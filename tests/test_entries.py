@@ -82,3 +82,18 @@ def test_build_signal_board_assigns_signals():
     assert "BBB" in board.index
     assert board.loc["AAA", "signal"] in ["breakout", "both"]
     assert board.loc["BBB", "signal"] in ["pullback", "both"]
+
+
+def test_build_signal_board_skips_empty_series():
+    ohlcv = _make_ohlcv_for_signals()
+    ohlcv[("Close", "CCC")] = pd.NA
+    ohlcv[("Open", "CCC")] = pd.NA
+    ohlcv[("High", "CCC")] = pd.NA
+    ohlcv[("Low", "CCC")] = pd.NA
+    ohlcv[("Volume", "CCC")] = pd.NA
+    ohlcv = ohlcv.sort_index(axis=1)
+
+    board = build_signal_board(ohlcv, ["AAA", "CCC"], EntrySignalConfig())
+
+    assert "AAA" in board.index
+    assert "CCC" not in board.index

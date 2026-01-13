@@ -36,7 +36,8 @@ def build_daily_report(ohlcv: pd.DataFrame, cfg: ReportConfig = ReportConfig()) 
 
     board = build_signal_board(ohlcv, ranked.index.tolist(), cfg.signals)
 
-    plans = build_trade_plans(ranked, board, cfg.risk)
+    atr_col = f"atr{cfg.universe.vol.atr_window}"
+    plans = build_trade_plans(ranked, board, cfg.risk, atr_col=atr_col)
 
     # merge: ranked features + signal board (left) + plans (left)
     report = ranked.join(board, how="left", rsuffix="_sig")
@@ -53,13 +54,14 @@ def build_daily_report(ohlcv: pd.DataFrame, cfg: ReportConfig = ReportConfig()) 
             report = report.drop(columns=["signal_plan"], errors="ignore")
 
     # tidy columns order
+    ma_col = f"ma{cfg.signals.pullback_ma}_level"
     keep = [
         "rank", "score",
-        "last", "atr14", "atr_pct",
+        "last", atr_col, "atr_pct",
         "mom_6m", "mom_12m", "rs_6m",
         "trend_ok", "dist_sma50_pct", "dist_sma200_pct",
         "signal",
-        "breakout_level", "ma20_level",
+        "breakout_level", ma_col,
         "entry", "stop", "shares", "position_value", "realized_risk",
     ]
     keep = [c for c in keep if c in report.columns]

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Optional, Dict, Any
+import re
 
 import math
 import pandas as pd
@@ -75,6 +76,7 @@ def build_trade_plans(
     ranked_universe: pd.DataFrame,
     signal_board: pd.DataFrame,
     cfg: RiskConfig = RiskConfig(),
+    atr_col: Optional[str] = None,
 ) -> pd.DataFrame:
     """
     ranked_universe: per-ticker features (must include atr14 and last)
@@ -88,8 +90,21 @@ def build_trade_plans(
     if signal_board is None or signal_board.empty:
         return pd.DataFrame()
 
-    if "atr14" not in ranked_universe.columns:
-        raise ValueError("ranked_universe must contain 'atr14' column.")
+    if atr_col is None:
+        atr_candidates = [
+            c for c in ranked_universe.columns if re.match(r"^atr\d+$", str(c))
+        ]
+        if len(atr_candidates) == 1:
+            atr_col = atr_candidates[0]
+        elif "atr14" in ranked_universe.columns:
+            atr_col = "atr14"
+        else:
+            raise ValueError(
+                "ranked_universe must contain a single atr{window} column (e.g. 'atr14') or provide atr_col."
+            )
+
+    if atr_col not in ranked_universe.columns:
+        raise ValueError(f"ranked_universe missing atr column: {atr_col}")
 
     active = signal_board[signal_board["signal"] != "none"].copy()
     if active.empty:
@@ -101,7 +116,7 @@ def build_trade_plans(
             continue
 
         entry = float(active.loc[t, "last"])
-        atr14 = float(ranked_universe.loc[t, "atr14"])
+        atr14 = float(ranked_universe.loc[t, atr_col])
 
         plan = position_plan(entry, atr14, cfg)
         if plan is None:

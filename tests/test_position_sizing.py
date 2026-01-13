@@ -42,3 +42,20 @@ def test_build_trade_plans_filters_none_and_requires_signal():
     assert "AAA" in plans.index
     assert "BBB" not in plans.index  # too volatile -> None
     assert plans.loc["AAA", "shares"] >= 1
+
+
+def test_build_trade_plans_infers_atr_column():
+    ranked = pd.DataFrame(
+        {"atr20": [1.2], "last": [30.0]},
+        index=["AAA"],
+    )
+    signals = pd.DataFrame(
+        {"last": [30.0], "signal": ["breakout"]},
+        index=["AAA"],
+    )
+    cfg = RiskConfig(account_size=500, risk_pct=0.01, k_atr=2.0, max_position_pct=0.60)
+
+    plans = build_trade_plans(ranked, signals, cfg)
+
+    assert "AAA" in plans.index
+    assert plans.loc["AAA", "shares"] >= 1

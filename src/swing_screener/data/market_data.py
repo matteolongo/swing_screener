@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Optional
+import hashlib
 
 import pandas as pd
 import yfinance as yf
@@ -38,6 +39,10 @@ def _cache_path(
     safe_end = end if end else "NONE"
     key = f"{'-'.join(tickers)}__{start}__{safe_end}__adj={int(auto_adjust)}"
     key = key.replace("/", "_")
+    if len(key) > 200:
+        digest = hashlib.sha1(key.encode("utf-8")).hexdigest()
+        prefix = "-".join(tickers[:3])
+        key = f"{prefix}__n={len(tickers)}__{start}__{safe_end}__adj={int(auto_adjust)}__{digest}"
     p = Path(cache_dir)
     p.mkdir(parents=True, exist_ok=True)
     return p / f"{key}.parquet"
