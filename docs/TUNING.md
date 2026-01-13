@@ -1,3 +1,0 @@
-# Tuning
-
-Parameter tuning guidelines.

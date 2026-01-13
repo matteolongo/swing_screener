@@ -1,0 +1,16 @@
+{
+  "asof": "2026-01-13",
+  "positions": [
+    {
+      "ticker": "INTC",
+      "status": "open",
+      "entry_date": "2026-01-13",
+      "entry_price": 47.29,
+      "stop_price": 42.88,
+      "shares": 1,
+      "initial_risk": null,
+      "max_favorable_price": 47.290000915527344,
+      "notes": "breakout"
+    }
+  ]
+}
