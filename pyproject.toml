@@ -18,7 +18,8 @@ dependencies = [
   "pandas>=2.0",
   "numpy>=1.24",
   "yfinance>=0.2",
-  "pyarrow>=14.0"
+  "pyarrow>=14.0",
+  "streamlit>=1.31"
 ]
 
 [project.optional-dependencies]
@@ -40,6 +41,7 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
 
 [tool.setuptools.package-data]
 "swing_screener.data" = ["universes/*.csv"]
