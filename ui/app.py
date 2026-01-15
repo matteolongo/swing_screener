@@ -24,6 +24,8 @@ from swing_screener.portfolio.state import (
     save_positions,
     ManageConfig,
 )
+import html
+
 from ui.helpers import (
     list_available_universes,
     ensure_parent_dir,
@@ -32,6 +34,7 @@ from ui.helpers import (
     safe_read_csv_preview,
     read_last_run,
     write_last_run,
+    build_action_badge,
 )
 
 
@@ -267,8 +270,23 @@ def main() -> None:
                         ),
                         axis=1,
                     )
+                guidance["ui_action_badge"] = guidance.apply(build_action_badge, axis=1)
+
+                def _badge_html(badge: dict) -> str:
+                    tooltip = badge.get("tooltip", "")
+                    tooltip_attr = f' title="{html.escape(tooltip)}"' if tooltip else ""
+                    return (
+                        f'<span style="background-color:{badge["bg_color"]}; '
+                        f'color:{badge["text_color"]}; padding:6px 10px; '
+                        f'border-radius:6px; font-weight:600; display:inline-block;"{tooltip_attr}>'
+                        f'{html.escape(badge["text"])}</span>'
+                    )
+
+                display = guidance.copy()
+                display.insert(0, "Action", display["ui_action_badge"].map(_badge_html))
+                display = display.drop(columns=["ui_action_badge"])
                 st.subheader("Execution guidance")
-                st.dataframe(guidance.head(50), use_container_width=True)
+                st.markdown(display.head(50).to_html(escape=False), unsafe_allow_html=True)
             st.download_button(
                 "Download report CSV",
                 report_csv,

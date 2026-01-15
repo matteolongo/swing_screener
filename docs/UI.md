@@ -28,6 +28,16 @@ streamlit run ui/app.py
 - Run the screener to generate the daily report.
 - The report is saved to `out/report.csv` by default and can be downloaded.
 
+### Action Badges
+
+The Daily Screener includes action badges that summarize the next-day execution hint:
+- 🟢 PLACE BUY LIMIT — suggested limit entry
+- 🔵 PLACE BUY STOP — suggested stop entry
+- ⚪ SKIP TRADE — no trade to place
+- 🟡 INCOMPLETE DATA — required fields missing
+
+Badges are visual guidance only and do not execute orders.
+
 ### Manage Positions
 
 - Loads `./positions.json` by default.

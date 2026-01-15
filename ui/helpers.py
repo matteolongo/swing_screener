@@ -128,3 +128,35 @@ def write_last_run(path: str | Path, ts: str) -> None:
     p = Path(path)
     ensure_parent_dir(p)
     p.write_text(json.dumps({"last_run": ts}, indent=2), encoding="utf-8")
+
+
+def build_action_badge(row: pd.Series) -> dict:
+    order_type = row.get("suggested_order_type", None)
+    order_price = row.get("suggested_order_price", None)
+    note = row.get("execution_note", "")
+
+    def _badge(text: str, bg_color: str) -> dict:
+        return {
+            "text": text,
+            "bg_color": bg_color,
+            "text_color": "#1a1a1a",
+            "tooltip": str(note) if pd.notna(note) and str(note).strip() else "",
+        }
+
+    if order_type is None or pd.isna(order_type):
+        return _badge("🟡 INCOMPLETE DATA", "#fff2b3")
+
+    order_type = str(order_type).strip().upper()
+
+    if order_type in {"BUY_LIMIT", "BUY_STOP"}:
+        if order_price is None or pd.isna(order_price):
+            return _badge("🟡 INCOMPLETE DATA", "#fff2b3")
+
+    if order_type == "BUY_LIMIT":
+        return _badge("🟢 PLACE BUY LIMIT", "#d4f8d4")
+    if order_type == "BUY_STOP":
+        return _badge("🔵 PLACE BUY STOP", "#d6e6ff")
+    if order_type == "SKIP":
+        return _badge("⚪ SKIP TRADE", "#e6e6e6")
+
+    return _badge("🟡 INCOMPLETE DATA", "#fff2b3")
