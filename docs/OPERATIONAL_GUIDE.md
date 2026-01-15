@@ -116,6 +116,13 @@ This does:
 
 No signal → no trade.
 
+### Execution Guidance Fields
+The report now includes explicit execution hints for next-day orders:
+- `entry` is NOT an order price; it is used for sizing and risk math only.
+- Use `suggested_order_type`, `suggested_order_price`, and `execution_note` as the only execution guidance.
+- `suggested_validity` is always `DAY`.
+- If present, `order_price_band_low` / `order_price_band_high` show a limit-entry range.
+
 ---
 
 ## Step 2 — Place orders in Degiro

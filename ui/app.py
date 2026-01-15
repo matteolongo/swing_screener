@@ -250,6 +250,25 @@ def main() -> None:
         if isinstance(report, pd.DataFrame) and not report.empty:
             st.dataframe(report.head(50))
             _render_report_stats(report)
+            guidance_cols = [
+                "suggested_order_type",
+                "suggested_order_price",
+                "execution_note",
+            ]
+            if all(c in report.columns for c in guidance_cols):
+                guidance = report[guidance_cols].copy()
+                if "order_price_band_low" in report.columns and "order_price_band_high" in report.columns:
+                    band = report[["order_price_band_low", "order_price_band_high"]].copy()
+                    guidance["order_price_band"] = band.apply(
+                        lambda r: (
+                            f"{float(r['order_price_band_low']):.2f} - {float(r['order_price_band_high']):.2f}"
+                            if pd.notna(r["order_price_band_low"]) and pd.notna(r["order_price_band_high"])
+                            else ""
+                        ),
+                        axis=1,
+                    )
+                st.subheader("Execution guidance")
+                st.dataframe(guidance.head(50), use_container_width=True)
             st.download_button(
                 "Download report CSV",
                 report_csv,

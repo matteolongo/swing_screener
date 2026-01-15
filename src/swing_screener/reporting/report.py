@@ -10,6 +10,7 @@ from swing_screener.screeners.universe import UniverseConfig, eligible_universe
 from swing_screener.screeners.ranking import RankingConfig, top_candidates
 from swing_screener.signals.entries import EntrySignalConfig, build_signal_board
 from swing_screener.risk.position_sizing import RiskConfig, build_trade_plans
+from swing_screener.execution.guidance import add_execution_guidance
 
 
 @dataclass(frozen=True)
@@ -76,6 +77,7 @@ def build_daily_report(ohlcv: pd.DataFrame, cfg: ReportConfig = ReportConfig()) 
         report["signal_order"] = report["signal"].map(order).fillna(99).astype(int)
         report = report.sort_values(["signal_order", "score"], ascending=[True, False]).drop(columns=["signal_order"])
 
+    report = add_execution_guidance(report)
     return report
 
 
