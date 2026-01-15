@@ -27,6 +27,7 @@ streamlit run ui/app.py
 - Select a universe, optional Top N cap, account size, and risk %.
 - Run the screener to generate the daily report.
 - The report is saved to `out/report.csv` by default and can be downloaded.
+- Use **Create pending orders** to open an inline form per row, edit the values, and save the order.
 
 ### Action Badges
 
@@ -44,6 +45,14 @@ Badges are visual guidance only and do not execute orders.
 - Edit open positions in the table (ticker, entry, stop, shares).
 - Click **Manage** to generate stop suggestions and a Degiro checklist.
 - If **Apply stop updates** is enabled, stops are updated in `positions.json` (never lowered).
+
+### Orders
+
+- Loads `./orders.json` by default.
+- Add pending orders (ticker, limit/stop, quantity, stop).
+- Stop price is optional for pending orders; it is required when marking an order as filled.
+- Review pending orders and mark them **filled** or **cancelled**.
+- When marked **filled**, a position is created in `positions.json`.
 
 ### Outputs
 
