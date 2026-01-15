@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Iterable, Tuple
+import warnings
 
 import pandas as pd
 
@@ -38,7 +39,11 @@ def backtest_portfolio_R(
     for t in tks:
         try:
             tr = backtest_single_ticker_R(ohlcv, t, cfg.bt)
-        except Exception:
+        except Exception as e:
+            warnings.warn(
+                f"Backtest failed for {t}: {e}",
+                RuntimeWarning,
+            )
             tr = pd.DataFrame()
 
         if tr is None or tr.empty:

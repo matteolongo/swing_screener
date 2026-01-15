@@ -81,6 +81,8 @@ def build_signal_board(
             continue
 
         s = close[t].dropna()
+        if s.empty:
+            continue
         if len(s) < cfg.min_history:
             # still try to compute if possible; but for swing we prefer decent history
             pass
