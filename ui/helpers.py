@@ -131,6 +131,22 @@ def write_last_run(path: str | Path, ts: str) -> None:
     p.write_text(json.dumps({"last_run": ts}, indent=2), encoding="utf-8")
 
 
+def load_user_defaults(path: str | Path) -> dict:
+    p = Path(path)
+    if not p.exists():
+        return {}
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def save_user_defaults(path: str | Path, values: dict) -> None:
+    p = Path(path)
+    ensure_parent_dir(p)
+    p.write_text(json.dumps(values, indent=2), encoding="utf-8")
+
+
 def build_action_badge(row: pd.Series) -> dict:
     order_type = row.get("suggested_order_type", None)
     order_price = row.get("suggested_order_price", None)

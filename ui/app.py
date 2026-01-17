@@ -14,6 +14,7 @@ if str(ROOT) not in sys.path:
 from swing_screener.data.market_data import MarketDataConfig, fetch_ohlcv
 from swing_screener.data.universe import UniverseConfig, load_universe_from_package
 from swing_screener.reporting.report import ReportConfig, build_daily_report
+from swing_screener.screeners.ranking import RankingConfig
 from swing_screener.risk.position_sizing import RiskConfig
 from swing_screener.portfolio.state import (
     load_positions,
@@ -40,7 +41,29 @@ from ui.helpers import (
     orders_to_dataframe,
     save_orders,
     make_order_entry,
+    load_user_defaults,
+    save_user_defaults,
 )
+
+PREFS_PATH = Path("ui/.user_defaults.json")
+LAST_RUN_PATH = Path("ui/.last_run.json")
+
+DEFAULT_SETTINGS: dict = {
+    "universe": "mega",
+    "top_n": 0,  # 0 = no cap (use full universe)
+    "account_size": 500.0,
+    "risk_pct": 1.0,
+    "use_cache": True,
+    "force_refresh": False,
+    "report_path": "out/report.csv",
+    "positions_path": "./positions.json",
+    "orders_path": "./orders.json",
+    "apply_updates": False,
+    "manage_use_cache": True,
+    "manage_force_refresh": False,
+    "manage_csv_path": "out/manage.csv",
+    "md_path": "out/degiro_actions.md",
+}
 
 
 def _handle_error(e: Exception, debug: bool) -> None:
@@ -70,6 +93,8 @@ def _run_screener(
     ucfg = UniverseConfig(benchmark="SPY", ensure_benchmark=True, max_tickers=top_n or None)
     tickers = load_universe_from_package(universe, ucfg)
 
+    ranking_top_n = top_n if top_n and top_n > 0 else 10_000  # 0 = no cap in UI -> effectively all
+
     ohlcv = fetch_ohlcv(
         tickers,
         MarketDataConfig(),
@@ -78,6 +103,7 @@ def _run_screener(
     )
 
     rcfg = ReportConfig(
+        ranking=RankingConfig(top_n=ranking_top_n),
         risk=RiskConfig(
             account_size=account_size,
             risk_pct=risk_pct / 100.0,
@@ -148,67 +174,149 @@ def _render_report_stats(report: pd.DataFrame) -> None:
         st.write(counts)
 
 
+def _init_settings(universes: list[str]) -> dict:
+    stored = load_user_defaults(PREFS_PATH)
+    defaults = {**DEFAULT_SETTINGS, **stored}
+    if universes:
+        defaults["universe"] = defaults["universe"] if defaults["universe"] in universes else universes[0]
+
+    for key, value in defaults.items():
+        st.session_state.setdefault(key, value)
+
+    return defaults
+
+
+def _current_settings() -> dict:
+    keys = [
+        "universe",
+        "top_n",
+        "account_size",
+        "risk_pct",
+        "use_cache",
+        "force_refresh",
+        "report_path",
+        "positions_path",
+        "orders_path",
+        "apply_updates",
+        "manage_use_cache",
+        "manage_force_refresh",
+        "manage_csv_path",
+        "md_path",
+    ]
+    return {k: st.session_state.get(k) for k in keys}
+
+
 def main() -> None:
     st.set_page_config(page_title="Swing Screener UI", layout="wide")
-    st.title("Swing Screener UI")
+    st.title("Swing Screener — Daily dashboard")
+    st.caption("Beginner-friendly flow: run screener → draft orders → manage open trades → review outputs.")
 
     universes = list_available_universes()
     if not universes:
         st.error("No universes found in package data.")
         st.stop()
 
-    if "pending_page" in st.session_state:
-        st.session_state["page"] = st.session_state.pop("pending_page")
+    defaults = _init_settings(universes)
 
-    st.sidebar.header("Navigation")
-    page = st.sidebar.radio(
-        "Page",
-        ["Daily Screener", "Manage Positions", "Orders", "Outputs"],
-        key="page",
+    st.sidebar.header("Session settings")
+    st.sidebar.caption("Values here drive every step. Save once, reuse daily.")
+    with st.sidebar.form("settings_form"):
+        universe = st.selectbox(
+            "Universe",
+            universes,
+            index=universes.index(st.session_state["universe"]),
+            key="universe",
+            help="Pick the ticker list to scan (default: mega).",
+        )
+        top_n = st.slider(
+            "Top N (0 = all)",
+            min_value=0,
+            max_value=200,
+            value=int(st.session_state.get("top_n", defaults["top_n"])),
+            step=10,
+            key="top_n",
+            help="Limit how many candidates you review. Lower = faster and simpler.",
+        )
+        account_size = st.number_input(
+            "Account size (EUR)",
+            min_value=100.0,
+            value=float(st.session_state.get("account_size", defaults["account_size"])),
+            step=500.0,
+            key="account_size",
+        )
+        risk_pct = st.slider(
+            "Risk per trade (%)",
+            min_value=0.5,
+            max_value=2.0,
+            value=float(st.session_state.get("risk_pct", defaults["risk_pct"])),
+            step=0.1,
+            key="risk_pct",
+            help="Keep between 0.5% and 2% to stay conservative.",
+        )
+        st.caption("Data options")
+        use_cache = st.checkbox(
+            "Use cached data",
+            value=bool(st.session_state.get("use_cache", defaults["use_cache"])),
+            key="use_cache",
+        )
+        force_refresh = st.checkbox(
+            "Force refresh data",
+            value=bool(st.session_state.get("force_refresh", defaults["force_refresh"])),
+            key="force_refresh",
+        )
+        st.caption("Paths")
+        report_path = st.text_input("Report CSV path", value=st.session_state["report_path"], key="report_path")
+        positions_path = st.text_input("Positions path", value=st.session_state["positions_path"], key="positions_path")
+        orders_path = st.text_input("Orders path", value=st.session_state["orders_path"], key="orders_path")
+        manage_csv_path = st.text_input("Manage CSV path", value=st.session_state["manage_csv_path"], key="manage_csv_path")
+        md_path = st.text_input("Degiro checklist path", value=st.session_state["md_path"], key="md_path")
+        apply_updates = st.checkbox(
+            "Apply stop updates to positions.json",
+            value=bool(st.session_state.get("apply_updates", defaults["apply_updates"])),
+            key="apply_updates",
+            help="When enabled, stop raises will be written automatically (never lowered).",
+        )
+        manage_use_cache = st.checkbox(
+            "Use cached data (manage)",
+            value=bool(st.session_state.get("manage_use_cache", defaults["manage_use_cache"])),
+            key="manage_use_cache",
+        )
+        manage_force_refresh = st.checkbox(
+            "Force refresh data (manage)",
+            value=bool(st.session_state.get("manage_force_refresh", defaults["manage_force_refresh"])),
+            key="manage_force_refresh",
+        )
+        save_defaults = st.form_submit_button("Save as my defaults")
+
+    st.sidebar.header("Utilities")
+    debug = st.sidebar.checkbox("Debug mode", value=False)
+    if save_defaults:
+        save_user_defaults(PREFS_PATH, _current_settings())
+        st.sidebar.success("Defaults saved for next sessions.")
+
+    st.markdown(
+        """
+        **Quick tips**
+        - Run after US market close, once per day.
+        - Follow the steps left-to-right. Green/blue badges mean actionable orders.
+        - Keep risk % modest; avoid changing stops downward.
+        """
     )
 
-    st.sidebar.header("Daily Routine")
-    run_daily = st.sidebar.button("Run Daily Routine", type="primary")
+    run_daily = st.button("Run daily routine (screener + manage)", type="primary")
 
-    st.sidebar.header("Global")
-    debug = st.sidebar.checkbox("Debug mode", value=False)
-
-    with st.sidebar.expander("Screener settings", expanded=(page == "Daily Screener")):
-        universe = st.selectbox("Universe", universes, index=0, key="universe")
-        top_n = st.number_input("Top N (0 = no cap)", min_value=0, value=0, step=1, key="top_n")
-        account_size = st.number_input(
-            "Account size (EUR)", min_value=0.0, value=500.0, step=100.0, key="account_size"
-        )
-        risk_pct = st.number_input(
-            "Risk %", min_value=0.1, max_value=5.0, value=1.0, step=0.1, key="risk_pct"
-        )
-        use_cache = st.checkbox("Use cache", value=True, key="use_cache")
-        force_refresh = st.checkbox("Force refresh", value=False, key="force_refresh")
-        report_path = st.text_input("Report CSV path", value="out/report.csv", key="report_path")
-
-    with st.sidebar.expander("Manage settings", expanded=(page == "Manage Positions")):
-        positions_path = st.text_input("Positions path", value="./positions.json", key="positions_path")
-        apply_updates = st.checkbox("Apply stop updates to positions.json", value=False, key="apply_updates")
-        manage_use_cache = st.checkbox("Use cache (manage)", value=True, key="manage_use_cache")
-        manage_force_refresh = st.checkbox("Force refresh (manage)", value=False, key="manage_force_refresh")
-        manage_csv_path = st.text_input("Manage CSV path", value="out/manage.csv", key="manage_csv_path")
-        md_path = st.text_input("Degiro MD path", value="out/degiro_actions.md", key="md_path")
-
-    with st.sidebar.expander("Orders settings", expanded=(page == "Orders")):
-        orders_path = st.text_input("Orders path", value="./orders.json", key="orders_path")
-
-    last_run_path = Path("ui/.last_run.json")
+    settings = _current_settings()
 
     if run_daily:
         try:
             report, report_csv = _run_screener(
-                universe,
-                int(top_n),
-                float(account_size),
-                float(risk_pct),
-                bool(use_cache),
-                bool(force_refresh),
-                report_path,
+                settings["universe"],
+                int(settings["top_n"]),
+                float(settings["account_size"]),
+                float(settings["risk_pct"]),
+                bool(settings["use_cache"]),
+                bool(settings["force_refresh"]),
+                settings["report_path"],
             )
             st.session_state["last_report"] = report
             st.session_state["last_report_csv"] = report_csv
@@ -216,15 +324,15 @@ def main() -> None:
             _handle_error(e, debug)
 
         try:
-            positions_df = load_positions_to_dataframe(positions_path)
+            positions_df = load_positions_to_dataframe(settings["positions_path"])
             df, md_text = _run_manage(
-                positions_path,
+                settings["positions_path"],
                 positions_df,
-                bool(apply_updates),
-                bool(manage_use_cache),
-                bool(manage_force_refresh),
-                manage_csv_path,
-                md_path,
+                bool(settings["apply_updates"]),
+                bool(settings["manage_use_cache"]),
+                bool(settings["manage_force_refresh"]),
+                settings["manage_csv_path"],
+                settings["md_path"],
             )
             st.session_state["last_manage_df"] = df
             st.session_state["last_degiro_md"] = md_text
@@ -232,33 +340,41 @@ def main() -> None:
             _handle_error(e, debug)
 
         ts = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
-        write_last_run(last_run_path, ts)
-        st.session_state["pending_page"] = "Outputs"
-        st.rerun()
+        write_last_run(LAST_RUN_PATH, ts)
+        st.success("Daily routine finished. Jump to Outputs to review results.")
 
-    if page == "Daily Screener":
-        st.header("Daily Screener")
-        if st.button("Run Screener"):
+    tab_screener, tab_orders, tab_manage, tab_outputs = st.tabs(
+        ["1) Candidates", "2) Orders", "3) Manage positions", "4) Outputs"]
+    )
+
+    with tab_screener:
+        st.subheader("1) Run screener and draft orders")
+        st.info("Step 1: load data, see badges, and add pending orders directly from suggestions.")
+
+        if st.button("Run screener", key="run_screener_btn"):
             try:
                 report, report_csv = _run_screener(
-                    universe,
-                    int(top_n),
-                    float(account_size),
-                    float(risk_pct),
-                    bool(use_cache),
-                    bool(force_refresh),
-                    report_path,
+                    settings["universe"],
+                    int(settings["top_n"]),
+                    float(settings["account_size"]),
+                    float(settings["risk_pct"]),
+                    bool(settings["use_cache"]),
+                    bool(settings["force_refresh"]),
+                    settings["report_path"],
                 )
                 st.session_state["last_report"] = report
                 st.session_state["last_report_csv"] = report_csv
                 ts = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
-                write_last_run(last_run_path, ts)
+                write_last_run(LAST_RUN_PATH, ts)
+                st.success("Screener complete. Scroll for guidance and order capture.")
             except Exception as e:
                 _handle_error(e, debug)
 
         report = st.session_state.get("last_report")
         report_csv = st.session_state.get("last_report_csv")
+
         if isinstance(report, pd.DataFrame) and not report.empty:
+            st.caption("Showing up to 50 rows for a quick scan.")
             st.dataframe(report.head(50))
             _render_report_stats(report)
             guidance_cols = [
@@ -296,18 +412,18 @@ def main() -> None:
                 st.subheader("Execution guidance")
                 st.markdown(display.head(50).to_html(escape=False), unsafe_allow_html=True)
 
-            st.subheader("Create pending orders")
-            orders_file = Path(orders_path)
+            st.subheader("Create pending orders from candidates")
+            orders_file = Path(settings["orders_path"])
             if not orders_file.exists():
-                st.warning(f"Orders file not found: {orders_path}")
-                if st.button("Create orders.json"):
+                st.warning(f"Orders file not found: {settings['orders_path']}")
+                if st.button("Create orders.json", key="create_orders_template"):
                     ensure_parent_dir(orders_file)
                     orders_file.write_text('{"asof": null, "orders": []}\n', encoding="utf-8")
                     st.success("Template created.")
                     st.rerun()
             else:
                 try:
-                    orders = load_orders(orders_path)
+                    orders = load_orders(settings["orders_path"])
                 except Exception as e:
                     _handle_error(e, debug)
                     orders = []
@@ -351,9 +467,7 @@ def main() -> None:
                                     step=1,
                                     key=f"{key_base}_qty",
                                 )
-                                stop_default = (
-                                    f"{float(stop_price):.2f}" if pd.notna(stop_price) else ""
-                                )
+                                stop_default = f"{float(stop_price):.2f}" if pd.notna(stop_price) else ""
                                 stop_price_input = st.text_input(
                                     "Stop price (optional)",
                                     value=stop_default,
@@ -388,128 +502,40 @@ def main() -> None:
                                         notes=notes,
                                     )
                                 )
-                                save_orders(orders_path, orders, asof=str(pd.Timestamp.now().date()))
+                                save_orders(settings["orders_path"], orders, asof=str(pd.Timestamp.now().date()))
                                 st.success(f"Order added: {ticker}")
                                 st.rerun()
-            st.download_button(
-                "Download report CSV",
-                report_csv,
-                file_name=Path(report_path).name,
-                mime="text/csv",
-            )
-        elif isinstance(report, pd.DataFrame):
-            st.info("Report is empty.")
-
-    if page == "Manage Positions":
-        st.header("Manage Positions")
-        positions_file = Path(positions_path)
-        if not positions_file.exists():
-            st.error(f"Positions file not found: {positions_path}")
-            if st.button("Create template positions.json"):
-                ensure_parent_dir(positions_file)
-                positions_file.write_text(
-                    '{"asof": null, "positions": []}\n', encoding="utf-8"
-                )
-                st.success("Template created.")
-            st.stop()
-
-        try:
-            positions_df = load_positions_to_dataframe(positions_path)
-        except Exception as e:
-            _handle_error(e, debug)
-            st.stop()
-
-        if positions_df.empty:
-            positions_df = pd.DataFrame(
-                columns=[
-                    "ticker",
-                    "status",
-                    "entry_date",
-                    "entry_price",
-                    "stop_price",
-                    "shares",
-                    "notes",
-                ]
-            )
-
-        edited_df = st.data_editor(
-            positions_df,
-            num_rows="dynamic",
-            width="stretch",
-        )
-
-        if st.button("Manage"):
-            try:
-                df, md_text = _run_manage(
-                    positions_path,
-                    edited_df,
-                    bool(apply_updates),
-                    bool(manage_use_cache),
-                    bool(manage_force_refresh),
-                    manage_csv_path,
-                    md_path,
-                )
-                st.session_state["last_manage_df"] = df
-                st.session_state["last_degiro_md"] = md_text
-                ts = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
-                write_last_run(last_run_path, ts)
-            except Exception as e:
-                _handle_error(e, debug)
-
-        df = st.session_state.get("last_manage_df")
-        md_text = st.session_state.get("last_degiro_md")
-        if isinstance(df, pd.DataFrame):
-            if df.empty:
-                st.info("No management actions.")
-            else:
-                display = df.copy()
-                display = display.rename(
-                    columns={
-                        "action": "Action",
-                        "last": "Last Price",
-                        "entry": "Entry Price",
-                        "stop_old": "Stop (old)",
-                        "stop_suggested": "Stop (suggested)",
-                        "r_now": "R now",
-                        "reason": "Reason",
-                        "shares": "Shares",
-                    }
-                )
-                st.caption("R now = (last - entry) / (entry - stop). It shows current profit in R units.")
-                st.dataframe(display, width="stretch")
+            if report_csv:
                 st.download_button(
-                    "Download manage CSV",
-                    df.to_csv(index=True),
-                    file_name=Path(manage_csv_path).name,
+                    "Download report CSV",
+                    report_csv,
+                    file_name=Path(settings["report_path"]).name,
                     mime="text/csv",
                 )
-        if isinstance(md_text, str) and md_text:
-            st.markdown(md_text)
-            st.download_button(
-                "Download Degiro checklist",
-                md_text,
-                file_name=Path(md_path).name,
-                mime="text/markdown",
-            )
+        elif isinstance(report, pd.DataFrame):
+            st.info("Report is empty. Try a different universe or rerun later.")
+        else:
+            st.info("Run the screener to see candidates and action badges.")
 
-    if page == "Orders":
-        st.header("Orders")
-        orders_file = Path(orders_path)
+    with tab_orders:
+        st.subheader("2) Orders")
+        st.info("Review pending orders, add manual ones, and mark fills. Filled orders become positions.")
+
+        orders_file = Path(settings["orders_path"])
+        orders: list[dict] = []
         if not orders_file.exists():
-            st.error(f"Orders file not found: {orders_path}")
-            if st.button("Create template orders.json"):
+            st.warning(f"Orders file not found: {settings['orders_path']}")
+            if st.button("Create template orders.json", key="create_orders_template_orders_tab"):
                 ensure_parent_dir(orders_file)
                 orders_file.write_text('{"asof": null, "orders": []}\n', encoding="utf-8")
                 st.success("Template created.")
-            st.stop()
-
         try:
-            orders = load_orders(orders_path)
+            orders = load_orders(settings["orders_path"])
         except Exception as e:
             _handle_error(e, debug)
-            st.stop()
+            orders = []
 
-        st.subheader("Place order")
+        st.caption("Add a manual pending order")
         with st.form("place_order"):
             ticker = st.text_input("Ticker").strip().upper()
             order_type = st.selectbox("Order type", ["BUY_LIMIT", "BUY_STOP"])
@@ -520,29 +546,32 @@ def main() -> None:
             submitted = st.form_submit_button("Add pending order")
 
         if submitted:
+            stop_price = None
+            valid = True
             if not ticker:
                 st.error("Ticker is required.")
-                st.stop()
-            stop_price = None
-            if stop_price_raw.strip():
-                try:
-                    stop_price = float(stop_price_raw.strip())
-                except ValueError:
-                    st.error("Stop price must be a number.")
-                    st.stop()
-            orders.append(
-                make_order_entry(
-                    ticker=ticker,
-                    order_type=order_type,
-                    limit_price=float(limit_price),
-                    quantity=int(quantity),
-                    stop_price=stop_price,
-                    notes=notes,
-                )
-            )
-            save_orders(orders_path, orders, asof=str(pd.Timestamp.now().date()))
-            st.success(f"Order added: {ticker}")
-            st.rerun()
+                valid = False
+            else:
+                if stop_price_raw.strip():
+                    try:
+                        stop_price = float(stop_price_raw.strip())
+                    except ValueError:
+                        st.error("Stop price must be a number.")
+                        valid = False
+                if valid:
+                    orders.append(
+                        make_order_entry(
+                            ticker=ticker,
+                            order_type=order_type,
+                            limit_price=float(limit_price),
+                            quantity=int(quantity),
+                            stop_price=stop_price,
+                            notes=notes,
+                        )
+                    )
+                    save_orders(settings["orders_path"], orders, asof=str(pd.Timestamp.now().date()))
+                    st.success(f"Order added: {ticker}")
+                    st.rerun()
 
         orders_df = orders_to_dataframe(orders)
         pending_df = orders_df[orders_df["status"] == "pending"].copy()
@@ -551,7 +580,7 @@ def main() -> None:
         if pending_df.empty:
             st.info("No pending orders.")
         else:
-            st.dataframe(pending_df, width="stretch")
+            st.dataframe(pending_df, use_container_width=True)
 
         st.subheader("Update pending order")
         pending = [o for o in orders if o.get("status") == "pending"]
@@ -615,7 +644,7 @@ def main() -> None:
                             had_error = True
                             break
 
-                        positions = load_positions(positions_path)
+                        positions = load_positions(settings["positions_path"])
                         if any(
                             p.status == "open" and p.ticker == order["ticker"] for p in positions
                         ):
@@ -644,11 +673,11 @@ def main() -> None:
                                 notes=str(order.get("notes", "")),
                             )
                         )
-                        save_positions(positions_path, positions, asof=str(pd.Timestamp.now().date()))
+                        save_positions(settings["positions_path"], positions, asof=str(pd.Timestamp.now().date()))
                     break
 
                 if not had_error:
-                    save_orders(orders_path, orders, asof=str(pd.Timestamp.now().date()))
+                    save_orders(settings["orders_path"], orders, asof=str(pd.Timestamp.now().date()))
                     st.success("Order updated.")
                     st.rerun()
 
@@ -656,25 +685,124 @@ def main() -> None:
         if orders_df.empty:
             st.info("No orders recorded.")
         else:
-            st.dataframe(orders_df, width="stretch")
+            st.dataframe(orders_df, use_container_width=True)
 
-    if page == "Outputs":
-        st.header("Outputs")
-        last_run = read_last_run(last_run_path)
+    with tab_manage:
+        st.subheader("3) Manage positions")
+        st.info(
+            "Recalculate stops and produce the Degiro checklist. R multiple = (last - entry) / (entry - stop)."
+        )
+
+        positions_file = Path(settings["positions_path"])
+        if not positions_file.exists():
+            st.warning(f"Positions file not found: {settings['positions_path']}")
+            if st.button("Create template positions.json", key="create_positions_template"):
+                ensure_parent_dir(positions_file)
+                positions_file.write_text('{"asof": null, "positions": []}\n', encoding="utf-8")
+                st.success("Template created.")
+            positions_df = pd.DataFrame()
+        else:
+            try:
+                positions_df = load_positions_to_dataframe(settings["positions_path"])
+            except Exception as e:
+                _handle_error(e, debug)
+                positions_df = pd.DataFrame()
+
+        if positions_df.empty:
+            positions_df = pd.DataFrame(
+                columns=[
+                    "ticker",
+                    "status",
+                    "entry_date",
+                    "entry_price",
+                    "stop_price",
+                    "shares",
+                    "notes",
+                ]
+            )
+
+        edited_df = st.data_editor(
+            positions_df,
+            num_rows="dynamic",
+            use_container_width=True,
+        )
+
+        if st.button("Recalculate stops / checklist", key="manage_btn"):
+            try:
+                df, md_text = _run_manage(
+                    settings["positions_path"],
+                    edited_df,
+                    bool(settings["apply_updates"]),
+                    bool(settings["manage_use_cache"]),
+                    bool(settings["manage_force_refresh"]),
+                    settings["manage_csv_path"],
+                    settings["md_path"],
+                )
+                st.session_state["last_manage_df"] = df
+                st.session_state["last_degiro_md"] = md_text
+                ts = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
+                write_last_run(LAST_RUN_PATH, ts)
+            except Exception as e:
+                _handle_error(e, debug)
+
+        df = st.session_state.get("last_manage_df")
+        md_text = st.session_state.get("last_degiro_md")
+        if isinstance(df, pd.DataFrame):
+            if df.empty:
+                st.info("No management actions.")
+            else:
+                display = df.copy()
+                display = display.rename(
+                    columns={
+                        "action": "Action",
+                        "last": "Last Price",
+                        "entry": "Entry Price",
+                        "stop_old": "Stop (old)",
+                        "stop_suggested": "Stop (suggested)",
+                        "r_now": "R now",
+                        "reason": "Reason",
+                        "shares": "Shares",
+                    }
+                )
+                st.caption("R now shows current profit in R units. Positive = above entry risk.")
+                st.dataframe(display, use_container_width=True)
+                st.download_button(
+                    "Download manage CSV",
+                    df.to_csv(index=True),
+                    file_name=Path(settings["manage_csv_path"]).name,
+                    mime="text/csv",
+                )
+        if isinstance(md_text, str) and md_text:
+            st.subheader("Degiro checklist")
+            st.markdown(md_text)
+            st.download_button(
+                "Download Degiro checklist",
+                md_text,
+                file_name=Path(settings["md_path"]).name,
+                mime="text/markdown",
+            )
+
+    with tab_outputs:
+        st.subheader("4) Outputs and last run")
+        last_run = read_last_run(LAST_RUN_PATH)
         if last_run:
             st.write(f"Last run: {last_run}")
 
-        report_df, report_err = safe_read_csv_preview(report_path)
+        report_df, report_err = safe_read_csv_preview(settings["report_path"])
         if report_err:
             st.warning(f"Unable to read report CSV: {report_err}")
         elif not report_df.empty:
-            st.subheader("Report preview")
-            st.dataframe(report_df, width="stretch")
+            st.caption("Report preview")
+            st.dataframe(report_df, use_container_width=True)
+        else:
+            st.info("No report found yet. Run the screener.")
 
-        md_file = Path(md_path)
+        md_file = Path(settings["md_path"])
         if md_file.exists():
             st.subheader("Degiro actions")
             st.markdown(md_file.read_text(encoding="utf-8"))
+        else:
+            st.info("Degiro checklist not generated yet. Run management step.")
 
 
 if __name__ == "__main__":
