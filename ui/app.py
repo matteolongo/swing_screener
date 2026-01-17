@@ -726,8 +726,8 @@ def main() -> None:
                     form_key = f"update_{oid}"
                     with st.form(form_key):
                         default_entry = float(pending_order.get("limit_price") or 0.0)
-                        fill_price = st.number_input(
-                            "Fill price (default = limit price)",
+                        order_price_input = st.number_input(
+                            "Order price (pending) / Fill price (filled)",
                             min_value=0.01,
                             value=default_entry if default_entry > 0 else 0.01,
                             step=0.01,
@@ -756,7 +756,7 @@ def main() -> None:
                         )
                         action = st.radio(
                             "Action",
-                            ["Mark filled", "Mark cancelled"],
+                            ["Save pending changes", "Mark filled", "Mark cancelled"],
                             key=f"{form_key}_action",
                         )
                         update_submit = st.form_submit_button("Update order")
@@ -770,6 +770,16 @@ def main() -> None:
                                 order["status"] = "cancelled"
                                 order["filled_date"] = ""
                                 order["entry_price"] = None
+                            elif action == "Save pending changes":
+                                order["limit_price"] = float(order_price_input)
+                                order["quantity"] = int(quantity_input)
+                                order["stop_price"] = (
+                                    float(stop_price_input.strip())
+                                    if stop_price_input.strip()
+                                    else None
+                                )
+                                order["notes"] = pending_order.get("notes", "")
+                                order["status"] = "pending"
                             else:
                                 if stop_price_input.strip() == "":
                                     st.error(f"{order['ticker']}: stop price required to mark filled.")
@@ -796,7 +806,7 @@ def main() -> None:
                                 order["stop_price"] = float(stop_price_value)
                                 order["status"] = "filled"
                                 order["filled_date"] = str(fill_date)
-                                order["entry_price"] = float(fill_price)
+                                order["entry_price"] = float(order_price_input)
 
                                 positions.append(
                                     Position(
