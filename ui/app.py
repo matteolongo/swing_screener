@@ -12,9 +12,10 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from swing_screener.data.market_data import MarketDataConfig, fetch_ohlcv
-from swing_screener.data.universe import UniverseConfig, load_universe_from_package
+from swing_screener.data.universe import UniverseConfig as DataUniverseConfig, load_universe_from_package
 from swing_screener.reporting.report import ReportConfig, build_daily_report
 from swing_screener.screeners.ranking import RankingConfig
+from swing_screener.screeners.universe import UniverseConfig as ScreenUniverseConfig, UniverseFilterConfig
 from swing_screener.risk.position_sizing import RiskConfig
 from swing_screener.portfolio.state import (
     load_positions,
@@ -53,6 +54,8 @@ DEFAULT_SETTINGS: dict = {
     "top_n": 0,  # 0 = no cap (use full universe)
     "account_size": 500.0,
     "risk_pct": 1.0,
+    "k_atr": 2.0,
+    "max_position_pct": 0.60,
     "use_cache": True,
     "force_refresh": False,
     "report_path": "out/report.csv",
@@ -63,6 +66,10 @@ DEFAULT_SETTINGS: dict = {
     "manage_force_refresh": False,
     "manage_csv_path": "out/manage.csv",
     "md_path": "out/degiro_actions.md",
+    "min_price": 10.0,
+    "max_price": 60.0,
+    "max_atr_pct": 10.0,
+    "require_trend_ok": True,
 }
 
 
@@ -86,11 +93,17 @@ def _run_screener(
     top_n: int,
     account_size: float,
     risk_pct: float,
+    k_atr: float,
+    max_position_pct: float,
     use_cache: bool,
     force_refresh: bool,
     report_path: str,
+    min_price: float,
+    max_price: float,
+    max_atr_pct: float,
+    require_trend_ok: bool,
 ) -> tuple[pd.DataFrame, str]:
-    ucfg = UniverseConfig(benchmark="SPY", ensure_benchmark=True, max_tickers=top_n or None)
+    ucfg = DataUniverseConfig(benchmark="SPY", ensure_benchmark=True, max_tickers=top_n or None)
     tickers = load_universe_from_package(universe, ucfg)
 
     ranking_top_n = top_n if top_n and top_n > 0 else 10_000  # 0 = no cap in UI -> effectively all
@@ -103,13 +116,21 @@ def _run_screener(
     )
 
     rcfg = ReportConfig(
+        universe=ScreenUniverseConfig(
+            filt=UniverseFilterConfig(
+                min_price=min_price,
+                max_price=max_price,
+                max_atr_pct=max_atr_pct,
+                require_trend_ok=require_trend_ok,
+            )
+        ),
         ranking=RankingConfig(top_n=ranking_top_n),
         risk=RiskConfig(
             account_size=account_size,
             risk_pct=risk_pct / 100.0,
-            k_atr=2.0,
-            max_position_pct=0.60,
-        )
+            k_atr=k_atr,
+            max_position_pct=max_position_pct,
+        ),
     )
     report = build_daily_report(ohlcv, rcfg)
 
@@ -192,6 +213,8 @@ def _current_settings() -> dict:
         "top_n",
         "account_size",
         "risk_pct",
+        "k_atr",
+        "max_position_pct",
         "use_cache",
         "force_refresh",
         "report_path",
@@ -202,6 +225,10 @@ def _current_settings() -> dict:
         "manage_force_refresh",
         "manage_csv_path",
         "md_path",
+        "min_price",
+        "max_price",
+        "max_atr_pct",
+        "require_trend_ok",
     ]
     return {k: st.session_state.get(k) for k in keys}
 
@@ -253,6 +280,24 @@ def main() -> None:
             key="risk_pct",
             help="Keep between 0.5% and 2% to stay conservative.",
         )
+        k_atr = st.slider(
+            "Stop distance (k * ATR)",
+            min_value=1.0,
+            max_value=3.0,
+            value=float(st.session_state.get("k_atr", defaults["k_atr"])),
+            step=0.1,
+            key="k_atr",
+            help="Higher = wider stops (fewer stop-outs, larger position risk). Default 2.0.",
+        )
+        max_position_pct = st.slider(
+            "Max position size (% of account)",
+            min_value=0.1,
+            max_value=1.0,
+            value=float(st.session_state.get("max_position_pct", defaults["max_position_pct"])),
+            step=0.05,
+            key="max_position_pct",
+            help="Cap for any single position. Default 0.60 (60%).",
+        )
         st.caption("Data options")
         use_cache = st.checkbox(
             "Use cached data",
@@ -286,6 +331,37 @@ def main() -> None:
             value=bool(st.session_state.get("manage_force_refresh", defaults["manage_force_refresh"])),
             key="manage_force_refresh",
         )
+        st.caption("Filters (more symbols → more rows, can be noisier)")
+        min_price = st.number_input(
+            "Min price (€/$)",
+            min_value=0.5,
+            max_value=2000.0,
+            value=float(st.session_state.get("min_price", defaults["min_price"])),
+            step=0.5,
+            key="min_price",
+        )
+        max_price = st.number_input(
+            "Max price (€/$)",
+            min_value=1.0,
+            max_value=5000.0,
+            value=float(st.session_state.get("max_price", defaults["max_price"])),
+            step=1.0,
+            key="max_price",
+        )
+        max_atr_pct = st.slider(
+            "Max ATR% (volatility filter)",
+            min_value=1.0,
+            max_value=25.0,
+            value=float(st.session_state.get("max_atr_pct", defaults["max_atr_pct"])),
+            step=0.5,
+            key="max_atr_pct",
+            help="Higher lets more volatile names in.",
+        )
+        require_trend_ok = st.checkbox(
+            "Require uptrend (SMA-based)",
+            value=bool(st.session_state.get("require_trend_ok", defaults["require_trend_ok"])),
+            key="require_trend_ok",
+        )
         save_defaults = st.form_submit_button("Save as my defaults")
 
     st.sidebar.header("Utilities")
@@ -314,9 +390,15 @@ def main() -> None:
                 int(settings["top_n"]),
                 float(settings["account_size"]),
                 float(settings["risk_pct"]),
+                float(settings["k_atr"]),
+                float(settings["max_position_pct"]),
                 bool(settings["use_cache"]),
                 bool(settings["force_refresh"]),
                 settings["report_path"],
+                float(settings["min_price"]),
+                float(settings["max_price"]),
+                float(settings["max_atr_pct"]),
+                bool(settings["require_trend_ok"]),
             )
             st.session_state["last_report"] = report
             st.session_state["last_report_csv"] = report_csv
@@ -358,9 +440,15 @@ def main() -> None:
                     int(settings["top_n"]),
                     float(settings["account_size"]),
                     float(settings["risk_pct"]),
+                    float(settings["k_atr"]),
+                    float(settings["max_position_pct"]),
                     bool(settings["use_cache"]),
                     bool(settings["force_refresh"]),
                     settings["report_path"],
+                    float(settings["min_price"]),
+                    float(settings["max_price"]),
+                    float(settings["max_atr_pct"]),
+                    bool(settings["require_trend_ok"]),
                 )
                 st.session_state["last_report"] = report
                 st.session_state["last_report_csv"] = report_csv
@@ -439,6 +527,36 @@ def main() -> None:
                 if not order_rows:
                     st.info("No actionable rows for order creation.")
                 else:
+                    st.subheader("Quick add from guidance")
+                    st.caption("Click to create a pending order with suggested price/stop/shares. Edit after if needed.")
+                    cols = st.columns(min(3, len(order_rows)))
+                    for idx, (ticker, row, order_type, order_price) in enumerate(order_rows):
+                        col = cols[idx % len(cols)]
+                        stop_price = row.get("stop", None)
+                        shares = row.get("shares", None)
+                        with col:
+                            st.markdown(f"**{ticker}** — {order_type} @ {float(order_price):.2f}")
+                            if st.button(f"Add {ticker}", key=f"quick_add_{ticker}"):
+                                if any(
+                                    o.get("status") == "pending" and o.get("ticker") == ticker
+                                    for o in orders
+                                ):
+                                    st.warning(f"{ticker}: pending order already exists.")
+                                else:
+                                    orders.append(
+                                        make_order_entry(
+                                            ticker=ticker,
+                                            order_type=order_type,
+                                            limit_price=float(order_price),
+                                            quantity=int(shares) if pd.notna(shares) else 1,
+                                            stop_price=float(stop_price) if pd.notna(stop_price) else None,
+                                            notes="from guidance",
+                                        )
+                                    )
+                                    save_orders(settings["orders_path"], orders, asof=str(pd.Timestamp.now().date()))
+                                    st.success(f"Order added: {ticker}")
+                                    st.rerun()
+
                     for ticker, row, order_type, order_price in order_rows:
                         stop_price = row.get("stop", None)
                         shares = row.get("shares", None)
