@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from datetime import datetime
 from typing import Iterable, Optional
 import json
 
@@ -160,3 +161,93 @@ def build_action_badge(row: pd.Series) -> dict:
         return _badge("⚪ SKIP TRADE", "#e6e6e6")
 
     return _badge("🟡 INCOMPLETE DATA", "#fff2b3")
+
+
+ORDER_COLUMNS = [
+    "order_id",
+    "ticker",
+    "status",
+    "order_type",
+    "limit_price",
+    "quantity",
+    "stop_price",
+    "order_date",
+    "filled_date",
+    "entry_price",
+    "notes",
+]
+
+def make_order_entry(
+    ticker: str,
+    order_type: str,
+    limit_price: float,
+    quantity: int,
+    stop_price: Optional[float],
+    notes: str = "",
+    now: Optional[datetime] = None,
+) -> dict:
+    ts = now or datetime.utcnow()
+    order_id = f"{ticker}-{ts.strftime('%Y%m%d%H%M%S')}"
+    order_date = ts.date().isoformat()
+    return {
+        "order_id": order_id,
+        "ticker": ticker,
+        "status": "pending",
+        "order_type": order_type,
+        "limit_price": float(limit_price),
+        "quantity": int(quantity),
+        "stop_price": float(stop_price) if stop_price is not None else None,
+        "order_date": order_date,
+        "filled_date": "",
+        "entry_price": None,
+        "notes": notes.strip(),
+    }
+
+
+def load_orders(path: str | Path) -> list[dict]:
+    p = Path(path)
+    data = json.loads(p.read_text(encoding="utf-8"))
+    out: list[dict] = []
+    for idx, item in enumerate(data.get("orders", [])):
+        ticker = str(item.get("ticker", "")).strip().upper()
+        if not ticker:
+            continue
+        order_id = str(item.get("order_id", "")).strip() or f"{ticker}-{idx + 1}"
+        status_raw = str(item.get("status", "pending")).strip().lower()
+        status = status_raw if status_raw in {"pending", "filled", "cancelled"} else "pending"
+        out.append(
+            {
+                "order_id": order_id,
+                "ticker": ticker,
+                "status": status,
+                "order_type": str(item.get("order_type", "")).strip().upper(),
+                "limit_price": item.get("limit_price", None),
+                "quantity": item.get("quantity", None),
+                "stop_price": item.get("stop_price", None),
+                "order_date": str(item.get("order_date", "")).strip(),
+                "filled_date": str(item.get("filled_date", "")).strip(),
+                "entry_price": item.get("entry_price", None),
+                "notes": str(item.get("notes", "")).strip(),
+            }
+        )
+    return out
+
+
+def orders_to_dataframe(orders: list[dict]) -> pd.DataFrame:
+    if not orders:
+        return pd.DataFrame(columns=ORDER_COLUMNS)
+    df = pd.DataFrame(orders)
+    for col in ORDER_COLUMNS:
+        if col not in df.columns:
+            df[col] = None
+    return df[ORDER_COLUMNS]
+
+
+def save_orders(path: str | Path, orders: list[dict], asof: Optional[str] = None) -> None:
+    p = Path(path)
+    payload = {
+        "asof": asof,
+        "orders": orders,
+    }
+    ensure_parent_dir(p)
+    p.write_text(json.dumps(payload, indent=2), encoding="utf-8")

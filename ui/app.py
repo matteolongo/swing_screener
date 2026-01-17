@@ -17,6 +17,7 @@ from swing_screener.reporting.report import ReportConfig, build_daily_report
 from swing_screener.risk.position_sizing import RiskConfig
 from swing_screener.portfolio.state import (
     load_positions,
+    Position,
     evaluate_positions,
     updates_to_dataframe,
     apply_stop_updates,
@@ -35,6 +36,10 @@ from ui.helpers import (
     read_last_run,
     write_last_run,
     build_action_badge,
+    load_orders,
+    orders_to_dataframe,
+    save_orders,
+    make_order_entry,
 )
 
 
@@ -158,7 +163,7 @@ def main() -> None:
     st.sidebar.header("Navigation")
     page = st.sidebar.radio(
         "Page",
-        ["Daily Screener", "Manage Positions", "Outputs"],
+        ["Daily Screener", "Manage Positions", "Orders", "Outputs"],
         key="page",
     )
 
@@ -188,6 +193,9 @@ def main() -> None:
         manage_force_refresh = st.checkbox("Force refresh (manage)", value=False, key="manage_force_refresh")
         manage_csv_path = st.text_input("Manage CSV path", value="out/manage.csv", key="manage_csv_path")
         md_path = st.text_input("Degiro MD path", value="out/degiro_actions.md", key="md_path")
+
+    with st.sidebar.expander("Orders settings", expanded=(page == "Orders")):
+        orders_path = st.text_input("Orders path", value="./orders.json", key="orders_path")
 
     last_run_path = Path("ui/.last_run.json")
 
@@ -287,6 +295,102 @@ def main() -> None:
                 display = display.drop(columns=["ui_action_badge"])
                 st.subheader("Execution guidance")
                 st.markdown(display.head(50).to_html(escape=False), unsafe_allow_html=True)
+
+            st.subheader("Create pending orders")
+            orders_file = Path(orders_path)
+            if not orders_file.exists():
+                st.warning(f"Orders file not found: {orders_path}")
+                if st.button("Create orders.json"):
+                    ensure_parent_dir(orders_file)
+                    orders_file.write_text('{"asof": null, "orders": []}\n', encoding="utf-8")
+                    st.success("Template created.")
+                    st.rerun()
+            else:
+                try:
+                    orders = load_orders(orders_path)
+                except Exception as e:
+                    _handle_error(e, debug)
+                    orders = []
+
+                order_rows = []
+                for ticker, row in report.head(50).iterrows():
+                    order_type = row.get("suggested_order_type", None)
+                    order_price = row.get("suggested_order_price", None)
+                    if order_type not in {"BUY_LIMIT", "BUY_STOP"}:
+                        continue
+                    order_rows.append((ticker, row, order_type, order_price))
+
+                if not order_rows:
+                    st.info("No actionable rows for order creation.")
+                else:
+                    for ticker, row, order_type, order_price in order_rows:
+                        stop_price = row.get("stop", None)
+                        shares = row.get("shares", None)
+                        summary = f"{ticker} | {order_type} | {float(order_price):.2f}"
+                        with st.expander(summary, expanded=False):
+                            form_key = f"order_form_{ticker}"
+                            with st.form(form_key):
+                                key_base = f"order_{ticker}"
+                                order_type_sel = st.selectbox(
+                                    "Order type",
+                                    ["BUY_LIMIT", "BUY_STOP"],
+                                    index=0 if order_type == "BUY_LIMIT" else 1,
+                                    key=f"{key_base}_type",
+                                )
+                                limit_price = st.number_input(
+                                    "Limit/Stop price",
+                                    min_value=0.01,
+                                    value=float(order_price) if pd.notna(order_price) else 0.01,
+                                    step=0.01,
+                                    key=f"{key_base}_limit",
+                                )
+                                quantity = st.number_input(
+                                    "Quantity",
+                                    min_value=1,
+                                    value=int(shares) if pd.notna(shares) else 1,
+                                    step=1,
+                                    key=f"{key_base}_qty",
+                                )
+                                stop_default = (
+                                    f"{float(stop_price):.2f}" if pd.notna(stop_price) else ""
+                                )
+                                stop_price_input = st.text_input(
+                                    "Stop price (optional)",
+                                    value=stop_default,
+                                    key=f"{key_base}_stop",
+                                )
+                                notes = st.text_input("Notes (optional)", key=f"{key_base}_notes")
+                                submit_order = st.form_submit_button("Save pending order")
+
+                            if submit_order:
+                                if any(
+                                    o.get("status") == "pending" and o.get("ticker") == ticker
+                                    for o in orders
+                                ):
+                                    st.warning(f"{ticker}: pending order already exists.")
+                                    continue
+
+                                stop_price_value = None
+                                if stop_price_input.strip():
+                                    try:
+                                        stop_price_value = float(stop_price_input.strip())
+                                    except ValueError:
+                                        st.error(f"{ticker}: stop price must be a number.")
+                                        continue
+
+                                orders.append(
+                                    make_order_entry(
+                                        ticker=ticker,
+                                        order_type=order_type_sel,
+                                        limit_price=float(limit_price),
+                                        quantity=int(quantity),
+                                        stop_price=stop_price_value,
+                                        notes=notes,
+                                    )
+                                )
+                                save_orders(orders_path, orders, asof=str(pd.Timestamp.now().date()))
+                                st.success(f"Order added: {ticker}")
+                                st.rerun()
             st.download_button(
                 "Download report CSV",
                 report_csv,
@@ -331,7 +435,7 @@ def main() -> None:
         edited_df = st.data_editor(
             positions_df,
             num_rows="dynamic",
-            use_container_width=True,
+            width="stretch",
         )
 
         if st.button("Manage"):
@@ -358,7 +462,21 @@ def main() -> None:
             if df.empty:
                 st.info("No management actions.")
             else:
-                st.dataframe(df, use_container_width=True)
+                display = df.copy()
+                display = display.rename(
+                    columns={
+                        "action": "Action",
+                        "last": "Last Price",
+                        "entry": "Entry Price",
+                        "stop_old": "Stop (old)",
+                        "stop_suggested": "Stop (suggested)",
+                        "r_now": "R now",
+                        "reason": "Reason",
+                        "shares": "Shares",
+                    }
+                )
+                st.caption("R now = (last - entry) / (entry - stop). It shows current profit in R units.")
+                st.dataframe(display, width="stretch")
                 st.download_button(
                     "Download manage CSV",
                     df.to_csv(index=True),
@@ -374,6 +492,172 @@ def main() -> None:
                 mime="text/markdown",
             )
 
+    if page == "Orders":
+        st.header("Orders")
+        orders_file = Path(orders_path)
+        if not orders_file.exists():
+            st.error(f"Orders file not found: {orders_path}")
+            if st.button("Create template orders.json"):
+                ensure_parent_dir(orders_file)
+                orders_file.write_text('{"asof": null, "orders": []}\n', encoding="utf-8")
+                st.success("Template created.")
+            st.stop()
+
+        try:
+            orders = load_orders(orders_path)
+        except Exception as e:
+            _handle_error(e, debug)
+            st.stop()
+
+        st.subheader("Place order")
+        with st.form("place_order"):
+            ticker = st.text_input("Ticker").strip().upper()
+            order_type = st.selectbox("Order type", ["BUY_LIMIT", "BUY_STOP"])
+            limit_price = st.number_input("Limit/Stop price", min_value=0.01, value=0.01, step=0.01)
+            quantity = st.number_input("Quantity", min_value=1, value=1, step=1)
+            stop_price_raw = st.text_input("Stop price (optional)")
+            notes = st.text_input("Notes (optional)")
+            submitted = st.form_submit_button("Add pending order")
+
+        if submitted:
+            if not ticker:
+                st.error("Ticker is required.")
+                st.stop()
+            stop_price = None
+            if stop_price_raw.strip():
+                try:
+                    stop_price = float(stop_price_raw.strip())
+                except ValueError:
+                    st.error("Stop price must be a number.")
+                    st.stop()
+            orders.append(
+                make_order_entry(
+                    ticker=ticker,
+                    order_type=order_type,
+                    limit_price=float(limit_price),
+                    quantity=int(quantity),
+                    stop_price=stop_price,
+                    notes=notes,
+                )
+            )
+            save_orders(orders_path, orders, asof=str(pd.Timestamp.now().date()))
+            st.success(f"Order added: {ticker}")
+            st.rerun()
+
+        orders_df = orders_to_dataframe(orders)
+        pending_df = orders_df[orders_df["status"] == "pending"].copy()
+
+        st.subheader("Pending orders")
+        if pending_df.empty:
+            st.info("No pending orders.")
+        else:
+            st.dataframe(pending_df, width="stretch")
+
+        st.subheader("Update pending order")
+        pending = [o for o in orders if o.get("status") == "pending"]
+        if not pending:
+            st.info("No pending orders to update.")
+        else:
+            options = {
+                f"{o['ticker']} | {o['order_type']} | {o['order_id']}": o["order_id"]
+                for o in pending
+            }
+            with st.form("update_order"):
+                selection = st.selectbox("Pending order", list(options.keys()))
+                selected_id = options[selection]
+                selected = next(o for o in pending if o["order_id"] == selected_id)
+                default_entry = float(selected.get("limit_price") or 0.0)
+                fill_price = st.number_input(
+                    "Fill price (default = limit price)",
+                    min_value=0.01,
+                    value=default_entry if default_entry > 0 else 0.01,
+                    step=0.01,
+                )
+                fill_date = st.date_input(
+                    "Fill date",
+                    value=datetime.utcnow().date(),
+                )
+                quantity_input = st.number_input(
+                    "Quantity",
+                    min_value=1,
+                    value=int(selected.get("quantity") or 1),
+                    step=1,
+                )
+                stop_price_input = st.text_input(
+                    "Stop price (required to mark filled)",
+                    value=(
+                        f"{float(selected.get('stop_price')):.2f}"
+                        if selected.get("stop_price") is not None
+                        else ""
+                    ),
+                )
+                action = st.radio("Action", ["Mark filled", "Mark cancelled"])
+                update_submit = st.form_submit_button("Update order")
+
+            if update_submit:
+                had_error = False
+                for order in orders:
+                    if order.get("order_id") != selected_id:
+                        continue
+                    if action == "Mark cancelled":
+                        order["status"] = "cancelled"
+                        order["filled_date"] = ""
+                        order["entry_price"] = None
+                    else:
+                        if stop_price_input.strip() == "":
+                            st.error(f"{order['ticker']}: stop price required to mark filled.")
+                            had_error = True
+                            break
+                        try:
+                            stop_price_value = float(stop_price_input.strip())
+                        except ValueError:
+                            st.error(f"{order['ticker']}: stop price must be a number.")
+                            had_error = True
+                            break
+
+                        positions = load_positions(positions_path)
+                        if any(
+                            p.status == "open" and p.ticker == order["ticker"] for p in positions
+                        ):
+                            st.error(
+                                f"{order['ticker']}: already an open position. Close it or cancel the order."
+                            )
+                            had_error = True
+                            break
+
+                        order["quantity"] = int(quantity_input)
+                        order["stop_price"] = float(stop_price_value)
+                        order["status"] = "filled"
+                        order["filled_date"] = str(fill_date)
+                        order["entry_price"] = float(fill_price)
+
+                        positions.append(
+                            Position(
+                                ticker=order["ticker"],
+                                status="open",
+                                entry_date=str(fill_date),
+                                entry_price=float(fill_price),
+                                stop_price=float(order["stop_price"]),
+                                shares=int(order["quantity"]),
+                                initial_risk=None,
+                                max_favorable_price=float(fill_price),
+                                notes=str(order.get("notes", "")),
+                            )
+                        )
+                        save_positions(positions_path, positions, asof=str(pd.Timestamp.now().date()))
+                    break
+
+                if not had_error:
+                    save_orders(orders_path, orders, asof=str(pd.Timestamp.now().date()))
+                    st.success("Order updated.")
+                    st.rerun()
+
+        st.subheader("All orders")
+        if orders_df.empty:
+            st.info("No orders recorded.")
+        else:
+            st.dataframe(orders_df, width="stretch")
+
     if page == "Outputs":
         st.header("Outputs")
         last_run = read_last_run(last_run_path)
@@ -385,7 +669,7 @@ def main() -> None:
             st.warning(f"Unable to read report CSV: {report_err}")
         elif not report_df.empty:
             st.subheader("Report preview")
-            st.dataframe(report_df, use_container_width=True)
+            st.dataframe(report_df, width="stretch")
 
         md_file = Path(md_path)
         if md_file.exists():
