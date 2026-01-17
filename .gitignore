@@ -48,3 +48,8 @@ dist/
 
 # =========================
 # Logs
+
+# =========================
+# Execution files
+orders.json
+positions,.json
