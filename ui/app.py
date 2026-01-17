@@ -193,6 +193,13 @@ def _render_report_stats(report: pd.DataFrame) -> None:
         counts = report["signal"].value_counts()
         st.write("Signal breakdown:")
         st.write(counts)
+        st.caption(
+            "Signals guide which rows matter: "
+            "breakout = price near breakout level (use suggested buy stop); "
+            "pullback = price near short-term MA (use suggested buy limit); "
+            "none = informational only (skip unless you change filters). "
+            "Always follow the Suggested order type/price in the guidance table."
+        )
 
 
 def _init_settings(universes: list[str]) -> dict:
@@ -498,6 +505,13 @@ def main() -> None:
                 display.insert(0, "Action", display["ui_action_badge"].map(_badge_html))
                 display = display.drop(columns=["ui_action_badge"])
                 st.subheader("Execution guidance")
+                st.caption(
+                    "Suggested order type/price comes from signal context: "
+                    "breakout → buy stop near breakout level; "
+                    "pullback → buy limit near pullback level; "
+                    "none → skip. "
+                    "Badges are hints only; orders are not placed automatically."
+                )
                 st.markdown(display.head(50).to_html(escape=False), unsafe_allow_html=True)
 
             st.subheader("Create pending orders from candidates")
