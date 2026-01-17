@@ -719,99 +719,105 @@ def main() -> None:
         if not pending:
             st.info("No pending orders to update.")
         else:
-            options = {
-                f"{o['ticker']} | {o['order_type']} | {o['order_id']}": o["order_id"]
-                for o in pending
-            }
-            with st.form("update_order"):
-                selection = st.selectbox("Pending order", list(options.keys()))
-                selected_id = options[selection]
-                selected = next(o for o in pending if o["order_id"] == selected_id)
-                default_entry = float(selected.get("limit_price") or 0.0)
-                fill_price = st.number_input(
-                    "Fill price (default = limit price)",
-                    min_value=0.01,
-                    value=default_entry if default_entry > 0 else 0.01,
-                    step=0.01,
-                )
-                fill_date = st.date_input(
-                    "Fill date",
-                    value=datetime.utcnow().date(),
-                )
-                quantity_input = st.number_input(
-                    "Quantity",
-                    min_value=1,
-                    value=int(selected.get("quantity") or 1),
-                    step=1,
-                )
-                stop_price_input = st.text_input(
-                    "Stop price (required to mark filled)",
-                    value=(
-                        f"{float(selected.get('stop_price')):.2f}"
-                        if selected.get("stop_price") is not None
-                        else ""
-                    ),
-                )
-                action = st.radio("Action", ["Mark filled", "Mark cancelled"])
-                update_submit = st.form_submit_button("Update order")
-
-            if update_submit:
-                had_error = False
-                for order in orders:
-                    if order.get("order_id") != selected_id:
-                        continue
-                    if action == "Mark cancelled":
-                        order["status"] = "cancelled"
-                        order["filled_date"] = ""
-                        order["entry_price"] = None
-                    else:
-                        if stop_price_input.strip() == "":
-                            st.error(f"{order['ticker']}: stop price required to mark filled.")
-                            had_error = True
-                            break
-                        try:
-                            stop_price_value = float(stop_price_input.strip())
-                        except ValueError:
-                            st.error(f"{order['ticker']}: stop price must be a number.")
-                            had_error = True
-                            break
-
-                        positions = load_positions(settings["positions_path"])
-                        if any(
-                            p.status == "open" and p.ticker == order["ticker"] for p in positions
-                        ):
-                            st.error(
-                                f"{order['ticker']}: already an open position. Close it or cancel the order."
-                            )
-                            had_error = True
-                            break
-
-                        order["quantity"] = int(quantity_input)
-                        order["stop_price"] = float(stop_price_value)
-                        order["status"] = "filled"
-                        order["filled_date"] = str(fill_date)
-                        order["entry_price"] = float(fill_price)
-
-                        positions.append(
-                            Position(
-                                ticker=order["ticker"],
-                                status="open",
-                                entry_date=str(fill_date),
-                                entry_price=float(fill_price),
-                                stop_price=float(order["stop_price"]),
-                                shares=int(order["quantity"]),
-                                initial_risk=None,
-                                max_favorable_price=float(fill_price),
-                                notes=str(order.get("notes", "")),
-                            )
+            for pending_order in pending:
+                oid = pending_order.get("order_id")
+                header = f"{pending_order['ticker']} | {pending_order['order_type']} | {oid}"
+                with st.expander(header, expanded=False):
+                    form_key = f"update_{oid}"
+                    with st.form(form_key):
+                        default_entry = float(pending_order.get("limit_price") or 0.0)
+                        fill_price = st.number_input(
+                            "Fill price (default = limit price)",
+                            min_value=0.01,
+                            value=default_entry if default_entry > 0 else 0.01,
+                            step=0.01,
+                            key=f"{form_key}_fill_price",
                         )
-                        save_positions(settings["positions_path"], positions, asof=str(pd.Timestamp.now().date()))
-                    break
+                        fill_date = st.date_input(
+                            "Fill date",
+                            value=datetime.utcnow().date(),
+                            key=f"{form_key}_date",
+                        )
+                        quantity_input = st.number_input(
+                            "Quantity",
+                            min_value=1,
+                            value=int(pending_order.get("quantity") or 1),
+                            step=1,
+                            key=f"{form_key}_qty",
+                        )
+                        stop_price_input = st.text_input(
+                            "Stop price (required to mark filled)",
+                            value=(
+                                f"{float(pending_order.get('stop_price')):.2f}"
+                                if pending_order.get("stop_price") is not None
+                                else ""
+                            ),
+                            key=f"{form_key}_stop",
+                        )
+                        action = st.radio(
+                            "Action",
+                            ["Mark filled", "Mark cancelled"],
+                            key=f"{form_key}_action",
+                        )
+                        update_submit = st.form_submit_button("Update order")
 
-                if not had_error:
-                    save_orders(settings["orders_path"], orders, asof=str(pd.Timestamp.now().date()))
-                    st.success("Order updated.")
-                    st.rerun()
+                    if update_submit:
+                        had_error = False
+                        for order in orders:
+                            if order.get("order_id") != oid:
+                                continue
+                            if action == "Mark cancelled":
+                                order["status"] = "cancelled"
+                                order["filled_date"] = ""
+                                order["entry_price"] = None
+                            else:
+                                if stop_price_input.strip() == "":
+                                    st.error(f"{order['ticker']}: stop price required to mark filled.")
+                                    had_error = True
+                                    break
+                                try:
+                                    stop_price_value = float(stop_price_input.strip())
+                                except ValueError:
+                                    st.error(f"{order['ticker']}: stop price must be a number.")
+                                    had_error = True
+                                    break
+
+                                positions = load_positions(settings["positions_path"])
+                                if any(
+                                    p.status == "open" and p.ticker == order["ticker"] for p in positions
+                                ):
+                                    st.error(
+                                        f"{order['ticker']}: already an open position. Close it or cancel the order."
+                                    )
+                                    had_error = True
+                                    break
+
+                                order["quantity"] = int(quantity_input)
+                                order["stop_price"] = float(stop_price_value)
+                                order["status"] = "filled"
+                                order["filled_date"] = str(fill_date)
+                                order["entry_price"] = float(fill_price)
+
+                                positions.append(
+                                    Position(
+                                        ticker=order["ticker"],
+                                        status="open",
+                                        entry_date=str(fill_date),
+                                        entry_price=float(fill_price),
+                                        stop_price=float(order["stop_price"]),
+                                        shares=int(order["quantity"]),
+                                        initial_risk=None,
+                                        max_favorable_price=float(fill_price),
+                                        notes=str(order.get("notes", "")),
+                                    )
+                                )
+                                save_positions(settings["positions_path"], positions, asof=str(pd.Timestamp.now().date()))
+                            break
+
+                        if not had_error:
+                            save_orders(settings["orders_path"], orders, asof=str(pd.Timestamp.now().date()))
+                            st.success("Order updated.")
+                            st.rerun()
 
         st.subheader("All orders")
         if orders_df.empty:
