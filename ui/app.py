@@ -435,7 +435,7 @@ def main() -> None:
         edited_df = st.data_editor(
             positions_df,
             num_rows="dynamic",
-            use_container_width=True,
+            width="stretch",
         )
 
         if st.button("Manage"):
@@ -476,7 +476,7 @@ def main() -> None:
                     }
                 )
                 st.caption("R now = (last - entry) / (entry - stop). It shows current profit in R units.")
-                st.dataframe(display, use_container_width=True)
+                st.dataframe(display, width="stretch")
                 st.download_button(
                     "Download manage CSV",
                     df.to_csv(index=True),
@@ -551,7 +551,7 @@ def main() -> None:
         if pending_df.empty:
             st.info("No pending orders.")
         else:
-            st.dataframe(pending_df, use_container_width=True)
+            st.dataframe(pending_df, width="stretch")
 
         st.subheader("Update pending order")
         pending = [o for o in orders if o.get("status") == "pending"]
@@ -577,10 +577,25 @@ def main() -> None:
                     "Fill date",
                     value=datetime.utcnow().date(),
                 )
+                quantity_input = st.number_input(
+                    "Quantity",
+                    min_value=1,
+                    value=int(selected.get("quantity") or 1),
+                    step=1,
+                )
+                stop_price_input = st.text_input(
+                    "Stop price (required to mark filled)",
+                    value=(
+                        f"{float(selected.get('stop_price')):.2f}"
+                        if selected.get("stop_price") is not None
+                        else ""
+                    ),
+                )
                 action = st.radio("Action", ["Mark filled", "Mark cancelled"])
                 update_submit = st.form_submit_button("Update order")
 
             if update_submit:
+                had_error = False
                 for order in orders:
                     if order.get("order_id") != selected_id:
                         continue
@@ -589,22 +604,32 @@ def main() -> None:
                         order["filled_date"] = ""
                         order["entry_price"] = None
                     else:
-                        order["status"] = "filled"
-                        order["filled_date"] = str(fill_date)
-                        order["entry_price"] = float(fill_price)
-
-                        if order.get("stop_price") is None or order.get("quantity") is None:
-                            raise ValueError(
-                                f"{order['ticker']}: stop_price and quantity required to create a position."
-                            )
+                        if stop_price_input.strip() == "":
+                            st.error(f"{order['ticker']}: stop price required to mark filled.")
+                            had_error = True
+                            break
+                        try:
+                            stop_price_value = float(stop_price_input.strip())
+                        except ValueError:
+                            st.error(f"{order['ticker']}: stop price must be a number.")
+                            had_error = True
+                            break
 
                         positions = load_positions(positions_path)
                         if any(
                             p.status == "open" and p.ticker == order["ticker"] for p in positions
                         ):
-                            raise ValueError(
+                            st.error(
                                 f"{order['ticker']}: already an open position. Close it or cancel the order."
                             )
+                            had_error = True
+                            break
+
+                        order["quantity"] = int(quantity_input)
+                        order["stop_price"] = float(stop_price_value)
+                        order["status"] = "filled"
+                        order["filled_date"] = str(fill_date)
+                        order["entry_price"] = float(fill_price)
 
                         positions.append(
                             Position(
@@ -622,15 +647,16 @@ def main() -> None:
                         save_positions(positions_path, positions, asof=str(pd.Timestamp.now().date()))
                     break
 
-                save_orders(orders_path, orders, asof=str(pd.Timestamp.now().date()))
-                st.success("Order updated.")
-                st.rerun()
+                if not had_error:
+                    save_orders(orders_path, orders, asof=str(pd.Timestamp.now().date()))
+                    st.success("Order updated.")
+                    st.rerun()
 
         st.subheader("All orders")
         if orders_df.empty:
             st.info("No orders recorded.")
         else:
-            st.dataframe(orders_df, use_container_width=True)
+            st.dataframe(orders_df, width="stretch")
 
     if page == "Outputs":
         st.header("Outputs")
@@ -643,7 +669,7 @@ def main() -> None:
             st.warning(f"Unable to read report CSV: {report_err}")
         elif not report_df.empty:
             st.subheader("Report preview")
-            st.dataframe(report_df, use_container_width=True)
+            st.dataframe(report_df, width="stretch")
 
         md_file = Path(md_path)
         if md_file.exists():
