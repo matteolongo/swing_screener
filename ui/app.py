@@ -51,10 +51,13 @@ from ui.helpers import (
     make_order_entry,
     load_user_defaults,
     save_user_defaults,
+    load_backtest_configs,
+    save_backtest_configs,
 )
 
 PREFS_PATH = Path("ui/.user_defaults.json")
 LAST_RUN_PATH = Path("ui/.last_run.json")
+BACKTEST_CONFIGS_PATH = Path("ui/.backtest_configs.json")
 
 DEFAULT_SETTINGS: dict = {
     "universe": "mega",
@@ -236,7 +239,9 @@ def _run_backtest(
     ucfg = DataUniverseConfig(benchmark="SPY", ensure_benchmark=True, max_tickers=top_n or None)
     tickers = load_universe_from_package(universe, ucfg)
 
-    mcfg = MarketDataConfig(start=start or "2018-01-01", end=end or None)
+    start_clean = str(start).replace("/", "-") if start else "2018-01-01"
+    end_clean = str(end).replace("/", "-") if end else None
+    mcfg = MarketDataConfig(start=start_clean or "2018-01-01", end=end_clean or None)
     ohlcv = fetch_ohlcv(
         tickers,
         mcfg,
@@ -1094,8 +1099,10 @@ def main() -> None:
                 """
             )
 
-        with st.form("backtest_form"):
-            st.caption("Config A (baseline)")
+        saved_configs = load_backtest_configs(BACKTEST_CONFIGS_PATH)
+
+        st.markdown("### Crea e salva configurazioni")
+        with st.form("backtest_save_form"):
             bt_start_val = st.session_state.get("bt_start", defaults["bt_start"])
             if isinstance(bt_start_val, str):
                 bt_start_val = bt_start_val.strip()
@@ -1114,60 +1121,17 @@ def main() -> None:
                 value=str(st.session_state.get("bt_end", defaults["bt_end"])),
                 key="bt_end",
             )
-            bt_entry_type = st.selectbox(
-                "Entry type",
-                ["pullback", "breakout"],
-                index=0 if st.session_state.get("bt_entry_type", defaults["bt_entry_type"]) == "pullback" else 1,
-                key="bt_entry_type",
-            )
-            bt_breakout_lookback = st.number_input(
-                "Breakout lookback",
-                min_value=10,
-                max_value=200,
-                value=int(st.session_state.get("bt_breakout_lookback", defaults["bt_breakout_lookback"])),
-                step=5,
-                key="bt_breakout_lookback",
-            )
-            bt_pullback_ma = st.number_input(
-                "Pullback MA",
-                min_value=5,
-                max_value=100,
-                value=int(st.session_state.get("bt_pullback_ma", defaults["bt_pullback_ma"])),
-                step=1,
-                key="bt_pullback_ma",
-            )
-            bt_atr_window = st.number_input(
-                "ATR window",
-                min_value=5,
-                max_value=50,
-                value=int(st.session_state.get("bt_atr_window", defaults["bt_atr_window"])),
-                step=1,
-                key="bt_atr_window",
-            )
-            bt_k_atr = st.slider(
-                "Stop distance (k * ATR)",
-                min_value=1.0,
-                max_value=3.0,
-                value=float(st.session_state.get("bt_k_atr", defaults["bt_k_atr"])),
-                step=0.1,
-                key="bt_k_atr",
-            )
-            bt_take_profit_R = st.slider(
-                "Take profit (R)",
-                min_value=0.5,
-                max_value=5.0,
-                value=float(st.session_state.get("bt_take_profit_R", defaults["bt_take_profit_R"])),
-                step=0.25,
-                key="bt_take_profit_R",
-            )
-            bt_max_holding_days = st.number_input(
-                "Max holding days",
-                min_value=5,
-                max_value=100,
-                value=int(st.session_state.get("bt_max_holding_days", defaults["bt_max_holding_days"])),
-                step=1,
-                key="bt_max_holding_days",
-            )
+            entry_type = st.selectbox("Entry type", ["pullback", "breakout"], key="bt_entry_type", help="pullback = buy limit su MA; breakout = buy stop oltre massimo.")
+            end_label = (bt_end_raw.strip() or "latest").replace("/", "_")
+            start_label = str(bt_start).replace("/", "_")
+            cfg_name_default = f"{entry_type}_{start_label}_{end_label}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+            cfg_name = st.text_input("Nome config", value=cfg_name_default, help="Usa un nome semplice. Verrà salvato per i confronti.")
+            k_atr_val = st.slider("Stop distance (k * ATR)", 1.0, 3.0, float(st.session_state.get("bt_k_atr", defaults["bt_k_atr"])), 0.1, key="bt_k_atr")
+            tp_r_val = st.slider("Take profit (R)", 0.5, 5.0, float(st.session_state.get("bt_take_profit_R", defaults["bt_take_profit_R"])), 0.25, key="bt_take_profit_R")
+            max_hold = st.number_input("Max holding days", 5, 100, int(st.session_state.get("bt_max_holding_days", defaults["bt_max_holding_days"])), 1, key="bt_max_holding_days")
+            breakout_lb = st.number_input("Breakout lookback", 10, 200, int(st.session_state.get("bt_breakout_lookback", defaults["bt_breakout_lookback"])), 5, key="bt_breakout_lookback")
+            pullback_ma = st.number_input("Pullback MA", 5, 100, int(st.session_state.get("bt_pullback_ma", defaults["bt_pullback_ma"])), 1, key="bt_pullback_ma")
+            atr_win = st.number_input("ATR window", 5, 50, int(st.session_state.get("bt_atr_window", defaults["bt_atr_window"])), 1, key="bt_atr_window")
             bt_min_trades_per_ticker = st.number_input(
                 "Min trades per ticker (include in summary)",
                 min_value=1,
@@ -1177,7 +1141,7 @@ def main() -> None:
                 key="bt_min_trades_per_ticker",
             )
             bt_min_trades_compare = st.number_input(
-                "Min trades (per config) to compare A vs B",
+                "Min trades (per config) to compare",
                 min_value=1,
                 max_value=200,
                 value=int(st.session_state.get("bt_min_trades_compare", defaults["bt_min_trades_compare"])),
@@ -1191,7 +1155,7 @@ def main() -> None:
                 value=float(st.session_state.get("bt_flag_profit_factor", defaults["bt_flag_profit_factor"])),
                 step=0.1,
                 key="bt_flag_profit_factor",
-                help="Below this profit factor, highlight a caution flag.",
+                help="Sotto questo profit factor: flag giallo.",
             )
             bt_flag_max_dd = st.number_input(
                 "Caution threshold: max drawdown R",
@@ -1200,144 +1164,95 @@ def main() -> None:
                 value=float(st.session_state.get("bt_flag_max_dd", defaults["bt_flag_max_dd"])),
                 step=0.5,
                 key="bt_flag_max_dd",
-                help="If max drawdown is below this (more negative), flag caution.",
+                help="Più negativo di questo: flag giallo.",
             )
-            run_compare = st.checkbox("Run comparison B (alternate params)", value=False)
+            save_cfg = st.form_submit_button("Salva configurazione")
 
-            if run_compare:
-                st.caption("Config B (comparison)")
-                bt_entry_type_b = st.selectbox(
-                    "Entry type (B)",
-                    ["pullback", "breakout"],
-                    key="bt_entry_type_b",
-                )
-                bt_k_atr_b = st.slider(
-                    "Stop distance (k * ATR) (B)",
-                    min_value=1.0,
-                    max_value=3.0,
-                    value=float(st.session_state.get("bt_k_atr", defaults["bt_k_atr"])),
-                    step=0.1,
-                    key="bt_k_atr_b",
-                )
-                bt_take_profit_R_b = st.slider(
-                    "Take profit (R) (B)",
-                    min_value=0.5,
-                    max_value=5.0,
-                    value=float(st.session_state.get("bt_take_profit_R", defaults["bt_take_profit_R"])),
-                    step=0.25,
-                    key="bt_take_profit_R_b",
-                )
-                bt_max_holding_days_b = st.number_input(
-                    "Max holding days (B)",
-                    min_value=5,
-                    max_value=100,
-                    value=int(st.session_state.get("bt_max_holding_days", defaults["bt_max_holding_days"])),
-                    step=1,
-                    key="bt_max_holding_days_b",
-                )
-                bt_breakout_lookback_b = st.number_input(
-                    "Breakout lookback (B)",
-                    min_value=10,
-                    max_value=200,
-                    value=int(st.session_state.get("bt_breakout_lookback", defaults["bt_breakout_lookback"])),
-                    step=5,
-                    key="bt_breakout_lookback_b",
-                )
-                bt_pullback_ma_b = st.number_input(
-                    "Pullback MA (B)",
-                    min_value=5,
-                    max_value=100,
-                    value=int(st.session_state.get("bt_pullback_ma", defaults["bt_pullback_ma"])),
-                    step=1,
-                    key="bt_pullback_ma_b",
-                )
-                bt_atr_window_b = st.number_input(
-                    "ATR window (B)",
-                    min_value=5,
-                    max_value=50,
-                    value=int(st.session_state.get("bt_atr_window", defaults["bt_atr_window"])),
-                    step=1,
-                    key="bt_atr_window_b",
-                )
+        if save_cfg:
+            saved_configs.append(
+                {
+                    "name": cfg_name.strip() or cfg_name_default,
+                    "created_at": datetime.utcnow().isoformat(),
+                    "entry_type": entry_type,
+                    "k_atr": float(k_atr_val),
+                    "take_profit_R": float(tp_r_val),
+                    "max_holding_days": int(max_hold),
+                    "breakout_lookback": int(breakout_lb),
+                    "pullback_ma": int(pullback_ma),
+                    "atr_window": int(atr_win),
+                    "bt_min_trades_per_ticker": int(bt_min_trades_per_ticker),
+                    "bt_min_trades_compare": int(bt_min_trades_compare),
+                    "bt_flag_profit_factor": float(bt_flag_profit_factor),
+                    "bt_flag_max_dd": float(bt_flag_max_dd),
+                    "start": str(bt_start),
+                    "end": bt_end_raw.strip(),
+                }
+            )
+            save_backtest_configs(BACKTEST_CONFIGS_PATH, saved_configs)
+            st.success("Config salvata.")
+            st.rerun()
 
-            bt_submit = st.form_submit_button("Run backtest")
+        st.markdown("### Config salvate")
+        if not saved_configs:
+            st.info("Nessuna config salvata. Creane una sopra.")
+        else:
+            to_delete = []
+            for cfg in saved_configs:
+                with st.expander(f"{cfg['name']} ({cfg['entry_type']}) — {cfg.get('created_at','')}"):
+                    st.write(f"Stop k_ATR: {cfg['k_atr']} | TP R: {cfg['take_profit_R']} | Max hold: {cfg['max_holding_days']}d")
+                    st.write(f"Breakout lb: {cfg['breakout_lookback']} | Pullback MA: {cfg['pullback_ma']} | ATR win: {cfg['atr_window']}")
+                    st.caption(f"Start: {cfg.get('start','')} | End: {cfg.get('end','latest')}")
+                    if st.button(f"Elimina {cfg['name']}", key=f"del_{cfg['name']}"):
+                        to_delete.append(cfg)
+            if to_delete:
+                for cfg in to_delete:
+                    saved_configs.remove(cfg)
+                save_backtest_configs(BACKTEST_CONFIGS_PATH, saved_configs)
+                st.success("Config eliminata.")
+                st.rerun()
 
-        if bt_submit:
-            try:
-                cfg_a = BacktestConfig(
-                    entry_type=bt_entry_type,  # type: ignore[arg-type]
-                    breakout_lookback=int(bt_breakout_lookback),
-                    pullback_ma=int(bt_pullback_ma),
-                    atr_window=int(bt_atr_window),
-                    k_atr=float(bt_k_atr),
-                    take_profit_R=float(bt_take_profit_R),
-                    max_holding_days=int(bt_max_holding_days),
-                )
-                bt_end_val = bt_end_raw.strip() or None
-                res_a = _run_backtest(
-                    settings["universe"],
-                    int(settings["top_n"]),
-                    str(bt_start),
-                    bt_end_val if bt_end_val else "",
-                    cfg_a,
-                    int(bt_min_trades_per_ticker),
-                    bool(settings["use_cache"]),
-                    bool(settings["force_refresh"]),
-                )
-                st.session_state["bt_a"] = res_a
+        st.markdown("### Seleziona config da confrontare")
+        cfg_names = [c["name"] for c in saved_configs]
+        selected_names = st.multiselect("Config", cfg_names, default=cfg_names[: min(3, len(cfg_names))])
 
-                if run_compare:
-                    cfg_b = BacktestConfig(
-                        entry_type=bt_entry_type_b,  # type: ignore[arg-type]
-                        breakout_lookback=int(bt_breakout_lookback_b),
-                        pullback_ma=int(bt_pullback_ma_b),
-                        atr_window=int(bt_atr_window_b),
-                        k_atr=float(bt_k_atr_b),
-                        take_profit_R=float(bt_take_profit_R_b),
-                        max_holding_days=int(bt_max_holding_days_b),
+        if st.button("Esegui backtest sulle config selezionate"):
+            results = []
+            for cfg in saved_configs:
+                if cfg["name"] not in selected_names:
+                    continue
+                try:
+                    cfg_bt = BacktestConfig(
+                        entry_type=cfg["entry_type"],  # type: ignore[arg-type]
+                        breakout_lookback=cfg["breakout_lookback"],
+                        pullback_ma=cfg["pullback_ma"],
+                        atr_window=cfg["atr_window"],
+                        k_atr=cfg["k_atr"],
+                        take_profit_R=cfg["take_profit_R"],
+                        max_holding_days=cfg["max_holding_days"],
                     )
-                    res_b = _run_backtest(
+                    res = _run_backtest(
                         settings["universe"],
                         int(settings["top_n"]),
-                        str(bt_start),
-                        bt_end_val if bt_end_val else "",
-                        cfg_b,
-                        int(bt_min_trades_per_ticker),
+                        cfg.get("start") or str(bt_start),
+                        cfg.get("end") or "",
+                        cfg_bt,
+                        int(cfg.get("bt_min_trades_per_ticker", bt_min_trades_per_ticker)),
                         bool(settings["use_cache"]),
                         bool(settings["force_refresh"]),
                     )
-                    st.session_state["bt_b"] = res_b
-                else:
-                    st.session_state.pop("bt_b", None)
+                    res["name"] = cfg["name"]
+                    res["cfg"] = cfg
+                    results.append(res)
+                except Exception as e:
+                    _handle_error(e, debug)
+            st.session_state["bt_results"] = results
 
-                st.success("Backtest completed.")
-            except Exception as e:
-                _handle_error(e, debug)
-
-        res_a = st.session_state.get("bt_a")
-        res_b = st.session_state.get("bt_b")
-
-        if not res_a:
-            st.info("Run a backtest to see results.")
+        results = st.session_state.get("bt_results", [])
+        if not results:
+            st.info("Seleziona e lancia i backtest per vedere i risultati.")
         else:
-            if res_b:
-                col_a, col_b = st.columns(2)
-            else:
-                col_a = st.container()
-                col_b = None
-
-            with col_a:
-                st.markdown("**Summary A**")
-                st.dataframe(res_a["summary_total"], use_container_width=True)
-            if res_b and col_b:
-                with col_b:
-                    st.markdown("**Summary B**")
-                    st.dataframe(res_b["summary_total"], use_container_width=True)
-
-            # Currency impact (simple, non-compounding)
             risk_per_trade = float(settings["account_size"]) * (float(settings["risk_pct"]) / 100.0)
-            st.markdown("**Stima € per trade (semplice, senza compounding)**")
-            col_imp_a, col_imp_b = st.columns(2 if res_b else 1)
+            rows = []
 
             def _metric(summary: pd.DataFrame, key: str):
                 if summary is None or summary.empty or key not in summary:
@@ -1345,97 +1260,102 @@ def main() -> None:
                 val = summary.iloc[0].get(key)
                 return float(val) if pd.notna(val) else None
 
-            exp_a = _metric(res_a["summary_total"], "expectancy_R")
-            trades_a = _metric(res_a["summary_total"], "trades") or 0
-            with col_imp_a:
-                if exp_a is not None:
-                    per_trade_eur = exp_a * risk_per_trade
-                    total_eur = per_trade_eur * trades_a
-                    st.info(
-                        f"Config A: expectancy {exp_a:.2f}R → ~{per_trade_eur:.2f}€ a trade "
-                        f"(risk/trade {risk_per_trade:.2f}€, {int(trades_a)} trade tot ≈ {total_eur:.2f}€)."
-                    )
-                else:
-                    st.info("Config A: nessuna stima € (expectancy mancante).")
-
-            if res_b:
-                exp_b = _metric(res_b["summary_total"], "expectancy_R")
-                trades_b = _metric(res_b["summary_total"], "trades") or 0
-                with col_imp_b:
-                    if exp_b is not None:
-                        per_trade_eur_b = exp_b * risk_per_trade
-                        total_eur_b = per_trade_eur_b * trades_b
-                        st.info(
-                            f"Config B: expectancy {exp_b:.2f}R → ~{per_trade_eur_b:.2f}€ a trade "
-                            f"(risk/trade {risk_per_trade:.2f}€, {int(trades_b)} trade tot ≈ {total_eur_b:.2f}€)."
-                        )
-                    else:
-                        st.info("Config B: nessuna stima € (expectancy mancante).")
-
-            if res_b:
-                st.subheader("Comparison (A vs B)")
-                comp_cols = ["expectancy_R", "avg_R", "median_R", "profit_factor_R", "max_drawdown_R", "trades"]
-
-                df_comp = pd.DataFrame(
+            for res in results:
+                summary = res["summary_total"]
+                name = res.get("name", "config")
+                exp_r = _metric(summary, "expectancy_R")
+                pf = _metric(summary, "profit_factor_R")
+                dd = _metric(summary, "max_drawdown_R")
+                trades = _metric(summary, "trades") or 0
+                per_trade_eur = exp_r * risk_per_trade if exp_r is not None else None
+                total_eur = per_trade_eur * trades if per_trade_eur is not None else None
+                rows.append(
                     {
-                        "metric": comp_cols,
-                        "A": [_metric(res_a["summary_total"], c) for c in comp_cols],
-                        "B": [_metric(res_b["summary_total"], c) for c in comp_cols],
+                        "Config": name,
+                        "Expectancy_R": exp_r,
+                        "Profit_factor": pf,
+                        "Max_drawdown_R": dd,
+                        "Trades": trades,
+                        "€ per trade": per_trade_eur,
+                        "€ totale": total_eur,
                     }
                 )
 
-                trades_a = _metric(res_a["summary_total"], "trades") or 0
-                trades_b = _metric(res_b["summary_total"], "trades") or 0
-                winner_note = ""
-                if trades_a >= bt_min_trades_compare and trades_b >= bt_min_trades_compare:
-                    exp_a = _metric(res_a["summary_total"], "expectancy_R")
-                    exp_b = _metric(res_b["summary_total"], "expectancy_R")
-                    pf_a = _metric(res_a["summary_total"], "profit_factor_R")
-                    pf_b = _metric(res_b["summary_total"], "profit_factor_R")
-                    dd_a = _metric(res_a["summary_total"], "max_drawdown_R")
-                    dd_b = _metric(res_b["summary_total"], "max_drawdown_R")
+            df_summary = pd.DataFrame(rows)
+            st.subheader("Panoramica")
+            st.dataframe(df_summary, use_container_width=True)
 
-                    winner = None
-                    reason_parts = []
-                    if exp_a is not None and exp_b is not None and exp_a != exp_b:
-                        winner = "A" if exp_a > exp_b else "B"
-                        reason_parts.append(f"expectancy {exp_a:.2f}R vs {exp_b:.2f}R")
-                    elif pf_a is not None and pf_b is not None and pf_a != pf_b:
-                        winner = "A" if pf_a > pf_b else "B"
-                        reason_parts.append(f"profit factor {pf_a:.2f} vs {pf_b:.2f}")
-                    elif dd_a is not None and dd_b is not None and dd_a != dd_b:
-                        winner = "A" if dd_a > dd_b else "B"  # less negative is better
-                        reason_parts.append(f"drawdown {dd_a:.2f}R vs {dd_b:.2f}R")
-
-                    if winner:
-                        winner_note = f"Config {winner} looks better: " + ", ".join(reason_parts)
-                else:
-                    winner_note = f"Not enough trades to compare: A={int(trades_a)} B={int(trades_b)} (min {bt_min_trades_compare})."
-
-                st.dataframe(df_comp, use_container_width=True)
-                if winner_note:
-                    st.info(winner_note)
-
-            st.subheader("By ticker (A)")
-            st.dataframe(res_a["summary_by_ticker"], use_container_width=True)
-
-            st.subheader("Equity curve (A, cum R)")
-            if res_a["curve"] is not None and not res_a["curve"].empty:
-                st.line_chart(res_a["curve"].set_index("date")[["cum_R"]])
-            else:
-                st.info("No equity curve to display.")
-
-            st.subheader("Trades sample (A)")
-            if res_a["trades"] is not None and not res_a["trades"].empty:
-                st.dataframe(res_a["trades"].head(200), use_container_width=True)
-                st.download_button(
-                    "Download trades CSV (A)",
-                    res_a["trades"].to_csv(index=False),
-                    file_name="backtest_trades_a.csv",
-                    mime="text/csv",
+            # Winner highlight
+            valid = df_summary.dropna(subset=["Expectancy_R", "Trades"])
+            valid = valid[valid["Trades"] >= bt_min_trades_compare]
+            winner_msg = ""
+            if not valid.empty:
+                # pick highest expectancy; tiebreak by higher profit factor, then less negative drawdown
+                valid = valid.copy()
+                valid["pf"] = valid["Profit_factor"].fillna(-1e9)
+                valid["dd"] = valid["Max_drawdown_R"].fillna(-1e9)
+                winner_row = valid.sort_values(
+                    ["Expectancy_R", "pf", "dd"],
+                    ascending=[False, False, False],
+                ).iloc[0]
+                winner_msg = (
+                    f"Config vincente: **{winner_row['Config']}** "
+                    f"(Expectancy {winner_row['Expectancy_R']:.2f}R, "
+                    f"PF {winner_row['Profit_factor'] or 0:.2f}, "
+                    f"DD {winner_row['Max_drawdown_R'] or 0:.2f}R)"
                 )
+                st.success(winner_msg)
             else:
-                st.info("No trades.")
+                st.info(f"Nessuna config con almeno {bt_min_trades_compare} trade per confronto.")
+
+            st.markdown("**Bandierine (caution)**")
+            cautions = []
+            for row in rows:
+                warns = []
+                if row["Trades"] < bt_min_trades_compare:
+                    warns.append("pochi trade")
+                if row["Profit_factor"] is not None and row["Profit_factor"] < bt_flag_profit_factor:
+                    warns.append("profit factor basso")
+                if row["Max_drawdown_R"] is not None and row["Max_drawdown_R"] < bt_flag_max_dd:
+                    warns.append("drawdown profondo")
+                if warns:
+                    cautions.append(f"{row['Config']}: " + ", ".join(warns))
+            if cautions:
+                for c in cautions:
+                    st.warning(c)
+            else:
+                st.info("Nessuna caution flag con le soglie attuali.")
+
+            # Bold € impact
+            st.markdown("**Impatto € (non compounding, stima semplice)**")
+            for row in rows:
+                if row["€ per trade"] is None:
+                    continue
+                st.markdown(
+                    f"- **{row['Config']}**: ~**{row['€ per trade']:.2f}€** a trade "
+                    f"(risk/trade {risk_per_trade:.2f}€, {int(row['Trades'])} trade ≈ **{row['€ totale'] or 0:.2f}€**)"
+                )
+
+            # Details for first config selected
+            if results:
+                first = results[0]
+                st.subheader(f"Equity curve — {first.get('name','config')}")
+                if first["curve"] is not None and not first["curve"].empty:
+                    st.line_chart(first["curve"].set_index("date")[["cum_R"]])
+                else:
+                    st.info("No equity curve to display.")
+
+                st.subheader(f"Trades sample — {first.get('name','config')}")
+                if first["trades"] is not None and not first["trades"].empty:
+                    st.dataframe(first["trades"].head(200), use_container_width=True)
+                    st.download_button(
+                        f"Download trades CSV ({first.get('name','config')})",
+                        first["trades"].to_csv(index=False),
+                        file_name=f"backtest_trades_{first.get('name','config')}.csv",
+                        mime="text/csv",
+                    )
+                else:
+                    st.info("No trades.")
 
 
 if __name__ == "__main__":
