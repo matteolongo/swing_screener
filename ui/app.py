@@ -492,6 +492,9 @@ def main() -> None:
                 "suggested_order_type",
                 "suggested_order_price",
                 "execution_note",
+                "name",
+                "currency",
+                "exchange",
             ]
             if all(c in report.columns for c in guidance_cols):
                 guidance = report[guidance_cols].copy()
@@ -520,6 +523,11 @@ def main() -> None:
                 display = guidance.copy()
                 display.insert(0, "Action", display["ui_action_badge"].map(_badge_html))
                 display = display.drop(columns=["ui_action_badge"])
+                # reorder for clarity
+                col_order = ["Action", "name", "currency", "exchange", "suggested_order_type", "suggested_order_price", "execution_note", "order_price_band"]
+                existing_cols = [c for c in col_order if c in display.columns]
+                rest = [c for c in display.columns if c not in existing_cols]
+                display = display[existing_cols + rest]
                 st.subheader("Execution guidance")
                 st.caption(
                     "Suggested order type/price comes from signal context: "
@@ -546,6 +554,11 @@ def main() -> None:
                     _handle_error(e, debug)
                     orders = []
 
+                try:
+                    existing_positions = load_positions(settings["positions_path"])
+                except Exception:
+                    existing_positions = []
+
                 order_rows = []
                 for ticker, row in report.head(50).iterrows():
                     order_type = row.get("suggested_order_type", None)
@@ -564,28 +577,45 @@ def main() -> None:
                         col = cols[idx % len(cols)]
                         stop_price = row.get("stop", None)
                         shares = row.get("shares", None)
+                        has_open_position = any(
+                            p.status == "open" and p.ticker == ticker for p in existing_positions
+                        )
+                        has_existing_order = any(
+                            o.get("ticker") == ticker and o.get("status") in {"pending", "filled"}
+                            for o in orders
+                        )
                         with col:
-                            st.markdown(f"**{ticker}** — {order_type} @ {float(order_price):.2f}")
-                            if st.button(f"Add {ticker}", key=f"quick_add_{ticker}"):
-                                if any(
-                                    o.get("status") == "pending" and o.get("ticker") == ticker
-                                    for o in orders
-                                ):
-                                    st.warning(f"{ticker}: pending order already exists.")
-                                else:
-                                    orders.append(
-                                        make_order_entry(
-                                            ticker=ticker,
-                                            order_type=order_type,
-                                            limit_price=float(order_price),
-                                            quantity=int(shares) if pd.notna(shares) else 1,
-                                            stop_price=float(stop_price) if pd.notna(stop_price) else None,
-                                            notes="from guidance",
-                                        )
+                            name = row.get("name", "") or ""
+                            currency = row.get("currency", "") or ""
+                            exchange = row.get("exchange", "") or ""
+                            subtitle_parts = [p for p in [exchange, currency] if p]
+                            subtitle = " | ".join(subtitle_parts)
+                            st.markdown(f"**{ticker}** — {name or '—'}")
+                            if subtitle:
+                                st.caption(subtitle)
+                            st.markdown(f"{order_type} @ {float(order_price):.2f}")
+                            disabled = has_open_position or has_existing_order
+                            reason = None
+                            if has_open_position:
+                                reason = "Open position exists."
+                            elif has_existing_order:
+                                reason = "Pending/filled order exists."
+                            if st.button(f"Add {ticker}", key=f"quick_add_{ticker}", disabled=disabled):
+                                orders.append(
+                                    make_order_entry(
+                                        ticker=ticker,
+                                        order_type=order_type,
+                                        limit_price=float(order_price),
+                                        quantity=int(shares) if pd.notna(shares) else 1,
+                                        stop_price=float(stop_price) if pd.notna(stop_price) else None,
+                                        notes="from guidance",
                                     )
-                                    save_orders(settings["orders_path"], orders, asof=str(pd.Timestamp.now().date()))
-                                    st.success(f"Order added: {ticker}")
-                                    st.rerun()
+                                )
+                                save_orders(settings["orders_path"], orders, asof=str(pd.Timestamp.now().date()))
+                                st.success(f"Order added: {ticker}")
+                                st.rerun()
+                            if reason:
+                                st.caption(reason)
 
                     for ticker, row, order_type, order_price in order_rows:
                         stop_price = row.get("stop", None)
