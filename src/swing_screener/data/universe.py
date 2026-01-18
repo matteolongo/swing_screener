@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Sequence
 import csv
 import re
+from pathlib import Path
 
 try:
     # py>=3.9
@@ -40,6 +41,19 @@ def normalize_tickers(items: Iterable[str]) -> list[str]:
     if not out:
         raise ValueError("Universe is empty after normalization.")
     return out
+
+
+def list_package_universes() -> list[str]:
+    """
+    Return available packaged universes (CSV files in data/universes).
+    """
+    pkg = "swing_screener.data"
+    base = importlib_resources.files(pkg).joinpath("universes")
+    names = []
+    for p in base.iterdir():
+        if p.suffix == ".csv":
+            names.append(p.stem)
+    return sorted(names)
 
 
 def _read_csv_lines(text: str) -> list[str]:
@@ -136,3 +150,50 @@ def apply_universe_config(tickers: list[str], cfg: UniverseConfig) -> list[str]:
                 out[-1] = b
 
     return out
+
+
+def filter_ticker_list(
+    tickers: Sequence[str],
+    include: Optional[Sequence[str]] = None,
+    exclude: Optional[Sequence[str]] = None,
+    grep: Optional[str] = None,
+) -> list[str]:
+    """
+    Apply simple include/exclude/substring filters to a ticker list.
+    - include/exclude are literal tickers (validated).
+    - grep keeps tickers containing the substring (case-insensitive).
+    """
+    base = [str(t).strip().upper() for t in tickers if str(t).strip()]
+
+    if grep:
+        g = str(grep).strip().upper()
+        base = [t for t in base if g in t]
+
+    if exclude:
+        excl = set(normalize_tickers(exclude))
+    else:
+        excl = set()
+
+    if include:
+        inc = normalize_tickers(include)
+    else:
+        inc = []
+
+    out: list[str] = []
+    for t in base + inc:
+        if t in excl:
+            continue
+        if t not in out:
+            out.append(t)
+
+    if not out:
+        raise ValueError("No tickers left after filtering.")
+    return out
+
+
+def save_universe_file(tickers: Sequence[str], path: Path) -> Path:
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    content = "\n".join([t for t in tickers])
+    path.write_text(content + "\n", encoding="utf-8")
+    return path
