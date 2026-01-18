@@ -27,6 +27,13 @@ from swing_screener.portfolio.state import (
     save_positions,
     ManageConfig,
 )
+from swing_screener.backtest.portfolio import (
+    backtest_portfolio_R,
+    equity_curve_R,
+    drawdown_stats,
+    PortfolioBacktestConfig,
+)
+from swing_screener.backtest.simulator import BacktestConfig
 import html
 
 from ui.helpers import (
@@ -56,6 +63,16 @@ DEFAULT_SETTINGS: dict = {
     "risk_pct": 1.0,
     "k_atr": 2.0,
     "max_position_pct": 0.60,
+    "bt_start": "2018-01-01",
+    "bt_end": "",
+    "bt_entry_type": "pullback",
+    "bt_breakout_lookback": 50,
+    "bt_pullback_ma": 20,
+    "bt_atr_window": 14,
+    "bt_k_atr": 2.0,
+    "bt_take_profit_R": 2.0,
+    "bt_max_holding_days": 20,
+    "bt_min_trades_per_ticker": 3,
     "use_cache": True,
     "force_refresh": False,
     "report_path": "out/report.csv",
@@ -203,6 +220,52 @@ def _run_manage(
     return df, md_text
 
 
+def _run_backtest(
+    universe: str,
+    top_n: int,
+    start: str,
+    end: str,
+    cfg_a: BacktestConfig,
+    min_trades_per_ticker: int,
+    use_cache: bool,
+    force_refresh: bool,
+) -> dict:
+    ucfg = DataUniverseConfig(benchmark="SPY", ensure_benchmark=True, max_tickers=top_n or None)
+    tickers = load_universe_from_package(universe, ucfg)
+
+    mcfg = MarketDataConfig(start=start or "2018-01-01", end=end or None)
+    ohlcv = fetch_ohlcv(
+        tickers,
+        mcfg,
+        use_cache=use_cache,
+        force_refresh=force_refresh,
+    )
+
+    portfolio_cfg = PortfolioBacktestConfig(bt=cfg_a, min_trades_per_ticker=min_trades_per_ticker)
+    trades_all, summary_by_ticker, summary_total = backtest_portfolio_R(ohlcv, tickers, portfolio_cfg)
+    curve = equity_curve_R(trades_all)
+    dd = drawdown_stats(curve)
+
+    # enrich summary_total with drawdown and trade extremes
+    if summary_total is None or summary_total.empty:
+        summary_total = pd.DataFrame([{"trades": 0}])
+    summary_total = summary_total.copy()
+    summary_total["max_drawdown_R"] = dd.get("max_drawdown_R", None)
+    if trades_all is not None and not trades_all.empty:
+        summary_total["best_trade_R"] = trades_all["R"].max()
+        summary_total["worst_trade_R"] = trades_all["R"].min()
+    else:
+        summary_total["best_trade_R"] = None
+        summary_total["worst_trade_R"] = None
+
+    return {
+        "trades": trades_all,
+        "summary_by_ticker": summary_by_ticker,
+        "summary_total": summary_total,
+        "curve": curve,
+    }
+
+
 def _render_report_stats(report: pd.DataFrame) -> None:
     st.write(f"Rows: {len(report)}")
     if "signal" in report.columns:
@@ -238,6 +301,16 @@ def _current_settings() -> dict:
         "risk_pct",
         "k_atr",
         "max_position_pct",
+        "bt_start",
+        "bt_end",
+        "bt_entry_type",
+        "bt_breakout_lookback",
+        "bt_pullback_ma",
+        "bt_atr_window",
+        "bt_k_atr",
+        "bt_take_profit_R",
+        "bt_max_holding_days",
+        "bt_min_trades_per_ticker",
         "use_cache",
         "force_refresh",
         "report_path",
@@ -448,8 +521,8 @@ def main() -> None:
         write_last_run(LAST_RUN_PATH, ts)
         st.success("Daily routine finished. Jump to Outputs to review results.")
 
-    tab_screener, tab_orders, tab_manage, tab_outputs = st.tabs(
-        ["1) Candidates", "2) Orders", "3) Manage positions", "4) Outputs"]
+    tab_screener, tab_orders, tab_manage, tab_outputs, tab_backtest = st.tabs(
+        ["1) Candidates", "2) Orders", "3) Manage positions", "4) Outputs", "5) Backtest"]
     )
 
     with tab_screener:
@@ -997,6 +1070,264 @@ def main() -> None:
             st.markdown(md_file.read_text(encoding="utf-8"))
         else:
             st.info("Degiro checklist not generated yet. Run management step.")
+
+    with tab_backtest:
+        st.subheader("5) Backtest")
+        st.info("Simulate breakout/pullback rules on history to gauge robustness. Use minimal tweaks; avoid curve fitting.")
+
+        with st.expander("Come leggere i risultati", expanded=False):
+            st.markdown(
+                """
+                - **expectancy_R / avg_R**: R medio per trade. >0 è buono; confronta tra settaggi.
+                - **winrate**: % trade > 0R; non basta da sola.
+                - **profit_factor_R**: R vinti / |R persi|. >1.3-1.5 è decente.
+                - **max_drawdown_R**: peggior drawdown della curva in R. Più vicino a 0 è meglio.
+                - **best/worst trade R**: coda della distribuzione (rischio estremo).
+                - **trades**: servono campioni sufficienti. Guarda anche curve/volatilità della curva.
+                - Confronto: privilegia set con drawdown minore a parità di expectancy, o con expectancy migliore a drawdown simile. Verifica stabilità su più periodi/universi.
+                """
+            )
+
+        with st.form("backtest_form"):
+            st.caption("Config A (baseline)")
+            bt_start_val = st.session_state.get("bt_start", defaults["bt_start"])
+            bt_start_parsed = pd.to_datetime(bt_start_val).date() if bt_start_val else datetime.utcnow().date()
+            bt_start = st.date_input(
+                "Start date",
+                value=bt_start_parsed,
+                key="bt_start",
+            )
+            bt_end_raw = st.text_input(
+                "End date (blank = latest)",
+                value=str(st.session_state.get("bt_end", defaults["bt_end"])),
+                key="bt_end",
+            )
+            bt_entry_type = st.selectbox(
+                "Entry type",
+                ["pullback", "breakout"],
+                index=0 if st.session_state.get("bt_entry_type", defaults["bt_entry_type"]) == "pullback" else 1,
+                key="bt_entry_type",
+            )
+            bt_breakout_lookback = st.number_input(
+                "Breakout lookback",
+                min_value=10,
+                max_value=200,
+                value=int(st.session_state.get("bt_breakout_lookback", defaults["bt_breakout_lookback"])),
+                step=5,
+                key="bt_breakout_lookback",
+            )
+            bt_pullback_ma = st.number_input(
+                "Pullback MA",
+                min_value=5,
+                max_value=100,
+                value=int(st.session_state.get("bt_pullback_ma", defaults["bt_pullback_ma"])),
+                step=1,
+                key="bt_pullback_ma",
+            )
+            bt_atr_window = st.number_input(
+                "ATR window",
+                min_value=5,
+                max_value=50,
+                value=int(st.session_state.get("bt_atr_window", defaults["bt_atr_window"])),
+                step=1,
+                key="bt_atr_window",
+            )
+            bt_k_atr = st.slider(
+                "Stop distance (k * ATR)",
+                min_value=1.0,
+                max_value=3.0,
+                value=float(st.session_state.get("bt_k_atr", defaults["bt_k_atr"])),
+                step=0.1,
+                key="bt_k_atr",
+            )
+            bt_take_profit_R = st.slider(
+                "Take profit (R)",
+                min_value=0.5,
+                max_value=5.0,
+                value=float(st.session_state.get("bt_take_profit_R", defaults["bt_take_profit_R"])),
+                step=0.25,
+                key="bt_take_profit_R",
+            )
+            bt_max_holding_days = st.number_input(
+                "Max holding days",
+                min_value=5,
+                max_value=100,
+                value=int(st.session_state.get("bt_max_holding_days", defaults["bt_max_holding_days"])),
+                step=1,
+                key="bt_max_holding_days",
+            )
+            bt_min_trades_per_ticker = st.number_input(
+                "Min trades per ticker (include in summary)",
+                min_value=1,
+                max_value=50,
+                value=int(st.session_state.get("bt_min_trades_per_ticker", defaults["bt_min_trades_per_ticker"])),
+                step=1,
+                key="bt_min_trades_per_ticker",
+            )
+            run_compare = st.checkbox("Run comparison B (alternate params)", value=False)
+
+            if run_compare:
+                st.caption("Config B (comparison)")
+                bt_entry_type_b = st.selectbox(
+                    "Entry type (B)",
+                    ["pullback", "breakout"],
+                    key="bt_entry_type_b",
+                )
+                bt_k_atr_b = st.slider(
+                    "Stop distance (k * ATR) (B)",
+                    min_value=1.0,
+                    max_value=3.0,
+                    value=float(st.session_state.get("bt_k_atr", defaults["bt_k_atr"])),
+                    step=0.1,
+                    key="bt_k_atr_b",
+                )
+                bt_take_profit_R_b = st.slider(
+                    "Take profit (R) (B)",
+                    min_value=0.5,
+                    max_value=5.0,
+                    value=float(st.session_state.get("bt_take_profit_R", defaults["bt_take_profit_R"])),
+                    step=0.25,
+                    key="bt_take_profit_R_b",
+                )
+                bt_max_holding_days_b = st.number_input(
+                    "Max holding days (B)",
+                    min_value=5,
+                    max_value=100,
+                    value=int(st.session_state.get("bt_max_holding_days", defaults["bt_max_holding_days"])),
+                    step=1,
+                    key="bt_max_holding_days_b",
+                )
+                bt_breakout_lookback_b = st.number_input(
+                    "Breakout lookback (B)",
+                    min_value=10,
+                    max_value=200,
+                    value=int(st.session_state.get("bt_breakout_lookback", defaults["bt_breakout_lookback"])),
+                    step=5,
+                    key="bt_breakout_lookback_b",
+                )
+                bt_pullback_ma_b = st.number_input(
+                    "Pullback MA (B)",
+                    min_value=5,
+                    max_value=100,
+                    value=int(st.session_state.get("bt_pullback_ma", defaults["bt_pullback_ma"])),
+                    step=1,
+                    key="bt_pullback_ma_b",
+                )
+                bt_atr_window_b = st.number_input(
+                    "ATR window (B)",
+                    min_value=5,
+                    max_value=50,
+                    value=int(st.session_state.get("bt_atr_window", defaults["bt_atr_window"])),
+                    step=1,
+                    key="bt_atr_window_b",
+                )
+
+            bt_submit = st.form_submit_button("Run backtest")
+
+        if bt_submit:
+            try:
+                cfg_a = BacktestConfig(
+                    entry_type=bt_entry_type,  # type: ignore[arg-type]
+                    breakout_lookback=int(bt_breakout_lookback),
+                    pullback_ma=int(bt_pullback_ma),
+                    atr_window=int(bt_atr_window),
+                    k_atr=float(bt_k_atr),
+                    take_profit_R=float(bt_take_profit_R),
+                    max_holding_days=int(bt_max_holding_days),
+                )
+                bt_end_val = bt_end_raw.strip() or None
+                res_a = _run_backtest(
+                    settings["universe"],
+                    int(settings["top_n"]),
+                    str(bt_start),
+                    bt_end_val if bt_end_val else "",
+                    cfg_a,
+                    int(bt_min_trades_per_ticker),
+                    bool(settings["use_cache"]),
+                    bool(settings["force_refresh"]),
+                )
+                st.session_state["bt_a"] = res_a
+
+                if run_compare:
+                    cfg_b = BacktestConfig(
+                        entry_type=bt_entry_type_b,  # type: ignore[arg-type]
+                        breakout_lookback=int(bt_breakout_lookback_b),
+                        pullback_ma=int(bt_pullback_ma_b),
+                        atr_window=int(bt_atr_window_b),
+                        k_atr=float(bt_k_atr_b),
+                        take_profit_R=float(bt_take_profit_R_b),
+                        max_holding_days=int(bt_max_holding_days_b),
+                    )
+                    res_b = _run_backtest(
+                        settings["universe"],
+                        int(settings["top_n"]),
+                        str(bt_start),
+                        bt_end_val if bt_end_val else "",
+                        cfg_b,
+                        int(bt_min_trades_per_ticker),
+                        bool(settings["use_cache"]),
+                        bool(settings["force_refresh"]),
+                    )
+                    st.session_state["bt_b"] = res_b
+                else:
+                    st.session_state.pop("bt_b", None)
+
+                st.success("Backtest completed.")
+            except Exception as e:
+                _handle_error(e, debug)
+
+        res_a = st.session_state.get("bt_a")
+        res_b = st.session_state.get("bt_b")
+
+        if not res_a:
+            st.info("Run a backtest to see results.")
+        else:
+            if res_b:
+                col_a, col_b = st.columns(2)
+            else:
+                col_a = st.container()
+                col_b = None
+
+            with col_a:
+                st.markdown("**Summary A**")
+                st.dataframe(res_a["summary_total"], use_container_width=True)
+            if res_b and col_b:
+                with col_b:
+                    st.markdown("**Summary B**")
+                    st.dataframe(res_b["summary_total"], use_container_width=True)
+
+            if res_b:
+                st.subheader("Comparison (A vs B)")
+                comp_cols = ["expectancy_R", "avg_R", "median_R", "profit_factor_R", "max_drawdown_R", "trades"]
+                df_comp = pd.DataFrame(
+                    {
+                        "metric": comp_cols,
+                        "A": [res_a["summary_total"].get(c, [None])[0] if c in res_a["summary_total"] else None for c in comp_cols],
+                        "B": [res_b["summary_total"].get(c, [None])[0] if c in res_b["summary_total"] else None for c in comp_cols],
+                    }
+                )
+                st.dataframe(df_comp, use_container_width=True)
+
+            st.subheader("By ticker (A)")
+            st.dataframe(res_a["summary_by_ticker"], use_container_width=True)
+
+            st.subheader("Equity curve (A, cum R)")
+            if res_a["curve"] is not None and not res_a["curve"].empty:
+                st.line_chart(res_a["curve"].set_index("date")[["cum_R"]])
+            else:
+                st.info("No equity curve to display.")
+
+            st.subheader("Trades sample (A)")
+            if res_a["trades"] is not None and not res_a["trades"].empty:
+                st.dataframe(res_a["trades"].head(200), use_container_width=True)
+                st.download_button(
+                    "Download trades CSV (A)",
+                    res_a["trades"].to_csv(index=False),
+                    file_name="backtest_trades_a.csv",
+                    mime="text/csv",
+                )
+            else:
+                st.info("No trades.")
 
 
 if __name__ == "__main__":
