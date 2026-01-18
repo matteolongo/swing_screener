@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from swing_screener.data.market_data import MarketDataConfig, fetch_ohlcv
+from swing_screener.data.market_data import MarketDataConfig, fetch_ohlcv, fetch_ticker_metadata
 from swing_screener.data.universe import UniverseConfig as DataUniverseConfig, load_universe_from_package
 from swing_screener.reporting.report import ReportConfig, build_daily_report
 from swing_screener.screeners.ranking import RankingConfig
@@ -133,6 +133,22 @@ def _run_screener(
         ),
     )
     report = build_daily_report(ohlcv, rcfg)
+
+    # enrich with basic metadata (name, currency, exchange) for display
+    try:
+        meta_df = fetch_ticker_metadata(
+            report.index.tolist(),
+            cache_path=".cache/ticker_meta.json",
+            use_cache=use_cache,
+            force_refresh=force_refresh,
+        )
+        if not meta_df.empty:
+            meta_df = meta_df.reindex(report.index)
+            report.insert(0, "exchange", meta_df["exchange"])
+            report.insert(0, "currency", meta_df["currency"])
+            report.insert(0, "name", meta_df["name"])
+    except Exception:
+        pass
 
     csv_text = report.to_csv(index=True)
     ensure_parent_dir(report_path)
