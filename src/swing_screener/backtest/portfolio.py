@@ -87,3 +87,15 @@ def equity_curve_R(trades_all: pd.DataFrame) -> pd.DataFrame:
     curve = df.groupby("date")["R"].sum().reset_index()
     curve["cum_R"] = curve["R"].cumsum()
     return curve[["date", "R", "cum_R"]]
+
+
+def drawdown_stats(curve: pd.DataFrame) -> dict:
+    """
+    Returns drawdown statistics from an equity curve in R units.
+    """
+    if curve is None or curve.empty or "cum_R" not in curve.columns:
+        return {"max_drawdown_R": None}
+
+    dd = curve["cum_R"] - curve["cum_R"].cummax()
+    max_dd = float(dd.min())
+    return {"max_drawdown_R": max_dd}

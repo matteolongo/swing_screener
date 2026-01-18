@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Optional
 import hashlib
+import json
 
 import pandas as pd
 import yfinance as yf
@@ -148,4 +149,68 @@ def _clean_ohlcv(df: pd.DataFrame, tickers: list[str]) -> pd.DataFrame:
 
     # drop righe tutte NaN
     df = df.dropna(how="all")
+    return df
+
+
+def fetch_ticker_metadata(
+    tickers: Iterable[str],
+    cache_path: str = ".cache/ticker_meta.json",
+    use_cache: bool = True,
+    force_refresh: bool = False,
+) -> pd.DataFrame:
+    """
+    Fetch lightweight metadata for tickers (name, currency, exchange) via yfinance.
+    Uses a small JSON cache to avoid repeated network calls.
+    """
+    tks = _normalize_tickers(tickers)
+    cache_file = Path(cache_path)
+    cache: dict[str, dict] = {}
+    if use_cache and cache_file.exists():
+        try:
+            cache = json.loads(cache_file.read_text(encoding="utf-8"))
+        except Exception:
+            cache = {}
+
+    results: dict[str, dict] = {}
+    for t in tks:
+        if (not force_refresh) and t in cache:
+            results[t] = cache[t]
+            continue
+
+        name = None
+        currency = None
+        exchange = None
+
+        tk = None
+        try:
+            tk = yf.Ticker(t)
+            fi = getattr(tk, "fast_info", None)
+            if fi:
+                currency = getattr(fi, "currency", None) or fi.get("currency", None)
+                exchange = getattr(fi, "exchange", None) or fi.get("exchange", None)
+        except Exception:
+            tk = None
+
+        if tk and (name is None or currency is None or exchange is None):
+            try:
+                info = tk.get_info()
+                name = info.get("shortName") or info.get("longName") or name
+                currency = currency or info.get("currency")
+                exchange = exchange or info.get("exchange") or info.get("fullExchangeName")
+            except Exception:
+                info = None
+
+        results[t] = {
+            "name": name,
+            "currency": currency,
+            "exchange": exchange,
+        }
+
+    if use_cache:
+        cache.update(results)
+        cache_file.parent.mkdir(parents=True, exist_ok=True)
+        cache_file.write_text(json.dumps(cache, indent=2), encoding="utf-8")
+
+    df = pd.DataFrame.from_dict(results, orient="index")
+    df.index.name = "ticker"
     return df

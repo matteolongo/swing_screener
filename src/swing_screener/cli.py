@@ -12,6 +12,10 @@ from swing_screener.data.universe import (
     load_universe_from_package,
     load_universe_from_file,
     UniverseConfig,
+    list_package_universes,
+    filter_ticker_list,
+    apply_universe_config,
+    save_universe_file,
 )
 
 
@@ -95,6 +99,71 @@ def main() -> None:
     manage.add_argument(
         "--md",
         help="Export a Degiro-friendly actions checklist in Markdown (path)",
+    )
+
+    # -------------------------
+    # UNIVERSES (list/show/filter)
+    # -------------------------
+    uni = sub.add_parser("universes", help="Inspect and build universes")
+    uni_sub = uni.add_subparsers(dest="uni_command", required=True)
+
+    uni_list = uni_sub.add_parser("list", help="List packaged universes")
+    uni_list.add_argument(
+        "--show-paths",
+        action="store_true",
+        help="Show underlying CSV paths",
+    )
+
+    uni_show = uni_sub.add_parser("show", help="Preview a universe")
+    src_show = uni_show.add_mutually_exclusive_group(required=True)
+    src_show.add_argument("--name", help="Packaged universe name (e.g. mega)")
+    src_show.add_argument("--file", help="Path to a universe file")
+    uni_show.add_argument("--top", type=int, default=20, help="Preview the first N tickers")
+    uni_show.add_argument("--grep", help="Keep tickers containing this substring (case-insensitive)")
+    uni_show.add_argument("--include", nargs="+", help="Extra tickers to include")
+    uni_show.add_argument("--exclude", nargs="+", help="Tickers to exclude")
+    uni_show.add_argument("--benchmark", default="SPY", help="Benchmark to ensure (default: SPY)")
+    uni_show.add_argument(
+        "--no-benchmark",
+        action="store_true",
+        help="Do not auto-ensure benchmark ticker",
+    )
+    uni_show.add_argument(
+        "--max",
+        dest="max_tickers",
+        type=int,
+        default=None,
+        help="Optional cap on tickers after filtering",
+    )
+
+    uni_filter = uni_sub.add_parser("filter", help="Filter a universe and save to CSV")
+    src_filter = uni_filter.add_mutually_exclusive_group(required=True)
+    src_filter.add_argument("--name", help="Packaged universe name (e.g. mega)")
+    src_filter.add_argument("--file", help="Path to a universe file")
+    uni_filter.add_argument(
+        "--grep", help="Keep tickers containing this substring (case-insensitive)"
+    )
+    uni_filter.add_argument("--include", nargs="+", help="Extra tickers to include")
+    uni_filter.add_argument("--exclude", nargs="+", help="Tickers to exclude")
+    uni_filter.add_argument(
+        "--benchmark", default="SPY", help="Benchmark to ensure (default: SPY)"
+    )
+    uni_filter.add_argument(
+        "--no-benchmark",
+        action="store_true",
+        help="Do not auto-ensure benchmark ticker",
+    )
+    uni_filter.add_argument(
+        "--max",
+        dest="max_tickers",
+        type=int,
+        default=None,
+        help="Optional cap on tickers after filtering",
+    )
+    uni_filter.add_argument(
+        "--out",
+        required=True,
+        help="Path to save the filtered universe CSV",
     )
 
     args = parser.parse_args()
@@ -232,5 +301,73 @@ def main() -> None:
 
         return
 
+    if args.command == "universes":
+        import importlib.resources as importlib_resources
+
+        def _load_base(name: str | None, file: str | None) -> list[str]:
+            cfg = UniverseConfig(
+                benchmark=args.benchmark if hasattr(args, "benchmark") else "SPY",
+                ensure_benchmark=False,
+                max_tickers=None,
+            )
+            if name:
+                return load_universe_from_package(name, cfg)
+            return load_universe_from_file(file, cfg)
+
+        if args.uni_command == "list":
+            names = list_package_universes()
+            if not names:
+                print("No packaged universes found.")
+                return
+            print("Packaged universes:")
+            for n in names:
+                if args.show_paths:
+                    pkg = "swing_screener.data"
+                    p = (
+                        importlib_resources.files(pkg)
+                        .joinpath(f"universes/{n}.csv")
+                        .resolve()
+                    )
+                    print(f"- {n} ({p})")
+                else:
+                    print(f"- {n}")
+            return
+
+        if args.uni_command in ("show", "filter"):
+            base = _load_base(getattr(args, "name", None), getattr(args, "file", None))
+            filtered = filter_ticker_list(
+                base,
+                include=args.include,
+                exclude=args.exclude,
+                grep=args.grep,
+            )
+
+            cfg = UniverseConfig(
+                benchmark=args.benchmark,
+                ensure_benchmark=not args.no_benchmark,
+                max_tickers=args.max_tickers,
+            )
+            tickers = apply_universe_config(filtered, cfg)
+
+            if args.uni_command == "show":
+                n = len(tickers)
+                top_n = args.top if args.top is not None else n
+                print(f"Tickers: {n} (showing first {min(top_n, n)})")
+                for t in tickers[:top_n]:
+                    print(t)
+                return
+
+            if args.uni_command == "filter":
+                path = save_universe_file(tickers, Path(args.out))
+                print(f"Saved {len(tickers)} tickers to {path.resolve()}")
+                return
+
+        parser.error("Unknown universes command")
+        sys.exit(1)
+
     parser.print_help()
     sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

@@ -131,6 +131,47 @@ def write_last_run(path: str | Path, ts: str) -> None:
     p.write_text(json.dumps({"last_run": ts}, indent=2), encoding="utf-8")
 
 
+def load_user_defaults(path: str | Path) -> dict:
+    p = Path(path)
+    if not p.exists():
+        return {}
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def save_user_defaults(path: str | Path, values: dict) -> None:
+    p = Path(path)
+    serializable = {}
+    for k, v in values.items():
+        if hasattr(v, "isoformat"):
+            serializable[k] = v.isoformat()
+        else:
+            serializable[k] = v
+    ensure_parent_dir(p)
+    p.write_text(json.dumps(serializable, indent=2), encoding="utf-8")
+
+
+def load_backtest_configs(path: str | Path) -> list[dict]:
+    p = Path(path)
+    if not p.exists():
+        return []
+    try:
+        data = json.loads(p.read_text(encoding="utf-8"))
+        if isinstance(data, list):
+            return data
+        return []
+    except Exception:
+        return []
+
+
+def save_backtest_configs(path: str | Path, configs: list[dict]) -> None:
+    p = Path(path)
+    ensure_parent_dir(p)
+    p.write_text(json.dumps(configs, indent=2), encoding="utf-8")
+
+
 def build_action_badge(row: pd.Series) -> dict:
     order_type = row.get("suggested_order_type", None)
     order_price = row.get("suggested_order_price", None)
