@@ -63,8 +63,10 @@ def backtest_single_ticker_R(
     - Entry at close on signal day.
     - Stop = entry - k_atr * ATR.
     - Take profit = entry + take_profit_R * (entry - stop).
-    - Exit priority each day: stop -> take profit -> time stop.
-      (We assume worst-case: if both hit same day, stop wins.)
+    - Exit priority each day (using bar-based holding period):
+        1) Stop (includes gap-down fills at open)
+        2) Take profit (includes gap-up fills at open)
+        3) Time stop (max_holding_days in bars)
     """
     if not isinstance(ohlcv.columns, pd.MultiIndex):
         raise ValueError("ohlcv must have MultiIndex columns (field, ticker).")
@@ -95,6 +97,7 @@ def backtest_single_ticker_R(
 
     in_pos = False
     entry_date = None
+    entry_idx = None
     entry_price = None
     stop = None
     tp = None
@@ -109,6 +112,7 @@ def backtest_single_ticker_R(
                     continue
 
                 entry_date = date
+                entry_idx = i
                 entry_price = float(df["close"].iloc[i])
 
                 stop = entry_price - cfg.k_atr * float(atr_i)
@@ -121,22 +125,30 @@ def backtest_single_ticker_R(
             continue
 
         # In position: evaluate exit
+        open_i = float(df["open"].iloc[i])
         high_i = float(df["high"].iloc[i])
         low_i = float(df["low"].iloc[i])
         close_i = float(df["close"].iloc[i])
 
-        holding_days = (date - entry_date).days if hasattr(date, "day") else i
+        holding_bars = i - entry_idx
 
         exit_type: Optional[ExitType] = None
         exit_price: Optional[float] = None
 
-        if low_i <= stop:
+        # Gap handling: exits at open if price gaps through levels.
+        if open_i <= stop:
+            exit_type = "stop"
+            exit_price = open_i
+        elif open_i >= tp:
+            exit_type = "take_profit"
+            exit_price = open_i
+        elif low_i <= stop:
             exit_type = "stop"
             exit_price = float(stop)
         elif high_i >= tp:
             exit_type = "take_profit"
             exit_price = float(tp)
-        elif holding_days >= cfg.max_holding_days:
+        elif holding_bars >= cfg.max_holding_days:
             exit_type = "time"
             exit_price = float(close_i)
 
@@ -153,13 +165,14 @@ def backtest_single_ticker_R(
                     "exit": round(float(exit_price), 4),
                     "exit_type": exit_type,
                     "R": round(float(R), 4),
-                    "holding_days": int(holding_days),
+                    "holding_days": int(holding_bars),
                     "entry_type": cfg.entry_type,
                 }
             )
 
             in_pos = False
             entry_date = None
+            entry_idx = None
             entry_price = None
             stop = None
             tp = None
