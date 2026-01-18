@@ -114,6 +114,7 @@ Your decision was already made the evening before.
   - average R
   - drawdowns
 - Change **at most one parameter**, and only if justified
+- Backtest model: signals/ATR use completed bars, entries execute next-day open, exits are gap-aware (stop/TP priority) with optional commission.
 
 ---
 
