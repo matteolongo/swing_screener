@@ -23,6 +23,7 @@ class BacktestConfig:
     max_holding_days: int = 20
 
     min_history: int = 260  # for daily swing
+    commission_pct: float = 0.0  # per-side commission as % of price
 
 
 def _sma(s: pd.Series, n: int) -> pd.Series:
@@ -60,13 +61,14 @@ def backtest_single_ticker_R(
     Backtest one ticker in R units.
 
     Rules:
-    - Entry at close on signal day.
-    - Stop = entry - k_atr * ATR.
+    - Signals computed on completed bars; entry at next bar's open.
+    - Stop = entry - k_atr * ATR (ATR from prior bar).
     - Take profit = entry + take_profit_R * (entry - stop).
     - Exit priority each day (using bar-based holding period):
         1) Stop (includes gap-down fills at open)
         2) Take profit (includes gap-up fills at open)
         3) Time stop (max_holding_days in bars)
+    - Optional per-side commission_pct is applied on both entry and exit.
     """
     if not isinstance(ohlcv.columns, pd.MultiIndex):
         raise ValueError("ohlcv must have MultiIndex columns (field, ticker).")
@@ -91,7 +93,8 @@ def backtest_single_ticker_R(
         return pd.DataFrame()
 
     df["atr"] = _atr(df["high"], df["low"], df["close"], cfg.atr_window)
-    df["entry_sig"] = _entry_signal(df["close"], cfg)
+    df["atr_prev"] = df["atr"].shift(1)
+    df["entry_sig"] = _entry_signal(df["close"], cfg).shift(1)
 
     trades: List[Dict[str, Any]] = []
 
@@ -107,13 +110,13 @@ def backtest_single_ticker_R(
 
         if not in_pos:
             if bool(df["entry_sig"].iloc[i]):
-                atr_i = df["atr"].iloc[i]
+                atr_i = df["atr_prev"].iloc[i]
                 if pd.isna(atr_i) or atr_i <= 0:
                     continue
 
                 entry_date = date
                 entry_idx = i
-                entry_price = float(df["close"].iloc[i])
+                entry_price = float(df["open"].iloc[i])
 
                 stop = entry_price - cfg.k_atr * float(atr_i)
                 risk = entry_price - stop
@@ -153,7 +156,8 @@ def backtest_single_ticker_R(
             exit_price = float(close_i)
 
         if exit_type is not None:
-            R = (exit_price - entry_price) / (entry_price - stop)
+            commission_cost = cfg.commission_pct * (entry_price + exit_price)
+            R = (exit_price - entry_price - commission_cost) / (entry_price - stop)
             trades.append(
                 {
                     "ticker": ticker,
