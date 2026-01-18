@@ -143,8 +143,14 @@ def load_user_defaults(path: str | Path) -> dict:
 
 def save_user_defaults(path: str | Path, values: dict) -> None:
     p = Path(path)
+    serializable = {}
+    for k, v in values.items():
+        if hasattr(v, "isoformat"):
+            serializable[k] = v.isoformat()
+        else:
+            serializable[k] = v
     ensure_parent_dir(p)
-    p.write_text(json.dumps(values, indent=2), encoding="utf-8")
+    p.write_text(json.dumps(serializable, indent=2), encoding="utf-8")
 
 
 def build_action_badge(row: pd.Series) -> dict:

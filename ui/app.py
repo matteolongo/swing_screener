@@ -73,6 +73,9 @@ DEFAULT_SETTINGS: dict = {
     "bt_take_profit_R": 2.0,
     "bt_max_holding_days": 20,
     "bt_min_trades_per_ticker": 3,
+    "bt_min_trades_compare": 30,
+    "bt_flag_profit_factor": 1.3,
+    "bt_flag_max_dd": -5.0,
     "use_cache": True,
     "force_refresh": False,
     "report_path": "out/report.csv",
@@ -311,6 +314,9 @@ def _current_settings() -> dict:
         "bt_take_profit_R",
         "bt_max_holding_days",
         "bt_min_trades_per_ticker",
+        "bt_min_trades_compare",
+        "bt_flag_profit_factor",
+        "bt_flag_max_dd",
         "use_cache",
         "force_refresh",
         "report_path",
@@ -1091,7 +1097,13 @@ def main() -> None:
         with st.form("backtest_form"):
             st.caption("Config A (baseline)")
             bt_start_val = st.session_state.get("bt_start", defaults["bt_start"])
-            bt_start_parsed = pd.to_datetime(bt_start_val).date() if bt_start_val else datetime.utcnow().date()
+            if isinstance(bt_start_val, str):
+                bt_start_val = bt_start_val.strip()
+            try:
+                bt_start_parsed = pd.to_datetime(bt_start_val).date()
+            except Exception:
+                bt_start_parsed = datetime.utcnow().date()
+            st.session_state["bt_start"] = bt_start_parsed
             bt_start = st.date_input(
                 "Start date",
                 value=bt_start_parsed,
@@ -1163,6 +1175,32 @@ def main() -> None:
                 value=int(st.session_state.get("bt_min_trades_per_ticker", defaults["bt_min_trades_per_ticker"])),
                 step=1,
                 key="bt_min_trades_per_ticker",
+            )
+            bt_min_trades_compare = st.number_input(
+                "Min trades (per config) to compare A vs B",
+                min_value=1,
+                max_value=200,
+                value=int(st.session_state.get("bt_min_trades_compare", defaults["bt_min_trades_compare"])),
+                step=5,
+                key="bt_min_trades_compare",
+            )
+            bt_flag_profit_factor = st.number_input(
+                "Caution threshold: profit factor",
+                min_value=0.5,
+                max_value=3.0,
+                value=float(st.session_state.get("bt_flag_profit_factor", defaults["bt_flag_profit_factor"])),
+                step=0.1,
+                key="bt_flag_profit_factor",
+                help="Below this profit factor, highlight a caution flag.",
+            )
+            bt_flag_max_dd = st.number_input(
+                "Caution threshold: max drawdown R",
+                min_value=-50.0,
+                max_value=0.0,
+                value=float(st.session_state.get("bt_flag_max_dd", defaults["bt_flag_max_dd"])),
+                step=0.5,
+                key="bt_flag_max_dd",
+                help="If max drawdown is below this (more negative), flag caution.",
             )
             run_compare = st.checkbox("Run comparison B (alternate params)", value=False)
 
@@ -1296,17 +1334,87 @@ def main() -> None:
                     st.markdown("**Summary B**")
                     st.dataframe(res_b["summary_total"], use_container_width=True)
 
+            # Currency impact (simple, non-compounding)
+            risk_per_trade = float(settings["account_size"]) * (float(settings["risk_pct"]) / 100.0)
+            st.markdown("**Stima € per trade (semplice, senza compounding)**")
+            col_imp_a, col_imp_b = st.columns(2 if res_b else 1)
+
+            def _metric(summary: pd.DataFrame, key: str):
+                if summary is None or summary.empty or key not in summary:
+                    return None
+                val = summary.iloc[0].get(key)
+                return float(val) if pd.notna(val) else None
+
+            exp_a = _metric(res_a["summary_total"], "expectancy_R")
+            trades_a = _metric(res_a["summary_total"], "trades") or 0
+            with col_imp_a:
+                if exp_a is not None:
+                    per_trade_eur = exp_a * risk_per_trade
+                    total_eur = per_trade_eur * trades_a
+                    st.info(
+                        f"Config A: expectancy {exp_a:.2f}R → ~{per_trade_eur:.2f}€ a trade "
+                        f"(risk/trade {risk_per_trade:.2f}€, {int(trades_a)} trade tot ≈ {total_eur:.2f}€)."
+                    )
+                else:
+                    st.info("Config A: nessuna stima € (expectancy mancante).")
+
+            if res_b:
+                exp_b = _metric(res_b["summary_total"], "expectancy_R")
+                trades_b = _metric(res_b["summary_total"], "trades") or 0
+                with col_imp_b:
+                    if exp_b is not None:
+                        per_trade_eur_b = exp_b * risk_per_trade
+                        total_eur_b = per_trade_eur_b * trades_b
+                        st.info(
+                            f"Config B: expectancy {exp_b:.2f}R → ~{per_trade_eur_b:.2f}€ a trade "
+                            f"(risk/trade {risk_per_trade:.2f}€, {int(trades_b)} trade tot ≈ {total_eur_b:.2f}€)."
+                        )
+                    else:
+                        st.info("Config B: nessuna stima € (expectancy mancante).")
+
             if res_b:
                 st.subheader("Comparison (A vs B)")
                 comp_cols = ["expectancy_R", "avg_R", "median_R", "profit_factor_R", "max_drawdown_R", "trades"]
+
                 df_comp = pd.DataFrame(
                     {
                         "metric": comp_cols,
-                        "A": [res_a["summary_total"].get(c, [None])[0] if c in res_a["summary_total"] else None for c in comp_cols],
-                        "B": [res_b["summary_total"].get(c, [None])[0] if c in res_b["summary_total"] else None for c in comp_cols],
+                        "A": [_metric(res_a["summary_total"], c) for c in comp_cols],
+                        "B": [_metric(res_b["summary_total"], c) for c in comp_cols],
                     }
                 )
+
+                trades_a = _metric(res_a["summary_total"], "trades") or 0
+                trades_b = _metric(res_b["summary_total"], "trades") or 0
+                winner_note = ""
+                if trades_a >= bt_min_trades_compare and trades_b >= bt_min_trades_compare:
+                    exp_a = _metric(res_a["summary_total"], "expectancy_R")
+                    exp_b = _metric(res_b["summary_total"], "expectancy_R")
+                    pf_a = _metric(res_a["summary_total"], "profit_factor_R")
+                    pf_b = _metric(res_b["summary_total"], "profit_factor_R")
+                    dd_a = _metric(res_a["summary_total"], "max_drawdown_R")
+                    dd_b = _metric(res_b["summary_total"], "max_drawdown_R")
+
+                    winner = None
+                    reason_parts = []
+                    if exp_a is not None and exp_b is not None and exp_a != exp_b:
+                        winner = "A" if exp_a > exp_b else "B"
+                        reason_parts.append(f"expectancy {exp_a:.2f}R vs {exp_b:.2f}R")
+                    elif pf_a is not None and pf_b is not None and pf_a != pf_b:
+                        winner = "A" if pf_a > pf_b else "B"
+                        reason_parts.append(f"profit factor {pf_a:.2f} vs {pf_b:.2f}")
+                    elif dd_a is not None and dd_b is not None and dd_a != dd_b:
+                        winner = "A" if dd_a > dd_b else "B"  # less negative is better
+                        reason_parts.append(f"drawdown {dd_a:.2f}R vs {dd_b:.2f}R")
+
+                    if winner:
+                        winner_note = f"Config {winner} looks better: " + ", ".join(reason_parts)
+                else:
+                    winner_note = f"Not enough trades to compare: A={int(trades_a)} B={int(trades_b)} (min {bt_min_trades_compare})."
+
                 st.dataframe(df_comp, use_container_width=True)
+                if winner_note:
+                    st.info(winner_note)
 
             st.subheader("By ticker (A)")
             st.dataframe(res_a["summary_by_ticker"], use_container_width=True)
