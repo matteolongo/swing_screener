@@ -71,3 +71,4 @@ Use **Run Daily Routine** in the sidebar to:
 
 - Data is fetched via the existing Yahoo Finance loader.
 - All logic stays deterministic and uses the same core modules as the CLI.
+- The UI can load built-in universes or a user-provided CSV (one ticker per line). Filters (include/exclude/grep, ensure benchmark) mirror the CLI. Use the sidebar to point to your CSV if you curate universes via `swing-screener universes filter ...`.

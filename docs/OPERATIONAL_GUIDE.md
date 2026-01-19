@@ -202,6 +202,35 @@ Degiro execution remains manual.
 
 ---
 
+## Building and curating universes (new)
+
+You can now inspect, filter, and save universes via CLI:
+
+- **List packaged universes**
+  ```bash
+  swing-screener universes list
+  ```
+- **Preview with filters (include/exclude/grep)**
+  ```bash
+  swing-screener universes show --name mega --top 20 --grep A --exclude AAPL
+  ```
+- **Filter and save to a CSV** (reusable with `--universe-file`)
+  ```bash
+  swing-screener universes filter --name mega --grep X --out data/universes/custom_x.csv
+  ```
+  Options:
+  - `--include / --exclude` literal tickers
+  - `--grep` substring match (case-insensitive)
+  - `--benchmark`/`--no-benchmark` to keep or drop the benchmark
+  - `--max` to cap length after filtering
+
+Saved CSVs are plain newline-separated tickers and can be referenced with:
+```bash
+swing-screener run --universe-file data/universes/custom_x.csv
+```
+
+---
+
 ## How exits work (very important)
 
 A position can be closed because:
