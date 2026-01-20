@@ -12,13 +12,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from swing_screener.data.market_data import MarketDataConfig, fetch_ohlcv, fetch_ticker_metadata
-from swing_screener.data.universe import (
-    UniverseConfig as DataUniverseConfig,
-    load_universe_from_package,
-    load_universe_from_file,
-    filter_ticker_list,
-    apply_universe_config,
-)
+from swing_screener.data.universe import UniverseConfig as DataUniverseConfig, load_universe_from_package
 from swing_screener.reporting.report import ReportConfig, build_daily_report
 from swing_screener.screeners.ranking import RankingConfig
 from swing_screener.screeners.universe import UniverseConfig as ScreenUniverseConfig, UniverseFilterConfig
@@ -67,12 +61,6 @@ BACKTEST_CONFIGS_PATH = Path("ui/.backtest_configs.json")
 
 DEFAULT_SETTINGS: dict = {
     "universe": "mega",
-    "universe_source": "package",  # package | file
-    "universe_file": "",
-    "universe_grep": "",
-    "universe_include": "",
-    "universe_exclude": "",
-    "ensure_benchmark": True,
     "top_n": 0,  # 0 = no cap (use full universe)
     "account_size": 500.0,
     "risk_pct": 1.0,
@@ -87,7 +75,6 @@ DEFAULT_SETTINGS: dict = {
     "bt_k_atr": 2.0,
     "bt_take_profit_R": 2.0,
     "bt_max_holding_days": 20,
-    "bt_commission_pct": 0.0,
     "bt_min_trades_per_ticker": 3,
     "bt_min_trades_compare": 30,
     "bt_flag_profit_factor": 1.3,
@@ -124,66 +111,8 @@ def _dedup_keep_order(items: list[str]) -> list[str]:
     return out
 
 
-def _parse_ticker_text(raw: str) -> list[str]:
-    """
-    Parse tickers from a freeform text field (comma/space/newline separated).
-    """
-    if not raw:
-        return []
-    tokens = []
-    for chunk in raw.replace("\n", " ").split(","):
-        for t in chunk.strip().split():
-            if t:
-                tokens.append(t.strip())
-    return tokens
-
-
-def _load_universe_tickers(
-    universe: str,
-    universe_source: str,
-    universe_file: str,
-    universe_grep: str,
-    universe_include: str,
-    universe_exclude: str,
-    ensure_benchmark: bool,
-    top_n: int,
-) -> list[str]:
-    cfg = DataUniverseConfig(
-        benchmark="SPY",
-        ensure_benchmark=False,  # apply after filtering
-        max_tickers=None,
-    )
-    if universe_source == "file":
-        base = load_universe_from_file(universe_file, cfg)
-    else:
-        base = load_universe_from_package(universe, cfg)
-
-    filtered = filter_ticker_list(
-        base,
-        include=_parse_ticker_text(universe_include),
-        exclude=_parse_ticker_text(universe_exclude),
-        grep=universe_grep,
-    )
-
-    final = apply_universe_config(
-        filtered,
-        DataUniverseConfig(
-            benchmark="SPY",
-            ensure_benchmark=ensure_benchmark,
-            max_tickers=top_n or None,
-        ),
-    )
-    return final
-
-
 def _run_screener(
     universe: str,
-    universe_source: str,
-    universe_file: str,
-    universe_grep: str,
-    universe_include: str,
-    universe_exclude: str,
-    ensure_benchmark: bool,
     top_n: int,
     account_size: float,
     risk_pct: float,
@@ -197,16 +126,8 @@ def _run_screener(
     max_atr_pct: float,
     require_trend_ok: bool,
 ) -> tuple[pd.DataFrame, str]:
-    tickers = _load_universe_tickers(
-        universe=universe,
-        universe_source=universe_source,
-        universe_file=universe_file,
-        universe_grep=universe_grep,
-        universe_include=universe_include,
-        universe_exclude=universe_exclude,
-        ensure_benchmark=ensure_benchmark,
-        top_n=top_n,
-    )
+    ucfg = DataUniverseConfig(benchmark="SPY", ensure_benchmark=True, max_tickers=top_n or None)
+    tickers = load_universe_from_package(universe, ucfg)
 
     ranking_top_n = top_n if top_n and top_n > 0 else 10_000  # 0 = no cap in UI -> effectively all
 
@@ -307,12 +228,6 @@ def _run_manage(
 
 def _run_backtest(
     universe: str,
-    universe_source: str,
-    universe_file: str,
-    universe_grep: str,
-    universe_include: str,
-    universe_exclude: str,
-    ensure_benchmark: bool,
     top_n: int,
     start: str,
     end: str,
@@ -321,16 +236,8 @@ def _run_backtest(
     use_cache: bool,
     force_refresh: bool,
 ) -> dict:
-    tickers = _load_universe_tickers(
-        universe=universe,
-        universe_source=universe_source,
-        universe_file=universe_file,
-        universe_grep=universe_grep,
-        universe_include=universe_include,
-        universe_exclude=universe_exclude,
-        ensure_benchmark=ensure_benchmark,
-        top_n=top_n,
-    )
+    ucfg = DataUniverseConfig(benchmark="SPY", ensure_benchmark=True, max_tickers=top_n or None)
+    tickers = load_universe_from_package(universe, ucfg)
 
     start_clean = str(start).replace("/", "-") if start else "2018-01-01"
     end_clean = str(end).replace("/", "-") if end else None
@@ -397,12 +304,6 @@ def _init_settings(universes: list[str]) -> dict:
 def _current_settings() -> dict:
     keys = [
         "universe",
-        "universe_source",
-        "universe_file",
-        "universe_grep",
-        "universe_include",
-        "universe_exclude",
-        "ensure_benchmark",
         "top_n",
         "account_size",
         "risk_pct",
@@ -417,7 +318,6 @@ def _current_settings() -> dict:
         "bt_k_atr",
         "bt_take_profit_R",
         "bt_max_holding_days",
-        "bt_commission_pct",
         "bt_min_trades_per_ticker",
         "bt_min_trades_compare",
         "bt_flag_profit_factor",
@@ -455,62 +355,12 @@ def main() -> None:
     st.sidebar.header("Session settings")
     st.sidebar.caption("Values here drive every step. Save once, reuse daily.")
     with st.sidebar.form("settings_form"):
-        universe_source = st.radio(
-            "Universe source",
-            options=["package", "file"],
-            format_func=lambda x: "Packaged (built-in)" if x == "package" else "File (CSV with tickers)",
-            index=0 if st.session_state.get("universe_source", "package") == "package" else 1,
-            key="universe_source",
-        )
-        if universe_source == "package":
-            universe = st.selectbox(
-                "Universe",
-                universes,
-                index=universes.index(st.session_state.get("universe", universes[0])),
-                key="universe",
-                help="Pick the ticker list to scan (default: mega).",
-            )
-            universe_file = st.text_input(
-                "Universe file (CSV, used when source=file)",
-                value=st.session_state.get("universe_file", defaults["universe_file"]),
-                key="universe_file",
-                help="Ignored when using packaged universes.",
-            )
-        else:
-            universe = st.selectbox(
-                "Fallback universe (used if file missing)",
-                universes,
-                index=universes.index(st.session_state.get("universe", universes[0])),
-                key="universe",
-            )
-            universe_file = st.text_input(
-                "Universe file (CSV with tickers, one per line)",
-                value=st.session_state.get("universe_file", defaults["universe_file"]),
-                key="universe_file",
-                help="Required when source=file.",
-            )
-        universe_grep = st.text_input(
-            "Filter: keep tickers containing substring (optional)",
-            value=st.session_state.get("universe_grep", defaults["universe_grep"]),
-            key="universe_grep",
-            help="Case-insensitive substring match applied after loading the universe.",
-        )
-        universe_include = st.text_area(
-            "Include tickers (comma/space/newline separated, optional)",
-            value=st.session_state.get("universe_include", defaults["universe_include"]),
-            key="universe_include",
-            height=60,
-        )
-        universe_exclude = st.text_area(
-            "Exclude tickers (comma/space/newline separated, optional)",
-            value=st.session_state.get("universe_exclude", defaults["universe_exclude"]),
-            key="universe_exclude",
-            height=60,
-        )
-        ensure_benchmark = st.checkbox(
-            "Ensure benchmark (adds SPY if missing)",
-            value=bool(st.session_state.get("ensure_benchmark", defaults["ensure_benchmark"])),
-            key="ensure_benchmark",
+        universe = st.selectbox(
+            "Universe",
+            universes,
+            index=universes.index(st.session_state["universe"]),
+            key="universe",
+            help="Pick the ticker list to scan (default: mega).",
         )
         top_n = st.slider(
             "Top N (0 = all)",
@@ -644,12 +494,6 @@ def main() -> None:
         try:
             report, report_csv = _run_screener(
                 settings["universe"],
-                settings["universe_source"],
-                settings["universe_file"],
-                settings["universe_grep"],
-                settings["universe_include"],
-                settings["universe_exclude"],
-                bool(settings["ensure_benchmark"]),
                 int(settings["top_n"]),
                 float(settings["account_size"]),
                 float(settings["risk_pct"]),
@@ -700,12 +544,6 @@ def main() -> None:
             try:
                 report, report_csv = _run_screener(
                     settings["universe"],
-                    settings["universe_source"],
-                    settings["universe_file"],
-                    settings["universe_grep"],
-                    settings["universe_include"],
-                    settings["universe_exclude"],
-                    bool(settings["ensure_benchmark"]),
                     int(settings["top_n"]),
                     float(settings["account_size"]),
                     float(settings["risk_pct"]),
@@ -1294,15 +1132,6 @@ def main() -> None:
             breakout_lb = st.number_input("Breakout lookback", 10, 200, int(st.session_state.get("bt_breakout_lookback", defaults["bt_breakout_lookback"])), 5, key="bt_breakout_lookback")
             pullback_ma = st.number_input("Pullback MA", 5, 100, int(st.session_state.get("bt_pullback_ma", defaults["bt_pullback_ma"])), 1, key="bt_pullback_ma")
             atr_win = st.number_input("ATR window", 5, 50, int(st.session_state.get("bt_atr_window", defaults["bt_atr_window"])), 1, key="bt_atr_window")
-            commission_pct = st.number_input(
-                "Commission per side (% of price)",
-                min_value=0.0,
-                max_value=1.0,
-                value=float(st.session_state.get("bt_commission_pct", defaults["bt_commission_pct"])),
-                step=0.01,
-                key="bt_commission_pct",
-                help="Applied on both entry and exit in backtest R calculations.",
-            )
             bt_min_trades_per_ticker = st.number_input(
                 "Min trades per ticker (include in summary)",
                 min_value=1,
@@ -1351,7 +1180,6 @@ def main() -> None:
                     "breakout_lookback": int(breakout_lb),
                     "pullback_ma": int(pullback_ma),
                     "atr_window": int(atr_win),
-                    "commission_pct": float(commission_pct),
                     "bt_min_trades_per_ticker": int(bt_min_trades_per_ticker),
                     "bt_min_trades_compare": int(bt_min_trades_compare),
                     "bt_flag_profit_factor": float(bt_flag_profit_factor),
@@ -1372,7 +1200,7 @@ def main() -> None:
             for cfg in saved_configs:
                 with st.expander(f"{cfg['name']} ({cfg['entry_type']}) — {cfg.get('created_at','')}"):
                     st.write(f"Stop k_ATR: {cfg['k_atr']} | TP R: {cfg['take_profit_R']} | Max hold: {cfg['max_holding_days']}d")
-                    st.write(f"Breakout lb: {cfg['breakout_lookback']} | Pullback MA: {cfg['pullback_ma']} | ATR win: {cfg['atr_window']} | Comm %: {cfg.get('commission_pct',0)}")
+                    st.write(f"Breakout lb: {cfg['breakout_lookback']} | Pullback MA: {cfg['pullback_ma']} | ATR win: {cfg['atr_window']}")
                     st.caption(f"Start: {cfg.get('start','')} | End: {cfg.get('end','latest')}")
                     if st.button(f"Elimina {cfg['name']}", key=f"del_{cfg['name']}"):
                         to_delete.append(cfg)
@@ -1401,16 +1229,9 @@ def main() -> None:
                         k_atr=cfg["k_atr"],
                         take_profit_R=cfg["take_profit_R"],
                         max_holding_days=cfg["max_holding_days"],
-                        commission_pct=cfg.get("commission_pct", 0.0),
                     )
                     res = _run_backtest(
                         settings["universe"],
-                        settings["universe_source"],
-                        settings["universe_file"],
-                        settings["universe_grep"],
-                        settings["universe_include"],
-                        settings["universe_exclude"],
-                        bool(settings["ensure_benchmark"]),
                         int(settings["top_n"]),
                         cfg.get("start") or str(bt_start),
                         cfg.get("end") or "",
