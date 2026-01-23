@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Literal, Optional
 from pathlib import Path
 import json
@@ -21,9 +21,12 @@ class Position:
     entry_price: float
     stop_price: float
     shares: int
+    position_id: Optional[str] = None
+    source_order_id: Optional[str] = None
     initial_risk: Optional[float] = None
     max_favorable_price: Optional[float] = None
     notes: str = ""
+    exit_order_ids: Optional[list[str]] = field(default=None)
 
 
 @dataclass
@@ -60,6 +63,8 @@ def load_positions(path: str | Path) -> list[Position]:
             Position(
                 ticker=str(item["ticker"]).upper(),
                 status=item.get("status", "open"),
+                position_id=item.get("position_id", None),
+                source_order_id=item.get("source_order_id", None),
                 entry_date=item["entry_date"],
                 entry_price=float(item["entry_price"]),
                 stop_price=float(item["stop_price"]),
@@ -75,6 +80,11 @@ def load_positions(path: str | Path) -> list[Position]:
                     else None
                 ),
                 notes=str(item.get("notes", "")),
+                exit_order_ids=(
+                    [str(x) for x in item.get("exit_order_ids", [])]
+                    if isinstance(item.get("exit_order_ids", None), list)
+                    else None
+                ),
             )
         )
     return out
@@ -90,6 +100,8 @@ def save_positions(
             {
                 "ticker": pos.ticker,
                 "status": pos.status,
+                "position_id": pos.position_id,
+                "source_order_id": pos.source_order_id,
                 "entry_date": pos.entry_date,
                 "entry_price": pos.entry_price,
                 "stop_price": pos.stop_price,
@@ -97,6 +109,7 @@ def save_positions(
                 "initial_risk": pos.initial_risk,
                 "max_favorable_price": pos.max_favorable_price,
                 "notes": pos.notes,
+                "exit_order_ids": pos.exit_order_ids,
             }
             for pos in positions
         ],

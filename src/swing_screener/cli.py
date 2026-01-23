@@ -106,6 +106,29 @@ def main() -> None:
     )
 
     # -------------------------
+    # MIGRATE (orders <-> positions)
+    # -------------------------
+    migrate = sub.add_parser(
+        "migrate",
+        help="Backfill order/position links and optional stop orders",
+    )
+    migrate.add_argument(
+        "--orders",
+        required=True,
+        help="Path to orders.json",
+    )
+    migrate.add_argument(
+        "--positions",
+        required=True,
+        help="Path to positions.json",
+    )
+    migrate.add_argument(
+        "--create-stop-orders",
+        action="store_true",
+        help="Create missing pending stop orders linked to open positions",
+    )
+
+    # -------------------------
     # UNIVERSES (list/show/filter)
     # -------------------------
     uni = sub.add_parser("universes", help="Inspect and build universes")
@@ -312,6 +335,21 @@ def main() -> None:
             path.write_text(md_text, encoding="utf-8")
             print(f"\nSaved Degiro actions checklist to {path.resolve()}")
 
+        return
+
+    if args.command == "migrate":
+        from swing_screener.portfolio.migrate import migrate_orders_positions
+
+        _, _, updated = migrate_orders_positions(
+            args.orders,
+            args.positions,
+            create_stop_orders=args.create_stop_orders,
+        )
+
+        if updated:
+            print("Migration complete: orders.json and positions.json updated.")
+        else:
+            print("No migration changes needed.")
         return
 
     if args.command == "universes":
