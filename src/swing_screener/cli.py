@@ -63,6 +63,10 @@ def main() -> None:
         "--top", type=int, default=None, help="Optional cap on number of tickers loaded"
     )
     run.add_argument("--csv", help="Export CSV report (path)")
+    run.add_argument(
+        "--positions",
+        help="Path to positions.json (open positions are excluded from screening)",
+    )
 
     # -------------------------
     # MANAGE (open positions)
@@ -175,7 +179,16 @@ def main() -> None:
         tickers = _resolve_tickers_from_run_args(args)
 
         ohlcv = fetch_ohlcv(tickers)
-        report = build_daily_report(ohlcv)
+        exclude_tickers = None
+        if args.positions:
+            from swing_screener.portfolio.state import load_positions
+
+            positions = load_positions(args.positions)
+            exclude_tickers = [
+                p.ticker for p in positions if p.status == "open"
+            ]
+
+        report = build_daily_report(ohlcv, exclude_tickers=exclude_tickers)
 
         if report.empty:
             print("No candidates today.")

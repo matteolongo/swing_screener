@@ -100,7 +100,7 @@ Never run during market hours.
 Run the screener:
 
 ```bash
-swing-screener run --universe mega --csv out/report.csv
+swing-screener run --universe mega --positions positions.json --csv out/report.csv
 ```
 
 This does:
@@ -108,6 +108,7 @@ This does:
 - computes trend, momentum, volatility
 - ranks candidates
 - computes entry / stop / shares
+- excludes open positions from new candidates
 
 ### What you do next
 - Open `out/report.csv`
@@ -226,7 +227,7 @@ You can now inspect, filter, and save universes via CLI:
 
 Saved CSVs are plain newline-separated tickers and can be referenced with:
 ```bash
-swing-screener run --universe-file data/universes/custom_x.csv
+swing-screener run --universe-file data/universes/custom_x.csv --positions positions.json
 ```
 
 ---
