@@ -87,3 +87,23 @@ def test_build_daily_report_returns_expected_structure():
     # should contain AAA and BBB
     assert "AAA" in rep.index
     assert "BBB" in rep.index
+
+
+def test_build_daily_report_excludes_open_positions():
+    ohlcv = _make_ohlcv_for_report()
+
+    cfg = ReportConfig(
+        universe=UniverseConfig(
+            filt=UniverseFilterConfig(
+                min_price=10,
+                max_price=1000,
+                max_atr_pct=10.0,
+                require_trend_ok=False,
+            )
+        )
+    )
+
+    rep = build_daily_report(ohlcv, cfg, exclude_tickers=["AAA"])
+
+    assert "AAA" not in rep.index
+    assert "BBB" in rep.index

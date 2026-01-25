@@ -22,7 +22,24 @@ class ReportConfig:
     only_active_signals: bool = False
 
 
-def build_daily_report(ohlcv: pd.DataFrame, cfg: ReportConfig = ReportConfig()) -> pd.DataFrame:
+def _normalize_ticker_set(items: Iterable[str] | None) -> set[str]:
+    if not items:
+        return set()
+    out: set[str] = set()
+    for item in items:
+        if item is None:
+            continue
+        t = str(item).strip().upper()
+        if t:
+            out.add(t)
+    return out
+
+
+def build_daily_report(
+    ohlcv: pd.DataFrame,
+    cfg: ReportConfig = ReportConfig(),
+    exclude_tickers: Iterable[str] | None = None,
+) -> pd.DataFrame:
     """
     Pipeline:
       eligible_universe -> ranking top_n -> signals -> trade plans -> merged report
@@ -30,6 +47,12 @@ def build_daily_report(ohlcv: pd.DataFrame, cfg: ReportConfig = ReportConfig()) 
     univ = eligible_universe(ohlcv, cfg.universe)
     if univ is None or univ.empty:
         return pd.DataFrame()
+
+    exclude = _normalize_ticker_set(exclude_tickers)
+    if exclude:
+        univ = univ.drop(index=list(exclude), errors="ignore")
+        if univ.empty:
+            return pd.DataFrame()
 
     ranked = top_candidates(univ, cfg.ranking)
     if ranked.empty:

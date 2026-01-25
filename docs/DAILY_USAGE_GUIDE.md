@@ -36,9 +36,10 @@ This is the single most important rule.
 ### 1️⃣ Run the screener (after market close)
 
 ```bash
-swing-screener run --tickers AAPL MSFT NVDA AMZN META INTC SPY --csv out/report.csv
+swing-screener run --tickers AAPL MSFT NVDA AMZN META INTC SPY --positions positions.json --csv out/report.csv
 ```
 
+`--positions` excludes tickers you already hold from new candidates.
 You are preparing **tomorrow’s trades** using **today’s final data**.
 
 ---

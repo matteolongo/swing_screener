@@ -49,10 +49,12 @@ Badges are visual guidance only and do not execute orders.
 ### Orders
 
 - Loads `./orders.json` by default.
-- Add pending orders (ticker, limit/stop, quantity, stop).
+- Add pending entry orders (ticker, limit/stop, quantity, stop).
 - Stop price is optional for pending orders; it is required when marking an order as filled.
 - Review pending orders and mark them **filled** or **cancelled**.
-- When marked **filled**, a position is created in `positions.json`.
+- When marked **filled**, a position is created in `positions.json` with a `position_id` linked to the entry order.
+- A linked **stop-loss order** (GTC) is created automatically.
+- An optional **take-profit order** (GTC) is created if you provide a TP price.
 
 ### Outputs
 
