@@ -55,6 +55,7 @@ def test_migrate_links_positions_and_creates_stop_orders(tmp_path):
     position = positions[0]
     assert position.position_id is not None
     assert position.source_order_id == "ORD-TEST-1"
+    assert position.initial_risk == 0.58
 
     entry_orders = [o for o in orders if o.order_id == "ORD-TEST-1"]
     assert entry_orders

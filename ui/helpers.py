@@ -95,9 +95,12 @@ def dataframe_to_positions(
                 entry_price=float(entry_price),
                 stop_price=float(stop_price),
                 shares=int(shares),
+                position_id=prev.position_id if prev else None,
+                source_order_id=prev.source_order_id if prev else None,
                 initial_risk=prev.initial_risk if prev else None,
                 max_favorable_price=prev.max_favorable_price if prev else None,
                 notes=str(notes) if notes is not None else "",
+                exit_order_ids=prev.exit_order_ids if prev else None,
             )
         )
 
@@ -208,6 +211,7 @@ ORDER_COLUMNS = [
     "order_id",
     "ticker",
     "status",
+    "order_kind",
     "order_type",
     "limit_price",
     "quantity",
@@ -215,6 +219,9 @@ ORDER_COLUMNS = [
     "order_date",
     "filled_date",
     "entry_price",
+    "position_id",
+    "parent_order_id",
+    "tif",
     "notes",
 ]
 
@@ -226,6 +233,10 @@ def make_order_entry(
     stop_price: Optional[float],
     notes: str = "",
     now: Optional[datetime] = None,
+    order_kind: Optional[str] = None,
+    parent_order_id: Optional[str] = None,
+    position_id: Optional[str] = None,
+    tif: Optional[str] = None,
 ) -> dict:
     ts = now or datetime.utcnow()
     order_id = f"{ticker}-{ts.strftime('%Y%m%d%H%M%S')}"
@@ -234,6 +245,7 @@ def make_order_entry(
         "order_id": order_id,
         "ticker": ticker,
         "status": "pending",
+        "order_kind": order_kind or "entry",
         "order_type": order_type,
         "limit_price": float(limit_price),
         "quantity": int(quantity),
@@ -241,6 +253,9 @@ def make_order_entry(
         "order_date": order_date,
         "filled_date": "",
         "entry_price": None,
+        "position_id": position_id,
+        "parent_order_id": parent_order_id,
+        "tif": tif or "GTC",
         "notes": notes.strip(),
     }
 
@@ -256,18 +271,36 @@ def load_orders(path: str | Path) -> list[dict]:
         order_id = str(item.get("order_id", "")).strip() or f"{ticker}-{idx + 1}"
         status_raw = str(item.get("status", "pending")).strip().lower()
         status = status_raw if status_raw in {"pending", "filled", "cancelled"} else "pending"
+        order_type = str(item.get("order_type", "")).strip().upper()
+        order_kind_raw = str(item.get("order_kind", "")).strip().lower()
+        if order_kind_raw in {"entry", "stop", "take_profit"}:
+            order_kind = order_kind_raw
+        else:
+            if order_type.startswith("BUY_"):
+                order_kind = "entry"
+            elif order_type == "SELL_STOP":
+                order_kind = "stop"
+            elif order_type == "SELL_LIMIT":
+                order_kind = "take_profit"
+            else:
+                order_kind = None
+
         out.append(
             {
                 "order_id": order_id,
                 "ticker": ticker,
                 "status": status,
-                "order_type": str(item.get("order_type", "")).strip().upper(),
+                "order_kind": order_kind,
+                "order_type": order_type,
                 "limit_price": item.get("limit_price", None),
                 "quantity": item.get("quantity", None),
                 "stop_price": item.get("stop_price", None),
                 "order_date": str(item.get("order_date", "")).strip(),
                 "filled_date": str(item.get("filled_date", "")).strip(),
                 "entry_price": item.get("entry_price", None),
+                "position_id": item.get("position_id", None),
+                "parent_order_id": item.get("parent_order_id", None),
+                "tif": item.get("tif", None) or "GTC",
                 "notes": str(item.get("notes", "")).strip(),
             }
         )

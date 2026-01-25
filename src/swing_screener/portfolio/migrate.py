@@ -107,6 +107,28 @@ def _ensure_exit_ids(position: Position, orders: list[Order]) -> Position:
     return replace(position, exit_order_ids=sorted(exit_ids))
 
 
+def _backfill_initial_risk(
+    position: Position,
+    orders: list[Order],
+) -> tuple[Position, bool]:
+    if position.initial_risk is not None:
+        return position, False
+    if not position.source_order_id:
+        return position, False
+    entry = next(
+        (o for o in orders if o.order_id == position.source_order_id),
+        None,
+    )
+    if entry is None or entry.stop_price is None:
+        return position, False
+    if position.entry_price <= entry.stop_price:
+        return position, False
+    return (
+        replace(position, initial_risk=float(position.entry_price - entry.stop_price)),
+        True,
+    )
+
+
 def _create_stop_orders(
     positions: list[Position],
     orders: list[Order],
@@ -198,8 +220,13 @@ def migrate_orders_positions(
         orders, created = _create_stop_orders(positions, orders, asof)
         updated = updated or created
 
-    # Refresh exit order ids
-    positions = [_ensure_exit_ids(p, orders) for p in positions]
+    # Backfill initial_risk from entry orders, then refresh exit order ids
+    new_positions: list[Position] = []
+    for p in positions:
+        p2, changed = _backfill_initial_risk(p, orders)
+        updated = updated or changed
+        new_positions.append(p2)
+    positions = [_ensure_exit_ids(p, orders) for p in new_positions]
 
     if updated:
         save_orders(orders_path, orders, asof=asof)

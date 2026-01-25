@@ -1,4 +1,5 @@
 import pandas as pd
+import pytest
 from swing_screener.portfolio.state import Position, evaluate_positions, ManageConfig
 
 
@@ -52,3 +53,32 @@ def test_stop_hit_triggers_close():
     )
     updates, _ = evaluate_positions(ohlcv, [pos], ManageConfig())
     assert updates[-1].action == "CLOSE_STOP_HIT"
+
+
+def test_trailing_stop_above_entry_uses_initial_risk():
+    ohlcv = _make_ohlcv({"AAA": [100, 105, 110]})
+    pos = Position(
+        ticker="AAA",
+        status="open",
+        entry_date="2026-01-01",
+        entry_price=100.0,
+        stop_price=105.0,
+        shares=1,
+        initial_risk=10.0,
+    )
+    updates, _ = evaluate_positions(ohlcv, [pos], ManageConfig())
+    assert updates[0].r_now == pytest.approx(1.0)
+
+
+def test_trailing_stop_above_entry_without_initial_risk_errors():
+    ohlcv = _make_ohlcv({"AAA": [100, 105, 110]})
+    pos = Position(
+        ticker="AAA",
+        status="open",
+        entry_date="2026-01-01",
+        entry_price=100.0,
+        stop_price=105.0,
+        shares=1,
+    )
+    with pytest.raises(ValueError):
+        evaluate_positions(ohlcv, [pos], ManageConfig())

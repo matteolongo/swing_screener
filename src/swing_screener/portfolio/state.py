@@ -160,10 +160,15 @@ def evaluate_positions(
         )
         mfp_new = max(mfp, last)
 
-        # compute 1R per-share
-        risk_per_share = pos.entry_price - pos.stop_price
+        # compute 1R per-share (use initial_risk if available)
+        if pos.initial_risk is not None:
+            risk_per_share = float(pos.initial_risk)
+        else:
+            risk_per_share = pos.entry_price - pos.stop_price
         if risk_per_share <= 0:
-            raise ValueError(f"{pos.ticker}: entry_price must be > stop_price.")
+            raise ValueError(
+                f"{pos.ticker}: initial_risk must be > 0 (entry - initial stop)."
+            )
         r_now = (last - pos.entry_price) / risk_per_share
 
         # stop hit?
