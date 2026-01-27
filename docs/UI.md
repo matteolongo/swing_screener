@@ -27,6 +27,7 @@ streamlit run ui/app.py
 - Select a universe, optional Top N cap, account size, and risk %.
 - Run the screener to generate the daily report.
 - The report is saved to `out/report.csv` by default and can be downloaded.
+- The candidates table includes a `confidence` score (0-100) for active signals only.
 - Use **Create pending orders** to open an inline form per row, edit the values, and save the order.
 
 ### Action Badges

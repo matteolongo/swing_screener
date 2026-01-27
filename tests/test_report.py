@@ -81,12 +81,18 @@ def test_build_daily_report_returns_expected_structure():
     assert "CCC" not in rep.index
 
     # report has key columns
-    for col in ["score", "rank", "last", "signal"]:
+    for col in ["score", "rank", "last", "signal", "confidence"]:
         assert col in rep.columns
 
     # should contain AAA and BBB
     assert "AAA" in rep.index
     assert "BBB" in rep.index
+
+    # confidence only for active signals (AAA/BBB should be active in this fixture)
+    assert pd.notna(rep.loc["AAA", "confidence"])
+    assert pd.notna(rep.loc["BBB", "confidence"])
+    assert 0 <= float(rep.loc["AAA", "confidence"]) <= 100
+    assert 0 <= float(rep.loc["BBB", "confidence"]) <= 100
 
 
 def test_build_daily_report_excludes_open_positions():
