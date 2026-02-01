@@ -22,7 +22,24 @@ class ReportConfig:
     only_active_signals: bool = False
 
 
-def build_daily_report(ohlcv: pd.DataFrame, cfg: ReportConfig = ReportConfig()) -> pd.DataFrame:
+def _normalize_ticker_set(items: Iterable[str] | None) -> set[str]:
+    if not items:
+        return set()
+    out: set[str] = set()
+    for item in items:
+        if item is None:
+            continue
+        t = str(item).strip().upper()
+        if t:
+            out.add(t)
+    return out
+
+
+def build_daily_report(
+    ohlcv: pd.DataFrame,
+    cfg: ReportConfig = ReportConfig(),
+    exclude_tickers: Iterable[str] | None = None,
+) -> pd.DataFrame:
     """
     Pipeline:
       eligible_universe -> ranking top_n -> signals -> trade plans -> merged report
@@ -30,6 +47,12 @@ def build_daily_report(ohlcv: pd.DataFrame, cfg: ReportConfig = ReportConfig()) 
     univ = eligible_universe(ohlcv, cfg.universe)
     if univ is None or univ.empty:
         return pd.DataFrame()
+
+    exclude = _normalize_ticker_set(exclude_tickers)
+    if exclude:
+        univ = univ.drop(index=list(exclude), errors="ignore")
+        if univ.empty:
+            return pd.DataFrame()
 
     ranked = top_candidates(univ, cfg.ranking)
     if ranked.empty:
@@ -54,10 +77,13 @@ def build_daily_report(ohlcv: pd.DataFrame, cfg: ReportConfig = ReportConfig()) 
             report["signal"] = report["signal_plan"].fillna(report["signal"])
             report = report.drop(columns=["signal_plan"], errors="ignore")
 
+    # confidence score for active signals only
+    report["confidence"] = _compute_confidence(report, cfg.universe.filt.max_atr_pct)
+
     # tidy columns order
     ma_col = f"ma{cfg.signals.pullback_ma}_level"
     keep = [
-        "rank", "score",
+        "rank", "score", "confidence",
         "last", atr_col, "atr_pct",
         "mom_6m", "mom_12m", "rs_6m",
         "trend_ok", "dist_sma50_pct", "dist_sma200_pct",
@@ -79,6 +105,52 @@ def build_daily_report(ohlcv: pd.DataFrame, cfg: ReportConfig = ReportConfig()) 
 
     report = add_execution_guidance(report)
     return report
+
+
+def _compute_confidence(report: pd.DataFrame, max_atr_pct: float) -> pd.Series:
+    """
+    Confidence (0-100) for active signals only.
+    Uses existing features: score, signal, dist_sma200_pct, atr_pct.
+    """
+    if report is None or report.empty:
+        return pd.Series(dtype=float)
+
+    out = pd.Series(index=report.index, dtype=float)
+    if "signal" not in report.columns:
+        return out
+
+    active = report["signal"].isin(["both", "breakout", "pullback"])
+    if not active.any():
+        return out
+
+    score = report["score"] if "score" in report.columns else pd.Series(0.0, index=report.index)
+    score = score.fillna(0.0).clip(lower=0.0, upper=1.0)
+
+    sig_map = {"both": 1.0, "breakout": 0.8, "pullback": 0.6}
+    sig_strength = report["signal"].map(sig_map).fillna(0.0).clip(lower=0.0, upper=1.0)
+
+    if "dist_sma200_pct" in report.columns:
+        trend_strength = (report["dist_sma200_pct"].clip(lower=0.0) / 20.0).clip(
+            lower=0.0, upper=1.0
+        )
+        trend_strength = trend_strength.fillna(0.0)
+    else:
+        trend_strength = pd.Series(0.0, index=report.index)
+
+    if "atr_pct" in report.columns and max_atr_pct > 0:
+        vol_strength = (1.0 - (report["atr_pct"] / max_atr_pct)).clip(
+            lower=0.0, upper=1.0
+        )
+        vol_strength = vol_strength.fillna(0.0)
+    else:
+        vol_strength = pd.Series(0.0, index=report.index)
+
+    conf = 100.0 * (
+        0.50 * score + 0.25 * sig_strength + 0.15 * trend_strength + 0.10 * vol_strength
+    )
+    conf = conf.round(1)
+    out.loc[active] = conf.loc[active]
+    return out
 
 
 def export_report_csv(report: pd.DataFrame, path: str = "out/daily_report.csv") -> str:

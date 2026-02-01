@@ -27,6 +27,7 @@ streamlit run ui/app.py
 - Select a universe, optional Top N cap, account size, and risk %.
 - Run the screener to generate the daily report.
 - The report is saved to `out/report.csv` by default and can be downloaded.
+- The candidates table includes a `confidence` score (0-100) for active signals only.
 - Use **Create pending orders** to open an inline form per row, edit the values, and save the order.
 
 ### Action Badges
@@ -49,10 +50,12 @@ Badges are visual guidance only and do not execute orders.
 ### Orders
 
 - Loads `./orders.json` by default.
-- Add pending orders (ticker, limit/stop, quantity, stop).
+- Add pending entry orders (ticker, limit/stop, quantity, stop).
 - Stop price is optional for pending orders; it is required when marking an order as filled.
 - Review pending orders and mark them **filled** or **cancelled**.
-- When marked **filled**, a position is created in `positions.json`.
+- When marked **filled**, a position is created in `positions.json` with a `position_id` linked to the entry order.
+- A linked **stop-loss order** (GTC) is created automatically.
+- An optional **take-profit order** (GTC) is created if you provide a TP price.
 
 ### Outputs
 
