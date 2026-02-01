@@ -17,6 +17,7 @@ class OrderPatch(BaseModel):
     order_date: Optional[str] = None
     filled_date: Optional[str] = None
     entry_price: Optional[float] = None
+    commission: Optional[float] = None
     notes: Optional[str] = None
     locked: Optional[bool] = None
 

@@ -22,6 +22,7 @@ class Order:
     order_date: str = ""
     filled_date: str = ""
     entry_price: Optional[float] = None
+    commission: Optional[float] = None
     notes: str = ""
     order_kind: Optional[OrderKind] = None
     parent_order_id: Optional[str] = None
@@ -71,6 +72,11 @@ def load_orders(path: str | Path) -> list[Order]:
                     if item.get("entry_price") is not None
                     else None
                 ),
+                commission=(
+                    float(item["commission"])
+                    if item.get("commission") is not None
+                    else None
+                ),
                 notes=str(item.get("notes", "")).strip(),
                 order_kind=order_kind,
                 parent_order_id=item.get("parent_order_id", None),
@@ -97,6 +103,7 @@ def save_orders(path: str | Path, orders: list[Order], asof: Optional[str] = Non
                 "order_date": o.order_date,
                 "filled_date": o.filled_date,
                 "entry_price": o.entry_price,
+                "commission": o.commission,
                 "notes": o.notes,
                 "order_kind": o.order_kind,
                 "parent_order_id": o.parent_order_id,

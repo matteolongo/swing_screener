@@ -72,6 +72,7 @@ def test_load_orders_invalid_order_type_normalized_to_empty(tmp_path):
                 "ticker": "AAA",
                 "status": "pending",
                 "order_type": "BUY_MARKET",
+                "commission": "1.5",
                 "order_date": "2026-01-01",
                 "filled_date": "",
             }
@@ -83,3 +84,4 @@ def test_load_orders_invalid_order_type_normalized_to_empty(tmp_path):
 
     assert len(orders) == 1
     assert orders[0]["order_type"] == ""
+    assert orders[0]["commission"] == 1.5

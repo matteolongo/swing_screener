@@ -35,6 +35,7 @@ const ORDER_PATCH_FIELDS: (keyof OrderPatch)[] = [
   'order_date',
   'filled_date',
   'entry_price',
+  'commission',
   'notes',
   'locked',
 ];

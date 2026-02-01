@@ -12,6 +12,7 @@ export interface Order {
   order_date: string;
   filled_date: string;
   entry_price: number | null;
+  commission?: number | null;
   notes: string;
   locked: boolean;
 }
@@ -77,6 +78,7 @@ export interface OrderPatch {
   order_date?: string;
   filled_date?: string;
   entry_price?: number | null;
+  commission?: number | null;
   notes?: string;
   locked?: boolean;
 }

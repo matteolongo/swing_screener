@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from '@mui/material/styles';
 import OrdersTable from '@/components/OrdersTable';
@@ -16,6 +16,7 @@ const baseOrder: Order = {
   order_date: '2026-01-01',
   filled_date: '',
   entry_price: null,
+  commission: null,
   notes: '',
   locked: false,
 };
@@ -54,5 +55,23 @@ describe('OrdersTable', () => {
     await user.click(screen.getByRole('option', { name: /filled/i }));
 
     expect(handleChange).toHaveBeenCalledWith('AAA-1', 'status', 'filled');
+  });
+
+  it('calls onOrderChange for commission edits', async () => {
+    const user = userEvent.setup();
+    const handleChange = jest.fn();
+
+    renderWithTheme(
+      <OrdersTable
+        orders={[baseOrder]}
+        onOrderChange={handleChange}
+        onToggleLock={() => undefined}
+      />
+    );
+
+    const input = screen.getByTestId('commission-AAA-1');
+    fireEvent.change(input, { target: { value: '1.25' } });
+
+    expect(handleChange).toHaveBeenCalledWith('AAA-1', 'commission', 1.25);
   });
 });

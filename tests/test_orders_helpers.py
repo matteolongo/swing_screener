@@ -17,6 +17,7 @@ def test_orders_roundtrip(tmp_path):
             "order_date": "2024-01-10",
             "filled_date": "",
             "entry_price": None,
+            "commission": 1.2,
             "notes": "test",
         }
     ]
@@ -27,6 +28,7 @@ def test_orders_roundtrip(tmp_path):
     assert loaded[0]["ticker"] == "AAPL"
     assert loaded[0]["status"] == "pending"
     assert loaded[0]["order_type"] == "BUY_LIMIT"
+    assert loaded[0]["commission"] == 1.2
 
     df = orders_to_dataframe(loaded)
     assert not df.empty
@@ -47,6 +49,7 @@ def test_make_order_entry_deterministic():
     assert order["order_id"] == "AAPL-20240102030405"
     assert order["order_date"] == "2024-01-02"
     assert order["status"] == "pending"
+    assert order["commission"] is None
 
 
 def test_make_order_entry_allows_missing_stop():

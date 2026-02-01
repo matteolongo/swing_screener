@@ -24,6 +24,15 @@ class PatchError(ValueError):
     pass
 
 
+def _optional_float(value: Any) -> float | None:
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def load_orders(path: str | Path) -> tuple[list[dict[str, Any]], str | None]:
     p = Path(path)
     if not p.exists():
@@ -292,6 +301,7 @@ def _normalize_order(item: dict[str, Any], idx: int) -> dict[str, Any]:
             "order_type": order_type,
             "order_date": str(order.get("order_date", "") or "").strip(),
             "filled_date": str(order.get("filled_date", "") or "").strip(),
+            "commission": _optional_float(order.get("commission")),
             "notes": str(order.get("notes", "") or "").strip(),
             "locked": bool(order.get("locked", False)),
         }
@@ -350,6 +360,7 @@ def _apply_order_patch(
         "order_date",
         "filled_date",
         "entry_price",
+        "commission",
         "notes",
     ):
         if key in patch:

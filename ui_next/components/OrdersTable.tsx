@@ -48,6 +48,7 @@ export default function OrdersTable({
             <TableCell>Order Date</TableCell>
             <TableCell>Filled Date</TableCell>
             <TableCell>Entry Price</TableCell>
+            <TableCell>Commission</TableCell>
             <TableCell>Stop Price</TableCell>
             <TableCell>Notes</TableCell>
             <TableCell>Locked</TableCell>
@@ -111,6 +112,18 @@ export default function OrdersTable({
                 <TableCell>
                   <TextField
                     size="small"
+                    value={order.commission ?? ''}
+                    disabled={disabled}
+                    onChange={(event) =>
+                      onOrderChange(order.order_id, 'commission', parseNumber(event.target.value))
+                    }
+                    fullWidth
+                    inputProps={{ inputMode: 'decimal', 'data-testid': `commission-${order.order_id}` }}
+                  />
+                </TableCell>
+                <TableCell>
+                  <TextField
+                    size="small"
                     value={order.stop_price ?? ''}
                     disabled={disabled}
                     onChange={(event) =>
@@ -142,7 +155,7 @@ export default function OrdersTable({
           })}
           {!orders.length && (
             <TableRow>
-              <TableCell colSpan={11}>
+              <TableCell colSpan={12}>
                 <Typography variant="body2" color="text.secondary">
                   No orders available.
                 </Typography>
