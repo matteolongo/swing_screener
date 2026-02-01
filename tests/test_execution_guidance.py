@@ -103,3 +103,42 @@ def test_none_signal_skip():
 
     assert row["suggested_order_type"] == "SKIP"
     assert np.isnan(row["suggested_order_price"])
+
+
+def test_both_signal_prefers_pullback_when_ma_available():
+    df = pd.DataFrame(
+        {
+            "signal": ["both"],
+            "last": [110.0],
+            "breakout_level": [105.0],
+            "atr14": [4.0],
+            "ma20_level": [101.0],
+        },
+        index=["AAA"],
+    )
+
+    out = add_execution_guidance(df)
+    row = out.loc["AAA"]
+
+    assert row["suggested_order_type"] == "BUY_LIMIT"
+    assert row["suggested_order_price"] == approx(101.0, rel=1e-9)
+
+
+def test_guidance_supports_dynamic_ma_and_atr_columns():
+    df = pd.DataFrame(
+        {
+            "signal": ["pullback"],
+            "last": [110.0],
+            "breakout_level": [105.0],
+            "atr21": [5.0],
+            "ma30_level": [102.0],
+        },
+        index=["AAA"],
+    )
+
+    out = add_execution_guidance(df)
+    row = out.loc["AAA"]
+
+    assert row["suggested_order_type"] == "BUY_LIMIT"
+    assert row["suggested_order_price"] == approx(102.0, rel=1e-9)
+    assert row["order_price_band_high"] == approx(102.0 + 0.1 * 5.0, rel=1e-9)
