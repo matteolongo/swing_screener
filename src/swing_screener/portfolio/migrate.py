@@ -123,8 +123,9 @@ def _backfill_initial_risk(
         return position, False
     if position.entry_price <= entry.stop_price:
         return position, False
+    initial_risk = round(float(position.entry_price - entry.stop_price), 4)
     return (
-        replace(position, initial_risk=float(position.entry_price - entry.stop_price)),
+        replace(position, initial_risk=initial_risk),
         True,
     )
 

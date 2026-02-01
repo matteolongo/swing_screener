@@ -75,6 +75,10 @@ def build_signal_board(
     tks = [str(t).strip().upper() for t in tickers if t and str(t).strip()]
     tks = [t for i, t in enumerate(tks) if t not in tks[:i]]  # unique preserve order
 
+    breakout_col = f"breakout{cfg.breakout_lookback}"
+    pullback_col = f"pullback_ma{cfg.pullback_ma}"
+    ma_col = f"ma{cfg.pullback_ma}_level"
+
     rows = []
     for t in tks:
         if t not in close.columns:
@@ -84,8 +88,7 @@ def build_signal_board(
         if s.empty:
             continue
         if len(s) < cfg.min_history:
-            # still try to compute if possible; but for swing we prefer decent history
-            pass
+            continue
 
         last = float(s.iloc[-1])
 
@@ -105,13 +108,24 @@ def build_signal_board(
             {
                 "ticker": t,
                 "last": last,
-                f"breakout{cfg.breakout_lookback}": brk,
+                breakout_col: brk,
                 "breakout_level": brk_lvl,
-                f"pullback_ma{cfg.pullback_ma}": pb,
-                f"ma{cfg.pullback_ma}_level": ma_lvl,
+                pullback_col: pb,
+                ma_col: ma_lvl,
                 "signal": sig,
             }
         )
+
+    board_cols = [
+        "last",
+        breakout_col,
+        "breakout_level",
+        pullback_col,
+        ma_col,
+        "signal",
+    ]
+    if not rows:
+        return pd.DataFrame(columns=board_cols, index=pd.Index([], name="ticker"))
 
     board = pd.DataFrame(rows).set_index("ticker")
 

@@ -54,9 +54,11 @@ def fetch_ohlcv(
     cfg: MarketDataConfig = MarketDataConfig(),
     use_cache: bool = True,
     force_refresh: bool = False,
+    allow_cache_fallback_on_error: bool = True,
 ) -> pd.DataFrame:
     """
     Scarica OHLCV da Yahoo Finance (via yfinance), opzionalmente con cache su parquet.
+    Se il download fallisce e la cache esiste, può fare fallback al parquet locale.
 
     Output: DataFrame con colonne MultiIndex: (field, ticker)
       field ∈ {Open, High, Low, Close, Volume}
@@ -68,17 +70,26 @@ def fetch_ohlcv(
         df = pd.read_parquet(cache_file)
         return _clean_ohlcv(df, tks)
 
-    df = yf.download(
-        tks,
-        start=cfg.start,
-        end=cfg.end,
-        auto_adjust=cfg.auto_adjust,
-        progress=cfg.progress,
-        group_by="column",
-        threads=True,
-    )
+    try:
+        df = yf.download(
+            tks,
+            start=cfg.start,
+            end=cfg.end,
+            auto_adjust=cfg.auto_adjust,
+            progress=cfg.progress,
+            group_by="column",
+            threads=True,
+        )
+    except Exception as e:
+        if allow_cache_fallback_on_error and cache_file.exists():
+            df = pd.read_parquet(cache_file)
+            return _clean_ohlcv(df, tks)
+        raise RuntimeError(f"Download fallito: {e}") from e
 
     if df is None or df.empty:
+        if allow_cache_fallback_on_error and cache_file.exists():
+            df = pd.read_parquet(cache_file)
+            return _clean_ohlcv(df, tks)
         raise RuntimeError("Download vuoto. Controlla tickers o connessione.")
 
     # yfinance può tornare:
