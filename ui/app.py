@@ -601,6 +601,10 @@ def main() -> None:
             ]
             if all(c in report.columns for c in guidance_cols):
                 guidance = report[guidance_cols].copy()
+                if "confidence" in report.columns:
+                    guidance["confidence"] = report["confidence"].map(
+                        lambda x: f"{float(x):.1f}%" if pd.notna(x) else ""
+                    )
                 if "order_price_band_low" in report.columns and "order_price_band_high" in report.columns:
                     band = report[["order_price_band_low", "order_price_band_high"]].copy()
                     guidance["order_price_band"] = band.apply(
@@ -627,7 +631,17 @@ def main() -> None:
                 display.insert(0, "Action", display["ui_action_badge"].map(_badge_html))
                 display = display.drop(columns=["ui_action_badge"])
                 # reorder for clarity
-                col_order = ["Action", "name", "currency", "exchange", "suggested_order_type", "suggested_order_price", "execution_note", "order_price_band"]
+                col_order = [
+                    "Action",
+                    "confidence",
+                    "name",
+                    "currency",
+                    "exchange",
+                    "suggested_order_type",
+                    "suggested_order_price",
+                    "execution_note",
+                    "order_price_band",
+                ]
                 existing_cols = [c for c in col_order if c in display.columns]
                 rest = [c for c in display.columns if c not in existing_cols]
                 display = display[existing_cols + rest]
@@ -636,6 +650,7 @@ def main() -> None:
                     "Suggested order type/price comes from signal context: "
                     "breakout → buy stop near breakout level; "
                     "pullback → buy limit near pullback level; "
+                    "confidence shows signal quality (0-100); "
                     "none → skip. "
                     "Badges are hints only; orders are not placed automatically."
                 )
@@ -865,7 +880,7 @@ def main() -> None:
         if pending_df.empty:
             st.info("No pending orders.")
         else:
-            st.dataframe(pending_df, width='stretch')
+            st.dataframe(pending_df, use_container_width=True)
 
         linked_df = orders_df[orders_df["position_id"].notna()].copy()
         st.subheader("Linked orders (by position)")
@@ -891,7 +906,7 @@ def main() -> None:
                         "notes",
                     ]
                     display = group[[c for c in cols if c in group.columns]]
-                    st.dataframe(display, width='stretch')
+                    st.dataframe(display, use_container_width=True)
 
         st.subheader("Update pending order")
         pending = [o for o in orders if o.get("status") == "pending"]
@@ -1095,7 +1110,7 @@ def main() -> None:
         if orders_df.empty:
             st.info("No orders recorded.")
         else:
-            st.dataframe(orders_df, width='stretch')
+            st.dataframe(orders_df, use_container_width=True)
 
     with tab_manage:
         st.subheader("3) Manage positions")
@@ -1134,7 +1149,7 @@ def main() -> None:
         edited_df = st.data_editor(
             positions_df,
             num_rows="dynamic",
-            width='stretch',
+            use_container_width=True,
         )
 
         if st.button("Recalculate stops / checklist", key="manage_btn"):
@@ -1175,7 +1190,7 @@ def main() -> None:
                     }
                 )
                 st.caption("R now shows current profit in R units. Positive = above entry risk.")
-                st.dataframe(display, width='stretch')
+                st.dataframe(display, use_container_width=True)
                 st.download_button(
                     "Download manage CSV",
                     df.to_csv(index=True),
@@ -1203,7 +1218,7 @@ def main() -> None:
             st.warning(f"Unable to read report CSV: {report_err}")
         elif not report_df.empty:
             st.caption("Report preview")
-            st.dataframe(report_df, width='stretch')
+            st.dataframe(report_df, use_container_width=True)
         else:
             st.info("No report found yet. Run the screener.")
 
@@ -1415,7 +1430,7 @@ def main() -> None:
 
             df_summary = pd.DataFrame(rows)
             st.subheader("Panoramica")
-            st.dataframe(df_summary, width='stretch')
+            st.dataframe(df_summary, use_container_width=True)
 
             # Winner highlight
             valid = df_summary.dropna(subset=["Expectancy_R", "Trades"])
@@ -1479,7 +1494,7 @@ def main() -> None:
 
                 st.subheader(f"Trades sample — {first.get('name','config')}")
                 if first["trades"] is not None and not first["trades"].empty:
-                    st.dataframe(first["trades"].head(200), width='stretch')
+                    st.dataframe(first["trades"].head(200), use_container_width=True)
                     st.download_button(
                         f"Download trades CSV ({first.get('name','config')})",
                         first["trades"].to_csv(index=False),

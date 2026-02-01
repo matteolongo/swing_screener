@@ -97,3 +97,19 @@ def test_build_signal_board_skips_empty_series():
 
     assert "AAA" in board.index
     assert "CCC" not in board.index
+
+
+def test_build_signal_board_empty_result_has_expected_columns():
+    ohlcv = _make_ohlcv_for_signals()
+    board = build_signal_board(ohlcv, ["ZZZ"], EntrySignalConfig())
+
+    assert isinstance(board, pd.DataFrame)
+    assert board.empty
+    assert list(board.columns) == [
+        "last",
+        "breakout50",
+        "breakout_level",
+        "pullback_ma20",
+        "ma20_level",
+        "signal",
+    ]
