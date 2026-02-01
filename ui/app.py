@@ -601,6 +601,10 @@ def main() -> None:
             ]
             if all(c in report.columns for c in guidance_cols):
                 guidance = report[guidance_cols].copy()
+                if "confidence" in report.columns:
+                    guidance["confidence"] = report["confidence"].map(
+                        lambda x: f"{float(x):.1f}%" if pd.notna(x) else ""
+                    )
                 if "order_price_band_low" in report.columns and "order_price_band_high" in report.columns:
                     band = report[["order_price_band_low", "order_price_band_high"]].copy()
                     guidance["order_price_band"] = band.apply(
@@ -627,7 +631,17 @@ def main() -> None:
                 display.insert(0, "Action", display["ui_action_badge"].map(_badge_html))
                 display = display.drop(columns=["ui_action_badge"])
                 # reorder for clarity
-                col_order = ["Action", "name", "currency", "exchange", "suggested_order_type", "suggested_order_price", "execution_note", "order_price_band"]
+                col_order = [
+                    "Action",
+                    "confidence",
+                    "name",
+                    "currency",
+                    "exchange",
+                    "suggested_order_type",
+                    "suggested_order_price",
+                    "execution_note",
+                    "order_price_band",
+                ]
                 existing_cols = [c for c in col_order if c in display.columns]
                 rest = [c for c in display.columns if c not in existing_cols]
                 display = display[existing_cols + rest]
@@ -636,6 +650,7 @@ def main() -> None:
                     "Suggested order type/price comes from signal context: "
                     "breakout → buy stop near breakout level; "
                     "pullback → buy limit near pullback level; "
+                    "confidence shows signal quality (0-100); "
                     "none → skip. "
                     "Badges are hints only; orders are not placed automatically."
                 )
