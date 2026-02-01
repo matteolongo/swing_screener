@@ -10,6 +10,7 @@ import {
   applyChanges,
   getOrders,
   getPositions,
+  getUniverses,
   previewChanges,
   runScreening,
 } from '@/lib/api';
@@ -90,6 +91,7 @@ export default function Home() {
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [lastRun, setLastRun] = React.useState<string | null>(null);
+  const [universes, setUniverses] = React.useState<string[]>([]);
 
   React.useEffect(() => {
     const stored = window.localStorage.getItem(LAST_RUN_KEY);
@@ -107,6 +109,16 @@ export default function Home() {
   React.useEffect(() => {
     refreshData().catch((err) => setError(err.message || 'Failed to load data.'));
   }, [refreshData]);
+
+  React.useEffect(() => {
+    getUniverses()
+      .then((response) => {
+        setUniverses(response.universes || []);
+      })
+      .catch(() => {
+        setUniverses([]);
+      });
+  }, []);
 
   const handleOrderChange = React.useCallback(
     (orderId: string, field: keyof Order, value: Order[keyof Order]) => {
@@ -168,11 +180,16 @@ export default function Home() {
   }, [baselineOrders, baselinePositions, orders, positions]);
 
   const handleApply = React.useCallback(async () => {
+    const orderPatches = buildOrderPatches(baselineOrders, orders);
+    const positionPatches = buildPositionPatches(baselinePositions, positions);
+    if (!orderPatches.length && !positionPatches.length) {
+      setPreview(null);
+      setError(null);
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
-      const orderPatches = buildOrderPatches(baselineOrders, orders);
-      const positionPatches = buildPositionPatches(baselinePositions, positions);
       await applyChanges({ orders: orderPatches, positions: positionPatches });
       await refreshData();
       setPreview(null);
@@ -214,6 +231,7 @@ export default function Home() {
 
         <RoutinePanel
           lastRun={lastRun}
+          universes={universes}
           onRunScreening={handleScreening}
           onPreview={handlePreview}
           onApply={handleApply}

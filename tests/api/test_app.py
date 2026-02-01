@@ -28,6 +28,19 @@ def test_get_orders_positions(tmp_path: Path) -> None:
     assert positions_res.json()["positions"] == []
 
 
+def test_get_universes(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "swing_screener.api.app.list_package_universes",
+        lambda: ["mega", "mega_europe"],
+    )
+
+    client = TestClient(create_app())
+    response = client.get("/universes")
+
+    assert response.status_code == 200
+    assert response.json() == {"universes": ["mega", "mega_europe"]}
+
+
 def test_preview_and_apply(tmp_path: Path) -> None:
     orders_path = tmp_path / "orders.json"
     positions_path = tmp_path / "positions.json"

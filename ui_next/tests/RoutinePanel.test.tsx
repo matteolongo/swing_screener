@@ -12,6 +12,7 @@ describe('RoutinePanel', () => {
     renderWithTheme(
       <RoutinePanel
         lastRun="2026-01-21"
+        universes={['mega', 'mega_europe']}
         onRunScreening={() => undefined}
         onPreview={() => undefined}
         onApply={() => undefined}
@@ -23,5 +24,6 @@ describe('RoutinePanel', () => {
     expect(screen.getByRole('button', { name: /Run Screening/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Preview Changes/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Apply/i })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: /Universe/i })).toBeInTheDocument();
   });
 });

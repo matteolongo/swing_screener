@@ -63,6 +63,10 @@ export interface ScreeningResponse {
   csv: string;
 }
 
+export interface UniversesResponse {
+  universes: string[];
+}
+
 export interface OrderPatch {
   order_id: string;
   status?: OrderStatus;

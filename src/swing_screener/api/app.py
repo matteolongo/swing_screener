@@ -4,6 +4,7 @@ from datetime import date
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
 from swing_screener.api.models import (
     ApplyRequest,
@@ -15,7 +16,9 @@ from swing_screener.api.models import (
     PreviewRequest,
     ScreeningRequest,
     ScreeningResponse,
+    UniversesResponse,
 )
+from swing_screener.data.universe import list_package_universes
 from swing_screener.api.service import (
     PatchError,
     apply_patches,
@@ -32,10 +35,19 @@ from swing_screener.api.service import (
 def create_app(
     orders_path: str | Path = "orders.json",
     positions_path: str | Path = "positions.json",
+    allow_origins: list[str] | None = None,
 ) -> FastAPI:
     app = FastAPI(title="Swing Screener API")
     app.state.orders_path = Path(orders_path)
     app.state.positions_path = Path(positions_path)
+    if allow_origins is None:
+        allow_origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=allow_origins,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     @app.get("/health", response_model=HealthResponse)
     def health() -> HealthResponse:
@@ -50,6 +62,10 @@ def create_app(
     def get_positions() -> PositionsResponse:
         positions, asof = load_positions(app.state.positions_path)
         return PositionsResponse(asof=asof, positions=positions)
+
+    @app.get("/universes", response_model=UniversesResponse)
+    def get_universes() -> UniversesResponse:
+        return UniversesResponse(universes=list_package_universes())
 
     @app.patch("/orders/{order_id}")
     def patch_order(order_id: str, patch: OrderPatch) -> dict:

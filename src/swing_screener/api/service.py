@@ -187,8 +187,13 @@ def apply_to_files(
     order_patches: Iterable[dict[str, Any]] | None = None,
     position_patches: Iterable[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    orders, _ = load_orders(orders_path)
-    positions, _ = load_positions(positions_path)
+    order_patches = list(order_patches or [])
+    position_patches = list(position_patches or [])
+    orders, orders_asof = load_orders(orders_path)
+    positions, positions_asof = load_positions(positions_path)
+    if not order_patches and not position_patches:
+        asof = orders_asof or positions_asof or date.today().isoformat()
+        return {"success": True, "asof": asof}
     updated_orders, updated_positions = apply_patches(
         orders,
         positions,
@@ -277,7 +282,7 @@ def _normalize_order(item: dict[str, Any], idx: int) -> dict[str, Any]:
 
     order_type = str(order.get("order_type", "")).strip().upper()
     if order_type and order_type not in ORDER_TYPES:
-        order_type = order_type
+        order_type = ""
 
     order.update(
         {

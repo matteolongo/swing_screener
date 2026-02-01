@@ -71,3 +71,7 @@ class OrdersResponse(BaseModel):
 class PositionsResponse(BaseModel):
     asof: Optional[str] = None
     positions: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class UniversesResponse(BaseModel):
+    universes: list[str] = Field(default_factory=list)
