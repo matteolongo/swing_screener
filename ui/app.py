@@ -1214,6 +1214,10 @@ def main() -> None:
                 st.info("No management actions.")
             else:
                 display = df.copy()
+                if {"last", "entry", "shares"}.issubset(display.columns):
+                    display["position_value"] = (display["last"] * display["shares"]).round(2)
+                    display["pl_value"] = ((display["last"] - display["entry"]) * display["shares"]).round(2)
+                    display["pl_pct"] = ((display["last"] / display["entry"]) - 1.0).mul(100.0).round(2)
                 display = display.rename(
                     columns={
                         "action": "Action",
@@ -1224,6 +1228,9 @@ def main() -> None:
                         "r_now": "R now",
                         "reason": "Reason",
                         "shares": "Shares",
+                        "position_value": "Position Value ($)",
+                        "pl_value": "P/L ($)",
+                        "pl_pct": "P/L (%)",
                     }
                 )
                 st.caption("R now shows current profit in R units. Positive = above entry risk.")
