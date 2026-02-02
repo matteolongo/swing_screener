@@ -45,6 +45,7 @@ from ui.helpers import (
     read_last_run,
     write_last_run,
     build_action_badge,
+    build_degiro_entry_lines,
     load_orders,
     orders_to_dataframe,
     save_orders,
@@ -689,7 +690,10 @@ def main() -> None:
                     st.info("No actionable rows for order creation.")
                 else:
                     st.subheader("Quick add from guidance")
-                    st.caption("Click to create a pending order with suggested price/stop/shares. Edit after if needed.")
+                    st.caption(
+                        "Click to create a pending order with suggested entry price, stop-loss, and shares. "
+                        "Degiro terms: BUY_LIMIT = Limit, BUY_STOP = Stop Limit, stop-loss = Stop Loss."
+                    )
                     cols = st.columns(min(3, len(order_rows)))
                     for idx, (ticker, row, order_type, order_price) in enumerate(order_rows):
                         col = cols[idx % len(cols)]
@@ -713,7 +717,20 @@ def main() -> None:
                             st.markdown(f"**{ticker}** — {name or '—'}")
                             if subtitle:
                                 st.caption(subtitle)
-                            st.markdown(f"{order_type} @ {float(order_price):.2f}")
+                            detail_lines = build_degiro_entry_lines(
+                                order_type=order_type,
+                                order_price=order_price,
+                                stop_price=stop_price,
+                                band_low=row.get("order_price_band_low", None),
+                                band_high=row.get("order_price_band_high", None),
+                                validity=row.get("suggested_validity", None),
+                            )
+                            if detail_lines:
+                                st.markdown(detail_lines[0])
+                                for line in detail_lines[1:]:
+                                    st.caption(line)
+                            else:
+                                st.markdown(f"{order_type}")
                             disabled = has_open_position or has_existing_order
                             reason = None
                             if has_open_position:
@@ -740,8 +757,21 @@ def main() -> None:
                     for ticker, row, order_type, order_price in order_rows:
                         stop_price = row.get("stop", None)
                         shares = row.get("shares", None)
-                        summary = f"{ticker} | {order_type} | {float(order_price):.2f}"
+                        price_label = f"{float(order_price):.2f}" if pd.notna(order_price) else "n/a"
+                        summary = f"{ticker} | {order_type} | {price_label}"
                         with st.expander(summary, expanded=False):
+                            detail_lines = build_degiro_entry_lines(
+                                order_type=order_type,
+                                order_price=order_price,
+                                stop_price=stop_price,
+                                band_low=row.get("order_price_band_low", None),
+                                band_high=row.get("order_price_band_high", None),
+                                validity=row.get("suggested_validity", None),
+                            )
+                            if detail_lines:
+                                st.markdown(detail_lines[0])
+                                for line in detail_lines[1:]:
+                                    st.caption(line)
                             form_key = f"order_form_{ticker}"
                             with st.form(form_key):
                                 key_base = f"order_{ticker}"
@@ -751,8 +781,13 @@ def main() -> None:
                                     index=0 if order_type == "BUY_LIMIT" else 1,
                                     key=f"{key_base}_type",
                                 )
+                                price_label = (
+                                    "Limit price"
+                                    if order_type_sel == "BUY_LIMIT"
+                                    else "Stop price (trigger)"
+                                )
                                 limit_price = st.number_input(
-                                    "Limit/Stop price",
+                                    price_label,
                                     min_value=0.01,
                                     value=float(order_price) if pd.notna(order_price) else 0.01,
                                     step=0.01,
@@ -767,7 +802,7 @@ def main() -> None:
                                 )
                                 stop_default = f"{float(stop_price):.2f}" if pd.notna(stop_price) else ""
                                 stop_price_input = st.text_input(
-                                    "Stop price (optional)",
+                                    "Stop-loss price (optional)",
                                     value=stop_default,
                                     key=f"{key_base}_stop",
                                 )
@@ -839,9 +874,10 @@ def main() -> None:
         with st.form("place_order"):
             ticker = st.text_input("Ticker").strip().upper()
             order_type = st.selectbox("Order type", ["BUY_LIMIT", "BUY_STOP"])
-            limit_price = st.number_input("Limit/Stop price", min_value=0.01, value=0.01, step=0.01)
+            price_label = "Limit price" if order_type == "BUY_LIMIT" else "Stop price (trigger)"
+            limit_price = st.number_input(price_label, min_value=0.01, value=0.01, step=0.01)
             quantity = st.number_input("Quantity", min_value=1, value=1, step=1)
-            stop_price_raw = st.text_input("Stop price (optional)")
+            stop_price_raw = st.text_input("Stop-loss price (optional)")
             notes = st.text_input("Notes (optional)")
             submitted = st.form_submit_button("Add pending order")
 
@@ -880,7 +916,7 @@ def main() -> None:
         if pending_df.empty:
             st.info("No pending orders.")
         else:
-            st.dataframe(pending_df, use_container_width=True)
+            st.dataframe(pending_df, width='stretch')
 
         linked_df = orders_df[orders_df["position_id"].notna()].copy()
         st.subheader("Linked orders (by position)")
@@ -906,7 +942,7 @@ def main() -> None:
                         "notes",
                     ]
                     display = group[[c for c in cols if c in group.columns]]
-                    st.dataframe(display, use_container_width=True)
+                    st.dataframe(display, width='stretch')
 
         st.subheader("Update pending order")
         pending = [o for o in orders if o.get("status") == "pending"]
@@ -945,7 +981,7 @@ def main() -> None:
                             key=f"{form_key}_qty",
                         )
                         stop_price_input = st.text_input(
-                            "Stop price (required to mark filled)",
+                            "Stop-loss price (required to mark filled)",
                             value=(
                                 f"{float(pending_order.get('stop_price')):.2f}"
                                 if pending_order.get("stop_price") is not None
@@ -1110,7 +1146,7 @@ def main() -> None:
         if orders_df.empty:
             st.info("No orders recorded.")
         else:
-            st.dataframe(orders_df, use_container_width=True)
+            st.dataframe(orders_df, width='stretch')
 
     with tab_manage:
         st.subheader("3) Manage positions")
@@ -1149,7 +1185,7 @@ def main() -> None:
         edited_df = st.data_editor(
             positions_df,
             num_rows="dynamic",
-            use_container_width=True,
+            width='stretch',
         )
 
         if st.button("Recalculate stops / checklist", key="manage_btn"):
@@ -1190,7 +1226,7 @@ def main() -> None:
                     }
                 )
                 st.caption("R now shows current profit in R units. Positive = above entry risk.")
-                st.dataframe(display, use_container_width=True)
+                st.dataframe(display, width='stretch')
                 st.download_button(
                     "Download manage CSV",
                     df.to_csv(index=True),
@@ -1218,7 +1254,7 @@ def main() -> None:
             st.warning(f"Unable to read report CSV: {report_err}")
         elif not report_df.empty:
             st.caption("Report preview")
-            st.dataframe(report_df, use_container_width=True)
+            st.dataframe(report_df, width='stretch')
         else:
             st.info("No report found yet. Run the screener.")
 
@@ -1430,7 +1466,7 @@ def main() -> None:
 
             df_summary = pd.DataFrame(rows)
             st.subheader("Panoramica")
-            st.dataframe(df_summary, use_container_width=True)
+            st.dataframe(df_summary, width='stretch')
 
             # Winner highlight
             valid = df_summary.dropna(subset=["Expectancy_R", "Trades"])
@@ -1494,7 +1530,7 @@ def main() -> None:
 
                 st.subheader(f"Trades sample — {first.get('name','config')}")
                 if first["trades"] is not None and not first["trades"].empty:
-                    st.dataframe(first["trades"].head(200), use_container_width=True)
+                    st.dataframe(first["trades"].head(200), width='stretch')
                     st.download_button(
                         f"Download trades CSV ({first.get('name','config')})",
                         first["trades"].to_csv(index=False),

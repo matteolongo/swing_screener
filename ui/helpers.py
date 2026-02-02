@@ -207,6 +207,56 @@ def build_action_badge(row: pd.Series) -> dict:
     return _badge("🟡 INCOMPLETE DATA", "#fff2b3")
 
 
+def _to_float_or_none(value: object) -> Optional[float]:
+    if value is None:
+        return None
+    try:
+        f = float(value)
+    except (TypeError, ValueError):
+        return None
+    if pd.isna(f):
+        return None
+    return f
+
+
+def build_degiro_entry_lines(
+    order_type: Optional[str],
+    order_price: Optional[float],
+    stop_price: Optional[float],
+    band_low: Optional[float] = None,
+    band_high: Optional[float] = None,
+    validity: Optional[str] = None,
+) -> list[str]:
+    """
+    Short, Degiro-friendly entry/stop lines for UI display.
+    """
+    lines: list[str] = []
+    otype = str(order_type or "").strip().upper()
+    price = _to_float_or_none(order_price)
+    stop = _to_float_or_none(stop_price)
+    low = _to_float_or_none(band_low)
+    high = _to_float_or_none(band_high)
+    valid = str(validity or "").strip().upper()
+
+    if otype == "BUY_LIMIT" and price is not None:
+        lines.append(f"Entry (Degiro: Limit): {price:.2f}")
+    elif otype == "BUY_STOP" and price is not None:
+        lines.append(f"Entry (Degiro: Stop Limit): stop {price:.2f}, limit {price:.2f}")
+    elif otype and price is not None:
+        lines.append(f"Entry ({otype}): {price:.2f}")
+
+    if low is not None and high is not None:
+        lines.append(f"Limit band: {low:.2f} - {high:.2f}")
+
+    if stop is not None:
+        lines.append(f"Stop-loss (Degiro: Stop Loss): {stop:.2f}")
+
+    if valid:
+        lines.append(f"Validity: {valid}")
+
+    return lines
+
+
 ORDER_COLUMNS = [
     "order_id",
     "ticker",

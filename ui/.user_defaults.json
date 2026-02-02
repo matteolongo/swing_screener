@@ -28,8 +28,8 @@
   "manage_force_refresh": true,
   "manage_csv_path": "out/manage.csv",
   "md_path": "out/degiro_actions.md",
-  "min_price": 10.0,
-  "max_price": 60.0,
+  "min_price": 1.0,
+  "max_price": 150.0,
   "max_atr_pct": 10.0,
   "require_trend_ok": true
 }

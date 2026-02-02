@@ -29,6 +29,7 @@ streamlit run ui/app.py
 - The report is saved to `out/report.csv` by default and can be downloaded.
 - The candidates table includes a `confidence` score (0-100) for active signals only.
 - Use **Create pending orders** to open an inline form per row, edit the values, and save the order.
+- Pending-order cards include Degiro-style entry and stop-loss details (limit/stop prices and bands when available).
 
 ### Action Badges
 
