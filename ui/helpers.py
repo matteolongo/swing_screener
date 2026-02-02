@@ -439,3 +439,11 @@ def orders_models_to_dicts(orders: list[Order]) -> list[dict]:
             }
         )
     return out
+
+
+def is_entry_order(order: dict) -> bool:
+    order_kind = str(order.get("order_kind", "")).strip().lower()
+    if order_kind:
+        return order_kind == "entry"
+    order_type = str(order.get("order_type", "")).strip().upper()
+    return order_type.startswith("BUY_")

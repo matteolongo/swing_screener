@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from dataclasses import replace
 import argparse
 import sys
 import datetime as dt
@@ -18,8 +19,8 @@ from swing_screener.data.universe import (
     apply_universe_config,
     save_universe_file,
 )
-from swing_screener.execution.order_workflows import fill_entry_order, scale_in_fill
-from swing_screener.execution.orders import load_orders, save_orders
+from swing_screener.execution.order_workflows import fill_entry_order, scale_in_fill, normalize_orders
+from swing_screener.execution.orders import Order, load_orders, save_orders
 from swing_screener.portfolio.state import load_positions, save_positions
 
 
@@ -93,6 +94,45 @@ def _orders_scale_in_to_files(
     )
     save_orders(orders_path, new_orders, asof=str(dt.date.today()))
     save_positions(positions_path, new_positions, asof=str(dt.date.today()))
+
+
+def _orders_list(
+    orders_path: str,
+    status: str | None,
+    kind: str | None,
+    ticker: str | None,
+) -> list[Order]:
+    orders = load_orders(orders_path)
+    orders, _ = normalize_orders(orders)
+    out = orders
+    if status:
+        out = [o for o in out if o.status == status]
+    if kind:
+        out = [o for o in out if o.order_kind == kind]
+    if ticker:
+        out = [o for o in out if o.ticker == ticker]
+    return out
+
+
+def _orders_cancel(
+    orders_path: str,
+    order_id: str,
+) -> None:
+    orders = load_orders(orders_path)
+    orders, _ = normalize_orders(orders)
+    found = False
+    out: list[Order] = []
+    for o in orders:
+        if o.order_id != order_id:
+            out.append(o)
+            continue
+        found = True
+        if o.status != "pending":
+            raise ValueError(f"{order_id}: only pending orders can be cancelled.")
+        out.append(replace(o, status="cancelled"))
+    if not found:
+        raise ValueError(f"Order '{order_id}' not found.")
+    save_orders(orders_path, out, asof=str(dt.date.today()))
 
 
 def main() -> None:
@@ -211,6 +251,26 @@ def main() -> None:
         help="Fill date (YYYY-MM-DD). Default: today.",
     )
     orders_scale.add_argument("--quantity", type=int, required=True, help="Filled quantity")
+
+    orders_list = orders_sub.add_parser("list", help="List orders")
+    orders_list.add_argument("--orders", required=True, help="Path to orders.json")
+    orders_list.add_argument(
+        "--status",
+        choices=["pending", "filled", "cancelled"],
+        default=None,
+        help="Filter by status",
+    )
+    orders_list.add_argument(
+        "--kind",
+        choices=["entry", "stop", "take_profit"],
+        default=None,
+        help="Filter by order kind",
+    )
+    orders_list.add_argument("--ticker", default=None, help="Filter by ticker")
+
+    orders_cancel = orders_sub.add_parser("cancel", help="Cancel a pending order")
+    orders_cancel.add_argument("--orders", required=True, help="Path to orders.json")
+    orders_cancel.add_argument("--order-id", required=True, help="Order ID to cancel")
 
     # -------------------------
     # UNIVERSES (list/show/filter)
@@ -460,6 +520,36 @@ def main() -> None:
                     quantity=int(args.quantity),
                 )
                 print(f"Scale-in filled: {args.order_id}")
+            elif args.orders_command == "list":
+                rows = _orders_list(
+                    orders_path=args.orders,
+                    status=args.status,
+                    kind=args.kind,
+                    ticker=args.ticker,
+                )
+                if not rows:
+                    print("No orders found.")
+                    return
+                cols = [
+                    "order_id",
+                    "ticker",
+                    "status",
+                    "order_kind",
+                    "order_type",
+                    "quantity",
+                    "limit_price",
+                    "stop_price",
+                    "order_date",
+                    "filled_date",
+                ]
+                df = pd.DataFrame([{c: getattr(o, c) for c in cols} for o in rows])
+                print(df.to_string(index=False))
+            elif args.orders_command == "cancel":
+                _orders_cancel(
+                    orders_path=args.orders,
+                    order_id=args.order_id,
+                )
+                print(f"Order cancelled: {args.order_id}")
         except ValueError as e:
             print(f"Error: {e}", file=sys.stderr)
             sys.exit(1)

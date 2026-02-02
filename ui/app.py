@@ -52,6 +52,7 @@ from ui.helpers import (
     make_order_entry,
     orders_dicts_to_models,
     orders_models_to_dicts,
+    is_entry_order,
     load_user_defaults,
     save_user_defaults,
     load_backtest_configs,
@@ -112,14 +113,6 @@ def _dedup_keep_order(items: list[str]) -> list[str]:
         if x and x not in out:
             out.append(x)
     return out
-
-
-def _is_entry_order(order: dict) -> bool:
-    order_kind = str(order.get("order_kind", "")).strip().lower()
-    if order_kind:
-        return order_kind == "entry"
-    order_type = str(order.get("order_type", "")).strip().upper()
-    return order_type.startswith("BUY_")
 
 
 def _run_screener(
@@ -703,7 +696,7 @@ def main() -> None:
                         has_existing_order = any(
                             o.get("ticker") == ticker
                             and o.get("status") in {"pending", "filled"}
-                            and _is_entry_order(o)
+                            and is_entry_order(o)
                             for o in orders
                         )
                         with col:
@@ -820,7 +813,7 @@ def main() -> None:
                                 if any(
                                     o.get("status") == "pending"
                                     and o.get("ticker") == ticker
-                                    and _is_entry_order(o)
+                                    and is_entry_order(o)
                                     for o in orders
                                 ):
                                     st.warning(f"{ticker}: pending order already exists.")

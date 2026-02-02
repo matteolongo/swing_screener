@@ -78,6 +78,13 @@ swing-screener orders fill --orders orders.json --positions positions.json \
   --quantity 5 --stop-price 11.80
 ```
 
+Other CLI helpers:
+
+```bash
+swing-screener orders list --orders orders.json --status pending
+swing-screener orders cancel --orders orders.json --order-id ORD-XYZ
+```
+
 ---
 
 ### 3) `out/report.csv`
