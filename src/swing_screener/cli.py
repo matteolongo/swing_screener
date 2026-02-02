@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 import argparse
 import sys
+import datetime as dt
 
 import pandas as pd
 
@@ -17,6 +18,9 @@ from swing_screener.data.universe import (
     apply_universe_config,
     save_universe_file,
 )
+from swing_screener.execution.order_workflows import fill_entry_order, scale_in_fill
+from swing_screener.execution.orders import load_orders, save_orders
+from swing_screener.portfolio.state import load_positions, save_positions
 
 
 def _dedup_keep_order(items: list[str]) -> list[str]:
@@ -41,6 +45,54 @@ def _resolve_tickers_from_run_args(args) -> list[str]:
         return load_universe_from_package(args.universe, ucfg)
 
     return load_universe_from_file(args.universe_file, ucfg)
+
+
+def _orders_fill_to_files(
+    orders_path: str,
+    positions_path: str,
+    order_id: str,
+    fill_price: float,
+    fill_date: str,
+    quantity: int,
+    stop_price: float,
+    tp_price: float | None,
+) -> None:
+    orders = load_orders(orders_path)
+    positions = load_positions(positions_path)
+    new_orders, new_positions = fill_entry_order(
+        orders,
+        positions,
+        order_id=order_id,
+        fill_price=fill_price,
+        fill_date=fill_date,
+        quantity=quantity,
+        stop_price=stop_price,
+        tp_price=tp_price,
+    )
+    save_orders(orders_path, new_orders, asof=str(dt.date.today()))
+    save_positions(positions_path, new_positions, asof=str(dt.date.today()))
+
+
+def _orders_scale_in_to_files(
+    orders_path: str,
+    positions_path: str,
+    order_id: str,
+    fill_price: float,
+    fill_date: str,
+    quantity: int,
+) -> None:
+    orders = load_orders(orders_path)
+    positions = load_positions(positions_path)
+    new_orders, new_positions = scale_in_fill(
+        orders,
+        positions,
+        order_id=order_id,
+        fill_price=fill_price,
+        fill_date=fill_date,
+        quantity=quantity,
+    )
+    save_orders(orders_path, new_orders, asof=str(dt.date.today()))
+    save_positions(positions_path, new_positions, asof=str(dt.date.today()))
 
 
 def main() -> None:
@@ -127,6 +179,38 @@ def main() -> None:
         action="store_true",
         help="Create missing pending stop orders linked to open positions",
     )
+
+    # -------------------------
+    # ORDERS (fill / scale-in)
+    # -------------------------
+    orders_cmd = sub.add_parser("orders", help="Update orders and positions from fills")
+    orders_sub = orders_cmd.add_subparsers(dest="orders_command", required=True)
+
+    orders_fill = orders_sub.add_parser("fill", help="Mark entry order filled")
+    orders_fill.add_argument("--orders", required=True, help="Path to orders.json")
+    orders_fill.add_argument("--positions", required=True, help="Path to positions.json")
+    orders_fill.add_argument("--order-id", required=True, help="Entry order ID to fill")
+    orders_fill.add_argument("--fill-price", type=float, required=True, help="Fill price")
+    orders_fill.add_argument(
+        "--fill-date",
+        default=str(dt.date.today()),
+        help="Fill date (YYYY-MM-DD). Default: today.",
+    )
+    orders_fill.add_argument("--quantity", type=int, required=True, help="Filled quantity")
+    orders_fill.add_argument("--stop-price", type=float, required=True, help="Stop-loss price")
+    orders_fill.add_argument("--tp-price", type=float, default=None, help="Take-profit price (optional)")
+
+    orders_scale = orders_sub.add_parser("scale-in", help="Scale into an existing position")
+    orders_scale.add_argument("--orders", required=True, help="Path to orders.json")
+    orders_scale.add_argument("--positions", required=True, help="Path to positions.json")
+    orders_scale.add_argument("--order-id", required=True, help="Entry order ID to fill")
+    orders_scale.add_argument("--fill-price", type=float, required=True, help="Fill price")
+    orders_scale.add_argument(
+        "--fill-date",
+        default=str(dt.date.today()),
+        help="Fill date (YYYY-MM-DD). Default: today.",
+    )
+    orders_scale.add_argument("--quantity", type=int, required=True, help="Filled quantity")
 
     # -------------------------
     # UNIVERSES (list/show/filter)
@@ -350,6 +434,35 @@ def main() -> None:
             print("Migration complete: orders.json and positions.json updated.")
         else:
             print("No migration changes needed.")
+        return
+
+    if args.command == "orders":
+        try:
+            if args.orders_command == "fill":
+                _orders_fill_to_files(
+                    orders_path=args.orders,
+                    positions_path=args.positions,
+                    order_id=args.order_id,
+                    fill_price=float(args.fill_price),
+                    fill_date=str(args.fill_date),
+                    quantity=int(args.quantity),
+                    stop_price=float(args.stop_price),
+                    tp_price=float(args.tp_price) if args.tp_price is not None else None,
+                )
+                print(f"Order filled: {args.order_id}")
+            elif args.orders_command == "scale-in":
+                _orders_scale_in_to_files(
+                    orders_path=args.orders,
+                    positions_path=args.positions,
+                    order_id=args.order_id,
+                    fill_price=float(args.fill_price),
+                    fill_date=str(args.fill_date),
+                    quantity=int(args.quantity),
+                )
+                print(f"Scale-in filled: {args.order_id}")
+        except ValueError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
         return
 
     if args.command == "universes":

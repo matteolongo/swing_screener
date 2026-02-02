@@ -70,6 +70,14 @@ Tracks **orders** (entry/stop/TP) and their status.
 
 You update this file when you **place, cancel, or fill orders**.
 
+Optional CLI helper (entry fill):
+
+```bash
+swing-screener orders fill --orders orders.json --positions positions.json \
+  --order-id ORD-XYZ --fill-price 12.34 --fill-date 2026-02-02 \
+  --quantity 5 --stop-price 11.80
+```
+
 ---
 
 ### 3) `out/report.csv`
@@ -172,6 +180,13 @@ If you add to an existing open position:
 - When it fills, choose **Scale-in** in the UI Orders tab.
 - The system blends the entry price and shares, keeps the existing stop, and recomputes `initial_risk`.
 - Scale-in logic is shared across UI and CLI utilities for consistent results.
+
+CLI alternative:
+
+```bash
+swing-screener orders scale-in --orders orders.json --positions positions.json \
+  --order-id ORD-XYZ --fill-price 12.34 --fill-date 2026-02-02 --quantity 5
+```
 
 ---
 
