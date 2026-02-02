@@ -30,6 +30,7 @@ streamlit run ui/app.py
 - The candidates table includes a `confidence` score (0-100) for active signals only.
 - Use **Create pending orders** to open an inline form per row, edit the values, and save the order.
 - Pending-order cards include Degiro-style entry and stop-loss details (limit/stop prices and bands when available).
+- Quick add allows scale-in orders for tickers with an open position; the stop remains unchanged when you mark the scale-in order filled.
 
 ### Action Badges
 
@@ -55,6 +56,7 @@ Badges are visual guidance only and do not execute orders.
 - Stop price is optional for pending orders; it is required when marking an order as filled.
 - Review pending orders and mark them **filled** or **cancelled**.
 - When marked **filled**, a position is created in `positions.json` with a `position_id` linked to the entry order.
+- If an entry order is filled while an open position exists, you can choose **Scale-in** to blend entry/waswo shares; the stop stays unchanged and `initial_risk` is recomputed.
 - A linked **stop-loss order** (GTC) is created automatically.
 - An optional **take-profit order** (GTC) is created if you provide a TP price.
 

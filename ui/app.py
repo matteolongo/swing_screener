@@ -20,6 +20,7 @@ from swing_screener.risk.position_sizing import RiskConfig
 from swing_screener.portfolio.state import (
     load_positions,
     Position,
+    scale_in_position,
     evaluate_positions,
     updates_to_dataframe,
     apply_stop_updates,
@@ -692,16 +693,23 @@ def main() -> None:
                     st.subheader("Quick add from guidance")
                     st.caption(
                         "Click to create a pending order with suggested entry price, stop-loss, and shares. "
+                        "If a ticker is already open, quick add creates a scale-in order (stop stays unchanged on fill). "
                         "Degiro terms: BUY_LIMIT = Limit, BUY_STOP = Stop Limit, stop-loss = Stop Loss."
                     )
                     cols = st.columns(min(3, len(order_rows)))
                     for idx, (ticker, row, order_type, order_price) in enumerate(order_rows):
                         col = cols[idx % len(cols)]
-                        stop_price = row.get("stop", None)
-                        shares = row.get("shares", None)
-                        has_open_position = any(
-                            p.status == "open" and p.ticker == ticker for p in existing_positions
+                        open_pos = next(
+                            (p for p in existing_positions if p.status == "open" and p.ticker == ticker),
+                            None,
                         )
+                        stop_price = (
+                            float(open_pos.stop_price)
+                            if open_pos is not None
+                            else row.get("stop", None)
+                        )
+                        shares = row.get("shares", None)
+                        has_open_position = open_pos is not None
                         has_existing_order = any(
                             o.get("ticker") == ticker
                             and o.get("status") in {"pending", "filled"}
@@ -731,13 +739,12 @@ def main() -> None:
                                     st.caption(line)
                             else:
                                 st.markdown(f"{order_type}")
-                            disabled = has_open_position or has_existing_order
+                            disabled = has_existing_order
                             reason = None
-                            if has_open_position:
-                                reason = "Open position exists."
-                            elif has_existing_order:
+                            if has_existing_order:
                                 reason = "Pending/filled order exists."
-                            if st.button(f"Add {ticker}", key=f"quick_add_{ticker}", disabled=disabled):
+                            label = f"Scale-in {ticker}" if has_open_position else f"Add {ticker}"
+                            if st.button(label, key=f"quick_add_{ticker}", disabled=disabled):
                                 orders.append(
                                     make_order_entry(
                                         ticker=ticker,
@@ -745,7 +752,7 @@ def main() -> None:
                                         limit_price=float(order_price),
                                         quantity=int(shares) if pd.notna(shares) else 1,
                                         stop_price=float(stop_price) if pd.notna(stop_price) else None,
-                                        notes="from guidance",
+                                        notes="from guidance (scale-in)" if has_open_position else "from guidance",
                                     )
                                 )
                                 save_orders(settings["orders_path"], orders, asof=str(pd.Timestamp.now().date()))
@@ -753,9 +760,19 @@ def main() -> None:
                                 st.rerun()
                             if reason:
                                 st.caption(reason)
+                            elif has_open_position:
+                                st.caption("Scale-in: blends entry/shares; stop stays unchanged on fill.")
 
                     for ticker, row, order_type, order_price in order_rows:
-                        stop_price = row.get("stop", None)
+                        open_pos = next(
+                            (p for p in existing_positions if p.status == "open" and p.ticker == ticker),
+                            None,
+                        )
+                        stop_price = (
+                            float(open_pos.stop_price)
+                            if open_pos is not None
+                            else row.get("stop", None)
+                        )
                         shares = row.get("shares", None)
                         price_label = f"{float(order_price):.2f}" if pd.notna(order_price) else "n/a"
                         summary = f"{ticker} | {order_type} | {price_label}"
@@ -869,6 +886,10 @@ def main() -> None:
         except Exception as e:
             _handle_error(e, debug)
             orders = []
+        try:
+            positions = load_positions(settings["positions_path"])
+        except Exception:
+            positions = []
 
         st.caption("Add a manual pending order")
         with st.form("place_order"):
@@ -953,6 +974,16 @@ def main() -> None:
                 oid = pending_order.get("order_id")
                 order_kind = str(pending_order.get("order_kind") or "entry").strip().lower()
                 position_id = pending_order.get("position_id", None)
+                open_pos = None
+                if order_kind == "entry":
+                    open_pos = next(
+                        (
+                            p
+                            for p in positions
+                            if p.status == "open" and p.ticker == pending_order["ticker"]
+                        ),
+                        None,
+                    )
                 kind_label = order_kind or "entry"
                 header = f"{pending_order['ticker']} | {pending_order['order_type']} | {kind_label}"
                 if position_id:
@@ -960,7 +991,12 @@ def main() -> None:
                 with st.expander(header, expanded=False):
                     form_key = f"update_{oid}"
                     with st.form(form_key):
-                        default_entry = float(pending_order.get("limit_price") or 0.0)
+                        order_type_raw = str(pending_order.get("order_type", "")).strip().upper()
+                        order_kind_raw = str(pending_order.get("order_kind", "")).strip().lower()
+                        if order_kind_raw == "stop" or order_type_raw == "SELL_STOP":
+                            default_entry = float(pending_order.get("stop_price") or 0.0)
+                        else:
+                            default_entry = float(pending_order.get("limit_price") or 0.0)
                         order_price_input = st.number_input(
                             "Order price (pending) / Fill price (filled)",
                             min_value=0.01,
@@ -995,7 +1031,15 @@ def main() -> None:
                             key=f"{form_key}_tp",
                         )
                         if order_kind == "entry":
-                            action_options = ["Save pending changes", "Mark filled", "Mark cancelled"]
+                            if open_pos:
+                                action_options = ["Save pending changes", "Scale-in (mark filled)", "Mark cancelled"]
+                                pos_id_label = open_pos.position_id or "no position_id"
+                                st.caption(
+                                    f"Open position detected ({pos_id_label}). Scale-in blends entry/shares; "
+                                    f"stop stays at {float(open_pos.stop_price):.2f}."
+                                )
+                            else:
+                                action_options = ["Save pending changes", "Mark filled", "Mark cancelled"]
                         else:
                             action_options = ["Save pending changes", "Mark cancelled"]
                             st.caption("Exit orders are linked to positions; mark filled in positions.json.")
@@ -1004,7 +1048,7 @@ def main() -> None:
 
                     if update_submit:
                         had_error = False
-                        if action == "Mark filled" and order_kind != "entry":
+                        if action in {"Mark filled", "Scale-in (mark filled)"} and order_kind != "entry":
                             st.error("Only entry orders can be marked filled here.")
                             continue
                         for order in orders:
@@ -1015,15 +1059,112 @@ def main() -> None:
                                 order["filled_date"] = ""
                                 order["entry_price"] = None
                             elif action == "Save pending changes":
-                                order["limit_price"] = float(order_price_input)
+                                order_kind_live = str(order.get("order_kind", "")).strip().lower()
+                                order_type_live = str(order.get("order_type", "")).strip().upper()
+                                if order_kind_live == "stop" or order_type_live == "SELL_STOP":
+                                    order["stop_price"] = float(order_price_input)
+                                    order["limit_price"] = None
+                                elif order_kind_live == "take_profit" or order_type_live == "SELL_LIMIT":
+                                    order["limit_price"] = float(order_price_input)
+                                    order["stop_price"] = None
+                                else:
+                                    order["limit_price"] = float(order_price_input)
+                                    order["stop_price"] = (
+                                        float(stop_price_input.strip())
+                                        if stop_price_input.strip()
+                                        else None
+                                    )
                                 order["quantity"] = int(quantity_input)
-                                order["stop_price"] = (
-                                    float(stop_price_input.strip())
-                                    if stop_price_input.strip()
-                                    else None
-                                )
                                 order["notes"] = pending_order.get("notes", "")
                                 order["status"] = "pending"
+                            elif action == "Scale-in (mark filled)":
+                                fill_price = float(order_price_input)
+                                add_shares = int(quantity_input)
+
+                                positions = load_positions(settings["positions_path"])
+                                pos_idx = None
+                                open_pos = None
+                                for i, p in enumerate(positions):
+                                    if p.status == "open" and p.ticker == order["ticker"]:
+                                        pos_idx = i
+                                        open_pos = p
+                                        break
+                                if open_pos is None:
+                                    st.error(
+                                        f"{order['ticker']}: no open position found to scale into."
+                                    )
+                                    had_error = True
+                                    break
+
+                                if open_pos.position_id is None:
+                                    new_id = _next_position_id(
+                                        open_pos.ticker, open_pos.entry_date, positions
+                                    )
+                                    open_pos = Position(**{**open_pos.__dict__, "position_id": new_id})
+                                    positions[pos_idx] = open_pos
+
+                                try:
+                                    blended = scale_in_position(
+                                        open_pos,
+                                        add_entry_price=fill_price,
+                                        add_shares=add_shares,
+                                        keep_stop=True,
+                                        recompute_initial_risk=True,
+                                    )
+                                except ValueError as e:
+                                    st.error(f"{order['ticker']}: {e}")
+                                    had_error = True
+                                    break
+
+                                positions[pos_idx] = blended
+
+                                order["quantity"] = add_shares
+                                order["stop_price"] = float(blended.stop_price)
+                                order["status"] = "filled"
+                                order["filled_date"] = str(fill_date)
+                                order["entry_price"] = float(fill_price)
+                                order["order_kind"] = "entry"
+                                order["position_id"] = blended.position_id
+                                order["tif"] = order.get("tif", "GTC") or "GTC"
+
+                                exit_updated = False
+                                for o in orders:
+                                    if o.get("position_id") != blended.position_id:
+                                        continue
+                                    if o.get("order_kind") in {"stop", "take_profit"}:
+                                        o["quantity"] = int(blended.shares)
+                                        if o.get("order_kind") == "stop":
+                                            o["stop_price"] = float(blended.stop_price)
+                                        exit_updated = True
+
+                                if not exit_updated:
+                                    stop_order_id = f"ORD-STOP-{blended.position_id}"
+                                    if not any(o.get("order_id") == stop_order_id for o in orders):
+                                        parent_id = blended.source_order_id or order["order_id"]
+                                        stop_order = {
+                                            "order_id": stop_order_id,
+                                            "ticker": order["ticker"],
+                                            "status": "pending",
+                                            "order_kind": "stop",
+                                            "order_type": "SELL_STOP",
+                                            "limit_price": None,
+                                            "quantity": int(blended.shares),
+                                            "stop_price": float(blended.stop_price),
+                                            "order_date": str(fill_date),
+                                            "filled_date": "",
+                                            "entry_price": None,
+                                            "position_id": blended.position_id,
+                                            "parent_order_id": parent_id,
+                                            "tif": "GTC",
+                                            "notes": "auto-linked stop (scale-in)",
+                                        }
+                                        orders.append(stop_order)
+
+                                save_positions(
+                                    settings["positions_path"],
+                                    positions,
+                                    asof=str(pd.Timestamp.now().date()),
+                                )
                             else:
                                 if stop_price_input.strip() == "":
                                     st.error(f"{order['ticker']}: stop price required to mark filled.")

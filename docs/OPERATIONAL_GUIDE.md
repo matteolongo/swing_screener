@@ -165,6 +165,13 @@ For each trade you accept:
 - widen the stop
 - enter without a stop
 
+### Scale-in (add to a winner)
+
+If you add to an existing open position:
+- Record the new entry as a pending order in `orders.json`.
+- When it fills, choose **Scale-in** in the UI Orders tab.
+- The system blends the entry price and shares, keeps the existing stop, and recomputes `initial_risk`.
+
 ---
 
 ## Step 3 — Register the trade
