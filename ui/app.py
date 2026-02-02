@@ -19,7 +19,6 @@ from swing_screener.screeners.universe import UniverseConfig as ScreenUniverseCo
 from swing_screener.risk.position_sizing import RiskConfig
 from swing_screener.portfolio.state import (
     load_positions,
-    Position,
     evaluate_positions,
     updates_to_dataframe,
     apply_stop_updates,
@@ -113,17 +112,6 @@ def _dedup_keep_order(items: list[str]) -> list[str]:
         if x and x not in out:
             out.append(x)
     return out
-
-
-def _next_position_id(ticker: str, entry_date: str, positions: list[Position]) -> str:
-    slug = entry_date.replace("-", "")
-    existing = [
-        p
-        for p in positions
-        if p.position_id and p.ticker == ticker and p.entry_date == entry_date
-    ]
-    seq = len(existing) + 1
-    return f"POS-{ticker}-{slug}-{seq:02d}"
 
 
 def _is_entry_order(order: dict) -> bool:

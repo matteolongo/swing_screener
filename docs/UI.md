@@ -56,7 +56,8 @@ Badges are visual guidance only and do not execute orders.
 - Stop price is optional for pending orders; it is required when marking an order as filled.
 - Review pending orders and mark them **filled** or **cancelled**.
 - When marked **filled**, a position is created in `positions.json` with a `position_id` linked to the entry order.
-- If an entry order is filled while an open position exists, you can choose **Scale-in** to blend entry/waswo shares; the stop stays unchanged and `initial_risk` is recomputed.
+- If an entry order is filled while an open position exists, you can choose **Scale-in** to blend entry/shares; the stop stays unchanged and `initial_risk` is recomputed.
+- Order fill and scale-in behavior is shared across UI and CLI utilities for consistent results.
 - A linked **stop-loss order** (GTC) is created automatically.
 - An optional **take-profit order** (GTC) is created if you provide a TP price.
 

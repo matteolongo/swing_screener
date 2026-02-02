@@ -171,6 +171,7 @@ If you add to an existing open position:
 - Record the new entry as a pending order in `orders.json`.
 - When it fills, choose **Scale-in** in the UI Orders tab.
 - The system blends the entry price and shares, keeps the existing stop, and recomputes `initial_risk`.
+- Scale-in logic is shared across UI and CLI utilities for consistent results.
 
 ---
 
