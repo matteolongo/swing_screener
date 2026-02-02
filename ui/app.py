@@ -20,7 +20,6 @@ from swing_screener.risk.position_sizing import RiskConfig
 from swing_screener.portfolio.state import (
     load_positions,
     Position,
-    scale_in_position,
     evaluate_positions,
     updates_to_dataframe,
     apply_stop_updates,
@@ -28,6 +27,7 @@ from swing_screener.portfolio.state import (
     save_positions,
     ManageConfig,
 )
+from swing_screener.execution.order_workflows import fill_entry_order, scale_in_fill
 from swing_screener.backtest.portfolio import (
     backtest_portfolio_R,
     equity_curve_R,
@@ -51,6 +51,8 @@ from ui.helpers import (
     orders_to_dataframe,
     save_orders,
     make_order_entry,
+    orders_dicts_to_models,
+    orders_models_to_dicts,
     load_user_defaults,
     save_user_defaults,
     load_backtest_configs,
@@ -1080,86 +1082,23 @@ def main() -> None:
                             elif action == "Scale-in (mark filled)":
                                 fill_price = float(order_price_input)
                                 add_shares = int(quantity_input)
-
-                                positions = load_positions(settings["positions_path"])
-                                pos_idx = None
-                                open_pos = None
-                                for i, p in enumerate(positions):
-                                    if p.status == "open" and p.ticker == order["ticker"]:
-                                        pos_idx = i
-                                        open_pos = p
-                                        break
-                                if open_pos is None:
-                                    st.error(
-                                        f"{order['ticker']}: no open position found to scale into."
-                                    )
-                                    had_error = True
-                                    break
-
-                                if open_pos.position_id is None:
-                                    new_id = _next_position_id(
-                                        open_pos.ticker, open_pos.entry_date, positions
-                                    )
-                                    open_pos = Position(**{**open_pos.__dict__, "position_id": new_id})
-                                    positions[pos_idx] = open_pos
-
                                 try:
-                                    blended = scale_in_position(
-                                        open_pos,
-                                        add_entry_price=fill_price,
-                                        add_shares=add_shares,
-                                        keep_stop=True,
-                                        recompute_initial_risk=True,
+                                    order_models = orders_dicts_to_models(orders)
+                                    new_order_models, new_positions = scale_in_fill(
+                                        order_models,
+                                        positions,
+                                        order_id=oid,
+                                        fill_price=fill_price,
+                                        fill_date=str(fill_date),
+                                        quantity=add_shares,
                                     )
                                 except ValueError as e:
                                     st.error(f"{order['ticker']}: {e}")
                                     had_error = True
                                     break
 
-                                positions[pos_idx] = blended
-
-                                order["quantity"] = add_shares
-                                order["stop_price"] = float(blended.stop_price)
-                                order["status"] = "filled"
-                                order["filled_date"] = str(fill_date)
-                                order["entry_price"] = float(fill_price)
-                                order["order_kind"] = "entry"
-                                order["position_id"] = blended.position_id
-                                order["tif"] = order.get("tif", "GTC") or "GTC"
-
-                                exit_updated = False
-                                for o in orders:
-                                    if o.get("position_id") != blended.position_id:
-                                        continue
-                                    if o.get("order_kind") in {"stop", "take_profit"}:
-                                        o["quantity"] = int(blended.shares)
-                                        if o.get("order_kind") == "stop":
-                                            o["stop_price"] = float(blended.stop_price)
-                                        exit_updated = True
-
-                                if not exit_updated:
-                                    stop_order_id = f"ORD-STOP-{blended.position_id}"
-                                    if not any(o.get("order_id") == stop_order_id for o in orders):
-                                        parent_id = blended.source_order_id or order["order_id"]
-                                        stop_order = {
-                                            "order_id": stop_order_id,
-                                            "ticker": order["ticker"],
-                                            "status": "pending",
-                                            "order_kind": "stop",
-                                            "order_type": "SELL_STOP",
-                                            "limit_price": None,
-                                            "quantity": int(blended.shares),
-                                            "stop_price": float(blended.stop_price),
-                                            "order_date": str(fill_date),
-                                            "filled_date": "",
-                                            "entry_price": None,
-                                            "position_id": blended.position_id,
-                                            "parent_order_id": parent_id,
-                                            "tif": "GTC",
-                                            "notes": "auto-linked stop (scale-in)",
-                                        }
-                                        orders.append(stop_order)
-
+                                orders = orders_models_to_dicts(new_order_models)
+                                positions = new_positions
                                 save_positions(
                                     settings["positions_path"],
                                     positions,
@@ -1192,90 +1131,30 @@ def main() -> None:
                                         had_error = True
                                         break
 
-                                positions = load_positions(settings["positions_path"])
-                                if any(
-                                    p.status == "open" and p.ticker == order["ticker"] for p in positions
-                                ):
-                                    st.error(
-                                        f"{order['ticker']}: already an open position. Close it or cancel the order."
+                                try:
+                                    order_models = orders_dicts_to_models(orders)
+                                    new_order_models, new_positions = fill_entry_order(
+                                        order_models,
+                                        positions,
+                                        order_id=oid,
+                                        fill_price=float(fill_price),
+                                        fill_date=str(fill_date),
+                                        quantity=int(quantity_input),
+                                        stop_price=float(stop_price_value),
+                                        tp_price=tp_price_value,
                                     )
+                                except ValueError as e:
+                                    st.error(f"{order['ticker']}: {e}")
                                     had_error = True
                                     break
 
-                                entry_date = str(fill_date)
-                                new_position_id = _next_position_id(
-                                    order["ticker"], entry_date, positions
+                                orders = orders_models_to_dicts(new_order_models)
+                                positions = new_positions
+                                save_positions(
+                                    settings["positions_path"],
+                                    positions,
+                                    asof=str(pd.Timestamp.now().date()),
                                 )
-
-                                order["quantity"] = int(quantity_input)
-                                order["stop_price"] = float(stop_price_value)
-                                order["status"] = "filled"
-                                order["filled_date"] = str(fill_date)
-                                order["entry_price"] = float(order_price_input)
-                                order["order_kind"] = "entry"
-                                order["position_id"] = new_position_id
-                                order["tif"] = order.get("tif", "GTC") or "GTC"
-
-                                stop_order_id = f"ORD-STOP-{new_position_id}"
-                                stop_order = {
-                                    "order_id": stop_order_id,
-                                    "ticker": order["ticker"],
-                                    "status": "pending",
-                                    "order_kind": "stop",
-                                    "order_type": "SELL_STOP",
-                                    "limit_price": None,
-                                    "quantity": int(order["quantity"]),
-                                    "stop_price": float(stop_price_value),
-                                    "order_date": entry_date,
-                                    "filled_date": "",
-                                    "entry_price": None,
-                                    "position_id": new_position_id,
-                                    "parent_order_id": order["order_id"],
-                                    "tif": "GTC",
-                                    "notes": "auto-linked stop",
-                                }
-                                orders.append(stop_order)
-
-                                exit_order_ids = [stop_order_id]
-                                if tp_price_value is not None:
-                                    tp_order_id = f"ORD-TP-{new_position_id}"
-                                    tp_order = {
-                                        "order_id": tp_order_id,
-                                        "ticker": order["ticker"],
-                                        "status": "pending",
-                                        "order_kind": "take_profit",
-                                        "order_type": "SELL_LIMIT",
-                                        "limit_price": float(tp_price_value),
-                                        "quantity": int(order["quantity"]),
-                                        "stop_price": None,
-                                        "order_date": entry_date,
-                                        "filled_date": "",
-                                        "entry_price": None,
-                                        "position_id": new_position_id,
-                                        "parent_order_id": order["order_id"],
-                                        "tif": "GTC",
-                                        "notes": "auto-linked take profit",
-                                    }
-                                    orders.append(tp_order)
-                                    exit_order_ids.append(tp_order_id)
-
-                                positions.append(
-                                    Position(
-                                        ticker=order["ticker"],
-                                        status="open",
-                                        position_id=new_position_id,
-                                        source_order_id=order["order_id"],
-                                        entry_date=str(fill_date),
-                                        entry_price=float(fill_price),
-                                        stop_price=float(order["stop_price"]),
-                                        shares=int(order["quantity"]),
-                                        initial_risk=float(fill_price - stop_price_value),
-                                        max_favorable_price=float(fill_price),
-                                        notes=str(order.get("notes", "")),
-                                        exit_order_ids=exit_order_ids,
-                                    )
-                                )
-                                save_positions(settings["positions_path"], positions, asof=str(pd.Timestamp.now().date()))
                             break
 
                         if not had_error:
