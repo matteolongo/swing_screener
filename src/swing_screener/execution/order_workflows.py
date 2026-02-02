@@ -16,13 +16,18 @@ def _slug_date(value: str) -> str:
 
 def next_position_id(ticker: str, entry_date: str, positions: list[Position]) -> str:
     slug = _slug_date(entry_date)
+    used = {p.position_id for p in positions if p.position_id}
     existing = [
         p
         for p in positions
         if p.position_id and p.ticker == ticker and p.entry_date == entry_date
     ]
     seq = len(existing) + 1
-    return f"POS-{ticker}-{slug}-{seq:02d}"
+    candidate = f"POS-{ticker}-{slug}-{seq:02d}"
+    while candidate in used:
+        seq += 1
+        candidate = f"POS-{ticker}-{slug}-{seq:02d}"
+    return candidate
 
 
 def infer_order_kind(order: Order) -> Optional[OrderKind]:

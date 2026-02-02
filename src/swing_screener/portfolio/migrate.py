@@ -6,6 +6,7 @@ from typing import Optional
 import datetime as dt
 
 from swing_screener.execution.orders import Order, load_orders, save_orders
+from swing_screener.execution.order_workflows import normalize_orders
 from swing_screener.portfolio.state import Position, load_positions, save_positions
 
 
@@ -47,29 +48,8 @@ def _assign_position_ids(positions: list[Position]) -> tuple[list[Position], boo
     return out, updated
 
 
-def _infer_order_kind(order: Order) -> Optional[str]:
-    if order.order_kind:
-        return order.order_kind
-    t = order.order_type.upper()
-    if t.startswith("BUY_"):
-        return "entry"
-    if t == "SELL_STOP":
-        return "stop"
-    if t == "SELL_LIMIT":
-        return "take_profit"
-    return None
-
-
 def _normalize_orders(orders: list[Order]) -> tuple[list[Order], bool]:
-    updated = False
-    out: list[Order] = []
-    for order in orders:
-        order_kind = _infer_order_kind(order)
-        tif = order.tif or "GTC"
-        if order_kind != order.order_kind or tif != order.tif:
-            updated = True
-        out.append(replace(order, order_kind=order_kind, tif=tif))
-    return out, updated
+    return normalize_orders(orders)
 
 
 def _match_entry_order(position: Position, orders: list[Order]) -> Optional[Order]:
