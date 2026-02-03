@@ -369,6 +369,7 @@ def _run_quick_backtest_single(
         "bars": bars,
         "trades": trades,
         "summary": summary,
+        "curve": curve,
         "warnings": warnings,
     }
 
@@ -736,8 +737,31 @@ def main() -> None:
                         for warn in res.get("warnings", []):
                             st.warning(warn)
                         st.dataframe(res["summary"], width='stretch')
-                        if res["trades"] is not None and not res["trades"].empty:
-                            st.dataframe(res["trades"].head(200), width='stretch')
+                        trades = res.get("trades")
+                        trade_count = int(len(trades)) if trades is not None else 0
+                        total_r = float(trades["R"].sum()) if trades is not None and not trades.empty else 0.0
+                        try:
+                            risk_per_trade = float(settings["account_size"]) * (float(settings["risk_pct"]) / 100.0)
+                            total_eur = total_r * risk_per_trade
+                        except Exception:
+                            risk_per_trade = None
+                            total_eur = None
+
+                        cols_stats = st.columns(3)
+                        cols_stats[0].metric("Trades (buys/sells)", f"{trade_count} / {trade_count}")
+                        cols_stats[1].metric("Total P/L (R)", f"{total_r:.2f}R")
+                        if total_eur is not None:
+                            cols_stats[2].metric("Total P/L (€)", f"{total_eur:.2f}")
+                        else:
+                            cols_stats[2].metric("Total P/L (€)", "n/a")
+
+                        curve = res.get("curve")
+                        if curve is not None and not curve.empty:
+                            st.line_chart(curve.set_index("date")[["cum_R"]])
+                        else:
+                            st.info("No equity curve to display.")
+                        if trades is not None and not trades.empty:
+                            st.dataframe(trades.head(200), width='stretch')
                         else:
                             st.info("No trades in this window.")
 
