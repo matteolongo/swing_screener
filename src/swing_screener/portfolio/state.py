@@ -117,6 +117,57 @@ def save_positions(
     p.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
+def scale_in_position(
+    position: Position,
+    add_entry_price: float,
+    add_shares: int,
+    *,
+    keep_stop: bool = True,
+    new_stop: Optional[float] = None,
+    recompute_initial_risk: bool = True,
+) -> Position:
+    """
+    Blend an add-on entry into an existing open position.
+    """
+    if add_shares <= 0:
+        raise ValueError("add_shares must be > 0")
+    if add_entry_price <= 0:
+        raise ValueError("add_entry_price must be > 0")
+    if position.shares <= 0:
+        raise ValueError("position.shares must be > 0")
+
+    new_shares = int(position.shares + add_shares)
+    total_cost = (position.entry_price * position.shares) + (add_entry_price * add_shares)
+    new_entry = float(total_cost / new_shares)
+
+    if keep_stop:
+        stop = float(position.stop_price)
+    else:
+        stop_candidate = position.stop_price if new_stop is None else float(new_stop)
+        stop = max(float(position.stop_price), float(stop_candidate))
+
+    if new_entry <= stop:
+        raise ValueError("Blended entry must be above stop price.")
+
+    initial_risk = position.initial_risk
+    if recompute_initial_risk:
+        initial_risk = round(float(new_entry - stop), 4)
+
+    mfp = position.max_favorable_price
+    if mfp is None:
+        mfp = position.entry_price
+    mfp_new = max(float(mfp), float(add_entry_price))
+
+    return replace(
+        position,
+        entry_price=new_entry,
+        shares=new_shares,
+        stop_price=stop,
+        initial_risk=initial_risk,
+        max_favorable_price=mfp_new,
+    )
+
+
 def _get_close_series(ohlcv: pd.DataFrame, ticker: str) -> pd.Series:
     close = ohlcv["Close"]
     if ticker not in close.columns:
