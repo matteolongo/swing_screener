@@ -38,6 +38,7 @@ def test_backtest_enters_next_open_and_exits_tp():
         breakout_lookback=1,
         atr_window=1,
         k_atr=1.0,
+        exit_mode="take_profit",
         take_profit_R=1.0,
         max_holding_days=5,
         min_history=1,
@@ -51,6 +52,45 @@ def test_backtest_enters_next_open_and_exits_tp():
 
     summ = summarize_trades(trades)
     assert summ.loc[0, "trades"] == len(trades)
+
+
+def test_trailing_stop_moves_to_breakeven():
+    idx = pd.date_range("2023-01-02", periods=4, freq="D")
+    close = pd.Series([11.5, 12.0, 14.0, 13.0], index=idx, dtype=float)
+    open_ = pd.Series([11.5, 12.0, 13.0, 13.2], index=idx, dtype=float)
+    high = pd.Series([12.0, 12.5, 14.5, 13.5], index=idx, dtype=float)
+    low = pd.Series([11.0, 11.5, 12.5, 12.8], index=idx, dtype=float)
+    vol = pd.Series(1_000_000, index=idx, dtype=float)
+
+    ohlcv = _make_ohlcv(
+        {
+            ("Open", "AAA"): open_,
+            ("High", "AAA"): high,
+            ("Low", "AAA"): low,
+            ("Close", "AAA"): close,
+            ("Volume", "AAA"): vol,
+        }
+    )
+
+    cfg = BacktestConfig(
+        entry_type="breakout",
+        breakout_lookback=1,
+        atr_window=1,
+        k_atr=1.0,
+        exit_mode="trailing_stop",
+        take_profit_R=2.0,
+        max_holding_days=10,
+        breakeven_at_R=1.0,
+        trail_after_R=3.0,
+        trail_sma=2,
+        sma_buffer_pct=0.0,
+        min_history=1,
+    )
+
+    trades = backtest_single_ticker_R(ohlcv, "AAA", cfg)
+    assert not trades.empty
+    assert trades.iloc[0]["exit_type"] == "stop"
+    assert trades.iloc[0]["exit"] == pytest.approx(13.0, rel=1e-6)
 
 
 def test_time_stop_counts_bars_not_calendar_days():
@@ -76,6 +116,7 @@ def test_time_stop_counts_bars_not_calendar_days():
         breakout_lookback=2,
         atr_window=1,
         k_atr=1.0,
+        exit_mode="take_profit",
         take_profit_R=3.0,
         max_holding_days=1,
         min_history=1,
@@ -116,6 +157,7 @@ def test_gap_through_stop_exits_at_open():
         breakout_lookback=1,
         atr_window=1,
         k_atr=1.0,
+        exit_mode="take_profit",
         take_profit_R=2.0,
         max_holding_days=5,
         min_history=1,
@@ -150,6 +192,7 @@ def test_stop_has_priority_over_take_profit_same_bar():
         breakout_lookback=1,
         atr_window=1,
         k_atr=1.0,
+        exit_mode="take_profit",
         take_profit_R=2.0,
         max_holding_days=5,
         min_history=1,
@@ -183,6 +226,7 @@ def test_commission_reduces_R():
         breakout_lookback=1,
         atr_window=1,
         k_atr=1.0,
+        exit_mode="take_profit",
         take_profit_R=1.0,
         max_holding_days=5,
         min_history=1,

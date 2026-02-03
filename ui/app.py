@@ -3,6 +3,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 from datetime import datetime
+from dataclasses import replace
 
 import pandas as pd
 import streamlit as st
@@ -33,7 +34,11 @@ from swing_screener.backtest.portfolio import (
     drawdown_stats,
     PortfolioBacktestConfig,
 )
-from swing_screener.backtest.simulator import BacktestConfig
+from swing_screener.backtest.simulator import (
+    BacktestConfig,
+    backtest_single_ticker_R,
+    summarize_trades,
+)
 import html
 
 from ui.helpers import (
@@ -77,8 +82,14 @@ DEFAULT_SETTINGS: dict = {
     "bt_pullback_ma": 20,
     "bt_atr_window": 14,
     "bt_k_atr": 2.0,
+    "bt_exit_mode": "trailing_stop",
     "bt_take_profit_R": 2.0,
     "bt_max_holding_days": 20,
+    "bt_breakeven_at_R": 1.0,
+    "bt_trail_after_R": 2.0,
+    "bt_trail_sma": 20,
+    "bt_sma_buffer_pct": 0.005,
+    "bt_quick_max_holding_days": 9999,
     "bt_min_trades_per_ticker": 3,
     "bt_min_trades_compare": 30,
     "bt_flag_profit_factor": 1.3,
@@ -278,6 +289,93 @@ def _run_backtest(
     }
 
 
+def _build_bt_config_from_settings(
+    settings: dict, *, min_history: int | None = None
+) -> BacktestConfig:
+    cfg = BacktestConfig(
+        entry_type=str(settings.get("bt_entry_type", "pullback")),
+        breakout_lookback=int(settings.get("bt_breakout_lookback", 50)),
+        pullback_ma=int(settings.get("bt_pullback_ma", 20)),
+        atr_window=int(settings.get("bt_atr_window", 14)),
+        k_atr=float(settings.get("bt_k_atr", 2.0)),
+        exit_mode=str(settings.get("bt_exit_mode", "take_profit")),
+        take_profit_R=float(settings.get("bt_take_profit_R", 2.0)),
+        max_holding_days=int(settings.get("bt_max_holding_days", 20)),
+        breakeven_at_R=float(settings.get("bt_breakeven_at_R", 1.0)),
+        trail_after_R=float(settings.get("bt_trail_after_R", 2.0)),
+        trail_sma=int(settings.get("bt_trail_sma", 20)),
+        sma_buffer_pct=float(settings.get("bt_sma_buffer_pct", 0.005)),
+        min_history=int(min_history) if min_history is not None else 200,
+    )
+    return cfg
+
+
+def _run_quick_backtest_single(
+    ticker: str,
+    cfg: BacktestConfig,
+    start: str,
+    end: str,
+    use_cache: bool,
+    force_refresh: bool,
+) -> dict:
+    mcfg = MarketDataConfig(start=start, end=end or None)
+    ohlcv = fetch_ohlcv(
+        [ticker],
+        mcfg,
+        use_cache=use_cache,
+        force_refresh=force_refresh,
+    )
+    trades = backtest_single_ticker_R(ohlcv, ticker, cfg)
+    summary = summarize_trades(trades)
+    curve = equity_curve_R(trades)
+    dd = drawdown_stats(curve)
+
+    if summary is None or summary.empty:
+        summary = pd.DataFrame([{"trades": 0}])
+    summary = summary.copy()
+    summary["max_drawdown_R"] = dd.get("max_drawdown_R", None)
+    if trades is not None and not trades.empty:
+        summary["best_trade_R"] = trades["R"].max()
+        summary["worst_trade_R"] = trades["R"].min()
+    else:
+        summary["best_trade_R"] = None
+        summary["worst_trade_R"] = None
+
+    close_series = ohlcv["Close"][ticker].dropna()
+    bars = int(len(close_series))
+
+    warnings = []
+    if bars < cfg.min_history:
+        warnings.append(
+            f"Not enough bars for min_history ({bars} < {cfg.min_history})."
+        )
+    if cfg.entry_type == "breakout" and bars < cfg.breakout_lookback + 1:
+        warnings.append(
+            f"Not enough bars for breakout lookback ({bars} < {cfg.breakout_lookback + 1})."
+        )
+    if cfg.entry_type == "pullback" and bars < cfg.pullback_ma + 1:
+        warnings.append(
+            f"Not enough bars for pullback MA ({bars} < {cfg.pullback_ma + 1})."
+        )
+    if bars < cfg.atr_window + 1:
+        warnings.append(f"Not enough bars for ATR window ({bars} < {cfg.atr_window + 1}).")
+    if cfg.exit_mode == "trailing_stop" and bars < cfg.trail_sma + 1:
+        warnings.append(
+            f"Not enough bars for trailing SMA ({bars} < {cfg.trail_sma + 1})."
+        )
+
+    return {
+        "ticker": ticker,
+        "start": start,
+        "end": end,
+        "bars": bars,
+        "trades": trades,
+        "summary": summary,
+        "curve": curve,
+        "warnings": warnings,
+    }
+
+
 def _render_report_stats(report: pd.DataFrame) -> None:
     st.write(f"Rows: {len(report)}")
     if "signal" in report.columns:
@@ -320,8 +418,14 @@ def _current_settings() -> dict:
         "bt_pullback_ma",
         "bt_atr_window",
         "bt_k_atr",
+        "bt_exit_mode",
         "bt_take_profit_R",
         "bt_max_holding_days",
+        "bt_breakeven_at_R",
+        "bt_trail_after_R",
+        "bt_trail_sma",
+        "bt_sma_buffer_pct",
+        "bt_quick_max_holding_days",
         "bt_min_trades_per_ticker",
         "bt_min_trades_compare",
         "bt_flag_profit_factor",
@@ -419,6 +523,16 @@ def main() -> None:
             "Force refresh data",
             value=bool(st.session_state.get("force_refresh", defaults["force_refresh"])),
             key="force_refresh",
+        )
+        st.caption("Quick backtest (Candidates tab)")
+        bt_quick_max_holding_days = st.number_input(
+            "Max holding days (quick backtest)",
+            min_value=1,
+            max_value=9999,
+            value=int(st.session_state.get("bt_quick_max_holding_days", defaults["bt_quick_max_holding_days"])),
+            step=1,
+            key="bt_quick_max_holding_days",
+            help="Used only for the quick backtest in the Candidates panel.",
         )
         st.caption("Paths")
         report_path = st.text_input("Report CSV path", value=st.session_state["report_path"], key="report_path")
@@ -576,6 +690,113 @@ def main() -> None:
             st.caption("Showing up to 50 rows for a quick scan.")
             st.dataframe(report.head(50))
             _render_report_stats(report)
+            st.subheader("Quick backtest")
+            st.caption(
+                "Run a quick backtest for any candidate using current backtest defaults. "
+                "Choose the lookback window in months. "
+                "Quick backtests use the sidebar stop distance (k*ATR) and quick max holding days. "
+                "Results may be empty if the lookback windows exceed the available bars."
+            )
+            quick_bt_results = st.session_state.setdefault("quick_bt_results", {})
+            month_end = datetime.utcnow().date()
+
+            for idx, (ticker, row) in enumerate(report.head(50).iterrows()):
+                ticker = str(ticker).strip().upper()
+                signal = row.get("signal", "")
+                order_type = row.get("suggested_order_type", "")
+                cols = st.columns([1.2, 1.2, 1.5, 1.4, 1.1])
+                with cols[0]:
+                    st.write(ticker)
+                with cols[1]:
+                    st.write(signal)
+                with cols[2]:
+                    st.write(order_type)
+                with cols[3]:
+                    months_back = st.number_input(
+                        "Lookback (months)",
+                        min_value=1,
+                        max_value=360,
+                        value=int(st.session_state.get("bt_quick_months", 12)),
+                        step=1,
+                        key=f"bt_quick_months_{ticker}_{idx}",
+                        label_visibility="visible",
+                    )
+                with cols[4]:
+                    if st.button("Run backtest", key=f"bt_quick_{ticker}_{idx}"):
+                        cfg_bt = _build_bt_config_from_settings(settings)
+                        max_hold_quick = int(settings.get("bt_quick_max_holding_days", 9999))
+                        entry_type_override = None
+                        order_type_norm = str(order_type).strip().upper() if order_type is not None else ""
+                        signal_norm = str(signal).strip().lower() if signal is not None else ""
+                        if order_type_norm == "BUY_STOP":
+                            entry_type_override = "breakout"
+                        elif order_type_norm == "BUY_LIMIT":
+                            entry_type_override = "pullback"
+                        elif signal_norm in {"breakout", "pullback"}:
+                            entry_type_override = signal_norm
+                        if entry_type_override:
+                            cfg_bt = replace(cfg_bt, entry_type=entry_type_override)
+                        cfg_bt = replace(
+                            cfg_bt,
+                            k_atr=float(settings.get("k_atr", cfg_bt.k_atr)),
+                            max_holding_days=max_hold_quick,
+                        )
+                        month_start = (pd.Timestamp(month_end) - pd.DateOffset(months=months_back)).date()
+                        start_str = str(month_start)
+                        end_str = str(month_end)
+                        res_key = f"{ticker}|{months_back}"
+                        with st.spinner(f"Running backtest for {ticker} ({months_back} months)..."):
+                            res = _run_quick_backtest_single(
+                                ticker,
+                                cfg_bt,
+                                start_str,
+                                end_str,
+                                bool(settings["use_cache"]),
+                                bool(settings["force_refresh"]),
+                            )
+                        res["months_back"] = int(months_back)
+                        quick_bt_results[res_key] = res
+                        st.session_state["quick_bt_results"] = quick_bt_results
+
+                res_key = f"{ticker}|{int(st.session_state.get(f'bt_quick_months_{ticker}_{idx}', 260))}"
+                res = quick_bt_results.get(res_key)
+                if res:
+                    with st.expander(f"{ticker} — quick backtest results", expanded=False):
+                        st.caption(
+                            f"Window: {res['start']} → {res['end']} "
+                            f"({res.get('months_back', '?')} months) | Bars: {res['bars']}"
+                        )
+                        for warn in res.get("warnings", []):
+                            st.warning(warn)
+                        st.dataframe(res["summary"], width='stretch')
+                        trades = res.get("trades")
+                        trade_count = int(len(trades)) if trades is not None else 0
+                        total_r = float(trades["R"].sum()) if trades is not None and not trades.empty else 0.0
+                        try:
+                            risk_per_trade = float(settings["account_size"]) * (float(settings["risk_pct"]) / 100.0)
+                            total_eur = total_r * risk_per_trade
+                        except Exception:
+                            risk_per_trade = None
+                            total_eur = None
+
+                        cols_stats = st.columns(3)
+                        cols_stats[0].metric("Trades (buys/sells)", f"{trade_count} / {trade_count}")
+                        cols_stats[1].metric("Total P/L (R)", f"{total_r:.2f}R")
+                        if total_eur is not None:
+                            cols_stats[2].metric("Total P/L (€)", f"{total_eur:.2f}")
+                        else:
+                            cols_stats[2].metric("Total P/L (€)", "n/a")
+
+                        curve = res.get("curve")
+                        if curve is not None and not curve.empty:
+                            st.line_chart(curve.set_index("date")[["cum_R"]])
+                        else:
+                            st.info("No equity curve to display.")
+                        if trades is not None and not trades.empty:
+                            st.dataframe(trades.head(200), width='stretch')
+                        else:
+                            st.info("No trades in this window.")
+
             guidance_cols = [
                 "suggested_order_type",
                 "suggested_order_price",
@@ -1275,7 +1496,11 @@ def main() -> None:
 
     with tab_backtest:
         st.subheader("5) Backtest")
-        st.info("Simulate breakout/pullback rules on history to gauge robustness. Use minimal tweaks; avoid curve fitting.")
+        st.info(
+            "Simulate breakout/pullback rules on history. "
+            "Puoi scegliere exit con take profit o trailing stop (breakeven + SMA). "
+            "Usa pochi parametri ed evita curve fitting."
+        )
 
         with st.expander("Come leggere i risultati", expanded=False):
             st.markdown(
@@ -1286,6 +1511,7 @@ def main() -> None:
                 - **max_drawdown_R**: peggior drawdown della curva in R. Più vicino a 0 è meglio.
                 - **best/worst trade R**: coda della distribuzione (rischio estremo).
                 - **trades**: servono campioni sufficienti. Guarda anche curve/volatilità della curva.
+                - **exit mode**: take profit tende a troncare i winner; trailing stop è più vicino alla gestione reale.
                 - Confronto: privilegia set con drawdown minore a parità di expectancy, o con expectancy migliore a drawdown simile. Verifica stabilità su più periodi/universi.
                 """
             )
@@ -1312,17 +1538,77 @@ def main() -> None:
                 value=str(st.session_state.get("bt_end", defaults["bt_end"])),
                 key="bt_end",
             )
-            entry_type = st.selectbox("Entry type", ["pullback", "breakout"], key="bt_entry_type", help="pullback = buy limit su MA; breakout = buy stop oltre massimo.")
+            entry_type = st.selectbox(
+                "Entry type",
+                ["pullback", "breakout"],
+                key="bt_entry_type",
+                help="pullback = buy limit su MA; breakout = buy stop oltre massimo.",
+            )
+            exit_mode = st.selectbox(
+                "Exit mode",
+                ["trailing_stop", "take_profit"],
+                key="bt_exit_mode",
+                help="trailing_stop = solo stop con breakeven + trailing; take_profit = TP fisso in R.",
+            )
             end_label = (bt_end_raw.strip() or "latest").replace("/", "_")
             start_label = str(bt_start).replace("/", "_")
             cfg_name_default = f"{entry_type}_{start_label}_{end_label}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
             cfg_name = st.text_input("Nome config", value=cfg_name_default, help="Usa un nome semplice. Verrà salvato per i confronti.")
             k_atr_val = st.slider("Stop distance (k * ATR)", 1.0, 3.0, float(st.session_state.get("bt_k_atr", defaults["bt_k_atr"])), 0.1, key="bt_k_atr")
-            tp_r_val = st.slider("Take profit (R)", 0.5, 5.0, float(st.session_state.get("bt_take_profit_R", defaults["bt_take_profit_R"])), 0.25, key="bt_take_profit_R")
+            tp_r_val = st.slider(
+                "Take profit (R)",
+                0.5,
+                5.0,
+                float(st.session_state.get("bt_take_profit_R", defaults["bt_take_profit_R"])),
+                0.25,
+                key="bt_take_profit_R",
+                disabled=exit_mode == "trailing_stop",
+            )
             max_hold = st.number_input("Max holding days", 5, 100, int(st.session_state.get("bt_max_holding_days", defaults["bt_max_holding_days"])), 1, key="bt_max_holding_days")
             breakout_lb = st.number_input("Breakout lookback", 10, 200, int(st.session_state.get("bt_breakout_lookback", defaults["bt_breakout_lookback"])), 5, key="bt_breakout_lookback")
             pullback_ma = st.number_input("Pullback MA", 5, 100, int(st.session_state.get("bt_pullback_ma", defaults["bt_pullback_ma"])), 1, key="bt_pullback_ma")
             atr_win = st.number_input("ATR window", 5, 50, int(st.session_state.get("bt_atr_window", defaults["bt_atr_window"])), 1, key="bt_atr_window")
+            if exit_mode == "trailing_stop":
+                breakeven_at_r = st.slider(
+                    "Breakeven at R",
+                    0.5,
+                    3.0,
+                    float(st.session_state.get("bt_breakeven_at_R", defaults["bt_breakeven_at_R"])),
+                    0.25,
+                    key="bt_breakeven_at_R",
+                    help="Quando R >= soglia, stop sale a entry.",
+                )
+                trail_after_r = st.slider(
+                    "Trail after R",
+                    1.0,
+                    5.0,
+                    float(st.session_state.get("bt_trail_after_R", defaults["bt_trail_after_R"])),
+                    0.25,
+                    key="bt_trail_after_R",
+                    help="Quando R >= soglia, stop trail sotto SMA.",
+                )
+                trail_sma = st.number_input(
+                    "Trail SMA window",
+                    5,
+                    100,
+                    int(st.session_state.get("bt_trail_sma", defaults["bt_trail_sma"])),
+                    1,
+                    key="bt_trail_sma",
+                )
+                sma_buffer_pct = st.number_input(
+                    "SMA buffer (decimal)",
+                    min_value=0.0,
+                    max_value=0.05,
+                    value=float(st.session_state.get("bt_sma_buffer_pct", defaults["bt_sma_buffer_pct"])),
+                    step=0.001,
+                    key="bt_sma_buffer_pct",
+                    help="Buffer sotto SMA (es: 0.005 = 0.5%).",
+                )
+            else:
+                breakeven_at_r = float(st.session_state.get("bt_breakeven_at_R", defaults["bt_breakeven_at_R"]))
+                trail_after_r = float(st.session_state.get("bt_trail_after_R", defaults["bt_trail_after_R"]))
+                trail_sma = int(st.session_state.get("bt_trail_sma", defaults["bt_trail_sma"]))
+                sma_buffer_pct = float(st.session_state.get("bt_sma_buffer_pct", defaults["bt_sma_buffer_pct"]))
             bt_min_trades_per_ticker = st.number_input(
                 "Min trades per ticker (include in summary)",
                 min_value=1,
@@ -1366,8 +1652,13 @@ def main() -> None:
                     "created_at": datetime.utcnow().isoformat(),
                     "entry_type": entry_type,
                     "k_atr": float(k_atr_val),
+                    "exit_mode": exit_mode,
                     "take_profit_R": float(tp_r_val),
                     "max_holding_days": int(max_hold),
+                    "breakeven_at_R": float(breakeven_at_r),
+                    "trail_after_R": float(trail_after_r),
+                    "trail_sma": int(trail_sma),
+                    "sma_buffer_pct": float(sma_buffer_pct),
                     "breakout_lookback": int(breakout_lb),
                     "pullback_ma": int(pullback_ma),
                     "atr_window": int(atr_win),
@@ -1390,7 +1681,22 @@ def main() -> None:
             to_delete = []
             for cfg in saved_configs:
                 with st.expander(f"{cfg['name']} ({cfg['entry_type']}) — {cfg.get('created_at','')}"):
-                    st.write(f"Stop k_ATR: {cfg['k_atr']} | TP R: {cfg['take_profit_R']} | Max hold: {cfg['max_holding_days']}d")
+                    exit_mode_label = cfg.get("exit_mode", "take_profit")
+                    if exit_mode_label == "trailing_stop":
+                        st.write(
+                            "Stop k_ATR: "
+                            f"{cfg['k_atr']} | Exit: trailing_stop "
+                            f"(BE {cfg.get('breakeven_at_R', defaults['bt_breakeven_at_R'])}R, "
+                            f"trail after {cfg.get('trail_after_R', defaults['bt_trail_after_R'])}R, "
+                            f"SMA{cfg.get('trail_sma', defaults['bt_trail_sma'])}, "
+                            f"buf {cfg.get('sma_buffer_pct', defaults['bt_sma_buffer_pct']) * 100:.2f}%) "
+                            f"| Max hold: {cfg['max_holding_days']}d"
+                        )
+                    else:
+                        st.write(
+                            f"Stop k_ATR: {cfg['k_atr']} | Exit: take_profit "
+                            f"(TP {cfg['take_profit_R']}R) | Max hold: {cfg['max_holding_days']}d"
+                        )
                     st.write(f"Breakout lb: {cfg['breakout_lookback']} | Pullback MA: {cfg['pullback_ma']} | ATR win: {cfg['atr_window']}")
                     st.caption(f"Start: {cfg.get('start','')} | End: {cfg.get('end','latest')}")
                     if st.button(f"Elimina {cfg['name']}", key=f"del_{cfg['name']}"):
@@ -1418,8 +1724,13 @@ def main() -> None:
                         pullback_ma=cfg["pullback_ma"],
                         atr_window=cfg["atr_window"],
                         k_atr=cfg["k_atr"],
-                        take_profit_R=cfg["take_profit_R"],
+                        exit_mode=cfg.get("exit_mode", "take_profit"),
+                        take_profit_R=cfg.get("take_profit_R", defaults["bt_take_profit_R"]),
                         max_holding_days=cfg["max_holding_days"],
+                        breakeven_at_R=cfg.get("breakeven_at_R", defaults["bt_breakeven_at_R"]),
+                        trail_after_R=cfg.get("trail_after_R", defaults["bt_trail_after_R"]),
+                        trail_sma=cfg.get("trail_sma", defaults["bt_trail_sma"]),
+                        sma_buffer_pct=cfg.get("sma_buffer_pct", defaults["bt_sma_buffer_pct"]),
                     )
                     res = _run_backtest(
                         settings["universe"],
