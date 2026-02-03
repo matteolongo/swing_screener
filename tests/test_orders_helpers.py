@@ -1,6 +1,13 @@
 from datetime import datetime
 
-from ui.helpers import load_orders, make_order_entry, orders_to_dataframe, save_orders
+from ui.helpers import (
+    load_orders,
+    make_order_entry,
+    orders_to_dataframe,
+    save_orders,
+    orders_dicts_to_models,
+    orders_models_to_dicts,
+)
 
 
 def test_orders_roundtrip(tmp_path):
@@ -61,3 +68,31 @@ def test_make_order_entry_allows_missing_stop():
         stop_price=None,
     )
     assert order["stop_price"] is None
+
+
+def test_order_model_roundtrip():
+    orders = [
+        {
+            "order_id": "AAPL-1",
+            "ticker": "AAPL",
+            "status": "pending",
+            "order_kind": "entry",
+            "order_type": "BUY_LIMIT",
+            "limit_price": 10.0,
+            "quantity": 2,
+            "stop_price": 9.0,
+            "order_date": "2026-01-10",
+            "filled_date": "",
+            "entry_price": None,
+            "position_id": None,
+            "parent_order_id": None,
+            "tif": "GTC",
+            "notes": "test",
+        }
+    ]
+    models = orders_dicts_to_models(orders)
+    out = orders_models_to_dicts(models)
+    assert out[0]["order_id"] == "AAPL-1"
+    assert out[0]["order_type"] == "BUY_LIMIT"
+    assert out[0]["limit_price"] == 10.0
+    assert out[0]["stop_price"] == 9.0
