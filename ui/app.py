@@ -33,7 +33,11 @@ from swing_screener.backtest.portfolio import (
     drawdown_stats,
     PortfolioBacktestConfig,
 )
-from swing_screener.backtest.simulator import BacktestConfig
+from swing_screener.backtest.simulator import (
+    BacktestConfig,
+    backtest_single_ticker_R,
+    summarize_trades,
+)
 import html
 
 from ui.helpers import (
@@ -280,6 +284,92 @@ def _run_backtest(
         "summary_by_ticker": summary_by_ticker,
         "summary_total": summary_total,
         "curve": curve,
+    }
+
+
+def _build_bt_config_from_settings(
+    settings: dict, *, min_history: int | None = None
+) -> BacktestConfig:
+    cfg = BacktestConfig(
+        entry_type=str(settings.get("bt_entry_type", "pullback")),
+        breakout_lookback=int(settings.get("bt_breakout_lookback", 50)),
+        pullback_ma=int(settings.get("bt_pullback_ma", 20)),
+        atr_window=int(settings.get("bt_atr_window", 14)),
+        k_atr=float(settings.get("bt_k_atr", 2.0)),
+        exit_mode=str(settings.get("bt_exit_mode", "take_profit")),
+        take_profit_R=float(settings.get("bt_take_profit_R", 2.0)),
+        max_holding_days=int(settings.get("bt_max_holding_days", 20)),
+        breakeven_at_R=float(settings.get("bt_breakeven_at_R", 1.0)),
+        trail_after_R=float(settings.get("bt_trail_after_R", 2.0)),
+        trail_sma=int(settings.get("bt_trail_sma", 20)),
+        sma_buffer_pct=float(settings.get("bt_sma_buffer_pct", 0.005)),
+        min_history=int(min_history) if min_history is not None else 200,
+    )
+    return cfg
+
+
+def _run_quick_backtest_single(
+    ticker: str,
+    cfg: BacktestConfig,
+    start: str,
+    end: str,
+    use_cache: bool,
+    force_refresh: bool,
+) -> dict:
+    mcfg = MarketDataConfig(start=start, end=end or None)
+    ohlcv = fetch_ohlcv(
+        [ticker],
+        mcfg,
+        use_cache=use_cache,
+        force_refresh=force_refresh,
+    )
+    trades = backtest_single_ticker_R(ohlcv, ticker, cfg)
+    summary = summarize_trades(trades)
+    curve = equity_curve_R(trades)
+    dd = drawdown_stats(curve)
+
+    if summary is None or summary.empty:
+        summary = pd.DataFrame([{"trades": 0}])
+    summary = summary.copy()
+    summary["max_drawdown_R"] = dd.get("max_drawdown_R", None)
+    if trades is not None and not trades.empty:
+        summary["best_trade_R"] = trades["R"].max()
+        summary["worst_trade_R"] = trades["R"].min()
+    else:
+        summary["best_trade_R"] = None
+        summary["worst_trade_R"] = None
+
+    close_series = ohlcv["Close"][ticker].dropna()
+    bars = int(len(close_series))
+
+    warnings = []
+    if bars < cfg.min_history:
+        warnings.append(
+            f"Not enough bars for min_history ({bars} < {cfg.min_history})."
+        )
+    if cfg.entry_type == "breakout" and bars < cfg.breakout_lookback + 1:
+        warnings.append(
+            f"Not enough bars for breakout lookback ({bars} < {cfg.breakout_lookback + 1})."
+        )
+    if cfg.entry_type == "pullback" and bars < cfg.pullback_ma + 1:
+        warnings.append(
+            f"Not enough bars for pullback MA ({bars} < {cfg.pullback_ma + 1})."
+        )
+    if bars < cfg.atr_window + 1:
+        warnings.append(f"Not enough bars for ATR window ({bars} < {cfg.atr_window + 1}).")
+    if cfg.exit_mode == "trailing_stop" and bars < cfg.trail_sma + 1:
+        warnings.append(
+            f"Not enough bars for trailing SMA ({bars} < {cfg.trail_sma + 1})."
+        )
+
+    return {
+        "ticker": ticker,
+        "start": start,
+        "end": end,
+        "bars": bars,
+        "trades": trades,
+        "summary": summary,
+        "warnings": warnings,
     }
 
 
@@ -586,6 +676,71 @@ def main() -> None:
             st.caption("Showing up to 50 rows for a quick scan.")
             st.dataframe(report.head(50))
             _render_report_stats(report)
+            st.subheader("Quick backtest")
+            st.caption(
+                "Run a quick backtest for any candidate using current backtest defaults. "
+                "Choose the lookback window in months. Results may be empty if the lookback windows exceed the available bars."
+            )
+            quick_bt_results = st.session_state.setdefault("quick_bt_results", {})
+            month_end = datetime.utcnow().date()
+
+            for idx, (ticker, row) in enumerate(report.head(50).iterrows()):
+                ticker = str(ticker).strip().upper()
+                signal = row.get("signal", "")
+                order_type = row.get("suggested_order_type", "")
+                cols = st.columns([1.2, 1.2, 1.5, 1.4, 1.1])
+                with cols[0]:
+                    st.write(ticker)
+                with cols[1]:
+                    st.write(signal)
+                with cols[2]:
+                    st.write(order_type)
+                with cols[3]:
+                    months_back = st.number_input(
+                        "Lookback (months)",
+                        min_value=1,
+                        max_value=360,
+                        value=int(st.session_state.get("bt_quick_months", 12)),
+                        step=1,
+                        key=f"bt_quick_months_{ticker}_{idx}",
+                        label_visibility="visible",
+                    )
+                with cols[4]:
+                    if st.button("Run backtest", key=f"bt_quick_{ticker}_{idx}"):
+                        cfg_bt = _build_bt_config_from_settings(settings)
+                        month_start = (pd.Timestamp(month_end) - pd.DateOffset(months=months_back)).date()
+                        start_str = str(month_start)
+                        end_str = str(month_end)
+                        res_key = f"{ticker}|{months_back}"
+                        with st.spinner(f"Running backtest for {ticker} ({months_back} months)..."):
+                            res = _run_quick_backtest_single(
+                                ticker,
+                                cfg_bt,
+                                start_str,
+                                end_str,
+                                bool(settings["use_cache"]),
+                                bool(settings["force_refresh"]),
+                            )
+                        res["months_back"] = int(months_back)
+                        quick_bt_results[res_key] = res
+                        st.session_state["quick_bt_results"] = quick_bt_results
+
+                res_key = f"{ticker}|{int(st.session_state.get(f'bt_quick_months_{ticker}_{idx}', 260))}"
+                res = quick_bt_results.get(res_key)
+                if res:
+                    with st.expander(f"{ticker} — quick backtest results", expanded=False):
+                        st.caption(
+                            f"Window: {res['start']} → {res['end']} "
+                            f"({res.get('months_back', '?')} months) | Bars: {res['bars']}"
+                        )
+                        for warn in res.get("warnings", []):
+                            st.warning(warn)
+                        st.dataframe(res["summary"], width='stretch')
+                        if res["trades"] is not None and not res["trades"].empty:
+                            st.dataframe(res["trades"].head(200), width='stretch')
+                        else:
+                            st.info("No trades in this window.")
+
             guidance_cols = [
                 "suggested_order_type",
                 "suggested_order_price",
