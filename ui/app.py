@@ -3,6 +3,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 from datetime import datetime
+from dataclasses import replace
 
 import pandas as pd
 import streamlit as st
@@ -88,6 +89,7 @@ DEFAULT_SETTINGS: dict = {
     "bt_trail_after_R": 2.0,
     "bt_trail_sma": 20,
     "bt_sma_buffer_pct": 0.005,
+    "bt_quick_max_holding_days": 9999,
     "bt_min_trades_per_ticker": 3,
     "bt_min_trades_compare": 30,
     "bt_flag_profit_factor": 1.3,
@@ -423,6 +425,7 @@ def _current_settings() -> dict:
         "bt_trail_after_R",
         "bt_trail_sma",
         "bt_sma_buffer_pct",
+        "bt_quick_max_holding_days",
         "bt_min_trades_per_ticker",
         "bt_min_trades_compare",
         "bt_flag_profit_factor",
@@ -520,6 +523,16 @@ def main() -> None:
             "Force refresh data",
             value=bool(st.session_state.get("force_refresh", defaults["force_refresh"])),
             key="force_refresh",
+        )
+        st.caption("Quick backtest (Candidates tab)")
+        bt_quick_max_holding_days = st.number_input(
+            "Max holding days (quick backtest)",
+            min_value=1,
+            max_value=9999,
+            value=int(st.session_state.get("bt_quick_max_holding_days", defaults["bt_quick_max_holding_days"])),
+            step=1,
+            key="bt_quick_max_holding_days",
+            help="Used only for the quick backtest in the Candidates panel.",
         )
         st.caption("Paths")
         report_path = st.text_input("Report CSV path", value=st.session_state["report_path"], key="report_path")
@@ -709,6 +722,8 @@ def main() -> None:
                 with cols[4]:
                     if st.button("Run backtest", key=f"bt_quick_{ticker}_{idx}"):
                         cfg_bt = _build_bt_config_from_settings(settings)
+                        max_hold_quick = int(settings.get("bt_quick_max_holding_days", 9999))
+                        cfg_bt = replace(cfg_bt, max_holding_days=max_hold_quick)
                         month_start = (pd.Timestamp(month_end) - pd.DateOffset(months=months_back)).date()
                         start_str = str(month_start)
                         end_str = str(month_end)
