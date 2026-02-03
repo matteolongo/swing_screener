@@ -47,6 +47,8 @@ def render_manage_tab(
                 "entry_price",
                 "stop_price",
                 "shares",
+                "exit_date",
+                "exit_price",
                 "notes",
             ]
         )
@@ -56,6 +58,36 @@ def render_manage_tab(
         num_rows="dynamic",
         width="stretch",
     )
+
+    closed_df = edited_df[edited_df["status"] == "closed"].copy()
+    if not closed_df.empty:
+        missing_exit = closed_df[
+            closed_df["exit_date"].isna() | closed_df["exit_price"].isna()
+        ]
+        if not missing_exit.empty:
+            st.warning("Closed positions missing exit_date/exit_price won't show realized P/L.")
+        realized = closed_df.dropna(subset=["entry_price", "exit_price", "shares"]).copy()
+        if not realized.empty:
+            realized.loc[:, "pl_value"] = (
+                (realized["exit_price"] - realized["entry_price"]) * realized["shares"]
+            ).round(2)
+            realized.loc[:, "pl_pct"] = (
+                (realized["exit_price"] / realized["entry_price"]) - 1.0
+            ).mul(100.0).round(2)
+            st.subheader("Closed positions (realized P/L)")
+            display_cols = [
+                "ticker",
+                "entry_date",
+                "exit_date",
+                "entry_price",
+                "exit_price",
+                "shares",
+                "pl_value",
+                "pl_pct",
+                "notes",
+            ]
+            display_cols = [c for c in display_cols if c in realized.columns]
+            st.dataframe(realized[display_cols], width="stretch")
 
     if st.button("Recalculate stops / checklist", key="manage_btn"):
         try:

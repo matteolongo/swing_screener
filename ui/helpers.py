@@ -54,6 +54,8 @@ def load_positions_to_dataframe(path: str | Path) -> pd.DataFrame:
             "entry_price": p.entry_price,
             "stop_price": p.stop_price,
             "shares": p.shares,
+            "exit_date": p.exit_date,
+            "exit_price": p.exit_price,
             "notes": p.notes,
         }
         for p in positions
@@ -90,6 +92,11 @@ def dataframe_to_positions(
         if entry_price is None or stop_price is None or shares is None:
             raise ValueError(f"{ticker}: entry_price, stop_price, shares are required.")
 
+        exit_date = row.get("exit_date", prev.exit_date if prev else None)
+        exit_date = str(exit_date).strip() if exit_date not in {None, ""} else None
+        exit_price = row.get("exit_price", prev.exit_price if prev else None)
+        exit_price = float(exit_price) if exit_price not in {None, ""} else None
+
         notes = row.get("notes", prev.notes if prev else "")
 
         out.append(
@@ -104,6 +111,8 @@ def dataframe_to_positions(
                 source_order_id=prev.source_order_id if prev else None,
                 initial_risk=prev.initial_risk if prev else None,
                 max_favorable_price=prev.max_favorable_price if prev else None,
+                exit_date=exit_date,
+                exit_price=exit_price,
                 notes=str(notes) if notes is not None else "",
                 exit_order_ids=prev.exit_order_ids if prev else None,
             )

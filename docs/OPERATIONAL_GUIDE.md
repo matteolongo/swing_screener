@@ -56,6 +56,9 @@ Contains:
 - stop loss
 - shares
 - trade state
+Closed-trade fields (required when closing):
+- `exit_date`
+- `exit_price`
 Optional linkage fields:
 - `position_id`
 - `source_order_id`
@@ -304,6 +307,7 @@ CLOSE_TIME_EXIT
 
 When you close a trade in Degiro:
 - mark it as `status: closed` in `positions.json`
+- include `exit_date` and `exit_price`
 - or remove it entirely
 
 ---

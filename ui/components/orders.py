@@ -9,6 +9,7 @@ import streamlit as st
 
 from swing_screener.execution.orders_service import (
     fill_entry_order_dicts,
+    fill_exit_order_dicts,
     scale_in_fill_dicts,
 )
 from swing_screener.portfolio.state import load_positions, save_positions
@@ -129,10 +130,21 @@ def render_orders_tab(
     else:
         for pending_order in pending:
             oid = pending_order.get("order_id")
-            order_kind = str(pending_order.get("order_kind") or "entry").strip().lower()
+            order_kind_raw = str(pending_order.get("order_kind") or "").strip().lower()
+            order_type_raw = str(pending_order.get("order_type") or "").strip().upper()
+            if order_kind_raw:
+                order_kind = order_kind_raw
+            elif order_type_raw == "SELL_STOP":
+                order_kind = "stop"
+            elif order_type_raw == "SELL_LIMIT":
+                order_kind = "take_profit"
+            else:
+                order_kind = "entry"
             position_id = pending_order.get("position_id", None)
             open_pos = None
-            if order_kind == "entry":
+            is_entry = order_kind == "entry"
+            is_exit = order_kind in {"stop", "take_profit"}
+            if is_entry:
                 open_pos = next(
                     (
                         p
@@ -148,8 +160,6 @@ def render_orders_tab(
             with st.expander(header, expanded=False):
                 form_key = f"update_{oid}"
                 with st.form(form_key):
-                    order_type_raw = str(pending_order.get("order_type", "")).strip().upper()
-                    order_kind_raw = str(pending_order.get("order_kind", "")).strip().lower()
                     if order_kind_raw == "stop" or order_type_raw == "SELL_STOP":
                         default_entry = float(pending_order.get("stop_price") or 0.0)
                     else:
@@ -173,21 +183,29 @@ def render_orders_tab(
                         step=1,
                         key=f"{form_key}_qty",
                     )
+                    stop_label = (
+                        "Stop-loss price (required to mark filled)"
+                        if is_entry
+                        else "Stop-loss price (n/a for exit fills)"
+                    )
                     stop_price_input = st.text_input(
-                        "Stop-loss price (required to mark filled)",
+                        stop_label,
                         value=(
                             f"{float(pending_order.get('stop_price')):.2f}"
                             if pending_order.get("stop_price") is not None
                             else ""
                         ),
                         key=f"{form_key}_stop",
+                        disabled=not is_entry,
                     )
-                    tp_price_input = st.text_input(
-                        "Take profit price (optional)",
-                        value="",
-                        key=f"{form_key}_tp",
-                    )
-                    if order_kind == "entry":
+                    tp_price_input = ""
+                    if is_entry:
+                        tp_price_input = st.text_input(
+                            "Take profit price (optional)",
+                            value="",
+                            key=f"{form_key}_tp",
+                        )
+                    if is_entry:
                         if open_pos:
                             action_options = [
                                 "Save pending changes",
@@ -202,15 +220,17 @@ def render_orders_tab(
                         else:
                             action_options = ["Save pending changes", "Mark filled", "Mark cancelled"]
                     else:
-                        action_options = ["Save pending changes", "Mark cancelled"]
-                        st.caption("Exit orders are linked to positions; mark filled in positions.json.")
+                        action_options = ["Save pending changes", "Mark filled", "Mark cancelled"]
+                        st.caption(
+                            "Exit orders close the linked position and store exit date/price."
+                        )
                     action = st.radio("Action", action_options, key=f"{form_key}_action")
                     update_submit = st.form_submit_button("Update order")
 
                 if update_submit:
                     had_error = False
-                    if action in {"Mark filled", "Scale-in (mark filled)"} and order_kind != "entry":
-                        st.error("Only entry orders can be marked filled here.")
+                    if action == "Scale-in (mark filled)" and not is_entry:
+                        st.error("Only entry orders can be scaled in here.")
                         continue
                     for order in orders:
                         if order.get("order_id") != oid:
@@ -249,6 +269,26 @@ def render_orders_tab(
                                     fill_price=fill_price,
                                     fill_date=str(fill_date),
                                     quantity=add_shares,
+                                )
+                            except ValueError as e:
+                                st.error(f"{order['ticker']}: {e}")
+                                had_error = True
+                                break
+
+                            save_positions(
+                                settings["positions_path"],
+                                positions,
+                                asof=str(pd.Timestamp.now().date()),
+                            )
+                        elif action == "Mark filled" and is_exit:
+                            fill_price = float(order_price_input)
+                            try:
+                                orders, positions = fill_exit_order_dicts(
+                                    orders,
+                                    positions,
+                                    order_id=oid,
+                                    fill_price=fill_price,
+                                    fill_date=str(fill_date),
                                 )
                             except ValueError as e:
                                 st.error(f"{order['ticker']}: {e}")

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Optional
+from dataclasses import replace
 
 from swing_screener.execution.order_workflows import fill_entry_order, scale_in_fill
 from swing_screener.execution.orders import Order
@@ -113,3 +114,66 @@ def scale_in_fill_dicts(
         quantity=quantity,
     )
     return orders_models_to_dicts(new_orders), new_positions
+
+
+def fill_exit_order_dicts(
+    orders: list[dict],
+    positions: list[Position],
+    *,
+    order_id: str,
+    fill_price: float,
+    fill_date: str,
+) -> tuple[list[dict], list[Position]]:
+    order = next((o for o in orders if o.get("order_id") == order_id), None)
+    if order is None:
+        raise ValueError(f"Order '{order_id}' not found.")
+
+    order_kind = str(order.get("order_kind", "")).strip().lower()
+    order_type = str(order.get("order_type", "")).strip().upper()
+    if order_kind not in {"stop", "take_profit"}:
+        if order_type == "SELL_STOP":
+            order_kind = "stop"
+        elif order_type == "SELL_LIMIT":
+            order_kind = "take_profit"
+        else:
+            raise ValueError("Only exit orders can be marked filled.")
+
+    position_id = order.get("position_id")
+    pos_idx = None
+    pos = None
+    if position_id:
+        for idx, p in enumerate(positions):
+            if p.position_id == position_id:
+                pos_idx = idx
+                pos = p
+                break
+    if pos is None:
+        ticker = str(order.get("ticker", "")).strip().upper()
+        matches = [
+            (idx, p)
+            for idx, p in enumerate(positions)
+            if p.ticker == ticker and p.status == "open"
+        ]
+        if len(matches) == 1:
+            pos_idx, pos = matches[0]
+        else:
+            raise ValueError("Linked position not found for exit fill.")
+
+    qty = order.get("quantity")
+    if qty is not None and pos is not None and int(qty) != int(pos.shares):
+        raise ValueError(
+            "Exit order quantity does not match position shares (partial exits not supported)."
+        )
+
+    order["status"] = "filled"
+    order["filled_date"] = str(fill_date)
+    order["entry_price"] = float(fill_price)
+
+    positions = list(positions)
+    positions[pos_idx] = replace(
+        pos,
+        status="closed",
+        exit_date=str(fill_date),
+        exit_price=float(fill_price),
+    )
+    return orders, positions
