@@ -73,3 +73,12 @@ def test_atr_is_about_2_for_constant_range():
 
     # TR should be ~2 most days in this synthetic dataset, so ATR ~2
     assert 1.9 < last_atr < 2.1
+
+
+def test_compute_volatility_features_empty_ohlcv():
+    cols = pd.MultiIndex.from_product(
+        [["Open", "High", "Low", "Close", "Volume"], ["AAA"]]
+    )
+    ohlcv = pd.DataFrame(columns=cols)
+    feats = compute_volatility_features(ohlcv, VolatilityConfig(atr_window=14))
+    assert feats.empty

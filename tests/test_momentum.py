@@ -83,3 +83,12 @@ def test_relative_strength_signs():
 
     # BBB underperforms SPY -> rs negative
     assert float(feats.loc["BBB", "rs_6m"]) < 0.0
+
+
+def test_momentum_features_empty_ohlcv():
+    cols = pd.MultiIndex.from_product(
+        [["Open", "High", "Low", "Close", "Volume"], ["SPY"]]
+    )
+    ohlcv = pd.DataFrame(columns=cols)
+    feats = compute_momentum_features(ohlcv, MomentumConfig(benchmark="SPY"))
+    assert feats.empty

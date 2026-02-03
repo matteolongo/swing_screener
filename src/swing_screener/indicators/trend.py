@@ -53,6 +53,17 @@ def compute_trend_features(
       - dist_sma50_pct, dist_sma200_pct
     """
     close = _get_close_matrix(ohlcv)
+    if close.empty:
+        cols = [
+            "last",
+            f"sma{cfg.sma_fast}",
+            f"sma{cfg.sma_mid}",
+            f"sma{cfg.sma_long}",
+            "trend_ok",
+            "dist_sma50_pct",
+            "dist_sma200_pct",
+        ]
+        return pd.DataFrame(columns=cols, index=pd.Index([], name="ticker"))
 
     sma_fast = sma(close, cfg.sma_fast)
     sma_mid = sma(close, cfg.sma_mid)

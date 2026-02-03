@@ -71,3 +71,12 @@ def test_trend_ok_true_for_uptrend_false_for_downtrend():
     # AAA is uptrend -> should satisfy last > sma200 and sma50 > sma200
     assert bool(feats.loc["AAA", "trend_ok"]) is True
     assert bool(feats.loc["BBB", "trend_ok"]) is False
+
+
+def test_compute_trend_features_empty_ohlcv():
+    cols = pd.MultiIndex.from_product(
+        [["Open", "High", "Low", "Close", "Volume"], ["AAA"]]
+    )
+    ohlcv = pd.DataFrame(columns=cols)
+    feats = compute_trend_features(ohlcv, TrendConfig())
+    assert feats.empty
