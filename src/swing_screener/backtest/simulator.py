@@ -8,6 +8,7 @@ import pandas as pd
 
 EntryType = Literal["breakout", "pullback"]
 ExitType = Literal["stop", "take_profit", "time"]
+ExitMode = Literal["take_profit", "trailing_stop"]
 
 
 @dataclass(frozen=True)
@@ -19,8 +20,13 @@ class BacktestConfig:
     atr_window: int = 14
     k_atr: float = 2.0
 
+    exit_mode: ExitMode = "take_profit"
     take_profit_R: float = 2.0
     max_holding_days: int = 20
+    breakeven_at_R: float = 1.0
+    trail_sma: int = 20
+    trail_after_R: float = 2.0
+    sma_buffer_pct: float = 0.005
 
     min_history: int = 260  # for daily swing
     commission_pct: float = 0.0  # per-side commission as % of price
@@ -63,10 +69,13 @@ def backtest_single_ticker_R(
     Rules:
     - Signals computed on completed bars; entry at next bar's open.
     - Stop = entry - k_atr * ATR (ATR from prior bar).
-    - Take profit = entry + take_profit_R * (entry - stop).
+    - Exit modes:
+        * take_profit: TP = entry + take_profit_R * (entry - stop)
+        * trailing_stop: no TP; stop can move to breakeven and trail under SMA
+          (updates apply from next bar to avoid look-ahead).
     - Exit priority each day (using bar-based holding period):
         1) Stop (includes gap-down fills at open)
-        2) Take profit (includes gap-up fills at open)
+        2) Take profit (if enabled; includes gap-up fills at open)
         3) Time stop (max_holding_days in bars)
     - Optional per-side commission_pct is applied on both entry and exit.
     """
@@ -95,6 +104,8 @@ def backtest_single_ticker_R(
     df["atr"] = _atr(df["high"], df["low"], df["close"], cfg.atr_window)
     df["atr_prev"] = df["atr"].shift(1)
     df["entry_sig"] = _entry_signal(df["close"], cfg).shift(1)
+    if cfg.exit_mode == "trailing_stop":
+        df["trail_sma"] = _sma(df["close"], cfg.trail_sma)
 
     trades: List[Dict[str, Any]] = []
 
@@ -103,7 +114,26 @@ def backtest_single_ticker_R(
     entry_idx = None
     entry_price = None
     stop = None
+    stop_init = None
+    risk_per_share = None
     tp = None
+
+    def _maybe_trail_stop(
+        stop_current: float,
+        close_val: float,
+        sma_val: float,
+    ) -> float:
+        r_now = (close_val - entry_price) / float(risk_per_share)
+        stop_candidate = float(stop_current)
+
+        if r_now >= cfg.breakeven_at_R:
+            stop_candidate = max(stop_candidate, float(entry_price))
+
+        if r_now >= cfg.trail_after_R and not pd.isna(sma_val):
+            trail_stop = sma_val * (1.0 - cfg.sma_buffer_pct)
+            stop_candidate = max(stop_candidate, trail_stop)
+
+        return float(stop_candidate)
 
     for i in range(len(df)):
         date = df.index[i]
@@ -119,12 +149,20 @@ def backtest_single_ticker_R(
                 entry_price = float(df["open"].iloc[i])
 
                 stop = entry_price - cfg.k_atr * float(atr_i)
-                risk = entry_price - stop
-                if risk <= 0:
+                stop_init = float(stop)
+                risk_per_share = float(entry_price - stop_init)
+                if risk_per_share <= 0:
                     continue
 
-                tp = entry_price + cfg.take_profit_R * risk
+                if cfg.exit_mode == "take_profit":
+                    tp = entry_price + cfg.take_profit_R * risk_per_share
+                else:
+                    tp = None
                 in_pos = True
+
+                if cfg.exit_mode == "trailing_stop":
+                    sma_val = float(df["trail_sma"].iloc[i])
+                    stop = _maybe_trail_stop(float(stop), float(df["close"].iloc[i]), sma_val)
             continue
 
         # In position: evaluate exit
@@ -142,13 +180,13 @@ def backtest_single_ticker_R(
         if open_i <= stop:
             exit_type = "stop"
             exit_price = open_i
-        elif open_i >= tp:
+        elif cfg.exit_mode == "take_profit" and tp is not None and open_i >= tp:
             exit_type = "take_profit"
             exit_price = open_i
         elif low_i <= stop:
             exit_type = "stop"
             exit_price = float(stop)
-        elif high_i >= tp:
+        elif cfg.exit_mode == "take_profit" and tp is not None and high_i >= tp:
             exit_type = "take_profit"
             exit_price = float(tp)
         elif holding_bars >= cfg.max_holding_days:
@@ -157,15 +195,15 @@ def backtest_single_ticker_R(
 
         if exit_type is not None:
             commission_cost = cfg.commission_pct * (entry_price + exit_price)
-            R = (exit_price - entry_price - commission_cost) / (entry_price - stop)
+            R = (exit_price - entry_price - commission_cost) / float(risk_per_share)
             trades.append(
                 {
                     "ticker": ticker,
                     "entry_date": entry_date,
                     "exit_date": date,
                     "entry": round(entry_price, 4),
-                    "stop": round(float(stop), 4),
-                    "tp": round(float(tp), 4),
+                    "stop": round(float(stop_init), 4),
+                    "tp": round(float(tp), 4) if tp is not None else None,
                     "exit": round(float(exit_price), 4),
                     "exit_type": exit_type,
                     "R": round(float(R), 4),
@@ -179,7 +217,16 @@ def backtest_single_ticker_R(
             entry_idx = None
             entry_price = None
             stop = None
+            stop_init = None
+            risk_per_share = None
             tp = None
+            continue
+
+        if cfg.exit_mode == "trailing_stop":
+            sma_val = float(df["trail_sma"].iloc[i])
+            stop_candidate = _maybe_trail_stop(float(stop), close_i, sma_val)
+            if stop_candidate > stop + 1e-9:
+                stop = float(stop_candidate)
 
     return pd.DataFrame(trades)
 

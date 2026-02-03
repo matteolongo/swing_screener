@@ -77,8 +77,13 @@ DEFAULT_SETTINGS: dict = {
     "bt_pullback_ma": 20,
     "bt_atr_window": 14,
     "bt_k_atr": 2.0,
+    "bt_exit_mode": "trailing_stop",
     "bt_take_profit_R": 2.0,
     "bt_max_holding_days": 20,
+    "bt_breakeven_at_R": 1.0,
+    "bt_trail_after_R": 2.0,
+    "bt_trail_sma": 20,
+    "bt_sma_buffer_pct": 0.005,
     "bt_min_trades_per_ticker": 3,
     "bt_min_trades_compare": 30,
     "bt_flag_profit_factor": 1.3,
@@ -320,8 +325,13 @@ def _current_settings() -> dict:
         "bt_pullback_ma",
         "bt_atr_window",
         "bt_k_atr",
+        "bt_exit_mode",
         "bt_take_profit_R",
         "bt_max_holding_days",
+        "bt_breakeven_at_R",
+        "bt_trail_after_R",
+        "bt_trail_sma",
+        "bt_sma_buffer_pct",
         "bt_min_trades_per_ticker",
         "bt_min_trades_compare",
         "bt_flag_profit_factor",
@@ -1275,7 +1285,11 @@ def main() -> None:
 
     with tab_backtest:
         st.subheader("5) Backtest")
-        st.info("Simulate breakout/pullback rules on history to gauge robustness. Use minimal tweaks; avoid curve fitting.")
+        st.info(
+            "Simulate breakout/pullback rules on history. "
+            "Puoi scegliere exit con take profit o trailing stop (breakeven + SMA). "
+            "Usa pochi parametri ed evita curve fitting."
+        )
 
         with st.expander("Come leggere i risultati", expanded=False):
             st.markdown(
@@ -1286,6 +1300,7 @@ def main() -> None:
                 - **max_drawdown_R**: peggior drawdown della curva in R. Più vicino a 0 è meglio.
                 - **best/worst trade R**: coda della distribuzione (rischio estremo).
                 - **trades**: servono campioni sufficienti. Guarda anche curve/volatilità della curva.
+                - **exit mode**: take profit tende a troncare i winner; trailing stop è più vicino alla gestione reale.
                 - Confronto: privilegia set con drawdown minore a parità di expectancy, o con expectancy migliore a drawdown simile. Verifica stabilità su più periodi/universi.
                 """
             )
@@ -1312,17 +1327,77 @@ def main() -> None:
                 value=str(st.session_state.get("bt_end", defaults["bt_end"])),
                 key="bt_end",
             )
-            entry_type = st.selectbox("Entry type", ["pullback", "breakout"], key="bt_entry_type", help="pullback = buy limit su MA; breakout = buy stop oltre massimo.")
+            entry_type = st.selectbox(
+                "Entry type",
+                ["pullback", "breakout"],
+                key="bt_entry_type",
+                help="pullback = buy limit su MA; breakout = buy stop oltre massimo.",
+            )
+            exit_mode = st.selectbox(
+                "Exit mode",
+                ["trailing_stop", "take_profit"],
+                key="bt_exit_mode",
+                help="trailing_stop = solo stop con breakeven + trailing; take_profit = TP fisso in R.",
+            )
             end_label = (bt_end_raw.strip() or "latest").replace("/", "_")
             start_label = str(bt_start).replace("/", "_")
             cfg_name_default = f"{entry_type}_{start_label}_{end_label}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
             cfg_name = st.text_input("Nome config", value=cfg_name_default, help="Usa un nome semplice. Verrà salvato per i confronti.")
             k_atr_val = st.slider("Stop distance (k * ATR)", 1.0, 3.0, float(st.session_state.get("bt_k_atr", defaults["bt_k_atr"])), 0.1, key="bt_k_atr")
-            tp_r_val = st.slider("Take profit (R)", 0.5, 5.0, float(st.session_state.get("bt_take_profit_R", defaults["bt_take_profit_R"])), 0.25, key="bt_take_profit_R")
+            tp_r_val = st.slider(
+                "Take profit (R)",
+                0.5,
+                5.0,
+                float(st.session_state.get("bt_take_profit_R", defaults["bt_take_profit_R"])),
+                0.25,
+                key="bt_take_profit_R",
+                disabled=exit_mode == "trailing_stop",
+            )
             max_hold = st.number_input("Max holding days", 5, 100, int(st.session_state.get("bt_max_holding_days", defaults["bt_max_holding_days"])), 1, key="bt_max_holding_days")
             breakout_lb = st.number_input("Breakout lookback", 10, 200, int(st.session_state.get("bt_breakout_lookback", defaults["bt_breakout_lookback"])), 5, key="bt_breakout_lookback")
             pullback_ma = st.number_input("Pullback MA", 5, 100, int(st.session_state.get("bt_pullback_ma", defaults["bt_pullback_ma"])), 1, key="bt_pullback_ma")
             atr_win = st.number_input("ATR window", 5, 50, int(st.session_state.get("bt_atr_window", defaults["bt_atr_window"])), 1, key="bt_atr_window")
+            if exit_mode == "trailing_stop":
+                breakeven_at_r = st.slider(
+                    "Breakeven at R",
+                    0.5,
+                    3.0,
+                    float(st.session_state.get("bt_breakeven_at_R", defaults["bt_breakeven_at_R"])),
+                    0.25,
+                    key="bt_breakeven_at_R",
+                    help="Quando R >= soglia, stop sale a entry.",
+                )
+                trail_after_r = st.slider(
+                    "Trail after R",
+                    1.0,
+                    5.0,
+                    float(st.session_state.get("bt_trail_after_R", defaults["bt_trail_after_R"])),
+                    0.25,
+                    key="bt_trail_after_R",
+                    help="Quando R >= soglia, stop trail sotto SMA.",
+                )
+                trail_sma = st.number_input(
+                    "Trail SMA window",
+                    5,
+                    100,
+                    int(st.session_state.get("bt_trail_sma", defaults["bt_trail_sma"])),
+                    1,
+                    key="bt_trail_sma",
+                )
+                sma_buffer_pct = st.number_input(
+                    "SMA buffer (decimal)",
+                    min_value=0.0,
+                    max_value=0.05,
+                    value=float(st.session_state.get("bt_sma_buffer_pct", defaults["bt_sma_buffer_pct"])),
+                    step=0.001,
+                    key="bt_sma_buffer_pct",
+                    help="Buffer sotto SMA (es: 0.005 = 0.5%).",
+                )
+            else:
+                breakeven_at_r = float(st.session_state.get("bt_breakeven_at_R", defaults["bt_breakeven_at_R"]))
+                trail_after_r = float(st.session_state.get("bt_trail_after_R", defaults["bt_trail_after_R"]))
+                trail_sma = int(st.session_state.get("bt_trail_sma", defaults["bt_trail_sma"]))
+                sma_buffer_pct = float(st.session_state.get("bt_sma_buffer_pct", defaults["bt_sma_buffer_pct"]))
             bt_min_trades_per_ticker = st.number_input(
                 "Min trades per ticker (include in summary)",
                 min_value=1,
@@ -1366,8 +1441,13 @@ def main() -> None:
                     "created_at": datetime.utcnow().isoformat(),
                     "entry_type": entry_type,
                     "k_atr": float(k_atr_val),
+                    "exit_mode": exit_mode,
                     "take_profit_R": float(tp_r_val),
                     "max_holding_days": int(max_hold),
+                    "breakeven_at_R": float(breakeven_at_r),
+                    "trail_after_R": float(trail_after_r),
+                    "trail_sma": int(trail_sma),
+                    "sma_buffer_pct": float(sma_buffer_pct),
                     "breakout_lookback": int(breakout_lb),
                     "pullback_ma": int(pullback_ma),
                     "atr_window": int(atr_win),
@@ -1390,7 +1470,22 @@ def main() -> None:
             to_delete = []
             for cfg in saved_configs:
                 with st.expander(f"{cfg['name']} ({cfg['entry_type']}) — {cfg.get('created_at','')}"):
-                    st.write(f"Stop k_ATR: {cfg['k_atr']} | TP R: {cfg['take_profit_R']} | Max hold: {cfg['max_holding_days']}d")
+                    exit_mode_label = cfg.get("exit_mode", "take_profit")
+                    if exit_mode_label == "trailing_stop":
+                        st.write(
+                            "Stop k_ATR: "
+                            f"{cfg['k_atr']} | Exit: trailing_stop "
+                            f"(BE {cfg.get('breakeven_at_R', defaults['bt_breakeven_at_R'])}R, "
+                            f"trail after {cfg.get('trail_after_R', defaults['bt_trail_after_R'])}R, "
+                            f"SMA{cfg.get('trail_sma', defaults['bt_trail_sma'])}, "
+                            f"buf {cfg.get('sma_buffer_pct', defaults['bt_sma_buffer_pct']) * 100:.2f}%) "
+                            f"| Max hold: {cfg['max_holding_days']}d"
+                        )
+                    else:
+                        st.write(
+                            f"Stop k_ATR: {cfg['k_atr']} | Exit: take_profit "
+                            f"(TP {cfg['take_profit_R']}R) | Max hold: {cfg['max_holding_days']}d"
+                        )
                     st.write(f"Breakout lb: {cfg['breakout_lookback']} | Pullback MA: {cfg['pullback_ma']} | ATR win: {cfg['atr_window']}")
                     st.caption(f"Start: {cfg.get('start','')} | End: {cfg.get('end','latest')}")
                     if st.button(f"Elimina {cfg['name']}", key=f"del_{cfg['name']}"):
@@ -1418,8 +1513,13 @@ def main() -> None:
                         pullback_ma=cfg["pullback_ma"],
                         atr_window=cfg["atr_window"],
                         k_atr=cfg["k_atr"],
-                        take_profit_R=cfg["take_profit_R"],
+                        exit_mode=cfg.get("exit_mode", "take_profit"),
+                        take_profit_R=cfg.get("take_profit_R", defaults["bt_take_profit_R"]),
                         max_holding_days=cfg["max_holding_days"],
+                        breakeven_at_R=cfg.get("breakeven_at_R", defaults["bt_breakeven_at_R"]),
+                        trail_after_R=cfg.get("trail_after_R", defaults["bt_trail_after_R"]),
+                        trail_sma=cfg.get("trail_sma", defaults["bt_trail_sma"]),
+                        sma_buffer_pct=cfg.get("sma_buffer_pct", defaults["bt_sma_buffer_pct"]),
                     )
                     res = _run_backtest(
                         settings["universe"],
