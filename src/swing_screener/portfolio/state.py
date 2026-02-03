@@ -25,6 +25,8 @@ class Position:
     source_order_id: Optional[str] = None
     initial_risk: Optional[float] = None
     max_favorable_price: Optional[float] = None
+    exit_date: Optional[str] = None
+    exit_price: Optional[float] = None
     notes: str = ""
     exit_order_ids: Optional[list[str]] = field(default=None)
 
@@ -79,6 +81,16 @@ def load_positions(path: str | Path) -> list[Position]:
                     if item.get("max_favorable_price") is not None
                     else None
                 ),
+                exit_date=(
+                    str(item.get("exit_date")).strip()
+                    if item.get("exit_date")
+                    else None
+                ),
+                exit_price=(
+                    float(item["exit_price"])
+                    if item.get("exit_price") is not None
+                    else None
+                ),
                 notes=str(item.get("notes", "")),
                 exit_order_ids=(
                     [str(x) for x in item.get("exit_order_ids", [])]
@@ -108,6 +120,8 @@ def save_positions(
                 "shares": pos.shares,
                 "initial_risk": pos.initial_risk,
                 "max_favorable_price": pos.max_favorable_price,
+                "exit_date": pos.exit_date,
+                "exit_price": pos.exit_price,
                 "notes": pos.notes,
                 "exit_order_ids": pos.exit_order_ids,
             }

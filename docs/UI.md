@@ -60,6 +60,7 @@ Badges are visual guidance only and do not execute orders.
 - Order fill and scale-in behavior is shared across UI and CLI utilities for consistent results.
 - A linked **stop-loss order** (GTC) is created automatically.
 - An optional **take-profit order** (GTC) is created if you provide a TP price.
+- Exit orders can be marked **filled**; the linked position is closed with `exit_date` and `exit_price` stored.
 
 ### Outputs
 

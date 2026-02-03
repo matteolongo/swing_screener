@@ -7,7 +7,10 @@ import json
 
 import pandas as pd
 
-from swing_screener.execution.orders import Order
+from swing_screener.execution.orders_service import (
+    orders_dicts_to_models as _orders_dicts_to_models,
+    orders_models_to_dicts as _orders_models_to_dicts,
+)
 
 from swing_screener.portfolio.state import Position, load_positions
 
@@ -51,6 +54,8 @@ def load_positions_to_dataframe(path: str | Path) -> pd.DataFrame:
             "entry_price": p.entry_price,
             "stop_price": p.stop_price,
             "shares": p.shares,
+            "exit_date": p.exit_date,
+            "exit_price": p.exit_price,
             "notes": p.notes,
         }
         for p in positions
@@ -87,6 +92,11 @@ def dataframe_to_positions(
         if entry_price is None or stop_price is None or shares is None:
             raise ValueError(f"{ticker}: entry_price, stop_price, shares are required.")
 
+        exit_date = row.get("exit_date", prev.exit_date if prev else None)
+        exit_date = str(exit_date).strip() if exit_date not in {None, ""} else None
+        exit_price = row.get("exit_price", prev.exit_price if prev else None)
+        exit_price = float(exit_price) if exit_price not in {None, ""} else None
+
         notes = row.get("notes", prev.notes if prev else "")
 
         out.append(
@@ -101,6 +111,8 @@ def dataframe_to_positions(
                 source_order_id=prev.source_order_id if prev else None,
                 initial_risk=prev.initial_risk if prev else None,
                 max_favorable_price=prev.max_favorable_price if prev else None,
+                exit_date=exit_date,
+                exit_price=exit_price,
                 notes=str(notes) if notes is not None else "",
                 exit_order_ids=prev.exit_order_ids if prev else None,
             )
@@ -379,66 +391,12 @@ def save_orders(path: str | Path, orders: list[dict], asof: Optional[str] = None
     p.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
-def orders_dicts_to_models(orders: list[dict]) -> list[Order]:
-    out: list[Order] = []
-    for item in orders:
-        out.append(
-            Order(
-                order_id=str(item.get("order_id", "")).strip(),
-                ticker=str(item.get("ticker", "")).strip().upper(),
-                status=str(item.get("status", "pending")).strip().lower(),  # type: ignore[arg-type]
-                order_type=str(item.get("order_type", "")).strip().upper(),
-                quantity=int(item.get("quantity", 0) or 0),
-                limit_price=(
-                    float(item["limit_price"])
-                    if item.get("limit_price") is not None
-                    else None
-                ),
-                stop_price=(
-                    float(item["stop_price"])
-                    if item.get("stop_price") is not None
-                    else None
-                ),
-                order_date=str(item.get("order_date", "")).strip(),
-                filled_date=str(item.get("filled_date", "")).strip(),
-                entry_price=(
-                    float(item["entry_price"])
-                    if item.get("entry_price") is not None
-                    else None
-                ),
-                notes=str(item.get("notes", "")).strip(),
-                order_kind=item.get("order_kind", None),
-                parent_order_id=item.get("parent_order_id", None),
-                position_id=item.get("position_id", None),
-                tif=item.get("tif", None),
-            )
-        )
-    return out
+def orders_dicts_to_models(orders: list[dict]):
+    return _orders_dicts_to_models(orders)
 
 
-def orders_models_to_dicts(orders: list[Order]) -> list[dict]:
-    out: list[dict] = []
-    for o in orders:
-        out.append(
-            {
-                "order_id": o.order_id,
-                "ticker": o.ticker,
-                "status": o.status,
-                "order_kind": o.order_kind,
-                "order_type": o.order_type,
-                "limit_price": o.limit_price,
-                "quantity": o.quantity,
-                "stop_price": o.stop_price,
-                "order_date": o.order_date,
-                "filled_date": o.filled_date,
-                "entry_price": o.entry_price,
-                "position_id": o.position_id,
-                "parent_order_id": o.parent_order_id,
-                "tif": o.tif,
-                "notes": o.notes,
-            }
-        )
-    return out
+def orders_models_to_dicts(orders):
+    return _orders_models_to_dicts(orders)
 
 
 def is_entry_order(order: dict) -> bool:

@@ -8,6 +8,8 @@ from ui.helpers import (
     orders_dicts_to_models,
     orders_models_to_dicts,
 )
+from swing_screener.execution.orders_service import fill_exit_order_dicts
+from swing_screener.portfolio.state import Position
 
 
 def test_orders_roundtrip(tmp_path):
@@ -93,3 +95,46 @@ def test_order_model_roundtrip():
     assert out[0]["order_type"] == "BUY_LIMIT"
     assert out[0]["limit_price"] == 10.0
     assert out[0]["stop_price"] == 9.0
+
+
+def test_fill_exit_order_closes_position():
+    orders = [
+        {
+            "order_id": "ORD-STOP-POS-AAA-20260110-01",
+            "ticker": "AAA",
+            "status": "pending",
+            "order_type": "SELL_STOP",
+            "quantity": 5,
+            "stop_price": 9.0,
+            "order_kind": "stop",
+            "position_id": "POS-AAA-20260110-01",
+        }
+    ]
+    positions = [
+        Position(
+            ticker="AAA",
+            status="open",
+            position_id="POS-AAA-20260110-01",
+            entry_date="2026-01-10",
+            entry_price=10.0,
+            stop_price=9.0,
+            shares=5,
+        )
+    ]
+
+    new_orders, new_positions = fill_exit_order_dicts(
+        orders,
+        positions,
+        order_id="ORD-STOP-POS-AAA-20260110-01",
+        fill_price=8.5,
+        fill_date="2026-02-03",
+    )
+
+    assert new_orders[0]["status"] == "filled"
+    assert new_orders[0]["filled_date"] == "2026-02-03"
+    assert new_orders[0]["entry_price"] == 8.5
+
+    pos = new_positions[0]
+    assert pos.status == "closed"
+    assert pos.exit_date == "2026-02-03"
+    assert pos.exit_price == 8.5
