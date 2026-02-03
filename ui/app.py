@@ -693,7 +693,9 @@ def main() -> None:
             st.subheader("Quick backtest")
             st.caption(
                 "Run a quick backtest for any candidate using current backtest defaults. "
-                "Choose the lookback window in months. Results may be empty if the lookback windows exceed the available bars."
+                "Choose the lookback window in months. "
+                "Quick backtests use the sidebar stop distance (k*ATR) and quick max holding days. "
+                "Results may be empty if the lookback windows exceed the available bars."
             )
             quick_bt_results = st.session_state.setdefault("quick_bt_results", {})
             month_end = datetime.utcnow().date()
@@ -723,7 +725,22 @@ def main() -> None:
                     if st.button("Run backtest", key=f"bt_quick_{ticker}_{idx}"):
                         cfg_bt = _build_bt_config_from_settings(settings)
                         max_hold_quick = int(settings.get("bt_quick_max_holding_days", 9999))
-                        cfg_bt = replace(cfg_bt, max_holding_days=max_hold_quick)
+                        entry_type_override = None
+                        order_type_norm = str(order_type).strip().upper() if order_type is not None else ""
+                        signal_norm = str(signal).strip().lower() if signal is not None else ""
+                        if order_type_norm == "BUY_STOP":
+                            entry_type_override = "breakout"
+                        elif order_type_norm == "BUY_LIMIT":
+                            entry_type_override = "pullback"
+                        elif signal_norm in {"breakout", "pullback"}:
+                            entry_type_override = signal_norm
+                        if entry_type_override:
+                            cfg_bt = replace(cfg_bt, entry_type=entry_type_override)
+                        cfg_bt = replace(
+                            cfg_bt,
+                            k_atr=float(settings.get("k_atr", cfg_bt.k_atr)),
+                            max_holding_days=max_hold_quick,
+                        )
                         month_start = (pd.Timestamp(month_end) - pd.DateOffset(months=months_back)).date()
                         start_str = str(month_start)
                         end_str = str(month_end)
