@@ -79,6 +79,17 @@ Inspect packaged universes:
 swing-screener universes list
 ```
 
+### Packaged universes (sources)
+
+- `mega_defense` — built from U.S. aerospace/defense ETF holdings (ITA, XAR) and expanded with major global primes from SIPRI's Top 100 list.
+  - ITA holdings: https://www.ishares.com/us/products/239502/ishares-us-aerospace-defense-etf
+  - XAR holdings: https://www.ssga.com/us/en/intermediary/etfs/state-street-spdr-sp-aerospace-defense-etf-xar
+  - SIPRI Top 100 arms-producing companies: https://www.sipri.org/databases/armsindustry
+- `mega_healthcare_biotech` — built from broad healthcare and biotech ETF holdings (VHT, IBB, XBI), covering pharma, medtech, providers, and biotech.
+  - VHT holdings: https://stockanalysis.com/etf/vht/holdings/
+  - IBB holdings: https://www.ishares.com/us/products/239699/ishares-biotechnology-etf
+  - XBI holdings: https://www.ssga.com/us/en/intermediary/etfs/state-street-spdr-sp-biotech-etf-xbi
+
 ## Core Data Contracts
 
 - **OHLCV**: pandas DataFrame with MultiIndex columns `(field, ticker)`
@@ -98,4 +109,3 @@ pytest -q
 - `docs/OPERATIONAL_GUIDE.md` — day-to-day operational workflow
 - `docs/DAILY_USAGE_GUIDE.md` — practical routine and timing
 - `docs/UI.md` — UI usage notes
-
