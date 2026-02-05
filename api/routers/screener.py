@@ -98,19 +98,36 @@ async def run_screener(request: ScreenerRequest):
         # Convert to response format
         candidates = []
         for idx, row in results.iterrows():
+            # Helper to safely convert to float, replacing NaN with 0
+            def safe_float(val, default=0.0):
+                import math
+                if val is None or (isinstance(val, float) and math.isnan(val)):
+                    return default
+                return float(val)
+            
+            # Calculate SMAs from OHLCV if available, otherwise use distance metrics
+            sma20 = safe_float(row.get("ma20_level"))
+            sma50_dist = safe_float(row.get("dist_sma50_pct"))
+            sma200_dist = safe_float(row.get("dist_sma200_pct"))
+            last_price = safe_float(row.get("last"))
+            
+            # Approximate SMA values from distance percentages
+            sma50 = last_price / (1 + sma50_dist / 100) if last_price and sma50_dist else last_price
+            sma200 = last_price / (1 + sma200_dist / 100) if last_price and sma200_dist else last_price
+            
             candidates.append(
                 ScreenerCandidate(
-                    ticker=str(idx),  # ticker is the index
-                    close=float(row.get("last", 0)),  # Use 'last' not 'close'
-                    sma_20=float(row.get("sma_20", 0)),
-                    sma_50=float(row.get("sma_50", 0)),
-                    sma_200=float(row.get("sma_200", 0)),
-                    atr=float(row.get("atr14", 0)),  # Default atr14
-                    momentum_6m=float(row.get("mom_6m", 0)),
-                    momentum_12m=float(row.get("mom_12m", 0)),
-                    rel_strength=float(row.get("rs_6m", 0)),
-                    score=float(row.get("score", 0)),
-                    rank=int(row.get("rank", idx + 1) if "rank" in row else len(candidates) + 1),
+                    ticker=str(idx),
+                    close=last_price,
+                    sma_20=sma20,
+                    sma_50=sma50,
+                    sma_200=sma200,
+                    atr=safe_float(row.get("atr14")),
+                    momentum_6m=safe_float(row.get("mom_6m")),
+                    momentum_12m=safe_float(row.get("mom_12m")),
+                    rel_strength=safe_float(row.get("rs_6m")),
+                    score=safe_float(row.get("score")),
+                    rank=int(row.get("rank", len(candidates) + 1)),
                 )
             )
         
