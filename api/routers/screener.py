@@ -40,9 +40,9 @@ async def run_screener(request: ScreenerRequest):
     try:
         # Determine date
         if request.asof_date:
-            asof = dt.datetime.strptime(request.asof_date, "%Y-%m-%d").date()
+            asof_str = request.asof_date
         else:
-            asof = dt.date.today()
+            asof_str = dt.date.today().isoformat()
         
         # Determine tickers
         if request.tickers:
@@ -53,12 +53,21 @@ async def run_screener(request: ScreenerRequest):
             ucfg = UniverseConfig(benchmark="SPY", ensure_benchmark=True, max_tickers=request.top or 500)
             tickers = load_universe_from_package(request.universe, ucfg)
         else:
-            # Default to sp500
+            # Default to mega
             ucfg = UniverseConfig(benchmark="SPY", ensure_benchmark=True, max_tickers=request.top or 500)
-            tickers = load_universe_from_package("sp500", ucfg)
+            tickers = load_universe_from_package("mega", ucfg)
         
-        # Fetch market data
-        ohlcv = fetch_ohlcv(tickers, asof=asof)
+        # Import MarketDataConfig
+        from swing_screener.data.market_data import MarketDataConfig
+        
+        # Fetch market data with proper config
+        cfg = MarketDataConfig(
+            start="2022-01-01",
+            end=asof_str,
+            auto_adjust=True,
+            progress=False,
+        )
+        ohlcv = fetch_ohlcv(tickers, cfg=cfg)
         
         # Run screener - build daily report
         results = build_daily_report(ohlcv, exclude_tickers=[])
@@ -88,7 +97,7 @@ async def run_screener(request: ScreenerRequest):
         
         return ScreenerResponse(
             candidates=candidates,
-            asof_date=asof.isoformat(),
+            asof_date=asof_str,
             total_screened=len(tickers),
         )
     
