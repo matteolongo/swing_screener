@@ -61,6 +61,7 @@ async def run_screener(request: ScreenerRequest):
         from swing_screener.data.market_data import MarketDataConfig
         from swing_screener.reporting.report import ReportConfig
         from swing_screener.screeners.universe import UniverseConfig as ScreenerUniverseConfig, UniverseFilterConfig
+        from swing_screener.screeners.ranking import RankingConfig
         
         # Fetch market data with proper config
         cfg = MarketDataConfig(
@@ -85,7 +86,7 @@ async def run_screener(request: ScreenerRequest):
         # Run screener with custom config
         report_cfg = ReportConfig(
             universe=universe_cfg,
-            ranking=None,  # Will use defaults
+            ranking=RankingConfig(top_n=request.top or 20),
         )
         
         results = build_daily_report(ohlcv, cfg=report_cfg, exclude_tickers=[])
