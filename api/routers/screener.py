@@ -57,8 +57,10 @@ async def run_screener(request: ScreenerRequest):
             ucfg = UniverseConfig(benchmark="SPY", ensure_benchmark=True, max_tickers=request.top or 500)
             tickers = load_universe_from_package("mega", ucfg)
         
-        # Import MarketDataConfig
+        # Import MarketDataConfig and ReportConfig
         from swing_screener.data.market_data import MarketDataConfig
+        from swing_screener.reporting.report import ReportConfig
+        from swing_screener.screeners.universe import UniverseConfig as ScreenerUniverseConfig, UniverseFilterConfig
         
         # Fetch market data with proper config
         cfg = MarketDataConfig(
@@ -69,11 +71,27 @@ async def run_screener(request: ScreenerRequest):
         )
         ohlcv = fetch_ohlcv(tickers, cfg=cfg)
         
-        # Run screener - build daily report
-        results = build_daily_report(ohlcv, exclude_tickers=[])
+        # Create more permissive universe filters for broader screening
+        universe_cfg = ScreenerUniverseConfig(
+            filt=UniverseFilterConfig(
+                min_price=5.0,  # Lower than default 10
+                max_price=500.0,  # Higher than default 60
+                max_atr_pct=15.0,  # More permissive
+                require_trend_ok=True,
+                require_rs_positive=False,
+            )
+        )
+        
+        # Run screener with custom config
+        report_cfg = ReportConfig(
+            universe=universe_cfg,
+            ranking=None,  # Will use defaults
+        )
+        
+        results = build_daily_report(ohlcv, cfg=report_cfg, exclude_tickers=[])
         
         # Limit results
-        if request.top:
+        if request.top and not results.empty:
             results = results.head(request.top)
         
         # Convert to response format
@@ -82,16 +100,16 @@ async def run_screener(request: ScreenerRequest):
             candidates.append(
                 ScreenerCandidate(
                     ticker=str(idx),  # ticker is the index
-                    close=float(row.get("close", 0)),
+                    close=float(row.get("last", 0)),  # Use 'last' not 'close'
                     sma_20=float(row.get("sma_20", 0)),
                     sma_50=float(row.get("sma_50", 0)),
                     sma_200=float(row.get("sma_200", 0)),
-                    atr=float(row.get("atr", 0)),
+                    atr=float(row.get("atr14", 0)),  # Default atr14
                     momentum_6m=float(row.get("mom_6m", 0)),
                     momentum_12m=float(row.get("mom_12m", 0)),
                     rel_strength=float(row.get("rs_6m", 0)),
                     score=float(row.get("score", 0)),
-                    rank=int(row.get("rank", idx + 1)),
+                    rank=int(row.get("rank", idx + 1) if "rank" in row else len(candidates) + 1),
                 )
             )
         
@@ -102,7 +120,9 @@ async def run_screener(request: ScreenerRequest):
         )
     
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Screener failed: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Screener failed: {str(e)}")
 
 
 @router.post("/preview-order", response_model=OrderPreview)
