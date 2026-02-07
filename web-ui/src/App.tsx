@@ -4,6 +4,7 @@ import MainLayout from './components/layout/MainLayout';
 import Dashboard from './pages/Dashboard';
 import Screener from './pages/Screener';
 import Orders from './pages/Orders';
+import Positions from './pages/Positions';
 import Settings from './pages/Settings';
 
 const queryClient = new QueryClient({
@@ -25,6 +26,7 @@ function App() {
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="screener" element={<Screener />} />
             <Route path="orders" element={<Orders />} />
+            <Route path="positions" element={<Positions />} />
             <Route path="settings" element={<Settings />} />
             {/* More routes will be added later */}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
