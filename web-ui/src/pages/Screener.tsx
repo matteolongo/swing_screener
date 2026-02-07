@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { PlayCircle, RefreshCw, TrendingUp, AlertCircle } from 'lucide-react';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
@@ -7,16 +7,21 @@ import { API_ENDPOINTS, apiUrl } from '../lib/api';
 import { 
   ScreenerRequest, 
   ScreenerResponseAPI,
+  ScreenerCandidate,
   UniversesResponse,
   transformScreenerResponse 
 } from '../types/screener';
+import { CreateOrderRequest, transformCreateOrderRequest } from '../types/order';
 import { useConfigStore } from '../stores/configStore';
 import { formatCurrency, formatPercent } from '../utils/formatters';
 
 export default function Screener() {
   const { config } = useConfigStore();
+  const queryClient = useQueryClient();
   const [selectedUniverse, setSelectedUniverse] = useState<string>('mega');
   const [topN, setTopN] = useState<number>(20);
+  const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
+  const [selectedCandidate, setSelectedCandidate] = useState<ScreenerCandidate | null>(null);
 
   // Fetch available universes
   const { data: universesData } = useQuery<UniversesResponse>({
@@ -245,8 +250,8 @@ export default function Screener() {
                             size="sm"
                             variant="secondary"
                             onClick={() => {
-                              // TODO: Open order creation modal
-                              console.log('Create order for', candidate.ticker);
+                              setSelectedCandidate(candidate);
+                              setShowCreateOrderModal(true);
                             }}
                           >
                             Create Order
@@ -261,6 +266,234 @@ export default function Screener() {
           </Card>
         </>
       )}
+
+      {/* Create Order Modal */}
+      {showCreateOrderModal && selectedCandidate && (
+        <CreateOrderModal
+          candidate={selectedCandidate}
+          config={config}
+          onClose={() => {
+            setShowCreateOrderModal(false);
+            setSelectedCandidate(null);
+          }}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['orders'] });
+            setShowCreateOrderModal(false);
+            setSelectedCandidate(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// Create Order Modal Component
+function CreateOrderModal({
+  candidate,
+  config,
+  onClose,
+  onSuccess,
+}: {
+  candidate: ScreenerCandidate;
+  config: any;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  // Calculate suggested stop price (entry - 2*ATR)
+  const suggestedStop = candidate.close - (candidate.atr * config.risk.kAtr);
+  
+  // Calculate position size based on risk
+  const riskPerTrade = config.risk.accountSize * config.risk.riskPct;
+  const riskPerShare = candidate.close - suggestedStop;
+  const suggestedShares = riskPerShare > 0 ? Math.floor(riskPerTrade / riskPerShare) : 1;
+  const maxShares = Math.floor((config.risk.accountSize * config.risk.maxPositionPct) / candidate.close);
+  const finalShares = Math.max(config.risk.minShares, Math.min(suggestedShares, maxShares));
+
+  const [formData, setFormData] = useState<CreateOrderRequest>({
+    ticker: candidate.ticker,
+    orderType: 'BUY_LIMIT',
+    quantity: finalShares,
+    limitPrice: candidate.close,
+    stopPrice: parseFloat(suggestedStop.toFixed(2)),
+    notes: `From screener: Score ${(candidate.score * 100).toFixed(1)}, Rank #${candidate.rank}`,
+    orderKind: 'entry',
+  });
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      const response = await fetch(apiUrl(API_ENDPOINTS.orders), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(transformCreateOrderRequest(formData)),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to create order');
+      }
+
+      onSuccess();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create order');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const positionSize = (formData.limitPrice || 0) * formData.quantity;
+  const riskAmount = formData.stopPrice ? (formData.limitPrice! - formData.stopPrice) * formData.quantity : 0;
+  const riskPercent = riskAmount / config.risk.accountSize * 100;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <Card variant="elevated" className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="p-6">
+          <h2 className="text-2xl font-bold mb-4">Create Order - {candidate.ticker}</h2>
+          
+          {/* Candidate Summary */}
+          <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded mb-4">
+            <h3 className="font-semibold mb-2">Candidate Details</h3>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div>
+                <span className="text-gray-600 dark:text-gray-400">Price:</span>{' '}
+                <strong>{formatCurrency(candidate.close)}</strong>
+              </div>
+              <div>
+                <span className="text-gray-600 dark:text-gray-400">ATR:</span>{' '}
+                <strong>{candidate.atr.toFixed(2)}</strong>
+              </div>
+              <div>
+                <span className="text-gray-600 dark:text-gray-400">Momentum 6M:</span>{' '}
+                <strong className={candidate.momentum6m >= 0 ? 'text-green-600' : 'text-red-600'}>
+                  {formatPercent(candidate.momentum6m)}
+                </strong>
+              </div>
+              <div>
+                <span className="text-gray-600 dark:text-gray-400">Score:</span>{' '}
+                <strong>{(candidate.score * 100).toFixed(1)}</strong>
+              </div>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Order Type</label>
+                <select
+                  value={formData.orderType}
+                  onChange={(e) => setFormData({ ...formData, orderType: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+                >
+                  <option value="BUY_LIMIT">BUY LIMIT</option>
+                  <option value="BUY_MARKET">BUY MARKET</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Quantity</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={formData.quantity}
+                  onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 1 })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Limit Price</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={formData.limitPrice}
+                  onChange={(e) => setFormData({ ...formData, limitPrice: parseFloat(e.target.value) || 0 })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Stop Price</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={formData.stopPrice}
+                  onChange={(e) => setFormData({ ...formData, stopPrice: parseFloat(e.target.value) || 0 })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Risk Summary */}
+            <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded">
+              <h3 className="font-semibold mb-2">Position Summary</h3>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <span className="text-gray-600 dark:text-gray-400">Position Size:</span>{' '}
+                  <strong>{formatCurrency(positionSize)}</strong>
+                </div>
+                <div>
+                  <span className="text-gray-600 dark:text-gray-400">% of Account:</span>{' '}
+                  <strong>{((positionSize / config.risk.accountSize) * 100).toFixed(1)}%</strong>
+                </div>
+                <div>
+                  <span className="text-gray-600 dark:text-gray-400">Risk Amount:</span>{' '}
+                  <strong className="text-red-600">{formatCurrency(riskAmount)}</strong>
+                </div>
+                <div>
+                  <span className="text-gray-600 dark:text-gray-400">Risk %:</span>{' '}
+                  <strong className={riskPercent > config.risk.riskPct * 100 ? 'text-red-600' : 'text-green-600'}>
+                    {riskPercent.toFixed(2)}%
+                  </strong>
+                </div>
+              </div>
+              {riskPercent > config.risk.riskPct * 100 && (
+                <p className="text-sm text-yellow-600 dark:text-yellow-500 mt-2">
+                  ⚠️ Risk exceeds target ({(config.risk.riskPct * 100).toFixed(1)}%)
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Notes</label>
+              <textarea
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+                rows={3}
+              />
+            </div>
+
+            {error && (
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3">
+                <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+              </div>
+            )}
+
+            <div className="flex gap-3 justify-end">
+              <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="primary" disabled={isSubmitting}>
+                {isSubmitting ? 'Creating...' : 'Create Order'}
+              </Button>
+            </div>
+          </form>
+        </div>
+      </Card>
     </div>
   );
 }
