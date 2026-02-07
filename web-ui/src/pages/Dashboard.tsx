@@ -106,7 +106,7 @@ export default function Dashboard() {
                       {orders.slice(0, 3).map((order: Order) => (
                         <div key={order.orderId} className="text-sm text-gray-600 dark:text-gray-400">
                           <Badge variant="warning" className="mr-2">{order.ticker}</Badge>
-                          {order.orderType} - {order.quantity} shares @ {formatCurrency(order.limitPrice || 0)}
+                          {order.orderType} - {order.quantity} shares @ {formatCurrency(order.stopPrice || order.limitPrice || 0)}
                         </div>
                       ))}
                       {orders.length > 3 && (
