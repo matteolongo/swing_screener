@@ -1,5 +1,5 @@
 {
-  "asof": "2026-02-07",
+  "asof": "2026-02-08",
   "orders": [
     {
       "order_id": "ORD-INTC-20260115-ENTRY",
@@ -408,6 +408,23 @@
       "parent_order_id": null,
       "tif": "GTC",
       "notes": "from guidance"
+    },
+    {
+      "order_id": "INTC-20260208124849",
+      "ticker": "INTC",
+      "status": "pending",
+      "order_type": "BUY_LIMIT",
+      "quantity": 1,
+      "limit_price": 50.59,
+      "stop_price": 42.97,
+      "order_date": "2026-02-08",
+      "filled_date": "",
+      "entry_price": null,
+      "notes": "From screener: Score 100.0, Rank #1",
+      "order_kind": "entry",
+      "parent_order_id": null,
+      "position_id": null,
+      "tif": "GTC"
     }
   ]
 }
