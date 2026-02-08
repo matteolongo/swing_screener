@@ -99,6 +99,8 @@ async def run_screener(request: ScreenerRequest):
         # Sort by confidence descending (if available)
         if not results.empty and "confidence" in results.columns:
             results = results.sort_values("confidence", ascending=False)
+            # Re-rank based on confidence order
+            results['rank'] = range(1, len(results) + 1)
         
         # Fetch company info for all tickers
         ticker_list = [str(idx) for idx in results.index]
