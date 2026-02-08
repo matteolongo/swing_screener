@@ -1,0 +1,57 @@
+import { describe, it, expect } from 'vitest'
+import { API_BASE_URL, API_ENDPOINTS, apiUrl } from './api'
+
+describe('API Client', () => {
+  describe('API_BASE_URL', () => {
+    it('has default base URL', () => {
+      expect(API_BASE_URL).toBe('http://localhost:8000')
+    })
+  })
+
+  describe('API_ENDPOINTS', () => {
+    it('has all config endpoints', () => {
+      expect(API_ENDPOINTS.config).toBe('/api/config')
+      expect(API_ENDPOINTS.configReset).toBe('/api/config/reset')
+      expect(API_ENDPOINTS.configDefaults).toBe('/api/config/defaults')
+    })
+
+    it('has all screener endpoints', () => {
+      expect(API_ENDPOINTS.screenerRun).toBe('/api/screener/run')
+      expect(API_ENDPOINTS.screenerUniverses).toBe('/api/screener/universes')
+      expect(API_ENDPOINTS.screenerPreview).toBe('/api/screener/preview-order')
+    })
+
+    it('has all portfolio endpoints', () => {
+      expect(API_ENDPOINTS.positions).toBe('/api/portfolio/positions')
+      expect(API_ENDPOINTS.orders).toBe('/api/portfolio/orders')
+    })
+
+    it('has dynamic position endpoint function', () => {
+      expect(API_ENDPOINTS.position('POS-123')).toBe('/api/portfolio/positions/POS-123')
+      expect(API_ENDPOINTS.positionStop('POS-123')).toBe('/api/portfolio/positions/POS-123/stop')
+      expect(API_ENDPOINTS.positionClose('POS-123')).toBe('/api/portfolio/positions/POS-123/close')
+    })
+
+    it('has dynamic order endpoint function', () => {
+      expect(API_ENDPOINTS.order('ORD-123')).toBe('/api/portfolio/orders/ORD-123')
+      expect(API_ENDPOINTS.orderFill('ORD-123')).toBe('/api/portfolio/orders/ORD-123/fill')
+    })
+  })
+
+  describe('apiUrl', () => {
+    it('constructs full URLs correctly', () => {
+      expect(apiUrl('/api/config')).toBe('http://localhost:8000/api/config')
+      expect(apiUrl('/api/portfolio/positions')).toBe('http://localhost:8000/api/portfolio/positions')
+    })
+
+    it('handles endpoints with query parameters', () => {
+      expect(apiUrl('/api/portfolio/positions?status=open')).toBe(
+        'http://localhost:8000/api/portfolio/positions?status=open'
+      )
+    })
+
+    it('handles absolute paths', () => {
+      expect(apiUrl('/api/screener/run')).toBe('http://localhost:8000/api/screener/run')
+    })
+  })
+})
