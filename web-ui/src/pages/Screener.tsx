@@ -18,12 +18,47 @@ import { formatCurrency, formatPercent } from '../utils/formatters';
 export default function Screener() {
   const { config } = useConfigStore();
   const queryClient = useQueryClient();
-  const [selectedUniverse, setSelectedUniverse] = useState<string>('mega');
-  const [topN, setTopN] = useState<number>(20);
-  const [minPrice, setMinPrice] = useState<number>(5);
-  const [maxPrice, setMaxPrice] = useState<number>(500);
+  
+  // Load saved preferences from localStorage or use defaults
+  const [selectedUniverse, setSelectedUniverse] = useState<string>(() => {
+    return localStorage.getItem('screener.universe') || 'mega';
+  });
+  const [topN, setTopN] = useState<number>(() => {
+    const saved = localStorage.getItem('screener.topN');
+    return saved ? parseInt(saved, 10) : 20;
+  });
+  const [minPrice, setMinPrice] = useState<number>(() => {
+    const saved = localStorage.getItem('screener.minPrice');
+    return saved ? parseFloat(saved) : 5;
+  });
+  const [maxPrice, setMaxPrice] = useState<number>(() => {
+    const saved = localStorage.getItem('screener.maxPrice');
+    return saved ? parseFloat(saved) : 500;
+  });
+  
   const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<ScreenerCandidate | null>(null);
+
+  // Save preferences to localStorage when they change
+  const handleUniverseChange = (value: string) => {
+    setSelectedUniverse(value);
+    localStorage.setItem('screener.universe', value);
+  };
+  
+  const handleTopNChange = (value: number) => {
+    setTopN(value);
+    localStorage.setItem('screener.topN', value.toString());
+  };
+  
+  const handleMinPriceChange = (value: number) => {
+    setMinPrice(value);
+    localStorage.setItem('screener.minPrice', value.toString());
+  };
+  
+  const handleMaxPriceChange = (value: number) => {
+    setMaxPrice(value);
+    localStorage.setItem('screener.maxPrice', value.toString());
+  };
 
   // Fetch available universes
   const { data: universesData } = useQuery<UniversesResponse>({
@@ -93,7 +128,7 @@ export default function Screener() {
             </label>
             <select
               value={selectedUniverse}
-              onChange={(e) => setSelectedUniverse(e.target.value)}
+              onChange={(e) => handleUniverseChange(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               disabled={screenerMutation.isPending}
             >
@@ -113,7 +148,7 @@ export default function Screener() {
             <input
               type="number"
               value={topN}
-              onChange={(e) => setTopN(parseInt(e.target.value) || 20)}
+              onChange={(e) => handleTopNChange(parseInt(e.target.value) || 20)}
               min="1"
               max="100"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -129,7 +164,7 @@ export default function Screener() {
             <input
               type="number"
               value={minPrice}
-              onChange={(e) => setMinPrice(parseFloat(e.target.value) || 0)}
+              onChange={(e) => handleMinPriceChange(parseFloat(e.target.value) || 0)}
               min="0"
               step="0.1"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -145,7 +180,7 @@ export default function Screener() {
             <input
               type="number"
               value={maxPrice}
-              onChange={(e) => setMaxPrice(parseFloat(e.target.value) || 1000)}
+              onChange={(e) => handleMaxPriceChange(parseFloat(e.target.value) || 1000)}
               min="0"
               step="1"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
