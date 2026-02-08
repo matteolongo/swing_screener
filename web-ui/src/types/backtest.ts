@@ -16,7 +16,7 @@ export interface BacktestTrade {
   entryPrice: number;
   exitDate: string;
   exitPrice: number;
-  R: number;
+  r: number;  // lowercase to match modal usage
   exitReason: string;
 }
 
@@ -34,8 +34,8 @@ export interface QuickBacktestResponse {
   end: string;
   bars: number;
   trades: number;
-  summary: BacktestSummaryAPI;
-  tradesDetail: BacktestTradeAPI[];
+  summary: BacktestSummary;  // Use transformed camelCase version
+  tradesDetail: BacktestTrade[];  // Use transformed camelCase version
   warnings: string[];
 }
 
@@ -91,7 +91,7 @@ export function transformBacktestTrade(api: BacktestTradeAPI): BacktestTrade {
     entryPrice: api.entry_price,
     exitDate: api.exit_date,
     exitPrice: api.exit_price,
-    R: api.R,
+    r: api.R,  // API uses capital R, we use lowercase
     exitReason: api.exit_reason,
   };
 }
@@ -103,8 +103,8 @@ export function transformQuickBacktestResponse(api: QuickBacktestResponseAPI): Q
     end: api.end,
     bars: api.bars,
     trades: api.trades,
-    summary: api.summary,
-    tradesDetail: api.trades_detail,
+    summary: transformBacktestSummary(api.summary),  // Transform summary!
+    tradesDetail: api.trades_detail.map(transformBacktestTrade),  // Transform each trade!
     warnings: api.warnings,
   };
 }
