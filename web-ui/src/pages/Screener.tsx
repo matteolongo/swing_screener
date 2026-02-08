@@ -20,6 +20,8 @@ export default function Screener() {
   const queryClient = useQueryClient();
   const [selectedUniverse, setSelectedUniverse] = useState<string>('mega');
   const [topN, setTopN] = useState<number>(20);
+  const [minPrice, setMinPrice] = useState<number>(5);
+  const [maxPrice, setMaxPrice] = useState<number>(500);
   const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<ScreenerCandidate | null>(null);
 
@@ -36,10 +38,20 @@ export default function Screener() {
   // Run screener mutation
   const screenerMutation = useMutation({
     mutationFn: async (request: ScreenerRequest) => {
+      // Transform camelCase to snake_case for API
+      const apiRequest = {
+        universe: request.universe,
+        tickers: request.tickers,
+        top: request.top,
+        asof_date: request.asofDate,
+        min_price: request.minPrice,
+        max_price: request.maxPrice,
+      };
+      
       const res = await fetch(apiUrl(API_ENDPOINTS.screenerRun), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(request),
+        body: JSON.stringify(apiRequest),
       });
       if (!res.ok) {
         const error = await res.json();
@@ -54,6 +66,8 @@ export default function Screener() {
     screenerMutation.mutate({
       universe: selectedUniverse,
       top: topN,
+      minPrice: minPrice,
+      maxPrice: maxPrice,
     });
   };
 
@@ -71,7 +85,7 @@ export default function Screener() {
 
       {/* Controls */}
       <Card>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
           {/* Universe selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -94,7 +108,7 @@ export default function Screener() {
           {/* Top N */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Top Candidates
+              Top N
             </label>
             <input
               type="number"
@@ -107,11 +121,43 @@ export default function Screener() {
             />
           </div>
 
+          {/* Min Price */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Min Price
+            </label>
+            <input
+              type="number"
+              value={minPrice}
+              onChange={(e) => setMinPrice(parseFloat(e.target.value) || 0)}
+              min="0"
+              step="0.1"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              disabled={screenerMutation.isPending}
+            />
+          </div>
+
+          {/* Max Price */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Max Price
+            </label>
+            <input
+              type="number"
+              value={maxPrice}
+              onChange={(e) => setMaxPrice(parseFloat(e.target.value) || 1000)}
+              min="0"
+              step="1"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              disabled={screenerMutation.isPending}
+            />
+          </div>
+
           {/* Account info */}
           <div className="flex items-end">
             <div className="text-sm text-gray-600">
               <div>Account: {formatCurrency(config.risk.accountSize)}</div>
-              <div>Risk/trade: {formatPercent(config.risk.riskPct)}</div>
+              <div>Risk: {formatPercent(config.risk.riskPct)}</div>
             </div>
           </div>
 

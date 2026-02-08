@@ -72,11 +72,11 @@ async def run_screener(request: ScreenerRequest):
         )
         ohlcv = fetch_ohlcv(tickers, cfg=cfg)
         
-        # Create more permissive universe filters for broader screening
+        # Create universe filters from request or use defaults
         universe_cfg = ScreenerUniverseConfig(
             filt=UniverseFilterConfig(
-                min_price=5.0,  # Lower than default 10
-                max_price=500.0,  # Higher than default 60
+                min_price=request.min_price if request.min_price is not None else 5.0,
+                max_price=request.max_price if request.max_price is not None else 500.0,
                 max_atr_pct=15.0,  # More permissive
                 require_trend_ok=True,
                 require_rs_positive=False,

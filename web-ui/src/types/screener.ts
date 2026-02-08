@@ -34,6 +34,8 @@ export interface ScreenerRequest {
   tickers?: string[];
   top?: number;
   asofDate?: string;
+  minPrice?: number;
+  maxPrice?: number;
 }
 
 export interface ScreenerResponse {

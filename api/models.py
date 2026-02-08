@@ -159,6 +159,8 @@ class ScreenerRequest(BaseModel):
     tickers: Optional[list[str]] = Field(default=None, description="Explicit ticker list")
     top: Optional[int] = Field(default=20, description="Max candidates to return")
     asof_date: Optional[str] = Field(default=None, description="Date for screening (YYYY-MM-DD)")
+    min_price: Optional[float] = Field(default=5.0, ge=0, description="Minimum stock price")
+    max_price: Optional[float] = Field(default=500.0, gt=0, description="Maximum stock price")
 
 
 class ScreenerResponse(BaseModel):
