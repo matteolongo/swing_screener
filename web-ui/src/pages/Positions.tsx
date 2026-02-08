@@ -176,7 +176,7 @@ export default function Positions() {
                         <td className={`py-3 px-4 text-right font-semibold ${isProfitable ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                           <div className="flex items-center justify-end gap-1">
                             {isProfitable ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                            {isProfitable ? '+' : ''}{formatPercent(pnlPercent)}
+                            {formatPercent(pnlPercent)}
                           </div>
                         </td>
                         <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 max-w-xs truncate">
