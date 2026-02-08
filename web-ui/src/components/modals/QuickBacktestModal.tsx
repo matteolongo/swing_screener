@@ -4,7 +4,7 @@ import { X, TrendingUp, TrendingDown, AlertCircle, BarChart3 } from 'lucide-reac
 import Button from '../common/Button';
 import { apiUrl } from '../../lib/api';
 import { QuickBacktestResponseAPI, transformQuickBacktestResponse, QuickBacktestResponse } from '../../types/backtest';
-import { formatR, formatPercent, formatCurrency } from '../../utils/formatters';
+import { formatR, formatPercent } from '../../utils/formatters';
 import { useConfigStore } from '../../stores/configStore';
 
 interface QuickBacktestModalProps {
@@ -44,7 +44,7 @@ export default function QuickBacktestModal({ ticker, onClose }: QuickBacktestMod
   });
 
   const summary = result?.summary;
-  const isPositive = summary && summary.expectancy_R > 0;
+  const isPositive = summary && summary.expectancyR > 0;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={onClose}>
@@ -117,36 +117,36 @@ export default function QuickBacktestModal({ ticker, onClose }: QuickBacktestMod
                   <div className="text-xs text-gray-600">Expectancy</div>
                   <div className={`text-xl font-bold flex items-center ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
                     {isPositive ? <TrendingUp className="w-5 h-5 mr-1" /> : <TrendingDown className="w-5 h-5 mr-1" />}
-                    {formatR(summary.expectancy_R)}
+                    {formatR(summary?.expectancyR || 0)}
                   </div>
                 </div>
 
                 <div className="p-3 bg-gray-50 rounded">
                   <div className="text-xs text-gray-600">Win Rate</div>
-                  <div className="text-xl font-bold">{formatPercent(summary.winrate * 100)}</div>
+                  <div className="text-xl font-bold">{formatPercent((summary?.winrate || 0) * 100)}</div>
                 </div>
 
                 <div className="p-3 bg-gray-50 rounded">
                   <div className="text-xs text-gray-600">Profit Factor</div>
-                  <div className="text-lg font-semibold">{summary.profit_factor_R.toFixed(2)}</div>
+                  <div className="text-lg font-semibold">{(summary?.profitFactorR || 0).toFixed(2)}</div>
                 </div>
 
                 <div className="p-3 bg-red-50 rounded">
                   <div className="text-xs text-gray-600">Max Drawdown</div>
-                  <div className="text-lg font-semibold text-red-600">{formatR(summary.max_drawdown_R)}</div>
+                  <div className="text-lg font-semibold text-red-600">{formatR(summary?.maxDrawdownR || 0)}</div>
                 </div>
               </div>
 
-              {result.trades_detail.length > 0 && (
+              {result.tradesDetail && result.tradesDetail.length > 0 && (
                 <details className="text-sm">
                   <summary className="cursor-pointer font-medium hover:text-blue-600">
-                    Show {result.trades_detail.length} Trades
+                    Show {result.tradesDetail.length} Trades
                   </summary>
                   <div className="mt-2 max-h-48 overflow-y-auto">
-                    {result.trades_detail.map((t, i) => (
+                    {result.tradesDetail.map((t, i) => (
                       <div key={i} className="py-1 border-b text-xs flex justify-between">
-                        <span>{t.entry_date}</span>
-                        <span className={t.R >= 0 ? 'text-green-600' : 'text-red-600'}>{formatR(t.R)}</span>
+                        <span>{t.entryDate}</span>
+                        <span className={t.r >= 0 ? 'text-green-600' : 'text-red-600'}>{formatR(t.r)}</span>
                       </div>
                     ))}
                   </div>
