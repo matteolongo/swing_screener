@@ -169,6 +169,45 @@ def test_gap_through_stop_exits_at_open():
     assert trades.iloc[0]["R"] == pytest.approx(-4.1667, rel=1e-3)
 
 
+def test_auto_entry_uses_pullback_or_breakout():
+    idx = pd.date_range("2023-01-02", periods=5, freq="D")
+    close = pd.Series([10, 9, 11, 11, 11], index=idx, dtype=float)
+    open_ = close.copy()
+    high = close + 0.5
+    low = close - 0.5
+    vol = pd.Series(1_000_000, index=idx, dtype=float)
+
+    ohlcv = _make_ohlcv(
+        {
+            ("Open", "AAA"): open_,
+            ("High", "AAA"): high,
+            ("Low", "AAA"): low,
+            ("Close", "AAA"): close,
+            ("Volume", "AAA"): vol,
+        }
+    )
+
+    cfg = BacktestConfig(
+        entry_type="auto",
+        breakout_lookback=3,
+        pullback_ma=2,
+        atr_window=1,
+        k_atr=1.0,
+        exit_mode="trailing_stop",
+        max_holding_days=1,
+        breakeven_at_R=10.0,
+        trail_after_R=10.0,
+        trail_sma=2,
+        sma_buffer_pct=0.0,
+        min_history=1,
+    )
+
+    trades = backtest_single_ticker_R(ohlcv, "AAA", cfg)
+    assert not trades.empty
+    # Pullback signal on day 3 -> entry at day 4 open
+    assert trades.iloc[0]["entry_date"] == idx[3]
+
+
 def test_stop_has_priority_over_take_profit_same_bar():
     idx = pd.date_range("2023-02-01", periods=4, freq="D")
     close = pd.Series([100.0, 105.0, 105.0, 105.0], index=idx, dtype=float)

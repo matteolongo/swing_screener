@@ -6,7 +6,7 @@ from typing import Literal, Optional, Dict, Any, List
 import pandas as pd
 
 
-EntryType = Literal["breakout", "pullback"]
+EntryType = Literal["breakout", "pullback", "auto"]
 ExitType = Literal["stop", "take_profit", "time"]
 ExitMode = Literal["take_profit", "trailing_stop"]
 
@@ -48,8 +48,14 @@ def _atr(high: pd.Series, low: pd.Series, close: pd.Series, n: int = 14) -> pd.S
 def _entry_signal(close: pd.Series, cfg: BacktestConfig) -> pd.Series:
     """
     Boolean Series: True on entry bars.
-    Entry executes at close of the signal bar (simple baseline).
+    Entry executes at next bar's open (signal computed on prior close).
     """
+    if cfg.entry_type == "auto":
+        prior_high = close.rolling(cfg.breakout_lookback).max().shift(1)
+        breakout = close > prior_high
+        ma = _sma(close, cfg.pullback_ma)
+        pullback = (close.shift(1) < ma.shift(1)) & (close > ma)
+        return breakout | pullback
     if cfg.entry_type == "breakout":
         prior_high = close.rolling(cfg.breakout_lookback).max().shift(1)
         return close > prior_high

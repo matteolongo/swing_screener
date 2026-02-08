@@ -50,6 +50,30 @@ export const useConfigStore = create<ConfigStore>()(
     }),
     {
       name: 'swing-screener-config',
+      merge: (persisted, current) => {
+        const persistedState = persisted as Partial<ConfigStore>
+        const persistedConfig = persistedState?.config ?? {}
+        return {
+          ...current,
+          ...persistedState,
+          config: {
+            ...current.config,
+            ...persistedConfig,
+            risk: {
+              ...current.config.risk,
+              ...(persistedConfig as AppConfig).risk,
+            },
+            indicators: {
+              ...current.config.indicators,
+              ...(persistedConfig as AppConfig).indicators,
+            },
+            manage: {
+              ...current.config.manage,
+              ...(persistedConfig as AppConfig).manage,
+            },
+          },
+        }
+      },
     }
   )
 );

@@ -63,6 +63,7 @@ async def run_screener(request: ScreenerRequest):
         from swing_screener.reporting.report import ReportConfig
         from swing_screener.screeners.universe import UniverseConfig as ScreenerUniverseConfig, UniverseFilterConfig
         from swing_screener.screeners.ranking import RankingConfig
+        from swing_screener.signals.entries import EntrySignalConfig
         
         # Fetch market data with proper config
         cfg = MarketDataConfig(
@@ -86,9 +87,16 @@ async def run_screener(request: ScreenerRequest):
         
         # Run screener with custom config
         # NOTE: We'll get more than top_n initially, then filter by confidence
+        signals_cfg = EntrySignalConfig(
+            breakout_lookback=request.breakout_lookback or 50,
+            pullback_ma=request.pullback_ma or 20,
+            min_history=request.min_history or 260,
+        )
+
         report_cfg = ReportConfig(
             universe=universe_cfg,
             ranking=RankingConfig(top_n=100),  # Get larger pool for confidence ranking
+            signals=signals_cfg,
         )
         
         results = build_daily_report(ohlcv, cfg=report_cfg, exclude_tickers=[])

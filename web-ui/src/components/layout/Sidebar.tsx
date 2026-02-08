@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Search, 
+  BarChart3,
   FileText, 
   TrendingUp, 
   Settings 
@@ -11,6 +12,7 @@ import { cn } from '@/utils/cn';
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Screener', href: '/screener', icon: Search },
+  { name: 'Backtest', href: '/backtest', icon: BarChart3 },
   { name: 'Orders', href: '/orders', icon: FileText },
   { name: 'Positions', href: '/positions', icon: TrendingUp },
   { name: 'Settings', href: '/settings', icon: Settings },

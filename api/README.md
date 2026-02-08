@@ -68,7 +68,10 @@ curl -X PUT http://localhost:8000/api/config \
       "atr_window": 14,
       "lookback_6m": 126,
       "lookback_12m": 252,
-      "benchmark": "SPY"
+      "benchmark": "SPY",
+      "breakout_lookback": 50,
+      "pullback_ma": 20,
+      "min_history": 260
     },
     "manage": {
       "breakeven_at_r": 1.0,
@@ -200,6 +203,34 @@ curl -X POST http://localhost:8000/api/portfolio/orders/AAPL-20260205001815/fill
     "filled_date": "2026-02-05"
   }'
 ```
+
+---
+
+### Backtest Router (`/api/backtest`)
+
+Run backtests and manage saved simulations.
+
+**`POST /api/backtest/quick`**  
+Quick single‑ticker backtest (existing modal).
+
+**`POST /api/backtest/run`**  
+Full backtest for one or more tickers. Automatically saves the simulation to disk.
+
+Key request fields:
+- `tickers` (list of symbols)
+- `start`, `end` (YYYY‑MM‑DD)
+- `entry_type` (`auto`, `breakout`, `pullback`)
+- Backtest params: `breakout_lookback`, `pullback_ma`, `min_history`, `atr_window`, `k_atr`,
+  `breakeven_at_r`, `trail_after_r`, `trail_sma`, `sma_buffer_pct`, `max_holding_days`, `commission_pct`
+
+**`GET /api/backtest/simulations`**  
+List saved simulations (metadata only).
+
+**`GET /api/backtest/simulations/{id}`**  
+Load a saved simulation (params + results).
+
+**`DELETE /api/backtest/simulations/{id}`**  
+Delete a saved simulation.
 
 **`DELETE /api/portfolio/orders/{order_id}`**  
 Cancel an order.

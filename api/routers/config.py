@@ -23,6 +23,9 @@ DEFAULT_CONFIG = AppConfig(
         lookback_6m=126,
         lookback_12m=252,
         benchmark="SPY",
+        breakout_lookback=50,
+        pullback_ma=20,
+        min_history=260,
     ),
     manage=ManageConfig(
         breakeven_at_r=1.0,

@@ -190,6 +190,26 @@ Go to **Orders** page:
 
 ---
 
+### 📈 Backtest
+
+**Purpose:** Run full backtests using your current settings and review saved simulations
+
+**What you can do:**
+- Enter tickers and date range
+- Choose entry mode (Auto / Breakout / Pullback)
+- Tune backtest parameters (ATR, trailing rules, lookbacks)
+- Run and automatically save simulations
+- Load or delete past simulations
+
+**Key features:**
+- **Equity curve chart** with per‑ticker lines (toggle visibility)
+- **Summary stats** and per‑ticker breakdowns
+- **Trades table** with exit reasons and R‑multiples
+
+**When to use:** Strategy evaluation, parameter tuning, or post‑market review
+
+---
+
 ### 📋 Orders
 
 **Purpose:** Manage all orders (pending, filled, cancelled)

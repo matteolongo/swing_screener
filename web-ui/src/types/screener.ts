@@ -42,6 +42,9 @@ export interface ScreenerRequest {
   asofDate?: string;
   minPrice?: number;
   maxPrice?: number;
+  breakoutLookback?: number;
+  pullbackMa?: number;
+  minHistory?: number;
 }
 
 export interface ScreenerResponse {
