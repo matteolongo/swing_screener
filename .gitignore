@@ -69,3 +69,10 @@ yarn-error.log*
 web-ui/dist/
 web-ui/.vite/
 web-ui/coverage/
+
+# =========================
+# Test artifacts
+# =========================
+test-results.xml
+coverage.xml
+.coverage
