@@ -125,6 +125,26 @@ class CreateOrderRequest(BaseModel):
     order_kind: OrderKind = "entry"
 
 
+class OrderSnapshot(BaseModel):
+    order_id: str
+    ticker: str
+    status: OrderStatus
+    order_type: str
+    quantity: int
+    limit_price: Optional[float] = None
+    stop_price: Optional[float] = None
+    order_kind: Optional[OrderKind] = None
+    last_price: Optional[float] = None
+    last_bar: Optional[str] = None
+    pct_to_limit: Optional[float] = None
+    pct_to_stop: Optional[float] = None
+
+
+class OrdersSnapshotResponse(BaseModel):
+    orders: list[OrderSnapshot]
+    asof: str
+
+
 class FillOrderRequest(BaseModel):
     filled_price: float = Field(gt=0, description="Price at which order was filled")
     filled_date: str = Field(description="Date order was filled (YYYY-MM-DD)")

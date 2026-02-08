@@ -24,6 +24,7 @@ describe('API Client', () => {
     it('has all portfolio endpoints', () => {
       expect(API_ENDPOINTS.positions).toBe('/api/portfolio/positions')
       expect(API_ENDPOINTS.orders).toBe('/api/portfolio/orders')
+      expect(API_ENDPOINTS.ordersSnapshot).toBe('/api/portfolio/orders/snapshot')
     })
 
     it('has dynamic position endpoint function', () => {

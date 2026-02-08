@@ -3,7 +3,8 @@ from __future__ import annotations
 
 from typing import Optional
 from fastapi import APIRouter, HTTPException
-from datetime import datetime
+import datetime as dt
+import logging
 import pandas as pd
 
 from api.models import (
@@ -11,6 +12,8 @@ from api.models import (
     Order,
     PositionsResponse,
     OrdersResponse,
+    OrderSnapshot,
+    OrdersSnapshotResponse,
     CreateOrderRequest,
     FillOrderRequest,
     UpdateStopRequest,
@@ -30,6 +33,45 @@ from swing_screener.execution.orders import Order as CoreOrder
 from swing_screener.data.market_data import fetch_ohlcv, MarketDataConfig
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
+
+
+def _to_iso(ts) -> Optional[str]:
+    if ts is None or pd.isna(ts):
+        return None
+    if isinstance(ts, pd.Timestamp):
+        ts = ts.to_pydatetime()
+    if isinstance(ts, dt.datetime):
+        return ts.isoformat()
+    if isinstance(ts, dt.date):
+        return dt.datetime.combine(ts, dt.time()).isoformat()
+    return str(ts)
+
+
+def _last_close_map(ohlcv: pd.DataFrame) -> tuple[dict[str, float], dict[str, str]]:
+    prices: dict[str, float] = {}
+    bars: dict[str, str] = {}
+    if ohlcv is None or ohlcv.empty:
+        return prices, bars
+    if "Close" not in ohlcv.columns.get_level_values(0):
+        return prices, bars
+    close = ohlcv["Close"]
+    for t in close.columns:
+        series = close[t].dropna()
+        if series.empty:
+            continue
+        ts = series.index[-1]
+        iso = _to_iso(ts)
+        if iso:
+            bars[str(t)] = iso
+        prices[str(t)] = float(series.iloc[-1])
+    return prices, bars
+
+
+def _pct_to_target(target: Optional[float], last_price: Optional[float]) -> Optional[float]:
+    if target is None or last_price is None or last_price == 0:
+        return None
+    return (target - last_price) / last_price * 100.0
 
 
 # ===== Positions =====
@@ -70,7 +112,7 @@ async def get_positions(status: Optional[str] = None):
                         pos["current_price"] = None
         except Exception as e:
             # If price fetch fails, continue without current_price
-            print(f"Warning: Failed to fetch current prices: {e}")
+            logger.warning("Failed to fetch current prices: %s", e)
             for pos in positions:
                 if pos.get("status") == "open":
                     pos["current_price"] = None
@@ -194,6 +236,70 @@ async def get_orders(status: Optional[str] = None, ticker: Optional[str] = None)
     )
 
 
+@router.get("/orders/snapshot", response_model=OrdersSnapshotResponse)
+async def get_orders_snapshot(status: Optional[str] = "pending"):
+    """Get orders with latest close and distance to limit/stop."""
+    path = get_orders_path()
+    data = read_json_file(path)
+    orders = data.get("orders", [])
+
+    if status:
+        orders = [o for o in orders if o.get("status") == status]
+
+    if not orders:
+        return OrdersSnapshotResponse(
+            orders=[],
+            asof=data.get("asof", get_today_str()),
+        )
+
+    tickers = list({o.get("ticker", "").upper() for o in orders if o.get("ticker")})
+    last_prices: dict[str, float] = {}
+    last_bars: dict[str, str] = {}
+
+    if tickers:
+        try:
+            cfg = MarketDataConfig(
+                start="2025-01-01",
+                end=get_today_str(),
+                auto_adjust=True,
+                progress=False,
+            )
+            ohlcv = fetch_ohlcv(tickers, cfg)
+            last_prices, last_bars = _last_close_map(ohlcv)
+        except Exception as e:
+            logger.warning("Failed to fetch order snapshot prices: %s", e)
+
+    snapshots: list[OrderSnapshot] = []
+    for order in orders:
+        ticker = order.get("ticker", "").upper()
+        last_price = last_prices.get(ticker)
+        last_bar = last_bars.get(ticker)
+        limit_price = order.get("limit_price")
+        stop_price = order.get("stop_price")
+
+        snapshots.append(
+            OrderSnapshot(
+                order_id=order.get("order_id", ""),
+                ticker=ticker,
+                status=order.get("status", ""),
+                order_type=order.get("order_type", ""),
+                quantity=order.get("quantity", 0),
+                limit_price=limit_price,
+                stop_price=stop_price,
+                order_kind=order.get("order_kind"),
+                last_price=last_price,
+                last_bar=last_bar,
+                pct_to_limit=_pct_to_target(limit_price, last_price),
+                pct_to_stop=_pct_to_target(stop_price, last_price),
+            )
+        )
+
+    return OrdersSnapshotResponse(
+        orders=snapshots,
+        asof=data.get("asof", get_today_str()),
+    )
+
+
 @router.get("/orders/{order_id}", response_model=Order)
 async def get_order(order_id: str):
     """Get a specific order by ID."""
@@ -215,7 +321,7 @@ async def create_order(request: CreateOrderRequest):
     
     # Generate order ID
     ticker = request.ticker.upper()
-    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    timestamp = dt.datetime.now().strftime("%Y%m%d%H%M%S")
     order_id = f"{ticker}-{timestamp}"
     
     new_order = {

@@ -101,6 +101,26 @@ export const mockScreenerResults = {
   warnings: [],
 }
 
+export const mockOrderSnapshots = {
+  orders: [
+    {
+      order_id: 'ORD-VALE-20260116-ENTRY',
+      ticker: 'VALE',
+      status: 'pending',
+      order_type: 'SELL_STOP',
+      quantity: 6,
+      limit_price: null,
+      stop_price: 14.9,
+      order_kind: 'stop',
+      last_price: 16.3,
+      last_bar: '2026-02-07T16:00:00',
+      pct_to_limit: null,
+      pct_to_stop: -8.59,
+    },
+  ],
+  asof: '2026-02-08',
+}
+
 export const mockBacktestRun = {
   tickers: ['AAPL', 'MSFT'],
   start: '2024-02-01',
@@ -231,6 +251,10 @@ export const handlers = [
       ...body,
       status: 'pending'
     }, { status: 201 })
+  }),
+
+  http.get(`${API_BASE_URL}/api/portfolio/orders/snapshot`, () => {
+    return HttpResponse.json(mockOrderSnapshots)
   }),
 
   // Screener endpoints

@@ -21,6 +21,7 @@ export const API_ENDPOINTS = {
   
   // Portfolio - Orders
   orders: '/api/portfolio/orders',
+  ordersSnapshot: '/api/portfolio/orders/snapshot',
   order: (id: string) => `/api/portfolio/orders/${id}`,
   orderFill: (id: string) => `/api/portfolio/orders/${id}/fill`,
 

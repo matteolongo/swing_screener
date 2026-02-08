@@ -6,9 +6,9 @@ import Badge from '@/components/common/Badge';
 import { useConfigStore } from '@/stores/configStore';
 import { API_ENDPOINTS, apiUrl } from '@/lib/api';
 import { Position, transformPosition, calculatePnL } from '@/types/position';
-import { Order, transformOrder } from '@/types/order';
-import { formatCurrency } from '@/utils/formatters';
-import { TrendingUp, AlertCircle, FileText, Search } from 'lucide-react';
+import { Order, OrderSnapshotResponseApi, transformOrder, transformOrderSnapshot } from '@/types/order';
+import { formatCurrency, formatDateTime, formatPercent } from '@/utils/formatters';
+import { TrendingUp, AlertCircle, FileText, Search, RefreshCw } from 'lucide-react';
 
 export default function Dashboard() {
   const { config } = useConfigStore();
@@ -35,6 +35,27 @@ export default function Dashboard() {
       return data.orders.map(transformOrder);
     },
   });
+
+  const {
+    data: orderSnapshots,
+    isFetching: isFetchingSnapshots,
+    isError: isSnapshotError,
+    refetch: refetchSnapshots,
+  } = useQuery({
+    queryKey: ['orders', 'snapshot'],
+    queryFn: async () => {
+      const response = await fetch(apiUrl(API_ENDPOINTS.ordersSnapshot));
+      if (!response.ok) throw new Error('Failed to fetch order snapshots');
+      const data: OrderSnapshotResponseApi = await response.json();
+      return {
+        orders: data.orders.map(transformOrderSnapshot),
+        asof: data.asof,
+      };
+    },
+    refetchOnWindowFocus: false,
+  });
+
+  const snapshotOrders = orderSnapshots?.orders ?? [];
 
   // Calculate portfolio metrics
   const totalPositionValue = positions.reduce((sum: number, pos: Position) => {
@@ -158,6 +179,77 @@ export default function Dashboard() {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Open Orders Snapshot */}
+      <Card variant="bordered">
+        <CardHeader className="flex items-center justify-between">
+          <CardTitle>Open Orders Snapshot</CardTitle>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => refetchSnapshots()}
+            disabled={isFetchingSnapshots}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${isFetchingSnapshots ? 'animate-spin' : ''}`} />
+            Refresh Prices
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {isSnapshotError && (
+            <div className="mb-3 text-sm text-red-600">
+              Failed to load order snapshots.
+            </div>
+          )}
+          {snapshotOrders.length === 0 ? (
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              No pending orders to review.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-2 px-3 text-sm font-semibold text-gray-700">Ticker</th>
+                    <th className="text-left py-2 px-3 text-sm font-semibold text-gray-700">Type</th>
+                    <th className="text-right py-2 px-3 text-sm font-semibold text-gray-700">Qty</th>
+                    <th className="text-right py-2 px-3 text-sm font-semibold text-gray-700">Last</th>
+                    <th className="text-right py-2 px-3 text-sm font-semibold text-gray-700">To Limit</th>
+                    <th className="text-right py-2 px-3 text-sm font-semibold text-gray-700">To Stop</th>
+                    <th className="text-right py-2 px-3 text-sm font-semibold text-gray-700">Last Bar</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {snapshotOrders.map((order) => (
+                    <tr key={order.orderId} className="border-b border-gray-100">
+                      <td className="py-2 px-3 text-sm font-medium text-gray-900">
+                        {order.ticker}
+                      </td>
+                      <td className="py-2 px-3 text-sm text-gray-700">
+                        {order.orderType}
+                      </td>
+                      <td className="py-2 px-3 text-sm text-right text-gray-700">
+                        {order.quantity}
+                      </td>
+                      <td className="py-2 px-3 text-sm text-right text-gray-900">
+                        {order.lastPrice !== undefined ? formatCurrency(order.lastPrice) : '-'}
+                      </td>
+                      <td className="py-2 px-3 text-sm text-right">
+                        {order.pctToLimit !== undefined ? formatPercent(order.pctToLimit) : '-'}
+                      </td>
+                      <td className="py-2 px-3 text-sm text-right">
+                        {order.pctToStop !== undefined ? formatPercent(order.pctToStop) : '-'}
+                      </td>
+                      <td className="py-2 px-3 text-sm text-right text-gray-600">
+                        {order.lastBar ? formatDateTime(order.lastBar) : '-'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </CardContent>

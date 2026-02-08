@@ -168,6 +168,13 @@ curl http://localhost:8000/api/portfolio/orders?status=pending
 curl http://localhost:8000/api/portfolio/orders?ticker=VALE
 ```
 
+**`GET /api/portfolio/orders/snapshot`**  
+Get pending orders enriched with latest close and distance to limit/stop.
+
+```bash
+curl http://localhost:8000/api/portfolio/orders/snapshot
+```
+
 **`GET /api/portfolio/orders/{order_id}`**  
 Get a specific order by ID.
 
