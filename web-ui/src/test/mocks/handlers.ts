@@ -85,6 +85,7 @@ export const mockScreenerResults = {
       rank: 1,
       score: 0.95,
       close: 175.50,
+      last_bar: '2026-02-07T16:00:00',
       sma_20: 170.00,
       sma_50: 165.00,
       sma_200: 160.00,
@@ -97,6 +98,7 @@ export const mockScreenerResults = {
   ],
   asof_date: '2026-02-08',
   total_screened: 500,
+  warnings: [],
 }
 
 export const mockBacktestRun = {

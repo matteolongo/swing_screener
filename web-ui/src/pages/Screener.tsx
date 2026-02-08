@@ -16,6 +16,8 @@ import { useConfigStore } from '../stores/configStore';
 import { formatCurrency, formatPercent } from '../utils/formatters';
 import QuickBacktestModal from '../components/modals/QuickBacktestModal';
 
+const TOP_N_MAX = 200;
+
 export default function Screener() {
   const { config } = useConfigStore();
   const queryClient = useQueryClient();
@@ -26,7 +28,10 @@ export default function Screener() {
   });
   const [topN, setTopN] = useState<number>(() => {
     const saved = localStorage.getItem('screener.topN');
-    return saved ? parseInt(saved, 10) : 20;
+    if (!saved) return 20;
+    const parsed = parseInt(saved, 10);
+    if (Number.isNaN(parsed)) return 20;
+    return Math.min(Math.max(parsed, 1), TOP_N_MAX);
   });
   const [minPrice, setMinPrice] = useState<number>(() => {
     const saved = localStorage.getItem('screener.minPrice');
@@ -48,8 +53,9 @@ export default function Screener() {
   };
   
   const handleTopNChange = (value: number) => {
-    setTopN(value);
-    localStorage.setItem('screener.topN', value.toString());
+    const next = Math.min(Math.max(value, 1), TOP_N_MAX);
+    setTopN(next);
+    localStorage.setItem('screener.topN', next.toString());
   };
   
   const handleMinPriceChange = (value: number) => {
@@ -100,6 +106,9 @@ export default function Screener() {
       const apiResponse: ScreenerResponseAPI = await res.json();
       return transformScreenerResponse(apiResponse);
     },
+    onError: (error) => {
+      console.error('Screener failed', error);
+    },
   });
 
   const handleRunScreener = () => {
@@ -115,6 +124,7 @@ export default function Screener() {
   };
 
   const candidates = screenerMutation.data?.candidates || [];
+  const warnings = screenerMutation.data?.warnings || [];
 
   return (
     <div className="space-y-6">
@@ -158,7 +168,7 @@ export default function Screener() {
               value={topN}
               onChange={(e) => handleTopNChange(parseInt(e.target.value) || 20)}
               min="1"
-              max="100"
+              max={TOP_N_MAX}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               disabled={screenerMutation.isPending}
             />
@@ -273,6 +283,16 @@ export default function Screener() {
                 Refresh
               </Button>
             </div>
+            {warnings.length > 0 && (
+              <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start">
+                <AlertCircle className="w-4 h-4 text-yellow-700 mr-2 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-yellow-800">
+                  {warnings.map((warning) => (
+                    <div key={warning}>{warning}</div>
+                  ))}
+                </div>
+              </div>
+            )}
           </Card>
 
           {/* Candidates table */}
@@ -285,6 +305,7 @@ export default function Screener() {
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Ticker</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Company</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Sector</th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Last Bar</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Confidence</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Score</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Close</th>
@@ -298,7 +319,7 @@ export default function Screener() {
                 <tbody>
                   {candidates.length === 0 ? (
                     <tr>
-                      <td colSpan={12} className="text-center py-8 text-gray-500">
+                      <td colSpan={13} className="text-center py-8 text-gray-500">
                         No candidates found
                       </td>
                     </tr>
@@ -336,6 +357,11 @@ export default function Screener() {
                           <span className="text-xs px-2 py-1 bg-gray-100 rounded">
                             {candidate.sector || 'N/A'}
                           </span>
+                        </td>
+                        <td className="py-3 px-4 text-sm text-right text-gray-600">
+                          {candidate.lastBar
+                            ? new Date(candidate.lastBar).toLocaleString()
+                            : '-'}
                         </td>
                         <td className="py-3 px-4 text-sm text-right">
                           <span className="font-semibold text-purple-600">

@@ -4,6 +4,7 @@ export interface ScreenerCandidate {
   ticker: string;
   name?: string;
   sector?: string;
+  lastBar?: string;
   close: number;
   sma20: number;
   sma50: number;
@@ -22,6 +23,7 @@ export interface ScreenerCandidateAPI {
   ticker: string;
   name?: string;
   sector?: string;
+  last_bar?: string;
   close: number;
   sma_20: number;
   sma_50: number;
@@ -51,6 +53,7 @@ export interface ScreenerResponse {
   candidates: ScreenerCandidate[];
   asofDate: string;
   totalScreened: number;
+  warnings?: string[];
 }
 
 // API response format (snake_case)
@@ -58,6 +61,7 @@ export interface ScreenerResponseAPI {
   candidates: ScreenerCandidateAPI[];
   asof_date: string;
   total_screened: number;
+  warnings?: string[];
 }
 
 export interface OrderPreview {
@@ -82,6 +86,7 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
       ticker: c.ticker,
       name: c.name,
       sector: c.sector,
+      lastBar: c.last_bar,
       close: c.close,
       sma20: c.sma_20,
       sma50: c.sma_50,
@@ -96,5 +101,6 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
     })),
     asofDate: apiResponse.asof_date,
     totalScreened: apiResponse.total_screened,
+    warnings: apiResponse.warnings ?? [],
   };
 }

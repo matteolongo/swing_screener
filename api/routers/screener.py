@@ -4,6 +4,8 @@ from __future__ import annotations
 from typing import Optional
 from fastapi import APIRouter, HTTPException
 import datetime as dt
+import logging
+import pandas as pd
 
 from api.models import (
     ScreenerRequest,
@@ -23,6 +25,68 @@ from swing_screener.data.ticker_info import get_multiple_ticker_info
 from swing_screener.reporting.report import build_daily_report
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
+
+
+def _merge_ohlcv(base: pd.DataFrame, extra: pd.DataFrame) -> pd.DataFrame:
+    if base is None or base.empty:
+        return extra
+    if extra is None or extra.empty:
+        return base
+    merged = pd.concat([base, extra], axis=1)
+    merged = merged.loc[:, ~merged.columns.duplicated()]
+    return merged.sort_index(axis=1)
+
+
+def _fetch_ohlcv_chunked(
+    tickers: list[str],
+    cfg,
+    chunk_size: int = 100,
+) -> pd.DataFrame:
+    frames: list[pd.DataFrame] = []
+    for i in range(0, len(tickers), chunk_size):
+        chunk = tickers[i : i + chunk_size]
+        df = fetch_ohlcv(chunk, cfg=cfg, use_cache=True, force_refresh=False)
+        if df is None or df.empty:
+            logger.warning("OHLCV chunk returned empty data (%s)", chunk)
+            continue
+        frames.append(df)
+    if not frames:
+        return pd.DataFrame()
+    out = frames[0]
+    for df in frames[1:]:
+        out = _merge_ohlcv(out, df)
+    return out
+
+
+def _to_iso(ts) -> Optional[str]:
+    if ts is None or pd.isna(ts):
+        return None
+    if isinstance(ts, pd.Timestamp):
+        ts = ts.to_pydatetime()
+    if isinstance(ts, dt.datetime):
+        return ts.isoformat()
+    if isinstance(ts, dt.date):
+        return dt.datetime.combine(ts, dt.time()).isoformat()
+    return str(ts)
+
+
+def _last_bar_map(ohlcv: pd.DataFrame) -> dict[str, str]:
+    out: dict[str, str] = {}
+    if ohlcv is None or ohlcv.empty:
+        return out
+    if "Close" not in ohlcv.columns.get_level_values(0):
+        return out
+    close = ohlcv["Close"]
+    for t in close.columns:
+        series = close[t].dropna()
+        if series.empty:
+            continue
+        ts = series.index[-1]
+        iso = _to_iso(ts)
+        if iso:
+            out[str(t)] = iso
+    return out
 
 
 @router.get("/universes")
@@ -39,6 +103,11 @@ async def list_universes():
 async def run_screener(request: ScreenerRequest):
     """Run the screener on a universe of stocks."""
     try:
+        requested_top = request.top or 20
+        if requested_top <= 0:
+            raise HTTPException(status_code=422, detail="top must be >= 1")
+        warnings: list[str] = []
+
         # Determine date
         if request.asof_date:
             asof_str = request.asof_date
@@ -51,11 +120,13 @@ async def run_screener(request: ScreenerRequest):
             if "SPY" not in tickers:
                 tickers.append("SPY")
         elif request.universe:
-            ucfg = UniverseConfig(benchmark="SPY", ensure_benchmark=True, max_tickers=request.top or 500)
+            universe_cap = max(500, requested_top * 2)
+            ucfg = UniverseConfig(benchmark="SPY", ensure_benchmark=True, max_tickers=universe_cap)
             tickers = load_universe_from_package(request.universe, ucfg)
         else:
             # Default to mega
-            ucfg = UniverseConfig(benchmark="SPY", ensure_benchmark=True, max_tickers=request.top or 500)
+            universe_cap = max(500, requested_top * 2)
+            ucfg = UniverseConfig(benchmark="SPY", ensure_benchmark=True, max_tickers=universe_cap)
             tickers = load_universe_from_package("mega", ucfg)
         
         # Import MarketDataConfig and ReportConfig
@@ -72,7 +143,31 @@ async def run_screener(request: ScreenerRequest):
             auto_adjust=True,
             progress=False,
         )
-        ohlcv = fetch_ohlcv(tickers, cfg=cfg)
+        logger.info(
+            "Screener run: universe=%s top=%s tickers=%s",
+            request.universe or "mega",
+            requested_top,
+            len(tickers),
+        )
+
+        if len(tickers) > 120:
+            ohlcv = _fetch_ohlcv_chunked(tickers, cfg, chunk_size=100)
+        else:
+            ohlcv = fetch_ohlcv(tickers, cfg=cfg)
+
+        if ohlcv is None or ohlcv.empty:
+            logger.error("OHLCV fetch returned empty data (tickers=%s)", len(tickers))
+            raise HTTPException(status_code=404, detail="No market data found for requested tickers")
+
+        if "Close" not in ohlcv.columns.get_level_values(0) or "SPY" not in ohlcv["Close"].columns:
+            logger.warning("Benchmark SPY missing from OHLCV; fetching separately.")
+            spy_df = fetch_ohlcv(["SPY"], cfg=cfg)
+            ohlcv = _merge_ohlcv(ohlcv, spy_df)
+            if "Close" not in ohlcv.columns.get_level_values(0) or "SPY" not in ohlcv["Close"].columns:
+                raise HTTPException(status_code=500, detail="Benchmark data missing; cannot compute momentum.")
+
+        last_bar_map = _last_bar_map(ohlcv)
+        overall_last_bar = _to_iso(ohlcv.index.max())
         
         # Create universe filters from request or use defaults
         universe_cfg = ScreenerUniverseConfig(
@@ -95,11 +190,24 @@ async def run_screener(request: ScreenerRequest):
 
         report_cfg = ReportConfig(
             universe=universe_cfg,
-            ranking=RankingConfig(top_n=100),  # Get larger pool for confidence ranking
+            ranking=RankingConfig(top_n=max(100, requested_top)),
             signals=signals_cfg,
         )
         
         results = build_daily_report(ohlcv, cfg=report_cfg, exclude_tickers=[])
+        if results is None or results.empty:
+            logger.warning(
+                "Screener returned no candidates (top=%s, tickers=%s).",
+                requested_top,
+                len(tickers),
+            )
+            warnings.append("No candidates found for the current screener filters.")
+            return ScreenerResponse(
+                candidates=[],
+                asof_date=asof_str,
+                total_screened=len(tickers),
+                warnings=warnings,
+            )
         
         # Sort by confidence descending and take top N
         if not results.empty and "confidence" in results.columns:
@@ -109,6 +217,11 @@ async def run_screener(request: ScreenerRequest):
                 results = results.head(request.top)
             # Re-rank based on confidence order
             results['rank'] = range(1, len(results) + 1)
+
+        if len(results) < requested_top:
+            message = f"Only {len(results)} candidates found for top {requested_top}."
+            warnings.append(message)
+            logger.warning(message)
         
         # Fetch company info for all tickers
         ticker_list = [str(idx) for idx in results.index]
@@ -137,12 +250,14 @@ async def run_screener(request: ScreenerRequest):
             # Get company info
             ticker_str = str(idx)
             info = ticker_info.get(ticker_str, {})
+            last_bar = last_bar_map.get(ticker_str) or overall_last_bar
             
             candidates.append(
                 ScreenerCandidate(
                     ticker=ticker_str,
                     name=info.get('name'),
                     sector=info.get('sector'),
+                    last_bar=last_bar,
                     close=last_price,
                     sma_20=sma20,
                     sma_50=sma50,
@@ -157,15 +272,19 @@ async def run_screener(request: ScreenerRequest):
                 )
             )
         
-        return ScreenerResponse(
+        response = ScreenerResponse(
             candidates=candidates,
             asof_date=asof_str,
             total_screened=len(tickers),
+            warnings=warnings,
         )
+        logger.info("Screener completed: candidates=%s", len(candidates))
+        return response
     
+    except HTTPException:
+        raise
     except Exception as e:
-        import traceback
-        traceback.print_exc()
+        logger.exception("Screener failed")
         raise HTTPException(status_code=500, detail=f"Screener failed: {str(e)}")
 
 

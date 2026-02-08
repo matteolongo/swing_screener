@@ -147,6 +147,7 @@ class ScreenerCandidate(BaseModel):
     ticker: str
     name: Optional[str] = None
     sector: Optional[str] = None
+    last_bar: Optional[str] = None
     close: float
     sma_20: float
     sma_50: float
@@ -163,7 +164,7 @@ class ScreenerCandidate(BaseModel):
 class ScreenerRequest(BaseModel):
     universe: Optional[str] = Field(default=None, description="Named universe (e.g., 'sp500')")
     tickers: Optional[list[str]] = Field(default=None, description="Explicit ticker list")
-    top: Optional[int] = Field(default=20, description="Max candidates to return")
+    top: Optional[int] = Field(default=20, ge=1, le=200, description="Max candidates to return")
     asof_date: Optional[str] = Field(default=None, description="Date for screening (YYYY-MM-DD)")
     min_price: Optional[float] = Field(default=5.0, ge=0, description="Minimum stock price")
     max_price: Optional[float] = Field(default=500.0, gt=0, description="Maximum stock price")
@@ -176,6 +177,7 @@ class ScreenerResponse(BaseModel):
     candidates: list[ScreenerCandidate]
     asof_date: str
     total_screened: int
+    warnings: list[str] = Field(default_factory=list)
 
 
 # ===== Response Models =====
