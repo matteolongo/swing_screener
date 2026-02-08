@@ -3,9 +3,87 @@
 This guide explains **how and when to use Swing Screener in real life**  
 if you live in **Barcelona (CET / CEST)** and trade **US stocks**.
 
-This is not about code — it’s about **correct behavior**.
+This is not about code — it's about **correct behavior**.
 
 ---
+
+## 🌐 Two Ways to Work
+
+### Web UI Workflow (Recommended)
+
+**Best for:** Daily interactive trading, visual review, order creation
+
+**Daily Routine (~10 minutes, 22:15-22:45 CET):**
+
+1. **Open Dashboard** at http://localhost:5173
+2. **Review** portfolio summary, P&L, action items
+3. **Run Screener:** Select universe → Click "Run Screener"
+4. **Create Orders:** Click "Create Order" for candidates you want
+5. **Review Risk:** Check position value and max loss in modal
+6. **Submit Orders:** They appear as PENDING in Orders page
+7. **Next Morning:** Execute at broker, then "Fill Order" in UI
+8. **Manage Positions:** Update stops for positions at +1.5R or +2R
+
+👉 **See [WEB_UI_GUIDE.md](WEB_UI_GUIDE.md) for detailed Web UI documentation**
+
+---
+
+### CLI Workflow (Advanced)
+
+**Best for:** Automation, scripting, headless environments
+
+---
+
+## 🌐 Two Ways to Work
+
+### Web UI Workflow (Recommended)
+
+**Best for:** Daily interactive trading, visual review, order creation
+
+**Daily Routine (~10 minutes, 22:15-22:45 CET):**
+
+1. **Start the servers** (if not already running)
+   ```bash
+   # Terminal 1: Backend
+   python -m uvicorn api.main:app --port 8000 --reload
+   
+   # Terminal 2: Frontend
+   cd web-ui && npm run dev
+   ```
+
+2. **Open http://localhost:5173**
+
+3. **Dashboard:** Review portfolio summary, P&L, action items
+
+4. **Screener Page:**
+   - Select universe (e.g., "mega")
+   - Click "Run Screener"
+   - Review candidates table
+   - Click "Create Order" for stocks you want to trade
+   - Review risk metrics in modal
+   - Submit orders
+
+5. **Orders Page:**
+   - Review pending orders
+   - Tomorrow morning: execute at broker (Degiro)
+   - After execution: click "Fill Order"
+   - Enter fill price and date
+
+6. **Positions Page:**
+   - Review open positions
+   - Update stops for positions at +1.5R or +2R
+   - Close positions that hit targets
+
+👉 **See [WEB_UI_GUIDE.md](WEB_UI_GUIDE.md) for detailed Web UI documentation**
+
+---
+
+### CLI Workflow (Advanced)
+
+**Best for:** Automation, scripting, headless environments
+
+**Daily Routine (~10 minutes, 22:15-22:45 CET):**
+
 
 ## ⏰ US Market Hours (from Barcelona)
 
