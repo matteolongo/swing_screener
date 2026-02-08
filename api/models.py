@@ -151,6 +151,7 @@ class ScreenerCandidate(BaseModel):
     momentum_12m: float
     rel_strength: float
     score: float
+    confidence: float
     rank: int
 
 

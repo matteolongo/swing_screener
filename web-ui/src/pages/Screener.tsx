@@ -240,19 +240,20 @@ export default function Screener() {
                   <tr className="border-b border-gray-200">
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Rank</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Ticker</th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Confidence</th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Score</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Close</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">ATR</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Mom 6M</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Mom 12M</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">RS</th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Score</th>
                     <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {candidates.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="text-center py-8 text-gray-500">
+                      <td colSpan={10} className="text-center py-8 text-gray-500">
                         No candidates found
                       </td>
                     </tr>
@@ -266,6 +267,14 @@ export default function Screener() {
                           <span className="text-sm font-semibold text-blue-600">
                             {candidate.ticker}
                           </span>
+                        </td>
+                        <td className="py-3 px-4 text-sm text-right">
+                          <span className="font-semibold text-purple-600">
+                            {candidate.confidence.toFixed(1)}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-sm text-right font-medium text-gray-900">
+                          {(candidate.score * 100).toFixed(1)}
                         </td>
                         <td className="py-3 px-4 text-sm text-right text-gray-900">
                           {formatCurrency(candidate.close)}
@@ -287,9 +296,6 @@ export default function Screener() {
                           <span className={candidate.relStrength >= 0 ? 'text-green-600' : 'text-red-600'}>
                             {formatPercent(candidate.relStrength)}
                           </span>
-                        </td>
-                        <td className="py-3 px-4 text-sm text-right font-medium text-gray-900">
-                          {(candidate.score * 100).toFixed(1)}
                         </td>
                         <td className="py-3 px-4 text-center">
                           <Button

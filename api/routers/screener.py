@@ -95,6 +95,10 @@ async def run_screener(request: ScreenerRequest):
         if request.top and not results.empty:
             results = results.head(request.top)
         
+        # Sort by confidence descending (if available)
+        if not results.empty and "confidence" in results.columns:
+            results = results.sort_values("confidence", ascending=False)
+        
         # Convert to response format
         candidates = []
         for idx, row in results.iterrows():
@@ -127,6 +131,7 @@ async def run_screener(request: ScreenerRequest):
                     momentum_12m=safe_float(row.get("mom_12m")),
                     rel_strength=safe_float(row.get("rs_6m")),
                     score=safe_float(row.get("score")),
+                    confidence=safe_float(row.get("confidence")),
                     rank=int(row.get("rank", len(candidates) + 1)),
                 )
             )

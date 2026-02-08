@@ -11,6 +11,7 @@ export interface ScreenerCandidate {
   momentum12m: number;
   relStrength: number;
   score: number;
+  confidence: number;
   rank: number;
 }
 
@@ -26,6 +27,7 @@ export interface ScreenerCandidateAPI {
   momentum_12m: number;
   rel_strength: number;
   score: number;
+  confidence: number;
   rank: number;
 }
 
@@ -80,6 +82,7 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
       momentum12m: c.momentum_12m,
       relStrength: c.rel_strength,
       score: c.score,
+      confidence: c.confidence,
       rank: c.rank,
     })),
     asofDate: apiResponse.asof_date,
