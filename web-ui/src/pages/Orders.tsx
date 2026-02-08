@@ -425,7 +425,12 @@ function FillOrderModal({
               <p className="text-sm text-gray-600 dark:text-gray-400">Order Details:</p>
               <p className="text-sm mt-1"><strong>Type:</strong> {order.orderType}</p>
               <p className="text-sm"><strong>Quantity:</strong> {order.quantity}</p>
-              <p className="text-sm"><strong>Limit:</strong> {order.limitPrice ? formatCurrency(order.limitPrice) : 'N/A'}</p>
+              {order.limitPrice && (
+                <p className="text-sm"><strong>Limit:</strong> {formatCurrency(order.limitPrice)}</p>
+              )}
+              {order.stopPrice && (
+                <p className="text-sm"><strong>Stop:</strong> {formatCurrency(order.stopPrice)}</p>
+              )}
             </div>
 
             <div className="flex gap-3 justify-end">

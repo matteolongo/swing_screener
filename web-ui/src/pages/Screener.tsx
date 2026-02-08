@@ -327,6 +327,23 @@ function CreateOrderModal({
     setIsSubmitting(true);
     setError(null);
 
+    // Validation
+    if (formData.quantity <= 0) {
+      setError('Quantity must be greater than 0');
+      setIsSubmitting(false);
+      return;
+    }
+    if (!formData.limitPrice || formData.limitPrice <= 0) {
+      setError('Limit price must be greater than 0');
+      setIsSubmitting(false);
+      return;
+    }
+    if (formData.stopPrice && formData.limitPrice <= formData.stopPrice) {
+      setError('Limit price must be higher than stop price');
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
       const response = await fetch(apiUrl(API_ENDPOINTS.orders), {
         method: 'POST',

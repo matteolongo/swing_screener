@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Optional
 from fastapi import APIRouter, HTTPException
 from datetime import datetime
+import pandas as pd
 
 from api.models import (
     Position,
@@ -26,6 +27,7 @@ from api.dependencies import (
 from swing_screener.portfolio.state import load_positions, save_positions
 from swing_screener.execution.orders import load_orders, save_orders
 from swing_screener.execution.orders import Order as CoreOrder
+from swing_screener.data.market_data import fetch_ohlcv, MarketDataConfig
 
 router = APIRouter()
 
@@ -43,6 +45,35 @@ async def get_positions(status: Optional[str] = None):
     # Filter by status if requested
     if status:
         positions = [p for p in positions if p.get("status") == status]
+    
+    # Fetch current prices for open positions
+    open_positions = [p for p in positions if p.get("status") == "open"]
+    if open_positions:
+        try:
+            tickers = list(set([p["ticker"] for p in open_positions]))
+            cfg = MarketDataConfig(
+                start="2025-01-01",  # Last year of data
+                end=get_today_str(),
+                auto_adjust=True,
+                progress=False,
+            )
+            ohlcv = fetch_ohlcv(tickers, cfg)
+            
+            # Get latest close price for each ticker
+            latest_date = ohlcv.index.max()
+            for pos in positions:
+                if pos.get("status") == "open":
+                    try:
+                        price = ohlcv.loc[latest_date, ("Close", pos["ticker"])]
+                        pos["current_price"] = float(price) if not pd.isna(price) else None
+                    except (KeyError, IndexError):
+                        pos["current_price"] = None
+        except Exception as e:
+            # If price fetch fails, continue without current_price
+            print(f"Warning: Failed to fetch current prices: {e}")
+            for pos in positions:
+                if pos.get("status") == "open":
+                    pos["current_price"] = None
     
     return PositionsResponse(
         positions=positions,

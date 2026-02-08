@@ -60,6 +60,7 @@ class Position(BaseModel):
     max_favorable_price: Optional[float] = None
     exit_date: Optional[str] = None
     exit_price: Optional[float] = None
+    current_price: Optional[float] = None  # Added: live price for open positions
     notes: str = ""
     exit_order_ids: Optional[list[str]] = None
 

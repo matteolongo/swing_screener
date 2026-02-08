@@ -15,6 +15,7 @@ export interface Position {
   maxFavorablePrice?: number;
   exitDate?: string;
   exitPrice?: number;
+  currentPrice?: number;  // Live price for open positions
   notes?: string;
   exitOrderIds?: string[];
 }
@@ -58,6 +59,7 @@ export interface PositionApiResponse {
   max_favorable_price: number | null;
   exit_date: string | null;
   exit_price: number | null;
+  current_price: number | null;  // Live price for open positions
   notes: string;
   exit_order_ids: string[] | null;
 }
@@ -76,6 +78,7 @@ export function transformPosition(apiPosition: PositionApiResponse): Position {
     maxFavorablePrice: apiPosition.max_favorable_price || undefined,
     exitDate: apiPosition.exit_date || undefined,
     exitPrice: apiPosition.exit_price || undefined,
+    currentPrice: apiPosition.current_price || undefined,  // Transform current_price
     notes: apiPosition.notes || '',
     exitOrderIds: apiPosition.exit_order_ids || undefined,
   };
@@ -90,13 +93,15 @@ export function calculateRNow(position: Position, currentPrice: number): number 
 
 // Calculate P&L
 export function calculatePnL(position: Position, currentPrice?: number): number {
-  const exitOrCurrent = position.exitPrice || currentPrice || position.entryPrice;
+  // Priority: exitPrice (closed) > passed currentPrice > position.currentPrice (live) > entryPrice (fallback)
+  const exitOrCurrent = position.exitPrice || currentPrice || position.currentPrice || position.entryPrice;
   return (exitOrCurrent - position.entryPrice) * position.shares;
 }
 
 // Calculate P&L percentage
 export function calculatePnLPercent(position: Position, currentPrice?: number): number {
-  const exitOrCurrent = position.exitPrice || currentPrice || position.entryPrice;
+  // Priority: exitPrice (closed) > passed currentPrice > position.currentPrice (live) > entryPrice (fallback)
+  const exitOrCurrent = position.exitPrice || currentPrice || position.currentPrice || position.entryPrice;
   return ((exitOrCurrent - position.entryPrice) / position.entryPrice) * 100;
 }
 
