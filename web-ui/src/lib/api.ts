@@ -1,0 +1,31 @@
+// API client configuration and base URL
+
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+export const API_ENDPOINTS = {
+  // Config
+  config: '/api/config',
+  configReset: '/api/config/reset',
+  configDefaults: '/api/config/defaults',
+  
+  // Screener
+  screenerRun: '/api/screener/run',
+  screenerUniverses: '/api/screener/universes',
+  screenerPreview: '/api/screener/preview-order',
+  
+  // Portfolio - Positions
+  positions: '/api/portfolio/positions',
+  position: (id: string) => `/api/portfolio/positions/${id}`,
+  positionStop: (id: string) => `/api/portfolio/positions/${id}/stop`,
+  positionClose: (id: string) => `/api/portfolio/positions/${id}/close`,
+  
+  // Portfolio - Orders
+  orders: '/api/portfolio/orders',
+  order: (id: string) => `/api/portfolio/orders/${id}`,
+  orderFill: (id: string) => `/api/portfolio/orders/${id}/fill`,
+} as const;
+
+// Helper to build full URL
+export const apiUrl = (endpoint: string): string => {
+  return `${API_BASE_URL}${endpoint}`;
+};

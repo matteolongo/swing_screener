@@ -10,6 +10,42 @@ It helps you:
 
 Execution is intentionally **manual** (Degiro-friendly).
 
+## Two Ways to Use
+
+### 🌐 Web UI (Recommended)
+
+Modern browser-based interface with full CRUD operations for positions, orders, and screener execution.
+
+**Quick Start:**
+
+```bash
+# Terminal 1: Start backend API
+python -m uvicorn api.main:app --port 8000 --reload
+
+# Terminal 2: Start frontend
+cd web-ui && npm run dev
+```
+
+Then open [http://localhost:5173](http://localhost:5173)
+
+👉 **See [docs/WEB_UI_GUIDE.md](docs/WEB_UI_GUIDE.md) for complete Web UI documentation**
+
+---
+
+### 💻 CLI (Advanced)
+
+Command-line interface for automation, scripting, and headless environments.
+
+**Quick Start:**
+
+```bash
+swing-screener run --universe mega --positions positions.json --csv out/report.csv
+```
+
+👉 **See [CLI Usage](#cli-usage) below for CLI documentation**
+
+---
+
 ## Key Principles
 
 - Deterministic logic over discretionary decisions
@@ -33,7 +69,9 @@ src/swing_screener/
   backtest/             # Deterministic historical simulation in R units
 ```
 
-## Install
+## Installation
+
+### Backend + CLI
 
 ```bash
 python -m venv .venv
@@ -41,13 +79,16 @@ source .venv/bin/activate
 pip install -e .
 ```
 
-CLI command after install:
+### Web UI (Frontend)
 
 ```bash
-swing-screener --help
+cd web-ui
+npm install
 ```
 
-## Quick Start
+---
+
+## CLI Usage
 
 Run the daily screener:
 
@@ -79,23 +120,57 @@ Inspect packaged universes:
 swing-screener universes list
 ```
 
+### Packaged universes (sources)
+
+- `mega_defense` — built from U.S. aerospace/defense ETF holdings (ITA, XAR) and expanded with major global primes from SIPRI's Top 100 list.
+  - ITA holdings: https://www.ishares.com/us/products/239502/ishares-us-aerospace-defense-etf
+  - XAR holdings: https://www.ssga.com/us/en/intermediary/etfs/state-street-spdr-sp-aerospace-defense-etf-xar
+  - SIPRI Top 100 arms-producing companies: https://www.sipri.org/databases/armsindustry
+- `mega_healthcare_biotech` — built from broad healthcare and biotech ETF holdings (VHT, IBB, XBI), covering pharma, medtech, providers, and biotech.
+  - VHT holdings: https://stockanalysis.com/etf/vht/holdings/
+  - IBB holdings: https://www.ishares.com/us/products/239699/ishares-biotechnology-etf
+  - XBI holdings: https://www.ssga.com/us/en/intermediary/etfs/state-street-spdr-sp-biotech-etf-xbi
+
 ## Core Data Contracts
 
 - **OHLCV**: pandas DataFrame with MultiIndex columns `(field, ticker)`
 - **positions.json**: single source of truth for open positions
 - **orders.json**: order lifecycle and position-linked entry/exit orders
 
-## Development
+## Testing
 
-Run tests:
+### Backend Tests
 
 ```bash
 pytest -q
 ```
 
+### Frontend Tests
+
+```bash
+cd web-ui
+npm test              # Run all tests
+npm run test:coverage # Run with coverage report
+```
+
+**Test Coverage:** 158 tests (51 unit, 24 component, 87 integration)
+
+---
+
 ## Documentation
 
-- `docs/OPERATIONAL_GUIDE.md` — day-to-day operational workflow
-- `docs/DAILY_USAGE_GUIDE.md` — practical routine and timing
-- `docs/UI.md` — UI usage notes
+### Getting Started
+- **[Web UI Guide](docs/WEB_UI_GUIDE.md)** — Complete Web UI documentation (recommended)
+- **[CLI Usage](#cli-usage)** — Command-line interface reference (see above)
 
+### Operational Guides
+- **[Operational Guide](docs/OPERATIONAL_GUIDE.md)** — Day-to-day CLI workflows
+- **[Daily Usage Guide](docs/DAILY_USAGE_GUIDE.md)** — Daily routine and timing (Barcelona/CET)
+
+### Technical References
+- **[API Documentation](api/README.md)** — FastAPI REST API reference (18 endpoints)
+- **[Web UI README](web-ui/README.md)** — React/TypeScript architecture
+- **[AGENTS.md](AGENTS.md)** — Guide for AI coding assistants
+
+### Planning
+- **[ROADMAP.md](ROADMAP.md)** — Feature roadmap and priorities

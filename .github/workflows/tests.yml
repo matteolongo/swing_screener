@@ -1,24 +1,53 @@
-name: tests
+name: Tests
 
 on:
   push:
-    branches: ["**"]
+    branches: ["main", "refactor/**", "feature/**"]  # Only test main and feature branches
   pull_request:
+    branches: ["main"]  # Only test PRs to main
 
 jobs:
   pytest:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write        # Required for test-reporter to create check runs
+      pull-requests: write # For commenting on PRs
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: "pip"
+          
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e ".[dev]"
-      - name: Run tests
-        run: pytest
+          
+      - name: Run tests with coverage
+        run: |
+          pytest --verbose --tb=short \
+            --cov=swing_screener --cov=api \
+            --cov-report=term --cov-report=xml \
+            --junit-xml=test-results.xml
+          
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml
+          fail_ci_if_error: false  # Don't fail if Codecov upload fails
+          
+      - name: Test Report
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: PyTest Results
+          path: test-results.xml
+          reporter: java-junit
+          fail-on-error: true  # Fail workflow if tests fail

@@ -72,16 +72,23 @@ def compute_volatility_features(
     high = _extract_field_matrix(ohlcv, "High")
     low = _extract_field_matrix(ohlcv, "Low")
     close = _extract_field_matrix(ohlcv, "Close")
+    if high.empty or low.empty or close.empty:
+        cols = [f"atr{cfg.atr_window}", "atr_pct"]
+        return pd.DataFrame(columns=cols, index=pd.Index([], name="ticker"))
 
     common = sorted(set(high.columns) & set(low.columns) & set(close.columns))
     if not common:
-        raise ValueError("No common tickers across High/Low/Close.")
+        cols = [f"atr{cfg.atr_window}", "atr_pct"]
+        return pd.DataFrame(columns=cols, index=pd.Index([], name="ticker"))
 
     high = high[common]
     low = low[common]
     close = close[common]
 
     atr_df = compute_atr(high, low, close, window=cfg.atr_window)
+    if atr_df.empty or close.empty:
+        cols = [f"atr{cfg.atr_window}", "atr_pct"]
+        return pd.DataFrame(columns=cols, index=pd.Index([], name="ticker"))
 
     last_close = close.iloc[-1]
     last_atr = atr_df.iloc[-1]

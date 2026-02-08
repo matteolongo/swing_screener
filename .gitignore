@@ -54,3 +54,25 @@ dist/
 # Execution files
 orders.json
 positions.json
+# =========================
+# Node.js / npm
+# =========================
+node_modules/
+package-lock.json
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# =========================
+# Web UI build artifacts
+# =========================
+web-ui/dist/
+web-ui/.vite/
+web-ui/coverage/
+
+# =========================
+# Test artifacts
+# =========================
+test-results.xml
+coverage.xml
+.coverage

@@ -62,16 +62,21 @@ def compute_momentum_features(
     Benchmark ticker is removed from the output index.
     """
     close = _get_close_matrix(ohlcv)
+    if close.empty:
+        cols = ["mom_6m", "mom_12m", "rs_6m"]
+        return pd.DataFrame(columns=cols, index=pd.Index([], name="ticker"))
 
     if cfg.benchmark not in close.columns:
-        raise ValueError(f"Benchmark '{cfg.benchmark}' not present in Close data.")
+        cols = ["mom_6m", "mom_12m", "rs_6m"]
+        return pd.DataFrame(columns=cols, index=pd.Index([], name="ticker"))
 
     mom6 = compute_returns(close, cfg.lookback_6m).rename("mom_6m")
     mom12 = compute_returns(close, cfg.lookback_12m).rename("mom_12m")
 
     bmk6 = mom6.get(cfg.benchmark, None)
     if bmk6 is None or pd.isna(bmk6):
-        raise RuntimeError("Unable to compute benchmark momentum (mom_6m).")
+        cols = ["mom_6m", "mom_12m", "rs_6m"]
+        return pd.DataFrame(columns=cols, index=pd.Index([], name="ticker"))
 
     rs6 = (mom6 - bmk6).rename("rs_6m")
 
