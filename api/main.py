@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 
 # Import routers
-from api.routers import config, screener, portfolio
+from api.routers import config, screener, portfolio, backtest
 
 
 @asynccontextmanager
@@ -71,6 +71,7 @@ async def health():
 app.include_router(config.router, prefix="/api/config", tags=["config"])
 app.include_router(screener.router, prefix="/api/screener", tags=["screener"])
 app.include_router(portfolio.router, prefix="/api/portfolio", tags=["portfolio"])
+app.include_router(backtest.router, prefix="/api/backtest", tags=["backtest"])
 
 
 if __name__ == "__main__":
