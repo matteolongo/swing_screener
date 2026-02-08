@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { PlayCircle, RefreshCw, TrendingUp, AlertCircle } from 'lucide-react';
+import { PlayCircle, RefreshCw, TrendingUp, AlertCircle, BarChart3 } from 'lucide-react';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import { API_ENDPOINTS, apiUrl } from '../lib/api';
@@ -14,6 +14,7 @@ import {
 import { CreateOrderRequest, transformCreateOrderRequest } from '../types/order';
 import { useConfigStore } from '../stores/configStore';
 import { formatCurrency, formatPercent } from '../utils/formatters';
+import QuickBacktestModal from '../components/modals/QuickBacktestModal';
 
 export default function Screener() {
   const { config } = useConfigStore();
@@ -37,6 +38,7 @@ export default function Screener() {
   });
   
   const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
+  const [showBacktestModal, setShowBacktestModal] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<ScreenerCandidate | null>(null);
 
   // Save preferences to localStorage when they change
@@ -359,16 +361,29 @@ export default function Screener() {
                           </span>
                         </td>
                         <td className="py-3 px-4 text-center">
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={() => {
-                              setSelectedCandidate(candidate);
-                              setShowCreateOrderModal(true);
-                            }}
-                          >
-                            Create Order
-                          </Button>
+                          <div className="flex gap-2 justify-center">
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => {
+                                setSelectedCandidate(candidate);
+                                setShowBacktestModal(true);
+                              }}
+                              title="Quick Backtest"
+                            >
+                              <BarChart3 className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="primary"
+                              onClick={() => {
+                                setSelectedCandidate(candidate);
+                                setShowCreateOrderModal(true);
+                              }}
+                            >
+                              Create Order
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -392,6 +407,17 @@ export default function Screener() {
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ['orders'] });
             setShowCreateOrderModal(false);
+            setSelectedCandidate(null);
+          }}
+        />
+      )}
+
+      {/* Quick Backtest Modal */}
+      {showBacktestModal && selectedCandidate && (
+        <QuickBacktestModal
+          ticker={selectedCandidate.ticker}
+          onClose={() => {
+            setShowBacktestModal(false);
             setSelectedCandidate(null);
           }}
         />
