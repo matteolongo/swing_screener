@@ -1,3 +1,18 @@
+# Swing Screener UI (Streamlit - DEPRECATED)
+
+> ⚠️ **DEPRECATED:** This documentation describes the old Streamlit UI, which has been replaced by a modern React-based Web UI.
+> 
+> For current UI documentation, see:
+> - **Web UI Guide:** `docs/WEB_UI_GUIDE.md`
+> - **Web UI README:** `web-ui/README.md`
+> - **API Documentation:** `api/README.md`
+
+---
+
+_The following content is preserved for historical reference only._
+
+---
+
 # Swing Screener UI
 
 This is a local-first Streamlit UI that wraps the existing screener and position manager logic.
