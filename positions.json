@@ -1,0 +1,131 @@
+{
+  "asof": "2026-02-08",
+  "positions": [
+    {
+      "ticker": "INTC",
+      "status": "closed",
+      "position_id": "POS-INTC-20260115-01",
+      "source_order_id": "ORD-INTC-20260115-ENTRY",
+      "entry_date": "2026-01-15",
+      "entry_price": 48.15,
+      "stop_price": 47.17,
+      "shares": 1,
+      "initial_risk": 0.98,
+      "max_favorable_price": null,
+      "exit_date": "2026-01-23",
+      "exit_price": 47.29,
+      "notes": "stopped",
+      "exit_order_ids": [
+        "ORD-INTC-20260115-STOP"
+      ]
+    },
+    {
+      "ticker": "VALE",
+      "status": "open",
+      "position_id": "POS-VALE-20260116-01",
+      "source_order_id": "ORD-VALE-20260116-ENTRY",
+      "entry_date": "2026-01-16",
+      "entry_price": 16.295,
+      "stop_price": 15.0,
+      "shares": 6,
+      "initial_risk": 1.295,
+      "max_favorable_price": 17.030000686645508,
+      "exit_date": null,
+      "exit_price": null,
+      "notes": "Entry price synced with Degiro (includes fees). Stop updated to 15.0: trailing stop test from UI. UPDATE DEGIRO STOP TO $15.00",
+      "exit_order_ids": [
+        "ORD-VALE-20260116-STOP"
+      ]
+    },
+    {
+      "ticker": "HSBC",
+      "status": "closed",
+      "position_id": "POS-HSBC-20260202-01",
+      "source_order_id": "HSBC-20260202145834",
+      "entry_date": "2026-02-02",
+      "entry_price": 88.78,
+      "stop_price": 86.4,
+      "shares": 1,
+      "initial_risk": 2.3799999999999955,
+      "max_favorable_price": 89.5999984741211,
+      "exit_date": "2026-02-05",
+      "exit_price": 86.4,
+      "notes": "",
+      "exit_order_ids": [
+        "ORD-STOP-POS-HSBC-20260202-01"
+      ]
+    },
+    {
+      "ticker": "MUFG",
+      "status": "open",
+      "position_id": "POS-MUFG-20260202-01",
+      "source_order_id": "MUFG-20260202202527",
+      "entry_date": "2026-02-02",
+      "entry_price": 19.14,
+      "stop_price": 17.5,
+      "shares": 4,
+      "initial_risk": 1.64,
+      "max_favorable_price": 19.139999389648438,
+      "exit_date": null,
+      "exit_price": null,
+      "notes": "Entry price synced with Degiro (includes fees). UPDATE DEGIRO STOP TO $17.50",
+      "exit_order_ids": [
+        "ORD-STOP-POS-MUFG-20260202-01"
+      ]
+    },
+    {
+      "ticker": "SAN",
+      "status": "closed",
+      "position_id": "POS-SAN-20260203-01",
+      "source_order_id": "SAN-20260203014018",
+      "entry_date": "2026-02-03",
+      "entry_price": 13.03,
+      "stop_price": 11.9,
+      "shares": 9,
+      "initial_risk": 1.129999999999999,
+      "max_favorable_price": 13.03,
+      "exit_date": "2026-02-03",
+      "exit_price": 11.905,
+      "notes": "",
+      "exit_order_ids": [
+        "ORD-STOP-POS-SAN-20260203-01"
+      ]
+    },
+    {
+      "ticker": "SMFG",
+      "status": "open",
+      "position_id": "POS-SMFG-20260205-01",
+      "source_order_id": "SMFG-20260205001815",
+      "entry_date": "2026-02-05",
+      "entry_price": 23.04,
+      "stop_price": 21.6,
+      "shares": 4,
+      "initial_risk": 1.44,
+      "max_favorable_price": 23.100000381469727,
+      "exit_date": null,
+      "exit_price": null,
+      "notes": "Synced with Degiro - reopened (was incorrectly closed in system)",
+      "exit_order_ids": [
+        "ORD-STOP-POS-SMFG-20260205-01"
+      ]
+    },
+    {
+      "ticker": "GSK",
+      "status": "closed",
+      "position_id": "POS-GSK-20260205-01",
+      "source_order_id": "GSK-20260205221655",
+      "entry_date": "2026-02-05",
+      "entry_price": 59.0,
+      "stop_price": 56.58,
+      "shares": 1,
+      "initial_risk": 2.4200000000000017,
+      "max_favorable_price": 60.22999954223633,
+      "exit_date": "2026-02-08",
+      "exit_price": 59.0,
+      "notes": "",
+      "exit_order_ids": [
+        "ORD-STOP-POS-GSK-20260205-01"
+      ]
+    }
+  ]
+}
