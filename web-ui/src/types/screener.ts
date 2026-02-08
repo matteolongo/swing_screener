@@ -2,6 +2,8 @@
 
 export interface ScreenerCandidate {
   ticker: string;
+  name?: string;
+  sector?: string;
   close: number;
   sma20: number;
   sma50: number;
@@ -18,6 +20,8 @@ export interface ScreenerCandidate {
 // API response format (snake_case)
 export interface ScreenerCandidateAPI {
   ticker: string;
+  name?: string;
+  sector?: string;
   close: number;
   sma_20: number;
   sma_50: number;
@@ -73,6 +77,8 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
   return {
     candidates: apiResponse.candidates.map(c => ({
       ticker: c.ticker,
+      name: c.name,
+      sector: c.sector,
       close: c.close,
       sma20: c.sma_20,
       sma50: c.sma_50,

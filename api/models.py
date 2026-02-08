@@ -142,6 +142,8 @@ class OrderPreview(BaseModel):
 
 class ScreenerCandidate(BaseModel):
     ticker: str
+    name: Optional[str] = None
+    sector: Optional[str] = None
     close: float
     sma_20: float
     sma_50: float

@@ -19,6 +19,7 @@ from swing_screener.data.universe import (
     UniverseConfig,
 )
 from swing_screener.data.market_data import fetch_ohlcv
+from swing_screener.data.ticker_info import get_multiple_ticker_info
 from swing_screener.reporting.report import build_daily_report
 
 router = APIRouter()
@@ -99,6 +100,10 @@ async def run_screener(request: ScreenerRequest):
         if not results.empty and "confidence" in results.columns:
             results = results.sort_values("confidence", ascending=False)
         
+        # Fetch company info for all tickers
+        ticker_list = [str(idx) for idx in results.index]
+        ticker_info = get_multiple_ticker_info(ticker_list) if ticker_list else {}
+        
         # Convert to response format
         candidates = []
         for idx, row in results.iterrows():
@@ -119,9 +124,15 @@ async def run_screener(request: ScreenerRequest):
             sma50 = last_price / (1 + sma50_dist / 100) if last_price and sma50_dist else last_price
             sma200 = last_price / (1 + sma200_dist / 100) if last_price and sma200_dist else last_price
             
+            # Get company info
+            ticker_str = str(idx)
+            info = ticker_info.get(ticker_str, {})
+            
             candidates.append(
                 ScreenerCandidate(
-                    ticker=str(idx),
+                    ticker=ticker_str,
+                    name=info.get('name'),
+                    sector=info.get('sector'),
                     close=last_price,
                     sma_20=sma20,
                     sma_50=sma50,

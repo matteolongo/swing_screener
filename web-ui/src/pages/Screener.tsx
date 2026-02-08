@@ -240,6 +240,8 @@ export default function Screener() {
                   <tr className="border-b border-gray-200">
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Rank</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Ticker</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Company</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Sector</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Confidence</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Score</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Close</th>
@@ -253,7 +255,7 @@ export default function Screener() {
                 <tbody>
                   {candidates.length === 0 ? (
                     <tr>
-                      <td colSpan={10} className="text-center py-8 text-gray-500">
+                      <td colSpan={12} className="text-center py-8 text-gray-500">
                         No candidates found
                       </td>
                     </tr>
@@ -266,6 +268,14 @@ export default function Screener() {
                         <td className="py-3 px-4">
                           <span className="text-sm font-semibold text-blue-600">
                             {candidate.ticker}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-sm text-gray-700">
+                          {candidate.name || '-'}
+                        </td>
+                        <td className="py-3 px-4 text-sm text-gray-600">
+                          <span className="text-xs px-2 py-1 bg-gray-100 rounded">
+                            {candidate.sector || 'N/A'}
                           </span>
                         </td>
                         <td className="py-3 px-4 text-sm text-right">
