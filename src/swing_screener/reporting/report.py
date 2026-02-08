@@ -109,25 +109,21 @@ def build_daily_report(
 
 def _compute_confidence(report: pd.DataFrame, max_atr_pct: float) -> pd.Series:
     """
-    Confidence (0-100) for active signals only.
-    Uses existing features: score, signal, dist_sma200_pct, atr_pct.
+    Confidence (0-100) for all candidates.
+    Uses existing features: score, signal (optional), dist_sma200_pct, atr_pct.
     """
     if report is None or report.empty:
         return pd.Series(dtype=float)
 
-    out = pd.Series(index=report.index, dtype=float)
-    if "signal" not in report.columns:
-        return out
-
-    active = report["signal"].isin(["both", "breakout", "pullback"])
-    if not active.any():
-        return out
-
     score = report["score"] if "score" in report.columns else pd.Series(0.0, index=report.index)
     score = score.fillna(0.0).clip(lower=0.0, upper=1.0)
 
-    sig_map = {"both": 1.0, "breakout": 0.8, "pullback": 0.6}
-    sig_strength = report["signal"].map(sig_map).fillna(0.0).clip(lower=0.0, upper=1.0)
+    # Signal strength (optional - if no signal column, use 0.5 as neutral)
+    if "signal" in report.columns:
+        sig_map = {"both": 1.0, "breakout": 0.8, "pullback": 0.6, "none": 0.0}
+        sig_strength = report["signal"].map(sig_map).fillna(0.5).clip(lower=0.0, upper=1.0)
+    else:
+        sig_strength = pd.Series(0.5, index=report.index)
 
     if "dist_sma200_pct" in report.columns:
         trend_strength = (report["dist_sma200_pct"].clip(lower=0.0) / 20.0).clip(
@@ -149,8 +145,7 @@ def _compute_confidence(report: pd.DataFrame, max_atr_pct: float) -> pd.Series:
         0.50 * score + 0.25 * sig_strength + 0.15 * trend_strength + 0.10 * vol_strength
     )
     conf = conf.round(1)
-    out.loc[active] = conf.loc[active]
-    return out
+    return conf
 
 
 def export_report_csv(report: pd.DataFrame, path: str = "out/daily_report.csv") -> str:
