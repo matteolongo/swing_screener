@@ -85,20 +85,20 @@ async def run_screener(request: ScreenerRequest):
         )
         
         # Run screener with custom config
+        # NOTE: We'll get more than top_n initially, then filter by confidence
         report_cfg = ReportConfig(
             universe=universe_cfg,
-            ranking=RankingConfig(top_n=request.top or 20),
+            ranking=RankingConfig(top_n=100),  # Get larger pool for confidence ranking
         )
         
         results = build_daily_report(ohlcv, cfg=report_cfg, exclude_tickers=[])
         
-        # Limit results
-        if request.top and not results.empty:
-            results = results.head(request.top)
-        
-        # Sort by confidence descending (if available)
+        # Sort by confidence descending and take top N
         if not results.empty and "confidence" in results.columns:
             results = results.sort_values("confidence", ascending=False)
+            # Take top N by confidence
+            if request.top:
+                results = results.head(request.top)
             # Re-rank based on confidence order
             results['rank'] = range(1, len(results) + 1)
         
