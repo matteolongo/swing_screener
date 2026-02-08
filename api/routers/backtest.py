@@ -80,13 +80,17 @@ async def quick_backtest(request: QuickBacktestRequest):
                 "worst_trade_R": None,
             }
         else:
+            # Helper to safely convert to float (handles None)
+            def safe_float(val, default=0.0):
+                return float(val) if val is not None and pd.notna(val) else default
+            
             summary_dict = {
                 "trades": int(summary_df.iloc[0].get("trades", 0)),
-                "expectancy_R": float(summary_df.iloc[0].get("expectancy_R", 0.0)),
-                "winrate": float(summary_df.iloc[0].get("winrate", 0.0)),
-                "profit_factor_R": float(summary_df.iloc[0].get("profit_factor_R", 0.0)),
-                "max_drawdown_R": float(dd.get("max_drawdown_R", 0.0)),
-                "avg_R": float(summary_df.iloc[0].get("avg_R", 0.0)),
+                "expectancy_R": safe_float(summary_df.iloc[0].get("expectancy_R")),
+                "winrate": safe_float(summary_df.iloc[0].get("winrate")),
+                "profit_factor_R": safe_float(summary_df.iloc[0].get("profit_factor_R")),
+                "max_drawdown_R": safe_float(dd.get("max_drawdown_R")),
+                "avg_R": safe_float(summary_df.iloc[0].get("avg_R")),
                 "best_trade_R": float(trades["R"].max()) if trades is not None and not trades.empty else None,
                 "worst_trade_R": float(trades["R"].min()) if trades is not None and not trades.empty else None,
             }
@@ -100,11 +104,11 @@ async def quick_backtest(request: QuickBacktestRequest):
                 trades_detail.append(
                     BacktestTrade(
                         entry_date=str(trade["entry_date"]),
-                        entry_price=float(trade["entry_price"]),
+                        entry_price=float(trade["entry"]),
                         exit_date=str(trade["exit_date"]),
-                        exit_price=float(trade["exit_price"]),
+                        exit_price=float(trade["exit"]),
                         R=float(trade["R"]),
-                        exit_reason=str(trade["exit_reason"]),
+                        exit_reason=str(trade["exit_type"]),
                     )
                 )
         
