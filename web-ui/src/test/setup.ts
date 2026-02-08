@@ -1,15 +1,23 @@
 import '@testing-library/jest-dom/vitest'
-import { expect, afterEach } from 'vitest'
+import { expect, afterEach, beforeAll, afterAll } from 'vitest'
 import { cleanup } from '@testing-library/react'
 import * as matchers from '@testing-library/jest-dom/matchers'
+import { server } from './mocks/server'
 
 // Extend Vitest's expect with jest-dom matchers
 expect.extend(matchers)
 
-// Cleanup after each test
+// Start MSW server before all tests
+beforeAll(() => server.listen({ onUnhandledRequest: 'warn' }))
+
+// Reset handlers after each test (important for test isolation)
 afterEach(() => {
+  server.resetHandlers()
   cleanup()
 })
+
+// Stop MSW server after all tests
+afterAll(() => server.close())
 
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
