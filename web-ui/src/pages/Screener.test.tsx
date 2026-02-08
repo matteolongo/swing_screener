@@ -109,7 +109,7 @@ describe('Screener Page', () => {
       
       const input = screen.getByDisplayValue('20') as HTMLInputElement
       expect(input.min).toBe('1')
-      expect(input.max).toBe('100')
+      expect(input.max).toBe('200')
     })
   })
 
@@ -177,6 +177,7 @@ describe('Screener Page', () => {
       await waitFor(() => {
         expect(screen.getByText('Rank')).toBeInTheDocument()
         expect(screen.getByText('Ticker')).toBeInTheDocument()
+        expect(screen.getByText('Last Bar')).toBeInTheDocument()
         expect(screen.getByText('Close')).toBeInTheDocument()
         expect(screen.getByText('ATR')).toBeInTheDocument()
         expect(screen.getByText('Mom 6M')).toBeInTheDocument()
@@ -248,7 +249,9 @@ describe('Screener Page', () => {
         http.post('*/api/screener/run', () => {
           return HttpResponse.json({
             candidates: [],
-            asof: '2026-02-08',
+            asof_date: '2026-02-08',
+            total_screened: 0,
+            warnings: ['No candidates found for the current screener filters.'],
           })
         })
       )
@@ -257,7 +260,7 @@ describe('Screener Page', () => {
       await user.click(screen.getByRole('button', { name: /Run Screener/i }))
       
       await waitFor(() => {
-        expect(screen.getByText(/No candidates found/i)).toBeInTheDocument()
+        expect(screen.getByText(/^No candidates found$/i)).toBeInTheDocument()
       })
     })
   })
@@ -282,6 +285,31 @@ describe('Screener Page', () => {
       await waitFor(() => {
         expect(screen.getByText(/Error:/i)).toBeInTheDocument()
         expect(screen.getByText(/Failed to fetch market data/i)).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('Warnings', () => {
+    it('shows warning banner when API returns warnings', async () => {
+      const { server } = await import('@/test/mocks/server')
+      const { http, HttpResponse } = await import('msw')
+      
+      server.use(
+        http.post('*/api/screener/run', () => {
+          return HttpResponse.json({
+            candidates: [],
+            asof_date: '2026-02-08',
+            total_screened: 120,
+            warnings: ['Only 0 candidates found for top 200.'],
+          })
+        })
+      )
+      
+      const { user } = renderWithProviders(<Screener />)
+      await user.click(screen.getByRole('button', { name: /Run Screener/i }))
+      
+      await waitFor(() => {
+        expect(screen.getByText(/Only 0 candidates found for top 200/i)).toBeInTheDocument()
       })
     })
   })

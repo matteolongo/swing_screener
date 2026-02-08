@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import { renderWithProviders } from '@/test/utils'
 import Dashboard from './Dashboard'
 import { useConfigStore } from '@/stores/configStore'
@@ -35,6 +35,7 @@ describe('Dashboard Page', () => {
       await waitFor(() => {
         expect(screen.getByText('Portfolio Summary')).toBeInTheDocument()
         expect(screen.getByText("Today's Action Items")).toBeInTheDocument()
+        expect(screen.getByText('Open Orders Snapshot')).toBeInTheDocument()
         expect(screen.getByText('Quick Actions')).toBeInTheDocument()
         expect(screen.getByText('Getting Started')).toBeInTheDocument()
       })
@@ -150,6 +151,23 @@ describe('Dashboard Page', () => {
         expect(screen.getByText(/No action items/)).toBeInTheDocument()
         expect(screen.getByText(/You're all caught up!/)).toBeInTheDocument()
       })
+    })
+  })
+
+  describe('Open Orders Snapshot', () => {
+    it('shows snapshot table with latest close and distance', async () => {
+      renderWithProviders(<Dashboard />)
+      
+      await waitFor(() => {
+        expect(screen.getByText('Open Orders Snapshot')).toBeInTheDocument()
+      })
+
+      await screen.findByText('$16.30')
+      const table = screen.getByRole('table')
+      const tableScope = within(table)
+      expect(tableScope.getByText('VALE')).toBeInTheDocument()
+      expect(tableScope.getByText('SELL_STOP')).toBeInTheDocument()
+      expect(tableScope.getByText('-8.6%')).toBeInTheDocument()
     })
   })
 

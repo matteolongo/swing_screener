@@ -1,6 +1,8 @@
 """FastAPI main application for Swing Screener."""
 from __future__ import annotations
 
+import logging
+import sys
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -9,15 +11,19 @@ from contextlib import asynccontextmanager
 # Import routers
 from api.routers import config, screener, portfolio, backtest
 
+LOG_FORMAT = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
+logging.basicConfig(level=logging.INFO, format=LOG_FORMAT, stream=sys.stdout)
+logger = logging.getLogger("swing_screener.api")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup/shutdown."""
-    print("🚀 Swing Screener API starting up...")
-    print("📊 API docs available at: http://localhost:8000/docs")
-    print("🔧 OpenAPI schema: http://localhost:8000/openapi.json")
+    logger.info("Swing Screener API starting up...")
+    logger.info("API docs available at: http://localhost:8000/docs")
+    logger.info("OpenAPI schema: http://localhost:8000/openapi.json")
     yield
-    print("👋 Shutting down...")
+    logger.info("Shutting down...")
 
 
 app = FastAPI(
@@ -41,6 +47,7 @@ app.add_middleware(
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     """Catch-all exception handler."""
+    logger.exception("Unhandled API error")
     return JSONResponse(
         status_code=500,
         content={
