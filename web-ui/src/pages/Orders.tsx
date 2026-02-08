@@ -152,7 +152,17 @@ export default function Orders() {
                 <tbody>
                   {orders.map((order: Order) => (
                     <tr key={order.orderId} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
-                      <td className="py-3 px-4 font-mono font-semibold">{order.ticker}</td>
+                      <td className="py-3 px-4 font-mono font-semibold">
+                        <a 
+                          href={`https://finance.yahoo.com/quote/${order.ticker}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800 hover:underline"
+                          title={`View ${order.ticker} on Yahoo Finance`}
+                        >
+                          {order.ticker}
+                        </a>
+                      </td>
                       <td className="py-3 px-4 text-sm">{order.orderType}</td>
                       <td className="py-3 px-4">
                         <Badge variant={order.orderKind === 'entry' ? 'success' : order.orderKind === 'stop' ? 'error' : 'default'}>

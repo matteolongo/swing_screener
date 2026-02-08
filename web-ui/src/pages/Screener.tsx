@@ -301,12 +301,28 @@ export default function Screener() {
                           #{candidate.rank}
                         </td>
                         <td className="py-3 px-4">
-                          <span className="text-sm font-semibold text-blue-600">
+                          <a 
+                            href={`https://finance.yahoo.com/quote/${candidate.ticker}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline"
+                            title={`View ${candidate.ticker} on Yahoo Finance`}
+                          >
                             {candidate.ticker}
-                          </span>
+                          </a>
                         </td>
                         <td className="py-3 px-4 text-sm text-gray-700">
-                          {candidate.name || '-'}
+                          {candidate.name ? (
+                            <a 
+                              href={`https://finance.yahoo.com/quote/${candidate.ticker}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="hover:text-blue-600 hover:underline"
+                              title={`View ${candidate.name} on Yahoo Finance`}
+                            >
+                              {candidate.name}
+                            </a>
+                          ) : '-'}
                         </td>
                         <td className="py-3 px-4 text-sm text-gray-600">
                           <span className="text-xs px-2 py-1 bg-gray-100 rounded">

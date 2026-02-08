@@ -157,7 +157,17 @@ export default function Positions() {
 
                     return (
                       <tr key={position.positionId || position.ticker} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
-                        <td className="py-3 px-4 font-mono font-semibold">{position.ticker}</td>
+                        <td className="py-3 px-4 font-mono font-semibold">
+                          <a 
+                            href={`https://finance.yahoo.com/quote/${position.ticker}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-800 hover:underline"
+                            title={`View ${position.ticker} on Yahoo Finance`}
+                          >
+                            {position.ticker}
+                          </a>
+                        </td>
                         <td className="py-3 px-4">
                           <Badge variant={position.status === 'open' ? 'success' : 'default'}>
                             {position.status}
