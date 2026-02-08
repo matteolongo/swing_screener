@@ -89,6 +89,25 @@ def equity_curve_R(trades_all: pd.DataFrame) -> pd.DataFrame:
     return curve[["date", "R", "cum_R"]]
 
 
+def equity_curve_by_ticker_R(trades_all: pd.DataFrame) -> pd.DataFrame:
+    """
+    Cumulative R over time per ticker (grouped by exit_date).
+    """
+    if trades_all is None or trades_all.empty:
+        return pd.DataFrame(columns=["ticker", "date", "R", "cum_R"])
+
+    df = trades_all.copy()
+    if "ticker" not in df.columns:
+        return pd.DataFrame(columns=["ticker", "date", "R", "cum_R"])
+
+    df["date"] = pd.to_datetime(df["exit_date"])
+    df = df.sort_values(["ticker", "date"])
+
+    curve = df.groupby(["ticker", "date"])["R"].sum().reset_index()
+    curve["cum_R"] = curve.groupby("ticker")["R"].cumsum()
+    return curve[["ticker", "date", "R", "cum_R"]]
+
+
 def drawdown_stats(curve: pd.DataFrame) -> dict:
     """
     Returns drawdown statistics from an equity curve in R units.

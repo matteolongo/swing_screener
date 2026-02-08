@@ -45,7 +45,7 @@ describe('Screener Page', () => {
       await waitFor(() => {
         expect(screen.getByText('Universe')).toBeInTheDocument()
       })
-      expect(screen.getByText('Top Candidates')).toBeInTheDocument()
+      expect(screen.getByText('Top N')).toBeInTheDocument()
       expect(screen.getByRole('button', { name: /Run Screener/i })).toBeInTheDocument()
     })
   })
@@ -126,7 +126,7 @@ describe('Screener Page', () => {
       renderWithProviders(<Screener />)
       
       await waitFor(() => {
-        expect(screen.getByText(/Risk\/trade:/i)).toBeInTheDocument()
+        expect(screen.getByText(/Risk:/i)).toBeInTheDocument()
       })
     })
   })

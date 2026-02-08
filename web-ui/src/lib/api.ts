@@ -23,6 +23,11 @@ export const API_ENDPOINTS = {
   orders: '/api/portfolio/orders',
   order: (id: string) => `/api/portfolio/orders/${id}`,
   orderFill: (id: string) => `/api/portfolio/orders/${id}/fill`,
+
+  // Backtest
+  backtestRun: '/api/backtest/run',
+  backtestSimulations: '/api/backtest/simulations',
+  backtestSimulation: (id: string) => `/api/backtest/simulations/${id}`,
 } as const;
 
 // Helper to build full URL

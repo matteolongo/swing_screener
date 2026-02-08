@@ -92,10 +92,101 @@ export const mockScreenerResults = {
       momentum_6m: 25.0,
       momentum_12m: 45.0,
       rel_strength: 85.2,
+      confidence: 72.5,
     },
   ],
   asof_date: '2026-02-08',
   total_screened: 500,
+}
+
+export const mockBacktestRun = {
+  tickers: ['AAPL', 'MSFT'],
+  start: '2024-02-01',
+  end: '2026-02-08',
+  entry_type: 'auto',
+  summary: {
+    trades: 4,
+    expectancy_R: 0.75,
+    winrate: 0.5,
+    profit_factor_R: 1.8,
+    max_drawdown_R: -1.2,
+    avg_R: 0.6,
+    best_trade_R: 2.4,
+    worst_trade_R: -1.3,
+  },
+  summary_by_ticker: [
+    {
+      ticker: 'AAPL',
+      trades: 2,
+      expectancy_R: 0.9,
+      winrate: 0.5,
+      profit_factor_R: 2.0,
+      max_drawdown_R: null,
+      avg_R: 0.7,
+      best_trade_R: 2.4,
+      worst_trade_R: -1.0,
+    },
+  ],
+  trades: [
+    {
+      ticker: 'AAPL',
+      entry_date: '2025-01-10',
+      entry_price: 150.0,
+      exit_date: '2025-01-20',
+      exit_price: 165.0,
+      R: 2.4,
+      exit_reason: 'trailing_stop',
+      holding_days: 8,
+      stop_price: 145.0,
+    },
+  ],
+  curve_total: [
+    { date: '2025-01-20', R: 2.4, cum_R: 2.4, ticker: null },
+  ],
+  curve_by_ticker: [
+    { date: '2025-01-20', R: 2.4, cum_R: 2.4, ticker: 'AAPL' },
+  ],
+  warnings: [],
+  simulation_id: '20260208_223000_abcd12',
+  simulation_name: '2026-02-08 22:30 • AAPL, MSFT • auto • 2024-02-01→2026-02-08',
+  created_at: '2026-02-08T22:30:00',
+}
+
+export const mockBacktestSimulationList = [
+  {
+    id: '20260208_223000_abcd12',
+    name: '2026-02-08 22:30 • AAPL, MSFT • auto • 2024-02-01→2026-02-08',
+    created_at: '2026-02-08T22:30:00',
+    tickers: ['AAPL', 'MSFT'],
+    start: '2024-02-01',
+    end: '2026-02-08',
+    entry_type: 'auto',
+    trades: 4,
+  },
+]
+
+export const mockBacktestSimulation = {
+  id: '20260208_223000_abcd12',
+  name: '2026-02-08 22:30 • AAPL, MSFT • auto • 2024-02-01→2026-02-08',
+  created_at: '2026-02-08T22:30:00',
+  params: {
+    tickers: ['AAPL', 'MSFT'],
+    start: '2024-02-01',
+    end: '2026-02-08',
+    entry_type: 'auto',
+    breakout_lookback: 50,
+    pullback_ma: 20,
+    min_history: 260,
+    atr_window: 14,
+    k_atr: 2.0,
+    breakeven_at_r: 1.0,
+    trail_after_r: 2.0,
+    trail_sma: 20,
+    sma_buffer_pct: 0.005,
+    max_holding_days: 20,
+    commission_pct: 0.0,
+  },
+  result: mockBacktestRun,
 }
 
 // MSW request handlers
@@ -147,5 +238,22 @@ export const handlers = [
 
   http.post(`${API_BASE_URL}/api/screener/run`, async ({ request }) => {
     return HttpResponse.json(mockScreenerResults)
+  }),
+
+  // Backtest endpoints
+  http.get(`${API_BASE_URL}/api/backtest/simulations`, () => {
+    return HttpResponse.json(mockBacktestSimulationList)
+  }),
+
+  http.get(`${API_BASE_URL}/api/backtest/simulations/:id`, () => {
+    return HttpResponse.json(mockBacktestSimulation)
+  }),
+
+  http.delete(`${API_BASE_URL}/api/backtest/simulations/:id`, () => {
+    return HttpResponse.json({ status: 'deleted' })
+  }),
+
+  http.post(`${API_BASE_URL}/api/backtest/run`, async () => {
+    return HttpResponse.json(mockBacktestRun)
   }),
 ]

@@ -23,6 +23,9 @@ class IndicatorConfig(BaseModel):
     lookback_6m: int = Field(gt=0, description="6-month momentum lookback (e.g., 126)")
     lookback_12m: int = Field(gt=0, description="12-month momentum lookback (e.g., 252)")
     benchmark: str = Field(description="Benchmark ticker (e.g., SPY)")
+    breakout_lookback: int = Field(gt=0, description="Breakout lookback window (e.g., 50)")
+    pullback_ma: int = Field(gt=0, description="Pullback MA window (e.g., 20)")
+    min_history: int = Field(gt=0, description="Minimum bars required for signals")
 
 
 class ManageConfig(BaseModel):
@@ -164,6 +167,9 @@ class ScreenerRequest(BaseModel):
     asof_date: Optional[str] = Field(default=None, description="Date for screening (YYYY-MM-DD)")
     min_price: Optional[float] = Field(default=5.0, ge=0, description="Minimum stock price")
     max_price: Optional[float] = Field(default=500.0, gt=0, description="Maximum stock price")
+    breakout_lookback: Optional[int] = Field(default=None, gt=0, description="Breakout lookback window")
+    pullback_ma: Optional[int] = Field(default=None, gt=0, description="Pullback MA window")
+    min_history: Optional[int] = Field(default=None, gt=0, description="Minimum bars required for signals")
 
 
 class ScreenerResponse(BaseModel):
@@ -223,6 +229,98 @@ class QuickBacktestResponse(BaseModel):
     summary: BacktestSummary
     trades_detail: list[BacktestTrade]
     warnings: list[str]
+
+
+# ===== Full Backtest Models =====
+
+FullEntryType = Literal["auto", "breakout", "pullback"]
+
+
+class FullBacktestSummary(BaseModel):
+    trades: int
+    expectancy_R: Optional[float] = None
+    winrate: Optional[float] = None
+    profit_factor_R: Optional[float] = None
+    max_drawdown_R: Optional[float] = None
+    avg_R: Optional[float] = None
+    best_trade_R: Optional[float] = None
+    worst_trade_R: Optional[float] = None
+
+
+class FullBacktestSummaryByTicker(FullBacktestSummary):
+    ticker: str
+
+
+class FullBacktestTrade(BaseModel):
+    ticker: str
+    entry_date: str
+    entry_price: float
+    exit_date: str
+    exit_price: float
+    R: float
+    exit_reason: str
+    holding_days: Optional[int] = None
+    stop_price: Optional[float] = None
+
+
+class BacktestCurvePoint(BaseModel):
+    date: str
+    R: float
+    cum_R: float
+    ticker: Optional[str] = None
+
+
+class FullBacktestRequest(BaseModel):
+    tickers: list[str]
+    start: str
+    end: str
+    entry_type: FullEntryType = "auto"
+    breakout_lookback: int = Field(default=50, gt=0)
+    pullback_ma: int = Field(default=20, gt=0)
+    min_history: int = Field(default=260, gt=0)
+    atr_window: int = Field(default=14, gt=0)
+    k_atr: float = Field(default=2.0, gt=0)
+    breakeven_at_r: float = Field(default=1.0, ge=0)
+    trail_after_r: float = Field(default=2.0, ge=0)
+    trail_sma: int = Field(default=20, gt=0)
+    sma_buffer_pct: float = Field(default=0.005, ge=0)
+    max_holding_days: int = Field(default=20, gt=0)
+    commission_pct: float = Field(default=0.0, ge=0)
+
+
+class FullBacktestResponse(BaseModel):
+    tickers: list[str]
+    start: str
+    end: str
+    entry_type: FullEntryType
+    summary: FullBacktestSummary
+    summary_by_ticker: list[FullBacktestSummaryByTicker]
+    trades: list[FullBacktestTrade]
+    curve_total: list[BacktestCurvePoint]
+    curve_by_ticker: list[BacktestCurvePoint]
+    warnings: list[str]
+    simulation_id: str
+    simulation_name: str
+    created_at: str
+
+
+class BacktestSimulationMeta(BaseModel):
+    id: str
+    name: str
+    created_at: str
+    tickers: list[str]
+    start: str
+    end: str
+    entry_type: FullEntryType
+    trades: Optional[int] = None
+
+
+class BacktestSimulation(BaseModel):
+    id: str
+    name: str
+    created_at: str
+    params: FullBacktestRequest
+    result: FullBacktestResponse
 
 
 class ErrorResponse(BaseModel):

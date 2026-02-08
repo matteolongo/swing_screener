@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import MainLayout from './components/layout/MainLayout';
 import Dashboard from './pages/Dashboard';
 import Screener from './pages/Screener';
+import Backtest from './pages/Backtest';
 import Orders from './pages/Orders';
 import Positions from './pages/Positions';
 import Settings from './pages/Settings';
@@ -25,6 +26,7 @@ function App() {
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="screener" element={<Screener />} />
+            <Route path="backtest" element={<Backtest />} />
             <Route path="orders" element={<Orders />} />
             <Route path="positions" element={<Positions />} />
             <Route path="settings" element={<Settings />} />

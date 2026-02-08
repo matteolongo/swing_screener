@@ -16,6 +16,9 @@ export interface IndicatorConfig {
   lookback6m: number;
   lookback12m: number;
   benchmark: string;
+  breakoutLookback: number;
+  pullbackMa: number;
+  minHistory: number;
 }
 
 export interface ManageConfig {
@@ -50,6 +53,9 @@ export const DEFAULT_CONFIG: AppConfig = {
     lookback6m: 126,
     lookback12m: 252,
     benchmark: 'SPY',
+    breakoutLookback: 50,
+    pullbackMa: 20,
+    minHistory: 260,
   },
   manage: {
     breakevenAtR: 1.0,

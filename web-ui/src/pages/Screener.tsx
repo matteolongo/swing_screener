@@ -83,6 +83,9 @@ export default function Screener() {
         asof_date: request.asofDate,
         min_price: request.minPrice,
         max_price: request.maxPrice,
+        breakout_lookback: request.breakoutLookback,
+        pullback_ma: request.pullbackMa,
+        min_history: request.minHistory,
       };
       
       const res = await fetch(apiUrl(API_ENDPOINTS.screenerRun), {
@@ -105,6 +108,9 @@ export default function Screener() {
       top: topN,
       minPrice: minPrice,
       maxPrice: maxPrice,
+      breakoutLookback: config.indicators.breakoutLookback,
+      pullbackMa: config.indicators.pullbackMa,
+      minHistory: config.indicators.minHistory,
     });
   };
 

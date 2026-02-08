@@ -117,6 +117,71 @@ export default function IndicatorConfigForm() {
         </div>
       </div>
 
+      {/* Entry Signal Windows */}
+      <div className="space-y-4">
+        <label className="flex items-center gap-2 text-sm font-medium">
+          Entry Signal Windows
+          <HelpTooltip
+            short="Breakout lookback and pullback MA windows"
+            title="Entry Signal Windows"
+            content={
+              <div className="space-y-4">
+                <p>
+                  These windows control breakout and pullback entry signals used across the screener and backtests.
+                </p>
+                <div>
+                  <h4 className="font-semibold mb-2">Breakout:</h4>
+                  <p className="text-sm">
+                    Trigger when today&apos;s close exceeds the prior high over the lookback period.
+                  </p>
+                </div>
+                <div>
+                  <h4 className="font-semibold mb-2">Pullback:</h4>
+                  <p className="text-sm">
+                    Trigger when yesterday was below the MA and today closes back above it.
+                  </p>
+                </div>
+              </div>
+            }
+          />
+        </label>
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <label className="text-xs text-gray-600 dark:text-gray-400">Breakout Lookback</label>
+            <input
+              type="number"
+              value={indicators.breakoutLookback}
+              onChange={(e) => updateIndicators({ breakoutLookback: Number(e.target.value) })}
+              className="w-full px-3 py-2 border border-border rounded-lg"
+              min="10"
+              max="200"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-gray-600 dark:text-gray-400">Pullback MA</label>
+            <input
+              type="number"
+              value={indicators.pullbackMa}
+              onChange={(e) => updateIndicators({ pullbackMa: Number(e.target.value) })}
+              className="w-full px-3 py-2 border border-border rounded-lg"
+              min="5"
+              max="100"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-gray-600 dark:text-gray-400">Min History</label>
+            <input
+              type="number"
+              value={indicators.minHistory}
+              onChange={(e) => updateIndicators({ minHistory: Number(e.target.value) })}
+              className="w-full px-3 py-2 border border-border rounded-lg"
+              min="50"
+              max="500"
+            />
+          </div>
+        </div>
+      </div>
+
       {/* Momentum Lookback */}
       <div className="space-y-4">
         <label className="flex items-center gap-2 text-sm font-medium">
