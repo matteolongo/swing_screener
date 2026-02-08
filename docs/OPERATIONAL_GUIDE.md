@@ -1,13 +1,41 @@
-# Swing Screener — Operational Guide (Day‑to‑Day Use)
+# Swing Screener — Operational Guide (CLI Workflows)
 
-This document explains **how to actually use Swing Screener in practice**, day after day,
-with minimal manual work and zero improvisation.
+This document explains **how to use Swing Screener via command-line interface (CLI)** for:
+- Automation and scripting
+- Headless server environments
+- Advanced users who prefer terminal workflows
 
-This is **not** a beginner explanation of trading concepts
-and **not** a technical developer README.
+---
 
-Think of this as:
-> *“What do I do every day, in which order, and why.”*
+## 🌐 Prefer the Web UI?
+
+**Most users should use the Web UI instead.**
+
+The modern browser-based interface provides:
+- Visual portfolio dashboard
+- Interactive screener with Create Order modal
+- Position and order management with CRUD operations
+- Real-time P&L calculations and risk validation
+
+👉 **See [WEB_UI_GUIDE.md](WEB_UI_GUIDE.md) for complete Web UI documentation**
+
+---
+
+## 💻 CLI Workflows (This Guide)
+
+This guide covers **CLI-only** operations for advanced use cases.
+
+### When to use CLI:
+- ✅ Automation scripts (cron jobs, scheduled tasks)
+- ✅ Headless servers (no browser)
+- ✅ Batch operations (processing multiple files)
+- ✅ Integration with other tools (pipes, redirects)
+
+### When to use Web UI instead:
+- ❌ Daily interactive trading (use Web UI)
+- ❌ Visual portfolio review (use Web UI Dashboard)
+- ❌ Creating orders from screener (use Web UI Screener)
+- ❌ Managing positions (use Web UI Positions page)
 
 ---
 
