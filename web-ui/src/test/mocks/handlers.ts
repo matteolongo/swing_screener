@@ -75,7 +75,7 @@ export const mockOrders = [
 ]
 
 export const mockUniverses = {
-  universes: ['SP500', 'NASDAQ100', 'DOW30', 'CUSTOM'],
+  universes: ['mega', 'SP500', 'NASDAQ100', 'DOW30'],
 }
 
 export const mockScreenerResults = {
@@ -85,13 +85,17 @@ export const mockScreenerResults = {
       rank: 1,
       score: 0.95,
       close: 175.50,
+      sma_20: 170.00,
+      sma_50: 165.00,
+      sma_200: 160.00,
       atr: 3.25,
-      momentum_6m: 0.25,
-      momentum_12m: 0.45,
-      rs_6m: 85.2,
+      momentum_6m: 25.0,
+      momentum_12m: 45.0,
+      rel_strength: 85.2,
     },
   ],
-  asof: '2026-02-08',
+  asof_date: '2026-02-08',
+  total_screened: 500,
 }
 
 // MSW request handlers
