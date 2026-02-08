@@ -2,6 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Light mode only - dark mode removed */
 :root {
   --background: 0 0% 100%;
   --foreground: 222.2 84% 4.9%;
@@ -15,20 +16,6 @@
   --danger: 0 84.2% 60.2%;
   --danger-foreground: 210 40% 98%;
   --radius: 0.5rem;
-}
-
-.dark {
-  --background: 222.2 84% 4.9%;
-  --foreground: 210 40% 98%;
-  --border: 217.2 32.6% 17.5%;
-  --primary: 217.2 91.2% 59.8%;
-  --primary-foreground: 222.2 47.4% 11.2%;
-  --success: 142.1 70.6% 45.3%;
-  --success-foreground: 144.9 80.4% 10%;
-  --warning: 47.9 95.8% 53.1%;
-  --warning-foreground: 26 83.3% 14.1%;
-  --danger: 0 72.2% 50.6%;
-  --danger-foreground: 210 40% 98%;
 }
 
 * {
