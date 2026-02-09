@@ -98,6 +98,12 @@ The results table shows:
 - **Social Overlay** - Risk-only status (OK/Reduced/Review/Veto) with reason codes
 - **Sentiment** - Click the message icon next to any ticker to run on‑demand analysis (shows last execution time, metrics, and raw events)
 
+### 3.5 **Daily Actions (Top 3)** ✅
+
+- **DO NOTHING** — if there are no stop updates and no new trades.
+- **INCREASE STOP LOSS PRICE** — only move stops up when suggested.
+- **PLACE BUY LIMIT ORDER FOR TOP 3 screened symbols** — after you run the screener.
+
 ### 4. **Create Orders** ✅
 
 For candidates you want to trade:

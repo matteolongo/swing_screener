@@ -165,6 +165,29 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
+      {/* Daily Routine */}
+      <Card variant="bordered">
+        <CardHeader>
+          <CardTitle>Daily Routine (Top 3)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            After market close, keep the routine simple and consistent.
+          </p>
+          <ul className="mt-3 space-y-2 text-sm">
+            <li>
+              <span className="font-semibold">DO NOTHING</span> — if there are no stop updates and no new trades.
+            </li>
+            <li>
+              <span className="font-semibold">INCREASE STOP LOSS PRICE</span> — only move stops up when suggested.
+            </li>
+            <li>
+              <span className="font-semibold">PLACE BUY LIMIT ORDER FOR TOP 3 screened symbols</span> — after you run the screener.
+            </li>
+          </ul>
+        </CardContent>
+      </Card>
+
       {/* Open Orders Snapshot */}
       <Card variant="bordered">
         <CardHeader className="flex items-center justify-between">

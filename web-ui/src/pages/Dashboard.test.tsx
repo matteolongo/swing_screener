@@ -36,9 +36,23 @@ describe('Dashboard Page', () => {
       await waitFor(() => {
         expect(screen.getByText('Portfolio Summary')).toBeInTheDocument()
         expect(screen.getByText("Today's Action Items")).toBeInTheDocument()
+        expect(screen.getByText('Daily Routine (Top 3)')).toBeInTheDocument()
         expect(screen.getByText('Open Orders Snapshot')).toBeInTheDocument()
         expect(screen.getByText('Quick Actions')).toBeInTheDocument()
         expect(screen.getByText('Getting Started')).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('Daily Routine', () => {
+    it('renders the daily routine checklist', async () => {
+      renderWithProviders(<Dashboard />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Daily Routine (Top 3)')).toBeInTheDocument()
+        expect(screen.getByText(/DO NOTHING/)).toBeInTheDocument()
+        expect(screen.getByText(/INCREASE STOP LOSS PRICE/)).toBeInTheDocument()
+        expect(screen.getByText(/PLACE BUY LIMIT ORDER FOR TOP 3 screened symbols/)).toBeInTheDocument()
       })
     })
   })

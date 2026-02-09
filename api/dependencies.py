@@ -3,9 +3,18 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Optional
-import json
 
-from fastapi import HTTPException
+from fastapi import Depends
+
+from api.repositories.orders_repo import OrdersRepository
+from api.repositories.positions_repo import PositionsRepository
+from api.repositories.strategy_repo import StrategyRepository
+from api.services.backtest_service import BacktestService
+from api.services.portfolio_service import PortfolioService
+from api.services.screener_service import ScreenerService
+from api.services.social_service import SocialService
+from api.services.strategy_service import StrategyService
+from api.utils.files import read_json_file, write_json_file, get_today_str
 
 # Repository root
 ROOT_DIR = Path(__file__).parent.parent.resolve()
@@ -24,32 +33,44 @@ def get_orders_path() -> Path:
     return ORDERS_FILE
 
 
-def read_json_file(path: Path) -> dict:
-    """Read and parse JSON file, converting NaN to None."""
-    if not path.exists():
-        raise HTTPException(status_code=404, detail=f"File not found: {path.name}")
-    try:
-        # Read raw text and replace NaN with null before parsing
-        import re
-        text = path.read_text(encoding="utf-8")
-        # Replace NaN (not part of a word) with null
-        text = re.sub(r'\bNaN\b', 'null', text)
-        data = json.loads(text)
-        return data
-    except json.JSONDecodeError as e:
-        raise HTTPException(status_code=500, detail=f"Invalid JSON in {path.name}: {e}")
+def get_orders_repo() -> OrdersRepository:
+    return OrdersRepository(get_orders_path())
 
 
-def write_json_file(path: Path, data: dict) -> None:
-    """Write data to JSON file."""
-    try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to write {path.name}: {e}")
+def get_positions_repo() -> PositionsRepository:
+    return PositionsRepository(get_positions_path())
 
 
-def get_today_str() -> str:
-    """Get today's date as YYYY-MM-DD string."""
-    from datetime import date
-    return date.today().isoformat()
+def get_strategy_repo() -> StrategyRepository:
+    return StrategyRepository()
+
+
+def get_portfolio_service(
+    orders_repo: OrdersRepository = Depends(get_orders_repo),
+    positions_repo: PositionsRepository = Depends(get_positions_repo),
+) -> PortfolioService:
+    return PortfolioService(orders_repo=orders_repo, positions_repo=positions_repo)
+
+
+def get_strategy_service(
+    strategy_repo: StrategyRepository = Depends(get_strategy_repo),
+) -> StrategyService:
+    return StrategyService(strategy_repo=strategy_repo)
+
+
+def get_screener_service(
+    strategy_repo: StrategyRepository = Depends(get_strategy_repo),
+) -> ScreenerService:
+    return ScreenerService(strategy_repo=strategy_repo)
+
+
+def get_backtest_service(
+    strategy_repo: StrategyRepository = Depends(get_strategy_repo),
+) -> BacktestService:
+    return BacktestService(strategy_repo=strategy_repo)
+
+
+def get_social_service(
+    strategy_repo: StrategyRepository = Depends(get_strategy_repo),
+) -> SocialService:
+    return SocialService(strategy_repo=strategy_repo)
