@@ -219,7 +219,7 @@ export const mockOrders = [
 ]
 
 export const mockUniverses = {
-  universes: ['mega', 'SP500', 'NASDAQ100', 'DOW30'],
+  universes: ['mega_all', 'mega_stocks', 'core_etfs', 'amsterdam_all', 'SP500', 'NASDAQ100', 'DOW30'],
 }
 
 export const mockScreenerResults = {

@@ -1,0 +1,99 @@
+{
+  "universes": [
+    {
+      "name": "mega_all",
+      "file": "mega.csv",
+      "description": "Global mega-cap stocks plus core US ETFs (legacy: mega)",
+      "benchmark": "SPY",
+      "aliases": ["mega"],
+      "tags": ["global", "stocks", "etfs", "mega"]
+    },
+    {
+      "name": "mega_stocks",
+      "file": "mega_stocks.csv",
+      "description": "Global mega-cap stocks only (no ETFs)",
+      "benchmark": "SPY",
+      "tags": ["global", "stocks", "mega"]
+    },
+    {
+      "name": "core_etfs",
+      "file": "core_etfs.csv",
+      "description": "Core US market and sector ETFs",
+      "benchmark": "SPY",
+      "tags": ["us", "etf"]
+    },
+    {
+      "name": "defense_all",
+      "file": "mega_defense.csv",
+      "description": "Defense theme (stocks plus ETFs, global) (legacy: mega_defense)",
+      "benchmark": "SPY",
+      "aliases": ["mega_defense"],
+      "tags": ["defense", "global"]
+    },
+    {
+      "name": "defense_stocks",
+      "file": "defense_stocks.csv",
+      "description": "Defense theme stocks only (no ETFs)",
+      "benchmark": "SPY",
+      "tags": ["defense", "stocks"]
+    },
+    {
+      "name": "defense_etfs",
+      "file": "defense_etfs.csv",
+      "description": "Defense theme ETFs",
+      "benchmark": "SPY",
+      "tags": ["defense", "etf"]
+    },
+    {
+      "name": "healthcare_all",
+      "file": "mega_healthcare_biotech.csv",
+      "description": "Healthcare and biotech (stocks plus ETFs, global) (legacy: mega_healthcare_biotech)",
+      "benchmark": "SPY",
+      "aliases": ["mega_healthcare_biotech"],
+      "tags": ["healthcare", "biotech", "global"]
+    },
+    {
+      "name": "healthcare_stocks",
+      "file": "healthcare_stocks.csv",
+      "description": "Healthcare and biotech stocks only (no ETFs)",
+      "benchmark": "SPY",
+      "tags": ["healthcare", "biotech", "stocks"]
+    },
+    {
+      "name": "healthcare_etfs",
+      "file": "healthcare_etfs.csv",
+      "description": "Healthcare and biotech ETFs",
+      "benchmark": "SPY",
+      "tags": ["healthcare", "biotech", "etf"]
+    },
+    {
+      "name": "europe_large",
+      "file": "mega_europe.csv",
+      "description": "Large-cap Europe (legacy: mega_europe)",
+      "benchmark": "VGK",
+      "aliases": ["mega_europe"],
+      "tags": ["europe", "stocks"]
+    },
+    {
+      "name": "amsterdam_aex",
+      "file": "amsterdam_aex.csv",
+      "description": "Euronext Amsterdam AEX constituents",
+      "benchmark": "VGK",
+      "tags": ["amsterdam", "aex", "stocks"]
+    },
+    {
+      "name": "amsterdam_all",
+      "file": "amsterdam_all.csv",
+      "description": "Euronext Amsterdam AEX + AMX constituents",
+      "benchmark": "VGK",
+      "tags": ["amsterdam", "aex", "amx", "stocks"]
+    },
+    {
+      "name": "amsterdam_amx",
+      "file": "amsterdam_amx.csv",
+      "description": "Euronext Amsterdam AMX (Midcap) constituents",
+      "benchmark": "VGK",
+      "tags": ["amsterdam", "amx", "stocks"]
+    }
+  ]
+}

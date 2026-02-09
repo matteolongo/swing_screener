@@ -6,12 +6,13 @@ from swing_screener.data.universe import (
     save_universe_file,
     apply_universe_config,
     UniverseConfig,
+    load_universe_from_package,
 )
 
 
-def test_list_package_universes_includes_mega():
+def test_list_package_universes_includes_mega_all():
     universes = list_package_universes()
-    assert "mega" in universes
+    assert "mega_all" in universes
 
 
 def test_filter_ticker_list_include_exclude_and_grep():
@@ -37,3 +38,10 @@ def test_save_universe_file_and_apply_config(tmp_path: Path):
     applied = apply_universe_config(tickers, cfg)
     # Max tickers keeps 2; benchmark replaces last slot
     assert applied[-1] == "SPY"
+
+
+def test_universe_alias_mega_resolves_to_mega_all():
+    cfg = UniverseConfig(benchmark="SPY", ensure_benchmark=False)
+    by_alias = load_universe_from_package("mega", cfg)
+    by_canonical = load_universe_from_package("mega_all", cfg)
+    assert by_alias == by_canonical

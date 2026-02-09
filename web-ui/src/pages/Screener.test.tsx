@@ -68,7 +68,7 @@ describe('Screener Page', () => {
       await waitFor(() => {
         const selects = screen.getAllByRole('combobox')
         const universeSelect = selects[0] as HTMLSelectElement
-        expect(universeSelect.value).toBe('mega')
+        expect(universeSelect.value).toBe('mega_all')
       })
     })
 

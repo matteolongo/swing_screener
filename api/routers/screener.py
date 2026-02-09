@@ -20,6 +20,7 @@ from swing_screener.data.universe import (
     load_universe_from_package,
     list_package_universes,
     UniverseConfig as DataUniverseConfig,
+    get_universe_benchmark,
 )
 from swing_screener.data.market_data import fetch_ohlcv
 from swing_screener.data.ticker_info import get_multiple_ticker_info
@@ -169,6 +170,14 @@ async def run_screener(request: ScreenerRequest):
         strategy = _resolve_strategy(request.strategy_id)
         universe_cfg = build_universe_config(strategy)
         benchmark = universe_cfg.mom.benchmark
+        if request.universe:
+            uni_benchmark = get_universe_benchmark(request.universe)
+            if uni_benchmark and uni_benchmark != benchmark:
+                universe_cfg = replace(
+                    universe_cfg,
+                    mom=replace(universe_cfg.mom, benchmark=uni_benchmark),
+                )
+                benchmark = uni_benchmark
 
         # Determine date
         if request.asof_date:
@@ -186,10 +195,10 @@ async def run_screener(request: ScreenerRequest):
             ucfg = DataUniverseConfig(benchmark=benchmark, ensure_benchmark=True, max_tickers=universe_cap)
             tickers = load_universe_from_package(request.universe, ucfg)
         else:
-            # Default to mega
+            # Default to mega_all
             universe_cap = max(500, requested_top * 2)
             ucfg = DataUniverseConfig(benchmark=benchmark, ensure_benchmark=True, max_tickers=universe_cap)
-            tickers = load_universe_from_package("mega", ucfg)
+            tickers = load_universe_from_package("mega_all", ucfg)
         
         # Import MarketDataConfig and ReportConfig
         from swing_screener.data.market_data import MarketDataConfig
@@ -203,7 +212,7 @@ async def run_screener(request: ScreenerRequest):
         )
         logger.info(
             "Screener run: universe=%s top=%s tickers=%s",
-            request.universe or "mega",
+            request.universe or "mega_all",
             requested_top,
             len(tickers),
         )

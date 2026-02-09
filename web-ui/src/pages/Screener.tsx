@@ -20,6 +20,16 @@ import { formatCurrency, formatPercent } from '../utils/formatters';
 import QuickBacktestModal from '../components/modals/QuickBacktestModal';
 
 const TOP_N_MAX = 200;
+const UNIVERSE_ALIASES: Record<string, string> = {
+  mega: 'mega_all',
+  mega_defense: 'defense_all',
+  mega_healthcare_biotech: 'healthcare_all',
+  mega_europe: 'europe_large',
+};
+const normalizeUniverse = (value: string | null) => {
+  if (!value) return null;
+  return UNIVERSE_ALIASES[value] ?? value;
+};
 const OVERLAY_BADGES: Record<string, { label: string; className: string }> = {
   OK: { label: 'OK', className: 'bg-green-100 text-green-700' },
   REDUCED_RISK: { label: 'Reduced', className: 'bg-yellow-100 text-yellow-800' },
@@ -41,7 +51,7 @@ export default function Screener() {
   
   // Load saved preferences from localStorage or use defaults
   const [selectedUniverse, setSelectedUniverse] = useState<string>(() => {
-    return localStorage.getItem('screener.universe') || 'mega';
+    return normalizeUniverse(localStorage.getItem('screener.universe')) || 'mega_all';
   });
   const [topN, setTopN] = useState<number>(() => {
     const saved = localStorage.getItem('screener.topN');

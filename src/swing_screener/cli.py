@@ -17,6 +17,8 @@ from swing_screener.data.universe import (
     load_universe_from_file,
     UniverseConfig,
     list_package_universes,
+    get_universe_benchmark,
+    get_universe_package_path,
     filter_ticker_list,
     apply_universe_config,
     save_universe_file,
@@ -161,7 +163,7 @@ def main() -> None:
     run = sub.add_parser("run", help="Run daily screener")
     src = run.add_mutually_exclusive_group(required=True)
     src.add_argument("--tickers", nargs="+", help="Manual tickers list")
-    src.add_argument("--universe", help="Universe name (e.g. mega, sp500)")
+    src.add_argument("--universe", help="Universe name (e.g. mega_all, sp500)")
     src.add_argument("--universe-file", help="Path to a file containing tickers")
 
     run.add_argument(
@@ -308,7 +310,7 @@ def main() -> None:
 
     uni_show = uni_sub.add_parser("show", help="Preview a universe")
     src_show = uni_show.add_mutually_exclusive_group(required=True)
-    src_show.add_argument("--name", help="Packaged universe name (e.g. mega)")
+    src_show.add_argument("--name", help="Packaged universe name (e.g. mega_all)")
     src_show.add_argument("--file", help="Path to a universe file")
     uni_show.add_argument("--top", type=int, default=20, help="Preview the first N tickers")
     uni_show.add_argument("--grep", help="Keep tickers containing this substring (case-insensitive)")
@@ -330,7 +332,7 @@ def main() -> None:
 
     uni_filter = uni_sub.add_parser("filter", help="Filter a universe and save to CSV")
     src_filter = uni_filter.add_mutually_exclusive_group(required=True)
-    src_filter.add_argument("--name", help="Packaged universe name (e.g. mega)")
+    src_filter.add_argument("--name", help="Packaged universe name (e.g. mega_all)")
     src_filter.add_argument("--file", help="Path to a universe file")
     uni_filter.add_argument(
         "--grep", help="Keep tickers containing this substring (case-insensitive)"
@@ -422,6 +424,17 @@ def main() -> None:
 
         report_cfg = build_report_config(strategy, top_override=args.top)
         benchmark = report_cfg.universe.mom.benchmark
+        if args.universe:
+            uni_benchmark = get_universe_benchmark(args.universe)
+            if uni_benchmark and uni_benchmark != benchmark:
+                report_cfg = replace(
+                    report_cfg,
+                    universe=replace(
+                        report_cfg.universe,
+                        mom=replace(report_cfg.universe.mom, benchmark=uni_benchmark),
+                    ),
+                )
+                benchmark = uni_benchmark
 
         tickers = _resolve_tickers_from_run_args(args, benchmark=benchmark)
 
@@ -752,8 +765,6 @@ def main() -> None:
         return
 
     if args.command == "universes":
-        import importlib.resources as importlib_resources
-
         def _load_base(name: str | None, file: str | None) -> list[str]:
             cfg = UniverseConfig(
                 benchmark=args.benchmark if hasattr(args, "benchmark") else "SPY",
@@ -772,12 +783,7 @@ def main() -> None:
             print("Packaged universes:")
             for n in names:
                 if args.show_paths:
-                    pkg = "swing_screener.data"
-                    p = (
-                        importlib_resources.files(pkg)
-                        .joinpath(f"universes/{n}.csv")
-                        .resolve()
-                    )
+                    p = get_universe_package_path(n)
                     print(f"- {n} ({p})")
                 else:
                     print(f"- {n}")

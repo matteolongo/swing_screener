@@ -79,7 +79,7 @@ This is the recommended daily routine (after market close, ~22:00 CET):
 
 Navigate to **Screener** page:
 
-1. Select universe (e.g., "mega", "mega_defense")
+1. Select universe (e.g., "mega_all", "defense_all", "amsterdam_aex", "amsterdam_all")
 2. Optionally set "Top N" limit (e.g., 10)
 3. Click **"Run Screener"**
 4. Wait for results (~10-30 seconds depending on universe size)

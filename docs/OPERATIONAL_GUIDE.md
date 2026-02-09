@@ -178,12 +178,12 @@ Never run during market hours.
 Run the screener:
 
 ```bash
-swing-screener run --universe mega --positions data/positions.json --csv out/report.csv
+swing-screener run --universe mega_all --positions data/positions.json --csv out/report.csv
 ```
 
 To run a specific strategy (override active):
 ```bash
-swing-screener run --universe mega --positions data/positions.json --strategy-id STRAT_ID --csv out/report.csv
+swing-screener run --universe mega_all --positions data/positions.json --strategy-id STRAT_ID --csv out/report.csv
 ```
 
 This does:
@@ -348,13 +348,15 @@ You can now inspect, filter, and save universes via CLI:
   ```bash
   swing-screener universes list
   ```
+  Examples include `mega_all`, `mega_stocks`, `core_etfs`, `defense_all`, `healthcare_all`, `europe_large`, `amsterdam_aex`, `amsterdam_all`, `amsterdam_amx`.
+  Note: named universes can specify a default benchmark (e.g., `europe_large` → `VGK`, `amsterdam_*` → `VGK`). When you pass `--universe`, that benchmark is used for momentum/RS and regime checks.
 - **Preview with filters (include/exclude/grep)**
   ```bash
-  swing-screener universes show --name mega --top 20 --grep A --exclude AAPL
+  swing-screener universes show --name mega_all --top 20 --grep A --exclude AAPL
   ```
 - **Filter and save to a CSV** (reusable with `--universe-file`)
   ```bash
-  swing-screener universes filter --name mega --grep X --out data/universes/custom_x.csv
+  swing-screener universes filter --name mega_all --grep X --out data/universes/custom_x.csv
   ```
   Options:
   - `--include / --exclude` literal tickers
