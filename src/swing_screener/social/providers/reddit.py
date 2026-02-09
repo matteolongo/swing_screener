@@ -8,6 +8,7 @@ import httpx
 from swing_screener.social.models import SocialRawEvent
 from swing_screener.social.utils import extract_tickers, hash_author
 from swing_screener.social.cache import SocialCache
+from swing_screener.social.config import DEFAULT_CACHE_TTL_HOURS
 
 
 class RedditProvider:
@@ -29,7 +30,12 @@ class RedditProvider:
         self, start_dt: datetime, end_dt: datetime, symbols: list[str]
     ) -> list[SocialRawEvent]:
         target_day: date = start_dt.date()
-        cached = self.cache.get_events(self.name, target_day, symbols)
+        cached = self.cache.get_events(
+            self.name,
+            target_day,
+            symbols,
+            max_age_hours=DEFAULT_CACHE_TTL_HOURS,
+        )
         if cached is not None:
             return cached
 

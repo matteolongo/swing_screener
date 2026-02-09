@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from dataclasses import dataclass
 from datetime import date, timedelta
 from pathlib import Path
@@ -26,15 +27,27 @@ class SocialCache:
     def _metrics_path(self, day: date) -> Path:
         return self._root() / "metrics" / f"{day.isoformat()}.json"
 
+    def _metadata_path(self) -> Path:
+        return self._root() / "metadata.json"
+
     def _ensure_parent(self, path: Path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
 
     def get_events(
-        self, provider: str, day: date, symbols: Iterable[str] | None = None
+        self,
+        provider: str,
+        day: date,
+        symbols: Iterable[str] | None = None,
+        max_age_hours: int | None = None,
     ) -> Optional[list[SocialRawEvent]]:
         path = self._events_path(provider, day)
         if not path.exists():
             return None
+        if max_age_hours is not None:
+            mtime = datetime.fromtimestamp(path.stat().st_mtime)
+            age_hours = (datetime.now() - mtime).total_seconds() / 3600.0
+            if age_hours > max_age_hours:
+                return None
         data = json.loads(path.read_text(encoding="utf-8"))
         events = [SocialRawEvent.model_validate(item) for item in data]
         if symbols:
@@ -74,6 +87,17 @@ class SocialCache:
                     values.append(float(m.attention_score))
                     break
         return values
+
+    def store_run_metadata(self, payload: dict) -> None:
+        path = self._metadata_path()
+        self._ensure_parent(path)
+        path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+    def load_run_metadata(self) -> Optional[dict]:
+        path = self._metadata_path()
+        if not path.exists():
+            return None
+        return json.loads(path.read_text(encoding="utf-8"))
 
     def get_hype_history(self, symbol: str, asof: date, lookback_days: int) -> list[float]:
         symbol = symbol.upper()

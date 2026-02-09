@@ -24,7 +24,7 @@ def run_social_overlay(
     ohlcv: pd.DataFrame,
     asof: date,
     cfg: SocialOverlayConfig,
-) -> tuple[list[SocialDailyMetrics], list[SocialOverlayDecision]]:
+) -> tuple[list[SocialDailyMetrics], list[SocialOverlayDecision], dict]:
     cache = SocialCache()
     provider = RedditProvider(
         list(DEFAULT_SUBREDDITS),
@@ -37,18 +37,33 @@ def run_social_overlay(
     end_dt = datetime.combine(asof, time.max)
     start_dt = end_dt - timedelta(hours=lookback_hours)
 
-    events = provider.fetch_events(start_dt, end_dt, list(symbols))
-    metrics = compute_daily_metrics(
-        events,
-        symbols,
-        ohlcv,
-        asof,
-        cache,
-        z_lookback_days=DEFAULT_ATTENTION_LOOKBACK_DAYS,
-    )
-    decisions = apply_overlay(metrics, cfg, cache)
+    meta: dict = {
+        "provider": provider.name,
+        "asof": asof.isoformat(),
+        "start_dt": start_dt.isoformat(),
+        "end_dt": end_dt.isoformat(),
+        "lookback_hours": lookback_hours,
+        "status": "ok",
+    }
 
-    return metrics, decisions
+    try:
+        events = provider.fetch_events(start_dt, end_dt, list(symbols))
+        metrics = compute_daily_metrics(
+            events,
+            symbols,
+            ohlcv,
+            asof,
+            cache,
+            z_lookback_days=DEFAULT_ATTENTION_LOOKBACK_DAYS,
+        )
+        decisions = apply_overlay(metrics, cfg, cache)
+        cache.store_run_metadata(meta)
+        return metrics, decisions, meta
+    except Exception as exc:
+        meta["status"] = "error"
+        meta["error"] = str(exc)
+        cache.store_run_metadata(meta)
+        raise
 
 
 __all__ = [

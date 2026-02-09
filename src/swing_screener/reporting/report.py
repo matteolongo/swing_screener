@@ -73,11 +73,12 @@ def build_daily_report(
     max_pos_multipliers: dict[str, float] | None = None
     vetoes: set[str] | None = None
     overlay_rows: list[dict] | None = None
+    overlay_meta: dict | None = None
 
     if cfg.social_overlay.enabled:
         try:
             asof = ohlcv.index.max().date()
-            metrics, decisions = run_social_overlay(
+            metrics, decisions, overlay_meta = run_social_overlay(
                 tickers,
                 ohlcv,
                 asof,
@@ -95,15 +96,15 @@ def build_daily_report(
                 m = metrics_map.get(sym)
                 d = decision_map.get(sym)
                 if m is None or d is None:
-                    overlay_rows.append(
-                        {
-                            "ticker": sym,
-                            "overlay_status": "NO_DATA",
-                            "overlay_reasons": ["NO_SOCIAL_DATA"],
-                            "overlay_risk_multiplier": 1.0,
-                            "overlay_max_pos_multiplier": 1.0,
-                            "overlay_attention_z": None,
-                            "overlay_sentiment_score": None,
+                overlay_rows.append(
+                    {
+                        "ticker": sym,
+                        "overlay_status": "NO_DATA",
+                        "overlay_reasons": ["NO_SOCIAL_DATA"],
+                        "overlay_risk_multiplier": 1.0,
+                        "overlay_max_pos_multiplier": 1.0,
+                        "overlay_attention_z": None,
+                        "overlay_sentiment_score": None,
                             "overlay_sentiment_confidence": None,
                             "overlay_hype_score": None,
                             "overlay_sample_size": None,
@@ -141,7 +142,33 @@ def build_daily_report(
                     }
                 )
         except Exception as exc:
+            asof = ohlcv.index.max().date()
+            overlay_meta = {
+                "provider": "reddit",
+                "asof": asof.isoformat(),
+                "status": "error",
+                "error": str(exc),
+            }
             logger.warning("Social overlay disabled due to provider error: %s", exc)
+            overlay_rows = [
+                {
+                    "ticker": sym,
+                    "overlay_status": "NO_DATA",
+                    "overlay_reasons": ["PROVIDER_ERROR"],
+                    "overlay_risk_multiplier": 1.0,
+                    "overlay_max_pos_multiplier": 1.0,
+                    "overlay_attention_z": None,
+                    "overlay_sentiment_score": None,
+                    "overlay_sentiment_confidence": None,
+                    "overlay_hype_score": None,
+                    "overlay_sample_size": None,
+                    "overlay_review_required": False,
+                    "overlay_veto": False,
+                }
+                for sym in tickers
+            ]
+    else:
+        overlay_meta = {"status": "disabled"}
 
     plans = build_trade_plans(
         ranked,
@@ -202,6 +229,8 @@ def build_daily_report(
         report = report.sort_values(["signal_order", "score"], ascending=[True, False]).drop(columns=["signal_order"])
 
     report = add_execution_guidance(report)
+    if overlay_meta is not None:
+        report.attrs["social_overlay"] = overlay_meta
     return report
 
 

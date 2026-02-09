@@ -252,7 +252,12 @@ async def run_screener(request: ScreenerRequest):
             message = f"Only {len(results)} candidates found for top {requested_top}."
             warnings.append(message)
             logger.warning(message)
-        
+
+        overlay_meta = results.attrs.get("social_overlay") if hasattr(results, "attrs") else None
+        if isinstance(overlay_meta, dict) and overlay_meta.get("status") == "error":
+            error_msg = overlay_meta.get("error", "provider error")
+            warnings.append(f"Social overlay disabled: {error_msg}")
+
         # Fetch company info for all tickers
         ticker_list = [str(idx) for idx in results.index]
         ticker_info = get_multiple_ticker_info(ticker_list) if ticker_list else {}

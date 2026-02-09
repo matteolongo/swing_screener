@@ -146,6 +146,11 @@ export default function Screener() {
   const result = screenerMutation.data ?? lastResult;
   const candidates = result?.candidates || [];
   const warnings = result?.warnings || [];
+  const overlayCounts = candidates.reduce<Record<string, number>>((acc, c) => {
+    const status = c.overlayStatus ?? 'OFF';
+    acc[status] = (acc[status] ?? 0) + 1;
+    return acc;
+  }, {});
 
   return (
     <div className="space-y-6">
@@ -312,6 +317,22 @@ export default function Screener() {
                     <div key={warning}>{warning}</div>
                   ))}
                 </div>
+              </div>
+            )}
+            {candidates.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                {Object.entries(overlayCounts).map(([status, count]) => {
+                  const badge = OVERLAY_BADGES[status] ?? OVERLAY_BADGES.OFF;
+                  return (
+                    <span
+                      key={status}
+                      className={`px-2 py-1 rounded ${badge.className}`}
+                      title={`Overlay status: ${status}`}
+                    >
+                      {badge.label}: {count}
+                    </span>
+                  );
+                })}
               </div>
             )}
           </Card>
