@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from typing import Optional
+from dataclasses import replace
 from fastapi import APIRouter, HTTPException
 import datetime as dt
 import logging
@@ -29,6 +30,11 @@ from api.dependencies import (
 
 from swing_screener.portfolio.state import load_positions, save_positions
 from swing_screener.execution.orders import load_orders, save_orders
+from swing_screener.execution.order_workflows import (
+    fill_entry_order,
+    infer_order_kind,
+    normalize_orders,
+)
 from swing_screener.execution.orders import Order as CoreOrder
 from swing_screener.data.market_data import fetch_ohlcv, MarketDataConfig
 
@@ -355,30 +361,65 @@ async def create_order(request: CreateOrderRequest):
 @router.post("/orders/{order_id}/fill")
 async def fill_order(order_id: str, request: FillOrderRequest):
     """Fill an order."""
-    path = get_orders_path()
-    data = read_json_file(path)
-    
-    orders = data.get("orders", [])
-    found = False
-    
-    for order in orders:
-        if order.get("order_id") == order_id:
-            if order.get("status") != "pending":
-                raise HTTPException(status_code=400, detail=f"Order not pending: {order.get('status')}")
-            
-            order["status"] = "filled"
-            order["filled_date"] = request.filled_date
-            order["entry_price"] = request.filled_price
-            
-            found = True
-            break
-    
-    if not found:
+    orders_path = get_orders_path()
+    positions_path = get_positions_path()
+
+    orders = load_orders(orders_path)
+    orders, normalized = normalize_orders(orders)
+    if normalized:
+        save_orders(orders_path, orders, asof=get_today_str())
+
+    positions = load_positions(positions_path)
+
+    order = next((o for o in orders if o.order_id == order_id), None)
+    if order is None:
         raise HTTPException(status_code=404, detail=f"Order not found: {order_id}")
-    
-    data["asof"] = get_today_str()
-    write_json_file(path, data)
-    
+    if order.status != "pending":
+        raise HTTPException(status_code=400, detail=f"Order not pending: {order.status}")
+
+    kind = infer_order_kind(order)
+    if kind == "entry":
+        stop_price = request.stop_price if request.stop_price is not None else order.stop_price
+        if stop_price is None:
+            raise HTTPException(status_code=400, detail="stop_price is required for entry fills")
+        if order.quantity <= 0:
+            raise HTTPException(status_code=400, detail="Order quantity must be > 0")
+
+        new_orders, new_positions = fill_entry_order(
+            orders,
+            positions,
+            order_id=order_id,
+            fill_price=request.filled_price,
+            fill_date=request.filled_date,
+            quantity=order.quantity,
+            stop_price=stop_price,
+            tp_price=None,
+        )
+        save_orders(orders_path, new_orders, asof=get_today_str())
+        save_positions(positions_path, new_positions, asof=get_today_str())
+        position_id = next(
+            (p.position_id for p in new_positions if p.source_order_id == order_id),
+            None,
+        )
+        return {
+            "status": "ok",
+            "order_id": order_id,
+            "filled_price": request.filled_price,
+            "position_id": position_id,
+        }
+
+    # Non-entry fills just update the order status
+    for idx, o in enumerate(orders):
+        if o.order_id == order_id:
+            orders[idx] = replace(
+                o,
+                status="filled",
+                filled_date=request.filled_date,
+                entry_price=request.filled_price,
+            )
+            break
+
+    save_orders(orders_path, orders, asof=get_today_str())
     return {"status": "ok", "order_id": order_id, "filled_price": request.filled_price}
 
 

@@ -271,6 +271,11 @@ class OrdersSnapshotResponse(BaseModel):
 class FillOrderRequest(BaseModel):
     filled_price: float = Field(gt=0, description="Price at which order was filled")
     filled_date: str = Field(description="Date order was filled (YYYY-MM-DD)")
+    stop_price: Optional[float] = Field(
+        default=None,
+        gt=0,
+        description="Stop price to use when filling entry orders (optional override)",
+    )
 
 
 class OrderPreview(BaseModel):

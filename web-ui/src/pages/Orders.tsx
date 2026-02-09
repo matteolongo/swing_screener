@@ -51,13 +51,18 @@ export default function Orders() {
   // Fill order mutation
   const fillOrderMutation = useMutation({
     mutationFn: async ({ orderId, request }: { orderId: string; request: FillOrderRequest }) => {
+      const payload: Record<string, number | string> = {
+        filled_price: request.filledPrice,
+        filled_date: request.filledDate,
+      };
+      if (request.stopPrice && request.stopPrice > 0) {
+        payload.stop_price = request.stopPrice;
+      }
+
       const response = await fetch(apiUrl(API_ENDPOINTS.orderFill(orderId)), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          filled_price: request.filledPrice,
-          filled_date: request.filledDate,
-        }),
+        body: JSON.stringify(payload),
       });
       if (!response.ok) throw new Error('Failed to fill order');
       return response.json();
@@ -412,6 +417,7 @@ function FillOrderModal({
   const [formData, setFormData] = useState<FillOrderRequest>({
     filledPrice: order.limitPrice || 0,
     filledDate: new Date().toISOString().split('T')[0],
+    stopPrice: order.orderKind === 'entry' ? (order.stopPrice || 0) : undefined,
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -450,6 +456,21 @@ function FillOrderModal({
                 required
               />
             </div>
+
+            {order.orderKind === 'entry' && (
+              <div>
+                <label className="block text-sm font-medium mb-1">Stop Price (for linked stop)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={formData.stopPrice}
+                  onChange={(e) => setFormData({ ...formData, stopPrice: parseFloat(e.target.value) || 0 })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+                  required
+                />
+              </div>
+            )}
 
             <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
               <p className="text-sm text-gray-600 dark:text-gray-400">Order Details:</p>
