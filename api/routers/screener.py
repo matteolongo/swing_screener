@@ -6,6 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException
 import datetime as dt
 import logging
+import math
 import pandas as pd
 
 from api.models import (
@@ -106,6 +107,43 @@ def _resolve_strategy(strategy_id: Optional[str]) -> dict:
             raise HTTPException(status_code=404, detail=f"Strategy not found: {strategy_id}")
         return strategy
     return get_active_strategy()
+
+
+def _safe_float(val, default=0.0):
+    """Helper to safely convert to float, replacing NaN with default."""
+    if val is None or (isinstance(val, float) and math.isnan(val)):
+        return default
+    return float(val)
+
+
+def _safe_optional_float(val):
+    """Helper to safely convert to optional float, replacing NaN with None."""
+    if val is None or (isinstance(val, float) and math.isnan(val)):
+        return None
+    return float(val)
+
+
+def _safe_optional_int(val):
+    """Helper to safely convert to optional int, replacing NaN with None."""
+    if val is None or (isinstance(val, float) and math.isnan(val)):
+        return None
+    return int(val)
+
+
+def _safe_list(val):
+    """Helper to safely convert various types to list of strings."""
+    if val is None:
+        return []
+    if isinstance(val, list):
+        return [str(v) for v in val if v is not None]
+    if isinstance(val, str):
+        if not val.strip():
+            return []
+        sep = ";" if ";" in val else "," if "," in val else None
+        if sep:
+            return [v.strip() for v in val.split(sep) if v.strip()]
+        return [val]
+    return [str(val)]
 
 
 @router.get("/universes")
@@ -271,44 +309,11 @@ async def run_screener(request: ScreenerRequest):
         ma_col = f"ma{signals_cfg.pullback_ma}_level"
         candidates = []
         for idx, row in results.iterrows():
-            # Helper to safely convert to float, replacing NaN with 0
-            def safe_float(val, default=0.0):
-                import math
-                if val is None or (isinstance(val, float) and math.isnan(val)):
-                    return default
-                return float(val)
-
-            def safe_optional_float(val):
-                import math
-                if val is None or (isinstance(val, float) and math.isnan(val)):
-                    return None
-                return float(val)
-
-            def safe_optional_int(val):
-                import math
-                if val is None or (isinstance(val, float) and math.isnan(val)):
-                    return None
-                return int(val)
-
-            def safe_list(val):
-                if val is None:
-                    return []
-                if isinstance(val, list):
-                    return [str(v) for v in val if v is not None]
-                if isinstance(val, str):
-                    if not val.strip():
-                        return []
-                    sep = ";" if ";" in val else "," if "," in val else None
-                    if sep:
-                        return [v.strip() for v in val.split(sep) if v.strip()]
-                    return [val]
-                return [str(val)]
-            
             # Calculate SMAs from OHLCV if available, otherwise use distance metrics
-            sma20 = safe_float(row.get(ma_col))
-            sma50_dist = safe_float(row.get("dist_sma50_pct"))
-            sma200_dist = safe_float(row.get("dist_sma200_pct"))
-            last_price = safe_float(row.get("last"))
+            sma20 = _safe_float(row.get(ma_col))
+            sma50_dist = _safe_float(row.get("dist_sma50_pct"))
+            sma200_dist = _safe_float(row.get("dist_sma200_pct"))
+            last_price = _safe_float(row.get("last"))
             
             # Approximate SMA values from distance percentages
             sma50 = last_price / (1 + sma50_dist / 100) if last_price and sma50_dist else last_price
@@ -329,22 +334,22 @@ async def run_screener(request: ScreenerRequest):
                     sma_20=sma20,
                     sma_50=sma50,
                     sma_200=sma200,
-                    atr=safe_float(row.get(atr_col)),
-                    momentum_6m=safe_float(row.get("mom_6m")),
-                    momentum_12m=safe_float(row.get("mom_12m")),
-                    rel_strength=safe_float(row.get("rs_6m")),
-                    score=safe_float(row.get("score")),
-                    confidence=safe_float(row.get("confidence")),
+                    atr=_safe_float(row.get(atr_col)),
+                    momentum_6m=_safe_float(row.get("mom_6m")),
+                    momentum_12m=_safe_float(row.get("mom_12m")),
+                    rel_strength=_safe_float(row.get("rs_6m")),
+                    score=_safe_float(row.get("score")),
+                    confidence=_safe_float(row.get("confidence")),
                     rank=int(row.get("rank", len(candidates) + 1)),
                     overlay_status=row.get("overlay_status"),
-                    overlay_reasons=safe_list(row.get("overlay_reasons")),
-                    overlay_risk_multiplier=safe_optional_float(row.get("overlay_risk_multiplier")),
-                    overlay_max_pos_multiplier=safe_optional_float(row.get("overlay_max_pos_multiplier")),
-                    overlay_attention_z=safe_optional_float(row.get("overlay_attention_z")),
-                    overlay_sentiment_score=safe_optional_float(row.get("overlay_sentiment_score")),
-                    overlay_sentiment_confidence=safe_optional_float(row.get("overlay_sentiment_confidence")),
-                    overlay_hype_score=safe_optional_float(row.get("overlay_hype_score")),
-                    overlay_sample_size=safe_optional_int(row.get("overlay_sample_size")),
+                    overlay_reasons=_safe_list(row.get("overlay_reasons")),
+                    overlay_risk_multiplier=_safe_optional_float(row.get("overlay_risk_multiplier")),
+                    overlay_max_pos_multiplier=_safe_optional_float(row.get("overlay_max_pos_multiplier")),
+                    overlay_attention_z=_safe_optional_float(row.get("overlay_attention_z")),
+                    overlay_sentiment_score=_safe_optional_float(row.get("overlay_sentiment_score")),
+                    overlay_sentiment_confidence=_safe_optional_float(row.get("overlay_sentiment_confidence")),
+                    overlay_hype_score=_safe_optional_float(row.get("overlay_hype_score")),
+                    overlay_sample_size=_safe_optional_int(row.get("overlay_sample_size")),
                 )
             )
 
