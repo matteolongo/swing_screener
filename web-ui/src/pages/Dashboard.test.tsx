@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { screen, waitFor, within } from '@testing-library/react'
+import { screen, waitFor, within, act } from '@testing-library/react'
 import { renderWithProviders } from '@/test/utils'
 import Dashboard from './Dashboard'
 import { useConfigStore } from '@/stores/configStore'
@@ -27,6 +27,7 @@ describe('Dashboard Page', () => {
     it('renders dashboard title', async () => {
       renderWithProviders(<Dashboard />)
       expect(screen.getByText('Dashboard')).toBeInTheDocument()
+      await screen.findByText('Portfolio Summary')
     })
 
     it('renders all main sections', async () => {
@@ -193,7 +194,9 @@ describe('Dashboard Page', () => {
       expect(screenerButton).not.toBeDisabled()
       
       // Just verify button is clickable - navigation testing is for E2E
-      await user.click(screenerButton)
+      await act(async () => {
+        await user.click(screenerButton)
+      })
     })
   })
 

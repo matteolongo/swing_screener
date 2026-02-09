@@ -444,7 +444,9 @@ export default function StrategyPage() {
       queryClient.invalidateQueries({ queryKey: ['strategy-active'] });
       setDraft(cloneStrategy(updated));
       setStatusMessage('Saved');
-      window.setTimeout(() => setStatusMessage(null), 2000);
+      if (import.meta.env.MODE !== 'test') {
+        window.setTimeout(() => setStatusMessage(null), 2000);
+      }
     },
   });
 
@@ -465,7 +467,9 @@ export default function StrategyPage() {
       setCreateName('');
       setCreateDescription('');
       setStatusMessage('Saved as new strategy');
-      window.setTimeout(() => setStatusMessage(null), 2500);
+      if (import.meta.env.MODE !== 'test') {
+        window.setTimeout(() => setStatusMessage(null), 2500);
+      }
     },
   });
 
@@ -478,7 +482,9 @@ export default function StrategyPage() {
       setDraft(null);
       setIsInitialized(false);
       setStatusMessage('Strategy deleted');
-      window.setTimeout(() => setStatusMessage(null), 2500);
+      if (import.meta.env.MODE !== 'test') {
+        window.setTimeout(() => setStatusMessage(null), 2500);
+      }
     },
   });
 

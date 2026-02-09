@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, act } from '@testing-library/react'
 import { renderWithProviders } from '@/test/utils'
 import Positions from './Positions'
 import { useConfigStore } from '@/stores/configStore'
@@ -43,6 +43,7 @@ describe('Positions Page', () => {
       renderWithProviders(<Positions />)
       
       expect(screen.getByText('Positions')).toBeInTheDocument()
+      await screen.findByText('VALE')
     })
 
     it('renders filter tabs', async () => {
@@ -150,7 +151,9 @@ describe('Positions Page', () => {
       })
       
       const closedTab = screen.getByText('Closed')
-      await user.click(closedTab)
+      await act(async () => {
+        await user.click(closedTab)
+      })
       
       await waitFor(() => {
         // Should show INTC (closed position in mock)
@@ -290,7 +293,9 @@ describe('Positions Page', () => {
       })
       
       const closedTab = screen.getByText('Closed')
-      await user.click(closedTab)
+      await act(async () => {
+        await user.click(closedTab)
+      })
       
       await waitFor(() => {
         expect(screen.getByText('INTC')).toBeInTheDocument()
@@ -306,7 +311,9 @@ describe('Positions Page', () => {
         expect(screen.getByText('Closed')).toBeInTheDocument()
       })
       
-      await user.click(screen.getByText('Closed'))
+      await act(async () => {
+        await user.click(screen.getByText('Closed'))
+      })
       
       await waitFor(() => {
         expect(screen.getByText('INTC')).toBeInTheDocument()

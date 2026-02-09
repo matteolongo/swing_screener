@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { screen } from '@testing-library/react'
+import { screen, act } from '@testing-library/react'
 import { renderWithProviders } from '@/test/utils'
 import Settings from './Settings'
 
@@ -25,7 +25,9 @@ describe('Settings Page', () => {
     const { user } = renderWithProviders(<Settings />)
     const resetButton = screen.getByRole('button', { name: /Reset to Defaults/i })
     expect(resetButton).not.toBeDisabled()
-    await user.click(resetButton)
+    await act(async () => {
+      await user.click(resetButton)
+    })
     expect(screen.getByText('Settings')).toBeInTheDocument()
   })
 

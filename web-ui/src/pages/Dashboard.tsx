@@ -5,9 +5,16 @@ import Button from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
 import { useConfigStore } from '@/stores/configStore';
 import { fetchActiveStrategy } from '@/lib/strategyApi';
-import { API_ENDPOINTS, apiUrl } from '@/lib/api';
-import { Position, transformPosition, calculatePnL } from '@/types/position';
-import { Order, OrderSnapshotResponseApi, transformOrder, transformOrderSnapshot } from '@/types/order';
+import {
+  Position,
+  Order,
+  calculatePnL,
+} from '@/features/portfolio/types';
+import {
+  useOpenPositions,
+  useOrders,
+  useOrderSnapshots,
+} from '@/features/portfolio/hooks';
 import { formatCurrency, formatDateTime, formatPercent } from '@/utils/formatters';
 import { TrendingUp, AlertCircle, FileText, Search, RefreshCw } from 'lucide-react';
 
@@ -20,46 +27,14 @@ export default function Dashboard() {
   });
   const riskConfig = activeStrategyQuery.data?.risk ?? config.risk;
 
-  // Fetch open positions
-  const { data: positions = [] } = useQuery({
-    queryKey: ['positions', 'open'],
-    queryFn: async () => {
-      const response = await fetch(apiUrl(API_ENDPOINTS.positions + '?status=open'));
-      if (!response.ok) throw new Error('Failed to fetch positions');
-      const data = await response.json();
-      return data.positions.map(transformPosition);
-    },
-  });
-
-  // Fetch pending orders
-  const { data: orders = [] } = useQuery({
-    queryKey: ['orders', 'pending'],
-    queryFn: async () => {
-      const response = await fetch(apiUrl(API_ENDPOINTS.orders + '?status=pending'));
-      if (!response.ok) throw new Error('Failed to fetch orders');
-      const data = await response.json();
-      return data.orders.map(transformOrder);
-    },
-  });
-
+  const { data: positions = [] } = useOpenPositions();
+  const { data: orders = [] } = useOrders('pending');
   const {
     data: orderSnapshots,
     isFetching: isFetchingSnapshots,
     isError: isSnapshotError,
     refetch: refetchSnapshots,
-  } = useQuery({
-    queryKey: ['orders', 'snapshot'],
-    queryFn: async () => {
-      const response = await fetch(apiUrl(API_ENDPOINTS.ordersSnapshot));
-      if (!response.ok) throw new Error('Failed to fetch order snapshots');
-      const data: OrderSnapshotResponseApi = await response.json();
-      return {
-        orders: data.orders.map(transformOrderSnapshot),
-        asof: data.asof,
-      };
-    },
-    refetchOnWindowFocus: false,
-  });
+  } = useOrderSnapshots();
 
   const snapshotOrders = orderSnapshots?.orders ?? [];
 

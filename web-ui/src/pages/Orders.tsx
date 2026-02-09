@@ -1,10 +1,19 @@
 import { useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
-import { API_ENDPOINTS, apiUrl } from '@/lib/api';
-import { Order, OrderStatus, CreateOrderRequest, FillOrderRequest, transformOrder, transformCreateOrderRequest } from '@/types/order';
+import {
+  Order,
+  OrderStatus,
+  CreateOrderRequest,
+  FillOrderRequest,
+} from '@/features/portfolio/types';
+import {
+  useOrders,
+  useCreateOrderMutation,
+  useFillOrderMutation,
+  useCancelOrderMutation,
+} from '@/features/portfolio/hooks';
 import { formatCurrency, formatDate } from '@/utils/formatters';
 import { Plus, X, CheckCircle, MessageSquare } from 'lucide-react';
 import SocialAnalysisModal from '@/components/modals/SocialAnalysisModal';
@@ -17,76 +26,21 @@ export default function Orders() {
   const [showFillModal, setShowFillModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [socialSymbol, setSocialSymbol] = useState<string | null>(null);
-  const queryClient = useQueryClient();
 
-  // Fetch orders
-  const { data: orders = [], isLoading } = useQuery({
-    queryKey: ['orders', filterStatus],
-    queryFn: async () => {
-      const params = filterStatus !== 'all' ? `?status=${filterStatus}` : '';
-      const response = await fetch(apiUrl(API_ENDPOINTS.orders + params));
-      if (!response.ok) throw new Error('Failed to fetch orders');
-      const data = await response.json();
-      return data.orders.map(transformOrder);
-    },
+  const ordersQuery = useOrders(filterStatus);
+  const orders = ordersQuery.data ?? [];
+  const isLoading = ordersQuery.isLoading;
+
+  const createOrderMutation = useCreateOrderMutation(() => {
+    setShowCreateModal(false);
   });
 
-  // Create order mutation
-  const createOrderMutation = useMutation({
-    mutationFn: async (request: CreateOrderRequest) => {
-      const response = await fetch(apiUrl(API_ENDPOINTS.orders), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(transformCreateOrderRequest(request)),
-      });
-      if (!response.ok) throw new Error('Failed to create order');
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['orders'] });
-      setShowCreateModal(false);
-    },
+  const fillOrderMutation = useFillOrderMutation(() => {
+    setShowFillModal(false);
+    setSelectedOrder(null);
   });
 
-  // Fill order mutation
-  const fillOrderMutation = useMutation({
-    mutationFn: async ({ orderId, request }: { orderId: string; request: FillOrderRequest }) => {
-      const payload: Record<string, number | string> = {
-        filled_price: request.filledPrice,
-        filled_date: request.filledDate,
-      };
-      if (request.stopPrice && request.stopPrice > 0) {
-        payload.stop_price = request.stopPrice;
-      }
-
-      const response = await fetch(apiUrl(API_ENDPOINTS.orderFill(orderId)), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!response.ok) throw new Error('Failed to fill order');
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['orders'] });
-      setShowFillModal(false);
-      setSelectedOrder(null);
-    },
-  });
-
-  // Cancel order mutation
-  const cancelOrderMutation = useMutation({
-    mutationFn: async (orderId: string) => {
-      const response = await fetch(apiUrl(API_ENDPOINTS.order(orderId)), {
-        method: 'DELETE',
-      });
-      if (!response.ok) throw new Error('Failed to cancel order');
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['orders'] });
-    },
-  });
+  const cancelOrderMutation = useCancelOrderMutation();
 
   const handleFillOrder = (order: Order) => {
     setSelectedOrder(order);

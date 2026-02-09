@@ -1,19 +1,23 @@
 import { useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
-import { API_ENDPOINTS, apiUrl } from '@/lib/api';
 import { fetchActiveStrategy } from '@/lib/strategyApi';
-import { 
-  Position, 
-  PositionStatus, 
-  UpdateStopRequest, 
+import {
+  Position,
+  PositionStatus,
+  UpdateStopRequest,
   ClosePositionRequest,
-  transformPosition,
   calculatePnL,
   calculatePnLPercent,
-} from '@/types/position';
+} from '@/features/portfolio/types';
+import {
+  usePositions,
+  useOpenPositions,
+  useUpdateStopMutation,
+  useClosePositionMutation,
+} from '@/features/portfolio/hooks';
 import { formatCurrency, formatDate, formatPercent } from '@/utils/formatters';
 import { TrendingUp, TrendingDown, X, MessageSquare } from 'lucide-react';
 import SocialAnalysisModal from '@/components/modals/SocialAnalysisModal';
@@ -26,34 +30,18 @@ export default function Positions() {
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [selectedPosition, setSelectedPosition] = useState<Position | null>(null);
   const [socialSymbol, setSocialSymbol] = useState<string | null>(null);
-  const queryClient = useQueryClient();
 
   const activeStrategyQuery = useQuery({
     queryKey: ['strategy-active'],
     queryFn: fetchActiveStrategy,
   });
 
-  // Fetch positions
-  const { data: positions = [], isLoading } = useQuery({
-    queryKey: ['positions', filterStatus],
-    queryFn: async () => {
-      const params = filterStatus !== 'all' ? `?status=${filterStatus}` : '';
-      const response = await fetch(apiUrl(API_ENDPOINTS.positions + params));
-      if (!response.ok) throw new Error('Failed to fetch positions');
-      const data = await response.json();
-      return data.positions.map(transformPosition);
-    },
-  });
+  const positionsQuery = usePositions(filterStatus);
+  const positions = positionsQuery.data ?? [];
+  const isLoading = positionsQuery.isLoading;
 
-  const { data: openPositions = [] } = useQuery({
-    queryKey: ['positions', 'open'],
-    queryFn: async () => {
-      const response = await fetch(apiUrl(API_ENDPOINTS.positions + '?status=open'));
-      if (!response.ok) throw new Error('Failed to fetch positions');
-      const data = await response.json();
-      return data.positions.map(transformPosition);
-    },
-  });
+  const openPositionsQuery = useOpenPositions();
+  const openPositions = openPositionsQuery.data ?? [];
 
   const accountSize = activeStrategyQuery.data?.risk.accountSize ?? 0;
   const totalOpenRisk = openPositions.reduce((sum: number, pos: Position) => {
@@ -65,52 +53,14 @@ export default function Positions() {
   }, 0);
   const openRiskPct = accountSize > 0 ? (totalOpenRisk / accountSize) * 100 : 0;
 
-  // Update stop mutation
-  const updateStopMutation = useMutation({
-    mutationFn: async ({ positionId, request }: { positionId: string; request: UpdateStopRequest }) => {
-      const response = await fetch(apiUrl(API_ENDPOINTS.positionStop(positionId)), {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          new_stop: request.newStop,
-          reason: request.reason || '',
-        }),
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Failed to update stop');
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['positions'] });
-      setShowUpdateStopModal(false);
-      setSelectedPosition(null);
-    },
+  const updateStopMutation = useUpdateStopMutation(() => {
+    setShowUpdateStopModal(false);
+    setSelectedPosition(null);
   });
 
-  // Close position mutation
-  const closePositionMutation = useMutation({
-    mutationFn: async ({ positionId, request }: { positionId: string; request: ClosePositionRequest }) => {
-      const response = await fetch(apiUrl(API_ENDPOINTS.positionClose(positionId)), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          exit_price: request.exitPrice,
-          reason: request.reason || '',
-        }),
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Failed to close position');
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['positions'] });
-      setShowCloseModal(false);
-      setSelectedPosition(null);
-    },
+  const closePositionMutation = useClosePositionMutation(() => {
+    setShowCloseModal(false);
+    setSelectedPosition(null);
   });
 
   const handleUpdateStop = (position: Position) => {

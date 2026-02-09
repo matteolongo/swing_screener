@@ -1,21 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { notifyManager, useQuery } from '@tanstack/react-query';
 import { AlertCircle, BarChart3, RefreshCw, Trash2 } from 'lucide-react';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
-import { API_ENDPOINTS, apiUrl } from '@/lib/api';
 import { fetchActiveStrategy } from '@/lib/strategyApi';
 import { useConfigStore } from '@/stores/configStore';
 import {
-  BacktestSimulationAPI,
-  BacktestSimulationMetaAPI,
-  FullBacktestResponseAPI,
   FullEntryType,
   FullBacktestResponse,
-  transformBacktestSimulation,
-  transformBacktestSimulationMeta,
-  transformFullBacktestResponse,
-} from '@/types/backtest';
+  FullBacktestParams,
+} from '@/features/backtest/types';
+import {
+  useBacktestSimulations,
+  useRunBacktestMutation,
+  useLoadSimulation,
+  useDeleteSimulationMutation,
+} from '@/features/backtest/hooks';
 import { formatDateTime, formatPercent, formatR, formatCurrency } from '@/utils/formatters';
 import EquityCurveChart from '@/components/domain/backtest/EquityCurveChart';
 
@@ -117,7 +117,6 @@ export default function Backtest() {
     queryKey: ['strategy-active'],
     queryFn: fetchActiveStrategy,
   });
-  const queryClient = useQueryClient();
 
   const [formState, setFormState] = useState<BacktestFormState>(() => {
     const defaults = buildDefaultFormState(config, {
@@ -125,8 +124,9 @@ export default function Backtest() {
     });
     return loadFormState(defaults);
   });
-  const [result, setResult] = useState<FullBacktestResponse | null>(null);
-  const canRun = parseTickers(formState.tickersText).length > 0;
+  const [loadedResult, setLoadedResult] = useState<FullBacktestResponse | null>(null);
+  const tickers = useMemo(() => parseTickers(formState.tickersText), [formState.tickersText]);
+  const canRun = tickers.length > 0;
   const presets = useMemo(
     () => [
       { label: '10Y', range: () => rangeYears(10) },
@@ -142,62 +142,18 @@ export default function Backtest() {
     const defaults = buildDefaultFormState(config, {
       kAtr: activeStrategyQuery.data.risk.kAtr,
     });
-    setFormState(defaults);
+    notifyManager.schedule(() => {
+      setFormState(defaults);
+    });
   }, [activeStrategyQuery.data, config]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(formState));
   }, [formState]);
 
-  const simulationsQuery = useQuery({
-    queryKey: ['backtest-simulations'],
-    queryFn: async () => {
-      const res = await fetch(apiUrl(API_ENDPOINTS.backtestSimulations));
-      if (!res.ok) throw new Error('Failed to load simulations');
-      const data: BacktestSimulationMetaAPI[] = await res.json();
-      return data.map(transformBacktestSimulationMeta);
-    },
-  });
+  const simulationsQuery = useBacktestSimulations();
 
-  const runMutation = useMutation({
-    mutationFn: async () => {
-      const tickers = parseTickers(formState.tickersText);
-      const payload = {
-        tickers,
-        start: formState.start,
-        end: formState.end,
-        invested_budget: formState.investedBudget && formState.investedBudget > 0 ? formState.investedBudget : undefined,
-        entry_type: formState.entryType,
-        breakout_lookback: formState.breakoutLookback,
-        pullback_ma: formState.pullbackMa,
-        min_history: formState.minHistory,
-        atr_window: formState.atrWindow,
-        k_atr: formState.kAtr,
-        breakeven_at_r: formState.breakevenAtR,
-        trail_after_r: formState.trailAfterR,
-        trail_sma: formState.trailSma,
-        sma_buffer_pct: formState.smaBufferPct,
-        max_holding_days: formState.maxHoldingDays,
-        commission_pct: formState.commissionPct,
-      };
-
-      const res = await fetch(apiUrl(API_ENDPOINTS.backtestRun), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.detail || 'Backtest failed');
-      }
-      const data: FullBacktestResponseAPI = await res.json();
-      return transformFullBacktestResponse(data);
-    },
-    onSuccess: (data) => {
-      setResult(data);
-      queryClient.invalidateQueries({ queryKey: ['backtest-simulations'] });
-    },
-  });
+  const runMutation = useRunBacktestMutation();
 
   const handleResetToSettings = () => {
     const defaults = buildDefaultFormState(config, {
@@ -220,13 +176,16 @@ export default function Backtest() {
     }));
   };
 
+  const loadSimulationMutation = useLoadSimulation();
+  const deleteSimulationMutation = useDeleteSimulationMutation();
+
   const handleLoadSimulation = async (id: string) => {
-    const res = await fetch(apiUrl(API_ENDPOINTS.backtestSimulation(id)));
-    if (!res.ok) {
+    let sim;
+    try {
+      sim = await loadSimulationMutation.mutateAsync(id);
+    } catch {
       return;
     }
-    const data: BacktestSimulationAPI = await res.json();
-    const sim = transformBacktestSimulation(data);
     setFormState((prev) => ({
       ...prev,
       tickersText: sim.params.tickers.join(', '),
@@ -246,16 +205,34 @@ export default function Backtest() {
       maxHoldingDays: sim.params.maxHoldingDays,
       commissionPct: sim.params.commissionPct,
     }));
-    setResult(sim.result);
+    runMutation.reset();
+    setLoadedResult(sim.result);
   };
 
   const handleDeleteSimulation = async (id: string) => {
-    const res = await fetch(apiUrl(API_ENDPOINTS.backtestSimulation(id)), { method: 'DELETE' });
-    if (!res.ok) {
-      return;
-    }
-    queryClient.invalidateQueries({ queryKey: ['backtest-simulations'] });
+    deleteSimulationMutation.mutate(id);
   };
+
+  const buildRunParams = (): FullBacktestParams => ({
+    tickers,
+    start: formState.start,
+    end: formState.end,
+    investedBudget: formState.investedBudget && formState.investedBudget > 0 ? formState.investedBudget : undefined,
+    entryType: formState.entryType,
+    breakoutLookback: formState.breakoutLookback,
+    pullbackMa: formState.pullbackMa,
+    minHistory: formState.minHistory,
+    atrWindow: formState.atrWindow,
+    kAtr: formState.kAtr,
+    breakevenAtR: formState.breakevenAtR,
+    trailAfterR: formState.trailAfterR,
+    trailSma: formState.trailSma,
+    smaBufferPct: formState.smaBufferPct,
+    maxHoldingDays: formState.maxHoldingDays,
+    commissionPct: formState.commissionPct,
+  });
+
+  const result = runMutation.data ?? loadedResult;
 
   const summaryCards = useMemo(() => {
     if (!result) return [];
@@ -306,7 +283,7 @@ export default function Backtest() {
             <Button variant="secondary" onClick={handleResetToSettings}>
               Reset to Settings
             </Button>
-            <Button onClick={() => runMutation.mutate()} disabled={runMutation.isPending || !canRun}>
+            <Button onClick={() => runMutation.mutate(buildRunParams())} disabled={runMutation.isPending || !canRun}>
               {runMutation.isPending ? (
                 <>
                   <RefreshCw className="w-4 h-4 mr-2 animate-spin" />

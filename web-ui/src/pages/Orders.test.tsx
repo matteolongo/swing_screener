@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { screen, waitFor, within } from '@testing-library/react'
-import { renderWithProviders } from '@/test/utils'
+import { screen, waitFor, within, act } from '@testing-library/react'
+import { renderWithProviders, waitForQueriesToSettle } from '@/test/utils'
 import Orders from './Orders'
 
 describe('Orders Page', () => {
@@ -13,6 +13,7 @@ describe('Orders Page', () => {
       renderWithProviders(<Orders />)
       
       expect(screen.getByText('Orders')).toBeInTheDocument()
+      await screen.findByText('VALE')
     })
 
     it('renders filter tabs', async () => {
@@ -97,14 +98,18 @@ describe('Orders Page', () => {
     })
 
     it('can filter by pending status', async () => {
-      const { user } = renderWithProviders(<Orders />)
+      const { user, queryClient } = renderWithProviders(<Orders />)
       
+      await screen.findByText('VALE')
       await waitFor(() => {
         expect(screen.getByText('Pending')).toBeInTheDocument()
       })
       
       const pendingTab = screen.getByText('Pending')
-      await user.click(pendingTab)
+      await act(async () => {
+        await user.click(pendingTab)
+      })
+      await waitForQueriesToSettle(queryClient)
       
       // Should still show VALE (it's pending in mock)
       await waitFor(() => {
@@ -113,7 +118,7 @@ describe('Orders Page', () => {
     })
 
     it('filter tabs are clickable', async () => {
-      const { user } = renderWithProviders(<Orders />)
+      const { user, queryClient } = renderWithProviders(<Orders />)
       
       await waitFor(() => {
         expect(screen.getByText('All')).toBeInTheDocument()
@@ -122,7 +127,10 @@ describe('Orders Page', () => {
       const allTab = screen.getByText('All')
       expect(allTab).not.toBeDisabled()
       
-      await user.click(allTab)
+      await act(async () => {
+        await user.click(allTab)
+      })
+      await waitForQueriesToSettle(queryClient)
     })
   })
 
@@ -135,7 +143,9 @@ describe('Orders Page', () => {
       })
       
       const createButton = screen.getByRole('button', { name: /Create Order/i })
-      await user.click(createButton)
+      await act(async () => {
+        await user.click(createButton)
+      })
       
       // Modal should open (assuming it has a title or close button)
       await waitFor(() => {
