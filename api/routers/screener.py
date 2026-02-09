@@ -28,6 +28,7 @@ from swing_screener.strategy.config import (
     build_entry_config,
     build_ranking_config,
     build_risk_config,
+    build_social_overlay_config,
     build_universe_config,
 )
 from swing_screener.risk.regime import compute_regime_risk_multiplier
@@ -217,11 +218,14 @@ async def run_screener(request: ScreenerRequest):
             else:
                 warnings.append(f"Risk scaled by {multiplier:.2f}x due to regime conditions.")
 
+        social_overlay_cfg = build_social_overlay_config(strategy)
+
         report_cfg = ReportConfig(
             universe=universe_cfg,
             ranking=ranking_cfg,
             signals=signals_cfg,
             risk=risk_cfg,
+            social_overlay=social_overlay_cfg,
         )
         
         results = build_daily_report(ohlcv, cfg=report_cfg, exclude_tickers=[])
