@@ -110,33 +110,53 @@ def _resolve_strategy(strategy_id: Optional[str]) -> dict:
     return get_active_strategy()
 
 
+def _is_na_scalar(val) -> bool:
+    """Return True if val is a scalar NA/NaN-like value (or None)."""
+    if val is None:
+        return True
+    # Avoid ambiguous truth values for list-like objects
+    if isinstance(val, (list, tuple, set, dict)):
+        return False
+    try:
+        # pd.isna works for numpy/pandas scalar types as well as Python scalars
+        return bool(pd.isna(val))
+    except (TypeError, ValueError):
+        # Types that pd.isna cannot handle are treated as non-NA
+        return False
+
+
 def _safe_float(val, default=0.0):
     """Helper to safely convert to float, replacing NaN with default."""
-    if val is None or (isinstance(val, float) and math.isnan(val)):
+    if _is_na_scalar(val):
         return default
     return float(val)
 
 
 def _safe_optional_float(val):
     """Helper to safely convert to optional float, replacing NaN with None."""
-    if val is None or (isinstance(val, float) and math.isnan(val)):
+    if _is_na_scalar(val):
         return None
     return float(val)
 
 
 def _safe_optional_int(val):
     """Helper to safely convert to optional int, replacing NaN with None."""
-    if val is None or (isinstance(val, float) and math.isnan(val)):
+    if _is_na_scalar(val):
         return None
-    return int(val)
+    try:
+        return int(val)
+    except (TypeError, ValueError, OverflowError):
+        return None
 
 
 def _safe_list(val):
     """Helper to safely convert various types to list of strings."""
-    if val is None:
+    # Treat None and scalar NA/NaN as empty list
+    if _is_na_scalar(val):
         return []
     if isinstance(val, list):
-        return [str(v) for v in val if v is not None]
+        # Filter out None/NaN elements
+        return [str(v) for v in val if not _is_na_scalar(v)]
     if isinstance(val, str):
         if not val.strip():
             return []
