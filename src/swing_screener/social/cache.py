@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from datetime import datetime
 from dataclasses import dataclass
@@ -69,15 +70,17 @@ class SocialCache:
                 # If file is corrupted, start fresh
                 existing_events = []
         
-        # Create a dictionary keyed by (symbol, timestamp, text) for deduplication
+        # Create a dictionary keyed by (symbol, timestamp, text_hash) for deduplication
         event_dict = {}
         for ev in existing_events:
-            key = (ev.symbol.upper(), ev.timestamp.isoformat(), ev.text[:100])
+            text_hash = hashlib.sha256(ev.text.encode('utf-8')).hexdigest()[:16]
+            key = (ev.symbol.upper(), ev.timestamp.isoformat(), text_hash)
             event_dict[key] = ev
         
         # Add/update with new events
         for ev in events:
-            key = (ev.symbol.upper(), ev.timestamp.isoformat(), ev.text[:100])
+            text_hash = hashlib.sha256(ev.text.encode('utf-8')).hexdigest()[:16]
+            key = (ev.symbol.upper(), ev.timestamp.isoformat(), text_hash)
             event_dict[key] = ev
         
         # Write merged events back
