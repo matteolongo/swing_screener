@@ -208,6 +208,47 @@ Go to **Orders** page:
 - **Summary stats** and per‑ticker breakdowns
 - **Trades table** with exit reasons and R‑multiples
 
+**How backtest works (daily bars):**
+- Uses **only completed daily bars** for signals (no intraday data).
+- **Entry signal** is computed on the close of day `t`, but **entry executes on next day’s open**.
+- **Stop** is set from ATR (previous bar) and updated **once per day**.
+- **Exit priority** each day:
+  - Stop (gap‑down handled at open)
+  - Take‑profit (if enabled; gap‑up handled at open)
+  - Time stop (max holding days)
+- Results are expressed in **R units** (risk multiples). If **Invested Budget** is set, R is converted to $ for convenience.
+
+```mermaid
+flowchart TD
+  A["Load OHLCV for tickers"] --> B["Check min_history gate"]
+  B -->|Insufficient bars| C["Skip ticker (no trades)"]
+  B -->|Enough bars| D["Compute indicators<br/>ATR, SMA, lookbacks"]
+  D --> E["Compute entry signals on close (t)"]
+  E --> F["Enter at next open (t+1)"]
+  F --> G["Set initial stop = entry - k*ATR"]
+  G --> H["Daily loop per bar"]
+  H --> I["Update trailing stop (if enabled)"]
+  H --> J["Evaluate exits (gap-aware)"]
+  J --> K["Record trade in R units"]
+  K --> L["Build equity curve + summary stats"]
+```
+
+**Parameter reference (what it changes):**
+- **Tickers / Start / End**: Defines the universe and date range. All bars in the range are used.
+- **Entry Type**: `Auto` combines breakout + pullback signals. `Breakout` uses prior high. `Pullback` uses MA reclaim.
+- **Breakout Lookback**: Lookback window for the prior‑high breakout signal.
+- **Pullback MA**: Moving average window used for pullback entries and trailing logic.
+- **Min History**: Minimum number of bars required to **include** a ticker. If below, the ticker is skipped.
+- **ATR Window**: ATR lookback length used for stop sizing.
+- **k×ATR Stop**: Multiplier applied to ATR to set the initial stop.
+- **Commission (%)**: Per‑side commission applied to entry and exit prices.
+- **Breakeven at R**: R multiple at which stop can move up to entry (if trailing stop mode).
+- **Trail After R**: R multiple after which SMA trailing can engage (if trailing stop mode).
+- **Trail SMA**: SMA window used for trailing stop in trailing mode.
+- **SMA Buffer (%)**: Offset below SMA for the trailing stop (e.g., 0.5%).
+- **Max Holding Days**: Time stop in bars; exits at close when exceeded.
+- **Invested Budget (optional)**: Converts R to $ using active strategy risk % for display.
+
 **When to use:** Strategy evaluation, parameter tuning, or post‑market review
 
 ---
