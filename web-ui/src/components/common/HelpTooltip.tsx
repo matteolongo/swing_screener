@@ -1,4 +1,5 @@
 import { useState, ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { HelpCircle, X } from 'lucide-react';
 import { cn } from '@/utils/cn';
 
@@ -12,6 +13,40 @@ interface HelpTooltipProps {
 export default function HelpTooltip({ short, title, content, className }: HelpTooltipProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
+  const handleClose = () => {
+    setIsOpen(false);
+    setShowTooltip(false);
+  };
+
+  const modal = isOpen ? (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={handleClose}>
+      <div
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-border">
+          <h3 className="text-xl font-semibold">{title}</h3>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleClose();
+            }}
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+            aria-label="Close help"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 prose dark:prose-invert max-w-none">
+          {content}
+        </div>
+      </div>
+    </div>
+  ) : null;
 
   return (
     <>
@@ -37,30 +72,9 @@ export default function HelpTooltip({ short, title, content, className }: HelpTo
       </div>
 
       {/* Modal */}
-      {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setIsOpen(false)}>
-          <div
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-border">
-              <h3 className="text-xl font-semibold">{title}</h3>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Content */}
-            <div className="p-6 prose dark:prose-invert max-w-none">
-              {content}
-            </div>
-          </div>
-        </div>
-      )}
+      {isOpen && typeof document !== 'undefined'
+        ? createPortal(modal, document.body)
+        : modal}
     </>
   );
 }
