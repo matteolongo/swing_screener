@@ -96,15 +96,15 @@ def build_daily_report(
                 m = metrics_map.get(sym)
                 d = decision_map.get(sym)
                 if m is None or d is None:
-                overlay_rows.append(
-                    {
-                        "ticker": sym,
-                        "overlay_status": "NO_DATA",
-                        "overlay_reasons": ["NO_SOCIAL_DATA"],
-                        "overlay_risk_multiplier": 1.0,
-                        "overlay_max_pos_multiplier": 1.0,
-                        "overlay_attention_z": None,
-                        "overlay_sentiment_score": None,
+                    overlay_rows.append(
+                        {
+                            "ticker": sym,
+                            "overlay_status": "NO_DATA",
+                            "overlay_reasons": ["NO_SOCIAL_DATA"],
+                            "overlay_risk_multiplier": 1.0,
+                            "overlay_max_pos_multiplier": 1.0,
+                            "overlay_attention_z": None,
+                            "overlay_sentiment_score": None,
                             "overlay_sentiment_confidence": None,
                             "overlay_hype_score": None,
                             "overlay_sample_size": None,
