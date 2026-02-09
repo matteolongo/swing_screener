@@ -66,5 +66,15 @@ def compute_daily_metrics(
             )
         )
 
-    cache.store_metrics(asof, metrics)
+    # Merge with existing metrics to avoid overwriting data for other symbols
+    existing_metrics = cache.get_metrics(asof) or []
+    existing_by_symbol = {m.symbol.upper(): m for m in existing_metrics}
+    
+    # Update with newly computed metrics
+    for m in metrics:
+        existing_by_symbol[m.symbol.upper()] = m
+    
+    # Store merged metrics
+    merged_metrics = list(existing_by_symbol.values())
+    cache.store_metrics(asof, merged_metrics)
     return metrics

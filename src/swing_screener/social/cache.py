@@ -58,7 +58,31 @@ class SocialCache:
     def store_events(self, provider: str, day: date, events: list[SocialRawEvent]) -> None:
         path = self._events_path(provider, day)
         self._ensure_parent(path)
-        payload = [e.model_dump(mode="json") for e in events]
+        
+        # Merge with existing events to avoid clobbering data from other symbols
+        existing_events = []
+        if path.exists():
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                existing_events = [SocialRawEvent.model_validate(item) for item in data]
+            except (json.JSONDecodeError, ValueError):
+                # If file is corrupted, start fresh
+                existing_events = []
+        
+        # Create a dictionary keyed by (symbol, timestamp, text) for deduplication
+        event_dict = {}
+        for ev in existing_events:
+            key = (ev.symbol.upper(), ev.timestamp.isoformat(), ev.text[:100])
+            event_dict[key] = ev
+        
+        # Add/update with new events
+        for ev in events:
+            key = (ev.symbol.upper(), ev.timestamp.isoformat(), ev.text[:100])
+            event_dict[key] = ev
+        
+        # Write merged events back
+        merged_events = sorted(event_dict.values(), key=lambda e: e.timestamp, reverse=True)
+        payload = [e.model_dump(mode="json") for e in merged_events]
         path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
     def get_metrics(self, day: date) -> Optional[list[SocialDailyMetrics]]:
