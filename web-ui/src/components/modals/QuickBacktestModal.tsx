@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { X, TrendingUp, TrendingDown, AlertCircle, BarChart3 } from 'lucide-react';
 import Button from '../common/Button';
 import { apiUrl } from '../../lib/api';
+import { fetchActiveStrategy } from '../../lib/strategyApi';
 import { QuickBacktestResponseAPI, transformQuickBacktestResponse, QuickBacktestResponse } from '../../types/backtest';
 import { formatR, formatPercent } from '../../utils/formatters';
 import { useConfigStore } from '../../stores/configStore';
@@ -14,6 +15,11 @@ interface QuickBacktestModalProps {
 
 export default function QuickBacktestModal({ ticker, onClose }: QuickBacktestModalProps) {
   const { config } = useConfigStore();
+  const activeStrategyQuery = useQuery({
+    queryKey: ['strategy-active'],
+    queryFn: fetchActiveStrategy,
+  });
+  const kAtr = activeStrategyQuery.data?.risk.kAtr ?? config.risk.kAtr;
   const [monthsBack, setMonthsBack] = useState(12);
   const [result, setResult] = useState<QuickBacktestResponse | null>(null);
 
@@ -25,7 +31,7 @@ export default function QuickBacktestModal({ ticker, onClose }: QuickBacktestMod
         body: JSON.stringify({
           ticker,
           months_back: monthsBack,
-          k_atr: config.risk.kAtr,
+          k_atr: kAtr,
           max_holding_days: 20,
         }),
       });
@@ -77,7 +83,7 @@ export default function QuickBacktestModal({ ticker, onClose }: QuickBacktestMod
           </div>
 
           <div className="mb-4 p-3 bg-gray-50 rounded text-sm">
-            <div>Using: Stop {config.risk.kAtr}× ATR, Max 20 days</div>
+            <div>Using: Stop {kAtr}× ATR, Max 20 days</div>
           </div>
 
           {!result && (

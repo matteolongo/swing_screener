@@ -5,6 +5,7 @@ import Button from '@/components/common/Button';
 import HelpTooltip from '@/components/common/HelpTooltip';
 import {
   createStrategy,
+  deleteStrategy,
   fetchActiveStrategy,
   fetchStrategies,
   setActiveStrategy,
@@ -377,6 +378,19 @@ export default function StrategyPage() {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (strategyId: string) => deleteStrategy(strategyId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['strategies'] });
+      queryClient.invalidateQueries({ queryKey: ['strategy-active'] });
+      setSelectedId('');
+      setDraft(null);
+      setIsInitialized(false);
+      setStatusMessage('Strategy deleted');
+      window.setTimeout(() => setStatusMessage(null), 2500);
+    },
+  });
+
   useEffect(() => {
     if (isInitialized) return;
     if (activeStrategy) {
@@ -418,6 +432,15 @@ export default function StrategyPage() {
     if (selectedStrategy) {
       setActiveMutation.mutate(selectedStrategy.id);
     }
+  };
+
+  const handleDelete = () => {
+    if (!selectedStrategy || selectedStrategy.isDefault) return;
+    const confirmed = window.confirm(
+      `Delete strategy "${selectedStrategy.name}"? This cannot be undone.`
+    );
+    if (!confirmed) return;
+    deleteMutation.mutate(selectedStrategy.id);
   };
 
   const normalizedCreateId = createId.trim();
@@ -489,6 +512,13 @@ export default function StrategyPage() {
               <Button variant="secondary" onClick={handleSetActive} disabled={!selectedStrategy || isActive}>
                 {isActive ? 'Active' : 'Set Active'}
               </Button>
+              <Button
+                variant="danger"
+                onClick={handleDelete}
+                disabled={!selectedStrategy || selectedStrategy?.isDefault || deleteMutation.isPending}
+              >
+                {deleteMutation.isPending ? 'Deleting…' : 'Delete'}
+              </Button>
               {selectedStrategy?.isDefault && (
                 <span className="text-xs text-gray-500">Default</span>
               )}
@@ -535,6 +565,11 @@ export default function StrategyPage() {
           {createMutation.isError && (
             <div className="mt-3 text-sm text-red-600">
               {(createMutation.error as Error)?.message || 'Failed to create strategy'}
+            </div>
+          )}
+          {deleteMutation.isError && (
+            <div className="mt-3 text-sm text-red-600">
+              {(deleteMutation.error as Error)?.message || 'Failed to delete strategy'}
             </div>
           )}
         </CardContent>

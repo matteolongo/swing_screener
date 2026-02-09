@@ -4,6 +4,7 @@ import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Ca
 import Button from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
 import { useConfigStore } from '@/stores/configStore';
+import { fetchActiveStrategy } from '@/lib/strategyApi';
 import { API_ENDPOINTS, apiUrl } from '@/lib/api';
 import { Position, transformPosition, calculatePnL } from '@/types/position';
 import { Order, OrderSnapshotResponseApi, transformOrder, transformOrderSnapshot } from '@/types/order';
@@ -13,6 +14,11 @@ import { TrendingUp, AlertCircle, FileText, Search, RefreshCw } from 'lucide-rea
 export default function Dashboard() {
   const { config } = useConfigStore();
   const navigate = useNavigate();
+  const activeStrategyQuery = useQuery({
+    queryKey: ['strategy-active'],
+    queryFn: fetchActiveStrategy,
+  });
+  const riskConfig = activeStrategyQuery.data?.risk ?? config.risk;
 
   // Fetch open positions
   const { data: positions = [] } = useQuery({
@@ -83,7 +89,7 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400">Account Size</p>
-              <p className="text-2xl font-bold mt-1">{formatCurrency(config.risk.accountSize)}</p>
+              <p className="text-2xl font-bold mt-1">{formatCurrency(riskConfig.accountSize)}</p>
             </div>
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400">Open Positions</p>

@@ -1,12 +1,13 @@
+import { useNavigate } from 'react-router-dom';
 import { useConfigStore } from '@/stores/configStore';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
-import RiskConfigForm from '@/components/domain/settings/RiskConfigForm';
 import IndicatorConfigForm from '@/components/domain/settings/IndicatorConfigForm';
 import ManageConfigForm from '@/components/domain/settings/ManageConfigForm';
 
 export default function Settings() {
   const { resetToDefaults } = useConfigStore();
+  const navigate = useNavigate();
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -22,7 +23,12 @@ export default function Settings() {
           <CardTitle>Account & Risk Management</CardTitle>
         </CardHeader>
         <CardContent>
-          <RiskConfigForm />
+          <div className="space-y-3 text-sm text-gray-600 dark:text-gray-400">
+            <p>Risk settings and account sizing now live in the Strategy page.</p>
+            <Button variant="secondary" onClick={() => navigate('/strategy')}>
+              Go to Strategy
+            </Button>
+          </div>
         </CardContent>
       </Card>
 

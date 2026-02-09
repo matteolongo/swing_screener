@@ -364,6 +364,22 @@ export const handlers = [
     return HttpResponse.json(created, { status: 201 })
   }),
 
+  http.delete(`${API_BASE_URL}/api/strategy/:id`, ({ params }) => {
+    const id = params.id as string
+    if (id === 'default') {
+      return HttpResponse.json({ detail: 'Default strategy cannot be deleted' }, { status: 400 })
+    }
+    const exists = strategies.find((s) => s.id === id)
+    if (!exists) {
+      return HttpResponse.json({ detail: 'Strategy not found' }, { status: 404 })
+    }
+    strategies = strategies.filter((s) => s.id !== id)
+    if (activeStrategyId === id) {
+      activeStrategyId = strategies[0]?.id || 'default'
+    }
+    return HttpResponse.json({ status: 'deleted', id })
+  }),
+
   http.get(`${API_BASE_URL}/api/strategy/active`, () => {
     return HttpResponse.json(resolveActiveStrategy())
   }),

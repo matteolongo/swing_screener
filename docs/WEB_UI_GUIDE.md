@@ -296,14 +296,13 @@ Go to **Orders** page:
 **Three main sections:**
 
 #### 1. Account & Risk Management
-- **Account Size** - Total capital ($50,000 default)
-- **Risk per Trade** - % of account to risk (1% default)
-- **Max Position Size** - % of account per position (60% default)
+Account sizing and risk settings are now managed per‑strategy.
 
-**Example:** With $50k account and 1% risk:
-- Max loss per trade = $500
-- If stock risk (R) = $2/share, you buy 250 shares
-- Position value = 250 × entry price (must be ≤ $30k)
+Use the **Strategy** page to edit:
+- Account Size
+- Risk per Trade
+- Max Position Size
+- ATR Multiplier
 
 #### 2. Technical Indicators
 - **SMA Fast** - Short-term moving average (20 days default)

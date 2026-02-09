@@ -51,6 +51,16 @@ export async function updateStrategy(strategy: Strategy): Promise<Strategy> {
   return transformStrategy(data);
 }
 
+export async function deleteStrategy(strategyId: string): Promise<void> {
+  const res = await fetch(apiUrl(API_ENDPOINTS.strategyById(strategyId)), {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || 'Failed to delete strategy');
+  }
+}
+
 export async function createStrategy(
   strategy: Strategy,
   payload: { id: string; name: string; description?: string }

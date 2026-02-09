@@ -4,6 +4,7 @@ import { AlertCircle, BarChart3, RefreshCw, Trash2 } from 'lucide-react';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import { API_ENDPOINTS, apiUrl } from '@/lib/api';
+import { fetchActiveStrategy } from '@/lib/strategyApi';
 import { useConfigStore } from '@/stores/configStore';
 import {
   BacktestSimulationAPI,
@@ -48,7 +49,10 @@ function defaultDateRange() {
   };
 }
 
-function buildDefaultFormState(config: ReturnType<typeof useConfigStore>['config']): BacktestFormState {
+function buildDefaultFormState(
+  config: ReturnType<typeof useConfigStore>['config'],
+  overrides?: { kAtr?: number }
+): BacktestFormState {
   const { start, end } = defaultDateRange();
   return {
     tickersText: '',
@@ -59,7 +63,7 @@ function buildDefaultFormState(config: ReturnType<typeof useConfigStore>['config
     pullbackMa: config.indicators.pullbackMa,
     minHistory: config.indicators.minHistory,
     atrWindow: config.indicators.atrWindow,
-    kAtr: config.risk.kAtr,
+    kAtr: overrides?.kAtr ?? config.risk.kAtr,
     breakevenAtR: config.manage.breakevenAtR,
     trailAfterR: config.manage.trailAfterR,
     trailSma: config.manage.trailSma,
@@ -89,14 +93,29 @@ function parseTickers(input: string): string[] {
 
 export default function Backtest() {
   const { config } = useConfigStore();
+  const activeStrategyQuery = useQuery({
+    queryKey: ['strategy-active'],
+    queryFn: fetchActiveStrategy,
+  });
   const queryClient = useQueryClient();
 
   const [formState, setFormState] = useState<BacktestFormState>(() => {
-    const defaults = buildDefaultFormState(config);
+    const defaults = buildDefaultFormState(config, {
+      kAtr: activeStrategyQuery.data?.risk.kAtr,
+    });
     return loadFormState(defaults);
   });
   const [result, setResult] = useState<FullBacktestResponse | null>(null);
   const canRun = parseTickers(formState.tickersText).length > 0;
+
+  useEffect(() => {
+    if (!activeStrategyQuery.data) return;
+    if (localStorage.getItem(STORAGE_KEY)) return;
+    const defaults = buildDefaultFormState(config, {
+      kAtr: activeStrategyQuery.data.risk.kAtr,
+    });
+    setFormState(defaults);
+  }, [activeStrategyQuery.data, config]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(formState));
@@ -152,7 +171,9 @@ export default function Backtest() {
   });
 
   const handleResetToSettings = () => {
-    const defaults = buildDefaultFormState(config);
+    const defaults = buildDefaultFormState(config, {
+      kAtr: activeStrategyQuery.data?.risk.kAtr,
+    });
     setFormState((prev) => ({
       ...prev,
       entryType: defaults.entryType,
@@ -230,7 +251,9 @@ export default function Backtest() {
         <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <CardTitle>Backtest Parameters</CardTitle>
-            <p className="text-sm text-gray-500">Defaults come from Settings. Changes are stored locally.</p>
+            <p className="text-sm text-gray-500">
+              Defaults come from Settings and the active Strategy. Changes are stored locally.
+            </p>
           </div>
           <div className="flex gap-2">
             <Button variant="secondary" onClick={handleResetToSettings}>

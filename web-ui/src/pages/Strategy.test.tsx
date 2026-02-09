@@ -27,6 +27,13 @@ describe('Strategy Page', () => {
     expect(await screen.findByText('SMA Fast')).toBeInTheDocument();
   });
 
+  it('disables delete for default strategy', async () => {
+    renderWithProviders(<StrategyPage />);
+
+    const deleteButton = await screen.findByRole('button', { name: /delete/i });
+    expect(deleteButton).toBeDisabled();
+  });
+
   it('can save a strategy as new', async () => {
     const { user } = renderWithProviders(<StrategyPage />);
 
