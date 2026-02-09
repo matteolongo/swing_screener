@@ -8,6 +8,7 @@ describe('Backtest Page', () => {
     renderWithProviders(<Backtest />)
     expect(screen.getByText('Backtest')).toBeInTheDocument()
     expect(screen.getByText('Backtest Parameters')).toBeInTheDocument()
+    expect(screen.getByLabelText('Invested Budget (optional)')).toBeInTheDocument()
   })
 
   it('loads saved simulations list', async () => {
