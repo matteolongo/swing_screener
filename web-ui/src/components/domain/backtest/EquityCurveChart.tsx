@@ -85,6 +85,28 @@ function linePath(points: SeriesPoint[], scaleX: (x: number) => number, scaleY: 
     .join(' ');
 }
 
+function buildTicks(min: number, max: number, count: number): number[] {
+  if (!Number.isFinite(min) || !Number.isFinite(max) || count <= 1) {
+    return [];
+  }
+  if (min === max) {
+    return [min];
+  }
+  const step = (max - min) / (count - 1);
+  return Array.from({ length: count }, (_, i) => min + step * i);
+}
+
+function formatDateTick(ts: number, spanDays: number): string {
+  const d = new Date(ts);
+  if (spanDays > 365 * 2) {
+    return d.getFullYear().toString();
+  }
+  if (spanDays > 120) {
+    return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+  }
+  return d.toLocaleDateString('en-US', { month: 'short', day: '2-digit' });
+}
+
 export default function EquityCurveChart({ total, byTicker }: EquityCurveChartProps) {
   const series = useMemo(() => buildSeries(total, byTicker), [total, byTicker]);
   const [visible, setVisible] = useState<Record<string, boolean>>({});
@@ -130,6 +152,9 @@ export default function EquityCurveChart({ total, byTicker }: EquityCurveChartPr
 
   const scaleX = (x: number) => pad + ((x - (bounds?.minX || 0)) / rangeX) * (width - pad * 2);
   const scaleY = (y: number) => height - pad - ((y - (bounds?.minY || 0)) / rangeY) * (height - pad * 2);
+  const spanDays = bounds ? (bounds.maxX - bounds.minX) / (1000 * 60 * 60 * 24) : 0;
+  const xTicks = bounds ? buildTicks(bounds.minX, bounds.maxX, 5) : [];
+  const yTicks = bounds ? buildTicks(bounds.minY, bounds.maxY, 5) : [];
 
   return (
     <div>
@@ -152,6 +177,30 @@ export default function EquityCurveChart({ total, byTicker }: EquityCurveChartPr
         <svg viewBox={`0 0 ${width} ${height}`} className="w-full min-w-[640px]">
           <line x1={pad} y1={height - pad} x2={width - pad} y2={height - pad} stroke="#e5e7eb" />
           <line x1={pad} y1={pad} x2={pad} y2={height - pad} stroke="#e5e7eb" />
+          {yTicks.map((yVal) => {
+            const y = scaleY(yVal);
+            return (
+              <g key={`y-${yVal}`}>
+                <line x1={pad} y1={y} x2={width - pad} y2={y} stroke="#f1f5f9" />
+                <line x1={pad - 4} y1={y} x2={pad} y2={y} stroke="#cbd5f5" />
+                <text x={pad - 8} y={y + 4} fontSize="10" textAnchor="end" fill="#64748b">
+                  {yVal.toFixed(2)}
+                </text>
+              </g>
+            );
+          })}
+          {xTicks.map((xVal) => {
+            const x = scaleX(xVal);
+            return (
+              <g key={`x-${xVal}`}>
+                <line x1={x} y1={pad} x2={x} y2={height - pad} stroke="#f8fafc" />
+                <line x1={x} y1={height - pad} x2={x} y2={height - pad + 4} stroke="#cbd5f5" />
+                <text x={x} y={height - pad + 16} fontSize="10" textAnchor="middle" fill="#64748b">
+                  {formatDateTick(xVal, spanDays)}
+                </text>
+              </g>
+            );
+          })}
           {visibleSeries.map((s) => (
             <path
               key={s.id}
