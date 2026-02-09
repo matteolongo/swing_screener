@@ -15,6 +15,12 @@ describe('API Client', () => {
       expect(API_ENDPOINTS.configDefaults).toBe('/api/config/defaults')
     })
 
+    it('has all strategy endpoints', () => {
+      expect(API_ENDPOINTS.strategy).toBe('/api/strategy')
+      expect(API_ENDPOINTS.strategyActive).toBe('/api/strategy/active')
+      expect(API_ENDPOINTS.strategyById('strat-1')).toBe('/api/strategy/strat-1')
+    })
+
     it('has all screener endpoints', () => {
       expect(API_ENDPOINTS.screenerRun).toBe('/api/screener/run')
       expect(API_ENDPOINTS.screenerUniverses).toBe('/api/screener/universes')

@@ -22,6 +22,8 @@ from swing_screener.data.universe import (
 from swing_screener.execution.order_workflows import fill_entry_order, scale_in_fill, normalize_orders
 from swing_screener.execution.orders import Order, load_orders, save_orders
 from swing_screener.portfolio.state import load_positions, save_positions
+from swing_screener.strategy.config import build_manage_config, build_report_config
+from swing_screener.strategy.storage import get_active_strategy, get_strategy_by_id
 
 
 def _dedup_keep_order(items: list[str]) -> list[str]:
@@ -33,13 +35,22 @@ def _dedup_keep_order(items: list[str]) -> list[str]:
     return out
 
 
-def _resolve_tickers_from_run_args(args) -> list[str]:
-    ucfg = UniverseConfig(benchmark="SPY", ensure_benchmark=True, max_tickers=args.top)
+def _resolve_strategy(strategy_id: str | None) -> dict:
+    if strategy_id:
+        strategy = get_strategy_by_id(strategy_id)
+        if strategy is None:
+            raise ValueError(f"Strategy '{strategy_id}' not found.")
+        return strategy
+    return get_active_strategy()
+
+
+def _resolve_tickers_from_run_args(args, *, benchmark: str) -> list[str]:
+    ucfg = UniverseConfig(benchmark=benchmark, ensure_benchmark=True, max_tickers=args.top)
 
     if args.tickers:
         tickers = _dedup_keep_order([t for t in args.tickers])
-        if "SPY" not in tickers:
-            tickers.append("SPY")
+        if benchmark not in tickers:
+            tickers.append(benchmark)
         return tickers
 
     if args.universe:
@@ -159,6 +170,10 @@ def main() -> None:
         "--positions",
         help="Path to positions.json (open positions are excluded from screening)",
     )
+    run.add_argument(
+        "--strategy-id",
+        help="Strategy id to use (defaults to active)",
+    )
 
     # -------------------------
     # MANAGE (open positions)
@@ -195,6 +210,10 @@ def main() -> None:
     manage.add_argument(
         "--md",
         help="Export a Degiro-friendly actions checklist in Markdown (path)",
+    )
+    manage.add_argument(
+        "--strategy-id",
+        help="Strategy id to use (defaults to active)",
     )
 
     # -------------------------
@@ -343,7 +362,16 @@ def main() -> None:
     # Dispatch
     # -------------------------
     if args.command == "run":
-        tickers = _resolve_tickers_from_run_args(args)
+        try:
+            strategy = _resolve_strategy(args.strategy_id)
+        except ValueError as exc:
+            print(str(exc))
+            return
+
+        report_cfg = build_report_config(strategy, top_override=args.top)
+        benchmark = report_cfg.universe.mom.benchmark
+
+        tickers = _resolve_tickers_from_run_args(args, benchmark=benchmark)
 
         ohlcv = fetch_ohlcv(tickers)
         exclude_tickers = None
@@ -355,7 +383,7 @@ def main() -> None:
                 p.ticker for p in positions if p.status == "open"
             ]
 
-        report = build_daily_report(ohlcv, exclude_tickers=exclude_tickers)
+        report = build_daily_report(ohlcv, cfg=report_cfg, exclude_tickers=exclude_tickers)
 
         if report.empty:
             print("No candidates today.")
@@ -375,11 +403,19 @@ def main() -> None:
             load_positions,
             evaluate_positions,
             updates_to_dataframe,
-            ManageConfig,
             save_positions,
             apply_stop_updates,
             render_degiro_actions_md,
         )
+
+        try:
+            strategy = _resolve_strategy(args.strategy_id)
+        except ValueError as exc:
+            print(str(exc))
+            return
+
+        manage_cfg = build_manage_config(strategy)
+        benchmark = manage_cfg.benchmark
 
         positions = load_positions(args.positions)
 
@@ -391,13 +427,13 @@ def main() -> None:
         tickers = _dedup_keep_order(open_tickers)
 
         # Ensure benchmark
-        if "SPY" not in tickers:
-            tickers.append("SPY")
+        if benchmark not in tickers:
+            tickers.append(benchmark)
 
         # Optional: widen download using a universe, but always keep open positions included
         if args.universe or args.universe_file:
             ucfg = UniverseConfig(
-                benchmark="SPY", ensure_benchmark=True, max_tickers=args.top
+                benchmark=benchmark, ensure_benchmark=True, max_tickers=args.top
             )
             if args.universe:
                 tickers = load_universe_from_package(args.universe, ucfg)
@@ -413,7 +449,7 @@ def main() -> None:
         # Fetch enough history for SMA trailing etc.
         ohlcv = fetch_ohlcv(tickers)
 
-        updates, new_positions = evaluate_positions(ohlcv, positions, ManageConfig())
+        updates, new_positions = evaluate_positions(ohlcv, positions, manage_cfg)
         df = updates_to_dataframe(updates)
 
         # Pretty display: format r_now as "x.xxR"

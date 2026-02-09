@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 
 # Import routers
-from api.routers import config, screener, portfolio, backtest
+from api.routers import config, screener, portfolio, backtest, strategy
 
 LOG_FORMAT = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
 logging.basicConfig(level=logging.INFO, format=LOG_FORMAT, stream=sys.stdout)
@@ -76,6 +76,7 @@ async def health():
 
 # Include routers
 app.include_router(config.router, prefix="/api/config", tags=["config"])
+app.include_router(strategy.router, prefix="/api/strategy", tags=["strategy"])
 app.include_router(screener.router, prefix="/api/screener", tags=["screener"])
 app.include_router(portfolio.router, prefix="/api/portfolio", tags=["portfolio"])
 app.include_router(backtest.router, prefix="/api/backtest", tags=["backtest"])

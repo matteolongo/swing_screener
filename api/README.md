@@ -101,6 +101,44 @@ curl http://localhost:8000/api/config/defaults
 
 ---
 
+### Strategy Router (`/api/strategy`)
+
+Manage strategy definitions stored on disk (default strategy is always present).
+
+#### `GET /api/strategy`
+List all strategies.
+
+```bash
+curl http://localhost:8000/api/strategy
+```
+
+#### `GET /api/strategy/active`
+Get the active strategy.
+
+```bash
+curl http://localhost:8000/api/strategy/active
+```
+
+#### `POST /api/strategy/active`
+Set active strategy.
+
+```bash
+curl -X POST http://localhost:8000/api/strategy/active \
+  -H "Content-Type: application/json" \
+  -d '{ "strategy_id": "default" }'
+```
+
+#### `POST /api/strategy`
+Create a new strategy (full payload required).
+
+#### `PUT /api/strategy/{strategy_id}`
+Update an existing strategy.
+
+#### `DELETE /api/strategy/{strategy_id}`
+Delete a strategy (default strategy cannot be deleted).
+
+---
+
 ### Portfolio Router (`/api/portfolio`)
 
 Manage positions and orders.
@@ -226,6 +264,7 @@ Full backtest for one or more tickers. Automatically saves the simulation to dis
 Key request fields:
 - `tickers` (list of symbols)
 - `start`, `end` (YYYY‑MM‑DD)
+- `strategy_id` (optional, defaults to active)
 - `entry_type` (`auto`, `breakout`, `pullback`)
 - Backtest params: `breakout_lookback`, `pullback_ma`, `min_history`, `atr_window`, `k_atr`,
   `breakeven_at_r`, `trail_after_r`, `trail_sma`, `sma_buffer_pct`, `max_holding_days`, `commission_pct`

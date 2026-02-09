@@ -17,6 +17,120 @@ export const mockConfig = {
   },
 }
 
+export const mockStrategies = [
+  {
+    id: 'default',
+    name: 'Default',
+    description: 'Default strategy seeded from current system settings.',
+    is_default: true,
+    created_at: '2026-02-08T00:00:00',
+    updated_at: '2026-02-08T00:00:00',
+    universe: {
+      trend: { sma_fast: 20, sma_mid: 50, sma_long: 200 },
+      vol: { atr_window: 14 },
+      mom: { lookback_6m: 126, lookback_12m: 252, benchmark: 'SPY' },
+      filt: {
+        min_price: 5.0,
+        max_price: 500.0,
+        max_atr_pct: 15.0,
+        require_trend_ok: true,
+        require_rs_positive: false,
+      },
+    },
+    ranking: {
+      w_mom_6m: 0.45,
+      w_mom_12m: 0.35,
+      w_rs_6m: 0.2,
+      top_n: 100,
+    },
+    signals: { breakout_lookback: 50, pullback_ma: 20, min_history: 260 },
+    risk: {
+      account_size: 50000.0,
+      risk_pct: 0.01,
+      max_position_pct: 0.6,
+      min_shares: 1,
+      k_atr: 2.0,
+    },
+    manage: {
+      breakeven_at_r: 1.0,
+      trail_after_r: 2.0,
+      trail_sma: 20,
+      sma_buffer_pct: 0.005,
+      max_holding_days: 20,
+      benchmark: 'SPY',
+    },
+    backtest: {
+      entry_type: 'auto',
+      exit_mode: 'trailing_stop',
+      take_profit_r: 2.0,
+      max_holding_days: 20,
+      breakeven_at_r: 1.0,
+      trail_after_r: 2.0,
+      trail_sma: 20,
+      sma_buffer_pct: 0.005,
+      commission_pct: 0.0,
+      min_history: 260,
+    },
+  },
+  {
+    id: 'momentum',
+    name: 'Momentum',
+    description: 'Faster trend + tighter filters.',
+    is_default: false,
+    created_at: '2026-02-08T08:30:00',
+    updated_at: '2026-02-08T08:30:00',
+    universe: {
+      trend: { sma_fast: 15, sma_mid: 40, sma_long: 200 },
+      vol: { atr_window: 10 },
+      mom: { lookback_6m: 84, lookback_12m: 252, benchmark: 'SPY' },
+      filt: {
+        min_price: 10.0,
+        max_price: 300.0,
+        max_atr_pct: 12.0,
+        require_trend_ok: true,
+        require_rs_positive: true,
+      },
+    },
+    ranking: {
+      w_mom_6m: 0.5,
+      w_mom_12m: 0.3,
+      w_rs_6m: 0.2,
+      top_n: 75,
+    },
+    signals: { breakout_lookback: 40, pullback_ma: 15, min_history: 200 },
+    risk: {
+      account_size: 50000.0,
+      risk_pct: 0.01,
+      max_position_pct: 0.5,
+      min_shares: 1,
+      k_atr: 1.8,
+    },
+    manage: {
+      breakeven_at_r: 1.0,
+      trail_after_r: 1.5,
+      trail_sma: 15,
+      sma_buffer_pct: 0.004,
+      max_holding_days: 15,
+      benchmark: 'SPY',
+    },
+    backtest: {
+      entry_type: 'breakout',
+      exit_mode: 'trailing_stop',
+      take_profit_r: 2.0,
+      max_holding_days: 15,
+      breakeven_at_r: 1.0,
+      trail_after_r: 1.5,
+      trail_sma: 15,
+      sma_buffer_pct: 0.004,
+      commission_pct: 0.0,
+      min_history: 200,
+    },
+  },
+]
+
+let activeStrategyId = mockStrategies[0].id
+let strategies = [...mockStrategies]
+
 export const mockPositions = [
   {
     ticker: 'VALE',
@@ -211,94 +325,13 @@ export const mockBacktestSimulation = {
   result: mockBacktestRun,
 }
 
-export const mockBacktestRun = {
-  tickers: ['AAPL', 'MSFT'],
-  start: '2024-02-01',
-  end: '2026-02-08',
-  entry_type: 'auto',
-  summary: {
-    trades: 4,
-    expectancy_R: 0.75,
-    winrate: 0.5,
-    profit_factor_R: 1.8,
-    max_drawdown_R: -1.2,
-    avg_R: 0.6,
-    best_trade_R: 2.4,
-    worst_trade_R: -1.3,
-  },
-  summary_by_ticker: [
-    {
-      ticker: 'AAPL',
-      trades: 2,
-      expectancy_R: 0.9,
-      winrate: 0.5,
-      profit_factor_R: 2.0,
-      max_drawdown_R: null,
-      avg_R: 0.7,
-      best_trade_R: 2.4,
-      worst_trade_R: -1.0,
-    },
-  ],
-  trades: [
-    {
-      ticker: 'AAPL',
-      entry_date: '2025-01-10',
-      entry_price: 150.0,
-      exit_date: '2025-01-20',
-      exit_price: 165.0,
-      R: 2.4,
-      exit_reason: 'trailing_stop',
-      holding_days: 8,
-      stop_price: 145.0,
-    },
-  ],
-  curve_total: [
-    { date: '2025-01-20', R: 2.4, cum_R: 2.4, ticker: null },
-  ],
-  curve_by_ticker: [
-    { date: '2025-01-20', R: 2.4, cum_R: 2.4, ticker: 'AAPL' },
-  ],
-  warnings: [],
-  simulation_id: '20260208_223000_abcd12',
-  simulation_name: '2026-02-08 22:30 • AAPL, MSFT • auto • 2024-02-01→2026-02-08',
-  created_at: '2026-02-08T22:30:00',
-}
-
-export const mockBacktestSimulationList = [
-  {
-    id: '20260208_223000_abcd12',
-    name: '2026-02-08 22:30 • AAPL, MSFT • auto • 2024-02-01→2026-02-08',
-    created_at: '2026-02-08T22:30:00',
-    tickers: ['AAPL', 'MSFT'],
-    start: '2024-02-01',
-    end: '2026-02-08',
-    entry_type: 'auto',
-    trades: 4,
-  },
-]
-
-export const mockBacktestSimulation = {
-  id: '20260208_223000_abcd12',
-  name: '2026-02-08 22:30 • AAPL, MSFT • auto • 2024-02-01→2026-02-08',
-  created_at: '2026-02-08T22:30:00',
-  params: {
-    tickers: ['AAPL', 'MSFT'],
-    start: '2024-02-01',
-    end: '2026-02-08',
-    entry_type: 'auto',
-    breakout_lookback: 50,
-    pullback_ma: 20,
-    min_history: 260,
-    atr_window: 14,
-    k_atr: 2.0,
-    breakeven_at_r: 1.0,
-    trail_after_r: 2.0,
-    trail_sma: 20,
-    sma_buffer_pct: 0.005,
-    max_holding_days: 20,
-    commission_pct: 0.0,
-  },
-  result: mockBacktestRun,
+const resolveActiveStrategy = () => {
+  const found = strategies.find((s) => s.id === activeStrategyId)
+  if (!found) {
+    activeStrategyId = strategies[0]?.id || 'default'
+    return strategies[0]
+  }
+  return found
 }
 
 // MSW request handlers
@@ -306,6 +339,60 @@ export const handlers = [
   // Config endpoints
   http.get(`${API_BASE_URL}/api/config`, () => {
     return HttpResponse.json(mockConfig)
+  }),
+
+  // Strategy endpoints
+  http.get(`${API_BASE_URL}/api/strategy`, () => {
+    return HttpResponse.json(strategies)
+  }),
+
+  http.post(`${API_BASE_URL}/api/strategy`, async ({ request }) => {
+    const body = await request.json()
+    if (body.id === 'default') {
+      return HttpResponse.json({ detail: 'Cannot create strategy with reserved id.' }, { status: 400 })
+    }
+    if (strategies.some((s) => s.id === body.id)) {
+      return HttpResponse.json({ detail: 'Strategy already exists' }, { status: 409 })
+    }
+    const created = {
+      ...body,
+      is_default: false,
+      created_at: '2026-02-08T23:10:00',
+      updated_at: '2026-02-08T23:10:00',
+    }
+    strategies = [...strategies, created]
+    return HttpResponse.json(created, { status: 201 })
+  }),
+
+  http.get(`${API_BASE_URL}/api/strategy/active`, () => {
+    return HttpResponse.json(resolveActiveStrategy())
+  }),
+
+  http.post(`${API_BASE_URL}/api/strategy/active`, async ({ request }) => {
+    const body = await request.json()
+    const target = strategies.find((s) => s.id === body.strategy_id)
+    if (!target) {
+      return HttpResponse.json({ detail: 'Strategy not found' }, { status: 404 })
+    }
+    activeStrategyId = target.id
+    return HttpResponse.json(target)
+  }),
+
+  http.put(`${API_BASE_URL}/api/strategy/:id`, async ({ request, params }) => {
+    const body = await request.json()
+    const id = params.id as string
+    const idx = strategies.findIndex((s) => s.id === id)
+    if (idx === -1) {
+      return HttpResponse.json({ detail: 'Strategy not found' }, { status: 404 })
+    }
+    const updated = {
+      ...strategies[idx],
+      ...body,
+      id,
+      updated_at: '2026-02-08T22:45:00',
+    }
+    strategies = strategies.map((s) => (s.id === id ? updated : s))
+    return HttpResponse.json(updated)
   }),
 
   // Positions endpoints

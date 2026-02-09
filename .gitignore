@@ -52,8 +52,8 @@ dist/
 
 # =========================
 # Execution files
-orders.json
-positions.json
+data/orders.json
+data/positions.json
 # =========================
 # Node.js / npm
 # =========================

@@ -210,6 +210,22 @@ Go to **Orders** page:
 
 ---
 
+### 🧭 Strategy
+
+**Purpose:** Edit strategy definitions and switch the active strategy
+
+**What you can do:**
+- Select a strategy to edit
+- Update minimal settings (signals, risk, filters)
+- Expand **Advanced Settings** for full control
+- Save a new strategy variant ("Save as New")
+- Use indicator hints next to each indicator setting
+- Set the active strategy used across the app
+
+**When to use:** When changing strategy parameters or comparing variants
+
+---
+
 ### 📋 Orders
 
 **Purpose:** Manage all orders (pending, filled, cancelled)
@@ -308,7 +324,7 @@ Go to **Orders** page:
 **Important Notes:**
 - Settings are saved in **localStorage** (browser)
 - **Reset to Defaults** button restores factory settings
-- Backend also has a config file (`positions.json` location)
+- Backend also has a config file (`data/positions.json` location)
 
 ---
 
@@ -520,7 +536,7 @@ python -m uvicorn api.main:app --port 8000 --reload
 **Fix:**
 1. Try different universe
 2. Check console for errors
-3. Verify `positions.json` is valid JSON
+3. Verify `data/positions.json` is valid JSON
 
 ---
 

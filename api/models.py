@@ -40,8 +40,114 @@ class AppConfig(BaseModel):
     risk: RiskConfig
     indicators: IndicatorConfig
     manage: ManageConfig
-    positions_file: str = "positions.json"
-    orders_file: str = "orders.json"
+    positions_file: str = "data/positions.json"
+    orders_file: str = "data/orders.json"
+
+
+# ===== Strategy Models =====
+
+class StrategyTrend(BaseModel):
+    sma_fast: int = Field(gt=0)
+    sma_mid: int = Field(gt=0)
+    sma_long: int = Field(gt=0)
+
+
+class StrategyVol(BaseModel):
+    atr_window: int = Field(gt=0)
+
+
+class StrategyMom(BaseModel):
+    lookback_6m: int = Field(gt=0)
+    lookback_12m: int = Field(gt=0)
+    benchmark: str
+
+
+class StrategyFilt(BaseModel):
+    min_price: float = Field(ge=0)
+    max_price: float = Field(gt=0)
+    max_atr_pct: float = Field(gt=0)
+    require_trend_ok: bool = True
+    require_rs_positive: bool = False
+
+
+class StrategyUniverse(BaseModel):
+    trend: StrategyTrend
+    vol: StrategyVol
+    mom: StrategyMom
+    filt: StrategyFilt
+
+
+class StrategyRanking(BaseModel):
+    w_mom_6m: float = Field(gt=0)
+    w_mom_12m: float = Field(gt=0)
+    w_rs_6m: float = Field(gt=0)
+    top_n: int = Field(gt=0)
+
+
+class StrategySignals(BaseModel):
+    breakout_lookback: int = Field(gt=0)
+    pullback_ma: int = Field(gt=0)
+    min_history: int = Field(gt=0)
+
+
+class StrategyRisk(BaseModel):
+    account_size: float = Field(gt=0)
+    risk_pct: float = Field(gt=0, le=1)
+    max_position_pct: float = Field(gt=0, le=1)
+    min_shares: int = Field(ge=1)
+    k_atr: float = Field(gt=0)
+
+
+class StrategyManage(BaseModel):
+    breakeven_at_r: float = Field(ge=0)
+    trail_after_r: float = Field(ge=0)
+    trail_sma: int = Field(gt=0)
+    sma_buffer_pct: float = Field(ge=0)
+    max_holding_days: int = Field(gt=0)
+    benchmark: str
+
+
+class StrategyBacktest(BaseModel):
+    entry_type: FullEntryType = "auto"
+    exit_mode: Literal["take_profit", "trailing_stop"] = "trailing_stop"
+    take_profit_r: float = Field(gt=0)
+    max_holding_days: int = Field(gt=0)
+    breakeven_at_r: float = Field(ge=0)
+    trail_after_r: float = Field(ge=0)
+    trail_sma: int = Field(gt=0)
+    sma_buffer_pct: float = Field(ge=0)
+    commission_pct: float = Field(ge=0)
+    min_history: int = Field(gt=0)
+
+
+class StrategyBase(BaseModel):
+    name: str
+    description: Optional[str] = None
+    universe: StrategyUniverse
+    ranking: StrategyRanking
+    signals: StrategySignals
+    risk: StrategyRisk
+    manage: StrategyManage
+    backtest: StrategyBacktest
+
+
+class StrategyCreateRequest(StrategyBase):
+    id: str
+
+
+class StrategyUpdateRequest(StrategyBase):
+    pass
+
+
+class Strategy(StrategyBase):
+    id: str
+    is_default: bool = False
+    created_at: str
+    updated_at: str
+
+
+class ActiveStrategyRequest(BaseModel):
+    strategy_id: str
 
 
 # ===== Position Models =====
@@ -185,6 +291,7 @@ class ScreenerRequest(BaseModel):
     universe: Optional[str] = Field(default=None, description="Named universe (e.g., 'sp500')")
     tickers: Optional[list[str]] = Field(default=None, description="Explicit ticker list")
     top: Optional[int] = Field(default=20, ge=1, le=200, description="Max candidates to return")
+    strategy_id: Optional[str] = Field(default=None, description="Strategy id to use (defaults to active)")
     asof_date: Optional[str] = Field(default=None, description="Date for screening (YYYY-MM-DD)")
     min_price: Optional[float] = Field(default=5.0, ge=0, description="Minimum stock price")
     max_price: Optional[float] = Field(default=500.0, gt=0, description="Maximum stock price")
@@ -237,6 +344,7 @@ class BacktestTrade(BaseModel):
 class QuickBacktestRequest(BaseModel):
     ticker: str
     months_back: int = Field(default=12, ge=1, le=360, description="Lookback period in months")
+    strategy_id: Optional[str] = Field(default=None, description="Strategy id to use (optional)")
     entry_type: Optional[str] = Field(default=None, description="breakout or pullback (auto-detect if None)")
     k_atr: Optional[float] = Field(default=None, ge=0.5, le=5.0, description="Stop distance multiplier")
     max_holding_days: Optional[int] = Field(default=None, ge=1, description="Maximum days to hold position")
@@ -296,6 +404,7 @@ class FullBacktestRequest(BaseModel):
     tickers: list[str]
     start: str
     end: str
+    strategy_id: Optional[str] = Field(default=None, description="Strategy id to use (defaults to active)")
     entry_type: FullEntryType = "auto"
     breakout_lookback: int = Field(default=50, gt=0)
     pullback_ma: int = Field(default=20, gt=0)

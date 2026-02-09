@@ -1,6 +1,7 @@
 """Screener router - Run screener and preview orders."""
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Optional
 from fastapi import APIRouter, HTTPException
 import datetime as dt
@@ -13,16 +14,22 @@ from api.models import (
     ScreenerCandidate,
     OrderPreview,
 )
-from api.dependencies import get_today_str
 
 from swing_screener.data.universe import (
     load_universe_from_package,
     list_package_universes,
-    UniverseConfig,
+    UniverseConfig as DataUniverseConfig,
 )
 from swing_screener.data.market_data import fetch_ohlcv
 from swing_screener.data.ticker_info import get_multiple_ticker_info
-from swing_screener.reporting.report import build_daily_report
+from swing_screener.reporting.report import ReportConfig, build_daily_report
+from swing_screener.strategy.config import (
+    build_entry_config,
+    build_ranking_config,
+    build_risk_config,
+    build_universe_config,
+)
+from swing_screener.strategy.storage import get_active_strategy, get_strategy_by_id
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -89,6 +96,15 @@ def _last_bar_map(ohlcv: pd.DataFrame) -> dict[str, str]:
     return out
 
 
+def _resolve_strategy(strategy_id: Optional[str]) -> dict:
+    if strategy_id:
+        strategy = get_strategy_by_id(strategy_id)
+        if strategy is None:
+            raise HTTPException(status_code=404, detail=f"Strategy not found: {strategy_id}")
+        return strategy
+    return get_active_strategy()
+
+
 @router.get("/universes")
 async def list_universes():
     """List available universe files."""
@@ -108,6 +124,11 @@ async def run_screener(request: ScreenerRequest):
             raise HTTPException(status_code=422, detail="top must be >= 1")
         warnings: list[str] = []
 
+        fields_set = request.model_fields_set
+        strategy = _resolve_strategy(request.strategy_id)
+        universe_cfg = build_universe_config(strategy)
+        benchmark = universe_cfg.mom.benchmark
+
         # Determine date
         if request.asof_date:
             asof_str = request.asof_date
@@ -117,24 +138,20 @@ async def run_screener(request: ScreenerRequest):
         # Determine tickers
         if request.tickers:
             tickers = [t.upper() for t in request.tickers]
-            if "SPY" not in tickers:
-                tickers.append("SPY")
+            if benchmark not in tickers:
+                tickers.append(benchmark)
         elif request.universe:
             universe_cap = max(500, requested_top * 2)
-            ucfg = UniverseConfig(benchmark="SPY", ensure_benchmark=True, max_tickers=universe_cap)
+            ucfg = DataUniverseConfig(benchmark=benchmark, ensure_benchmark=True, max_tickers=universe_cap)
             tickers = load_universe_from_package(request.universe, ucfg)
         else:
             # Default to mega
             universe_cap = max(500, requested_top * 2)
-            ucfg = UniverseConfig(benchmark="SPY", ensure_benchmark=True, max_tickers=universe_cap)
+            ucfg = DataUniverseConfig(benchmark=benchmark, ensure_benchmark=True, max_tickers=universe_cap)
             tickers = load_universe_from_package("mega", ucfg)
         
         # Import MarketDataConfig and ReportConfig
         from swing_screener.data.market_data import MarketDataConfig
-        from swing_screener.reporting.report import ReportConfig
-        from swing_screener.screeners.universe import UniverseConfig as ScreenerUniverseConfig, UniverseFilterConfig
-        from swing_screener.screeners.ranking import RankingConfig
-        from swing_screener.signals.entries import EntrySignalConfig
         
         # Fetch market data with proper config
         cfg = MarketDataConfig(
@@ -159,39 +176,42 @@ async def run_screener(request: ScreenerRequest):
             logger.error("OHLCV fetch returned empty data (tickers=%s)", len(tickers))
             raise HTTPException(status_code=404, detail="No market data found for requested tickers")
 
-        if "Close" not in ohlcv.columns.get_level_values(0) or "SPY" not in ohlcv["Close"].columns:
-            logger.warning("Benchmark SPY missing from OHLCV; fetching separately.")
-            spy_df = fetch_ohlcv(["SPY"], cfg=cfg)
-            ohlcv = _merge_ohlcv(ohlcv, spy_df)
-            if "Close" not in ohlcv.columns.get_level_values(0) or "SPY" not in ohlcv["Close"].columns:
+        if "Close" not in ohlcv.columns.get_level_values(0) or benchmark not in ohlcv["Close"].columns:
+            logger.warning("Benchmark %s missing from OHLCV; fetching separately.", benchmark)
+            bench_df = fetch_ohlcv([benchmark], cfg=cfg)
+            ohlcv = _merge_ohlcv(ohlcv, bench_df)
+            if "Close" not in ohlcv.columns.get_level_values(0) or benchmark not in ohlcv["Close"].columns:
                 raise HTTPException(status_code=500, detail="Benchmark data missing; cannot compute momentum.")
 
         last_bar_map = _last_bar_map(ohlcv)
         overall_last_bar = _to_iso(ohlcv.index.max())
         
-        # Create universe filters from request or use defaults
-        universe_cfg = ScreenerUniverseConfig(
-            filt=UniverseFilterConfig(
-                min_price=request.min_price if request.min_price is not None else 5.0,
-                max_price=request.max_price if request.max_price is not None else 500.0,
-                max_atr_pct=15.0,  # More permissive
-                require_trend_ok=True,
-                require_rs_positive=False,
-            )
-        )
-        
-        # Run screener with custom config
-        # NOTE: We'll get more than top_n initially, then filter by confidence
-        signals_cfg = EntrySignalConfig(
-            breakout_lookback=request.breakout_lookback or 50,
-            pullback_ma=request.pullback_ma or 20,
-            min_history=request.min_history or 260,
-        )
+        # Apply request overrides to strategy config
+        if "min_price" in fields_set or "max_price" in fields_set:
+            filt = universe_cfg.filt
+            min_price = request.min_price if request.min_price is not None else filt.min_price
+            max_price = request.max_price if request.max_price is not None else filt.max_price
+            universe_cfg = replace(universe_cfg, filt=replace(filt, min_price=min_price, max_price=max_price))
+
+        ranking_cfg = build_ranking_config(strategy)
+        if ranking_cfg.top_n < requested_top:
+            ranking_cfg = replace(ranking_cfg, top_n=requested_top)
+
+        signals_cfg = build_entry_config(strategy)
+        if "breakout_lookback" in fields_set and request.breakout_lookback is not None:
+            signals_cfg = replace(signals_cfg, breakout_lookback=request.breakout_lookback)
+        if "pullback_ma" in fields_set and request.pullback_ma is not None:
+            signals_cfg = replace(signals_cfg, pullback_ma=request.pullback_ma)
+        if "min_history" in fields_set and request.min_history is not None:
+            signals_cfg = replace(signals_cfg, min_history=request.min_history)
+
+        risk_cfg = build_risk_config(strategy)
 
         report_cfg = ReportConfig(
             universe=universe_cfg,
-            ranking=RankingConfig(top_n=max(100, requested_top)),
+            ranking=ranking_cfg,
             signals=signals_cfg,
+            risk=risk_cfg,
         )
         
         results = build_daily_report(ohlcv, cfg=report_cfg, exclude_tickers=[])
@@ -228,6 +248,8 @@ async def run_screener(request: ScreenerRequest):
         ticker_info = get_multiple_ticker_info(ticker_list) if ticker_list else {}
         
         # Convert to response format
+        atr_col = f"atr{universe_cfg.vol.atr_window}"
+        ma_col = f"ma{signals_cfg.pullback_ma}_level"
         candidates = []
         for idx, row in results.iterrows():
             # Helper to safely convert to float, replacing NaN with 0
@@ -238,7 +260,7 @@ async def run_screener(request: ScreenerRequest):
                 return float(val)
             
             # Calculate SMAs from OHLCV if available, otherwise use distance metrics
-            sma20 = safe_float(row.get("ma20_level"))
+            sma20 = safe_float(row.get(ma_col))
             sma50_dist = safe_float(row.get("dist_sma50_pct"))
             sma200_dist = safe_float(row.get("dist_sma200_pct"))
             last_price = safe_float(row.get("last"))
@@ -262,7 +284,7 @@ async def run_screener(request: ScreenerRequest):
                     sma_20=sma20,
                     sma_50=sma50,
                     sma_200=sma200,
-                    atr=safe_float(row.get("atr14")),
+                    atr=safe_float(row.get(atr_col)),
                     momentum_6m=safe_float(row.get("mom_6m")),
                     momentum_12m=safe_float(row.get("mom_12m")),
                     rel_strength=safe_float(row.get("rs_6m")),

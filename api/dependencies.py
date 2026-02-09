@@ -9,8 +9,9 @@ from fastapi import HTTPException
 
 # Repository root
 ROOT_DIR = Path(__file__).parent.parent.resolve()
-POSITIONS_FILE = ROOT_DIR / "positions.json"
-ORDERS_FILE = ROOT_DIR / "orders.json"
+DATA_DIR = ROOT_DIR / "data"
+POSITIONS_FILE = DATA_DIR / "positions.json"
+ORDERS_FILE = DATA_DIR / "orders.json"
 
 
 def get_positions_path() -> Path:
@@ -42,6 +43,7 @@ def read_json_file(path: Path) -> dict:
 def write_json_file(path: Path, data: dict) -> None:
     """Write data to JSON file."""
     try:
+        path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to write {path.name}: {e}")
