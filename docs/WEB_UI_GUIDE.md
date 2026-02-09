@@ -96,6 +96,7 @@ The results table shows:
 - **Trend/Momentum** - Technical indicators
 - **Shares** - Calculated position size based on risk config
 - **Social Overlay** - Risk-only status (OK/Reduced/Review/Veto) with reason codes
+- **Sentiment** - Click the message icon next to any ticker to run on‑demand analysis (shows last execution time, metrics, and raw events)
 
 ### 4. **Create Orders** ✅
 
@@ -238,6 +239,7 @@ Go to **Orders** page:
   - Filter by status: ALL, PENDING, FILLED, CANCELLED
   - Filter by side: ALL, BUY, SELL, SELL_STOP
 - **Create new orders** manually
+- **Run on‑demand sentiment analysis** for any order via the message icon
 - **Fill orders** after execution at broker
 - **Cancel orders** if you change your mind
 - **Delete orders** (removes from history)
@@ -262,6 +264,7 @@ Go to **Orders** page:
 - **View all positions** with filtering
   - Open positions (currently held)
   - Closed positions (historical)
+- **Run on‑demand sentiment analysis** for any position via the message icon
 - **Update stops** on open positions
   - **Important:** Stops can only move UP (risk protection)
   - Useful for trailing stops as price moves in your favor

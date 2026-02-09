@@ -227,6 +227,25 @@ describe('Screener Page', () => {
         expect(createButtons.length).toBeGreaterThan(0)
       })
     })
+
+    it('opens sentiment analysis modal from candidate row', async () => {
+      const { user } = renderWithProviders(<Screener />)
+
+      await user.click(screen.getByRole('button', { name: /Run Screener/i }))
+
+      await waitFor(() => {
+        expect(screen.getByText('AAPL')).toBeInTheDocument()
+      })
+
+      const sentimentButton = screen.getByRole('button', { name: /Sentiment for AAPL/i })
+      await user.click(sentimentButton)
+
+      await waitFor(() => {
+        expect(screen.getByText('Sentiment Analysis - AAPL')).toBeInTheDocument()
+      })
+
+      expect(screen.getByLabelText(/Lookback Override/i)).toBeInTheDocument()
+    })
   })
 
   describe('Refresh Functionality', () => {

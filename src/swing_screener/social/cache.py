@@ -93,6 +93,26 @@ class SocialCache:
         self._ensure_parent(path)
         path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
+    def update_run_metadata(self, payload: dict) -> None:
+        meta = self.load_run_metadata() or {}
+        meta["last_run"] = payload
+        self.store_run_metadata(meta)
+
+    def update_symbol_run(self, provider: str, symbol: str, payload: dict) -> None:
+        meta = self.load_run_metadata() or {}
+        runs = meta.get("symbol_runs", {})
+        provider_runs = runs.get(provider, {})
+        provider_runs[str(symbol).upper()] = payload
+        runs[provider] = provider_runs
+        meta["symbol_runs"] = runs
+        self.store_run_metadata(meta)
+
+    def get_symbol_run(self, provider: str, symbol: str) -> Optional[dict]:
+        meta = self.load_run_metadata() or {}
+        runs = meta.get("symbol_runs", {})
+        provider_runs = runs.get(provider, {})
+        return provider_runs.get(str(symbol).upper())
+
     def load_run_metadata(self) -> Optional[dict]:
         path = self._metadata_path()
         if not path.exists():

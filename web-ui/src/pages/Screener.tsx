@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { PlayCircle, RefreshCw, TrendingUp, AlertCircle, BarChart3 } from 'lucide-react';
+import { PlayCircle, RefreshCw, TrendingUp, AlertCircle, BarChart3, MessageSquare } from 'lucide-react';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import { API_ENDPOINTS, apiUrl } from '../lib/api';
@@ -18,6 +18,7 @@ import { StrategyRisk } from '../types/strategy';
 import { useScreenerStore } from '../stores/screenerStore';
 import { formatCurrency, formatPercent } from '../utils/formatters';
 import QuickBacktestModal from '../components/modals/QuickBacktestModal';
+import SocialAnalysisModal from '../components/modals/SocialAnalysisModal';
 
 const TOP_N_MAX = 200;
 const UNIVERSE_ALIASES: Record<string, string> = {
@@ -72,6 +73,7 @@ export default function Screener() {
   const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
   const [showBacktestModal, setShowBacktestModal] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<ScreenerCandidate | null>(null);
+  const [socialSymbol, setSocialSymbol] = useState<string | null>(null);
 
   // Save preferences to localStorage when they change
   const handleUniverseChange = (value: string) => {
@@ -383,15 +385,26 @@ export default function Screener() {
                           #{candidate.rank}
                         </td>
                         <td className="py-3 px-4">
-                          <a 
-                            href={`https://finance.yahoo.com/quote/${candidate.ticker}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline"
-                            title={`View ${candidate.ticker} on Yahoo Finance`}
-                          >
-                            {candidate.ticker}
-                          </a>
+                          <div className="flex items-center gap-2">
+                            <a 
+                              href={`https://finance.yahoo.com/quote/${candidate.ticker}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline"
+                              title={`View ${candidate.ticker} on Yahoo Finance`}
+                            >
+                              {candidate.ticker}
+                            </a>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => setSocialSymbol(candidate.ticker)}
+                              aria-label={`Sentiment for ${candidate.ticker}`}
+                              title="Sentiment"
+                            >
+                              <MessageSquare className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </td>
                         <td className="py-3 px-4 text-sm text-gray-700">
                           {candidate.name ? (
@@ -537,6 +550,13 @@ export default function Screener() {
             setShowBacktestModal(false);
             setSelectedCandidate(null);
           }}
+        />
+      )}
+
+      {socialSymbol && (
+        <SocialAnalysisModal
+          symbol={socialSymbol}
+          onClose={() => setSocialSymbol(null)}
         />
       )}
     </div>

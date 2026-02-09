@@ -6,7 +6,8 @@ import Badge from '@/components/common/Badge';
 import { API_ENDPOINTS, apiUrl } from '@/lib/api';
 import { Order, OrderStatus, CreateOrderRequest, FillOrderRequest, transformOrder, transformCreateOrderRequest } from '@/types/order';
 import { formatCurrency, formatDate } from '@/utils/formatters';
-import { Plus, X, CheckCircle } from 'lucide-react';
+import { Plus, X, CheckCircle, MessageSquare } from 'lucide-react';
+import SocialAnalysisModal from '@/components/modals/SocialAnalysisModal';
 
 type FilterStatus = OrderStatus | 'all';
 
@@ -15,6 +16,7 @@ export default function Orders() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showFillModal, setShowFillModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [socialSymbol, setSocialSymbol] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   // Fetch orders
@@ -153,15 +155,26 @@ export default function Orders() {
                   {orders.map((order: Order) => (
                     <tr key={order.orderId} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
                       <td className="py-3 px-4 font-mono font-semibold">
-                        <a 
-                          href={`https://finance.yahoo.com/quote/${order.ticker}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-800 hover:underline"
-                          title={`View ${order.ticker} on Yahoo Finance`}
-                        >
-                          {order.ticker}
-                        </a>
+                        <div className="flex items-center gap-2">
+                          <a 
+                            href={`https://finance.yahoo.com/quote/${order.ticker}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-800 hover:underline"
+                            title={`View ${order.ticker} on Yahoo Finance`}
+                          >
+                            {order.ticker}
+                          </a>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => setSocialSymbol(order.ticker)}
+                            aria-label={`Sentiment for ${order.ticker}`}
+                            title="Sentiment"
+                          >
+                            <MessageSquare className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </td>
                       <td className="py-3 px-4 text-sm">{order.orderType}</td>
                       <td className="py-3 px-4">
@@ -237,6 +250,13 @@ export default function Orders() {
           }}
           onSubmit={(request) => fillOrderMutation.mutate({ orderId: selectedOrder.orderId, request })}
           isLoading={fillOrderMutation.isPending}
+        />
+      )}
+
+      {socialSymbol && (
+        <SocialAnalysisModal
+          symbol={socialSymbol}
+          onClose={() => setSocialSymbol(null)}
         />
       )}
     </div>

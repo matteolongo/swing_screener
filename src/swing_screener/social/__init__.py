@@ -57,12 +57,12 @@ def run_social_overlay(
             z_lookback_days=DEFAULT_ATTENTION_LOOKBACK_DAYS,
         )
         decisions = apply_overlay(metrics, cfg, cache)
-        cache.store_run_metadata(meta)
+        cache.update_run_metadata(meta)
         return metrics, decisions, meta
     except Exception as exc:
         meta["status"] = "error"
         meta["error"] = str(exc)
-        cache.store_run_metadata(meta)
+        cache.update_run_metadata(meta)
         raise
 
 

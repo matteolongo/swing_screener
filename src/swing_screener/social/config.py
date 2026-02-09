@@ -7,6 +7,10 @@ DEFAULT_SUBREDDITS = (
     "stocks",
     "investing",
     "options",
+    "stockmarket",
+    "securityanalysis",
+    "valueinvesting",
+    "pennystocks",
 )
 DEFAULT_USER_AGENT = "swing-screener/1.0"
 DEFAULT_RATE_LIMIT_PER_SEC = 1.0

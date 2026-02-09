@@ -4,7 +4,7 @@ import { API_BASE_URL, API_ENDPOINTS, apiUrl } from './api'
 describe('API Client', () => {
   describe('API_BASE_URL', () => {
     it('has default base URL', () => {
-      expect(API_BASE_URL).toBe('http://localhost:8000')
+      expect(API_BASE_URL).toBe('')
     })
   })
 
@@ -47,18 +47,18 @@ describe('API Client', () => {
 
   describe('apiUrl', () => {
     it('constructs full URLs correctly', () => {
-      expect(apiUrl('/api/config')).toBe('http://localhost:8000/api/config')
-      expect(apiUrl('/api/portfolio/positions')).toBe('http://localhost:8000/api/portfolio/positions')
+      expect(apiUrl('/api/config')).toBe('/api/config')
+      expect(apiUrl('/api/portfolio/positions')).toBe('/api/portfolio/positions')
     })
 
     it('handles endpoints with query parameters', () => {
       expect(apiUrl('/api/portfolio/positions?status=open')).toBe(
-        'http://localhost:8000/api/portfolio/positions?status=open'
+        '/api/portfolio/positions?status=open'
       )
     })
 
     it('handles absolute paths', () => {
-      expect(apiUrl('/api/screener/run')).toBe('http://localhost:8000/api/screener/run')
+      expect(apiUrl('/api/screener/run')).toBe('/api/screener/run')
     })
   })
 })

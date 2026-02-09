@@ -381,6 +381,26 @@ Response:
 
 ---
 
+### Social Router (`/api/social`)
+On‑demand social sentiment analysis (risk/awareness only).
+
+#### `POST /api/social/analyze`
+Fetch recent social events for a symbol and compute sentiment + attention metrics.
+
+```bash
+curl -X POST http://localhost:8000/api/social/analyze \
+  -H "Content-Type: application/json" \
+  -d '{ "symbol": "AAPL", "lookback_hours": 24, "max_events": 100, "provider": "reddit" }'
+```
+
+Response includes:
+- `status` (`ok` | `no_data` | `error`)
+- `last_execution_at`
+- metrics (sentiment, attention, hype)
+- `raw_events` (returned even when sample size is low)
+
+---
+
 ## CORS Configuration
 
 The API allows requests from:

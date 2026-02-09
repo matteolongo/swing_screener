@@ -373,6 +373,33 @@ const resolveActiveStrategy = () => {
   return found
 }
 
+const buildSocialAnalysis = (symbol: string) => ({
+  status: 'ok',
+  symbol,
+  provider: 'reddit',
+  lookback_hours: 24,
+  last_execution_at: '2026-02-09T09:00:00',
+  sample_size: 32,
+  sentiment_score: 0.18,
+  sentiment_confidence: 0.62,
+  attention_score: 32,
+  attention_z: 1.9,
+  hype_score: 2.1,
+  reasons: [],
+  raw_events: [
+    {
+      source: 'reddit',
+      symbol,
+      timestamp: '2026-02-09T08:45:00',
+      text: `${symbol} looking strong today`,
+      author_id_hash: 'hash123',
+      upvotes: 12,
+      url: 'https://www.reddit.com/r/stocks/comments/abc123',
+      metadata: { subreddit: 'stocks', id: 'abc123' },
+    },
+  ],
+})
+
 // MSW request handlers
 export const handlers = [
   // Config endpoints
@@ -496,6 +523,13 @@ export const handlers = [
 
   http.post(`${API_BASE_URL}/api/screener/run`, async ({ request }) => {
     return HttpResponse.json(mockScreenerResults)
+  }),
+
+  // Social endpoints
+  http.post(`${API_BASE_URL}/api/social/analyze`, async ({ request }) => {
+    const body = await request.json()
+    const symbol = (body?.symbol || 'AAPL').toUpperCase()
+    return HttpResponse.json(buildSocialAnalysis(symbol))
   }),
 
   // Backtest endpoints

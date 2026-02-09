@@ -65,6 +65,16 @@ describe('Positions Page', () => {
       })
     })
 
+    it('shows sentiment button for each position', async () => {
+      renderWithProviders(<Positions />)
+
+      await waitFor(() => {
+        expect(screen.getByText('VALE')).toBeInTheDocument()
+      })
+
+      expect(screen.getByRole('button', { name: /Sentiment for VALE/i })).toBeInTheDocument()
+    })
+
     it('displays position details', async () => {
       renderWithProviders(<Positions />)
       
