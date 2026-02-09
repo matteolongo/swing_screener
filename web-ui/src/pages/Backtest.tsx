@@ -25,6 +25,7 @@ interface BacktestFormState {
   tickersText: string;
   start: string;
   end: string;
+  investedBudget: number | null;
   entryType: FullEntryType;
   breakoutLookback: number;
   pullbackMa: number;
@@ -76,6 +77,7 @@ function buildDefaultFormState(
     tickersText: '',
     start,
     end,
+    investedBudget: null,
     entryType: 'auto',
     breakoutLookback: config.indicators.breakoutLookback,
     pullbackMa: config.indicators.pullbackMa,
@@ -164,6 +166,7 @@ export default function Backtest() {
         tickers,
         start: formState.start,
         end: formState.end,
+        invested_budget: formState.investedBudget && formState.investedBudget > 0 ? formState.investedBudget : undefined,
         entry_type: formState.entryType,
         breakout_lookback: formState.breakoutLookback,
         pullback_ma: formState.pullbackMa,
@@ -229,6 +232,7 @@ export default function Backtest() {
       tickersText: sim.params.tickers.join(', '),
       start: sim.params.start,
       end: sim.params.end,
+      investedBudget: sim.params.investedBudget ?? null,
       entryType: sim.params.entryType,
       breakoutLookback: sim.params.breakoutLookback,
       pullbackMa: sim.params.pullbackMa,
@@ -265,6 +269,23 @@ export default function Backtest() {
       { label: 'Avg R', value: s.avgR != null ? formatR(s.avgR) : '—' },
     ];
   }, [result]);
+
+  const budgetCards = useMemo(() => {
+    if (!result || !formState.investedBudget) return [];
+    const riskPct = activeStrategyQuery.data?.risk.riskPct ?? config.risk.riskPct;
+    if (!riskPct || riskPct <= 0) return [];
+    const riskPerR = formState.investedBudget * riskPct;
+    const s = result.summary;
+    const formatMoney = (val: number | null) =>
+      val == null ? '—' : formatCurrency(val * riskPerR);
+    return [
+      { label: 'Expectancy $', value: formatMoney(s.expectancyR) },
+      { label: 'Avg R $', value: formatMoney(s.avgR) },
+      { label: 'Max Drawdown $', value: formatMoney(s.maxDrawdownR != null ? -Math.abs(s.maxDrawdownR) : null) },
+      { label: 'Best Trade $', value: formatMoney(s.bestTradeR) },
+      { label: 'Worst Trade $', value: formatMoney(s.worstTradeR) },
+    ];
+  }, [result, formState.investedBudget, activeStrategyQuery.data, config.risk.riskPct]);
 
   return (
     <div className="space-y-6">
@@ -329,6 +350,32 @@ export default function Backtest() {
                 onChange={(e) => setFormState((prev) => ({ ...prev, end: e.target.value }))}
                 className="w-full px-3 py-2 border border-border rounded-lg"
               />
+            </div>
+          </div>
+          <div className="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div>
+              <label htmlFor="investedBudget" className="block text-sm font-medium mb-1">
+                Invested Budget (optional)
+              </label>
+              <input
+                id="investedBudget"
+                type="number"
+                min="0"
+                step="1"
+                value={formState.investedBudget ?? ''}
+                onChange={(e) => {
+                  const value = e.target.value.trim();
+                  setFormState((prev) => ({
+                    ...prev,
+                    investedBudget: value === '' ? null : Number(value),
+                  }));
+                }}
+                className="w-full px-3 py-2 border border-border rounded-lg"
+                placeholder="e.g. 10000"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Converts R results to $ using the active strategy risk %.
+              </p>
             </div>
           </div>
           <div className="mt-3 flex flex-wrap gap-2 text-sm">
@@ -515,13 +562,25 @@ export default function Backtest() {
             </CardHeader>
             <CardContent>
               {result ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {summaryCards.map((item) => (
-                    <div key={item.label} className="p-3 bg-gray-50 rounded">
-                      <div className="text-xs text-gray-600">{item.label}</div>
-                      <div className="text-lg font-semibold">{item.value}</div>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {summaryCards.map((item) => (
+                      <div key={item.label} className="p-3 bg-gray-50 rounded">
+                        <div className="text-xs text-gray-600">{item.label}</div>
+                        <div className="text-lg font-semibold">{item.value}</div>
+                      </div>
+                    ))}
+                  </div>
+                  {budgetCards.length > 0 && (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {budgetCards.map((item) => (
+                        <div key={item.label} className="p-3 bg-blue-50 rounded">
+                          <div className="text-xs text-blue-700">{item.label}</div>
+                          <div className="text-lg font-semibold text-blue-900">{item.value}</div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  )}
                 </div>
               ) : (
                 <div className="text-sm text-gray-500">Run a backtest to see summary metrics.</div>

@@ -473,6 +473,11 @@ class FullBacktestRequest(BaseModel):
     start: str
     end: str
     strategy_id: Optional[str] = Field(default=None, description="Strategy id to use (defaults to active)")
+    invested_budget: Optional[float] = Field(
+        default=None,
+        gt=0,
+        description="Optional invested budget used for $ P&L estimates (backtest only)",
+    )
     entry_type: FullEntryType = "auto"
     breakout_lookback: int = Field(default=50, gt=0)
     pullback_ma: int = Field(default=20, gt=0)
