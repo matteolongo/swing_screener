@@ -180,6 +180,48 @@ const help = {
     'Reduces stop-outs from minor volatility around the average.',
     'Higher buffers allow more room but may give back more gains.'
   ),
+  regimeEnabled: buildHelp(
+    'Regime Risk Scaling',
+    'Scale risk down in adverse regimes.',
+    'An optional ruleset that reduces risk when trend or volatility conditions are unfavorable.',
+    'Protects capital during downtrends or high-volatility regimes.',
+    'When enabled, risk is multiplied by the configured trend/volatility factors.'
+  ),
+  regimeTrendSma: buildHelp(
+    'Trend SMA Window',
+    'Benchmark SMA used for risk scaling.',
+    'The SMA window applied to the benchmark for regime detection.',
+    'A break below this SMA signals a risk-off trend.',
+    'Common choice is 200 for long-term trend.'
+  ),
+  regimeTrendMultiplier: buildHelp(
+    'Trend Multiplier',
+    'Risk scaling when below SMA.',
+    'Risk multiplier applied when the benchmark is below the trend SMA.',
+    'Reduces exposure in risk-off trends.',
+    '0.5 means you take half the normal risk.'
+  ),
+  regimeVolAtrWindow: buildHelp(
+    'Volatility ATR Window',
+    'ATR window for regime volatility.',
+    'ATR window used to compute benchmark ATR%.',
+    'Detects volatility spikes that merit reduced risk.',
+    'Use the same window as your ATR (e.g., 14) for consistency.'
+  ),
+  regimeVolAtrPctThreshold: buildHelp(
+    'Volatility Threshold',
+    'ATR% level that triggers scaling.',
+    'If benchmark ATR% exceeds this threshold, risk is reduced.',
+    'Limits exposure during volatility spikes.',
+    'Lower thresholds trigger scaling more often.'
+  ),
+  regimeVolMultiplier: buildHelp(
+    'Volatility Multiplier',
+    'Risk scaling during high volatility.',
+    'Risk multiplier applied when benchmark ATR% exceeds the threshold.',
+    'Reduces exposure during unstable periods.',
+    '0.5 means you take half the normal risk.'
+  ),
 };
 
 function cloneStrategy(strategy: Strategy): Strategy {
@@ -1026,6 +1068,91 @@ export default function StrategyPage() {
                         step={1}
                         min={1}
                       />
+                    </div>
+                    <div className="mt-6">
+                      <div className="text-sm font-semibold mb-3">Regime Risk Scaling</div>
+                      <div className="space-y-4">
+                        <CheckboxInput
+                          label="Enable Regime Scaling"
+                          checked={draft.risk.regimeEnabled}
+                          onChange={(value) =>
+                            setDraft({
+                              ...draft,
+                              risk: { ...draft.risk, regimeEnabled: value },
+                            })
+                          }
+                          help={help.regimeEnabled}
+                        />
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <NumberInput
+                            label="Trend SMA"
+                            value={draft.risk.regimeTrendSma}
+                            onChange={(value) =>
+                              setDraft({
+                                ...draft,
+                                risk: { ...draft.risk, regimeTrendSma: value },
+                              })
+                            }
+                            step={1}
+                            min={50}
+                            help={help.regimeTrendSma}
+                          />
+                          <NumberInput
+                            label="Trend Multiplier"
+                            value={draft.risk.regimeTrendMultiplier}
+                            onChange={(value) =>
+                              setDraft({
+                                ...draft,
+                                risk: { ...draft.risk, regimeTrendMultiplier: value },
+                              })
+                            }
+                            step={0.05}
+                            min={0}
+                            max={1}
+                            help={help.regimeTrendMultiplier}
+                          />
+                          <NumberInput
+                            label="Volatility ATR Window"
+                            value={draft.risk.regimeVolAtrWindow}
+                            onChange={(value) =>
+                              setDraft({
+                                ...draft,
+                                risk: { ...draft.risk, regimeVolAtrWindow: value },
+                              })
+                            }
+                            step={1}
+                            min={2}
+                            help={help.regimeVolAtrWindow}
+                          />
+                          <NumberInput
+                            label="Volatility ATR % Threshold"
+                            value={draft.risk.regimeVolAtrPctThreshold}
+                            onChange={(value) =>
+                              setDraft({
+                                ...draft,
+                                risk: { ...draft.risk, regimeVolAtrPctThreshold: value },
+                              })
+                            }
+                            step={0.1}
+                            min={0}
+                            help={help.regimeVolAtrPctThreshold}
+                          />
+                          <NumberInput
+                            label="Volatility Multiplier"
+                            value={draft.risk.regimeVolMultiplier}
+                            onChange={(value) =>
+                              setDraft({
+                                ...draft,
+                                risk: { ...draft.risk, regimeVolMultiplier: value },
+                              })
+                            }
+                            step={0.05}
+                            min={0}
+                            max={1}
+                            help={help.regimeVolMultiplier}
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
 

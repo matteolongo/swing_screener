@@ -65,6 +65,12 @@ def _default_strategy_payload(now: dt.datetime | None = None) -> dict:
             "max_position_pct": 0.6,
             "min_shares": 1,
             "k_atr": 2.0,
+            "regime_enabled": False,
+            "regime_trend_sma": 200,
+            "regime_trend_multiplier": 0.5,
+            "regime_vol_atr_window": 14,
+            "regime_vol_atr_pct_threshold": 6.0,
+            "regime_vol_multiplier": 0.5,
         },
         "manage": {
             "breakeven_at_r": 1.0,

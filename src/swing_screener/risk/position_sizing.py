@@ -15,6 +15,13 @@ class RiskConfig:
     k_atr: float = 2.0  # stop = entry - k*ATR
     max_position_pct: float = 0.60  # max capital allocated to a single position
     min_shares: int = 1
+    # Regime-aware risk scaling (optional)
+    regime_enabled: bool = False
+    regime_trend_sma: int = 200
+    regime_trend_multiplier: float = 0.5
+    regime_vol_atr_window: int = 14
+    regime_vol_atr_pct_threshold: float = 6.0
+    regime_vol_multiplier: float = 0.5
 
 
 def compute_stop(entry: float, atr14: float, k_atr: float) -> float:

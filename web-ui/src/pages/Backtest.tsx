@@ -49,6 +49,24 @@ function defaultDateRange() {
   };
 }
 
+function rangeYears(years: number) {
+  const end = new Date();
+  const start = new Date();
+  start.setFullYear(start.getFullYear() - years);
+  return {
+    start: start.toISOString().slice(0, 10),
+    end: end.toISOString().slice(0, 10),
+  };
+}
+
+function rangeSince(dateStr: string) {
+  const end = new Date();
+  return {
+    start: dateStr,
+    end: end.toISOString().slice(0, 10),
+  };
+}
+
 function buildDefaultFormState(
   config: ReturnType<typeof useConfigStore>['config'],
   overrides?: { kAtr?: number }
@@ -107,6 +125,14 @@ export default function Backtest() {
   });
   const [result, setResult] = useState<FullBacktestResponse | null>(null);
   const canRun = parseTickers(formState.tickersText).length > 0;
+  const presets = useMemo(
+    () => [
+      { label: '10Y', range: () => rangeYears(10) },
+      { label: '15Y', range: () => rangeYears(15) },
+      { label: 'Since 2008', range: () => rangeSince('2008-01-01') },
+    ],
+    []
+  );
 
   useEffect(() => {
     if (!activeStrategyQuery.data) return;
@@ -304,6 +330,22 @@ export default function Backtest() {
                 className="w-full px-3 py-2 border border-border rounded-lg"
               />
             </div>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2 text-sm">
+            <span className="text-gray-500">Presets:</span>
+            {presets.map((preset) => (
+              <Button
+                key={preset.label}
+                size="sm"
+                variant="secondary"
+                onClick={() => {
+                  const range = preset.range();
+                  setFormState((prev) => ({ ...prev, start: range.start, end: range.end }));
+                }}
+              >
+                {preset.label}
+              </Button>
+            ))}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mt-4">

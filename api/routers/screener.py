@@ -23,12 +23,14 @@ from swing_screener.data.universe import (
 from swing_screener.data.market_data import fetch_ohlcv
 from swing_screener.data.ticker_info import get_multiple_ticker_info
 from swing_screener.reporting.report import ReportConfig, build_daily_report
+from swing_screener.reporting.concentration import sector_concentration_warnings
 from swing_screener.strategy.config import (
     build_entry_config,
     build_ranking_config,
     build_risk_config,
     build_universe_config,
 )
+from swing_screener.risk.regime import compute_regime_risk_multiplier
 from swing_screener.strategy.storage import get_active_strategy, get_strategy_by_id
 
 router = APIRouter()
@@ -206,6 +208,14 @@ async def run_screener(request: ScreenerRequest):
             signals_cfg = replace(signals_cfg, min_history=request.min_history)
 
         risk_cfg = build_risk_config(strategy)
+        multiplier, regime_meta = compute_regime_risk_multiplier(ohlcv, benchmark, risk_cfg)
+        if multiplier != 1.0:
+            risk_cfg = replace(risk_cfg, risk_pct=risk_cfg.risk_pct * multiplier)
+            if regime_meta.get("reasons"):
+                reasons = ", ".join(regime_meta["reasons"])
+                warnings.append(f"Risk scaled by {multiplier:.2f}x due to regime: {reasons}")
+            else:
+                warnings.append(f"Risk scaled by {multiplier:.2f}x due to regime conditions.")
 
         report_cfg = ReportConfig(
             universe=universe_cfg,
@@ -293,6 +303,9 @@ async def run_screener(request: ScreenerRequest):
                     rank=int(row.get("rank", len(candidates) + 1)),
                 )
             )
+
+        sector_map = {t: info.get("sector") for t, info in ticker_info.items()}
+        warnings.extend(sector_concentration_warnings(ticker_list, sector_map))
         
         response = ScreenerResponse(
             candidates=candidates,
