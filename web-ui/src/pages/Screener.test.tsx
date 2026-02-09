@@ -3,6 +3,7 @@ import { screen, waitFor } from '@testing-library/react'
 import { renderWithProviders } from '@/test/utils'
 import Screener from './Screener'
 import { useConfigStore } from '@/stores/configStore'
+import { useScreenerStore } from '@/stores/screenerStore'
 
 describe('Screener Page', () => {
   beforeEach(() => {
@@ -29,6 +30,7 @@ describe('Screener Page', () => {
         },
       },
     })
+    useScreenerStore.setState({ lastResult: null })
   })
 
   describe('Page Structure', () => {

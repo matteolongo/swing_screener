@@ -39,7 +39,7 @@ Command-line interface for automation, scripting, and headless environments.
 **Quick Start:**
 
 ```bash
-swing-screener run --universe mega --positions positions.json --csv out/report.csv
+swing-screener run --universe mega --positions data/positions.json --csv out/report.csv
 ```
 
 👉 **See [CLI Usage](#cli-usage) below for CLI documentation**
@@ -51,7 +51,7 @@ swing-screener run --universe mega --positions positions.json --csv out/report.c
 - Deterministic logic over discretionary decisions
 - Risk-first sizing and trade management
 - One daily workflow (post-close), no intraday automation
-- Files as source of truth (`positions.json`, `orders.json`)
+- Files as source of truth (`data/positions.json`, `data/orders.json`)
 
 ## Project Layout
 
@@ -93,25 +93,25 @@ npm install
 Run the daily screener:
 
 ```bash
-swing-screener run --universe mega --positions positions.json --csv out/report.csv
+swing-screener run --universe mega --positions data/positions.json --csv out/report.csv
 ```
 
 Manage open positions:
 
 ```bash
-swing-screener manage --positions positions.json --md out/degiro_actions.md
+swing-screener manage --positions data/positions.json --md out/degiro_actions.md
 ```
 
 Apply suggested stop updates to local state:
 
 ```bash
-swing-screener manage --positions positions.json --apply --md out/degiro_actions.md
+swing-screener manage --positions data/positions.json --apply --md out/degiro_actions.md
 ```
 
-Backfill links between `orders.json` and `positions.json`:
+Backfill links between `data/orders.json` and `data/positions.json`:
 
 ```bash
-swing-screener migrate --orders orders.json --positions positions.json --create-stop-orders
+swing-screener migrate --orders data/orders.json --positions data/positions.json --create-stop-orders
 ```
 
 Inspect packaged universes:
@@ -134,8 +134,8 @@ swing-screener universes list
 ## Core Data Contracts
 
 - **OHLCV**: pandas DataFrame with MultiIndex columns `(field, ticker)`
-- **positions.json**: single source of truth for open positions
-- **orders.json**: order lifecycle and position-linked entry/exit orders
+- **data/positions.json**: single source of truth for open positions
+- **data/orders.json**: order lifecycle and position-linked entry/exit orders
 
 ## Testing
 

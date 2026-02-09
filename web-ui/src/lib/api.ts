@@ -7,6 +7,11 @@ export const API_ENDPOINTS = {
   config: '/api/config',
   configReset: '/api/config/reset',
   configDefaults: '/api/config/defaults',
+
+  // Strategy
+  strategy: '/api/strategy',
+  strategyActive: '/api/strategy/active',
+  strategyById: (id: string) => `/api/strategy/${id}`,
   
   // Screener
   screenerRun: '/api/screener/run',

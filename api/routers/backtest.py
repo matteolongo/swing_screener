@@ -1,6 +1,7 @@
 """Backtest router - Quick backtest for individual tickers."""
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Optional
 from fastapi import APIRouter, HTTPException
 import datetime as dt
@@ -30,8 +31,19 @@ from swing_screener.backtest.storage import (
     load_simulation,
     delete_simulation,
 )
+from swing_screener.strategy.config import build_backtest_config
+from swing_screener.strategy.storage import get_active_strategy, get_strategy_by_id
 
 router = APIRouter()
+
+
+def _resolve_strategy(strategy_id: Optional[str]) -> dict:
+    if strategy_id:
+        strategy = get_strategy_by_id(strategy_id)
+        if strategy is None:
+            raise HTTPException(status_code=404, detail=f"Strategy not found: {strategy_id}")
+        return strategy
+    return get_active_strategy()
 
 
 @router.post("/quick", response_model=QuickBacktestResponse)
@@ -67,12 +79,23 @@ async def quick_backtest(request: QuickBacktestRequest):
                 detail=f"No market data found for {request.ticker}"
             )
         
-        # Build backtest config (use defaults from BacktestConfig if not provided)
-        cfg = BacktestConfig(
-            entry_type=request.entry_type or "pullback",
-            k_atr=request.k_atr if request.k_atr is not None else 2.0,
-            max_holding_days=request.max_holding_days if request.max_holding_days is not None else 20,
-        )
+        # Build backtest config (use strategy defaults only when explicitly requested)
+        fields_set = request.model_fields_set
+        if request.strategy_id:
+            strategy = _resolve_strategy(request.strategy_id)
+            cfg = build_backtest_config(strategy)
+            if "entry_type" in fields_set and request.entry_type is not None:
+                cfg = replace(cfg, entry_type=request.entry_type)
+            if "k_atr" in fields_set and request.k_atr is not None:
+                cfg = replace(cfg, k_atr=request.k_atr)
+            if "max_holding_days" in fields_set and request.max_holding_days is not None:
+                cfg = replace(cfg, max_holding_days=request.max_holding_days)
+        else:
+            cfg = BacktestConfig(
+                entry_type=request.entry_type or "pullback",
+                k_atr=request.k_atr if request.k_atr is not None else 2.0,
+                max_holding_days=request.max_holding_days if request.max_holding_days is not None else 20,
+            )
         
         # Run backtest
         trades = backtest_single_ticker_R(ohlcv, request.ticker, cfg)
@@ -303,21 +326,33 @@ async def run_full_backtest(request: FullBacktestRequest):
         if ohlcv is None or ohlcv.empty:
             raise HTTPException(status_code=404, detail="No market data found for requested tickers")
 
-        cfg = BacktestConfig(
-            entry_type=request.entry_type,
-            breakout_lookback=request.breakout_lookback,
-            pullback_ma=request.pullback_ma,
-            atr_window=request.atr_window,
-            k_atr=request.k_atr,
-            exit_mode="trailing_stop",
-            max_holding_days=request.max_holding_days,
-            breakeven_at_R=request.breakeven_at_r,
-            trail_after_R=request.trail_after_r,
-            trail_sma=request.trail_sma,
-            sma_buffer_pct=request.sma_buffer_pct,
-            min_history=request.min_history,
-            commission_pct=request.commission_pct,
-        )
+        fields_set = request.model_fields_set
+        strategy = _resolve_strategy(request.strategy_id)
+        strategy_id_used = strategy.get("id")
+        overrides: dict[str, object] = {}
+        for field in [
+            "entry_type",
+            "max_holding_days",
+            "breakeven_at_r",
+            "trail_after_r",
+            "trail_sma",
+            "sma_buffer_pct",
+            "commission_pct",
+            "min_history",
+        ]:
+            if field in fields_set:
+                overrides[field] = getattr(request, field)
+
+        cfg = build_backtest_config(strategy, overrides=overrides)
+
+        if "breakout_lookback" in fields_set:
+            cfg = replace(cfg, breakout_lookback=request.breakout_lookback)
+        if "pullback_ma" in fields_set:
+            cfg = replace(cfg, pullback_ma=request.pullback_ma)
+        if "atr_window" in fields_set:
+            cfg = replace(cfg, atr_window=request.atr_window)
+        if "k_atr" in fields_set:
+            cfg = replace(cfg, k_atr=request.k_atr)
 
         trades_list: list[pd.DataFrame] = []
         warnings: list[str] = []
@@ -375,7 +410,7 @@ async def run_full_backtest(request: FullBacktestRequest):
         simulation_name = _format_simulation_name(
             created_at=created_at,
             tickers=tickers,
-            entry_type=request.entry_type,
+            entry_type=cfg.entry_type,
             start=str(start_date),
             end=str(end_date),
         )
@@ -386,7 +421,7 @@ async def run_full_backtest(request: FullBacktestRequest):
             tickers=tickers,
             start=str(start_date),
             end=str(end_date),
-            entry_type=request.entry_type,
+            entry_type=cfg.entry_type,
             summary=summary,
             summary_by_ticker=summary_by_ticker,
             trades=trades_detail,
@@ -398,11 +433,15 @@ async def run_full_backtest(request: FullBacktestRequest):
             created_at=created_at.isoformat(),
         )
 
+        params_payload = request.model_dump()
+        if params_payload.get("strategy_id") is None and strategy_id_used:
+            params_payload["strategy_id"] = strategy_id_used
+
         save_payload = {
             "id": sim_id,
             "created_at": created_at.isoformat(),
             "name": simulation_name,
-            "params": request.model_dump(),
+            "params": params_payload,
             "result": response_payload.model_dump(),
         }
         save_simulation(save_payload)

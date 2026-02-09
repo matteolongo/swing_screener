@@ -64,6 +64,6 @@ export const DEFAULT_CONFIG: AppConfig = {
     smaBufferPct: 0.005,
     maxHoldingDays: 20,
   },
-  positionsFile: 'positions.json',
-  ordersFile: 'orders.json',
+  positionsFile: 'data/positions.json',
+  ordersFile: 'data/orders.json',
 };

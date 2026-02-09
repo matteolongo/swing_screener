@@ -43,12 +43,12 @@ describe('Dashboard Page', () => {
   })
 
   describe('Portfolio Summary', () => {
-    it('displays account size from config', async () => {
+    it('displays account size from active strategy', async () => {
       renderWithProviders(<Dashboard />)
       
       await waitFor(() => {
         expect(screen.getByText('Account Size')).toBeInTheDocument()
-        expect(screen.getByText('$100,000.00')).toBeInTheDocument()
+        expect(screen.getByText('$50,000.00')).toBeInTheDocument()
       })
     })
 

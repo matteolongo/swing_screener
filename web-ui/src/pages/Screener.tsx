@@ -13,6 +13,9 @@ import {
 } from '../types/screener';
 import { CreateOrderRequest, transformCreateOrderRequest } from '../types/order';
 import { useConfigStore } from '../stores/configStore';
+import { fetchActiveStrategy } from '../lib/strategyApi';
+import { StrategyRisk } from '../types/strategy';
+import { useScreenerStore } from '../stores/screenerStore';
 import { formatCurrency, formatPercent } from '../utils/formatters';
 import QuickBacktestModal from '../components/modals/QuickBacktestModal';
 
@@ -20,7 +23,13 @@ const TOP_N_MAX = 200;
 
 export default function Screener() {
   const { config } = useConfigStore();
+  const { lastResult, setLastResult } = useScreenerStore();
   const queryClient = useQueryClient();
+  const activeStrategyQuery = useQuery({
+    queryKey: ['strategy-active'],
+    queryFn: fetchActiveStrategy,
+  });
+  const riskConfig: StrategyRisk = activeStrategyQuery.data?.risk ?? config.risk;
   
   // Load saved preferences from localStorage or use defaults
   const [selectedUniverse, setSelectedUniverse] = useState<string>(() => {
@@ -106,6 +115,9 @@ export default function Screener() {
       const apiResponse: ScreenerResponseAPI = await res.json();
       return transformScreenerResponse(apiResponse);
     },
+    onSuccess: (data) => {
+      setLastResult(data);
+    },
     onError: (error) => {
       console.error('Screener failed', error);
     },
@@ -123,8 +135,9 @@ export default function Screener() {
     });
   };
 
-  const candidates = screenerMutation.data?.candidates || [];
-  const warnings = screenerMutation.data?.warnings || [];
+  const result = screenerMutation.data ?? lastResult;
+  const candidates = result?.candidates || [];
+  const warnings = result?.warnings || [];
 
   return (
     <div className="space-y-6">
@@ -209,8 +222,8 @@ export default function Screener() {
           {/* Account info */}
           <div className="flex items-end">
             <div className="text-sm text-gray-600">
-              <div>Account: {formatCurrency(config.risk.accountSize)}</div>
-              <div>Risk: {formatPercent(config.risk.riskPct)}</div>
+              <div>Account: {formatCurrency(riskConfig.accountSize)}</div>
+              <div>Risk: {formatPercent(riskConfig.riskPct)}</div>
             </div>
           </div>
 
@@ -237,7 +250,7 @@ export default function Screener() {
         </div>
 
         {/* Info banner */}
-        {!screenerMutation.isPending && !screenerMutation.data && (
+        {!screenerMutation.isPending && !result && (
           <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-start">
             <AlertCircle className="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" />
             <div className="text-sm text-blue-800">
@@ -257,7 +270,7 @@ export default function Screener() {
       </Card>
 
       {/* Results */}
-      {screenerMutation.data && (
+      {result && (
         <>
           {/* Summary */}
           <Card variant="bordered">
@@ -267,10 +280,10 @@ export default function Screener() {
                 <div>
                   <p className="text-sm text-gray-600">Screener completed</p>
                   <p className="text-lg font-semibold text-gray-900">
-                    {candidates.length} candidates from {screenerMutation.data.totalScreened} stocks
+                    {candidates.length} candidates from {result.totalScreened} stocks
                   </p>
                   <p className="text-xs text-gray-500">
-                    As of: {screenerMutation.data.asofDate}
+                    As of: {result.asofDate}
                   </p>
                 </div>
               </div>
@@ -431,7 +444,7 @@ export default function Screener() {
       {showCreateOrderModal && selectedCandidate && (
         <CreateOrderModal
           candidate={selectedCandidate}
-          config={config}
+          risk={riskConfig}
           onClose={() => {
             setShowCreateOrderModal(false);
             setSelectedCandidate(null);
@@ -461,24 +474,24 @@ export default function Screener() {
 // Create Order Modal Component
 function CreateOrderModal({
   candidate,
-  config,
+  risk,
   onClose,
   onSuccess,
 }: {
   candidate: ScreenerCandidate;
-  config: any;
+  risk: StrategyRisk;
   onClose: () => void;
   onSuccess: () => void;
 }) {
   // Calculate suggested stop price (entry - 2*ATR)
-  const suggestedStop = candidate.close - (candidate.atr * config.risk.kAtr);
+  const suggestedStop = candidate.close - (candidate.atr * risk.kAtr);
   
   // Calculate position size based on risk
-  const riskPerTrade = config.risk.accountSize * config.risk.riskPct;
+  const riskPerTrade = risk.accountSize * risk.riskPct;
   const riskPerShare = candidate.close - suggestedStop;
   const suggestedShares = riskPerShare > 0 ? Math.floor(riskPerTrade / riskPerShare) : 1;
-  const maxShares = Math.floor((config.risk.accountSize * config.risk.maxPositionPct) / candidate.close);
-  const finalShares = Math.max(config.risk.minShares, Math.min(suggestedShares, maxShares));
+  const maxShares = Math.floor((risk.accountSize * risk.maxPositionPct) / candidate.close);
+  const finalShares = Math.max(risk.minShares, Math.min(suggestedShares, maxShares));
 
   const [formData, setFormData] = useState<CreateOrderRequest>({
     ticker: candidate.ticker,
@@ -537,7 +550,7 @@ function CreateOrderModal({
 
   const positionSize = (formData.limitPrice || 0) * formData.quantity;
   const riskAmount = formData.stopPrice ? (formData.limitPrice! - formData.stopPrice) * formData.quantity : 0;
-  const riskPercent = riskAmount / config.risk.accountSize * 100;
+  const riskPercent = risk.accountSize > 0 ? (riskAmount / risk.accountSize) * 100 : 0;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -635,7 +648,7 @@ function CreateOrderModal({
                 </div>
                 <div>
                   <span className="text-gray-600 dark:text-gray-400">% of Account:</span>{' '}
-                  <strong>{((positionSize / config.risk.accountSize) * 100).toFixed(1)}%</strong>
+                  <strong>{risk.accountSize > 0 ? ((positionSize / risk.accountSize) * 100).toFixed(1) : '0.0'}%</strong>
                 </div>
                 <div>
                   <span className="text-gray-600 dark:text-gray-400">Risk Amount:</span>{' '}
@@ -643,14 +656,14 @@ function CreateOrderModal({
                 </div>
                 <div>
                   <span className="text-gray-600 dark:text-gray-400">Risk %:</span>{' '}
-                  <strong className={riskPercent > config.risk.riskPct * 100 ? 'text-red-600' : 'text-green-600'}>
+                  <strong className={riskPercent > risk.riskPct * 100 ? 'text-red-600' : 'text-green-600'}>
                     {riskPercent.toFixed(2)}%
                   </strong>
                 </div>
               </div>
-              {riskPercent > config.risk.riskPct * 100 && (
+              {riskPercent > risk.riskPct * 100 && (
                 <p className="text-sm text-yellow-600 dark:text-yellow-500 mt-2">
-                  ⚠️ Risk exceeds target ({(config.risk.riskPct * 100).toFixed(1)}%)
+                  ⚠️ Risk exceeds target ({(risk.riskPct * 100).toFixed(1)}%)
                 </p>
               )}
             </div>

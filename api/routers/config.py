@@ -34,8 +34,8 @@ DEFAULT_CONFIG = AppConfig(
         sma_buffer_pct=0.005,
         max_holding_days=20,
     ),
-    positions_file="positions.json",
-    orders_file="orders.json",
+    positions_file="data/positions.json",
+    orders_file="data/orders.json",
 )
 
 # In-memory config storage (web UI uses localStorage, we'll keep it simple)

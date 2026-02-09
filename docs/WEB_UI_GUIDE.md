@@ -210,6 +210,22 @@ Go to **Orders** page:
 
 ---
 
+### 🧭 Strategy
+
+**Purpose:** Edit strategy definitions and switch the active strategy
+
+**What you can do:**
+- Select a strategy to edit
+- Update minimal settings (signals, risk, filters)
+- Expand **Advanced Settings** for full control
+- Save a new strategy variant ("Save as New")
+- Use indicator hints next to each indicator setting
+- Set the active strategy used across the app
+
+**When to use:** When changing strategy parameters or comparing variants
+
+---
+
 ### 📋 Orders
 
 **Purpose:** Manage all orders (pending, filled, cancelled)
@@ -280,14 +296,13 @@ Go to **Orders** page:
 **Three main sections:**
 
 #### 1. Account & Risk Management
-- **Account Size** - Total capital ($50,000 default)
-- **Risk per Trade** - % of account to risk (1% default)
-- **Max Position Size** - % of account per position (60% default)
+Account sizing and risk settings are now managed per‑strategy.
 
-**Example:** With $50k account and 1% risk:
-- Max loss per trade = $500
-- If stock risk (R) = $2/share, you buy 250 shares
-- Position value = 250 × entry price (must be ≤ $30k)
+Use the **Strategy** page to edit:
+- Account Size
+- Risk per Trade
+- Max Position Size
+- ATR Multiplier
 
 #### 2. Technical Indicators
 - **SMA Fast** - Short-term moving average (20 days default)
@@ -308,7 +323,7 @@ Go to **Orders** page:
 **Important Notes:**
 - Settings are saved in **localStorage** (browser)
 - **Reset to Defaults** button restores factory settings
-- Backend also has a config file (`positions.json` location)
+- Backend also has a config file (`data/positions.json` location)
 
 ---
 
@@ -520,7 +535,7 @@ python -m uvicorn api.main:app --port 8000 --reload
 **Fix:**
 1. Try different universe
 2. Check console for errors
-3. Verify `positions.json` is valid JSON
+3. Verify `data/positions.json` is valid JSON
 
 ---
 
