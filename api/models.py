@@ -128,6 +128,7 @@ class StrategyBacktest(BaseModel):
 
 class StrategySocialOverlay(BaseModel):
     enabled: bool = False
+    lookback_hours: int = Field(default=24, ge=1)
     attention_z_threshold: float = Field(default=3.0, ge=0)
     min_sample_size: int = Field(default=20, ge=0)
     negative_sent_threshold: float = Field(default=-0.4)

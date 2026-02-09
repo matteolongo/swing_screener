@@ -358,6 +358,29 @@ def main() -> None:
         help="Path to save the filtered universe CSV",
     )
 
+    # -------------------------
+    # SOCIAL TEST (provider smoke test)
+    # -------------------------
+    social = sub.add_parser("social-test", help="Fetch social events for tickers")
+    social.add_argument(
+        "--symbols",
+        nargs="+",
+        required=True,
+        help="Tickers to check for social mentions",
+    )
+    social.add_argument(
+        "--hours",
+        type=int,
+        default=24,
+        help="Lookback window in hours (default: 24)",
+    )
+    social.add_argument(
+        "--subreddits",
+        nargs="+",
+        default=None,
+        help="Optional override list of subreddits to scan",
+    )
+
     args = parser.parse_args()
 
     # -------------------------
@@ -421,6 +444,52 @@ def main() -> None:
             path.parent.mkdir(parents=True, exist_ok=True)
             report.to_csv(path)
             print(f"Saved report to {path.resolve()}")
+        return
+
+    if args.command == "social-test":
+        from swing_screener.social.providers.reddit import RedditProvider
+        from swing_screener.social.cache import SocialCache
+        from swing_screener.social.config import (
+            DEFAULT_SUBREDDITS,
+            DEFAULT_USER_AGENT,
+            DEFAULT_RATE_LIMIT_PER_SEC,
+        )
+
+        symbols = _dedup_keep_order(args.symbols)
+        if not symbols:
+            print("No valid symbols provided.")
+            return
+
+        lookback_hours = max(1, int(args.hours))
+        start = dt.datetime.utcnow() - dt.timedelta(hours=lookback_hours)
+        end = dt.datetime.utcnow()
+        subreddits = args.subreddits or list(DEFAULT_SUBREDDITS)
+
+        provider = RedditProvider(
+            list(subreddits),
+            DEFAULT_USER_AGENT,
+            DEFAULT_RATE_LIMIT_PER_SEC,
+            SocialCache(),
+        )
+
+        try:
+            events = provider.fetch_events(start, end, symbols)
+        except Exception as exc:
+            print(f"Social fetch failed: {exc}")
+            return
+
+        counts: dict[str, int] = {}
+        for ev in events:
+            counts[ev.symbol] = counts.get(ev.symbol, 0) + 1
+
+        print(f"Fetched {len(events)} events in last {lookback_hours}h")
+        for sym in symbols:
+            print(f"{sym}: {counts.get(sym, 0)} mentions")
+
+        if events:
+            sample = events[0]
+            preview = sample.text.replace("\n", " ")[:120]
+            print(f"Sample: {sample.symbol} @ {sample.timestamp} -> {preview}")
         return
 
     if args.command == "manage":

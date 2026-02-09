@@ -229,6 +229,13 @@ const help = {
     'Helps reduce gap and slippage risk without changing the strategy ranking.',
     'Enable to apply conservative risk multipliers and review flags.'
   ),
+  lookbackHours: buildHelp(
+    'Lookback Hours',
+    'Hours of social history to scan.',
+    'The number of hours to look back for social mentions.',
+    'Controls how far back the overlay searches for attention and sentiment.',
+    'Shorter windows are more responsive; longer windows capture broader context.'
+  ),
   attentionZThreshold: buildHelp(
     'Attention Z-Score',
     'Spike threshold vs baseline.',
@@ -771,6 +778,19 @@ export default function StrategyPage() {
                 />
                 {draft.socialOverlay.enabled && (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <NumberInput
+                      label="Lookback Hours"
+                      value={draft.socialOverlay.lookbackHours}
+                      onChange={(value) =>
+                        setDraft({
+                          ...draft,
+                          socialOverlay: { ...draft.socialOverlay, lookbackHours: value },
+                        })
+                      }
+                      step={1}
+                      min={1}
+                      help={help.lookbackHours}
+                    />
                     <NumberInput
                       label="Attention Z Threshold"
                       value={draft.socialOverlay.attentionZThreshold}

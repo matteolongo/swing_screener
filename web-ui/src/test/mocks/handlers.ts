@@ -79,6 +79,7 @@ export const mockStrategies = [
     },
     social_overlay: {
       enabled: false,
+      lookback_hours: 24,
       attention_z_threshold: 3.0,
       min_sample_size: 20,
       negative_sent_threshold: -0.4,
@@ -147,6 +148,7 @@ export const mockStrategies = [
     },
     social_overlay: {
       enabled: true,
+      lookback_hours: 24,
       attention_z_threshold: 3.0,
       min_sample_size: 20,
       negative_sent_threshold: -0.4,

@@ -223,6 +223,7 @@ Go to **Orders** page:
 - Use indicator hints next to each indicator setting
 - Set the active strategy used across the app
 - Configure the **Social Overlay** (risk-only safeguards using social signals)
+  - Includes **Lookback Hours** to control how far back social data is scanned
 
 **When to use:** When changing strategy parameters or comparing variants
 

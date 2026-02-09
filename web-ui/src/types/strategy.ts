@@ -83,6 +83,7 @@ export interface StrategyBacktest {
 
 export interface StrategySocialOverlay {
   enabled: boolean;
+  lookbackHours: number;
   attentionZThreshold: number;
   minSampleSize: number;
   negativeSentThreshold: number;
@@ -188,6 +189,7 @@ export interface StrategyBacktestAPI {
 
 export interface StrategySocialOverlayAPI {
   enabled?: boolean;
+  lookback_hours?: number;
   attention_z_threshold?: number;
   min_sample_size?: number;
   negative_sent_threshold?: number;
@@ -305,6 +307,7 @@ export function transformStrategy(api: StrategyAPI): Strategy {
     },
     socialOverlay: {
       enabled: socialOverlayApi.enabled ?? false,
+      lookbackHours: socialOverlayApi.lookback_hours ?? 24,
       attentionZThreshold: socialOverlayApi.attention_z_threshold ?? 3.0,
       minSampleSize: socialOverlayApi.min_sample_size ?? 20,
       negativeSentThreshold: socialOverlayApi.negative_sent_threshold ?? -0.4,
@@ -389,6 +392,7 @@ export function toStrategyUpdateRequest(strategy: Strategy): StrategyUpdateReque
     },
     social_overlay: {
       enabled: strategy.socialOverlay.enabled,
+      lookback_hours: strategy.socialOverlay.lookbackHours,
       attention_z_threshold: strategy.socialOverlay.attentionZThreshold,
       min_sample_size: strategy.socialOverlay.minSampleSize,
       negative_sent_threshold: strategy.socialOverlay.negativeSentThreshold,

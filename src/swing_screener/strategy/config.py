@@ -60,6 +60,7 @@ def build_social_overlay_config(strategy: dict) -> SocialOverlayConfig:
     raw = _get_nested(strategy, "social_overlay")
     return SocialOverlayConfig(
         enabled=bool(raw.get("enabled", False)),
+        lookback_hours=int(raw.get("lookback_hours", 24)),
         attention_z_threshold=float(raw.get("attention_z_threshold", 3.0)),
         min_sample_size=int(raw.get("min_sample_size", 20)),
         negative_sent_threshold=float(raw.get("negative_sent_threshold", -0.4)),

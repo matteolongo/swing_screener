@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 from typing import Iterable
 
 import pandas as pd
@@ -33,8 +33,9 @@ def run_social_overlay(
         cache,
     )
 
-    start_dt = datetime.combine(asof, time.min)
+    lookback_hours = max(1, int(cfg.lookback_hours))
     end_dt = datetime.combine(asof, time.max)
+    start_dt = end_dt - timedelta(hours=lookback_hours)
 
     events = provider.fetch_events(start_dt, end_dt, list(symbols))
     metrics = compute_daily_metrics(

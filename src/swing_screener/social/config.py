@@ -18,6 +18,7 @@ DEFAULT_HYPE_FIXED_THRESHOLD = 5.0
 @dataclass(frozen=True)
 class SocialOverlayConfig:
     enabled: bool = False
+    lookback_hours: int = 24
     attention_z_threshold: float = 3.0
     min_sample_size: int = 20
     negative_sent_threshold: float = -0.4

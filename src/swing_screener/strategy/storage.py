@@ -94,6 +94,7 @@ def _default_strategy_payload(now: dt.datetime | None = None) -> dict:
         },
         "social_overlay": {
             "enabled": False,
+            "lookback_hours": 24,
             "attention_z_threshold": 3.0,
             "min_sample_size": 20,
             "negative_sent_threshold": -0.4,

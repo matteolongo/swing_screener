@@ -204,6 +204,21 @@ This does:
 - Statuses include `OK`, `REDUCED_RISK`, `REVIEW`, `VETO`, `NO_DATA`
 - The overlay never changes ranking in v1; it only adjusts risk or flags review
 
+---
+
+## Social overlay smoke test (CLI)
+
+Use this to verify the Reddit provider returns data for well-known tickers:
+
+```bash
+swing-screener social-test --symbols TSLA NVDA AAPL GME --hours 24
+```
+
+Optional subreddit override:
+```bash
+swing-screener social-test --symbols TSLA NVDA --subreddits wallstreetbets stocks
+```
+
 No signal → no trade.
 
 ### Execution Guidance Fields
