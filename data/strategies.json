@@ -66,5 +66,73 @@
     "is_default": true,
     "created_at": "2026-02-08T00:00:00",
     "updated_at": "2026-02-09T00:56:55"
+  },
+  {
+    "name": "1000",
+    "description": "Default strategy seeded from current system settings.",
+    "universe": {
+      "trend": {
+        "sma_fast": 20,
+        "sma_mid": 50,
+        "sma_long": 200
+      },
+      "vol": {
+        "atr_window": 14
+      },
+      "mom": {
+        "lookback_6m": 126,
+        "lookback_12m": 252,
+        "benchmark": "SPY"
+      },
+      "filt": {
+        "min_price": 5.0,
+        "max_price": 120.0,
+        "max_atr_pct": 15.0,
+        "require_trend_ok": true,
+        "require_rs_positive": false
+      }
+    },
+    "ranking": {
+      "w_mom_6m": 0.45,
+      "w_mom_12m": 0.35,
+      "w_rs_6m": 0.2,
+      "top_n": 170
+    },
+    "signals": {
+      "breakout_lookback": 50,
+      "pullback_ma": 20,
+      "min_history": 260
+    },
+    "risk": {
+      "account_size": 1000.0,
+      "risk_pct": 0.02,
+      "max_position_pct": 0.6,
+      "min_shares": 1,
+      "k_atr": 2.0
+    },
+    "manage": {
+      "breakeven_at_r": 1.0,
+      "trail_after_r": 2.0,
+      "trail_sma": 20,
+      "sma_buffer_pct": 0.005,
+      "max_holding_days": 20,
+      "benchmark": "SPY"
+    },
+    "backtest": {
+      "entry_type": "auto",
+      "exit_mode": "trailing_stop",
+      "take_profit_r": 2.0,
+      "max_holding_days": 20,
+      "breakeven_at_r": 1.0,
+      "trail_after_r": 2.0,
+      "trail_sma": 20,
+      "sma_buffer_pct": 0.005,
+      "commission_pct": 0.0,
+      "min_history": 260
+    },
+    "id": "streategy-1000",
+    "is_default": false,
+    "created_at": "2026-02-09T01:11:01",
+    "updated_at": "2026-02-09T01:11:24"
   }
 ]
