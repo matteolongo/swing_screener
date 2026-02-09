@@ -15,6 +15,7 @@ from swing_screener.social.config import (
 from swing_screener.social.metrics import compute_daily_metrics
 from swing_screener.social.overlay import REASON_LOW_SAMPLE
 from swing_screener.social.providers.reddit import RedditProvider
+from swing_screener.data.market_data import fetch_ohlcv, MarketDataConfig
 
 
 def _provider_for(name: str, cache: SocialCache):
@@ -69,10 +70,30 @@ def analyze_social_symbol(
         events_sorted = sorted(events, key=lambda e: e.timestamp, reverse=True)
         raw_events = events_sorted[:max_events]
 
+        # Fetch minimal OHLCV data for hype_score calculation
+        ohlcv = pd.DataFrame()
+        try:
+            # Fetch last 30 days of data for 20-day ADV calculation
+            thirty_days_ago = now - timedelta(days=30)
+            ohlcv = fetch_ohlcv(
+                [symbol],
+                cfg=MarketDataConfig(
+                    start=thirty_days_ago.strftime("%Y-%m-%d"),
+                    end=None,
+                    auto_adjust=True,
+                    progress=False,
+                ),
+                use_cache=True,
+                allow_cache_fallback_on_error=True,
+            )
+        except Exception:
+            # If OHLCV fetch fails, hype_score will be None
+            pass
+
         metrics = compute_daily_metrics(
             events,
             [symbol],
-            pd.DataFrame(),
+            ohlcv,
             now.date(),
             cache,
             z_lookback_days=DEFAULT_ATTENTION_LOOKBACK_DAYS,

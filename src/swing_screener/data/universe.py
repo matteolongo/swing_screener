@@ -102,7 +102,6 @@ def load_universe_from_package(
     if not raw_name:
         raise ValueError("Universe name is empty.")
 
-    canonical = resolve_universe_name(raw_name)
     filename = resolve_universe_filename(raw_name)
     rel = f"universes/{filename}"
     pkg = "swing_screener.data"

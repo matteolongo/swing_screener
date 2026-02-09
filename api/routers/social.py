@@ -12,7 +12,7 @@ router = APIRouter()
 
 
 @router.post("/analyze", response_model=SocialAnalysisResponse)
-async def analyze(request: SocialAnalysisRequest):
+def analyze(request: SocialAnalysisRequest):
     symbol = str(request.symbol).strip().upper()
     overlay_cfg = build_social_overlay_config(get_active_strategy())
 

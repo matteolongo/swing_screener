@@ -26,13 +26,22 @@ export default function SocialAnalysisModal({
   const analysisMutation = useMutation({
     mutationFn: async () => {
       const trimmed = lookbackInput.trim();
-      const parsed = trimmed === '' ? null : Number(trimmed);
+      let lookback_hours: number | undefined;
+      
+      if (trimmed !== '') {
+        const parsed = parseInt(trimmed, 10);
+        // Only include if it's a valid positive integer
+        if (Number.isFinite(parsed) && parsed > 0) {
+          lookback_hours = parsed;
+        }
+      }
+      
       const payload: { symbol: string; max_events: number; lookback_hours?: number } = {
         symbol,
         max_events: 100,
       };
-      if (parsed && Number.isFinite(parsed) && parsed > 0) {
-        payload.lookback_hours = parsed;
+      if (lookback_hours !== undefined) {
+        payload.lookback_hours = lookback_hours;
       }
 
       const response = await fetch(apiUrl(API_ENDPOINTS.socialAnalyze), {
@@ -50,9 +59,9 @@ export default function SocialAnalysisModal({
   });
 
   useEffect(() => {
-    analysisMutation.mutate();
     setShowRaw(false);
     setLookbackInput('');
+    analysisMutation.mutate();
   }, [symbol]);
 
   const data = analysisMutation.data;
