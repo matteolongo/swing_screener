@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Optional, Dict, Any
 import re
 
@@ -84,6 +84,9 @@ def build_trade_plans(
     signal_board: pd.DataFrame,
     cfg: RiskConfig = RiskConfig(),
     atr_col: Optional[str] = None,
+    risk_multipliers: Optional[Dict[str, float]] = None,
+    max_position_multipliers: Optional[Dict[str, float]] = None,
+    vetoes: Optional[set[str]] = None,
 ) -> pd.DataFrame:
     """
     ranked_universe: per-ticker features (must include atr14 and last)
@@ -119,13 +122,29 @@ def build_trade_plans(
 
     out_rows = []
     for t in active.index:
+        if vetoes and t in vetoes:
+            continue
+
         if t not in ranked_universe.index:
             continue
 
         entry = float(active.loc[t, "last"])
         atr14 = float(ranked_universe.loc[t, atr_col])
 
-        plan = position_plan(entry, atr14, cfg)
+        risk_mult = risk_multipliers.get(t, 1.0) if risk_multipliers else 1.0
+        max_mult = max_position_multipliers.get(t, 1.0) if max_position_multipliers else 1.0
+        risk_mult = max(0.0, float(risk_mult))
+        max_mult = max(0.0, float(max_mult))
+
+        cfg_for_t = cfg
+        if risk_mult != 1.0 or max_mult != 1.0:
+            cfg_for_t = replace(
+                cfg,
+                risk_pct=cfg.risk_pct * risk_mult,
+                max_position_pct=cfg.max_position_pct * max_mult,
+            )
+
+        plan = position_plan(entry, atr14, cfg_for_t)
         if plan is None:
             continue
 

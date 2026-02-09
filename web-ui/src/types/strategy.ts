@@ -81,6 +81,15 @@ export interface StrategyBacktest {
   minHistory: number;
 }
 
+export interface StrategySocialOverlay {
+  enabled: boolean;
+  attentionZThreshold: number;
+  minSampleSize: number;
+  negativeSentThreshold: number;
+  sentimentConfThreshold: number;
+  hypePercentileThreshold: number;
+}
+
 export interface Strategy {
   id: string;
   name: string;
@@ -91,6 +100,7 @@ export interface Strategy {
   risk: StrategyRisk;
   manage: StrategyManage;
   backtest: StrategyBacktest;
+  socialOverlay: StrategySocialOverlay;
   isDefault: boolean;
   createdAt: string;
   updatedAt: string;
@@ -176,6 +186,15 @@ export interface StrategyBacktestAPI {
   min_history: number;
 }
 
+export interface StrategySocialOverlayAPI {
+  enabled?: boolean;
+  attention_z_threshold?: number;
+  min_sample_size?: number;
+  negative_sent_threshold?: number;
+  sentiment_conf_threshold?: number;
+  hype_percentile_threshold?: number;
+}
+
 export interface StrategyAPI {
   id: string;
   name: string;
@@ -186,6 +205,7 @@ export interface StrategyAPI {
   risk: StrategyRiskAPI;
   manage: StrategyManageAPI;
   backtest: StrategyBacktestAPI;
+  social_overlay?: StrategySocialOverlayAPI;
   is_default: boolean;
   created_at: string;
   updated_at: string;
@@ -200,6 +220,7 @@ export interface StrategyUpdateRequestAPI {
   risk: StrategyRiskAPI;
   manage: StrategyManageAPI;
   backtest: StrategyBacktestAPI;
+  social_overlay: StrategySocialOverlayAPI;
 }
 
 export interface StrategyCreateRequestAPI extends StrategyUpdateRequestAPI {
@@ -211,6 +232,7 @@ export interface ActiveStrategyRequestAPI {
 }
 
 export function transformStrategy(api: StrategyAPI): Strategy {
+  const socialOverlayApi = api.social_overlay ?? {};
   return {
     id: api.id,
     name: api.name,
@@ -280,6 +302,14 @@ export function transformStrategy(api: StrategyAPI): Strategy {
       smaBufferPct: api.backtest.sma_buffer_pct,
       commissionPct: api.backtest.commission_pct,
       minHistory: api.backtest.min_history,
+    },
+    socialOverlay: {
+      enabled: socialOverlayApi.enabled ?? false,
+      attentionZThreshold: socialOverlayApi.attention_z_threshold ?? 3.0,
+      minSampleSize: socialOverlayApi.min_sample_size ?? 20,
+      negativeSentThreshold: socialOverlayApi.negative_sent_threshold ?? -0.4,
+      sentimentConfThreshold: socialOverlayApi.sentiment_conf_threshold ?? 0.7,
+      hypePercentileThreshold: socialOverlayApi.hype_percentile_threshold ?? 95.0,
     },
     isDefault: api.is_default,
     createdAt: api.created_at,
@@ -356,6 +386,14 @@ export function toStrategyUpdateRequest(strategy: Strategy): StrategyUpdateReque
       sma_buffer_pct: strategy.backtest.smaBufferPct,
       commission_pct: strategy.backtest.commissionPct,
       min_history: strategy.backtest.minHistory,
+    },
+    social_overlay: {
+      enabled: strategy.socialOverlay.enabled,
+      attention_z_threshold: strategy.socialOverlay.attentionZThreshold,
+      min_sample_size: strategy.socialOverlay.minSampleSize,
+      negative_sent_threshold: strategy.socialOverlay.negativeSentThreshold,
+      sentiment_conf_threshold: strategy.socialOverlay.sentimentConfThreshold,
+      hype_percentile_threshold: strategy.socialOverlay.hypePercentileThreshold,
     },
   };
 }

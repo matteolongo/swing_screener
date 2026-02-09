@@ -1,5 +1,5 @@
 {
-  "asof": "2026-02-08",
+  "asof": "2026-02-09",
   "orders": [
     {
       "order_id": "ORD-INTC-20260115-ENTRY",
@@ -395,7 +395,7 @@
     {
       "order_id": "MFG-20260207154147",
       "ticker": "MFG",
-      "status": "pending",
+      "status": "cancelled",
       "order_kind": "entry",
       "order_type": "BUY_LIMIT",
       "limit_price": 9.59,

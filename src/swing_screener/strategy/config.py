@@ -12,6 +12,7 @@ from swing_screener.risk.position_sizing import RiskConfig
 from swing_screener.reporting.report import ReportConfig
 from swing_screener.portfolio.state import ManageConfig
 from swing_screener.backtest.simulator import BacktestConfig
+from swing_screener.social.config import SocialOverlayConfig
 
 
 def _get_nested(payload: dict, *keys: str, default: Optional[dict] = None) -> dict:
@@ -55,11 +56,24 @@ def build_manage_config(strategy: dict) -> ManageConfig:
     )
 
 
+def build_social_overlay_config(strategy: dict) -> SocialOverlayConfig:
+    raw = _get_nested(strategy, "social_overlay")
+    return SocialOverlayConfig(
+        enabled=bool(raw.get("enabled", False)),
+        attention_z_threshold=float(raw.get("attention_z_threshold", 3.0)),
+        min_sample_size=int(raw.get("min_sample_size", 20)),
+        negative_sent_threshold=float(raw.get("negative_sent_threshold", -0.4)),
+        sentiment_conf_threshold=float(raw.get("sentiment_conf_threshold", 0.7)),
+        hype_percentile_threshold=float(raw.get("hype_percentile_threshold", 95.0)),
+    )
+
+
 def build_report_config(strategy: dict, *, top_override: Optional[int] = None) -> ReportConfig:
     universe = build_universe_config(strategy)
     ranking = build_ranking_config(strategy)
     signals = build_entry_config(strategy)
     risk = build_risk_config(strategy)
+    social_overlay = build_social_overlay_config(strategy)
 
     if top_override is not None:
         ranking = RankingConfig(
@@ -74,6 +88,7 @@ def build_report_config(strategy: dict, *, top_override: Optional[int] = None) -
         ranking=ranking,
         signals=signals,
         risk=risk,
+        social_overlay=social_overlay,
         only_active_signals=False,
     )
 

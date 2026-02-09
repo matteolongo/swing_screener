@@ -20,6 +20,14 @@ import { formatCurrency, formatPercent } from '../utils/formatters';
 import QuickBacktestModal from '../components/modals/QuickBacktestModal';
 
 const TOP_N_MAX = 200;
+const OVERLAY_BADGES: Record<string, { label: string; className: string }> = {
+  OK: { label: 'OK', className: 'bg-green-100 text-green-700' },
+  REDUCED_RISK: { label: 'Reduced', className: 'bg-yellow-100 text-yellow-800' },
+  REVIEW: { label: 'Review', className: 'bg-orange-100 text-orange-800' },
+  VETO: { label: 'Veto', className: 'bg-red-100 text-red-800' },
+  NO_DATA: { label: 'No Data', className: 'bg-gray-100 text-gray-600' },
+  OFF: { label: 'Off', className: 'bg-gray-100 text-gray-600' },
+};
 
 export default function Screener() {
   const { config } = useConfigStore();
@@ -326,13 +334,14 @@ export default function Screener() {
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Mom 6M</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Mom 12M</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">RS</th>
+                    <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">Overlay</th>
                     <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {candidates.length === 0 ? (
                     <tr>
-                      <td colSpan={13} className="text-center py-8 text-gray-500">
+                      <td colSpan={14} className="text-center py-8 text-gray-500">
                         No candidates found
                       </td>
                     </tr>
@@ -404,6 +413,38 @@ export default function Screener() {
                           <span className={candidate.relStrength >= 0 ? 'text-green-600' : 'text-red-600'}>
                             {formatPercent(candidate.relStrength)}
                           </span>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          {(() => {
+                            const status = candidate.overlayStatus ?? 'OFF';
+                            const badge = OVERLAY_BADGES[status] ?? OVERLAY_BADGES.OFF;
+                            const reasons = candidate.overlayReasons?.length
+                              ? `Reasons: ${candidate.overlayReasons.join(', ')}`
+                              : 'No overlay triggers';
+                            const metrics = [
+                              candidate.overlayAttentionZ != null
+                                ? `Attention Z: ${candidate.overlayAttentionZ.toFixed(2)}`
+                                : null,
+                              candidate.overlaySentimentScore != null
+                                ? `Sentiment: ${candidate.overlaySentimentScore.toFixed(2)}`
+                                : null,
+                              candidate.overlayHypeScore != null
+                                ? `Hype: ${candidate.overlayHypeScore.toFixed(2)}`
+                                : null,
+                              candidate.overlaySampleSize != null
+                                ? `Sample: ${candidate.overlaySampleSize}`
+                                : null,
+                            ].filter(Boolean);
+                            const title = [reasons, ...metrics].join(' | ');
+                            return (
+                              <span
+                                className={`text-xs px-2 py-1 rounded ${badge.className}`}
+                                title={title}
+                              >
+                                {badge.label}
+                              </span>
+                            );
+                          })()}
                         </td>
                         <td className="py-3 px-4 text-center">
                           <div className="flex gap-2 justify-center">
@@ -486,11 +527,16 @@ function CreateOrderModal({
   // Calculate suggested stop price (entry - 2*ATR)
   const suggestedStop = candidate.close - (candidate.atr * risk.kAtr);
   
+  const overlayRiskMultiplier = candidate.overlayRiskMultiplier ?? 1;
+  const overlayMaxPosMultiplier = candidate.overlayMaxPosMultiplier ?? 1;
+  const effectiveRiskPct = risk.riskPct * overlayRiskMultiplier;
+  const effectiveMaxPositionPct = risk.maxPositionPct * overlayMaxPosMultiplier;
+
   // Calculate position size based on risk
-  const riskPerTrade = risk.accountSize * risk.riskPct;
+  const riskPerTrade = risk.accountSize * effectiveRiskPct;
   const riskPerShare = candidate.close - suggestedStop;
   const suggestedShares = riskPerShare > 0 ? Math.floor(riskPerTrade / riskPerShare) : 1;
-  const maxShares = Math.floor((risk.accountSize * risk.maxPositionPct) / candidate.close);
+  const maxShares = Math.floor((risk.accountSize * effectiveMaxPositionPct) / candidate.close);
   const finalShares = Math.max(risk.minShares, Math.min(suggestedShares, maxShares));
 
   const [formData, setFormData] = useState<CreateOrderRequest>({

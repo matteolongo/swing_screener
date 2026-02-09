@@ -192,11 +192,17 @@ This does:
 - ranks candidates
 - computes entry / stop / shares
 - excludes open positions from new candidates
+- applies the Social Overlay (if enabled) to reduce risk or flag manual review
 
 ### What you do next
 - Open `out/report.csv`
 - Look ONLY at rows with a valid `signal`
 - Decide whether to take the trade
+
+**Social Overlay (optional):**
+- Adds columns like `overlay_status`, `overlay_reasons`, and `overlay_*` metrics
+- Statuses include `OK`, `REDUCED_RISK`, `REVIEW`, `VETO`, `NO_DATA`
+- The overlay never changes ranking in v1; it only adjusts risk or flags review
 
 No signal → no trade.
 

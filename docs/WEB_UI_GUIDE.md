@@ -95,6 +95,7 @@ The results table shows:
 - **ATR** - Average True Range (volatility measure)
 - **Trend/Momentum** - Technical indicators
 - **Shares** - Calculated position size based on risk config
+- **Social Overlay** - Risk-only status (OK/Reduced/Review/Veto) with reason codes
 
 ### 4. **Create Orders** ✅
 
@@ -221,6 +222,7 @@ Go to **Orders** page:
 - Save a new strategy variant ("Save as New")
 - Use indicator hints next to each indicator setting
 - Set the active strategy used across the app
+- Configure the **Social Overlay** (risk-only safeguards using social signals)
 
 **When to use:** When changing strategy parameters or comparing variants
 

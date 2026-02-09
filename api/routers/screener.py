@@ -268,6 +268,32 @@ async def run_screener(request: ScreenerRequest):
                 if val is None or (isinstance(val, float) and math.isnan(val)):
                     return default
                 return float(val)
+
+            def safe_optional_float(val):
+                import math
+                if val is None or (isinstance(val, float) and math.isnan(val)):
+                    return None
+                return float(val)
+
+            def safe_optional_int(val):
+                import math
+                if val is None or (isinstance(val, float) and math.isnan(val)):
+                    return None
+                return int(val)
+
+            def safe_list(val):
+                if val is None:
+                    return []
+                if isinstance(val, list):
+                    return [str(v) for v in val if v is not None]
+                if isinstance(val, str):
+                    if not val.strip():
+                        return []
+                    sep = ";" if ";" in val else "," if "," in val else None
+                    if sep:
+                        return [v.strip() for v in val.split(sep) if v.strip()]
+                    return [val]
+                return [str(val)]
             
             # Calculate SMAs from OHLCV if available, otherwise use distance metrics
             sma20 = safe_float(row.get(ma_col))
@@ -301,6 +327,15 @@ async def run_screener(request: ScreenerRequest):
                     score=safe_float(row.get("score")),
                     confidence=safe_float(row.get("confidence")),
                     rank=int(row.get("rank", len(candidates) + 1)),
+                    overlay_status=row.get("overlay_status"),
+                    overlay_reasons=safe_list(row.get("overlay_reasons")),
+                    overlay_risk_multiplier=safe_optional_float(row.get("overlay_risk_multiplier")),
+                    overlay_max_pos_multiplier=safe_optional_float(row.get("overlay_max_pos_multiplier")),
+                    overlay_attention_z=safe_optional_float(row.get("overlay_attention_z")),
+                    overlay_sentiment_score=safe_optional_float(row.get("overlay_sentiment_score")),
+                    overlay_sentiment_confidence=safe_optional_float(row.get("overlay_sentiment_confidence")),
+                    overlay_hype_score=safe_optional_float(row.get("overlay_hype_score")),
+                    overlay_sample_size=safe_optional_int(row.get("overlay_sample_size")),
                 )
             )
 

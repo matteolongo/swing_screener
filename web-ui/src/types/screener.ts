@@ -16,6 +16,15 @@ export interface ScreenerCandidate {
   score: number;
   confidence: number;
   rank: number;
+  overlayStatus?: string;
+  overlayReasons?: string[];
+  overlayRiskMultiplier?: number;
+  overlayMaxPosMultiplier?: number;
+  overlayAttentionZ?: number;
+  overlaySentimentScore?: number;
+  overlaySentimentConfidence?: number;
+  overlayHypeScore?: number;
+  overlaySampleSize?: number;
 }
 
 // API response format (snake_case)
@@ -35,6 +44,15 @@ export interface ScreenerCandidateAPI {
   score: number;
   confidence: number;
   rank: number;
+  overlay_status?: string;
+  overlay_reasons?: string[];
+  overlay_risk_multiplier?: number;
+  overlay_max_pos_multiplier?: number;
+  overlay_attention_z?: number;
+  overlay_sentiment_score?: number;
+  overlay_sentiment_confidence?: number;
+  overlay_hype_score?: number;
+  overlay_sample_size?: number;
 }
 
 export interface ScreenerRequest {
@@ -98,6 +116,15 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
       score: c.score,
       confidence: c.confidence,
       rank: c.rank,
+      overlayStatus: c.overlay_status,
+      overlayReasons: c.overlay_reasons,
+      overlayRiskMultiplier: c.overlay_risk_multiplier,
+      overlayMaxPosMultiplier: c.overlay_max_pos_multiplier,
+      overlayAttentionZ: c.overlay_attention_z,
+      overlaySentimentScore: c.overlay_sentiment_score,
+      overlaySentimentConfidence: c.overlay_sentiment_confidence,
+      overlayHypeScore: c.overlay_hype_score,
+      overlaySampleSize: c.overlay_sample_size,
     })),
     asofDate: apiResponse.asof_date,
     totalScreened: apiResponse.total_screened,
