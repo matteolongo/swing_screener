@@ -9,6 +9,8 @@ import datetime as dt
 import pandas as pd
 
 from swing_screener.reporting.report import build_daily_report
+from swing_screener.reporting.concentration import sector_concentration_warnings
+from swing_screener.risk.regime import compute_regime_risk_multiplier
 from swing_screener.data.market_data import fetch_ohlcv
 from swing_screener.data.universe import (
     load_universe_from_package,
@@ -22,7 +24,7 @@ from swing_screener.data.universe import (
 from swing_screener.execution.order_workflows import fill_entry_order, scale_in_fill, normalize_orders
 from swing_screener.execution.orders import Order, load_orders, save_orders
 from swing_screener.portfolio.state import load_positions, save_positions
-from swing_screener.strategy.config import build_manage_config, build_report_config
+from swing_screener.strategy.config import build_manage_config, build_report_config, build_risk_config
 from swing_screener.strategy.storage import get_active_strategy, get_strategy_by_id
 
 
@@ -383,11 +385,34 @@ def main() -> None:
                 p.ticker for p in positions if p.status == "open"
             ]
 
+        multiplier, regime_meta = compute_regime_risk_multiplier(ohlcv, benchmark, report_cfg.risk)
+        if multiplier != 1.0:
+            report_cfg = replace(
+                report_cfg,
+                risk=replace(report_cfg.risk, risk_pct=report_cfg.risk.risk_pct * multiplier),
+            )
+            reasons = ", ".join(regime_meta.get("reasons", []))
+            if reasons:
+                print(f"Risk scaled by {multiplier:.2f}x due to regime: {reasons}")
+            else:
+                print(f"Risk scaled by {multiplier:.2f}x due to regime conditions.")
+
         report = build_daily_report(ohlcv, cfg=report_cfg, exclude_tickers=exclude_tickers)
 
         if report.empty:
             print("No candidates today.")
             return
+
+        try:
+            from swing_screener.data.ticker_info import get_multiple_ticker_info
+
+            tickers = [str(t) for t in report.index]
+            info = get_multiple_ticker_info(tickers)
+            sector_map = {t: data.get("sector") for t, data in info.items()}
+            for warning in sector_concentration_warnings(tickers, sector_map):
+                print(f"Warning: {warning}")
+        except Exception:
+            pass
 
         print(report.head(10))
 
@@ -415,6 +440,7 @@ def main() -> None:
             return
 
         manage_cfg = build_manage_config(strategy)
+        risk_cfg = build_risk_config(strategy)
         benchmark = manage_cfg.benchmark
 
         positions = load_positions(args.positions)
@@ -423,6 +449,22 @@ def main() -> None:
         if not open_tickers:
             print("No open positions found in positions.json")
             return
+
+        total_open_risk = 0.0
+        for pos in positions:
+            if pos.status != "open":
+                continue
+            risk_per_share = pos.initial_risk
+            if risk_per_share is None or risk_per_share <= 0:
+                risk_per_share = pos.entry_price - pos.stop_price
+            if risk_per_share > 0:
+                total_open_risk += risk_per_share * pos.shares
+
+        if risk_cfg.account_size > 0:
+            pct = (total_open_risk / risk_cfg.account_size) * 100.0
+            print(f"Open risk: {total_open_risk:.2f} ({pct:.2f}% of account)")
+        else:
+            print(f"Open risk: {total_open_risk:.2f}")
 
         tickers = _dedup_keep_order(open_tickers)
 

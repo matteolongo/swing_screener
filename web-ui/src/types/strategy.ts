@@ -51,6 +51,12 @@ export interface StrategyRisk {
   maxPositionPct: number;
   minShares: number;
   kAtr: number;
+  regimeEnabled: boolean;
+  regimeTrendSma: number;
+  regimeTrendMultiplier: number;
+  regimeVolAtrWindow: number;
+  regimeVolAtrPctThreshold: number;
+  regimeVolMultiplier: number;
 }
 
 export interface StrategyManage {
@@ -140,6 +146,12 @@ export interface StrategyRiskAPI {
   max_position_pct: number;
   min_shares: number;
   k_atr: number;
+  regime_enabled?: boolean;
+  regime_trend_sma?: number;
+  regime_trend_multiplier?: number;
+  regime_vol_atr_window?: number;
+  regime_vol_atr_pct_threshold?: number;
+  regime_vol_multiplier?: number;
 }
 
 export interface StrategyManageAPI {
@@ -242,6 +254,12 @@ export function transformStrategy(api: StrategyAPI): Strategy {
       maxPositionPct: api.risk.max_position_pct,
       minShares: api.risk.min_shares,
       kAtr: api.risk.k_atr,
+      regimeEnabled: api.risk.regime_enabled ?? false,
+      regimeTrendSma: api.risk.regime_trend_sma ?? 200,
+      regimeTrendMultiplier: api.risk.regime_trend_multiplier ?? 0.5,
+      regimeVolAtrWindow: api.risk.regime_vol_atr_window ?? 14,
+      regimeVolAtrPctThreshold: api.risk.regime_vol_atr_pct_threshold ?? 6.0,
+      regimeVolMultiplier: api.risk.regime_vol_multiplier ?? 0.5,
     },
     manage: {
       breakevenAtR: api.manage.breakeven_at_r,
@@ -312,6 +330,12 @@ export function toStrategyUpdateRequest(strategy: Strategy): StrategyUpdateReque
       max_position_pct: strategy.risk.maxPositionPct,
       min_shares: strategy.risk.minShares,
       k_atr: strategy.risk.kAtr,
+      regime_enabled: strategy.risk.regimeEnabled,
+      regime_trend_sma: strategy.risk.regimeTrendSma,
+      regime_trend_multiplier: strategy.risk.regimeTrendMultiplier,
+      regime_vol_atr_window: strategy.risk.regimeVolAtrWindow,
+      regime_vol_atr_pct_threshold: strategy.risk.regimeVolAtrPctThreshold,
+      regime_vol_multiplier: strategy.risk.regimeVolMultiplier,
     },
     manage: {
       breakeven_at_r: strategy.manage.breakevenAtR,

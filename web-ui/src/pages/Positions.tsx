@@ -4,6 +4,7 @@ import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Ca
 import Button from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
 import { API_ENDPOINTS, apiUrl } from '@/lib/api';
+import { fetchActiveStrategy } from '@/lib/strategyApi';
 import { 
   Position, 
   PositionStatus, 
@@ -25,6 +26,11 @@ export default function Positions() {
   const [selectedPosition, setSelectedPosition] = useState<Position | null>(null);
   const queryClient = useQueryClient();
 
+  const activeStrategyQuery = useQuery({
+    queryKey: ['strategy-active'],
+    queryFn: fetchActiveStrategy,
+  });
+
   // Fetch positions
   const { data: positions = [], isLoading } = useQuery({
     queryKey: ['positions', filterStatus],
@@ -36,6 +42,26 @@ export default function Positions() {
       return data.positions.map(transformPosition);
     },
   });
+
+  const { data: openPositions = [] } = useQuery({
+    queryKey: ['positions', 'open'],
+    queryFn: async () => {
+      const response = await fetch(apiUrl(API_ENDPOINTS.positions + '?status=open'));
+      if (!response.ok) throw new Error('Failed to fetch positions');
+      const data = await response.json();
+      return data.positions.map(transformPosition);
+    },
+  });
+
+  const accountSize = activeStrategyQuery.data?.risk.accountSize ?? 0;
+  const totalOpenRisk = openPositions.reduce((sum: number, pos: Position) => {
+    const riskPerShare = pos.initialRisk && pos.initialRisk > 0
+      ? pos.initialRisk
+      : pos.entryPrice - pos.stopPrice;
+    if (riskPerShare <= 0) return sum;
+    return sum + riskPerShare * pos.shares;
+  }, 0);
+  const openRiskPct = accountSize > 0 ? (totalOpenRisk / accountSize) * 100 : 0;
 
   // Update stop mutation
   const updateStopMutation = useMutation({
@@ -115,6 +141,27 @@ export default function Positions() {
                 {status.charAt(0).toUpperCase() + status.slice(1)}
               </Button>
             ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card variant="bordered">
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div>
+              <div className="text-gray-600 dark:text-gray-400">Open Risk</div>
+              <div className="text-lg font-semibold">{formatCurrency(totalOpenRisk)}</div>
+            </div>
+            <div>
+              <div className="text-gray-600 dark:text-gray-400">Open Risk %</div>
+              <div className="text-lg font-semibold">{openRiskPct.toFixed(2)}%</div>
+            </div>
+            <div>
+              <div className="text-gray-600 dark:text-gray-400">Account Size</div>
+              <div className="text-lg font-semibold">
+                {accountSize > 0 ? formatCurrency(accountSize) : '—'}
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
