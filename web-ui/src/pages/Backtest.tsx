@@ -16,7 +16,7 @@ import {
   transformBacktestSimulationMeta,
   transformFullBacktestResponse,
 } from '@/types/backtest';
-import { formatDateTime, formatPercent, formatR } from '@/utils/formatters';
+import { formatDateTime, formatPercent, formatR, formatCurrency } from '@/utils/formatters';
 import EquityCurveChart from '@/components/domain/backtest/EquityCurveChart';
 
 const STORAGE_KEY = 'backtest.params.v1';
