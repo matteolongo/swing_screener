@@ -381,6 +381,33 @@ def main() -> None:
         help="Optional override list of subreddits to scan",
     )
 
+    # -------------------------
+    # SOCIAL EXPORT (cache export)
+    # -------------------------
+    social_export = sub.add_parser("social-export", help="Export cached social data")
+    social_export.add_argument(
+        "--format",
+        choices=["parquet", "csv"],
+        default="parquet",
+        help="Export format (default: parquet)",
+    )
+    social_export.add_argument(
+        "--scope",
+        choices=["events", "metrics", "both"],
+        default="both",
+        help="What to export (default: both)",
+    )
+    social_export.add_argument(
+        "--out",
+        default="out/social",
+        help="Output directory (default: out/social)",
+    )
+    social_export.add_argument(
+        "--provider",
+        default="reddit",
+        help="Provider folder to export (default: reddit)",
+    )
+
     args = parser.parse_args()
 
     # -------------------------
@@ -490,6 +517,28 @@ def main() -> None:
             sample = events[0]
             preview = sample.text.replace("\n", " ")[:120]
             print(f"Sample: {sample.symbol} @ {sample.timestamp} -> {preview}")
+        return
+
+    if args.command == "social-export":
+        from swing_screener.social.cache import SocialCache
+        from swing_screener.social.export import export_social_cache
+
+        cache = SocialCache()
+        out_dir = Path(args.out)
+        saved = export_social_cache(
+            cache,
+            out_dir=out_dir,
+            fmt=args.format,
+            scope=args.scope,
+            provider=args.provider,
+        )
+
+        if not saved:
+            print("No cached social data found to export.")
+            return
+
+        for key, path in saved.items():
+            print(f"Saved {key}: {path}")
         return
 
     if args.command == "manage":

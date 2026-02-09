@@ -219,6 +219,19 @@ Optional subreddit override:
 swing-screener social-test --symbols TSLA NVDA --subreddits wallstreetbets stocks
 ```
 
+## Social cache export (CLI)
+
+Export cached social data for offline analysis:
+
+```bash
+swing-screener social-export --format parquet --scope both --out out/social
+```
+
+Options:
+- `--format` = `parquet` or `csv` (default: `parquet`)
+- `--scope` = `events`, `metrics`, or `both` (default: `both`)
+- `--provider` = cache folder name (default: `reddit`)
+
 No signal → no trade.
 
 ### Execution Guidance Fields
