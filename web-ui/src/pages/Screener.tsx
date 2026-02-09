@@ -13,6 +13,7 @@ import {
 } from '../types/screener';
 import { CreateOrderRequest, transformCreateOrderRequest } from '../types/order';
 import { useConfigStore } from '../stores/configStore';
+import { useScreenerStore } from '../stores/screenerStore';
 import { formatCurrency, formatPercent } from '../utils/formatters';
 import QuickBacktestModal from '../components/modals/QuickBacktestModal';
 
@@ -20,6 +21,7 @@ const TOP_N_MAX = 200;
 
 export default function Screener() {
   const { config } = useConfigStore();
+  const { lastResult, setLastResult } = useScreenerStore();
   const queryClient = useQueryClient();
   
   // Load saved preferences from localStorage or use defaults
@@ -106,6 +108,9 @@ export default function Screener() {
       const apiResponse: ScreenerResponseAPI = await res.json();
       return transformScreenerResponse(apiResponse);
     },
+    onSuccess: (data) => {
+      setLastResult(data);
+    },
     onError: (error) => {
       console.error('Screener failed', error);
     },
@@ -123,8 +128,9 @@ export default function Screener() {
     });
   };
 
-  const candidates = screenerMutation.data?.candidates || [];
-  const warnings = screenerMutation.data?.warnings || [];
+  const result = screenerMutation.data ?? lastResult;
+  const candidates = result?.candidates || [];
+  const warnings = result?.warnings || [];
 
   return (
     <div className="space-y-6">
@@ -237,7 +243,7 @@ export default function Screener() {
         </div>
 
         {/* Info banner */}
-        {!screenerMutation.isPending && !screenerMutation.data && (
+        {!screenerMutation.isPending && !result && (
           <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-start">
             <AlertCircle className="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" />
             <div className="text-sm text-blue-800">
@@ -257,7 +263,7 @@ export default function Screener() {
       </Card>
 
       {/* Results */}
-      {screenerMutation.data && (
+      {result && (
         <>
           {/* Summary */}
           <Card variant="bordered">
@@ -267,10 +273,10 @@ export default function Screener() {
                 <div>
                   <p className="text-sm text-gray-600">Screener completed</p>
                   <p className="text-lg font-semibold text-gray-900">
-                    {candidates.length} candidates from {screenerMutation.data.totalScreened} stocks
+                    {candidates.length} candidates from {result.totalScreened} stocks
                   </p>
                   <p className="text-xs text-gray-500">
-                    As of: {screenerMutation.data.asofDate}
+                    As of: {result.asofDate}
                   </p>
                 </div>
               </div>
