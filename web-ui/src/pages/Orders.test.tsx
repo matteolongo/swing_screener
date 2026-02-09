@@ -69,6 +69,16 @@ describe('Orders Page', () => {
       })
     })
 
+    it('shows sentiment button for each order', async () => {
+      renderWithProviders(<Orders />)
+
+      await waitFor(() => {
+        expect(screen.getByText('VALE')).toBeInTheDocument()
+      })
+
+      expect(screen.getByRole('button', { name: /Sentiment for VALE/i })).toBeInTheDocument()
+    })
+
     it('shows loading state', () => {
       renderWithProviders(<Orders />)
       

@@ -15,7 +15,8 @@ import {
   calculatePnLPercent,
 } from '@/types/position';
 import { formatCurrency, formatDate, formatPercent } from '@/utils/formatters';
-import { TrendingUp, TrendingDown, X } from 'lucide-react';
+import { TrendingUp, TrendingDown, X, MessageSquare } from 'lucide-react';
+import SocialAnalysisModal from '@/components/modals/SocialAnalysisModal';
 
 type FilterStatus = PositionStatus | 'all';
 
@@ -24,6 +25,7 @@ export default function Positions() {
   const [showUpdateStopModal, setShowUpdateStopModal] = useState(false);
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [selectedPosition, setSelectedPosition] = useState<Position | null>(null);
+  const [socialSymbol, setSocialSymbol] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const activeStrategyQuery = useQuery({
@@ -205,15 +207,26 @@ export default function Positions() {
                     return (
                       <tr key={position.positionId || position.ticker} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
                         <td className="py-3 px-4 font-mono font-semibold">
-                          <a 
-                            href={`https://finance.yahoo.com/quote/${position.ticker}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:text-blue-800 hover:underline"
-                            title={`View ${position.ticker} on Yahoo Finance`}
-                          >
-                            {position.ticker}
-                          </a>
+                          <div className="flex items-center gap-2">
+                            <a 
+                              href={`https://finance.yahoo.com/quote/${position.ticker}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:text-blue-800 hover:underline"
+                              title={`View ${position.ticker} on Yahoo Finance`}
+                            >
+                              {position.ticker}
+                            </a>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => setSocialSymbol(position.ticker)}
+                              aria-label={`Sentiment for ${position.ticker}`}
+                              title="Sentiment"
+                            >
+                              <MessageSquare className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </td>
                         <td className="py-3 px-4">
                           <Badge variant={position.status === 'open' ? 'success' : 'default'}>
@@ -304,6 +317,13 @@ export default function Positions() {
           })}
           isLoading={closePositionMutation.isPending}
           error={closePositionMutation.error?.message}
+        />
+      )}
+
+      {socialSymbol && (
+        <SocialAnalysisModal
+          symbol={socialSymbol}
+          onClose={() => setSocialSymbol(null)}
         />
       )}
     </div>

@@ -6,7 +6,8 @@ import Badge from '@/components/common/Badge';
 import { API_ENDPOINTS, apiUrl } from '@/lib/api';
 import { Order, OrderStatus, CreateOrderRequest, FillOrderRequest, transformOrder, transformCreateOrderRequest } from '@/types/order';
 import { formatCurrency, formatDate } from '@/utils/formatters';
-import { Plus, X, CheckCircle } from 'lucide-react';
+import { Plus, X, CheckCircle, MessageSquare } from 'lucide-react';
+import SocialAnalysisModal from '@/components/modals/SocialAnalysisModal';
 
 type FilterStatus = OrderStatus | 'all';
 
@@ -15,6 +16,7 @@ export default function Orders() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showFillModal, setShowFillModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [socialSymbol, setSocialSymbol] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   // Fetch orders
@@ -49,13 +51,18 @@ export default function Orders() {
   // Fill order mutation
   const fillOrderMutation = useMutation({
     mutationFn: async ({ orderId, request }: { orderId: string; request: FillOrderRequest }) => {
+      const payload: Record<string, number | string> = {
+        filled_price: request.filledPrice,
+        filled_date: request.filledDate,
+      };
+      if (request.stopPrice && request.stopPrice > 0) {
+        payload.stop_price = request.stopPrice;
+      }
+
       const response = await fetch(apiUrl(API_ENDPOINTS.orderFill(orderId)), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          filled_price: request.filledPrice,
-          filled_date: request.filledDate,
-        }),
+        body: JSON.stringify(payload),
       });
       if (!response.ok) throw new Error('Failed to fill order');
       return response.json();
@@ -153,15 +160,26 @@ export default function Orders() {
                   {orders.map((order: Order) => (
                     <tr key={order.orderId} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
                       <td className="py-3 px-4 font-mono font-semibold">
-                        <a 
-                          href={`https://finance.yahoo.com/quote/${order.ticker}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-800 hover:underline"
-                          title={`View ${order.ticker} on Yahoo Finance`}
-                        >
-                          {order.ticker}
-                        </a>
+                        <div className="flex items-center gap-2">
+                          <a 
+                            href={`https://finance.yahoo.com/quote/${order.ticker}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-800 hover:underline"
+                            title={`View ${order.ticker} on Yahoo Finance`}
+                          >
+                            {order.ticker}
+                          </a>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => setSocialSymbol(order.ticker)}
+                            aria-label={`Sentiment for ${order.ticker}`}
+                            title="Sentiment"
+                          >
+                            <MessageSquare className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </td>
                       <td className="py-3 px-4 text-sm">{order.orderType}</td>
                       <td className="py-3 px-4">
@@ -237,6 +255,13 @@ export default function Orders() {
           }}
           onSubmit={(request) => fillOrderMutation.mutate({ orderId: selectedOrder.orderId, request })}
           isLoading={fillOrderMutation.isPending}
+        />
+      )}
+
+      {socialSymbol && (
+        <SocialAnalysisModal
+          symbol={socialSymbol}
+          onClose={() => setSocialSymbol(null)}
         />
       )}
     </div>
@@ -392,6 +417,7 @@ function FillOrderModal({
   const [formData, setFormData] = useState<FillOrderRequest>({
     filledPrice: order.limitPrice || 0,
     filledDate: new Date().toISOString().split('T')[0],
+    stopPrice: order.orderKind === 'entry' ? (order.stopPrice || 0) : undefined,
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -430,6 +456,21 @@ function FillOrderModal({
                 required
               />
             </div>
+
+            {order.orderKind === 'entry' && (
+              <div>
+                <label className="block text-sm font-medium mb-1">Stop Price (for linked stop)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={formData.stopPrice}
+                  onChange={(e) => setFormData({ ...formData, stopPrice: parseFloat(e.target.value) || 0 })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+                  required
+                />
+              </div>
+            )}
 
             <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
               <p className="text-sm text-gray-600 dark:text-gray-400">Order Details:</p>

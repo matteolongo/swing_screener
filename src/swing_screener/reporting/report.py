@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Iterable
@@ -11,6 +12,10 @@ from swing_screener.screeners.ranking import RankingConfig, top_candidates
 from swing_screener.signals.entries import EntrySignalConfig, build_signal_board
 from swing_screener.risk.position_sizing import RiskConfig, build_trade_plans
 from swing_screener.execution.guidance import add_execution_guidance
+from swing_screener.social import run_social_overlay
+from swing_screener.social.config import SocialOverlayConfig
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -19,6 +24,7 @@ class ReportConfig:
     ranking: RankingConfig = RankingConfig(top_n=12)
     signals: EntrySignalConfig = EntrySignalConfig(breakout_lookback=50, pullback_ma=20)
     risk: RiskConfig = RiskConfig(account_size=500.0, risk_pct=0.01, k_atr=2.0, max_position_pct=0.60)
+    social_overlay: SocialOverlayConfig = SocialOverlayConfig()
     only_active_signals: bool = False
 
 
@@ -58,13 +64,128 @@ def build_daily_report(
     if ranked.empty:
         return pd.DataFrame()
 
-    board = build_signal_board(ohlcv, ranked.index.tolist(), cfg.signals)
+    tickers = ranked.index.tolist()
+    board = build_signal_board(ohlcv, tickers, cfg.signals)
 
     atr_col = f"atr{cfg.universe.vol.atr_window}"
-    plans = build_trade_plans(ranked, board, cfg.risk, atr_col=atr_col)
+
+    risk_multipliers: dict[str, float] | None = None
+    max_pos_multipliers: dict[str, float] | None = None
+    vetoes: set[str] | None = None
+    overlay_rows: list[dict] | None = None
+    overlay_meta: dict | None = None
+
+    if cfg.social_overlay.enabled:
+        try:
+            asof = ohlcv.index.max().date()
+            metrics, decisions, overlay_meta = run_social_overlay(
+                tickers,
+                ohlcv,
+                asof,
+                cfg.social_overlay,
+            )
+            decision_map = {d.symbol: d for d in decisions}
+            metrics_map = {m.symbol: m for m in metrics}
+
+            risk_multipliers = {sym: d.risk_multiplier for sym, d in decision_map.items() if d.risk_multiplier != 1.0}
+            max_pos_multipliers = {sym: d.max_pos_multiplier for sym, d in decision_map.items() if d.max_pos_multiplier != 1.0}
+            vetoes = {sym for sym, d in decision_map.items() if d.veto}
+
+            overlay_rows = []
+            for sym in tickers:
+                m = metrics_map.get(sym)
+                d = decision_map.get(sym)
+                if m is None or d is None:
+                    overlay_rows.append(
+                        {
+                            "ticker": sym,
+                            "overlay_status": "NO_DATA",
+                            "overlay_reasons": ["NO_SOCIAL_DATA"],
+                            "overlay_risk_multiplier": 1.0,
+                            "overlay_max_pos_multiplier": 1.0,
+                            "overlay_attention_z": None,
+                            "overlay_sentiment_score": None,
+                            "overlay_sentiment_confidence": None,
+                            "overlay_hype_score": None,
+                            "overlay_sample_size": None,
+                            "overlay_review_required": False,
+                            "overlay_veto": False,
+                        }
+                    )
+                    continue
+
+                if m.sample_size < cfg.social_overlay.min_sample_size:
+                    status = "NO_DATA"
+                elif d.veto:
+                    status = "VETO"
+                elif d.review_required:
+                    status = "REVIEW"
+                elif d.risk_multiplier < 1.0 or d.max_pos_multiplier < 1.0:
+                    status = "REDUCED_RISK"
+                else:
+                    status = "OK"
+
+                overlay_rows.append(
+                    {
+                        "ticker": sym,
+                        "overlay_status": status,
+                        "overlay_reasons": d.reasons,
+                        "overlay_risk_multiplier": d.risk_multiplier,
+                        "overlay_max_pos_multiplier": d.max_pos_multiplier,
+                        "overlay_attention_z": m.attention_z,
+                        "overlay_sentiment_score": m.sentiment_score,
+                        "overlay_sentiment_confidence": m.sentiment_confidence,
+                        "overlay_hype_score": m.hype_score,
+                        "overlay_sample_size": m.sample_size,
+                        "overlay_review_required": d.review_required,
+                        "overlay_veto": d.veto,
+                    }
+                )
+        except Exception as exc:
+            asof = ohlcv.index.max().date()
+            overlay_meta = {
+                "provider": "reddit",
+                "asof": asof.isoformat(),
+                "status": "error",
+                "error": str(exc),
+            }
+            logger.warning("Social overlay disabled due to provider error: %s", exc)
+            overlay_rows = [
+                {
+                    "ticker": sym,
+                    "overlay_status": "NO_DATA",
+                    "overlay_reasons": ["PROVIDER_ERROR"],
+                    "overlay_risk_multiplier": 1.0,
+                    "overlay_max_pos_multiplier": 1.0,
+                    "overlay_attention_z": None,
+                    "overlay_sentiment_score": None,
+                    "overlay_sentiment_confidence": None,
+                    "overlay_hype_score": None,
+                    "overlay_sample_size": None,
+                    "overlay_review_required": False,
+                    "overlay_veto": False,
+                }
+                for sym in tickers
+            ]
+    else:
+        overlay_meta = {"status": "disabled"}
+
+    plans = build_trade_plans(
+        ranked,
+        board,
+        cfg.risk,
+        atr_col=atr_col,
+        risk_multipliers=risk_multipliers,
+        max_position_multipliers=max_pos_multipliers,
+        vetoes=vetoes,
+    )
 
     # merge: ranked features + signal board (left) + plans (left)
     report = ranked.join(board, how="left", rsuffix="_sig")
+
+    if overlay_rows:
+        overlay_df = pd.DataFrame(overlay_rows).set_index("ticker")
+        report = report.join(overlay_df, how="left")
 
     if plans is not None and not plans.empty:
         # keep some plan cols
@@ -90,6 +211,10 @@ def build_daily_report(
         "signal",
         "breakout_level", ma_col,
         "entry", "stop", "shares", "position_value", "realized_risk",
+        "overlay_status", "overlay_reasons",
+        "overlay_risk_multiplier", "overlay_max_pos_multiplier",
+        "overlay_attention_z", "overlay_sentiment_score", "overlay_sentiment_confidence",
+        "overlay_hype_score", "overlay_sample_size",
     ]
     keep = [c for c in keep if c in report.columns]
     report = report[keep]
@@ -104,6 +229,8 @@ def build_daily_report(
         report = report.sort_values(["signal_order", "score"], ascending=[True, False]).drop(columns=["signal_order"])
 
     report = add_execution_guidance(report)
+    if overlay_meta is not None:
+        report.attrs["social_overlay"] = overlay_meta
     return report
 
 

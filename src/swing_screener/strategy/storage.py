@@ -92,6 +92,15 @@ def _default_strategy_payload(now: dt.datetime | None = None) -> dict:
             "commission_pct": 0.0,
             "min_history": 260,
         },
+        "social_overlay": {
+            "enabled": False,
+            "lookback_hours": 24,
+            "attention_z_threshold": 3.0,
+            "min_sample_size": 20,
+            "negative_sent_threshold": -0.4,
+            "sentiment_conf_threshold": 0.7,
+            "hype_percentile_threshold": 95.0,
+        },
     }
 
 

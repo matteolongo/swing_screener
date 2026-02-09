@@ -1,5 +1,5 @@
 {
-  "asof": "2026-02-08",
+  "asof": "2026-02-09",
   "positions": [
     {
       "ticker": "INTC",
@@ -125,6 +125,24 @@
       "notes": "",
       "exit_order_ids": [
         "ORD-STOP-POS-GSK-20260205-01"
+      ]
+    },
+    {
+      "ticker": "INTC",
+      "status": "open",
+      "position_id": "POS-INTC-20260209-01",
+      "source_order_id": "INTC-20260208124849",
+      "entry_date": "2026-02-09",
+      "entry_price": 49.55,
+      "stop_price": 42.97,
+      "shares": 1,
+      "initial_risk": 6.579999999999998,
+      "max_favorable_price": 49.55,
+      "exit_date": null,
+      "exit_price": null,
+      "notes": "From screener: Score 100.0, Rank #1",
+      "exit_order_ids": [
+        "ORD-STOP-POS-INTC-20260209-01"
       ]
     }
   ]

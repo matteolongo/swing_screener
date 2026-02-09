@@ -222,6 +222,55 @@ const help = {
     'Reduces exposure during unstable periods.',
     '0.5 means you take half the normal risk.'
   ),
+  socialOverlayEnabled: buildHelp(
+    'Social Overlay',
+    'Risk-only overlay using social signals.',
+    'An optional safety layer that adjusts risk or flags trades when social activity is extreme.',
+    'Helps reduce gap and slippage risk without changing the strategy ranking.',
+    'Enable to apply conservative risk multipliers and review flags.'
+  ),
+  lookbackHours: buildHelp(
+    'Lookback Hours',
+    'Hours of social history to scan.',
+    'The number of hours to look back for social mentions.',
+    'Controls how far back the overlay searches for attention and sentiment.',
+    'Shorter windows are more responsive; longer windows capture broader context.'
+  ),
+  attentionZThreshold: buildHelp(
+    'Attention Z-Score',
+    'Spike threshold vs baseline.',
+    'Z-score threshold for attention spikes relative to recent history.',
+    'Large spikes often increase gap risk and execution slippage.',
+    'Higher values make the overlay trigger less often.'
+  ),
+  minSampleSize: buildHelp(
+    'Min Sample Size',
+    'Minimum mentions required.',
+    'Minimum number of social mentions required before applying the overlay.',
+    'Avoids acting on noisy, low-sample social data.',
+    'Higher values require more data to trigger overlay rules.'
+  ),
+  negativeSentThreshold: buildHelp(
+    'Negative Sentiment',
+    'Threshold for negative tone.',
+    'Sentiment score threshold that flags strong negative tone.',
+    'High-confidence negative sentiment can indicate news or crowd panic risk.',
+    'More negative values make the filter stricter.'
+  ),
+  sentimentConfThreshold: buildHelp(
+    'Sentiment Confidence',
+    'Confidence required for sentiment rule.',
+    'Confidence threshold needed to act on sentiment scores.',
+    'Prevents false positives from weak sentiment signals.',
+    'Higher values require stronger, more consistent sentiment.'
+  ),
+  hypePercentileThreshold: buildHelp(
+    'Hype Percentile',
+    'Crowding threshold vs history.',
+    'Percentile threshold for crowding based on mentions normalized by liquidity.',
+    'Highly crowded names can gap and whipsaw; review is advised.',
+    'Higher values make crowding alerts rarer.'
+  ),
 };
 
 function cloneStrategy(strategy: Strategy): Strategy {
@@ -706,6 +755,112 @@ export default function StrategyPage() {
                   min={0}
                   help={help.atrMultiplier}
                 />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card variant="bordered">
+            <CardHeader>
+              <CardTitle>Social Overlay</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <CheckboxInput
+                  label="Enable Social Overlay"
+                  checked={draft.socialOverlay.enabled}
+                  onChange={(value) =>
+                    setDraft({
+                      ...draft,
+                      socialOverlay: { ...draft.socialOverlay, enabled: value },
+                    })
+                  }
+                  help={help.socialOverlayEnabled}
+                />
+                {draft.socialOverlay.enabled && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <NumberInput
+                      label="Lookback Hours"
+                      value={draft.socialOverlay.lookbackHours}
+                      onChange={(value) =>
+                        setDraft({
+                          ...draft,
+                          socialOverlay: { ...draft.socialOverlay, lookbackHours: value },
+                        })
+                      }
+                      step={1}
+                      min={1}
+                      help={help.lookbackHours}
+                    />
+                    <NumberInput
+                      label="Attention Z Threshold"
+                      value={draft.socialOverlay.attentionZThreshold}
+                      onChange={(value) =>
+                        setDraft({
+                          ...draft,
+                          socialOverlay: { ...draft.socialOverlay, attentionZThreshold: value },
+                        })
+                      }
+                      step={0.1}
+                      min={0}
+                      help={help.attentionZThreshold}
+                    />
+                    <NumberInput
+                      label="Min Sample Size"
+                      value={draft.socialOverlay.minSampleSize}
+                      onChange={(value) =>
+                        setDraft({
+                          ...draft,
+                          socialOverlay: { ...draft.socialOverlay, minSampleSize: value },
+                        })
+                      }
+                      step={1}
+                      min={0}
+                      help={help.minSampleSize}
+                    />
+                    <NumberInput
+                      label="Negative Sentiment"
+                      value={draft.socialOverlay.negativeSentThreshold}
+                      onChange={(value) =>
+                        setDraft({
+                          ...draft,
+                          socialOverlay: { ...draft.socialOverlay, negativeSentThreshold: value },
+                        })
+                      }
+                      step={0.05}
+                      min={-1}
+                      max={0}
+                      help={help.negativeSentThreshold}
+                    />
+                    <NumberInput
+                      label="Sentiment Confidence"
+                      value={draft.socialOverlay.sentimentConfThreshold}
+                      onChange={(value) =>
+                        setDraft({
+                          ...draft,
+                          socialOverlay: { ...draft.socialOverlay, sentimentConfThreshold: value },
+                        })
+                      }
+                      step={0.05}
+                      min={0}
+                      max={1}
+                      help={help.sentimentConfThreshold}
+                    />
+                    <NumberInput
+                      label="Hype Percentile"
+                      value={draft.socialOverlay.hypePercentileThreshold}
+                      onChange={(value) =>
+                        setDraft({
+                          ...draft,
+                          socialOverlay: { ...draft.socialOverlay, hypePercentileThreshold: value },
+                        })
+                      }
+                      step={1}
+                      min={0}
+                      max={100}
+                      help={help.hypePercentileThreshold}
+                    />
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

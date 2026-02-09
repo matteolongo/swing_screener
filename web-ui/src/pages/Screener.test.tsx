@@ -68,7 +68,7 @@ describe('Screener Page', () => {
       await waitFor(() => {
         const selects = screen.getAllByRole('combobox')
         const universeSelect = selects[0] as HTMLSelectElement
-        expect(universeSelect.value).toBe('mega')
+        expect(universeSelect.value).toBe('mega_all')
       })
     })
 
@@ -226,6 +226,25 @@ describe('Screener Page', () => {
         const createButtons = screen.getAllByRole('button', { name: /Create Order/i })
         expect(createButtons.length).toBeGreaterThan(0)
       })
+    })
+
+    it('opens sentiment analysis modal from candidate row', async () => {
+      const { user } = renderWithProviders(<Screener />)
+
+      await user.click(screen.getByRole('button', { name: /Run Screener/i }))
+
+      await waitFor(() => {
+        expect(screen.getByText('AAPL')).toBeInTheDocument()
+      })
+
+      const sentimentButton = screen.getByRole('button', { name: /Sentiment for AAPL/i })
+      await user.click(sentimentButton)
+
+      await waitFor(() => {
+        expect(screen.getByText('Sentiment Analysis - AAPL')).toBeInTheDocument()
+      })
+
+      expect(screen.getByLabelText(/Lookback Override/i)).toBeInTheDocument()
     })
   })
 

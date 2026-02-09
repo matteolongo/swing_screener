@@ -47,4 +47,4 @@ testpaths = ["tests"]
 pythonpath = ["."]
 
 [tool.setuptools.package-data]
-"swing_screener.data" = ["universes/*.csv"]
+"swing_screener.data" = ["universes/*.csv", "universes/*.json"]

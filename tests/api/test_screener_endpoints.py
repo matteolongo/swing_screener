@@ -48,7 +48,7 @@ def test_screener_top_over_100_returns_candidates(monkeypatch):
     monkeypatch.setattr(screener_router, "get_multiple_ticker_info", lambda tickers: {})
 
     client = TestClient(app)
-    res = client.post("/api/screener/run", json={"universe": "mega", "top": 200})
+    res = client.post("/api/screener/run", json={"universe": "mega_all", "top": 200})
     assert res.status_code == 200
     data = res.json()
     assert len(data["candidates"]) == 150
@@ -63,5 +63,5 @@ def test_screener_empty_ohlcv_returns_404(monkeypatch):
     monkeypatch.setattr(screener_router, "fetch_ohlcv", fake_fetch_ohlcv)
 
     client = TestClient(app)
-    res = client.post("/api/screener/run", json={"universe": "mega", "top": 200})
+    res = client.post("/api/screener/run", json={"universe": "mega_all", "top": 200})
     assert res.status_code == 404

@@ -117,6 +117,7 @@ export interface FullBacktestParams {
   tickers: string[];
   start: string;
   end: string;
+  investedBudget?: number | null;
   entryType: FullEntryType;
   breakoutLookback: number;
   pullbackMa: number;
@@ -274,6 +275,7 @@ export interface BacktestSimulationAPI {
     tickers: string[];
     start: string;
     end: string;
+    invested_budget?: number | null;
     entry_type: FullEntryType;
     breakout_lookback: number;
     pullback_ma: number;
@@ -352,6 +354,7 @@ export function transformBacktestParamsFromAPI(api: BacktestSimulationAPI['param
     tickers: api.tickers,
     start: api.start,
     end: api.end,
+    investedBudget: api.invested_budget ?? null,
     entryType: api.entry_type,
     breakoutLookback: api.breakout_lookback,
     pullbackMa: api.pullback_ma,

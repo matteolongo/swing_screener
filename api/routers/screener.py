@@ -6,6 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException
 import datetime as dt
 import logging
+import math
 import pandas as pd
 
 from api.models import (
@@ -19,6 +20,7 @@ from swing_screener.data.universe import (
     load_universe_from_package,
     list_package_universes,
     UniverseConfig as DataUniverseConfig,
+    get_universe_benchmark,
 )
 from swing_screener.data.market_data import fetch_ohlcv
 from swing_screener.data.ticker_info import get_multiple_ticker_info
@@ -28,6 +30,7 @@ from swing_screener.strategy.config import (
     build_entry_config,
     build_ranking_config,
     build_risk_config,
+    build_social_overlay_config,
     build_universe_config,
 )
 from swing_screener.risk.regime import compute_regime_risk_multiplier
@@ -107,6 +110,63 @@ def _resolve_strategy(strategy_id: Optional[str]) -> dict:
     return get_active_strategy()
 
 
+def _is_na_scalar(val) -> bool:
+    """Return True if val is a scalar NA/NaN-like value (or None)."""
+    if val is None:
+        return True
+    # Avoid ambiguous truth values for list-like objects
+    if isinstance(val, (list, tuple, set, dict)):
+        return False
+    try:
+        # pd.isna works for numpy/pandas scalar types as well as Python scalars
+        return bool(pd.isna(val))
+    except (TypeError, ValueError):
+        # Types that pd.isna cannot handle are treated as non-NA
+        return False
+
+
+def _safe_float(val, default=0.0):
+    """Helper to safely convert to float, replacing NaN with default."""
+    if _is_na_scalar(val):
+        return default
+    return float(val)
+
+
+def _safe_optional_float(val):
+    """Helper to safely convert to optional float, replacing NaN with None."""
+    if _is_na_scalar(val):
+        return None
+    return float(val)
+
+
+def _safe_optional_int(val):
+    """Helper to safely convert to optional int, replacing NaN with None."""
+    if _is_na_scalar(val):
+        return None
+    try:
+        return int(val)
+    except (TypeError, ValueError, OverflowError):
+        return None
+
+
+def _safe_list(val):
+    """Helper to safely convert various types to list of strings."""
+    # Treat None and scalar NA/NaN as empty list
+    if _is_na_scalar(val):
+        return []
+    if isinstance(val, list):
+        # Filter out None/NaN elements
+        return [str(v) for v in val if not _is_na_scalar(v)]
+    if isinstance(val, str):
+        if not val.strip():
+            return []
+        sep = ";" if ";" in val else "," if "," in val else None
+        if sep:
+            return [v.strip() for v in val.split(sep) if v.strip()]
+        return [val]
+    return [str(val)]
+
+
 @router.get("/universes")
 async def list_universes():
     """List available universe files."""
@@ -130,6 +190,14 @@ async def run_screener(request: ScreenerRequest):
         strategy = _resolve_strategy(request.strategy_id)
         universe_cfg = build_universe_config(strategy)
         benchmark = universe_cfg.mom.benchmark
+        if request.universe:
+            uni_benchmark = get_universe_benchmark(request.universe)
+            if uni_benchmark and uni_benchmark != benchmark:
+                universe_cfg = replace(
+                    universe_cfg,
+                    mom=replace(universe_cfg.mom, benchmark=uni_benchmark),
+                )
+                benchmark = uni_benchmark
 
         # Determine date
         if request.asof_date:
@@ -147,10 +215,10 @@ async def run_screener(request: ScreenerRequest):
             ucfg = DataUniverseConfig(benchmark=benchmark, ensure_benchmark=True, max_tickers=universe_cap)
             tickers = load_universe_from_package(request.universe, ucfg)
         else:
-            # Default to mega
+            # Default to mega_all
             universe_cap = max(500, requested_top * 2)
             ucfg = DataUniverseConfig(benchmark=benchmark, ensure_benchmark=True, max_tickers=universe_cap)
-            tickers = load_universe_from_package("mega", ucfg)
+            tickers = load_universe_from_package("mega_all", ucfg)
         
         # Import MarketDataConfig and ReportConfig
         from swing_screener.data.market_data import MarketDataConfig
@@ -164,7 +232,7 @@ async def run_screener(request: ScreenerRequest):
         )
         logger.info(
             "Screener run: universe=%s top=%s tickers=%s",
-            request.universe or "mega",
+            request.universe or "mega_all",
             requested_top,
             len(tickers),
         )
@@ -217,11 +285,14 @@ async def run_screener(request: ScreenerRequest):
             else:
                 warnings.append(f"Risk scaled by {multiplier:.2f}x due to regime conditions.")
 
+        social_overlay_cfg = build_social_overlay_config(strategy)
+
         report_cfg = ReportConfig(
             universe=universe_cfg,
             ranking=ranking_cfg,
             signals=signals_cfg,
             risk=risk_cfg,
+            social_overlay=social_overlay_cfg,
         )
         
         results = build_daily_report(ohlcv, cfg=report_cfg, exclude_tickers=[])
@@ -252,7 +323,12 @@ async def run_screener(request: ScreenerRequest):
             message = f"Only {len(results)} candidates found for top {requested_top}."
             warnings.append(message)
             logger.warning(message)
-        
+
+        overlay_meta = results.attrs.get("social_overlay") if hasattr(results, "attrs") else None
+        if isinstance(overlay_meta, dict) and overlay_meta.get("status") == "error":
+            error_msg = overlay_meta.get("error", "provider error")
+            warnings.append(f"Social overlay disabled: {error_msg}")
+
         # Fetch company info for all tickers
         ticker_list = [str(idx) for idx in results.index]
         ticker_info = get_multiple_ticker_info(ticker_list) if ticker_list else {}
@@ -262,18 +338,11 @@ async def run_screener(request: ScreenerRequest):
         ma_col = f"ma{signals_cfg.pullback_ma}_level"
         candidates = []
         for idx, row in results.iterrows():
-            # Helper to safely convert to float, replacing NaN with 0
-            def safe_float(val, default=0.0):
-                import math
-                if val is None or (isinstance(val, float) and math.isnan(val)):
-                    return default
-                return float(val)
-            
             # Calculate SMAs from OHLCV if available, otherwise use distance metrics
-            sma20 = safe_float(row.get(ma_col))
-            sma50_dist = safe_float(row.get("dist_sma50_pct"))
-            sma200_dist = safe_float(row.get("dist_sma200_pct"))
-            last_price = safe_float(row.get("last"))
+            sma20 = _safe_float(row.get(ma_col))
+            sma50_dist = _safe_float(row.get("dist_sma50_pct"))
+            sma200_dist = _safe_float(row.get("dist_sma200_pct"))
+            last_price = _safe_float(row.get("last"))
             
             # Approximate SMA values from distance percentages
             sma50 = last_price / (1 + sma50_dist / 100) if last_price and sma50_dist else last_price
@@ -294,13 +363,22 @@ async def run_screener(request: ScreenerRequest):
                     sma_20=sma20,
                     sma_50=sma50,
                     sma_200=sma200,
-                    atr=safe_float(row.get(atr_col)),
-                    momentum_6m=safe_float(row.get("mom_6m")),
-                    momentum_12m=safe_float(row.get("mom_12m")),
-                    rel_strength=safe_float(row.get("rs_6m")),
-                    score=safe_float(row.get("score")),
-                    confidence=safe_float(row.get("confidence")),
+                    atr=_safe_float(row.get(atr_col)),
+                    momentum_6m=_safe_float(row.get("mom_6m")),
+                    momentum_12m=_safe_float(row.get("mom_12m")),
+                    rel_strength=_safe_float(row.get("rs_6m")),
+                    score=_safe_float(row.get("score")),
+                    confidence=_safe_float(row.get("confidence")),
                     rank=int(row.get("rank", len(candidates) + 1)),
+                    overlay_status=row.get("overlay_status"),
+                    overlay_reasons=_safe_list(row.get("overlay_reasons")),
+                    overlay_risk_multiplier=_safe_optional_float(row.get("overlay_risk_multiplier")),
+                    overlay_max_pos_multiplier=_safe_optional_float(row.get("overlay_max_pos_multiplier")),
+                    overlay_attention_z=_safe_optional_float(row.get("overlay_attention_z")),
+                    overlay_sentiment_score=_safe_optional_float(row.get("overlay_sentiment_score")),
+                    overlay_sentiment_confidence=_safe_optional_float(row.get("overlay_sentiment_confidence")),
+                    overlay_hype_score=_safe_optional_float(row.get("overlay_hype_score")),
+                    overlay_sample_size=_safe_optional_int(row.get("overlay_sample_size")),
                 )
             )
 

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { PlayCircle, RefreshCw, TrendingUp, AlertCircle, BarChart3 } from 'lucide-react';
+import { PlayCircle, RefreshCw, TrendingUp, AlertCircle, BarChart3, MessageSquare } from 'lucide-react';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import { API_ENDPOINTS, apiUrl } from '../lib/api';
@@ -18,8 +18,27 @@ import { StrategyRisk } from '../types/strategy';
 import { useScreenerStore } from '../stores/screenerStore';
 import { formatCurrency, formatPercent } from '../utils/formatters';
 import QuickBacktestModal from '../components/modals/QuickBacktestModal';
+import SocialAnalysisModal from '../components/modals/SocialAnalysisModal';
 
 const TOP_N_MAX = 200;
+const UNIVERSE_ALIASES: Record<string, string> = {
+  mega: 'mega_all',
+  mega_defense: 'defense_all',
+  mega_healthcare_biotech: 'healthcare_all',
+  mega_europe: 'europe_large',
+};
+const normalizeUniverse = (value: string | null) => {
+  if (!value) return null;
+  return UNIVERSE_ALIASES[value] ?? value;
+};
+const OVERLAY_BADGES: Record<string, { label: string; className: string }> = {
+  OK: { label: 'OK', className: 'bg-green-100 text-green-700' },
+  REDUCED_RISK: { label: 'Reduced', className: 'bg-yellow-100 text-yellow-800' },
+  REVIEW: { label: 'Review', className: 'bg-orange-100 text-orange-800' },
+  VETO: { label: 'Veto', className: 'bg-red-100 text-red-800' },
+  NO_DATA: { label: 'No Data', className: 'bg-gray-100 text-gray-600' },
+  OFF: { label: 'Off', className: 'bg-gray-100 text-gray-600' },
+};
 
 export default function Screener() {
   const { config } = useConfigStore();
@@ -33,7 +52,7 @@ export default function Screener() {
   
   // Load saved preferences from localStorage or use defaults
   const [selectedUniverse, setSelectedUniverse] = useState<string>(() => {
-    return localStorage.getItem('screener.universe') || 'mega';
+    return normalizeUniverse(localStorage.getItem('screener.universe')) || 'mega_all';
   });
   const [topN, setTopN] = useState<number>(() => {
     const saved = localStorage.getItem('screener.topN');
@@ -54,6 +73,7 @@ export default function Screener() {
   const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
   const [showBacktestModal, setShowBacktestModal] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<ScreenerCandidate | null>(null);
+  const [socialSymbol, setSocialSymbol] = useState<string | null>(null);
 
   // Save preferences to localStorage when they change
   const handleUniverseChange = (value: string) => {
@@ -138,6 +158,11 @@ export default function Screener() {
   const result = screenerMutation.data ?? lastResult;
   const candidates = result?.candidates || [];
   const warnings = result?.warnings || [];
+  const overlayCounts = candidates.reduce<Record<string, number>>((acc, c) => {
+    const status = c.overlayStatus ?? 'OFF';
+    acc[status] = (acc[status] ?? 0) + 1;
+    return acc;
+  }, {});
 
   return (
     <div className="space-y-6">
@@ -306,6 +331,22 @@ export default function Screener() {
                 </div>
               </div>
             )}
+            {candidates.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                {Object.entries(overlayCounts).map(([status, count]) => {
+                  const badge = OVERLAY_BADGES[status] ?? OVERLAY_BADGES.OFF;
+                  return (
+                    <span
+                      key={status}
+                      className={`px-2 py-1 rounded ${badge.className}`}
+                      title={`Overlay status: ${status}`}
+                    >
+                      {badge.label}: {count}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
           </Card>
 
           {/* Candidates table */}
@@ -326,13 +367,14 @@ export default function Screener() {
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Mom 6M</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Mom 12M</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">RS</th>
+                    <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">Overlay</th>
                     <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {candidates.length === 0 ? (
                     <tr>
-                      <td colSpan={13} className="text-center py-8 text-gray-500">
+                      <td colSpan={14} className="text-center py-8 text-gray-500">
                         No candidates found
                       </td>
                     </tr>
@@ -343,15 +385,26 @@ export default function Screener() {
                           #{candidate.rank}
                         </td>
                         <td className="py-3 px-4">
-                          <a 
-                            href={`https://finance.yahoo.com/quote/${candidate.ticker}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline"
-                            title={`View ${candidate.ticker} on Yahoo Finance`}
-                          >
-                            {candidate.ticker}
-                          </a>
+                          <div className="flex items-center gap-2">
+                            <a 
+                              href={`https://finance.yahoo.com/quote/${candidate.ticker}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline"
+                              title={`View ${candidate.ticker} on Yahoo Finance`}
+                            >
+                              {candidate.ticker}
+                            </a>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => setSocialSymbol(candidate.ticker)}
+                              aria-label={`Sentiment for ${candidate.ticker}`}
+                              title="Sentiment"
+                            >
+                              <MessageSquare className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </td>
                         <td className="py-3 px-4 text-sm text-gray-700">
                           {candidate.name ? (
@@ -404,6 +457,38 @@ export default function Screener() {
                           <span className={candidate.relStrength >= 0 ? 'text-green-600' : 'text-red-600'}>
                             {formatPercent(candidate.relStrength)}
                           </span>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          {(() => {
+                            const status = candidate.overlayStatus ?? 'OFF';
+                            const badge = OVERLAY_BADGES[status] ?? OVERLAY_BADGES.OFF;
+                            const reasons = candidate.overlayReasons?.length
+                              ? `Reasons: ${candidate.overlayReasons.join(', ')}`
+                              : 'No overlay triggers';
+                            const metrics = [
+                              candidate.overlayAttentionZ != null
+                                ? `Attention Z: ${candidate.overlayAttentionZ.toFixed(2)}`
+                                : null,
+                              candidate.overlaySentimentScore != null
+                                ? `Sentiment: ${candidate.overlaySentimentScore.toFixed(2)}`
+                                : null,
+                              candidate.overlayHypeScore != null
+                                ? `Hype: ${candidate.overlayHypeScore.toFixed(2)}`
+                                : null,
+                              candidate.overlaySampleSize != null
+                                ? `Sample: ${candidate.overlaySampleSize}`
+                                : null,
+                            ].filter(Boolean);
+                            const title = [reasons, ...metrics].join(' | ');
+                            return (
+                              <span
+                                className={`text-xs px-2 py-1 rounded ${badge.className}`}
+                                title={title}
+                              >
+                                {badge.label}
+                              </span>
+                            );
+                          })()}
                         </td>
                         <td className="py-3 px-4 text-center">
                           <div className="flex gap-2 justify-center">
@@ -467,6 +552,13 @@ export default function Screener() {
           }}
         />
       )}
+
+      {socialSymbol && (
+        <SocialAnalysisModal
+          symbol={socialSymbol}
+          onClose={() => setSocialSymbol(null)}
+        />
+      )}
     </div>
   );
 }
@@ -486,11 +578,16 @@ function CreateOrderModal({
   // Calculate suggested stop price (entry - 2*ATR)
   const suggestedStop = candidate.close - (candidate.atr * risk.kAtr);
   
+  const overlayRiskMultiplier = candidate.overlayRiskMultiplier ?? 1;
+  const overlayMaxPosMultiplier = candidate.overlayMaxPosMultiplier ?? 1;
+  const effectiveRiskPct = risk.riskPct * overlayRiskMultiplier;
+  const effectiveMaxPositionPct = risk.maxPositionPct * overlayMaxPosMultiplier;
+
   // Calculate position size based on risk
-  const riskPerTrade = risk.accountSize * risk.riskPct;
+  const riskPerTrade = risk.accountSize * effectiveRiskPct;
   const riskPerShare = candidate.close - suggestedStop;
   const suggestedShares = riskPerShare > 0 ? Math.floor(riskPerTrade / riskPerShare) : 1;
-  const maxShares = Math.floor((risk.accountSize * risk.maxPositionPct) / candidate.close);
+  const maxShares = Math.floor((risk.accountSize * effectiveMaxPositionPct) / candidate.close);
   const finalShares = Math.max(risk.minShares, Math.min(suggestedShares, maxShares));
 
   const [formData, setFormData] = useState<CreateOrderRequest>({

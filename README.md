@@ -39,7 +39,7 @@ Command-line interface for automation, scripting, and headless environments.
 **Quick Start:**
 
 ```bash
-swing-screener run --universe mega --positions data/positions.json --csv out/report.csv
+swing-screener run --universe mega_all --positions data/positions.json --csv out/report.csv
 ```
 
 👉 **See [CLI Usage](#cli-usage) below for CLI documentation**
@@ -93,7 +93,7 @@ npm install
 Run the daily screener:
 
 ```bash
-swing-screener run --universe mega --positions data/positions.json --csv out/report.csv
+swing-screener run --universe mega_all --positions data/positions.json --csv out/report.csv
 ```
 
 Manage open positions:
@@ -122,11 +122,11 @@ swing-screener universes list
 
 ### Packaged universes (sources)
 
-- `mega_defense` — built from U.S. aerospace/defense ETF holdings (ITA, XAR) and expanded with major global primes from SIPRI's Top 100 list.
+- `defense_all` (legacy: `mega_defense`) — built from U.S. aerospace/defense ETF holdings (ITA, XAR) and expanded with major global primes from SIPRI's Top 100 list.
   - ITA holdings: https://www.ishares.com/us/products/239502/ishares-us-aerospace-defense-etf
   - XAR holdings: https://www.ssga.com/us/en/intermediary/etfs/state-street-spdr-sp-aerospace-defense-etf-xar
   - SIPRI Top 100 arms-producing companies: https://www.sipri.org/databases/armsindustry
-- `mega_healthcare_biotech` — built from broad healthcare and biotech ETF holdings (VHT, IBB, XBI), covering pharma, medtech, providers, and biotech.
+- `healthcare_all` (legacy: `mega_healthcare_biotech`) — built from broad healthcare and biotech ETF holdings (VHT, IBB, XBI), covering pharma, medtech, providers, and biotech.
   - VHT holdings: https://stockanalysis.com/etf/vht/holdings/
   - IBB holdings: https://www.ishares.com/us/products/239699/ishares-biotechnology-etf
   - XBI holdings: https://www.ssga.com/us/en/intermediary/etfs/state-street-spdr-sp-biotech-etf-xbi

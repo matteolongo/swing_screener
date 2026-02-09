@@ -1,7 +1,7 @@
 """Pydantic models for API requests/responses."""
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import Literal, Optional, Any
 from pydantic import BaseModel, Field
 
 
@@ -126,6 +126,16 @@ class StrategyBacktest(BaseModel):
     min_history: int = Field(gt=0)
 
 
+class StrategySocialOverlay(BaseModel):
+    enabled: bool = False
+    lookback_hours: int = Field(default=24, ge=1)
+    attention_z_threshold: float = Field(default=3.0, ge=0)
+    min_sample_size: int = Field(default=20, ge=0)
+    negative_sent_threshold: float = Field(default=-0.4)
+    sentiment_conf_threshold: float = Field(default=0.7, ge=0, le=1)
+    hype_percentile_threshold: float = Field(default=95.0, ge=0, le=100)
+
+
 class StrategyBase(BaseModel):
     name: str
     description: Optional[str] = None
@@ -135,6 +145,7 @@ class StrategyBase(BaseModel):
     risk: StrategyRisk
     manage: StrategyManage
     backtest: StrategyBacktest
+    social_overlay: StrategySocialOverlay = Field(default_factory=StrategySocialOverlay)
 
 
 class StrategyCreateRequest(StrategyBase):
@@ -260,6 +271,11 @@ class OrdersSnapshotResponse(BaseModel):
 class FillOrderRequest(BaseModel):
     filled_price: float = Field(gt=0, description="Price at which order was filled")
     filled_date: str = Field(description="Date order was filled (YYYY-MM-DD)")
+    stop_price: Optional[float] = Field(
+        default=None,
+        gt=0,
+        description="Stop price to use when filling entry orders (optional override)",
+    )
 
 
 class OrderPreview(BaseModel):
@@ -291,6 +307,15 @@ class ScreenerCandidate(BaseModel):
     score: float
     confidence: float
     rank: int
+    overlay_status: Optional[str] = None
+    overlay_reasons: list[str] = Field(default_factory=list)
+    overlay_risk_multiplier: Optional[float] = None
+    overlay_max_pos_multiplier: Optional[float] = None
+    overlay_attention_z: Optional[float] = None
+    overlay_sentiment_score: Optional[float] = None
+    overlay_sentiment_confidence: Optional[float] = None
+    overlay_hype_score: Optional[float] = None
+    overlay_sample_size: Optional[int] = None
 
 
 class ScreenerRequest(BaseModel):
@@ -311,6 +336,43 @@ class ScreenerResponse(BaseModel):
     asof_date: str
     total_screened: int
     warnings: list[str] = Field(default_factory=list)
+
+
+# ===== Social Analysis Models =====
+
+class SocialRawEvent(BaseModel):
+    source: str
+    symbol: str
+    timestamp: str
+    text: str
+    author_id_hash: Optional[str] = None
+    upvotes: Optional[int] = None
+    url: Optional[str] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class SocialAnalysisRequest(BaseModel):
+    symbol: str
+    lookback_hours: Optional[int] = Field(default=None, ge=1)
+    provider: Optional[str] = None
+    max_events: Optional[int] = Field(default=None, ge=1, le=500)
+
+
+class SocialAnalysisResponse(BaseModel):
+    status: Literal["ok", "no_data", "error"]
+    symbol: str
+    provider: str
+    lookback_hours: int
+    last_execution_at: str
+    sample_size: int
+    sentiment_score: Optional[float] = None
+    sentiment_confidence: Optional[float] = None
+    attention_score: float
+    attention_z: Optional[float] = None
+    hype_score: Optional[float] = None
+    reasons: list[str] = Field(default_factory=list)
+    raw_events: list[SocialRawEvent] = Field(default_factory=list)
+    error: Optional[str] = None
 
 
 # ===== Response Models =====
@@ -411,6 +473,11 @@ class FullBacktestRequest(BaseModel):
     start: str
     end: str
     strategy_id: Optional[str] = Field(default=None, description="Strategy id to use (defaults to active)")
+    invested_budget: Optional[float] = Field(
+        default=None,
+        gt=0,
+        description="Optional invested budget used for $ P&L estimates (backtest only)",
+    )
     entry_type: FullEntryType = "auto"
     breakout_lookback: int = Field(default=50, gt=0)
     pullback_ma: int = Field(default=20, gt=0)

@@ -301,7 +301,7 @@ curl http://localhost:8000/api/screener/universes
 Response:
 ```json
 {
-  "universes": ["mega", "mega_defense", "mega_europe", "mega_healthcare_biotech"]
+  "universes": ["mega_all", "mega_stocks", "core_etfs", "defense_all", "defense_stocks", "defense_etfs", "healthcare_all", "healthcare_stocks", "healthcare_etfs", "europe_large", "amsterdam_aex", "amsterdam_all", "amsterdam_amx"]
 }
 ```
 
@@ -313,7 +313,7 @@ Run the screener on a universe.
 curl -X POST http://localhost:8000/api/screener/run \
   -H "Content-Type: application/json" \
   -d '{
-    "universe": "mega",
+    "universe": "mega_all",
     "top": 20
   }'
 
@@ -329,7 +329,7 @@ curl -X POST http://localhost:8000/api/screener/run \
 curl -X POST http://localhost:8000/api/screener/run \
   -H "Content-Type: application/json" \
   -d '{
-    "universe": "mega",
+    "universe": "mega_all",
     "top": 20,
     "asof_date": "2026-02-03"
   }'
@@ -378,6 +378,26 @@ Response:
   "risk_pct": 0.00976
 }
 ```
+
+---
+
+### Social Router (`/api/social`)
+On‑demand social sentiment analysis (risk/awareness only).
+
+#### `POST /api/social/analyze`
+Fetch recent social events for a symbol and compute sentiment + attention metrics.
+
+```bash
+curl -X POST http://localhost:8000/api/social/analyze \
+  -H "Content-Type: application/json" \
+  -d '{ "symbol": "AAPL", "lookback_hours": 24, "max_events": 100, "provider": "reddit" }'
+```
+
+Response includes:
+- `status` (`ok` | `no_data` | `error`)
+- `last_execution_at`
+- metrics (sentiment, attention, hype)
+- `raw_events` (returned even when sample size is low)
 
 ---
 

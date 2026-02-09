@@ -1,6 +1,6 @@
 // API client configuration and base URL
 
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+export const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 export const API_ENDPOINTS = {
   // Config
@@ -34,6 +34,9 @@ export const API_ENDPOINTS = {
   backtestRun: '/api/backtest/run',
   backtestSimulations: '/api/backtest/simulations',
   backtestSimulation: (id: string) => `/api/backtest/simulations/${id}`,
+
+  // Social
+  socialAnalyze: '/api/social/analyze',
 } as const;
 
 // Helper to build full URL

@@ -34,6 +34,7 @@ export interface CreateOrderRequest {
 export interface FillOrderRequest {
   filledPrice: number;
   filledDate: string;
+  stopPrice?: number;
 }
 
 // Backend uses snake_case, transform to camelCase

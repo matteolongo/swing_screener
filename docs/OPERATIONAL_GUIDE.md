@@ -178,12 +178,12 @@ Never run during market hours.
 Run the screener:
 
 ```bash
-swing-screener run --universe mega --positions data/positions.json --csv out/report.csv
+swing-screener run --universe mega_all --positions data/positions.json --csv out/report.csv
 ```
 
 To run a specific strategy (override active):
 ```bash
-swing-screener run --universe mega --positions data/positions.json --strategy-id STRAT_ID --csv out/report.csv
+swing-screener run --universe mega_all --positions data/positions.json --strategy-id STRAT_ID --csv out/report.csv
 ```
 
 This does:
@@ -192,11 +192,45 @@ This does:
 - ranks candidates
 - computes entry / stop / shares
 - excludes open positions from new candidates
+- applies the Social Overlay (if enabled) to reduce risk or flag manual review
 
 ### What you do next
 - Open `out/report.csv`
 - Look ONLY at rows with a valid `signal`
 - Decide whether to take the trade
+
+**Social Overlay (optional):**
+- Adds columns like `overlay_status`, `overlay_reasons`, and `overlay_*` metrics
+- Statuses include `OK`, `REDUCED_RISK`, `REVIEW`, `VETO`, `NO_DATA`
+- The overlay never changes ranking in v1; it only adjusts risk or flags review
+
+---
+
+## Social overlay smoke test (CLI)
+
+Use this to verify the Reddit provider returns data for well-known tickers:
+
+```bash
+swing-screener social-test --symbols TSLA NVDA AAPL GME --hours 24
+```
+
+Optional subreddit override:
+```bash
+swing-screener social-test --symbols TSLA NVDA --subreddits wallstreetbets stocks
+```
+
+## Social cache export (CLI)
+
+Export cached social data for offline analysis:
+
+```bash
+swing-screener social-export --format parquet --scope both --out out/social
+```
+
+Options:
+- `--format` = `parquet` or `csv` (default: `parquet`)
+- `--scope` = `events`, `metrics`, or `both` (default: `both`)
+- `--provider` = cache folder name (default: `reddit`)
 
 No signal → no trade.
 
@@ -314,13 +348,15 @@ You can now inspect, filter, and save universes via CLI:
   ```bash
   swing-screener universes list
   ```
+  Examples include `mega_all`, `mega_stocks`, `core_etfs`, `defense_all`, `healthcare_all`, `europe_large`, `amsterdam_aex`, `amsterdam_all`, `amsterdam_amx`.
+  Note: named universes can specify a default benchmark (e.g., `europe_large` → `VGK`, `amsterdam_*` → `VGK`). When you pass `--universe`, that benchmark is used for momentum/RS and regime checks.
 - **Preview with filters (include/exclude/grep)**
   ```bash
-  swing-screener universes show --name mega --top 20 --grep A --exclude AAPL
+  swing-screener universes show --name mega_all --top 20 --grep A --exclude AAPL
   ```
 - **Filter and save to a CSV** (reusable with `--universe-file`)
   ```bash
-  swing-screener universes filter --name mega --grep X --out data/universes/custom_x.csv
+  swing-screener universes filter --name mega_all --grep X --out data/universes/custom_x.csv
   ```
   Options:
   - `--include / --exclude` literal tickers

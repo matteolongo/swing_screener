@@ -56,7 +56,7 @@ This is not about code — it's about **correct behavior**.
 3. **Dashboard:** Review portfolio summary, P&L, action items
 
 4. **Screener Page:**
-   - Select universe (e.g., "mega")
+   - Select universe (e.g., "mega_all")
    - Click "Run Screener"
    - Review candidates table
    - Click "Create Order" for stocks you want to trade

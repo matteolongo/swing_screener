@@ -46,6 +46,7 @@ dist/
 # =========================
 .cache/
 *.parquet
+data/social_cache/
 
 # =========================
 # Logs
