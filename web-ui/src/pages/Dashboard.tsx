@@ -47,6 +47,15 @@ export default function Dashboard() {
     return sum + calculatePnL(pos);
   }, 0);
 
+  const openRisk = positions.reduce((sum: number, pos: Position) => {
+    const perShareRisk = pos.entryPrice - pos.stopPrice;
+    if (perShareRisk <= 0) return sum;
+    return sum + (perShareRisk * pos.shares);
+  }, 0);
+
+  const openRiskPct = riskConfig.accountSize > 0 ? openRisk / riskConfig.accountSize : 0;
+  const riskBudget = riskConfig.accountSize * riskConfig.riskPct;
+
   const pendingOrdersCount = orders.length;
   const actionItems = pendingOrdersCount;
 
@@ -67,17 +76,39 @@ export default function Dashboard() {
               <p className="text-2xl font-bold mt-1">{formatCurrency(riskConfig.accountSize)}</p>
             </div>
             <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Risk Budget / Trade</p>
+              <p className="text-2xl font-bold mt-1">{formatCurrency(riskBudget)}</p>
+              <p className="text-xs text-gray-500 mt-1">
+                {(riskConfig.riskPct * 100).toFixed(2)}% of account
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Open Risk (at stops)</p>
+              <p className="text-2xl font-bold mt-1">{formatCurrency(openRisk)}</p>
+              <p className="text-xs text-gray-500 mt-1">
+                {formatPercent(openRiskPct * 100)} of account
+              </p>
+            </div>
+            <div>
               <p className="text-sm text-gray-600 dark:text-gray-400">Open Positions</p>
               <p className="text-2xl font-bold mt-1">{positions.length}</p>
             </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 pt-4 border-t border-gray-100">
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400">Position Value</p>
               <p className="text-2xl font-bold mt-1">{formatCurrency(totalPositionValue)}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Total P&L</p>
-              <p className={`text-2xl font-bold mt-1 ${totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Total P&L <span className="text-xs">(not a decision metric)</span>
+              </p>
+              <p className={`text-xl font-semibold mt-1 ${totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {totalPnL >= 0 ? '+' : ''}{formatCurrency(totalPnL)}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                Includes realized P&L, FX, and fees — focus on current risk/reward instead.
               </p>
             </div>
           </div>
