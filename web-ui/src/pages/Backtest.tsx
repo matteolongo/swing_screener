@@ -20,6 +20,12 @@ import { formatDateTime, formatPercent, formatR, formatCurrency } from '@/utils/
 import EquityCurveChart from '@/components/domain/backtest/EquityCurveChart';
 
 const STORAGE_KEY = 'backtest.params.v1';
+const DEFAULT_LIVE_GAPS = [
+  'Backtests assume next-bar entries; live fills can be worse.',
+  'Stops can slip beyond planned levels during gaps or fast moves.',
+  'Liquidity and order queue priority are simplified in backtests.',
+  'Historical data can be revised or survivorship-biased.',
+];
 
 interface BacktestFormState {
   tickersText: string;
@@ -233,6 +239,11 @@ export default function Backtest() {
   });
 
   const result = runMutation.data ?? loadedResult;
+
+  const liveCaveats = useMemo(() => {
+    if (result?.education?.caveats?.length) return result.education.caveats;
+    return DEFAULT_LIVE_GAPS;
+  }, [result]);
 
   const summaryCards = useMemo(() => {
     if (!result) return [];
@@ -679,6 +690,19 @@ export default function Backtest() {
               ) : (
                 <div className="text-sm text-gray-500">Run a backtest to see education notes.</div>
               )}
+            </CardContent>
+          </Card>
+
+          <Card variant="bordered">
+            <CardHeader>
+              <CardTitle>Why Backtests Differ From Live</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="list-disc ml-5 space-y-2 text-sm text-gray-700">
+                {liveCaveats.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
             </CardContent>
           </Card>
 
