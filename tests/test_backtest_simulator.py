@@ -42,6 +42,8 @@ def test_backtest_enters_next_open_and_exits_tp():
         take_profit_R=1.0,
         max_holding_days=5,
         min_history=1,
+        slippage_bps=0.0,
+        fx_pct=0.0,
     )
 
     trades = backtest_single_ticker_R(ohlcv, "AAA", cfg)
@@ -85,6 +87,8 @@ def test_trailing_stop_moves_to_breakeven():
         trail_sma=2,
         sma_buffer_pct=0.0,
         min_history=1,
+        slippage_bps=0.0,
+        fx_pct=0.0,
     )
 
     trades = backtest_single_ticker_R(ohlcv, "AAA", cfg)
@@ -120,6 +124,8 @@ def test_time_stop_counts_bars_not_calendar_days():
         take_profit_R=3.0,
         max_holding_days=1,
         min_history=1,
+        slippage_bps=0.0,
+        fx_pct=0.0,
     )
 
     trades = backtest_single_ticker_R(ohlcv, "AAA", cfg)
@@ -161,6 +167,8 @@ def test_gap_through_stop_exits_at_open():
         take_profit_R=2.0,
         max_holding_days=5,
         min_history=1,
+        slippage_bps=0.0,
+        fx_pct=0.0,
     )
 
     trades = backtest_single_ticker_R(ohlcv, "AAA", cfg)
@@ -200,6 +208,8 @@ def test_auto_entry_uses_pullback_or_breakout():
         trail_sma=2,
         sma_buffer_pct=0.0,
         min_history=1,
+        slippage_bps=0.0,
+        fx_pct=0.0,
     )
 
     trades = backtest_single_ticker_R(ohlcv, "AAA", cfg)
@@ -235,6 +245,8 @@ def test_stop_has_priority_over_take_profit_same_bar():
         take_profit_R=2.0,
         max_holding_days=5,
         min_history=1,
+        slippage_bps=0.0,
+        fx_pct=0.0,
     )
 
     trades = backtest_single_ticker_R(ohlcv, "AAA", cfg)
@@ -269,6 +281,8 @@ def test_commission_reduces_R():
         take_profit_R=1.0,
         max_holding_days=5,
         min_history=1,
+        slippage_bps=0.0,
+        fx_pct=0.0,
     )
     cfg_commission = replace(base_cfg, commission_pct=0.01)
 

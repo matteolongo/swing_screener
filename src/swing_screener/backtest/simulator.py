@@ -30,6 +30,8 @@ class BacktestConfig:
 
     min_history: int = 260  # for daily swing
     commission_pct: float = 0.0  # per-side commission as % of price
+    slippage_bps: float = 5.0  # per-side slippage in basis points
+    fx_pct: float = 0.0  # per-side FX cost as % of price
 
 
 def _sma(s: pd.Series, n: int) -> pd.Series:
@@ -200,8 +202,14 @@ def backtest_single_ticker_R(
             exit_price = float(close_i)
 
         if exit_type is not None:
+            slippage_pct = cfg.slippage_bps / 10000.0
+            fx_cost = cfg.fx_pct * (entry_price + exit_price)
             commission_cost = cfg.commission_pct * (entry_price + exit_price)
-            R = (exit_price - entry_price - commission_cost) / float(risk_per_share)
+            slippage_cost = slippage_pct * (entry_price + exit_price)
+            total_cost = commission_cost + slippage_cost + fx_cost
+            gross_R = (exit_price - entry_price) / float(risk_per_share)
+            cost_R = total_cost / float(risk_per_share)
+            R = gross_R - cost_R
             trades.append(
                 {
                     "ticker": ticker,
@@ -213,6 +221,12 @@ def backtest_single_ticker_R(
                     "exit": round(float(exit_price), 4),
                     "exit_type": exit_type,
                     "R": round(float(R), 4),
+                    "R_gross": round(float(gross_R), 4),
+                    "R_cost": round(float(cost_R), 4),
+                    "cost_commission": round(float(commission_cost), 4),
+                    "cost_slippage": round(float(slippage_cost), 4),
+                    "cost_fx": round(float(fx_cost), 4),
+                    "cost_total": round(float(total_cost), 4),
                     "holding_days": int(holding_bars),
                     "entry_type": cfg.entry_type,
                 }

@@ -115,6 +115,8 @@ def build_backtest_config(
     trail_sma = overrides.get("trail_sma", raw.get("trail_sma", 20))
     sma_buffer_pct = overrides.get("sma_buffer_pct", raw.get("sma_buffer_pct", 0.005))
     commission_pct = overrides.get("commission_pct", raw.get("commission_pct", 0.0))
+    slippage_bps = overrides.get("slippage_bps", raw.get("slippage_bps", 5.0))
+    fx_pct = overrides.get("fx_pct", raw.get("fx_pct", 0.0))
     min_history = overrides.get("min_history", raw.get("min_history", signals.min_history))
 
     return BacktestConfig(
@@ -132,4 +134,6 @@ def build_backtest_config(
         sma_buffer_pct=sma_buffer_pct,
         min_history=min_history,
         commission_pct=commission_pct,
+        slippage_bps=slippage_bps,
+        fx_pct=fx_pct,
     )

@@ -14,6 +14,8 @@ from api.models.backtest import (
     QuickBacktestResponse,
     BacktestSummary,
     BacktestTrade,
+    BacktestCostSummary,
+    BacktestEducation,
     FullBacktestRequest,
     FullBacktestResponse,
     FullBacktestSummary,
@@ -100,6 +102,8 @@ class BacktestService:
                     "avg_R": 0.0,
                     "best_trade_R": None,
                     "worst_trade_R": None,
+                    "avg_cost_R": None,
+                    "total_cost_R": None,
                 }
             else:
                 def safe_float(val, default=0.0):
@@ -114,9 +118,13 @@ class BacktestService:
                     "avg_R": safe_float(summary_df.iloc[0].get("avg_R")),
                     "best_trade_R": float(trades["R"].max()) if trades is not None and not trades.empty else None,
                     "worst_trade_R": float(trades["R"].min()) if trades is not None and not trades.empty else None,
+                    "avg_cost_R": safe_float(trades["R_cost"].mean()) if trades is not None and "R_cost" in trades.columns else None,
+                    "total_cost_R": safe_float(trades["R_cost"].sum()) if trades is not None and "R_cost" in trades.columns else None,
                 }
 
             summary = BacktestSummary(**summary_dict)
+            cost_summary = self._build_cost_summary(trades, cfg)
+            education = self._build_education(summary, cost_summary)
 
             trades_detail = []
             if trades is not None and not trades.empty:
@@ -154,6 +162,8 @@ class BacktestService:
                 summary=summary,
                 trades_detail=trades_detail,
                 warnings=warnings,
+                costs=cost_summary,
+                education=education,
             )
 
         except HTTPException:
@@ -191,6 +201,9 @@ class BacktestService:
         best_trade = float(trades["R"].max()) if "R" in trades.columns else None
         worst_trade = float(trades["R"].min()) if "R" in trades.columns else None
 
+        avg_cost_R = self._safe_float_optional(trades["R_cost"].mean()) if "R_cost" in trades.columns else None
+        total_cost_R = self._safe_float_optional(trades["R_cost"].sum()) if "R_cost" in trades.columns else None
+
         return FullBacktestSummary(
             trades=int(row.get("trades", 0)),
             expectancy_R=self._safe_float_optional(row.get("expectancy_R")),
@@ -200,6 +213,8 @@ class BacktestService:
             avg_R=self._safe_float_optional(row.get("avg_R")),
             best_trade_R=self._safe_float_optional(best_trade),
             worst_trade_R=self._safe_float_optional(worst_trade),
+            avg_cost_R=avg_cost_R,
+            total_cost_R=total_cost_R,
         )
 
     def _build_summary_by_ticker(self, trades_all: pd.DataFrame) -> list[FullBacktestSummaryByTicker]:
@@ -221,9 +236,43 @@ class BacktestService:
                     avg_R=self._safe_float_optional(row.get("avg_R")),
                     best_trade_R=self._safe_float_optional(df["R"].max()) if "R" in df.columns else None,
                     worst_trade_R=self._safe_float_optional(df["R"].min()) if "R" in df.columns else None,
+                    avg_cost_R=self._safe_float_optional(df["R_cost"].mean()) if "R_cost" in df.columns else None,
+                    total_cost_R=self._safe_float_optional(df["R_cost"].sum()) if "R_cost" in df.columns else None,
                 )
             )
         return out
+
+    def _build_cost_summary(self, trades: pd.DataFrame, cfg: BacktestConfig) -> BacktestCostSummary:
+        avg_cost_R = self._safe_float_optional(trades["R_cost"].mean()) if trades is not None and "R_cost" in trades.columns else None
+        total_cost_R = self._safe_float_optional(trades["R_cost"].sum()) if trades is not None and "R_cost" in trades.columns else None
+        return BacktestCostSummary(
+            commission_pct=cfg.commission_pct,
+            slippage_bps=cfg.slippage_bps,
+            fx_pct=cfg.fx_pct,
+            avg_cost_R=avg_cost_R,
+            total_cost_R=total_cost_R,
+        )
+
+    def _build_education(self, summary: FullBacktestSummary | BacktestSummary, costs: BacktestCostSummary) -> BacktestEducation:
+        drivers: list[str] = []
+        caveats: list[str] = [
+            "Assumes entries at next bar open and ignores intraday liquidity constraints.",
+            "Results include estimated costs (commission, slippage, FX).",
+        ]
+
+        if summary.trades == 0:
+            overview = "No trades were generated in this window."
+        else:
+            overview = "Results are net of basic execution costs and designed for learning, not prediction."
+
+        if summary.expectancy_R is not None:
+            drivers.append(f"Expectancy: {summary.expectancy_R:.2f}R")
+        if summary.winrate is not None:
+            drivers.append(f"Win rate: {summary.winrate:.0%}")
+        if costs.total_cost_R is not None and costs.total_cost_R > 0:
+            drivers.append("Costs reduced results; review position sizing and trade frequency.")
+
+        return BacktestEducation(overview=overview, drivers=drivers, caveats=caveats)
 
     def _curve_points_total(self, curve: pd.DataFrame) -> list[BacktestCurvePoint]:
         if curve is None or curve.empty:
@@ -302,6 +351,8 @@ class BacktestService:
                 "trail_sma",
                 "sma_buffer_pct",
                 "commission_pct",
+                "slippage_bps",
+                "fx_pct",
                 "min_history",
             ]:
                 if field in fields_set:
@@ -353,6 +404,8 @@ class BacktestService:
 
             summary = self._build_summary(trades_all, dd.get("max_drawdown_R"))
             summary_by_ticker = self._build_summary_by_ticker(trades_all)
+            cost_summary = self._build_cost_summary(trades_all, cfg)
+            education = self._build_education(summary, cost_summary)
 
             if summary.trades == 0:
                 warnings.append("No trades generated. Try a longer range or different entry type.")
@@ -401,6 +454,8 @@ class BacktestService:
                 simulation_id=sim_id,
                 simulation_name=simulation_name,
                 created_at=created_at.isoformat(),
+                costs=cost_summary,
+                education=education,
             )
 
             params_payload = request.model_dump()

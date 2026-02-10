@@ -14,6 +14,22 @@ class BacktestSummary(BaseModel):
     avg_R: float
     best_trade_R: Optional[float] = None
     worst_trade_R: Optional[float] = None
+    avg_cost_R: Optional[float] = None
+    total_cost_R: Optional[float] = None
+
+
+class BacktestCostSummary(BaseModel):
+    commission_pct: float
+    slippage_bps: float
+    fx_pct: float
+    avg_cost_R: Optional[float] = None
+    total_cost_R: Optional[float] = None
+
+
+class BacktestEducation(BaseModel):
+    overview: str
+    drivers: list[str] = Field(default_factory=list)
+    caveats: list[str] = Field(default_factory=list)
 
 
 class BacktestTrade(BaseModel):
@@ -43,6 +59,8 @@ class QuickBacktestResponse(BaseModel):
     summary: BacktestSummary
     trades_detail: list[BacktestTrade]
     warnings: list[str]
+    costs: Optional[BacktestCostSummary] = None
+    education: Optional[BacktestEducation] = None
 
 
 FullEntryType = Literal["auto", "breakout", "pullback"]
@@ -57,6 +75,8 @@ class FullBacktestSummary(BaseModel):
     avg_R: Optional[float] = None
     best_trade_R: Optional[float] = None
     worst_trade_R: Optional[float] = None
+    avg_cost_R: Optional[float] = None
+    total_cost_R: Optional[float] = None
 
 
 class FullBacktestSummaryByTicker(FullBacktestSummary):
@@ -104,6 +124,8 @@ class FullBacktestRequest(BaseModel):
     sma_buffer_pct: float = Field(default=0.005, ge=0)
     max_holding_days: int = Field(default=20, gt=0)
     commission_pct: float = Field(default=0.0, ge=0)
+    slippage_bps: float = Field(default=5.0, ge=0)
+    fx_pct: float = Field(default=0.0, ge=0)
 
 
 class FullBacktestResponse(BaseModel):
@@ -120,6 +142,8 @@ class FullBacktestResponse(BaseModel):
     simulation_id: str
     simulation_name: str
     created_at: str
+    costs: Optional[BacktestCostSummary] = None
+    education: Optional[BacktestEducation] = None
 
 
 class BacktestSimulationMeta(BaseModel):

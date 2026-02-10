@@ -9,6 +9,8 @@ export interface BacktestSummary {
   avgR: number;
   bestTradeR: number | null;
   worstTradeR: number | null;
+  avgCostR?: number | null;
+  totalCostR?: number | null;
 }
 
 export interface BacktestTrade {
@@ -37,6 +39,22 @@ export interface QuickBacktestResponse {
   summary: BacktestSummary;  // Use transformed camelCase version
   tradesDetail: BacktestTrade[];  // Use transformed camelCase version
   warnings: string[];
+  costs?: BacktestCostSummary;
+  education?: BacktestEducation;
+}
+
+export interface BacktestCostSummary {
+  commissionPct: number;
+  slippageBps: number;
+  fxPct: number;
+  avgCostR?: number | null;
+  totalCostR?: number | null;
+}
+
+export interface BacktestEducation {
+  overview: string;
+  drivers: string[];
+  caveats: string[];
 }
 
 // API response formats (snake_case)
@@ -49,6 +67,8 @@ export interface BacktestSummaryAPI {
   avg_R: number;
   best_trade_R: number | null;
   worst_trade_R: number | null;
+  avg_cost_R?: number | null;
+  total_cost_R?: number | null;
 }
 
 export interface BacktestTradeAPI {
@@ -69,6 +89,22 @@ export interface QuickBacktestResponseAPI {
   summary: BacktestSummaryAPI;
   trades_detail: BacktestTradeAPI[];
   warnings: string[];
+  costs?: BacktestCostSummaryAPI;
+  education?: BacktestEducationAPI;
+}
+
+export interface BacktestCostSummaryAPI {
+  commission_pct: number;
+  slippage_bps: number;
+  fx_pct: number;
+  avg_cost_R?: number | null;
+  total_cost_R?: number | null;
+}
+
+export interface BacktestEducationAPI {
+  overview: string;
+  drivers: string[];
+  caveats: string[];
 }
 
 // Transform functions
@@ -82,6 +118,8 @@ export function transformBacktestSummary(api: BacktestSummaryAPI): BacktestSumma
     avgR: api.avg_R,
     bestTradeR: api.best_trade_R,
     worstTradeR: api.worst_trade_R,
+    avgCostR: api.avg_cost_R ?? undefined,
+    totalCostR: api.total_cost_R ?? undefined,
   };
 }
 
@@ -106,6 +144,22 @@ export function transformQuickBacktestResponse(api: QuickBacktestResponseAPI): Q
     summary: transformBacktestSummary(api.summary),  // Transform summary!
     tradesDetail: api.trades_detail.map(transformBacktestTrade),  // Transform each trade!
     warnings: api.warnings,
+    costs: api.costs
+      ? {
+          commissionPct: api.costs.commission_pct,
+          slippageBps: api.costs.slippage_bps,
+          fxPct: api.costs.fx_pct,
+          avgCostR: api.costs.avg_cost_R ?? undefined,
+          totalCostR: api.costs.total_cost_R ?? undefined,
+        }
+      : undefined,
+    education: api.education
+      ? {
+          overview: api.education.overview,
+          drivers: api.education.drivers,
+          caveats: api.education.caveats,
+        }
+      : undefined,
   };
 }
 
@@ -130,6 +184,8 @@ export interface FullBacktestParams {
   smaBufferPct: number;
   maxHoldingDays: number;
   commissionPct: number;
+  slippageBps?: number;
+  fxPct?: number;
 }
 
 export interface FullBacktestSummary {
@@ -141,6 +197,8 @@ export interface FullBacktestSummary {
   avgR: number | null;
   bestTradeR: number | null;
   worstTradeR: number | null;
+  avgCostR?: number | null;
+  totalCostR?: number | null;
 }
 
 export interface FullBacktestSummaryByTicker extends FullBacktestSummary {
@@ -180,6 +238,8 @@ export interface FullBacktestResponse {
   simulationId: string;
   simulationName: string;
   createdAt: string;
+  costs?: BacktestCostSummary;
+  education?: BacktestEducation;
 }
 
 export interface FullBacktestResponseAPI {
@@ -196,6 +256,8 @@ export interface FullBacktestResponseAPI {
     avg_R: number | null;
     best_trade_R: number | null;
     worst_trade_R: number | null;
+    avg_cost_R?: number | null;
+    total_cost_R?: number | null;
   };
   summary_by_ticker: Array<{
     ticker: string;
@@ -207,6 +269,8 @@ export interface FullBacktestResponseAPI {
     avg_R: number | null;
     best_trade_R: number | null;
     worst_trade_R: number | null;
+    avg_cost_R?: number | null;
+    total_cost_R?: number | null;
   }>;
   trades: Array<{
     ticker: string;
@@ -235,6 +299,8 @@ export interface FullBacktestResponseAPI {
   simulation_id: string;
   simulation_name: string;
   created_at: string;
+  costs?: BacktestCostSummaryAPI;
+  education?: BacktestEducationAPI;
 }
 
 export interface BacktestSimulationMeta {
@@ -288,6 +354,8 @@ export interface BacktestSimulationAPI {
     sma_buffer_pct: number;
     max_holding_days: number;
     commission_pct: number;
+    slippage_bps?: number;
+    fx_pct?: number;
   };
   result: FullBacktestResponseAPI;
 }
@@ -307,6 +375,8 @@ export function transformFullBacktestResponse(api: FullBacktestResponseAPI): Ful
       avgR: api.summary.avg_R,
       bestTradeR: api.summary.best_trade_R,
       worstTradeR: api.summary.worst_trade_R,
+      avgCostR: api.summary.avg_cost_R ?? undefined,
+      totalCostR: api.summary.total_cost_R ?? undefined,
     },
     summaryByTicker: api.summary_by_ticker.map((s) => ({
       ticker: s.ticker,
@@ -318,6 +388,8 @@ export function transformFullBacktestResponse(api: FullBacktestResponseAPI): Ful
       avgR: s.avg_R,
       bestTradeR: s.best_trade_R,
       worstTradeR: s.worst_trade_R,
+      avgCostR: s.avg_cost_R ?? undefined,
+      totalCostR: s.total_cost_R ?? undefined,
     })),
     trades: api.trades.map((t) => ({
       ticker: t.ticker,
@@ -346,6 +418,22 @@ export function transformFullBacktestResponse(api: FullBacktestResponseAPI): Ful
     simulationId: api.simulation_id,
     simulationName: api.simulation_name,
     createdAt: api.created_at,
+    costs: api.costs
+      ? {
+          commissionPct: api.costs.commission_pct,
+          slippageBps: api.costs.slippage_bps,
+          fxPct: api.costs.fx_pct,
+          avgCostR: api.costs.avg_cost_R ?? undefined,
+          totalCostR: api.costs.total_cost_R ?? undefined,
+        }
+      : undefined,
+    education: api.education
+      ? {
+          overview: api.education.overview,
+          drivers: api.education.drivers,
+          caveats: api.education.caveats,
+        }
+      : undefined,
   };
 }
 
@@ -367,6 +455,8 @@ export function transformBacktestParamsFromAPI(api: BacktestSimulationAPI['param
     smaBufferPct: api.sma_buffer_pct,
     maxHoldingDays: api.max_holding_days,
     commissionPct: api.commission_pct,
+    slippageBps: api.slippage_bps,
+    fxPct: api.fx_pct,
   };
 }
 
