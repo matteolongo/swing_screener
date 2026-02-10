@@ -744,27 +744,17 @@ function CreateOrderModal({
   onClose: () => void;
   onSuccess: () => void;
 }) {
-  // Calculate suggested stop price (entry - 2*ATR)
-  const suggestedStop = candidate.close - (candidate.atr * risk.kAtr);
-  
-  const overlayRiskMultiplier = candidate.overlayRiskMultiplier ?? 1;
-  const overlayMaxPosMultiplier = candidate.overlayMaxPosMultiplier ?? 1;
-  const effectiveRiskPct = risk.riskPct * overlayRiskMultiplier;
-  const effectiveMaxPositionPct = risk.maxPositionPct * overlayMaxPosMultiplier;
-
-  // Calculate position size based on risk
-  const riskPerTrade = risk.accountSize * effectiveRiskPct;
-  const riskPerShare = candidate.close - suggestedStop;
-  const suggestedShares = riskPerShare > 0 ? Math.floor(riskPerTrade / riskPerShare) : 1;
-  const maxShares = Math.floor((risk.accountSize * effectiveMaxPositionPct) / candidate.close);
-  const finalShares = Math.max(risk.minShares, Math.min(suggestedShares, maxShares));
+  const recRisk = candidate.recommendation?.risk;
+  const suggestedEntry = recRisk?.entry ?? candidate.entry ?? candidate.close;
+  const suggestedStop = recRisk?.stop ?? candidate.stop ?? null;
+  const suggestedShares = recRisk?.shares ?? candidate.shares ?? risk.minShares;
 
   const [formData, setFormData] = useState<CreateOrderRequest>({
     ticker: candidate.ticker,
     orderType: 'BUY_LIMIT',
-    quantity: finalShares,
-    limitPrice: candidate.close,
-    stopPrice: parseFloat(suggestedStop.toFixed(2)),
+    quantity: suggestedShares,
+    limitPrice: parseFloat(suggestedEntry.toFixed(2)),
+    stopPrice: suggestedStop != null ? parseFloat(suggestedStop.toFixed(2)) : 0,
     notes: `From screener: Score ${(candidate.score * 100).toFixed(1)}, Rank #${candidate.rank}`,
     orderKind: 'entry',
   });

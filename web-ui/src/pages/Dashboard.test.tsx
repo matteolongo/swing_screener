@@ -103,8 +103,8 @@ describe('Dashboard Page', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Open Risk (at stops)')).toBeInTheDocument()
-        // (15.89 - 15.00) * 6 shares = $5.34
-        expect(screen.getByText('$5.34')).toBeInTheDocument()
+        // initialRisk 1.29 * 6 shares = $7.74
+        expect(screen.getByText('$7.74')).toBeInTheDocument()
       })
     })
 
