@@ -10,7 +10,7 @@ function createTestQueryClient() {
     defaultOptions: {
       queries: {
         retry: false, // Don't retry failed queries in tests
-        cacheTime: 0, // Don't cache results
+        gcTime: 0, // Don't cache results
       },
       mutations: {
         retry: false,

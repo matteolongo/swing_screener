@@ -3,23 +3,13 @@ import { screen, waitFor, within, act } from '@testing-library/react'
 import { renderWithProviders } from '@/test/utils'
 import Dashboard from './Dashboard'
 import { useConfigStore } from '@/stores/configStore'
+import { DEFAULT_CONFIG } from '@/types/config'
 
 describe('Dashboard Page', () => {
   beforeEach(() => {
     // Reset config store to defaults
     useConfigStore.setState({
-      config: {
-        risk: {
-          accountSize: 100000,
-          riskPercentPerTrade: 1,
-          maxOpenPositions: 5,
-          maxDailyLoss: 500,
-        },
-        marketData: {
-          dataSource: 'yahoo',
-          updateFrequency: 'daily',
-        },
-      },
+      config: DEFAULT_CONFIG,
     })
   })
 

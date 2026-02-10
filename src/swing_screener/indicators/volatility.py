@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import numpy as np
 import pandas as pd
 
 
@@ -41,7 +42,7 @@ def compute_atr(
       abs(low - prev_close)
     )
 
-    Returns: DataFrame (date x ticker) ATR
+    Returns: DataFrame (date x ticker) ATR using Wilder's smoothing.
     """
     if window <= 1:
         raise ValueError("window must be > 1")
@@ -56,7 +57,23 @@ def compute_atr(
     tr = pd.concat([tr1, tr2, tr3], axis=1)
     tr = tr.T.groupby(level=0).max().T
 
-    atr = tr.rolling(window=window, min_periods=window).mean()
+    atr = pd.DataFrame(index=tr.index, columns=tr.columns, dtype=float)
+    for col in tr.columns:
+        tr_vals = tr[col].to_numpy(dtype=float)
+        atr_vals = np.full_like(tr_vals, np.nan, dtype=float)
+        if len(tr_vals) >= window + 1:
+            # TA-Lib seeds ATR with SMA of TR over the first window,
+            # starting at index 1 (skips the very first TR value).
+            first_atr = np.nanmean(tr_vals[1:window + 1])
+            atr_vals[window] = first_atr
+            for i in range(window + 1, len(tr_vals)):
+                prev = atr_vals[i - 1]
+                curr = tr_vals[i]
+                if np.isnan(prev) or np.isnan(curr):
+                    atr_vals[i] = np.nan
+                else:
+                    atr_vals[i] = (prev * (window - 1) + curr) / window
+        atr[col] = atr_vals
     return atr
 
 

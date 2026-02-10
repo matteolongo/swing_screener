@@ -5,6 +5,7 @@ import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Ca
 import Button from '@/components/common/Button';
 import { fetchActiveStrategy } from '@/lib/strategyApi';
 import { useConfigStore } from '@/stores/configStore';
+import { AppConfig } from '@/types/config';
 import {
   FullEntryType,
   FullBacktestResponse,
@@ -75,7 +76,7 @@ function rangeSince(dateStr: string) {
 }
 
 function buildDefaultFormState(
-  config: ReturnType<typeof useConfigStore>['config'],
+  config: AppConfig,
   overrides?: { kAtr?: number }
 ): BacktestFormState {
   const { start, end } = defaultDateRange();

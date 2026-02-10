@@ -4,12 +4,12 @@ import { PlayCircle, RefreshCw, TrendingUp, AlertCircle, BarChart3, MessageSquar
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import { useUniverses, useRunScreenerMutation } from '@/features/screener/hooks';
-import { ScreenerRequest, ScreenerCandidate } from '@/features/screener/types';
+import { ScreenerCandidate } from '@/features/screener/types';
 import { CreateOrderRequest } from '@/features/portfolio/types';
 import { createOrder } from '@/features/portfolio/api';
 import { useConfigStore } from '@/stores/configStore';
 import { fetchActiveStrategy } from '@/lib/strategyApi';
-import { StrategyRisk } from '@/types/strategy';
+import { RiskConfig } from '@/types/config';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { formatCurrency, formatPercent } from '@/utils/formatters';
 import QuickBacktestModal from '@/components/modals/QuickBacktestModal';
@@ -48,7 +48,7 @@ export default function Screener() {
     queryKey: ['strategy-active'],
     queryFn: fetchActiveStrategy,
   });
-  const riskConfig: StrategyRisk = activeStrategyQuery.data?.risk ?? config.risk;
+  const riskConfig: RiskConfig = activeStrategyQuery.data?.risk ?? config.risk;
   
   // Load saved preferences from localStorage or use defaults
   const [selectedUniverse, setSelectedUniverse] = useState<string>(() => {
@@ -255,7 +255,7 @@ export default function Screener() {
         {screenerMutation.isError && (
           <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
             <p className="text-sm text-red-800">
-              Error: {screenerMutation.error.message}
+              Error: {screenerMutation.error instanceof Error ? screenerMutation.error.message : 'Unknown error'}
             </p>
           </div>
         )}
@@ -740,7 +740,7 @@ function CreateOrderModal({
   onSuccess,
 }: {
   candidate: ScreenerCandidate;
-  risk: StrategyRisk;
+  risk: RiskConfig;
   onClose: () => void;
   onSuccess: () => void;
 }) {

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { screen, waitFor, within, act } from '@testing-library/react'
+import { screen, waitFor, act } from '@testing-library/react'
 import { renderWithProviders, waitForQueriesToSettle } from '@/test/utils'
 import Orders from './Orders'
 
