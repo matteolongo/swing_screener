@@ -12,6 +12,7 @@ import {
   calculatePnL,
   calculatePnLPercent,
 } from '@/features/portfolio/types';
+import { calcOpenRisk, calcOpenRiskPct } from '@/features/portfolio/metrics';
 import {
   usePositions,
   useOpenPositions,
@@ -44,14 +45,8 @@ export default function Positions() {
   const openPositions = openPositionsQuery.data ?? [];
 
   const accountSize = activeStrategyQuery.data?.risk.accountSize ?? 0;
-  const totalOpenRisk = openPositions.reduce((sum: number, pos: Position) => {
-    const riskPerShare = pos.initialRisk && pos.initialRisk > 0
-      ? pos.initialRisk
-      : pos.entryPrice - pos.stopPrice;
-    if (riskPerShare <= 0) return sum;
-    return sum + riskPerShare * pos.shares;
-  }, 0);
-  const openRiskPct = accountSize > 0 ? (totalOpenRisk / accountSize) * 100 : 0;
+  const totalOpenRisk = calcOpenRisk(openPositions);
+  const openRiskPct = calcOpenRiskPct(totalOpenRisk, accountSize) * 100;
 
   const updateStopMutation = useUpdateStopMutation(() => {
     setShowUpdateStopModal(false);

@@ -10,6 +10,7 @@ import {
   Order,
   calculatePnL,
 } from '@/features/portfolio/types';
+import { calcOpenRisk, calcOpenRiskPct, calcTotalPositionValue } from '@/features/portfolio/metrics';
 import {
   useOpenPositions,
   useOrders,
@@ -39,21 +40,13 @@ export default function Dashboard() {
   const snapshotOrders = orderSnapshots?.orders ?? [];
 
   // Calculate portfolio metrics
-  const totalPositionValue = positions.reduce((sum: number, pos: Position) => {
-    return sum + (pos.entryPrice * pos.shares);
-  }, 0);
-
+  const totalPositionValue = calcTotalPositionValue(positions);
   const totalPnL = positions.reduce((sum: number, pos: Position) => {
     return sum + calculatePnL(pos);
   }, 0);
 
-  const openRisk = positions.reduce((sum: number, pos: Position) => {
-    const perShareRisk = pos.entryPrice - pos.stopPrice;
-    if (perShareRisk <= 0) return sum;
-    return sum + (perShareRisk * pos.shares);
-  }, 0);
-
-  const openRiskPct = riskConfig.accountSize > 0 ? openRisk / riskConfig.accountSize : 0;
+  const openRisk = calcOpenRisk(positions);
+  const openRiskPct = calcOpenRiskPct(openRisk, riskConfig.accountSize);
   const riskBudget = riskConfig.accountSize * riskConfig.riskPct;
 
   const pendingOrdersCount = orders.length;
