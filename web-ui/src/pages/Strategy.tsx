@@ -103,6 +103,20 @@ const help = {
     'Normalizes risk across different volatility regimes.',
     'Higher values widen stops and reduce position size; lower values tighten stops.'
   ),
+  minRr: buildHelp(
+    'Minimum RR',
+    'Minimum reward-to-risk for recommendations.',
+    'The minimum reward-to-risk ratio required for a setup to be labeled Recommended.',
+    'Encourages asymmetric payoff (letting winners run, cutting losers).',
+    'Typical baseline is 2.0 or higher.'
+  ),
+  maxFeeRiskPct: buildHelp(
+    'Max Fee/Risk %',
+    'Fee-to-risk threshold for micro-trading.',
+    'Maximum total estimated fees as a percentage of planned risk per trade.',
+    'Prevents tiny positions where fees dominate expected edge.',
+    'Example: 20% means fees must be <= 20% of planned risk.'
+  ),
   maxAtrPct: buildHelp(
     'Max ATR %',
     'Maximum allowed ATR as % of price.',
@@ -760,6 +774,34 @@ export default function StrategyPage() {
                   step={0.1}
                   min={0}
                   help={help.atrMultiplier}
+                />
+                <NumberInput
+                  label="Minimum RR"
+                  value={draft.risk.minRr}
+                  onChange={(value) =>
+                    setDraft({
+                      ...draft,
+                      risk: { ...draft.risk, minRr: value },
+                    })
+                  }
+                  step={0.1}
+                  min={0.5}
+                  help={help.minRr}
+                />
+                <NumberInput
+                  label="Max Fee / Risk"
+                  value={draft.risk.maxFeeRiskPct * 100}
+                  onChange={(value) =>
+                    setDraft({
+                      ...draft,
+                      risk: { ...draft.risk, maxFeeRiskPct: value / 100 },
+                    })
+                  }
+                  step={1}
+                  min={0}
+                  max={100}
+                  suffix="%"
+                  help={help.maxFeeRiskPct}
                 />
               </div>
             </CardContent>

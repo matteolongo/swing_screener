@@ -331,18 +331,21 @@ export default function Screener() {
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Score</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Close</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">ATR</th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Risk $</th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">RR</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Mom 6M</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Mom 12M</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">RS</th>
                     <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">Overlay</th>
                     <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">Verdict</th>
+                    <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">Fix</th>
                     <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {candidates.length === 0 ? (
                     <tr>
-                      <td colSpan={15} className="text-center py-8 text-gray-500">
+                      <td colSpan={18} className="text-center py-8 text-gray-500">
                         No candidates found
                       </td>
                     </tr>
@@ -411,6 +414,19 @@ export default function Screener() {
                         <td className="py-3 px-4 text-sm text-right text-gray-600">
                           {candidate.atr.toFixed(2)}
                         </td>
+                        <td className="py-3 px-4 text-sm text-right text-gray-900">
+                          {(() => {
+                            const riskValue =
+                              candidate.recommendation?.risk?.riskAmount ?? candidate.riskUsd;
+                            return riskValue && riskValue > 0 ? formatCurrency(riskValue) : '-';
+                          })()}
+                        </td>
+                        <td className="py-3 px-4 text-sm text-right text-gray-900">
+                          {(() => {
+                            const rrValue = candidate.recommendation?.risk?.rr ?? candidate.rr;
+                            return rrValue != null && rrValue > 0 ? rrValue.toFixed(2) : '-';
+                          })()}
+                        </td>
                         <td className="py-3 px-4 text-sm text-right">
                           <span className={candidate.momentum6m >= 0 ? 'text-green-600' : 'text-red-600'}>
                             {formatPercent(candidate.momentum6m)}
@@ -471,6 +487,21 @@ export default function Screener() {
                                 title={reasons}
                               >
                                 {badge.label}
+                              </span>
+                            );
+                          })()}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          {(() => {
+                            const fixes = candidate.recommendation?.education?.whatWouldMakeValid ?? [];
+                            if (!fixes.length) return <span className="text-gray-400">—</span>;
+                            const title = fixes.join(' | ');
+                            return (
+                              <span
+                                className="text-xs text-blue-700 underline decoration-dotted cursor-help"
+                                title={title}
+                              >
+                                Fix
                               </span>
                             );
                           })()}

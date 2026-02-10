@@ -15,6 +15,8 @@ class RiskConfig:
     k_atr: float = 2.0  # stop = entry - k*ATR
     max_position_pct: float = 0.60  # max capital allocated to a single position
     min_shares: int = 1
+    min_rr: float = 2.0  # minimum reward-to-risk to recommend
+    max_fee_risk_pct: float = 0.20  # max fees as % of planned risk
     # Regime-aware risk scaling (optional)
     regime_enabled: bool = False
     regime_trend_sma: int = 200

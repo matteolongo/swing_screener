@@ -191,10 +191,13 @@ describe('Screener Page', () => {
         expect(screen.getByText('Last Bar')).toBeInTheDocument()
         expect(screen.getByText('Close')).toBeInTheDocument()
         expect(screen.getByText('ATR')).toBeInTheDocument()
+        expect(screen.getByText('Risk $')).toBeInTheDocument()
+        expect(screen.getByText('RR')).toBeInTheDocument()
         expect(screen.getByText('Mom 6M')).toBeInTheDocument()
         expect(screen.getByText('Mom 12M')).toBeInTheDocument()
         expect(screen.getByText('Score')).toBeInTheDocument()
         expect(screen.getByText('Verdict')).toBeInTheDocument()
+        expect(screen.getByText('Fix')).toBeInTheDocument()
       })
     })
 

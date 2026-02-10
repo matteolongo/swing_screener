@@ -65,6 +65,8 @@ def _default_strategy_payload(now: dt.datetime | None = None) -> dict:
             "max_position_pct": 0.6,
             "min_shares": 1,
             "k_atr": 2.0,
+            "min_rr": 2.0,
+            "max_fee_risk_pct": 0.2,
             "regime_enabled": False,
             "regime_trend_sma": 200,
             "regime_trend_multiplier": 0.5,

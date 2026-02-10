@@ -344,6 +344,8 @@ class ScreenerService:
                     account_size=risk_cfg.account_size,
                     risk_pct_target=risk_cfg.risk_pct,
                     rr_target=take_profit_r,
+                    min_rr=getattr(risk_cfg, "min_rr", 2.0),
+                    max_fee_risk_pct=getattr(risk_cfg, "max_fee_risk_pct", 0.2),
                     commission_pct=commission_pct,
                     slippage_bps=5.0,
                     fx_estimate_pct=0.0,

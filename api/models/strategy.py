@@ -57,6 +57,8 @@ class StrategyRisk(BaseModel):
     max_position_pct: float = Field(gt=0, le=1)
     min_shares: int = Field(ge=1)
     k_atr: float = Field(gt=0)
+    min_rr: float = Field(gt=0, default=2.0)
+    max_fee_risk_pct: float = Field(ge=0, le=1, default=0.2)
     regime_enabled: bool = False
     regime_trend_sma: int = Field(gt=1, default=200)
     regime_trend_multiplier: float = Field(gt=0, le=1, default=0.5)
