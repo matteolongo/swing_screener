@@ -260,6 +260,8 @@ def summarize_trades(trades: pd.DataFrame) -> pd.DataFrame:
                     "winrate": None,
                     "avg_R": None,
                     "median_R": None,
+                    "avg_win_R": None,
+                    "avg_loss_R": None,
                     "expectancy_R": None,
                     "profit_factor_R": None,
                 }
@@ -273,6 +275,8 @@ def summarize_trades(trades: pd.DataFrame) -> pd.DataFrame:
     winrate = float((r > 0).mean())
     avg_R = float(r.mean())
     med_R = float(r.median())
+    avg_win_R = float(wins.mean()) if len(wins) > 0 else None
+    avg_loss_R = float(losses.mean()) if len(losses) > 0 else None
 
     profit_factor = None
     if losses.abs().sum() > 0:
@@ -285,6 +289,8 @@ def summarize_trades(trades: pd.DataFrame) -> pd.DataFrame:
                 "winrate": round(winrate, 4),
                 "avg_R": round(avg_R, 4),
                 "median_R": round(med_R, 4),
+                "avg_win_R": round(avg_win_R, 4) if avg_win_R is not None else None,
+                "avg_loss_R": round(avg_loss_R, 4) if avg_loss_R is not None else None,
                 "expectancy_R": round(avg_R, 4),
                 "profit_factor_R": (
                     round(profit_factor, 4) if profit_factor is not None else None

@@ -218,6 +218,14 @@ def test_auto_entry_uses_pullback_or_breakout():
     assert trades.iloc[0]["entry_date"] == idx[3]
 
 
+def test_summarize_trades_avg_win_loss():
+    trades = pd.DataFrame({"R": [1.0, -0.5, 2.0, -1.0]})
+    summary = summarize_trades(trades)
+    row = summary.iloc[0]
+    assert row["avg_win_R"] == pytest.approx(1.5)
+    assert row["avg_loss_R"] == pytest.approx(-0.75)
+
+
 def test_stop_has_priority_over_take_profit_same_bar():
     idx = pd.date_range("2023-02-01", periods=4, freq="D")
     close = pd.Series([100.0, 105.0, 105.0, 105.0], index=idx, dtype=float)

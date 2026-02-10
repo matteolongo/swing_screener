@@ -104,3 +104,7 @@ def test_full_backtest_null_summary_when_no_trades(monkeypatch, tmp_path):
     assert summary["winrate"] is None
     assert summary["profit_factor_R"] is None
     assert summary["avg_R"] is None
+    assert summary["avg_win_R"] is None
+    assert summary["avg_loss_R"] is None
+    assert summary["trade_frequency_per_year"] is None
+    assert summary["rr_distribution"] is None

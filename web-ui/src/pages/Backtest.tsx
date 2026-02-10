@@ -242,6 +242,12 @@ export default function Backtest() {
       { label: 'Expectancy', value: s.expectancyR != null ? formatR(s.expectancyR) : '—' },
       { label: 'Win Rate', value: s.winrate != null ? formatPercent(s.winrate * 100) : '—' },
       { label: 'Profit Factor', value: s.profitFactorR != null ? s.profitFactorR.toFixed(2) : '—' },
+      { label: 'Avg Win', value: s.avgWinR != null ? formatR(s.avgWinR) : '—' },
+      { label: 'Avg Loss', value: s.avgLossR != null ? formatR(s.avgLossR) : '—' },
+      {
+        label: 'Trades/Year',
+        value: s.tradeFrequencyPerYear != null ? s.tradeFrequencyPerYear.toFixed(1) : '—',
+      },
       { label: 'Max Drawdown', value: s.maxDrawdownR != null ? formatR(s.maxDrawdownR) : '—' },
       { label: 'Avg R', value: s.avgR != null ? formatR(s.avgR) : '—' },
     ];
@@ -596,9 +602,47 @@ export default function Backtest() {
                       {result.costs.totalCostR != null ? formatR(result.costs.totalCostR) : '—'}
                     </div>
                   </div>
+                  <div className="p-3 bg-gray-50 rounded">
+                    <div className="text-xs text-gray-600">Gross R (total)</div>
+                    <div className="text-lg font-semibold">
+                      {result.costs.grossRTotal != null ? formatR(result.costs.grossRTotal) : '—'}
+                    </div>
+                  </div>
+                  <div className="p-3 bg-gray-50 rounded">
+                    <div className="text-xs text-gray-600">Net R (total)</div>
+                    <div className="text-lg font-semibold">
+                      {result.costs.netRTotal != null ? formatR(result.costs.netRTotal) : '—'}
+                    </div>
+                  </div>
+                  <div className="p-3 bg-gray-50 rounded">
+                    <div className="text-xs text-gray-600">Fee Impact</div>
+                    <div className="text-lg font-semibold">
+                      {result.costs.feeImpactPct != null ? formatPercent(result.costs.feeImpactPct * 100, 1) : '—'}
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <div className="text-sm text-gray-500">Run a backtest to see cost impact.</div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card variant="bordered">
+            <CardHeader>
+              <CardTitle>RR Distribution</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {result?.summary.rrDistribution && Object.keys(result.summary.rrDistribution).length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                  {Object.entries(result.summary.rrDistribution).map(([label, count]) => (
+                    <div key={label} className="p-3 bg-gray-50 rounded">
+                      <div className="text-xs text-gray-600">{label}</div>
+                      <div className="text-lg font-semibold">{count}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-gray-500">Run a backtest to see RR distribution.</div>
               )}
             </CardContent>
           </Card>

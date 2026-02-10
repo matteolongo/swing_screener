@@ -7,6 +7,10 @@ export interface BacktestSummary {
   profitFactorR: number;
   maxDrawdownR: number;
   avgR: number;
+  avgWinR?: number | null;
+  avgLossR?: number | null;
+  tradeFrequencyPerYear?: number | null;
+  rrDistribution?: Record<string, number> | null;
   bestTradeR: number | null;
   worstTradeR: number | null;
   avgCostR?: number | null;
@@ -47,6 +51,9 @@ export interface BacktestCostSummary {
   commissionPct: number;
   slippageBps: number;
   fxPct: number;
+  grossRTotal?: number | null;
+  netRTotal?: number | null;
+  feeImpactPct?: number | null;
   avgCostR?: number | null;
   totalCostR?: number | null;
 }
@@ -65,6 +72,10 @@ export interface BacktestSummaryAPI {
   profit_factor_R: number;
   max_drawdown_R: number;
   avg_R: number;
+  avg_win_R?: number | null;
+  avg_loss_R?: number | null;
+  trade_frequency_per_year?: number | null;
+  rr_distribution?: Record<string, number> | null;
   best_trade_R: number | null;
   worst_trade_R: number | null;
   avg_cost_R?: number | null;
@@ -97,6 +108,9 @@ export interface BacktestCostSummaryAPI {
   commission_pct: number;
   slippage_bps: number;
   fx_pct: number;
+  gross_R_total?: number | null;
+  net_R_total?: number | null;
+  fee_impact_pct?: number | null;
   avg_cost_R?: number | null;
   total_cost_R?: number | null;
 }
@@ -116,6 +130,10 @@ export function transformBacktestSummary(api: BacktestSummaryAPI): BacktestSumma
     profitFactorR: api.profit_factor_R,
     maxDrawdownR: api.max_drawdown_R,
     avgR: api.avg_R,
+    avgWinR: api.avg_win_R ?? undefined,
+    avgLossR: api.avg_loss_R ?? undefined,
+    tradeFrequencyPerYear: api.trade_frequency_per_year ?? undefined,
+    rrDistribution: api.rr_distribution ?? undefined,
     bestTradeR: api.best_trade_R,
     worstTradeR: api.worst_trade_R,
     avgCostR: api.avg_cost_R ?? undefined,
@@ -149,6 +167,9 @@ export function transformQuickBacktestResponse(api: QuickBacktestResponseAPI): Q
           commissionPct: api.costs.commission_pct,
           slippageBps: api.costs.slippage_bps,
           fxPct: api.costs.fx_pct,
+          grossRTotal: api.costs.gross_R_total ?? undefined,
+          netRTotal: api.costs.net_R_total ?? undefined,
+          feeImpactPct: api.costs.fee_impact_pct ?? undefined,
           avgCostR: api.costs.avg_cost_R ?? undefined,
           totalCostR: api.costs.total_cost_R ?? undefined,
         }
@@ -195,6 +216,10 @@ export interface FullBacktestSummary {
   profitFactorR: number | null;
   maxDrawdownR: number | null;
   avgR: number | null;
+  avgWinR?: number | null;
+  avgLossR?: number | null;
+  tradeFrequencyPerYear?: number | null;
+  rrDistribution?: Record<string, number> | null;
   bestTradeR: number | null;
   worstTradeR: number | null;
   avgCostR?: number | null;
@@ -254,6 +279,10 @@ export interface FullBacktestResponseAPI {
     profit_factor_R: number | null;
     max_drawdown_R: number | null;
     avg_R: number | null;
+    avg_win_R?: number | null;
+    avg_loss_R?: number | null;
+    trade_frequency_per_year?: number | null;
+    rr_distribution?: Record<string, number> | null;
     best_trade_R: number | null;
     worst_trade_R: number | null;
     avg_cost_R?: number | null;
@@ -267,6 +296,10 @@ export interface FullBacktestResponseAPI {
     profit_factor_R: number | null;
     max_drawdown_R: number | null;
     avg_R: number | null;
+    avg_win_R?: number | null;
+    avg_loss_R?: number | null;
+    trade_frequency_per_year?: number | null;
+    rr_distribution?: Record<string, number> | null;
     best_trade_R: number | null;
     worst_trade_R: number | null;
     avg_cost_R?: number | null;
@@ -373,6 +406,10 @@ export function transformFullBacktestResponse(api: FullBacktestResponseAPI): Ful
       profitFactorR: api.summary.profit_factor_R,
       maxDrawdownR: api.summary.max_drawdown_R,
       avgR: api.summary.avg_R,
+      avgWinR: api.summary.avg_win_R ?? undefined,
+      avgLossR: api.summary.avg_loss_R ?? undefined,
+      tradeFrequencyPerYear: api.summary.trade_frequency_per_year ?? undefined,
+      rrDistribution: api.summary.rr_distribution ?? undefined,
       bestTradeR: api.summary.best_trade_R,
       worstTradeR: api.summary.worst_trade_R,
       avgCostR: api.summary.avg_cost_R ?? undefined,
@@ -386,6 +423,10 @@ export function transformFullBacktestResponse(api: FullBacktestResponseAPI): Ful
       profitFactorR: s.profit_factor_R,
       maxDrawdownR: s.max_drawdown_R,
       avgR: s.avg_R,
+      avgWinR: s.avg_win_R ?? undefined,
+      avgLossR: s.avg_loss_R ?? undefined,
+      tradeFrequencyPerYear: s.trade_frequency_per_year ?? undefined,
+      rrDistribution: s.rr_distribution ?? undefined,
       bestTradeR: s.best_trade_R,
       worstTradeR: s.worst_trade_R,
       avgCostR: s.avg_cost_R ?? undefined,
@@ -423,6 +464,9 @@ export function transformFullBacktestResponse(api: FullBacktestResponseAPI): Ful
           commissionPct: api.costs.commission_pct,
           slippageBps: api.costs.slippage_bps,
           fxPct: api.costs.fx_pct,
+          grossRTotal: api.costs.gross_R_total ?? undefined,
+          netRTotal: api.costs.net_R_total ?? undefined,
+          feeImpactPct: api.costs.fee_impact_pct ?? undefined,
           avgCostR: api.costs.avg_cost_R ?? undefined,
           totalCostR: api.costs.total_cost_R ?? undefined,
         }

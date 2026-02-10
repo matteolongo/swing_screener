@@ -12,6 +12,10 @@ class BacktestSummary(BaseModel):
     profit_factor_R: float
     max_drawdown_R: float
     avg_R: float
+    avg_win_R: Optional[float] = None
+    avg_loss_R: Optional[float] = None
+    trade_frequency_per_year: Optional[float] = None
+    rr_distribution: Optional[dict[str, int]] = None
     best_trade_R: Optional[float] = None
     worst_trade_R: Optional[float] = None
     avg_cost_R: Optional[float] = None
@@ -22,6 +26,9 @@ class BacktestCostSummary(BaseModel):
     commission_pct: float
     slippage_bps: float
     fx_pct: float
+    gross_R_total: Optional[float] = None
+    net_R_total: Optional[float] = None
+    fee_impact_pct: Optional[float] = None
     avg_cost_R: Optional[float] = None
     total_cost_R: Optional[float] = None
 
@@ -73,6 +80,10 @@ class FullBacktestSummary(BaseModel):
     profit_factor_R: Optional[float] = None
     max_drawdown_R: Optional[float] = None
     avg_R: Optional[float] = None
+    avg_win_R: Optional[float] = None
+    avg_loss_R: Optional[float] = None
+    trade_frequency_per_year: Optional[float] = None
+    rr_distribution: Optional[dict[str, int]] = None
     best_trade_R: Optional[float] = None
     worst_trade_R: Optional[float] = None
     avg_cost_R: Optional[float] = None
