@@ -37,6 +37,7 @@ def _default_strategy_payload(now: dt.datetime | None = None) -> dict:
         "id": DEFAULT_STRATEGY_ID,
         "name": "Default",
         "description": "Default strategy seeded from current system settings.",
+        "module": "momentum",
         "is_default": True,
         "created_at": ts,
         "updated_at": ts,

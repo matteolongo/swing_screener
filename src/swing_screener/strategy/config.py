@@ -9,7 +9,7 @@ from swing_screener.indicators.momentum import MomentumConfig
 from swing_screener.screeners.ranking import RankingConfig
 from swing_screener.signals.entries import EntrySignalConfig
 from swing_screener.risk.position_sizing import RiskConfig
-from swing_screener.reporting.report import ReportConfig
+from swing_screener.reporting.config import ReportConfig
 from swing_screener.portfolio.state import ManageConfig
 from swing_screener.backtest.simulator import BacktestConfig
 from swing_screener.social.config import SocialOverlayConfig
@@ -75,6 +75,7 @@ def build_report_config(strategy: dict, *, top_override: Optional[int] = None) -
     signals = build_entry_config(strategy)
     risk = build_risk_config(strategy)
     social_overlay = build_social_overlay_config(strategy)
+    strategy_module = strategy.get("module", "momentum") if isinstance(strategy, dict) else "momentum"
 
     if top_override is not None:
         ranking = RankingConfig(
@@ -91,6 +92,7 @@ def build_report_config(strategy: dict, *, top_override: Optional[int] = None) -
         risk=risk,
         social_overlay=social_overlay,
         only_active_signals=False,
+        strategy_module=strategy_module,
     )
 
 
