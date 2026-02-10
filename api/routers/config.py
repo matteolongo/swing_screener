@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
-from api.models import AppConfig, RiskConfig, IndicatorConfig, ManageConfig
+from api.models.config import AppConfig, RiskConfig, IndicatorConfig, ManageConfig
 
 router = APIRouter()
 

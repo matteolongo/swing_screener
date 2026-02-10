@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { X, TrendingUp, TrendingDown, AlertCircle, BarChart3 } from 'lucide-react';
 import Button from '../common/Button';
-import { apiUrl } from '../../lib/api';
 import { fetchActiveStrategy } from '../../lib/strategyApi';
-import { QuickBacktestResponseAPI, transformQuickBacktestResponse, QuickBacktestResponse } from '../../types/backtest';
+import { runQuickBacktest } from '@/features/backtest/api';
+import { QuickBacktestResponse } from '@/features/backtest/types';
 import { formatR, formatPercent } from '../../utils/formatters';
 import { useConfigStore } from '../../stores/configStore';
 
@@ -25,24 +25,12 @@ export default function QuickBacktestModal({ ticker, onClose }: QuickBacktestMod
 
   const backtestMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch(apiUrl('/api/backtest/quick'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ticker,
-          months_back: monthsBack,
-          k_atr: kAtr,
-          max_holding_days: 20,
-        }),
+      return runQuickBacktest({
+        ticker,
+        monthsBack,
+        kAtr,
+        maxHoldingDays: 20,
       });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Backtest failed');
-      }
-      
-      const data: QuickBacktestResponseAPI = await response.json();
-      return transformQuickBacktestResponse(data);
     },
     onSuccess: (data) => {
       setResult(data);

@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { screen, waitFor } from '@testing-library/react'
-import { renderWithProviders } from '@/test/utils'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { screen, waitFor, act } from '@testing-library/react'
+import { renderWithProviders, waitForQueriesToSettle } from '@/test/utils'
 import Screener from './Screener'
 import { useConfigStore } from '@/stores/configStore'
 import { useScreenerStore } from '@/stores/screenerStore'
@@ -34,11 +34,12 @@ describe('Screener Page', () => {
   })
 
   describe('Page Structure', () => {
-    it('renders screener title and description', () => {
+    it('renders screener title and description', async () => {
       renderWithProviders(<Screener />)
       
       expect(screen.getByText('Screener')).toBeInTheDocument()
       expect(screen.getByText(/Find swing trade candidates/i)).toBeInTheDocument()
+      await screen.findByText('Universe')
     })
 
     it('renders controls section', async () => {
@@ -143,18 +144,22 @@ describe('Screener Page', () => {
     })
 
     it('can run screener successfully', async () => {
-      const { user } = renderWithProviders(<Screener />)
+      const { user, queryClient } = renderWithProviders(<Screener />)
       
+      await screen.findByText('Universe')
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /Run Screener/i })).toBeInTheDocument()
       })
       
       const runButton = screen.getByRole('button', { name: /Run Screener/i })
-      await user.click(runButton)
+      await act(async () => {
+        await user.click(runButton)
+      })
       
       await waitFor(() => {
         expect(screen.getByText(/Screener completed/i)).toBeInTheDocument()
       }, { timeout: 3000 })
+      await waitForQueriesToSettle(queryClient)
     })
   })
 
@@ -163,7 +168,9 @@ describe('Screener Page', () => {
       const { user } = renderWithProviders(<Screener />)
       
       const runButton = screen.getByRole('button', { name: /Run Screener/i })
-      await user.click(runButton)
+      await act(async () => {
+        await user.click(runButton)
+      })
       
       await waitFor(() => {
         expect(screen.getByText(/1 candidates from/i)).toBeInTheDocument()
@@ -174,7 +181,9 @@ describe('Screener Page', () => {
     it('displays candidates table with correct headers', async () => {
       const { user } = renderWithProviders(<Screener />)
       
-      await user.click(screen.getByRole('button', { name: /Run Screener/i }))
+      await act(async () => {
+        await user.click(screen.getByRole('button', { name: /Run Screener/i }))
+      })
       
       await waitFor(() => {
         expect(screen.getByText('Rank')).toBeInTheDocument()
@@ -191,7 +200,9 @@ describe('Screener Page', () => {
     it('displays candidate data correctly', async () => {
       const { user } = renderWithProviders(<Screener />)
       
-      await user.click(screen.getByRole('button', { name: /Run Screener/i }))
+      await act(async () => {
+        await user.click(screen.getByRole('button', { name: /Run Screener/i }))
+      })
       
       await waitFor(() => {
         // MSW mock returns AAPL candidate
@@ -205,7 +216,9 @@ describe('Screener Page', () => {
     it('shows momentum values with color coding', async () => {
       const { user } = renderWithProviders(<Screener />)
       
-      await user.click(screen.getByRole('button', { name: /Run Screener/i }))
+      await act(async () => {
+        await user.click(screen.getByRole('button', { name: /Run Screener/i }))
+      })
       
       await waitFor(() => {
         // Mock has positive momentum
@@ -220,7 +233,9 @@ describe('Screener Page', () => {
     it('displays create order button for each candidate', async () => {
       const { user } = renderWithProviders(<Screener />)
       
-      await user.click(screen.getByRole('button', { name: /Run Screener/i }))
+      await act(async () => {
+        await user.click(screen.getByRole('button', { name: /Run Screener/i }))
+      })
       
       await waitFor(() => {
         const createButtons = screen.getAllByRole('button', { name: /Create Order/i })
@@ -231,14 +246,18 @@ describe('Screener Page', () => {
     it('opens sentiment analysis modal from candidate row', async () => {
       const { user } = renderWithProviders(<Screener />)
 
-      await user.click(screen.getByRole('button', { name: /Run Screener/i }))
+      await act(async () => {
+        await user.click(screen.getByRole('button', { name: /Run Screener/i }))
+      })
 
       await waitFor(() => {
         expect(screen.getByText('AAPL')).toBeInTheDocument()
       })
 
       const sentimentButton = screen.getByRole('button', { name: /Sentiment for AAPL/i })
-      await user.click(sentimentButton)
+      await act(async () => {
+        await user.click(sentimentButton)
+      })
 
       await waitFor(() => {
         expect(screen.getByText('Sentiment Analysis - AAPL')).toBeInTheDocument()
@@ -252,7 +271,9 @@ describe('Screener Page', () => {
     it('shows refresh button after results displayed', async () => {
       const { user } = renderWithProviders(<Screener />)
       
-      await user.click(screen.getByRole('button', { name: /Run Screener/i }))
+      await act(async () => {
+        await user.click(screen.getByRole('button', { name: /Run Screener/i }))
+      })
       
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /Refresh/i })).toBeInTheDocument()
@@ -278,7 +299,9 @@ describe('Screener Page', () => {
       )
       
       const { user } = renderWithProviders(<Screener />)
-      await user.click(screen.getByRole('button', { name: /Run Screener/i }))
+      await act(async () => {
+        await user.click(screen.getByRole('button', { name: /Run Screener/i }))
+      })
       
       await waitFor(() => {
         expect(screen.getByText(/^No candidates found$/i)).toBeInTheDocument()
@@ -288,6 +311,7 @@ describe('Screener Page', () => {
 
   describe('Error Handling', () => {
     it('displays error message on screener failure', async () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
       const { server } = await import('@/test/mocks/server')
       const { http, HttpResponse } = await import('msw')
       
@@ -301,12 +325,15 @@ describe('Screener Page', () => {
       )
       
       const { user } = renderWithProviders(<Screener />)
-      await user.click(screen.getByRole('button', { name: /Run Screener/i }))
+      await act(async () => {
+        await user.click(screen.getByRole('button', { name: /Run Screener/i }))
+      })
       
       await waitFor(() => {
         expect(screen.getByText(/Error:/i)).toBeInTheDocument()
         expect(screen.getByText(/Failed to fetch market data/i)).toBeInTheDocument()
       })
+      consoleSpy.mockRestore()
     })
   })
 
@@ -327,7 +354,9 @@ describe('Screener Page', () => {
       )
       
       const { user } = renderWithProviders(<Screener />)
-      await user.click(screen.getByRole('button', { name: /Run Screener/i }))
+      await act(async () => {
+        await user.click(screen.getByRole('button', { name: /Run Screener/i }))
+      })
       
       await waitFor(() => {
         expect(screen.getByText(/Only 0 candidates found for top 200/i)).toBeInTheDocument()

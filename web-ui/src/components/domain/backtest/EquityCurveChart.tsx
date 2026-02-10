@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { BacktestCurvePoint } from '@/types/backtest';
 
 const COLORS = [
@@ -110,20 +110,17 @@ function formatDateTick(ts: number, spanDays: number): string {
 export default function EquityCurveChart({ total, byTicker }: EquityCurveChartProps) {
   const series = useMemo(() => buildSeries(total, byTicker), [total, byTicker]);
   const [visible, setVisible] = useState<Record<string, boolean>>({});
-
-  useEffect(() => {
-    setVisible((prev) => {
-      const next: Record<string, boolean> = { ...prev };
-      series.forEach((s) => {
-        if (next[s.id] === undefined) {
-          next[s.id] = true;
-        }
-      });
-      return next;
+  const visibleMap = useMemo(() => {
+    const next: Record<string, boolean> = { ...visible };
+    series.forEach((s) => {
+      if (next[s.id] === undefined) {
+        next[s.id] = true;
+      }
     });
-  }, [series.map((s) => s.id).join('|')]);
+    return next;
+  }, [series, visible]);
 
-  const visibleSeries = series.filter((s) => visible[s.id]);
+  const visibleSeries = series.filter((s) => visibleMap[s.id]);
 
   const bounds = useMemo(() => {
     const allPoints = visibleSeries.flatMap((s) => s.points);
@@ -163,7 +160,7 @@ export default function EquityCurveChart({ total, byTicker }: EquityCurveChartPr
           <label key={s.id} className="flex items-center gap-2">
             <input
               type="checkbox"
-              checked={visible[s.id] ?? true}
+              checked={visibleMap[s.id] ?? true}
               onChange={() => setVisible((prev) => ({ ...prev, [s.id]: !(prev[s.id] ?? true) }))}
             />
             <span className="inline-flex items-center gap-2">

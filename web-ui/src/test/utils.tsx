@@ -1,5 +1,5 @@
 import { ReactElement } from 'react'
-import { render, RenderOptions } from '@testing-library/react'
+import { render, RenderOptions, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
 import userEvent from '@testing-library/user-event'
@@ -34,7 +34,12 @@ export function renderWithProviders(
   function Wrapper({ children }: { children: React.ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
+        <BrowserRouter
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true,
+          }}
+        >
           {children}
         </BrowserRouter>
       </QueryClientProvider>
@@ -46,6 +51,14 @@ export function renderWithProviders(
     queryClient,
     user: userEvent.setup(),
   }
+}
+
+export async function waitForQueriesToSettle(queryClient: QueryClient) {
+  await waitFor(() => {
+    if (queryClient.isFetching() !== 0) {
+      throw new Error('Queries still fetching')
+    }
+  })
 }
 
 // Re-export everything from testing-library

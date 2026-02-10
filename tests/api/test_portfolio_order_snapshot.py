@@ -3,7 +3,8 @@ import pandas as pd
 from fastapi.testclient import TestClient
 
 from api.main import app
-import api.routers.portfolio as portfolio_router
+import api.repositories.orders_repo as orders_repo
+import api.services.portfolio_service as portfolio_service
 
 
 def _ohlcv_for_tickers() -> pd.DataFrame:
@@ -41,8 +42,8 @@ def test_order_snapshot_includes_last_price_and_distance(monkeypatch):
     def fake_fetch_ohlcv(tickers, cfg):
         return _ohlcv_for_tickers()
 
-    monkeypatch.setattr(portfolio_router, "read_json_file", fake_read_json)
-    monkeypatch.setattr(portfolio_router, "fetch_ohlcv", fake_fetch_ohlcv)
+    monkeypatch.setattr(orders_repo, "read_json_file", fake_read_json)
+    monkeypatch.setattr(portfolio_service, "fetch_ohlcv", fake_fetch_ohlcv)
 
     client = TestClient(app)
     res = client.get("/api/portfolio/orders/snapshot")

@@ -1,19 +1,23 @@
 import { useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
-import { API_ENDPOINTS, apiUrl } from '@/lib/api';
 import { fetchActiveStrategy } from '@/lib/strategyApi';
-import { 
-  Position, 
-  PositionStatus, 
-  UpdateStopRequest, 
+import {
+  Position,
+  PositionStatus,
+  UpdateStopRequest,
   ClosePositionRequest,
-  transformPosition,
   calculatePnL,
   calculatePnLPercent,
-} from '@/types/position';
+} from '@/features/portfolio/types';
+import {
+  usePositions,
+  useOpenPositions,
+  useUpdateStopMutation,
+  useClosePositionMutation,
+} from '@/features/portfolio/hooks';
 import { formatCurrency, formatDate, formatPercent } from '@/utils/formatters';
 import { TrendingUp, TrendingDown, X, MessageSquare } from 'lucide-react';
 import SocialAnalysisModal from '@/components/modals/SocialAnalysisModal';
@@ -26,34 +30,18 @@ export default function Positions() {
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [selectedPosition, setSelectedPosition] = useState<Position | null>(null);
   const [socialSymbol, setSocialSymbol] = useState<string | null>(null);
-  const queryClient = useQueryClient();
 
   const activeStrategyQuery = useQuery({
     queryKey: ['strategy-active'],
     queryFn: fetchActiveStrategy,
   });
 
-  // Fetch positions
-  const { data: positions = [], isLoading } = useQuery({
-    queryKey: ['positions', filterStatus],
-    queryFn: async () => {
-      const params = filterStatus !== 'all' ? `?status=${filterStatus}` : '';
-      const response = await fetch(apiUrl(API_ENDPOINTS.positions + params));
-      if (!response.ok) throw new Error('Failed to fetch positions');
-      const data = await response.json();
-      return data.positions.map(transformPosition);
-    },
-  });
+  const positionsQuery = usePositions(filterStatus);
+  const positions = positionsQuery.data ?? [];
+  const isLoading = positionsQuery.isLoading;
 
-  const { data: openPositions = [] } = useQuery({
-    queryKey: ['positions', 'open'],
-    queryFn: async () => {
-      const response = await fetch(apiUrl(API_ENDPOINTS.positions + '?status=open'));
-      if (!response.ok) throw new Error('Failed to fetch positions');
-      const data = await response.json();
-      return data.positions.map(transformPosition);
-    },
-  });
+  const openPositionsQuery = useOpenPositions();
+  const openPositions = openPositionsQuery.data ?? [];
 
   const accountSize = activeStrategyQuery.data?.risk.accountSize ?? 0;
   const totalOpenRisk = openPositions.reduce((sum: number, pos: Position) => {
@@ -65,52 +53,14 @@ export default function Positions() {
   }, 0);
   const openRiskPct = accountSize > 0 ? (totalOpenRisk / accountSize) * 100 : 0;
 
-  // Update stop mutation
-  const updateStopMutation = useMutation({
-    mutationFn: async ({ positionId, request }: { positionId: string; request: UpdateStopRequest }) => {
-      const response = await fetch(apiUrl(API_ENDPOINTS.positionStop(positionId)), {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          new_stop: request.newStop,
-          reason: request.reason || '',
-        }),
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Failed to update stop');
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['positions'] });
-      setShowUpdateStopModal(false);
-      setSelectedPosition(null);
-    },
+  const updateStopMutation = useUpdateStopMutation(() => {
+    setShowUpdateStopModal(false);
+    setSelectedPosition(null);
   });
 
-  // Close position mutation
-  const closePositionMutation = useMutation({
-    mutationFn: async ({ positionId, request }: { positionId: string; request: ClosePositionRequest }) => {
-      const response = await fetch(apiUrl(API_ENDPOINTS.positionClose(positionId)), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          exit_price: request.exitPrice,
-          reason: request.reason || '',
-        }),
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Failed to close position');
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['positions'] });
-      setShowCloseModal(false);
-      setSelectedPosition(null);
-    },
+  const closePositionMutation = useClosePositionMutation(() => {
+    setShowCloseModal(false);
+    setSelectedPosition(null);
   });
 
   const handleUpdateStop = (position: Position) => {
@@ -190,6 +140,7 @@ export default function Positions() {
                     <th className="text-left py-3 px-4 font-semibold">Entry Date</th>
                     <th className="text-right py-3 px-4 font-semibold">Shares</th>
                     <th className="text-right py-3 px-4 font-semibold">Entry</th>
+                    <th className="text-right py-3 px-4 font-semibold">Value</th>
                     <th className="text-right py-3 px-4 font-semibold">Stop</th>
                     <th className="text-right py-3 px-4 font-semibold">Exit</th>
                     <th className="text-right py-3 px-4 font-semibold">P&L</th>
@@ -203,6 +154,11 @@ export default function Positions() {
                     const pnl = calculatePnL(position);
                     const pnlPercent = calculatePnLPercent(position);
                     const isProfitable = pnl >= 0;
+                    const entryValue = position.entryPrice * position.shares;
+                    const currentPrice = position.status === 'closed'
+                      ? (position.exitPrice ?? position.entryPrice)
+                      : (position.currentPrice ?? position.entryPrice);
+                    const currentValue = currentPrice * position.shares;
 
                     return (
                       <tr key={position.positionId || position.ticker} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
@@ -236,6 +192,12 @@ export default function Positions() {
                         <td className="py-3 px-4 text-sm">{formatDate(position.entryDate)}</td>
                         <td className="py-3 px-4 text-right">{position.shares}</td>
                         <td className="py-3 px-4 text-right">{formatCurrency(position.entryPrice)}</td>
+                        <td className={`py-3 px-4 text-right ${isProfitable ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                          <div className="font-semibold">{formatCurrency(currentValue)}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            from {formatCurrency(entryValue)} ({formatPercent(pnlPercent)})
+                          </div>
+                        </td>
                         <td className="py-3 px-4 text-right">{formatCurrency(position.stopPrice)}</td>
                         <td className="py-3 px-4 text-right">
                           {position.exitPrice ? formatCurrency(position.exitPrice) : '-'}

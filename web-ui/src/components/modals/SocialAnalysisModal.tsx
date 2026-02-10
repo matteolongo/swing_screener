@@ -3,8 +3,8 @@ import { useMutation } from '@tanstack/react-query';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
-import { API_ENDPOINTS, apiUrl } from '@/lib/api';
-import { SocialAnalysisResponse, SocialAnalysisResponseAPI, transformSocialAnalysisResponse } from '@/types/social';
+import { analyzeSocial } from '@/features/social/api';
+import { SocialAnalysisResponse } from '@/features/social/types';
 import { formatDateTime } from '@/utils/formatters';
 
 const STATUS_LABELS: Record<SocialAnalysisResponse['status'], { label: string; variant: 'success' | 'warning' | 'error' | 'default' } > = {
@@ -36,25 +36,11 @@ export default function SocialAnalysisModal({
         }
       }
       
-      const payload: { symbol: string; max_events: number; lookback_hours?: number } = {
+      return analyzeSocial({
         symbol,
-        max_events: 100,
-      };
-      if (lookback_hours !== undefined) {
-        payload.lookback_hours = lookback_hours;
-      }
-
-      const response = await fetch(apiUrl(API_ENDPOINTS.socialAnalyze), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        maxEvents: 100,
+        lookbackHours: lookback_hours,
       });
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.detail || 'Failed to analyze sentiment');
-      }
-      const data: SocialAnalysisResponseAPI = await response.json();
-      return transformSocialAnalysisResponse(data);
     },
   });
 

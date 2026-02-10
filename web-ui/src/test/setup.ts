@@ -1,49 +1,15 @@
 import '@testing-library/jest-dom/vitest'
 import { expect, afterEach, beforeAll, afterAll } from 'vitest'
-import { cleanup } from '@testing-library/react'
+import { cleanup, act } from '@testing-library/react'
 import * as matchers from '@testing-library/jest-dom/matchers'
-import { server } from './mocks/server'
+import { notifyManager } from '@tanstack/react-query'
+import type { SetupServerApi } from 'msw/node'
+
+let server: SetupServerApi | null = null
+const originalConsoleError = console.error
 
 // Extend Vitest's expect with jest-dom matchers
 expect.extend(matchers)
-
-// Start MSW server before all tests
-beforeAll(() => server.listen({ onUnhandledRequest: 'warn' }))
-
-// Reset handlers after each test (important for test isolation)
-afterEach(() => {
-  server.resetHandlers()
-  cleanup()
-})
-
-// Stop MSW server after all tests
-afterAll(() => server.close())
-
-// Mock window.matchMedia
-Object.defineProperty(window, 'matchMedia', {
-  writable: true,
-  value: (query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: () => {}, // deprecated
-    removeListener: () => {}, // deprecated
-    addEventListener: () => {},
-    removeEventListener: () => {},
-    dispatchEvent: () => {},
-  }),
-})
-
-// Mock IntersectionObserver
-global.IntersectionObserver = class IntersectionObserver {
-  constructor() {}
-  disconnect() {}
-  observe() {}
-  takeRecords() {
-    return []
-  }
-  unobserve() {}
-} as any
 
 // Mock localStorage for Zustand persist in tests
 const localStorageMock = (() => {
@@ -70,3 +36,60 @@ Object.defineProperty(window, 'localStorage', {
   value: localStorageMock,
   writable: true,
 })
+
+// Start MSW server before all tests
+beforeAll(async () => {
+  const mod = await import('./mocks/server')
+  server = mod.server
+  server.listen({ onUnhandledRequest: 'warn' })
+  console.error = (...args) => {
+    if (typeof args[0] === 'string' && args[0].includes('not wrapped in act')) {
+      return
+    }
+    originalConsoleError(...args)
+  }
+  notifyManager.setNotifyFunction((fn) => {
+    act(fn)
+  })
+  notifyManager.setBatchNotifyFunction((fn) => {
+    act(fn)
+  })
+})
+
+// Reset handlers after each test (important for test isolation)
+afterEach(() => {
+  server?.resetHandlers()
+  cleanup()
+})
+
+// Stop MSW server after all tests
+afterAll(() => {
+  console.error = originalConsoleError
+  server?.close()
+})
+
+// Mock window.matchMedia
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: (query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: () => {}, // deprecated
+    removeListener: () => {}, // deprecated
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => {},
+  }),
+})
+
+// Mock IntersectionObserver
+global.IntersectionObserver = class IntersectionObserver {
+  constructor() {}
+  disconnect() {}
+  observe() {}
+  takeRecords() {
+    return []
+  }
+  unobserve() {}
+} as any

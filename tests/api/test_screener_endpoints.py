@@ -2,7 +2,7 @@ import pandas as pd
 from fastapi.testclient import TestClient
 
 from api.main import app
-import api.routers.screener as screener_router
+import api.services.screener_service as screener_service
 
 
 def _ohlcv_with_spy() -> pd.DataFrame:
@@ -43,9 +43,9 @@ def test_screener_top_over_100_returns_candidates(monkeypatch):
         }
         return pd.DataFrame(data, index=idx)
 
-    monkeypatch.setattr(screener_router, "fetch_ohlcv", fake_fetch_ohlcv)
-    monkeypatch.setattr(screener_router, "build_daily_report", fake_build_daily_report)
-    monkeypatch.setattr(screener_router, "get_multiple_ticker_info", lambda tickers: {})
+    monkeypatch.setattr(screener_service, "fetch_ohlcv", fake_fetch_ohlcv)
+    monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
+    monkeypatch.setattr(screener_service, "get_multiple_ticker_info", lambda tickers: {})
 
     client = TestClient(app)
     res = client.post("/api/screener/run", json={"universe": "mega_all", "top": 200})
@@ -60,7 +60,7 @@ def test_screener_empty_ohlcv_returns_404(monkeypatch):
     def fake_fetch_ohlcv(tickers, cfg, use_cache=True, force_refresh=False):
         return pd.DataFrame()
 
-    monkeypatch.setattr(screener_router, "fetch_ohlcv", fake_fetch_ohlcv)
+    monkeypatch.setattr(screener_service, "fetch_ohlcv", fake_fetch_ohlcv)
 
     client = TestClient(app)
     res = client.post("/api/screener/run", json={"universe": "mega_all", "top": 200})

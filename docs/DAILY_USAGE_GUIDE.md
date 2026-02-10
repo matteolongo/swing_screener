@@ -141,6 +141,12 @@ Ask yourself:
 If yes → proceed  
 If no → skip (skipping is allowed)
 
+### ✅ Daily Actions (Top 3)
+
+- **DO NOTHING** — if there are no stop updates and no new trades.
+- **INCREASE STOP LOSS PRICE** — only move stops up when suggested.
+- **PLACE BUY LIMIT ORDER FOR TOP 3 screened symbols** — after you run the screener.
+
 ---
 
 ### 3️⃣ Place orders on DEGIRO (same evening)

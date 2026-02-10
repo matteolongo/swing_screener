@@ -3,7 +3,7 @@ from datetime import datetime
 from fastapi.testclient import TestClient
 
 from api.main import app
-import api.routers.social as social_router
+import api.services.social_service as social_service
 import swing_screener.strategy.storage as strategy_storage
 from swing_screener.social.models import SocialRawEvent
 
@@ -53,7 +53,7 @@ def test_social_analyze_returns_raw_events_when_no_data(monkeypatch, tmp_path):
             ],
         }
 
-    monkeypatch.setattr(social_router, "analyze_social_symbol", fake_analyze)
+    monkeypatch.setattr(social_service, "analyze_social_symbol", fake_analyze)
 
     client = TestClient(app)
     res = client.post("/api/social/analyze", json={"symbol": "TSLA"})

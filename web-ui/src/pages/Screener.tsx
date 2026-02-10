@@ -1,24 +1,19 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { PlayCircle, RefreshCw, TrendingUp, AlertCircle, BarChart3, MessageSquare } from 'lucide-react';
-import Card from '../components/common/Card';
-import Button from '../components/common/Button';
-import { API_ENDPOINTS, apiUrl } from '../lib/api';
-import { 
-  ScreenerRequest, 
-  ScreenerResponseAPI,
-  ScreenerCandidate,
-  UniversesResponse,
-  transformScreenerResponse 
-} from '../types/screener';
-import { CreateOrderRequest, transformCreateOrderRequest } from '../types/order';
-import { useConfigStore } from '../stores/configStore';
-import { fetchActiveStrategy } from '../lib/strategyApi';
-import { StrategyRisk } from '../types/strategy';
-import { useScreenerStore } from '../stores/screenerStore';
-import { formatCurrency, formatPercent } from '../utils/formatters';
-import QuickBacktestModal from '../components/modals/QuickBacktestModal';
-import SocialAnalysisModal from '../components/modals/SocialAnalysisModal';
+import Card from '@/components/common/Card';
+import Button from '@/components/common/Button';
+import { useUniverses, useRunScreenerMutation } from '@/features/screener/hooks';
+import { ScreenerRequest, ScreenerCandidate } from '@/features/screener/types';
+import { CreateOrderRequest } from '@/features/portfolio/types';
+import { createOrder } from '@/features/portfolio/api';
+import { useConfigStore } from '@/stores/configStore';
+import { fetchActiveStrategy } from '@/lib/strategyApi';
+import { StrategyRisk } from '@/types/strategy';
+import { useScreenerStore } from '@/stores/screenerStore';
+import { formatCurrency, formatPercent } from '@/utils/formatters';
+import QuickBacktestModal from '@/components/modals/QuickBacktestModal';
+import SocialAnalysisModal from '@/components/modals/SocialAnalysisModal';
 
 const TOP_N_MAX = 200;
 const UNIVERSE_ALIASES: Record<string, string> = {
@@ -97,51 +92,17 @@ export default function Screener() {
     localStorage.setItem('screener.maxPrice', value.toString());
   };
 
-  // Fetch available universes
-  const { data: universesData } = useQuery<UniversesResponse>({
-    queryKey: ['universes'],
-    queryFn: async () => {
-      const res = await fetch(apiUrl(API_ENDPOINTS.screenerUniverses));
-      if (!res.ok) throw new Error('Failed to fetch universes');
-      return res.json();
-    },
-  });
+  const universesQuery = useUniverses();
+  const universesData = universesQuery.data;
 
-  // Run screener mutation
-  const screenerMutation = useMutation({
-    mutationFn: async (request: ScreenerRequest) => {
-      // Transform camelCase to snake_case for API
-      const apiRequest = {
-        universe: request.universe,
-        tickers: request.tickers,
-        top: request.top,
-        asof_date: request.asofDate,
-        min_price: request.minPrice,
-        max_price: request.maxPrice,
-        breakout_lookback: request.breakoutLookback,
-        pullback_ma: request.pullbackMa,
-        min_history: request.minHistory,
-      };
-      
-      const res = await fetch(apiUrl(API_ENDPOINTS.screenerRun), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(apiRequest),
-      });
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.detail || 'Failed to run screener');
-      }
-      const apiResponse: ScreenerResponseAPI = await res.json();
-      return transformScreenerResponse(apiResponse);
-    },
-    onSuccess: (data) => {
+  const screenerMutation = useRunScreenerMutation(
+    (data) => {
       setLastResult(data);
     },
-    onError: (error) => {
+    (error) => {
       console.error('Screener failed', error);
     },
-  });
+  );
 
   const handleRunScreener = () => {
     screenerMutation.mutate({
@@ -626,17 +587,7 @@ function CreateOrderModal({
     }
 
     try {
-      const response = await fetch(apiUrl(API_ENDPOINTS.orders), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(transformCreateOrderRequest(formData)),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to create order');
-      }
-
+      await createOrder(formData);
       onSuccess();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create order');
