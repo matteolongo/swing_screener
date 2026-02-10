@@ -14,6 +14,8 @@ DEFAULT_CONFIG = AppConfig(
         max_position_pct=0.60,
         min_shares=1,
         k_atr=2.0,
+        min_rr=2.0,
+        max_fee_risk_pct=0.2,
     ),
     indicators=IndicatorConfig(
         sma_fast=20,

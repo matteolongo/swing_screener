@@ -519,6 +519,9 @@ export default function StrategyPage() {
     return strategies.find((s) => s.id === selectedId) ?? null;
   }, [strategies, selectedId]);
 
+  const lowRrWarning = draft ? draft.risk.minRr < 1.5 : false;
+  const highFeeWarning = draft ? draft.risk.maxFeeRiskPct > 0.3 : false;
+
   useEffect(() => {
     if (selectedStrategy) {
       setDraft(cloneStrategy(selectedStrategy));
@@ -774,34 +777,6 @@ export default function StrategyPage() {
                   step={0.1}
                   min={0}
                   help={help.atrMultiplier}
-                />
-                <NumberInput
-                  label="Minimum RR"
-                  value={draft.risk.minRr}
-                  onChange={(value) =>
-                    setDraft({
-                      ...draft,
-                      risk: { ...draft.risk, minRr: value },
-                    })
-                  }
-                  step={0.1}
-                  min={0.5}
-                  help={help.minRr}
-                />
-                <NumberInput
-                  label="Max Fee / Risk"
-                  value={draft.risk.maxFeeRiskPct * 100}
-                  onChange={(value) =>
-                    setDraft({
-                      ...draft,
-                      risk: { ...draft.risk, maxFeeRiskPct: value / 100 },
-                    })
-                  }
-                  step={1}
-                  min={0}
-                  max={100}
-                  suffix="%"
-                  help={help.maxFeeRiskPct}
                 />
               </div>
             </CardContent>
@@ -1092,7 +1067,7 @@ export default function StrategyPage() {
 
                   <div>
                     <div className="text-sm font-semibold mb-3">Volatility</div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <NumberInput
                         label="ATR Window"
                         value={draft.universe.vol.atrWindow}
@@ -1271,7 +1246,46 @@ export default function StrategyPage() {
                         step={1}
                         min={1}
                       />
+                      <NumberInput
+                        label="Minimum RR"
+                        value={draft.risk.minRr}
+                        onChange={(value) =>
+                          setDraft({
+                            ...draft,
+                            risk: { ...draft.risk, minRr: value },
+                          })
+                        }
+                        step={0.1}
+                        min={0.5}
+                        help={help.minRr}
+                      />
+                      <NumberInput
+                        label="Max Fee / Risk"
+                        value={draft.risk.maxFeeRiskPct * 100}
+                        onChange={(value) =>
+                          setDraft({
+                            ...draft,
+                            risk: { ...draft.risk, maxFeeRiskPct: value / 100 },
+                          })
+                        }
+                        step={1}
+                        min={0}
+                        max={100}
+                        suffix="%"
+                        help={help.maxFeeRiskPct}
+                      />
                     </div>
+                    {(lowRrWarning || highFeeWarning) && (
+                      <div className="mt-3 rounded border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
+                        <div className="font-semibold">Recommendation guardrails</div>
+                        {lowRrWarning && (
+                          <div>Minimum RR below 1.5 may allow low-payoff setups.</div>
+                        )}
+                        {highFeeWarning && (
+                          <div>Max fee/risk above 30% increases fee drag risk.</div>
+                        )}
+                      </div>
+                    )}
                     <div className="mt-6">
                       <div className="text-sm font-semibold mb-3">Regime Risk Scaling</div>
                       <div className="space-y-4">
