@@ -180,11 +180,11 @@ describe('Screener Page', () => {
 
     it('displays candidates table with correct headers', async () => {
       const { user } = renderWithProviders(<Screener />)
-      
+
       await act(async () => {
         await user.click(screen.getByRole('button', { name: /Run Screener/i }))
       })
-      
+
       await waitFor(() => {
         expect(screen.getByText('Rank')).toBeInTheDocument()
         expect(screen.getByText('Ticker')).toBeInTheDocument()
@@ -194,6 +194,7 @@ describe('Screener Page', () => {
         expect(screen.getByText('Mom 6M')).toBeInTheDocument()
         expect(screen.getByText('Mom 12M')).toBeInTheDocument()
         expect(screen.getByText('Score')).toBeInTheDocument()
+        expect(screen.getByText('Verdict')).toBeInTheDocument()
       })
     })
 
@@ -264,6 +265,27 @@ describe('Screener Page', () => {
       })
 
       expect(screen.getByLabelText(/Lookback Override/i)).toBeInTheDocument()
+    })
+
+    it('opens recommendation details modal from candidate row', async () => {
+      const { user } = renderWithProviders(<Screener />)
+
+      await act(async () => {
+        await user.click(screen.getByRole('button', { name: /Run Screener/i }))
+      })
+
+      await waitFor(() => {
+        expect(screen.getByText('AAPL')).toBeInTheDocument()
+      })
+
+      const detailsButton = screen.getByRole('button', { name: /Recommendation details for AAPL/i })
+      await act(async () => {
+        await user.click(detailsButton)
+      })
+
+      await waitFor(() => {
+        expect(screen.getByText(/Recommendation — AAPL/i)).toBeInTheDocument()
+      })
     })
   })
 
