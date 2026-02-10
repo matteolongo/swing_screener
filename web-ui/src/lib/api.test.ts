@@ -2,9 +2,12 @@ import { describe, it, expect } from 'vitest'
 import { API_BASE_URL, API_ENDPOINTS, apiUrl } from './api'
 
 describe('API Client', () => {
+  const expectedBase = import.meta.env.VITE_API_URL || ''
+  const expectedUrl = (path: string) => `${expectedBase}${path}`
+
   describe('API_BASE_URL', () => {
     it('has default base URL', () => {
-      expect(API_BASE_URL).toBe('')
+      expect(API_BASE_URL).toBe(expectedBase)
     })
   })
 
@@ -47,18 +50,18 @@ describe('API Client', () => {
 
   describe('apiUrl', () => {
     it('constructs full URLs correctly', () => {
-      expect(apiUrl('/api/config')).toBe('/api/config')
-      expect(apiUrl('/api/portfolio/positions')).toBe('/api/portfolio/positions')
+      expect(apiUrl('/api/config')).toBe(expectedUrl('/api/config'))
+      expect(apiUrl('/api/portfolio/positions')).toBe(expectedUrl('/api/portfolio/positions'))
     })
 
     it('handles endpoints with query parameters', () => {
       expect(apiUrl('/api/portfolio/positions?status=open')).toBe(
-        '/api/portfolio/positions?status=open'
+        expectedUrl('/api/portfolio/positions?status=open')
       )
     })
 
     it('handles absolute paths', () => {
-      expect(apiUrl('/api/screener/run')).toBe('/api/screener/run')
+      expect(apiUrl('/api/screener/run')).toBe(expectedUrl('/api/screener/run'))
     })
   })
 })
