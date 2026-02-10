@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Optional
 from pydantic import BaseModel, Field
+from api.models.recommendation import Recommendation
 
 
 class ScreenerCandidate(BaseModel):
@@ -30,6 +31,17 @@ class ScreenerCandidate(BaseModel):
     overlay_sentiment_confidence: Optional[float] = None
     overlay_hype_score: Optional[float] = None
     overlay_sample_size: Optional[int] = None
+    # Plan + recommendation fields (education-first)
+    signal: Optional[str] = None
+    entry: Optional[float] = None
+    stop: Optional[float] = None
+    target: Optional[float] = None
+    rr: Optional[float] = None
+    shares: Optional[int] = None
+    position_size_usd: Optional[float] = None
+    risk_usd: Optional[float] = None
+    risk_pct: Optional[float] = None
+    recommendation: Optional[Recommendation] = None
 
 
 class ScreenerRequest(BaseModel):

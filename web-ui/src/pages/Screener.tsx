@@ -34,6 +34,11 @@ const OVERLAY_BADGES: Record<string, { label: string; className: string }> = {
   NO_DATA: { label: 'No Data', className: 'bg-gray-100 text-gray-600' },
   OFF: { label: 'Off', className: 'bg-gray-100 text-gray-600' },
 };
+const VERDICT_BADGES: Record<string, { label: string; className: string }> = {
+  RECOMMENDED: { label: 'Recommended', className: 'bg-green-100 text-green-800' },
+  NOT_RECOMMENDED: { label: 'Not Recommended', className: 'bg-red-100 text-red-800' },
+  UNKNOWN: { label: 'No Verdict', className: 'bg-gray-100 text-gray-600' },
+};
 
 export default function Screener() {
   const { config } = useConfigStore();
@@ -329,13 +334,14 @@ export default function Screener() {
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Mom 12M</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">RS</th>
                     <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">Overlay</th>
+                    <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">Verdict</th>
                     <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {candidates.length === 0 ? (
                     <tr>
-                      <td colSpan={14} className="text-center py-8 text-gray-500">
+                      <td colSpan={15} className="text-center py-8 text-gray-500">
                         No candidates found
                       </td>
                     </tr>
@@ -452,6 +458,23 @@ export default function Screener() {
                           })()}
                         </td>
                         <td className="py-3 px-4 text-center">
+                          {(() => {
+                            const verdict = candidate.recommendation?.verdict ?? 'UNKNOWN';
+                            const badge = VERDICT_BADGES[verdict] ?? VERDICT_BADGES.UNKNOWN;
+                            const reasons = candidate.recommendation?.reasonsShort?.length
+                              ? candidate.recommendation.reasonsShort.join(' | ')
+                              : 'No recommendation available';
+                            return (
+                              <span
+                                className={`text-xs px-2 py-1 rounded ${badge.className}`}
+                                title={reasons}
+                              >
+                                {badge.label}
+                              </span>
+                            );
+                          })()}
+                        </td>
+                        <td className="py-3 px-4 text-center">
                           <div className="flex gap-2 justify-center">
                             <Button
                               size="sm"
@@ -471,6 +494,11 @@ export default function Screener() {
                                 setSelectedCandidate(candidate);
                                 setShowCreateOrderModal(true);
                               }}
+                              title={
+                                candidate.recommendation?.verdict === 'NOT_RECOMMENDED'
+                                  ? 'Not recommended — open details to fix'
+                                  : 'Create Order'
+                              }
                             >
                               Create Order
                             </Button>
@@ -563,6 +591,8 @@ function CreateOrderModal({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const verdict = candidate.recommendation?.verdict ?? 'NOT_RECOMMENDED';
+  const isRecommended = verdict === 'RECOMMENDED';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -570,6 +600,11 @@ function CreateOrderModal({
     setError(null);
 
     // Validation
+    if (!isRecommended) {
+      setError('This setup is not recommended. Review the checklist and fix the issues first.');
+      setIsSubmitting(false);
+      return;
+    }
     if (formData.quantity <= 0) {
       setError('Quantity must be greater than 0');
       setIsSubmitting(false);
@@ -628,6 +663,35 @@ function CreateOrderModal({
                 <span className="text-gray-600 dark:text-gray-400">Score:</span>{' '}
                 <strong>{(candidate.score * 100).toFixed(1)}</strong>
               </div>
+            </div>
+          </div>
+
+          {/* Recommendation Summary */}
+          <div className={`p-4 rounded mb-4 ${isRecommended ? 'bg-green-50' : 'bg-red-50'}`}>
+            <h3 className="font-semibold mb-2">Recommendation</h3>
+            <div className="text-sm">
+              <div className="font-semibold">
+                {isRecommended ? 'Recommended' : 'Not Recommended'}
+              </div>
+              {candidate.recommendation?.reasonsShort?.length ? (
+                <ul className="list-disc ml-5 mt-2 space-y-1">
+                  {candidate.recommendation.reasonsShort.map((reason) => (
+                    <li key={reason}>{reason}</li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="mt-2 text-gray-700">No recommendation details available.</div>
+              )}
+              {candidate.recommendation?.education?.whatWouldMakeValid?.length ? (
+                <div className="mt-3">
+                  <div className="font-medium">What would make it valid?</div>
+                  <ul className="list-disc ml-5 mt-1 space-y-1">
+                    {candidate.recommendation.education.whatWouldMakeValid.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
             </div>
           </div>
 
@@ -736,7 +800,7 @@ function CreateOrderModal({
               <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>
                 Cancel
               </Button>
-              <Button type="submit" variant="primary" disabled={isSubmitting}>
+              <Button type="submit" variant="primary" disabled={isSubmitting || !isRecommended}>
                 {isSubmitting ? 'Creating...' : 'Create Order'}
               </Button>
             </div>
