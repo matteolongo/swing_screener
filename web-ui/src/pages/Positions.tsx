@@ -140,6 +140,7 @@ export default function Positions() {
                     <th className="text-left py-3 px-4 font-semibold">Entry Date</th>
                     <th className="text-right py-3 px-4 font-semibold">Shares</th>
                     <th className="text-right py-3 px-4 font-semibold">Entry</th>
+                    <th className="text-right py-3 px-4 font-semibold">Value</th>
                     <th className="text-right py-3 px-4 font-semibold">Stop</th>
                     <th className="text-right py-3 px-4 font-semibold">Exit</th>
                     <th className="text-right py-3 px-4 font-semibold">P&L</th>
@@ -153,6 +154,11 @@ export default function Positions() {
                     const pnl = calculatePnL(position);
                     const pnlPercent = calculatePnLPercent(position);
                     const isProfitable = pnl >= 0;
+                    const entryValue = position.entryPrice * position.shares;
+                    const currentPrice = position.status === 'closed'
+                      ? (position.exitPrice ?? position.entryPrice)
+                      : (position.currentPrice ?? position.entryPrice);
+                    const currentValue = currentPrice * position.shares;
 
                     return (
                       <tr key={position.positionId || position.ticker} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
@@ -186,6 +192,12 @@ export default function Positions() {
                         <td className="py-3 px-4 text-sm">{formatDate(position.entryDate)}</td>
                         <td className="py-3 px-4 text-right">{position.shares}</td>
                         <td className="py-3 px-4 text-right">{formatCurrency(position.entryPrice)}</td>
+                        <td className={`py-3 px-4 text-right ${isProfitable ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                          <div className="font-semibold">{formatCurrency(currentValue)}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            from {formatCurrency(entryValue)} ({formatPercent(pnlPercent)})
+                          </div>
+                        </td>
                         <td className="py-3 px-4 text-right">{formatCurrency(position.stopPrice)}</td>
                         <td className="py-3 px-4 text-right">
                           {position.exitPrice ? formatCurrency(position.exitPrice) : '-'}

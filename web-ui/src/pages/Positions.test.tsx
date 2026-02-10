@@ -127,9 +127,9 @@ describe('Positions Page', () => {
       
       await waitFor(() => {
         expect(screen.getByText('VALE')).toBeInTheDocument()
-        // Just verify some price is displayed
-        const prices = screen.queryAllByText(/\$/i)
-        expect(prices.length).toBeGreaterThan(0)
+        expect(screen.getByText('Value')).toBeInTheDocument()
+        expect(screen.getByText('$97.80')).toBeInTheDocument()
+        expect(screen.getByText(/from \$95\.34/)).toBeInTheDocument()
       })
     })
   })
@@ -300,7 +300,7 @@ describe('Positions Page', () => {
       await waitFor(() => {
         expect(screen.getByText('INTC')).toBeInTheDocument()
         // Exit price is $47.29
-        expect(screen.getByText(/\$47\.29/)).toBeInTheDocument()
+        expect(screen.getAllByText(/\$47\.29/).length).toBeGreaterThan(0)
       })
     })
 
