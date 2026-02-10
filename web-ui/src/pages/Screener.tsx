@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { PlayCircle, RefreshCw, TrendingUp, AlertCircle, BarChart3, MessageSquare } from 'lucide-react';
+import { PlayCircle, RefreshCw, TrendingUp, AlertCircle, BarChart3, MessageSquare, ListChecks } from 'lucide-react';
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import { useUniverses, useRunScreenerMutation } from '@/features/screener/hooks';
@@ -33,6 +33,11 @@ const OVERLAY_BADGES: Record<string, { label: string; className: string }> = {
   VETO: { label: 'Veto', className: 'bg-red-100 text-red-800' },
   NO_DATA: { label: 'No Data', className: 'bg-gray-100 text-gray-600' },
   OFF: { label: 'Off', className: 'bg-gray-100 text-gray-600' },
+};
+const VERDICT_BADGES: Record<string, { label: string; className: string }> = {
+  RECOMMENDED: { label: 'Recommended', className: 'bg-green-100 text-green-800' },
+  NOT_RECOMMENDED: { label: 'Not Recommended', className: 'bg-red-100 text-red-800' },
+  UNKNOWN: { label: 'No Verdict', className: 'bg-gray-100 text-gray-600' },
 };
 
 export default function Screener() {
@@ -69,6 +74,7 @@ export default function Screener() {
   const [showBacktestModal, setShowBacktestModal] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<ScreenerCandidate | null>(null);
   const [socialSymbol, setSocialSymbol] = useState<string | null>(null);
+  const [recommendationCandidate, setRecommendationCandidate] = useState<ScreenerCandidate | null>(null);
 
   // Save preferences to localStorage when they change
   const handleUniverseChange = (value: string) => {
@@ -325,17 +331,21 @@ export default function Screener() {
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Score</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Close</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">ATR</th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Risk $</th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">RR</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Mom 6M</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Mom 12M</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">RS</th>
                     <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">Overlay</th>
+                    <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">Verdict</th>
+                    <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">Fix</th>
                     <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {candidates.length === 0 ? (
                     <tr>
-                      <td colSpan={14} className="text-center py-8 text-gray-500">
+                      <td colSpan={18} className="text-center py-8 text-gray-500">
                         No candidates found
                       </td>
                     </tr>
@@ -404,6 +414,19 @@ export default function Screener() {
                         <td className="py-3 px-4 text-sm text-right text-gray-600">
                           {candidate.atr.toFixed(2)}
                         </td>
+                        <td className="py-3 px-4 text-sm text-right text-gray-900">
+                          {(() => {
+                            const riskValue =
+                              candidate.recommendation?.risk?.riskAmount ?? candidate.riskUsd;
+                            return riskValue && riskValue > 0 ? formatCurrency(riskValue) : '-';
+                          })()}
+                        </td>
+                        <td className="py-3 px-4 text-sm text-right text-gray-900">
+                          {(() => {
+                            const rrValue = candidate.recommendation?.risk?.rr ?? candidate.rr;
+                            return rrValue != null && rrValue > 0 ? rrValue.toFixed(2) : '-';
+                          })()}
+                        </td>
                         <td className="py-3 px-4 text-sm text-right">
                           <span className={candidate.momentum6m >= 0 ? 'text-green-600' : 'text-red-600'}>
                             {formatPercent(candidate.momentum6m)}
@@ -452,7 +475,48 @@ export default function Screener() {
                           })()}
                         </td>
                         <td className="py-3 px-4 text-center">
+                          {(() => {
+                            const verdict = candidate.recommendation?.verdict ?? 'UNKNOWN';
+                            const badge = VERDICT_BADGES[verdict] ?? VERDICT_BADGES.UNKNOWN;
+                            const reasons = candidate.recommendation?.reasonsShort?.length
+                              ? candidate.recommendation.reasonsShort.join(' | ')
+                              : 'No recommendation available';
+                            return (
+                              <span
+                                className={`text-xs px-2 py-1 rounded ${badge.className}`}
+                                title={reasons}
+                              >
+                                {badge.label}
+                              </span>
+                            );
+                          })()}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          {(() => {
+                            const fixes = candidate.recommendation?.education?.whatWouldMakeValid ?? [];
+                            if (!fixes.length) return <span className="text-gray-400">—</span>;
+                            const title = fixes.join(' | ');
+                            return (
+                              <span
+                                className="text-xs text-blue-700 underline decoration-dotted cursor-help"
+                                title={title}
+                              >
+                                Fix
+                              </span>
+                            );
+                          })()}
+                        </td>
+                        <td className="py-3 px-4 text-center">
                           <div className="flex gap-2 justify-center">
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => setRecommendationCandidate(candidate)}
+                              title="Recommendation details"
+                              aria-label={`Recommendation details for ${candidate.ticker}`}
+                            >
+                              <ListChecks className="w-4 h-4" />
+                            </Button>
                             <Button
                               size="sm"
                               variant="secondary"
@@ -471,6 +535,11 @@ export default function Screener() {
                                 setSelectedCandidate(candidate);
                                 setShowCreateOrderModal(true);
                               }}
+                              title={
+                                candidate.recommendation?.verdict === 'NOT_RECOMMENDED'
+                                  ? 'Not recommended — open details to fix'
+                                  : 'Create Order'
+                              }
                             >
                               Create Order
                             </Button>
@@ -520,6 +589,145 @@ export default function Screener() {
           onClose={() => setSocialSymbol(null)}
         />
       )}
+
+      {recommendationCandidate && (
+        <RecommendationModal
+          candidate={recommendationCandidate}
+          onClose={() => setRecommendationCandidate(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function RecommendationModal({
+  candidate,
+  onClose,
+}: {
+  candidate: ScreenerCandidate;
+  onClose: () => void;
+}) {
+  const rec = candidate.recommendation;
+  const verdict = rec?.verdict ?? 'NOT_RECOMMENDED';
+  const verdictBadge = VERDICT_BADGES[verdict] ?? VERDICT_BADGES.NOT_RECOMMENDED;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <Card variant="elevated" className="w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+        <div className="p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold">Recommendation — {candidate.ticker}</h2>
+            <Button variant="secondary" size="sm" onClick={onClose}>Close</Button>
+          </div>
+
+          <div className={`p-4 rounded ${verdict === 'RECOMMENDED' ? 'bg-green-50' : 'bg-red-50'}`}>
+            <div className="flex items-center gap-2">
+              <span className={`text-xs px-2 py-1 rounded ${verdictBadge.className}`}>
+                {verdictBadge.label}
+              </span>
+              <span className="text-sm text-gray-700">Summary</span>
+            </div>
+            {rec?.reasonsShort?.length ? (
+              <ul className="list-disc ml-5 mt-2 space-y-1 text-sm">
+                {rec.reasonsShort.map((reason) => (
+                  <li key={reason}>{reason}</li>
+                ))}
+              </ul>
+            ) : (
+              <div className="text-sm text-gray-700 mt-2">
+                No recommendation details available.
+              </div>
+            )}
+          </div>
+
+          <details className="bg-white rounded border border-gray-200 p-4" open>
+            <summary className="cursor-pointer font-semibold">Checklist Gates</summary>
+            <div className="mt-3 space-y-2 text-sm">
+              {rec?.checklist?.length ? rec.checklist.map((gate) => (
+                <div key={gate.gateName} className="flex items-start gap-3">
+                  <span className={`mt-0.5 h-2 w-2 rounded-full ${gate.passed ? 'bg-green-600' : 'bg-red-600'}`} />
+                  <div>
+                    <div className="font-medium">{gate.gateName}</div>
+                    <div className="text-gray-600">{gate.explanation}</div>
+                  </div>
+                </div>
+              )) : (
+                <div className="text-gray-600">No checklist data.</div>
+              )}
+            </div>
+          </details>
+
+          <details className="bg-white rounded border border-gray-200 p-4">
+            <summary className="cursor-pointer font-semibold">Risk & Costs</summary>
+            <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+              <div>
+                <div className="text-gray-500">Entry</div>
+                <div className="font-semibold">{rec?.risk?.entry != null ? formatCurrency(rec.risk.entry) : '—'}</div>
+              </div>
+              <div>
+                <div className="text-gray-500">Stop</div>
+                <div className="font-semibold">{rec?.risk?.stop != null ? formatCurrency(rec.risk.stop) : '—'}</div>
+              </div>
+              <div>
+                <div className="text-gray-500">Target</div>
+                <div className="font-semibold">{rec?.risk?.target != null ? formatCurrency(rec.risk.target) : '—'}</div>
+              </div>
+              <div>
+                <div className="text-gray-500">RR</div>
+                <div className="font-semibold">{rec?.risk?.rr != null ? rec.risk.rr.toFixed(2) : '—'}</div>
+              </div>
+              <div>
+                <div className="text-gray-500">Risk Amount</div>
+                <div className="font-semibold">{rec?.risk?.riskAmount != null ? formatCurrency(rec.risk.riskAmount) : '—'}</div>
+              </div>
+              <div>
+                <div className="text-gray-500">Risk %</div>
+                <div className="font-semibold">{rec?.risk?.riskPct != null ? formatPercent(rec.risk.riskPct) : '—'}</div>
+              </div>
+              <div>
+                <div className="text-gray-500">Position Size</div>
+                <div className="font-semibold">{rec?.risk?.positionSize != null ? formatCurrency(rec.risk.positionSize) : '—'}</div>
+              </div>
+              <div>
+                <div className="text-gray-500">Shares</div>
+                <div className="font-semibold">{rec?.risk?.shares != null ? rec.risk.shares : '—'}</div>
+              </div>
+              <div>
+                <div className="text-gray-500">Fees (est.)</div>
+                <div className="font-semibold">{rec?.costs?.totalCost != null ? formatCurrency(rec.costs.totalCost) : '—'}</div>
+              </div>
+              <div>
+                <div className="text-gray-500">Fee / Risk</div>
+                <div className="font-semibold">{rec?.costs?.feeToRiskPct != null ? formatPercent(rec.costs.feeToRiskPct) : '—'}</div>
+              </div>
+            </div>
+          </details>
+
+          <details className="bg-white rounded border border-gray-200 p-4">
+            <summary className="cursor-pointer font-semibold">Education</summary>
+            <div className="mt-3 text-sm space-y-2">
+              <div>
+                <div className="text-gray-500">Bias Warning</div>
+                <div className="font-medium">{rec?.education?.commonBiasWarning ?? '—'}</div>
+              </div>
+              <div>
+                <div className="text-gray-500">What to Learn</div>
+                <div className="font-medium">{rec?.education?.whatToLearn ?? '—'}</div>
+              </div>
+              {rec?.education?.whatWouldMakeValid?.length ? (
+                <div>
+                  <div className="text-gray-500">What would make this trade valid?</div>
+                  <ul className="list-disc ml-5 mt-1 space-y-1">
+                    {rec.education.whatWouldMakeValid.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </div>
+          </details>
+        </div>
+      </Card>
     </div>
   );
 }
@@ -563,6 +771,8 @@ function CreateOrderModal({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const verdict = candidate.recommendation?.verdict ?? 'NOT_RECOMMENDED';
+  const isRecommended = verdict === 'RECOMMENDED';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -570,6 +780,11 @@ function CreateOrderModal({
     setError(null);
 
     // Validation
+    if (!isRecommended) {
+      setError('This setup is not recommended. Review the checklist and fix the issues first.');
+      setIsSubmitting(false);
+      return;
+    }
     if (formData.quantity <= 0) {
       setError('Quantity must be greater than 0');
       setIsSubmitting(false);
@@ -628,6 +843,35 @@ function CreateOrderModal({
                 <span className="text-gray-600 dark:text-gray-400">Score:</span>{' '}
                 <strong>{(candidate.score * 100).toFixed(1)}</strong>
               </div>
+            </div>
+          </div>
+
+          {/* Recommendation Summary */}
+          <div className={`p-4 rounded mb-4 ${isRecommended ? 'bg-green-50' : 'bg-red-50'}`}>
+            <h3 className="font-semibold mb-2">Recommendation</h3>
+            <div className="text-sm">
+              <div className="font-semibold">
+                {isRecommended ? 'Recommended' : 'Not Recommended'}
+              </div>
+              {candidate.recommendation?.reasonsShort?.length ? (
+                <ul className="list-disc ml-5 mt-2 space-y-1">
+                  {candidate.recommendation.reasonsShort.map((reason) => (
+                    <li key={reason}>{reason}</li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="mt-2 text-gray-700">No recommendation details available.</div>
+              )}
+              {candidate.recommendation?.education?.whatWouldMakeValid?.length ? (
+                <div className="mt-3">
+                  <div className="font-medium">What would make it valid?</div>
+                  <ul className="list-disc ml-5 mt-1 space-y-1">
+                    {candidate.recommendation.education.whatWouldMakeValid.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
             </div>
           </div>
 
@@ -736,7 +980,7 @@ function CreateOrderModal({
               <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>
                 Cancel
               </Button>
-              <Button type="submit" variant="primary" disabled={isSubmitting}>
+              <Button type="submit" variant="primary" disabled={isSubmitting || !isRecommended}>
                 {isSubmitting ? 'Creating...' : 'Create Order'}
               </Button>
             </div>

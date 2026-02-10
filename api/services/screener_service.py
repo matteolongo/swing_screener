@@ -1,7 +1,7 @@
 """Screener service."""
 from __future__ import annotations
 
-from dataclasses import replace
+from dataclasses import replace, asdict
 from typing import Optional
 import datetime as dt
 import logging
@@ -16,6 +16,8 @@ from api.models.screener import (
     ScreenerCandidate,
     OrderPreview,
 )
+from api.models.recommendation import Recommendation
+from swing_screener.recommendations.engine import build_recommendation
 from api.repositories.strategy_repo import StrategyRepository
 from swing_screener.data.universe import (
     load_universe_from_package,
@@ -171,6 +173,7 @@ class ScreenerService:
 
             fields_set = request.model_fields_set
             strategy = self._resolve_strategy(request.strategy_id)
+            backtest_cfg = strategy.get("backtest", {}) if isinstance(strategy, dict) else {}
             universe_cfg = build_universe_config(strategy)
             benchmark = universe_cfg.mom.benchmark
             if request.universe:
@@ -322,6 +325,36 @@ class ScreenerService:
                 info = ticker_info.get(ticker_str, {})
                 last_bar = last_bar_map.get(ticker_str) or overall_last_bar
 
+                signal = row.get("signal")
+                entry_val = _safe_optional_float(row.get("entry")) or last_price
+                stop_val = _safe_optional_float(row.get("stop"))
+                shares_val = _safe_optional_int(row.get("shares"))
+                position_size = _safe_optional_float(row.get("position_value"))
+                risk_usd = _safe_optional_float(row.get("realized_risk"))
+                risk_pct = (risk_usd / risk_cfg.account_size) if risk_usd and risk_cfg.account_size else None
+
+                take_profit_r = _safe_float(backtest_cfg.get("take_profit_r", 2.0), default=2.0)
+                commission_pct = _safe_float(backtest_cfg.get("commission_pct", 0.0), default=0.0)
+
+                rec_payload = build_recommendation(
+                    signal=str(signal) if not _is_na_scalar(signal) else None,
+                    entry=entry_val,
+                    stop=stop_val,
+                    shares=shares_val,
+                    account_size=risk_cfg.account_size,
+                    risk_pct_target=risk_cfg.risk_pct,
+                    rr_target=take_profit_r,
+                    min_rr=getattr(risk_cfg, "min_rr", 2.0),
+                    max_fee_risk_pct=getattr(risk_cfg, "max_fee_risk_pct", 0.2),
+                    commission_pct=commission_pct,
+                    slippage_bps=5.0,
+                    fx_estimate_pct=0.0,
+                    overlay_status=str(row.get("overlay_status")) if not _is_na_scalar(row.get("overlay_status")) else None,
+                    min_shares=risk_cfg.min_shares,
+                )
+                recommendation = Recommendation.model_validate(asdict(rec_payload))
+                rec_risk = recommendation.risk
+
                 candidates.append(
                     ScreenerCandidate(
                         ticker=ticker_str,
@@ -348,6 +381,16 @@ class ScreenerService:
                         overlay_sentiment_confidence=_safe_optional_float(row.get("overlay_sentiment_confidence")),
                         overlay_hype_score=_safe_optional_float(row.get("overlay_hype_score")),
                         overlay_sample_size=_safe_optional_int(row.get("overlay_sample_size")),
+                        signal=str(signal) if not _is_na_scalar(signal) else None,
+                        entry=rec_risk.entry,
+                        stop=rec_risk.stop if stop_val is not None else None,
+                        target=rec_risk.target,
+                        rr=rec_risk.rr,
+                        shares=shares_val if shares_val is not None else rec_risk.shares,
+                        position_size_usd=position_size if position_size is not None else rec_risk.position_size,
+                        risk_usd=risk_usd if risk_usd is not None else rec_risk.risk_amount,
+                        risk_pct=risk_pct if risk_pct is not None else rec_risk.risk_pct,
+                        recommendation=recommendation,
                     )
                 )
 

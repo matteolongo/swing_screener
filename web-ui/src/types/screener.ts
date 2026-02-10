@@ -1,5 +1,7 @@
 // Screener types
 
+import { Recommendation, RecommendationAPI, transformRecommendation } from '@/types/recommendation';
+
 export interface ScreenerCandidate {
   ticker: string;
   name?: string;
@@ -25,6 +27,16 @@ export interface ScreenerCandidate {
   overlaySentimentConfidence?: number;
   overlayHypeScore?: number;
   overlaySampleSize?: number;
+  signal?: string;
+  entry?: number;
+  stop?: number;
+  target?: number;
+  rr?: number;
+  shares?: number;
+  positionSizeUsd?: number;
+  riskUsd?: number;
+  riskPct?: number;
+  recommendation?: Recommendation;
 }
 
 // API response format (snake_case)
@@ -53,6 +65,16 @@ export interface ScreenerCandidateAPI {
   overlay_sentiment_confidence?: number;
   overlay_hype_score?: number;
   overlay_sample_size?: number;
+  signal?: string;
+  entry?: number;
+  stop?: number;
+  target?: number;
+  rr?: number;
+  shares?: number;
+  position_size_usd?: number;
+  risk_usd?: number;
+  risk_pct?: number;
+  recommendation?: RecommendationAPI;
 }
 
 export interface ScreenerRequest {
@@ -125,6 +147,16 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
       overlaySentimentConfidence: c.overlay_sentiment_confidence,
       overlayHypeScore: c.overlay_hype_score,
       overlaySampleSize: c.overlay_sample_size,
+      signal: c.signal,
+      entry: c.entry,
+      stop: c.stop,
+      target: c.target,
+      rr: c.rr,
+      shares: c.shares,
+      positionSizeUsd: c.position_size_usd,
+      riskUsd: c.risk_usd,
+      riskPct: c.risk_pct,
+      recommendation: c.recommendation ? transformRecommendation(c.recommendation) : undefined,
     })),
     asofDate: apiResponse.asof_date,
     totalScreened: apiResponse.total_screened,

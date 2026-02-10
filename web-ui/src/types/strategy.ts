@@ -51,6 +51,8 @@ export interface StrategyRisk {
   maxPositionPct: number;
   minShares: number;
   kAtr: number;
+  minRr: number;
+  maxFeeRiskPct: number;
   regimeEnabled: boolean;
   regimeTrendSma: number;
   regimeTrendMultiplier: number;
@@ -157,6 +159,8 @@ export interface StrategyRiskAPI {
   max_position_pct: number;
   min_shares: number;
   k_atr: number;
+  min_rr?: number;
+  max_fee_risk_pct?: number;
   regime_enabled?: boolean;
   regime_trend_sma?: number;
   regime_trend_multiplier?: number;
@@ -278,6 +282,8 @@ export function transformStrategy(api: StrategyAPI): Strategy {
       maxPositionPct: api.risk.max_position_pct,
       minShares: api.risk.min_shares,
       kAtr: api.risk.k_atr,
+      minRr: api.risk.min_rr ?? 2.0,
+      maxFeeRiskPct: api.risk.max_fee_risk_pct ?? 0.2,
       regimeEnabled: api.risk.regime_enabled ?? false,
       regimeTrendSma: api.risk.regime_trend_sma ?? 200,
       regimeTrendMultiplier: api.risk.regime_trend_multiplier ?? 0.5,
@@ -363,6 +369,8 @@ export function toStrategyUpdateRequest(strategy: Strategy): StrategyUpdateReque
       max_position_pct: strategy.risk.maxPositionPct,
       min_shares: strategy.risk.minShares,
       k_atr: strategy.risk.kAtr,
+      min_rr: strategy.risk.minRr,
+      max_fee_risk_pct: strategy.risk.maxFeeRiskPct,
       regime_enabled: strategy.risk.regimeEnabled,
       regime_trend_sma: strategy.risk.regimeTrendSma,
       regime_trend_multiplier: strategy.risk.regimeTrendMultiplier,

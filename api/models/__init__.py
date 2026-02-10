@@ -36,6 +36,14 @@ from api.models.portfolio import (
     OrdersResponse,
 )
 from api.models.screener import ScreenerCandidate, ScreenerRequest, ScreenerResponse, OrderPreview
+from api.models.recommendation import (
+    Recommendation,
+    RecommendationReason,
+    RecommendationRisk,
+    RecommendationCosts,
+    RecommendationEducation,
+    ChecklistGate,
+)
 from api.models.social import SocialRawEvent, SocialAnalysisRequest, SocialAnalysisResponse
 from api.models.backtest import (
     BacktestSummary,
@@ -93,6 +101,12 @@ __all__ = [
     "ScreenerRequest",
     "ScreenerResponse",
     "OrderPreview",
+    "Recommendation",
+    "RecommendationReason",
+    "RecommendationRisk",
+    "RecommendationCosts",
+    "RecommendationEducation",
+    "ChecklistGate",
     "SocialRawEvent",
     "SocialAnalysisRequest",
     "SocialAnalysisResponse",

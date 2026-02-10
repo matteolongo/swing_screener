@@ -10,6 +10,8 @@ class RiskConfig(BaseModel):
     max_position_pct: float = Field(gt=0, le=1, description="Max position size as % of account")
     min_shares: int = Field(ge=1, description="Minimum shares to trade")
     k_atr: float = Field(gt=0, description="ATR multiplier for stops")
+    min_rr: float = Field(gt=0, default=2.0, description="Minimum reward-to-risk required")
+    max_fee_risk_pct: float = Field(ge=0, le=1, default=0.2, description="Max fees as % of planned risk")
 
 
 class IndicatorConfig(BaseModel):

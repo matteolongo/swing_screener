@@ -6,6 +6,8 @@ export interface RiskConfig {
   maxPositionPct: number;
   minShares: number;
   kAtr: number;
+  minRr: number;
+  maxFeeRiskPct: number;
 }
 
 export interface IndicatorConfig {
@@ -44,6 +46,8 @@ export const DEFAULT_CONFIG: AppConfig = {
     maxPositionPct: 0.60,
     minShares: 1,
     kAtr: 2.0,
+    minRr: 2.0,
+    maxFeeRiskPct: 0.2,
   },
   indicators: {
     smaFast: 20,
