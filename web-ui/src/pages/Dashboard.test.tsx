@@ -88,11 +88,31 @@ describe('Dashboard Page', () => {
       })
     })
 
+    it('calculates risk budget per trade', async () => {
+      renderWithProviders(<Dashboard />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Risk Budget / Trade')).toBeInTheDocument()
+        // $50,000 * 1% = $500
+        expect(screen.getByText('$500.00')).toBeInTheDocument()
+      })
+    })
+
+    it('calculates open risk at stops', async () => {
+      renderWithProviders(<Dashboard />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Open Risk (at stops)')).toBeInTheDocument()
+        // (15.89 - 15.00) * 6 shares = $5.34
+        expect(screen.getByText('$5.34')).toBeInTheDocument()
+      })
+    })
+
     it('calculates total P&L correctly', async () => {
       renderWithProviders(<Dashboard />)
       
       await waitFor(() => {
-        expect(screen.getByText('Total P&L')).toBeInTheDocument()
+        expect(screen.getByText(/Total P&L/i)).toBeInTheDocument()
         // VALE: (currentPrice $16.30 - entryPrice $15.89) * 6 shares = +$2.46
         expect(screen.getByText('+$2.46')).toBeInTheDocument()
       })

@@ -9,7 +9,7 @@ from swing_screener.indicators.momentum import MomentumConfig
 from swing_screener.screeners.ranking import RankingConfig
 from swing_screener.signals.entries import EntrySignalConfig
 from swing_screener.risk.position_sizing import RiskConfig
-from swing_screener.reporting.report import ReportConfig
+from swing_screener.reporting.config import ReportConfig
 from swing_screener.portfolio.state import ManageConfig
 from swing_screener.backtest.simulator import BacktestConfig
 from swing_screener.social.config import SocialOverlayConfig
@@ -75,6 +75,7 @@ def build_report_config(strategy: dict, *, top_override: Optional[int] = None) -
     signals = build_entry_config(strategy)
     risk = build_risk_config(strategy)
     social_overlay = build_social_overlay_config(strategy)
+    strategy_module = strategy.get("module", "momentum") if isinstance(strategy, dict) else "momentum"
 
     if top_override is not None:
         ranking = RankingConfig(
@@ -91,6 +92,7 @@ def build_report_config(strategy: dict, *, top_override: Optional[int] = None) -
         risk=risk,
         social_overlay=social_overlay,
         only_active_signals=False,
+        strategy_module=strategy_module,
     )
 
 
@@ -113,6 +115,8 @@ def build_backtest_config(
     trail_sma = overrides.get("trail_sma", raw.get("trail_sma", 20))
     sma_buffer_pct = overrides.get("sma_buffer_pct", raw.get("sma_buffer_pct", 0.005))
     commission_pct = overrides.get("commission_pct", raw.get("commission_pct", 0.0))
+    slippage_bps = overrides.get("slippage_bps", raw.get("slippage_bps", 5.0))
+    fx_pct = overrides.get("fx_pct", raw.get("fx_pct", 0.0))
     min_history = overrides.get("min_history", raw.get("min_history", signals.min_history))
 
     return BacktestConfig(
@@ -130,4 +134,6 @@ def build_backtest_config(
         sma_buffer_pct=sma_buffer_pct,
         min_history=min_history,
         commission_pct=commission_pct,
+        slippage_bps=slippage_bps,
+        fx_pct=fx_pct,
     )

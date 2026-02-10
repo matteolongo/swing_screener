@@ -17,7 +17,7 @@ from api.models.screener import (
     OrderPreview,
 )
 from api.models.recommendation import Recommendation
-from swing_screener.recommendations.engine import build_recommendation
+from swing_screener.risk.engine import RiskEngineConfig, evaluate_recommendation
 from api.repositories.strategy_repo import StrategyRepository
 from swing_screener.data.universe import (
     load_universe_from_package,
@@ -336,21 +336,19 @@ class ScreenerService:
                 take_profit_r = _safe_float(backtest_cfg.get("take_profit_r", 2.0), default=2.0)
                 commission_pct = _safe_float(backtest_cfg.get("commission_pct", 0.0), default=0.0)
 
-                rec_payload = build_recommendation(
+                rec_payload = evaluate_recommendation(
                     signal=str(signal) if not _is_na_scalar(signal) else None,
                     entry=entry_val,
                     stop=stop_val,
                     shares=shares_val,
-                    account_size=risk_cfg.account_size,
-                    risk_pct_target=risk_cfg.risk_pct,
-                    rr_target=take_profit_r,
-                    min_rr=getattr(risk_cfg, "min_rr", 2.0),
-                    max_fee_risk_pct=getattr(risk_cfg, "max_fee_risk_pct", 0.2),
-                    commission_pct=commission_pct,
-                    slippage_bps=5.0,
-                    fx_estimate_pct=0.0,
                     overlay_status=str(row.get("overlay_status")) if not _is_na_scalar(row.get("overlay_status")) else None,
-                    min_shares=risk_cfg.min_shares,
+                    risk_cfg=risk_cfg,
+                    rr_target=take_profit_r,
+                    costs=RiskEngineConfig(
+                        commission_pct=commission_pct,
+                        slippage_bps=5.0,
+                        fx_estimate_pct=0.0,
+                    ),
                 )
                 recommendation = Recommendation.model_validate(asdict(rec_payload))
                 rec_risk = recommendation.risk

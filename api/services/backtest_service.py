@@ -14,6 +14,8 @@ from api.models.backtest import (
     QuickBacktestResponse,
     BacktestSummary,
     BacktestTrade,
+    BacktestCostSummary,
+    BacktestEducation,
     FullBacktestRequest,
     FullBacktestResponse,
     FullBacktestSummary,
@@ -26,7 +28,12 @@ from api.models.backtest import (
 from api.repositories.strategy_repo import StrategyRepository
 from swing_screener.data.market_data import MarketDataConfig, fetch_ohlcv
 from swing_screener.backtest.simulator import BacktestConfig, backtest_single_ticker_R, summarize_trades
-from swing_screener.backtest.portfolio import equity_curve_R, equity_curve_by_ticker_R, drawdown_stats
+from swing_screener.backtest.portfolio import (
+    equity_curve_R,
+    equity_curve_by_ticker_R,
+    drawdown_stats,
+    rr_distribution,
+)
 from swing_screener.backtest.storage import (
     save_simulation,
     list_simulations,
@@ -98,25 +105,42 @@ class BacktestService:
                     "profit_factor_R": 0.0,
                     "max_drawdown_R": 0.0,
                     "avg_R": 0.0,
+                    "avg_win_R": None,
+                    "avg_loss_R": None,
+                    "trade_frequency_per_year": None,
+                    "rr_distribution": {},
                     "best_trade_R": None,
                     "worst_trade_R": None,
+                    "avg_cost_R": None,
+                    "total_cost_R": None,
                 }
             else:
                 def safe_float(val, default=0.0):
                     return float(val) if val is not None and pd.notna(val) else default
 
+                trades_count = int(summary_df.iloc[0].get("trades", 0))
                 summary_dict = {
-                    "trades": int(summary_df.iloc[0].get("trades", 0)),
+                    "trades": trades_count,
                     "expectancy_R": safe_float(summary_df.iloc[0].get("expectancy_R")),
                     "winrate": safe_float(summary_df.iloc[0].get("winrate")),
                     "profit_factor_R": safe_float(summary_df.iloc[0].get("profit_factor_R")),
                     "max_drawdown_R": safe_float(dd.get("max_drawdown_R")),
                     "avg_R": safe_float(summary_df.iloc[0].get("avg_R")),
+                    "avg_win_R": self._safe_float_optional(summary_df.iloc[0].get("avg_win_R")),
+                    "avg_loss_R": self._safe_float_optional(summary_df.iloc[0].get("avg_loss_R")),
+                    "trade_frequency_per_year": self._trade_frequency_per_year(
+                        trades_count, start_str, end_str
+                    ),
+                    "rr_distribution": rr_distribution(trades),
                     "best_trade_R": float(trades["R"].max()) if trades is not None and not trades.empty else None,
                     "worst_trade_R": float(trades["R"].min()) if trades is not None and not trades.empty else None,
+                    "avg_cost_R": safe_float(trades["R_cost"].mean()) if trades is not None and "R_cost" in trades.columns else None,
+                    "total_cost_R": safe_float(trades["R_cost"].sum()) if trades is not None and "R_cost" in trades.columns else None,
                 }
 
             summary = BacktestSummary(**summary_dict)
+            cost_summary = self._build_cost_summary(trades, cfg)
+            education = self._build_education(summary, cost_summary)
 
             trades_detail = []
             if trades is not None and not trades.empty:
@@ -154,6 +178,8 @@ class BacktestService:
                 summary=summary,
                 trades_detail=trades_detail,
                 warnings=warnings,
+                costs=cost_summary,
+                education=education,
             )
 
         except HTTPException:
@@ -181,7 +207,27 @@ class BacktestService:
         except Exception:
             return None
 
-    def _build_summary(self, trades: pd.DataFrame, max_drawdown_R: float | None) -> FullBacktestSummary:
+    def _trade_frequency_per_year(self, trades: int, start: str | None, end: str | None) -> float | None:
+        if trades <= 0 or not start or not end:
+            return None
+        try:
+            start_dt = pd.to_datetime(start)
+            end_dt = pd.to_datetime(end)
+            days = (end_dt - start_dt).days
+            if days <= 0:
+                return None
+            years = days / 365.25
+            return float(trades) / years if years > 0 else None
+        except Exception:
+            return None
+
+    def _build_summary(
+        self,
+        trades: pd.DataFrame,
+        max_drawdown_R: float | None,
+        start: str | None = None,
+        end: str | None = None,
+    ) -> FullBacktestSummary:
         if trades is None or trades.empty:
             return FullBacktestSummary(trades=0)
 
@@ -191,18 +237,30 @@ class BacktestService:
         best_trade = float(trades["R"].max()) if "R" in trades.columns else None
         worst_trade = float(trades["R"].min()) if "R" in trades.columns else None
 
+        avg_cost_R = self._safe_float_optional(trades["R_cost"].mean()) if "R_cost" in trades.columns else None
+        total_cost_R = self._safe_float_optional(trades["R_cost"].sum()) if "R_cost" in trades.columns else None
+
+        trades_count = int(row.get("trades", 0))
         return FullBacktestSummary(
-            trades=int(row.get("trades", 0)),
+            trades=trades_count,
             expectancy_R=self._safe_float_optional(row.get("expectancy_R")),
             winrate=self._safe_float_optional(row.get("winrate")),
             profit_factor_R=self._safe_float_optional(row.get("profit_factor_R")),
             max_drawdown_R=self._safe_float_optional(max_drawdown_R),
             avg_R=self._safe_float_optional(row.get("avg_R")),
+            avg_win_R=self._safe_float_optional(row.get("avg_win_R")),
+            avg_loss_R=self._safe_float_optional(row.get("avg_loss_R")),
+            trade_frequency_per_year=self._trade_frequency_per_year(trades_count, start, end),
+            rr_distribution=rr_distribution(trades),
             best_trade_R=self._safe_float_optional(best_trade),
             worst_trade_R=self._safe_float_optional(worst_trade),
+            avg_cost_R=avg_cost_R,
+            total_cost_R=total_cost_R,
         )
 
-    def _build_summary_by_ticker(self, trades_all: pd.DataFrame) -> list[FullBacktestSummaryByTicker]:
+    def _build_summary_by_ticker(
+        self, trades_all: pd.DataFrame, start: str | None, end: str | None
+    ) -> list[FullBacktestSummaryByTicker]:
         if trades_all is None or trades_all.empty or "ticker" not in trades_all.columns:
             return []
 
@@ -210,20 +268,93 @@ class BacktestService:
         for ticker, df in trades_all.groupby("ticker"):
             summary_df = summarize_trades(df)
             row = summary_df.iloc[0] if summary_df is not None and not summary_df.empty else {}
+            trades_count = int(row.get("trades", 0))
             out.append(
                 FullBacktestSummaryByTicker(
                     ticker=str(ticker),
-                    trades=int(row.get("trades", 0)),
+                    trades=trades_count,
                     expectancy_R=self._safe_float_optional(row.get("expectancy_R")),
                     winrate=self._safe_float_optional(row.get("winrate")),
                     profit_factor_R=self._safe_float_optional(row.get("profit_factor_R")),
                     max_drawdown_R=None,
                     avg_R=self._safe_float_optional(row.get("avg_R")),
+                    avg_win_R=self._safe_float_optional(row.get("avg_win_R")),
+                    avg_loss_R=self._safe_float_optional(row.get("avg_loss_R")),
+                    trade_frequency_per_year=self._trade_frequency_per_year(trades_count, start, end),
+                    rr_distribution=rr_distribution(df),
                     best_trade_R=self._safe_float_optional(df["R"].max()) if "R" in df.columns else None,
                     worst_trade_R=self._safe_float_optional(df["R"].min()) if "R" in df.columns else None,
+                    avg_cost_R=self._safe_float_optional(df["R_cost"].mean()) if "R_cost" in df.columns else None,
+                    total_cost_R=self._safe_float_optional(df["R_cost"].sum()) if "R_cost" in df.columns else None,
                 )
             )
         return out
+
+    def _build_cost_summary(self, trades: pd.DataFrame, cfg: BacktestConfig) -> BacktestCostSummary:
+        avg_cost_R = (
+            self._safe_float_optional(trades["R_cost"].mean())
+            if trades is not None and "R_cost" in trades.columns
+            else None
+        )
+        total_cost_R = (
+            self._safe_float_optional(trades["R_cost"].sum())
+            if trades is not None and "R_cost" in trades.columns
+            else None
+        )
+        gross_total = (
+            self._safe_float_optional(trades["R_gross"].sum())
+            if trades is not None and "R_gross" in trades.columns
+            else None
+        )
+        net_total = (
+            self._safe_float_optional(trades["R"].sum())
+            if trades is not None and "R" in trades.columns
+            else None
+        )
+        fee_impact_pct = None
+        if gross_total is not None and gross_total != 0 and total_cost_R is not None:
+            fee_impact_pct = abs(total_cost_R) / abs(gross_total)
+        return BacktestCostSummary(
+            commission_pct=cfg.commission_pct,
+            slippage_bps=cfg.slippage_bps,
+            fx_pct=cfg.fx_pct,
+            gross_R_total=gross_total,
+            net_R_total=net_total,
+            fee_impact_pct=fee_impact_pct,
+            avg_cost_R=avg_cost_R,
+            total_cost_R=total_cost_R,
+        )
+
+    def _build_education(self, summary: FullBacktestSummary | BacktestSummary, costs: BacktestCostSummary) -> BacktestEducation:
+        drivers: list[str] = []
+        caveats: list[str] = [
+            "Assumes entries at next bar open and ignores intraday liquidity constraints.",
+            "Results include estimated costs (commission, slippage, FX).",
+        ]
+
+        if summary.trades == 0:
+            overview = "No trades were generated in this window."
+        else:
+            overview = "Results are net of basic execution costs and designed for learning, not prediction."
+
+        if summary.expectancy_R is not None:
+            drivers.append(f"Expectancy: {summary.expectancy_R:.2f}R")
+        if summary.winrate is not None:
+            drivers.append(f"Win rate: {summary.winrate:.0%}")
+        if summary.avg_win_R is not None and summary.avg_loss_R is not None:
+            drivers.append(
+                f"Avg win/loss: {summary.avg_win_R:.2f}R / {summary.avg_loss_R:.2f}R"
+            )
+        if summary.trade_frequency_per_year is not None:
+            drivers.append(
+                f"Trade frequency: {summary.trade_frequency_per_year:.1f} trades/year"
+            )
+        if costs.total_cost_R is not None and costs.total_cost_R > 0:
+            drivers.append("Costs reduced results; review position sizing and trade frequency.")
+        if costs.fee_impact_pct is not None:
+            drivers.append(f"Fee impact: {costs.fee_impact_pct:.0%} of gross R.")
+
+        return BacktestEducation(overview=overview, drivers=drivers, caveats=caveats)
 
     def _curve_points_total(self, curve: pd.DataFrame) -> list[BacktestCurvePoint]:
         if curve is None or curve.empty:
@@ -302,6 +433,8 @@ class BacktestService:
                 "trail_sma",
                 "sma_buffer_pct",
                 "commission_pct",
+                "slippage_bps",
+                "fx_pct",
                 "min_history",
             ]:
                 if field in fields_set:
@@ -351,8 +484,14 @@ class BacktestService:
             curve_by_ticker = equity_curve_by_ticker_R(trades_all)
             dd = drawdown_stats(curve_total)
 
-            summary = self._build_summary(trades_all, dd.get("max_drawdown_R"))
-            summary_by_ticker = self._build_summary_by_ticker(trades_all)
+            summary = self._build_summary(
+                trades_all, dd.get("max_drawdown_R"), start=str(start_date), end=str(end_date)
+            )
+            summary_by_ticker = self._build_summary_by_ticker(
+                trades_all, start=str(start_date), end=str(end_date)
+            )
+            cost_summary = self._build_cost_summary(trades_all, cfg)
+            education = self._build_education(summary, cost_summary)
 
             if summary.trades == 0:
                 warnings.append("No trades generated. Try a longer range or different entry type.")
@@ -401,6 +540,8 @@ class BacktestService:
                 simulation_id=sim_id,
                 simulation_name=simulation_name,
                 created_at=created_at.isoformat(),
+                costs=cost_summary,
+                education=education,
             )
 
             params_payload = request.model_dump()

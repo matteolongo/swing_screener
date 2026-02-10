@@ -20,6 +20,12 @@ import { formatDateTime, formatPercent, formatR, formatCurrency } from '@/utils/
 import EquityCurveChart from '@/components/domain/backtest/EquityCurveChart';
 
 const STORAGE_KEY = 'backtest.params.v1';
+const DEFAULT_LIVE_GAPS = [
+  'Backtests assume next-bar entries; live fills can be worse.',
+  'Stops can slip beyond planned levels during gaps or fast moves.',
+  'Liquidity and order queue priority are simplified in backtests.',
+  'Historical data can be revised or survivorship-biased.',
+];
 
 interface BacktestFormState {
   tickersText: string;
@@ -234,6 +240,11 @@ export default function Backtest() {
 
   const result = runMutation.data ?? loadedResult;
 
+  const liveCaveats = useMemo(() => {
+    if (result?.education?.caveats?.length) return result.education.caveats;
+    return DEFAULT_LIVE_GAPS;
+  }, [result]);
+
   const summaryCards = useMemo(() => {
     if (!result) return [];
     const s = result.summary;
@@ -242,6 +253,12 @@ export default function Backtest() {
       { label: 'Expectancy', value: s.expectancyR != null ? formatR(s.expectancyR) : '—' },
       { label: 'Win Rate', value: s.winrate != null ? formatPercent(s.winrate * 100) : '—' },
       { label: 'Profit Factor', value: s.profitFactorR != null ? s.profitFactorR.toFixed(2) : '—' },
+      { label: 'Avg Win', value: s.avgWinR != null ? formatR(s.avgWinR) : '—' },
+      { label: 'Avg Loss', value: s.avgLossR != null ? formatR(s.avgLossR) : '—' },
+      {
+        label: 'Trades/Year',
+        value: s.tradeFrequencyPerYear != null ? s.tradeFrequencyPerYear.toFixed(1) : '—',
+      },
       { label: 'Max Drawdown', value: s.maxDrawdownR != null ? formatR(s.maxDrawdownR) : '—' },
       { label: 'Avg R', value: s.avgR != null ? formatR(s.avgR) : '—' },
     ];
@@ -562,6 +579,130 @@ export default function Backtest() {
               ) : (
                 <div className="text-sm text-gray-500">Run a backtest to see summary metrics.</div>
               )}
+            </CardContent>
+          </Card>
+
+          <Card variant="bordered">
+            <CardHeader>
+              <CardTitle>Cost Impact</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {result?.costs ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                  <div className="p-3 bg-gray-50 rounded">
+                    <div className="text-xs text-gray-600">Commission</div>
+                    <div className="text-lg font-semibold">{formatPercent(result.costs.commissionPct * 100)}</div>
+                  </div>
+                  <div className="p-3 bg-gray-50 rounded">
+                    <div className="text-xs text-gray-600">Slippage (bps)</div>
+                    <div className="text-lg font-semibold">{result.costs.slippageBps.toFixed(1)}</div>
+                  </div>
+                  <div className="p-3 bg-gray-50 rounded">
+                    <div className="text-xs text-gray-600">FX Cost</div>
+                    <div className="text-lg font-semibold">{formatPercent(result.costs.fxPct * 100)}</div>
+                  </div>
+                  <div className="p-3 bg-gray-50 rounded">
+                    <div className="text-xs text-gray-600">Avg Cost (R)</div>
+                    <div className="text-lg font-semibold">
+                      {result.costs.avgCostR != null ? formatR(result.costs.avgCostR) : '—'}
+                    </div>
+                  </div>
+                  <div className="p-3 bg-gray-50 rounded">
+                    <div className="text-xs text-gray-600">Total Cost (R)</div>
+                    <div className="text-lg font-semibold">
+                      {result.costs.totalCostR != null ? formatR(result.costs.totalCostR) : '—'}
+                    </div>
+                  </div>
+                  <div className="p-3 bg-gray-50 rounded">
+                    <div className="text-xs text-gray-600">Gross R (total)</div>
+                    <div className="text-lg font-semibold">
+                      {result.costs.grossRTotal != null ? formatR(result.costs.grossRTotal) : '—'}
+                    </div>
+                  </div>
+                  <div className="p-3 bg-gray-50 rounded">
+                    <div className="text-xs text-gray-600">Net R (total)</div>
+                    <div className="text-lg font-semibold">
+                      {result.costs.netRTotal != null ? formatR(result.costs.netRTotal) : '—'}
+                    </div>
+                  </div>
+                  <div className="p-3 bg-gray-50 rounded">
+                    <div className="text-xs text-gray-600">Fee Impact</div>
+                    <div className="text-lg font-semibold">
+                      {result.costs.feeImpactPct != null ? formatPercent(result.costs.feeImpactPct * 100, 1) : '—'}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-sm text-gray-500">Run a backtest to see cost impact.</div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card variant="bordered">
+            <CardHeader>
+              <CardTitle>RR Distribution</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {result?.summary.rrDistribution && Object.keys(result.summary.rrDistribution).length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                  {Object.entries(result.summary.rrDistribution).map(([label, count]) => (
+                    <div key={label} className="p-3 bg-gray-50 rounded">
+                      <div className="text-xs text-gray-600">{label}</div>
+                      <div className="text-lg font-semibold">{count}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-gray-500">Run a backtest to see RR distribution.</div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card variant="bordered">
+            <CardHeader>
+              <CardTitle>Education Report</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {result?.education ? (
+                <div className="space-y-3 text-sm">
+                  <div className="text-gray-700">{result.education.overview}</div>
+                  {result.education.drivers.length > 0 && (
+                    <div>
+                      <div className="text-xs text-gray-500">Key Drivers</div>
+                      <ul className="list-disc ml-5 mt-1 space-y-1">
+                        {result.education.drivers.map((d) => (
+                          <li key={d}>{d}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {result.education.caveats.length > 0 && (
+                    <div>
+                      <div className="text-xs text-gray-500">Caveats</div>
+                      <ul className="list-disc ml-5 mt-1 space-y-1">
+                        {result.education.caveats.map((c) => (
+                          <li key={c}>{c}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-sm text-gray-500">Run a backtest to see education notes.</div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card variant="bordered">
+            <CardHeader>
+              <CardTitle>Why Backtests Differ From Live</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="list-disc ml-5 space-y-2 text-sm text-gray-700">
+                {liveCaveats.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
             </CardContent>
           </Card>
 

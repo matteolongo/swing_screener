@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Iterable, Tuple
+import math
 import warnings
 
 import pandas as pd
@@ -118,3 +119,32 @@ def drawdown_stats(curve: pd.DataFrame) -> dict:
     dd = curve["cum_R"] - curve["cum_R"].cummax()
     max_dd = float(dd.min())
     return {"max_drawdown_R": max_dd}
+
+
+def rr_distribution(trades: pd.DataFrame) -> dict[str, int]:
+    """
+    Bucketized distribution of R-multiples for teaching impact.
+    """
+    if trades is None or trades.empty or "R" not in trades.columns:
+        return {}
+
+    r = trades["R"]
+    buckets = [
+        ("<-1R", -math.inf, -1.0),
+        ("-1 to 0R", -1.0, 0.0),
+        ("0 to 1R", 0.0, 1.0),
+        ("1 to 2R", 1.0, 2.0),
+        ("2 to 3R", 2.0, 3.0),
+        (">=3R", 3.0, math.inf),
+    ]
+
+    out: dict[str, int] = {}
+    for label, low, high in buckets:
+        if low == -math.inf:
+            count = int((r < high).sum())
+        elif high == math.inf:
+            count = int((r >= low).sum())
+        else:
+            count = int(((r >= low) & (r < high)).sum())
+        out[label] = count
+    return out

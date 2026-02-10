@@ -48,6 +48,8 @@ from api.models.social import SocialRawEvent, SocialAnalysisRequest, SocialAnaly
 from api.models.backtest import (
     BacktestSummary,
     BacktestTrade,
+    BacktestCostSummary,
+    BacktestEducation,
     QuickBacktestRequest,
     QuickBacktestResponse,
     FullEntryType,
@@ -112,6 +114,8 @@ __all__ = [
     "SocialAnalysisResponse",
     "BacktestSummary",
     "BacktestTrade",
+    "BacktestCostSummary",
+    "BacktestEducation",
     "QuickBacktestRequest",
     "QuickBacktestResponse",
     "FullEntryType",

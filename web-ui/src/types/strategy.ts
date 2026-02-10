@@ -97,6 +97,7 @@ export interface Strategy {
   id: string;
   name: string;
   description?: string;
+  module: string;
   universe: StrategyUniverse;
   ranking: StrategyRanking;
   signals: StrategySignals;
@@ -205,6 +206,7 @@ export interface StrategyAPI {
   id: string;
   name: string;
   description?: string | null;
+  module?: string;
   universe: StrategyUniverseAPI;
   ranking: StrategyRankingAPI;
   signals: StrategySignalsAPI;
@@ -220,6 +222,7 @@ export interface StrategyAPI {
 export interface StrategyUpdateRequestAPI {
   name: string;
   description?: string | null;
+  module?: string;
   universe: StrategyUniverseAPI;
   ranking: StrategyRankingAPI;
   signals: StrategySignalsAPI;
@@ -243,6 +246,7 @@ export function transformStrategy(api: StrategyAPI): Strategy {
     id: api.id,
     name: api.name,
     description: api.description ?? undefined,
+    module: api.module ?? 'momentum',
     universe: {
       trend: {
         smaFast: api.universe.trend.sma_fast,
@@ -330,6 +334,7 @@ export function toStrategyUpdateRequest(strategy: Strategy): StrategyUpdateReque
   return {
     name: strategy.name,
     description: strategy.description ?? undefined,
+    module: strategy.module ?? 'momentum',
     universe: {
       trend: {
         sma_fast: strategy.universe.trend.smaFast,

@@ -7,8 +7,14 @@ export interface BacktestSummary {
   profitFactorR: number;
   maxDrawdownR: number;
   avgR: number;
+  avgWinR?: number | null;
+  avgLossR?: number | null;
+  tradeFrequencyPerYear?: number | null;
+  rrDistribution?: Record<string, number> | null;
   bestTradeR: number | null;
   worstTradeR: number | null;
+  avgCostR?: number | null;
+  totalCostR?: number | null;
 }
 
 export interface BacktestTrade {
@@ -37,6 +43,25 @@ export interface QuickBacktestResponse {
   summary: BacktestSummary;  // Use transformed camelCase version
   tradesDetail: BacktestTrade[];  // Use transformed camelCase version
   warnings: string[];
+  costs?: BacktestCostSummary;
+  education?: BacktestEducation;
+}
+
+export interface BacktestCostSummary {
+  commissionPct: number;
+  slippageBps: number;
+  fxPct: number;
+  grossRTotal?: number | null;
+  netRTotal?: number | null;
+  feeImpactPct?: number | null;
+  avgCostR?: number | null;
+  totalCostR?: number | null;
+}
+
+export interface BacktestEducation {
+  overview: string;
+  drivers: string[];
+  caveats: string[];
 }
 
 // API response formats (snake_case)
@@ -47,8 +72,14 @@ export interface BacktestSummaryAPI {
   profit_factor_R: number;
   max_drawdown_R: number;
   avg_R: number;
+  avg_win_R?: number | null;
+  avg_loss_R?: number | null;
+  trade_frequency_per_year?: number | null;
+  rr_distribution?: Record<string, number> | null;
   best_trade_R: number | null;
   worst_trade_R: number | null;
+  avg_cost_R?: number | null;
+  total_cost_R?: number | null;
 }
 
 export interface BacktestTradeAPI {
@@ -69,6 +100,25 @@ export interface QuickBacktestResponseAPI {
   summary: BacktestSummaryAPI;
   trades_detail: BacktestTradeAPI[];
   warnings: string[];
+  costs?: BacktestCostSummaryAPI;
+  education?: BacktestEducationAPI;
+}
+
+export interface BacktestCostSummaryAPI {
+  commission_pct: number;
+  slippage_bps: number;
+  fx_pct: number;
+  gross_R_total?: number | null;
+  net_R_total?: number | null;
+  fee_impact_pct?: number | null;
+  avg_cost_R?: number | null;
+  total_cost_R?: number | null;
+}
+
+export interface BacktestEducationAPI {
+  overview: string;
+  drivers: string[];
+  caveats: string[];
 }
 
 // Transform functions
@@ -80,8 +130,14 @@ export function transformBacktestSummary(api: BacktestSummaryAPI): BacktestSumma
     profitFactorR: api.profit_factor_R,
     maxDrawdownR: api.max_drawdown_R,
     avgR: api.avg_R,
+    avgWinR: api.avg_win_R ?? undefined,
+    avgLossR: api.avg_loss_R ?? undefined,
+    tradeFrequencyPerYear: api.trade_frequency_per_year ?? undefined,
+    rrDistribution: api.rr_distribution ?? undefined,
     bestTradeR: api.best_trade_R,
     worstTradeR: api.worst_trade_R,
+    avgCostR: api.avg_cost_R ?? undefined,
+    totalCostR: api.total_cost_R ?? undefined,
   };
 }
 
@@ -106,6 +162,25 @@ export function transformQuickBacktestResponse(api: QuickBacktestResponseAPI): Q
     summary: transformBacktestSummary(api.summary),  // Transform summary!
     tradesDetail: api.trades_detail.map(transformBacktestTrade),  // Transform each trade!
     warnings: api.warnings,
+    costs: api.costs
+      ? {
+          commissionPct: api.costs.commission_pct,
+          slippageBps: api.costs.slippage_bps,
+          fxPct: api.costs.fx_pct,
+          grossRTotal: api.costs.gross_R_total ?? undefined,
+          netRTotal: api.costs.net_R_total ?? undefined,
+          feeImpactPct: api.costs.fee_impact_pct ?? undefined,
+          avgCostR: api.costs.avg_cost_R ?? undefined,
+          totalCostR: api.costs.total_cost_R ?? undefined,
+        }
+      : undefined,
+    education: api.education
+      ? {
+          overview: api.education.overview,
+          drivers: api.education.drivers,
+          caveats: api.education.caveats,
+        }
+      : undefined,
   };
 }
 
@@ -130,6 +205,8 @@ export interface FullBacktestParams {
   smaBufferPct: number;
   maxHoldingDays: number;
   commissionPct: number;
+  slippageBps?: number;
+  fxPct?: number;
 }
 
 export interface FullBacktestSummary {
@@ -139,8 +216,14 @@ export interface FullBacktestSummary {
   profitFactorR: number | null;
   maxDrawdownR: number | null;
   avgR: number | null;
+  avgWinR?: number | null;
+  avgLossR?: number | null;
+  tradeFrequencyPerYear?: number | null;
+  rrDistribution?: Record<string, number> | null;
   bestTradeR: number | null;
   worstTradeR: number | null;
+  avgCostR?: number | null;
+  totalCostR?: number | null;
 }
 
 export interface FullBacktestSummaryByTicker extends FullBacktestSummary {
@@ -180,6 +263,8 @@ export interface FullBacktestResponse {
   simulationId: string;
   simulationName: string;
   createdAt: string;
+  costs?: BacktestCostSummary;
+  education?: BacktestEducation;
 }
 
 export interface FullBacktestResponseAPI {
@@ -194,8 +279,14 @@ export interface FullBacktestResponseAPI {
     profit_factor_R: number | null;
     max_drawdown_R: number | null;
     avg_R: number | null;
+    avg_win_R?: number | null;
+    avg_loss_R?: number | null;
+    trade_frequency_per_year?: number | null;
+    rr_distribution?: Record<string, number> | null;
     best_trade_R: number | null;
     worst_trade_R: number | null;
+    avg_cost_R?: number | null;
+    total_cost_R?: number | null;
   };
   summary_by_ticker: Array<{
     ticker: string;
@@ -205,8 +296,14 @@ export interface FullBacktestResponseAPI {
     profit_factor_R: number | null;
     max_drawdown_R: number | null;
     avg_R: number | null;
+    avg_win_R?: number | null;
+    avg_loss_R?: number | null;
+    trade_frequency_per_year?: number | null;
+    rr_distribution?: Record<string, number> | null;
     best_trade_R: number | null;
     worst_trade_R: number | null;
+    avg_cost_R?: number | null;
+    total_cost_R?: number | null;
   }>;
   trades: Array<{
     ticker: string;
@@ -235,6 +332,8 @@ export interface FullBacktestResponseAPI {
   simulation_id: string;
   simulation_name: string;
   created_at: string;
+  costs?: BacktestCostSummaryAPI;
+  education?: BacktestEducationAPI;
 }
 
 export interface BacktestSimulationMeta {
@@ -288,6 +387,8 @@ export interface BacktestSimulationAPI {
     sma_buffer_pct: number;
     max_holding_days: number;
     commission_pct: number;
+    slippage_bps?: number;
+    fx_pct?: number;
   };
   result: FullBacktestResponseAPI;
 }
@@ -305,8 +406,14 @@ export function transformFullBacktestResponse(api: FullBacktestResponseAPI): Ful
       profitFactorR: api.summary.profit_factor_R,
       maxDrawdownR: api.summary.max_drawdown_R,
       avgR: api.summary.avg_R,
+      avgWinR: api.summary.avg_win_R ?? undefined,
+      avgLossR: api.summary.avg_loss_R ?? undefined,
+      tradeFrequencyPerYear: api.summary.trade_frequency_per_year ?? undefined,
+      rrDistribution: api.summary.rr_distribution ?? undefined,
       bestTradeR: api.summary.best_trade_R,
       worstTradeR: api.summary.worst_trade_R,
+      avgCostR: api.summary.avg_cost_R ?? undefined,
+      totalCostR: api.summary.total_cost_R ?? undefined,
     },
     summaryByTicker: api.summary_by_ticker.map((s) => ({
       ticker: s.ticker,
@@ -316,8 +423,14 @@ export function transformFullBacktestResponse(api: FullBacktestResponseAPI): Ful
       profitFactorR: s.profit_factor_R,
       maxDrawdownR: s.max_drawdown_R,
       avgR: s.avg_R,
+      avgWinR: s.avg_win_R ?? undefined,
+      avgLossR: s.avg_loss_R ?? undefined,
+      tradeFrequencyPerYear: s.trade_frequency_per_year ?? undefined,
+      rrDistribution: s.rr_distribution ?? undefined,
       bestTradeR: s.best_trade_R,
       worstTradeR: s.worst_trade_R,
+      avgCostR: s.avg_cost_R ?? undefined,
+      totalCostR: s.total_cost_R ?? undefined,
     })),
     trades: api.trades.map((t) => ({
       ticker: t.ticker,
@@ -346,6 +459,25 @@ export function transformFullBacktestResponse(api: FullBacktestResponseAPI): Ful
     simulationId: api.simulation_id,
     simulationName: api.simulation_name,
     createdAt: api.created_at,
+    costs: api.costs
+      ? {
+          commissionPct: api.costs.commission_pct,
+          slippageBps: api.costs.slippage_bps,
+          fxPct: api.costs.fx_pct,
+          grossRTotal: api.costs.gross_R_total ?? undefined,
+          netRTotal: api.costs.net_R_total ?? undefined,
+          feeImpactPct: api.costs.fee_impact_pct ?? undefined,
+          avgCostR: api.costs.avg_cost_R ?? undefined,
+          totalCostR: api.costs.total_cost_R ?? undefined,
+        }
+      : undefined,
+    education: api.education
+      ? {
+          overview: api.education.overview,
+          drivers: api.education.drivers,
+          caveats: api.education.caveats,
+        }
+      : undefined,
   };
 }
 
@@ -367,6 +499,8 @@ export function transformBacktestParamsFromAPI(api: BacktestSimulationAPI['param
     smaBufferPct: api.sma_buffer_pct,
     maxHoldingDays: api.max_holding_days,
     commissionPct: api.commission_pct,
+    slippageBps: api.slippage_bps,
+    fxPct: api.fx_pct,
   };
 }
 

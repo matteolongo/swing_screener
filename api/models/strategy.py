@@ -102,6 +102,7 @@ class StrategySocialOverlay(BaseModel):
 class StrategyBase(BaseModel):
     name: str
     description: Optional[str] = None
+    module: str = "momentum"
     universe: StrategyUniverse
     ranking: StrategyRanking
     signals: StrategySignals

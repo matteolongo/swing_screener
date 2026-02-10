@@ -65,3 +65,59 @@ def test_screener_empty_ohlcv_returns_404(monkeypatch):
     client = TestClient(app)
     res = client.post("/api/screener/run", json={"universe": "mega_all", "top": 200})
     assert res.status_code == 404
+
+
+def test_screener_recommendation_payload_shape(monkeypatch):
+    ohlcv = _ohlcv_with_spy()
+
+    def fake_fetch_ohlcv(tickers, cfg, use_cache=True, force_refresh=False):
+        return ohlcv
+
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None):
+        idx = ["AAA"]
+        data = {
+            "atr14": [1.2],
+            "mom_6m": [0.1],
+            "mom_12m": [0.2],
+            "rs_6m": [0.05],
+            "score": [0.55],
+            "confidence": [60.0],
+            "last": [50.0],
+            "ma20_level": [48.0],
+            "dist_sma50_pct": [5.0],
+            "dist_sma200_pct": [10.0],
+            "rank": [1],
+            "signal": ["breakout"],
+            "entry": [50.0],
+            "stop": [48.0],
+            "shares": [10],
+            "position_value": [500.0],
+            "realized_risk": [20.0],
+            "overlay_status": ["OK"],
+            "overlay_reasons": [[]],
+        }
+        return pd.DataFrame(data, index=idx)
+
+    monkeypatch.setattr(screener_service, "fetch_ohlcv", fake_fetch_ohlcv)
+    monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
+    monkeypatch.setattr(screener_service, "get_multiple_ticker_info", lambda tickers: {})
+
+    client = TestClient(app)
+    res = client.post("/api/screener/run", json={"universe": "mega_all", "top": 20})
+    assert res.status_code == 200
+
+    candidate = res.json()["candidates"][0]
+    rec = candidate["recommendation"]
+
+    assert rec["verdict"] in {"RECOMMENDED", "NOT_RECOMMENDED"}
+    assert isinstance(rec["reasons_short"], list)
+    assert isinstance(rec["reasons_detailed"], list)
+    assert "risk" in rec
+    assert "costs" in rec
+    assert "checklist" in rec
+    assert "education" in rec
+    assert rec["risk"]["entry"] == 50.0
+    assert rec["risk"]["stop"] == 48.0
+    assert rec["risk"]["shares"] == 10
+    assert isinstance(rec["checklist"][0]["gate_name"], str)
+    assert isinstance(rec["education"]["what_would_make_valid"], list)
