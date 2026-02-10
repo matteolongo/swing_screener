@@ -1,0 +1,10 @@
+.git
+.gitignore
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+web-ui/node_modules/
+web-ui/dist/
+out/
+data/*.csv

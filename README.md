@@ -32,6 +32,18 @@ Then open [http://localhost:5173](http://localhost:5173)
 
 ---
 
+### 🐳 Docker (Dev)
+
+Dev-only Docker Compose setup for API + Vite dev server:
+
+```bash
+docker compose up --build
+```
+
+Then open [http://localhost:5173](http://localhost:5173)
+
+---
+
 ### 💻 CLI (Advanced)
 
 Command-line interface for automation, scripting, and headless environments.
