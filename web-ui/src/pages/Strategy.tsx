@@ -47,6 +47,13 @@ const buildHelp = (
 });
 
 const help = {
+  module: buildHelp(
+    'Strategy Module',
+    'Select the strategy logic used for screening.',
+    'Defines which strategy module drives signals and recommendations.',
+    'Keeps the architecture modular for future strategies.',
+    'Start with Momentum; add others later.'
+  ),
   breakoutLookback: buildHelp(
     'Breakout Lookback',
     'Window for breakout highs/lows.',
@@ -287,6 +294,10 @@ const help = {
   ),
 };
 
+const STRATEGY_MODULES = [
+  { value: 'momentum', label: 'Momentum (default)' },
+];
+
 function cloneStrategy(strategy: Strategy): Strategy {
   return JSON.parse(JSON.stringify(strategy)) as Strategy;
 }
@@ -360,6 +371,40 @@ function TextInput({
   );
 }
 
+function SelectInput({
+  label,
+  value,
+  onChange,
+  options,
+  help,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: Array<{ value: string; label: string }>;
+  help?: HelpInfo;
+}) {
+  return (
+    <label className="text-sm font-medium">
+      <div className="mb-2 flex items-center gap-2">
+        <span>{label}</span>
+        {help && <HelpTooltip short={help.short} title={help.title} content={help.content} />}
+      </div>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={fieldClass}
+      >
+        {options.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 function CheckboxInput({
   label,
   checked,
@@ -384,40 +429,6 @@ function CheckboxInput({
       </label>
       {help && <HelpTooltip short={help.short} title={help.title} content={help.content} />}
     </div>
-  );
-}
-
-function SelectInput({
-  label,
-  value,
-  options,
-  onChange,
-  help,
-}: {
-  label: string;
-  value: string;
-  options: Array<{ value: string; label: string }>;
-  onChange: (value: string) => void;
-  help?: HelpInfo;
-}) {
-  return (
-    <label className="text-sm font-medium">
-      <div className="mb-2 flex items-center gap-2">
-        <span>{label}</span>
-        {help && <HelpTooltip short={help.short} title={help.title} content={help.content} />}
-      </div>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={fieldClass}
-      >
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
-    </label>
   );
 }
 
@@ -715,6 +726,13 @@ export default function StrategyPage() {
                   value={draft.description ?? ''}
                   onChange={(value) => setDraft({ ...draft, description: value })}
                   placeholder="Optional description"
+                />
+                <SelectInput
+                  label="Strategy Module"
+                  value={draft.module ?? 'momentum'}
+                  onChange={(value) => setDraft({ ...draft, module: value })}
+                  options={STRATEGY_MODULES}
+                  help={help.module}
                 />
               </div>
               <div className="mt-3 text-xs text-gray-500">ID: {draft.id}</div>
