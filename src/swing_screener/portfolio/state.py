@@ -9,6 +9,8 @@ from dataclasses import replace
 
 import pandas as pd
 
+from swing_screener.utils.file_lock import locked_read_json_cli, locked_write_json_cli
+
 
 PositionStatus = Literal["open", "closed"]
 
@@ -58,7 +60,7 @@ class PositionUpdate:
 
 def load_positions(path: str | Path) -> list[Position]:
     p = Path(path)
-    data = json.loads(p.read_text(encoding="utf-8"))
+    data = locked_read_json_cli(p)
     out: list[Position] = []
     for item in data.get("positions", []):
         out.append(
@@ -128,7 +130,7 @@ def save_positions(
             for pos in positions
         ],
     }
-    p.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    locked_write_json_cli(p, payload)
 
 
 def scale_in_position(

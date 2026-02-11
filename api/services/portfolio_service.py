@@ -126,12 +126,38 @@ class PortfolioService:
                     raise HTTPException(status_code=400, detail="Cannot update stop on closed position")
 
                 old_stop = pos.get("stop_price")
+                entry_price = pos.get("entry_price")
                 new_stop = request.new_stop
+                
+                # Validation: stop must move up only (trailing stop)
                 if new_stop <= old_stop:
                     raise HTTPException(
                         status_code=400,
                         detail=f"Cannot move stop down. Current: {old_stop}, Requested: {new_stop}",
                     )
+                
+                # Validation: stop must be below entry (for long positions)
+                if entry_price and new_stop >= entry_price:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Stop price ({new_stop}) must be below entry price ({entry_price}) for long positions"
+                    )
+                
+                # Optional: fetch current price and validate stop is reasonable
+                ticker = pos.get("ticker")
+                try:
+                    cfg = MarketDataConfig(lookback_days=5)
+                    ohlcv = fetch_ohlcv([ticker], cfg)
+                    if not ohlcv.empty and ticker in ohlcv.columns.get_level_values(1):
+                        current_price = ohlcv[("Close", ticker)].iloc[-1]
+                        if not pd.isna(current_price):
+                            # Warn if stop is way above current price
+                            if new_stop > current_price * 1.1:
+                                logger.warning(
+                                    f"Stop price {new_stop} is >10% above current price {current_price} for {ticker}"
+                                )
+                except Exception as exc:
+                    logger.warning(f"Could not fetch current price for validation: {exc}")
 
                 pos["stop_price"] = new_stop
                 if request.reason:

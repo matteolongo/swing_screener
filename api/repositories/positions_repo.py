@@ -5,7 +5,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from api.utils.files import read_json_file, write_json_file, get_today_str
+from api.utils.file_lock import locked_read_json, locked_write_json
+from api.utils.files import get_today_str
 
 
 @dataclass
@@ -13,10 +14,10 @@ class PositionsRepository:
     path: Path
 
     def read(self) -> dict:
-        return read_json_file(self.path)
+        return locked_read_json(self.path)
 
     def write(self, data: dict) -> None:
-        write_json_file(self.path, data)
+        locked_write_json(self.path, data)
 
     def list_positions(self, status: Optional[str] = None) -> tuple[list[dict], str]:
         data = self.read()

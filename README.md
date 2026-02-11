@@ -186,3 +186,13 @@ npm run test:coverage # Run with coverage report
 
 ### Planning
 - **[ROADMAP.md](ROADMAP.md)** — Feature roadmap and priorities
+
+## Technical Indicators
+
+The Swing Screener uses simple, transparent technical indicators:
+- **SMA** (Simple Moving Average) - Trend identification
+- **ATR** (Average True Range) - Volatility measurement
+- **Momentum** - Price returns over lookback periods
+
+All indicators are **validated against TA-Lib** (industry-standard library) to ensure correctness
+while maintaining code simplicity. See [`docs/INDICATOR_VALIDATION.md`](docs/INDICATOR_VALIDATION.md) for details.
