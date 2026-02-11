@@ -1,8 +1,6 @@
 """Tests for daily review service."""
-import json
 from datetime import date
-from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 import pytest
 
 from api.models.daily_review import DailyReview
@@ -155,9 +153,9 @@ def mock_portfolio_service():
     return service
 
 
-def test_generate_daily_review_basic(mock_screener_service, mock_portfolio_service):
+def test_generate_daily_review_basic(mock_screener_service, mock_portfolio_service, tmp_path):
     """Test basic daily review generation."""
-    service = DailyReviewService(mock_screener_service, mock_portfolio_service)
+    service = DailyReviewService(mock_screener_service, mock_portfolio_service, data_dir=tmp_path)
     
     review = service.generate_daily_review(top_n=10)
     
@@ -177,9 +175,9 @@ def test_generate_daily_review_basic(mock_screener_service, mock_portfolio_servi
     assert review.summary.review_date == date.today()
 
 
-def test_generate_daily_review_top_n_limit(mock_screener_service, mock_portfolio_service):
+def test_generate_daily_review_top_n_limit(mock_screener_service, mock_portfolio_service, tmp_path):
     """Test that top_n correctly limits candidates."""
-    service = DailyReviewService(mock_screener_service, mock_portfolio_service)
+    service = DailyReviewService(mock_screener_service, mock_portfolio_service, data_dir=tmp_path)
     
     review = service.generate_daily_review(top_n=1)
     
@@ -189,9 +187,9 @@ def test_generate_daily_review_top_n_limit(mock_screener_service, mock_portfolio
     assert review.summary.new_candidates == 1
 
 
-def test_generate_daily_review_candidates_fields(mock_screener_service, mock_portfolio_service):
+def test_generate_daily_review_candidates_fields(mock_screener_service, mock_portfolio_service, tmp_path):
     """Test that candidate fields are correctly mapped."""
-    service = DailyReviewService(mock_screener_service, mock_portfolio_service)
+    service = DailyReviewService(mock_screener_service, mock_portfolio_service, data_dir=tmp_path)
     
     review = service.generate_daily_review(top_n=10)
     
@@ -206,9 +204,9 @@ def test_generate_daily_review_candidates_fields(mock_screener_service, mock_por
     assert candidate.sector == "Technology"
 
 
-def test_generate_daily_review_position_hold(mock_screener_service, mock_portfolio_service):
+def test_generate_daily_review_position_hold(mock_screener_service, mock_portfolio_service, tmp_path):
     """Test position categorized as 'hold' (no action)."""
-    service = DailyReviewService(mock_screener_service, mock_portfolio_service)
+    service = DailyReviewService(mock_screener_service, mock_portfolio_service, data_dir=tmp_path)
     
     review = service.generate_daily_review(top_n=10)
     
@@ -222,9 +220,9 @@ def test_generate_daily_review_position_hold(mock_screener_service, mock_portfol
     assert "no trailing signal" in hold_pos.reason.lower()
 
 
-def test_generate_daily_review_position_update(mock_screener_service, mock_portfolio_service):
+def test_generate_daily_review_position_update(mock_screener_service, mock_portfolio_service, tmp_path):
     """Test position categorized as 'update stop'."""
-    service = DailyReviewService(mock_screener_service, mock_portfolio_service)
+    service = DailyReviewService(mock_screener_service, mock_portfolio_service, data_dir=tmp_path)
     
     review = service.generate_daily_review(top_n=10)
     
@@ -237,9 +235,9 @@ def test_generate_daily_review_position_update(mock_screener_service, mock_portf
     assert "breakeven" in update_pos.reason.lower()
 
 
-def test_generate_daily_review_position_close(mock_screener_service, mock_portfolio_service):
+def test_generate_daily_review_position_close(mock_screener_service, mock_portfolio_service, tmp_path):
     """Test position categorized as 'close'."""
-    service = DailyReviewService(mock_screener_service, mock_portfolio_service)
+    service = DailyReviewService(mock_screener_service, mock_portfolio_service, data_dir=tmp_path)
     
     review = service.generate_daily_review(top_n=10)
     
@@ -253,12 +251,12 @@ def test_generate_daily_review_position_close(mock_screener_service, mock_portfo
     assert "stop hit" in close_pos.reason.lower()
 
 
-def test_generate_daily_review_no_positions(mock_screener_service):
+def test_generate_daily_review_no_positions(mock_screener_service, tmp_path):
     """Test daily review with no open positions."""
     empty_portfolio = Mock()
     empty_portfolio.list_positions.return_value = PositionsResponse(positions=[], asof="2026-02-11")
     
-    service = DailyReviewService(mock_screener_service, empty_portfolio)
+    service = DailyReviewService(mock_screener_service, empty_portfolio, data_dir=tmp_path)
     review = service.generate_daily_review(top_n=10)
     
     assert len(review.positions_hold) == 0
@@ -268,7 +266,7 @@ def test_generate_daily_review_no_positions(mock_screener_service):
     assert review.summary.no_action == 0
 
 
-def test_generate_daily_review_no_candidates(mock_portfolio_service):
+def test_generate_daily_review_no_candidates(mock_portfolio_service, tmp_path):
     """Test daily review with no screener candidates."""
     empty_screener = Mock()
     empty_screener.run_screener.return_value = ScreenerResponse(
@@ -277,7 +275,7 @@ def test_generate_daily_review_no_candidates(mock_portfolio_service):
         total_screened=0,
     )
     
-    service = DailyReviewService(empty_screener, mock_portfolio_service)
+    service = DailyReviewService(empty_screener, mock_portfolio_service, data_dir=tmp_path)
     review = service.generate_daily_review(top_n=10)
     
     assert len(review.new_candidates) == 0

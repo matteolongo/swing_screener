@@ -1,8 +1,7 @@
 """Test stop order synchronization when position stop is updated."""
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 import pandas as pd
-from datetime import datetime
 
 from api.services.portfolio_service import PortfolioService
 from api.models.portfolio import UpdateStopRequest
