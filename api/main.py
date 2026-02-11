@@ -152,7 +152,7 @@ async def metrics():
     Returns:
         - uptime_seconds: time since API started
         - lock_contention_total: number of times file lock acquisition was delayed
-        - validation_failures_total: number of validation errors
+        - validation_failures_total: number of Pydantic validation errors (422 status)
     """
     from api.monitoring import get_metrics_collector
     
