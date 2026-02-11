@@ -1,6 +1,7 @@
 """Yfinance market data provider - wraps existing market_data.py logic."""
 from __future__ import annotations
 
+from datetime import datetime, timedelta
 from typing import Optional
 import pandas as pd
 import yfinance as yf
@@ -48,7 +49,7 @@ class YfinanceProvider(MarketDataProvider):
         Args:
             tickers: List of ticker symbols
             start_date: Start date in YYYY-MM-DD format
-            end_date: End date in YYYY-MM-DD format
+            end_date: End date in YYYY-MM-DD format (inclusive)
             interval: Bar interval (default: "1d", yfinance supports 1m, 2m, 5m, 15m, 30m, 60m, 90m, 1h, 1d, 5d, 1wk, 1mo, 3mo)
             
         Returns:
@@ -57,10 +58,19 @@ class YfinanceProvider(MarketDataProvider):
         Raises:
             ValueError: If invalid tickers
             RuntimeError: If download fails
+            
+        Note:
+            Yfinance's end parameter is exclusive, so we add 1 day to ensure
+            end_date is included in the results.
         """
+        # Yfinance end param is exclusive - add 1 day to include end_date
+        end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+        end_dt_inclusive = end_dt + timedelta(days=1)
+        end_date_adjusted = end_dt_inclusive.strftime("%Y-%m-%d")
+        
         cfg = MarketDataConfig(
             start=start_date,
-            end=end_date,
+            end=end_date_adjusted,
             auto_adjust=self.auto_adjust,
             progress=self.progress,
             cache_dir=self.cache_dir,
