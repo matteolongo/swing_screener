@@ -1,8 +1,8 @@
 """Service for generating daily review with action items."""
 import json
+import logging
 from datetime import date
 from pathlib import Path
-from typing import Literal
 
 from api.models.daily_review import (
     DailyReview,
@@ -15,6 +15,8 @@ from api.models.daily_review import (
 from api.models.screener import ScreenerRequest
 from api.services.screener_service import ScreenerService
 from api.services.portfolio_service import PortfolioService
+
+logger = logging.getLogger(__name__)
 
 
 class DailyReviewService:
@@ -157,4 +159,4 @@ class DailyReviewService:
         with open(filepath, 'w') as f:
             json.dump(review_dict, f, indent=2)
         
-        print(f"Daily review saved to {filepath}")
+        logger.info(f"Daily review saved to {filepath}")

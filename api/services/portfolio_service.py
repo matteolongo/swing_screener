@@ -305,6 +305,7 @@ class PortfolioService:
         data["asof"] = get_today_str()
         self._positions_repo.write(data)
         
+        orders_data["orders"] = orders
         orders_data["asof"] = get_today_str()
         self._orders_repo.write(orders_data)
 

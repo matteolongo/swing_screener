@@ -320,15 +320,28 @@ function UpdateStopModal({
     reason: initialReason,
   });
 
-  // Update form when suggestion loads
+  // Update form when suggestion loads, but avoid clobbering user edits
   React.useEffect(() => {
-    if (canApplySuggested && suggestedStop != null) {
-      setFormData({
+    if (!canApplySuggested || suggestedStop == null) {
+      return;
+    }
+
+    setFormData((prev) => {
+      const isPristine =
+        prev.newStop === initialStop &&
+        prev.reason === initialReason;
+
+      if (!isPristine) {
+        // User has modified the form; do not overwrite their changes
+        return prev;
+      }
+
+      return {
         newStop: suggestedStop,
         reason: suggestion?.reason || '',
-      });
-    }
-  }, [canApplySuggested, suggestedStop, suggestion?.reason]);
+      };
+    });
+  }, [canApplySuggested, suggestedStop, suggestion?.reason, initialStop, initialReason]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

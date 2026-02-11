@@ -37,7 +37,15 @@ export default function DailyReview() {
   const queryClient = useQueryClient();
   const { data: review, isLoading, error, refetch, isFetching } = useDailyReview(10);
   const config = useConfigStore(state => state.config);
-  const riskConfig = config?.risk ?? { accountSize: 10000, riskPct: 1, minShares: 1, maxPositionPct: 20, kAtr: 2, minRr: 2, maxFeeRiskPct: 5 };
+  const riskConfig = config?.risk ?? {
+    accountSize: 10000,
+    riskPct: 0.01,
+    minShares: 1,
+    maxPositionPct: 0.2,
+    kAtr: 2,
+    minRr: 2,
+    maxFeeRiskPct: 0.05,
+  };
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
@@ -84,7 +92,7 @@ export default function DailyReview() {
         <div>
           <h1 className="text-2xl font-bold">Daily Review</h1>
           <p className="text-gray-600 dark:text-gray-400">
-            {new Date(summary.reviewDate).toLocaleDateString('en-US', {
+            {new Date(summary.reviewDate + 'T00:00:00').toLocaleDateString('en-US', {
               weekday: 'long',
               year: 'numeric',
               month: 'long',
@@ -325,8 +333,8 @@ function CandidatesTable({
           </tr>
         </thead>
         <tbody>
-          {candidates.map((candidate, idx) => (
-            <tr key={idx} className="border-b dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
+          {candidates.map((candidate) => (
+            <tr key={candidate.ticker} className="border-b dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
               <td className="p-2 font-mono font-bold">{candidate.ticker}</td>
               <td className="p-2">
                 <Badge variant="primary">{candidate.signal}</Badge>
@@ -402,7 +410,9 @@ function UpdateStopTable({ positions }: { positions: DailyReviewPositionUpdate[]
               </td>
               <td className="p-2 text-sm">{pos.reason}</td>
               <td className="p-2 text-right">
-                <Button variant="secondary" size="sm">Update Stop</Button>
+                <Button variant="secondary" size="sm" disabled title="Update stop action not yet available">
+                  Update Stop
+                </Button>
               </td>
             </tr>
           ))}
@@ -442,7 +452,9 @@ function CloseTable({ positions }: { positions: DailyReviewPositionClose[] }) {
               </td>
               <td className="p-2 text-sm">{pos.reason}</td>
               <td className="p-2 text-right">
-                <Button variant="danger" size="sm">Close Position</Button>
+                <Button variant="danger" size="sm" disabled title="Close position action not yet available">
+                  Close Position
+                </Button>
               </td>
             </tr>
           ))}
@@ -821,14 +833,14 @@ function CreateOrderModal({
                 </div>
                 <div>
                   <span className="text-gray-600 dark:text-gray-400">Risk %:</span>{' '}
-                  <strong className={riskPercent > risk.riskPct ? 'text-red-600' : 'text-green-600'}>
+                  <strong className={riskPercent > risk.riskPct * 100 ? 'text-red-600' : 'text-green-600'}>
                     {riskPercent.toFixed(2)}%
                   </strong>
                 </div>
               </div>
-              {riskPercent > risk.riskPct && (
+              {riskPercent > risk.riskPct * 100 && (
                 <p className="text-sm text-yellow-600 dark:text-yellow-500 mt-2">
-                  ⚠️ Risk exceeds target ({risk.riskPct.toFixed(1)}%)
+                  ⚠️ Risk exceeds target ({(risk.riskPct * 100).toFixed(1)}%)
                 </p>
               )}
             </div>
