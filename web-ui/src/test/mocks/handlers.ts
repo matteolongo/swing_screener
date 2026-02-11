@@ -548,6 +548,23 @@ export const handlers = [
     return HttpResponse.json({ positions, asof: '2026-02-08' })
   }),
 
+  http.get(`${API_BASE_URL}/api/portfolio/positions/:id/stop-suggestion`, ({ params }) => {
+    const id = params.id as string
+    const position = mockPositions.find((p) => p.position_id === id) ?? mockPositions[0]
+    return HttpResponse.json({
+      ticker: position?.ticker ?? 'VALE',
+      status: 'open',
+      last: position?.current_price ?? 16.3,
+      entry: position?.entry_price ?? 15.89,
+      stop_old: position?.stop_price ?? 15.0,
+      stop_suggested: (position?.stop_price ?? 15.0) + 0.2,
+      shares: position?.shares ?? 1,
+      r_now: 0.6,
+      action: 'MOVE_STOP_UP',
+      reason: 'Trail: R=2.00 >= 2.0 and SMA20 trail',
+    })
+  }),
+
   // Orders endpoints
   http.get(`${API_BASE_URL}/api/portfolio/orders`, ({ request }) => {
     const url = new URL(request.url)

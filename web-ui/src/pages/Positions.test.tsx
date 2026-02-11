@@ -149,6 +149,24 @@ describe('Positions Page', () => {
       const buttons = screen.getAllByRole('button')
       expect(buttons.length).toBeGreaterThan(2)
     })
+
+    it('shows suggested stop in update modal', async () => {
+      const { user } = renderWithProviders(<Positions />)
+
+      await waitFor(() => {
+        expect(screen.getByText('VALE')).toBeInTheDocument()
+      })
+
+      const updateButtons = screen.getAllByRole('button', { name: /Update Stop/i })
+      await act(async () => {
+        await user.click(updateButtons[0])
+      })
+
+      await waitFor(() => {
+        expect(screen.getByText('Suggested Stop')).toBeInTheDocument()
+        expect(screen.getByText('$15.20')).toBeInTheDocument()
+      })
+    })
   })
 
   describe('Empty State', () => {

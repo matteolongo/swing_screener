@@ -39,6 +39,9 @@ describe('API Client', () => {
     it('has dynamic position endpoint function', () => {
       expect(API_ENDPOINTS.position('POS-123')).toBe('/api/portfolio/positions/POS-123')
       expect(API_ENDPOINTS.positionStop('POS-123')).toBe('/api/portfolio/positions/POS-123/stop')
+      expect(API_ENDPOINTS.positionStopSuggestion('POS-123')).toBe(
+        '/api/portfolio/positions/POS-123/stop-suggestion'
+      )
       expect(API_ENDPOINTS.positionClose('POS-123')).toBe('/api/portfolio/positions/POS-123/close')
     })
 
