@@ -178,10 +178,12 @@ npm run test:coverage # Run with coverage report
 ### Operational Guides
 - **[Operational Guide](docs/OPERATIONAL_GUIDE.md)** — Day-to-day CLI workflows
 - **[Daily Usage Guide](docs/DAILY_USAGE_GUIDE.md)** — Daily routine and timing (Barcelona/CET)
+- **[Troubleshooting](docs/TROUBLESHOOTING.md)** — Common issues and solutions ⭐ **NEW**
 
 ### Technical References
-- **[API Documentation](api/README.md)** — FastAPI REST API reference (18 endpoints)
+- **[API Documentation](api/README.md)** — FastAPI REST API reference (18 endpoints, health checks, monitoring)
 - **[Web UI README](web-ui/README.md)** — React/TypeScript architecture
+- **[Indicator Validation](docs/INDICATOR_VALIDATION.md)** — TA-Lib validation approach ⭐ **NEW**
 - **[AGENTS.md](AGENTS.md)** — Guide for AI coding assistants
 
 ### Planning
