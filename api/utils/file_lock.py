@@ -15,6 +15,16 @@ logger = logging.getLogger(__name__)
 DEFAULT_TIMEOUT = 5.0  # seconds
 
 
+def _record_lock_contention():
+    """Record a lock contention event in metrics."""
+    try:
+        from api.monitoring import get_metrics_collector
+        get_metrics_collector().record_lock_contention()
+    except Exception:
+        # Don't fail if metrics aren't available
+        pass
+
+
 def locked_read_json(path: Path, timeout: float = DEFAULT_TIMEOUT) -> dict[str, Any]:
     """Read JSON file with exclusive file lock.
     
@@ -38,6 +48,7 @@ def locked_read_json(path: Path, timeout: float = DEFAULT_TIMEOUT) -> dict[str, 
             text = re.sub(r"\bNaN\b", "null", text)
             return json.loads(text)
     except portalocker.exceptions.LockException:
+        _record_lock_contention()
         logger.error(f"Lock timeout reading {path.name} after {timeout}s")
         raise HTTPException(
             status_code=503,
@@ -96,6 +107,7 @@ def locked_write_json(
             fh.flush()
             
     except portalocker.exceptions.LockException:
+        _record_lock_contention()
         logger.error(f"Lock timeout writing {path.name} after {timeout}s")
         raise HTTPException(
             status_code=503,
