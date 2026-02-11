@@ -38,7 +38,7 @@ from swing_screener.execution.order_workflows import (
     infer_order_kind,
     normalize_orders,
 )
-from swing_screener.data.market_data import fetch_ohlcv, MarketDataConfig
+from swing_screener.data.providers import MarketDataProvider, get_default_provider
 
 logger = logging.getLogger(__name__)
 
@@ -139,9 +139,15 @@ def _to_state_position(position: dict) -> StatePosition:
 
 
 class PortfolioService:
-    def __init__(self, orders_repo: OrdersRepository, positions_repo: PositionsRepository) -> None:
+    def __init__(
+        self,
+        orders_repo: OrdersRepository,
+        positions_repo: PositionsRepository,
+        provider: Optional[MarketDataProvider] = None
+    ) -> None:
         self._orders_repo = orders_repo
         self._positions_repo = positions_repo
+        self._provider = provider or get_default_provider()
 
     def list_positions(self, status: Optional[str] = None) -> PositionsResponse:
         positions, asof = self._positions_repo.list_positions(status=status)
@@ -150,13 +156,10 @@ class PortfolioService:
         if open_positions:
             try:
                 tickers = list({p["ticker"] for p in open_positions})
-                cfg = MarketDataConfig(
-                    start="2025-01-01",
-                    end=get_today_str(),
-                    auto_adjust=True,
-                    progress=False,
-                )
-                ohlcv = fetch_ohlcv(tickers, cfg)
+                start_date = "2025-01-01"
+                end_date = get_today_str()
+                
+                ohlcv = self._provider.fetch_ohlcv(tickers, start_date=start_date, end_date=end_date)
                 latest_date = ohlcv.index.max()
                 for pos in positions:
                     if pos.get("status") == "open":
@@ -217,8 +220,9 @@ class PortfolioService:
                 # Optional: fetch current price and validate stop is reasonable
                 ticker = pos.get("ticker")
                 try:
-                    cfg = MarketDataConfig(lookback_days=5)
-                    ohlcv = fetch_ohlcv([ticker], cfg)
+                    end_date = get_today_str()
+                    start_date = (pd.Timestamp(end_date) - pd.Timedelta(days=5)).strftime("%Y-%m-%d")
+                    ohlcv = self._provider.fetch_ohlcv([ticker], start_date=start_date, end_date=end_date)
                     if not ohlcv.empty and ticker in ohlcv.columns.get_level_values(1):
                         current_price = ohlcv[("Close", ticker)].iloc[-1]
                         if not pd.isna(current_price):
@@ -287,14 +291,10 @@ class PortfolioService:
 
         manage_cfg = _manage_cfg_from_app()
         start_date = _calc_start_date(position.get("entry_date"), manage_cfg.trail_sma)
+        end_date = get_today_str()
+        
         try:
-            cfg = MarketDataConfig(
-                start=start_date,
-                end=get_today_str(),
-                auto_adjust=True,
-                progress=False,
-            )
-            ohlcv = fetch_ohlcv([ticker], cfg)
+            ohlcv = self._provider.fetch_ohlcv([ticker], start_date=start_date, end_date=end_date)
         except Exception as exc:
             raise HTTPException(
                 status_code=502,
@@ -348,13 +348,9 @@ class PortfolioService:
 
         if tickers:
             try:
-                cfg = MarketDataConfig(
-                    start="2025-01-01",
-                    end=get_today_str(),
-                    auto_adjust=True,
-                    progress=False,
-                )
-                ohlcv = fetch_ohlcv(tickers, cfg)
+                start_date = "2025-01-01"
+                end_date = get_today_str()
+                ohlcv = self._provider.fetch_ohlcv(tickers, start_date=start_date, end_date=end_date)
                 last_prices, last_bars = _last_close_map(ohlcv)
             except Exception as exc:
                 logger.warning("Failed to fetch order snapshot prices: %s", exc)

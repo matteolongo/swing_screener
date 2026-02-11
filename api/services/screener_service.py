@@ -25,7 +25,8 @@ from swing_screener.data.universe import (
     UniverseConfig as DataUniverseConfig,
     get_universe_benchmark,
 )
-from swing_screener.data.market_data import fetch_ohlcv
+from swing_screener.data.market_data import MarketDataConfig
+from swing_screener.data.providers import MarketDataProvider, get_default_provider
 from swing_screener.data.ticker_info import get_multiple_ticker_info
 from swing_screener.reporting.report import ReportConfig, build_daily_report
 from swing_screener.reporting.concentration import sector_concentration_warnings
@@ -51,11 +52,18 @@ def _merge_ohlcv(base: pd.DataFrame, extra: pd.DataFrame) -> pd.DataFrame:
     return merged.sort_index(axis=1)
 
 
-def _fetch_ohlcv_chunked(tickers: list[str], cfg, chunk_size: int = 100) -> pd.DataFrame:
+def _fetch_ohlcv_chunked(
+    provider: MarketDataProvider,
+    tickers: list[str], 
+    start_date: str,
+    end_date: str,
+    chunk_size: int = 100
+) -> pd.DataFrame:
+    """Fetch OHLCV in chunks using provider."""
     frames: list[pd.DataFrame] = []
     for i in range(0, len(tickers), chunk_size):
         chunk = tickers[i : i + chunk_size]
-        df = fetch_ohlcv(chunk, cfg=cfg, use_cache=True, force_refresh=False)
+        df = provider.fetch_ohlcv(chunk, start_date=start_date, end_date=end_date)
         if df is None or df.empty:
             logger.warning("OHLCV chunk returned empty data (%s)", chunk)
             continue
@@ -146,8 +154,13 @@ def _safe_list(val):
 
 
 class ScreenerService:
-    def __init__(self, strategy_repo: StrategyRepository) -> None:
+    def __init__(
+        self, 
+        strategy_repo: StrategyRepository,
+        provider: Optional[MarketDataProvider] = None
+    ) -> None:
         self._strategy_repo = strategy_repo
+        self._provider = provider or get_default_provider()
 
     def _resolve_strategy(self, strategy_id: Optional[str]) -> dict:
         if strategy_id:
@@ -209,23 +222,23 @@ class ScreenerService:
 
             from swing_screener.data.market_data import MarketDataConfig
 
-            cfg = MarketDataConfig(
-                start="2022-01-01",
-                end=asof_str,
-                auto_adjust=True,
-                progress=False,
-            )
+            # Note: MarketDataConfig is kept for backward compatibility
+            # but not passed to provider (provider has its own defaults)
+            start_date = "2022-01-01"
+            end_date = asof_str
+            
             logger.info(
-                "Screener run: universe=%s top=%s tickers=%s",
+                "Screener run: universe=%s top=%s tickers=%s provider=%s",
                 request.universe or "mega_all",
                 requested_top,
                 len(tickers),
+                self._provider.get_provider_name(),
             )
 
             if len(tickers) > 120:
-                ohlcv = _fetch_ohlcv_chunked(tickers, cfg, chunk_size=100)
+                ohlcv = _fetch_ohlcv_chunked(self._provider, tickers, start_date, end_date, chunk_size=100)
             else:
-                ohlcv = fetch_ohlcv(tickers, cfg=cfg)
+                ohlcv = self._provider.fetch_ohlcv(tickers, start_date=start_date, end_date=end_date)
 
             if ohlcv is None or ohlcv.empty:
                 logger.error("OHLCV fetch returned empty data (tickers=%s)", len(tickers))
@@ -233,7 +246,7 @@ class ScreenerService:
 
             if "Close" not in ohlcv.columns.get_level_values(0) or benchmark not in ohlcv["Close"].columns:
                 logger.warning("Benchmark %s missing from OHLCV; fetching separately.", benchmark)
-                bench_df = fetch_ohlcv([benchmark], cfg=cfg)
+                bench_df = self._provider.fetch_ohlcv([benchmark], start_date=start_date, end_date=end_date)
                 ohlcv = _merge_ohlcv(ohlcv, bench_df)
                 if "Close" not in ohlcv.columns.get_level_values(0) or benchmark not in ohlcv["Close"].columns:
                     raise HTTPException(status_code=500, detail="Benchmark data missing; cannot compute momentum.")

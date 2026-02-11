@@ -149,6 +149,21 @@ swing-screener universes list
 - **data/positions.json**: single source of truth for open positions
 - **data/orders.json**: order lifecycle and position-linked entry/exit orders
 
+### Market Data Providers
+
+Swing Screener supports multiple market data sources:
+- **yfinance** (default): Free Yahoo Finance data - no API keys required
+- **Alpaca**: Professional market data with paper/live trading support
+
+Configure via environment variables:
+```bash
+export SWING_SCREENER_PROVIDER=alpaca  # or yfinance (default)
+export ALPACA_API_KEY=your_key
+export ALPACA_SECRET_KEY=your_secret
+```
+
+See [docs/BROKER_INTEGRATION.md](docs/BROKER_INTEGRATION.md) for complete setup guide.
+
 ## Testing
 
 ### Backend Tests
@@ -183,6 +198,7 @@ npm run test:coverage # Run with coverage report
 ### Technical References
 - **[API Documentation](api/README.md)** — FastAPI REST API reference (18 endpoints, health checks, monitoring)
 - **[Web UI README](web-ui/README.md)** — React/TypeScript architecture
+- **[Broker Integration](docs/BROKER_INTEGRATION.md)** — Market data providers (yfinance, Alpaca) ⭐ **NEW**
 - **[Indicator Validation](docs/INDICATOR_VALIDATION.md)** — TA-Lib validation approach ⭐ **NEW**
 - **[AGENTS.md](AGENTS.md)** — Guide for AI coding assistants
 
