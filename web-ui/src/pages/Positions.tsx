@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
@@ -302,10 +302,6 @@ function UpdateStopModal({
   isLoading: boolean;
   error?: string;
 }) {
-  const [formData, setFormData] = useState<UpdateStopRequest>({
-    newStop: position.stopPrice,
-    reason: '',
-  });
   const suggestionQuery = usePositionStopSuggestion(position.positionId);
   const suggestion = suggestionQuery.data;
   const suggestionError = suggestionQuery.error instanceof Error ? suggestionQuery.error.message : '';
@@ -314,6 +310,25 @@ function UpdateStopModal({
     suggestion?.action === 'MOVE_STOP_UP' &&
     suggestedStop != null &&
     suggestedStop > position.stopPrice;
+
+  // Pre-fill with suggested stop if available, otherwise use current stop
+  const initialStop = canApplySuggested && suggestedStop != null ? suggestedStop : position.stopPrice;
+  const initialReason = canApplySuggested && suggestion?.reason ? suggestion.reason : '';
+  
+  const [formData, setFormData] = useState<UpdateStopRequest>({
+    newStop: initialStop,
+    reason: initialReason,
+  });
+
+  // Update form when suggestion loads
+  React.useEffect(() => {
+    if (canApplySuggested && suggestedStop != null) {
+      setFormData({
+        newStop: suggestedStop,
+        reason: suggestion?.reason || '',
+      });
+    }
+  }, [canApplySuggested, suggestedStop, suggestion?.reason]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
