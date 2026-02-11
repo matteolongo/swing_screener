@@ -25,6 +25,7 @@ def _record_lock_contention():
         pass
 
 
+
 def locked_read_json(path: Path, timeout: float = DEFAULT_TIMEOUT) -> dict[str, Any]:
     """Read JSON file with exclusive file lock.
     

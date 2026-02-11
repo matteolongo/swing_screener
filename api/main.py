@@ -144,12 +144,6 @@ async def health_check():
     )
 
 
-@app.get("/health")
-async def health():
-    """Health check endpoint."""
-    return {"status": "healthy"}
-
-
 @app.get("/metrics")
 async def metrics():
     """
