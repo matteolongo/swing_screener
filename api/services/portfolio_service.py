@@ -193,6 +193,10 @@ class PortfolioService:
         data = self._positions_repo.read()
         positions = data.get("positions", [])
         found = False
+        ticker = None
+        shares = None
+        old_stop = None
+        new_stop = request.new_stop
 
         for pos in positions:
             if pos.get("position_id") == position_id:
@@ -201,7 +205,8 @@ class PortfolioService:
 
                 old_stop = pos.get("stop_price")
                 entry_price = pos.get("entry_price")
-                new_stop = request.new_stop
+                ticker = pos.get("ticker")
+                shares = pos.get("shares")
                 
                 # Validation: stop must move up only (trailing stop)
                 if new_stop <= old_stop:
@@ -218,7 +223,6 @@ class PortfolioService:
                     )
                 
                 # Optional: fetch current price and validate stop is reasonable
-                ticker = pos.get("ticker")
                 try:
                     end_date = get_today_str()
                     start_date = (pd.Timestamp(end_date) - pd.Timedelta(days=5)).strftime("%Y-%m-%d")
@@ -234,6 +238,7 @@ class PortfolioService:
                 except Exception as exc:
                     logger.warning(f"Could not fetch current price for validation: {exc}")
 
+                # Update position stop
                 pos["stop_price"] = new_stop
                 if request.reason:
                     current_notes = pos.get("notes", "")
@@ -245,10 +250,72 @@ class PortfolioService:
         if not found:
             raise HTTPException(status_code=404, detail=f"Position not found: {position_id}")
 
+        # Sync stop orders: Cancel old SELL_STOP orders and create new one
+        orders_data = self._orders_repo.read()
+        orders = orders_data.get("orders", [])
+        cancelled_order_ids = []
+        new_order_id = None
+
+        # Find and cancel existing SELL_STOP orders for this position
+        for order in orders:
+            if (order.get("position_id") == position_id and 
+                order.get("order_kind") == "stop" and
+                order.get("status") == "pending"):
+                
+                # Cancel the old stop order
+                order["status"] = "cancelled"
+                cancel_reason = f"Replaced with new stop at {new_stop} (was {old_stop})"
+                order["notes"] = f"{order.get('notes', '')}\n{cancel_reason}".strip()
+                cancelled_order_ids.append(order.get("order_id"))
+                logger.info(f"Cancelled stop order {order.get('order_id')} for position {position_id}")
+
+        # Create new SELL_STOP order
+        if ticker and shares:
+            import uuid
+            new_order_id = f"ORD-{uuid.uuid4().hex[:8].upper()}"
+            new_order = {
+                "order_id": new_order_id,
+                "ticker": ticker,
+                "status": "pending",
+                "order_type": "STOP",
+                "quantity": shares,
+                "stop_price": new_stop,
+                "order_date": get_today_str(),
+                "notes": f"Auto-created from position stop update (was {old_stop})",
+                "order_kind": "stop",
+                "position_id": position_id,
+                "tif": "GTC",  # Good Till Cancelled
+            }
+            orders.append(new_order)
+            logger.info(f"Created new stop order {new_order_id} at {new_stop} for position {position_id}")
+
+            # Update position's exit_order_ids
+            for pos in positions:
+                if pos.get("position_id") == position_id:
+                    exit_order_ids = pos.get("exit_order_ids", [])
+                    if not isinstance(exit_order_ids, list):
+                        exit_order_ids = []
+                    # Add new order, keep old ones for history
+                    if new_order_id not in exit_order_ids:
+                        exit_order_ids.append(new_order_id)
+                    pos["exit_order_ids"] = exit_order_ids
+                    break
+
+        # Save both positions and orders
         data["asof"] = get_today_str()
         self._positions_repo.write(data)
+        
+        orders_data["asof"] = get_today_str()
+        self._orders_repo.write(orders_data)
 
-        return {"status": "ok", "position_id": position_id, "new_stop": request.new_stop}
+        return {
+            "status": "ok",
+            "position_id": position_id,
+            "new_stop": new_stop,
+            "old_stop": old_stop,
+            "cancelled_orders": cancelled_order_ids,
+            "new_order_id": new_order_id,
+        }
 
     def close_position(self, position_id: str, request: ClosePositionRequest) -> dict:
         data = self._positions_repo.read()
