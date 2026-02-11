@@ -16,9 +16,77 @@ Server will be available at:
 - **Interactive docs**: http://localhost:8000/docs
 - **OpenAPI schema**: http://localhost:8000/openapi.json
 
+## Architecture & Reliability
+
+### File Locking (Concurrent Access)
+
+The API uses **file-level locking** to prevent race conditions when multiple clients/processes access `positions.json` and `orders.json` concurrently:
+
+- **Lock type**: Exclusive locks for writes, shared locks for reads (via `portalocker`)
+- **Timeout**: 5 seconds (returns `503 Service Temporarily Unavailable` if lock can't be acquired)
+- **Granularity**: One lock per file (positions.json, orders.json)
+- **Compatibility**: Cross-platform (Linux, macOS, Windows)
+
+**Implementation:**
+- All file I/O goes through `api/utils/file_lock.py`
+- Functions: `locked_read_json()`, `locked_write_json()`
+- CLI also uses locking (`src/swing_screener/utils/file_lock.py`)
+
+**Safe concurrency:**
+- ✅ Multiple browser tabs
+- ✅ Concurrent API requests
+- ✅ CLI + API simultaneously
+- ✅ Multiple users (if shared filesystem)
+
+### Input Validation
+
+The API enforces strict validation on all inputs using **Pydantic validators**:
+
+**Price validation:**
+- Must be positive, finite (no NaN, no Infinity)
+- Reasonable bounds (< $1,000,000 per share)
+- Relationship checks: `entry_price > stop_price` for longs
+
+**Quantity validation:**
+- Positive integers only
+- Maximum: 1,000,000 shares
+
+**Risk validation:**
+- `risk_pct`: 0.01% to 10% (0.0001 to 0.10)
+- `account_size`: positive, max $1B
+
+**Ticker validation:**
+- 1-5 uppercase alphanumeric characters
+- Examples: `AAPL`, `SPY`, `TSLA`
+
+**Stop price validation:**
+- Trailing stops only (new_stop > old_stop)
+- Must remain below entry price for longs
+
+**Invalid requests return:**
+- `400 Bad Request` for business logic errors
+- `422 Unprocessable Entity` for validation errors
+- Detailed error messages with field names
+
+### Error Handling & Security
+
+**Error masking** (prevents information leakage):
+- Unexpected errors → `500 Internal Server Error` with generic message
+- Full stack traces logged server-side only
+- Preserves `HTTPException` and `ValidationError` details
+
+**CORS configuration** (tightened for security):
+- Methods: `["GET", "POST", "PUT", "DELETE", "PATCH"]` (no wildcards)
+- Headers: `["Content-Type", "Authorization"]` (explicit list)
+- Origins: `http://localhost:5173` (dev), configurable for production
+
+**Logging:**
+- All errors logged with context (ticker, endpoint, request ID)
+- No sensitive data in logs (no account_size, positions, PII)
+
 ## API Endpoints
 
-### Health & Info
+### Health & Monitoring
 
 #### `GET /`
 Root endpoint - API information.
@@ -27,12 +95,75 @@ Root endpoint - API information.
 curl http://localhost:8000/
 ```
 
-####` GET /health`
-Health check.
+**Response:**
+```json
+{
+  "message": "Swing Screener API",
+  "version": "1.0.0",
+  "docs": "/docs",
+  "health": "/health"
+}
+```
+
+#### `GET /health`
+Comprehensive health check for load balancers and monitoring.
 
 ```bash
 curl http://localhost:8000/health
 ```
+
+**Response (healthy):**
+```json
+{
+  "status": "healthy",
+  "checks": {
+    "files": {
+      "status": "healthy",
+      "positions_file": "ok",
+      "orders_file": "ok",
+      "issues": null
+    },
+    "data_directory": {
+      "status": "ok"
+    }
+  },
+  "metrics": {
+    "uptime_seconds": 12345.67,
+    "lock_contention_total": 3,
+    "validation_failures_total": 0
+  }
+}
+```
+
+**Status codes:**
+- `200 OK` - Healthy or degraded (non-critical issues)
+- `503 Service Unavailable` - Unhealthy (critical issues)
+
+**Status types:**
+- `healthy` - All checks pass
+- `degraded` - Non-critical issues (e.g., invalid JSON, warnings)
+- `unhealthy` - Critical issues (e.g., permission errors, missing files)
+
+#### `GET /metrics`
+Basic metrics for monitoring and debugging.
+
+```bash
+curl http://localhost:8000/metrics
+```
+
+**Response:**
+```json
+{
+  "uptime_seconds": 12345.67,
+  "lock_contention_total": 3,
+  "validation_failures_total": 0
+}
+```
+
+**Metrics:**
+- `uptime_seconds` - Time since server started
+- `lock_contention_total` - Number of times lock acquisition timed out
+- `validation_failures_total` - Count of Pydantic validation errors (422 status)
 
 ---
 

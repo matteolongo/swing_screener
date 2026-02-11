@@ -57,6 +57,7 @@ async def global_exception_handler(request: Request, exc: Exception):
     """Catch-all exception handler - masks error details for security."""
     from fastapi import HTTPException
     from pydantic import ValidationError
+    from api.monitoring import get_metrics_collector
     
     # Preserve HTTPException status codes and messages (these are intentional)
     if isinstance(exc, HTTPException):
@@ -67,6 +68,7 @@ async def global_exception_handler(request: Request, exc: Exception):
     
     # Preserve Pydantic validation errors (user input errors)
     if isinstance(exc, ValidationError):
+        get_metrics_collector().record_validation_failure()
         return JSONResponse(
             status_code=422,
             content={"detail": exc.errors()},
@@ -96,13 +98,65 @@ async def root():
         "service": "swing-screener-api",
         "version": "0.1.0",
         "docs": "/docs",
+        "health": "/health",
     }
 
 
 @app.get("/health")
-async def health():
-    """Health check endpoint."""
-    return {"status": "healthy"}
+async def health_check():
+    """
+    Health check endpoint for monitoring and load balancers.
+    
+    Returns:
+        - status: overall health (healthy, degraded, unhealthy)
+        - checks: individual component checks
+        - uptime: time since API started
+    """
+    from api.monitoring import HealthChecker, get_metrics_collector
+    
+    file_check = HealthChecker.check_file_access()
+    data_check = HealthChecker.check_data_directory()
+    metrics = get_metrics_collector().get_metrics()
+    
+    # Determine overall status
+    if file_check["status"] == "unhealthy" or data_check["status"] == "error":
+        overall_status = "unhealthy"
+        status_code = 503
+    elif file_check["status"] == "degraded" or data_check["status"] == "warning":
+        overall_status = "degraded"
+        status_code = 200  # Still serving traffic
+    else:
+        overall_status = "healthy"
+        status_code = 200
+    
+    from fastapi.responses import JSONResponse
+    
+    return JSONResponse(
+        status_code=status_code,
+        content={
+            "status": overall_status,
+            "checks": {
+                "files": file_check,
+                "data_directory": data_check,
+            },
+            "metrics": metrics,
+        }
+    )
+
+
+@app.get("/metrics")
+async def metrics():
+    """
+    Metrics endpoint for monitoring.
+    
+    Returns:
+        - uptime_seconds: time since API started
+        - lock_contention_total: number of times file lock acquisition timed out
+        - validation_failures_total: number of Pydantic validation errors (422 status)
+    """
+    from api.monitoring import get_metrics_collector
+    
+    return get_metrics_collector().get_metrics()
 
 
 # Include routers
