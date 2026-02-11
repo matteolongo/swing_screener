@@ -252,6 +252,7 @@ describe('Screener Page', () => {
         expect(screen.getByText('Ticker')).toBeInTheDocument()
         expect(screen.getByText('Last Bar')).toBeInTheDocument()
         expect(screen.getByText('Close')).toBeInTheDocument()
+        expect(screen.getByText('Stop')).toBeInTheDocument()
         expect(screen.getByText('ATR')).toBeInTheDocument()
         expect(screen.getByText('Risk $')).toBeInTheDocument()
         expect(screen.getByText('RR')).toBeInTheDocument()

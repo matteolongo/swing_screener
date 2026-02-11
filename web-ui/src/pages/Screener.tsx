@@ -330,6 +330,7 @@ export default function Screener() {
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Confidence</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Score</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Close</th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Stop</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">ATR</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Risk $</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">RR</th>
@@ -345,7 +346,7 @@ export default function Screener() {
                 <tbody>
                   {candidates.length === 0 ? (
                     <tr>
-                      <td colSpan={18} className="text-center py-8 text-gray-500">
+                      <td colSpan={19} className="text-center py-8 text-gray-500">
                         No candidates found
                       </td>
                     </tr>
@@ -410,6 +411,12 @@ export default function Screener() {
                         </td>
                         <td className="py-3 px-4 text-sm text-right text-gray-900">
                           {formatCurrency(candidate.close)}
+                        </td>
+                        <td className="py-3 px-4 text-sm text-right text-gray-900">
+                          {(() => {
+                            const stopValue = candidate.recommendation?.risk?.stop ?? candidate.stop;
+                            return stopValue != null && stopValue > 0 ? formatCurrency(stopValue) : '-';
+                          })()}
                         </td>
                         <td className="py-3 px-4 text-sm text-right text-gray-600">
                           {candidate.atr.toFixed(2)}
