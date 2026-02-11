@@ -1,4 +1,5 @@
 """Service for generating daily review with action items."""
+import json
 from datetime import date
 from pathlib import Path
 from typing import Literal
@@ -23,9 +24,13 @@ class DailyReviewService:
         self,
         screener_service: ScreenerService,
         portfolio_service: PortfolioService,
+        data_dir: Path = Path("data"),
     ):
         self.screener = screener_service
         self.portfolio = portfolio_service
+        self.data_dir = data_dir
+        self.daily_reviews_dir = data_dir / "daily_reviews"
+        self.daily_reviews_dir.mkdir(parents=True, exist_ok=True)
 
     def generate_daily_review(self, top_n: int = 10) -> DailyReview:
         """
@@ -121,10 +126,35 @@ class DailyReviewService:
             review_date=date.today(),
         )
         
-        return DailyReview(
+        review = DailyReview(
             new_candidates=new_candidates,
             positions_hold=positions_hold,
             positions_update_stop=positions_update,
             positions_close=positions_close,
             summary=summary,
         )
+        
+        # Save to historical file (use "default" as strategy name for now)
+        self._save_review(review, "default")
+        
+        return review
+    
+    def _save_review(self, review: DailyReview, strategy_name: str) -> None:
+        """
+        Save daily review to historical file.
+        
+        Args:
+            review: DailyReview to save
+            strategy_name: Name of the strategy used
+        """
+        review_date = review.summary.review_date
+        filename = f"daily_review_{review_date.isoformat()}_{strategy_name}.json"
+        filepath = self.daily_reviews_dir / filename
+        
+        # Convert to dict for JSON serialization
+        review_dict = review.model_dump(mode="json")
+        
+        with open(filepath, 'w') as f:
+            json.dump(review_dict, f, indent=2)
+        
+        print(f"Daily review saved to {filepath}")

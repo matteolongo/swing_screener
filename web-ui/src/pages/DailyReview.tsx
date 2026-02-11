@@ -1,10 +1,15 @@
 import { useState } from 'react';
-import { Info } from 'lucide-react';
+import { Info, RefreshCw } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useDailyReview } from '@/features/dailyReview/api';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
 import { formatCurrency, formatNumber, formatPercent } from '@/utils/formatters';
+import { CreateOrderRequest } from '@/features/portfolio/types';
+import { createOrder } from '@/features/portfolio/api';
+import { useConfigStore } from '@/stores/configStore';
+import { RiskConfig } from '@/types/config';
 import type {
   DailyReviewCandidate,
   DailyReviewPositionHold,
@@ -26,8 +31,13 @@ export default function DailyReview() {
     close: true,
   });
   const [recommendationCandidate, setRecommendationCandidate] = useState<DailyReviewCandidate | null>(null);
+  const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
+  const [selectedCandidate, setSelectedCandidate] = useState<DailyReviewCandidate | null>(null);
 
-  const { data: review, isLoading, error } = useDailyReview(10);
+  const queryClient = useQueryClient();
+  const { data: review, isLoading, error, refetch, isFetching } = useDailyReview(10);
+  const config = useConfigStore(state => state.config);
+  const riskConfig = config?.risk ?? { accountSize: 10000, riskPct: 1, minShares: 1, maxPositionPct: 20, kAtr: 2, minRr: 2, maxFeeRiskPct: 5 };
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
@@ -63,19 +73,34 @@ export default function DailyReview() {
 
   const { summary } = review;
 
+  const handleRefresh = async () => {
+    await refetch();
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold">Daily Review</h1>
-        <p className="text-gray-600 dark:text-gray-400">
-          {new Date(summary.reviewDate).toLocaleDateString('en-US', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-          })}
-        </p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-2xl font-bold">Daily Review</h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            {new Date(summary.reviewDate).toLocaleDateString('en-US', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            })}
+          </p>
+        </div>
+        <Button
+          variant="secondary"
+          onClick={handleRefresh}
+          disabled={isFetching}
+          title="Refresh daily review data"
+        >
+          <RefreshCw className={`w-4 h-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
+          {isFetching ? 'Refreshing...' : 'Refresh'}
+        </Button>
       </div>
 
       {/* Summary Cards */}
@@ -119,6 +144,10 @@ export default function DailyReview() {
           <CandidatesTable
             candidates={review.newCandidates}
             onShowRecommendation={setRecommendationCandidate}
+            onCreateOrder={(candidate) => {
+              setSelectedCandidate(candidate);
+              setShowCreateOrderModal(true);
+            }}
           />
         )}
       </CollapsibleSection>
@@ -172,6 +201,23 @@ export default function DailyReview() {
         <RecommendationModal
           candidate={recommendationCandidate}
           onClose={() => setRecommendationCandidate(null)}
+        />
+      )}
+
+      {/* Create Order Modal */}
+      {showCreateOrderModal && selectedCandidate && (
+        <CreateOrderModal
+          candidate={selectedCandidate}
+          risk={riskConfig}
+          onClose={() => {
+            setShowCreateOrderModal(false);
+            setSelectedCandidate(null);
+          }}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['orders'] });
+            setShowCreateOrderModal(false);
+            setSelectedCandidate(null);
+          }}
         />
       )}
     </div>
@@ -256,9 +302,11 @@ function CollapsibleSection({
 function CandidatesTable({
   candidates,
   onShowRecommendation,
+  onCreateOrder,
 }: {
   candidates: DailyReviewCandidate[];
   onShowRecommendation: (candidate: DailyReviewCandidate) => void;
+  onCreateOrder: (candidate: DailyReviewCandidate) => void;
 }) {
   return (
     <div className="overflow-x-auto">
@@ -301,7 +349,18 @@ function CandidatesTable({
                 )}
               </td>
               <td className="p-2 text-right">
-                <Button variant="primary" size="sm">Create Order</Button>
+                <Button 
+                  variant="primary" 
+                  size="sm"
+                  onClick={() => onCreateOrder(candidate)}
+                  title={
+                    candidate.recommendation?.verdict === 'NOT_RECOMMENDED'
+                      ? 'Not recommended — open details to fix'
+                      : 'Create Order'
+                  }
+                >
+                  Create Order
+                </Button>
               </td>
             </tr>
           ))}
@@ -556,6 +615,249 @@ function RecommendationModal({
               ) : null}
             </div>
           </details>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+// Create Order Modal
+function CreateOrderModal({
+  candidate,
+  risk,
+  onClose,
+  onSuccess,
+}: {
+  candidate: DailyReviewCandidate;
+  risk: RiskConfig;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const recRisk = candidate.recommendation?.risk;
+  const suggestedEntry = recRisk?.entry ?? candidate.entry;
+  const suggestedStop = recRisk?.stop ?? candidate.stop;
+  const suggestedShares = recRisk?.shares ?? candidate.shares;
+
+  const [formData, setFormData] = useState<CreateOrderRequest>({
+    ticker: candidate.ticker,
+    orderType: 'BUY_LIMIT',
+    quantity: suggestedShares,
+    limitPrice: parseFloat(suggestedEntry.toFixed(2)),
+    stopPrice: parseFloat(suggestedStop.toFixed(2)),
+    notes: `From daily review: Entry ${formatCurrency(candidate.entry)}, R:R ${formatNumber(candidate.rReward, 1)}`,
+    orderKind: 'entry',
+  });
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const verdict = candidate.recommendation?.verdict ?? 'NOT_RECOMMENDED';
+  const isRecommended = verdict === 'RECOMMENDED';
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError(null);
+
+    if (!isRecommended) {
+      setError('This setup is not recommended. Review the checklist and fix the issues first.');
+      setIsSubmitting(false);
+      return;
+    }
+    if (formData.quantity <= 0) {
+      setError('Quantity must be greater than 0');
+      setIsSubmitting(false);
+      return;
+    }
+    if (!formData.limitPrice || formData.limitPrice <= 0) {
+      setError('Limit price must be greater than 0');
+      setIsSubmitting(false);
+      return;
+    }
+    if (formData.stopPrice && formData.limitPrice <= formData.stopPrice) {
+      setError('Limit price must be higher than stop price');
+      setIsSubmitting(false);
+      return;
+    }
+
+    try {
+      await createOrder(formData);
+      onSuccess();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create order');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const positionSize = (formData.limitPrice || 0) * formData.quantity;
+  const riskAmount = formData.stopPrice ? (formData.limitPrice! - formData.stopPrice) * formData.quantity : 0;
+  const riskPercent = risk.accountSize > 0 ? (riskAmount / risk.accountSize) * 100 : 0;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <Card variant="elevated" className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="p-6">
+          <h2 className="text-2xl font-bold mb-4">Create Order - {candidate.ticker}</h2>
+          
+          <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded mb-4">
+            <h3 className="font-semibold mb-2">Candidate Details</h3>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div>
+                <span className="text-gray-600 dark:text-gray-400">Entry:</span>{' '}
+                <strong>{formatCurrency(candidate.entry)}</strong>
+              </div>
+              <div>
+                <span className="text-gray-600 dark:text-gray-400">Stop:</span>{' '}
+                <strong>{formatCurrency(candidate.stop)}</strong>
+              </div>
+              <div>
+                <span className="text-gray-600 dark:text-gray-400">R:R:</span>{' '}
+                <strong className="text-green-600">{formatNumber(candidate.rReward, 1)}R</strong>
+              </div>
+              <div>
+                <span className="text-gray-600 dark:text-gray-400">Sector:</span>{' '}
+                <strong>{candidate.sector || '-'}</strong>
+              </div>
+            </div>
+          </div>
+
+          <div className={`p-4 rounded mb-4 ${isRecommended ? 'bg-green-50' : 'bg-red-50'}`}>
+            <h3 className="font-semibold mb-2">Recommendation</h3>
+            <div className="text-sm">
+              <div className="font-semibold">
+                {isRecommended ? 'Recommended' : 'Not Recommended'}
+              </div>
+              {candidate.recommendation?.reasonsShort?.length ? (
+                <ul className="list-disc ml-5 mt-2 space-y-1">
+                  {candidate.recommendation.reasonsShort.map((reason) => (
+                    <li key={reason}>{reason}</li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="mt-2 text-gray-700">No recommendation details available.</div>
+              )}
+              {candidate.recommendation?.education?.whatWouldMakeValid?.length ? (
+                <div className="mt-3">
+                  <div className="font-medium">What would make it valid?</div>
+                  <ul className="list-disc ml-5 mt-1 space-y-1">
+                    {candidate.recommendation.education.whatWouldMakeValid.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Order Type</label>
+                <select
+                  value={formData.orderType}
+                  onChange={(e) => setFormData({ ...formData, orderType: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+                >
+                  <option value="BUY_LIMIT">BUY LIMIT</option>
+                  <option value="BUY_MARKET">BUY MARKET</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Quantity</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={formData.quantity}
+                  onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 1 })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Limit Price</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={formData.limitPrice}
+                  onChange={(e) => setFormData({ ...formData, limitPrice: parseFloat(e.target.value) || 0 })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Stop Price</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={formData.stopPrice}
+                  onChange={(e) => setFormData({ ...formData, stopPrice: parseFloat(e.target.value) || 0 })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded">
+              <h3 className="font-semibold mb-2">Position Summary</h3>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <span className="text-gray-600 dark:text-gray-400">Position Size:</span>{' '}
+                  <strong>{formatCurrency(positionSize)}</strong>
+                </div>
+                <div>
+                  <span className="text-gray-600 dark:text-gray-400">% of Account:</span>{' '}
+                  <strong>{risk.accountSize > 0 ? ((positionSize / risk.accountSize) * 100).toFixed(1) : '0.0'}%</strong>
+                </div>
+                <div>
+                  <span className="text-gray-600 dark:text-gray-400">Risk Amount:</span>{' '}
+                  <strong className="text-red-600">{formatCurrency(riskAmount)}</strong>
+                </div>
+                <div>
+                  <span className="text-gray-600 dark:text-gray-400">Risk %:</span>{' '}
+                  <strong className={riskPercent > risk.riskPct ? 'text-red-600' : 'text-green-600'}>
+                    {riskPercent.toFixed(2)}%
+                  </strong>
+                </div>
+              </div>
+              {riskPercent > risk.riskPct && (
+                <p className="text-sm text-yellow-600 dark:text-yellow-500 mt-2">
+                  ⚠️ Risk exceeds target ({risk.riskPct.toFixed(1)}%)
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Notes</label>
+              <textarea
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+                rows={3}
+              />
+            </div>
+
+            {error && (
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3">
+                <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+              </div>
+            )}
+
+            <div className="flex gap-3 justify-end">
+              <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="primary" disabled={isSubmitting || !isRecommended}>
+                {isSubmitting ? 'Creating...' : 'Create Order'}
+              </Button>
+            </div>
+          </form>
         </div>
       </Card>
     </div>
