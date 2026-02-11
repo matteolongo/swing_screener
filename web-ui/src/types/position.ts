@@ -35,6 +35,19 @@ export interface PositionUpdate {
   reason: string;
 }
 
+export interface PositionUpdateApiResponse {
+  ticker: string;
+  status: PositionStatus;
+  last: number;
+  entry: number;
+  stop_old: number;
+  stop_suggested: number;
+  shares: number;
+  r_now: number;
+  action: ActionType;
+  reason: string;
+}
+
 export interface UpdateStopRequest {
   newStop: number;
   reason?: string;
@@ -84,6 +97,21 @@ export function transformPosition(apiPosition: PositionApiResponse): Position {
   };
 }
 
+export function transformPositionUpdate(apiUpdate: PositionUpdateApiResponse): PositionUpdate {
+  return {
+    ticker: apiUpdate.ticker,
+    status: apiUpdate.status,
+    last: apiUpdate.last,
+    entry: apiUpdate.entry,
+    stopOld: apiUpdate.stop_old,
+    stopSuggested: apiUpdate.stop_suggested,
+    shares: apiUpdate.shares,
+    rNow: apiUpdate.r_now,
+    action: apiUpdate.action,
+    reason: apiUpdate.reason,
+  };
+}
+
 // Calculate current R-multiple for open position
 export function calculateRNow(position: Position, currentPrice: number): number {
   if (!position.initialRisk || position.initialRisk === 0) return 0;
@@ -104,4 +132,3 @@ export function calculatePnLPercent(position: Position, currentPrice?: number): 
   const exitOrCurrent = position.exitPrice || currentPrice || position.currentPrice || position.entryPrice;
   return ((exitOrCurrent - position.entryPrice) / position.entryPrice) * 100;
 }
-

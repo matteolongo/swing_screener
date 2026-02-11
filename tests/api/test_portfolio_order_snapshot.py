@@ -21,35 +21,41 @@ def _ohlcv_for_tickers() -> pd.DataFrame:
     return df
 
 
-def test_order_snapshot_includes_last_price_and_distance(monkeypatch):
-    def fake_read_json(_path):
-        return {
-            "asof": "2026-02-08",
-            "orders": [
-                {
-                    "order_id": "ORD-AAPL-1",
-                    "ticker": "AAPL",
-                    "status": "pending",
-                    "order_type": "BUY_LIMIT",
-                    "quantity": 10,
-                    "limit_price": 100.0,
-                    "stop_price": 90.0,
-                    "order_kind": "entry",
-                }
-            ],
-        }
+def test_order_snapshot_includes_last_price_and_distance(monkeypatch, tmp_path):
+    # Create temporary orders file
+    orders_file = tmp_path / "orders.json"
+    import json
+    orders_data = {
+        "asof": "2026-02-08",
+        "orders": [
+            {
+                "order_id": "ORD-AAPL-1",
+                "ticker": "AAPL",
+                "status": "pending",
+                "order_type": "BUY_LIMIT",
+                "quantity": 10,
+                "limit_price": 100.0,
+                "stop_price": 90.0,
+                "order_kind": "entry",
+            }
+        ],
+    }
+    orders_file.write_text(json.dumps(orders_data))
 
     def fake_fetch_ohlcv(tickers, cfg):
         return _ohlcv_for_tickers()
 
-    monkeypatch.setattr(orders_repo, "read_json_file", fake_read_json)
+    # Patch the get_orders_path dependency to return our test file
+    import api.dependencies
+    monkeypatch.setattr(api.dependencies, "ORDERS_FILE", orders_file)
     monkeypatch.setattr(portfolio_service, "fetch_ohlcv", fake_fetch_ohlcv)
 
     client = TestClient(app)
     res = client.get("/api/portfolio/orders/snapshot")
     assert res.status_code == 200
     data = res.json()
-    assert data["asof"] == "2026-02-08"
+    # asof date will be today's date from get_today_str()
+    assert "asof" in data
     assert len(data["orders"]) == 1
     order = data["orders"][0]
     assert order["ticker"] == "AAPL"

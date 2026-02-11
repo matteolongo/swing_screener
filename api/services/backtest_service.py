@@ -184,8 +184,15 @@ class BacktestService:
 
         except HTTPException:
             raise
+        except ValueError as exc:
+            logger.error("Backtest configuration error: %s", exc)
+            raise HTTPException(status_code=400, detail=f"Invalid backtest configuration: {str(exc)}")
+        except (KeyError, IndexError) as exc:
+            logger.error("Backtest data error: %s", exc)
+            raise HTTPException(status_code=500, detail="Backtest failed due to data error")
         except Exception as exc:
-            raise HTTPException(status_code=500, detail=f"Backtest failed: {str(exc)}")
+            logger.exception("Unexpected backtest error")
+            raise HTTPException(status_code=500, detail="Backtest failed unexpectedly")
 
     def _normalize_tickers(self, items: list[str]) -> list[str]:
         out: list[str] = []
@@ -204,7 +211,7 @@ class BacktestService:
             return None
         try:
             return float(val)
-        except Exception:
+        except (ValueError, TypeError):
             return None
 
     def _trade_frequency_per_year(self, trades: int, start: str | None, end: str | None) -> float | None:
@@ -218,7 +225,7 @@ class BacktestService:
                 return None
             years = days / 365.25
             return float(trades) / years if years > 0 else None
-        except Exception:
+        except (ValueError, TypeError):
             return None
 
     def _build_summary(
@@ -561,22 +568,37 @@ class BacktestService:
 
         except HTTPException:
             raise
+        except ValueError as exc:
+            logger.error("Backtest configuration error: %s", exc)
+            raise HTTPException(status_code=400, detail=f"Invalid backtest request: {str(exc)}")
+        except (KeyError, IndexError) as exc:
+            logger.error("Backtest data error: %s", exc)
+            raise HTTPException(status_code=500, detail="Backtest failed due to data error")
         except Exception as exc:
-            raise HTTPException(status_code=500, detail=f"Backtest failed: {str(exc)}")
+            logger.exception("Unexpected backtest error")
+            raise HTTPException(status_code=500, detail="Backtest failed unexpectedly")
 
     def list_simulations(self) -> list[BacktestSimulationMeta]:
         try:
             return list_simulations()
+        except (FileNotFoundError, PermissionError) as exc:
+            logger.error("Failed to access simulation directory: %s", exc)
+            raise HTTPException(status_code=500, detail="Failed to list simulations (file access error)")
         except Exception as exc:
-            raise HTTPException(status_code=500, detail=f"Failed to list simulations: {exc}")
+            logger.exception("Unexpected error listing simulations")
+            raise HTTPException(status_code=500, detail="Failed to list simulations")
 
     def get_simulation(self, sim_id: str) -> BacktestSimulation:
         try:
             return load_simulation(sim_id)
         except FileNotFoundError:
             raise HTTPException(status_code=404, detail="Simulation not found")
+        except (ValueError, KeyError) as exc:
+            logger.error("Invalid simulation data: %s", exc)
+            raise HTTPException(status_code=500, detail="Failed to load simulation (data error)")
         except Exception as exc:
-            raise HTTPException(status_code=500, detail=f"Failed to load simulation: {exc}")
+            logger.exception("Unexpected error loading simulation")
+            raise HTTPException(status_code=500, detail="Failed to load simulation")
 
     def delete_simulation(self, sim_id: str) -> dict:
         try:
@@ -584,5 +606,9 @@ class BacktestService:
             return {"status": "deleted", "id": sim_id}
         except FileNotFoundError:
             raise HTTPException(status_code=404, detail="Simulation not found")
+        except PermissionError as exc:
+            logger.error("Permission denied deleting simulation: %s", exc)
+            raise HTTPException(status_code=500, detail="Failed to delete simulation (permission denied)")
         except Exception as exc:
-            raise HTTPException(status_code=500, detail=f"Failed to delete simulation: {exc}")
+            logger.exception("Unexpected error deleting simulation")
+            raise HTTPException(status_code=500, detail="Failed to delete simulation")

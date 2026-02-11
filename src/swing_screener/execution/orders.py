@@ -5,6 +5,8 @@ from pathlib import Path
 from typing import Literal, Optional
 import json
 
+from swing_screener.utils.file_lock import locked_read_json_cli, locked_write_json_cli
+
 
 OrderStatus = Literal["pending", "filled", "cancelled"]
 OrderKind = Literal["entry", "stop", "take_profit"]
@@ -31,7 +33,7 @@ class Order:
 
 def load_orders(path: str | Path) -> list[Order]:
     p = Path(path)
-    data = json.loads(p.read_text(encoding="utf-8"))
+    data = locked_read_json_cli(p)
     out: list[Order] = []
     for idx, item in enumerate(data.get("orders", [])):
         ticker = str(item.get("ticker", "")).strip().upper()
@@ -106,4 +108,4 @@ def save_orders(path: str | Path, orders: list[Order], asof: Optional[str] = Non
             for o in orders
         ],
     }
-    p.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    locked_write_json_cli(p, payload)

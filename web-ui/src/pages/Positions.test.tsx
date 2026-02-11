@@ -3,38 +3,13 @@ import { screen, waitFor, act } from '@testing-library/react'
 import { renderWithProviders } from '@/test/utils'
 import Positions from './Positions'
 import { useConfigStore } from '@/stores/configStore'
+import { DEFAULT_CONFIG } from '@/types/config'
 
 describe('Positions Page', () => {
   beforeEach(() => {
     // Reset config store
     useConfigStore.setState({
-      config: {
-        risk: {
-          accountSize: 100000,
-          riskPct: 0.01,
-          maxPositionPct: 0.60,
-          minShares: 1,
-          kAtr: 2.0,
-        },
-        indicators: {
-          smaFast: 20,
-          smaMid: 50,
-          smaLong: 200,
-          atrWindow: 14,
-          lookback6m: 126,
-          lookback12m: 252,
-          benchmark: 'SPY',
-        },
-        manage: {
-          breakevenAtR: 1.0,
-          trailAfterR: 2.0,
-          trailSma: 20,
-          smaBufferPct: 0.005,
-          maxHoldingDays: 20,
-        },
-        positionsFile: 'positions.json',
-        ordersFile: 'orders.json',
-      },
+      config: DEFAULT_CONFIG,
     })
   })
 
@@ -173,6 +148,24 @@ describe('Positions Page', () => {
       // Should have Update Stop and Close buttons
       const buttons = screen.getAllByRole('button')
       expect(buttons.length).toBeGreaterThan(2)
+    })
+
+    it('shows suggested stop in update modal', async () => {
+      const { user } = renderWithProviders(<Positions />)
+
+      await waitFor(() => {
+        expect(screen.getByText('VALE')).toBeInTheDocument()
+      })
+
+      const updateButtons = screen.getAllByRole('button', { name: /Update Stop/i })
+      await act(async () => {
+        await user.click(updateButtons[0])
+      })
+
+      await waitFor(() => {
+        expect(screen.getByText('Suggested Stop')).toBeInTheDocument()
+        expect(screen.getByText('$15.20')).toBeInTheDocument()
+      })
     })
   })
 

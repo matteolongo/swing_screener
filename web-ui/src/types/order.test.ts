@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest'
 import {
   transformOrder,
   transformCreateOrderRequest,
-  type Order,
   type OrderApiResponse,
   type CreateOrderRequest,
 } from './order'
@@ -41,9 +40,9 @@ describe('Order Type Transformations', () => {
         stopPrice: 145.00,
         orderDate: '2026-02-01',
         filledDate: '',
-        entryPrice: undefined,
+        entryPrice: null,
         positionId: 'POS-AAPL-001',
-        parentOrderId: undefined,
+        parentOrderId: null,
         tif: 'GTC',
         notes: 'Test order',
       })
@@ -70,7 +69,7 @@ describe('Order Type Transformations', () => {
 
       const result = transformOrder(apiResponse)
 
-      expect(result.limitPrice).toBeUndefined()
+      expect(result.limitPrice).toBeNull()
       expect(result.stopPrice).toBe(14.90)
       expect(result.orderType).toBe('SELL_STOP')
       expect(result.orderKind).toBe('stop')
@@ -97,10 +96,10 @@ describe('Order Type Transformations', () => {
 
       const result = transformOrder(apiResponse)
 
-      expect(result.stopPrice).toBeUndefined()
-      expect(result.entryPrice).toBeUndefined()
-      expect(result.positionId).toBeUndefined()
-      expect(result.parentOrderId).toBeUndefined()
+      expect(result.stopPrice).toBeNull()
+      expect(result.entryPrice).toBeNull()
+      expect(result.positionId).toBeNull()
+      expect(result.parentOrderId).toBeNull()
     })
 
     it('handles filled order with entry price', () => {

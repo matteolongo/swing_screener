@@ -6,6 +6,7 @@ import {
   fetchOrderSnapshots,
   fetchOrders,
   fetchPositions,
+  fetchPositionStopSuggestion,
   fillOrder,
   updatePositionStop,
   OrderFilterStatus,
@@ -89,6 +90,16 @@ export function useUpdateStopMutation(onSuccess?: () => void) {
       queryClient.invalidateQueries({ queryKey: ['positions'] });
       onSuccess?.();
     },
+  });
+}
+
+export function usePositionStopSuggestion(positionId?: string) {
+  return useQuery({
+    queryKey: ['positions', positionId, 'stop-suggestion'],
+    queryFn: () => fetchPositionStopSuggestion(positionId as string),
+    enabled: Boolean(positionId),
+    refetchOnWindowFocus: false,
+    retry: false,
   });
 }
 

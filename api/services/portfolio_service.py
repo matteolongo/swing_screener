@@ -11,6 +11,7 @@ from fastapi import HTTPException
 
 from api.models.portfolio import (
     Position,
+    PositionUpdate,
     PositionsResponse,
     Order,
     OrdersResponse,
@@ -24,7 +25,13 @@ from api.models.portfolio import (
 from api.repositories.orders_repo import OrdersRepository
 from api.repositories.positions_repo import PositionsRepository
 from api.utils.files import get_today_str
-from swing_screener.portfolio.state import load_positions, save_positions
+from swing_screener.portfolio.state import (
+    ManageConfig as ManageStateConfig,
+    Position as StatePosition,
+    evaluate_positions,
+    load_positions,
+    save_positions,
+)
 from swing_screener.execution.orders import load_orders, save_orders
 from swing_screener.execution.order_workflows import (
     fill_entry_order,
@@ -74,6 +81,63 @@ def _pct_to_target(target: Optional[float], last_price: Optional[float]) -> Opti
     return (target - last_price) / last_price * 100.0
 
 
+def _manage_cfg_from_app() -> ManageStateConfig:
+    from api.routers import config as config_router
+
+    manage = config_router.current_config.manage
+    return ManageStateConfig(
+        breakeven_at_R=manage.breakeven_at_r,
+        trail_sma=manage.trail_sma,
+        trail_after_R=manage.trail_after_r,
+        sma_buffer_pct=manage.sma_buffer_pct,
+        max_holding_days=manage.max_holding_days,
+    )
+
+
+def _calc_start_date(entry_date: Optional[str], trail_sma: int) -> str:
+    buffer_days = max(200, int(trail_sma * 3))
+    try:
+        entry_dt = pd.to_datetime(entry_date) if entry_date else pd.Timestamp.today()
+    except (TypeError, ValueError):
+        entry_dt = pd.Timestamp.today()
+    today = pd.Timestamp.today()
+    if entry_dt > today:
+        entry_dt = today
+    start_dt = entry_dt - pd.Timedelta(days=buffer_days)
+    return start_dt.strftime("%Y-%m-%d")
+
+
+def _to_state_position(position: dict) -> StatePosition:
+    return StatePosition(
+        ticker=str(position.get("ticker", "")).upper(),
+        status=position.get("status", "open"),
+        entry_date=str(position.get("entry_date", "")),
+        entry_price=float(position.get("entry_price", 0)),
+        stop_price=float(position.get("stop_price", 0)),
+        shares=int(position.get("shares", 0)),
+        position_id=position.get("position_id"),
+        source_order_id=position.get("source_order_id"),
+        initial_risk=(
+            float(position["initial_risk"])
+            if position.get("initial_risk") is not None
+            else None
+        ),
+        max_favorable_price=(
+            float(position["max_favorable_price"])
+            if position.get("max_favorable_price") is not None
+            else None
+        ),
+        exit_date=position.get("exit_date"),
+        exit_price=(
+            float(position["exit_price"])
+            if position.get("exit_price") is not None
+            else None
+        ),
+        notes=str(position.get("notes", "")),
+        exit_order_ids=position.get("exit_order_ids"),
+    )
+
+
 class PortfolioService:
     def __init__(self, orders_repo: OrdersRepository, positions_repo: PositionsRepository) -> None:
         self._orders_repo = orders_repo
@@ -101,8 +165,15 @@ class PortfolioService:
                             pos["current_price"] = float(price) if not pd.isna(price) else None
                         except (KeyError, IndexError):
                             pos["current_price"] = None
+            except (KeyError, ValueError, TypeError) as exc:
+                # Known data access errors - log and continue with null prices
+                logger.warning("Failed to fetch current prices (data error): %s", exc)
+                for pos in positions:
+                    if pos.get("status") == "open":
+                        pos["current_price"] = None
             except Exception as exc:
-                logger.warning("Failed to fetch current prices: %s", exc)
+                # Unexpected errors - log with full context but continue
+                logger.exception("Unexpected error fetching current prices")
                 for pos in positions:
                     if pos.get("status") == "open":
                         pos["current_price"] = None
@@ -126,12 +197,38 @@ class PortfolioService:
                     raise HTTPException(status_code=400, detail="Cannot update stop on closed position")
 
                 old_stop = pos.get("stop_price")
+                entry_price = pos.get("entry_price")
                 new_stop = request.new_stop
+                
+                # Validation: stop must move up only (trailing stop)
                 if new_stop <= old_stop:
                     raise HTTPException(
                         status_code=400,
                         detail=f"Cannot move stop down. Current: {old_stop}, Requested: {new_stop}",
                     )
+                
+                # Validation: stop must be below entry (for long positions)
+                if entry_price and new_stop >= entry_price:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Stop price ({new_stop}) must be below entry price ({entry_price}) for long positions"
+                    )
+                
+                # Optional: fetch current price and validate stop is reasonable
+                ticker = pos.get("ticker")
+                try:
+                    cfg = MarketDataConfig(lookback_days=5)
+                    ohlcv = fetch_ohlcv([ticker], cfg)
+                    if not ohlcv.empty and ticker in ohlcv.columns.get_level_values(1):
+                        current_price = ohlcv[("Close", ticker)].iloc[-1]
+                        if not pd.isna(current_price):
+                            # Warn if stop is way above current price
+                            if new_stop > current_price * 1.1:
+                                logger.warning(
+                                    f"Stop price {new_stop} is >10% above current price {current_price} for {ticker}"
+                                )
+                except Exception as exc:
+                    logger.warning(f"Could not fetch current price for validation: {exc}")
 
                 pos["stop_price"] = new_stop
                 if request.reason:
@@ -176,6 +273,60 @@ class PortfolioService:
         self._positions_repo.write(data)
 
         return {"status": "ok", "position_id": position_id, "exit_price": request.exit_price}
+
+    def suggest_position_stop(self, position_id: str) -> PositionUpdate:
+        position = self._positions_repo.get_position(position_id)
+        if position is None:
+            raise HTTPException(status_code=404, detail=f"Position not found: {position_id}")
+        if position.get("status") != "open":
+            raise HTTPException(status_code=400, detail="Stop suggestions require an open position")
+
+        ticker = position.get("ticker")
+        if not ticker:
+            raise HTTPException(status_code=400, detail="Position ticker is missing")
+
+        manage_cfg = _manage_cfg_from_app()
+        start_date = _calc_start_date(position.get("entry_date"), manage_cfg.trail_sma)
+        try:
+            cfg = MarketDataConfig(
+                start=start_date,
+                end=get_today_str(),
+                auto_adjust=True,
+                progress=False,
+            )
+            ohlcv = fetch_ohlcv([ticker], cfg)
+        except Exception as exc:
+            raise HTTPException(
+                status_code=502,
+                detail=f"Failed to fetch market data for {ticker}: {exc}",
+            ) from exc
+
+        try:
+            updates, _ = evaluate_positions(ohlcv, [_to_state_position(position)], manage_cfg)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except Exception as exc:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to compute stop suggestion: {exc}",
+            ) from exc
+
+        if not updates:
+            raise HTTPException(status_code=500, detail="No stop suggestion available")
+
+        update = updates[0]
+        return PositionUpdate(
+            ticker=update.ticker,
+            status=update.status,
+            last=update.last,
+            entry=update.entry,
+            stop_old=update.stop_old,
+            stop_suggested=update.stop_suggested,
+            shares=update.shares,
+            r_now=update.r_now,
+            action=update.action,
+            reason=update.reason,
+        )
 
     def list_orders(self, status: Optional[str] = None, ticker: Optional[str] = None) -> OrdersResponse:
         orders, asof = self._orders_repo.list_orders(status=status, ticker=ticker)

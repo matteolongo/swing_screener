@@ -178,6 +178,13 @@ curl -X PUT http://localhost:8000/api/portfolio/positions/POS-VALE-20260116-01/s
   }'
 ```
 
+**`GET /api/portfolio/positions/{position_id}/stop-suggestion`**  
+Get a suggested stop price based on the strategy manage rules.
+
+```bash
+curl http://localhost:8000/api/portfolio/positions/POS-VALE-20260116-01/stop-suggestion
+```
+
 **`POST /api/portfolio/positions/{position_id}/close`**  
 Close a position.
 

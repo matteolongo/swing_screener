@@ -4,12 +4,12 @@ import { PlayCircle, RefreshCw, TrendingUp, AlertCircle, BarChart3, MessageSquar
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import { useUniverses, useRunScreenerMutation } from '@/features/screener/hooks';
-import { ScreenerRequest, ScreenerCandidate } from '@/features/screener/types';
+import { ScreenerCandidate } from '@/features/screener/types';
 import { CreateOrderRequest } from '@/features/portfolio/types';
 import { createOrder } from '@/features/portfolio/api';
 import { useConfigStore } from '@/stores/configStore';
 import { fetchActiveStrategy } from '@/lib/strategyApi';
-import { StrategyRisk } from '@/types/strategy';
+import { RiskConfig } from '@/types/config';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { formatCurrency, formatPercent } from '@/utils/formatters';
 import QuickBacktestModal from '@/components/modals/QuickBacktestModal';
@@ -48,7 +48,7 @@ export default function Screener() {
     queryKey: ['strategy-active'],
     queryFn: fetchActiveStrategy,
   });
-  const riskConfig: StrategyRisk = activeStrategyQuery.data?.risk ?? config.risk;
+  const riskConfig: RiskConfig = activeStrategyQuery.data?.risk ?? config.risk;
   
   // Load saved preferences from localStorage or use defaults
   const [selectedUniverse, setSelectedUniverse] = useState<string>(() => {
@@ -255,7 +255,7 @@ export default function Screener() {
         {screenerMutation.isError && (
           <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
             <p className="text-sm text-red-800">
-              Error: {screenerMutation.error.message}
+              Error: {screenerMutation.error instanceof Error ? screenerMutation.error.message : 'Unknown error'}
             </p>
           </div>
         )}
@@ -330,6 +330,7 @@ export default function Screener() {
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Confidence</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Score</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Close</th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Stop</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">ATR</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Risk $</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">RR</th>
@@ -345,7 +346,7 @@ export default function Screener() {
                 <tbody>
                   {candidates.length === 0 ? (
                     <tr>
-                      <td colSpan={18} className="text-center py-8 text-gray-500">
+                      <td colSpan={19} className="text-center py-8 text-gray-500">
                         No candidates found
                       </td>
                     </tr>
@@ -410,6 +411,12 @@ export default function Screener() {
                         </td>
                         <td className="py-3 px-4 text-sm text-right text-gray-900">
                           {formatCurrency(candidate.close)}
+                        </td>
+                        <td className="py-3 px-4 text-sm text-right text-gray-900">
+                          {(() => {
+                            const stopValue = candidate.recommendation?.risk?.stop ?? candidate.stop;
+                            return stopValue != null && stopValue > 0 ? formatCurrency(stopValue) : '-';
+                          })()}
                         </td>
                         <td className="py-3 px-4 text-sm text-right text-gray-600">
                           {candidate.atr.toFixed(2)}
@@ -740,7 +747,7 @@ function CreateOrderModal({
   onSuccess,
 }: {
   candidate: ScreenerCandidate;
-  risk: StrategyRisk;
+  risk: RiskConfig;
   onClose: () => void;
   onSuccess: () => void;
 }) {

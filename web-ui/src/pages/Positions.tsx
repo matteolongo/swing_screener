@@ -16,6 +16,7 @@ import { calcOpenRisk, calcOpenRiskPct } from '@/features/portfolio/metrics';
 import {
   usePositions,
   useOpenPositions,
+  usePositionStopSuggestion,
   useUpdateStopMutation,
   useClosePositionMutation,
 } from '@/features/portfolio/hooks';
@@ -305,10 +306,27 @@ function UpdateStopModal({
     newStop: position.stopPrice,
     reason: '',
   });
+  const suggestionQuery = usePositionStopSuggestion(position.positionId);
+  const suggestion = suggestionQuery.data;
+  const suggestionError = suggestionQuery.error instanceof Error ? suggestionQuery.error.message : '';
+  const suggestedStop = suggestion?.stopSuggested;
+  const canApplySuggested =
+    suggestion?.action === 'MOVE_STOP_UP' &&
+    suggestedStop != null &&
+    suggestedStop > position.stopPrice;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit(formData);
+  };
+
+  const handleUseSuggested = () => {
+    if (!canApplySuggested || suggestedStop == null) return;
+    setFormData((prev) => ({
+      ...prev,
+      newStop: suggestedStop,
+      reason: prev.reason || suggestion?.reason || '',
+    }));
   };
 
   const canMoveUp = formData.newStop > position.stopPrice;
@@ -326,6 +344,31 @@ function UpdateStopModal({
               <p className="text-sm mt-1"><strong>Entry:</strong> {formatCurrency(position.entryPrice)}</p>
               <p className="text-sm"><strong>Current Stop:</strong> {formatCurrency(position.stopPrice)}</p>
               <p className="text-sm"><strong>Shares:</strong> {position.shares}</p>
+            </div>
+
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded">
+              <p className="text-sm text-blue-700 dark:text-blue-200 font-semibold">Suggested Stop</p>
+              {suggestionQuery.isLoading ? (
+                <p className="text-sm text-blue-700 dark:text-blue-200 mt-1">Loading suggestion...</p>
+              ) : suggestionError ? (
+                <p className="text-sm text-red-700 dark:text-red-200 mt-1">{suggestionError}</p>
+              ) : suggestion ? (
+                <div className="text-sm text-blue-800 dark:text-blue-100 mt-2 space-y-1">
+                  <p><strong>Suggested:</strong> {formatCurrency(suggestedStop ?? position.stopPrice)}</p>
+                  <p><strong>Action:</strong> {suggestion.action}</p>
+                  <p><strong>Reason:</strong> {suggestion.reason}</p>
+                  <p><strong>R now:</strong> {suggestion.rNow.toFixed(2)}R</p>
+                  {canApplySuggested ? (
+                    <Button type="button" size="sm" variant="secondary" onClick={handleUseSuggested}>
+                      Use Suggested
+                    </Button>
+                  ) : (
+                    <p className="text-xs text-blue-700 dark:text-blue-200">No stop update suggested.</p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-blue-700 dark:text-blue-200 mt-1">Suggestion unavailable.</p>
+              )}
             </div>
 
             <div>

@@ -1,8 +1,9 @@
 """Portfolio models (positions and orders)."""
 from __future__ import annotations
 
+import math
 from typing import Literal, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 PositionStatus = Literal["open", "closed"]
@@ -44,10 +45,32 @@ class UpdateStopRequest(BaseModel):
     new_stop: float = Field(gt=0, description="New stop price")
     reason: str = Field(default="", description="Reason for update")
 
+    @field_validator("new_stop")
+    @classmethod
+    def validate_new_stop(cls, v: float) -> float:
+        if not math.isfinite(v):
+            raise ValueError("Stop price must be a finite number (not NaN or Inf)")
+        if v <= 0:
+            raise ValueError("Stop price must be positive")
+        if v > 100000:  # Reasonable upper bound
+            raise ValueError("Stop price exceeds reasonable maximum (100,000)")
+        return v
+
 
 class ClosePositionRequest(BaseModel):
     exit_price: float = Field(gt=0, description="Exit price")
     reason: str = Field(default="", description="Reason for closing")
+
+    @field_validator("exit_price")
+    @classmethod
+    def validate_exit_price(cls, v: float) -> float:
+        if not math.isfinite(v):
+            raise ValueError("Exit price must be a finite number (not NaN or Inf)")
+        if v <= 0:
+            raise ValueError("Exit price must be positive")
+        if v > 100000:
+            raise ValueError("Exit price exceeds reasonable maximum (100,000)")
+        return v
 
 
 OrderStatus = Literal["pending", "filled", "cancelled"]
@@ -80,6 +103,59 @@ class CreateOrderRequest(BaseModel):
     stop_price: Optional[float] = None
     notes: str = ""
     order_kind: OrderKind = "entry"
+
+    @field_validator("ticker")
+    @classmethod
+    def validate_ticker(cls, v: str) -> str:
+        v = v.strip().upper()
+        if not v:
+            raise ValueError("Ticker cannot be empty")
+        if len(v) > 10:
+            raise ValueError("Ticker must be 10 characters or less")
+        if not v.isalnum():
+            raise ValueError("Ticker must be alphanumeric")
+        return v
+
+    @field_validator("quantity")
+    @classmethod
+    def validate_quantity(cls, v: int) -> int:
+        if v <= 0:
+            raise ValueError("Quantity must be positive")
+        if v > 1000000:
+            raise ValueError("Quantity exceeds maximum (1,000,000 shares)")
+        return v
+
+    @field_validator("limit_price", "stop_price")
+    @classmethod
+    def validate_price(cls, v: Optional[float]) -> Optional[float]:
+        if v is None:
+            return v
+        if not math.isfinite(v):
+            raise ValueError("Price must be a finite number (not NaN or Inf)")
+        if v <= 0:
+            raise ValueError("Price must be positive")
+        if v > 100000:
+            raise ValueError("Price exceeds reasonable maximum (100,000)")
+        return v
+
+    @field_validator("order_type")
+    @classmethod
+    def validate_order_type(cls, v: str) -> str:
+        v = v.strip().upper()
+        if v not in {"MARKET", "LIMIT", "STOP", "STOP_LIMIT"}:
+            raise ValueError(f"Invalid order type: {v}. Must be MARKET, LIMIT, STOP, or STOP_LIMIT")
+        return v
+
+    @model_validator(mode="after")
+    def validate_order_consistency(self):
+        """Validate price fields match order type."""
+        if self.order_type == "LIMIT" and self.limit_price is None:
+            raise ValueError("LIMIT order requires limit_price")
+        if self.order_type in {"STOP", "STOP_LIMIT"} and self.stop_price is None:
+            raise ValueError(f"{self.order_type} order requires stop_price")
+        if self.order_type == "STOP_LIMIT" and self.limit_price is None:
+            raise ValueError("STOP_LIMIT order requires both stop_price and limit_price")
+        return self
 
 
 class OrderSnapshot(BaseModel):

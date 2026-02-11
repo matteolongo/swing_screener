@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends
 
 from api.models.portfolio import (
     Position,
+    PositionUpdate,
     Order,
     PositionsResponse,
     OrdersResponse,
@@ -50,6 +51,15 @@ async def update_position_stop(
 ):
     """Update stop price for a position."""
     return service.update_position_stop(position_id, request)
+
+
+@router.get("/positions/{position_id}/stop-suggestion", response_model=PositionUpdate)
+async def get_position_stop_suggestion(
+    position_id: str,
+    service: PortfolioService = Depends(get_portfolio_service),
+):
+    """Get suggested stop price for a position based on manage rules."""
+    return service.suggest_position_stop(position_id)
 
 
 @router.post("/positions/{position_id}/close")

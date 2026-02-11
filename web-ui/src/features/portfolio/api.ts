@@ -14,6 +14,8 @@ import {
   transformCreateOrderRequest,
   transformOrderSnapshot,
   transformPosition,
+  transformPositionUpdate,
+  PositionUpdate,
 } from './types';
 
 export type OrderFilterStatus = OrderStatus | 'all';
@@ -94,6 +96,16 @@ export async function updatePositionStop(
     const error = await response.json();
     throw new Error(error.detail || 'Failed to update stop');
   }
+}
+
+export async function fetchPositionStopSuggestion(positionId: string): Promise<PositionUpdate> {
+  const response = await fetch(apiUrl(API_ENDPOINTS.positionStopSuggestion(positionId)));
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Failed to fetch stop suggestion');
+  }
+  const data = await response.json();
+  return transformPositionUpdate(data);
 }
 
 export async function closePosition(

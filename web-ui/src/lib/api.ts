@@ -22,6 +22,7 @@ export const API_ENDPOINTS = {
   positions: '/api/portfolio/positions',
   position: (id: string) => `/api/portfolio/positions/${id}`,
   positionStop: (id: string) => `/api/portfolio/positions/${id}/stop`,
+  positionStopSuggestion: (id: string) => `/api/portfolio/positions/${id}/stop-suggestion`,
   positionClose: (id: string) => `/api/portfolio/positions/${id}/close`,
   
   // Portfolio - Orders

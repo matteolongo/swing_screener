@@ -164,8 +164,14 @@ export const mockStrategies = [
   },
 ]
 
+type StrategyPayload = (typeof mockStrategies)[number]
+
 let activeStrategyId = mockStrategies[0].id
-let strategies = [...mockStrategies]
+let strategies: StrategyPayload[] = [...mockStrategies]
+
+const asObject = (value: unknown): Record<string, any> => (
+  value && typeof value === 'object' ? (value as Record<string, any>) : {}
+)
 
 export const mockPositions = [
   {
@@ -456,15 +462,24 @@ export const handlers = [
   }),
 
   http.post(`${API_BASE_URL}/api/strategy`, async ({ request }) => {
-    const body = await request.json()
+    const body = asObject(await request.json()) as Partial<StrategyPayload>
     if (body.id === 'default') {
       return HttpResponse.json({ detail: 'Cannot create strategy with reserved id.' }, { status: 400 })
     }
-    if (strategies.some((s) => s.id === body.id)) {
+    if (body.id && strategies.some((s) => s.id === body.id)) {
       return HttpResponse.json({ detail: 'Strategy already exists' }, { status: 409 })
     }
-    const created = {
+    const bodyId = typeof body.id === 'string' ? body.id : `strategy-${Date.now()}`
+    const bodyName = typeof body.name === 'string' ? body.name : 'New Strategy'
+    const bodyDescription = typeof body.description === 'string' ? body.description : mockStrategies[0].description
+    const bodyModule = typeof body.module === 'string' ? body.module : mockStrategies[0].module
+    const created: StrategyPayload = {
+      ...mockStrategies[0],
       ...body,
+      id: bodyId,
+      name: bodyName,
+      description: bodyDescription,
+      module: bodyModule,
       is_default: false,
       created_at: '2026-02-08T23:10:00',
       updated_at: '2026-02-08T23:10:00',
@@ -494,7 +509,7 @@ export const handlers = [
   }),
 
   http.post(`${API_BASE_URL}/api/strategy/active`, async ({ request }) => {
-    const body = await request.json()
+    const body = asObject(await request.json())
     const target = strategies.find((s) => s.id === body.strategy_id)
     if (!target) {
       return HttpResponse.json({ detail: 'Strategy not found' }, { status: 404 })
@@ -504,13 +519,13 @@ export const handlers = [
   }),
 
   http.put(`${API_BASE_URL}/api/strategy/:id`, async ({ request, params }) => {
-    const body = await request.json()
+    const body = asObject(await request.json()) as Partial<StrategyPayload>
     const id = params.id as string
     const idx = strategies.findIndex((s) => s.id === id)
     if (idx === -1) {
       return HttpResponse.json({ detail: 'Strategy not found' }, { status: 404 })
     }
-    const updated = {
+    const updated: StrategyPayload = {
       ...strategies[idx],
       ...body,
       id,
@@ -533,6 +548,23 @@ export const handlers = [
     return HttpResponse.json({ positions, asof: '2026-02-08' })
   }),
 
+  http.get(`${API_BASE_URL}/api/portfolio/positions/:id/stop-suggestion`, ({ params }) => {
+    const id = params.id as string
+    const position = mockPositions.find((p) => p.position_id === id) ?? mockPositions[0]
+    return HttpResponse.json({
+      ticker: position?.ticker ?? 'VALE',
+      status: 'open',
+      last: position?.current_price ?? 16.3,
+      entry: position?.entry_price ?? 15.89,
+      stop_old: position?.stop_price ?? 15.0,
+      stop_suggested: (position?.stop_price ?? 15.0) + 0.2,
+      shares: position?.shares ?? 1,
+      r_now: 0.6,
+      action: 'MOVE_STOP_UP',
+      reason: 'Trail: R=2.00 >= 2.0 and SMA20 trail',
+    })
+  }),
+
   // Orders endpoints
   http.get(`${API_BASE_URL}/api/portfolio/orders`, ({ request }) => {
     const url = new URL(request.url)
@@ -547,7 +579,7 @@ export const handlers = [
   }),
 
   http.post(`${API_BASE_URL}/api/portfolio/orders`, async ({ request }) => {
-    const body = await request.json()
+    const body = asObject(await request.json())
     return HttpResponse.json({ 
       order_id: `TEST-${Date.now()}`,
       ...body,
@@ -564,13 +596,13 @@ export const handlers = [
     return HttpResponse.json(mockUniverses)
   }),
 
-  http.post(`${API_BASE_URL}/api/screener/run`, async ({ request }) => {
+  http.post(`${API_BASE_URL}/api/screener/run`, () => {
     return HttpResponse.json(mockScreenerResults)
   }),
 
   // Social endpoints
   http.post(`${API_BASE_URL}/api/social/analyze`, async ({ request }) => {
-    const body = await request.json()
+    const body = asObject(await request.json())
     const symbol = (body?.symbol || 'AAPL').toUpperCase()
     return HttpResponse.json(buildSocialAnalysis(symbol))
   }),

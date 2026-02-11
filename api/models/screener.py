@@ -1,8 +1,9 @@
 """Screener models."""
 from __future__ import annotations
 
+import math
 from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from api.models.recommendation import Recommendation
 
 
@@ -73,3 +74,42 @@ class OrderPreview(BaseModel):
     position_size_usd: float
     risk_usd: float
     risk_pct: float
+
+    @field_validator("ticker")
+    @classmethod
+    def validate_ticker(cls, v: str) -> str:
+        v = v.strip().upper()
+        if not v:
+            raise ValueError("Ticker cannot be empty")
+        if len(v) > 10:
+            raise ValueError("Ticker must be 10 characters or less")
+        return v
+
+    @field_validator("entry_price", "stop_price", "atr")
+    @classmethod
+    def validate_price_fields(cls, v: float) -> float:
+        if not math.isfinite(v):
+            raise ValueError("Price must be a finite number (not NaN or Inf)")
+        if v <= 0:
+            raise ValueError("Price must be positive")
+        if v > 100000:
+            raise ValueError("Price exceeds reasonable maximum (100,000)")
+        return v
+
+    @field_validator("risk_pct")
+    @classmethod
+    def validate_risk_pct(cls, v: float) -> float:
+        if not math.isfinite(v):
+            raise ValueError("Risk percentage must be finite")
+        if v <= 0 or v >= 1.0:
+            raise ValueError("Risk percentage must be between 0 and 1 (0% and 100%)")
+        return v
+
+    @field_validator("shares")
+    @classmethod
+    def validate_shares(cls, v: int) -> int:
+        if v <= 0:
+            raise ValueError("Shares must be positive")
+        if v > 1000000:
+            raise ValueError("Shares exceed maximum (1,000,000)")
+        return v

@@ -15,11 +15,13 @@ export {
 export type {
   Position,
   PositionStatus,
+  PositionUpdate,
   UpdateStopRequest,
   ClosePositionRequest,
 } from '@/types/position';
 export {
   transformPosition,
+  transformPositionUpdate,
   calculatePnL,
   calculatePnLPercent,
 } from '@/types/position';

@@ -4,31 +4,13 @@ import { renderWithProviders, waitForQueriesToSettle } from '@/test/utils'
 import Screener from './Screener'
 import { useConfigStore } from '@/stores/configStore'
 import { useScreenerStore } from '@/stores/screenerStore'
+import { DEFAULT_CONFIG } from '@/types/config'
 
 describe('Screener Page', () => {
   beforeEach(() => {
     // Reset config store
     useConfigStore.setState({
-      config: {
-        risk: {
-          accountSize: 100000,
-          riskPct: 0.01,
-          maxPositions: 5,
-          minShares: 1,
-        },
-        indicators: {
-          sma_fast: 50,
-          sma_slow: 200,
-          mom_lookback_6m: 126,
-          mom_lookback_12m: 252,
-          atr_period: 20,
-        },
-        manage: {
-          trail_after_r: 1.0,
-          trail_pct_below_max: 0.10,
-          max_open_positions: 5,
-        },
-      },
+      config: DEFAULT_CONFIG,
     })
     useScreenerStore.setState({ lastResult: null })
   })
@@ -270,6 +252,7 @@ describe('Screener Page', () => {
         expect(screen.getByText('Ticker')).toBeInTheDocument()
         expect(screen.getByText('Last Bar')).toBeInTheDocument()
         expect(screen.getByText('Close')).toBeInTheDocument()
+        expect(screen.getByText('Stop')).toBeInTheDocument()
         expect(screen.getByText('ATR')).toBeInTheDocument()
         expect(screen.getByText('Risk $')).toBeInTheDocument()
         expect(screen.getByText('RR')).toBeInTheDocument()
