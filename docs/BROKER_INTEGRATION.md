@@ -290,6 +290,18 @@ pytest tests/data/test_providers.py::TestProviderCompatibility -v
 
 ## Troubleshooting
 
+### Date/Timezone Issues
+
+**Problem**: Screener shows yesterday's data even after market close
+
+**Solution** (Fixed in Feb 2026):
+- Yfinance's `end` parameter is exclusive (doesn't include the end date)
+- Provider now automatically adds +1 day to ensure current data is included
+- After US market close (22:00 CET / 16:00 ET), screener correctly shows today's data
+- To verify: Check the "Last Bar" column in screener results
+
+---
+
 ### yfinance Issues
 
 **Problem**: Download fails with `RuntimeError`
