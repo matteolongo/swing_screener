@@ -2,11 +2,13 @@ import json
 
 import pandas as pd
 from fastapi.testclient import TestClient
+from unittest.mock import MagicMock
 
 from api.main import app
 import api.dependencies
 import api.routers.config as config_router
 import api.services.portfolio_service as portfolio_service
+from swing_screener.data.providers import MarketDataProvider
 
 
 def _ohlcv_for_ticker() -> pd.DataFrame:
@@ -47,7 +49,12 @@ def test_position_stop_suggestion(monkeypatch, tmp_path):
         return _ohlcv_for_ticker()
 
     monkeypatch.setattr(api.dependencies, "POSITIONS_FILE", positions_file)
-    monkeypatch.setattr(portfolio_service, "fetch_ohlcv", fake_fetch_ohlcv)
+    # Mock the provider
+    ohlcv = _ohlcv_for_ticker()
+    mock_provider = MagicMock(spec=MarketDataProvider)
+    mock_provider.fetch_ohlcv.return_value = ohlcv
+    mock_provider.get_provider_name.return_value = "mock"
+    monkeypatch.setattr(portfolio_service, "get_default_provider", lambda **kwargs: mock_provider)
 
     client = TestClient(app)
     res = client.get("/api/portfolio/positions/POS-AAPL-1/stop-suggestion")

@@ -26,7 +26,7 @@ from api.models.backtest import (
     BacktestSimulation,
 )
 from api.repositories.strategy_repo import StrategyRepository
-from swing_screener.data.market_data import MarketDataConfig, fetch_ohlcv
+from swing_screener.data.providers import MarketDataProvider, get_default_provider
 from swing_screener.backtest.simulator import BacktestConfig, backtest_single_ticker_R, summarize_trades
 from swing_screener.backtest.portfolio import (
     equity_curve_R,
@@ -44,8 +44,13 @@ from swing_screener.strategy.config import build_backtest_config
 
 
 class BacktestService:
-    def __init__(self, strategy_repo: StrategyRepository) -> None:
+    def __init__(
+        self,
+        strategy_repo: StrategyRepository,
+        provider: Optional[MarketDataProvider] = None
+    ) -> None:
         self._strategy_repo = strategy_repo
+        self._provider = provider or get_default_provider()
 
     def _resolve_strategy(self, strategy_id: Optional[str]) -> dict:
         if strategy_id:
@@ -63,12 +68,10 @@ class BacktestService:
             start_str = str(start_date)
             end_str = str(end_date)
 
-            mcfg = MarketDataConfig(start=start_str, end=end_str)
-            ohlcv = fetch_ohlcv(
+            ohlcv = self._provider.fetch_ohlcv(
                 [request.ticker],
-                mcfg,
-                use_cache=True,
-                force_refresh=False,
+                start_date=start_str,
+                end_date=end_str,
             )
 
             if ohlcv is None or ohlcv.empty:
@@ -422,8 +425,7 @@ class BacktestService:
             if start_date > end_date:
                 raise HTTPException(status_code=400, detail="start must be <= end")
 
-            mcfg = MarketDataConfig(start=str(start_date), end=str(end_date))
-            ohlcv = fetch_ohlcv(tickers, mcfg, use_cache=True, force_refresh=False)
+            ohlcv = self._provider.fetch_ohlcv(tickers, start_date=str(start_date), end_date=str(end_date))
 
             if ohlcv is None or ohlcv.empty:
                 raise HTTPException(status_code=404, detail="No market data found for requested tickers")

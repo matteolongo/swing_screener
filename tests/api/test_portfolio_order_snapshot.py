@@ -1,10 +1,12 @@
 import pytest
 import pandas as pd
 from fastapi.testclient import TestClient
+from unittest.mock import MagicMock
 
 from api.main import app
 import api.repositories.orders_repo as orders_repo
 import api.services.portfolio_service as portfolio_service
+from swing_screener.data.providers import MarketDataProvider
 
 
 def _ohlcv_for_tickers() -> pd.DataFrame:
@@ -48,7 +50,12 @@ def test_order_snapshot_includes_last_price_and_distance(monkeypatch, tmp_path):
     # Patch the get_orders_path dependency to return our test file
     import api.dependencies
     monkeypatch.setattr(api.dependencies, "ORDERS_FILE", orders_file)
-    monkeypatch.setattr(portfolio_service, "fetch_ohlcv", fake_fetch_ohlcv)
+    # Mock the provider
+    ohlcv = _ohlcv_for_tickers()
+    mock_provider = MagicMock(spec=MarketDataProvider)
+    mock_provider.fetch_ohlcv.return_value = ohlcv
+    mock_provider.get_provider_name.return_value = "mock"
+    monkeypatch.setattr(portfolio_service, "get_default_provider", lambda **kwargs: mock_provider)
 
     client = TestClient(app)
     res = client.get("/api/portfolio/orders/snapshot")

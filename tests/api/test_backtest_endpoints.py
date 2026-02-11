@@ -1,8 +1,10 @@
 import pandas as pd
 from fastapi.testclient import TestClient
+from unittest.mock import MagicMock
 
 from api.main import app
 import api.services.backtest_service as backtest_service
+from swing_screener.data.providers import MarketDataProvider
 from swing_screener.backtest import storage as backtest_storage
 
 
@@ -52,7 +54,11 @@ def test_full_backtest_run_and_simulation_flow(monkeypatch, tmp_path):
     def fake_fetch_ohlcv(tickers, cfg, use_cache=True, force_refresh=False):
         return ohlcv
 
-    monkeypatch.setattr(backtest_service, "fetch_ohlcv", fake_fetch_ohlcv)
+    # Mock the provider
+    mock_provider = MagicMock(spec=MarketDataProvider)
+    mock_provider.fetch_ohlcv.return_value = ohlcv
+    mock_provider.get_provider_name.return_value = "mock"
+    monkeypatch.setattr(backtest_service, "get_default_provider", lambda **kwargs: mock_provider)
     monkeypatch.setattr(backtest_storage, "BACKTEST_DIR", tmp_path / "backtests")
 
     client = TestClient(app)
@@ -88,7 +94,11 @@ def test_full_backtest_null_summary_when_no_trades(monkeypatch, tmp_path):
     def fake_fetch_ohlcv(tickers, cfg, use_cache=True, force_refresh=False):
         return ohlcv
 
-    monkeypatch.setattr(backtest_service, "fetch_ohlcv", fake_fetch_ohlcv)
+    # Mock the provider
+    mock_provider = MagicMock(spec=MarketDataProvider)
+    mock_provider.fetch_ohlcv.return_value = ohlcv
+    mock_provider.get_provider_name.return_value = "mock"
+    monkeypatch.setattr(backtest_service, "get_default_provider", lambda **kwargs: mock_provider)
     monkeypatch.setattr(backtest_storage, "BACKTEST_DIR", tmp_path / "backtests")
 
     client = TestClient(app)

@@ -1,8 +1,10 @@
 import pandas as pd
 from fastapi.testclient import TestClient
+from unittest.mock import MagicMock
 
 from api.main import app
 import api.services.screener_service as screener_service
+from swing_screener.data.providers import MarketDataProvider
 
 
 def _ohlcv_with_spy() -> pd.DataFrame:
@@ -20,11 +22,17 @@ def _ohlcv_with_spy() -> pd.DataFrame:
     return df
 
 
+def _create_mock_provider(ohlcv_data: pd.DataFrame) -> MarketDataProvider:
+    """Create a mock provider that returns the given OHLCV data."""
+    mock_provider = MagicMock(spec=MarketDataProvider)
+    mock_provider.fetch_ohlcv.return_value = ohlcv_data
+    mock_provider.get_provider_name.return_value = "mock"
+    return mock_provider
+
+
 def test_screener_top_over_100_returns_candidates(monkeypatch):
     ohlcv = _ohlcv_with_spy()
-
-    def fake_fetch_ohlcv(tickers, cfg, use_cache=True, force_refresh=False):
-        return ohlcv
+    mock_provider = _create_mock_provider(ohlcv)
 
     def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None):
         idx = [f"T{i:03d}" for i in range(150)]
@@ -43,7 +51,8 @@ def test_screener_top_over_100_returns_candidates(monkeypatch):
         }
         return pd.DataFrame(data, index=idx)
 
-    monkeypatch.setattr(screener_service, "fetch_ohlcv", fake_fetch_ohlcv)
+    # Mock the provider factory to return our mock provider
+    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
     monkeypatch.setattr(screener_service, "get_multiple_ticker_info", lambda tickers: {})
 
@@ -57,10 +66,11 @@ def test_screener_top_over_100_returns_candidates(monkeypatch):
 
 
 def test_screener_empty_ohlcv_returns_404(monkeypatch):
-    def fake_fetch_ohlcv(tickers, cfg, use_cache=True, force_refresh=False):
-        return pd.DataFrame()
-
-    monkeypatch.setattr(screener_service, "fetch_ohlcv", fake_fetch_ohlcv)
+    empty_df = pd.DataFrame()
+    mock_provider = _create_mock_provider(empty_df)
+    
+    # Mock the provider factory to return our mock provider
+    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
 
     client = TestClient(app)
     res = client.post("/api/screener/run", json={"universe": "mega_all", "top": 200})
@@ -69,9 +79,7 @@ def test_screener_empty_ohlcv_returns_404(monkeypatch):
 
 def test_screener_recommendation_payload_shape(monkeypatch):
     ohlcv = _ohlcv_with_spy()
-
-    def fake_fetch_ohlcv(tickers, cfg, use_cache=True, force_refresh=False):
-        return ohlcv
+    mock_provider = _create_mock_provider(ohlcv)
 
     def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None):
         idx = ["AAA"]
@@ -98,7 +106,8 @@ def test_screener_recommendation_payload_shape(monkeypatch):
         }
         return pd.DataFrame(data, index=idx)
 
-    monkeypatch.setattr(screener_service, "fetch_ohlcv", fake_fetch_ohlcv)
+    # Mock the provider factory to return our mock provider
+    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
     monkeypatch.setattr(screener_service, "get_multiple_ticker_info", lambda tickers: {})
 
