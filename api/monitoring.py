@@ -2,11 +2,10 @@
 from __future__ import annotations
 
 import time
+import threading
 from pathlib import Path
 from typing import Dict, Any
 import json
-
-from fastapi import HTTPException
 
 
 class HealthChecker:
@@ -14,7 +13,11 @@ class HealthChecker:
     
     @staticmethod
     def check_file_access() -> Dict[str, Any]:
-        """Check that critical files are accessible."""
+        """Check that critical files are accessible.
+        
+        Note: This method has a side effect - it will create positions.json
+        and orders.json with empty list content if they don't exist.
+        """
         # Use hardcoded paths instead of importing (avoid circular deps)
         positions_file = Path("positions.json")
         orders_file = Path("orders.json")
@@ -91,20 +94,28 @@ class HealthChecker:
 
 
 class MetricsCollector:
-    """Simple in-memory metrics collector."""
+    """Simple in-memory metrics collector.
+    
+    Thread-safe for concurrent access within a single process.
+    Note: When running with multiple workers (e.g., uvicorn --workers 4),
+    each process will have its own instance with separate counters.
+    """
     
     def __init__(self):
         self._lock_contention_count = 0
         self._validation_failure_count = 0
         self._start_time = time.time()
+        self._lock = threading.Lock()
     
     def record_lock_contention(self):
         """Record a lock contention event."""
-        self._lock_contention_count += 1
+        with self._lock:
+            self._lock_contention_count += 1
     
     def record_validation_failure(self):
         """Record a validation failure."""
-        self._validation_failure_count += 1
+        with self._lock:
+            self._validation_failure_count += 1
     
     def get_metrics(self) -> Dict[str, Any]:
         """Get current metrics."""

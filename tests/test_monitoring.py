@@ -70,12 +70,13 @@ class TestMetrics:
         assert isinstance(data["lock_contention_total"], int)
         assert isinstance(data["validation_failures_total"], int)
 
-    @pytest.mark.skip(reason="Pydantic validation happens before exception handler - can't track these")
+    @pytest.mark.skip(reason="TODO: implement using a request that triggers ValidationError and increments validation_failures_total")
     def test_metrics_validation_failure_increments(self):
         """Test that validation failures are counted."""
-        # NOTE: This is hard to test because Pydantic catches validation errors
-        # before they reach our exception handler. We'd need to track them at
-        # the request validation level, which is more complex.
+        # NOTE: The global exception handler tracks Pydantic ValidationError
+        # exceptions and increments the validation_failures_total metric.
+        # This test is currently skipped until we define a specific endpoint
+        # and payload to reliably trigger such a validation error.
         pass
 
 

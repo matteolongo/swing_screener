@@ -124,10 +124,7 @@ curl http://localhost:8000/health
       "issues": null
     },
     "data_directory": {
-      "status": "healthy",
-      "path": "data/",
-      "readable": true,
-      "writable": true
+      "status": "ok"
     }
   },
   "metrics": {
@@ -165,8 +162,8 @@ curl http://localhost:8000/metrics
 
 **Metrics:**
 - `uptime_seconds` - Time since server started
-- `lock_contention_total` - Number of times lock acquisition was delayed
-- `validation_failures_total` - Count of validation errors (HTTPException with 400/422 status)
+- `lock_contention_total` - Number of times lock acquisition timed out
+- `validation_failures_total` - Count of Pydantic validation errors (422 status)
 
 ---
 
