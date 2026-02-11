@@ -11,7 +11,7 @@ Common issues and solutions for the Swing Screener system.
 **Symptom:**
 ```json
 {
-  "detail": "Resource temporarily unavailable - file lock timeout"
+  "detail": "Service temporarily unavailable - file locked: positions.json"
 }
 ```
 
