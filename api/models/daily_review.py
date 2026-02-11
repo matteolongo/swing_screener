@@ -1,6 +1,8 @@
 """Data models for daily review endpoint."""
 from datetime import date
+from typing import Optional
 from pydantic import BaseModel, Field
+from api.models.recommendation import Recommendation
 
 
 class DailyReviewCandidate(BaseModel):
@@ -13,6 +15,7 @@ class DailyReviewCandidate(BaseModel):
     r_reward: float = Field(..., description="Potential reward in R-multiples")
     name: str | None = None
     sector: str | None = None
+    recommendation: Optional[Recommendation] = None
 
 
 class DailyReviewPositionHold(BaseModel):

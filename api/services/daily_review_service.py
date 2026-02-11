@@ -53,6 +53,7 @@ class DailyReviewService:
                 r_reward=c.rr or 0.0,
                 name=c.name,
                 sector=c.sector,
+                recommendation=c.recommendation,
             )
             for c in candidates
         ]

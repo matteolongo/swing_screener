@@ -2,6 +2,8 @@
  * Daily Review types and transformations
  */
 
+import { Recommendation, RecommendationAPI, transformRecommendation } from '@/types/recommendation';
+
 // API response types (snake_case from backend)
 export interface DailyReviewCandidateAPI {
   ticker: string;
@@ -12,6 +14,7 @@ export interface DailyReviewCandidateAPI {
   r_reward: number;
   name: string | null;
   sector: string | null;
+  recommendation?: RecommendationAPI | null;
 }
 
 export interface DailyReviewPositionHoldAPI {
@@ -72,6 +75,7 @@ export interface DailyReviewCandidate {
   rReward: number;
   name: string | null;
   sector: string | null;
+  recommendation?: Recommendation;
 }
 
 export interface DailyReviewPositionHold {
@@ -133,6 +137,7 @@ export function transformCandidate(api: DailyReviewCandidateAPI): DailyReviewCan
     rReward: api.r_reward,
     name: api.name,
     sector: api.sector,
+    recommendation: api.recommendation ? transformRecommendation(api.recommendation) : undefined,
   };
 }
 
