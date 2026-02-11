@@ -7,7 +7,7 @@ import pytest
 
 from api.models.daily_review import DailyReview
 from api.models.screener import ScreenerResponse, ScreenerCandidate
-from api.models.portfolio import Position, PositionUpdate
+from api.models.portfolio import Position, PositionUpdate, PositionsResponse
 from api.services.daily_review_service import DailyReviewService
 
 
@@ -71,36 +71,39 @@ def mock_portfolio_service():
     """Mock portfolio service."""
     service = Mock()
     
-    # Mock positions
-    service.list_positions.return_value = [
-        Position(
-            position_id="pos1",
-            ticker="NVDA",
-            entry_price=500.0,
-            stop_price=490.0,
-            shares=10,
-            status="open",
-            entry_date="2026-02-01",
-        ),
-        Position(
-            position_id="pos2",
-            ticker="GOOGL",
-            entry_price=140.0,
-            stop_price=135.0,
-            shares=15,
-            status="open",
-            entry_date="2026-02-05",
-        ),
-        Position(
-            position_id="pos3",
-            ticker="TSLA",
-            entry_price=200.0,
-            stop_price=190.0,
-            shares=8,
-            status="open",
-            entry_date="2026-01-20",
-        ),
-    ]
+    # Mock positions (return PositionsResponse, not list)
+    service.list_positions.return_value = PositionsResponse(
+        positions=[
+            Position(
+                position_id="pos1",
+                ticker="NVDA",
+                entry_price=500.0,
+                stop_price=490.0,
+                shares=10,
+                status="open",
+                entry_date="2026-02-01",
+            ),
+            Position(
+                position_id="pos2",
+                ticker="GOOGL",
+                entry_price=140.0,
+                stop_price=135.0,
+                shares=15,
+                status="open",
+                entry_date="2026-02-05",
+            ),
+            Position(
+                position_id="pos3",
+                ticker="TSLA",
+                entry_price=200.0,
+                stop_price=190.0,
+                shares=8,
+                status="open",
+                entry_date="2026-01-20",
+            ),
+        ],
+        asof="2026-02-11",
+    )
     
     # Mock stop suggestions (different actions for each position)
     def mock_suggest_stop(position_id: str) -> PositionUpdate:
@@ -253,7 +256,7 @@ def test_generate_daily_review_position_close(mock_screener_service, mock_portfo
 def test_generate_daily_review_no_positions(mock_screener_service):
     """Test daily review with no open positions."""
     empty_portfolio = Mock()
-    empty_portfolio.list_positions.return_value = []
+    empty_portfolio.list_positions.return_value = PositionsResponse(positions=[], asof="2026-02-11")
     
     service = DailyReviewService(mock_screener_service, empty_portfolio)
     review = service.generate_daily_review(top_n=10)

@@ -58,7 +58,8 @@ class DailyReviewService:
         ]
         
         # 2. Analyze all open positions
-        positions = self.portfolio.list_positions(status="open")
+        positions_response = self.portfolio.list_positions(status="open")
+        positions = positions_response.positions
         
         positions_hold: list[DailyReviewPositionHold] = []
         positions_update: list[DailyReviewPositionUpdate] = []
