@@ -7,13 +7,15 @@ import {
   FileText, 
   TrendingUp,
   SlidersHorizontal,
-  Settings 
+  Settings,
+  ClipboardCheck,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { fetchActiveStrategy, fetchStrategies, setActiveStrategy } from '@/lib/strategyApi';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Daily Review', href: '/daily-review', icon: ClipboardCheck },
   { name: 'Screener', href: '/screener', icon: Search },
   { name: 'Backtest', href: '/backtest', icon: BarChart3 },
   { name: 'Orders', href: '/orders', icon: FileText },

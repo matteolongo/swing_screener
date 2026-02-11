@@ -38,6 +38,9 @@ export const API_ENDPOINTS = {
 
   // Social
   socialAnalyze: '/api/social/analyze',
+
+  // Daily Review
+  dailyReview: '/api/daily-review',
 } as const;
 
 // Helper to build full URL
