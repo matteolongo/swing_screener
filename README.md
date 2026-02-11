@@ -10,6 +10,19 @@ It helps you:
 
 Execution is intentionally **manual** (Degiro-friendly).
 
+---
+
+## 🤖 For AI Agents
+
+**New to this codebase?** Start with **[WELCOME.md](WELCOME.md)** for complete onboarding.
+
+**Quick reference:**
+- **AGENTS.md** - Project philosophy and constraints (read this!)
+- **ROADMAP.md** - Feature status and priorities
+- **docs/DAILY_REVIEW_IMPLEMENTATION.md** - Recent implementation patterns
+
+---
+
 ## Two Ways to Use
 
 ### 🌐 Web UI (Recommended)
