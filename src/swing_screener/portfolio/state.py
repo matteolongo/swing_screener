@@ -266,7 +266,15 @@ def evaluate_positions(
         try:
             entry_dt = pd.to_datetime(pos.entry_date)
             bars_since = int((s.index >= entry_dt).sum())
-        except Exception:
+        except (ValueError, TypeError) as exc:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(
+                "Failed to calculate bars_since for %s (entry_date=%s): %s",
+                pos.ticker,
+                pos.entry_date,
+                exc
+            )
             bars_since = 0
 
         if cfg.max_holding_days and bars_since >= cfg.max_holding_days:

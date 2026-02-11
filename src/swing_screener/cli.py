@@ -474,8 +474,11 @@ def main() -> None:
             sector_map = {t: data.get("sector") for t, data in info.items()}
             for warning in sector_concentration_warnings(tickers, sector_map):
                 print(f"Warning: {warning}")
-        except Exception:
-            pass
+        except Exception as exc:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning("Sector concentration check failed: %s", exc, exc_info=True)
+            print("(Sector concentration check unavailable - continuing without it)")
 
         print(report.head(10))
 
@@ -514,8 +517,17 @@ def main() -> None:
 
         try:
             events = provider.fetch_events(start, end, symbols)
+        except (ConnectionError, TimeoutError) as exc:
+            print(f"Social fetch failed (network error): {exc}")
+            return
+        except ValueError as exc:
+            print(f"Social fetch failed (invalid data): {exc}")
+            return
         except Exception as exc:
-            print(f"Social fetch failed: {exc}")
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.exception("Unexpected error fetching social events")
+            print(f"Social fetch failed unexpectedly: {exc}")
             return
 
         counts: dict[str, int] = {}

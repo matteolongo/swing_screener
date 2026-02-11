@@ -34,25 +34,56 @@ app = FastAPI(
 )
 
 # CORS middleware - allow web UI to connect
+# Security: Use explicit allowed methods and headers instead of wildcards
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://localhost:5174"],  # Vite dev servers
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],  # Explicit instead of ["*"]
+    allow_headers=[
+        "Content-Type",
+        "Authorization",
+        "Accept",
+        "Origin",
+        "User-Agent",
+        "X-Requested-With",
+    ],  # Explicit instead of ["*"]
 )
 
 
 # Global exception handler
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    """Catch-all exception handler."""
-    logger.exception("Unhandled API error")
+    """Catch-all exception handler - masks error details for security."""
+    from fastapi import HTTPException
+    from pydantic import ValidationError
+    
+    # Preserve HTTPException status codes and messages (these are intentional)
+    if isinstance(exc, HTTPException):
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.detail},
+        )
+    
+    # Preserve Pydantic validation errors (user input errors)
+    if isinstance(exc, ValidationError):
+        return JSONResponse(
+            status_code=422,
+            content={"detail": exc.errors()},
+        )
+    
+    # For unexpected errors: log full details server-side, return generic message
+    logger.exception(
+        "Unhandled API error on %s %s",
+        request.method,
+        request.url.path,
+    )
+    
     return JSONResponse(
         status_code=500,
         content={
-            "detail": str(exc),
-            "error_type": type(exc).__name__,
+            "detail": "Internal server error",
+            "message": "An unexpected error occurred. Please contact support if the issue persists.",
         },
     )
 

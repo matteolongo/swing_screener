@@ -101,8 +101,15 @@ class PortfolioService:
                             pos["current_price"] = float(price) if not pd.isna(price) else None
                         except (KeyError, IndexError):
                             pos["current_price"] = None
+            except (KeyError, ValueError, TypeError) as exc:
+                # Known data access errors - log and continue with null prices
+                logger.warning("Failed to fetch current prices (data error): %s", exc)
+                for pos in positions:
+                    if pos.get("status") == "open":
+                        pos["current_price"] = None
             except Exception as exc:
-                logger.warning("Failed to fetch current prices: %s", exc)
+                # Unexpected errors - log with full context but continue
+                logger.exception("Unexpected error fetching current prices")
                 for pos in positions:
                     if pos.get("status") == "open":
                         pos["current_price"] = None

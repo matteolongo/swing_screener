@@ -161,8 +161,12 @@ class ScreenerService:
         try:
             universes = list_package_universes()
             return {"universes": universes}
+        except (FileNotFoundError, PermissionError) as exc:
+            logger.error("Failed to access universe files: %s", exc)
+            raise HTTPException(status_code=500, detail="Failed to list universes (file access error)")
         except Exception as exc:
-            raise HTTPException(status_code=500, detail=f"Failed to list universes: {exc}")
+            logger.exception("Unexpected error listing universes")
+            raise HTTPException(status_code=500, detail="Failed to list universes")
 
     def run_screener(self, request: ScreenerRequest) -> ScreenerResponse:
         try:
@@ -406,9 +410,15 @@ class ScreenerService:
 
         except HTTPException:
             raise
+        except ValueError as exc:
+            logger.error("Screener configuration error: %s", exc)
+            raise HTTPException(status_code=400, detail=f"Invalid screener configuration: {str(exc)}")
+        except (KeyError, IndexError) as exc:
+            logger.error("Screener data error: %s", exc)
+            raise HTTPException(status_code=500, detail="Screener failed due to data error")
         except Exception as exc:
-            logger.exception("Screener failed")
-            raise HTTPException(status_code=500, detail=f"Screener failed: {str(exc)}")
+            logger.exception("Unexpected screener error")
+            raise HTTPException(status_code=500, detail="Screener failed unexpectedly")
 
     def preview_order(
         self,
@@ -443,5 +453,9 @@ class ScreenerService:
 
         except HTTPException:
             raise
+        except ValueError as exc:
+            logger.error("Preview configuration error: %s", exc)
+            raise HTTPException(status_code=400, detail=f"Invalid preview request: {str(exc)}")
         except Exception as exc:
-            raise HTTPException(status_code=500, detail=f"Preview failed: {exc}")
+            logger.exception("Unexpected preview error")
+            raise HTTPException(status_code=500, detail="Preview failed unexpectedly")
