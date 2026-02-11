@@ -48,6 +48,9 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+markers = [
+    "integration: marks tests as integration tests (require API keys, slower)",
+]
 
 [tool.setuptools.package-data]
 "swing_screener.data" = ["universes/*.csv", "universes/*.json"]
