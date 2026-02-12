@@ -27,6 +27,57 @@ def _extract_field_matrix(ohlcv: pd.DataFrame, field: str) -> pd.DataFrame:
     return m.dropna(axis=1, how="all").sort_index()
 
 
+def compute_atr_per_ticker(
+    high: pd.Series,
+    low: pd.Series,
+    close: pd.Series,
+    window: int = 14,
+) -> float:
+    """
+    Compute ATR for a single ticker on its actual trading days.
+    
+    Returns the last ATR value, or NaN if insufficient data.
+    """
+    if window <= 1:
+        raise ValueError("window must be > 1")
+    
+    # Drop NaN values - only compute on actual trading days
+    valid_mask = high.notna() & low.notna() & close.notna()
+    h = high[valid_mask]
+    l = low[valid_mask]
+    c = close[valid_mask]
+    
+    if len(h) < window + 1:
+        return float("nan")
+    
+    # Compute True Range
+    prev_c = c.shift(1)
+    tr1 = h - l
+    tr2 = (h - prev_c).abs()
+    tr3 = (l - prev_c).abs()
+    
+    tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+    
+    # Wilder's smoothing
+    tr_vals = tr.to_numpy(dtype=float)
+    atr_vals = np.full_like(tr_vals, np.nan, dtype=float)
+    
+    # Seed with SMA of first window TR values (skip first value)
+    first_atr = np.nanmean(tr_vals[1:window + 1])
+    atr_vals[window] = first_atr
+    
+    # Smooth remaining values
+    for i in range(window + 1, len(tr_vals)):
+        prev_atr = atr_vals[i - 1]
+        curr_tr = tr_vals[i]
+        if np.isnan(prev_atr) or np.isnan(curr_tr):
+            atr_vals[i] = np.nan
+        else:
+            atr_vals[i] = (prev_atr * (window - 1) + curr_tr) / window
+    
+    return atr_vals[-1]
+
+
 def compute_atr(
     high: pd.DataFrame,
     low: pd.DataFrame,
@@ -43,6 +94,9 @@ def compute_atr(
     )
 
     Returns: DataFrame (date x ticker) ATR using Wilder's smoothing.
+    
+    NOTE: This is kept for backward compatibility but is not recommended
+    for sparse calendar data. Use compute_atr_per_ticker instead.
     """
     if window <= 1:
         raise ValueError("window must be > 1")
@@ -85,6 +139,9 @@ def compute_volatility_features(
     Returns per-ticker volatility features:
       - atr{window}: last ATR value
       - atr_pct: atr / last_close * 100
+      
+    Computes ATR per ticker on their actual trading days only,
+    ignoring NaN gaps from sparse calendars (e.g., EUR vs USD holidays).
     """
     high = _extract_field_matrix(ohlcv, "High")
     low = _extract_field_matrix(ohlcv, "Low")
@@ -98,40 +155,33 @@ def compute_volatility_features(
         cols = [f"atr{cfg.atr_window}", "atr_pct"]
         return pd.DataFrame(columns=cols, index=pd.Index([], name="ticker"))
 
-    high = high[common]
-    low = low[common]
-    close = close[common]
-    # Sparse exchange calendars introduce NaNs for non-trading days.
-    # ATR should operate only on actual trading bars per ticker, not on
-    # synthetic flat bars created by forward-filling non-trading days.
-    # For each ticker, drop rows where any of High/Low/Close is NaN.
+    results = []
     for ticker in common:
-        h_col = high[ticker]
-        l_col = low[ticker]
-        c_col = close[ticker]
-        valid_mask = h_col.notna() & l_col.notna() & c_col.notna()
-        if not valid_mask.any():
-            # No valid bars for this ticker; leave as-is (all NaN) and let
-            # downstream logic drop it based on NaN ATR.
+        h_series = high[ticker]
+        l_series = low[ticker]
+        c_series = close[ticker]
+        
+        # Get last close value for this ticker
+        valid_close = c_series.dropna()
+        if valid_close.empty:
             continue
-        high[ticker] = h_col[valid_mask]
-        low[ticker] = l_col[valid_mask]
-        close[ticker] = c_col[valid_mask]
-
-    atr_df = compute_atr(high, low, close, window=cfg.atr_window)
-    if atr_df.empty or close.empty:
+        last_close_val = valid_close.iloc[-1]
+        
+        # Compute ATR on actual trading days only
+        atr_val = compute_atr_per_ticker(h_series, l_series, c_series, window=cfg.atr_window)
+        
+        if pd.isna(atr_val):
+            continue
+            
+        results.append({
+            "ticker": ticker,
+            f"atr{cfg.atr_window}": atr_val,
+            "atr_pct": (atr_val / last_close_val) * 100.0,
+        })
+    
+    if not results:
         cols = [f"atr{cfg.atr_window}", "atr_pct"]
         return pd.DataFrame(columns=cols, index=pd.Index([], name="ticker"))
-
-    last_close = close.iloc[-1]
-    last_atr = atr_df.iloc[-1]
-
-    feats = pd.DataFrame(
-        {
-            f"atr{cfg.atr_window}": last_atr,
-            "atr_pct": (last_atr / last_close) * 100.0,
-        }
-    )
-
-    feats = feats.dropna(subset=[f"atr{cfg.atr_window}"]).sort_index()
-    return feats
+    
+    feats = pd.DataFrame(results).set_index("ticker")
+    return feats.sort_index()
