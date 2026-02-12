@@ -25,11 +25,42 @@ describe('Dashboard Page', () => {
       
       await waitFor(() => {
         expect(screen.getByText('Portfolio Summary')).toBeInTheDocument()
+        expect(screen.getByText('Strategy Coach')).toBeInTheDocument()
         expect(screen.getByText("Today's Action Items")).toBeInTheDocument()
         expect(screen.getByText('Daily Routine (Top 3)')).toBeInTheDocument()
         expect(screen.getByText('Open Orders Snapshot')).toBeInTheDocument()
         expect(screen.getByText('Quick Actions')).toBeInTheDocument()
         expect(screen.getByText('Getting Started')).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('Strategy Coach', () => {
+    it('renders strategy coach card with active strategy values', async () => {
+      renderWithProviders(<Dashboard />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Strategy Coach')).toBeInTheDocument()
+        expect(screen.getByText(/Active:/i)).toBeInTheDocument()
+        expect(screen.getByText('Default')).toBeInTheDocument()
+        expect(screen.getByText(/Stop = Entry - \(2.0 x ATR\(14\)\)/i)).toBeInTheDocument()
+        expect(screen.getByText(/Breakeven at \+1.0R, trail after \+2.0R using SMA\(20\)/i)).toBeInTheDocument()
+      })
+    })
+
+    it('falls back to local config explanation if active strategy query fails', async () => {
+      const { server } = await import('@/test/mocks/server')
+      const { http, HttpResponse } = await import('msw')
+
+      server.use(
+        http.get('*/api/strategy/active', () => HttpResponse.json({ detail: 'boom' }, { status: 500 }))
+      )
+
+      renderWithProviders(<Dashboard />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Strategy Coach')).toBeInTheDocument()
+        expect(screen.getByText(/Using local Settings values because active strategy data could not be loaded/i)).toBeInTheDocument()
       })
     })
   })

@@ -18,6 +18,8 @@ import {
 } from '@/features/portfolio/hooks';
 import { formatCurrency, formatDateTime, formatPercent } from '@/utils/formatters';
 import { TrendingUp, AlertCircle, FileText, Search, RefreshCw } from 'lucide-react';
+import StrategyCoachCard from '@/components/domain/education/StrategyCoachCard';
+import { buildFallbackStrategyCoachSections, buildStrategyCoachSections } from '@/content/strategyCoach';
 
 export default function Dashboard() {
   const { config } = useConfigStore();
@@ -51,6 +53,14 @@ export default function Dashboard() {
 
   const pendingOrdersCount = orders.length;
   const actionItems = pendingOrdersCount;
+  const strategyCoachSections = activeStrategyQuery.data
+    ? buildStrategyCoachSections(activeStrategyQuery.data)
+    : buildFallbackStrategyCoachSections(config);
+  const strategyCoachSubtitle = activeStrategyQuery.data
+    ? 'Teacher-style explanation of how this strategy makes decisions.'
+    : activeStrategyQuery.isError
+      ? 'Using local Settings values because active strategy data could not be loaded.'
+      : 'Loading strategy details...';
 
 
   return (
@@ -107,6 +117,13 @@ export default function Dashboard() {
           </div>
         </CardContent>
       </Card>
+
+      <StrategyCoachCard
+        strategyName={activeStrategyQuery.data?.name}
+        subtitle={strategyCoachSubtitle}
+        sections={strategyCoachSections}
+        isLoading={activeStrategyQuery.isLoading && !activeStrategyQuery.data}
+      />
 
       {/* Action Items */}
       <Card variant="bordered">
