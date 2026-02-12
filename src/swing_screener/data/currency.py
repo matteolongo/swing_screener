@@ -43,4 +43,3 @@ def detect_currency(ticker: str) -> str:
     if suffix in EUR_SUFFIXES:
         return "EUR"
     return "USD"
-

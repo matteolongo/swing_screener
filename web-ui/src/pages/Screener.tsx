@@ -16,6 +16,7 @@ import QuickBacktestModal from '@/components/modals/QuickBacktestModal';
 import SocialAnalysisModal from '@/components/modals/SocialAnalysisModal';
 
 const TOP_N_MAX = 200;
+type CurrencyFilter = 'all' | 'usd' | 'eur';
 const UNIVERSE_ALIASES: Record<string, string> = {
   mega: 'mega_all',
   mega_defense: 'defense_all',
@@ -32,6 +33,11 @@ const formatCurrencyFilterLabel = (currencies: ('USD' | 'EUR')[]): string => {
   if (currencies.length === 1 && currencies[0] === 'USD') return 'USD only';
   if (currencies.length === 1 && currencies[0] === 'EUR') return 'EUR only';
   return 'USD + EUR';
+};
+const currencyFilterToRequest = (value: CurrencyFilter): string[] => {
+  if (value === 'usd') return ['USD'];
+  if (value === 'eur') return ['EUR'];
+  return ['USD', 'EUR'];
 };
 const normalizeUniverse = (value: string | null) => {
   if (!value) return null;
@@ -60,7 +66,7 @@ export default function Screener() {
     queryFn: fetchActiveStrategy,
   });
   const riskConfig: RiskConfig = activeStrategyQuery.data?.risk ?? config.risk;
-  const activeCurrencies = normalizeCurrencies(activeStrategyQuery.data?.universe.filt.currencies);
+  const activeCurrencies = normalizeCurrencies(activeStrategyQuery.data?.universe?.filt?.currencies);
   
   // Load saved preferences from localStorage or use defaults
   const [selectedUniverse, setSelectedUniverse] = useState<string>(() => {
@@ -80,6 +86,11 @@ export default function Screener() {
   const [maxPrice, setMaxPrice] = useState<number>(() => {
     const saved = localStorage.getItem('screener.maxPrice');
     return saved ? parseFloat(saved) : 500;
+  });
+  const [currencyFilter, setCurrencyFilter] = useState<CurrencyFilter>(() => {
+    const saved = localStorage.getItem('screener.currencyFilter');
+    if (saved === 'usd' || saved === 'eur' || saved === 'all') return saved;
+    return 'all';
   });
   
   const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
@@ -110,6 +121,10 @@ export default function Screener() {
     localStorage.setItem('screener.maxPrice', value.toString());
   };
   
+  const handleCurrencyFilterChange = (value: CurrencyFilter) => {
+    setCurrencyFilter(value);
+    localStorage.setItem('screener.currencyFilter', value);
+  };
   const universesQuery = useUniverses();
   const universesData = universesQuery.data;
 
@@ -128,7 +143,7 @@ export default function Screener() {
       top: topN,
       minPrice: minPrice,
       maxPrice: maxPrice,
-      currencies: activeCurrencies,
+      currencies: currencyFilterToRequest(currencyFilter),
       breakoutLookback: config.indicators.breakoutLookback,
       pullbackMa: config.indicators.pullbackMa,
       minHistory: config.indicators.minHistory,
@@ -156,7 +171,7 @@ export default function Screener() {
 
       {/* Controls */}
       <Card>
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
           {/* Universe selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -222,6 +237,23 @@ export default function Screener() {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               disabled={screenerMutation.isPending}
             />
+          </div>
+
+          {/* Currency filter */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Currency
+            </label>
+            <select
+              value={currencyFilter}
+              onChange={(e) => handleCurrencyFilterChange(e.target.value as CurrencyFilter)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              disabled={screenerMutation.isPending}
+            >
+              <option value="all">All</option>
+              <option value="usd">USD only</option>
+              <option value="eur">EUR only</option>
+            </select>
           </div>
 
           {/* Account info */}
