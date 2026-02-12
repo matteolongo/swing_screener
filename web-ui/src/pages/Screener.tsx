@@ -367,12 +367,17 @@ export default function Screener() {
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.sector')}</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.lastBar')}</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
-                      <MetricHelpLabel metricKey="CONFIDENCE" className="w-full justify-end" />
+                      <MetricHelpLabel
+                        metricKey="CONFIDENCE"
+                        labelOverride={t('screener.table.headers.signalConfidence')}
+                        className="w-full justify-end"
+                      />
                     </th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.close')}</th>
+                    <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.verdict')}</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
                       <MetricHelpLabel metricKey="SCORE" className="w-full justify-end" />
                     </th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.close')}</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.stop')}</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
                       <MetricHelpLabel metricKey="ATR" className="w-full justify-end" />
@@ -393,7 +398,6 @@ export default function Screener() {
                     <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">
                       <MetricHelpLabel metricKey="OVERLAY" className="justify-center" />
                     </th>
-                    <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.verdict')}</th>
                     <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.fix')}</th>
                     <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.actions')}</th>
                   </tr>
@@ -465,11 +469,17 @@ export default function Screener() {
                             {candidate.confidence.toFixed(1)}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-sm text-right font-medium text-gray-900">
-                          {(candidate.score * 100).toFixed(1)}
-                        </td>
                         <td className="py-3 px-4 text-sm text-right text-gray-900">
                           {formatCurrency(candidate.close, candidate.currency)}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          {(() => {
+                            const verdict = candidate.recommendation?.verdict ?? 'UNKNOWN';
+                            return <RecommendationBadge verdict={verdict} className="inline-block" />;
+                          })()}
+                        </td>
+                        <td className="py-3 px-4 text-sm text-right font-medium text-gray-900">
+                          {(candidate.score * 100).toFixed(1)}
                         </td>
                         <td className="py-3 px-4 text-sm text-right text-gray-900">
                           {(() => {
@@ -541,12 +551,6 @@ export default function Screener() {
                             ].filter(Boolean);
                             const title = [reasons, ...metrics].join(' | ');
                             return <OverlayBadge status={candidate.overlayStatus} title={title} />;
-                          })()}
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          {(() => {
-                            const verdict = candidate.recommendation?.verdict ?? 'UNKNOWN';
-                            return <RecommendationBadge verdict={verdict} className="inline-block" />;
                           })()}
                         </td>
                         <td className="py-3 px-4 text-center">

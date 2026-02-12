@@ -242,6 +242,7 @@ export const messagesEn = {
         company: 'Company',
         sector: 'Sector',
         lastBar: 'Last Bar',
+        signalConfidence: 'Signal Confidence',
         close: 'Close',
         stop: 'Stop',
         riskDollar: 'Risk $',
