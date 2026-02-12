@@ -64,6 +64,10 @@ class MCPServer:
             self.registry.tool_count(),
             len(self.registry.get_enabled_features())
         )
+        
+        # Create MCP protocol server (Phase 2)
+        from mcp_server.protocol import SwingScreenerMCP
+        self.mcp = SwingScreenerMCP(config, self.registry)
     
     def validate_configuration(self) -> bool:
         """Validate the server configuration.
@@ -78,7 +82,7 @@ class MCPServer:
             for warning in warnings:
                 logger.warning("  - %s", warning)
         
-        # For Phase 1, we allow servers with no tools (empty registry)
+        # Phase 2: Allow servers with tools
         if self.registry.tool_count() == 0:
             logger.warning("Server has no registered tools - all features are disabled")
         
@@ -87,8 +91,7 @@ class MCPServer:
     async def start(self) -> None:
         """Start the MCP server.
         
-        This method will be expanded in Phase 2 to handle actual MCP protocol
-        communication. For Phase 1, it just validates that the server can initialize.
+        Phase 2: Uses MCP protocol with stdio transport for actual communication.
         """
         logger.info("Starting MCP server...")
         
@@ -99,13 +102,14 @@ class MCPServer:
         logger.info("Server validation complete")
         logger.info("Enabled features: %s", self.config.get_enabled_features())
         
-        # Phase 2 will add actual MCP protocol handling here
-        logger.info("MCP server ready (Phase 1 - skeleton mode)")
+        # Phase 2: Run MCP protocol server
+        logger.info("MCP server ready - starting protocol handler")
+        await self.mcp.run()
     
     async def stop(self) -> None:
         """Stop the MCP server."""
         logger.info("Stopping MCP server...")
-        # Phase 2 will add cleanup logic here
+        # Phase 2: Cleanup logic here
         logger.info("MCP server stopped")
 
 
@@ -164,12 +168,8 @@ async def async_main() -> int:
             logger.info("Validation successful")
             return 0
         
-        # Start server
+        # Start server (Phase 2: runs actual MCP protocol)
         await server.start()
-        
-        # In Phase 1, we just validate and exit
-        # Phase 2 will add actual server loop
-        logger.info("Phase 1 validation complete - server would run here")
         
         return 0
         

@@ -14,18 +14,13 @@ environment: "dev"
 features:
   # Portfolio Management (positions, orders)
   portfolio:
-    enabled: false
+    enabled: true  # Phase 2: Enabled
     tools:
       - list_positions
       - get_position
       - update_position_stop
-      - suggest_position_stop
-      - close_position
       - list_orders
-      - get_order
       - create_order
-      - fill_order
-      - cancel_order
   
   # Screener & Analysis
   screener:

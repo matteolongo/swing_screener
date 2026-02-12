@@ -159,12 +159,11 @@ def create_registry(config: MCPConfig) -> ToolRegistry:
     """
     registry = ToolRegistry(config)
     
-    # In Phase 1, we just create an empty registry
-    # Future phases will import and register feature-specific tools here
-    # Example for future phases:
-    # if config.is_feature_enabled('portfolio'):
-    #     from mcp_server.tools.portfolio import get_portfolio_tools
-    #     registry.register_tools(get_portfolio_tools())
+    # Register portfolio tools if enabled
+    if config.is_feature_enabled('portfolio'):
+        from mcp_server.tools.portfolio import get_portfolio_tools
+        registry.register_tools(get_portfolio_tools())
+        logger.info("Registered portfolio tools")
     
     logger.info(
         "Tool registry initialized: %d tools registered across %d features",
