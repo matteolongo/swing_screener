@@ -42,6 +42,19 @@ def sma_per_ticker(close_series: pd.Series, window: int) -> float:
     return valid.iloc[-window:].mean()
 
 
+def sma(close: pd.DataFrame, window: int) -> pd.DataFrame:
+    """
+    Backward-compatible SMA helper used by validation tests.
+
+    close: DataFrame date x ticker
+    Returns rolling SMA per ticker with TA-Lib-like warmup behavior
+    (NaN until `window` observations are available).
+    """
+    if window <= 1:
+        raise ValueError("window must be > 1")
+    return close.rolling(window=window, min_periods=window).mean()
+
+
 def compute_trend_features(
     ohlcv: pd.DataFrame,
     cfg: TrendConfig = TrendConfig(),
