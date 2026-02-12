@@ -7,6 +7,7 @@ import { Recommendation, RecommendationAPI, transformRecommendation } from '@/ty
 // API response types (snake_case from backend)
 export interface DailyReviewCandidateAPI {
   ticker: string;
+  confidence?: number | null;
   signal: string;
   entry: number;
   stop: number;
@@ -68,6 +69,7 @@ export interface DailyReviewAPI {
 // Frontend types (camelCase)
 export interface DailyReviewCandidate {
   ticker: string;
+  confidence?: number;
   signal: string;
   entry: number;
   stop: number;
@@ -130,6 +132,7 @@ export interface DailyReview {
 export function transformCandidate(api: DailyReviewCandidateAPI): DailyReviewCandidate {
   return {
     ticker: api.ticker,
+    confidence: api.confidence ?? undefined,
     signal: api.signal,
     entry: api.entry,
     stop: api.stop,

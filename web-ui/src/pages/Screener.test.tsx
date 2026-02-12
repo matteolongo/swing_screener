@@ -265,6 +265,21 @@ describe('Screener Page', () => {
       })
     })
 
+    it('shows the screener glossary for abbreviated labels', async () => {
+      const { user } = renderWithProviders(<Screener />)
+
+      await act(async () => {
+        await user.click(screen.getByRole('button', { name: /Run Screener/i }))
+      })
+
+      await waitFor(() => {
+        expect(screen.getByText('Screener Glossary')).toBeInTheDocument()
+        expect(screen.getByText(/RR:/)).toBeInTheDocument()
+        expect(screen.getByText(/RS:/)).toBeInTheDocument()
+        expect(screen.getByText(/ATR:/)).toBeInTheDocument()
+      })
+    })
+
     it('displays candidate data correctly', async () => {
       const { user } = renderWithProviders(<Screener />)
       
@@ -413,6 +428,44 @@ describe('Screener Page', () => {
 
       await waitFor(() => {
         expect(screen.getByText(/Recommendation — AAPL/i)).toBeInTheDocument()
+      })
+    })
+
+    it('renders ratio fields as non-zero percentages in recommendation modal', async () => {
+      const { server } = await import('@/test/mocks/server')
+      const { http, HttpResponse } = await import('msw')
+
+      server.use(
+        http.post('*/api/screener/run', () => {
+          return HttpResponse.json({
+            candidates: [buildCandidate('RECOMMENDED')],
+            asof_date: '2026-02-08',
+            total_screened: 1,
+            warnings: [],
+          })
+        })
+      )
+
+      const { user } = renderWithProviders(<Screener />)
+      await act(async () => {
+        await user.click(screen.getByRole('button', { name: /Run Screener/i }))
+      })
+
+      await act(async () => {
+        await user.click(screen.getByRole('button', { name: /Recommendation details for AAPL/i }))
+      })
+
+      await waitFor(() => {
+        expect(screen.getByText(/Recommendation — AAPL/i)).toBeInTheDocument()
+      })
+
+      await act(async () => {
+        await user.click(screen.getByText('Risk & Costs'))
+      })
+
+      await waitFor(() => {
+        expect(screen.getByText('+0.1%')).toBeInTheDocument()
+        expect(screen.getByText('+2.0%')).toBeInTheDocument()
       })
     })
   })

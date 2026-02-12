@@ -22,6 +22,13 @@ export function formatPercent(value: number, decimals: number = 1): string {
 }
 
 /**
+ * Format decimal ratio as percentage (e.g., 0.0082 -> 0.8%)
+ */
+export function formatRatioAsPercent(value: number, decimals: number = 1): string {
+  return formatPercent(value * 100, decimals);
+}
+
+/**
  * Format number as currency (e.g., $1,234.56 / €1,234.56)
  */
 export function formatCurrency(value: number, currency: 'USD' | 'EUR' = 'USD'): string {
