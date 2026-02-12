@@ -250,5 +250,8 @@ class TestCreateRegistry:
         registry = create_registry(enabled_portfolio_config)
         
         assert isinstance(registry, ToolRegistry)
-        # Phase 1: No tools are auto-registered yet
-        assert registry.tool_count() == 0
+        # create_registry auto-registers tools for enabled features
+        assert registry.tool_count() == 2  # list_positions and get_position
+        assert registry.is_registered("list_positions")
+        assert registry.is_registered("get_position")
+        assert "portfolio" in registry.get_enabled_features()
