@@ -71,6 +71,32 @@ swing-screener run --universe mega_all --positions data/positions.json --csv out
 
 ---
 
+### 🤖 MCP Server (AI Integration)
+
+**NEW:** Model Context Protocol (MCP) server for AI assistant integration.
+
+The MCP server exposes Swing Screener functionality to AI assistants like Claude, enabling natural language interaction with the trading system.
+
+**Status:** Phase 1 Complete (Foundation)
+- ✅ Configuration system (YAML-based feature toggles)
+- ✅ Tool registry with dependency injection
+- ✅ Server skeleton and validation
+- ⏳ Tool implementations (Phase 2+)
+
+**Quick Start:**
+
+```bash
+# Install with MCP dependencies
+pip install -e ".[mcp]"
+
+# Validate server configuration
+python -m mcp_server.main --validate-only
+```
+
+👉 **See [mcp_server/README.md](mcp_server/README.md) for complete MCP documentation**
+
+---
+
 ## Key Principles
 
 - Deterministic logic over discretionary decisions
@@ -92,6 +118,22 @@ src/swing_screener/
   execution/            # Order guidance and order-state models
   portfolio/            # Position state + management + migration helpers
   backtest/             # Deterministic historical simulation in R units
+
+api/                    # FastAPI backend (REST API)
+  services/             # Business logic (shared with MCP server)
+  routers/              # HTTP endpoints
+  models/               # Pydantic request/response models
+  repositories/         # Data access layer
+
+mcp_server/             # Model Context Protocol server (Phase 1)
+  tools/                # MCP tool definitions
+  config.py             # YAML configuration loader
+  main.py               # Server entrypoint
+
+web-ui/                 # React + TypeScript frontend
+  src/components/       # UI components
+  src/pages/            # Main application pages
+  src/stores/           # State management (Zustand)
 ```
 
 ## Installation
@@ -102,6 +144,13 @@ src/swing_screener/
 python -m venv .venv
 source .venv/bin/activate
 pip install -e .
+```
+
+### MCP Server (Optional)
+
+```bash
+# Install with MCP dependencies
+pip install -e ".[mcp]"
 ```
 
 ### Web UI (Frontend)
