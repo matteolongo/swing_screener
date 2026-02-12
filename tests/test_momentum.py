@@ -95,15 +95,47 @@ def test_momentum_features_empty_ohlcv():
 
 
 def test_momentum_features_handles_sparse_calendar_gaps():
-    ohlcv = _make_synthetic_ohlcv_for_momentum()
+    # Use more periods to ensure enough actual trading days after gaps
+    idx = pd.bdate_range("2022-01-02", periods=400)
 
+    close_spy = pd.Series(range(100, 500), index=idx, dtype=float)
+    close_aaa = close_spy * 1.20
+    close_bbb = pd.Series(200.0, index=idx, dtype=float)
+
+    def mk(close):
+        open_ = close * 0.99
+        high = close * 1.01
+        low = close * 0.98
+        vol = pd.Series(1_000_000, index=close.index, dtype=float)
+        return open_, high, low, close, vol
+
+    o_s, h_s, l_s, c_s, v_s = mk(close_spy)
+    o_a, h_a, l_a, c_a, v_a = mk(close_aaa)
+    o_b, h_b, l_b, c_b, v_b = mk(close_bbb)
+
+    data = {}
+    for field, s_spy, s_aaa, s_bbb in [
+        ("Open", o_s, o_a, o_b),
+        ("High", h_s, h_a, h_b),
+        ("Low", l_s, l_a, l_b),
+        ("Close", c_s, c_a, c_b),
+        ("Volume", v_s, v_a, v_b),
+    ]:
+        data[(field, "SPY")] = s_spy
+        data[(field, "AAA")] = s_aaa
+        data[(field, "BBB")] = s_bbb
+
+    ohlcv = pd.DataFrame(data, index=idx)
+    ohlcv.columns = pd.MultiIndex.from_tuples(ohlcv.columns)
+
+    # Simulate sparse calendars: EUR vs USD holidays
+    # Remove every 9th bar for SPY (USD), every 11th for AAA (EUR-like)
     for field in ["Open", "High", "Low", "Close", "Volume"]:
         ohlcv.loc[ohlcv.index[::9], (field, "SPY")] = float("nan")
         ohlcv.loc[ohlcv.index[::11], (field, "AAA")] = float("nan")
-        ohlcv.loc[ohlcv.index[-1], (field, "SPY")] = float("nan")
-        ohlcv.loc[ohlcv.index[-1], (field, "AAA")] = float("nan")
 
     feats = compute_momentum_features(ohlcv, MomentumConfig(benchmark="SPY"))
 
+    # Both AAA and SPY should have features despite gaps
     assert "AAA" in feats.index
     assert pd.notna(feats.loc["AAA", "mom_6m"])

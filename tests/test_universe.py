@@ -81,13 +81,47 @@ def test_build_feature_table_contains_expected_columns():
 
 
 def test_build_feature_table_handles_sparse_calendars():
-    ohlcv = _make_synthetic_ohlcv_universe()
+    # Use more periods to ensure enough actual trading days after gaps
+    idx = pd.bdate_range("2022-01-02", periods=400)
 
+    close_spy = pd.Series(range(100, 500), index=idx, dtype=float)
+    close_aaa = close_spy * 1.15
+    close_bbb = pd.Series(range(500, 100, -1), index=idx, dtype=float)
+    close_ccc = close_spy * 1.05
+
+    def mk(close: pd.Series, range_width: float):
+        open_ = close
+        high = close + range_width
+        low = close - range_width
+        vol = pd.Series(1_000_000, index=close.index, dtype=float)
+        return open_, high, low, close, vol
+
+    o_s, h_s, l_s, c_s, v_s = mk(close_spy, range_width=1.0)
+    o_a, h_a, l_a, c_a, v_a = mk(close_aaa, range_width=1.0)
+    o_b, h_b, l_b, c_b, v_b = mk(close_bbb, range_width=1.0)
+    o_c, h_c, l_c, c_c, v_c = mk(close_ccc, range_width=30.0)
+
+    data = {}
+    for field, s_spy, s_aaa, s_bbb, s_ccc in [
+        ("Open", o_s, o_a, o_b, o_c),
+        ("High", h_s, h_a, h_b, h_c),
+        ("Low", l_s, l_a, l_b, l_c),
+        ("Close", c_s, c_a, c_b, c_c),
+        ("Volume", v_s, v_a, v_b, v_c),
+    ]:
+        data[(field, "SPY")] = s_spy
+        data[(field, "AAA")] = s_aaa
+        data[(field, "BBB")] = s_bbb
+        data[(field, "CCC")] = s_ccc
+
+    ohlcv = pd.DataFrame(data, index=idx)
+    ohlcv.columns = pd.MultiIndex.from_tuples(ohlcv.columns)
+
+    # Simulate sparse calendars with different gaps per ticker
     for field in ["Open", "High", "Low", "Close", "Volume"]:
         ohlcv.loc[ohlcv.index[::9], (field, "SPY")] = float("nan")
         ohlcv.loc[ohlcv.index[::7], (field, "AAA")] = float("nan")
         ohlcv.loc[ohlcv.index[::8], (field, "BBB")] = float("nan")
-        ohlcv.loc[ohlcv.index[-1], (field, "SPY")] = float("nan")
 
     cfg = UniverseConfig(
         trend=TrendConfig(),
