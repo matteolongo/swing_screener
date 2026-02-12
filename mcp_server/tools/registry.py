@@ -159,12 +159,6 @@ def create_registry(config: MCPConfig) -> ToolRegistry:
     """
     registry = ToolRegistry(config)
     
-    # Register portfolio tools if enabled
-    if config.is_feature_enabled('portfolio'):
-        from mcp_server.tools.portfolio import get_portfolio_tools
-        registry.register_tools(get_portfolio_tools())
-        logger.info("Registered portfolio tools")
-    
     logger.info(
         "Tool registry initialized: %d tools registered across %d features",
         registry.tool_count(),
