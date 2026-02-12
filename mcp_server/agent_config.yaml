@@ -1,0 +1,27 @@
+# MCP Agent Configuration
+
+# Prompt style controls information density
+# Options: concise, balanced, detailed, educational
+style: balanced
+
+# Prompt tone controls communication style
+# Options: professional, friendly, technical
+tone: professional
+
+# Maximum number of candidates to analyze during screening
+max_candidates: 20
+
+# Auto-preview orders for top candidates
+auto_preview: true
+
+# Educational mode adds explanations of concepts
+educational_mode: false
+
+# Account settings (used for position sizing)
+account_size: 50000
+
+# Risk settings
+risk_pct: 0.01  # 1% risk per trade
+
+# Default universe for screening
+default_universe: mega_all
