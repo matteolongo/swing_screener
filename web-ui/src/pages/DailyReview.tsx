@@ -381,7 +381,9 @@ function CandidatesTable({
           <td className="p-2 text-right">{formatCurrency(candidate.entry)}</td>
           <td className="p-2 text-right">{formatCurrency(candidate.stop)}</td>
           <td className="p-2 text-right">{candidate.shares}</td>
-          <td className="p-2 text-right font-bold">{formatNumber(candidate.rReward, 1)}R</td>
+          <td className="p-2 text-right font-bold">
+            {t('common.units.rValue', { value: formatNumber(candidate.rReward, 1) })}
+          </td>
           <td className="p-2 text-sm text-gray-600 dark:text-gray-400">
             {candidate.sector || t('common.placeholders.dash')}
           </td>
@@ -447,7 +449,7 @@ function UpdateStopTable({ positions }: { positions: DailyReviewPositionUpdate[]
           <td className="p-2 text-right font-bold text-green-600 dark:text-green-400">{formatCurrency(pos.stopSuggested)}</td>
           <td className="p-2 text-right">
             <span className={pos.rNow >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
-              {formatNumber(pos.rNow, 2)}R
+              {t('common.units.rValue', { value: formatNumber(pos.rNow, 2) })}
             </span>
           </td>
           <td className="p-2 text-sm">{pos.reason}</td>
@@ -494,7 +496,9 @@ function CloseTable({ positions }: { positions: DailyReviewPositionClose[] }) {
           <td className="p-2 text-right">{formatCurrency(pos.currentPrice)}</td>
           <td className="p-2 text-right">{formatCurrency(pos.stopPrice)}</td>
           <td className="p-2 text-right">
-            <span className="text-red-600 dark:text-red-400 font-bold">{formatNumber(pos.rNow, 2)}R</span>
+            <span className="text-red-600 dark:text-red-400 font-bold">
+              {t('common.units.rValue', { value: formatNumber(pos.rNow, 2) })}
+            </span>
           </td>
           <td className="p-2 text-sm">{pos.reason}</td>
           <td className="p-2 text-right">
@@ -540,7 +544,7 @@ function HoldTable({ positions }: { positions: DailyReviewPositionHold[] }) {
           <td className="p-2 text-right">{formatCurrency(pos.stopPrice)}</td>
           <td className="p-2 text-right">
             <span className={pos.rNow >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
-              {formatNumber(pos.rNow, 2)}R
+              {t('common.units.rValue', { value: formatNumber(pos.rNow, 2) })}
             </span>
           </td>
           <td className="p-2 text-sm text-gray-600 dark:text-gray-400">{pos.reason}</td>

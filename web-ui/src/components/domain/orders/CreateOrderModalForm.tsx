@@ -61,10 +61,10 @@ export default function CreateOrderModalForm({
             {...form.register('orderType')}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
           >
-            <option value="BUY_LIMIT">BUY LIMIT</option>
-            <option value="SELL_LIMIT">SELL LIMIT</option>
-            <option value="BUY_MARKET">BUY MARKET</option>
-            <option value="SELL_MARKET">SELL MARKET</option>
+            <option value="BUY_LIMIT">{t('order.createModal.orderTypeOptions.buyLimit')}</option>
+            <option value="SELL_LIMIT">{t('order.createModal.orderTypeOptions.sellLimit')}</option>
+            <option value="BUY_MARKET">{t('order.createModal.orderTypeOptions.buyMarket')}</option>
+            <option value="SELL_MARKET">{t('order.createModal.orderTypeOptions.sellMarket')}</option>
           </select>
         </div>
 
@@ -74,9 +74,9 @@ export default function CreateOrderModalForm({
             {...form.register('orderKind')}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
           >
-            <option value="entry">Entry</option>
-            <option value="stop">Stop Loss</option>
-            <option value="take_profit">Take Profit</option>
+            <option value="entry">{t('order.createModal.orderKindOptions.entry')}</option>
+            <option value="stop">{t('order.createModal.orderKindOptions.stopLoss')}</option>
+            <option value="take_profit">{t('order.createModal.orderKindOptions.takeProfit')}</option>
           </select>
         </div>
 

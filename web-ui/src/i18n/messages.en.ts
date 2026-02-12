@@ -24,6 +24,10 @@ export const messagesEn = {
       dash: '-',
       emDash: '—',
     },
+    units: {
+      r: 'R',
+      rValue: '{{value}}R',
+    },
   },
   modal: {
     closeAria: 'Close modal',
@@ -86,13 +90,29 @@ export const messagesEn = {
         rank: 'Rank',
         sector: 'Sector',
         atr: 'ATR',
+        rr: 'R:R',
+      },
+      orderTypeOptions: {
+        buyLimit: 'BUY LIMIT',
+        buyMarket: 'BUY MARKET',
       },
     },
     createModal: {
       title: 'Create Order',
       ticker: 'Ticker',
       orderType: 'Order Type',
+      orderTypeOptions: {
+        buyLimit: 'BUY LIMIT',
+        sellLimit: 'SELL LIMIT',
+        buyMarket: 'BUY MARKET',
+        sellMarket: 'SELL MARKET',
+      },
       orderKind: 'Order Kind',
+      orderKindOptions: {
+        entry: 'Entry',
+        stopLoss: 'Stop Loss',
+        takeProfit: 'Take Profit',
+      },
       quantity: 'Quantity',
       limitPrice: 'Limit Price',
       stopPrice: 'Stop Price',

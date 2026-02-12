@@ -126,8 +126,10 @@ export default function CandidateOrderModal({
             </div>
             {candidate.rReward != null ? (
               <div>
-                <span className="text-gray-600 dark:text-gray-400">R:R:</span>{' '}
-                <strong className="text-green-600">{formatNumber(candidate.rReward, 1)}R</strong>
+                <span className="text-gray-600 dark:text-gray-400">{t('order.candidateModal.labels.rr')}:</span>{' '}
+                <strong className="text-green-600">
+                  {t('common.units.rValue', { value: formatNumber(candidate.rReward, 1) })}
+                </strong>
               </div>
             ) : null}
             {candidate.sector ? (
@@ -168,8 +170,8 @@ export default function CandidateOrderModal({
                 {...form.register('orderType')}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
               >
-                <option value="BUY_LIMIT">BUY LIMIT</option>
-                <option value="BUY_MARKET">BUY MARKET</option>
+                <option value="BUY_LIMIT">{t('order.candidateModal.orderTypeOptions.buyLimit')}</option>
+                <option value="BUY_MARKET">{t('order.candidateModal.orderTypeOptions.buyMarket')}</option>
               </select>
             </div>
 

@@ -44,4 +44,31 @@ export default [
       'no-restricted-imports': 'off',
     },
   },
+  {
+    files: [
+      'src/pages/Screener.tsx',
+      'src/pages/DailyReview.tsx',
+      'src/pages/Orders.tsx',
+      'src/pages/Positions.tsx',
+      'src/components/domain/orders/**/*.tsx',
+      'src/components/domain/recommendation/**/*.tsx',
+      'src/components/common/ModalShell.tsx',
+      'src/components/common/TableShell.tsx',
+      'src/components/common/TableState.tsx',
+    ],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'JSXText[value=/[A-Za-z]/]',
+          message: 'Use i18n keys via t(...) for user-facing text.',
+        },
+        {
+          selector:
+            'JSXAttribute[name.name=/^(title|placeholder|aria-label)$/] > Literal[value=/[A-Za-z]/]',
+          message: 'Use i18n keys via t(...) for user-facing attribute strings.',
+        },
+      ],
+    },
+  },
 ];
