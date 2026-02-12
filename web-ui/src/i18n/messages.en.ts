@@ -38,6 +38,17 @@ export const messagesEn = {
       notRecommended: 'Not Recommended',
       unknown: 'No Verdict',
     },
+    overlay: {
+      ok: 'OK',
+      reducedRisk: 'Reduced',
+      review: 'Review',
+      veto: 'Veto',
+      noData: 'No Data',
+      off: 'Off',
+    },
+    details: {
+      title: 'Recommendation — {{ticker}}',
+    },
     summary: 'Summary',
     noDetails: 'No recommendation details available.',
     sections: {
@@ -83,6 +94,7 @@ export const messagesEn = {
       quantityError: 'Quantity must be greater than 0',
       limitError: 'Limit price must be greater than 0',
       stopError: 'Limit price must be higher than stop price',
+      stopPositiveError: 'Stop price must be greater than 0',
       createError: 'Failed to create order',
       riskExceeded: 'Risk exceeds target ({{riskPct}}%)',
       labels: {
@@ -138,6 +150,9 @@ export const messagesEn = {
     updateStopModal: {
       title: 'Update Stop - {{ticker}}',
       currentPosition: 'Current Position:',
+      entryLabel: 'Entry:',
+      currentStopLabel: 'Current Stop:',
+      sharesLabel: 'Shares:',
       suggestedStop: 'Suggested Stop',
       loadingSuggestion: 'Loading suggestion...',
       suggestionUnavailable: 'Suggestion unavailable.',
@@ -155,6 +170,9 @@ export const messagesEn = {
     closeModal: {
       title: 'Close Position - {{ticker}}',
       positionDetails: 'Position Details:',
+      entryLabel: 'Entry:',
+      sharesLabel: 'Shares:',
+      stopLabel: 'Stop:',
       exitPrice: 'Exit Price',
       reason: 'Reason',
       reasonPlaceholder: 'e.g., profit target reached, stopped out',
