@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 
 # Import routers
-from api.routers import config, screener, portfolio, backtest, strategy, social
+from api.routers import config, screener, portfolio, backtest, strategy, social, daily_review
 
 LOG_FORMAT = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
 logging.basicConfig(level=logging.INFO, format=LOG_FORMAT, stream=sys.stdout)
@@ -166,6 +166,7 @@ app.include_router(screener.router, prefix="/api/screener", tags=["screener"])
 app.include_router(portfolio.router, prefix="/api/portfolio", tags=["portfolio"])
 app.include_router(backtest.router, prefix="/api/backtest", tags=["backtest"])
 app.include_router(social.router, prefix="/api/social", tags=["social"])
+app.include_router(daily_review.router, prefix="/api", tags=["daily-review"])
 
 
 if __name__ == "__main__":

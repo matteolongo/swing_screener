@@ -88,6 +88,7 @@ export function useUpdateStopMutation(onSuccess?: () => void) {
       updatePositionStop(positionId, request),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['positions'] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });  // Also invalidate orders since stop orders are updated
       onSuccess?.();
     },
   });

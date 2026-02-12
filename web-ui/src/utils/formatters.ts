@@ -1,4 +1,11 @@
 /**
+ * Format number with specified decimals (e.g., 2.34, 1.5)
+ */
+export function formatNumber(value: number, decimals: number = 2): string {
+  return value.toFixed(decimals);
+}
+
+/**
  * Format number as R-multiple (e.g., +2.34R, -0.5R)
  */
 export function formatR(r: number): string {

@@ -428,9 +428,69 @@ Technical docs:
 - `api/README.md` — API reference
 - `web-ui/README.md` — React architecture
 - `README.md` — main entry point (updated for Web UI)
+- `docs/DAILY_REVIEW_IMPLEMENTATION.md` — Daily Review patterns and gotchas
 
 Deprecated:
 - `docs/archive/STREAMLIT_UI.md` — old Streamlit UI (replaced by React)
+
+---
+
+## Implementation Learnings (Daily Review)
+
+**Context:** Daily Review feature (v2/daily-routine-revamp) combines screener + position management.
+
+### Critical Patterns Agents Must Know
+
+**1. PositionsResponse Handling**
+
+`PortfolioService.list_positions()` returns `PositionsResponse`, NOT a list:
+
+```python
+# WRONG - AttributeError!
+for pos in portfolio.list_positions():
+
+# CORRECT
+response = portfolio.list_positions()
+for pos in response.positions:
+```
+
+**2. Type Transformation at API Boundary**
+
+Backend = snake_case, Frontend = camelCase. ALWAYS add transforms:
+
+```typescript
+function transformCandidate(api: CandidateAPI): Candidate {
+  return { entryPrice: api.entry_price };  // snake → camel
+}
+```
+
+**3. React Query Caching Pattern**
+
+Daily data uses 5-min staleTime + manual refresh (user-controlled):
+
+```typescript
+useQuery({ staleTime: 1000*60*5, refetchOnWindowFocus: false })
+```
+
+**4. Recommendation Validation (Risk-First)**
+
+Create Order modal BLOCKS NOT_RECOMMENDED trades:
+
+```typescript
+if (!isRecommended) {
+  setError('Not recommended - fix issues first');
+  return;  // Prevent submission
+}
+```
+
+**5. Historical Tracking**
+
+Daily reviews auto-save to `data/daily_reviews/daily_review_YYYY-MM-DD_strategy.json`
+- Complete audit trail
+- Gitignored (not committed)
+- See `data/README.md`
+
+**Full guide:** `docs/DAILY_REVIEW_IMPLEMENTATION.md`
 
 ---
 

@@ -1,7 +1,61 @@
 # Swing Screener - Implementation Roadmap
 
 **Current Status:** ✅ Production-Ready (Core + Web UI + Testing Complete)  
-**Last Updated:** February 8, 2026
+**Last Updated:** February 11, 2026
+
+---
+
+## 🚧 In Progress
+
+### Daily Routine Restoration (v2/daily-routine-revamp)
+Restoring the daily workflow for position management and trade candidate review.
+
+**Status:** Phase 2 complete, Phase 3 in progress
+
+- ✅ **Phase 1 (Backend):** Stop order synchronization
+  - Cancel old SELL_STOP orders when position stop updated
+  - Create new order with updated price
+  - Link via `exit_order_ids` for audit trail
+  - 4/4 tests passing
+
+- ✅ **Phase 1 (Frontend):** Modal pre-fill with suggested stop
+  - Auto-populate UpdateStopModal with suggested stop price
+  - Invalidate orders query on update
+  - User doesn't need manual "Use Suggested" click
+
+- ✅ **Phase 2 (Backend):** Daily Review API endpoint
+  - GET `/api/daily-review` endpoint with `top_n` parameter
+  - Returns categorized positions and trade candidates
+  - Service combines screener + position analysis
+  - 8/8 tests passing
+
+- ⏳ **Phase 3 (Frontend):** Daily Review page
+  - New dedicated page with 4 sections
+  - Collapsible sections for clean UX
+  - Quick action buttons (Update All Stops)
+  - Add to navigation sidebar
+
+- ⏳ **Phase 4:** CLI integration
+- ⏳ **Phase 5:** Testing & documentation
+
+**Branch:** v2/daily-routine-revamp  
+**ETA:** Phase 3 next
+
+---
+
+## 📋 Planned
+
+### Currency Filtering
+Allow filtering screener results by currency (USD/EUR) and display currency in all tables.
+
+**Features:**
+- Filter dropdown: All / USD only / EUR only
+- Currency detection from ticker suffix (.AS = EUR, default = USD)
+- Show currency symbol in all tables
+- Persist filter choice in config
+
+**Status:** Queued after daily routine completion  
+**Priority:** Medium
 
 ---
 
@@ -57,6 +111,23 @@ The system is **ready for daily manual trading** with:
 - ✅ Full documentation
 
 **You can start trading with this system today.**
+
+---
+
+## 🔮 Future Vision
+
+### Education-First Refactor
+Large-scale UX improvements for teaching risk-first trading principles.
+
+**Scope:** See `docs/EDUCATION_REFACTOR_PLAN.md` for full details
+- Recommendation Engine with BUY/AVOID/PASS verdicts
+- Risk gates and checklist validation
+- Structured reasons and warnings
+- Progressive disclosure UI pattern
+- Realistic backtesting with fees/slippage
+
+**Status:** Vision document, not prioritized  
+**Note:** May conflict with "simplicity over cleverness" philosophy
 
 ---
 
