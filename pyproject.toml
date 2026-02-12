@@ -47,7 +47,8 @@ swing-screener = "swing_screener.cli:main"
 package-dir = {"" = "src", "mcp_server" = "mcp_server"}
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["src", "."]
+include = ["swing_screener*", "mcp_server*"]
 
 
 [tool.pytest.ini_options]

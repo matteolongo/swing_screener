@@ -23,8 +23,8 @@ jobs:
 
       - name: Run backend tests in Docker
         run: |
-          docker compose run --rm api pytest --verbose --tb=short \
-            --cov=swing_screener --cov=api \
+          docker compose run --rm -e PYTHONPATH=/app api pytest --verbose --tb=short \
+            --cov=swing_screener --cov=api --cov=mcp_server \
             --cov-report=term --cov-report=xml \
             --junit-xml=test-results.xml
 
