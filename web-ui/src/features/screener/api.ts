@@ -21,6 +21,7 @@ export async function runScreener(request: ScreenerRequest): Promise<ScreenerRes
     asof_date: request.asofDate,
     min_price: request.minPrice,
     max_price: request.maxPrice,
+    currencies: request.currencies,
     breakout_lookback: request.breakoutLookback,
     pullback_ma: request.pullbackMa,
     min_history: request.minHistory,

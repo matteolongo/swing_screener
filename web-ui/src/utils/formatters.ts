@@ -15,12 +15,12 @@ export function formatPercent(value: number, decimals: number = 1): string {
 }
 
 /**
- * Format number as currency (e.g., $1,234.56)
+ * Format number as currency (e.g., $1,234.56 / €1,234.56)
  */
-export function formatCurrency(value: number): string {
+export function formatCurrency(value: number, currency: 'USD' | 'EUR' = 'USD'): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'USD',
+    currency,
   }).format(value);
 }
 
