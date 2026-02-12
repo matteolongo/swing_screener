@@ -15,6 +15,9 @@ EUR_SUFFIXES = frozenset(
         "LS",  # Euronext Lisbon
         "IR",  # Euronext Dublin
         "HE",  # Nasdaq Helsinki
+        "ST",  # Nasdaq Stockholm
+        "CO",  # Nasdaq Copenhagen
+        "OL",  # Oslo Bors
         "VI",  # Wiener Borse
     }
 )
@@ -40,4 +43,3 @@ def detect_currency(ticker: str) -> str:
     if suffix in EUR_SUFFIXES:
         return "EUR"
     return "USD"
-

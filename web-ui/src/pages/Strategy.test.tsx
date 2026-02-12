@@ -63,4 +63,11 @@ describe('Strategy Page', () => {
     expect(await screen.findByRole('option', { name: 'Breakout v2' })).toBeInTheDocument();
     await waitForQueriesToSettle(queryClient);
   });
+
+  it('renders currency filter selector', async () => {
+    const { queryClient } = renderWithProviders(<StrategyPage />);
+
+    expect(await screen.findByRole('combobox', { name: /currencies/i })).toBeInTheDocument();
+    await waitForQueriesToSettle(queryClient);
+  });
 });

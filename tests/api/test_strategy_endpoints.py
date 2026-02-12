@@ -1,3 +1,4 @@
+import json
 from fastapi.testclient import TestClient
 
 from api.main import app
@@ -33,6 +34,7 @@ def test_strategy_crud_and_active(monkeypatch, tmp_path):
     assert res.status_code == 200
     active = res.json()
     assert active["id"] == "default"
+    assert active["universe"]["filt"]["currencies"] == ["USD", "EUR"]
 
     payload = _create_strategy_payload(active, strategy_id="test", name="Test Strategy")
     res = client.post("/api/strategy", json=payload)
@@ -78,3 +80,29 @@ def test_strategy_create_default_id_forbidden(monkeypatch, tmp_path):
 
     res = client.post("/api/strategy", json=payload)
     assert res.status_code == 400
+
+
+def test_strategy_rejects_invalid_currency(monkeypatch, tmp_path):
+    _patch_strategy_storage(monkeypatch, tmp_path)
+
+    client = TestClient(app)
+    active = client.get("/api/strategy/active").json()
+    payload = _create_strategy_payload(active, strategy_id="bad-currency", name="Bad Currency")
+    payload["universe"]["filt"]["currencies"] = ["JPY"]
+
+    res = client.post("/api/strategy", json=payload)
+    assert res.status_code == 422
+
+
+def test_strategy_backfills_missing_currency_field(monkeypatch, tmp_path):
+    _patch_strategy_storage(monkeypatch, tmp_path)
+    strategy_storage.DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+    legacy = strategy_storage._default_strategy_payload()  # noqa: SLF001
+    legacy["universe"]["filt"].pop("currencies", None)
+    strategy_storage.STRATEGIES_FILE.write_text(json.dumps([legacy]), encoding="utf-8")
+    strategy_storage.ACTIVE_STRATEGY_FILE.write_text(json.dumps({"id": "default"}), encoding="utf-8")
+
+    client = TestClient(app)
+    active = client.get("/api/strategy/active").json()
+    assert active["universe"]["filt"]["currencies"] == ["USD", "EUR"]

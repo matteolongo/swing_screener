@@ -26,14 +26,29 @@ def _get_close_matrix(ohlcv: pd.DataFrame) -> pd.DataFrame:
     if not isinstance(close, pd.DataFrame):
         close = close.to_frame()
 
-    close = close.dropna(axis=1, how="all").sort_index()
-    return close
+    return close.dropna(axis=1, how="all").sort_index()
+
+
+def sma_per_ticker(close_series: pd.Series, window: int) -> float:
+    """
+    Compute SMA on a single ticker's non-NaN close prices.
+    Returns NaN if insufficient data.
+    """
+    if window <= 1:
+        raise ValueError("window must be > 1")
+    valid = close_series.dropna()
+    if len(valid) < window:
+        return float("nan")
+    return valid.iloc[-window:].mean()
 
 
 def sma(close: pd.DataFrame, window: int) -> pd.DataFrame:
     """
-    Simple Moving Average for each ticker.
+    Backward-compatible SMA helper used by validation tests.
+
     close: DataFrame date x ticker
+    Returns rolling SMA per ticker with TA-Lib-like warmup behavior
+    (NaN until `window` observations are available).
     """
     if window <= 1:
         raise ValueError("window must be > 1")
@@ -51,6 +66,9 @@ def compute_trend_features(
       - last, sma20, sma50, sma200 (by default)
       - trend_ok: (last > sma200) AND (sma50 > sma200)
       - dist_sma50_pct, dist_sma200_pct
+      
+    Computes SMAs per ticker on their actual trading days only,
+    ignoring NaN gaps from sparse calendars (e.g., EUR vs USD holidays).
     """
     close = _get_close_matrix(ohlcv)
     if close.empty:
@@ -65,48 +83,47 @@ def compute_trend_features(
         ]
         return pd.DataFrame(columns=cols, index=pd.Index([], name="ticker"))
 
-    sma_fast = sma(close, cfg.sma_fast)
-    sma_mid = sma(close, cfg.sma_mid)
-    sma_long = sma(close, cfg.sma_long)
-
-    last = close.iloc[-1]
-    f = sma_fast.iloc[-1]
-    m = sma_mid.iloc[-1]
-    l = sma_long.iloc[-1]
-
-    feats = pd.DataFrame(
-        {
-            "last": last,
-            f"sma{cfg.sma_fast}": f,
-            f"sma{cfg.sma_mid}": m,
-            f"sma{cfg.sma_long}": l,
-        }
-    )
-
-    long_col = f"sma{cfg.sma_long}"
-    mid_col = f"sma{cfg.sma_mid}"
-
-    feats["trend_ok"] = (feats["last"] > feats[long_col]) & (
-        feats[mid_col] > feats[long_col]
-    )
-
-    feats["dist_sma50_pct"] = (feats["last"] / feats[mid_col] - 1.0) * 100.0
-    feats["dist_sma200_pct"] = (feats["last"] / feats[long_col] - 1.0) * 100.0
-
-    # Drop tickers without enough history for SMA long
-    feats = feats.dropna(subset=[long_col])
-
-    # Order columns nicely
-    feats = feats[
-        [
+    results = []
+    for ticker in close.columns:
+        series = close[ticker]
+        valid = series.dropna()
+        if len(valid) < cfg.sma_long:
+            continue
+            
+        last_val = valid.iloc[-1]
+        sma_fast_val = sma_per_ticker(series, cfg.sma_fast)
+        sma_mid_val = sma_per_ticker(series, cfg.sma_mid)
+        sma_long_val = sma_per_ticker(series, cfg.sma_long)
+        
+        if pd.isna(sma_long_val):
+            continue
+            
+        trend_ok = (last_val > sma_long_val) and (sma_mid_val > sma_long_val)
+        dist_sma50 = ((last_val / sma_mid_val) - 1.0) * 100.0 if pd.notna(sma_mid_val) else float("nan")
+        dist_sma200 = ((last_val / sma_long_val) - 1.0) * 100.0 if pd.notna(sma_long_val) else float("nan")
+        
+        results.append({
+            "ticker": ticker,
+            "last": last_val,
+            f"sma{cfg.sma_fast}": sma_fast_val,
+            f"sma{cfg.sma_mid}": sma_mid_val,
+            f"sma{cfg.sma_long}": sma_long_val,
+            "trend_ok": trend_ok,
+            "dist_sma50_pct": dist_sma50,
+            "dist_sma200_pct": dist_sma200,
+        })
+    
+    if not results:
+        cols = [
             "last",
             f"sma{cfg.sma_fast}",
-            mid_col,
-            long_col,
+            f"sma{cfg.sma_mid}",
+            f"sma{cfg.sma_long}",
             "trend_ok",
             "dist_sma50_pct",
             "dist_sma200_pct",
         ]
-    ].sort_index()
-
-    return feats
+        return pd.DataFrame(columns=cols, index=pd.Index([], name="ticker"))
+    
+    feats = pd.DataFrame(results).set_index("ticker")
+    return feats.sort_index()

@@ -27,8 +27,7 @@ def _get_close_matrix(ohlcv: pd.DataFrame) -> pd.DataFrame:
     if not isinstance(close, pd.DataFrame):
         close = close.to_frame()
 
-    close = close.dropna(axis=1, how="all").sort_index()
-    return close
+    return close.dropna(axis=1, how="all").sort_index()
 
 
 def compute_returns(close: pd.DataFrame, lookback: int) -> pd.Series:
@@ -38,15 +37,25 @@ def compute_returns(close: pd.DataFrame, lookback: int) -> pd.Series:
 
     close: DataFrame date x ticker
     Returns: Series index=ticker
+    
+    Computes returns per ticker on their actual trading days only,
+    ignoring NaN gaps from sparse calendars (e.g., EUR vs USD holidays).
     """
     if lookback <= 1:
         raise ValueError("lookback must be > 1")
-    if len(close) <= lookback:
-        return pd.Series(dtype=float)
 
-    last = close.iloc[-1]
-    prev = close.iloc[-(lookback + 1)]
-    return (last / prev) - 1.0
+    results = {}
+    for ticker in close.columns:
+        series = close[ticker].dropna()
+        if len(series) < lookback + 1:
+            # Need at least lookback + 1 points: one for current, lookback for past
+            continue
+        last_val = series.iloc[-1]
+        prev_val = series.iloc[-(lookback + 1)]
+        if pd.notna(last_val) and pd.notna(prev_val) and prev_val != 0:
+            results[ticker] = (last_val / prev_val) - 1.0
+    
+    return pd.Series(results)
 
 
 def compute_momentum_features(

@@ -36,6 +36,7 @@ export const mockStrategies = [
         max_atr_pct: 15.0,
         require_trend_ok: true,
         require_rs_positive: false,
+        currencies: ['USD', 'EUR'],
       },
     },
     ranking: {
@@ -108,6 +109,7 @@ export const mockStrategies = [
         max_atr_pct: 12.0,
         require_trend_ok: true,
         require_rs_positive: true,
+        currencies: ['USD', 'EUR'],
       },
     },
     ranking: {
