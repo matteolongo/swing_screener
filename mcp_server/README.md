@@ -6,14 +6,19 @@ Model Context Protocol (MCP) server for Swing Screener, exposing trading system 
 
 **Phase 1:** ✅ Complete - Infrastructure (config, registry, skeleton)  
 **Phase 2:** ✅ Complete - Portfolio tools + MCP protocol integration  
-**Phase 3:** ✅ Complete - Portfolio domain complete (9 tools) + Screener tools (3 tools)
+**Phase 3:** ✅ Complete - Portfolio domain complete (9 tools) + Screener tools (3 tools)  
+**Phase 4:** ✅ Complete - All remaining domains (strategy, config, daily_review, social)
 
-**Total:** 12 tools across 2 feature domains
+**Total:** 22 tools across 6 feature domains
 
 ### Currently Available
 
 - **9 Portfolio Tools** - Complete position and order management
 - **3 Screener Tools** - Stock screening and position sizing
+- **4 Strategy Tools** - Strategy management and configuration
+- **2 Config Tools** - Application configuration management
+- **2 Daily Review Tools** - Comprehensive daily trading workflow
+- **2 Social Tools** - Social sentiment analysis
 - **MCP Protocol** - Stdio transport for AI assistant communication
 - **Configuration** - YAML-based feature toggles
 - **Tool Registry** - Multi-domain support
@@ -93,6 +98,47 @@ python -m mcp_server.main --config /path/to/config.yaml
 3. **preview_order** - Calculate position sizing
    - Given entry and stop prices
    - Returns share quantity, position size, risk amount
+
+**Strategy Management (4 tools):**
+
+1. **list_strategies** - List all available strategies
+   - Shows all configured trading strategies
+
+2. **get_strategy** - Get strategy details by ID
+   - Returns complete strategy configuration
+
+3. **get_active_strategy** - Get currently active strategy
+   - Returns the strategy currently in use
+
+4. **set_active_strategy** - Set a strategy as active
+   - Activates a specific strategy for trading
+
+**Configuration Management (2 tools):**
+
+1. **get_config** - Retrieve current configuration
+   - Returns all app configuration settings
+
+2. **update_config** - Update configuration
+   - Supports partial updates to config
+   - 22 fields across risk, indicators, manage sections
+
+**Daily Review (2 tools):**
+
+1. **get_daily_review** - Generate comprehensive daily review
+   - Combines screener + portfolio data
+   - Returns daily trading workflow summary
+
+2. **get_candidate_recommendations** - Get filtered candidates
+   - Returns recommended trading candidates
+   - Configurable top_n parameter
+
+**Social Sentiment (2 tools):**
+
+1. **get_social_sentiment** - Get social sentiment for ticker
+   - Real-time social sentiment data
+
+2. **analyze_ticker_sentiment** - Comprehensive sentiment analysis
+   - Detailed ticker sentiment breakdown
 
 ### Configuration
 
