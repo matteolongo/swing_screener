@@ -171,6 +171,30 @@ def create_registry(config: MCPConfig) -> ToolRegistry:
         registry.register_tools(get_screener_tools())
         logger.info("Registered screener tools")
     
+    # Register strategy tools if enabled
+    if config.is_feature_enabled('strategy'):
+        from mcp_server.tools.strategy import get_strategy_tools
+        registry.register_tools(get_strategy_tools())
+        logger.info("Registered strategy tools")
+    
+    # Register config tools if enabled
+    if config.is_feature_enabled('config'):
+        from mcp_server.tools.config import get_config_tools
+        registry.register_tools(get_config_tools())
+        logger.info("Registered config tools")
+    
+    # Register daily_review tools if enabled
+    if config.is_feature_enabled('daily_review'):
+        from mcp_server.tools.daily_review import get_daily_review_tools
+        registry.register_tools(get_daily_review_tools())
+        logger.info("Registered daily_review tools")
+    
+    # Register social tools if enabled
+    if config.is_feature_enabled('social'):
+        from mcp_server.tools.social import get_social_tools
+        registry.register_tools(get_social_tools())
+        logger.info("Registered social tools")
+    
     logger.info(
         "Tool registry initialized: %d tools registered across %d features",
         registry.tool_count(),

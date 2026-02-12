@@ -14,6 +14,7 @@ from api.repositories.orders_repo import OrdersRepository
 from api.repositories.positions_repo import PositionsRepository
 from api.repositories.strategy_repo import StrategyRepository
 from api.services.backtest_service import BacktestService
+from api.services.daily_review_service import DailyReviewService
 from api.services.portfolio_service import PortfolioService
 from api.services.screener_service import ScreenerService
 from api.services.social_service import SocialService
@@ -77,3 +78,13 @@ def get_backtest_service() -> BacktestService:
 def get_social_service() -> SocialService:
     """Get social service instance with injected dependencies."""
     return SocialService(strategy_repo=get_strategy_repo())
+
+
+def get_daily_review_service() -> DailyReviewService:
+    """Get daily_review service instance with injected dependencies."""
+    return DailyReviewService(
+        screener_service=get_screener_service(),
+        portfolio_service=get_portfolio_service(),
+        data_dir=DATA_DIR,
+    )
+

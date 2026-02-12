@@ -37,7 +37,7 @@ features:
   
   # Strategy Management
   strategy:
-    enabled: false
+    enabled: true
     tools:
       - list_strategies
       - get_strategy
@@ -53,21 +53,21 @@ features:
   
   # Configuration Management
   config:
-    enabled: false
+    enabled: true
     tools:
       - get_config
       - update_config
   
   # Social Sentiment
   social:
-    enabled: false
+    enabled: true
     tools:
       - get_social_sentiment
       - analyze_ticker_sentiment
   
   # Daily Review (combines screener + portfolio management)
   daily_review:
-    enabled: false
+    enabled: true
     tools:
       - get_daily_review
       - get_candidate_recommendations
