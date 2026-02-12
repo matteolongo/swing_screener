@@ -28,6 +28,8 @@ def _get_close_matrix(ohlcv: pd.DataFrame) -> pd.DataFrame:
         close = close.to_frame()
 
     close = close.dropna(axis=1, how="all").sort_index()
+    # Align sparse calendars (EU/US holidays) to last available close per ticker.
+    close = close.ffill()
     return close
 
 

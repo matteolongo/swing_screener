@@ -80,6 +80,27 @@ def test_build_feature_table_contains_expected_columns():
     assert "SPY" not in feats.index
 
 
+def test_build_feature_table_handles_sparse_calendars():
+    ohlcv = _make_synthetic_ohlcv_universe()
+
+    for field in ["Open", "High", "Low", "Close", "Volume"]:
+        ohlcv.loc[ohlcv.index[::9], (field, "SPY")] = float("nan")
+        ohlcv.loc[ohlcv.index[::7], (field, "AAA")] = float("nan")
+        ohlcv.loc[ohlcv.index[::8], (field, "BBB")] = float("nan")
+        ohlcv.loc[ohlcv.index[-1], (field, "SPY")] = float("nan")
+
+    cfg = UniverseConfig(
+        trend=TrendConfig(),
+        vol=VolatilityConfig(atr_window=14),
+        mom=MomentumConfig(benchmark="SPY"),
+    )
+    feats = build_feature_table(ohlcv, cfg)
+
+    assert not feats.empty
+    assert "AAA" in feats.index
+    assert "BBB" in feats.index
+
+
 def test_build_universe_filters_expected_fail_reasons():
     ohlcv = _make_synthetic_ohlcv_universe()
 

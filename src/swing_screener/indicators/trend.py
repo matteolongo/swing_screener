@@ -27,6 +27,8 @@ def _get_close_matrix(ohlcv: pd.DataFrame) -> pd.DataFrame:
         close = close.to_frame()
 
     close = close.dropna(axis=1, how="all").sort_index()
+    # Mixed-market calendars create sparse rows per ticker; use last known close.
+    close = close.ffill()
     return close
 
 

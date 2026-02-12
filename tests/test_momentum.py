@@ -92,3 +92,18 @@ def test_momentum_features_empty_ohlcv():
     ohlcv = pd.DataFrame(columns=cols)
     feats = compute_momentum_features(ohlcv, MomentumConfig(benchmark="SPY"))
     assert feats.empty
+
+
+def test_momentum_features_handles_sparse_calendar_gaps():
+    ohlcv = _make_synthetic_ohlcv_for_momentum()
+
+    for field in ["Open", "High", "Low", "Close", "Volume"]:
+        ohlcv.loc[ohlcv.index[::9], (field, "SPY")] = float("nan")
+        ohlcv.loc[ohlcv.index[::11], (field, "AAA")] = float("nan")
+        ohlcv.loc[ohlcv.index[-1], (field, "SPY")] = float("nan")
+        ohlcv.loc[ohlcv.index[-1], (field, "AAA")] = float("nan")
+
+    feats = compute_momentum_features(ohlcv, MomentumConfig(benchmark="SPY"))
+
+    assert "AAA" in feats.index
+    assert pd.notna(feats.loc["AAA", "mom_6m"])

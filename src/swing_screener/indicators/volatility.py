@@ -101,6 +101,11 @@ def compute_volatility_features(
     high = high[common]
     low = low[common]
     close = close[common]
+    # Sparse exchange calendars introduce NaNs for non-trading days.
+    # ATR should operate on the latest known OHLC values per ticker.
+    high = high.ffill()
+    low = low.ffill()
+    close = close.ffill()
 
     atr_df = compute_atr(high, low, close, window=cfg.atr_window)
     if atr_df.empty or close.empty:
