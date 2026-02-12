@@ -348,6 +348,7 @@ function CandidatesTable({
       empty={candidates.length === 0}
       emptyMessage={t('dailyReview.table.candidates.empty')}
       tableClassName="text-sm"
+      colSpan={10}
       headers={(
         <tr>
           <th className="text-left p-2">{t('dailyReview.table.candidates.headers.ticker')}</th>
@@ -425,6 +426,7 @@ function UpdateStopTable({ positions }: { positions: DailyReviewPositionUpdate[]
       empty={positions.length === 0}
       emptyMessage={t('dailyReview.table.update.empty')}
       tableClassName="text-sm"
+      colSpan={8}
       headers={(
         <tr>
           <th className="text-left p-2">{t('dailyReview.table.update.headers.ticker')}</th>
@@ -475,6 +477,7 @@ function CloseTable({ positions }: { positions: DailyReviewPositionClose[] }) {
       empty={positions.length === 0}
       emptyMessage={t('dailyReview.table.close.empty')}
       tableClassName="text-sm"
+      colSpan={7}
       headers={(
         <tr>
           <th className="text-left p-2">{t('dailyReview.table.close.headers.ticker')}</th>
@@ -523,6 +526,7 @@ function HoldTable({ positions }: { positions: DailyReviewPositionHold[] }) {
       empty={positions.length === 0}
       emptyMessage={t('dailyReview.table.hold.empty')}
       tableClassName="text-sm"
+      colSpan={6}
       headers={(
         <tr>
           <th className="text-left p-2">{t('dailyReview.table.hold.headers.ticker')}</th>

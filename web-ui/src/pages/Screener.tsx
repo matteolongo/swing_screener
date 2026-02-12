@@ -358,6 +358,7 @@ export default function Screener() {
             <TableShell
               empty={candidates.length === 0}
               emptyMessage={t('screener.table.empty')}
+              colSpan={20}
               headers={(
                 <tr className="border-b border-gray-200">
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.rank')}</th>

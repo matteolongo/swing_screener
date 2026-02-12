@@ -100,6 +100,7 @@ export default function Orders() {
             loading={isLoading}
             empty={!isLoading && orders.length === 0}
             emptyMessage={t('ordersPage.empty')}
+            colSpan={10}
             headers={(
               <tr className="border-b border-gray-200 dark:border-gray-700">
                 <th className="text-left py-3 px-4 font-semibold">{t('ordersPage.headers.ticker')}</th>

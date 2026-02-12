@@ -40,6 +40,9 @@ export const messagesEn = {
     },
     summary: 'Summary',
     noDetails: 'No recommendation details available.',
+    details: {
+      title: 'Recommendation — {{ticker}}',
+    },
     sections: {
       checklist: 'Checklist Gates',
       riskCosts: 'Risk & Costs',
@@ -58,6 +61,14 @@ export const messagesEn = {
       biasWarning: 'Bias Warning',
       whatToLearn: 'What to Learn',
       whatWouldMakeValid: 'What would make this trade valid?',
+    },
+    overlayBadge: {
+      ok: 'OK',
+      reducedRisk: 'Reduced',
+      review: 'Review',
+      veto: 'Veto',
+      noData: 'No Data',
+      off: 'Off',
     },
   },
   order: {
@@ -82,6 +93,7 @@ export const messagesEn = {
         'This setup is not recommended. Review the checklist and fix the issues first.',
       quantityError: 'Quantity must be greater than 0',
       limitError: 'Limit price must be greater than 0',
+      stopPositiveError: 'Stop price must be greater than 0',
       stopError: 'Limit price must be higher than stop price',
       createError: 'Failed to create order',
       riskExceeded: 'Risk exceeds target ({{riskPct}}%)',

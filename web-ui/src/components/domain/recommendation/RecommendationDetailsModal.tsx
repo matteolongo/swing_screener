@@ -20,7 +20,7 @@ export default function RecommendationDetailsModal({
 }: RecommendationDetailsModalProps) {
   return (
     <ModalShell
-      title={`Recommendation — ${ticker}`}
+      title={t('recommendation.details.title', { ticker })}
       onClose={onClose}
       className="max-w-3xl"
       closeAriaLabel={t('modal.closeAria')}

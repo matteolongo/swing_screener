@@ -129,7 +129,7 @@ export default function CreateOrderModalForm({
             {t('common.actions.cancel')}
           </Button>
           <Button type="submit" variant="primary" disabled={isLoading}>
-            {isLoading ? t('order.candidateModal.creating') : t('order.candidateModal.createAction')}
+            {isLoading ? t('order.createModal.creating') : t('order.createModal.createAction')}
           </Button>
         </div>
       </form>

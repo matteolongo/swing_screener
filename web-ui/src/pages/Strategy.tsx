@@ -1,6 +1,6 @@
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
-import { Strategy, StrategyEntryType, StrategyExitMode, StrategyCurrency } from '@/types/strategy';
+import { StrategyEntryType, StrategyExitMode, StrategyCurrency } from '@/types/strategy';
 import { useStrategyEditor } from '@/features/strategy/useStrategyEditor';
 import {
   buildHelp,

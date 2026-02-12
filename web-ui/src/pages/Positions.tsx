@@ -129,6 +129,7 @@ export default function Positions() {
             loading={isLoading}
             empty={!isLoading && positions.length === 0}
             emptyMessage={t('positionsPage.empty')}
+            colSpan={12}
             headers={(
               <tr className="border-b border-gray-200 dark:border-gray-700">
                 <th className="text-left py-3 px-4 font-semibold">{t('positionsPage.headers.ticker')}</th>

@@ -3,7 +3,7 @@ import { AlertCircle, BarChart3, RefreshCw, Trash2 } from 'lucide-react';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import { useConfigStore } from '@/stores/configStore';
-import { FullBacktestResponse } from '@/features/backtest/types';
+import { FullBacktestResponse, FullEntryType } from '@/features/backtest/types';
 import {
   useBacktestSimulations,
   useRunBacktestMutation,
