@@ -128,7 +128,7 @@ export default function CandidateOrderModal({
               <div>
                 <span className="text-gray-600 dark:text-gray-400">{t('order.candidateModal.labels.rr')}:</span>{' '}
                 <strong className="text-green-600">
-                  {t('common.units.rValue', { value: formatNumber(candidate.rReward, 1) })}
+                  {formatNumber(candidate.rReward, 1)}
                 </strong>
               </div>
             ) : null}

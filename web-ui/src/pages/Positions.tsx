@@ -25,16 +25,6 @@ import ClosePositionModalForm from '@/components/domain/positions/ClosePositionM
 import { t } from '@/i18n/t';
 
 type FilterStatus = PositionStatus | 'all';
-const POSITION_FILTER_LABEL: Record<FilterStatus, string> = {
-  all: t('positionsPage.filter.all'),
-  open: t('positionsPage.filter.open'),
-  closed: t('positionsPage.filter.closed'),
-};
-const POSITION_LIST_TITLE: Record<FilterStatus, string> = {
-  all: t('positionsPage.listTitle.all'),
-  open: t('positionsPage.listTitle.open'),
-  closed: t('positionsPage.listTitle.closed'),
-};
 
 export default function Positions() {
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
@@ -48,6 +38,24 @@ export default function Positions() {
   const positionsQuery = usePositions(filterStatus);
   const positions = positionsQuery.data ?? [];
   const isLoading = positionsQuery.isLoading;
+
+  const getFilterLabel = (status: FilterStatus): string => {
+    const labels: Record<FilterStatus, string> = {
+      all: t('positionsPage.filter.all'),
+      open: t('positionsPage.filter.open'),
+      closed: t('positionsPage.filter.closed'),
+    };
+    return labels[status];
+  };
+
+  const getListTitle = (status: FilterStatus): string => {
+    const titles: Record<FilterStatus, string> = {
+      all: t('positionsPage.listTitle.all'),
+      open: t('positionsPage.listTitle.open'),
+      closed: t('positionsPage.listTitle.closed'),
+    };
+    return titles[status];
+  };
 
   const openPositionsQuery = useOpenPositions();
   const openPositions = openPositionsQuery.data ?? [];
@@ -92,7 +100,7 @@ export default function Positions() {
                 size="sm"
                 onClick={() => setFilterStatus(status)}
               >
-                {POSITION_FILTER_LABEL[status]}
+                {getFilterLabel(status)}
               </Button>
             ))}
           </div>
@@ -122,7 +130,7 @@ export default function Positions() {
 
       <Card variant="elevated">
         <CardHeader>
-          <CardTitle>{POSITION_LIST_TITLE[filterStatus]}</CardTitle>
+          <CardTitle>{getListTitle(filterStatus)}</CardTitle>
         </CardHeader>
         <CardContent>
           <TableShell
@@ -207,7 +215,7 @@ export default function Positions() {
                   </td>
                   <td className="py-3 px-4 text-right">{formatCurrency(position.stopPrice)}</td>
                   <td className="py-3 px-4 text-right">
-                    {position.exitPrice ? formatCurrency(position.exitPrice) : t('positionsPage.exitFallback')}
+                    {position.exitPrice != null ? formatCurrency(position.exitPrice) : t('positionsPage.exitFallback')}
                   </td>
                   <td
                     className={`py-3 px-4 text-right font-semibold ${

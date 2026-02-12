@@ -18,18 +18,6 @@ import FillOrderModalForm from '@/components/domain/orders/FillOrderModalForm';
 import { t } from '@/i18n/t';
 
 type FilterStatus = OrderStatus | 'all';
-const ORDER_FILTER_LABEL: Record<FilterStatus, string> = {
-  all: t('ordersPage.filter.all'),
-  pending: t('ordersPage.filter.pending'),
-  filled: t('ordersPage.filter.filled'),
-  cancelled: t('ordersPage.filter.cancelled'),
-};
-const ORDER_LIST_TITLE: Record<FilterStatus, string> = {
-  all: t('ordersPage.listTitle.all'),
-  pending: t('ordersPage.listTitle.pending'),
-  filled: t('ordersPage.listTitle.filled'),
-  cancelled: t('ordersPage.listTitle.cancelled'),
-};
 
 export default function Orders() {
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
@@ -41,6 +29,26 @@ export default function Orders() {
   const ordersQuery = useOrders(filterStatus);
   const orders = ordersQuery.data ?? [];
   const isLoading = ordersQuery.isLoading;
+
+  const getFilterLabel = (status: FilterStatus): string => {
+    const labels: Record<FilterStatus, string> = {
+      all: t('ordersPage.filter.all'),
+      pending: t('ordersPage.filter.pending'),
+      filled: t('ordersPage.filter.filled'),
+      cancelled: t('ordersPage.filter.cancelled'),
+    };
+    return labels[status];
+  };
+
+  const getListTitle = (status: FilterStatus): string => {
+    const titles: Record<FilterStatus, string> = {
+      all: t('ordersPage.listTitle.all'),
+      pending: t('ordersPage.listTitle.pending'),
+      filled: t('ordersPage.listTitle.filled'),
+      cancelled: t('ordersPage.listTitle.cancelled'),
+    };
+    return titles[status];
+  };
 
   const createOrderMutation = useCreateOrderMutation(() => {
     setShowCreateModal(false);
@@ -84,7 +92,7 @@ export default function Orders() {
                 size="sm"
                 onClick={() => setFilterStatus(status)}
               >
-                {ORDER_FILTER_LABEL[status]}
+                {getFilterLabel(status)}
               </Button>
             ))}
           </div>
@@ -93,7 +101,7 @@ export default function Orders() {
 
       <Card variant="elevated">
         <CardHeader>
-          <CardTitle>{ORDER_LIST_TITLE[filterStatus]}</CardTitle>
+          <CardTitle>{getListTitle(filterStatus)}</CardTitle>
         </CardHeader>
         <CardContent>
           <TableShell
@@ -158,10 +166,10 @@ export default function Orders() {
                 </td>
                 <td className="py-3 px-4 text-right">{order.quantity}</td>
                 <td className="py-3 px-4 text-right">
-                  {order.limitPrice ? formatCurrency(order.limitPrice) : '-'}
+                  {order.limitPrice ? formatCurrency(order.limitPrice) : t('common.placeholders.dash')}
                 </td>
                 <td className="py-3 px-4 text-right">
-                  {order.stopPrice ? formatCurrency(order.stopPrice) : '-'}
+                  {order.stopPrice ? formatCurrency(order.stopPrice) : t('common.placeholders.dash')}
                 </td>
                 <td className="py-3 px-4">
                   <Badge

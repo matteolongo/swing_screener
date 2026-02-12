@@ -6,7 +6,7 @@ export const candidateOrderSchema = z
     orderType: z.enum(['BUY_LIMIT', 'BUY_MARKET']),
     quantity: z.number().int().min(1, t('order.candidateModal.quantityError')),
     limitPrice: z.number().positive(t('order.candidateModal.limitError')),
-    stopPrice: z.number().positive(t('order.candidateModal.stopError')),
+    stopPrice: z.number().positive(t('order.candidateModal.stopPositiveError')),
     notes: z.string().optional(),
   })
   .superRefine((values, ctx) => {

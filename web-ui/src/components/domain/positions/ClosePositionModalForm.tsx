@@ -39,13 +39,13 @@ export default function ClosePositionModalForm({
         <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
           <p className="text-sm text-gray-600 dark:text-gray-400">{t('positions.closeModal.positionDetails')}</p>
           <p className="text-sm mt-1">
-            <strong>Entry:</strong> {formatCurrency(position.entryPrice)}
+            <strong>{t('positions.closeModal.entryLabel')}</strong> {formatCurrency(position.entryPrice)}
           </p>
           <p className="text-sm">
-            <strong>Shares:</strong> {position.shares}
+            <strong>{t('positions.closeModal.sharesLabel')}</strong> {position.shares}
           </p>
           <p className="text-sm">
-            <strong>Stop:</strong> {formatCurrency(position.stopPrice)}
+            <strong>{t('positions.closeModal.stopLabel')}</strong> {formatCurrency(position.stopPrice)}
           </p>
         </div>
 

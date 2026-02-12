@@ -13,10 +13,10 @@ const VERDICT_STYLES: Record<string, string> = {
   UNKNOWN: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
 };
 
-const VERDICT_LABELS: Record<string, string> = {
-  RECOMMENDED: t('recommendation.verdict.recommended'),
-  NOT_RECOMMENDED: t('recommendation.verdict.notRecommended'),
-  UNKNOWN: t('recommendation.verdict.unknown'),
+const VERDICT_LABEL_KEYS: Record<string, string> = {
+  RECOMMENDED: 'recommendation.verdict.recommended',
+  NOT_RECOMMENDED: 'recommendation.verdict.notRecommended',
+  UNKNOWN: 'recommendation.verdict.unknown',
 };
 
 export default function RecommendationBadge({
@@ -24,6 +24,7 @@ export default function RecommendationBadge({
   className,
 }: RecommendationBadgeProps) {
   const safeVerdict = verdict in VERDICT_STYLES ? verdict : 'UNKNOWN';
+  const label = t(VERDICT_LABEL_KEYS[safeVerdict] as any);
 
   return (
     <span
@@ -33,7 +34,7 @@ export default function RecommendationBadge({
         className,
       )}
     >
-      {VERDICT_LABELS[safeVerdict]}
+      {label}
     </span>
   );
 }

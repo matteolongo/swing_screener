@@ -73,13 +73,13 @@ export default function UpdateStopModalForm({
         <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
           <p className="text-sm text-gray-600 dark:text-gray-400">{t('positions.updateStopModal.currentPosition')}</p>
           <p className="text-sm mt-1">
-            <strong>Entry:</strong> {formatCurrency(position.entryPrice)}
+            <strong>{t('positions.updateStopModal.entryLabel')}</strong> {formatCurrency(position.entryPrice)}
           </p>
           <p className="text-sm">
-            <strong>Current Stop:</strong> {formatCurrency(position.stopPrice)}
+            <strong>{t('positions.updateStopModal.currentStopLabel')}</strong> {formatCurrency(position.stopPrice)}
           </p>
           <p className="text-sm">
-            <strong>Shares:</strong> {position.shares}
+            <strong>{t('positions.updateStopModal.sharesLabel')}</strong> {position.shares}
           </p>
         </div>
 

@@ -122,13 +122,13 @@ export function calculateRNow(position: Position, currentPrice: number): number 
 // Calculate P&L
 export function calculatePnL(position: Position, currentPrice?: number): number {
   // Priority: exitPrice (closed) > passed currentPrice > position.currentPrice (live) > entryPrice (fallback)
-  const exitOrCurrent = position.exitPrice || currentPrice || position.currentPrice || position.entryPrice;
+  const exitOrCurrent = position.exitPrice ?? currentPrice ?? position.currentPrice ?? position.entryPrice;
   return (exitOrCurrent - position.entryPrice) * position.shares;
 }
 
 // Calculate P&L percentage
 export function calculatePnLPercent(position: Position, currentPrice?: number): number {
   // Priority: exitPrice (closed) > passed currentPrice > position.currentPrice (live) > entryPrice (fallback)
-  const exitOrCurrent = position.exitPrice || currentPrice || position.currentPrice || position.entryPrice;
+  const exitOrCurrent = position.exitPrice ?? currentPrice ?? position.currentPrice ?? position.entryPrice;
   return ((exitOrCurrent - position.entryPrice) / position.entryPrice) * 100;
 }
