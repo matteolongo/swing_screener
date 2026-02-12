@@ -15,9 +15,6 @@ EUR_SUFFIXES = frozenset(
         "LS",  # Euronext Lisbon
         "IR",  # Euronext Dublin
         "HE",  # Nasdaq Helsinki
-        "ST",  # Nasdaq Stockholm
-        "CO",  # Nasdaq Copenhagen
-        "OL",  # Oslo Bors
         "VI",  # Wiener Borse
     }
 )
