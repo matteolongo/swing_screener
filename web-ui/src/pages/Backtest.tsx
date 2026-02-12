@@ -1,28 +1,22 @@
-import { useEffect, useMemo, useState } from 'react';
-import { notifyManager } from '@tanstack/react-query';
+import { useMemo, useState } from 'react';
 import { AlertCircle, BarChart3, RefreshCw, Trash2 } from 'lucide-react';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import { useConfigStore } from '@/stores/configStore';
-import { AppConfig } from '@/types/config';
-import {
-  FullEntryType,
-  FullBacktestResponse,
-  FullBacktestParams,
-} from '@/features/backtest/types';
+import { FullBacktestResponse } from '@/features/backtest/types';
 import {
   useBacktestSimulations,
   useRunBacktestMutation,
   useLoadSimulation,
   useDeleteSimulationMutation,
 } from '@/features/backtest/hooks';
+import { useBacktestForm } from '@/features/backtest/useBacktestForm';
 import { formatDateTime, formatPercent, formatR, formatCurrency } from '@/utils/formatters';
 import EquityCurveChart from '@/components/domain/backtest/EquityCurveChart';
 import BacktestTickerSummaryTable from '@/components/domain/backtest/BacktestTickerSummaryTable';
 import BacktestTradesTable from '@/components/domain/backtest/BacktestTradesTable';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 
-const STORAGE_KEY = 'backtest.params.v1';
 const DEFAULT_LIVE_GAPS = [
   'Backtests assume next-bar entries; live fills can be worse.',
   'Stops can slip beyond planned levels during gaps or fast moves.',
@@ -30,157 +24,26 @@ const DEFAULT_LIVE_GAPS = [
   'Historical data can be revised or survivorship-biased.',
 ];
 
-interface BacktestFormState {
-  tickersText: string;
-  start: string;
-  end: string;
-  investedBudget: number | null;
-  entryType: FullEntryType;
-  breakoutLookback: number;
-  pullbackMa: number;
-  minHistory: number;
-  atrWindow: number;
-  kAtr: number;
-  breakevenAtR: number;
-  trailAfterR: number;
-  trailSma: number;
-  smaBufferPct: number;
-  maxHoldingDays: number;
-  commissionPct: number;
-}
-
-function defaultDateRange() {
-  const end = new Date();
-  const start = new Date();
-  start.setFullYear(start.getFullYear() - 2);
-  return {
-    start: start.toISOString().slice(0, 10),
-    end: end.toISOString().slice(0, 10),
-  };
-}
-
-function rangeYears(years: number) {
-  const end = new Date();
-  const start = new Date();
-  start.setFullYear(start.getFullYear() - years);
-  return {
-    start: start.toISOString().slice(0, 10),
-    end: end.toISOString().slice(0, 10),
-  };
-}
-
-function rangeSince(dateStr: string) {
-  const end = new Date();
-  return {
-    start: dateStr,
-    end: end.toISOString().slice(0, 10),
-  };
-}
-
-function buildDefaultFormState(
-  config: AppConfig,
-  overrides?: { kAtr?: number }
-): BacktestFormState {
-  const { start, end } = defaultDateRange();
-  return {
-    tickersText: '',
-    start,
-    end,
-    investedBudget: null,
-    entryType: 'auto',
-    breakoutLookback: config.indicators.breakoutLookback,
-    pullbackMa: config.indicators.pullbackMa,
-    minHistory: config.indicators.minHistory,
-    atrWindow: config.indicators.atrWindow,
-    kAtr: overrides?.kAtr ?? config.risk.kAtr,
-    breakevenAtR: config.manage.breakevenAtR,
-    trailAfterR: config.manage.trailAfterR,
-    trailSma: config.manage.trailSma,
-    smaBufferPct: config.manage.smaBufferPct,
-    maxHoldingDays: config.manage.maxHoldingDays,
-    commissionPct: 0,
-  };
-}
-
-function loadFormState(fallback: BacktestFormState): BacktestFormState {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) return fallback;
-  try {
-    const parsed = JSON.parse(raw) as Partial<BacktestFormState>;
-    return { ...fallback, ...parsed };
-  } catch {
-    return fallback;
-  }
-}
-
-function parseTickers(input: string): string[] {
-  return input
-    .split(',')
-    .map((t) => t.trim().toUpperCase())
-    .filter((t) => t.length > 0);
-}
-
 export default function Backtest() {
   const { config } = useConfigStore();
   const activeStrategyQuery = useActiveStrategyQuery();
 
-  const [formState, setFormState] = useState<BacktestFormState>(() => {
-    const defaults = buildDefaultFormState(config, {
-      kAtr: activeStrategyQuery.data?.risk.kAtr,
-    });
-    return loadFormState(defaults);
+  const {
+    formState,
+    setFormState,
+    canRun,
+    presets,
+    resetToSettings,
+    buildRunParams,
+  } = useBacktestForm({
+    config,
+    strategyKAtr: activeStrategyQuery.data?.risk.kAtr,
   });
   const [loadedResult, setLoadedResult] = useState<FullBacktestResponse | null>(null);
-  const tickers = useMemo(() => parseTickers(formState.tickersText), [formState.tickersText]);
-  const canRun = tickers.length > 0;
-  const presets = useMemo(
-    () => [
-      { label: '10Y', range: () => rangeYears(10) },
-      { label: '15Y', range: () => rangeYears(15) },
-      { label: 'Since 2008', range: () => rangeSince('2008-01-01') },
-    ],
-    []
-  );
-
-  useEffect(() => {
-    if (!activeStrategyQuery.data) return;
-    if (localStorage.getItem(STORAGE_KEY)) return;
-    const defaults = buildDefaultFormState(config, {
-      kAtr: activeStrategyQuery.data.risk.kAtr,
-    });
-    notifyManager.schedule(() => {
-      setFormState(defaults);
-    });
-  }, [activeStrategyQuery.data, config]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(formState));
-  }, [formState]);
 
   const simulationsQuery = useBacktestSimulations();
 
   const runMutation = useRunBacktestMutation();
-
-  const handleResetToSettings = () => {
-    const defaults = buildDefaultFormState(config, {
-      kAtr: activeStrategyQuery.data?.risk.kAtr,
-    });
-    setFormState((prev) => ({
-      ...prev,
-      entryType: defaults.entryType,
-      breakoutLookback: defaults.breakoutLookback,
-      pullbackMa: defaults.pullbackMa,
-      minHistory: defaults.minHistory,
-      atrWindow: defaults.atrWindow,
-      kAtr: defaults.kAtr,
-      breakevenAtR: defaults.breakevenAtR,
-      trailAfterR: defaults.trailAfterR,
-      trailSma: defaults.trailSma,
-      smaBufferPct: defaults.smaBufferPct,
-      maxHoldingDays: defaults.maxHoldingDays,
-      commissionPct: defaults.commissionPct,
-    }));
-  };
 
   const loadSimulationMutation = useLoadSimulation();
   const deleteSimulationMutation = useDeleteSimulationMutation();
@@ -218,25 +81,6 @@ export default function Backtest() {
   const handleDeleteSimulation = async (id: string) => {
     deleteSimulationMutation.mutate(id);
   };
-
-  const buildRunParams = (): FullBacktestParams => ({
-    tickers,
-    start: formState.start,
-    end: formState.end,
-    investedBudget: formState.investedBudget && formState.investedBudget > 0 ? formState.investedBudget : undefined,
-    entryType: formState.entryType,
-    breakoutLookback: formState.breakoutLookback,
-    pullbackMa: formState.pullbackMa,
-    minHistory: formState.minHistory,
-    atrWindow: formState.atrWindow,
-    kAtr: formState.kAtr,
-    breakevenAtR: formState.breakevenAtR,
-    trailAfterR: formState.trailAfterR,
-    trailSma: formState.trailSma,
-    smaBufferPct: formState.smaBufferPct,
-    maxHoldingDays: formState.maxHoldingDays,
-    commissionPct: formState.commissionPct,
-  });
 
   const result = runMutation.data ?? loadedResult;
 
@@ -297,7 +141,7 @@ export default function Backtest() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="secondary" onClick={handleResetToSettings}>
+            <Button variant="secondary" onClick={resetToSettings}>
               Reset to Settings
             </Button>
             <Button onClick={() => runMutation.mutate(buildRunParams())} disabled={runMutation.isPending || !canRun}>
