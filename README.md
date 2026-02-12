@@ -198,6 +198,13 @@ mcp_server/             # Model Context Protocol server (22 tools)
   protocol.py           # MCP protocol integration
   main.py               # Server entrypoint
 
+agent/                  # Agent (workflow automation via MCP)
+  client.py             # MCP client implementation
+  agent.py              # Main agent class
+  workflows.py          # Workflow orchestration
+  cli.py                # Command-line interface
+  examples/             # Usage examples
+
 web-ui/                 # React + TypeScript frontend
   src/components/       # UI components
   src/pages/            # Main application pages
