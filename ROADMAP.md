@@ -70,6 +70,19 @@ Allow filtering screener results by currency (USD/EUR) and display currency in a
 - [x] NaN handling for JSON files
 - [x] Error handling and validation
 
+### MCP Server (100%)
+- [x] Model Context Protocol integration (stdio transport)
+- [x] 22 tools across 6 feature domains
+- [x] Portfolio tools (9) - complete position/order management
+- [x] Screener tools (3) - stock screening and analysis
+- [x] Strategy tools (4) - strategy management
+- [x] Config tools (2) - application configuration
+- [x] Daily Review tools (2) - comprehensive workflow
+- [x] Social tools (2) - sentiment analysis
+- [x] Modular architecture (one file per tool)
+- [x] YAML-based configuration with feature toggles
+- [x] Zero service layer changes (reuses existing services)
+
 ### Web UI (100%)
 - [x] React + TypeScript + Vite frontend
 - [x] Dashboard with real data (portfolio summary, P&L, action items)

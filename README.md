@@ -78,11 +78,17 @@ swing-screener run --universe mega_all --positions data/positions.json --csv out
 
 The MCP server exposes Swing Screener functionality to AI assistants like Claude, enabling natural language interaction with the trading system.
 
-**Status:** Phase 1 Complete (Foundation)
+**Status:** ✅ **Production Ready** (Phases 1-4 Complete)
 - ✅ Configuration system (YAML-based feature toggles)
 - ✅ Tool registry with dependency injection
-- ✅ Server skeleton and validation
-- ⏳ Tool implementations (Phase 2+)
+- ✅ Server skeleton and MCP protocol integration
+- ✅ **22 tools across 6 feature domains**
+  - Portfolio (9 tools) - Complete position/order management
+  - Screener (3 tools) - Stock screening and analysis
+  - Strategy (4 tools) - Strategy management
+  - Config (2 tools) - Application configuration
+  - Daily Review (2 tools) - Comprehensive workflow
+  - Social (2 tools) - Sentiment analysis
 
 **Quick Start:**
 
@@ -90,7 +96,10 @@ The MCP server exposes Swing Screener functionality to AI assistants like Claude
 # Install with MCP dependencies
 pip install -e ".[mcp]"
 
-# Validate server configuration
+# Start MCP server
+python -m mcp_server.main
+
+# Validate configuration
 python -m mcp_server.main --validate-only
 ```
 
@@ -126,9 +135,16 @@ api/                    # FastAPI backend (REST API)
   models/               # Pydantic request/response models
   repositories/         # Data access layer
 
-mcp_server/             # Model Context Protocol server (Phase 1)
-  tools/                # MCP tool definitions
+mcp_server/             # Model Context Protocol server (22 tools)
+  tools/                # MCP tool definitions by domain
+    portfolio/          # 9 position/order management tools
+    screener/           # 3 screening and analysis tools
+    strategy/           # 4 strategy management tools
+    config/             # 2 configuration tools
+    daily_review/       # 2 daily workflow tools
+    social/             # 2 sentiment analysis tools
   config.py             # YAML configuration loader
+  protocol.py           # MCP protocol integration
   main.py               # Server entrypoint
 
 web-ui/                 # React + TypeScript frontend
@@ -260,6 +276,7 @@ npm run test:coverage # Run with coverage report
 
 ### Technical References
 - **[API Documentation](api/README.md)** — FastAPI REST API reference (18 endpoints, health checks, monitoring)
+- **[MCP Server Documentation](mcp_server/README.md)** — Model Context Protocol server (22 tools for AI assistants) ⭐ **NEW**
 - **[Web UI README](web-ui/README.md)** — React/TypeScript architecture
 - **[Broker Integration](docs/BROKER_INTEGRATION.md)** — Market data providers (yfinance, Alpaca) ⭐ **NEW**
 - **[Indicator Validation](docs/INDICATOR_VALIDATION.md)** — TA-Lib validation approach ⭐ **NEW**
