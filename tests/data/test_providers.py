@@ -5,6 +5,7 @@ import importlib.util
 import pytest
 import pandas as pd
 from datetime import datetime, timedelta
+import swing_screener.data.providers.yfinance_provider as yfinance_provider_module
 
 from swing_screener.data.providers import (
     MarketDataProvider,
@@ -102,6 +103,63 @@ class TestYfinanceProvider:
         assert "name" in info
         assert "sector" in info
         assert info["name"] is not None  # Apple should have a name
+
+    def test_fetch_ohlcv_forces_refresh_on_live_edge(self, monkeypatch):
+        """Today/end-date requests should bypass stale cache."""
+        provider = YfinanceProvider()
+        captured: dict[str, object] = {}
+
+        def fake_fetch_ohlcv(tickers, cfg, use_cache=True, force_refresh=False, allow_cache_fallback_on_error=True):
+            captured["tickers"] = tickers
+            captured["cfg_end"] = cfg.end
+            captured["force_refresh"] = force_refresh
+            idx = pd.date_range("2026-02-01", periods=2, freq="D")
+            df = pd.DataFrame(
+                {
+                    ("Close", "AAPL"): [100.0, 101.0],
+                    ("Open", "AAPL"): [99.0, 100.0],
+                    ("High", "AAPL"): [101.0, 102.0],
+                    ("Low", "AAPL"): [98.0, 99.0],
+                    ("Volume", "AAPL"): [1_000_000, 1_100_000],
+                },
+                index=idx,
+            )
+            df.columns = pd.MultiIndex.from_tuples(df.columns)
+            return df
+
+        monkeypatch.setattr(yfinance_provider_module, "fetch_ohlcv", fake_fetch_ohlcv)
+
+        today = datetime.now().strftime("%Y-%m-%d")
+        provider.fetch_ohlcv(["AAPL"], "2026-01-01", today)
+
+        assert captured["force_refresh"] is True
+
+    def test_fetch_ohlcv_keeps_cache_for_historical_end_date(self, monkeypatch):
+        """Historical windows should keep normal cache behavior."""
+        provider = YfinanceProvider()
+        captured: dict[str, object] = {}
+
+        def fake_fetch_ohlcv(tickers, cfg, use_cache=True, force_refresh=False, allow_cache_fallback_on_error=True):
+            captured["force_refresh"] = force_refresh
+            idx = pd.date_range("2026-01-01", periods=2, freq="D")
+            df = pd.DataFrame(
+                {
+                    ("Close", "AAPL"): [100.0, 101.0],
+                    ("Open", "AAPL"): [99.0, 100.0],
+                    ("High", "AAPL"): [101.0, 102.0],
+                    ("Low", "AAPL"): [98.0, 99.0],
+                    ("Volume", "AAPL"): [1_000_000, 1_100_000],
+                },
+                index=idx,
+            )
+            df.columns = pd.MultiIndex.from_tuples(df.columns)
+            return df
+
+        monkeypatch.setattr(yfinance_provider_module, "fetch_ohlcv", fake_fetch_ohlcv)
+
+        provider.fetch_ohlcv(["AAPL"], "2026-01-01", "2026-01-31")
+
+        assert captured["force_refresh"] is False
     
     def test_caching(self):
         """Test that caching works."""

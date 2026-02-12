@@ -1,7 +1,7 @@
 """Yfinance market data provider - wraps existing market_data.py logic."""
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Optional
 import pandas as pd
 import yfinance as yf
@@ -63,10 +63,15 @@ class YfinanceProvider(MarketDataProvider):
             Yfinance's end parameter is exclusive, so we add 1 day to ensure
             end_date is included in the results.
         """
-        # Yfinance end param is exclusive - add 1 day to include end_date
+        # Yfinance end param is exclusive - add 1 day to include end_date.
         end_dt = datetime.strptime(end_date, "%Y-%m-%d")
         end_dt_inclusive = end_dt + timedelta(days=1)
         end_date_adjusted = end_dt_inclusive.strftime("%Y-%m-%d")
+        request_end = end_dt.date()
+        today = date.today()
+        # For "today/live-edge" requests, bypass stale same-day cache so users
+        # don't have to wait for midnight to get post-close bars.
+        force_refresh = request_end >= today
         
         cfg = MarketDataConfig(
             start=start_date,
@@ -75,7 +80,7 @@ class YfinanceProvider(MarketDataProvider):
             progress=self.progress,
             cache_dir=self.cache_dir,
         )
-        return fetch_ohlcv(tickers, cfg=cfg, use_cache=True, force_refresh=False)
+        return fetch_ohlcv(tickers, cfg=cfg, use_cache=True, force_refresh=force_refresh)
     
     def fetch_latest_price(self, ticker: str) -> float:
         """
