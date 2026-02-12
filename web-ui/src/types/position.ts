@@ -85,15 +85,15 @@ export function transformPosition(apiPosition: PositionApiResponse): Position {
     entryPrice: apiPosition.entry_price,
     stopPrice: apiPosition.stop_price,
     shares: apiPosition.shares,
-    positionId: apiPosition.position_id || undefined,
-    sourceOrderId: apiPosition.source_order_id || undefined,
-    initialRisk: apiPosition.initial_risk || undefined,
-    maxFavorablePrice: apiPosition.max_favorable_price || undefined,
-    exitDate: apiPosition.exit_date || undefined,
-    exitPrice: apiPosition.exit_price || undefined,
-    currentPrice: apiPosition.current_price || undefined,  // Transform current_price
+    positionId: apiPosition.position_id ?? undefined,
+    sourceOrderId: apiPosition.source_order_id ?? undefined,
+    initialRisk: apiPosition.initial_risk ?? undefined,
+    maxFavorablePrice: apiPosition.max_favorable_price ?? undefined,
+    exitDate: apiPosition.exit_date ?? undefined,
+    exitPrice: apiPosition.exit_price ?? undefined,
+    currentPrice: apiPosition.current_price ?? undefined,
     notes: apiPosition.notes || '',
-    exitOrderIds: apiPosition.exit_order_ids || undefined,
+    exitOrderIds: apiPosition.exit_order_ids ?? undefined,
   };
 }
 

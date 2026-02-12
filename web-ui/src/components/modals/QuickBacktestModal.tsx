@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { X, TrendingUp, TrendingDown, AlertCircle, BarChart3 } from 'lucide-react';
-import Button from '../common/Button';
-import { fetchActiveStrategy } from '../../lib/strategyApi';
+import Button from '@/components/common/Button';
 import { runQuickBacktest } from '@/features/backtest/api';
 import { QuickBacktestResponse } from '@/features/backtest/types';
-import { formatR, formatPercent } from '../../utils/formatters';
-import { useConfigStore } from '../../stores/configStore';
+import { formatR, formatPercent } from '@/utils/formatters';
+import { useConfigStore } from '@/stores/configStore';
+import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 
 interface QuickBacktestModalProps {
   ticker: string;
@@ -15,10 +15,7 @@ interface QuickBacktestModalProps {
 
 export default function QuickBacktestModal({ ticker, onClose }: QuickBacktestModalProps) {
   const { config } = useConfigStore();
-  const activeStrategyQuery = useQuery({
-    queryKey: ['strategy-active'],
-    queryFn: fetchActiveStrategy,
-  });
+  const activeStrategyQuery = useActiveStrategyQuery();
   const kAtr = activeStrategyQuery.data?.risk.kAtr ?? config.risk.kAtr;
   const [monthsBack, setMonthsBack] = useState(12);
   const [result, setResult] = useState<QuickBacktestResponse | null>(null);

@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { notifyManager, useQuery } from '@tanstack/react-query';
+import { notifyManager } from '@tanstack/react-query';
 import { AlertCircle, BarChart3, RefreshCw, Trash2 } from 'lucide-react';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
-import { fetchActiveStrategy } from '@/lib/strategyApi';
 import { useConfigStore } from '@/stores/configStore';
 import { AppConfig } from '@/types/config';
 import {
@@ -19,6 +18,7 @@ import {
 } from '@/features/backtest/hooks';
 import { formatDateTime, formatPercent, formatR, formatCurrency } from '@/utils/formatters';
 import EquityCurveChart from '@/components/domain/backtest/EquityCurveChart';
+import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 
 const STORAGE_KEY = 'backtest.params.v1';
 const DEFAULT_LIVE_GAPS = [
@@ -120,10 +120,7 @@ function parseTickers(input: string): string[] {
 
 export default function Backtest() {
   const { config } = useConfigStore();
-  const activeStrategyQuery = useQuery({
-    queryKey: ['strategy-active'],
-    queryFn: fetchActiveStrategy,
-  });
+  const activeStrategyQuery = useActiveStrategyQuery();
 
   const [formState, setFormState] = useState<BacktestFormState>(() => {
     const defaults = buildDefaultFormState(config, {

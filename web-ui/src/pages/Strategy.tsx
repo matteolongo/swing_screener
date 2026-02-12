@@ -1,16 +1,16 @@
 import { ReactNode, useEffect, useMemo, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import HelpTooltip from '@/components/common/HelpTooltip';
 import {
-  createStrategy,
-  deleteStrategy,
-  fetchActiveStrategy,
-  fetchStrategies,
-  setActiveStrategy,
-  updateStrategy,
-} from '@/lib/strategyApi';
+  createStrategyFromDraft,
+  useActiveStrategyQuery,
+  useCreateStrategyMutation,
+  useDeleteStrategyMutation,
+  useSetActiveStrategyMutation,
+  useStrategiesQuery,
+  useUpdateStrategyMutation,
+} from '@/features/strategy/hooks';
 import { Strategy, StrategyEntryType, StrategyExitMode, StrategyCurrency } from '@/types/strategy';
 
 const fieldClass =
@@ -460,17 +460,8 @@ function CheckboxInput({
 }
 
 export default function StrategyPage() {
-  const queryClient = useQueryClient();
-
-  const strategiesQuery = useQuery({
-    queryKey: ['strategies'],
-    queryFn: fetchStrategies,
-  });
-
-  const activeStrategyQuery = useQuery({
-    queryKey: ['strategy-active'],
-    queryFn: fetchActiveStrategy,
-  });
+  const strategiesQuery = useStrategiesQuery();
+  const activeStrategyQuery = useActiveStrategyQuery();
 
   const [selectedId, setSelectedId] = useState('');
   const [draft, setDraft] = useState<Strategy | null>(null);
@@ -481,38 +472,21 @@ export default function StrategyPage() {
   const [createDescription, setCreateDescription] = useState('');
   const [isInitialized, setIsInitialized] = useState(false);
 
-  const setActiveMutation = useMutation({
-    mutationFn: (strategyId: string) => setActiveStrategy(strategyId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['strategy-active'] });
-      queryClient.invalidateQueries({ queryKey: ['strategies'] });
-    },
-  });
+  const setActiveMutation = useSetActiveStrategyMutation();
 
-  const updateMutation = useMutation({
-    mutationFn: updateStrategy,
-    onSuccess: (updated) => {
-      queryClient.invalidateQueries({ queryKey: ['strategies'] });
-      queryClient.invalidateQueries({ queryKey: ['strategy-active'] });
+  const updateMutation = useUpdateStrategyMutation((updated) => {
       setDraft(cloneStrategy(updated));
       setStatusMessage('Saved');
       if (import.meta.env.MODE !== 'test') {
         window.setTimeout(() => setStatusMessage(null), 2000);
       }
-    },
   });
 
   const strategies = strategiesQuery.data ?? [];
   const activeStrategy = activeStrategyQuery.data;
 
-  const createMutation = useMutation({
-    mutationFn: (payload: { id: string; name: string; description?: string }) => {
-      if (!draft) throw new Error('No strategy selected');
-      return createStrategy(draft, payload);
-    },
-    onSuccess: (created) => {
-      queryClient.invalidateQueries({ queryKey: ['strategies'] });
-      queryClient.invalidateQueries({ queryKey: ['strategy-active'] });
+  const createMutation = useCreateStrategyMutation(
+    (created) => {
       setSelectedId(created.id);
       setDraft(cloneStrategy(created));
       setCreateId('');
@@ -523,13 +497,10 @@ export default function StrategyPage() {
         window.setTimeout(() => setStatusMessage(null), 2500);
       }
     },
-  });
+    (payload) => createStrategyFromDraft(draft, payload),
+  );
 
-  const deleteMutation = useMutation({
-    mutationFn: (strategyId: string) => deleteStrategy(strategyId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['strategies'] });
-      queryClient.invalidateQueries({ queryKey: ['strategy-active'] });
+  const deleteMutation = useDeleteStrategyMutation(() => {
       setSelectedId('');
       setDraft(null);
       setIsInitialized(false);
@@ -537,7 +508,6 @@ export default function StrategyPage() {
       if (import.meta.env.MODE !== 'test') {
         window.setTimeout(() => setStatusMessage(null), 2500);
       }
-    },
   });
 
   useEffect(() => {

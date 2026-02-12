@@ -1,10 +1,8 @@
-import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
 import { useConfigStore } from '@/stores/configStore';
-import { fetchActiveStrategy } from '@/lib/strategyApi';
 import {
   Position,
   Order,
@@ -20,14 +18,12 @@ import { formatCurrency, formatDateTime, formatPercent } from '@/utils/formatter
 import { TrendingUp, AlertCircle, FileText, Search, RefreshCw } from 'lucide-react';
 import StrategyCoachCard from '@/components/domain/education/StrategyCoachCard';
 import { buildFallbackStrategyCoachSections, buildStrategyCoachSections } from '@/content/strategyCoach';
+import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 
 export default function Dashboard() {
   const { config } = useConfigStore();
   const navigate = useNavigate();
-  const activeStrategyQuery = useQuery({
-    queryKey: ['strategy-active'],
-    queryFn: fetchActiveStrategy,
-  });
+  const activeStrategyQuery = useActiveStrategyQuery();
   const riskConfig = activeStrategyQuery.data?.risk ?? config.risk;
 
   const { data: positions = [] } = useOpenPositions();

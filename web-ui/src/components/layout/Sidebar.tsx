@@ -1,5 +1,4 @@
 import { NavLink } from 'react-router-dom';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { 
   LayoutDashboard, 
   Search, 
@@ -11,7 +10,12 @@ import {
   ClipboardCheck,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
-import { fetchActiveStrategy, fetchStrategies, setActiveStrategy } from '@/lib/strategyApi';
+import {
+  useActiveStrategyQuery,
+  useSetActiveStrategyMutation,
+  useStrategiesQuery,
+} from '@/features/strategy/hooks';
+import { t } from '@/i18n/t';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -25,25 +29,9 @@ const navigation = [
 ];
 
 export default function Sidebar() {
-  const queryClient = useQueryClient();
-
-  const strategiesQuery = useQuery({
-    queryKey: ['strategies'],
-    queryFn: fetchStrategies,
-  });
-
-  const activeStrategyQuery = useQuery({
-    queryKey: ['strategy-active'],
-    queryFn: fetchActiveStrategy,
-  });
-
-  const setActiveMutation = useMutation({
-    mutationFn: (strategyId: string) => setActiveStrategy(strategyId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['strategies'] });
-      queryClient.invalidateQueries({ queryKey: ['strategy-active'] });
-    },
-  });
+  const strategiesQuery = useStrategiesQuery();
+  const activeStrategyQuery = useActiveStrategyQuery();
+  const setActiveMutation = useSetActiveStrategyMutation();
 
   const activeId = activeStrategyQuery.data?.id ?? '';
   const strategies = strategiesQuery.data ?? [];
@@ -59,7 +47,7 @@ export default function Sidebar() {
     <aside className="w-64 border-r border-border bg-white dark:bg-gray-800 flex flex-col">
       <div className="p-4 border-b border-border">
         <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">
-          Active Strategy
+          {t('sidebar.activeStrategy')}
         </div>
         <select
           value={selectValue}
@@ -67,9 +55,9 @@ export default function Sidebar() {
           className="w-full px-3 py-2 border border-border rounded-lg bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
           disabled={isLoading || setActiveMutation.isPending}
         >
-          {isLoading && <option value="">Loading strategies…</option>}
-          {!isLoading && !strategies.length && <option value="">No strategies</option>}
-          {!isLoading && !activeId && <option value="">Select strategy</option>}
+          {isLoading && <option value="">{t('sidebar.loadingStrategies')}</option>}
+          {!isLoading && !strategies.length && <option value="">{t('sidebar.noStrategies')}</option>}
+          {!isLoading && !activeId && <option value="">{t('sidebar.selectStrategy')}</option>}
           {!isLoading &&
             strategies.map((strategy) => (
               <option key={strategy.id} value={strategy.id}>
@@ -79,14 +67,16 @@ export default function Sidebar() {
         </select>
         {activeStrategyQuery.data && (
           <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-            {activeStrategyQuery.data.isDefault ? 'Default strategy' : 'Custom strategy'}
+            {activeStrategyQuery.data.isDefault
+              ? t('sidebar.defaultStrategy')
+              : t('sidebar.customStrategy')}
           </div>
         )}
         {strategiesQuery.isError && (
-          <div className="mt-2 text-xs text-red-600">Failed to load strategies</div>
+          <div className="mt-2 text-xs text-red-600">{t('sidebar.loadError')}</div>
         )}
         {setActiveMutation.isError && (
-          <div className="mt-2 text-xs text-red-600">Failed to update active strategy</div>
+          <div className="mt-2 text-xs text-red-600">{t('sidebar.updateError')}</div>
         )}
       </div>
       <nav className="flex-1 p-4 space-y-1">
@@ -111,7 +101,7 @@ export default function Sidebar() {
       
       <div className="p-4 border-t border-border text-xs text-gray-500">
         <p>v0.1.0</p>
-        <p className="mt-1">Risk-first swing trading</p>
+        <p className="mt-1">{t('sidebar.versionLabel')}</p>
       </div>
     </aside>
   );
