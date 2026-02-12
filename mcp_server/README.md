@@ -2,16 +2,18 @@
 
 Model Context Protocol (MCP) server for Swing Screener, exposing trading system functionality to AI assistants and other MCP-compatible clients.
 
-## Phase 1 Status: Foundation Complete ✅
+## Status
 
-Phase 1 establishes the infrastructure for the MCP server:
+**Phase 1:** ✅ Complete - Infrastructure (config, registry, skeleton)  
+**Phase 2:** ✅ Complete - Portfolio tools + MCP protocol integration  
+**Phase 3:** ⏳ Planned - Additional tools + client testing
 
-- ✅ Configuration system (YAML-based feature toggles)
-- ✅ Tool registry with feature-based filtering
-- ✅ Dependency injection (reuses api/services layer)
-- ✅ Server skeleton with logging and validation
-- ✅ Tests for configuration and registry
-- ⏳ Tool implementations (Phase 2+)
+### Currently Available
+
+- **5 Portfolio Tools** - Position and order management
+- **MCP Protocol** - Stdio transport for AI assistant communication
+- **Configuration** - YAML-based feature toggles
+- **Tool Registry** - Feature-based filtering
 
 ## Quick Start
 
@@ -25,15 +27,39 @@ pip install -e ".[mcp]"
 ### Running the Server
 
 ```bash
+# Start MCP server (stdio transport)
+python -m mcp_server.main
+
 # Validate configuration only
 python -m mcp_server.main --validate-only
-
-# Start server (Phase 1 - skeleton mode)
-python -m mcp_server.main
 
 # Use custom config
 python -m mcp_server.main --config /path/to/config.yaml
 ```
+
+### Available Tools
+
+**Portfolio Management (5 tools):**
+
+1. **list_positions** - List all trading positions
+   - Filter by status (open/closed)
+   - Returns positions with current prices
+
+2. **get_position** - Get position details by ID
+   - Includes entry, stop, and current price
+   - Shows R-multiples and P&L
+
+3. **update_position_stop** - Update trailing stop
+   - Raises stop price only (trailing stop logic)
+   - Auto-creates new stop orders
+
+4. **list_orders** - List all orders
+   - Filter by status (pending/filled/cancelled)
+   - Filter by ticker
+
+5. **create_order** - Create new order
+   - Supports LIMIT, STOP, MARKET types
+   - Entry/stop/target order kinds
 
 ### Configuration
 
