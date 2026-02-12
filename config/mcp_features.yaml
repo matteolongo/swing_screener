@@ -1,0 +1,83 @@
+# MCP Server Feature Configuration
+# This file controls which tools and features are enabled in the MCP server
+
+# Server Configuration
+server:
+  name: "swing-screener-mcp"
+  version: "0.1.0"
+  description: "Model Context Protocol server for Swing Screener"
+  
+# Environment settings (dev/staging/prod)
+environment: "dev"
+
+# Feature flags - enables/disables entire feature domains
+features:
+  # Portfolio Management (positions, orders)
+  portfolio:
+    enabled: false
+    tools:
+      - list_positions
+      - get_position
+      - update_position_stop
+      - suggest_position_stop
+      - close_position
+      - list_orders
+      - get_order
+      - create_order
+      - fill_order
+      - cancel_order
+  
+  # Screener & Analysis
+  screener:
+    enabled: false
+    tools:
+      - run_screener
+      - list_universes
+      - preview_order
+  
+  # Strategy Management
+  strategy:
+    enabled: false
+    tools:
+      - list_strategies
+      - get_strategy
+      - get_active_strategy
+      - set_active_strategy
+  
+  # Backtesting
+  backtest:
+    enabled: false
+    tools:
+      - run_backtest
+      - get_backtest_metrics
+  
+  # Configuration Management
+  config:
+    enabled: false
+    tools:
+      - get_config
+      - update_config
+  
+  # Social Sentiment
+  social:
+    enabled: false
+    tools:
+      - get_social_sentiment
+      - analyze_ticker_sentiment
+  
+  # Daily Review (combines screener + portfolio management)
+  daily_review:
+    enabled: false
+    tools:
+      - get_daily_review
+      - get_candidate_recommendations
+
+# Logging configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  
+# Rate limiting (future feature)
+rate_limiting:
+  enabled: false
+  requests_per_minute: 60
