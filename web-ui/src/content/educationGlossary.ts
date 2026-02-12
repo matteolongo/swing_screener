@@ -134,6 +134,7 @@ export const SCREENER_GLOSSARY_KEYS: EducationMetricKey[] = [
 ];
 
 export const DAILY_REVIEW_GLOSSARY_KEYS: EducationMetricKey[] = [
+  'CONFIDENCE',
   'RR',
   'R_NOW',
   'RISK_PCT',

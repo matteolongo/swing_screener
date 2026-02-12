@@ -347,6 +347,9 @@ function CandidatesTable({
         <thead className="border-b dark:border-gray-700">
           <tr>
             <th className="text-left p-2">Ticker</th>
+            <th className="text-right p-2">
+              <MetricHelpLabel metricKey="CONFIDENCE" className="justify-end w-full" />
+            </th>
             <th className="text-left p-2">Signal</th>
             <th className="text-right p-2">Entry</th>
             <th className="text-right p-2">Stop</th>
@@ -363,6 +366,11 @@ function CandidatesTable({
           {candidates.map((candidate) => (
             <tr key={candidate.ticker} className="border-b dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
               <td className="p-2 font-mono font-bold">{candidate.ticker}</td>
+              <td className="p-2 text-right">
+                <span className="font-semibold text-purple-600">
+                  {candidate.confidence != null ? formatNumber(candidate.confidence, 1) : '-'}
+                </span>
+              </td>
               <td className="p-2">
                 <Badge variant="primary">{candidate.signal}</Badge>
               </td>

@@ -11,6 +11,7 @@ const mockDailyReview = {
   new_candidates: [
     {
       ticker: 'VALE',
+      confidence: 91.6,
       signal: 'breakout',
       entry: 17.38,
       stop: 16.36,
@@ -107,8 +108,10 @@ describe('DailyReview Page', () => {
     await waitFor(() => {
       expect(screen.getByText('Daily Review Glossary')).toBeInTheDocument()
       expect(screen.getByText('Stop Management Glossary')).toBeInTheDocument()
+      expect(screen.getByText('Confidence')).toBeInTheDocument()
       expect(screen.getByText('R:R')).toBeInTheDocument()
       expect(screen.getAllByText('R Now').length).toBeGreaterThan(0)
+      expect(screen.getByText('91.6')).toBeInTheDocument()
     })
   })
 
@@ -145,6 +148,7 @@ describe('DailyReview Page', () => {
           ...mockDailyReview.new_candidates,
           {
             ticker: 'NOREC',
+            confidence: 70.0,
             signal: 'pullback',
             entry: 10.0,
             stop: 9.8,
