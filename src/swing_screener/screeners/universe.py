@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import pandas as pd
 
+from swing_screener.data.currency import detect_currency
 from swing_screener.indicators.trend import TrendConfig, compute_trend_features
 from swing_screener.indicators.volatility import (
     VolatilityConfig,
@@ -18,6 +19,7 @@ class UniverseFilterConfig:
     max_atr_pct: float = 10.0
     require_trend_ok: bool = True
     require_rs_positive: bool = False
+    currencies: list[str] = field(default_factory=lambda: ["USD", "EUR"])
 
 
 @dataclass(frozen=True)
@@ -63,6 +65,15 @@ def apply_universe_filters(
     # base conditions
     cond_price = (df["last"] >= cfg.min_price) & (df["last"] <= cfg.max_price)
     cond_atr = df["atr_pct"] <= cfg.max_atr_pct
+    allowed_currencies = {str(c).strip().upper() for c in cfg.currencies if str(c).strip()}
+    if not allowed_currencies:
+        allowed_currencies = {"USD", "EUR"}
+    detected_currencies = pd.Series(
+        [detect_currency(str(ticker)) for ticker in df.index],
+        index=df.index,
+    )
+    df["currency"] = detected_currencies
+    cond_currency = detected_currencies.isin(allowed_currencies)
 
     cond_trend = (
         (df["trend_ok"] == True)
@@ -75,7 +86,7 @@ def apply_universe_filters(
         else pd.Series(True, index=df.index)
     )
 
-    eligible = cond_price & cond_atr & cond_trend & cond_rs
+    eligible = cond_price & cond_atr & cond_trend & cond_rs & cond_currency
     df["is_eligible"] = eligible
 
     # reason column (useful for debugging)
@@ -90,6 +101,8 @@ def apply_universe_filters(
             r.append("trend")
         if not bool(cond_rs.loc[t]):
             r.append("rs")
+        if not bool(cond_currency.loc[t]):
+            r.append("currency")
         reasons.append(",".join(r) if r else "ok")
 
     df["reason"] = reasons

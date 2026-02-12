@@ -16,11 +16,17 @@ import QuickBacktestModal from '@/components/modals/QuickBacktestModal';
 import SocialAnalysisModal from '@/components/modals/SocialAnalysisModal';
 
 const TOP_N_MAX = 200;
+type CurrencyFilter = 'all' | 'usd' | 'eur';
 const UNIVERSE_ALIASES: Record<string, string> = {
   mega: 'mega_all',
   mega_defense: 'defense_all',
   mega_healthcare_biotech: 'healthcare_all',
   mega_europe: 'europe_large',
+};
+const currencyFilterToRequest = (value: CurrencyFilter): string[] => {
+  if (value === 'usd') return ['USD'];
+  if (value === 'eur') return ['EUR'];
+  return ['USD', 'EUR'];
 };
 const normalizeUniverse = (value: string | null) => {
   if (!value) return null;
@@ -69,6 +75,11 @@ export default function Screener() {
     const saved = localStorage.getItem('screener.maxPrice');
     return saved ? parseFloat(saved) : 500;
   });
+  const [currencyFilter, setCurrencyFilter] = useState<CurrencyFilter>(() => {
+    const saved = localStorage.getItem('screener.currencyFilter');
+    if (saved === 'usd' || saved === 'eur' || saved === 'all') return saved;
+    return 'all';
+  });
   
   const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
   const [showBacktestModal, setShowBacktestModal] = useState(false);
@@ -97,6 +108,11 @@ export default function Screener() {
     setMaxPrice(value);
     localStorage.setItem('screener.maxPrice', value.toString());
   };
+  
+  const handleCurrencyFilterChange = (value: CurrencyFilter) => {
+    setCurrencyFilter(value);
+    localStorage.setItem('screener.currencyFilter', value);
+  };
 
   const universesQuery = useUniverses();
   const universesData = universesQuery.data;
@@ -116,6 +132,7 @@ export default function Screener() {
       top: topN,
       minPrice: minPrice,
       maxPrice: maxPrice,
+      currencies: currencyFilterToRequest(currencyFilter),
       breakoutLookback: config.indicators.breakoutLookback,
       pullbackMa: config.indicators.pullbackMa,
       minHistory: config.indicators.minHistory,
@@ -143,7 +160,7 @@ export default function Screener() {
 
       {/* Controls */}
       <Card>
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
           {/* Universe selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -209,6 +226,23 @@ export default function Screener() {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               disabled={screenerMutation.isPending}
             />
+          </div>
+
+          {/* Currency filter */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Currency
+            </label>
+            <select
+              value={currencyFilter}
+              onChange={(e) => handleCurrencyFilterChange(e.target.value as CurrencyFilter)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              disabled={screenerMutation.isPending}
+            >
+              <option value="all">All</option>
+              <option value="usd">USD only</option>
+              <option value="eur">EUR only</option>
+            </select>
           </div>
 
           {/* Account info */}
@@ -324,6 +358,7 @@ export default function Screener() {
                   <tr className="border-b border-gray-200">
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Rank</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Ticker</th>
+                    <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">Currency</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Company</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Sector</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Last Bar</th>
@@ -346,7 +381,7 @@ export default function Screener() {
                 <tbody>
                   {candidates.length === 0 ? (
                     <tr>
-                      <td colSpan={19} className="text-center py-8 text-gray-500">
+                      <td colSpan={20} className="text-center py-8 text-gray-500">
                         No candidates found
                       </td>
                     </tr>
@@ -377,6 +412,17 @@ export default function Screener() {
                               <MessageSquare className="w-4 h-4" />
                             </Button>
                           </div>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <span
+                            className={
+                              candidate.currency === 'EUR'
+                                ? 'text-xs px-2 py-1 rounded bg-green-100 text-green-700'
+                                : 'text-xs px-2 py-1 rounded bg-blue-100 text-blue-700'
+                            }
+                          >
+                            {candidate.currency}
+                          </span>
                         </td>
                         <td className="py-3 px-4 text-sm text-gray-700">
                           {candidate.name ? (
@@ -410,12 +456,14 @@ export default function Screener() {
                           {(candidate.score * 100).toFixed(1)}
                         </td>
                         <td className="py-3 px-4 text-sm text-right text-gray-900">
-                          {formatCurrency(candidate.close)}
+                          {formatCurrency(candidate.close, candidate.currency)}
                         </td>
                         <td className="py-3 px-4 text-sm text-right text-gray-900">
                           {(() => {
                             const stopValue = candidate.recommendation?.risk?.stop ?? candidate.stop;
-                            return stopValue != null && stopValue > 0 ? formatCurrency(stopValue) : '-';
+                            return stopValue != null && stopValue > 0
+                              ? formatCurrency(stopValue, candidate.currency)
+                              : '-';
                           })()}
                         </td>
                         <td className="py-3 px-4 text-sm text-right text-gray-600">
@@ -669,15 +717,21 @@ function RecommendationModal({
             <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
               <div>
                 <div className="text-gray-500">Entry</div>
-                <div className="font-semibold">{rec?.risk?.entry != null ? formatCurrency(rec.risk.entry) : '—'}</div>
+                <div className="font-semibold">
+                  {rec?.risk?.entry != null ? formatCurrency(rec.risk.entry, candidate.currency) : '—'}
+                </div>
               </div>
               <div>
                 <div className="text-gray-500">Stop</div>
-                <div className="font-semibold">{rec?.risk?.stop != null ? formatCurrency(rec.risk.stop) : '—'}</div>
+                <div className="font-semibold">
+                  {rec?.risk?.stop != null ? formatCurrency(rec.risk.stop, candidate.currency) : '—'}
+                </div>
               </div>
               <div>
                 <div className="text-gray-500">Target</div>
-                <div className="font-semibold">{rec?.risk?.target != null ? formatCurrency(rec.risk.target) : '—'}</div>
+                <div className="font-semibold">
+                  {rec?.risk?.target != null ? formatCurrency(rec.risk.target, candidate.currency) : '—'}
+                </div>
               </div>
               <div>
                 <div className="text-gray-500">RR</div>

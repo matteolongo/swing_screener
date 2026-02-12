@@ -193,6 +193,7 @@ describe('Screener Page', () => {
 
     const buildCandidate = (verdict: 'RECOMMENDED' | 'NOT_RECOMMENDED') => ({
       ticker: 'AAPL',
+      currency: 'USD',
       rank: 1,
       score: 0.95,
       close: 175.50,

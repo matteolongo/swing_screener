@@ -4,6 +4,7 @@ import { Recommendation, RecommendationAPI, transformRecommendation } from '@/ty
 
 export interface ScreenerCandidate {
   ticker: string;
+  currency: 'USD' | 'EUR';
   name?: string;
   sector?: string;
   lastBar?: string;
@@ -42,6 +43,7 @@ export interface ScreenerCandidate {
 // API response format (snake_case)
 export interface ScreenerCandidateAPI {
   ticker: string;
+  currency?: string;
   name?: string;
   sector?: string;
   last_bar?: string;
@@ -84,6 +86,7 @@ export interface ScreenerRequest {
   asofDate?: string;
   minPrice?: number;
   maxPrice?: number;
+  currencies?: string[];
   breakoutLookback?: number;
   pullbackMa?: number;
   minHistory?: number;
@@ -124,6 +127,7 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
   return {
     candidates: apiResponse.candidates.map(c => ({
       ticker: c.ticker,
+      currency: c.currency === 'EUR' ? 'EUR' : 'USD',
       name: c.name,
       sector: c.sector,
       lastBar: c.last_bar,

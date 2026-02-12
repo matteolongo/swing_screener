@@ -63,6 +63,7 @@ def test_screener_top_over_100_returns_candidates(monkeypatch):
     assert len(data["candidates"]) == 150
     assert data["warnings"] == ["Only 150 candidates found for top 200."]
     assert data["candidates"][0]["last_bar"] == "2024-01-03T00:00:00"
+    assert data["candidates"][0]["currency"] == "USD"
 
 
 def test_screener_empty_ohlcv_returns_404(monkeypatch):
@@ -130,3 +131,84 @@ def test_screener_recommendation_payload_shape(monkeypatch):
     assert rec["risk"]["shares"] == 10
     assert isinstance(rec["checklist"][0]["gate_name"], str)
     assert isinstance(rec["education"]["what_would_make_valid"], list)
+
+
+def test_screener_currency_comes_from_metadata(monkeypatch):
+    ohlcv = _ohlcv_with_spy()
+    mock_provider = _create_mock_provider(ohlcv)
+
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None):
+        idx = ["ASML.AS"]
+        data = {
+            "atr14": [1.2],
+            "mom_6m": [0.1],
+            "mom_12m": [0.2],
+            "rs_6m": [0.05],
+            "score": [0.55],
+            "confidence": [60.0],
+            "last": [50.0],
+            "ma20_level": [48.0],
+            "dist_sma50_pct": [5.0],
+            "dist_sma200_pct": [10.0],
+            "rank": [1],
+        }
+        return pd.DataFrame(data, index=idx)
+
+    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
+    monkeypatch.setattr(
+        screener_service,
+        "get_multiple_ticker_info",
+        lambda tickers: {"ASML.AS": {"name": "ASML", "sector": "Technology", "currency": "EUR"}},
+    )
+
+    client = TestClient(app)
+    res = client.post("/api/screener/run", json={"universe": "mega_all", "top": 20})
+    assert res.status_code == 200
+    candidate = res.json()["candidates"][0]
+    assert candidate["currency"] == "EUR"
+
+
+def test_screener_request_currency_filter_overrides_strategy(monkeypatch):
+    ohlcv = _ohlcv_with_spy()
+    mock_provider = _create_mock_provider(ohlcv)
+    captured = {}
+
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None):
+        captured["currencies"] = cfg.universe.filt.currencies
+        idx = ["AAPL"]
+        data = {
+            "atr14": [1.2],
+            "mom_6m": [0.1],
+            "mom_12m": [0.2],
+            "rs_6m": [0.05],
+            "score": [0.55],
+            "confidence": [60.0],
+            "last": [50.0],
+            "ma20_level": [48.0],
+            "dist_sma50_pct": [5.0],
+            "dist_sma200_pct": [10.0],
+            "rank": [1],
+        }
+        return pd.DataFrame(data, index=idx)
+
+    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
+    monkeypatch.setattr(screener_service, "get_multiple_ticker_info", lambda tickers: {})
+
+    client = TestClient(app)
+    res = client.post(
+        "/api/screener/run",
+        json={"universe": "mega_all", "top": 20, "currencies": ["EUR"]},
+    )
+    assert res.status_code == 200
+    assert captured["currencies"] == ["EUR"]
+
+
+def test_screener_invalid_currency_rejected():
+    client = TestClient(app)
+    res = client.post(
+        "/api/screener/run",
+        json={"universe": "mega_all", "top": 20, "currencies": ["JPY"]},
+    )
+    assert res.status_code == 422
