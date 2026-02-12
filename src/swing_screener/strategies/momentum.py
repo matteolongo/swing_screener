@@ -231,7 +231,7 @@ def build_momentum_report(
     ma_col = f"ma{cfg.signals.pullback_ma}_level"
     keep = [
         "rank", "score", "confidence",
-        "last", atr_col, "atr_pct",
+        "last", "currency", atr_col, "atr_pct",
         "mom_6m", "mom_12m", "rs_6m",
         "trend_ok", "dist_sma50_pct", "dist_sma200_pct",
         "signal",
@@ -271,4 +271,3 @@ class MomentumStrategyModule:
         exclude_tickers: Iterable[str] | None = None,
     ) -> pd.DataFrame:
         return build_momentum_report(ohlcv, cfg=cfg, exclude_tickers=exclude_tickers)
-

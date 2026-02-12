@@ -1,6 +1,7 @@
 import pandas as pd
 
 from swing_screener.screeners.universe import (
+    apply_universe_filters,
     build_feature_table,
     build_universe,
     eligible_universe,
@@ -124,3 +125,33 @@ def test_eligible_universe_returns_only_eligible():
     assert "AAA" in elig.index
     assert "BBB" not in elig.index
     assert "CCC" not in elig.index
+
+
+def test_apply_universe_filters_currency_filter():
+    feats = pd.DataFrame(
+        {
+            "last": [100.0, 40.0, 55.0],
+            "atr_pct": [2.0, 3.0, 4.0],
+            "trend_ok": [True, True, True],
+            "rs_6m": [0.5, 0.4, 0.3],
+        },
+        index=["AAPL", "ASML.AS", "SAP.DE"],
+    )
+    cfg = UniverseFilterConfig(
+        min_price=10.0,
+        max_price=500.0,
+        max_atr_pct=10.0,
+        require_trend_ok=True,
+        require_rs_positive=False,
+        currencies=["USD"],
+    )
+
+    filtered = apply_universe_filters(feats, cfg)
+
+    assert filtered.loc["AAPL", "currency"] == "USD"
+    assert filtered.loc["ASML.AS", "currency"] == "EUR"
+    assert filtered.loc["SAP.DE", "currency"] == "EUR"
+    assert bool(filtered.loc["AAPL", "is_eligible"]) is True
+    assert bool(filtered.loc["ASML.AS", "is_eligible"]) is False
+    assert bool(filtered.loc["SAP.DE", "is_eligible"]) is False
+    assert filtered.loc["ASML.AS", "reason"] == "currency"

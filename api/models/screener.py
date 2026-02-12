@@ -9,6 +9,7 @@ from api.models.recommendation import Recommendation
 
 class ScreenerCandidate(BaseModel):
     ticker: str
+    currency: str = "USD"
     name: Optional[str] = None
     sector: Optional[str] = None
     last_bar: Optional[str] = None
@@ -53,9 +54,26 @@ class ScreenerRequest(BaseModel):
     asof_date: Optional[str] = Field(default=None, description="Date for screening (YYYY-MM-DD)")
     min_price: Optional[float] = Field(default=5.0, ge=0, description="Minimum stock price")
     max_price: Optional[float] = Field(default=500.0, gt=0, description="Maximum stock price")
+    currencies: Optional[list[str]] = Field(
+        default=None,
+        description="Allowed currencies (e.g., ['USD'], ['EUR'], ['USD','EUR'])",
+    )
     breakout_lookback: Optional[int] = Field(default=None, gt=0, description="Breakout lookback window")
     pullback_ma: Optional[int] = Field(default=None, gt=0, description="Pullback MA window")
     min_history: Optional[int] = Field(default=None, gt=0, description="Minimum bars required for signals")
+
+    @field_validator("currencies")
+    @classmethod
+    def validate_currencies(cls, values: Optional[list[str]]) -> Optional[list[str]]:
+        if values is None:
+            return None
+        cleaned = [str(v).strip().upper() for v in values if str(v).strip()]
+        if not cleaned:
+            return ["USD", "EUR"]
+        invalid = [v for v in cleaned if v not in {"USD", "EUR"}]
+        if invalid:
+            raise ValueError(f"Unsupported currency codes: {', '.join(invalid)}")
+        return list(dict.fromkeys(cleaned))
 
 
 class ScreenerResponse(BaseModel):

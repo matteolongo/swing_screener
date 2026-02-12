@@ -27,6 +27,7 @@ from swing_screener.data.universe import (
 )
 from swing_screener.data.market_data import MarketDataConfig
 from swing_screener.data.providers import MarketDataProvider, get_default_provider
+from swing_screener.data.currency import detect_currency
 from swing_screener.data.ticker_info import get_multiple_ticker_info
 from swing_screener.reporting.report import ReportConfig, build_daily_report
 from swing_screener.reporting.concentration import sector_concentration_warnings
@@ -259,6 +260,16 @@ class ScreenerService:
                 min_price = request.min_price if request.min_price is not None else filt.min_price
                 max_price = request.max_price if request.max_price is not None else filt.max_price
                 universe_cfg = replace(universe_cfg, filt=replace(filt, min_price=min_price, max_price=max_price))
+            if "currencies" in fields_set and request.currencies is not None:
+                filt = universe_cfg.filt
+                requested_currencies = [
+                    str(code).strip().upper()
+                    for code in request.currencies
+                    if str(code).strip()
+                ]
+                if not requested_currencies:
+                    requested_currencies = ["USD", "EUR"]
+                universe_cfg = replace(universe_cfg, filt=replace(filt, currencies=requested_currencies))
 
             ranking_cfg = build_ranking_config(strategy)
             if ranking_cfg.top_n < requested_top:
@@ -341,6 +352,13 @@ class ScreenerService:
                 ticker_str = str(idx)
                 info = ticker_info.get(ticker_str, {})
                 last_bar = last_bar_map.get(ticker_str) or overall_last_bar
+                currency = str(
+                    info.get("currency")
+                    or row.get("currency")
+                    or detect_currency(ticker_str)
+                ).upper()
+                if currency not in {"USD", "EUR"}:
+                    currency = detect_currency(ticker_str)
 
                 signal = row.get("signal")
                 entry_val = _safe_optional_float(row.get("entry")) or last_price
@@ -373,6 +391,7 @@ class ScreenerService:
                 candidates.append(
                     ScreenerCandidate(
                         ticker=ticker_str,
+                        currency=currency,
                         name=info.get("name"),
                         sector=info.get("sector"),
                         last_bar=last_bar,
