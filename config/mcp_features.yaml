@@ -26,12 +26,13 @@ features:
       - fill_order
       - cancel_order
   
-  # Screener & Analysis
+  # Screener & Analysis - Phase 3: Enabled
   screener:
-    enabled: false
+    enabled: true
     tools:
       - run_screener
       - list_universes
+      - preview_order
       - preview_order
   
   # Strategy Management
