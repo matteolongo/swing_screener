@@ -17,9 +17,10 @@ Execution is intentionally **manual** (Degiro-friendly).
 **New to this codebase?** Start with **[WELCOME.md](WELCOME.md)** for complete onboarding.
 
 **Quick reference:**
-- **AGENTS.md** - Project philosophy and constraints (read this!)
-- **ROADMAP.md** - Feature status and priorities
-- **docs/DAILY_REVIEW_IMPLEMENTATION.md** - Recent implementation patterns
+- **[.github/copilot-instructions.md](.github/copilot-instructions.md)** - GitHub Copilot configuration (auto-loaded by Copilot)
+- **[AGENTS.md](AGENTS.md)** - Complete guide: project philosophy and constraints (read this!)
+- **[ROADMAP.md](ROADMAP.md)** - Feature status and priorities
+- **[docs/DAILY_REVIEW_IMPLEMENTATION.md](docs/DAILY_REVIEW_IMPLEMENTATION.md)** - Recent implementation patterns
 
 ---
 
