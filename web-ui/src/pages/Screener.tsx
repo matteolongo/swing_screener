@@ -228,7 +228,7 @@ export default function Screener() {
             />
           </div>
 
-          {/* Account info */}
+          {/* Currency filter */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Currency
