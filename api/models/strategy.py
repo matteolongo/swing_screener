@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from typing import Optional, Literal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from api.models.backtest import FullEntryType
 
@@ -29,6 +29,18 @@ class StrategyFilt(BaseModel):
     max_atr_pct: float = Field(gt=0)
     require_trend_ok: bool = True
     require_rs_positive: bool = False
+    currencies: list[str] = Field(default_factory=lambda: ["USD", "EUR"])
+
+    @field_validator("currencies")
+    @classmethod
+    def validate_currencies(cls, values: list[str]) -> list[str]:
+        cleaned = [str(v).strip().upper() for v in values if str(v).strip()]
+        if not cleaned:
+            return ["USD", "EUR"]
+        invalid = [v for v in cleaned if v not in {"USD", "EUR"}]
+        if invalid:
+            raise ValueError(f"Unsupported currency codes: {', '.join(invalid)}")
+        return list(dict.fromkeys(cleaned))
 
 
 class StrategyUniverse(BaseModel):

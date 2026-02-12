@@ -23,6 +23,17 @@ const UNIVERSE_ALIASES: Record<string, string> = {
   mega_healthcare_biotech: 'healthcare_all',
   mega_europe: 'europe_large',
 };
+const normalizeCurrencies = (currencies?: string[]): ('USD' | 'EUR')[] => {
+  const normalized = (currencies ?? [])
+    .map((value) => value.toUpperCase())
+    .filter((value): value is 'USD' | 'EUR' => value === 'USD' || value === 'EUR');
+  return normalized.length ? Array.from(new Set(normalized)) : ['USD', 'EUR'];
+};
+const formatCurrencyFilterLabel = (currencies: ('USD' | 'EUR')[]): string => {
+  if (currencies.length === 1 && currencies[0] === 'USD') return 'USD only';
+  if (currencies.length === 1 && currencies[0] === 'EUR') return 'EUR only';
+  return 'USD + EUR';
+};
 const currencyFilterToRequest = (value: CurrencyFilter): string[] => {
   if (value === 'usd') return ['USD'];
   if (value === 'eur') return ['EUR'];
@@ -55,6 +66,7 @@ export default function Screener() {
     queryFn: fetchActiveStrategy,
   });
   const riskConfig: RiskConfig = activeStrategyQuery.data?.risk ?? config.risk;
+  const activeCurrencies = normalizeCurrencies(activeStrategyQuery.data?.universe?.filt?.currencies);
   
   // Load saved preferences from localStorage or use defaults
   const [selectedUniverse, setSelectedUniverse] = useState<string>(() => {
@@ -113,7 +125,6 @@ export default function Screener() {
     setCurrencyFilter(value);
     localStorage.setItem('screener.currencyFilter', value);
   };
-
   const universesQuery = useUniverses();
   const universesData = universesQuery.data;
 
@@ -250,6 +261,7 @@ export default function Screener() {
             <div className="text-sm text-gray-600">
               <div>Account: {formatCurrency(riskConfig.accountSize)}</div>
               <div>Risk: {formatPercent(riskConfig.riskPct)}</div>
+              <div>Currency: {formatCurrencyFilterLabel(activeCurrencies)}</div>
             </div>
           </div>
 

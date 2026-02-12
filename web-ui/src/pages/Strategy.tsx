@@ -11,7 +11,7 @@ import {
   setActiveStrategy,
   updateStrategy,
 } from '@/lib/strategyApi';
-import { Strategy, StrategyEntryType, StrategyExitMode } from '@/types/strategy';
+import { Strategy, StrategyEntryType, StrategyExitMode, StrategyCurrency } from '@/types/strategy';
 
 const fieldClass =
   'w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-800';
@@ -144,6 +144,13 @@ const help = {
     'Requires 6m relative strength versus the benchmark to be positive.',
     'Prioritizes stocks outperforming the market.',
     'Disable to allow laggards or turnaround candidates.'
+  ),
+  currencies: buildHelp(
+    'Currencies',
+    'Filter eligible stocks by listing currency.',
+    'Limits the screener universe to selected trading currencies.',
+    'Helps keep selection aligned with account base currency and execution preferences.',
+    'Use All for mixed universes, or choose USD/EUR for stricter filtering.'
   ),
   momentum6m: buildHelp(
     'Momentum 6m',
@@ -297,6 +304,26 @@ const help = {
 const STRATEGY_MODULES = [
   { value: 'momentum', label: 'Momentum (default)' },
 ];
+const CURRENCY_FILTER_OPTIONS = [
+  { value: 'all', label: 'All currencies (USD + EUR)' },
+  { value: 'usd', label: 'USD only' },
+  { value: 'eur', label: 'EUR only' },
+];
+type CurrencyFilterValue = 'all' | 'usd' | 'eur';
+
+function currenciesToFilterValue(currencies: StrategyCurrency[]): CurrencyFilterValue {
+  const hasUsd = currencies.includes('USD');
+  const hasEur = currencies.includes('EUR');
+  if (hasUsd && !hasEur) return 'usd';
+  if (!hasUsd && hasEur) return 'eur';
+  return 'all';
+}
+
+function filterValueToCurrencies(value: CurrencyFilterValue): StrategyCurrency[] {
+  if (value === 'usd') return ['USD'];
+  if (value === 'eur') return ['EUR'];
+  return ['USD', 'EUR'];
+}
 
 function cloneStrategy(strategy: Strategy): Strategy {
   return JSON.parse(JSON.stringify(strategy)) as Strategy;
@@ -960,7 +987,7 @@ export default function StrategyPage() {
               <CardTitle>Universe Filters</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <NumberInput
                   label="Min Price"
                   value={draft.universe.filt.minPrice}
@@ -990,6 +1017,24 @@ export default function StrategyPage() {
                   }
                   step={1}
                   min={0}
+                />
+                <SelectInput
+                  label="Currencies"
+                  value={currenciesToFilterValue(draft.universe.filt.currencies)}
+                  onChange={(value) =>
+                    setDraft({
+                      ...draft,
+                      universe: {
+                        ...draft.universe,
+                        filt: {
+                          ...draft.universe.filt,
+                          currencies: filterValueToCurrencies(value as CurrencyFilterValue),
+                        },
+                      },
+                    })
+                  }
+                  options={CURRENCY_FILTER_OPTIONS}
+                  help={help.currencies}
                 />
               </div>
             </CardContent>

@@ -1,6 +1,7 @@
 """Tests for market data providers."""
 from __future__ import annotations
 
+import importlib.util
 import pytest
 import pandas as pd
 from datetime import datetime, timedelta
@@ -13,6 +14,8 @@ from swing_screener.data.providers import (
     get_default_provider,
 )
 from swing_screener.config import BrokerConfig
+
+ALPACA_AVAILABLE = importlib.util.find_spec("alpaca") is not None
 
 
 class TestYfinanceProvider:
@@ -185,6 +188,10 @@ class TestProviderFactory:
             alpaca_api_key="test_key",
             alpaca_secret_key="test_secret"
         )
+        if not ALPACA_AVAILABLE:
+            with pytest.raises(ModuleNotFoundError, match="alpaca-py"):
+                get_market_data_provider(config)
+            return
         provider = get_market_data_provider(config)
         assert isinstance(provider, AlpacaDataProvider)
         assert provider.get_provider_name() in ("alpaca", "alpaca-paper")
@@ -198,6 +205,12 @@ class TestProviderFactory:
 
 class TestAlpacaProvider:
     """Test AlpacaDataProvider (requires API keys)."""
+
+    @pytest.fixture(autouse=True)
+    def skip_if_no_alpaca_package(self):
+        """Skip class if alpaca-py is not installed."""
+        if not ALPACA_AVAILABLE:
+            pytest.skip("alpaca-py not installed")
     
     @pytest.fixture
     def skip_if_no_alpaca_keys(self):

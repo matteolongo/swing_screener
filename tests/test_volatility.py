@@ -82,3 +82,16 @@ def test_compute_volatility_features_empty_ohlcv():
     ohlcv = pd.DataFrame(columns=cols)
     feats = compute_volatility_features(ohlcv, VolatilityConfig(atr_window=14))
     assert feats.empty
+
+
+def test_compute_volatility_features_handles_sparse_calendar_gaps():
+    ohlcv = _make_synthetic_ohlcv_constant_range()
+
+    for field in ["Open", "High", "Low", "Close", "Volume"]:
+        ohlcv.loc[ohlcv.index[::8], (field, "BBB")] = float("nan")
+        ohlcv.loc[ohlcv.index[-1], (field, "BBB")] = float("nan")
+
+    feats = compute_volatility_features(ohlcv, VolatilityConfig(atr_window=14))
+
+    assert "BBB" in feats.index
+    assert pd.notna(feats.loc["BBB", "atr14"])
