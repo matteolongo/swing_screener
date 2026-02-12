@@ -80,3 +80,16 @@ def test_compute_trend_features_empty_ohlcv():
     ohlcv = pd.DataFrame(columns=cols)
     feats = compute_trend_features(ohlcv, TrendConfig())
     assert feats.empty
+
+
+def test_compute_trend_features_handles_sparse_calendar_gaps():
+    ohlcv = _make_synthetic_ohlcv()
+    sparse_days = ohlcv.index[::7]
+
+    for field in ["Open", "High", "Low", "Close", "Volume"]:
+        ohlcv.loc[sparse_days, (field, "BBB")] = float("nan")
+
+    feats = compute_trend_features(ohlcv, TrendConfig())
+
+    assert "BBB" in feats.index
+    assert pd.notna(feats.loc["BBB", "sma200"])

@@ -51,6 +51,7 @@ def _default_strategy_payload(now: dt.datetime | None = None) -> dict:
                 "max_atr_pct": 15.0,
                 "require_trend_ok": True,
                 "require_rs_positive": False,
+                "currencies": ["USD", "EUR"],
             },
         },
         "ranking": {
@@ -118,8 +119,26 @@ def load_strategies() -> list[dict]:
     if not isinstance(data, list):
         raise ValueError("strategies.json must contain a list of strategies")
 
+    dirty = False
+    for strategy in data:
+        if not isinstance(strategy, dict):
+            continue
+        universe = strategy.get("universe")
+        if not isinstance(universe, dict):
+            continue
+        filt = universe.get("filt")
+        if not isinstance(filt, dict):
+            continue
+        currencies = filt.get("currencies")
+        if currencies is None:
+            filt["currencies"] = ["USD", "EUR"]
+            dirty = True
+
     if not any(s.get("id") == DEFAULT_STRATEGY_ID for s in data):
         data.append(_default_strategy_payload())
+        dirty = True
+
+    if dirty:
         _write_json(STRATEGIES_FILE, data)
 
     return data

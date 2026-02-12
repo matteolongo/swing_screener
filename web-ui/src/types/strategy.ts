@@ -1,5 +1,6 @@
 export type StrategyEntryType = 'auto' | 'breakout' | 'pullback';
 export type StrategyExitMode = 'take_profit' | 'trailing_stop';
+export type StrategyCurrency = 'USD' | 'EUR';
 
 export interface StrategyTrend {
   smaFast: number;
@@ -23,6 +24,7 @@ export interface StrategyFilt {
   maxAtrPct: number;
   requireTrendOk: boolean;
   requireRsPositive: boolean;
+  currencies: StrategyCurrency[];
 }
 
 export interface StrategyUniverse {
@@ -132,6 +134,7 @@ export interface StrategyFiltAPI {
   max_atr_pct: number;
   require_trend_ok: boolean;
   require_rs_positive: boolean;
+  currencies?: string[];
 }
 
 export interface StrategyUniverseAPI {
@@ -242,6 +245,15 @@ export interface ActiveStrategyRequestAPI {
 
 export function transformStrategy(api: StrategyAPI): Strategy {
   const socialOverlayApi = api.social_overlay ?? {};
+  const currenciesRaw = api.universe.filt.currencies ?? ['USD', 'EUR'];
+  const currencies = currenciesRaw
+    .map((value) => value.toUpperCase())
+    .filter((value): value is StrategyCurrency => value === 'USD' || value === 'EUR');
+  const uniqueCurrencies: StrategyCurrency[] = Array.from(new Set(currencies));
+  const normalizedCurrencies: StrategyCurrency[] = uniqueCurrencies.length
+    ? uniqueCurrencies
+    : ['USD', 'EUR'];
+
   return {
     id: api.id,
     name: api.name,
@@ -267,6 +279,7 @@ export function transformStrategy(api: StrategyAPI): Strategy {
         maxAtrPct: api.universe.filt.max_atr_pct,
         requireTrendOk: api.universe.filt.require_trend_ok,
         requireRsPositive: api.universe.filt.require_rs_positive,
+        currencies: normalizedCurrencies,
       },
     },
     ranking: {
@@ -331,6 +344,13 @@ export function transformStrategy(api: StrategyAPI): Strategy {
 }
 
 export function toStrategyUpdateRequest(strategy: Strategy): StrategyUpdateRequestAPI {
+  const currencies = Array.from(
+    new Set(
+      strategy.universe.filt.currencies
+        .map((value) => value.toUpperCase())
+        .filter((value) => value === 'USD' || value === 'EUR')
+    )
+  );
   return {
     name: strategy.name,
     description: strategy.description ?? undefined,
@@ -355,6 +375,7 @@ export function toStrategyUpdateRequest(strategy: Strategy): StrategyUpdateReque
         max_atr_pct: strategy.universe.filt.maxAtrPct,
         require_trend_ok: strategy.universe.filt.requireTrendOk,
         require_rs_positive: strategy.universe.filt.requireRsPositive,
+        currencies: currencies.length ? currencies : ['USD', 'EUR'],
       },
     },
     ranking: {

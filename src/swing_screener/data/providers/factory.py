@@ -5,7 +5,6 @@ from typing import Optional
 
 from .base import MarketDataProvider
 from .yfinance_provider import YfinanceProvider
-from .alpaca_provider import AlpacaDataProvider
 from ...config import BrokerConfig
 
 
@@ -52,6 +51,13 @@ def get_market_data_provider(
     elif config.provider == "alpaca":
         if not config.alpaca_api_key or not config.alpaca_secret_key:
             raise ValueError("Alpaca provider requires api_key and secret_key")
+        try:
+            from .alpaca_provider import AlpacaDataProvider
+        except ModuleNotFoundError as exc:
+            raise ModuleNotFoundError(
+                "alpaca-py is required when provider='alpaca'. "
+                "Install it with `pip install alpaca-py`."
+            ) from exc
         
         return AlpacaDataProvider(
             api_key=config.alpaca_api_key,
