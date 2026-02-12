@@ -102,10 +102,21 @@ def compute_volatility_features(
     low = low[common]
     close = close[common]
     # Sparse exchange calendars introduce NaNs for non-trading days.
-    # ATR should operate on the latest known OHLC values per ticker.
-    high = high.ffill()
-    low = low.ffill()
-    close = close.ffill()
+    # ATR should operate only on actual trading bars per ticker, not on
+    # synthetic flat bars created by forward-filling non-trading days.
+    # For each ticker, drop rows where any of High/Low/Close is NaN.
+    for ticker in common:
+        h_col = high[ticker]
+        l_col = low[ticker]
+        c_col = close[ticker]
+        valid_mask = h_col.notna() & l_col.notna() & c_col.notna()
+        if not valid_mask.any():
+            # No valid bars for this ticker; leave as-is (all NaN) and let
+            # downstream logic drop it based on NaN ATR.
+            continue
+        high[ticker] = h_col[valid_mask]
+        low[ticker] = l_col[valid_mask]
+        close[ticker] = c_col[valid_mask]
 
     atr_df = compute_atr(high, low, close, window=cfg.atr_window)
     if atr_df.empty or close.empty:
