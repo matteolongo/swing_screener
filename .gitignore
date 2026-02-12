@@ -47,6 +47,7 @@ dist/
 .cache/
 *.parquet
 data/social_cache/
+data/daily_reviews/
 
 # =========================
 # Logs

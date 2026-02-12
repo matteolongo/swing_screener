@@ -38,7 +38,7 @@
     },
     "risk": {
       "account_size": 500.0,
-      "risk_pct": 0.02,
+      "risk_pct": 0.01,
       "max_position_pct": 0.6,
       "min_shares": 1,
       "k_atr": 2.0,
@@ -83,7 +83,7 @@
     "id": "default",
     "is_default": true,
     "created_at": "2026-02-08T00:00:00",
-    "updated_at": "2026-02-10T22:50:35"
+    "updated_at": "2026-02-11T22:52:23"
   },
   {
     "name": "1000",

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatCurrency, formatDate, formatPercent } from './formatters'
+import { formatCurrency, formatDate, formatPercent, formatNumber } from './formatters'
 
 describe('Formatter Utilities', () => {
   describe('formatCurrency', () => {
@@ -82,6 +82,45 @@ describe('Formatter Utilities', () => {
 
     it('handles very large percentages', () => {
       expect(formatPercent(1050.5)).toBe('+1050.5%')
+    })
+  })
+
+  describe('formatNumber', () => {
+    it('formats positive numbers with default 2 decimals', () => {
+      expect(formatNumber(123.456)).toBe('123.46')
+      expect(formatNumber(100)).toBe('100.00')
+      expect(formatNumber(1.2)).toBe('1.20')
+    })
+
+    it('formats negative numbers correctly', () => {
+      expect(formatNumber(-123.456)).toBe('-123.46')
+      expect(formatNumber(-1.5)).toBe('-1.50')
+    })
+
+    it('formats zero correctly', () => {
+      expect(formatNumber(0)).toBe('0.00')
+      expect(formatNumber(0, 1)).toBe('0.0')
+    })
+
+    it('supports custom decimal places', () => {
+      expect(formatNumber(123.456, 0)).toBe('123')
+      expect(formatNumber(123.456, 1)).toBe('123.5')
+      expect(formatNumber(123.456, 3)).toBe('123.456')
+    })
+
+    it('rounds correctly', () => {
+      expect(formatNumber(2.345, 2)).toBe('2.35')
+      expect(formatNumber(2.344, 2)).toBe('2.34')
+      expect(formatNumber(1.5, 0)).toBe('2')
+    })
+
+    it('handles very small numbers', () => {
+      expect(formatNumber(0.001, 3)).toBe('0.001')
+      expect(formatNumber(0.0001, 2)).toBe('0.00')
+    })
+
+    it('handles very large numbers', () => {
+      expect(formatNumber(999999.99, 2)).toBe('999999.99')
     })
   })
 })
