@@ -1,7 +1,6 @@
-import { ReactNode, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
-import HelpTooltip from '@/components/common/HelpTooltip';
 import {
   createStrategyFromDraft,
   useActiveStrategyQuery,
@@ -12,39 +11,14 @@ import {
   useUpdateStrategyMutation,
 } from '@/features/strategy/hooks';
 import { Strategy, StrategyEntryType, StrategyExitMode, StrategyCurrency } from '@/types/strategy';
-
-const fieldClass =
-  'w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-800';
-
-type HelpInfo = {
-  short: string;
-  title: string;
-  content: ReactNode;
-};
-
-const buildHelp = (
-  title: string,
-  short: string,
-  what: string,
-  why: string,
-  how: string
-): HelpInfo => ({
-  title,
-  short,
-  content: (
-    <div className="space-y-2">
-      <p>
-        <strong>What it is:</strong> {what}
-      </p>
-      <p>
-        <strong>Why it matters:</strong> {why}
-      </p>
-      <p>
-        <strong>How to interpret:</strong> {how}
-      </p>
-    </div>
-  ),
-});
+import {
+  buildHelp,
+  CheckboxInput,
+  NumberInput,
+  SelectInput,
+  strategyFieldClass,
+  TextInput,
+} from '@/components/domain/strategy/StrategyFieldControls';
 
 const help = {
   module: buildHelp(
@@ -329,136 +303,6 @@ function cloneStrategy(strategy: Strategy): Strategy {
   return JSON.parse(JSON.stringify(strategy)) as Strategy;
 }
 
-function NumberInput({
-  label,
-  value,
-  onChange,
-  step = 1,
-  min,
-  max,
-  suffix,
-  help,
-}: {
-  label: string;
-  value: number;
-  onChange: (value: number) => void;
-  step?: number;
-  min?: number;
-  max?: number;
-  suffix?: string;
-  help?: HelpInfo;
-}) {
-  return (
-    <label className="text-sm font-medium">
-      <div className="mb-2 flex items-center gap-2">
-        <span>{label}</span>
-        {help && <HelpTooltip short={help.short} title={help.title} content={help.content} />}
-        {suffix && <span className="text-xs text-gray-500">{suffix}</span>}
-      </div>
-      <input
-        type="number"
-        value={Number.isFinite(value) ? value : 0}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className={fieldClass}
-        step={step}
-        min={min}
-        max={max}
-      />
-    </label>
-  );
-}
-
-function TextInput({
-  label,
-  value,
-  onChange,
-  placeholder,
-  help,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-  help?: HelpInfo;
-}) {
-  return (
-    <label className="text-sm font-medium">
-      <div className="mb-2 flex items-center gap-2">
-        <span>{label}</span>
-        {help && <HelpTooltip short={help.short} title={help.title} content={help.content} />}
-      </div>
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className={fieldClass}
-      />
-    </label>
-  );
-}
-
-function SelectInput({
-  label,
-  value,
-  onChange,
-  options,
-  help,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  options: Array<{ value: string; label: string }>;
-  help?: HelpInfo;
-}) {
-  return (
-    <label className="text-sm font-medium">
-      <div className="mb-2 flex items-center gap-2">
-        <span>{label}</span>
-        {help && <HelpTooltip short={help.short} title={help.title} content={help.content} />}
-      </div>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={fieldClass}
-      >
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
-
-function CheckboxInput({
-  label,
-  checked,
-  onChange,
-  help,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (value: boolean) => void;
-  help?: HelpInfo;
-}) {
-  return (
-    <div className="flex items-center gap-2 text-sm font-medium">
-      <label className="flex items-center gap-2">
-        <input
-          type="checkbox"
-          checked={checked}
-          onChange={(e) => onChange(e.target.checked)}
-          className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
-        />
-        <span>{label}</span>
-      </label>
-      {help && <HelpTooltip short={help.short} title={help.title} content={help.content} />}
-    </div>
-  );
-}
-
 export default function StrategyPage() {
   const strategiesQuery = useStrategiesQuery();
   const activeStrategyQuery = useActiveStrategyQuery();
@@ -615,7 +459,7 @@ export default function StrategyPage() {
               <select
                 value={selectedId}
                 onChange={(e) => setSelectedId(e.target.value)}
-                className={fieldClass}
+                className={strategyFieldClass}
                 disabled={strategiesQuery.isLoading}
               >
                 {!strategies.length && (

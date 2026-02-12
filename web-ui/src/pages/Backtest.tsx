@@ -18,6 +18,8 @@ import {
 } from '@/features/backtest/hooks';
 import { formatDateTime, formatPercent, formatR, formatCurrency } from '@/utils/formatters';
 import EquityCurveChart from '@/components/domain/backtest/EquityCurveChart';
+import BacktestTickerSummaryTable from '@/components/domain/backtest/BacktestTickerSummaryTable';
+import BacktestTradesTable from '@/components/domain/backtest/BacktestTradesTable';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 
 const STORAGE_KEY = 'backtest.params.v1';
@@ -722,33 +724,8 @@ export default function Backtest() {
               <CardTitle>Summary by Ticker</CardTitle>
             </CardHeader>
             <CardContent>
-              {result && result.summaryByTicker.length > 0 ? (
-                <div className="max-h-[260px] overflow-y-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="text-left text-xs text-gray-500">
-                        <th className="py-2">Ticker</th>
-                        <th className="py-2">Trades</th>
-                        <th className="py-2">Expectancy</th>
-                        <th className="py-2">Win Rate</th>
-                        <th className="py-2">Avg R</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {result.summaryByTicker.map((row) => (
-                        <tr key={row.ticker} className="border-t">
-                          <td className="py-2 font-medium">{row.ticker}</td>
-                          <td className="py-2">{row.trades}</td>
-                          <td className="py-2">{row.expectancyR != null ? formatR(row.expectancyR) : '—'}</td>
-                          <td className="py-2">
-                            {row.winrate != null ? formatPercent(row.winrate * 100) : '—'}
-                          </td>
-                          <td className="py-2">{row.avgR != null ? formatR(row.avgR) : '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+              {result ? (
+                <BacktestTickerSummaryTable rows={result.summaryByTicker} />
               ) : (
                 <div className="text-sm text-gray-500">No ticker-level summary available.</div>
               )}
@@ -760,33 +737,8 @@ export default function Backtest() {
               <CardTitle>Trades</CardTitle>
             </CardHeader>
             <CardContent>
-              {result && result.trades.length > 0 ? (
-                <div className="max-h-[420px] overflow-y-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="text-left text-xs text-gray-500">
-                        <th className="py-2">Ticker</th>
-                        <th className="py-2">Entry</th>
-                        <th className="py-2">Exit</th>
-                        <th className="py-2">R</th>
-                        <th className="py-2">Exit Reason</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {result.trades.map((t, i) => (
-                        <tr key={`${t.ticker}-${t.entryDate}-${i}`} className="border-t">
-                          <td className="py-2 font-medium">{t.ticker}</td>
-                          <td className="py-2">{t.entryDate}</td>
-                          <td className="py-2">{t.exitDate}</td>
-                          <td className={`py-2 ${t.r >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {formatR(t.r)}
-                          </td>
-                          <td className="py-2">{t.exitReason}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+              {result ? (
+                <BacktestTradesTable rows={result.trades} />
               ) : (
                 <div className="text-sm text-gray-500">No trades generated.</div>
               )}
