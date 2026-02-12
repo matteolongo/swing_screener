@@ -336,6 +336,253 @@ class CreateOrderTool(BaseTool):
             return {"error": str(e)}
 
 
+class SuggestPositionStopTool(BaseTool):
+    """Get AI-powered stop price suggestion for a position."""
+    
+    @property
+    def feature(self) -> str:
+        return "portfolio"
+    
+    @property
+    def name(self) -> str:
+        return "suggest_position_stop"
+    
+    @property
+    def description(self) -> str:
+        return ("Get AI-powered stop price suggestion for an open position based on "
+                "trailing stop rules, R-multiples, and technical indicators.")
+    
+    @property
+    def input_schema(self) -> dict[str, Any]:
+        return {
+            "type": "object",
+            "properties": {
+                "position_id": {
+                    "type": "string",
+                    "description": "Unique identifier of the position"
+                }
+            },
+            "required": ["position_id"]
+        }
+    
+    async def execute(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        """Execute suggest_position_stop tool.
+        
+        Args:
+            arguments: Tool input with position_id
+            
+        Returns:
+            Suggested stop update with reasoning
+        """
+        service = _get_portfolio_service()
+        position_id = arguments.get("position_id")
+        
+        if not position_id:
+            return {"error": "position_id is required"}
+        
+        try:
+            result = service.suggest_position_stop(position_id)
+            return result.model_dump()
+        except Exception as e:
+            logger.error(f"Error suggesting stop for position {position_id}: {e}")
+            return {"error": str(e)}
+
+
+class ClosePositionTool(BaseTool):
+    """Manually close a trading position."""
+    
+    @property
+    def feature(self) -> str:
+        return "portfolio"
+    
+    @property
+    def name(self) -> str:
+        return "close_position"
+    
+    @property
+    def description(self) -> str:
+        return ("Manually close an open trading position. "
+                "Records exit price and date, marks position as closed.")
+    
+    @property
+    def input_schema(self) -> dict[str, Any]:
+        return {
+            "type": "object",
+            "properties": {
+                "position_id": {
+                    "type": "string",
+                    "description": "Unique identifier of the position"
+                },
+                "exit_price": {
+                    "type": "number",
+                    "description": "Price at which position was closed",
+                    "minimum": 0.01
+                },
+                "reason": {
+                    "type": "string",
+                    "description": "Reason for closing the position (optional)",
+                    "default": ""
+                }
+            },
+            "required": ["position_id", "exit_price"]
+        }
+    
+    async def execute(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        """Execute close_position tool.
+        
+        Args:
+            arguments: Tool input with position_id, exit_price, and optional reason
+            
+        Returns:
+            Close result with status
+        """
+        from api.models.portfolio import ClosePositionRequest
+        
+        service = _get_portfolio_service()
+        position_id = arguments.get("position_id")
+        exit_price = arguments.get("exit_price")
+        reason = arguments.get("reason", "")
+        
+        if not position_id or exit_price is None:
+            return {"error": "position_id and exit_price are required"}
+        
+        try:
+            request = ClosePositionRequest(exit_price=exit_price, reason=reason)
+            result = service.close_position(position_id, request)
+            return result
+        except Exception as e:
+            logger.error(f"Error closing position {position_id}: {e}")
+            return {"error": str(e)}
+
+
+class FillOrderTool(BaseTool):
+    """Mark an order as filled and optionally create a position."""
+    
+    @property
+    def feature(self) -> str:
+        return "portfolio"
+    
+    @property
+    def name(self) -> str:
+        return "fill_order"
+    
+    @property
+    def description(self) -> str:
+        return ("Mark an order as filled. For entry orders, creates a new position. "
+                "Records fill price and date.")
+    
+    @property
+    def input_schema(self) -> dict[str, Any]:
+        return {
+            "type": "object",
+            "properties": {
+                "order_id": {
+                    "type": "string",
+                    "description": "Unique identifier of the order"
+                },
+                "filled_price": {
+                    "type": "number",
+                    "description": "Price at which order was filled",
+                    "minimum": 0.01
+                },
+                "filled_date": {
+                    "type": "string",
+                    "description": "Date when order was filled (YYYY-MM-DD format)",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                },
+                "stop_price": {
+                    "type": "number",
+                    "description": "Stop price for entry orders (required for entry fills)",
+                    "minimum": 0.01
+                }
+            },
+            "required": ["order_id", "filled_price", "filled_date"]
+        }
+    
+    async def execute(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        """Execute fill_order tool.
+        
+        Args:
+            arguments: Tool input with order_id, filled_price, filled_date, and optional stop_price
+            
+        Returns:
+            Fill result with position_id if entry order
+        """
+        from api.models.portfolio import FillOrderRequest
+        
+        service = _get_portfolio_service()
+        order_id = arguments.get("order_id")
+        filled_price = arguments.get("filled_price")
+        filled_date = arguments.get("filled_date")
+        stop_price = arguments.get("stop_price")
+        
+        if not order_id or filled_price is None or not filled_date:
+            return {"error": "order_id, filled_price, and filled_date are required"}
+        
+        try:
+            request = FillOrderRequest(
+                filled_price=filled_price,
+                filled_date=filled_date,
+                stop_price=stop_price
+            )
+            result = service.fill_order(order_id, request)
+            return result
+        except Exception as e:
+            logger.error(f"Error filling order {order_id}: {e}")
+            return {"error": str(e)}
+
+
+class CancelOrderTool(BaseTool):
+    """Cancel a pending order."""
+    
+    @property
+    def feature(self) -> str:
+        return "portfolio"
+    
+    @property
+    def name(self) -> str:
+        return "cancel_order"
+    
+    @property
+    def description(self) -> str:
+        return "Cancel a pending order. Only pending orders can be cancelled."
+    
+    @property
+    def input_schema(self) -> dict[str, Any]:
+        return {
+            "type": "object",
+            "properties": {
+                "order_id": {
+                    "type": "string",
+                    "description": "Unique identifier of the order to cancel"
+                }
+            },
+            "required": ["order_id"]
+        }
+    
+    async def execute(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        """Execute cancel_order tool.
+        
+        Args:
+            arguments: Tool input with order_id
+            
+        Returns:
+            Cancel result with status
+        """
+        service = _get_portfolio_service()
+        order_id = arguments.get("order_id")
+        
+        if not order_id:
+            return {"error": "order_id is required"}
+        
+        try:
+            result = service.cancel_order(order_id)
+            return result
+        except Exception as e:
+            logger.error(f"Error cancelling order {order_id}: {e}")
+            return {"error": str(e)}
+
+
 def get_portfolio_tools() -> list[BaseTool]:
     """Get all portfolio tools.
     
@@ -348,4 +595,8 @@ def get_portfolio_tools() -> list[BaseTool]:
         UpdatePositionStopTool(),
         ListOrdersTool(),
         CreateOrderTool(),
+        SuggestPositionStopTool(),
+        ClosePositionTool(),
+        FillOrderTool(),
+        CancelOrderTool(),
     ]

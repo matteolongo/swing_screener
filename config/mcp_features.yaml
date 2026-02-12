@@ -12,15 +12,19 @@ environment: "dev"
 
 # Feature flags - enables/disables entire feature domains
 features:
-  # Portfolio Management (positions, orders)
+  # Portfolio Management (positions, orders) - Phase 3: Complete
   portfolio:
-    enabled: true  # Phase 2: Enabled
+    enabled: true
     tools:
       - list_positions
       - get_position
       - update_position_stop
       - list_orders
       - create_order
+      - suggest_position_stop
+      - close_position
+      - fill_order
+      - cancel_order
   
   # Screener & Analysis
   screener:
