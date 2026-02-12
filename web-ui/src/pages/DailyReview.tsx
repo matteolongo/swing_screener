@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Info, RefreshCw } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Info, RefreshCw, X } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useDailyReview } from '@/features/dailyReview/api';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
@@ -83,6 +83,10 @@ export default function DailyReview() {
   }
 
   const { summary } = review;
+  const recommendedCandidates = review.newCandidates.filter(
+    (candidate) => candidate.recommendation?.verdict === 'RECOMMENDED'
+  );
+  const hiddenCandidates = review.newCandidates.length - recommendedCandidates.length;
 
   const handleRefresh = async () => {
     await refetch();
@@ -144,18 +148,30 @@ export default function DailyReview() {
 
       {/* New Candidates Section */}
       <CollapsibleSection
-        title={`📈 New Trade Candidates (${review.newCandidates.length})`}
+        title={`📈 New Trade Candidates (${recommendedCandidates.length})`}
         isExpanded={expandedSections.candidates}
         onToggle={() => toggleSection('candidates')}
-        count={review.newCandidates.length}
+        count={recommendedCandidates.length}
       >
-        {review.newCandidates.length === 0 ? (
-          <p className="text-gray-600 dark:text-gray-400">No new candidates today.</p>
+        {recommendedCandidates.length === 0 ? (
+          <div className="space-y-2">
+            <p className="text-gray-600 dark:text-gray-400">No recommended candidates today.</p>
+            {hiddenCandidates > 0 ? (
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {hiddenCandidates} candidate{hiddenCandidates === 1 ? '' : 's'} hidden because verdict is Not Recommended.
+              </p>
+            ) : null}
+          </div>
         ) : (
           <div className="space-y-3">
             <GlossaryLegend metricKeys={DAILY_REVIEW_GLOSSARY_KEYS} title="Daily Review Glossary" />
+            {hiddenCandidates > 0 ? (
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Showing recommended setups only. {hiddenCandidates} candidate{hiddenCandidates === 1 ? '' : 's'} hidden.
+              </p>
+            ) : null}
             <CandidatesTable
-              candidates={review.newCandidates}
+              candidates={recommendedCandidates}
               onShowRecommendation={setRecommendationCandidate}
               onCreateOrder={(candidate) => {
                 setSelectedCandidate(candidate);
@@ -734,11 +750,43 @@ function CreateOrderModal({
   const riskAmount = formData.stopPrice ? (formData.limitPrice! - formData.stopPrice) * formData.quantity : 0;
   const riskPercent = risk.accountSize > 0 ? (riskAmount / risk.accountSize) * 100 : 0;
 
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [onClose]);
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <Card variant="elevated" className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      onClick={onClose}
+      role="presentation"
+    >
+      <Card
+        variant="elevated"
+        className="w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+        onClick={(event) => event.stopPropagation()}
+      >
         <div className="p-6">
-          <h2 className="text-2xl font-bold mb-4">Create Order - {candidate.ticker}</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-bold">Create Order - {candidate.ticker}</h2>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={onClose}
+              aria-label="Close create order modal"
+              title="Close"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
           
           <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded mb-4">
             <h3 className="font-semibold mb-2">Candidate Details</h3>

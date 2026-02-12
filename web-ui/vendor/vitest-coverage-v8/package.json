@@ -1,0 +1,20 @@
+{
+  "name": "@vitest/coverage-v8",
+  "type": "module",
+  "version": "1.6.1-local",
+  "description": "Offline compatibility coverage provider for Vitest",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "exports": {
+    ".": {
+      "default": "./dist/index.js"
+    },
+    "./browser": {
+      "default": "./dist/browser.js"
+    }
+  },
+  "peerDependencies": {
+    "vitest": "^1.6.1"
+  }
+}

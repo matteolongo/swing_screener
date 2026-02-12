@@ -136,4 +136,79 @@ describe('DailyReview Page', () => {
       expect(screen.getByText('+2.0%')).toBeInTheDocument()
     })
   })
+
+  it('shows only recommended candidates in New Trade Candidates', async () => {
+    server.use(
+      http.get('*/api/daily-review', () => HttpResponse.json({
+        ...mockDailyReview,
+        new_candidates: [
+          ...mockDailyReview.new_candidates,
+          {
+            ticker: 'NOREC',
+            signal: 'pullback',
+            entry: 10.0,
+            stop: 9.8,
+            shares: 10,
+            r_reward: 1.2,
+            name: 'Not Recommended Corp',
+            sector: 'Utilities',
+            recommendation: {
+              ...mockDailyReview.new_candidates[0].recommendation,
+              verdict: 'NOT_RECOMMENDED',
+              reasons_short: ['RR below minimum.'],
+            },
+          },
+        ],
+      }))
+    )
+
+    renderWithProviders(<DailyReview />)
+
+    await waitFor(() => {
+      expect(screen.getByText('VALE')).toBeInTheDocument()
+      expect(screen.queryByText('NOREC')).not.toBeInTheDocument()
+      expect(screen.getByText(/showing recommended setups only/i)).toBeInTheDocument()
+    })
+  })
+
+  it('closes Create Order modal with Escape and with close button', async () => {
+    const { user } = renderWithProviders(<DailyReview />)
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Create Order/i })).toBeInTheDocument()
+    })
+
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: /Create Order/i }))
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText(/Create Order - VALE/i)).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /Close create order modal/i })).toBeInTheDocument()
+    })
+
+    await act(async () => {
+      await user.keyboard('{Escape}')
+    })
+
+    await waitFor(() => {
+      expect(screen.queryByText(/Create Order - VALE/i)).not.toBeInTheDocument()
+    })
+
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: /Create Order/i }))
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText(/Create Order - VALE/i)).toBeInTheDocument()
+    })
+
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: /Close create order modal/i }))
+    })
+
+    await waitFor(() => {
+      expect(screen.queryByText(/Create Order - VALE/i)).not.toBeInTheDocument()
+    })
+  })
 })
