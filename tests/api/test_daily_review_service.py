@@ -195,6 +195,7 @@ def test_generate_daily_review_candidates_fields(mock_screener_service, mock_por
     
     candidate = review.new_candidates[0]
     assert candidate.ticker == "AAPL"
+    assert candidate.confidence == 0.9
     assert candidate.signal == "MOMENTUM"
     assert candidate.entry == 150.0
     assert candidate.stop == 145.0

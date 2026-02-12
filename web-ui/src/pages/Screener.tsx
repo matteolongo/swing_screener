@@ -11,9 +11,12 @@ import { useConfigStore } from '@/stores/configStore';
 import { fetchActiveStrategy } from '@/lib/strategyApi';
 import { RiskConfig } from '@/types/config';
 import { useScreenerStore } from '@/stores/screenerStore';
-import { formatCurrency, formatPercent } from '@/utils/formatters';
+import { formatCurrency, formatPercent, formatRatioAsPercent } from '@/utils/formatters';
 import QuickBacktestModal from '@/components/modals/QuickBacktestModal';
 import SocialAnalysisModal from '@/components/modals/SocialAnalysisModal';
+import MetricHelpLabel from '@/components/domain/education/MetricHelpLabel';
+import GlossaryLegend from '@/components/domain/education/GlossaryLegend';
+import { SCREENER_GLOSSARY_KEYS } from '@/content/educationGlossary';
 
 const TOP_N_MAX = 200;
 type CurrencyFilter = 'all' | 'usd' | 'eur';
@@ -363,6 +366,10 @@ export default function Screener() {
           </Card>
 
           {/* Candidates table */}
+          <GlossaryLegend
+            metricKeys={SCREENER_GLOSSARY_KEYS}
+            title="Screener Glossary"
+          />
           <Card>
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -374,17 +381,33 @@ export default function Screener() {
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Company</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Sector</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Last Bar</th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Confidence</th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Score</th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
+                      <MetricHelpLabel metricKey="CONFIDENCE" className="w-full justify-end" />
+                    </th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
+                      <MetricHelpLabel metricKey="SCORE" className="w-full justify-end" />
+                    </th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Close</th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Stop</th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">ATR</th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
+                      <MetricHelpLabel metricKey="ATR" className="w-full justify-end" />
+                    </th>
                     <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Risk $</th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">RR</th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Mom 6M</th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Mom 12M</th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">RS</th>
-                    <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">Overlay</th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
+                      <MetricHelpLabel metricKey="RR" className="w-full justify-end" />
+                    </th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
+                      <MetricHelpLabel metricKey="MOM_6M" className="w-full justify-end" />
+                    </th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
+                      <MetricHelpLabel metricKey="MOM_12M" className="w-full justify-end" />
+                    </th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
+                      <MetricHelpLabel metricKey="RS" className="w-full justify-end" />
+                    </th>
+                    <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">
+                      <MetricHelpLabel metricKey="OVERLAY" className="justify-center" />
+                    </th>
                     <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">Verdict</th>
                     <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">Fix</th>
                     <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">Actions</th>
@@ -746,7 +769,9 @@ function RecommendationModal({
                 </div>
               </div>
               <div>
-                <div className="text-gray-500">RR</div>
+                <div className="text-gray-500">
+                  <MetricHelpLabel metricKey="RR" />
+                </div>
                 <div className="font-semibold">{rec?.risk?.rr != null ? rec.risk.rr.toFixed(2) : '—'}</div>
               </div>
               <div>
@@ -754,8 +779,13 @@ function RecommendationModal({
                 <div className="font-semibold">{rec?.risk?.riskAmount != null ? formatCurrency(rec.risk.riskAmount) : '—'}</div>
               </div>
               <div>
-                <div className="text-gray-500">Risk %</div>
-                <div className="font-semibold">{rec?.risk?.riskPct != null ? formatPercent(rec.risk.riskPct) : '—'}</div>
+                <div className="text-gray-500">
+                  <MetricHelpLabel metricKey="RISK_PCT" />
+                </div>
+                <div className="font-semibold">
+                  {/* riskPct is a ratio from backend (0.0082 means 0.82%) */}
+                  {rec?.risk?.riskPct != null ? formatRatioAsPercent(rec.risk.riskPct) : '—'}
+                </div>
               </div>
               <div>
                 <div className="text-gray-500">Position Size</div>
@@ -770,8 +800,13 @@ function RecommendationModal({
                 <div className="font-semibold">{rec?.costs?.totalCost != null ? formatCurrency(rec.costs.totalCost) : '—'}</div>
               </div>
               <div>
-                <div className="text-gray-500">Fee / Risk</div>
-                <div className="font-semibold">{rec?.costs?.feeToRiskPct != null ? formatPercent(rec.costs.feeToRiskPct) : '—'}</div>
+                <div className="text-gray-500">
+                  <MetricHelpLabel metricKey="FEE_TO_RISK" />
+                </div>
+                <div className="font-semibold">
+                  {/* feeToRiskPct is a ratio from backend (0.02 means 2.0%) */}
+                  {rec?.costs?.feeToRiskPct != null ? formatRatioAsPercent(rec.costs.feeToRiskPct) : '—'}
+                </div>
               </div>
             </div>
           </details>

@@ -1,15 +1,18 @@
-import { useState } from 'react';
-import { Info, RefreshCw } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Info, RefreshCw, X } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useDailyReview } from '@/features/dailyReview/api';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
-import { formatCurrency, formatNumber, formatPercent } from '@/utils/formatters';
+import { formatCurrency, formatNumber, formatRatioAsPercent } from '@/utils/formatters';
 import { CreateOrderRequest } from '@/features/portfolio/types';
 import { createOrder } from '@/features/portfolio/api';
 import { useConfigStore } from '@/stores/configStore';
 import { RiskConfig } from '@/types/config';
+import GlossaryLegend from '@/components/domain/education/GlossaryLegend';
+import MetricHelpLabel from '@/components/domain/education/MetricHelpLabel';
+import { DAILY_REVIEW_GLOSSARY_KEYS } from '@/content/educationGlossary';
 import type {
   DailyReviewCandidate,
   DailyReviewPositionHold,
@@ -80,6 +83,10 @@ export default function DailyReview() {
   }
 
   const { summary } = review;
+  const recommendedCandidates = review.newCandidates.filter(
+    (candidate) => candidate.recommendation?.verdict === 'RECOMMENDED'
+  );
+  const hiddenCandidates = review.newCandidates.length - recommendedCandidates.length;
 
   const handleRefresh = async () => {
     await refetch();
@@ -141,22 +148,37 @@ export default function DailyReview() {
 
       {/* New Candidates Section */}
       <CollapsibleSection
-        title={`📈 New Trade Candidates (${review.newCandidates.length})`}
+        title={`📈 New Trade Candidates (${recommendedCandidates.length})`}
         isExpanded={expandedSections.candidates}
         onToggle={() => toggleSection('candidates')}
-        count={review.newCandidates.length}
+        count={recommendedCandidates.length}
       >
-        {review.newCandidates.length === 0 ? (
-          <p className="text-gray-600 dark:text-gray-400">No new candidates today.</p>
+        {recommendedCandidates.length === 0 ? (
+          <div className="space-y-2">
+            <p className="text-gray-600 dark:text-gray-400">No recommended candidates today.</p>
+            {hiddenCandidates > 0 ? (
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {hiddenCandidates} candidate{hiddenCandidates === 1 ? '' : 's'} hidden because verdict is Not Recommended.
+              </p>
+            ) : null}
+          </div>
         ) : (
-          <CandidatesTable
-            candidates={review.newCandidates}
-            onShowRecommendation={setRecommendationCandidate}
-            onCreateOrder={(candidate) => {
-              setSelectedCandidate(candidate);
-              setShowCreateOrderModal(true);
-            }}
-          />
+          <div className="space-y-3">
+            <GlossaryLegend metricKeys={DAILY_REVIEW_GLOSSARY_KEYS} title="Daily Review Glossary" />
+            {hiddenCandidates > 0 ? (
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Showing recommended setups only. {hiddenCandidates} candidate{hiddenCandidates === 1 ? '' : 's'} hidden.
+              </p>
+            ) : null}
+            <CandidatesTable
+              candidates={recommendedCandidates}
+              onShowRecommendation={setRecommendationCandidate}
+              onCreateOrder={(candidate) => {
+                setSelectedCandidate(candidate);
+                setShowCreateOrderModal(true);
+              }}
+            />
+          </div>
         )}
       </CollapsibleSection>
 
@@ -171,7 +193,10 @@ export default function DailyReview() {
         {review.positionsUpdateStop.length === 0 ? (
           <p className="text-gray-600 dark:text-gray-400">No stop updates needed.</p>
         ) : (
-          <UpdateStopTable positions={review.positionsUpdateStop} />
+          <div className="space-y-3">
+            <GlossaryLegend metricKeys={DAILY_REVIEW_GLOSSARY_KEYS} title="Stop Management Glossary" />
+            <UpdateStopTable positions={review.positionsUpdateStop} />
+          </div>
         )}
       </CollapsibleSection>
 
@@ -322,11 +347,16 @@ function CandidatesTable({
         <thead className="border-b dark:border-gray-700">
           <tr>
             <th className="text-left p-2">Ticker</th>
+            <th className="text-right p-2">
+              <MetricHelpLabel metricKey="CONFIDENCE" className="justify-end w-full" />
+            </th>
             <th className="text-left p-2">Signal</th>
             <th className="text-right p-2">Entry</th>
             <th className="text-right p-2">Stop</th>
             <th className="text-right p-2">Shares</th>
-            <th className="text-right p-2">R:R</th>
+            <th className="text-right p-2">
+              <MetricHelpLabel metricKey="RR" labelOverride="R:R" className="justify-end w-full" />
+            </th>
             <th className="text-left p-2">Sector</th>
             <th className="text-center p-2">Info</th>
             <th className="text-right p-2">Action</th>
@@ -336,6 +366,11 @@ function CandidatesTable({
           {candidates.map((candidate) => (
             <tr key={candidate.ticker} className="border-b dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
               <td className="p-2 font-mono font-bold">{candidate.ticker}</td>
+              <td className="p-2 text-right">
+                <span className="font-semibold text-purple-600">
+                  {candidate.confidence != null ? formatNumber(candidate.confidence, 1) : '-'}
+                </span>
+              </td>
               <td className="p-2">
                 <Badge variant="primary">{candidate.signal}</Badge>
               </td>
@@ -390,7 +425,9 @@ function UpdateStopTable({ positions }: { positions: DailyReviewPositionUpdate[]
             <th className="text-right p-2">Current</th>
             <th className="text-right p-2">Stop (Old)</th>
             <th className="text-right p-2">Stop (New)</th>
-            <th className="text-right p-2">R Now</th>
+            <th className="text-right p-2">
+              <MetricHelpLabel metricKey="R_NOW" className="justify-end w-full" />
+            </th>
             <th className="text-left p-2">Reason</th>
             <th className="text-right p-2">Action</th>
           </tr>
@@ -433,7 +470,9 @@ function CloseTable({ positions }: { positions: DailyReviewPositionClose[] }) {
             <th className="text-right p-2">Entry</th>
             <th className="text-right p-2">Current</th>
             <th className="text-right p-2">Stop</th>
-            <th className="text-right p-2">R Now</th>
+            <th className="text-right p-2">
+              <MetricHelpLabel metricKey="R_NOW" className="justify-end w-full" />
+            </th>
             <th className="text-left p-2">Reason</th>
             <th className="text-right p-2">Action</th>
           </tr>
@@ -475,7 +514,9 @@ function HoldTable({ positions }: { positions: DailyReviewPositionHold[] }) {
             <th className="text-right p-2">Entry</th>
             <th className="text-right p-2">Current</th>
             <th className="text-right p-2">Stop</th>
-            <th className="text-right p-2">R Now</th>
+            <th className="text-right p-2">
+              <MetricHelpLabel metricKey="R_NOW" className="justify-end w-full" />
+            </th>
             <th className="text-left p-2">Reason</th>
           </tr>
         </thead>
@@ -574,7 +615,9 @@ function RecommendationModal({
                 <div className="font-semibold">{rec?.risk?.target != null ? formatCurrency(rec.risk.target) : '—'}</div>
               </div>
               <div>
-                <div className="text-gray-500 dark:text-gray-400">RR</div>
+                <div className="text-gray-500 dark:text-gray-400">
+                  <MetricHelpLabel metricKey="RR" />
+                </div>
                 <div className="font-semibold">{rec?.risk?.rr != null ? rec.risk.rr.toFixed(2) : '—'}</div>
               </div>
               <div>
@@ -582,8 +625,13 @@ function RecommendationModal({
                 <div className="font-semibold">{rec?.risk?.riskAmount != null ? formatCurrency(rec.risk.riskAmount) : '—'}</div>
               </div>
               <div>
-                <div className="text-gray-500 dark:text-gray-400">Risk %</div>
-                <div className="font-semibold">{rec?.risk?.riskPct != null ? formatPercent(rec.risk.riskPct) : '—'}</div>
+                <div className="text-gray-500 dark:text-gray-400">
+                  <MetricHelpLabel metricKey="RISK_PCT" />
+                </div>
+                <div className="font-semibold">
+                  {/* riskPct is a ratio from backend (0.0082 means 0.82%) */}
+                  {rec?.risk?.riskPct != null ? formatRatioAsPercent(rec.risk.riskPct) : '—'}
+                </div>
               </div>
               <div>
                 <div className="text-gray-500 dark:text-gray-400">Position Size</div>
@@ -598,8 +646,13 @@ function RecommendationModal({
                 <div className="font-semibold">{rec?.costs?.totalCost != null ? formatCurrency(rec.costs.totalCost) : '—'}</div>
               </div>
               <div>
-                <div className="text-gray-500 dark:text-gray-400">Fee / Risk</div>
-                <div className="font-semibold">{rec?.costs?.feeToRiskPct != null ? formatPercent(rec.costs.feeToRiskPct) : '—'}</div>
+                <div className="text-gray-500 dark:text-gray-400">
+                  <MetricHelpLabel metricKey="FEE_TO_RISK" />
+                </div>
+                <div className="font-semibold">
+                  {/* feeToRiskPct is a ratio from backend (0.02 means 2.0%) */}
+                  {rec?.costs?.feeToRiskPct != null ? formatRatioAsPercent(rec.costs.feeToRiskPct) : '—'}
+                </div>
               </div>
             </div>
           </details>
@@ -705,11 +758,43 @@ function CreateOrderModal({
   const riskAmount = formData.stopPrice ? (formData.limitPrice! - formData.stopPrice) * formData.quantity : 0;
   const riskPercent = risk.accountSize > 0 ? (riskAmount / risk.accountSize) * 100 : 0;
 
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [onClose]);
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <Card variant="elevated" className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      onClick={onClose}
+      role="presentation"
+    >
+      <Card
+        variant="elevated"
+        className="w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+        onClick={(event) => event.stopPropagation()}
+      >
         <div className="p-6">
-          <h2 className="text-2xl font-bold mb-4">Create Order - {candidate.ticker}</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-bold">Create Order - {candidate.ticker}</h2>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={onClose}
+              aria-label="Close create order modal"
+              title="Close"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
           
           <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded mb-4">
             <h3 className="font-semibold mb-2">Candidate Details</h3>

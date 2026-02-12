@@ -53,6 +53,7 @@ class DailyReviewService:
         new_candidates = [
             DailyReviewCandidate(
                 ticker=c.ticker,
+                confidence=c.confidence,
                 signal=c.signal or "UNKNOWN",
                 entry=c.entry or 0.0,
                 stop=c.stop or 0.0,
