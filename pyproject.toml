@@ -35,19 +35,25 @@ dev = [
   "ruff",
   "TA-Lib>=0.4.28"
 ]
+mcp = [
+  "mcp>=1.0.0",
+  "pyyaml>=6.0"
+]
 
 [project.scripts]
 swing-screener = "swing_screener.cli:main"
 
 [tool.setuptools]
-package-dir = {"" = "src"}
+package-dir = {"" = "src", "mcp_server" = "mcp_server"}
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["src", "."]
+include = ["swing_screener*", "mcp_server*"]
+
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["."]
+pythonpath = [".", "src"]
 markers = [
     "integration: marks tests as integration tests (require API keys, slower)",
 ]
