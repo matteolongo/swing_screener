@@ -107,6 +107,57 @@ python -m mcp_server.main --validate-only
 
 ---
 
+### 🤖 Agent (Workflow Automation)
+
+**NEW:** AI-driven agent for automating trading workflows via MCP.
+
+The Swing Screener Agent connects to the MCP server as a client, orchestrating tool calls to automate daily trading routines while providing educational insights.
+
+**Features:**
+- 🔍 Automated screening for trade candidates
+- 📊 Position management with stop updates
+- 📝 Order creation and tracking
+- 💡 Educational insights on every action
+- 🛠️ CLI and Python API
+
+**Quick Start:**
+
+```bash
+# Run daily screening
+python -m agent.cli screen --universe mega_all --top 10
+
+# Review open positions
+python -m agent.cli positions review
+
+# Run comprehensive daily review
+python -m agent.cli daily-review
+```
+
+**Python API:**
+
+```python
+from agent import SwingScreenerAgent
+import asyncio
+
+async def main():
+    agent = SwingScreenerAgent()
+    await agent.start()
+    
+    # Run daily screening
+    result = await agent.daily_screening(universe="mega_all", top_n=10)
+    
+    # Review positions
+    positions = await agent.review_positions()
+    
+    await agent.stop()
+
+asyncio.run(main())
+```
+
+👉 **See [agent/README.md](agent/README.md) for complete Agent documentation**
+
+---
+
 ## Key Principles
 
 - Deterministic logic over discretionary decisions
