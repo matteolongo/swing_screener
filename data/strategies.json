@@ -22,7 +22,11 @@
         "max_price": 500.0,
         "max_atr_pct": 15.0,
         "require_trend_ok": true,
-        "require_rs_positive": false
+        "require_rs_positive": false,
+        "currencies": [
+          "USD",
+          "EUR"
+        ]
       }
     },
     "ranking": {
@@ -107,7 +111,11 @@
         "max_price": 120.0,
         "max_atr_pct": 15.0,
         "require_trend_ok": true,
-        "require_rs_positive": false
+        "require_rs_positive": false,
+        "currencies": [
+          "USD",
+          "EUR"
+        ]
       }
     },
     "ranking": {
