@@ -6,14 +6,17 @@ Model Context Protocol (MCP) server for Swing Screener, exposing trading system 
 
 **Phase 1:** ✅ Complete - Infrastructure (config, registry, skeleton)  
 **Phase 2:** ✅ Complete - Portfolio tools + MCP protocol integration  
-**Phase 3:** ⏳ Planned - Additional tools + client testing
+**Phase 3:** ✅ Complete - Portfolio domain complete (9 tools) + Screener tools (3 tools)
+
+**Total:** 12 tools across 2 feature domains
 
 ### Currently Available
 
-- **5 Portfolio Tools** - Position and order management
+- **9 Portfolio Tools** - Complete position and order management
+- **3 Screener Tools** - Stock screening and position sizing
 - **MCP Protocol** - Stdio transport for AI assistant communication
 - **Configuration** - YAML-based feature toggles
-- **Tool Registry** - Feature-based filtering
+- **Tool Registry** - Multi-domain support
 
 ## Quick Start
 
@@ -39,7 +42,7 @@ python -m mcp_server.main --config /path/to/config.yaml
 
 ### Available Tools
 
-**Portfolio Management (5 tools):**
+**Portfolio Management (9 tools):**
 
 1. **list_positions** - List all trading positions
    - Filter by status (open/closed)
@@ -60,6 +63,36 @@ python -m mcp_server.main --config /path/to/config.yaml
 5. **create_order** - Create new order
    - Supports LIMIT, STOP, MARKET types
    - Entry/stop/target order kinds
+
+6. **suggest_position_stop** - AI-powered stop suggestions
+   - Based on R-multiples and trailing stop rules
+   - Considers technical indicators
+
+7. **close_position** - Manually close position
+   - Records exit price and date
+   - Marks position as closed
+
+8. **fill_order** - Mark order as filled
+   - Creates position for entry orders
+   - Records fill price and date
+
+9. **cancel_order** - Cancel pending order
+   - Only pending orders can be cancelled
+
+**Screener & Analysis (3 tools):**
+
+1. **run_screener** - Execute stock screening
+   - Filter by technical criteria
+   - Rank by momentum indicators
+   - Returns top candidates with entry/stop prices
+   - Supports multiple universes and strategies
+
+2. **list_universes** - List available stock universes
+   - Shows all configured universes (mega_all, sp500, etc.)
+
+3. **preview_order** - Calculate position sizing
+   - Given entry and stop prices
+   - Returns share quantity, position size, risk amount
 
 ### Configuration
 
