@@ -49,7 +49,7 @@ class YfinanceProvider(MarketDataProvider):
             if t and t not in out:
                 out.append(t)
         if not out:
-            raise ValueError("tickers è vuoto.")
+            raise ValueError("tickers is empty.")
         return out
     
     def _cache_path(
@@ -98,7 +98,7 @@ class YfinanceProvider(MarketDataProvider):
             return df.sort_index(axis=1)
 
         raise ValueError(
-            "Impossibile inferire l'ordine dei livelli MultiIndex (field,ticker) vs (ticker,field)."
+            "Unable to infer MultiIndex level order (field, ticker) vs (ticker, field)."
         )
     
     def _clean_ohlcv(self, df: pd.DataFrame, tickers: list[str]) -> pd.DataFrame:
@@ -172,13 +172,13 @@ class YfinanceProvider(MarketDataProvider):
             if allow_cache_fallback_on_error and cache_file.exists():
                 df = pd.read_parquet(cache_file)
                 return self._clean_ohlcv(df, tks)
-            raise RuntimeError(f"Download fallito: {e}") from e
+            raise RuntimeError(f"Download failed: {e}") from e
         
         if df is None or df.empty:
             if allow_cache_fallback_on_error and cache_file.exists():
                 df = pd.read_parquet(cache_file)
                 return self._clean_ohlcv(df, tks)
-            raise RuntimeError("Download vuoto. Controlla tickers o connessione.")
+            raise RuntimeError("Download empty. Check tickers or connection.")
         
         # Standardize column format
         df = self._standardize_columns(df, tks)
@@ -222,52 +222,20 @@ class YfinanceProvider(MarketDataProvider):
             Yfinance's end parameter is exclusive, so we add 1 day to ensure
             end_date is included in the results.
         """
-        # Normalize tickers
-        tks = self._normalize_tickers(tickers)
-        
         # Yfinance end param is exclusive - add 1 day to include end_date
         end_dt = datetime.strptime(end_date, "%Y-%m-%d")
         end_dt_inclusive = end_dt + timedelta(days=1)
         end_date_adjusted = end_dt_inclusive.strftime("%Y-%m-%d")
         
-        # Check cache
-        cache_file = self._cache_path(tks, start_date, end_date_adjusted, self.auto_adjust)
-        
-        if use_cache and (not force_refresh) and cache_file.exists():
-            df = pd.read_parquet(cache_file)
-            return self._clean_ohlcv(df, tks)
-        
-        # Download from Yahoo Finance
-        try:
-            df = yf.download(
-                tks,
-                start=start_date,
-                end=end_date_adjusted,
-                auto_adjust=self.auto_adjust,
-                progress=self.progress,
-                group_by="column",
-                threads=True,
-            )
-        except Exception as e:
-            if allow_cache_fallback_on_error and cache_file.exists():
-                df = pd.read_parquet(cache_file)
-                return self._clean_ohlcv(df, tks)
-            raise RuntimeError(f"Download fallito: {e}") from e
-        
-        if df is None or df.empty:
-            if allow_cache_fallback_on_error and cache_file.exists():
-                df = pd.read_parquet(cache_file)
-                return self._clean_ohlcv(df, tks)
-            raise RuntimeError("Download vuoto. Controlla tickers o connessione.")
-        
-        # Standardize column format
-        df = self._standardize_columns(df, tks)
-        
-        # Cache result
-        if use_cache:
-            df.to_parquet(cache_file)
-        
-        return self._clean_ohlcv(df, tks)
+        # Delegate to internal method
+        return self._fetch_ohlcv_with_config(
+            tickers,
+            start_date,
+            end_date_adjusted,
+            use_cache,
+            force_refresh,
+            allow_cache_fallback_on_error,
+        )
     
     def fetch_latest_price(self, ticker: str) -> float:
         """
