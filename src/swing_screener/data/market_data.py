@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Optional
+import datetime as dt
 import hashlib
 import json
 
@@ -62,45 +63,44 @@ def fetch_ohlcv(
 
     Output: DataFrame con colonne MultiIndex: (field, ticker)
       field ∈ {Open, High, Low, Close, Volume}
+      
+    Note:
+        This function is a wrapper around YfinanceProvider for backward compatibility.
+        New code should use get_market_data_provider() and call fetch_ohlcv on the provider.
     """
-    tks = _normalize_tickers(tickers)
-    cache_file = _cache_path(cfg.cache_dir, tks, cfg.start, cfg.end, cfg.auto_adjust)
-
-    if use_cache and (not force_refresh) and cache_file.exists():
-        df = pd.read_parquet(cache_file)
-        return _clean_ohlcv(df, tks)
-
-    try:
-        df = yf.download(
-            tks,
-            start=cfg.start,
-            end=cfg.end,
-            auto_adjust=cfg.auto_adjust,
-            progress=cfg.progress,
-            group_by="column",
-            threads=True,
+    from swing_screener.data.providers.yfinance_provider import YfinanceProvider
+    
+    # Create provider with the same configuration
+    provider = YfinanceProvider(
+        cache_dir=cfg.cache_dir,
+        auto_adjust=cfg.auto_adjust,
+        progress=cfg.progress,
+    )
+    
+    # Determine end date - keep None to preserve cache path behavior
+    end_date = cfg.end
+    if end_date is None:
+        # Use "today" as a sentinel that gets converted in provider
+        # but for cache purposes we want None behavior preserved
+        # Let's use a special fetch method that handles None
+        return provider._fetch_ohlcv_with_config(
+            list(tickers),
+            start_date=cfg.start,
+            end_date=None,
+            use_cache=use_cache,
+            force_refresh=force_refresh,
+            allow_cache_fallback_on_error=allow_cache_fallback_on_error,
         )
-    except Exception as e:
-        if allow_cache_fallback_on_error and cache_file.exists():
-            df = pd.read_parquet(cache_file)
-            return _clean_ohlcv(df, tks)
-        raise RuntimeError(f"Download fallito: {e}") from e
-
-    if df is None or df.empty:
-        if allow_cache_fallback_on_error and cache_file.exists():
-            df = pd.read_parquet(cache_file)
-            return _clean_ohlcv(df, tks)
-        raise RuntimeError("Download vuoto. Controlla tickers o connessione.")
-
-    # yfinance può tornare:
-    # - colonne singole se un ticker
-    # - MultiIndex se più ticker
-    df = _standardize_columns(df, tks)
-
-    if use_cache:
-        df.to_parquet(cache_file)
-
-    return _clean_ohlcv(df, tks)
+    
+    # Call provider's fetch_ohlcv with explicit end date
+    return provider.fetch_ohlcv(
+        list(tickers),
+        start_date=cfg.start,
+        end_date=end_date,
+        use_cache=use_cache,
+        force_refresh=force_refresh,
+        allow_cache_fallback_on_error=allow_cache_fallback_on_error,
+    )
 
 
 def _standardize_columns(df: pd.DataFrame, tickers: list[str]) -> pd.DataFrame:

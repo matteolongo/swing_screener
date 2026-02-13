@@ -2,20 +2,22 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from typing import Optional
+from pathlib import Path
+from typing import Iterable, Optional
+import hashlib
 import pandas as pd
 import yfinance as yf
 
 from .base import MarketDataProvider
-from ..market_data import fetch_ohlcv, MarketDataConfig, fetch_ticker_metadata
+from ..market_data import fetch_ticker_metadata
 
 
 class YfinanceProvider(MarketDataProvider):
     """
     Yahoo Finance market data provider.
     
-    Wraps existing fetch_ohlcv() logic from market_data.py.
-    Maintains all caching behavior and is the default provider.
+    Self-contained provider with integrated caching logic.
+    Fetches OHLCV data from Yahoo Finance and caches to parquet files.
     """
     
     def __init__(
@@ -32,16 +34,170 @@ class YfinanceProvider(MarketDataProvider):
             auto_adjust: Use adjusted prices (default: True)
             progress: Show download progress bar (default: False)
         """
-        self.cache_dir = cache_dir
+        self.cache_dir = Path(cache_dir)
         self.auto_adjust = auto_adjust
         self.progress = progress
+        
+        # Create cache directory
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+    
+    def _normalize_tickers(self, tickers: Iterable[str]) -> list[str]:
+        """Normalize and deduplicate ticker list."""
+        out = []
+        for t in tickers:
+            t = t.strip().upper()
+            if t and t not in out:
+                out.append(t)
+        if not out:
+            raise ValueError("tickers è vuoto.")
+        return out
+    
+    def _cache_path(
+        self,
+        tickers: list[str],
+        start: str,
+        end: Optional[str],
+        auto_adjust: bool,
+    ) -> Path:
+        """Generate cache file path for given parameters."""
+        safe_end = end if end else "NONE"
+        key = f"{'-'.join(tickers)}__{start}__{safe_end}__adj={int(auto_adjust)}"
+        key = key.replace("/", "_")
+        if len(key) > 200:
+            digest = hashlib.sha1(key.encode("utf-8")).hexdigest()
+            prefix = "-".join(tickers[:3])
+            key = f"{prefix}__n={len(tickers)}__{start}__{safe_end}__adj={int(auto_adjust)}__{digest}"
+        return self.cache_dir / f"{key}.parquet"
+    
+    def _standardize_columns(self, df: pd.DataFrame, tickers: list[str]) -> pd.DataFrame:
+        """Standardize column format to (field, ticker) MultiIndex."""
+        if not isinstance(df.columns, pd.MultiIndex):
+            t = tickers[0]
+            df.columns = pd.MultiIndex.from_product([df.columns, [t]])
+            return df
+
+        fields = {"Open", "High", "Low", "Close", "Adj Close", "Volume"}
+
+        lvl0 = set(map(str, df.columns.get_level_values(0).unique()))
+        lvl1 = set(map(str, df.columns.get_level_values(1).unique()))
+
+        if lvl0.issubset(fields):
+            # (field, ticker)
+            return df
+
+        if lvl1.issubset(fields):
+            # (ticker, field) -> swap to (field, ticker)
+            df.columns = df.columns.swaplevel(0, 1)
+            return df.sort_index(axis=1)
+
+        # fallback: try to infer by checking intersection sizes
+        if len(lvl0 & fields) > len(lvl1 & fields):
+            return df
+        if len(lvl1 & fields) > len(lvl0 & fields):
+            df.columns = df.columns.swaplevel(0, 1)
+            return df.sort_index(axis=1)
+
+        raise ValueError(
+            "Impossibile inferire l'ordine dei livelli MultiIndex (field,ticker) vs (ticker,field)."
+        )
+    
+    def _clean_ohlcv(self, df: pd.DataFrame, tickers: list[str]) -> pd.DataFrame:
+        """
+        Clean and standardize OHLCV data.
+        
+        - Keeps only Open/High/Low/Close/Volume
+        - Removes rows that are completely NaN
+        - Sorts index by date
+        - Ensures each ticker has all required columns (fills missing with NaN)
+        """
+        df = df.copy()
+        df = df.sort_index()
+        df = df.loc[~df.index.duplicated(keep="last")]
+
+        # Keep only standard OHLCV fields
+        keep_fields = ["Open", "High", "Low", "Close", "Volume"]
+        existing_fields = [f for f in keep_fields if f in df.columns.get_level_values(0)]
+        df = df.loc[:, df.columns.get_level_values(0).isin(existing_fields)]
+
+        # Ensure all ticker columns are present
+        cols = []
+        for f in existing_fields:
+            for t in tickers:
+                cols.append((f, t))
+        df = df.reindex(columns=pd.MultiIndex.from_tuples(cols))
+
+        # Drop rows that are completely NaN
+        df = df.dropna(how="all")
+        return df
+    
+    def _fetch_ohlcv_with_config(
+        self,
+        tickers: list[str],
+        start_date: str,
+        end_date: Optional[str],
+        use_cache: bool = True,
+        force_refresh: bool = False,
+        allow_cache_fallback_on_error: bool = True,
+    ) -> pd.DataFrame:
+        """
+        Internal method to fetch OHLCV with optional None end_date for backward compatibility.
+        
+        This method preserves the cache path behavior when end_date is None.
+        """
+        # Normalize tickers
+        tks = self._normalize_tickers(tickers)
+        
+        # Determine actual end date for yfinance call
+        actual_end = end_date if end_date else None
+        
+        # Check cache - use original end_date (possibly None) for cache path
+        cache_file = self._cache_path(tks, start_date, end_date, self.auto_adjust)
+        
+        if use_cache and (not force_refresh) and cache_file.exists():
+            df = pd.read_parquet(cache_file)
+            return self._clean_ohlcv(df, tks)
+        
+        # Download from Yahoo Finance
+        try:
+            df = yf.download(
+                tks,
+                start=start_date,
+                end=actual_end,  # yfinance handles None as "today"
+                auto_adjust=self.auto_adjust,
+                progress=self.progress,
+                group_by="column",
+                threads=True,
+            )
+        except Exception as e:
+            if allow_cache_fallback_on_error and cache_file.exists():
+                df = pd.read_parquet(cache_file)
+                return self._clean_ohlcv(df, tks)
+            raise RuntimeError(f"Download fallito: {e}") from e
+        
+        if df is None or df.empty:
+            if allow_cache_fallback_on_error and cache_file.exists():
+                df = pd.read_parquet(cache_file)
+                return self._clean_ohlcv(df, tks)
+            raise RuntimeError("Download vuoto. Controlla tickers o connessione.")
+        
+        # Standardize column format
+        df = self._standardize_columns(df, tks)
+        
+        # Cache result
+        if use_cache:
+            df.to_parquet(cache_file)
+        
+        return self._clean_ohlcv(df, tks)
     
     def fetch_ohlcv(
         self,
         tickers: list[str],
         start_date: str,
         end_date: str,
-        interval: str = "1d"
+        interval: str = "1d",
+        use_cache: bool = True,
+        force_refresh: bool = False,
+        allow_cache_fallback_on_error: bool = True,
     ) -> pd.DataFrame:
         """
         Fetch OHLCV data from Yahoo Finance.
@@ -51,6 +207,9 @@ class YfinanceProvider(MarketDataProvider):
             start_date: Start date in YYYY-MM-DD format
             end_date: End date in YYYY-MM-DD format (inclusive)
             interval: Bar interval (default: "1d", yfinance supports 1m, 2m, 5m, 15m, 30m, 60m, 90m, 1h, 1d, 5d, 1wk, 1mo, 3mo)
+            use_cache: Enable caching (default: True)
+            force_refresh: Force refresh even if cache exists (default: False)
+            allow_cache_fallback_on_error: Use cached data if download fails (default: True)
             
         Returns:
             DataFrame with MultiIndex columns (field, ticker)
@@ -63,19 +222,52 @@ class YfinanceProvider(MarketDataProvider):
             Yfinance's end parameter is exclusive, so we add 1 day to ensure
             end_date is included in the results.
         """
+        # Normalize tickers
+        tks = self._normalize_tickers(tickers)
+        
         # Yfinance end param is exclusive - add 1 day to include end_date
         end_dt = datetime.strptime(end_date, "%Y-%m-%d")
         end_dt_inclusive = end_dt + timedelta(days=1)
         end_date_adjusted = end_dt_inclusive.strftime("%Y-%m-%d")
         
-        cfg = MarketDataConfig(
-            start=start_date,
-            end=end_date_adjusted,
-            auto_adjust=self.auto_adjust,
-            progress=self.progress,
-            cache_dir=self.cache_dir,
-        )
-        return fetch_ohlcv(tickers, cfg=cfg, use_cache=True, force_refresh=False)
+        # Check cache
+        cache_file = self._cache_path(tks, start_date, end_date_adjusted, self.auto_adjust)
+        
+        if use_cache and (not force_refresh) and cache_file.exists():
+            df = pd.read_parquet(cache_file)
+            return self._clean_ohlcv(df, tks)
+        
+        # Download from Yahoo Finance
+        try:
+            df = yf.download(
+                tks,
+                start=start_date,
+                end=end_date_adjusted,
+                auto_adjust=self.auto_adjust,
+                progress=self.progress,
+                group_by="column",
+                threads=True,
+            )
+        except Exception as e:
+            if allow_cache_fallback_on_error and cache_file.exists():
+                df = pd.read_parquet(cache_file)
+                return self._clean_ohlcv(df, tks)
+            raise RuntimeError(f"Download fallito: {e}") from e
+        
+        if df is None or df.empty:
+            if allow_cache_fallback_on_error and cache_file.exists():
+                df = pd.read_parquet(cache_file)
+                return self._clean_ohlcv(df, tks)
+            raise RuntimeError("Download vuoto. Controlla tickers o connessione.")
+        
+        # Standardize column format
+        df = self._standardize_columns(df, tks)
+        
+        # Cache result
+        if use_cache:
+            df.to_parquet(cache_file)
+        
+        return self._clean_ohlcv(df, tks)
     
     def fetch_latest_price(self, ticker: str) -> float:
         """
