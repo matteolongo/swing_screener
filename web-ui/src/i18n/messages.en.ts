@@ -625,6 +625,217 @@ export const messagesEn = {
     updateStop: 'Update Stop',
     closePosition: 'Close Position',
   },
+  settingsPage: {
+    header: {
+      title: 'Settings',
+      reset: 'Reset to Defaults',
+    },
+    sections: {
+      accountRisk: {
+        title: 'Account & Risk Management',
+        message: 'Risk settings and account sizing now live in the Strategy page.',
+        goToStrategy: 'Go to Strategy',
+      },
+      technicalIndicators: {
+        title: 'Technical Indicators',
+      },
+      positionManagement: {
+        title: 'Position Management Rules',
+      },
+    },
+    indicatorForm: {
+      common: {
+        formula: 'Formula:',
+        example: 'Example:',
+      },
+      smaWindows: {
+        label: 'SMA Windows (Fast / Mid / Long)',
+        fast: 'Fast (20)',
+        mid: 'Mid (50)',
+        long: 'Long (200)',
+        tooltip: {
+          short: 'Simple Moving Average periods for trend identification',
+          title: 'SMA Windows',
+          content: {
+            intro: 'Simple Moving Averages smooth out price action to identify trends.',
+            formulaValue: 'SMA(n) = (P1 + P2 + ... + Pn) / n',
+            standardWindowsTitle: 'Standard Windows:',
+            sma20: 'Short-term trend (~1 month of trading days)',
+            sma50: 'Intermediate trend (~2.5 months)',
+            sma200: 'Long-term trend (~1 year)',
+            howWeUseTitle: 'How we use them:',
+            howWeUseLine1: '• Price above SMA200 = uptrend filter',
+            howWeUseLine2: '• SMA50 > SMA200 = trend strength confirmation',
+            howWeUseLine3: '• SMA20 = trailing stop reference (after +2R)',
+          },
+        },
+      },
+      atrWindow: {
+        label: 'ATR Window',
+        tooltip: {
+          short: 'Period for volatility calculation (default: 14 days)',
+          title: 'ATR Window',
+          content: {
+            intro: 'Number of trading days used to calculate Average True Range (volatility measure).',
+            standardTitle: 'Standard: 14 days',
+            standardBody:
+              'Developed by J. Welles Wilder. Industry standard is 14 periods. Most traders stick with this default.',
+          },
+        },
+      },
+      entrySignalWindows: {
+        label: 'Entry Signal Windows',
+        breakoutLookback: 'Breakout Lookback',
+        pullbackMa: 'Pullback MA',
+        minHistory: 'Min History',
+        tooltip: {
+          short: 'Breakout lookback and pullback MA windows',
+          title: 'Entry Signal Windows',
+          content: {
+            intro: 'These windows control breakout and pullback entry signals used across the screener and backtests.',
+            breakoutTitle: 'Breakout:',
+            breakoutBody: "Trigger when today's close exceeds the prior high over the lookback period.",
+            pullbackTitle: 'Pullback:',
+            pullbackBody: 'Trigger when yesterday was below the MA and today closes back above it.',
+          },
+        },
+      },
+      momentumLookback: {
+        label: 'Momentum Lookback (6m / 12m in trading days)',
+        sixMonths: '6 months (126)',
+        twelveMonths: '12 months (252)',
+        tooltip: {
+          short: 'Trading days for momentum calculation',
+          title: 'Momentum Lookback Periods',
+          content: {
+            intro: 'We measure momentum (% return) over 6 and 12 month periods.',
+            tradingDaysTitle: 'Trading Days:',
+            tradingDays126: '126 days ≈ 6 months (252 trading days/year ÷ 2)',
+            tradingDays252: '252 days ≈ 12 months (1 year)',
+            formulaValue: 'mom_6m = (Price_now / Price_126_days_ago) - 1',
+            whyTitle: 'Why measure momentum?',
+            whyBody:
+              'Academic research shows momentum persists: past winners tend to keep winning (at least for 3-12 months). We rank stocks by momentum to find the strongest.',
+          },
+        },
+      },
+      benchmark: {
+        label: 'Benchmark Ticker',
+        placeholder: 'SPY',
+        tooltip: {
+          short: 'Reference index for relative strength calculation',
+          title: 'Benchmark Ticker',
+          content: {
+            intro: 'The benchmark is used to calculate Relative Strength (RS).',
+            formulaValue: 'RS = mom_6m[stock] - mom_6m[benchmark]',
+            exampleLine1: 'Stock up 20%, SPY up 10%',
+            exampleLine2: 'RS = +10% (outperforming)',
+            defaultPrefix: 'Default:',
+            defaultSuffix: '(S&P 500 ETF). We want stocks beating the market.',
+          },
+        },
+      },
+    },
+    manageForm: {
+      intro: 'These rules protect profits and limit losses on open positions.',
+      common: {
+        rUnit: 'R',
+        formula: 'Formula:',
+        example: 'Example:',
+      },
+      breakeven: {
+        label: 'Move Stop to Breakeven At',
+        defaultHint: 'Default: 1.0R (lock in breakeven after 1× initial risk gain)',
+        tooltip: {
+          short: 'When profit reaches this R, move stop to entry',
+          title: 'Breakeven Rule',
+          content: {
+            intro: 'When your position reaches +1R profit, automatically suggest moving the stop to your entry price.',
+            whyTitle: 'Why +1R?',
+            whyBody:
+              "At +1R, you've made back your initial risk. Moving stop to entry locks in a \"no-lose\" trade. If the trade reverses, you exit at breakeven (no loss).",
+            exampleLine1: 'Entry: $100, Stop: $95, 1R = $5',
+            exampleLine2: 'Current: $105 → R = +1.0',
+            exampleLine3: '→ Move stop from $95 to $100',
+            goldenRuleTitle: '✅ Golden Rule',
+            goldenRuleBody: 'Never let a winner become a loser. Once at +1R, worst case is breakeven.',
+          },
+        },
+      },
+      trailAfter: {
+        label: 'Start Trailing Stop After',
+        defaultHint: 'Default: 2.0R (start trailing after 2× initial risk)',
+        tooltip: {
+          short: 'After this R, trail stop below SMA',
+          title: 'Trailing Stop Activation',
+          content: {
+            intro: 'After reaching +2R, switch from breakeven stop to a trailing stop that follows SMA20.',
+            whyTitle: 'Why +2R?',
+            whyBody:
+              "At +2R, you've locked in breakeven (+1R). Now we want to \"let winners run\" while protecting downside. Trailing below SMA20 gives the stock room to breathe.",
+            howTitle: 'How it works:',
+            howLine1: 'New Stop = SMA20 × (1 - buffer%)',
+            howLine2: 'Updates daily as SMA20 rises',
+            tipTitle: '💡 Let winners run',
+            tipBody:
+              'Your big winners (+5R, +10R) come from letting good trades run. Trailing stops protect gains without cutting profits short.',
+          },
+        },
+      },
+      trailSma: {
+        label: 'Trail Below SMA',
+        tooltip: {
+          short: 'SMA period for trailing stop reference',
+          title: 'Trailing SMA Period',
+          content: {
+            intro: 'Which moving average to use as the trailing stop reference. Default: SMA20.',
+            whyTitle: 'Why SMA20?',
+            whyPoint1: 'Tracks short-term trend (~1 month)',
+            whyPoint2: 'Not too tight (less whipsaws)',
+            whyPoint3: 'Not too loose (protects profits)',
+            whyPoint4: 'Widely used standard',
+            note: 'Some traders use SMA10 (tighter) or SMA50 (looser). Experiment to find what works for you.',
+          },
+        },
+      },
+      smaBuffer: {
+        label: 'SMA Buffer (%)',
+        defaultHint: 'Default: 0.5% (small safety cushion)',
+        tooltip: {
+          short: 'Safety buffer below SMA (prevents false stops)',
+          title: 'SMA Buffer Percentage',
+          content: {
+            intro: 'Small buffer below the SMA to avoid getting stopped on minor dips below the moving average.',
+            formulaValue: 'Stop = SMA20 × (1 - buffer%)',
+            exampleLine1: 'SMA20 = $108',
+            exampleLine2: 'Buffer = 0.5%',
+            exampleLine3: 'Stop = $108 × 0.995 = $107.46',
+            note: 'Typical: 0.5%. Too tight → whipsaws. Too wide → gives back too much profit.',
+          },
+        },
+      },
+      maxHolding: {
+        label: 'Max Holding Period (bars)',
+        defaultHint: 'Default: 20 bars (~4 weeks for daily charts)',
+        tooltip: {
+          short: 'Exit if position held longer than this many trading days',
+          title: 'Time-Based Exit',
+          content: {
+            intro: 'Automatically suggest closing positions held longer than this many trading days (bars).',
+            whyTitle: 'Why time exits?',
+            whyPoint1: '"Dead money" - capital not working',
+            whyPoint2: 'Swing trades should move within weeks',
+            whyPoint3: "If nothing's happening, find better opportunities",
+            whyPoint4: 'Frees up capital for fresh ideas',
+            typicalRangeTitle: 'Typical Range:',
+            typicalRangeBody: '15-30 trading days (3-6 weeks). Default: 20 bars.',
+            noteTitle: '⚠️ Note',
+            noteBody: 'This is a suggestion, not automatic. Review why the trade stalled before closing.',
+          },
+        },
+      },
+    },
+  },
   strategyPage: {
     header: {
       title: 'Strategy',
