@@ -18,15 +18,15 @@ import {
 import { t } from '@/i18n/t';
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Daily Review', href: '/daily-review', icon: ClipboardCheck },
-  { name: 'Screener', href: '/screener', icon: Search },
-  { name: 'Backtest', href: '/backtest', icon: BarChart3 },
-  { name: 'Orders', href: '/orders', icon: FileText },
-  { name: 'Positions', href: '/positions', icon: TrendingUp },
-  { name: 'Strategy', href: '/strategy', icon: SlidersHorizontal },
-  { name: 'Settings', href: '/settings', icon: Settings },
-];
+  { labelKey: 'sidebar.nav.dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { labelKey: 'sidebar.nav.dailyReview', href: '/daily-review', icon: ClipboardCheck },
+  { labelKey: 'sidebar.nav.screener', href: '/screener', icon: Search },
+  { labelKey: 'sidebar.nav.backtest', href: '/backtest', icon: BarChart3 },
+  { labelKey: 'sidebar.nav.orders', href: '/orders', icon: FileText },
+  { labelKey: 'sidebar.nav.positions', href: '/positions', icon: TrendingUp },
+  { labelKey: 'sidebar.nav.strategy', href: '/strategy', icon: SlidersHorizontal },
+  { labelKey: 'sidebar.nav.settings', href: '/settings', icon: Settings },
+] as const;
 
 export default function Sidebar() {
   const strategiesQuery = useStrategiesQuery();
@@ -82,7 +82,7 @@ export default function Sidebar() {
       <nav className="flex-1 p-4 space-y-1">
         {navigation.map((item) => (
           <NavLink
-            key={item.name}
+            key={item.labelKey}
             to={item.href}
             className={({ isActive }) =>
               cn(
@@ -94,7 +94,7 @@ export default function Sidebar() {
             }
           >
             <item.icon className="w-5 h-5" />
-            {item.name}
+            {t(item.labelKey)}
           </NavLink>
         ))}
       </nav>

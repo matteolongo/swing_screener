@@ -182,6 +182,16 @@ export const messagesEn = {
     },
   },
   sidebar: {
+    nav: {
+      dashboard: 'Dashboard',
+      dailyReview: 'Daily Review',
+      screener: 'Screener',
+      backtest: 'Backtest',
+      orders: 'Orders',
+      positions: 'Positions',
+      strategy: 'Strategy',
+      settings: 'Settings',
+    },
     activeStrategy: 'Active Strategy',
     loadingStrategies: 'Loading strategies...',
     noStrategies: 'No strategies',
@@ -191,6 +201,181 @@ export const messagesEn = {
     loadError: 'Failed to load strategies',
     updateError: 'Failed to update active strategy',
     versionLabel: 'Risk-first swing trading',
+  },
+  header: {
+    brand: 'Swing Screener',
+  },
+  strategyCoach: {
+    title: 'Strategy Coach',
+    activeLabel: 'Active:',
+    loading: 'Loading strategy explanation...',
+    examplePrefix: 'Example:',
+    actions: {
+      collapse: 'Collapse',
+      expand: 'Expand',
+      collapseAria: 'Collapse strategy coach',
+      expandAria: 'Expand strategy coach',
+    },
+    sections: {
+      goal: {
+        title: 'What this strategy tries to do',
+        explanation:
+          'It searches for strong trend followers and keeps risk fixed so one bad trade stays small. It ranks candidates, keeps the top {{topN}}, and avoids weak risk/reward setups.',
+      },
+      filters: {
+        title: 'How symbols are filtered',
+        explanation:
+          'Universe filters keep symbols between {{minPrice}} and {{maxPrice}}, in {{currencyScope}}, and under {{maxAtrPct}}% ATR/price.',
+        formula: 'Trend: close > SMA({{smaFast}}), SMA({{smaMid}}), SMA({{smaLong}})',
+        example:
+          'Momentum windows use {{lookback6m}} bars (6M) and {{lookback12m}} bars (12M) vs {{benchmark}}.',
+      },
+      entries: {
+        title: 'How entries and stops are formed',
+        explanation: 'Entries come from breakout/pullback signal rules, then stop distance is anchored to volatility.',
+        formula: 'Stop = Entry - ({{kAtr}} x ATR({{atrWindow}}))',
+        example: 'If Entry is 50.00 and ATR is 1.20, stop is about {{stop}}.',
+      },
+      sizing: {
+        title: 'How position sizing works',
+        explanation:
+          'Position size is chosen from a fixed risk budget, then capped by max position size and minimum shares.',
+        formula: 'Risk Amount = Account Size x Risk % = {{accountSize}} x {{riskPct}}',
+        example: 'Per-trade budget is about {{budget}} with max position {{maxPositionPct}}.',
+      },
+      recommended: {
+        title: 'What makes a trade Recommended',
+        explanation:
+          'Recommendation must pass checklist gates, not just have a high score or confidence.',
+        formula: 'Requires RR >= {{minRr}} and Fee/Risk <= {{maxFeeRiskPct}}',
+        example:
+          'A setup with great momentum can still be blocked if stop is invalid, RR is low, or costs are too high.',
+      },
+      manage: {
+        title: 'How open positions are managed',
+        explanation:
+          'Once trade progress reaches specific R levels, stop logic shifts from protection to trend trailing.',
+        formula: 'Breakeven at +{{breakevenAtR}}R, trail after +{{trailAfterR}}R using SMA({{trailSma}})',
+        example: 'Trailing stop uses a {{smaBufferPct}} buffer under the trailing SMA.',
+      },
+      overlay: {
+        title: 'What social overlay means',
+        enabledExplanation:
+          'Overlay is ON. It reviews social extremes and can reduce size or veto a trade when hype/risk is abnormal.',
+        disabledExplanation: 'Overlay is OFF. Recommendations rely only on price/volume/risk rules.',
+        formula: 'Triggers include Attention Z >= {{attentionZThreshold}} and sample >= {{minSampleSize}}',
+      },
+    },
+    fallback: {
+      goal: {
+        title: 'What this strategy tries to do',
+        explanation:
+          'This fallback explanation uses your local Settings values because active strategy details were unavailable.',
+      },
+      filters: {
+        title: 'How symbols are filtered',
+        explanation:
+          'Trend uses SMA({{smaFast}}/{{smaMid}}/{{smaLong}}) with momentum windows {{lookback6m}} and {{lookback12m}}.',
+      },
+      entries: {
+        title: 'How entries and stops are formed',
+        explanation: 'Stops are volatility-based and tied to ATR.',
+        formula: 'Stop = Entry - ({{kAtr}} x ATR({{atrWindow}}))',
+      },
+      sizing: {
+        title: 'How position sizing works',
+        explanation: 'Each trade uses a fixed risk budget from account size.',
+        formula: 'Risk Amount = {{accountSize}} x {{riskPct}}',
+      },
+      recommended: {
+        title: 'What makes a trade Recommended',
+        explanation:
+          'A trade must meet minimum RR ({{minRr}}) and cost-to-risk cap ({{maxFeeRiskPct}}).',
+      },
+      manage: {
+        title: 'How open positions are managed',
+        explanation:
+          'Move to breakeven at +{{breakevenAtR}}R, trail after +{{trailAfterR}}R with SMA({{trailSma}}).',
+        formula: 'Trailing buffer = {{smaBufferPct}}',
+      },
+    },
+  },
+  dashboardPage: {
+    header: {
+      title: 'Dashboard',
+    },
+    strategyCoach: {
+      subtitleActive: 'Teacher-style explanation of how this strategy makes decisions.',
+      subtitleFallback: 'Using local Settings values because active strategy data could not be loaded.',
+      subtitleLoading: 'Loading strategy details...',
+    },
+    portfolioSummary: {
+      title: 'Portfolio Summary',
+      accountSize: 'Account Size',
+      riskBudgetPerTrade: 'Risk Budget / Trade',
+      openRiskAtStops: 'Open Risk (at stops)',
+      openPositions: 'Open Positions',
+      positionValue: 'Position Value',
+      totalPnl: 'Total P&L',
+      totalPnlDisclaimer: '(not a decision metric)',
+      totalPnlDetail: 'Includes realized P&L, FX, and fees — focus on current risk/reward instead.',
+      percentOfAccount: '{{value}} of account',
+    },
+    actionItems: {
+      title: "Today's Action Items",
+      empty: "No action items. You're all caught up!",
+      pendingOrderSingular: '{{count}} pending order',
+      pendingOrderPlural: '{{count}} pending orders',
+      orderRow: '{{orderType}} - {{quantity}} shares @ {{price}}',
+      viewAllOrders: 'View all {{count}} orders',
+      openPositionSingular: '{{count}} open position',
+      openPositionPlural: '{{count}} open positions',
+      positionRow: '{{quantity}} shares @ {{entry}}',
+      viewAllPositions: 'View all {{count}} positions',
+    },
+    dailyRoutine: {
+      title: 'Daily Routine (Top 3)',
+      subtitle: 'After market close, keep the routine simple and consistent.',
+      steps: {
+        doNothingLead: 'DO NOTHING',
+        doNothingBody: '— if there are no stop updates and no new trades.',
+        increaseStopLead: 'INCREASE STOP LOSS PRICE',
+        increaseStopBody: '— only move stops up when suggested.',
+        placeBuyLead: 'PLACE BUY LIMIT ORDER FOR TOP 3 screened symbols',
+        placeBuyBody: '— after you run the screener.',
+      },
+    },
+    openOrdersSnapshot: {
+      title: 'Open Orders Snapshot',
+      refreshPrices: 'Refresh Prices',
+      loadError: 'Failed to load order snapshots.',
+      empty: 'No pending orders to review.',
+      headers: {
+        ticker: 'Ticker',
+        type: 'Type',
+        qty: 'Qty',
+        last: 'Last',
+        toLimit: 'To Limit',
+        toStop: 'To Stop',
+        lastBar: 'Last Bar',
+      },
+    },
+    quickActions: {
+      title: 'Quick Actions',
+      runScreener: 'Run Screener',
+      managePositions: 'Manage Positions',
+      viewOrders: 'View Orders',
+    },
+    gettingStarted: {
+      title: 'Getting Started',
+      subtitle: "Welcome to Swing Screener! Here's what to do next:",
+      step1Prefix: 'Review and customize your',
+      step1LinkLabel: 'Settings',
+      step1Suffix: '(risk parameters, indicators)',
+      step2: 'Run the Screener to find trade candidates',
+      step3: 'Create orders for your best setups',
+      step4: 'Track positions and manage stops',
+    },
   },
   screener: {
     header: {
