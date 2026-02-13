@@ -42,7 +42,7 @@ class PositionModel(Base):
     exit_order_ids = Column(String, nullable=True)  # JSON array as string
 
     # Relationship
-    orders = relationship("OrderModel", back_populates="position", foreign_keys="OrderModel.position_id")
+    orders = relationship("OrderModel", back_populates="position", foreign_keys="OrderModel.position_id_fk")
 
 
 class OrderModel(Base):
