@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { BacktestCurvePoint } from '@/types/backtest';
+import { BacktestCurvePoint } from '@/features/backtest/types';
 
 const COLORS = [
   '#1d4ed8',
