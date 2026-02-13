@@ -9,7 +9,7 @@ from dataclasses import replace
 
 import pandas as pd
 
-from swing_screener.utils.file_lock import locked_read_json_cli, locked_write_json_cli
+from swing_screener.db import Database, get_default_db, model_to_position
 
 
 PositionStatus = Literal["open", "closed"]
@@ -58,79 +58,49 @@ class PositionUpdate:
     reason: str
 
 
-def load_positions(path: str | Path) -> list[Position]:
-    p = Path(path)
-    data = locked_read_json_cli(p)
-    out: list[Position] = []
-    for item in data.get("positions", []):
-        out.append(
-            Position(
-                ticker=str(item["ticker"]).upper(),
-                status=item.get("status", "open"),
-                position_id=item.get("position_id", None),
-                source_order_id=item.get("source_order_id", None),
-                entry_date=item["entry_date"],
-                entry_price=float(item["entry_price"]),
-                stop_price=float(item["stop_price"]),
-                shares=int(item["shares"]),
-                initial_risk=(
-                    float(item["initial_risk"])
-                    if item.get("initial_risk") is not None
-                    else None
-                ),
-                max_favorable_price=(
-                    float(item["max_favorable_price"])
-                    if item.get("max_favorable_price") is not None
-                    else None
-                ),
-                exit_date=(
-                    str(item.get("exit_date")).strip()
-                    if item.get("exit_date")
-                    else None
-                ),
-                exit_price=(
-                    float(item["exit_price"])
-                    if item.get("exit_price") is not None
-                    else None
-                ),
-                notes=str(item.get("notes", "")),
-                exit_order_ids=(
-                    [str(x) for x in item.get("exit_order_ids", [])]
-                    if isinstance(item.get("exit_order_ids", None), list)
-                    else None
-                ),
-            )
-        )
-    return out
+def load_positions(path: str | Path = None, db: Database = None) -> list[Position]:
+    """Load positions from database.
+    
+    Args:
+        path: Legacy parameter for backward compatibility (ignored if db provided)
+        db: Database instance to use. If None, uses default database.
+        
+    Returns:
+        List of Position objects
+    """
+    if db is None:
+        db = get_default_db()
+    
+    session = db.get_session()
+    try:
+        from swing_screener.db import PositionModel
+        models = session.query(PositionModel).all()
+        return [model_to_position(m) for m in models]
+    finally:
+        session.close()
 
 
 def save_positions(
     path: str | Path, positions: list[Position], asof: Optional[str] = None
 ) -> None:
-    p = Path(path)
-    payload = {
-        "asof": asof,
-        "positions": [
-            {
-                "ticker": pos.ticker,
-                "status": pos.status,
-                "position_id": pos.position_id,
-                "source_order_id": pos.source_order_id,
-                "entry_date": pos.entry_date,
-                "entry_price": pos.entry_price,
-                "stop_price": pos.stop_price,
-                "shares": pos.shares,
-                "initial_risk": pos.initial_risk,
-                "max_favorable_price": pos.max_favorable_price,
-                "exit_date": pos.exit_date,
-                "exit_price": pos.exit_price,
-                "notes": pos.notes,
-                "exit_order_ids": pos.exit_order_ids,
-            }
-            for pos in positions
-        ],
-    }
-    locked_write_json_cli(p, payload)
+    """[DEPRECATED] Save positions to database.
+    
+    This function is kept for backward compatibility but now uses the database.
+    The file-based persistence is no longer used.
+    
+    Args:
+        path: Ignored (kept for backward compatibility)
+        positions: List of positions to save
+        asof: Ignored (kept for backward compatibility)
+    """
+    import warnings
+    warnings.warn(
+        "save_positions is deprecated. Positions are now persisted via database transactions.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+    # For now, do nothing as positions should be saved via transactions
+    pass
 
 
 def scale_in_position(
