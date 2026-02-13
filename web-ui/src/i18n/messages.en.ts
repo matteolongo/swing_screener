@@ -1102,14 +1102,33 @@ export const messagesEn = {
     equityCurve: {
       title: 'Equity Curve (R)',
       empty: 'No curve to display yet.',
+      noData: 'No equity curve data.',
+      series: {
+        total: 'Total',
+        unknown: 'UNKNOWN',
+      },
     },
     summaryByTicker: {
       title: 'Summary by Ticker',
       empty: 'No ticker-level summary available.',
+      headers: {
+        ticker: 'Ticker',
+        trades: 'Trades',
+        expectancy: 'Expectancy',
+        winRate: 'Win Rate',
+        avgR: 'Avg R',
+      },
     },
     trades: {
       title: 'Trades',
       empty: 'No trades generated.',
+      headers: {
+        ticker: 'Ticker',
+        entry: 'Entry',
+        exit: 'Exit',
+        r: 'R',
+        exitReason: 'Exit Reason',
+      },
     },
     saved: {
       title: 'Saved Simulations',

@@ -1,5 +1,6 @@
 import DataTable, { type DataTableColumn } from '@/components/common/DataTable';
 import type { FullBacktestResponse } from '@/features/backtest/types';
+import { t } from '@/i18n/t';
 import { formatR } from '@/utils/formatters';
 
 type BacktestTradesTableProps = {
@@ -10,22 +11,22 @@ export default function BacktestTradesTable({ rows }: BacktestTradesTableProps) 
   const columns: DataTableColumn<FullBacktestResponse['trades'][number]>[] = [
     {
       key: 'ticker',
-      header: 'Ticker',
+      header: t('backtestPage.trades.headers.ticker'),
       render: (trade) => <span className="font-medium">{trade.ticker}</span>,
     },
     {
       key: 'entry',
-      header: 'Entry',
+      header: t('backtestPage.trades.headers.entry'),
       render: (trade) => trade.entryDate,
     },
     {
       key: 'exit',
-      header: 'Exit',
+      header: t('backtestPage.trades.headers.exit'),
       render: (trade) => trade.exitDate,
     },
     {
       key: 'r',
-      header: 'R',
+      header: t('backtestPage.trades.headers.r'),
       render: (trade) => (
         <span className={trade.r >= 0 ? 'text-green-600' : 'text-red-600'}>
           {formatR(trade.r)}
@@ -34,7 +35,7 @@ export default function BacktestTradesTable({ rows }: BacktestTradesTableProps) 
     },
     {
       key: 'exitReason',
-      header: 'Exit Reason',
+      header: t('backtestPage.trades.headers.exitReason'),
       render: (trade) => trade.exitReason,
     },
   ];
@@ -45,7 +46,7 @@ export default function BacktestTradesTable({ rows }: BacktestTradesTableProps) 
         rows={rows}
         columns={columns}
         getRowKey={(trade, idx) => `${trade.ticker}-${trade.entryDate}-${idx}`}
-        emptyMessage="No trades generated."
+        emptyMessage={t('backtestPage.trades.empty')}
         tableClassName="text-sm"
       />
     </div>

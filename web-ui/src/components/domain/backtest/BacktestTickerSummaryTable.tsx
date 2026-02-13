@@ -1,5 +1,6 @@
 import DataTable, { type DataTableColumn } from '@/components/common/DataTable';
 import type { FullBacktestResponse } from '@/features/backtest/types';
+import { t } from '@/i18n/t';
 import { formatPercent, formatR } from '@/utils/formatters';
 
 type BacktestTickerSummaryTableProps = {
@@ -10,27 +11,27 @@ export default function BacktestTickerSummaryTable({ rows }: BacktestTickerSumma
   const columns: DataTableColumn<FullBacktestResponse['summaryByTicker'][number]>[] = [
     {
       key: 'ticker',
-      header: 'Ticker',
+      header: t('backtestPage.summaryByTicker.headers.ticker'),
       render: (row) => <span className="font-medium">{row.ticker}</span>,
     },
     {
       key: 'trades',
-      header: 'Trades',
+      header: t('backtestPage.summaryByTicker.headers.trades'),
       render: (row) => row.trades,
     },
     {
       key: 'expectancy',
-      header: 'Expectancy',
+      header: t('backtestPage.summaryByTicker.headers.expectancy'),
       render: (row) => (row.expectancyR != null ? formatR(row.expectancyR) : '—'),
     },
     {
       key: 'winrate',
-      header: 'Win Rate',
+      header: t('backtestPage.summaryByTicker.headers.winRate'),
       render: (row) => (row.winrate != null ? formatPercent(row.winrate * 100) : '—'),
     },
     {
       key: 'avgR',
-      header: 'Avg R',
+      header: t('backtestPage.summaryByTicker.headers.avgR'),
       render: (row) => (row.avgR != null ? formatR(row.avgR) : '—'),
     },
   ];
@@ -41,7 +42,7 @@ export default function BacktestTickerSummaryTable({ rows }: BacktestTickerSumma
         rows={rows}
         columns={columns}
         getRowKey={(row) => row.ticker}
-        emptyMessage="No ticker-level summary available."
+        emptyMessage={t('backtestPage.summaryByTicker.empty')}
         tableClassName="text-sm"
       />
     </div>
