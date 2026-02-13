@@ -1,8 +1,10 @@
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import type { Dispatch, SetStateAction } from 'react';
+import { t } from '@/i18n/t';
 import {
   CheckboxInput,
+  HelpInfo,
   NumberInput,
   SelectInput,
   TextInput,
@@ -20,7 +22,7 @@ interface StrategyAdvancedSettingsCardProps {
   setShowAdvanced: Dispatch<SetStateAction<boolean>>;
   lowRrWarning: boolean;
   highFeeWarning: boolean;
-  help: Record<string, any>;
+  help: Record<string, HelpInfo>;
 }
 
 export default function StrategyAdvancedSettingsCard({
@@ -32,13 +34,26 @@ export default function StrategyAdvancedSettingsCard({
   highFeeWarning,
   help,
 }: StrategyAdvancedSettingsCardProps) {
+  const backtestEntryOptions = [
+    { value: 'auto', label: t('strategyPage.advanced.options.entryAuto') },
+    { value: 'breakout', label: t('strategyPage.advanced.options.entryBreakout') },
+    { value: 'pullback', label: t('strategyPage.advanced.options.entryPullback') },
+  ];
+
+  const backtestExitOptions = [
+    { value: 'trailing_stop', label: t('strategyPage.advanced.options.exitTrailingStop') },
+    { value: 'take_profit', label: t('strategyPage.advanced.options.exitTakeProfit') },
+  ];
+
   return (
     <Card variant="bordered">
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
-          <span>Advanced Settings</span>
+          <span>{t('strategyPage.advanced.title')}</span>
           <Button variant="secondary" onClick={() => setShowAdvanced((prev) => !prev)}>
-            {showAdvanced ? 'Hide Advanced' : 'Show Advanced'}
+            {showAdvanced
+              ? t('strategyPage.advanced.actions.hide')
+              : t('strategyPage.advanced.actions.show')}
           </Button>
         </CardTitle>
       </CardHeader>
@@ -46,10 +61,10 @@ export default function StrategyAdvancedSettingsCard({
         <CardContent>
           <div className="space-y-6">
             <div>
-              <div className="text-sm font-semibold mb-3">Trend (SMA)</div>
+              <div className="text-sm font-semibold mb-3">{t('strategyPage.advanced.sections.trend')}</div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <NumberInput
-                  label="SMA Fast"
+                  label={t('strategyPage.advanced.fields.smaFast')}
                   value={draft.universe.trend.smaFast}
                   onChange={(value) =>
                     setDraft({
@@ -65,7 +80,7 @@ export default function StrategyAdvancedSettingsCard({
                   help={help.smaFast}
                 />
                 <NumberInput
-                  label="SMA Mid"
+                  label={t('strategyPage.advanced.fields.smaMid')}
                   value={draft.universe.trend.smaMid}
                   onChange={(value) =>
                     setDraft({
@@ -81,7 +96,7 @@ export default function StrategyAdvancedSettingsCard({
                   help={help.smaMid}
                 />
                 <NumberInput
-                  label="SMA Long"
+                  label={t('strategyPage.advanced.fields.smaLong')}
                   value={draft.universe.trend.smaLong}
                   onChange={(value) =>
                     setDraft({
@@ -100,10 +115,10 @@ export default function StrategyAdvancedSettingsCard({
             </div>
 
             <div>
-              <div className="text-sm font-semibold mb-3">Volatility</div>
+              <div className="text-sm font-semibold mb-3">{t('strategyPage.advanced.sections.volatility')}</div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <NumberInput
-                  label="ATR Window"
+                  label={t('strategyPage.advanced.fields.atrWindow')}
                   value={draft.universe.vol.atrWindow}
                   onChange={(value) =>
                     setDraft({
@@ -119,7 +134,7 @@ export default function StrategyAdvancedSettingsCard({
                   help={help.atrWindow}
                 />
                 <NumberInput
-                  label="Max ATR %"
+                  label={t('strategyPage.advanced.fields.maxAtrPct')}
                   value={draft.universe.filt.maxAtrPct}
                   onChange={(value) =>
                     setDraft({
@@ -138,7 +153,7 @@ export default function StrategyAdvancedSettingsCard({
               </div>
               <div className="mt-3 flex flex-wrap gap-4">
                 <CheckboxInput
-                  label="Require Trend OK"
+                  label={t('strategyPage.advanced.fields.requireTrendOk')}
                   checked={draft.universe.filt.requireTrendOk}
                   onChange={(value) =>
                     setDraft({
@@ -152,7 +167,7 @@ export default function StrategyAdvancedSettingsCard({
                   help={help.requireTrendOk}
                 />
                 <CheckboxInput
-                  label="Require RS Positive"
+                  label={t('strategyPage.advanced.fields.requireRsPositive')}
                   checked={draft.universe.filt.requireRsPositive}
                   onChange={(value) =>
                     setDraft({
@@ -169,10 +184,10 @@ export default function StrategyAdvancedSettingsCard({
             </div>
 
             <div>
-              <div className="text-sm font-semibold mb-3">Momentum</div>
+              <div className="text-sm font-semibold mb-3">{t('strategyPage.advanced.sections.momentum')}</div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <NumberInput
-                  label="Lookback 6m"
+                  label={t('strategyPage.advanced.fields.lookback6m')}
                   value={draft.universe.mom.lookback6m}
                   onChange={(value) =>
                     setDraft({
@@ -188,7 +203,7 @@ export default function StrategyAdvancedSettingsCard({
                   help={help.momentum6m}
                 />
                 <NumberInput
-                  label="Lookback 12m"
+                  label={t('strategyPage.advanced.fields.lookback12m')}
                   value={draft.universe.mom.lookback12m}
                   onChange={(value) =>
                     setDraft({
@@ -204,7 +219,7 @@ export default function StrategyAdvancedSettingsCard({
                   help={help.momentum12m}
                 />
                 <TextInput
-                  label="Benchmark"
+                  label={t('strategyPage.advanced.fields.benchmark')}
                   value={draft.universe.mom.benchmark}
                   onChange={(value) =>
                     setDraft({
@@ -221,10 +236,12 @@ export default function StrategyAdvancedSettingsCard({
             </div>
 
             <div>
-              <div className="text-sm font-semibold mb-3">Ranking Weights</div>
+              <div className="text-sm font-semibold mb-3">
+                {t('strategyPage.advanced.sections.rankingWeights')}
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <NumberInput
-                  label="Weight 6m"
+                  label={t('strategyPage.advanced.fields.weight6m')}
                   value={draft.ranking.wMom6m}
                   onChange={(value) =>
                     setDraft({
@@ -237,7 +254,7 @@ export default function StrategyAdvancedSettingsCard({
                   help={help.weightMom6m}
                 />
                 <NumberInput
-                  label="Weight 12m"
+                  label={t('strategyPage.advanced.fields.weight12m')}
                   value={draft.ranking.wMom12m}
                   onChange={(value) =>
                     setDraft({
@@ -250,7 +267,7 @@ export default function StrategyAdvancedSettingsCard({
                   help={help.weightMom12m}
                 />
                 <NumberInput
-                  label="Weight RS"
+                  label={t('strategyPage.advanced.fields.weightRs')}
                   value={draft.ranking.wRs6m}
                   onChange={(value) =>
                     setDraft({
@@ -266,10 +283,10 @@ export default function StrategyAdvancedSettingsCard({
             </div>
 
             <div>
-              <div className="text-sm font-semibold mb-3">Risk Details</div>
+              <div className="text-sm font-semibold mb-3">{t('strategyPage.advanced.sections.riskDetails')}</div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <NumberInput
-                  label="Min Shares"
+                  label={t('strategyPage.advanced.fields.minShares')}
                   value={draft.risk.minShares}
                   onChange={(value) =>
                     setDraft({
@@ -281,7 +298,7 @@ export default function StrategyAdvancedSettingsCard({
                   min={1}
                 />
                 <NumberInput
-                  label="Minimum RR"
+                  label={t('strategyPage.advanced.fields.minimumRr')}
                   value={draft.risk.minRr}
                   onChange={(value) =>
                     setDraft({
@@ -294,7 +311,7 @@ export default function StrategyAdvancedSettingsCard({
                   help={help.minRr}
                 />
                 <NumberInput
-                  label="Max Fee / Risk"
+                  label={t('strategyPage.advanced.fields.maxFeeRisk')}
                   value={draft.risk.maxFeeRiskPct * 100}
                   onChange={(value) =>
                     setDraft({
@@ -311,20 +328,22 @@ export default function StrategyAdvancedSettingsCard({
               </div>
               {(lowRrWarning || highFeeWarning) && (
                 <div className="mt-3 rounded border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
-                  <div className="font-semibold">Recommendation guardrails</div>
+                  <div className="font-semibold">{t('strategyPage.advanced.guardrails.title')}</div>
                   {lowRrWarning && (
-                    <div>Minimum RR below 1.5 may allow low-payoff setups.</div>
+                    <div>{t('strategyPage.advanced.guardrails.lowRr')}</div>
                   )}
                   {highFeeWarning && (
-                    <div>Max fee/risk above 30% increases fee drag risk.</div>
+                    <div>{t('strategyPage.advanced.guardrails.highFee')}</div>
                   )}
                 </div>
               )}
               <div className="mt-6">
-                <div className="text-sm font-semibold mb-3">Regime Risk Scaling</div>
+                <div className="text-sm font-semibold mb-3">
+                  {t('strategyPage.advanced.sections.regimeRiskScaling')}
+                </div>
                 <div className="space-y-4">
                   <CheckboxInput
-                    label="Enable Regime Scaling"
+                    label={t('strategyPage.advanced.fields.enableRegimeScaling')}
                     checked={draft.risk.regimeEnabled}
                     onChange={(value) =>
                       setDraft({
@@ -336,7 +355,7 @@ export default function StrategyAdvancedSettingsCard({
                   />
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <NumberInput
-                      label="Trend SMA"
+                      label={t('strategyPage.advanced.fields.trendSma')}
                       value={draft.risk.regimeTrendSma}
                       onChange={(value) =>
                         setDraft({
@@ -349,7 +368,7 @@ export default function StrategyAdvancedSettingsCard({
                       help={help.regimeTrendSma}
                     />
                     <NumberInput
-                      label="Trend Multiplier"
+                      label={t('strategyPage.advanced.fields.trendMultiplier')}
                       value={draft.risk.regimeTrendMultiplier}
                       onChange={(value) =>
                         setDraft({
@@ -363,7 +382,7 @@ export default function StrategyAdvancedSettingsCard({
                       help={help.regimeTrendMultiplier}
                     />
                     <NumberInput
-                      label="Volatility ATR Window"
+                      label={t('strategyPage.advanced.fields.volatilityAtrWindow')}
                       value={draft.risk.regimeVolAtrWindow}
                       onChange={(value) =>
                         setDraft({
@@ -376,7 +395,7 @@ export default function StrategyAdvancedSettingsCard({
                       help={help.regimeVolAtrWindow}
                     />
                     <NumberInput
-                      label="Volatility ATR % Threshold"
+                      label={t('strategyPage.advanced.fields.volatilityAtrPctThreshold')}
                       value={draft.risk.regimeVolAtrPctThreshold}
                       onChange={(value) =>
                         setDraft({
@@ -389,7 +408,7 @@ export default function StrategyAdvancedSettingsCard({
                       help={help.regimeVolAtrPctThreshold}
                     />
                     <NumberInput
-                      label="Volatility Multiplier"
+                      label={t('strategyPage.advanced.fields.volatilityMultiplier')}
                       value={draft.risk.regimeVolMultiplier}
                       onChange={(value) =>
                         setDraft({
@@ -408,10 +427,10 @@ export default function StrategyAdvancedSettingsCard({
             </div>
 
             <div>
-              <div className="text-sm font-semibold mb-3">Manage Rules</div>
+              <div className="text-sm font-semibold mb-3">{t('strategyPage.advanced.sections.manageRules')}</div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <NumberInput
-                  label="Breakeven At R"
+                  label={t('strategyPage.advanced.fields.breakevenAtR')}
                   value={draft.manage.breakevenAtR}
                   onChange={(value) =>
                     setDraft({
@@ -423,7 +442,7 @@ export default function StrategyAdvancedSettingsCard({
                   min={0}
                 />
                 <NumberInput
-                  label="Trail After R"
+                  label={t('strategyPage.advanced.fields.trailAfterR')}
                   value={draft.manage.trailAfterR}
                   onChange={(value) =>
                     setDraft({
@@ -435,7 +454,7 @@ export default function StrategyAdvancedSettingsCard({
                   min={0}
                 />
                 <NumberInput
-                  label="Trail SMA"
+                  label={t('strategyPage.advanced.fields.trailSma')}
                   value={draft.manage.trailSma}
                   onChange={(value) =>
                     setDraft({
@@ -448,7 +467,7 @@ export default function StrategyAdvancedSettingsCard({
                   help={help.trailSma}
                 />
                 <NumberInput
-                  label="SMA Buffer"
+                  label={t('strategyPage.advanced.fields.smaBuffer')}
                   value={draft.manage.smaBufferPct * 100}
                   onChange={(value) =>
                     setDraft({
@@ -462,7 +481,7 @@ export default function StrategyAdvancedSettingsCard({
                   help={help.smaBuffer}
                 />
                 <NumberInput
-                  label="Max Holding Days"
+                  label={t('strategyPage.advanced.fields.maxHoldingDays')}
                   value={draft.manage.maxHoldingDays}
                   onChange={(value) =>
                     setDraft({
@@ -474,7 +493,7 @@ export default function StrategyAdvancedSettingsCard({
                   min={1}
                 />
                 <TextInput
-                  label="Benchmark"
+                  label={t('strategyPage.advanced.fields.benchmark')}
                   value={draft.manage.benchmark}
                   onChange={(value) =>
                     setDraft({
@@ -487,16 +506,14 @@ export default function StrategyAdvancedSettingsCard({
             </div>
 
             <div>
-              <div className="text-sm font-semibold mb-3">Backtest Defaults</div>
+              <div className="text-sm font-semibold mb-3">
+                {t('strategyPage.advanced.sections.backtestDefaults')}
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <SelectInput
-                  label="Entry Type"
+                  label={t('strategyPage.advanced.fields.entryType')}
                   value={draft.backtest.entryType}
-                  options={[
-                    { value: 'auto', label: 'Auto' },
-                    { value: 'breakout', label: 'Breakout' },
-                    { value: 'pullback', label: 'Pullback' },
-                  ]}
+                  options={backtestEntryOptions}
                   onChange={(value) =>
                     setDraft({
                       ...draft,
@@ -505,12 +522,9 @@ export default function StrategyAdvancedSettingsCard({
                   }
                 />
                 <SelectInput
-                  label="Exit Mode"
+                  label={t('strategyPage.advanced.fields.exitMode')}
                   value={draft.backtest.exitMode}
-                  options={[
-                    { value: 'trailing_stop', label: 'Trailing Stop' },
-                    { value: 'take_profit', label: 'Take Profit' },
-                  ]}
+                  options={backtestExitOptions}
                   onChange={(value) =>
                     setDraft({
                       ...draft,
@@ -519,7 +533,7 @@ export default function StrategyAdvancedSettingsCard({
                   }
                 />
                 <NumberInput
-                  label="Take Profit (R)"
+                  label={t('strategyPage.advanced.fields.takeProfitR')}
                   value={draft.backtest.takeProfitR}
                   onChange={(value) =>
                     setDraft({
@@ -531,7 +545,7 @@ export default function StrategyAdvancedSettingsCard({
                   min={0}
                 />
                 <NumberInput
-                  label="Max Holding Days"
+                  label={t('strategyPage.advanced.fields.maxHoldingDays')}
                   value={draft.backtest.maxHoldingDays}
                   onChange={(value) =>
                     setDraft({
@@ -543,7 +557,7 @@ export default function StrategyAdvancedSettingsCard({
                   min={1}
                 />
                 <NumberInput
-                  label="Breakeven At R"
+                  label={t('strategyPage.advanced.fields.breakevenAtR')}
                   value={draft.backtest.breakevenAtR}
                   onChange={(value) =>
                     setDraft({
@@ -555,7 +569,7 @@ export default function StrategyAdvancedSettingsCard({
                   min={0}
                 />
                 <NumberInput
-                  label="Trail After R"
+                  label={t('strategyPage.advanced.fields.trailAfterR')}
                   value={draft.backtest.trailAfterR}
                   onChange={(value) =>
                     setDraft({
@@ -567,7 +581,7 @@ export default function StrategyAdvancedSettingsCard({
                   min={0}
                 />
                 <NumberInput
-                  label="Trail SMA"
+                  label={t('strategyPage.advanced.fields.trailSma')}
                   value={draft.backtest.trailSma}
                   onChange={(value) =>
                     setDraft({
@@ -580,7 +594,7 @@ export default function StrategyAdvancedSettingsCard({
                   help={help.trailSma}
                 />
                 <NumberInput
-                  label="SMA Buffer"
+                  label={t('strategyPage.advanced.fields.smaBuffer')}
                   value={draft.backtest.smaBufferPct * 100}
                   onChange={(value) =>
                     setDraft({
@@ -594,7 +608,7 @@ export default function StrategyAdvancedSettingsCard({
                   help={help.smaBuffer}
                 />
                 <NumberInput
-                  label="Commission"
+                  label={t('strategyPage.advanced.fields.commission')}
                   value={draft.backtest.commissionPct * 100}
                   onChange={(value) =>
                     setDraft({
@@ -607,7 +621,7 @@ export default function StrategyAdvancedSettingsCard({
                   suffix="%"
                 />
                 <NumberInput
-                  label="Min History"
+                  label={t('strategyPage.advanced.fields.minHistory')}
                   value={draft.backtest.minHistory}
                   onChange={(value) =>
                     setDraft({

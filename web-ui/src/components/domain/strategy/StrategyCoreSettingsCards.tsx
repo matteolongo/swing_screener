@@ -1,21 +1,13 @@
 import Card, { CardContent, CardHeader, CardTitle } from '@/components/common/Card';
+import { t } from '@/i18n/t';
 import {
   CheckboxInput,
+  HelpInfo,
   NumberInput,
   SelectInput,
   TextInput,
 } from '@/components/domain/strategy/StrategyFieldControls';
 import { Strategy, StrategyCurrency } from '@/features/strategy/types';
-
-const STRATEGY_MODULES = [
-  { value: 'momentum', label: 'Momentum (default)' },
-];
-
-const CURRENCY_FILTER_OPTIONS = [
-  { value: 'all', label: 'All currencies (USD + EUR)' },
-  { value: 'usd', label: 'USD only' },
-  { value: 'eur', label: 'EUR only' },
-];
 
 type CurrencyFilterValue = 'all' | 'usd' | 'eur';
 
@@ -36,7 +28,7 @@ function filterValueToCurrencies(value: CurrencyFilterValue): StrategyCurrency[]
 interface StrategyCoreSettingsCardsProps {
   draft: Strategy;
   setDraft: (value: Strategy) => void;
-  help: Record<string, any>;
+  help: Record<string, HelpInfo>;
 }
 
 export default function StrategyCoreSettingsCards({
@@ -44,45 +36,57 @@ export default function StrategyCoreSettingsCards({
   setDraft,
   help,
 }: StrategyCoreSettingsCardsProps) {
+  const strategyModules = [
+    { value: 'momentum', label: t('strategyPage.core.options.moduleMomentumDefault') },
+  ];
+
+  const currencyFilterOptions = [
+    { value: 'all', label: t('strategyPage.core.options.currencyAll') },
+    { value: 'usd', label: t('strategyPage.core.options.currencyUsd') },
+    { value: 'eur', label: t('strategyPage.core.options.currencyEur') },
+  ];
+
   return (
     <>
       <Card variant="bordered">
         <CardHeader>
-          <CardTitle>Basics</CardTitle>
+          <CardTitle>{t('strategyPage.core.cards.basics.title')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <TextInput
-              label="Name"
+              label={t('strategyPage.core.fields.name')}
               value={draft.name}
               onChange={(value) => setDraft({ ...draft, name: value })}
             />
             <TextInput
-              label="Description"
+              label={t('strategyPage.core.fields.description')}
               value={draft.description ?? ''}
               onChange={(value) => setDraft({ ...draft, description: value })}
-              placeholder="Optional description"
+              placeholder={t('strategyPage.core.fields.descriptionPlaceholder')}
             />
             <SelectInput
-              label="Strategy Module"
+              label={t('strategyPage.core.fields.strategyModule')}
               value={draft.module ?? 'momentum'}
               onChange={(value) => setDraft({ ...draft, module: value })}
-              options={STRATEGY_MODULES}
+              options={strategyModules}
               help={help.module}
             />
           </div>
-          <div className="mt-3 text-xs text-gray-500">ID: {draft.id}</div>
+          <div className="mt-3 text-xs text-gray-500">
+            {t('strategyPage.core.fields.idValue', { id: draft.id })}
+          </div>
         </CardContent>
       </Card>
 
       <Card variant="bordered">
         <CardHeader>
-          <CardTitle>Risk & Position Sizing</CardTitle>
+          <CardTitle>{t('strategyPage.core.cards.riskPosition.title')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <NumberInput
-              label="Account Size"
+              label={t('strategyPage.core.fields.accountSize')}
               value={draft.risk.accountSize}
               onChange={(value) =>
                 setDraft({
@@ -94,7 +98,7 @@ export default function StrategyCoreSettingsCards({
               min={0}
             />
             <NumberInput
-              label="Risk Per Trade"
+              label={t('strategyPage.core.fields.riskPerTrade')}
               value={draft.risk.riskPct * 100}
               onChange={(value) =>
                 setDraft({
@@ -107,7 +111,7 @@ export default function StrategyCoreSettingsCards({
               suffix="%"
             />
             <NumberInput
-              label="Max Position Size"
+              label={t('strategyPage.core.fields.maxPositionSize')}
               value={draft.risk.maxPositionPct * 100}
               onChange={(value) =>
                 setDraft({
@@ -120,7 +124,7 @@ export default function StrategyCoreSettingsCards({
               suffix="%"
             />
             <NumberInput
-              label="ATR Multiplier"
+              label={t('strategyPage.core.fields.atrMultiplier')}
               value={draft.risk.kAtr}
               onChange={(value) =>
                 setDraft({
@@ -138,12 +142,12 @@ export default function StrategyCoreSettingsCards({
 
       <Card variant="bordered">
         <CardHeader>
-          <CardTitle>Social Overlay</CardTitle>
+          <CardTitle>{t('strategyPage.core.cards.socialOverlay.title')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             <CheckboxInput
-              label="Enable Social Overlay"
+              label={t('strategyPage.core.fields.enableSocialOverlay')}
               checked={draft.socialOverlay.enabled}
               onChange={(value) =>
                 setDraft({
@@ -156,7 +160,7 @@ export default function StrategyCoreSettingsCards({
             {draft.socialOverlay.enabled && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <NumberInput
-                  label="Lookback Hours"
+                  label={t('strategyPage.core.fields.lookbackHours')}
                   value={draft.socialOverlay.lookbackHours}
                   onChange={(value) =>
                     setDraft({
@@ -169,7 +173,7 @@ export default function StrategyCoreSettingsCards({
                   help={help.lookbackHours}
                 />
                 <NumberInput
-                  label="Attention Z Threshold"
+                  label={t('strategyPage.core.fields.attentionZThreshold')}
                   value={draft.socialOverlay.attentionZThreshold}
                   onChange={(value) =>
                     setDraft({
@@ -182,7 +186,7 @@ export default function StrategyCoreSettingsCards({
                   help={help.attentionZThreshold}
                 />
                 <NumberInput
-                  label="Min Sample Size"
+                  label={t('strategyPage.core.fields.minSampleSize')}
                   value={draft.socialOverlay.minSampleSize}
                   onChange={(value) =>
                     setDraft({
@@ -195,7 +199,7 @@ export default function StrategyCoreSettingsCards({
                   help={help.minSampleSize}
                 />
                 <NumberInput
-                  label="Negative Sentiment"
+                  label={t('strategyPage.core.fields.negativeSentiment')}
                   value={draft.socialOverlay.negativeSentThreshold}
                   onChange={(value) =>
                     setDraft({
@@ -209,7 +213,7 @@ export default function StrategyCoreSettingsCards({
                   help={help.negativeSentThreshold}
                 />
                 <NumberInput
-                  label="Sentiment Confidence"
+                  label={t('strategyPage.core.fields.sentimentConfidence')}
                   value={draft.socialOverlay.sentimentConfThreshold}
                   onChange={(value) =>
                     setDraft({
@@ -223,7 +227,7 @@ export default function StrategyCoreSettingsCards({
                   help={help.sentimentConfThreshold}
                 />
                 <NumberInput
-                  label="Hype Percentile"
+                  label={t('strategyPage.core.fields.hypePercentile')}
                   value={draft.socialOverlay.hypePercentileThreshold}
                   onChange={(value) =>
                     setDraft({
@@ -244,12 +248,12 @@ export default function StrategyCoreSettingsCards({
 
       <Card variant="bordered">
         <CardHeader>
-          <CardTitle>Signals</CardTitle>
+          <CardTitle>{t('strategyPage.core.cards.signals.title')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <NumberInput
-              label="Breakout Lookback"
+              label={t('strategyPage.core.fields.breakoutLookback')}
               value={draft.signals.breakoutLookback}
               onChange={(value) =>
                 setDraft({
@@ -262,7 +266,7 @@ export default function StrategyCoreSettingsCards({
               help={help.breakoutLookback}
             />
             <NumberInput
-              label="Pullback MA"
+              label={t('strategyPage.core.fields.pullbackMa')}
               value={draft.signals.pullbackMa}
               onChange={(value) =>
                 setDraft({
@@ -275,7 +279,7 @@ export default function StrategyCoreSettingsCards({
               help={help.pullbackMa}
             />
             <NumberInput
-              label="Min History"
+              label={t('strategyPage.core.fields.minHistory')}
               value={draft.signals.minHistory}
               onChange={(value) =>
                 setDraft({
@@ -293,12 +297,12 @@ export default function StrategyCoreSettingsCards({
 
       <Card variant="bordered">
         <CardHeader>
-          <CardTitle>Universe Filters</CardTitle>
+          <CardTitle>{t('strategyPage.core.cards.universeFilters.title')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <NumberInput
-              label="Min Price"
+              label={t('strategyPage.core.fields.minPrice')}
               value={draft.universe.filt.minPrice}
               onChange={(value) =>
                 setDraft({
@@ -313,7 +317,7 @@ export default function StrategyCoreSettingsCards({
               min={0}
             />
             <NumberInput
-              label="Max Price"
+              label={t('strategyPage.core.fields.maxPrice')}
               value={draft.universe.filt.maxPrice}
               onChange={(value) =>
                 setDraft({
@@ -328,7 +332,7 @@ export default function StrategyCoreSettingsCards({
               min={0}
             />
             <SelectInput
-              label="Currencies"
+              label={t('strategyPage.core.fields.currencies')}
               value={currenciesToFilterValue(draft.universe.filt.currencies)}
               onChange={(value) =>
                 setDraft({
@@ -342,7 +346,7 @@ export default function StrategyCoreSettingsCards({
                   },
                 })
               }
-              options={CURRENCY_FILTER_OPTIONS}
+              options={currencyFilterOptions}
               help={help.currencies}
             />
           </div>
@@ -351,12 +355,12 @@ export default function StrategyCoreSettingsCards({
 
       <Card variant="bordered">
         <CardHeader>
-          <CardTitle>Ranking</CardTitle>
+          <CardTitle>{t('strategyPage.core.cards.ranking.title')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <NumberInput
-              label="Top N"
+              label={t('strategyPage.core.fields.topN')}
               value={draft.ranking.topN}
               onChange={(value) =>
                 setDraft({

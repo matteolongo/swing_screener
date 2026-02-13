@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Strategy } from '@/features/strategy/types';
+import { t } from '@/i18n/t';
 import {
   createStrategyFromDraft,
   useActiveStrategyQuery,
@@ -36,7 +37,7 @@ export function useStrategyEditor() {
 
   const updateMutation = useUpdateStrategyMutation((updated) => {
     setDraft(cloneStrategy(updated));
-    setStatusMessage('Saved');
+    setStatusMessage(t('strategyPage.status.saved'));
     clearStatusLater(setStatusMessage, import.meta.env.MODE, 2000);
   });
 
@@ -50,7 +51,7 @@ export function useStrategyEditor() {
       setCreateId('');
       setCreateName('');
       setCreateDescription('');
-      setStatusMessage('Saved as new strategy');
+      setStatusMessage(t('strategyPage.status.savedAsNew'));
       clearStatusLater(setStatusMessage, import.meta.env.MODE);
     },
     (payload) => createStrategyFromDraft(draft, payload),
@@ -60,7 +61,7 @@ export function useStrategyEditor() {
     setSelectedId('');
     setDraft(null);
     setIsInitialized(false);
-    setStatusMessage('Strategy deleted');
+    setStatusMessage(t('strategyPage.status.deleted'));
     clearStatusLater(setStatusMessage, import.meta.env.MODE);
   });
 
@@ -119,7 +120,9 @@ export function useStrategyEditor() {
 
   const handleDelete = () => {
     if (!selectedStrategy || selectedStrategy.isDefault) return;
-    const confirmed = window.confirm(`Delete strategy "${selectedStrategy.name}"? This cannot be undone.`);
+    const confirmed = window.confirm(
+      t('strategyPage.selection.confirmDelete', { name: selectedStrategy.name }),
+    );
     if (!confirmed) return;
     deleteMutation.mutate(selectedStrategy.id);
   };

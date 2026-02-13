@@ -3,6 +3,7 @@ import Button from '@/components/common/Button';
 import { useStrategyEditor } from '@/features/strategy/useStrategyEditor';
 import StrategyAdvancedSettingsCard from '@/components/domain/strategy/StrategyAdvancedSettingsCard';
 import StrategyCoreSettingsCards from '@/components/domain/strategy/StrategyCoreSettingsCards';
+import { t } from '@/i18n/t';
 import {
   buildHelp,
   strategyFieldClass,
@@ -301,27 +302,27 @@ export default function StrategyPage() {
     <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Strategy</h1>
-          <p className="text-sm text-gray-500 mt-1">Edit screening, risk, and management rules.</p>
+          <h1 className="text-3xl font-bold">{t('strategyPage.header.title')}</h1>
+          <p className="text-sm text-gray-500 mt-1">{t('strategyPage.header.subtitle')}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="secondary" onClick={handleReset} disabled={!draft || updateMutation.isPending}>
-            Reset Changes
+            {t('strategyPage.actions.resetChanges')}
           </Button>
           <Button onClick={handleSave} disabled={!draft || updateMutation.isPending}>
-            {updateMutation.isPending ? 'Saving…' : 'Save Changes'}
+            {updateMutation.isPending ? t('strategyPage.actions.saving') : t('strategyPage.actions.saveChanges')}
           </Button>
         </div>
       </div>
 
       <Card variant="bordered">
         <CardHeader>
-          <CardTitle>Strategy Selection</CardTitle>
+          <CardTitle>{t('strategyPage.selection.title')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
             <label className="text-sm font-medium md:col-span-2">
-              <div className="mb-2">Choose strategy</div>
+              <div className="mb-2">{t('strategyPage.selection.chooseStrategy')}</div>
               <select
                 value={selectedId}
                 onChange={(e) => setSelectedId(e.target.value)}
@@ -330,7 +331,9 @@ export default function StrategyPage() {
               >
                 {!strategies.length && (
                   <option value="">
-                    {strategiesQuery.isLoading ? 'Loading strategies…' : 'No strategies'}
+                    {strategiesQuery.isLoading
+                      ? t('strategyPage.selection.loadingStrategies')
+                      : t('strategyPage.selection.noStrategies')}
                   </option>
                 )}
                 {strategies.map((strategy) => (
@@ -342,66 +345,66 @@ export default function StrategyPage() {
             </label>
             <div className="flex items-center gap-2">
               <Button variant="secondary" onClick={handleSetActive} disabled={!selectedStrategy || isActive}>
-                {isActive ? 'Active' : 'Set Active'}
+                {isActive ? t('strategyPage.selection.active') : t('strategyPage.selection.setActive')}
               </Button>
               <Button
                 variant="danger"
                 onClick={handleDelete}
                 disabled={!selectedStrategy || selectedStrategy?.isDefault || deleteMutation.isPending}
               >
-                {deleteMutation.isPending ? 'Deleting…' : 'Delete'}
+                {deleteMutation.isPending ? t('strategyPage.selection.deleting') : t('common.actions.delete')}
               </Button>
               {selectedStrategy?.isDefault && (
-                <span className="text-xs text-gray-500">Default</span>
+                <span className="text-xs text-gray-500">{t('strategyPage.selection.default')}</span>
               )}
             </div>
           </div>
           <div className="mt-5 border-t border-border pt-4 space-y-3">
-            <div className="text-sm font-semibold">Save as new strategy</div>
+            <div className="text-sm font-semibold">{t('strategyPage.create.title')}</div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <TextInput
-                label="New ID"
+                label={t('strategyPage.create.newId')}
                 value={createId}
                 onChange={(value) => setCreateId(value)}
-                placeholder="momentum_v2"
+                placeholder={t('strategyPage.create.newIdPlaceholder')}
               />
               <TextInput
-                label="New Name"
+                label={t('strategyPage.create.newName')}
                 value={createName}
                 onChange={(value) => setCreateName(value)}
-                placeholder="Momentum v2"
+                placeholder={t('strategyPage.create.newNamePlaceholder')}
               />
               <TextInput
-                label="New Description"
+                label={t('strategyPage.create.newDescription')}
                 value={createDescription}
                 onChange={(value) => setCreateDescription(value)}
-                placeholder="Optional"
+                placeholder={t('strategyPage.create.newDescriptionPlaceholder')}
               />
             </div>
             {idAlreadyExists && (
-              <div className="text-xs text-red-600">Strategy ID already exists.</div>
+              <div className="text-xs text-red-600">{t('strategyPage.create.idAlreadyExists')}</div>
             )}
             <div className="flex items-center gap-2">
               <Button onClick={handleCreate} disabled={!canCreate}>
-                {createMutation.isPending ? 'Saving…' : 'Save as New'}
+                {createMutation.isPending ? t('strategyPage.actions.saving') : t('strategyPage.create.saveAsNew')}
               </Button>
               <div className="text-xs text-gray-500">
-                IDs are permanent and used in reports & APIs.
+                {t('strategyPage.create.idHint')}
               </div>
             </div>
           </div>
           {statusMessage && <div className="mt-3 text-sm text-green-600">{statusMessage}</div>}
           {updateMutation.isError && (
-            <div className="mt-3 text-sm text-red-600">Failed to save strategy</div>
+            <div className="mt-3 text-sm text-red-600">{t('strategyPage.errors.saveFailed')}</div>
           )}
           {createMutation.isError && (
             <div className="mt-3 text-sm text-red-600">
-              {(createMutation.error as Error)?.message || 'Failed to create strategy'}
+              {(createMutation.error as Error)?.message || t('strategyPage.errors.createFailed')}
             </div>
           )}
           {deleteMutation.isError && (
             <div className="mt-3 text-sm text-red-600">
-              {(deleteMutation.error as Error)?.message || 'Failed to delete strategy'}
+              {(deleteMutation.error as Error)?.message || t('strategyPage.errors.deleteFailed')}
             </div>
           )}
         </CardContent>
@@ -410,7 +413,7 @@ export default function StrategyPage() {
       {!draft && (
         <Card variant="bordered">
           <CardContent>
-            <div className="text-sm text-gray-500">Select a strategy to edit.</div>
+            <div className="text-sm text-gray-500">{t('strategyPage.selection.selectToEdit')}</div>
           </CardContent>
         </Card>
       )}

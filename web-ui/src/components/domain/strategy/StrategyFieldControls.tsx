@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import HelpTooltip from '@/components/common/HelpTooltip';
+import { t } from '@/i18n/t';
 
 export const strategyFieldClass =
   'w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-800';
@@ -22,13 +23,13 @@ export const buildHelp = (
   content: (
     <div className="space-y-2">
       <p>
-        <strong>What it is:</strong> {what}
+        <strong>{t('strategyPage.help.whatItIs')}</strong> {what}
       </p>
       <p>
-        <strong>Why it matters:</strong> {why}
+        <strong>{t('strategyPage.help.whyItMatters')}</strong> {why}
       </p>
       <p>
-        <strong>How to interpret:</strong> {how}
+        <strong>{t('strategyPage.help.howToInterpret')}</strong> {how}
       </p>
     </div>
   ),
