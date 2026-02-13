@@ -1,5 +1,5 @@
 import { AppConfig } from '@/types/config';
-import { Strategy } from '@/types/strategy';
+import { Strategy } from '@/features/strategy/types';
 
 export interface StrategyCoachSection {
   title: string;

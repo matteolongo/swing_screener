@@ -1,6 +1,6 @@
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
-import { StrategyCurrency } from '@/types/strategy';
+import { StrategyCurrency } from '@/features/strategy/types';
 import { useStrategyEditor } from '@/features/strategy/useStrategyEditor';
 import StrategyAdvancedSettingsCard from '@/components/domain/strategy/StrategyAdvancedSettingsCard';
 import {

@@ -11,7 +11,7 @@ import {
   Strategy,
   StrategyEntryType,
   StrategyExitMode,
-} from '@/types/strategy';
+} from '@/features/strategy/types';
 
 interface StrategyAdvancedSettingsCardProps {
   draft: Strategy;

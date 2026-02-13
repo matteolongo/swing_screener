@@ -8,7 +8,7 @@ import {
   DailyReview,
   DailyReviewAPI,
   transformDailyReview,
-} from '@/types/dailyReview';
+} from '@/features/dailyReview/types';
 
 /**
  * Fetch daily review from API

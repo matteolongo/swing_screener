@@ -21,7 +21,7 @@ import type {
   DailyReviewPositionHold,
   DailyReviewPositionUpdate,
   DailyReviewPositionClose,
-} from '@/types/dailyReview';
+} from '@/features/dailyReview/types';
 
 export default function DailyReview() {
   const [expandedSections, setExpandedSections] = useState({

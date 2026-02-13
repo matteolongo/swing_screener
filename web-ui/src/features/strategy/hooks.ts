@@ -7,7 +7,7 @@ import {
   setActiveStrategy,
   updateStrategy,
 } from '@/features/strategy/api';
-import type { Strategy } from '@/types/strategy';
+import type { Strategy } from '@/features/strategy/types';
 import { queryKeys } from '@/lib/queryKeys';
 import { invalidateStrategyQueries } from '@/lib/queryInvalidation';
 

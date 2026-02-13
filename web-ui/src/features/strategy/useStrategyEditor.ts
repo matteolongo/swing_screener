@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { Strategy } from '@/types/strategy';
+import type { Strategy } from '@/features/strategy/types';
 import {
   createStrategyFromDraft,
   useActiveStrategyQuery,
