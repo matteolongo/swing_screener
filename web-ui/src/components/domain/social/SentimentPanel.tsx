@@ -62,7 +62,7 @@ function EventsList({ events }: { events: SocialRawEvent[] }) {
     <div className="space-y-3">
       {displayEvents.map((event, idx) => (
         <div
-          key={idx}
+          key={`${event.timestamp}-${event.source}-${idx}`}
           className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
         >
           <div className="flex items-start justify-between gap-2 mb-2">

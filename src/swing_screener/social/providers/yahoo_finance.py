@@ -1,8 +1,9 @@
 """Yahoo Finance news provider."""
 from __future__ import annotations
 
+import logging
 import time
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from typing import Optional
 
 import httpx
@@ -10,6 +11,8 @@ import httpx
 from swing_screener.social.models import SocialRawEvent
 from swing_screener.social.cache import SocialCache
 from swing_screener.social.config import DEFAULT_CACHE_TTL_HOURS
+
+logger = logging.getLogger(__name__)
 
 
 class YahooFinanceProvider:
@@ -82,7 +85,7 @@ class YahooFinanceProvider:
                         if timestamp:
                             dt = datetime.fromtimestamp(timestamp).replace(tzinfo=None)
                         else:
-                            dt = datetime.utcnow()
+                            dt = datetime.now(timezone.utc).replace(tzinfo=None)
                         
                         # Ensure timezone-naive comparison
                         start_naive = start_dt.replace(tzinfo=None) if start_dt.tzinfo else start_dt
@@ -113,7 +116,7 @@ class YahooFinanceProvider:
                     
                 except (httpx.HTTPError, KeyError, ValueError) as e:
                     # Log error but continue with other symbols
-                    print(f"Warning: Failed to fetch Yahoo Finance news for {symbol}: {e}")
+                    logger.warning(f"Failed to fetch Yahoo Finance news for {symbol}: {e}")
                     continue
         
         # Cache the results

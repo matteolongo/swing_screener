@@ -1,12 +1,19 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useStrategyEditor } from '@/features/strategy/useStrategyEditor';
 import Button from '@/components/common/Button';
 import HelpTooltip from '@/components/common/HelpTooltip';
 import Badge from '@/components/common/Badge';
 import type { StrategySocialOverlay } from '@/features/strategy/types';
+import { API_BASE_URL, API_ENDPOINTS } from '@/lib/api';
 
 interface SentimentConfigFormProps {
   onSave?: () => void;
+}
+
+interface SocialProvidersResponse {
+  providers: string[];
+  analyzers: string[];
 }
 
 const DEFAULT_SOCIAL_OVERLAY: StrategySocialOverlay = {
@@ -39,8 +46,21 @@ const HELP_ANALYZER = {
 
 export default function SentimentConfigForm({ onSave }: SentimentConfigFormProps) {
   const { draft, setDraft, handleSave, updateMutation } = useStrategyEditor();
-  const [availableProviders] = useState<string[]>(['reddit', 'yahoo_finance']);
-  const [availableAnalyzers] = useState<string[]>(['keyword', 'vader']);
+  
+  // Fetch available providers and analyzers from API
+  const { data: providersData, isLoading } = useQuery<SocialProvidersResponse>({
+    queryKey: ['social-providers'],
+    queryFn: async () => {
+      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.socialProviders}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch social providers');
+      }
+      return response.json();
+    },
+  });
+
+  const availableProviders = providersData?.providers ?? ['reddit', 'yahoo_finance'];
+  const availableAnalyzers = providersData?.analyzers ?? ['keyword', 'vader'];
 
   const socialOverlay = useMemo<StrategySocialOverlay>(() => {
     if (!draft) return DEFAULT_SOCIAL_OVERLAY;
@@ -96,6 +116,10 @@ export default function SentimentConfigForm({ onSave }: SentimentConfigFormProps
 
   if (!draft) {
     return <p className="text-sm text-gray-500">Loading strategy configuration...</p>;
+  }
+
+  if (isLoading) {
+    return <p className="text-sm text-gray-500">Loading available providers...</p>;
   }
 
   return (
