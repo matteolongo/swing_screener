@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from datetime import date
 import math
-from typing import Iterable
+from typing import Iterable, Optional
 
 import pandas as pd
 
 from swing_screener.social.models import SocialRawEvent, SocialDailyMetrics
 from swing_screener.social.cache import SocialCache
-from swing_screener.social.utils import sentiment_score_event
+from swing_screener.social.sentiment.base import SentimentAnalyzer
+from swing_screener.social.sentiment.factory import get_sentiment_analyzer
 
 
 def compute_daily_metrics(
@@ -18,7 +19,22 @@ def compute_daily_metrics(
     asof: date,
     cache: SocialCache,
     z_lookback_days: int = 60,
+    sentiment_analyzer: Optional[SentimentAnalyzer] = None,
 ) -> list[SocialDailyMetrics]:
+    """Compute daily social metrics for symbols.
+    
+    Args:
+        events: Raw social events
+        symbols: Symbols to compute metrics for
+        ohlcv: Market data for hype score calculation
+        asof: Date to compute metrics for
+        cache: Cache for storing/retrieving metrics
+        z_lookback_days: Days to look back for attention z-score
+        sentiment_analyzer: Optional sentiment analyzer (defaults to keyword)
+    """
+    if sentiment_analyzer is None:
+        sentiment_analyzer = get_sentiment_analyzer("keyword")
+    
     symbol_set = {str(s).upper() for s in symbols}
     by_symbol: dict[str, list[SocialRawEvent]] = {s: [] for s in symbol_set}
     for ev in events:
@@ -32,9 +48,14 @@ def compute_daily_metrics(
         sample_size = len(evs)
         attention_score = float(sample_size)
 
-        sent_vals = [sentiment_score_event(ev.text) for ev in evs]
-        sent_score = float(sum(sent_vals) / max(len(sent_vals), 1))
-        sent_conf = min(1.0, abs(sent_score) * math.sqrt(sample_size) / 3.0)
+        # Use pluggable sentiment analyzer
+        sent_results = [sentiment_analyzer.analyze(ev.text) for ev in evs]
+        if sent_results:
+            sent_score = float(sum(r.score for r in sent_results) / len(sent_results))
+            sent_conf = float(sum(r.confidence for r in sent_results) / len(sent_results))
+        else:
+            sent_score = 0.0
+            sent_conf = 0.0
 
         prior = cache.get_attention_history(symbol, asof, z_lookback_days)
         att_z = None
@@ -51,6 +72,11 @@ def compute_daily_metrics(
             adv = ohlcv[vol_key].rolling(20).mean().iloc[-1]
             if pd.notna(adv) and adv and adv > 0:
                 hype_score = (attention_score / float(adv)) * 1_000_000.0
+        
+        # Count events by source
+        source_breakdown = {}
+        for ev in evs:
+            source_breakdown[ev.source] = source_breakdown.get(ev.source, 0) + 1
 
         metrics.append(
             SocialDailyMetrics(
@@ -62,7 +88,7 @@ def compute_daily_metrics(
                 sentiment_confidence=sent_conf,
                 hype_score=hype_score,
                 sample_size=sample_size,
-                source_breakdown={"reddit": sample_size},
+                source_breakdown=source_breakdown,
             )
         )
 

@@ -19,6 +19,10 @@ DEFAULT_HYPE_LOOKBACK_DAYS = 60
 DEFAULT_HYPE_FIXED_THRESHOLD = 5.0
 DEFAULT_CACHE_TTL_HOURS = 6
 
+# Provider and sentiment analyzer defaults
+DEFAULT_PROVIDERS = ["reddit"]  # Available: "reddit", "yahoo_finance"
+DEFAULT_SENTIMENT_ANALYZER = "keyword"  # Available: "keyword", "vader"
+
 
 @dataclass(frozen=True)
 class SocialOverlayConfig:
@@ -29,3 +33,5 @@ class SocialOverlayConfig:
     negative_sent_threshold: float = -0.4
     sentiment_conf_threshold: float = 0.7
     hype_percentile_threshold: float = 95.0
+    providers: tuple[str, ...] = tuple(DEFAULT_PROVIDERS)
+    sentiment_analyzer: str = DEFAULT_SENTIMENT_ANALYZER
