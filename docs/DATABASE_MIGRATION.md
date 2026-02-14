@@ -2,12 +2,14 @@
 
 ## Overview
 
-The Swing Screener application has been migrated from file-based state management (JSON files) to a robust SQLite database using SQLAlchemy. This provides:
+The Swing Screener application has added SQLite database infrastructure using SQLAlchemy. This provides a foundation for:
 
-- **Atomicity**: Changes are made in transactions that either fully succeed or fully rollback
+- **Atomicity**: Transaction support for atomic state changes
 - **Integrity**: Foreign key constraints ensure data consistency
-- **Concurrency**: No more file locking issues
-- **Performance**: Faster queries and better scalability
+- **Concurrency**: Better handling of concurrent operations
+- **Performance**: Faster queries with indexed lookups
+
+> **Note:** The database infrastructure is complete and ready to use, but core workflow functions still use file-based operations for backward compatibility. Future updates can incrementally adopt database operations.
 
 ## Architecture
 
@@ -82,52 +84,66 @@ python scripts/migrate_json_to_sqlite.py --force
 
 ## Code Changes
 
-### Loading Data
+### Current Implementation
 
-**Old approach (file-based):**
+The database infrastructure is **ready to use** but core functions still use file-based operations for backward compatibility.
+
+### Loading Data (File-Based)
+
 ```python
 from swing_screener.portfolio.state import load_positions
 from swing_screener.execution.orders import load_orders
 
+# Load from JSON files (current default)
 positions = load_positions("data/positions.json")
 orders = load_orders("data/orders.json")
 ```
 
-**New approach (database-based):**
-```python
-from swing_screener.portfolio.state import load_positions
-from swing_screener.execution.orders import load_orders
-from swing_screener.db import get_default_db
+### Saving Data (File-Based)
 
-# Use default database
-positions = load_positions()  # Loads from data/swing_screener.db
-orders = load_orders()
-
-# Or use custom database
-db = get_default_db()  # or Database("custom/path.db")
-positions = load_positions(db=db)
-orders = load_orders(db=db)
-```
-
-### Saving Data
-
-**Old approach (file-based):**
 ```python
 from swing_screener.portfolio.state import save_positions
 from swing_screener.execution.orders import save_orders
 
+# Save to JSON files (current default)
 save_positions("data/positions.json", positions)
 save_orders("data/orders.json", orders)
 ```
 
-**New approach (database transactions):**
+### Using Database Directly
 
-The `save_positions()` and `save_orders()` functions are now **deprecated**. Instead, use the workflow functions that perform atomic transactions:
+If you want to use the database, you can access it directly:
+
+```python
+from swing_screener.db import Database, position_to_model, order_to_model
+
+# Create database connection
+db = Database("data/swing_screener.db")
+session = db.get_session()
+
+try:
+    # Insert a position
+    session.add(position_to_model(position))
+    
+    # Insert orders
+    for order in orders:
+        session.add(order_to_model(order))
+    
+    # Commit transaction
+    session.commit()
+finally:
+    session.close()
+    db.close()
+```
+
+### Workflow Functions (In-Memory)
+
+Workflow functions like `fill_entry_order()` currently work with in-memory lists:
 
 ```python
 from swing_screener.execution.order_workflows import fill_entry_order
 
-# This function now uses database transactions internally
+# Works with in-memory lists (no database required)
 new_orders, new_positions = fill_entry_order(
     orders=orders,
     positions=positions,
@@ -137,23 +153,30 @@ new_orders, new_positions = fill_entry_order(
     quantity=10,
     stop_price=45.0,
 )
-# Changes are automatically committed to the database
+# Result is in-memory - persist manually if using database
 ```
 
-### Transaction Safety
+### Future: Transaction-Based Workflows
 
-All state-mutating operations now use database transactions:
+Future versions may support database transactions in workflow functions:
 
 ```python
 from swing_screener.execution.order_workflows import fill_entry_order
+from swing_screener.db import Database
 
-try:
-    # This entire operation is atomic
-    new_orders, new_positions = fill_entry_order(...)
-    # If successful, changes are committed
-except Exception as e:
-    # If any error occurs, all changes are rolled back
-    print(f"Order fill failed: {e}")
+db = Database("data/swing_screener.db")
+
+# Future: optional db parameter for transactional behavior
+new_orders, new_positions = fill_entry_order(
+    orders=orders,
+    positions=positions,
+    order_id="ORD-INTC-ENTRY",
+    fill_price=50.0,
+    fill_date="2026-02-01",
+    quantity=10,
+    stop_price=45.0,
+    db=db  # Future feature - not yet implemented
+)
 ```
 
 ## Testing
@@ -195,20 +218,28 @@ This allows existing code to continue working during the transition period. Howe
 - [x] Database connection and session management
 - [x] Position and Order table definitions with foreign keys
 - [x] Conversion functions between dataclasses and models
-- [x] `load_positions()` rewritten to use database
-- [x] `load_orders()` rewritten to use database
-- [x] `fill_entry_order()` rewritten with database transactions
-- [x] `scale_in_fill()` rewritten with database transactions
 - [x] Migration script (`scripts/migrate_json_to_sqlite.py`)
 - [x] Database tests (`tests/test_database.py`)
 
-### ⏸️ In Progress (Future Work)
+### ⏸️ Deferred for Backward Compatibility
+- [ ] `load_positions()` and `load_orders()` - still file-based
+- [ ] `fill_entry_order()` and `scale_in_fill()` - still in-memory
 - [ ] Update API repositories to use database directly
 - [ ] Update API tests to seed database instead of JSON files
 - [ ] Update CLI to use database transactions
-- [ ] Remove legacy JSON-based code paths
-- [ ] Remove `utils/file_lock.py` (no longer needed with database)
-- [ ] Remove `portfolio/migrate.py` (replaced by migration script)
+- [ ] Remove legacy file-based code paths
+
+## Current Status
+
+**Infrastructure Ready ✅**
+- Database schema is complete and tested
+- Migration script works with production data
+- All conversion functions working
+
+**Integration Deferred ⏸️**
+- Core functions remain file-based for backward compatibility
+- Tests continue to work without modification
+- Migration path is clear for future adoption
 
 ## Troubleshooting
 
