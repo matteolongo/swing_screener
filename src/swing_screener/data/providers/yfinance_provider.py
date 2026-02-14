@@ -1,7 +1,7 @@
 """Yfinance market data provider - wraps existing market_data.py logic."""
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from pathlib import Path
 from typing import Iterable, Optional
 import hashlib
@@ -241,7 +241,6 @@ class YfinanceProvider(MarketDataProvider):
             force_refresh,
             allow_cache_fallback_on_error,
         )
-        return fetch_ohlcv(tickers, cfg=cfg, use_cache=True, force_refresh=force_refresh)
     
     def fetch_latest_price(self, ticker: str) -> float:
         """
