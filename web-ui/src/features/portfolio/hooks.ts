@@ -18,17 +18,19 @@ import {
   UpdateStopRequest,
   ClosePositionRequest,
 } from './types';
+import { queryKeys } from '@/lib/queryKeys';
+import { invalidateOrderQueries, invalidatePositionQueries } from '@/lib/queryInvalidation';
 
 export function useOrders(status: OrderFilterStatus) {
   return useQuery({
-    queryKey: ['orders', status],
+    queryKey: queryKeys.orders(status),
     queryFn: () => fetchOrders(status),
   });
 }
 
 export function useOrderSnapshots() {
   return useQuery({
-    queryKey: ['orders', 'snapshot'],
+    queryKey: queryKeys.ordersSnapshot(),
     queryFn: fetchOrderSnapshots,
     refetchOnWindowFocus: false,
   });
@@ -38,8 +40,8 @@ export function useCreateOrderMutation(onSuccess?: () => void) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (request: CreateOrderRequest) => createOrder(request),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['orders'] });
+    onSuccess: async () => {
+      await invalidateOrderQueries(queryClient);
       onSuccess?.();
     },
   });
@@ -50,8 +52,8 @@ export function useFillOrderMutation(onSuccess?: () => void) {
   return useMutation({
     mutationFn: ({ orderId, request }: { orderId: string; request: FillOrderRequest }) =>
       fillOrder(orderId, request),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['orders'] });
+    onSuccess: async () => {
+      await invalidateOrderQueries(queryClient);
       onSuccess?.();
     },
   });
@@ -61,22 +63,22 @@ export function useCancelOrderMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (orderId: string) => cancelOrder(orderId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['orders'] });
+    onSuccess: async () => {
+      await invalidateOrderQueries(queryClient);
     },
   });
 }
 
 export function usePositions(status: PositionFilterStatus) {
   return useQuery({
-    queryKey: ['positions', status],
+    queryKey: queryKeys.positions(status),
     queryFn: () => fetchPositions(status),
   });
 }
 
 export function useOpenPositions() {
   return useQuery({
-    queryKey: ['positions', 'open'],
+    queryKey: queryKeys.positions('open'),
     queryFn: () => fetchPositions('open'),
   });
 }
@@ -86,9 +88,9 @@ export function useUpdateStopMutation(onSuccess?: () => void) {
   return useMutation({
     mutationFn: ({ positionId, request }: { positionId: string; request: UpdateStopRequest }) =>
       updatePositionStop(positionId, request),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['positions'] });
-      queryClient.invalidateQueries({ queryKey: ['orders'] });  // Also invalidate orders since stop orders are updated
+    onSuccess: async () => {
+      await invalidatePositionQueries(queryClient);
+      await invalidateOrderQueries(queryClient);
       onSuccess?.();
     },
   });
@@ -96,7 +98,7 @@ export function useUpdateStopMutation(onSuccess?: () => void) {
 
 export function usePositionStopSuggestion(positionId?: string) {
   return useQuery({
-    queryKey: ['positions', positionId, 'stop-suggestion'],
+    queryKey: queryKeys.positionStopSuggestion(positionId),
     queryFn: () => fetchPositionStopSuggestion(positionId as string),
     enabled: Boolean(positionId),
     refetchOnWindowFocus: false,
@@ -109,8 +111,8 @@ export function useClosePositionMutation(onSuccess?: () => void) {
   return useMutation({
     mutationFn: ({ positionId, request }: { positionId: string; request: ClosePositionRequest }) =>
       closePosition(positionId, request),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['positions'] });
+    onSuccess: async () => {
+      await invalidatePositionQueries(queryClient);
       onSuccess?.();
     },
   });

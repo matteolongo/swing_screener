@@ -251,5 +251,32 @@ describe('Position Helper Functions', () => {
       const result = transformPosition(apiResponse)
       expect(result.notes).toBe('')
     })
+
+    it('preserves numeric zero values instead of converting them to undefined', () => {
+      const apiResponse: PositionApiResponse = {
+        ticker: 'AAPL',
+        status: 'open',
+        entry_date: '2026-01-01',
+        entry_price: 0,
+        stop_price: 0,
+        shares: 10,
+        position_id: 'POS-AAPL-001',
+        source_order_id: 'ORD-AAPL-001',
+        initial_risk: 0,
+        max_favorable_price: 0,
+        exit_date: null,
+        exit_price: 0,
+        current_price: 0,
+        notes: 'zero test',
+        exit_order_ids: [],
+      }
+
+      const result = transformPosition(apiResponse)
+      expect(result.initialRisk).toBe(0)
+      expect(result.maxFavorablePrice).toBe(0)
+      expect(result.exitPrice).toBe(0)
+      expect(result.currentPrice).toBe(0)
+      expect(result.exitOrderIds).toEqual([])
+    })
   })
 })

@@ -45,7 +45,23 @@ export async function createOrder(request: CreateOrderRequest): Promise<void> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(transformCreateOrderRequest(request)),
   });
-  if (!response.ok) throw new Error('Failed to create order');
+  if (!response.ok) {
+    let message = 'Failed to create order';
+    try {
+      const error = await response.json();
+      if (typeof error?.detail === 'string') {
+        message = error.detail;
+      } else if (Array.isArray(error?.detail) && error.detail.length > 0) {
+        const first = error.detail[0];
+        if (typeof first?.msg === 'string') {
+          message = first.msg;
+        }
+      }
+    } catch {
+      // Keep default error message if response body is not JSON.
+    }
+    throw new Error(message);
+  }
 }
 
 export async function fillOrder(orderId: string, request: FillOrderRequest): Promise<void> {

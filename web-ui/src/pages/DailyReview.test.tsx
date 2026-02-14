@@ -175,6 +175,39 @@ describe('DailyReview Page', () => {
     })
   })
 
+  it('formats technical time-exit reasons into clear action text', async () => {
+    server.use(
+      http.get('*/api/daily-review', () => HttpResponse.json({
+        ...mockDailyReview,
+        positions_close: [
+          {
+            position_id: 'POS-3',
+            ticker: 'VALE',
+            entry_price: 16.3,
+            stop_price: 15.0,
+            current_price: 16.65,
+            r_now: 0.27,
+            reason: 'Time exit: 20 bars since entry_date >= 20',
+          },
+        ],
+        summary: {
+          ...mockDailyReview.summary,
+          close_positions: 1,
+        },
+      }))
+    )
+
+    renderWithProviders(<DailyReview />)
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          'Held for 20 bars (max 20). Close to free capital for stronger setups.'
+        )
+      ).toBeInTheDocument()
+    })
+  })
+
   it('closes Create Order modal with Escape and with close button', async () => {
     const { user } = renderWithProviders(<DailyReview />)
 

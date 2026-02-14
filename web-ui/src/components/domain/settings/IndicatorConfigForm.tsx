@@ -1,5 +1,6 @@
 import { useConfigStore } from '@/stores/configStore';
 import HelpTooltip from '@/components/common/HelpTooltip';
+import { t } from '@/i18n/t';
 
 export default function IndicatorConfigForm() {
   const { config, updateIndicators } = useConfigStore();
@@ -10,35 +11,35 @@ export default function IndicatorConfigForm() {
       {/* SMA Windows */}
       <div className="space-y-4">
         <label className="flex items-center gap-2 text-sm font-medium">
-          SMA Windows (Fast / Mid / Long)
+          {t('settingsPage.indicatorForm.smaWindows.label')}
           <HelpTooltip
-            short="Simple Moving Average periods for trend identification"
-            title="SMA Windows"
+            short={t('settingsPage.indicatorForm.smaWindows.tooltip.short')}
+            title={t('settingsPage.indicatorForm.smaWindows.tooltip.title')}
             content={
               <div className="space-y-4">
                 <p>
-                  Simple Moving Averages smooth out price action to identify trends.
+                  {t('settingsPage.indicatorForm.smaWindows.tooltip.content.intro')}
                 </p>
                 <div>
-                  <h4 className="font-semibold mb-2">Formula:</h4>
+                  <h4 className="font-semibold mb-2">{t('settingsPage.indicatorForm.common.formula')}</h4>
                   <code className="block bg-gray-100 dark:bg-gray-800 p-3 rounded font-mono text-sm">
-                    SMA(n) = (P1 + P2 + ... + Pn) / n
+                    {t('settingsPage.indicatorForm.smaWindows.tooltip.content.formulaValue')}
                   </code>
                 </div>
                 <div>
-                  <h4 className="font-semibold mb-2">Standard Windows:</h4>
+                  <h4 className="font-semibold mb-2">{t('settingsPage.indicatorForm.smaWindows.tooltip.content.standardWindowsTitle')}</h4>
                   <ul className="list-disc pl-5 space-y-2 text-sm">
-                    <li><strong>SMA20:</strong> Short-term trend (~1 month of trading days)</li>
-                    <li><strong>SMA50:</strong> Intermediate trend (~2.5 months)</li>
-                    <li><strong>SMA200:</strong> Long-term trend (~1 year)</li>
+                    <li><strong>SMA20:</strong> {t('settingsPage.indicatorForm.smaWindows.tooltip.content.sma20')}</li>
+                    <li><strong>SMA50:</strong> {t('settingsPage.indicatorForm.smaWindows.tooltip.content.sma50')}</li>
+                    <li><strong>SMA200:</strong> {t('settingsPage.indicatorForm.smaWindows.tooltip.content.sma200')}</li>
                   </ul>
                 </div>
                 <div className="bg-primary/10 border border-primary/30 rounded p-4">
-                  <p className="font-semibold">How we use them:</p>
+                  <p className="font-semibold">{t('settingsPage.indicatorForm.smaWindows.tooltip.content.howWeUseTitle')}</p>
                   <p className="text-sm mt-2">
-                    • Price above SMA200 = uptrend filter<br />
-                    • SMA50 {'>'} SMA200 = trend strength confirmation<br />
-                    • SMA20 = trailing stop reference (after +2R)
+                    {t('settingsPage.indicatorForm.smaWindows.tooltip.content.howWeUseLine1')}<br />
+                    {t('settingsPage.indicatorForm.smaWindows.tooltip.content.howWeUseLine2')}<br />
+                    {t('settingsPage.indicatorForm.smaWindows.tooltip.content.howWeUseLine3')}
                   </p>
                 </div>
               </div>
@@ -47,7 +48,7 @@ export default function IndicatorConfigForm() {
         </label>
         <div className="grid grid-cols-3 gap-4">
           <div>
-            <label className="text-xs text-gray-600 dark:text-gray-400">Fast (20)</label>
+            <label className="text-xs text-gray-600 dark:text-gray-400">{t('settingsPage.indicatorForm.smaWindows.fast')}</label>
             <input
               type="number"
               value={indicators.smaFast}
@@ -58,7 +59,7 @@ export default function IndicatorConfigForm() {
             />
           </div>
           <div>
-            <label className="text-xs text-gray-600 dark:text-gray-400">Mid (50)</label>
+            <label className="text-xs text-gray-600 dark:text-gray-400">{t('settingsPage.indicatorForm.smaWindows.mid')}</label>
             <input
               type="number"
               value={indicators.smaMid}
@@ -69,7 +70,7 @@ export default function IndicatorConfigForm() {
             />
           </div>
           <div>
-            <label className="text-xs text-gray-600 dark:text-gray-400">Long (200)</label>
+            <label className="text-xs text-gray-600 dark:text-gray-400">{t('settingsPage.indicatorForm.smaWindows.long')}</label>
             <input
               type="number"
               value={indicators.smaLong}
@@ -86,20 +87,19 @@ export default function IndicatorConfigForm() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
         <div>
           <label className="flex items-center gap-2 text-sm font-medium mb-2">
-            ATR Window
+            {t('settingsPage.indicatorForm.atrWindow.label')}
             <HelpTooltip
-              short="Period for volatility calculation (default: 14 days)"
-              title="ATR Window"
+              short={t('settingsPage.indicatorForm.atrWindow.tooltip.short')}
+              title={t('settingsPage.indicatorForm.atrWindow.tooltip.title')}
               content={
                 <div className="space-y-4">
                   <p>
-                    Number of trading days used to calculate Average True Range (volatility measure).
+                    {t('settingsPage.indicatorForm.atrWindow.tooltip.content.intro')}
                   </p>
                   <div>
-                    <h4 className="font-semibold mb-2">Standard: 14 days</h4>
+                    <h4 className="font-semibold mb-2">{t('settingsPage.indicatorForm.atrWindow.tooltip.content.standardTitle')}</h4>
                     <p className="text-sm">
-                      Developed by J. Welles Wilder. Industry standard is 14 periods. 
-                      Most traders stick with this default.
+                      {t('settingsPage.indicatorForm.atrWindow.tooltip.content.standardBody')}
                     </p>
                   </div>
                 </div>
@@ -120,25 +120,25 @@ export default function IndicatorConfigForm() {
       {/* Entry Signal Windows */}
       <div className="space-y-4">
         <label className="flex items-center gap-2 text-sm font-medium">
-          Entry Signal Windows
+          {t('settingsPage.indicatorForm.entrySignalWindows.label')}
           <HelpTooltip
-            short="Breakout lookback and pullback MA windows"
-            title="Entry Signal Windows"
+            short={t('settingsPage.indicatorForm.entrySignalWindows.tooltip.short')}
+            title={t('settingsPage.indicatorForm.entrySignalWindows.tooltip.title')}
             content={
               <div className="space-y-4">
                 <p>
-                  These windows control breakout and pullback entry signals used across the screener and backtests.
+                  {t('settingsPage.indicatorForm.entrySignalWindows.tooltip.content.intro')}
                 </p>
                 <div>
-                  <h4 className="font-semibold mb-2">Breakout:</h4>
+                  <h4 className="font-semibold mb-2">{t('settingsPage.indicatorForm.entrySignalWindows.tooltip.content.breakoutTitle')}</h4>
                   <p className="text-sm">
-                    Trigger when today&apos;s close exceeds the prior high over the lookback period.
+                    {t('settingsPage.indicatorForm.entrySignalWindows.tooltip.content.breakoutBody')}
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-semibold mb-2">Pullback:</h4>
+                  <h4 className="font-semibold mb-2">{t('settingsPage.indicatorForm.entrySignalWindows.tooltip.content.pullbackTitle')}</h4>
                   <p className="text-sm">
-                    Trigger when yesterday was below the MA and today closes back above it.
+                    {t('settingsPage.indicatorForm.entrySignalWindows.tooltip.content.pullbackBody')}
                   </p>
                 </div>
               </div>
@@ -147,7 +147,7 @@ export default function IndicatorConfigForm() {
         </label>
         <div className="grid grid-cols-3 gap-4">
           <div>
-            <label className="text-xs text-gray-600 dark:text-gray-400">Breakout Lookback</label>
+            <label className="text-xs text-gray-600 dark:text-gray-400">{t('settingsPage.indicatorForm.entrySignalWindows.breakoutLookback')}</label>
             <input
               type="number"
               value={indicators.breakoutLookback}
@@ -158,7 +158,7 @@ export default function IndicatorConfigForm() {
             />
           </div>
           <div>
-            <label className="text-xs text-gray-600 dark:text-gray-400">Pullback MA</label>
+            <label className="text-xs text-gray-600 dark:text-gray-400">{t('settingsPage.indicatorForm.entrySignalWindows.pullbackMa')}</label>
             <input
               type="number"
               value={indicators.pullbackMa}
@@ -169,7 +169,7 @@ export default function IndicatorConfigForm() {
             />
           </div>
           <div>
-            <label className="text-xs text-gray-600 dark:text-gray-400">Min History</label>
+            <label className="text-xs text-gray-600 dark:text-gray-400">{t('settingsPage.indicatorForm.entrySignalWindows.minHistory')}</label>
             <input
               type="number"
               value={indicators.minHistory}
@@ -185,33 +185,32 @@ export default function IndicatorConfigForm() {
       {/* Momentum Lookback */}
       <div className="space-y-4">
         <label className="flex items-center gap-2 text-sm font-medium">
-          Momentum Lookback (6m / 12m in trading days)
+          {t('settingsPage.indicatorForm.momentumLookback.label')}
           <HelpTooltip
-            short="Trading days for momentum calculation"
-            title="Momentum Lookback Periods"
+            short={t('settingsPage.indicatorForm.momentumLookback.tooltip.short')}
+            title={t('settingsPage.indicatorForm.momentumLookback.tooltip.title')}
             content={
               <div className="space-y-4">
                 <p>
-                  We measure momentum (% return) over 6 and 12 month periods.
+                  {t('settingsPage.indicatorForm.momentumLookback.tooltip.content.intro')}
                 </p>
                 <div>
-                  <h4 className="font-semibold mb-2">Trading Days:</h4>
+                  <h4 className="font-semibold mb-2">{t('settingsPage.indicatorForm.momentumLookback.tooltip.content.tradingDaysTitle')}</h4>
                   <ul className="list-disc pl-5 space-y-1 text-sm">
-                    <li>126 days ≈ 6 months (252 trading days/year ÷ 2)</li>
-                    <li>252 days ≈ 12 months (1 year)</li>
+                    <li>{t('settingsPage.indicatorForm.momentumLookback.tooltip.content.tradingDays126')}</li>
+                    <li>{t('settingsPage.indicatorForm.momentumLookback.tooltip.content.tradingDays252')}</li>
                   </ul>
                 </div>
                 <div>
-                  <h4 className="font-semibold mb-2">Formula:</h4>
+                  <h4 className="font-semibold mb-2">{t('settingsPage.indicatorForm.common.formula')}</h4>
                   <code className="block bg-gray-100 dark:bg-gray-800 p-3 rounded font-mono text-sm">
-                    mom_6m = (Price_now / Price_126_days_ago) - 1
+                    {t('settingsPage.indicatorForm.momentumLookback.tooltip.content.formulaValue')}
                   </code>
                 </div>
                 <div className="bg-primary/10 border border-primary/30 rounded p-4">
-                  <p className="font-semibold">Why measure momentum?</p>
+                  <p className="font-semibold">{t('settingsPage.indicatorForm.momentumLookback.tooltip.content.whyTitle')}</p>
                   <p className="text-sm mt-2">
-                    Academic research shows momentum persists: past winners tend to keep winning 
-                    (at least for 3-12 months). We rank stocks by momentum to find the strongest.
+                    {t('settingsPage.indicatorForm.momentumLookback.tooltip.content.whyBody')}
                   </p>
                 </div>
               </div>
@@ -220,7 +219,7 @@ export default function IndicatorConfigForm() {
         </label>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-xs text-gray-600 dark:text-gray-400">6 months (126)</label>
+            <label className="text-xs text-gray-600 dark:text-gray-400">{t('settingsPage.indicatorForm.momentumLookback.sixMonths')}</label>
             <input
               type="number"
               value={indicators.lookback6m}
@@ -231,7 +230,7 @@ export default function IndicatorConfigForm() {
             />
           </div>
           <div>
-            <label className="text-xs text-gray-600 dark:text-gray-400">12 months (252)</label>
+            <label className="text-xs text-gray-600 dark:text-gray-400">{t('settingsPage.indicatorForm.momentumLookback.twelveMonths')}</label>
             <input
               type="number"
               value={indicators.lookback12m}
@@ -248,30 +247,30 @@ export default function IndicatorConfigForm() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
         <div>
           <label className="flex items-center gap-2 text-sm font-medium mb-2">
-            Benchmark Ticker
+            {t('settingsPage.indicatorForm.benchmark.label')}
             <HelpTooltip
-              short="Reference index for relative strength calculation"
-              title="Benchmark Ticker"
+              short={t('settingsPage.indicatorForm.benchmark.tooltip.short')}
+              title={t('settingsPage.indicatorForm.benchmark.tooltip.title')}
               content={
                 <div className="space-y-4">
                   <p>
-                    The benchmark is used to calculate Relative Strength (RS).
+                    {t('settingsPage.indicatorForm.benchmark.tooltip.content.intro')}
                   </p>
                   <div>
-                    <h4 className="font-semibold mb-2">Formula:</h4>
+                    <h4 className="font-semibold mb-2">{t('settingsPage.indicatorForm.common.formula')}</h4>
                     <code className="block bg-gray-100 dark:bg-gray-800 p-3 rounded font-mono text-sm">
-                      RS = mom_6m[stock] - mom_6m[benchmark]
+                      {t('settingsPage.indicatorForm.benchmark.tooltip.content.formulaValue')}
                     </code>
                   </div>
                   <div>
-                    <h4 className="font-semibold mb-2">Example:</h4>
+                    <h4 className="font-semibold mb-2">{t('settingsPage.indicatorForm.common.example')}</h4>
                     <p className="text-sm">
-                      Stock up 20%, SPY up 10%<br />
-                      RS = +10% (outperforming)
+                      {t('settingsPage.indicatorForm.benchmark.tooltip.content.exampleLine1')}<br />
+                      {t('settingsPage.indicatorForm.benchmark.tooltip.content.exampleLine2')}
                     </p>
                   </div>
                   <p className="text-sm">
-                    Default: <strong>SPY</strong> (S&P 500 ETF). We want stocks beating the market.
+                    {t('settingsPage.indicatorForm.benchmark.tooltip.content.defaultPrefix')} <strong>SPY</strong> {t('settingsPage.indicatorForm.benchmark.tooltip.content.defaultSuffix')}
                   </p>
                 </div>
               }
@@ -282,7 +281,7 @@ export default function IndicatorConfigForm() {
             value={indicators.benchmark}
             onChange={(e) => updateIndicators({ benchmark: e.target.value.toUpperCase() })}
             className="w-full px-4 py-2 border border-border rounded-lg uppercase"
-            placeholder="SPY"
+            placeholder={t('settingsPage.indicatorForm.benchmark.placeholder')}
           />
         </div>
       </div>

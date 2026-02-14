@@ -28,6 +28,14 @@ jobs:
             --cov-report=term --cov-report=xml \
             --junit-xml=test-results.xml
 
+      - name: Run web typecheck in Docker
+        run: |
+          docker compose run --rm web npm run typecheck
+
+      - name: Run web lint in Docker
+        run: |
+          docker compose run --rm web npm run lint
+
       - name: Run web tests in Docker
         run: |
           docker compose run --rm web npm test -- --run

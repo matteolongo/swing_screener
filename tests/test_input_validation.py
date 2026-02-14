@@ -30,6 +30,19 @@ class TestCreateOrderValidation:
         assert order.order_type == "LIMIT"
         assert order.quantity == 100
 
+    def test_valid_buy_limit_order(self):
+        """Test that directional BUY_LIMIT order passes validation."""
+        order = CreateOrderRequest(
+            ticker="TAK",
+            order_type="BUY_LIMIT",
+            quantity=8,
+            limit_price=18.37,
+            stop_price=17.8,
+            order_kind="entry",
+        )
+        assert order.order_type == "BUY_LIMIT"
+        assert order.limit_price == 18.37
+
     def test_ticker_uppercase_normalization(self):
         """Test that ticker is normalized to uppercase."""
         order = CreateOrderRequest(
@@ -160,6 +173,16 @@ class TestCreateOrderValidation:
                 ticker="AAPL",
                 order_type="LIMIT",
                 quantity=100
+            )
+        assert "requires limit_price" in str(exc_info.value)
+
+    def test_buy_limit_order_without_limit_price_fails(self):
+        """Test that BUY_LIMIT order without limit_price fails."""
+        with pytest.raises(ValidationError) as exc_info:
+            CreateOrderRequest(
+                ticker="TAK",
+                order_type="BUY_LIMIT",
+                quantity=8,
             )
         assert "requires limit_price" in str(exc_info.value)
 
