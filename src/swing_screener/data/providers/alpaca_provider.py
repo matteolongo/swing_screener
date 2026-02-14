@@ -1,7 +1,7 @@
 """Alpaca market data provider using alpaca-py SDK."""
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Optional
 import time
@@ -156,9 +156,14 @@ class AlpacaDataProvider(MarketDataProvider):
         if not tickers:
             raise ValueError("tickers list is empty")
         
-        # Check cache first
+        end_dt = pd.Timestamp(end_date).date()
+        is_live_edge_request = end_dt >= date.today()
+
+        # Check cache first for historical windows only.
+        # For "today/live-edge" requests, bypass stale same-day cache so
+        # post-close bars are visible before local midnight.
         cache_file = self._cache_path(tickers, start_date, end_date, interval)
-        if self.use_cache and cache_file.exists():
+        if self.use_cache and cache_file.exists() and not is_live_edge_request:
             return pd.read_parquet(cache_file)
         
         # Parse timeframe

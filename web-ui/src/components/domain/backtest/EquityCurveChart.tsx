@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { BacktestCurvePoint } from '@/types/backtest';
+import { BacktestCurvePoint } from '@/features/backtest/types';
+import { useI18n } from '@/i18n/I18nProvider';
 
 const COLORS = [
   '#1d4ed8',
@@ -33,13 +34,18 @@ interface EquityCurveChartProps {
   byTicker: BacktestCurvePoint[];
 }
 
-function buildSeries(total: BacktestCurvePoint[], byTicker: BacktestCurvePoint[]): Series[] {
+function buildSeries(
+  total: BacktestCurvePoint[],
+  byTicker: BacktestCurvePoint[],
+  totalLabel: string,
+  unknownLabel: string
+): Series[] {
   const series: Series[] = [];
 
   if (total.length > 0) {
     series.push({
       id: 'TOTAL',
-      label: 'Total',
+      label: totalLabel,
       color: '#111827',
       points: total.map((p) => ({
         x: new Date(p.date).getTime(),
@@ -52,11 +58,11 @@ function buildSeries(total: BacktestCurvePoint[], byTicker: BacktestCurvePoint[]
 
   const byMap = new Map<string, BacktestCurvePoint[]>();
   byTicker.forEach((p) => {
-    const t = p.ticker || 'UNKNOWN';
-    if (!byMap.has(t)) {
-      byMap.set(t, []);
+    const ticker = p.ticker || unknownLabel;
+    if (!byMap.has(ticker)) {
+      byMap.set(ticker, []);
     }
-    byMap.get(t)!.push(p);
+    byMap.get(ticker)!.push(p);
   });
 
   Array.from(byMap.entries()).forEach(([ticker, points], idx) => {
@@ -96,19 +102,29 @@ function buildTicks(min: number, max: number, count: number): number[] {
   return Array.from({ length: count }, (_, i) => min + step * i);
 }
 
-function formatDateTick(ts: number, spanDays: number): string {
+function formatDateTick(ts: number, spanDays: number, locale: string): string {
   const d = new Date(ts);
   if (spanDays > 365 * 2) {
     return d.getFullYear().toString();
   }
   if (spanDays > 120) {
-    return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+    return d.toLocaleDateString(locale, { month: 'short', year: '2-digit' });
   }
-  return d.toLocaleDateString('en-US', { month: 'short', day: '2-digit' });
+  return d.toLocaleDateString(locale, { month: 'short', day: '2-digit' });
 }
 
 export default function EquityCurveChart({ total, byTicker }: EquityCurveChartProps) {
-  const series = useMemo(() => buildSeries(total, byTicker), [total, byTicker]);
+  const { locale, t } = useI18n();
+  const series = useMemo(
+    () =>
+      buildSeries(
+        total,
+        byTicker,
+        t('backtestPage.equityCurve.series.total'),
+        t('backtestPage.equityCurve.series.unknown')
+      ),
+    [total, byTicker, locale, t]
+  );
   const [visible, setVisible] = useState<Record<string, boolean>>({});
   const visibleMap = useMemo(() => {
     const next: Record<string, boolean> = { ...visible };
@@ -138,7 +154,7 @@ export default function EquityCurveChart({ total, byTicker }: EquityCurveChartPr
   }, [visibleSeries]);
 
   if (series.length === 0) {
-    return <div className="text-sm text-gray-500">No equity curve data.</div>;
+    return <div className="text-sm text-gray-500">{t('backtestPage.equityCurve.noData')}</div>;
   }
 
   const width = 900;
@@ -193,7 +209,7 @@ export default function EquityCurveChart({ total, byTicker }: EquityCurveChartPr
                 <line x1={x} y1={pad} x2={x} y2={height - pad} stroke="#f8fafc" />
                 <line x1={x} y1={height - pad} x2={x} y2={height - pad + 4} stroke="#cbd5f5" />
                 <text x={x} y={height - pad + 16} fontSize="10" textAnchor="middle" fill="#64748b">
-                  {formatDateTick(xVal, spanDays)}
+                  {formatDateTick(xVal, spanDays, locale)}
                 </text>
               </g>
             );

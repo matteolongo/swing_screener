@@ -85,15 +85,15 @@ export function transformPosition(apiPosition: PositionApiResponse): Position {
     entryPrice: apiPosition.entry_price,
     stopPrice: apiPosition.stop_price,
     shares: apiPosition.shares,
-    positionId: apiPosition.position_id || undefined,
-    sourceOrderId: apiPosition.source_order_id || undefined,
-    initialRisk: apiPosition.initial_risk || undefined,
-    maxFavorablePrice: apiPosition.max_favorable_price || undefined,
-    exitDate: apiPosition.exit_date || undefined,
-    exitPrice: apiPosition.exit_price || undefined,
-    currentPrice: apiPosition.current_price || undefined,  // Transform current_price
+    positionId: apiPosition.position_id ?? undefined,
+    sourceOrderId: apiPosition.source_order_id ?? undefined,
+    initialRisk: apiPosition.initial_risk ?? undefined,
+    maxFavorablePrice: apiPosition.max_favorable_price ?? undefined,
+    exitDate: apiPosition.exit_date ?? undefined,
+    exitPrice: apiPosition.exit_price ?? undefined,
+    currentPrice: apiPosition.current_price ?? undefined,
     notes: apiPosition.notes || '',
-    exitOrderIds: apiPosition.exit_order_ids || undefined,
+    exitOrderIds: apiPosition.exit_order_ids ?? undefined,
   };
 }
 
@@ -122,13 +122,13 @@ export function calculateRNow(position: Position, currentPrice: number): number 
 // Calculate P&L
 export function calculatePnL(position: Position, currentPrice?: number): number {
   // Priority: exitPrice (closed) > passed currentPrice > position.currentPrice (live) > entryPrice (fallback)
-  const exitOrCurrent = position.exitPrice || currentPrice || position.currentPrice || position.entryPrice;
+  const exitOrCurrent = position.exitPrice ?? currentPrice ?? position.currentPrice ?? position.entryPrice;
   return (exitOrCurrent - position.entryPrice) * position.shares;
 }
 
 // Calculate P&L percentage
 export function calculatePnLPercent(position: Position, currentPrice?: number): number {
   // Priority: exitPrice (closed) > passed currentPrice > position.currentPrice (live) > entryPrice (fallback)
-  const exitOrCurrent = position.exitPrice || currentPrice || position.currentPrice || position.entryPrice;
+  const exitOrCurrent = position.exitPrice ?? currentPrice ?? position.currentPrice ?? position.entryPrice;
   return ((exitOrCurrent - position.entryPrice) / position.entryPrice) * 100;
 }
