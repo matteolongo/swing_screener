@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { notifyManager } from '@tanstack/react-query';
 import type { AppConfig } from '@/types/config';
 import type { FullBacktestParams, FullEntryType } from '@/features/backtest/types';
+import { t } from '@/i18n/t';
 
 const STORAGE_KEY = 'backtest.params.v1';
 
@@ -110,14 +111,11 @@ export function useBacktestForm({ config, strategyKAtr }: UseBacktestFormArgs) {
   const tickers = useMemo(() => parseTickers(formState.tickersText), [formState.tickersText]);
   const canRun = tickers.length > 0;
 
-  const presets = useMemo(
-    () => [
-      { label: '10Y', range: () => rangeYears(10) },
-      { label: '15Y', range: () => rangeYears(15) },
-      { label: 'Since 2008', range: () => rangeSince('2008-01-01') },
-    ],
-    [],
-  );
+  const presets = [
+    { label: t('backtestPage.parameters.presetOptions.tenYears'), range: () => rangeYears(10) },
+    { label: t('backtestPage.parameters.presetOptions.fifteenYears'), range: () => rangeYears(15) },
+    { label: t('backtestPage.parameters.presetOptions.since2008'), range: () => rangeSince('2008-01-01') },
+  ];
 
   useEffect(() => {
     if (strategyKAtr == null) return;

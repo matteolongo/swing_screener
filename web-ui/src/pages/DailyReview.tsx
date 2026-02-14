@@ -419,6 +419,19 @@ function CandidatesTable({
   );
 }
 
+const TIME_EXIT_REASON_PATTERN = /Time exit:\s*(\d+)\s*bars since entry_date\s*>=\s*(\d+)/i;
+
+function formatDailyReviewReason(reason: string): string {
+  const timeExitMatch = reason.match(TIME_EXIT_REASON_PATTERN);
+  if (timeExitMatch) {
+    return t('dailyReview.reason.timeExit', {
+      barsSince: Number(timeExitMatch[1]),
+      maxBars: Number(timeExitMatch[2]),
+    });
+  }
+  return reason;
+}
+
 function UpdateStopTable({ positions }: { positions: DailyReviewPositionUpdate[] }) {
   return (
     <TableShell
@@ -452,7 +465,7 @@ function UpdateStopTable({ positions }: { positions: DailyReviewPositionUpdate[]
               {t('common.units.rValue', { value: formatNumber(pos.rNow, 2) })}
             </span>
           </td>
-          <td className="p-2 text-sm">{pos.reason}</td>
+          <td className="p-2 text-sm">{formatDailyReviewReason(pos.reason)}</td>
           <td className="p-2 text-right">
             <Button
               variant="secondary"
@@ -500,7 +513,7 @@ function CloseTable({ positions }: { positions: DailyReviewPositionClose[] }) {
               {t('common.units.rValue', { value: formatNumber(pos.rNow, 2) })}
             </span>
           </td>
-          <td className="p-2 text-sm">{pos.reason}</td>
+          <td className="p-2 text-sm">{formatDailyReviewReason(pos.reason)}</td>
           <td className="p-2 text-right">
             <Button
               variant="danger"
@@ -547,7 +560,7 @@ function HoldTable({ positions }: { positions: DailyReviewPositionHold[] }) {
               {t('common.units.rValue', { value: formatNumber(pos.rNow, 2) })}
             </span>
           </td>
-          <td className="p-2 text-sm text-gray-600 dark:text-gray-400">{pos.reason}</td>
+          <td className="p-2 text-sm text-gray-600 dark:text-gray-400">{formatDailyReviewReason(pos.reason)}</td>
         </tr>
       ))}
     </TableShell>
