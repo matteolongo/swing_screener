@@ -22,17 +22,17 @@ export default function BacktestTickerSummaryTable({ rows }: BacktestTickerSumma
     {
       key: 'expectancy',
       header: t('backtestPage.summaryByTicker.headers.expectancy'),
-      render: (row) => (row.expectancyR != null ? formatR(row.expectancyR) : '—'),
+      render: (row) => (row.expectancyR != null ? formatR(row.expectancyR) : t('common.placeholders.emDash')),
     },
     {
       key: 'winrate',
       header: t('backtestPage.summaryByTicker.headers.winRate'),
-      render: (row) => (row.winrate != null ? formatPercent(row.winrate * 100) : '—'),
+      render: (row) => (row.winrate != null ? formatPercent(row.winrate * 100) : t('common.placeholders.emDash')),
     },
     {
       key: 'avgR',
       header: t('backtestPage.summaryByTicker.headers.avgR'),
-      render: (row) => (row.avgR != null ? formatR(row.avgR) : '—'),
+      render: (row) => (row.avgR != null ? formatR(row.avgR) : t('common.placeholders.emDash')),
     },
   ];
 

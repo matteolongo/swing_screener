@@ -61,7 +61,9 @@ export default function SocialAnalysisModal({
         ? t('socialAnalysisModal.status.noData')
         : t('socialAnalysisModal.status.error');
 
-  const lastExecution = data?.lastExecutionAt ? formatDateTime(data.lastExecutionAt) : '—';
+  const lastExecution = data?.lastExecutionAt
+    ? formatDateTime(data.lastExecutionAt)
+    : t('common.placeholders.emDash');
   const sampleSize = data?.sampleSize ?? 0;
   const reasons = data?.reasons ?? [];
   const defaultLookback = data?.lookbackHours;
@@ -120,13 +122,17 @@ export default function SocialAnalysisModal({
                 <div>
                   <div className="text-gray-500">{t('socialAnalysisModal.metrics.sentiment')}</div>
                   <div className="font-semibold">
-                    {data.sentimentScore != null ? data.sentimentScore.toFixed(2) : '—'}
+                    {data.sentimentScore != null
+                      ? data.sentimentScore.toFixed(2)
+                      : t('common.placeholders.emDash')}
                   </div>
                 </div>
                 <div>
                   <div className="text-gray-500">{t('socialAnalysisModal.metrics.confidence')}</div>
                   <div className="font-semibold">
-                    {data.sentimentConfidence != null ? data.sentimentConfidence.toFixed(2) : '—'}
+                    {data.sentimentConfidence != null
+                      ? data.sentimentConfidence.toFixed(2)
+                      : t('common.placeholders.emDash')}
                   </div>
                 </div>
                 <div>
@@ -136,13 +142,17 @@ export default function SocialAnalysisModal({
                 <div>
                   <div className="text-gray-500">{t('socialAnalysisModal.metrics.attentionZ')}</div>
                   <div className="font-semibold">
-                    {data.attentionZ != null ? data.attentionZ.toFixed(2) : '—'}
+                    {data.attentionZ != null
+                      ? data.attentionZ.toFixed(2)
+                      : t('common.placeholders.emDash')}
                   </div>
                 </div>
                 <div>
                   <div className="text-gray-500">{t('socialAnalysisModal.metrics.hype')}</div>
                   <div className="font-semibold">
-                    {data.hypeScore != null ? data.hypeScore.toFixed(2) : '—'}
+                    {data.hypeScore != null
+                      ? data.hypeScore.toFixed(2)
+                      : t('common.placeholders.emDash')}
                   </div>
                 </div>
                 <div>
