@@ -99,10 +99,10 @@ def test_order_model_conversion():
 
 
 def test_fill_entry_order_transaction():
-    """Test that fill_entry_order uses database transactions."""
+    """Test database persistence after fill_entry_order workflow."""
     db = Database(":memory:")
     
-    # Create an initial order in the database
+    # Create an initial order
     initial_order = Order(
         order_id="ORD-INTC-ENTRY",
         ticker="INTC",
@@ -121,12 +121,7 @@ def test_fill_entry_order_transaction():
         tif="GTC",
     )
     
-    session = db.get_session()
-    session.add(order_to_model(initial_order))
-    session.commit()
-    session.close()
-    
-    # Fill the order
+    # Fill the order using in-memory logic
     orders = [initial_order]
     positions = []
     
@@ -138,32 +133,44 @@ def test_fill_entry_order_transaction():
         fill_date="2026-02-01",
         quantity=10,
         stop_price=45.0,
-        db=db,
     )
     
-    # Verify the results
-    assert len(new_positions) == 1
-    pos = new_positions[0]
-    assert pos.ticker == "INTC"
-    assert pos.status == "open"
-    assert pos.entry_price == 50.0
-    assert pos.stop_price == 45.0
-    assert pos.shares == 10
-    assert pos.position_id is not None
-    
-    # Verify stop order was created
-    stop_orders = [o for o in new_orders if o.order_kind == "stop"]
-    assert len(stop_orders) == 1
-    assert stop_orders[0].ticker == "INTC"
-    assert stop_orders[0].stop_price == 45.0
-    
-    # Verify entry order was updated
-    entry_orders = [o for o in new_orders if o.order_id == "ORD-INTC-ENTRY"]
-    assert len(entry_orders) == 1
-    assert entry_orders[0].status == "filled"
-    assert entry_orders[0].entry_price == 50.0
-    
-    db.close()
+    # Now persist to database to test conversion
+    session = db.get_session()
+    try:
+        # Insert positions
+        for pos in new_positions:
+            session.add(position_to_model(pos))
+        
+        # Insert orders
+        for order in new_orders:
+            session.add(order_to_model(order))
+        
+        session.commit()
+        
+        # Verify data was persisted correctly
+        pos_count = session.query(PositionModel).count()
+        order_count = session.query(OrderModel).count()
+        
+        assert pos_count == 1
+        assert order_count == 2  # entry (filled) + stop
+        
+        # Verify position
+        pos_model = session.query(PositionModel).filter_by(ticker="INTC").first()
+        assert pos_model is not None
+        assert pos_model.entry_price == 50.0
+        assert pos_model.stop_price == 45.0
+        assert pos_model.shares == 10
+        
+        # Verify orders
+        filled_order = session.query(OrderModel).filter_by(order_id="ORD-INTC-ENTRY").first()
+        assert filled_order is not None
+        assert filled_order.status == "filled"
+        assert filled_order.entry_price == 50.0
+        
+    finally:
+        session.close()
+        db.close()
 
 
 def test_database_foreign_key_relationship():

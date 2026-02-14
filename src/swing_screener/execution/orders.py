@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Literal, Optional
 import json
 
-from swing_screener.db import Database, get_default_db, model_to_order
+from swing_screener.utils.file_lock import locked_read_json_cli, locked_write_json_cli
 
 
 OrderStatus = Literal["pending", "filled", "cancelled"]
@@ -31,44 +31,81 @@ class Order:
     tif: Optional[str] = None
 
 
-def load_orders(path: str | Path = None, db: Database = None) -> list[Order]:
-    """Load orders from database.
-    
-    Args:
-        path: Legacy parameter for backward compatibility (ignored if db provided)
-        db: Database instance to use. If None, uses default database.
-        
-    Returns:
-        List of Order objects
-    """
-    if db is None:
-        db = get_default_db()
-    
-    session = db.get_session()
-    try:
-        from swing_screener.db import OrderModel
-        models = session.query(OrderModel).all()
-        return [model_to_order(m) for m in models]
-    finally:
-        session.close()
+def load_orders(path: str | Path) -> list[Order]:
+    p = Path(path)
+    data = locked_read_json_cli(p)
+    out: list[Order] = []
+    for idx, item in enumerate(data.get("orders", [])):
+        ticker = str(item.get("ticker", "")).strip().upper()
+        if not ticker:
+            continue
+        order_id = str(item.get("order_id", "")).strip() or f"{ticker}-{idx + 1}"
+        status_raw = str(item.get("status", "pending")).strip().lower()
+        status = status_raw if status_raw in {"pending", "filled", "cancelled"} else "pending"
+        order_kind_raw = str(item.get("order_kind", "")).strip().lower()
+        order_kind = (
+            order_kind_raw
+            if order_kind_raw in {"entry", "stop", "take_profit"}
+            else None
+        )
+
+        out.append(
+            Order(
+                order_id=order_id,
+                ticker=ticker,
+                status=status,
+                order_type=str(item.get("order_type", "")).strip().upper(),
+                quantity=int(item.get("quantity", 0) or 0),
+                limit_price=(
+                    float(item["limit_price"])
+                    if item.get("limit_price") is not None
+                    else None
+                ),
+                stop_price=(
+                    float(item["stop_price"])
+                    if item.get("stop_price") is not None
+                    else None
+                ),
+                order_date=str(item.get("order_date", "")).strip(),
+                filled_date=str(item.get("filled_date", "")).strip(),
+                entry_price=(
+                    float(item["entry_price"])
+                    if item.get("entry_price") is not None
+                    else None
+                ),
+                notes=str(item.get("notes", "")).strip(),
+                order_kind=order_kind,
+                parent_order_id=item.get("parent_order_id", None),
+                position_id=item.get("position_id", None),
+                tif=item.get("tif", None),
+            )
+        )
+    return out
 
 
 def save_orders(path: str | Path, orders: list[Order], asof: Optional[str] = None) -> None:
-    """[DEPRECATED] Save orders to database.
-    
-    This function is kept for backward compatibility but now uses the database.
-    The file-based persistence is no longer used.
-    
-    Args:
-        path: Ignored (kept for backward compatibility)
-        orders: List of orders to save
-        asof: Ignored (kept for backward compatibility)
-    """
-    import warnings
-    warnings.warn(
-        "save_orders is deprecated. Orders are now persisted via database transactions.",
-        DeprecationWarning,
-        stacklevel=2
-    )
-    # For now, do nothing as orders should be saved via transactions
-    pass
+    p = Path(path)
+    payload = {
+        "asof": asof,
+        "orders": [
+            {
+                "order_id": o.order_id,
+                "ticker": o.ticker,
+                "status": o.status,
+                "order_type": o.order_type,
+                "limit_price": o.limit_price,
+                "quantity": o.quantity,
+                "stop_price": o.stop_price,
+                "order_date": o.order_date,
+                "filled_date": o.filled_date,
+                "entry_price": o.entry_price,
+                "notes": o.notes,
+                "order_kind": o.order_kind,
+                "parent_order_id": o.parent_order_id,
+                "position_id": o.position_id,
+                "tif": o.tif,
+            }
+            for o in orders
+        ],
+    }
+    locked_write_json_cli(p, payload)
