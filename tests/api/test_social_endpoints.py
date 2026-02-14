@@ -23,13 +23,16 @@ def test_social_analyze_returns_raw_events_when_no_data(monkeypatch, tmp_path):
         *,
         lookback_hours: int,
         min_sample_size: int,
-        provider_name: str = "reddit",
+        provider_names: list[str] | None = None,
+        sentiment_analyzer_name: str = "keyword",
         max_events: int = 100,
     ):
+        providers = provider_names or ["reddit"]
         return {
             "status": "no_data",
             "symbol": symbol,
-            "provider": provider_name,
+            "providers": providers,
+            "sentiment_analyzer": sentiment_analyzer_name,
             "lookback_hours": lookback_hours,
             "last_execution_at": "2026-02-09T09:00:00",
             "sample_size": min_sample_size - 1,
@@ -38,6 +41,7 @@ def test_social_analyze_returns_raw_events_when_no_data(monkeypatch, tmp_path):
             "attention_score": 3.0,
             "attention_z": None,
             "hype_score": None,
+            "source_breakdown": {"reddit": min_sample_size - 1},
             "reasons": ["LOW_SAMPLE_SIZE_NO_ACTION"],
             "raw_events": [
                 SocialRawEvent(
