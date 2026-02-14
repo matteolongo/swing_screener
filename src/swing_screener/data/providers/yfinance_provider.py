@@ -3,13 +3,16 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, date
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Iterable, Iterator, Optional
 import hashlib
+import logging
 import pandas as pd
 import yfinance as yf
 
 from .base import MarketDataProvider
 from ..market_data import fetch_ticker_metadata
+
+logger = logging.getLogger(__name__)
 
 
 class YfinanceProvider(MarketDataProvider):
@@ -20,6 +23,9 @@ class YfinanceProvider(MarketDataProvider):
     Fetches OHLCV data from Yahoo Finance and caches to parquet files.
     """
     
+    _THREAD_SAFE_BATCH_SIZE = 20
+    _RETRY_CHUNK_SIZE = 10
+
     def __init__(
         self,
         cache_dir: str = ".cache/market_data",
@@ -40,6 +46,7 @@ class YfinanceProvider(MarketDataProvider):
         
         # Create cache directory
         self.cache_dir.mkdir(parents=True, exist_ok=True)
+        self._configure_yf_tz_cache()
     
     def _normalize_tickers(self, tickers: Iterable[str]) -> list[str]:
         """Normalize and deduplicate ticker list."""
@@ -68,6 +75,141 @@ class YfinanceProvider(MarketDataProvider):
             prefix = "-".join(tickers[:3])
             key = f"{prefix}__n={len(tickers)}__{start}__{safe_end}__adj={int(auto_adjust)}__{digest}"
         return self.cache_dir / f"{key}.parquet"
+
+    def _configure_yf_tz_cache(self) -> None:
+        """Point yfinance timezone cache to a writable project-local directory."""
+        if not hasattr(yf, "set_tz_cache_location"):
+            return
+
+        tz_cache_dir = self.cache_dir / "yfinance_tz_cache"
+        try:
+            tz_cache_dir.mkdir(parents=True, exist_ok=True)
+            yf.set_tz_cache_location(str(tz_cache_dir))
+        except Exception as exc:  # pragma: no cover - defensive, depends on host FS perms
+            logger.warning("Failed to configure yfinance tz cache at %s: %s", tz_cache_dir, exc)
+
+    def _iter_chunks(self, tickers: list[str], size: int) -> Iterator[list[str]]:
+        """Yield fixed-size chunks from a ticker list."""
+        for i in range(0, len(tickers), size):
+            yield tickers[i : i + size]
+
+    def _download_raw(
+        self,
+        tickers: list[str],
+        start_date: str,
+        end_date: Optional[str],
+        threads: Optional[bool] = None,
+    ) -> pd.DataFrame:
+        """
+        Download raw data from yfinance.
+
+        For larger batches, disable yfinance threading to avoid sporadic failures in
+        multi-ticker requests.
+        """
+        use_threads = threads if threads is not None else len(tickers) <= self._THREAD_SAFE_BATCH_SIZE
+        return yf.download(
+            tickers,
+            start=start_date,
+            end=end_date,
+            auto_adjust=self.auto_adjust,
+            progress=self.progress,
+            group_by="column",
+            threads=use_threads,
+        )
+
+    def _download_batch(
+        self,
+        tickers: list[str],
+        start_date: str,
+        end_date: Optional[str],
+        threads: Optional[bool] = None,
+    ) -> pd.DataFrame:
+        """Download and normalize one ticker batch, returning empty frame on failure."""
+        try:
+            df = self._download_raw(tickers, start_date, end_date, threads=threads)
+        except Exception as exc:
+            logger.warning(
+                "yfinance download failed for %s tickers (%s): %s",
+                len(tickers),
+                ",".join(tickers[:5]),
+                exc,
+            )
+            return pd.DataFrame()
+
+        if df is None or df.empty:
+            return pd.DataFrame()
+
+        try:
+            return self._standardize_columns(df, tickers)
+        except ValueError as exc:
+            logger.warning(
+                "Failed to normalize yfinance columns for %s tickers (%s): %s",
+                len(tickers),
+                ",".join(tickers[:5]),
+                exc,
+            )
+            return pd.DataFrame()
+
+    def _merge_ohlcv_frames(self, base: pd.DataFrame, extra: pd.DataFrame) -> pd.DataFrame:
+        """Merge two normalized OHLCV frames and deduplicate overlapping columns."""
+        if base is None or base.empty:
+            return extra
+        if extra is None or extra.empty:
+            return base
+        merged = pd.concat([base, extra], axis=1)
+        merged = merged.loc[:, ~merged.columns.duplicated()]
+        return merged.sort_index(axis=1)
+
+    def _missing_close_tickers(self, df: pd.DataFrame, tickers: list[str]) -> list[str]:
+        """Return tickers with missing or all-NaN Close series."""
+        if df is None or df.empty:
+            return list(tickers)
+        if "Close" not in df.columns.get_level_values(0):
+            return list(tickers)
+
+        close = df["Close"]
+        missing: list[str] = []
+        for ticker in tickers:
+            if ticker not in close.columns:
+                missing.append(ticker)
+                continue
+            if close[ticker].dropna().empty:
+                missing.append(ticker)
+        return missing
+
+    def _download_sequential(
+        self,
+        tickers: list[str],
+        start_date: str,
+        end_date: Optional[str],
+    ) -> pd.DataFrame:
+        """Download tickers one-by-one as a fallback when bulk calls fail."""
+        out = pd.DataFrame()
+        for ticker in tickers:
+            single = self._download_batch([ticker], start_date, end_date, threads=False)
+            out = self._merge_ohlcv_frames(out, single)
+        return out
+
+    def _retry_missing_tickers(
+        self,
+        tickers: list[str],
+        start_date: str,
+        end_date: Optional[str],
+    ) -> pd.DataFrame:
+        """
+        Retry missing tickers in smaller batches, then one-by-one for stubborn symbols.
+        """
+        out = pd.DataFrame()
+        for chunk in self._iter_chunks(tickers, self._RETRY_CHUNK_SIZE):
+            chunk_df = self._download_batch(chunk, start_date, end_date, threads=False)
+            out = self._merge_ohlcv_frames(out, chunk_df)
+
+            still_missing = self._missing_close_tickers(chunk_df, chunk)
+            if still_missing:
+                out = self._merge_ohlcv_frames(
+                    out, self._download_sequential(still_missing, start_date, end_date)
+                )
+        return out
     
     def _standardize_columns(self, df: pd.DataFrame, tickers: list[str]) -> pd.DataFrame:
         """Standardize column format to (field, ticker) MultiIndex."""
@@ -157,31 +299,39 @@ class YfinanceProvider(MarketDataProvider):
             df = pd.read_parquet(cache_file)
             return self._clean_ohlcv(df, tks)
         
-        # Download from Yahoo Finance
-        try:
-            df = yf.download(
-                tks,
-                start=start_date,
-                end=actual_end,  # yfinance handles None as "today"
-                auto_adjust=self.auto_adjust,
-                progress=self.progress,
-                group_by="column",
-                threads=True,
+        # Download from Yahoo Finance (bulk first, then targeted retries for missing symbols)
+        df = self._download_batch(tks, start_date, actual_end)
+
+        if (df is None or df.empty) and len(tks) > 1:
+            logger.warning(
+                "Bulk yfinance download returned no data for %s tickers; retrying sequentially.",
+                len(tks),
             )
-        except Exception as e:
-            if allow_cache_fallback_on_error and cache_file.exists():
-                df = pd.read_parquet(cache_file)
-                return self._clean_ohlcv(df, tks)
-            raise RuntimeError(f"Download failed: {e}") from e
-        
+            df = self._download_sequential(tks, start_date, actual_end)
+
         if df is None or df.empty:
             if allow_cache_fallback_on_error and cache_file.exists():
                 df = pd.read_parquet(cache_file)
                 return self._clean_ohlcv(df, tks)
             raise RuntimeError("Download empty. Check tickers or connection.")
-        
-        # Standardize column format
-        df = self._standardize_columns(df, tks)
+
+        missing_tickers = self._missing_close_tickers(df, tks)
+        if missing_tickers and len(tks) > 1:
+            logger.warning(
+                "yfinance missing close data for %s/%s tickers; retrying missing symbols.",
+                len(missing_tickers),
+                len(tks),
+            )
+            retry_df = self._retry_missing_tickers(missing_tickers, start_date, actual_end)
+            df = self._merge_ohlcv_frames(df, retry_df)
+
+            remaining_missing = self._missing_close_tickers(df, tks)
+            if remaining_missing:
+                logger.warning(
+                    "yfinance still missing close data for %s tickers after retries (%s).",
+                    len(remaining_missing),
+                    ",".join(remaining_missing[:10]),
+                )
         
         # Cache result
         if use_cache:

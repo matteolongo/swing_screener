@@ -66,7 +66,7 @@ function EventsList({ events }: { events: SocialRawEvent[] }) {
           className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
         >
           <div className="flex items-start justify-between gap-2 mb-2">
-            <Badge variant="default" size="sm">
+            <Badge variant="default">
               {event.source === 'yahoo_finance' ? 'Yahoo Finance' : 'Reddit'}
             </Badge>
             <span className="text-xs text-gray-500 dark:text-gray-400">
@@ -146,11 +146,11 @@ export default function SentimentPanel({ data, loading, error }: SentimentPanelP
           <CardTitle>Sentiment Analysis - {data.symbol}</CardTitle>
           <div className="flex items-center gap-2">
             {data.providers.map(p => (
-              <Badge key={p} variant="default" size="sm">
+              <Badge key={p} variant="default">
                 {p === 'yahoo_finance' ? 'Yahoo Finance' : 'Reddit'}
               </Badge>
             ))}
-            <Badge variant="info" size="sm">
+            <Badge variant="primary">
               {data.sentimentAnalyzer}
             </Badge>
           </div>

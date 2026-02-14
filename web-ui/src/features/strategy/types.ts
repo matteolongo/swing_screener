@@ -205,6 +205,8 @@ export interface StrategySocialOverlayAPI {
   negative_sent_threshold?: number;
   sentiment_conf_threshold?: number;
   hype_percentile_threshold?: number;
+  providers?: string[];
+  sentiment_analyzer?: string;
 }
 
 export interface StrategyAPI {
@@ -338,6 +340,8 @@ export function transformStrategy(api: StrategyAPI): Strategy {
       negativeSentThreshold: socialOverlayApi.negative_sent_threshold ?? -0.4,
       sentimentConfThreshold: socialOverlayApi.sentiment_conf_threshold ?? 0.7,
       hypePercentileThreshold: socialOverlayApi.hype_percentile_threshold ?? 95.0,
+      providers: socialOverlayApi.providers ?? ['reddit'],
+      sentimentAnalyzer: socialOverlayApi.sentiment_analyzer ?? 'keyword',
     },
     isDefault: api.is_default,
     createdAt: api.created_at,
@@ -434,6 +438,8 @@ export function toStrategyUpdateRequest(strategy: Strategy): StrategyUpdateReque
       negative_sent_threshold: strategy.socialOverlay.negativeSentThreshold,
       sentiment_conf_threshold: strategy.socialOverlay.sentimentConfThreshold,
       hype_percentile_threshold: strategy.socialOverlay.hypePercentileThreshold,
+      providers: strategy.socialOverlay.providers,
+      sentiment_analyzer: strategy.socialOverlay.sentimentAnalyzer,
     },
   };
 }

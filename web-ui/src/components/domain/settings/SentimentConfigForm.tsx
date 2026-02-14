@@ -1,12 +1,25 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useStrategyEditor } from '@/features/strategy/useStrategyEditor';
 import Button from '@/components/common/Button';
 import HelpTooltip from '@/components/common/HelpTooltip';
 import Badge from '@/components/common/Badge';
+import type { StrategySocialOverlay } from '@/features/strategy/types';
 
 interface SentimentConfigFormProps {
   onSave?: () => void;
 }
+
+const DEFAULT_SOCIAL_OVERLAY: StrategySocialOverlay = {
+  enabled: false,
+  lookbackHours: 24,
+  attentionZThreshold: 3.0,
+  minSampleSize: 20,
+  negativeSentThreshold: -0.4,
+  sentimentConfThreshold: 0.7,
+  hypePercentileThreshold: 95.0,
+  providers: ['reddit'],
+  sentimentAnalyzer: 'keyword',
+};
 
 const HELP_PROVIDERS = {
   title: 'Social Data Providers',
@@ -25,12 +38,39 @@ const HELP_ANALYZER = {
 };
 
 export default function SentimentConfigForm({ onSave }: SentimentConfigFormProps) {
-  const { editor, handleSave, isSaving } = useStrategyEditor();
+  const { draft, setDraft, handleSave, updateMutation } = useStrategyEditor();
   const [availableProviders] = useState<string[]>(['reddit', 'yahoo_finance']);
   const [availableAnalyzers] = useState<string[]>(['keyword', 'vader']);
-  
-  const providers = editor.socialOverlay.providers || ['reddit'];
-  const analyzer = editor.socialOverlay.sentimentAnalyzer || 'keyword';
+
+  const socialOverlay = useMemo<StrategySocialOverlay>(() => {
+    if (!draft) return DEFAULT_SOCIAL_OVERLAY;
+    const overlay = (draft.socialOverlay ?? {}) as Partial<StrategySocialOverlay>;
+    const providers =
+      Array.isArray(overlay.providers) && overlay.providers.length > 0
+        ? overlay.providers
+        : DEFAULT_SOCIAL_OVERLAY.providers;
+
+    return {
+      ...DEFAULT_SOCIAL_OVERLAY,
+      ...overlay,
+      providers,
+      sentimentAnalyzer: overlay.sentimentAnalyzer ?? DEFAULT_SOCIAL_OVERLAY.sentimentAnalyzer,
+    };
+  }, [draft]);
+
+  const providers = socialOverlay.providers;
+  const analyzer = socialOverlay.sentimentAnalyzer;
+
+  const updateSocialOverlay = (next: Partial<StrategySocialOverlay>) => {
+    if (!draft) return;
+    setDraft({
+      ...draft,
+      socialOverlay: {
+        ...socialOverlay,
+        ...next,
+      },
+    });
+  };
 
   const toggleProvider = (provider: string) => {
     const newProviders = providers.includes(provider)
@@ -41,24 +81,22 @@ export default function SentimentConfigForm({ onSave }: SentimentConfigFormProps
       // Keep at least one provider
       return;
     }
-    
-    editor.setSocialOverlay({
-      ...editor.socialOverlay,
-      providers: newProviders,
-    });
+
+    updateSocialOverlay({ providers: newProviders });
   };
 
   const setAnalyzer = (newAnalyzer: string) => {
-    editor.setSocialOverlay({
-      ...editor.socialOverlay,
-      sentimentAnalyzer: newAnalyzer,
-    });
+    updateSocialOverlay({ sentimentAnalyzer: newAnalyzer });
   };
 
-  const handleSaveClick = async () => {
-    await handleSave();
+  const handleSaveClick = () => {
+    handleSave();
     onSave?.();
   };
+
+  if (!draft) {
+    return <p className="text-sm text-gray-500">Loading strategy configuration...</p>;
+  }
 
   return (
     <div className="space-y-6">
@@ -68,7 +106,18 @@ export default function SentimentConfigForm({ onSave }: SentimentConfigFormProps
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Social Data Providers
           </label>
-          <HelpTooltip {...HELP_PROVIDERS} />
+          <HelpTooltip
+            short={HELP_PROVIDERS.whatIs}
+            title={HELP_PROVIDERS.title}
+            content={
+              <div className="space-y-2 text-sm">
+                <p>{HELP_PROVIDERS.whatIs}</p>
+                <p>{HELP_PROVIDERS.why}</p>
+                <p>{HELP_PROVIDERS.detail}</p>
+                <p className="font-medium">{HELP_PROVIDERS.tip}</p>
+              </div>
+            }
+          />
         </div>
         <div className="flex flex-wrap gap-2">
           {availableProviders.map((provider) => {
@@ -105,7 +154,18 @@ export default function SentimentConfigForm({ onSave }: SentimentConfigFormProps
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Sentiment Analyzer
           </label>
-          <HelpTooltip {...HELP_ANALYZER} />
+          <HelpTooltip
+            short={HELP_ANALYZER.whatIs}
+            title={HELP_ANALYZER.title}
+            content={
+              <div className="space-y-2 text-sm">
+                <p>{HELP_ANALYZER.whatIs}</p>
+                <p>{HELP_ANALYZER.why}</p>
+                <p>{HELP_ANALYZER.detail}</p>
+                <p className="font-medium">{HELP_ANALYZER.tip}</p>
+              </div>
+            }
+          />
         </div>
         <div className="flex gap-2">
           {availableAnalyzers.map((a) => {
@@ -147,7 +207,7 @@ export default function SentimentConfigForm({ onSave }: SentimentConfigFormProps
             <span className="font-medium">Providers:</span>
             <div className="flex gap-1">
               {providers.map(p => (
-                <Badge key={p} variant="info" size="sm">
+                <Badge key={p} variant="primary">
                   {p === 'yahoo_finance' ? 'Yahoo Finance' : 'Reddit'}
                 </Badge>
               ))}
@@ -155,7 +215,7 @@ export default function SentimentConfigForm({ onSave }: SentimentConfigFormProps
           </div>
           <div className="flex items-center gap-2">
             <span className="font-medium">Analyzer:</span>
-            <Badge variant="info" size="sm">
+            <Badge variant="primary">
               {analyzer.charAt(0).toUpperCase() + analyzer.slice(1)}
             </Badge>
           </div>
@@ -166,10 +226,9 @@ export default function SentimentConfigForm({ onSave }: SentimentConfigFormProps
       <div className="flex justify-end">
         <Button
           onClick={handleSaveClick}
-          disabled={isSaving}
-          loading={isSaving}
+          disabled={updateMutation.isPending}
         >
-          Save Configuration
+          {updateMutation.isPending ? 'Saving...' : 'Save Configuration'}
         </Button>
       </div>
     </div>
