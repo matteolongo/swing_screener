@@ -19,14 +19,16 @@ class SocialRawEvent(BaseModel):
 class SocialAnalysisRequest(BaseModel):
     symbol: str
     lookback_hours: Optional[int] = Field(default=None, ge=1)
-    provider: Optional[str] = None
+    providers: Optional[list[str]] = None
+    sentiment_analyzer: Optional[str] = None
     max_events: Optional[int] = Field(default=None, ge=1, le=500)
 
 
 class SocialAnalysisResponse(BaseModel):
     status: Literal["ok", "no_data", "error"]
     symbol: str
-    provider: str
+    providers: list[str]
+    sentiment_analyzer: str
     lookback_hours: int
     last_execution_at: str
     sample_size: int
@@ -35,6 +37,7 @@ class SocialAnalysisResponse(BaseModel):
     attention_score: float
     attention_z: Optional[float] = None
     hype_score: Optional[float] = None
+    source_breakdown: dict[str, int] = Field(default_factory=dict)
     reasons: list[str] = Field(default_factory=list)
     raw_events: list[SocialRawEvent] = Field(default_factory=list)
     error: Optional[str] = None

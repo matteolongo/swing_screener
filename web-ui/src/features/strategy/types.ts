@@ -93,6 +93,8 @@ export interface StrategySocialOverlay {
   negativeSentThreshold: number;
   sentimentConfThreshold: number;
   hypePercentileThreshold: number;
+  providers: string[];
+  sentimentAnalyzer: string;
 }
 
 export interface Strategy {

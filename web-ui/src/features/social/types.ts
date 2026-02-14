@@ -12,7 +12,8 @@ export interface SocialRawEvent {
 export interface SocialAnalysisResponse {
   status: 'ok' | 'no_data' | 'error';
   symbol: string;
-  provider: string;
+  providers: string[];
+  sentimentAnalyzer: string;
   lookbackHours: number;
   lastExecutionAt: string;
   sampleSize: number;
@@ -21,6 +22,7 @@ export interface SocialAnalysisResponse {
   attentionScore: number;
   attentionZ?: number;
   hypeScore?: number;
+  sourceBreakdown: Record<string, number>;
   reasons: string[];
   rawEvents: SocialRawEvent[];
   error?: string;
@@ -40,7 +42,8 @@ export interface SocialRawEventAPI {
 export interface SocialAnalysisResponseAPI {
   status: 'ok' | 'no_data' | 'error';
   symbol: string;
-  provider: string;
+  providers: string[];
+  sentiment_analyzer: string;
   lookback_hours: number;
   last_execution_at: string;
   sample_size: number;
@@ -49,9 +52,15 @@ export interface SocialAnalysisResponseAPI {
   attention_score: number;
   attention_z?: number;
   hype_score?: number;
+  source_breakdown: Record<string, number>;
   reasons: string[];
   raw_events: SocialRawEventAPI[];
   error?: string;
+}
+
+export interface SocialProvidersResponse {
+  providers: string[];
+  analyzers: string[];
 }
 
 export function transformSocialAnalysisResponse(
@@ -60,7 +69,8 @@ export function transformSocialAnalysisResponse(
   return {
     status: api.status,
     symbol: api.symbol,
-    provider: api.provider,
+    providers: api.providers,
+    sentimentAnalyzer: api.sentiment_analyzer,
     lookbackHours: api.lookback_hours,
     lastExecutionAt: api.last_execution_at,
     sampleSize: api.sample_size,
@@ -69,6 +79,7 @@ export function transformSocialAnalysisResponse(
     attentionScore: api.attention_score,
     attentionZ: api.attention_z,
     hypeScore: api.hype_score,
+    sourceBreakdown: api.source_breakdown ?? {},
     reasons: api.reasons ?? [],
     rawEvents: (api.raw_events ?? []).map((ev) => ({
       source: ev.source,
