@@ -3,6 +3,7 @@ import { render, RenderOptions, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
 import userEvent from '@testing-library/user-event'
+import { I18nProvider } from '@/i18n/I18nProvider'
 
 // Create a new QueryClient for each test
 function createTestQueryClient() {
@@ -33,16 +34,18 @@ export function renderWithProviders(
 
   function Wrapper({ children }: { children: React.ReactNode }) {
     return (
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter
-          future={{
-            v7_startTransition: true,
-            v7_relativeSplatPath: true,
-          }}
-        >
-          {children}
-        </BrowserRouter>
-      </QueryClientProvider>
+      <I18nProvider>
+        <QueryClientProvider client={queryClient}>
+          <BrowserRouter
+            future={{
+              v7_startTransition: true,
+              v7_relativeSplatPath: true,
+            }}
+          >
+            {children}
+          </BrowserRouter>
+        </QueryClientProvider>
+      </I18nProvider>
     )
   }
 

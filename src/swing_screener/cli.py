@@ -11,7 +11,7 @@ import pandas as pd
 from swing_screener.reporting.report import build_daily_report
 from swing_screener.reporting.concentration import sector_concentration_warnings
 from swing_screener.risk.regime import compute_regime_risk_multiplier
-from swing_screener.data.market_data import fetch_ohlcv
+from swing_screener.data.providers.factory import get_market_data_provider
 from swing_screener.data.universe import (
     load_universe_from_package,
     load_universe_from_file,
@@ -438,7 +438,11 @@ def main() -> None:
 
         tickers = _resolve_tickers_from_run_args(args, benchmark=benchmark)
 
-        ohlcv = fetch_ohlcv(tickers)
+        # Fetch OHLCV data using provider
+        provider = get_market_data_provider()
+        # Use default date range: start from 2022-01-01 to today (matches MarketDataConfig defaults)
+        end_date = dt.date.today().strftime("%Y-%m-%d")
+        ohlcv = provider.fetch_ohlcv(tickers, start_date="2022-01-01", end_date=end_date)
         exclude_tickers = None
         if args.positions:
             from swing_screener.portfolio.state import load_positions
@@ -632,7 +636,10 @@ def main() -> None:
                     tickers.append(t)
 
         # Fetch enough history for SMA trailing etc.
-        ohlcv = fetch_ohlcv(tickers)
+        provider = get_market_data_provider()
+        # Use default date range: start from 2022-01-01 to today (matches MarketDataConfig defaults)
+        end_date = dt.date.today().strftime("%Y-%m-%d")
+        ohlcv = provider.fetch_ohlcv(tickers, start_date="2022-01-01", end_date=end_date)
 
         updates, new_positions = evaluate_positions(ohlcv, positions, manage_cfg)
         df = updates_to_dataframe(updates)
