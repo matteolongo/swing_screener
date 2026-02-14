@@ -123,7 +123,7 @@ export default function EquityCurveChart({ total, byTicker }: EquityCurveChartPr
         t('backtestPage.equityCurve.series.total'),
         t('backtestPage.equityCurve.series.unknown')
       ),
-    [total, byTicker, t]
+    [total, byTicker, locale, t]
   );
   const [visible, setVisible] = useState<Record<string, boolean>>({});
   const visibleMap = useMemo(() => {
