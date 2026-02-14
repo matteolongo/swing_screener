@@ -3,6 +3,7 @@ from datetime import date, datetime, timedelta
 import pandas as pd
 import pytest
 
+import swing_screener.social as social_module
 from swing_screener.social.cache import SocialCache
 from swing_screener.social.config import SocialOverlayConfig
 from swing_screener.social.metrics import compute_daily_metrics
@@ -14,6 +15,7 @@ from swing_screener.social.overlay import (
     REASON_NEG_SENT,
     REASON_LOW_SAMPLE,
 )
+from swing_screener.social.sentiment.base import SentimentResult
 from swing_screener.risk.position_sizing import RiskConfig, build_trade_plans
 
 
@@ -171,3 +173,64 @@ def test_trade_plan_respects_risk_multiplier():
 
     assert base.loc["AAA", "risk_amount_target"] == 20.0
     assert overlay.loc["AAA", "risk_amount_target"] == 10.0
+
+
+def test_run_social_overlay_uses_configured_provider_and_analyzer(monkeypatch, tmp_path):
+    class TmpCache(SocialCache):
+        def __init__(self):
+            super().__init__(base_dir=tmp_path)
+
+    class StubAnalyzer:
+        name = "vader"
+
+        def analyze(self, text: str):
+            return SentimentResult(score=0.2, confidence=0.8)
+
+    captured_provider_names: list[str] = []
+    captured_analyzer_names: list[str] = []
+
+    def fake_provider_for(name: str, cache: SocialCache):
+        captured_provider_names.append(name)
+
+        class StubProvider:
+            def fetch_events(self, start_dt, end_dt, symbols):
+                return [
+                    SocialRawEvent(
+                        source=name,
+                        symbol="AAA",
+                        timestamp=datetime(2026, 2, 8, 12, 0, 0),
+                        text="bullish update",
+                        author_id_hash=None,
+                    )
+                ]
+
+        return StubProvider()
+
+    def fake_get_sentiment_analyzer(name: str):
+        captured_analyzer_names.append(name)
+        return StubAnalyzer()
+
+    monkeypatch.setattr(social_module, "SocialCache", TmpCache)
+    monkeypatch.setattr(social_module, "_provider_for", fake_provider_for)
+    monkeypatch.setattr(social_module, "get_sentiment_analyzer", fake_get_sentiment_analyzer)
+
+    cfg = SocialOverlayConfig(
+        enabled=True,
+        min_sample_size=1,
+        providers=("yahoo_finance",),
+        sentiment_analyzer="vader",
+    )
+    metrics, decisions, meta = social_module.run_social_overlay(
+        symbols=["AAA"],
+        ohlcv=_make_ohlcv("AAA"),
+        asof=date(2026, 2, 8),
+        cfg=cfg,
+    )
+
+    assert captured_provider_names == ["yahoo_finance"]
+    assert captured_analyzer_names == ["vader"]
+    assert len(metrics) == 1
+    assert metrics[0].source_breakdown == {"yahoo_finance": 1}
+    assert len(decisions) == 1
+    assert meta["providers"] == ["yahoo_finance"]
+    assert meta["sentiment_analyzer"] == "vader"
