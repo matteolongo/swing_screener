@@ -12,81 +12,81 @@ import {
 
 const help = {
   module: buildHelp(
-    'Strategy Module',
-    'Select the strategy logic used for screening.',
-    'Defines which strategy module drives signals and recommendations.',
-    'Keeps the architecture modular for future strategies.',
-    'Start with Momentum; add others later.'
+    t('strategyPage.help.items.module.title'),
+    t('strategyPage.help.items.module.short'),
+    t('strategyPage.help.items.module.what'),
+    t('strategyPage.help.items.module.why'),
+    t('strategyPage.help.items.module.how')
   ),
   breakoutLookback: buildHelp(
-    'Breakout Lookback',
-    'Window for breakout highs/lows.',
-    'The lookback window used to define recent highs or lows for breakout signals.',
-    'Controls how strict the breakout condition is and filters out noise.',
-    'Shorter windows react faster; longer windows require stronger, longer-term breakouts.'
+    t('strategyPage.help.items.breakoutLookback.title'),
+    t('strategyPage.help.items.breakoutLookback.short'),
+    t('strategyPage.help.items.breakoutLookback.what'),
+    t('strategyPage.help.items.breakoutLookback.why'),
+    t('strategyPage.help.items.breakoutLookback.how')
   ),
   pullbackMa: buildHelp(
-    'Pullback Moving Average',
-    'MA used to confirm pullback entries.',
-    'A moving average used as a reference line for pullback signals.',
-    'Keeps pullbacks aligned with the prevailing trend before re-entry.',
-    'Lower values track price closely; higher values require deeper pullbacks before entry.'
+    t('strategyPage.help.items.pullbackMa.title'),
+    t('strategyPage.help.items.pullbackMa.short'),
+    t('strategyPage.help.items.pullbackMa.what'),
+    t('strategyPage.help.items.pullbackMa.why'),
+    t('strategyPage.help.items.pullbackMa.how')
   ),
   minHistory: buildHelp(
-    'Minimum History',
-    'Bars required before indicators are valid.',
-    'The minimum number of daily bars required to compute indicators reliably.',
-    'Prevents signals based on insufficient data or partial lookbacks.',
-    'Set at least as long as your longest lookback (e.g., SMA long or 12m momentum).'
+    t('strategyPage.help.items.minHistory.title'),
+    t('strategyPage.help.items.minHistory.short'),
+    t('strategyPage.help.items.minHistory.what'),
+    t('strategyPage.help.items.minHistory.why'),
+    t('strategyPage.help.items.minHistory.how')
   ),
   smaFast: buildHelp(
-    'SMA Fast',
-    'Short-term trend filter.',
-    'A simple moving average over a short window.',
-    'Captures near-term trend direction and responsiveness.',
-    'Lower values respond faster but can whipsaw; higher values are smoother.'
+    t('strategyPage.help.items.smaFast.title'),
+    t('strategyPage.help.items.smaFast.short'),
+    t('strategyPage.help.items.smaFast.what'),
+    t('strategyPage.help.items.smaFast.why'),
+    t('strategyPage.help.items.smaFast.how')
   ),
   smaMid: buildHelp(
-    'SMA Mid',
-    'Intermediate trend filter.',
-    'A simple moving average over a medium window.',
-    'Defines the intermediate trend used in trend alignment checks.',
-    'Lower values respond faster; higher values provide a steadier mid-term trend.'
+    t('strategyPage.help.items.smaMid.title'),
+    t('strategyPage.help.items.smaMid.short'),
+    t('strategyPage.help.items.smaMid.what'),
+    t('strategyPage.help.items.smaMid.why'),
+    t('strategyPage.help.items.smaMid.how')
   ),
   smaLong: buildHelp(
-    'SMA Long',
-    'Primary trend filter.',
-    'A simple moving average over a long window.',
-    'Sets the primary trend filter to keep the universe in longer-term uptrends.',
-    'Higher values smooth long-term trend; lower values make the filter more responsive.'
+    t('strategyPage.help.items.smaLong.title'),
+    t('strategyPage.help.items.smaLong.short'),
+    t('strategyPage.help.items.smaLong.what'),
+    t('strategyPage.help.items.smaLong.why'),
+    t('strategyPage.help.items.smaLong.how')
   ),
   atrWindow: buildHelp(
-    'ATR Window',
-    'Lookback for volatility (ATR).',
-    'The lookback period used to compute Average True Range (ATR).',
-    'Volatility impacts position sizing, stops, and volatility filters.',
-    'Higher windows smooth volatility; lower windows react faster to recent changes.'
+    t('strategyPage.help.items.atrWindow.title'),
+    t('strategyPage.help.items.atrWindow.short'),
+    t('strategyPage.help.items.atrWindow.what'),
+    t('strategyPage.help.items.atrWindow.why'),
+    t('strategyPage.help.items.atrWindow.how')
   ),
   atrMultiplier: buildHelp(
-    'ATR Multiplier',
-    'Scales ATR for stops/position sizing.',
-    'A multiplier applied to ATR when setting risk distance or stop logic.',
-    'Normalizes risk across different volatility regimes.',
-    'Higher values widen stops and reduce position size; lower values tighten stops.'
+    t('strategyPage.help.items.atrMultiplier.title'),
+    t('strategyPage.help.items.atrMultiplier.short'),
+    t('strategyPage.help.items.atrMultiplier.what'),
+    t('strategyPage.help.items.atrMultiplier.why'),
+    t('strategyPage.help.items.atrMultiplier.how')
   ),
   minRr: buildHelp(
-    'Minimum RR',
-    'Minimum reward-to-risk for recommendations.',
-    'The minimum reward-to-risk ratio required for a setup to be labeled Recommended.',
-    'Encourages asymmetric payoff (letting winners run, cutting losers).',
-    'Typical baseline is 2.0 or higher.'
+    t('strategyPage.help.items.minRr.title'),
+    t('strategyPage.help.items.minRr.short'),
+    t('strategyPage.help.items.minRr.what'),
+    t('strategyPage.help.items.minRr.why'),
+    t('strategyPage.help.items.minRr.how')
   ),
   maxFeeRiskPct: buildHelp(
-    'Max Fee/Risk %',
-    'Fee-to-risk threshold for micro-trading.',
-    'Maximum total estimated fees as a percentage of planned risk per trade.',
-    'Prevents tiny positions where fees dominate expected edge.',
-    'Example: 20% means fees must be <= 20% of planned risk.'
+    t('strategyPage.help.items.maxFeeRiskPct.title'),
+    t('strategyPage.help.items.maxFeeRiskPct.short'),
+    t('strategyPage.help.items.maxFeeRiskPct.what'),
+    t('strategyPage.help.items.maxFeeRiskPct.why'),
+    t('strategyPage.help.items.maxFeeRiskPct.how')
   ),
   maxAtrPct: buildHelp(
     'Max ATR %',
