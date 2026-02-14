@@ -1,4 +1,5 @@
 import { API_ENDPOINTS, apiUrl } from '@/lib/api';
+import { t } from '@/i18n/t';
 import {
   FullBacktestParams,
   FullBacktestResponse,
@@ -17,7 +18,7 @@ import {
 
 export async function fetchSimulations(): Promise<BacktestSimulationMeta[]> {
   const res = await fetch(apiUrl(API_ENDPOINTS.backtestSimulations));
-  if (!res.ok) throw new Error('Failed to load simulations');
+  if (!res.ok) throw new Error(t('backtestPage.apiErrors.fetchSimulations'));
   const data: BacktestSimulationMetaAPI[] = await res.json();
   return data.map(transformBacktestSimulationMeta);
 }
@@ -49,7 +50,7 @@ export async function runBacktest(params: FullBacktestParams): Promise<FullBackt
   });
   if (!res.ok) {
     const error = await res.json();
-    throw new Error(error.detail || 'Backtest failed');
+    throw new Error(error.detail || t('backtestPage.apiErrors.runBacktest'));
   }
   const data: FullBacktestResponseAPI = await res.json();
   return transformFullBacktestResponse(data);
@@ -57,7 +58,7 @@ export async function runBacktest(params: FullBacktestParams): Promise<FullBackt
 
 export async function fetchSimulation(id: string): Promise<BacktestSimulation> {
   const res = await fetch(apiUrl(API_ENDPOINTS.backtestSimulation(id)));
-  if (!res.ok) throw new Error('Failed to load simulation');
+  if (!res.ok) throw new Error(t('backtestPage.apiErrors.fetchSimulation'));
   const data: BacktestSimulationAPI = await res.json();
   return transformBacktestSimulation(data);
 }
@@ -66,7 +67,7 @@ export async function deleteSimulation(id: string): Promise<void> {
   const res = await fetch(apiUrl(API_ENDPOINTS.backtestSimulation(id)), {
     method: 'DELETE',
   });
-  if (!res.ok) throw new Error('Failed to delete simulation');
+  if (!res.ok) throw new Error(t('backtestPage.apiErrors.deleteSimulation'));
 }
 
 export async function runQuickBacktest(params: {
@@ -88,7 +89,7 @@ export async function runQuickBacktest(params: {
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.detail || 'Backtest failed');
+    throw new Error(error.detail || t('backtestPage.apiErrors.quickBacktest'));
   }
 
   const data: QuickBacktestResponseAPI = await response.json();

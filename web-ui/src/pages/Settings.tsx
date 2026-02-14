@@ -4,6 +4,7 @@ import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Ca
 import Button from '@/components/common/Button';
 import IndicatorConfigForm from '@/components/domain/settings/IndicatorConfigForm';
 import ManageConfigForm from '@/components/domain/settings/ManageConfigForm';
+import { t } from '@/i18n/t';
 
 export default function Settings() {
   const { resetToDefaults } = useConfigStore();
@@ -12,21 +13,21 @@ export default function Settings() {
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Settings</h1>
+        <h1 className="text-3xl font-bold">{t('settingsPage.header.title')}</h1>
         <Button variant="secondary" onClick={resetToDefaults}>
-          Reset to Defaults
+          {t('settingsPage.header.reset')}
         </Button>
       </div>
 
       <Card variant="bordered">
         <CardHeader>
-          <CardTitle>Account & Risk Management</CardTitle>
+          <CardTitle>{t('settingsPage.sections.accountRisk.title')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-3 text-sm text-gray-600 dark:text-gray-400">
-            <p>Risk settings and account sizing now live in the Strategy page.</p>
+            <p>{t('settingsPage.sections.accountRisk.message')}</p>
             <Button variant="secondary" onClick={() => navigate('/strategy')}>
-              Go to Strategy
+              {t('settingsPage.sections.accountRisk.goToStrategy')}
             </Button>
           </div>
         </CardContent>
@@ -34,7 +35,7 @@ export default function Settings() {
 
       <Card variant="bordered">
         <CardHeader>
-          <CardTitle>Technical Indicators</CardTitle>
+          <CardTitle>{t('settingsPage.sections.technicalIndicators.title')}</CardTitle>
         </CardHeader>
         <CardContent>
           <IndicatorConfigForm />
@@ -43,7 +44,7 @@ export default function Settings() {
 
       <Card variant="bordered">
         <CardHeader>
-          <CardTitle>Position Management Rules</CardTitle>
+          <CardTitle>{t('settingsPage.sections.positionManagement.title')}</CardTitle>
         </CardHeader>
         <CardContent>
           <ManageConfigForm />

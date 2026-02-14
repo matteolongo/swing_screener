@@ -3,11 +3,12 @@
  */
 import { useQuery } from '@tanstack/react-query';
 import { API_ENDPOINTS, apiUrl } from '@/lib/api';
+import { queryKeys } from '@/lib/queryKeys';
 import {
   DailyReview,
   DailyReviewAPI,
   transformDailyReview,
-} from '@/types/dailyReview';
+} from '@/features/dailyReview/types';
 
 /**
  * Fetch daily review from API
@@ -30,7 +31,7 @@ export async function getDailyReview(topN: number = 10): Promise<DailyReview> {
  */
 export function useDailyReview(topN: number = 10) {
   return useQuery({
-    queryKey: ['dailyReview', topN],
+    queryKey: queryKeys.dailyReview(topN),
     queryFn: () => getDailyReview(topN),
     staleTime: 1000 * 60 * 5, // 5 minutes - review data is relatively stable
     refetchOnWindowFocus: false, // Don't refetch on window focus - user is reviewing
