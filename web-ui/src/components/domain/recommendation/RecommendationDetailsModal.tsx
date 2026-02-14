@@ -63,7 +63,7 @@ export default function RecommendationDetailsModal({
               <div className="font-semibold">
                 {recommendation?.risk?.entry != null
                   ? formatCurrency(recommendation.risk.entry, currency)
-                  : '—'}
+                  : t('common.placeholders.emDash')}
               </div>
             </div>
             <div>
@@ -71,7 +71,7 @@ export default function RecommendationDetailsModal({
               <div className="font-semibold">
                 {recommendation?.risk?.stop != null
                   ? formatCurrency(recommendation.risk.stop, currency)
-                  : '—'}
+                  : t('common.placeholders.emDash')}
               </div>
             </div>
             <div>
@@ -79,7 +79,7 @@ export default function RecommendationDetailsModal({
               <div className="font-semibold">
                 {recommendation?.risk?.target != null
                   ? formatCurrency(recommendation.risk.target, currency)
-                  : '—'}
+                  : t('common.placeholders.emDash')}
               </div>
             </div>
             <div>
@@ -87,7 +87,7 @@ export default function RecommendationDetailsModal({
                 <MetricHelpLabel metricKey="RR" />
               </div>
               <div className="font-semibold">
-                {recommendation?.risk?.rr != null ? recommendation.risk.rr.toFixed(2) : '—'}
+                {recommendation?.risk?.rr != null ? recommendation.risk.rr.toFixed(2) : t('common.placeholders.emDash')}
               </div>
             </div>
             <div>
@@ -95,7 +95,7 @@ export default function RecommendationDetailsModal({
               <div className="font-semibold">
                 {recommendation?.risk?.riskAmount != null
                   ? formatCurrency(recommendation.risk.riskAmount, currency)
-                  : '—'}
+                  : t('common.placeholders.emDash')}
               </div>
             </div>
             <div>
@@ -105,7 +105,7 @@ export default function RecommendationDetailsModal({
               <div className="font-semibold">
                 {recommendation?.risk?.riskPct != null
                   ? formatRatioAsPercent(recommendation.risk.riskPct)
-                  : '—'}
+                  : t('common.placeholders.emDash')}
               </div>
             </div>
             <div>
@@ -113,13 +113,13 @@ export default function RecommendationDetailsModal({
               <div className="font-semibold">
                 {recommendation?.risk?.positionSize != null
                   ? formatCurrency(recommendation.risk.positionSize, currency)
-                  : '—'}
+                  : t('common.placeholders.emDash')}
               </div>
             </div>
             <div>
               <div className="text-gray-500 dark:text-gray-400">{t('recommendation.labels.shares')}</div>
               <div className="font-semibold">
-                {recommendation?.risk?.shares != null ? recommendation.risk.shares : '—'}
+                {recommendation?.risk?.shares != null ? recommendation.risk.shares : t('common.placeholders.emDash')}
               </div>
             </div>
             <div>
@@ -129,7 +129,7 @@ export default function RecommendationDetailsModal({
               <div className="font-semibold">
                 {recommendation?.costs?.totalCost != null
                   ? formatCurrency(recommendation.costs.totalCost, currency)
-                  : '—'}
+                  : t('common.placeholders.emDash')}
               </div>
             </div>
             <div>
@@ -139,7 +139,7 @@ export default function RecommendationDetailsModal({
               <div className="font-semibold">
                 {recommendation?.costs?.feeToRiskPct != null
                   ? formatRatioAsPercent(recommendation.costs.feeToRiskPct)
-                  : '—'}
+                  : t('common.placeholders.emDash')}
               </div>
             </div>
           </div>
@@ -154,13 +154,13 @@ export default function RecommendationDetailsModal({
               <div className="text-gray-500 dark:text-gray-400">
                 {t('recommendation.labels.biasWarning')}
               </div>
-              <div className="font-medium">{recommendation?.education?.commonBiasWarning ?? '—'}</div>
+              <div className="font-medium">{recommendation?.education?.commonBiasWarning ?? t('common.placeholders.emDash')}</div>
             </div>
             <div>
               <div className="text-gray-500 dark:text-gray-400">
                 {t('recommendation.labels.whatToLearn')}
               </div>
-              <div className="font-medium">{recommendation?.education?.whatToLearn ?? '—'}</div>
+              <div className="font-medium">{recommendation?.education?.whatToLearn ?? t('common.placeholders.emDash')}</div>
             </div>
             {recommendation?.education?.whatWouldMakeValid?.length ? (
               <div>
