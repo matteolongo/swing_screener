@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { BacktestCurvePoint } from '@/features/backtest/types';
-import { getLocale, t } from '@/i18n/t';
+import { useI18n } from '@/i18n/I18nProvider';
 
 const COLORS = [
   '#1d4ed8',
@@ -34,13 +34,18 @@ interface EquityCurveChartProps {
   byTicker: BacktestCurvePoint[];
 }
 
-function buildSeries(total: BacktestCurvePoint[], byTicker: BacktestCurvePoint[]): Series[] {
+function buildSeries(
+  total: BacktestCurvePoint[],
+  byTicker: BacktestCurvePoint[],
+  totalLabel: string,
+  unknownLabel: string
+): Series[] {
   const series: Series[] = [];
 
   if (total.length > 0) {
     series.push({
       id: 'TOTAL',
-      label: t('backtestPage.equityCurve.series.total'),
+      label: totalLabel,
       color: '#111827',
       points: total.map((p) => ({
         x: new Date(p.date).getTime(),
@@ -53,7 +58,7 @@ function buildSeries(total: BacktestCurvePoint[], byTicker: BacktestCurvePoint[]
 
   const byMap = new Map<string, BacktestCurvePoint[]>();
   byTicker.forEach((p) => {
-    const ticker = p.ticker || t('backtestPage.equityCurve.series.unknown');
+    const ticker = p.ticker || unknownLabel;
     if (!byMap.has(ticker)) {
       byMap.set(ticker, []);
     }
@@ -109,8 +114,17 @@ function formatDateTick(ts: number, spanDays: number, locale: string): string {
 }
 
 export default function EquityCurveChart({ total, byTicker }: EquityCurveChartProps) {
-  const locale = getLocale();
-  const series = useMemo(() => buildSeries(total, byTicker), [total, byTicker]);
+  const { locale, t } = useI18n();
+  const series = useMemo(
+    () =>
+      buildSeries(
+        total,
+        byTicker,
+        t('backtestPage.equityCurve.series.total'),
+        t('backtestPage.equityCurve.series.unknown')
+      ),
+    [total, byTicker, t]
+  );
   const [visible, setVisible] = useState<Record<string, boolean>>({});
   const visibleMap = useMemo(() => {
     const next: Record<string, boolean> = { ...visible };
