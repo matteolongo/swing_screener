@@ -1,9 +1,9 @@
 import { TrendingUp } from 'lucide-react';
-import { getLocale, t } from '@/i18n/t';
+import { useI18n } from '@/i18n/I18nProvider';
 
 export default function Header() {
   const now = new Date();
-  const locale = getLocale();
+  const { locale, t } = useI18n();
   const dateStr = now.toLocaleDateString(locale, {
     month: 'short',
     day: 'numeric',
