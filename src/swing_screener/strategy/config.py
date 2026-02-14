@@ -58,6 +58,13 @@ def build_manage_config(strategy: dict) -> ManageConfig:
 
 def build_social_overlay_config(strategy: dict) -> SocialOverlayConfig:
     raw = _get_nested(strategy, "social_overlay")
+    providers = raw.get("providers", ["reddit"])
+    # Handle tuple conversion for providers
+    if isinstance(providers, (list, tuple)):
+        providers = tuple(providers)
+    else:
+        providers = ("reddit",)
+    
     return SocialOverlayConfig(
         enabled=bool(raw.get("enabled", False)),
         lookback_hours=int(raw.get("lookback_hours", 24)),
@@ -66,6 +73,8 @@ def build_social_overlay_config(strategy: dict) -> SocialOverlayConfig:
         negative_sent_threshold=float(raw.get("negative_sent_threshold", -0.4)),
         sentiment_conf_threshold=float(raw.get("sentiment_conf_threshold", 0.7)),
         hype_percentile_threshold=float(raw.get("hype_percentile_threshold", 95.0)),
+        providers=providers,
+        sentiment_analyzer=str(raw.get("sentiment_analyzer", "keyword")),
     )
 
 
