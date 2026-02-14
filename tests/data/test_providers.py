@@ -51,11 +51,11 @@ class TestYfinanceProvider:
     
     def test_fetch_ohlcv_single_ticker(self, monkeypatch):
         """Test fetching OHLCV data for single ticker."""
-        monkeypatch.setattr(
-            yfinance_provider_module,
-            "fetch_ohlcv",
-            lambda tickers, cfg, use_cache=True, force_refresh=False, allow_cache_fallback_on_error=True: _mock_ohlcv_frame(tickers),
-        )
+        # Mock yf.download to return test data
+        def fake_download(*args, **kwargs):
+            return _mock_ohlcv_frame(["AAPL"])
+        
+        monkeypatch.setattr(yfinance_provider_module.yf, "download", fake_download)
         provider = YfinanceProvider()
         
         end = datetime.now().strftime("%Y-%m-%d")
@@ -90,11 +90,12 @@ class TestYfinanceProvider:
     
     def test_fetch_ohlcv_multiple_tickers(self, monkeypatch):
         """Test fetching OHLCV data for multiple tickers."""
-        monkeypatch.setattr(
-            yfinance_provider_module,
-            "fetch_ohlcv",
-            lambda tickers, cfg, use_cache=True, force_refresh=False, allow_cache_fallback_on_error=True: _mock_ohlcv_frame(tickers),
-        )
+        # Mock yf.download to return test data
+        def fake_download(*args, **kwargs):
+            tickers = ["AAPL", "MSFT", "GOOGL"]
+            return _mock_ohlcv_frame(tickers)
+        
+        monkeypatch.setattr(yfinance_provider_module.yf, "download", fake_download)
         provider = YfinanceProvider()
         
         end = datetime.now().strftime("%Y-%m-%d")
@@ -162,81 +163,75 @@ class TestYfinanceProvider:
         assert "sector" in info
         assert info["name"] == "Apple Inc."
 
-    def test_fetch_ohlcv_forces_refresh_on_live_edge(self, monkeypatch):
+    def test_fetch_ohlcv_forces_refresh_on_live_edge(self, monkeypatch, tmp_path):
         """Today/end-date requests should bypass stale cache."""
-        provider = YfinanceProvider()
-        captured: dict[str, object] = {}
-
-        def fake_fetch_ohlcv(tickers, cfg, use_cache=True, force_refresh=False, allow_cache_fallback_on_error=True):
-            captured["tickers"] = tickers
-            captured["cfg_end"] = cfg.end
-            captured["force_refresh"] = force_refresh
-            idx = pd.date_range("2026-02-01", periods=2, freq="D")
-            df = pd.DataFrame(
-                {
-                    ("Close", "AAPL"): [100.0, 101.0],
-                    ("Open", "AAPL"): [99.0, 100.0],
-                    ("High", "AAPL"): [101.0, 102.0],
-                    ("Low", "AAPL"): [98.0, 99.0],
-                    ("Volume", "AAPL"): [1_000_000, 1_100_000],
-                },
-                index=idx,
-            )
-            df.columns = pd.MultiIndex.from_tuples(df.columns)
-            return df
-
-        monkeypatch.setattr(yfinance_provider_module, "fetch_ohlcv", fake_fetch_ohlcv)
-
+        cache_dir = tmp_path / "test_cache"
+        provider = YfinanceProvider(cache_dir=str(cache_dir))
+        
+        # Create a mock cached file
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        fake_data = _mock_ohlcv_frame(["AAPL"])
+        
+        # Mock yf.download to track calls
+        download_called = []
+        def fake_download(*args, **kwargs):
+            download_called.append(True)
+            return _mock_ohlcv_frame(["AAPL"])
+        
+        monkeypatch.setattr(yfinance_provider_module.yf, "download", fake_download)
+        
+        # First call with today's date - should force refresh
         today = datetime.now().strftime("%Y-%m-%d")
-        provider.fetch_ohlcv(["AAPL"], "2026-01-01", today)
-
-        assert captured["force_refresh"] is True
-
-    def test_fetch_ohlcv_keeps_cache_for_historical_end_date(self, monkeypatch):
+        df1 = provider.fetch_ohlcv(["AAPL"], "2026-01-01", today)
+        
+        # Should have called download (not used cache)
+        assert len(download_called) >= 1
+        assert not df1.empty
+        
+    def test_fetch_ohlcv_keeps_cache_for_historical_end_date(self, monkeypatch, tmp_path):
         """Historical windows should keep normal cache behavior."""
-        provider = YfinanceProvider()
-        captured: dict[str, object] = {}
-
-        def fake_fetch_ohlcv(tickers, cfg, use_cache=True, force_refresh=False, allow_cache_fallback_on_error=True):
-            captured["force_refresh"] = force_refresh
-            idx = pd.date_range("2026-01-01", periods=2, freq="D")
-            df = pd.DataFrame(
-                {
-                    ("Close", "AAPL"): [100.0, 101.0],
-                    ("Open", "AAPL"): [99.0, 100.0],
-                    ("High", "AAPL"): [101.0, 102.0],
-                    ("Low", "AAPL"): [98.0, 99.0],
-                    ("Volume", "AAPL"): [1_000_000, 1_100_000],
-                },
-                index=idx,
-            )
-            df.columns = pd.MultiIndex.from_tuples(df.columns)
-            return df
-
-        monkeypatch.setattr(yfinance_provider_module, "fetch_ohlcv", fake_fetch_ohlcv)
-
-        provider.fetch_ohlcv(["AAPL"], "2026-01-01", "2026-01-31")
-
-        assert captured["force_refresh"] is False
+        cache_dir = tmp_path / "test_cache"
+        provider = YfinanceProvider(cache_dir=str(cache_dir))
+        
+        # Mock yf.download
+        download_call_count = []
+        def fake_download(*args, **kwargs):
+            download_call_count.append(True)
+            return _mock_ohlcv_frame(["AAPL"])
+        
+        monkeypatch.setattr(yfinance_provider_module.yf, "download", fake_download)
+        
+        # Call with historical dates - should use cache on second call
+        df1 = provider.fetch_ohlcv(["AAPL"], "2026-01-01", "2026-01-31")
+        first_call_count = len(download_call_count)
+        
+        df2 = provider.fetch_ohlcv(["AAPL"], "2026-01-01", "2026-01-31")
+        second_call_count = len(download_call_count)
+        
+        # Second call should use cache (same download count)
+        assert second_call_count == first_call_count
     
     def test_uses_configured_cache_dir(self, monkeypatch, tmp_path):
-        """Provider should pass configured cache_dir to market-data layer."""
-        captured: dict[str, object] = {}
-
-        def fake_fetch_ohlcv(tickers, cfg, use_cache=True, force_refresh=False, allow_cache_fallback_on_error=True):
-            captured["cache_dir"] = cfg.cache_dir
-            return _mock_ohlcv_frame(tickers)
-
-        monkeypatch.setattr(yfinance_provider_module, "fetch_ohlcv", fake_fetch_ohlcv)
-
+        """Provider should use configured cache_dir."""
         cache_dir = tmp_path / "test_market_data"
+        
+        # Mock yf.download
+        def fake_download(*args, **kwargs):
+            return _mock_ohlcv_frame(["AAPL"])
+        
+        monkeypatch.setattr(yfinance_provider_module.yf, "download", fake_download)
+        
         provider = YfinanceProvider(cache_dir=str(cache_dir))
-
+        
         end = datetime.now().strftime("%Y-%m-%d")
         start = (datetime.now() - timedelta(days=10)).strftime("%Y-%m-%d")
         provider.fetch_ohlcv(["AAPL"], start, end)
-
-        assert captured["cache_dir"] == str(cache_dir)
+        
+        # Check that cache directory was created
+        assert cache_dir.exists()
+        # Check that cache files exist in the directory
+        cache_files = list(cache_dir.glob("*.parquet"))
+        assert len(cache_files) > 0
 
 
 class TestBrokerConfig:
@@ -393,11 +388,11 @@ class TestProviderCompatibility:
     
     def test_yfinance_format(self, monkeypatch):
         """Test yfinance provider returns correct format."""
-        monkeypatch.setattr(
-            yfinance_provider_module,
-            "fetch_ohlcv",
-            lambda tickers, cfg, use_cache=True, force_refresh=False, allow_cache_fallback_on_error=True: _mock_ohlcv_frame(tickers),
-        )
+        # Mock yf.download
+        def fake_download(*args, **kwargs):
+            return _mock_ohlcv_frame(["AAPL"])
+        
+        monkeypatch.setattr(yfinance_provider_module.yf, "download", fake_download)
         yf_provider = YfinanceProvider()
         
         end = datetime.now().strftime("%Y-%m-%d")

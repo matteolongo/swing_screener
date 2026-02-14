@@ -15,7 +15,7 @@ from swing_screener.social.config import (
 from swing_screener.social.metrics import compute_daily_metrics
 from swing_screener.social.overlay import REASON_LOW_SAMPLE
 from swing_screener.social.providers.reddit import RedditProvider
-from swing_screener.data.market_data import fetch_ohlcv, MarketDataConfig
+from swing_screener.data.providers.factory import get_market_data_provider
 
 
 def _provider_for(name: str, cache: SocialCache):
@@ -75,14 +75,11 @@ def analyze_social_symbol(
         try:
             # Fetch last 30 days of data for 20-day ADV calculation
             thirty_days_ago = now - timedelta(days=30)
-            ohlcv = fetch_ohlcv(
+            provider = get_market_data_provider()
+            ohlcv = provider.fetch_ohlcv(
                 [symbol],
-                cfg=MarketDataConfig(
-                    start=thirty_days_ago.strftime("%Y-%m-%d"),
-                    end=None,
-                    auto_adjust=True,
-                    progress=False,
-                ),
+                start_date=thirty_days_ago.strftime("%Y-%m-%d"),
+                end_date=now.strftime("%Y-%m-%d"),
                 use_cache=True,
                 allow_cache_fallback_on_error=True,
             )
