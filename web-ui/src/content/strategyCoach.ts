@@ -1,5 +1,6 @@
 import { AppConfig } from '@/types/config';
-import { Strategy } from '@/types/strategy';
+import { Strategy } from '@/features/strategy/types';
+import { t } from '@/i18n/t';
 
 export interface StrategyCoachSection {
   title: string;
@@ -12,66 +13,86 @@ const asPercent = (ratio: number, decimals: number = 1): string => `${(ratio * 1
 
 export function buildStrategyCoachSections(strategy: Strategy): StrategyCoachSection[] {
   const currencyScope = strategy.universe.filt.currencies.join(' + ');
+  const stopExample = (50 - strategy.risk.kAtr * 1.2).toFixed(2);
+  const riskBudget = (strategy.risk.accountSize * strategy.risk.riskPct).toFixed(2);
   return [
     {
-      title: 'What this strategy tries to do',
-      explanation:
-        `It searches for strong trend followers and keeps risk fixed so one bad trade stays small. ` +
-        `It ranks candidates, keeps the top ${strategy.ranking.topN}, and avoids weak risk/reward setups.`,
+      title: t('strategyCoach.sections.goal.title'),
+      explanation: t('strategyCoach.sections.goal.explanation', {
+        topN: strategy.ranking.topN,
+      }),
     },
     {
-      title: 'How symbols are filtered',
-      explanation:
-        `Universe filters keep symbols between ${strategy.universe.filt.minPrice} and ${strategy.universe.filt.maxPrice}, ` +
-        `in ${currencyScope}, and under ${strategy.universe.filt.maxAtrPct}% ATR/price.`,
-      formula:
-        `Trend: close > SMA(${strategy.universe.trend.smaFast}), SMA(${strategy.universe.trend.smaMid}), SMA(${strategy.universe.trend.smaLong})`,
-      example:
-        `Momentum windows use ${strategy.universe.mom.lookback6m} bars (6M) and ${strategy.universe.mom.lookback12m} bars (12M) vs ${strategy.universe.mom.benchmark}.`,
+      title: t('strategyCoach.sections.filters.title'),
+      explanation: t('strategyCoach.sections.filters.explanation', {
+        minPrice: strategy.universe.filt.minPrice,
+        maxPrice: strategy.universe.filt.maxPrice,
+        currencyScope,
+        maxAtrPct: strategy.universe.filt.maxAtrPct,
+      }),
+      formula: t('strategyCoach.sections.filters.formula', {
+        smaFast: strategy.universe.trend.smaFast,
+        smaMid: strategy.universe.trend.smaMid,
+        smaLong: strategy.universe.trend.smaLong,
+      }),
+      example: t('strategyCoach.sections.filters.example', {
+        lookback6m: strategy.universe.mom.lookback6m,
+        lookback12m: strategy.universe.mom.lookback12m,
+        benchmark: strategy.universe.mom.benchmark,
+      }),
     },
     {
-      title: 'How entries and stops are formed',
-      explanation:
-        `Entries come from breakout/pullback signal rules, then stop distance is anchored to volatility.`,
-      formula:
-        `Stop = Entry - (${strategy.risk.kAtr.toFixed(1)} x ATR(${strategy.universe.vol.atrWindow}))`,
-      example:
-        `If Entry is 50.00 and ATR is 1.20, stop is about ${(50 - strategy.risk.kAtr * 1.2).toFixed(2)}.`,
+      title: t('strategyCoach.sections.entries.title'),
+      explanation: t('strategyCoach.sections.entries.explanation'),
+      formula: t('strategyCoach.sections.entries.formula', {
+        kAtr: strategy.risk.kAtr.toFixed(1),
+        atrWindow: strategy.universe.vol.atrWindow,
+      }),
+      example: t('strategyCoach.sections.entries.example', { stop: stopExample }),
     },
     {
-      title: 'How position sizing works',
-      explanation:
-        'Position size is chosen from a fixed risk budget, then capped by max position size and minimum shares.',
-      formula: `Risk Amount = Account Size x Risk % = ${strategy.risk.accountSize} x ${asPercent(strategy.risk.riskPct, 2)}`,
-      example:
-        `Per-trade budget is about ${(strategy.risk.accountSize * strategy.risk.riskPct).toFixed(2)} with max position ${asPercent(strategy.risk.maxPositionPct)}.`,
+      title: t('strategyCoach.sections.sizing.title'),
+      explanation: t('strategyCoach.sections.sizing.explanation'),
+      formula: t('strategyCoach.sections.sizing.formula', {
+        accountSize: strategy.risk.accountSize,
+        riskPct: asPercent(strategy.risk.riskPct, 2),
+      }),
+      example: t('strategyCoach.sections.sizing.example', {
+        budget: riskBudget,
+        maxPositionPct: asPercent(strategy.risk.maxPositionPct),
+      }),
     },
     {
-      title: 'What makes a trade Recommended',
-      explanation:
-        'Recommendation must pass checklist gates, not just have a high score or confidence.',
-      formula:
-        `Requires RR >= ${strategy.risk.minRr.toFixed(1)} and Fee/Risk <= ${asPercent(strategy.risk.maxFeeRiskPct)}`,
-      example:
-        'A setup with great momentum can still be blocked if stop is invalid, RR is low, or costs are too high.',
+      title: t('strategyCoach.sections.recommended.title'),
+      explanation: t('strategyCoach.sections.recommended.explanation'),
+      formula: t('strategyCoach.sections.recommended.formula', {
+        minRr: strategy.risk.minRr.toFixed(1),
+        maxFeeRiskPct: asPercent(strategy.risk.maxFeeRiskPct),
+      }),
+      example: t('strategyCoach.sections.recommended.example'),
     },
     {
-      title: 'How open positions are managed',
-      explanation:
-        'Once trade progress reaches specific R levels, stop logic shifts from protection to trend trailing.',
-      formula:
-        `Breakeven at +${strategy.manage.breakevenAtR.toFixed(1)}R, trail after +${strategy.manage.trailAfterR.toFixed(1)}R using SMA(${strategy.manage.trailSma})`,
-      example:
-        `Trailing stop uses a ${asPercent(strategy.manage.smaBufferPct, 2)} buffer under the trailing SMA.`,
+      title: t('strategyCoach.sections.manage.title'),
+      explanation: t('strategyCoach.sections.manage.explanation'),
+      formula: t('strategyCoach.sections.manage.formula', {
+        breakevenAtR: strategy.manage.breakevenAtR.toFixed(1),
+        trailAfterR: strategy.manage.trailAfterR.toFixed(1),
+        trailSma: strategy.manage.trailSma,
+      }),
+      example: t('strategyCoach.sections.manage.example', {
+        smaBufferPct: asPercent(strategy.manage.smaBufferPct, 2),
+      }),
     },
     {
-      title: 'What social overlay means',
-      explanation:
-        strategy.socialOverlay.enabled
-          ? `Overlay is ON. It reviews social extremes and can reduce size or veto a trade when hype/risk is abnormal.`
-          : 'Overlay is OFF. Recommendations rely only on price/volume/risk rules.',
+      title: t('strategyCoach.sections.overlay.title'),
+      explanation: strategy.socialOverlay.enabled
+        ? t('strategyCoach.sections.overlay.enabledExplanation')
+        : t('strategyCoach.sections.overlay.disabledExplanation'),
       formula: strategy.socialOverlay.enabled
-        ? `Triggers include Attention Z >= ${strategy.socialOverlay.attentionZThreshold} and sample >= ${strategy.socialOverlay.minSampleSize}`
+        ? t('strategyCoach.sections.overlay.formula', {
+          attentionZThreshold: strategy.socialOverlay.attentionZThreshold,
+          minSampleSize: strategy.socialOverlay.minSampleSize,
+        })
         : undefined,
     },
   ];
@@ -80,36 +101,52 @@ export function buildStrategyCoachSections(strategy: Strategy): StrategyCoachSec
 export function buildFallbackStrategyCoachSections(config: AppConfig): StrategyCoachSection[] {
   return [
     {
-      title: 'What this strategy tries to do',
-      explanation:
-        'This fallback explanation uses your local Settings values because active strategy details were unavailable.',
+      title: t('strategyCoach.fallback.goal.title'),
+      explanation: t('strategyCoach.fallback.goal.explanation'),
     },
     {
-      title: 'How symbols are filtered',
-      explanation:
-        `Trend uses SMA(${config.indicators.smaFast}/${config.indicators.smaMid}/${config.indicators.smaLong}) with ` +
-        `momentum windows ${config.indicators.lookback6m} and ${config.indicators.lookback12m}.`,
+      title: t('strategyCoach.fallback.filters.title'),
+      explanation: t('strategyCoach.fallback.filters.explanation', {
+        smaFast: config.indicators.smaFast,
+        smaMid: config.indicators.smaMid,
+        smaLong: config.indicators.smaLong,
+        lookback6m: config.indicators.lookback6m,
+        lookback12m: config.indicators.lookback12m,
+      }),
     },
     {
-      title: 'How entries and stops are formed',
-      explanation: 'Stops are volatility-based and tied to ATR.',
-      formula: `Stop = Entry - (${config.risk.kAtr.toFixed(1)} x ATR(${config.indicators.atrWindow}))`,
+      title: t('strategyCoach.fallback.entries.title'),
+      explanation: t('strategyCoach.fallback.entries.explanation'),
+      formula: t('strategyCoach.fallback.entries.formula', {
+        kAtr: config.risk.kAtr.toFixed(1),
+        atrWindow: config.indicators.atrWindow,
+      }),
     },
     {
-      title: 'How position sizing works',
-      explanation: 'Each trade uses a fixed risk budget from account size.',
-      formula: `Risk Amount = ${config.risk.accountSize} x ${asPercent(config.risk.riskPct, 2)}`,
+      title: t('strategyCoach.fallback.sizing.title'),
+      explanation: t('strategyCoach.fallback.sizing.explanation'),
+      formula: t('strategyCoach.fallback.sizing.formula', {
+        accountSize: config.risk.accountSize,
+        riskPct: asPercent(config.risk.riskPct, 2),
+      }),
     },
     {
-      title: 'What makes a trade Recommended',
-      explanation:
-        `A trade must meet minimum RR (${config.risk.minRr.toFixed(1)}) and cost-to-risk cap (${asPercent(config.risk.maxFeeRiskPct)}).`,
+      title: t('strategyCoach.fallback.recommended.title'),
+      explanation: t('strategyCoach.fallback.recommended.explanation', {
+        minRr: config.risk.minRr.toFixed(1),
+        maxFeeRiskPct: asPercent(config.risk.maxFeeRiskPct),
+      }),
     },
     {
-      title: 'How open positions are managed',
-      explanation:
-        `Move to breakeven at +${config.manage.breakevenAtR.toFixed(1)}R, trail after +${config.manage.trailAfterR.toFixed(1)}R with SMA(${config.manage.trailSma}).`,
-      formula: `Trailing buffer = ${asPercent(config.manage.smaBufferPct, 2)}`,
+      title: t('strategyCoach.fallback.manage.title'),
+      explanation: t('strategyCoach.fallback.manage.explanation', {
+        breakevenAtR: config.manage.breakevenAtR.toFixed(1),
+        trailAfterR: config.manage.trailAfterR.toFixed(1),
+        trailSma: config.manage.trailSma,
+      }),
+      formula: t('strategyCoach.fallback.manage.formula', {
+        smaBufferPct: asPercent(config.manage.smaBufferPct, 2),
+      }),
     },
   ];
 }

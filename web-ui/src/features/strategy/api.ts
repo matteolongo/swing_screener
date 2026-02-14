@@ -6,7 +6,7 @@ import {
   transformStrategy,
   toStrategyCreateRequest,
   toStrategyUpdateRequest,
-} from '@/types/strategy';
+} from '@/features/strategy/types';
 
 export async function fetchStrategies(): Promise<Strategy[]> {
   const res = await fetch(apiUrl(API_ENDPOINTS.strategy));

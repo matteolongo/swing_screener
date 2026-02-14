@@ -1,3 +1,6 @@
+import { t } from '@/i18n/t';
+import type { MessageKey } from '@/i18n/types';
+
 export type EducationMetricKey =
   | 'RR'
   | 'RS'
@@ -21,102 +24,100 @@ export interface EducationGlossaryEntry {
   interpretation: string;
 }
 
-export const EDUCATION_GLOSSARY: Record<EducationMetricKey, EducationGlossaryEntry> = {
+interface EducationGlossaryMessageKeys {
+  label: MessageKey;
+  title: MessageKey;
+  tooltip: MessageKey;
+  explanation: MessageKey;
+  interpretation: MessageKey;
+  formula?: MessageKey;
+}
+
+const EDUCATION_GLOSSARY_MESSAGE_KEYS: Record<EducationMetricKey, EducationGlossaryMessageKeys> = {
   RR: {
-    key: 'RR',
-    label: 'RR',
-    title: 'Reward-to-Risk (RR)',
-    tooltip: 'Potential upside compared with planned downside.',
-    explanation: 'RR compares the distance to target versus the distance to stop.',
-    formula: 'RR = (Target - Entry) / (Entry - Stop)',
-    interpretation: 'Higher is better. A value above your minimum RR gives more payoff room.',
+    label: 'educationGlossary.entries.rr.label',
+    title: 'educationGlossary.entries.rr.title',
+    tooltip: 'educationGlossary.entries.rr.tooltip',
+    explanation: 'educationGlossary.entries.rr.explanation',
+    formula: 'educationGlossary.entries.rr.formula',
+    interpretation: 'educationGlossary.entries.rr.interpretation',
   },
   RS: {
-    key: 'RS',
-    label: 'RS',
-    title: 'Relative Strength (RS)',
-    tooltip: 'How the stock performs versus the benchmark.',
-    explanation: 'RS tracks whether this symbol is outperforming the benchmark index.',
-    formula: 'RS = Stock return - Benchmark return',
-    interpretation: 'Positive RS means leadership. Negative RS means lagging behavior.',
+    label: 'educationGlossary.entries.rs.label',
+    title: 'educationGlossary.entries.rs.title',
+    tooltip: 'educationGlossary.entries.rs.tooltip',
+    explanation: 'educationGlossary.entries.rs.explanation',
+    formula: 'educationGlossary.entries.rs.formula',
+    interpretation: 'educationGlossary.entries.rs.interpretation',
   },
   ATR: {
-    key: 'ATR',
-    label: 'ATR',
-    title: 'Average True Range (ATR)',
-    tooltip: 'Average recent daily movement size.',
-    explanation: 'ATR measures volatility in price units (not percent).',
-    formula: 'ATR(n) = average True Range over n bars',
-    interpretation: 'Higher ATR means wider swings and usually wider stop distance.',
+    label: 'educationGlossary.entries.atr.label',
+    title: 'educationGlossary.entries.atr.title',
+    tooltip: 'educationGlossary.entries.atr.tooltip',
+    explanation: 'educationGlossary.entries.atr.explanation',
+    formula: 'educationGlossary.entries.atr.formula',
+    interpretation: 'educationGlossary.entries.atr.interpretation',
   },
   SCORE: {
-    key: 'SCORE',
-    label: 'Score',
-    title: 'Composite Score',
-    tooltip: 'Weighted rank score used to sort candidates.',
-    explanation: 'Score combines momentum and relative-strength signals into one ranking number.',
-    interpretation: 'Higher score means stronger setup quality by the current ranking weights.',
+    label: 'educationGlossary.entries.score.label',
+    title: 'educationGlossary.entries.score.title',
+    tooltip: 'educationGlossary.entries.score.tooltip',
+    explanation: 'educationGlossary.entries.score.explanation',
+    interpretation: 'educationGlossary.entries.score.interpretation',
   },
   CONFIDENCE: {
-    key: 'CONFIDENCE',
-    label: 'Confidence',
-    title: 'Setup Confidence',
-    tooltip: 'How many quality gates are strong for this setup.',
-    explanation: 'Confidence summarizes how robust and consistent the signal is.',
-    interpretation: 'High confidence helps, but recommendation still depends on risk gates.',
+    label: 'educationGlossary.entries.confidence.label',
+    title: 'educationGlossary.entries.confidence.title',
+    tooltip: 'educationGlossary.entries.confidence.tooltip',
+    explanation: 'educationGlossary.entries.confidence.explanation',
+    interpretation: 'educationGlossary.entries.confidence.interpretation',
   },
   MOM_6M: {
-    key: 'MOM_6M',
-    label: 'Mom 6M',
-    title: '6-Month Momentum',
-    tooltip: 'Price return over the last 6 months.',
-    explanation: 'Momentum captures medium-term trend persistence.',
-    formula: 'Mom 6M = return over lookback_6m',
-    interpretation: 'Positive values indicate upward trend persistence.',
+    label: 'educationGlossary.entries.mom6m.label',
+    title: 'educationGlossary.entries.mom6m.title',
+    tooltip: 'educationGlossary.entries.mom6m.tooltip',
+    explanation: 'educationGlossary.entries.mom6m.explanation',
+    formula: 'educationGlossary.entries.mom6m.formula',
+    interpretation: 'educationGlossary.entries.mom6m.interpretation',
   },
   MOM_12M: {
-    key: 'MOM_12M',
-    label: 'Mom 12M',
-    title: '12-Month Momentum',
-    tooltip: 'Price return over the last 12 months.',
-    explanation: 'Momentum captures longer trend persistence.',
-    formula: 'Mom 12M = return over lookback_12m',
-    interpretation: 'Positive values show long-term strength.',
+    label: 'educationGlossary.entries.mom12m.label',
+    title: 'educationGlossary.entries.mom12m.title',
+    tooltip: 'educationGlossary.entries.mom12m.tooltip',
+    explanation: 'educationGlossary.entries.mom12m.explanation',
+    formula: 'educationGlossary.entries.mom12m.formula',
+    interpretation: 'educationGlossary.entries.mom12m.interpretation',
   },
   RISK_PCT: {
-    key: 'RISK_PCT',
-    label: 'Risk %',
-    title: 'Risk Percent of Account',
-    tooltip: 'Portion of account at risk if stop is hit.',
-    explanation: 'Risk % is the loss size if the stop executes, as a share of account size.',
-    formula: 'Risk % = Risk Amount / Account Size',
-    interpretation: 'Keep this near your per-trade risk budget.',
+    label: 'educationGlossary.entries.riskPct.label',
+    title: 'educationGlossary.entries.riskPct.title',
+    tooltip: 'educationGlossary.entries.riskPct.tooltip',
+    explanation: 'educationGlossary.entries.riskPct.explanation',
+    formula: 'educationGlossary.entries.riskPct.formula',
+    interpretation: 'educationGlossary.entries.riskPct.interpretation',
   },
   FEE_TO_RISK: {
-    key: 'FEE_TO_RISK',
-    label: 'Fee / Risk',
-    title: 'Fees Relative to Risk',
-    tooltip: 'How much estimated costs consume planned risk.',
-    explanation: 'Fee/Risk measures whether costs are small versus expected downside.',
-    formula: 'Fee / Risk = Total Fees / Risk Amount',
-    interpretation: 'Lower is better. High values can invalidate otherwise good setups.',
+    label: 'educationGlossary.entries.feeToRisk.label',
+    title: 'educationGlossary.entries.feeToRisk.title',
+    tooltip: 'educationGlossary.entries.feeToRisk.tooltip',
+    explanation: 'educationGlossary.entries.feeToRisk.explanation',
+    formula: 'educationGlossary.entries.feeToRisk.formula',
+    interpretation: 'educationGlossary.entries.feeToRisk.interpretation',
   },
   OVERLAY: {
-    key: 'OVERLAY',
-    label: 'Overlay',
-    title: 'Social Overlay',
-    tooltip: 'Optional social-risk adjustment layer.',
-    explanation: 'Overlay can reduce risk or veto a trade when social conditions are extreme.',
-    interpretation: 'OFF/OK means no major social warning. REVIEW/VETO means investigate first.',
+    label: 'educationGlossary.entries.overlay.label',
+    title: 'educationGlossary.entries.overlay.title',
+    tooltip: 'educationGlossary.entries.overlay.tooltip',
+    explanation: 'educationGlossary.entries.overlay.explanation',
+    interpretation: 'educationGlossary.entries.overlay.interpretation',
   },
   R_NOW: {
-    key: 'R_NOW',
-    label: 'R Now',
-    title: 'Current R Multiple',
-    tooltip: 'Current profit/loss measured in initial risk units.',
-    explanation: 'R Now compares current P&L with initial risk (1R).',
-    formula: 'R Now = (Current Price - Entry) / (Entry - Initial Stop)',
-    interpretation: 'Above +1R indicates progress; below 0R means position is underwater.',
+    label: 'educationGlossary.entries.rNow.label',
+    title: 'educationGlossary.entries.rNow.title',
+    tooltip: 'educationGlossary.entries.rNow.tooltip',
+    explanation: 'educationGlossary.entries.rNow.explanation',
+    formula: 'educationGlossary.entries.rNow.formula',
+    interpretation: 'educationGlossary.entries.rNow.interpretation',
   },
 };
 
@@ -142,5 +143,14 @@ export const DAILY_REVIEW_GLOSSARY_KEYS: EducationMetricKey[] = [
 ];
 
 export function getGlossaryEntry(metricKey: EducationMetricKey): EducationGlossaryEntry {
-  return EDUCATION_GLOSSARY[metricKey];
+  const keys = EDUCATION_GLOSSARY_MESSAGE_KEYS[metricKey];
+  return {
+    key: metricKey,
+    label: t(keys.label),
+    title: t(keys.title),
+    tooltip: t(keys.tooltip),
+    explanation: t(keys.explanation),
+    formula: keys.formula ? t(keys.formula) : undefined,
+    interpretation: t(keys.interpretation),
+  };
 }

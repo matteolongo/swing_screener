@@ -1,10 +1,11 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { fetchUniverses, runScreener } from './api';
 import { ScreenerRequest, ScreenerResponse } from './types';
+import { queryKeys } from '@/lib/queryKeys';
 
 export function useUniverses() {
   return useQuery({
-    queryKey: ['universes'],
+    queryKey: queryKeys.universes(),
     queryFn: fetchUniverses,
   });
 }

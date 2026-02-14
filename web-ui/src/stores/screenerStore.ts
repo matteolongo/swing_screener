@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { ScreenerResponse } from '@/types/screener';
+import { ScreenerResponse } from '@/features/screener/types';
 
 interface ScreenerStore {
   lastResult: ScreenerResponse | null;
