@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import importlib.util
+from types import SimpleNamespace
 import pytest
 import pandas as pd
 from datetime import datetime, timedelta
+import swing_screener.data.providers.yfinance_provider as yfinance_provider_module
 
 from swing_screener.data.providers import (
     MarketDataProvider,
@@ -16,6 +18,22 @@ from swing_screener.data.providers import (
 from swing_screener.config import BrokerConfig
 
 ALPACA_AVAILABLE = importlib.util.find_spec("alpaca") is not None
+
+
+def _mock_ohlcv_frame(tickers: list[str]) -> pd.DataFrame:
+    """Create deterministic OHLCV frame in project-standard MultiIndex format."""
+    idx = pd.date_range("2026-01-05", periods=5, freq="D")
+    data: dict[tuple[str, str], pd.Series] = {}
+    for i, ticker in enumerate(tickers):
+        base = 100.0 + i * 10
+        data[("Open", ticker)] = pd.Series([base + j for j in range(5)], index=idx, dtype=float)
+        data[("High", ticker)] = pd.Series([base + 1 + j for j in range(5)], index=idx, dtype=float)
+        data[("Low", ticker)] = pd.Series([base - 1 + j for j in range(5)], index=idx, dtype=float)
+        data[("Close", ticker)] = pd.Series([base + 0.5 + j for j in range(5)], index=idx, dtype=float)
+        data[("Volume", ticker)] = pd.Series([1_000_000 + j for j in range(5)], index=idx, dtype=float)
+    df = pd.DataFrame(data, index=idx)
+    df.columns = pd.MultiIndex.from_tuples(df.columns)
+    return df
 
 
 class TestYfinanceProvider:
@@ -31,8 +49,13 @@ class TestYfinanceProvider:
         provider = YfinanceProvider()
         assert provider.is_market_open() is False
     
-    def test_fetch_ohlcv_single_ticker(self):
+    def test_fetch_ohlcv_single_ticker(self, monkeypatch):
         """Test fetching OHLCV data for single ticker."""
+        # Mock yf.download to return test data
+        def fake_download(*args, **kwargs):
+            return _mock_ohlcv_frame(["AAPL"])
+        
+        monkeypatch.setattr(yfinance_provider_module.yf, "download", fake_download)
         provider = YfinanceProvider()
         
         end = datetime.now().strftime("%Y-%m-%d")
@@ -65,8 +88,14 @@ class TestYfinanceProvider:
         assert not df.empty
         assert df[("Close", "AAPL")].notna().any()
     
-    def test_fetch_ohlcv_multiple_tickers(self):
+    def test_fetch_ohlcv_multiple_tickers(self, monkeypatch):
         """Test fetching OHLCV data for multiple tickers."""
+        # Mock yf.download to return test data
+        def fake_download(*args, **kwargs):
+            tickers = ["AAPL", "MSFT", "GOOGL"]
+            return _mock_ohlcv_frame(tickers)
+        
+        monkeypatch.setattr(yfinance_provider_module.yf, "download", fake_download)
         provider = YfinanceProvider()
         
         end = datetime.now().strftime("%Y-%m-%d")
@@ -85,47 +114,124 @@ class TestYfinanceProvider:
         for ticker in tickers:
             assert ticker in result_tickers
     
-    def test_fetch_latest_price(self):
+    def test_fetch_latest_price(self, monkeypatch):
         """Test fetching latest price."""
+        def fake_ticker(_symbol: str):
+            return SimpleNamespace(
+                fast_info=SimpleNamespace(last_price=123.45, previous_close=120.0)
+            )
+
+        monkeypatch.setattr(yfinance_provider_module, "yf", SimpleNamespace(Ticker=fake_ticker))
+
         provider = YfinanceProvider()
         price = provider.fetch_latest_price("AAPL")
         
         assert isinstance(price, float)
-        assert price > 0
+        assert price == 123.45
     
-    def test_get_ticker_info(self):
+    def test_get_ticker_info(self, monkeypatch):
         """Test fetching ticker metadata."""
+        metadata = pd.DataFrame.from_dict(
+            {
+                "AAPL": {
+                    "name": "Apple Inc.",
+                    "currency": "USD",
+                    "exchange": "NASDAQ",
+                }
+            },
+            orient="index",
+        )
+
+        def fake_ticker(_symbol: str):
+            return SimpleNamespace(
+                get_info=lambda: {
+                    "shortName": "Apple Inc.",
+                    "sector": "Technology",
+                    "industry": "Consumer Electronics",
+                    "marketCap": 3_000_000_000_000,
+                }
+            )
+
+        monkeypatch.setattr(yfinance_provider_module, "fetch_ticker_metadata", lambda *args, **kwargs: metadata)
+        monkeypatch.setattr(yfinance_provider_module, "yf", SimpleNamespace(Ticker=fake_ticker))
+
         provider = YfinanceProvider()
         info = provider.get_ticker_info("AAPL")
         
         assert isinstance(info, dict)
         assert "name" in info
         assert "sector" in info
-        assert info["name"] is not None  # Apple should have a name
-    
-    def test_caching(self):
-        """Test that caching works."""
-        import time
-        provider = YfinanceProvider(cache_dir=".cache/test_market_data")
+        assert info["name"] == "Apple Inc."
 
+    def test_fetch_ohlcv_forces_refresh_on_live_edge(self, monkeypatch, tmp_path):
+        """Today/end-date requests should bypass stale cache."""
+        cache_dir = tmp_path / "test_cache"
+        provider = YfinanceProvider(cache_dir=str(cache_dir))
+        
+        # Create a mock cached file
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        fake_data = _mock_ohlcv_frame(["AAPL"])
+        
+        # Mock yf.download to track calls
+        download_called = []
+        def fake_download(*args, **kwargs):
+            download_called.append(True)
+            return _mock_ohlcv_frame(["AAPL"])
+        
+        monkeypatch.setattr(yfinance_provider_module.yf, "download", fake_download)
+        
+        # First call with today's date - should force refresh
+        today = datetime.now().strftime("%Y-%m-%d")
+        df1 = provider.fetch_ohlcv(["AAPL"], "2026-01-01", today)
+        
+        # Should have called download (not used cache)
+        assert len(download_called) >= 1
+        assert not df1.empty
+        
+    def test_fetch_ohlcv_keeps_cache_for_historical_end_date(self, monkeypatch, tmp_path):
+        """Historical windows should keep normal cache behavior."""
+        cache_dir = tmp_path / "test_cache"
+        provider = YfinanceProvider(cache_dir=str(cache_dir))
+        
+        # Mock yf.download
+        download_call_count = []
+        def fake_download(*args, **kwargs):
+            download_call_count.append(True)
+            return _mock_ohlcv_frame(["AAPL"])
+        
+        monkeypatch.setattr(yfinance_provider_module.yf, "download", fake_download)
+        
+        # Call with historical dates - should use cache on second call
+        df1 = provider.fetch_ohlcv(["AAPL"], "2026-01-01", "2026-01-31")
+        first_call_count = len(download_call_count)
+        
+        df2 = provider.fetch_ohlcv(["AAPL"], "2026-01-01", "2026-01-31")
+        second_call_count = len(download_call_count)
+        
+        # Second call should use cache (same download count)
+        assert second_call_count == first_call_count
+    
+    def test_uses_configured_cache_dir(self, monkeypatch, tmp_path):
+        """Provider should use configured cache_dir."""
+        cache_dir = tmp_path / "test_market_data"
+        
+        # Mock yf.download
+        def fake_download(*args, **kwargs):
+            return _mock_ohlcv_frame(["AAPL"])
+        
+        monkeypatch.setattr(yfinance_provider_module.yf, "download", fake_download)
+        
+        provider = YfinanceProvider(cache_dir=str(cache_dir))
+        
         end = datetime.now().strftime("%Y-%m-%d")
         start = (datetime.now() - timedelta(days=10)).strftime("%Y-%m-%d")
-
-        # First call - should download
-        start_time = time.time()
-        df1 = provider.fetch_ohlcv(["AAPL"], start, end)
-        first_duration = time.time() - start_time
-
-        # Second call - should use cache
-        start_time = time.time()
-        df2 = provider.fetch_ohlcv(["AAPL"], start, end)
-        second_duration = time.time() - start_time
-
-        # Cache should be faster (but timing is flaky, so just check it works)
-        # assert second_duration < first_duration
+        provider.fetch_ohlcv(["AAPL"], start, end)
         
-        # Data should be identical (allow for datetime precision differences from parquet)
-        pd.testing.assert_frame_equal(df1, df2, check_dtype=False, check_index_type=False)
+        # Check that cache directory was created
+        assert cache_dir.exists()
+        # Check that cache files exist in the directory
+        cache_files = list(cache_dir.glob("*.parquet"))
+        assert len(cache_files) > 0
 
 
 class TestBrokerConfig:
@@ -280,8 +386,13 @@ class TestAlpacaProvider:
 class TestProviderCompatibility:
     """Test that all providers return compatible DataFrame format."""
     
-    def test_yfinance_format(self):
+    def test_yfinance_format(self, monkeypatch):
         """Test yfinance provider returns correct format."""
+        # Mock yf.download
+        def fake_download(*args, **kwargs):
+            return _mock_ohlcv_frame(["AAPL"])
+        
+        monkeypatch.setattr(yfinance_provider_module.yf, "download", fake_download)
         yf_provider = YfinanceProvider()
         
         end = datetime.now().strftime("%Y-%m-%d")

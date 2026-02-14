@@ -76,6 +76,23 @@ class ClosePositionRequest(BaseModel):
 OrderStatus = Literal["pending", "filled", "cancelled"]
 OrderKind = Literal["entry", "stop", "take_profit"]
 
+BASE_ORDER_TYPES = {"MARKET", "LIMIT", "STOP", "STOP_LIMIT"}
+DIRECTIONAL_ORDER_TYPES = {
+    "BUY_MARKET",
+    "BUY_LIMIT",
+    "BUY_STOP",
+    "BUY_STOP_LIMIT",
+    "SELL_MARKET",
+    "SELL_LIMIT",
+    "SELL_STOP",
+    "SELL_STOP_LIMIT",
+}
+SUPPORTED_ORDER_TYPES = BASE_ORDER_TYPES | DIRECTIONAL_ORDER_TYPES
+
+LIMIT_ORDER_TYPES = {"LIMIT", "BUY_LIMIT", "SELL_LIMIT"}
+STOP_ORDER_TYPES = {"STOP", "BUY_STOP", "SELL_STOP"}
+STOP_LIMIT_ORDER_TYPES = {"STOP_LIMIT", "BUY_STOP_LIMIT", "SELL_STOP_LIMIT"}
+
 
 class Order(BaseModel):
     order_id: str
@@ -142,19 +159,21 @@ class CreateOrderRequest(BaseModel):
     @classmethod
     def validate_order_type(cls, v: str) -> str:
         v = v.strip().upper()
-        if v not in {"MARKET", "LIMIT", "STOP", "STOP_LIMIT"}:
-            raise ValueError(f"Invalid order type: {v}. Must be MARKET, LIMIT, STOP, or STOP_LIMIT")
+        if v not in SUPPORTED_ORDER_TYPES:
+            raise ValueError(
+                f"Invalid order type: {v}. Must be one of {', '.join(sorted(SUPPORTED_ORDER_TYPES))}"
+            )
         return v
 
     @model_validator(mode="after")
     def validate_order_consistency(self):
         """Validate price fields match order type."""
-        if self.order_type == "LIMIT" and self.limit_price is None:
-            raise ValueError("LIMIT order requires limit_price")
-        if self.order_type in {"STOP", "STOP_LIMIT"} and self.stop_price is None:
+        if self.order_type in LIMIT_ORDER_TYPES and self.limit_price is None:
+            raise ValueError(f"{self.order_type} order requires limit_price")
+        if self.order_type in STOP_ORDER_TYPES | STOP_LIMIT_ORDER_TYPES and self.stop_price is None:
             raise ValueError(f"{self.order_type} order requires stop_price")
-        if self.order_type == "STOP_LIMIT" and self.limit_price is None:
-            raise ValueError("STOP_LIMIT order requires both stop_price and limit_price")
+        if self.order_type in STOP_LIMIT_ORDER_TYPES and self.limit_price is None:
+            raise ValueError(f"{self.order_type} order requires both stop_price and limit_price")
         return self
 
 
