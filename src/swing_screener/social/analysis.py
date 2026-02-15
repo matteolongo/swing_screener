@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -17,8 +18,22 @@ from swing_screener.social.overlay import REASON_LOW_SAMPLE
 from swing_screener.social.providers.reddit import RedditProvider
 from swing_screener.data.providers.factory import get_market_data_provider
 
+logger = logging.getLogger(__name__)
+
 
 def _provider_for(name: str, cache: SocialCache):
+    """Get social provider instance by name.
+    
+    Args:
+        name: Provider name ("reddit" or "yahoo_finance")
+        cache: Social cache instance for storing provider data
+        
+    Returns:
+        Provider instance (RedditProvider or YahooFinanceProvider)
+        
+    Raises:
+        ValueError: If provider name is not supported
+    """
     if name == "reddit":
         return RedditProvider(
             list(DEFAULT_SUBREDDITS),
@@ -115,8 +130,9 @@ def analyze_social_symbol(
                 use_cache=True,
                 allow_cache_fallback_on_error=True,
             )
-        except Exception:
+        except Exception as e:
             # If OHLCV fetch fails, hype_score will be None
+            logger.debug(f"Failed to fetch OHLCV for {symbol}: {e}")
             pass
 
         metrics = compute_daily_metrics(
