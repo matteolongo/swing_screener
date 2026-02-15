@@ -34,7 +34,7 @@ def get_run_status(
 @router.get("/opportunities", response_model=IntelligenceOpportunitiesResponse)
 def get_opportunities(
     asof_date: str | None = Query(default=None),
+    symbols: list[str] | None = Query(default=None),
     service: IntelligenceService = Depends(get_intelligence_service),
 ):
-    return service.get_opportunities(asof_date=asof_date)
-
+    return service.get_opportunities(asof_date=asof_date, symbols=symbols)

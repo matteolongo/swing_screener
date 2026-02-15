@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { PlayCircle, RefreshCw, TrendingUp, AlertCircle, Sparkles } from 'lucide-react';
 import Card from '@/components/common/Card';
@@ -21,9 +21,15 @@ import ScreenerCandidatesTable from '@/components/domain/screener/ScreenerCandid
 import { queryKeys } from '@/lib/queryKeys';
 import { t } from '@/i18n/t';
 import { fetchSocialWarmupStatus } from '@/features/social/api';
-import { useRunIntelligenceMutation, useIntelligenceRunStatus, useIntelligenceOpportunities } from '@/features/intelligence/hooks';
+import {
+  useRunIntelligenceMutation,
+  useIntelligenceRunStatus,
+  useIntelligenceOpportunitiesScoped,
+} from '@/features/intelligence/hooks';
 
 const TOP_N_MAX = 200;
+const INTELLIGENCE_ASOF_STORAGE_KEY = 'screener.intelligenceAsofDate';
+const INTELLIGENCE_SYMBOLS_STORAGE_KEY = 'screener.intelligenceSymbols';
 type CurrencyFilter = 'all' | 'usd' | 'eur';
 const UNIVERSE_ALIASES: Record<string, string> = {
   mega: 'mega_all',
@@ -102,10 +108,28 @@ export default function Screener() {
 
   // Intelligence state
   const [intelligenceJobId, setIntelligenceJobId] = useState<string | null>(null);
+  const [intelligenceAsofDate, setIntelligenceAsofDate] = useState<string | null>(() => {
+    const saved = localStorage.getItem(INTELLIGENCE_ASOF_STORAGE_KEY);
+    return saved && saved.trim().length > 0 ? saved : null;
+  });
+  const [intelligenceSymbols, setIntelligenceSymbols] = useState<string[]>(() => {
+    const saved = localStorage.getItem(INTELLIGENCE_SYMBOLS_STORAGE_KEY);
+    if (!saved) return [];
+    try {
+      const parsed = JSON.parse(saved);
+      if (!Array.isArray(parsed)) return [];
+      return parsed
+        .map((value) => String(value).trim().toUpperCase())
+        .filter((value) => value.length > 0);
+    } catch {
+      return [];
+    }
+  });
   const intelligenceStatus = useIntelligenceRunStatus(intelligenceJobId ?? undefined);
-  const intelligenceOpportunities = useIntelligenceOpportunities(
-    intelligenceStatus.data?.asofDate,
-    Boolean(intelligenceStatus.data?.asofDate && intelligenceStatus.data?.status === 'completed')
+  const intelligenceOpportunities = useIntelligenceOpportunitiesScoped(
+    intelligenceAsofDate ?? undefined,
+    intelligenceSymbols.length > 0 ? intelligenceSymbols : undefined,
+    Boolean(intelligenceAsofDate)
   );
 
   // Save preferences to localStorage when they change
@@ -141,6 +165,10 @@ export default function Screener() {
     (data) => {
       setLastResult(data);
       setIntelligenceJobId(null);
+      setIntelligenceAsofDate(null);
+      setIntelligenceSymbols([]);
+      localStorage.removeItem(INTELLIGENCE_ASOF_STORAGE_KEY);
+      localStorage.removeItem(INTELLIGENCE_SYMBOLS_STORAGE_KEY);
     },
     (error) => {
       console.error('Screener failed', error);
@@ -149,10 +177,25 @@ export default function Screener() {
 
   const intelligenceMutation = useRunIntelligenceMutation((data) => {
     setIntelligenceJobId(data.jobId);
+    setIntelligenceAsofDate(null);
+    localStorage.removeItem(INTELLIGENCE_ASOF_STORAGE_KEY);
   });
+
+  useEffect(() => {
+    if (intelligenceStatus.data?.status !== 'completed' || !intelligenceStatus.data.asofDate) {
+      return;
+    }
+    setIntelligenceAsofDate(intelligenceStatus.data.asofDate);
+    localStorage.setItem(INTELLIGENCE_ASOF_STORAGE_KEY, intelligenceStatus.data.asofDate);
+  }, [intelligenceStatus.data?.asofDate, intelligenceStatus.data?.status]);
 
   const handleRunIntelligence = () => {
     const symbols = candidates.map((c) => c.ticker);
+    if (!symbols.length) {
+      return;
+    }
+    setIntelligenceSymbols(symbols);
+    localStorage.setItem(INTELLIGENCE_SYMBOLS_STORAGE_KEY, JSON.stringify(symbols));
     intelligenceMutation.mutate({ symbols });
   };
 
@@ -421,11 +464,11 @@ export default function Screener() {
           </Card>
 
           {/* Intelligence Section */}
-          {candidates.length > 0 && (
+          {(candidates.length > 0 || intelligenceAsofDate) && (
             <Card>
               <div className="space-y-4">
                 {/* Run Intelligence button */}
-                {!intelligenceJobId && !intelligenceStatus.data && (
+                {candidates.length > 0 && !intelligenceJobId && !intelligenceStatus.data && (
                   <Button
                     onClick={handleRunIntelligence}
                     disabled={intelligenceMutation.isPending}
@@ -448,7 +491,7 @@ export default function Screener() {
                 {/* Intelligence status and results */}
                 {intelligenceStatus.data && (
                   <div>
-                    {intelligenceStatus.data.status === 'completed' && intelligenceStatus.data.asofDate && (
+                    {intelligenceStatus.data.status === 'completed' && intelligenceAsofDate && (
                       <>
                         <p className="text-sm text-green-700 mb-3">
                           {t('screener.intelligence.statusCompleted', {
@@ -460,9 +503,22 @@ export default function Screener() {
                         <div>
                           <h3 className="text-lg font-semibold text-gray-900 mb-3">
                             {t('screener.intelligence.opportunitiesTitle', {
-                              date: intelligenceStatus.data.asofDate,
+                              date: intelligenceAsofDate,
                             })}
                           </h3>
+                          <div className="mb-3">
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => intelligenceOpportunities.refetch()}
+                              disabled={intelligenceOpportunities.isFetching}
+                            >
+                              {t('screener.intelligence.refreshOpportunities')}
+                            </Button>
+                          </div>
+                          {intelligenceOpportunities.isError ? (
+                            <p className="text-sm text-red-700">{t('screener.intelligence.statusLoadError')}</p>
+                          ) : null}
                           {intelligenceOpportunities.data && intelligenceOpportunities.data.opportunities.length > 0 ? (
                             <div className="space-y-3">
                               {intelligenceOpportunities.data.opportunities.map((opp) => (
@@ -481,7 +537,7 @@ export default function Screener() {
                                 </div>
                               ))}
                             </div>
-                          ) : intelligenceOpportunities.isLoading ? (
+                          ) : intelligenceOpportunities.isLoading || intelligenceOpportunities.isFetching ? (
                             <p className="text-sm text-gray-600">{t('screener.intelligence.loading')}</p>
                           ) : (
                             <p className="text-sm text-gray-600">{t('screener.intelligence.empty')}</p>
@@ -503,6 +559,51 @@ export default function Screener() {
                           error: intelligenceStatus.data.error || t('common.errors.generic'),
                         })}
                       </p>
+                    )}
+                  </div>
+                )}
+                {!intelligenceStatus.data && intelligenceAsofDate && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                      {t('screener.intelligence.opportunitiesTitle', {
+                        date: intelligenceAsofDate,
+                      })}
+                    </h3>
+                    <div className="mb-3">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => intelligenceOpportunities.refetch()}
+                        disabled={intelligenceOpportunities.isFetching}
+                      >
+                        {t('screener.intelligence.refreshOpportunities')}
+                      </Button>
+                    </div>
+                    {intelligenceOpportunities.isError ? (
+                      <p className="text-sm text-red-700">{t('screener.intelligence.statusLoadError')}</p>
+                    ) : null}
+                    {intelligenceOpportunities.data && intelligenceOpportunities.data.opportunities.length > 0 ? (
+                      <div className="space-y-3">
+                        {intelligenceOpportunities.data.opportunities.map((opp) => (
+                          <div key={opp.symbol} className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <p className="font-semibold text-gray-900">{opp.symbol}</p>
+                                <p className="text-sm text-gray-600">
+                                  {t('screener.intelligence.stateValue', { state: opp.state })}
+                                </p>
+                                {opp.explanations.map((explanation, idx) => (
+                                  <p key={idx} className="text-sm text-gray-700 mt-1">{explanation}</p>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : intelligenceOpportunities.isLoading || intelligenceOpportunities.isFetching ? (
+                      <p className="text-sm text-gray-600">{t('screener.intelligence.loading')}</p>
+                    ) : (
+                      <p className="text-sm text-gray-600">{t('screener.intelligence.empty')}</p>
                     )}
                   </div>
                 )}

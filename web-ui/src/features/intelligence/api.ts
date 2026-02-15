@@ -50,11 +50,18 @@ export async function fetchIntelligenceRunStatus(jobId: string): Promise<Intelli
 }
 
 export async function fetchIntelligenceOpportunities(
-  asofDate?: string
+  asofDate?: string,
+  symbols?: string[]
 ): Promise<IntelligenceOpportunitiesResponse> {
   const endpoint = new URL(apiUrl(API_ENDPOINTS.intelligenceOpportunities), window.location.origin);
   if (asofDate) {
     endpoint.searchParams.set('asof_date', asofDate);
+  }
+  if (symbols && symbols.length > 0) {
+    symbols
+      .map((symbol) => symbol.trim().toUpperCase())
+      .filter((symbol) => symbol.length > 0)
+      .forEach((symbol) => endpoint.searchParams.append('symbols', symbol));
   }
 
   const response = await fetch(endpoint.toString());
@@ -65,4 +72,3 @@ export async function fetchIntelligenceOpportunities(
   const payload: IntelligenceOpportunitiesResponseAPI = await response.json();
   return transformIntelligenceOpportunitiesResponse(payload);
 }
-

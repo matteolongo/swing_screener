@@ -17,7 +17,7 @@ import CandidateOrderModal from '@/components/domain/orders/CandidateOrderModal'
 import { queryKeys } from '@/lib/queryKeys';
 import { t } from '@/i18n/t';
 import {
-  useIntelligenceOpportunities,
+  useIntelligenceOpportunitiesScoped,
   useIntelligenceRunStatus,
   useRunIntelligenceMutation,
 } from '@/features/intelligence/hooks';
@@ -40,6 +40,7 @@ export default function DailyReview() {
   const [selectedCandidate, setSelectedCandidate] = useState<DailyReviewCandidate | null>(null);
   const [intelligenceJobId, setIntelligenceJobId] = useState<string>();
   const [intelligenceAsofDate, setIntelligenceAsofDate] = useState<string>();
+  const [intelligenceRunSymbols, setIntelligenceRunSymbols] = useState<string[]>([]);
 
   const queryClient = useQueryClient();
   const { data: review, isLoading, error, refetch, isFetching } = useDailyReview(10);
@@ -71,8 +72,9 @@ export default function DailyReview() {
   });
   const intelligenceStatusQuery = useIntelligenceRunStatus(intelligenceJobId);
   const intelligenceStatus = intelligenceStatusQuery.data;
-  const intelligenceOpportunitiesQuery = useIntelligenceOpportunities(
+  const intelligenceOpportunitiesQuery = useIntelligenceOpportunitiesScoped(
     intelligenceAsofDate,
+    intelligenceRunSymbols,
     Boolean(intelligenceAsofDate)
   );
   const intelligenceOpportunities = intelligenceOpportunitiesQuery.data?.opportunities ?? [];
@@ -85,8 +87,10 @@ export default function DailyReview() {
     if (!intelligenceSymbols.length) {
       return;
     }
+    const scopedSymbols = intelligenceSymbols.slice(0, 100);
+    setIntelligenceRunSymbols(scopedSymbols);
     runIntelligenceMutation.mutate({
-      symbols: intelligenceSymbols.slice(0, 100),
+      symbols: scopedSymbols,
     });
   };
   const formatScorePercent = (value: number) => `${(value * 100).toFixed(1)}%`;

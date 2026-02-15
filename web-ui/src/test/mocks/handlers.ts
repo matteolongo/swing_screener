@@ -482,6 +482,14 @@ const mockIntelligenceOpportunities = {
   asof_date: '2026-02-15',
   opportunities: [
     {
+      symbol: 'AAPL',
+      technical_readiness: 0.82,
+      catalyst_strength: 0.71,
+      opportunity_score: 0.77,
+      state: 'TRENDING',
+      explanations: ['Catalyst + follow-through confirmed.'],
+    },
+    {
       symbol: 'VALE',
       technical_readiness: 0.82,
       catalyst_strength: 0.71,
@@ -680,8 +688,21 @@ export const handlers = [
   http.get(`${API_BASE_URL}/api/intelligence/opportunities`, ({ request }) => {
     const url = new URL(request.url)
     const asofDate = url.searchParams.get('asof_date')
+    const symbols = url.searchParams
+      .getAll('symbols')
+      .map((value) => value.trim().toUpperCase())
+      .filter((value) => value.length > 0)
     if (asofDate && asofDate !== mockIntelligenceOpportunities.asof_date) {
       return HttpResponse.json({ asof_date: asofDate, opportunities: [] })
+    }
+    if (symbols.length > 0) {
+      const symbolSet = new Set(symbols)
+      return HttpResponse.json({
+        asof_date: mockIntelligenceOpportunities.asof_date,
+        opportunities: mockIntelligenceOpportunities.opportunities.filter((opportunity) =>
+          symbolSet.has(opportunity.symbol.toUpperCase())
+        ),
+      })
     }
     return HttpResponse.json(mockIntelligenceOpportunities)
   }),

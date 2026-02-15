@@ -265,7 +265,7 @@ describe('DailyReview Page', () => {
       expect(screen.getByText('Opportunities (as of 2026-02-15)')).toBeInTheDocument()
     })
 
-    await screen.findByText('Catalyst + follow-through confirmed.')
-    expect(screen.getByText('State: TRENDING')).toBeInTheDocument()
+    expect((await screen.findAllByText('Catalyst + follow-through confirmed.')).length).toBeGreaterThan(0)
+    expect((await screen.findAllByText('State: TRENDING')).length).toBeGreaterThan(0)
   })
 })

@@ -20,7 +20,7 @@ import StrategyCoachCard from '@/components/domain/education/StrategyCoachCard';
 import { buildFallbackStrategyCoachSections, buildStrategyCoachSections } from '@/content/strategyCoach';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 import {
-  useIntelligenceOpportunities,
+  useIntelligenceOpportunitiesScoped,
   useIntelligenceRunStatus,
   useRunIntelligenceMutation,
 } from '@/features/intelligence/hooks';
@@ -68,14 +68,16 @@ export default function Dashboard() {
   );
   const [intelligenceJobId, setIntelligenceJobId] = useState<string>();
   const [intelligenceAsofDate, setIntelligenceAsofDate] = useState<string>();
+  const [intelligenceRunSymbols, setIntelligenceRunSymbols] = useState<string[]>([]);
   const runIntelligenceMutation = useRunIntelligenceMutation((launch) => {
     setIntelligenceJobId(launch.jobId);
     setIntelligenceAsofDate(undefined);
   });
   const intelligenceStatusQuery = useIntelligenceRunStatus(intelligenceJobId);
   const intelligenceStatus = intelligenceStatusQuery.data;
-  const intelligenceOpportunitiesQuery = useIntelligenceOpportunities(
+  const intelligenceOpportunitiesQuery = useIntelligenceOpportunitiesScoped(
     intelligenceAsofDate,
+    intelligenceRunSymbols,
     Boolean(intelligenceAsofDate)
   );
   const intelligenceOpportunities = intelligenceOpportunitiesQuery.data?.opportunities ?? [];
@@ -90,8 +92,10 @@ export default function Dashboard() {
     if (!intelligenceSymbols.length) {
       return;
     }
+    const scopedSymbols = intelligenceSymbols.slice(0, 50);
+    setIntelligenceRunSymbols(scopedSymbols);
     runIntelligenceMutation.mutate({
-      symbols: intelligenceSymbols.slice(0, 50),
+      symbols: scopedSymbols,
     });
   };
 

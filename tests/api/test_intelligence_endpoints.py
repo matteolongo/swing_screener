@@ -84,3 +84,49 @@ def test_intelligence_opportunities_returns_payload(monkeypatch, tmp_path):
         assert payload["opportunities"][0]["symbol"] == "AAPL"
     finally:
         app.dependency_overrides.clear()
+
+
+def test_intelligence_opportunities_filters_by_symbols_query(monkeypatch):
+    class FakeStorage:
+        def latest_opportunities_date(self):
+            return "2026-02-15"
+
+        def load_opportunities(self, asof_date):
+            assert asof_date == "2026-02-15"
+            from swing_screener.intelligence.models import Opportunity
+
+            return [
+                Opportunity(
+                    symbol="AAPL",
+                    technical_readiness=0.8,
+                    catalyst_strength=0.7,
+                    opportunity_score=0.755,
+                    state="CATALYST_ACTIVE",
+                    explanations=["technical=0.80", "catalyst=0.70", "blend=0.76"],
+                ),
+                Opportunity(
+                    symbol="MSFT",
+                    technical_readiness=0.79,
+                    catalyst_strength=0.66,
+                    opportunity_score=0.731,
+                    state="WATCH",
+                    explanations=["technical=0.79", "catalyst=0.66", "blend=0.73"],
+                ),
+            ]
+
+    service = intelligence_service.IntelligenceService(strategy_repo=SimpleNamespace(get_active_strategy=lambda: {}))
+    monkeypatch.setattr(service, "_storage", FakeStorage())
+    app.dependency_overrides = {}
+    from api.routers.intelligence import get_intelligence_service as dep
+
+    app.dependency_overrides[dep] = lambda: service
+    try:
+        client = TestClient(app)
+        res = client.get("/api/intelligence/opportunities?asof_date=2026-02-15&symbols=MSFT")
+        assert res.status_code == 200
+        payload = res.json()
+        assert payload["asof_date"] == "2026-02-15"
+        assert len(payload["opportunities"]) == 1
+        assert payload["opportunities"][0]["symbol"] == "MSFT"
+    finally:
+        app.dependency_overrides.clear()

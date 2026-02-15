@@ -79,11 +79,18 @@ class IntelligenceService:
             updated_at=job.updated_at,
         )
 
-    def get_opportunities(self, asof_date: str | None = None) -> IntelligenceOpportunitiesResponse:
+    def get_opportunities(
+        self,
+        asof_date: str | None = None,
+        symbols: list[str] | None = None,
+    ) -> IntelligenceOpportunitiesResponse:
         target_date = asof_date or self._storage.latest_opportunities_date()
         if target_date is None:
             raise HTTPException(status_code=404, detail="No intelligence opportunities available.")
         opportunities = self._storage.load_opportunities(target_date)
+        if symbols:
+            symbol_set = {str(symbol).strip().upper() for symbol in symbols if str(symbol).strip()}
+            opportunities = [opportunity for opportunity in opportunities if opportunity.symbol in symbol_set]
         payload = [
             IntelligenceOpportunityResponse(
                 symbol=opportunity.symbol,

@@ -15,6 +15,6 @@ export const queryKeys = {
   backtestSimulations: () => ['backtest-simulations'] as const,
   socialWarmupStatus: (jobId?: string) => ['social-warmup', jobId] as const,
   intelligenceRunStatus: (jobId?: string) => ['intelligence-run-status', jobId] as const,
-  intelligenceOpportunities: (asofDate?: string) =>
-    ['intelligence-opportunities', asofDate] as const,
+  intelligenceOpportunities: (asofDate?: string, symbolScope?: string) =>
+    ['intelligence-opportunities', asofDate, symbolScope] as const,
 };

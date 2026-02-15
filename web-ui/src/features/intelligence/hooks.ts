@@ -19,7 +19,9 @@ export function useRunIntelligenceMutation(
   return useMutation({
     mutationFn: (request: IntelligenceRunRequest) => runIntelligence(request),
     onSuccess: async (data) => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.intelligenceOpportunities() });
+      await queryClient.invalidateQueries({
+        predicate: (query) => Array.isArray(query.queryKey) && query.queryKey[0] === 'intelligence-opportunities',
+      });
       onSuccess?.(data);
     },
   });
@@ -42,12 +44,23 @@ export function useIntelligenceRunStatus(jobId?: string) {
 }
 
 export function useIntelligenceOpportunities(asofDate?: string, enabled: boolean = true) {
+  return useIntelligenceOpportunitiesScoped(asofDate, undefined, enabled);
+}
+
+export function useIntelligenceOpportunitiesScoped(
+  asofDate?: string,
+  symbols?: string[],
+  enabled: boolean = true
+) {
+  const normalizedSymbols = (symbols ?? [])
+    .map((symbol) => symbol.trim().toUpperCase())
+    .filter((symbol) => symbol.length > 0);
+  const symbolScope = normalizedSymbols.join(',');
   return useQuery<IntelligenceOpportunitiesResponse>({
-    queryKey: queryKeys.intelligenceOpportunities(asofDate),
-    queryFn: () => fetchIntelligenceOpportunities(asofDate),
+    queryKey: queryKeys.intelligenceOpportunities(asofDate, symbolScope || undefined),
+    queryFn: () => fetchIntelligenceOpportunities(asofDate, normalizedSymbols),
     enabled,
     retry: false,
     refetchOnWindowFocus: false,
   });
 }
-
