@@ -195,7 +195,7 @@ rec_payload = evaluate_recommendation(
 
 ### Frontend Display
 
-The thesis is displayed in a comprehensive modal accessed via the lightbulb icon (💡) in the screener results:
+The thesis is displayed in a dedicated modal from the Screener row details actions:
 
 **Modal Sections:**
 1. Setup Score & Safety Label
@@ -214,8 +214,9 @@ The thesis is displayed in a comprehensive modal accessed via the lightbulb icon
 
 1. Run the screener from the Screener page
 2. Results appear with candidates
-3. Click the lightbulb icon (💡) on any candidate
-4. The Trade Thesis modal opens with complete analysis
+3. Click **Expand details** for the candidate you want to inspect
+4. Click **View Trade Thesis** in secondary actions
+5. The Trade Thesis modal opens with complete analysis
 
 ### Reading the Thesis
 
@@ -343,7 +344,7 @@ The Pre-Trade Explanation Engine embodies the project's core values:
 
 - [OPERATIONAL_GUIDE.md](OPERATIONAL_GUIDE.md) - Daily usage
 - [WEB_UI_GUIDE.md](WEB_UI_GUIDE.md) - UI features
-- [AGENTS.md](../AGENTS.md) - Architecture overview
+- [AGENTS.md](AGENTS.md) - Architecture overview
 
 ---
 

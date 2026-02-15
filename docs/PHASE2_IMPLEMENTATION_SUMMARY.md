@@ -1,5 +1,8 @@
 # Phase 2 Implementation Summary
 
+> **Status: Historical snapshot (February 2026).** This document captures implementation context at the time and may not match the current code structure. Use `/docs/INDEX.md` for current canonical docs.
+
+
 ## Persistence Layer Infrastructure - COMPLETE ✅
 
 **Implementation Date:** February 13-14, 2026  

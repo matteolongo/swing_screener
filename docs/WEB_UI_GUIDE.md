@@ -86,17 +86,21 @@ Navigate to **Screener** page:
 
 ### 3. **Review Candidates** 📋
 
-The results table shows:
-- **Ticker** - Stock symbol
-- **Signal** - Entry signal type (BREAKOUT, PULLBACK)
-- **Close Price** - Latest closing price
-- **Entry Price** - Suggested entry (limit or stop order)
-- **Stop Price** - Suggested stop loss (entry - 2×ATR)
-- **ATR** - Average True Range (volatility measure)
-- **Trend/Momentum** - Technical indicators
-- **Shares** - Calculated position size based on risk config
-- **Social Overlay** - Risk-only status (OK/Reduced/Review/Veto) with reason codes
-- **Sentiment** - Click the message icon next to any ticker to run on‑demand analysis (shows last execution time, metrics, and raw events)
+The default Screener table is beginner-first and shows essential fields:
+- **Rank**
+- **Symbol** (ticker, company, sector/currency tags, verdict badge, confidence)
+- **Last Bar**
+- **Close**
+- **Setup** (entry/stop/RR/risk summary)
+- **Fix** (what to improve when not recommended)
+- **Actions**
+
+Advanced metrics are available per symbol by clicking **Expand details**:
+- **Score, ATR, Mom 6M, Mom 12M, RS**
+- **Overlay status and overlay metrics**
+- **Secondary actions**: Sentiment analysis, Trade Thesis, Quick Backtest
+
+If social warmup is running in the background, you will see progress in the screener summary card.
 
 ### 3.5 **Daily Actions (Top 3)** ✅
 
@@ -189,10 +193,13 @@ Go to **Orders** page:
   - Auto-calculates risk metrics
   - Validates against account size and risk limits
   - Shows position value and max loss
-- **Candidate table columns**
-  - Signal type (BREAKOUT/PULLBACK)
-  - Technical indicators (SMA, momentum, relative strength)
-  - Pre-calculated position sizing
+- **Essential + expandable candidate table**
+  - Essential columns remain visible by default for readability
+  - Advanced indicators and overlay analysis live in expandable details rows
+  - Recommendation details are always available from the row action button
+  - Sentiment and Trade Thesis actions are available in expanded row actions
+
+**See also:** [Web UI Architecture](WEB_UI_ARCHITECTURE.md), [API Documentation](../api/README.md), [Troubleshooting](TROUBLESHOOTING.md)
 
 **When to use:** Daily, after market close (~22:00 CET for US stocks)
 

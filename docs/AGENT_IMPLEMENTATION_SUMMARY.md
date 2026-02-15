@@ -1,5 +1,8 @@
 # Agent Implementation Summary
 
+> **Status: Historical snapshot (February 2026).** This document captures implementation context at the time and may not match the current code structure. Use `/docs/INDEX.md` for current canonical docs.
+
+
 **Status:** ✅ Complete  
 **Date:** February 12, 2026  
 **Implementation:** Agent integration with MCP server for workflow automation
