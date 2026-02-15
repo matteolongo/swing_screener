@@ -1,6 +1,51 @@
 export type RecommendationVerdict = 'RECOMMENDED' | 'NOT_RECOMMENDED';
 export type RecommendationSeverity = 'info' | 'warn' | 'block';
 
+// Trade Thesis types
+export type SafetyLabel = 'BEGINNER_FRIENDLY' | 'REQUIRES_DISCIPLINE' | 'ADVANCED_ONLY';
+export type SetupQuality = 'INSTITUTIONAL' | 'HIGH_QUALITY' | 'TRADABLE' | 'WEAK';
+
+export interface TradePersonality {
+  trendStrength: 1 | 2 | 3 | 4 | 5;
+  volatilityRating: 1 | 2 | 3 | 4 | 5;
+  conviction: 1 | 2 | 3 | 4 | 5;
+  complexity: string;
+}
+
+export interface InvalidationRule {
+  ruleId: string;
+  condition: string;
+  metric?: string;
+  threshold?: number;
+}
+
+export interface StructuredExplanation {
+  whyQualified: string[];
+  whatCouldGoWrong: string[];
+  setupType: string;
+  keyInsight: string;
+}
+
+export interface TradeThesis {
+  ticker: string;
+  strategy: string;
+  entryType: string;
+  trendStatus: string;
+  relativeStrength: string;
+  regimeAlignment: boolean;
+  volatilityState: string;
+  riskReward: number;
+  setupQualityScore: number;
+  setupQualityTier: SetupQuality;
+  institutionalSignal: boolean;
+  priceActionQuality: string;
+  safetyLabel: SafetyLabel;
+  personality: TradePersonality;
+  explanation: StructuredExplanation;
+  invalidationRules: InvalidationRule[];
+  professionalInsight?: string;
+}
+
 export interface RecommendationReason {
   code: string;
   message: string;
@@ -50,6 +95,7 @@ export interface Recommendation {
   costs: RecommendationCosts;
   checklist: ChecklistGate[];
   education: RecommendationEducation;
+  thesis?: TradeThesis;
 }
 
 // API shapes (snake_case)
@@ -102,6 +148,7 @@ export interface RecommendationAPI {
   costs: RecommendationCostsAPI;
   checklist: ChecklistGateAPI[];
   education: RecommendationEducationAPI;
+  thesis?: any;  // Thesis comes as dict from backend
 }
 
 export function transformRecommendation(api: RecommendationAPI): Recommendation {
@@ -144,5 +191,43 @@ export function transformRecommendation(api: RecommendationAPI): Recommendation 
       whatToLearn: api.education.what_to_learn,
       whatWouldMakeValid: api.education.what_would_make_valid ?? [],
     },
+    thesis: api.thesis ? transformThesis(api.thesis) : undefined,
+  };
+}
+
+function transformThesis(apiThesis: any): TradeThesis {
+  return {
+    ticker: apiThesis.ticker,
+    strategy: apiThesis.strategy,
+    entryType: apiThesis.entry_type,
+    trendStatus: apiThesis.trend_status,
+    relativeStrength: apiThesis.relative_strength,
+    regimeAlignment: apiThesis.regime_alignment,
+    volatilityState: apiThesis.volatility_state,
+    riskReward: apiThesis.risk_reward,
+    setupQualityScore: apiThesis.setup_quality_score,
+    setupQualityTier: apiThesis.setup_quality_tier as SetupQuality,
+    institutionalSignal: apiThesis.institutional_signal,
+    priceActionQuality: apiThesis.price_action_quality,
+    safetyLabel: apiThesis.safety_label as SafetyLabel,
+    personality: {
+      trendStrength: apiThesis.personality.trend_strength,
+      volatilityRating: apiThesis.personality.volatility_rating,
+      conviction: apiThesis.personality.conviction,
+      complexity: apiThesis.personality.complexity,
+    },
+    explanation: {
+      whyQualified: apiThesis.explanation.why_qualified,
+      whatCouldGoWrong: apiThesis.explanation.what_could_go_wrong,
+      setupType: apiThesis.explanation.setup_type,
+      keyInsight: apiThesis.explanation.key_insight,
+    },
+    invalidationRules: apiThesis.invalidation_rules.map((rule: any) => ({
+      ruleId: rule.rule_id,
+      condition: rule.condition,
+      metric: rule.metric,
+      threshold: rule.threshold,
+    })),
+    professionalInsight: apiThesis.professional_insight,
   };
 }

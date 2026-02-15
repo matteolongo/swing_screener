@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { PlayCircle, RefreshCw, TrendingUp, AlertCircle, BarChart3, MessageSquare, ListChecks } from 'lucide-react';
+import { PlayCircle, RefreshCw, TrendingUp, AlertCircle, BarChart3, MessageSquare, ListChecks, Lightbulb } from 'lucide-react';
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import TableShell from '@/components/common/TableShell';
@@ -12,6 +12,7 @@ import { useScreenerStore } from '@/stores/screenerStore';
 import { formatCurrency, formatPercent } from '@/utils/formatters';
 import QuickBacktestModal from '@/components/modals/QuickBacktestModal';
 import SocialAnalysisModal from '@/components/modals/SocialAnalysisModal';
+import TradeThesisModal from '@/components/modals/TradeThesisModal';
 import MetricHelpLabel from '@/components/domain/education/MetricHelpLabel';
 import GlossaryLegend from '@/components/domain/education/GlossaryLegend';
 import { SCREENER_GLOSSARY_KEYS } from '@/content/educationGlossary';
@@ -87,6 +88,7 @@ export default function Screener() {
   
   const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
   const [showBacktestModal, setShowBacktestModal] = useState(false);
+  const [showThesisModal, setShowThesisModal] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<ScreenerCandidate | null>(null);
   const [socialSymbol, setSocialSymbol] = useState<string | null>(null);
   const [recommendationCandidate, setRecommendationCandidate] = useState<ScreenerCandidate | null>(null);
@@ -605,6 +607,20 @@ export default function Screener() {
                         </td>
                         <td className="py-3 px-4 text-center">
                           <div className="flex gap-2 justify-center">
+                            {candidate.recommendation?.thesis && (
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => {
+                                  setSelectedCandidate(candidate);
+                                  setShowThesisModal(true);
+                                }}
+                                title={t('screener.table.tradeThesisTitle')}
+                                aria-label={t('screener.table.tradeThesisAria', { ticker: candidate.ticker })}
+                              >
+                                <Lightbulb className="w-4 h-4" />
+                              </Button>
+                            )}
                             <Button
                               size="sm"
                               variant="secondary"
@@ -698,6 +714,17 @@ export default function Screener() {
         <SocialAnalysisModal
           symbol={socialSymbol}
           onClose={() => setSocialSymbol(null)}
+        />
+      )}
+
+      {/* Trade Thesis Modal */}
+      {showThesisModal && selectedCandidate?.recommendation?.thesis && (
+        <TradeThesisModal
+          thesis={selectedCandidate.recommendation.thesis}
+          onClose={() => {
+            setShowThesisModal(false);
+            setSelectedCandidate(null);
+          }}
         />
       )}
 
