@@ -53,16 +53,17 @@ def test_fetch_events_cached(tmp_path):
             url="https://example.com/news",
         )
     ]
-    test_cache.store_events("yahoo_finance", now.date(), cached_events)
+    # Provider looks up cache by end_dt.date(), so store there
+    end_dt = now + timedelta(hours=1)
+    test_cache.store_events("yahoo_finance", end_dt.date(), cached_events)
     
     # Patch httpx to avoid real network call
-    with patch("httpx.Client") as mock_client:
+    with patch("swing_screener.social.providers.yahoo_finance.httpx.Client") as mock_client:
         # Mock should not be called if cache hits
         mock_client.side_effect = Exception("Should not make HTTP request")
         
         # Fetch should return cached events (cache returns cached data if within max_age)
         start_dt = now - timedelta(hours=1)
-        end_dt = now + timedelta(hours=1)
         events = test_provider.fetch_events(start_dt, end_dt, ["AAPL"])
         
         assert len(events) >= 1

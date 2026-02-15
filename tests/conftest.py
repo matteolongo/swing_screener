@@ -1,5 +1,6 @@
 """Pytest configuration and shared fixtures for all tests."""
 
+import json
 import pytest
 from unittest.mock import MagicMock
 
@@ -18,7 +19,7 @@ def mock_ollama_client():
         elif "acquisition" in headline_lower or "m&a" in headline_lower:
             event_type = "M_AND_A"
             severity = "HIGH"
-        elif "product" in headline_lower or "launch" in headline_lower:
+        elif "product" in headline_lower or "launch" in headline_lower or "unveils" in headline_lower or "introduces" in headline_lower:
             event_type = "PRODUCT"
             severity = "MEDIUM"
         else:
@@ -27,15 +28,15 @@ def mock_ollama_client():
         
         return {
             "message": {
-                "content": f'''{{
-                    "event_type": "{event_type}",
-                    "severity": "{severity}",
+                "content": json.dumps({
+                    "event_type": event_type,
+                    "severity": severity,
                     "primary_symbol": "AAPL",
                     "secondary_symbols": [],
-                    "is_material": true,
+                    "is_material": True,
                     "confidence": 0.9,
-                    "summary": "Test classification for: {headline[:50]}"
-                }}''' 
+                    "summary": f"Test classification for: {headline[:50].strip()}"
+                })
             }
         }
     
@@ -53,7 +54,11 @@ def mock_ollama_client():
     def mock_chat(model, messages, format=None, options=None):
         # Extract headline from user message
         user_msg = next((m["content"] for m in messages if m["role"] == "user"), "")
-        return create_mock_response(user_msg)
+        # Parse headline from the prompt format: Headline: "..."
+        import re
+        headline_match = re.search(r'Headline:\s*"([^"]*)"', user_msg)
+        headline = headline_match.group(1) if headline_match else user_msg
+        return create_mock_response(headline)
     
     mock_client.chat.side_effect = mock_chat
     

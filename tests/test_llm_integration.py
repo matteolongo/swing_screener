@@ -109,7 +109,7 @@ class TestOllamaWithMocks:
         classifier = EventClassifier(
             provider=provider,
             enable_cache=True,
-            cache_dir=str(tmp_path / "cache"),
+            cache_path=tmp_path / "cache" / "llm_cache.json",
             enable_audit=False,
         )
         
