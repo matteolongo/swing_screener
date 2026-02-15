@@ -280,7 +280,6 @@ describe('Screener Page', () => {
         expect(screen.getByText('Last Bar')).toBeInTheDocument()
         expect(screen.getByText('Close')).toBeInTheDocument()
         expect(screen.getByText('Setup')).toBeInTheDocument()
-        expect(screen.getByText('Fix')).toBeInTheDocument()
         expect(screen.getByText('Actions')).toBeInTheDocument()
       })
     })

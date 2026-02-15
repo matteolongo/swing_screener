@@ -30,7 +30,7 @@ export default function ScreenerCandidateDetailsRow({
 
   return (
     <tr className="bg-gray-50 dark:bg-gray-800">
-      <td colSpan={7} className="px-4 py-4">
+      <td colSpan={6} className="px-4 py-4">
         <div className="space-y-4">
           <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
             {/* Advanced metrics */}
