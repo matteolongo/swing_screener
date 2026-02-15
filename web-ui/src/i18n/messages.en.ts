@@ -603,6 +603,8 @@ export const messagesEn = {
       fixLabel: 'Fix',
       recommendationDetailsTitle: 'Recommendation details',
       recommendationDetailsAria: 'Recommendation details for {{ticker}}',
+      tradeThesisTitle: 'View Trade Thesis',
+      tradeThesisAria: 'View trade thesis for {{ticker}}',
       quickBacktestTitle: 'Quick Backtest',
       createOrderTitle: 'Create Order',
       createOrderNotRecommendedTitle: 'Not recommended — open details to fix',

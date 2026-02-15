@@ -397,6 +397,18 @@ class ScreenerService:
                         slippage_bps=5.0,
                         fx_estimate_pct=0.0,
                     ),
+                    # Pass candidate data for Trade Thesis
+                    ticker=ticker_str,
+                    strategy="Momentum",
+                    close=last_price,
+                    sma_20=sma20,
+                    sma_50=sma50,
+                    sma_200=sma200,
+                    atr=_safe_float(row.get(atr_col)),
+                    momentum_6m=_safe_float(row.get("mom_6m")),
+                    momentum_12m=_safe_float(row.get("mom_12m")),
+                    rel_strength=_safe_float(row.get("rs_6m")),
+                    confidence=_safe_float(row.get("confidence")),
                 )
                 recommendation = Recommendation.model_validate(asdict(rec_payload))
                 rec_risk = recommendation.risk
