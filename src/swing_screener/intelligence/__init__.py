@@ -15,6 +15,12 @@ from .relations import (
     detect_theme_clusters,
     load_curated_peer_map,
 )
+from .scoring import (
+    CatalystScoreBreakdown,
+    build_catalyst_score_map,
+    build_opportunities,
+    score_catalyst_signal,
+)
 from .state import StateMachinePolicy, transition_symbol_state, update_symbol_states
 from .storage import IntelligenceStorage
 
@@ -40,4 +46,8 @@ __all__ = [
     "StateMachinePolicy",
     "transition_symbol_state",
     "update_symbol_states",
+    "CatalystScoreBreakdown",
+    "build_catalyst_score_map",
+    "build_opportunities",
+    "score_catalyst_signal",
 ]
