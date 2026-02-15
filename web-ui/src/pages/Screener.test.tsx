@@ -14,6 +14,7 @@ describe('Screener Page', () => {
     })
     useScreenerStore.setState({ lastResult: null })
     localStorage.removeItem('screener.intelligenceAsofDate')
+    localStorage.removeItem('screener.intelligenceSymbols')
   })
 
   describe('Page Structure', () => {
