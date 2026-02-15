@@ -12,6 +12,28 @@ from swing_screener.intelligence.models import (
     ThemeCluster,
 )
 
+# Scoring constants for catalyst signal evaluation
+REACTION_Z_CEILING = 3.0
+ATR_SHOCK_CEILING = 2.0
+PEER_CONFIRMATION_CEILING = 3.0
+
+# Weight distribution for catalyst scoring (must sum to 1.0)
+WEIGHT_REACTION = 0.30
+WEIGHT_ATR = 0.20
+WEIGHT_PEER = 0.15
+WEIGHT_RECENCY = 0.15
+WEIGHT_THEME = 0.10
+WEIGHT_CREDIBILITY = 0.10
+
+# Validate weights sum to 1.0
+_WEIGHT_SUM = (
+    WEIGHT_REACTION + WEIGHT_ATR + WEIGHT_PEER + 
+    WEIGHT_RECENCY + WEIGHT_THEME + WEIGHT_CREDIBILITY
+)
+assert abs(_WEIGHT_SUM - 1.0) < 1e-9, (
+    f"Catalyst scoring weights must sum to 1.0, got {_WEIGHT_SUM}"
+)
+
 
 def _clamp01(value: float) -> float:
     return max(0.0, min(1.0, float(value)))
@@ -46,9 +68,9 @@ def score_catalyst_signal(
     if signal.is_false_catalyst:
         return 0.0
 
-    reaction_score = _norm(max(0.0, signal.return_z), 3.0)
-    atr_score = _norm(max(0.0, signal.atr_shock), 2.0)
-    peer_score = _norm(max(0.0, float(signal.peer_confirmation_count)), 3.0)
+    reaction_score = _norm(max(0.0, signal.return_z), REACTION_Z_CEILING)
+    atr_score = _norm(max(0.0, signal.atr_shock), ATR_SHOCK_CEILING)
+    peer_score = _norm(max(0.0, float(signal.peer_confirmation_count)), PEER_CONFIRMATION_CEILING)
     half_life = max(1e-6, recency_half_life_hours)
     recency_score = math.exp(math.log(0.5) * max(0.0, signal.recency_hours) / half_life)
     recency_score = _clamp01(recency_score)
@@ -56,12 +78,12 @@ def score_catalyst_signal(
     credibility_score = _clamp01(event_credibility)
 
     return round(
-        0.30 * reaction_score
-        + 0.20 * atr_score
-        + 0.15 * peer_score
-        + 0.15 * recency_score
-        + 0.10 * theme_score
-        + 0.10 * credibility_score,
+        WEIGHT_REACTION * reaction_score
+        + WEIGHT_ATR * atr_score
+        + WEIGHT_PEER * peer_score
+        + WEIGHT_RECENCY * recency_score
+        + WEIGHT_THEME * theme_score
+        + WEIGHT_CREDIBILITY * credibility_score,
         6,
     )
 
