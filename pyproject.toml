@@ -40,6 +40,9 @@ mcp = [
   "mcp>=1.0.0",
   "pyyaml>=6.0"
 ]
+llm = [
+  "ollama>=0.1.0"
+]
 
 [project.scripts]
 swing-screener = "swing_screener.cli:main"

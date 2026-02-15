@@ -42,12 +42,26 @@ class OpportunityConfig:
 
 
 @dataclass(frozen=True)
+class LLMConfig:
+    """LLM-based event classification configuration."""
+    enabled: bool = False
+    provider: str = "ollama"  # ollama, openai, anthropic, mock
+    model: str = "mistral:7b-instruct"
+    base_url: str = "http://localhost:11434"
+    enable_cache: bool = True
+    enable_audit: bool = True
+    cache_path: str = "data/intelligence/llm_cache.json"
+    audit_path: str = "data/intelligence/llm_audit"
+
+
+@dataclass(frozen=True)
 class IntelligenceConfig:
     enabled: bool = False
     providers: tuple[str, ...] = DEFAULT_INTEL_PROVIDERS
     universe_scope: str = "screener_universe"
     market_context_symbols: tuple[str, ...] = DEFAULT_MARKET_CONTEXT_SYMBOLS
     symbol_states: tuple[str, ...] = DEFAULT_SYMBOL_STATES
+    llm: LLMConfig = field(default_factory=LLMConfig)
     catalyst: CatalystConfig = field(default_factory=CatalystConfig)
     theme: ThemeConfig = field(default_factory=ThemeConfig)
     opportunity: OpportunityConfig = field(default_factory=OpportunityConfig)
