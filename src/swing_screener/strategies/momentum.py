@@ -170,8 +170,12 @@ def build_momentum_report(
                 )
         except Exception as exc:
             asof = ohlcv.index.max().date()
+            provider_names = list(cfg.social_overlay.providers)
+            provider_label = provider_names[0] if len(provider_names) == 1 else "multiple"
             overlay_meta = {
-                "provider": "reddit",
+                "provider": provider_label,
+                "providers": provider_names,
+                "sentiment_analyzer": cfg.social_overlay.sentiment_analyzer,
                 "asof": asof.isoformat(),
                 "status": "error",
                 "error": str(exc),

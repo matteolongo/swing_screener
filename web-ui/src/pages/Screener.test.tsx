@@ -404,7 +404,12 @@ describe('Screener Page', () => {
       })
 
       await waitFor(() => {
-        expect(screen.getByText('Sentiment Analysis - AAPL')).toBeInTheDocument()
+        expect(
+          screen.getByRole('heading', {
+            level: 2,
+            name: /Sentiment Analysis - AAPL/i,
+          })
+        ).toBeInTheDocument()
       })
 
       expect(screen.getByLabelText(/Lookback Override/i)).toBeInTheDocument()
@@ -466,6 +471,45 @@ describe('Screener Page', () => {
       await waitFor(() => {
         expect(screen.getByText('+0.1%')).toBeInTheDocument()
         expect(screen.getByText('+2.0%')).toBeInTheDocument()
+      })
+    })
+
+    it('shows social warmup progress when background sentiment job is active', async () => {
+      const { server } = await import('@/test/mocks/server')
+      const { http, HttpResponse } = await import('msw')
+
+      server.use(
+        http.post('*/api/screener/run', () => {
+          return HttpResponse.json({
+            candidates: [buildCandidate('RECOMMENDED')],
+            asof_date: '2026-02-08',
+            total_screened: 1,
+            warnings: [],
+            social_warmup_job_id: 'job-123',
+          })
+        }),
+        http.get('*/api/social/warmup/job-123', () => {
+          return HttpResponse.json({
+            job_id: 'job-123',
+            status: 'running',
+            total_symbols: 1,
+            completed_symbols: 0,
+            ok_symbols: 0,
+            no_data_symbols: 0,
+            error_symbols: 0,
+            created_at: '2026-02-08T10:00:00',
+            updated_at: '2026-02-08T10:00:01',
+          })
+        })
+      )
+
+      const { user } = renderWithProviders(<Screener />)
+      await act(async () => {
+        await user.click(screen.getByRole('button', { name: /Run Screener/i }))
+      })
+
+      await waitFor(() => {
+        expect(screen.getByText(/Social sentiment warmup:/i)).toBeInTheDocument()
       })
     })
   })

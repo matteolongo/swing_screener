@@ -43,6 +43,7 @@ export const messagesEn = {
       reducedRisk: 'Reduced',
       review: 'Review',
       veto: 'Veto',
+      pending: 'Pending',
       noData: 'No Data',
       off: 'Off',
     },
@@ -562,6 +563,11 @@ export const messagesEn = {
       completed: 'Screener completed',
       resultLine: '{{count}} candidates from {{total}} stocks',
       asOf: 'As of: {{date}}',
+      socialWarmupLoading: 'Social sentiment warmup: starting...',
+      socialWarmupRunning:
+        'Social sentiment warmup: {{completed}}/{{total}} ready (ok {{ok}}, no data {{noData}}, errors {{errors}}).',
+      socialWarmupCompleted:
+        'Social sentiment warmup complete: {{completed}}/{{total}} (ok {{ok}}, no data {{noData}}, errors {{errors}}).',
     },
     glossary: {
       title: 'Screener Glossary',

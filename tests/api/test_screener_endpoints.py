@@ -1,6 +1,7 @@
 import pandas as pd
 from fastapi.testclient import TestClient
 from unittest.mock import MagicMock
+from types import SimpleNamespace
 
 from api.main import app
 import api.services.screener_service as screener_service
@@ -30,7 +31,16 @@ def _create_mock_provider(ohlcv_data: pd.DataFrame) -> MarketDataProvider:
     return mock_provider
 
 
+def _disable_social_warmup(monkeypatch):
+    monkeypatch.setattr(
+        screener_service,
+        "get_social_warmup_manager",
+        lambda: SimpleNamespace(start_job=lambda **kwargs: None),
+    )
+
+
 def test_screener_top_over_100_returns_candidates(monkeypatch):
+    _disable_social_warmup(monkeypatch)
     ohlcv = _ohlcv_with_spy()
     mock_provider = _create_mock_provider(ohlcv)
 
@@ -67,6 +77,7 @@ def test_screener_top_over_100_returns_candidates(monkeypatch):
 
 
 def test_screener_empty_ohlcv_returns_404(monkeypatch):
+    _disable_social_warmup(monkeypatch)
     empty_df = pd.DataFrame()
     mock_provider = _create_mock_provider(empty_df)
     
@@ -79,6 +90,7 @@ def test_screener_empty_ohlcv_returns_404(monkeypatch):
 
 
 def test_screener_recommendation_payload_shape(monkeypatch):
+    _disable_social_warmup(monkeypatch)
     ohlcv = _ohlcv_with_spy()
     mock_provider = _create_mock_provider(ohlcv)
 
@@ -134,6 +146,7 @@ def test_screener_recommendation_payload_shape(monkeypatch):
 
 
 def test_screener_currency_comes_from_metadata(monkeypatch):
+    _disable_social_warmup(monkeypatch)
     ohlcv = _ohlcv_with_spy()
     mock_provider = _create_mock_provider(ohlcv)
 
@@ -170,6 +183,7 @@ def test_screener_currency_comes_from_metadata(monkeypatch):
 
 
 def test_screener_request_currency_filter_overrides_strategy(monkeypatch):
+    _disable_social_warmup(monkeypatch)
     ohlcv = _ohlcv_with_spy()
     mock_provider = _create_mock_provider(ohlcv)
     captured = {}

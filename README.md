@@ -335,6 +335,7 @@ npm run test:coverage # Run with coverage report
 ### Technical References
 - **[API Documentation](api/README.md)** — FastAPI REST API reference (18 endpoints, health checks, monitoring)
 - **[MCP Server Documentation](mcp_server/README.md)** — Model Context Protocol server (22 tools for AI assistants) ⭐ **NEW**
+- **[Sentiment Analysis Plugin Guide](docs/SENTIMENT_PLUGIN_GUIDE.md)** — Pluggable sentiment analysis system (Reddit, Yahoo Finance, VADER) ⭐ **NEW**
 - **[Web UI README](web-ui/README.md)** — React/TypeScript architecture
 - **[Broker Integration](docs/BROKER_INTEGRATION.md)** — Market data providers (yfinance, Alpaca) ⭐ **NEW**
 - **[Indicator Validation](docs/INDICATOR_VALIDATION.md)** — TA-Lib validation approach ⭐ **NEW**
@@ -352,3 +353,14 @@ The Swing Screener uses simple, transparent technical indicators:
 
 All indicators are **validated against TA-Lib** (industry-standard library) to ensure correctness
 while maintaining code simplicity. See [`docs/INDICATOR_VALIDATION.md`](docs/INDICATOR_VALIDATION.md) for details.
+
+## Social Sentiment Analysis
+
+**NEW:** Pluggable sentiment analysis system for adding social/news sentiment to strategy confidence:
+
+- **Multiple data sources**: Reddit (default), Yahoo Finance news, or both
+- **Multiple analyzers**: Keyword-based (fast), VADER (NLP-enhanced)
+- **Extensible architecture**: Add custom providers and analyzers
+- **Integrated with risk**: Sentiment affects position sizing and trade vetoes
+
+See [`docs/SENTIMENT_PLUGIN_GUIDE.md`](docs/SENTIMENT_PLUGIN_GUIDE.md) for complete documentation and examples.
