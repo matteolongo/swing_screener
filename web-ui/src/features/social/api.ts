@@ -8,6 +8,20 @@ import {
   transformSocialWarmupStatus,
 } from './types';
 
+export interface SocialApiError extends Error {
+  status: number;
+  detail?: string;
+}
+
+async function buildApiError(response: Response, fallbackMessage: string): Promise<SocialApiError> {
+  const payload = await response.json().catch(() => ({} as Record<string, unknown>));
+  const detail = typeof payload.detail === 'string' ? payload.detail : undefined;
+  const error = new Error(detail || fallbackMessage) as SocialApiError;
+  error.status = response.status;
+  error.detail = detail;
+  return error;
+}
+
 export async function analyzeSocial(params: {
   symbol: string;
   maxEvents: number;
@@ -27,8 +41,7 @@ export async function analyzeSocial(params: {
     body: JSON.stringify(payload),
   });
   if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.detail || 'Failed to analyze sentiment');
+    throw await buildApiError(response, 'Failed to analyze sentiment');
   }
   const data: SocialAnalysisResponseAPI = await response.json();
   return transformSocialAnalysisResponse(data);
@@ -37,8 +50,7 @@ export async function analyzeSocial(params: {
 export async function fetchSocialWarmupStatus(jobId: string): Promise<SocialWarmupStatus> {
   const response = await fetch(apiUrl(API_ENDPOINTS.socialWarmupStatus(jobId)));
   if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.detail || 'Failed to fetch social warmup status');
+    throw await buildApiError(response, 'Failed to fetch social warmup status');
   }
   const data: SocialWarmupStatusAPI = await response.json();
   return transformSocialWarmupStatus(data);

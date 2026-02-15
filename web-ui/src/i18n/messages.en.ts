@@ -568,6 +568,8 @@ export const messagesEn = {
         'Social sentiment warmup: {{completed}}/{{total}} ready (ok {{ok}}, no data {{noData}}, errors {{errors}}).',
       socialWarmupCompleted:
         'Social sentiment warmup complete: {{completed}}/{{total}} (ok {{ok}}, no data {{noData}}, errors {{errors}}).',
+      socialWarmupUnavailable:
+        'Social sentiment warmup status unavailable (job not found). Run Screener again to start a new warmup job.',
     },
     glossary: {
       title: 'Screener Glossary',
