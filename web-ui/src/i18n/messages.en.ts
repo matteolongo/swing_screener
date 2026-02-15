@@ -28,6 +28,8 @@ export const messagesEn = {
       r: 'R',
       rValue: '{{value}}R',
     },
+    yes: 'Yes',
+    no: 'No',
   },
   modal: {
     closeAria: 'Close modal',
@@ -71,6 +73,87 @@ export const messagesEn = {
       whatToLearn: 'What to Learn',
       whatWouldMakeValid: 'What would make this trade valid?',
     },
+  },
+  tradeInsight: {
+    title: 'Trade Insight — {{ticker}}',
+    tabsAria: 'Trade insight tabs',
+    tabs: {
+      recommendation: 'Recommendation',
+      thesis: 'Thesis',
+      learn: 'Learn',
+    },
+    learn: {
+      title: 'Key Trading Concepts',
+      subtitle: 'Learn the basics before making your first trade',
+      riskReward: {
+        term: 'Risk/Reward Ratio (R:R)',
+        definition: 'How much you can gain compared to how much you might lose. A 3:1 R:R means for every $1 at risk, you target $3 in profit.',
+      },
+      stopLoss: {
+        term: 'Stop Loss',
+        definition: 'The price at which you exit to limit your loss. Always set your stop before entering a trade.',
+      },
+      positionSize: {
+        term: 'Position Size',
+        definition: 'The dollar amount you invest in a single trade. It should be based on your risk tolerance and account size.',
+      },
+      thesis: {
+        term: 'Trade Thesis',
+        definition: 'The reasoning behind why a trade meets the system\'s criteria. It explains what made this stock qualify and what could go wrong.',
+      },
+      remember: {
+        title: 'Remember',
+        point1: 'Never risk more than 1-2% of your account on a single trade',
+        point2: 'Always know your exit before you enter',
+        point3: 'Follow the checklist - skip trades that don\'t meet all criteria',
+      },
+    },
+  },
+  tradeThesis: {
+    strategyLabel: 'Strategy',
+    setupQuality: 'Setup Quality Score',
+    tradeSafety: 'Trade Safety',
+    setupQualityTier: {
+      INSTITUTIONAL: 'Institutional-Grade',
+      HIGH_QUALITY: 'High-Quality',
+      TRADABLE: 'Tradable',
+      WEAK: 'Weak - Educational Only',
+    },
+    safetyLabel: {
+      BEGINNER_FRIENDLY: 'Beginner-Friendly',
+      REQUIRES_DISCIPLINE: 'Requires Discipline',
+      ADVANCED_ONLY: 'Advanced Only',
+    },
+    safetyIcon: {
+      BEGINNER_FRIENDLY: '🟢',
+      REQUIRES_DISCIPLINE: '🟡',
+      ADVANCED_ONLY: '🔴',
+    },
+    personality: {
+      title: 'Trade Personality',
+      trendStrength: 'Trend Strength',
+      volatilityControl: 'Volatility Control',
+      conviction: 'System Conviction',
+    },
+    whyQualified: 'Why This Trade Qualified',
+    setupType: 'Setup Type',
+    whatCouldGoWrong: 'What Could Go Wrong',
+    keyInsight: 'Key Insight',
+    invalidation: 'Trade No Longer Valid If:',
+    monitor: 'Monitor',
+    thresholdAt: 'threshold at',
+    characteristics: 'Trade Characteristics',
+    fields: {
+      entryType: 'Entry Type',
+      trendStatus: 'Trend Status',
+      relativeStrength: 'Relative Strength',
+      volatility: 'Volatility',
+      riskReward: 'Risk/Reward',
+      priceAction: 'Price Action',
+      regimeAligned: 'Regime Aligned',
+      institutionalSignal: 'Institutional Signal',
+    },
+    transparencyNote: 'This is transparent, rule-based reasoning. No AI hallucination.',
   },
   order: {
     candidateModal: {

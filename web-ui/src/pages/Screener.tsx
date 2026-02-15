@@ -11,12 +11,11 @@ import { useScreenerStore } from '@/stores/screenerStore';
 import { formatCurrency, formatPercent } from '@/utils/formatters';
 import QuickBacktestModal from '@/components/modals/QuickBacktestModal';
 import SocialAnalysisModal from '@/components/modals/SocialAnalysisModal';
-import TradeThesisModal from '@/components/modals/TradeThesisModal';
 import GlossaryLegend from '@/components/domain/education/GlossaryLegend';
 import { SCREENER_GLOSSARY_KEYS } from '@/content/educationGlossary';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 import OverlayBadge from '@/components/domain/recommendation/OverlayBadge';
-import RecommendationDetailsModal from '@/components/domain/recommendation/RecommendationDetailsModal';
+import TradeInsightModal from '@/components/domain/recommendation/TradeInsightModal';
 import CandidateOrderModal from '@/components/domain/orders/CandidateOrderModal';
 import ScreenerCandidatesTable from '@/components/domain/screener/ScreenerCandidatesTable';
 import { queryKeys } from '@/lib/queryKeys';
@@ -95,10 +94,10 @@ export default function Screener() {
   
   const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
   const [showBacktestModal, setShowBacktestModal] = useState(false);
-  const [showThesisModal, setShowThesisModal] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<ScreenerCandidate | null>(null);
   const [socialSymbol, setSocialSymbol] = useState<string | null>(null);
-  const [recommendationCandidate, setRecommendationCandidate] = useState<ScreenerCandidate | null>(null);
+  const [insightCandidate, setInsightCandidate] = useState<ScreenerCandidate | null>(null);
+  const [insightDefaultTab, setInsightDefaultTab] = useState<'recommendation' | 'thesis' | 'learn'>('recommendation');
 
   // Save preferences to localStorage when they change
   const handleUniverseChange = (value: string) => {
@@ -414,11 +413,14 @@ export default function Screener() {
                 setSelectedCandidate(candidate);
                 setShowCreateOrderModal(true);
               }}
-              onRecommendationDetails={(candidate) => setRecommendationCandidate(candidate)}
+              onRecommendationDetails={(candidate) => {
+                setInsightCandidate(candidate);
+                setInsightDefaultTab('recommendation');
+              }}
               onSocialAnalysis={(ticker) => setSocialSymbol(ticker)}
               onTradeThesis={(candidate) => {
-                setSelectedCandidate(candidate);
-                setShowThesisModal(true);
+                setInsightCandidate(candidate);
+                setInsightDefaultTab('thesis');
               }}
               onQuickBacktest={(candidate) => {
                 setSelectedCandidate(candidate);
@@ -481,23 +483,14 @@ export default function Screener() {
         />
       )}
 
-      {/* Trade Thesis Modal */}
-      {showThesisModal && selectedCandidate?.recommendation?.thesis && (
-        <TradeThesisModal
-          thesis={selectedCandidate.recommendation.thesis}
-          onClose={() => {
-            setShowThesisModal(false);
-            setSelectedCandidate(null);
-          }}
-        />
-      )}
-
-      {recommendationCandidate && (
-        <RecommendationDetailsModal
-          ticker={recommendationCandidate.ticker}
-          recommendation={recommendationCandidate.recommendation}
-          currency={recommendationCandidate.currency}
-          onClose={() => setRecommendationCandidate(null)}
+      {/* Trade Insight Modal - Unified recommendation + thesis */}
+      {insightCandidate && (
+        <TradeInsightModal
+          ticker={insightCandidate.ticker}
+          recommendation={insightCandidate.recommendation}
+          currency={insightCandidate.currency}
+          defaultTab={insightDefaultTab}
+          onClose={() => setInsightCandidate(null)}
         />
       )}
     </div>

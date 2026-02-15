@@ -503,7 +503,7 @@ describe('Screener Page', () => {
       })
 
       await waitFor(() => {
-        expect(screen.getByText(/Recommendation — AAPL/i)).toBeInTheDocument()
+        expect(screen.getByText(/Trade Insight — AAPL/i)).toBeInTheDocument()
       })
     })
 
@@ -532,7 +532,7 @@ describe('Screener Page', () => {
       })
 
       await waitFor(() => {
-        expect(screen.getByText(/Recommendation — AAPL/i)).toBeInTheDocument()
+        expect(screen.getByText(/Trade Insight — AAPL/i)).toBeInTheDocument()
       })
 
       await act(async () => {
