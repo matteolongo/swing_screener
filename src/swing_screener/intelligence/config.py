@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from swing_screener.utils.helpers import get_nested_dict
+
 DEFAULT_INTEL_PROVIDERS = ("yahoo_finance",)
 SUPPORTED_INTEL_PROVIDERS = {"yahoo_finance", "earnings_calendar"}
 SUPPORTED_UNIVERSE_SCOPES = {"screener_universe", "strategy_universe"}
@@ -65,15 +67,6 @@ class IntelligenceConfig:
     catalyst: CatalystConfig = field(default_factory=CatalystConfig)
     theme: ThemeConfig = field(default_factory=ThemeConfig)
     opportunity: OpportunityConfig = field(default_factory=OpportunityConfig)
-
-
-def _get_nested(payload: dict, *keys: str) -> dict:
-    out: Any = payload
-    for key in keys:
-        if not isinstance(out, dict):
-            return {}
-        out = out.get(key, {})
-    return out if isinstance(out, dict) else {}
 
 
 def _clean_positive_int(raw: Any, fallback: int, *, min_value: int = 1) -> int:
@@ -139,10 +132,10 @@ def _clean_string_list(
 
 
 def build_intelligence_config(strategy: dict) -> IntelligenceConfig:
-    raw = _get_nested(strategy, "market_intelligence")
-    catalyst_raw = _get_nested(raw, "catalyst")
-    theme_raw = _get_nested(raw, "theme")
-    opportunity_raw = _get_nested(raw, "opportunity")
+    raw = get_nested_dict(strategy, "market_intelligence")
+    catalyst_raw = get_nested_dict(raw, "catalyst")
+    theme_raw = get_nested_dict(raw, "theme")
+    opportunity_raw = get_nested_dict(raw, "opportunity")
 
     providers = _clean_string_list(
         raw.get("providers"),
