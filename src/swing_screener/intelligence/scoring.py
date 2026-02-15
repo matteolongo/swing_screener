@@ -25,6 +25,15 @@ WEIGHT_RECENCY = 0.15
 WEIGHT_THEME = 0.10
 WEIGHT_CREDIBILITY = 0.10
 
+# Validate weights sum to 1.0
+_WEIGHT_SUM = (
+    WEIGHT_REACTION + WEIGHT_ATR + WEIGHT_PEER + 
+    WEIGHT_RECENCY + WEIGHT_THEME + WEIGHT_CREDIBILITY
+)
+assert abs(_WEIGHT_SUM - 1.0) < 1e-9, (
+    f"Catalyst scoring weights must sum to 1.0, got {_WEIGHT_SUM}"
+)
+
 
 def _clamp01(value: float) -> float:
     return max(0.0, min(1.0, float(value)))
