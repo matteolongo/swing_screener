@@ -248,4 +248,24 @@ describe('DailyReview Page', () => {
       expect(screen.queryByText(/Create Order - VALE/i)).not.toBeInTheDocument()
     })
   })
+
+  it('runs intelligence from daily review symbols and renders opportunities', async () => {
+    const { user } = renderWithProviders(<DailyReview />)
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Run Intelligence/i })).toBeInTheDocument()
+    })
+
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: /Run Intelligence/i }))
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('Run complete: 1/1 symbols analyzed, 1 opportunities found.')).toBeInTheDocument()
+      expect(screen.getByText('Opportunities (as of 2026-02-15)')).toBeInTheDocument()
+    })
+
+    await screen.findByText('Catalyst + follow-through confirmed.')
+    expect(screen.getByText('State: TRENDING')).toBeInTheDocument()
+  })
 })
