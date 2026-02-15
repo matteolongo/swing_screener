@@ -122,34 +122,35 @@ def _standardize_columns(df: pd.DataFrame, tickers: list[str]) -> pd.DataFrame:
         return df.sort_index(axis=1)
 
     raise ValueError(
-        "Impossibile inferire l'ordine dei livelli MultiIndex (field,ticker) vs (ticker,field)."
+        "Unable to infer MultiIndex level order (field,ticker) vs (ticker,field)."
     )
 
 
 def _clean_ohlcv(df: pd.DataFrame, tickers: list[str]) -> pd.DataFrame:
-    """
-    - Tiene solo Open/High/Low/Close/Volume
-    - Rimuove righe completamente NaN
-    - Ordina index per data
-    - Garantisce che ogni ticker abbia le colonne presenti (se mancano, le crea NaN)
+    """Clean OHLCV data to standard format.
+    
+    - Keep only Open/High/Low/Close/Volume columns
+    - Remove completely NaN rows
+    - Sort index by date
+    - Ensure each ticker has all required columns (create NaN if missing)
     """
     df = df.copy()
     df = df.sort_index()
     df = df.loc[~df.index.duplicated(keep="last")]
 
-    # Se auto_adjust=False, può esistere "Adj Close"; noi teniamo sempre "Close"
+    # If auto_adjust=False, "Adj Close" may exist; we always use "Close"
     keep_fields = ["Open", "High", "Low", "Close", "Volume"]
     existing_fields = [f for f in keep_fields if f in df.columns.get_level_values(0)]
     df = df.loc[:, df.columns.get_level_values(0).isin(existing_fields)]
 
-    # assicura colonne per ticker mancanti
+    # Ensure columns for missing tickers
     cols = []
     for f in existing_fields:
         for t in tickers:
             cols.append((f, t))
     df = df.reindex(columns=pd.MultiIndex.from_tuples(cols))
 
-    # drop righe tutte NaN
+    # Drop completely NaN rows
     df = df.dropna(how="all")
     return df
 
