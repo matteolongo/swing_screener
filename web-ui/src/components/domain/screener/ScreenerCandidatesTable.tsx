@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, ListChecks } from 'lucide-react';
 import Button from '@/components/common/Button';
 import TableShell from '@/components/common/TableShell';
@@ -86,10 +86,9 @@ export default function ScreenerCandidatesTable({
         const isExpanded = expandedRows.has(candidate.ticker);
 
         return (
-          <>
+          <React.Fragment key={candidate.ticker}>
             {/* Main row with essential data */}
             <tr
-              key={candidate.ticker}
               className="border-b border-gray-100 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
             >
               {/* Rank */}
@@ -190,7 +189,7 @@ export default function ScreenerCandidatesTable({
                 onBacktestClick={() => onQuickBacktest(candidate)}
               />
             )}
-          </>
+          </React.Fragment>
         );
       })}
     </TableShell>
