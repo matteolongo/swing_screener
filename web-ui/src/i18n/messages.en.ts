@@ -285,6 +285,13 @@ export const messagesEn = {
     loadError: 'Failed to load strategies',
     updateError: 'Failed to update active strategy',
     versionLabel: 'Risk-first swing trading',
+    mode: {
+      label: 'Mode',
+      beginner: 'Beginner',
+      advanced: 'Advanced',
+      toggle: 'Toggle between Beginner and Advanced mode',
+    },
+    disabledHint: 'Enable Advanced Mode to access',
   },
   header: {
     brand: 'Swing Screener',
