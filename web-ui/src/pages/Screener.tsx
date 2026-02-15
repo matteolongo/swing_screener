@@ -16,6 +16,7 @@ import { SCREENER_GLOSSARY_KEYS } from '@/content/educationGlossary';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 import OverlayBadge from '@/components/domain/recommendation/OverlayBadge';
 import TradeInsightModal from '@/components/domain/recommendation/TradeInsightModal';
+import IntelligenceOpportunityCard from '@/components/domain/intelligence/IntelligenceOpportunityCard';
 import CandidateOrderModal from '@/components/domain/orders/CandidateOrderModal';
 import ScreenerCandidatesTable from '@/components/domain/screener/ScreenerCandidatesTable';
 import { queryKeys } from '@/lib/queryKeys';
@@ -522,19 +523,7 @@ export default function Screener() {
                           {intelligenceOpportunities.data && intelligenceOpportunities.data.opportunities.length > 0 ? (
                             <div className="space-y-3">
                               {intelligenceOpportunities.data.opportunities.map((opp) => (
-                                <div key={opp.symbol} className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                                  <div className="flex items-start justify-between">
-                                    <div>
-                                      <p className="font-semibold text-gray-900">{opp.symbol}</p>
-                                      <p className="text-sm text-gray-600">
-                                        {t('screener.intelligence.stateValue', { state: opp.state })}
-                                      </p>
-                                      {opp.explanations.map((explanation, idx) => (
-                                        <p key={idx} className="text-sm text-gray-700 mt-1">{explanation}</p>
-                                      ))}
-                                    </div>
-                                  </div>
-                                </div>
+                                <IntelligenceOpportunityCard key={opp.symbol} opportunity={opp} />
                               ))}
                             </div>
                           ) : intelligenceOpportunities.isLoading || intelligenceOpportunities.isFetching ? (
@@ -585,19 +574,7 @@ export default function Screener() {
                     {intelligenceOpportunities.data && intelligenceOpportunities.data.opportunities.length > 0 ? (
                       <div className="space-y-3">
                         {intelligenceOpportunities.data.opportunities.map((opp) => (
-                          <div key={opp.symbol} className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                            <div className="flex items-start justify-between">
-                              <div>
-                                <p className="font-semibold text-gray-900">{opp.symbol}</p>
-                                <p className="text-sm text-gray-600">
-                                  {t('screener.intelligence.stateValue', { state: opp.state })}
-                                </p>
-                                {opp.explanations.map((explanation, idx) => (
-                                  <p key={idx} className="text-sm text-gray-700 mt-1">{explanation}</p>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
+                          <IntelligenceOpportunityCard key={opp.symbol} opportunity={opp} />
                         ))}
                       </div>
                     ) : intelligenceOpportunities.isLoading || intelligenceOpportunities.isFetching ? (

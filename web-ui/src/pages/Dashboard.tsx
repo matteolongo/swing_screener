@@ -17,6 +17,7 @@ import {
 import { formatCurrency, formatPercent } from '@/utils/formatters';
 import { TrendingUp, AlertCircle, FileText, Search, RefreshCw, CalendarCheck } from 'lucide-react';
 import StrategyCoachCard from '@/components/domain/education/StrategyCoachCard';
+import IntelligenceOpportunityCard from '@/components/domain/intelligence/IntelligenceOpportunityCard';
 import { buildFallbackStrategyCoachSections, buildStrategyCoachSections } from '@/content/strategyCoach';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 import {
@@ -99,7 +100,6 @@ export default function Dashboard() {
     });
   };
 
-  const formatScorePercent = (value: number) => `${(value * 100).toFixed(1)}%`;
   const isNewUser = positions.length === 0 && orders.length === 0;
   const strategyCoachSections = activeStrategyQuery.data
     ? buildStrategyCoachSections(activeStrategyQuery.data)
@@ -348,31 +348,7 @@ export default function Dashboard() {
             {intelligenceOpportunities.length > 0 && (
               <div className="space-y-2">
                 {intelligenceOpportunities.slice(0, 8).map((opportunity) => (
-                  <div
-                    key={opportunity.symbol}
-                    className="rounded-md border border-gray-200 dark:border-gray-700 p-3"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="primary">{opportunity.symbol}</Badge>
-                        <span className="text-xs text-gray-500">{opportunity.state}</span>
-                      </div>
-                      <span className="text-sm font-semibold text-green-700 dark:text-green-400">
-                        {t('dashboardPage.intelligence.opportunityScore', {
-                          value: formatScorePercent(opportunity.opportunityScore),
-                        })}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-xs text-gray-600 dark:text-gray-300">
-                      {t('dashboardPage.intelligence.componentsLine', {
-                        technical: formatScorePercent(opportunity.technicalReadiness),
-                        catalyst: formatScorePercent(opportunity.catalystStrength),
-                      })}
-                    </p>
-                    {opportunity.explanations[0] && (
-                      <p className="mt-1 text-xs text-gray-500">{opportunity.explanations[0]}</p>
-                    )}
-                  </div>
+                  <IntelligenceOpportunityCard key={opportunity.symbol} opportunity={opportunity} />
                 ))}
               </div>
             )}

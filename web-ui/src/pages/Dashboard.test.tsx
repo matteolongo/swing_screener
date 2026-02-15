@@ -60,7 +60,11 @@ describe('Dashboard Page', () => {
       })
 
       await screen.findByText('Catalyst + follow-through confirmed.')
-      expect(screen.getByText('Technical 82.0% | Catalyst 71.0%')).toBeInTheDocument()
+      expect(screen.getByText('Trending')).toBeInTheDocument()
+      expect(screen.getByText('Why this is on the list')).toBeInTheDocument()
+      expect(
+        screen.getByText('Technical readiness 82.0% (High): trend structure quality.')
+      ).toBeInTheDocument()
     })
 
     it('shows guidance and disables run when no symbols are available', async () => {

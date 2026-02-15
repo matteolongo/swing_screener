@@ -384,6 +384,58 @@ export const messagesEn = {
       },
     },
   },
+  intelligenceEducation: {
+    sections: {
+      why: 'Why this is on the list',
+      next: 'What to do next',
+      risk: 'Risk note',
+      evidence: 'Evidence from the latest scan',
+    },
+    labels: {
+      opportunityScore: 'Opportunity {{value}}',
+    },
+    bands: {
+      high: 'High',
+      medium: 'Medium',
+      low: 'Low',
+    },
+    why: {
+      technical: 'Technical readiness {{value}} ({{band}}): trend structure quality.',
+      catalyst: 'Catalyst strength {{value}} ({{band}}): freshness and reaction quality.',
+      blend: 'Combined opportunity {{value}} ({{band}}): blended technical + catalyst edge.',
+    },
+    state: {
+      labels: {
+        watch: 'Watch',
+        catalyst_active: 'Catalyst Active',
+        trending: 'Trending',
+        cooling_off: 'Cooling Off',
+        quiet: 'Quiet',
+      },
+      summary: {
+        watch: 'Early setup: there is interest, but confirmation is still limited.',
+        catalyst_active: 'Catalyst is active and conditions are improving.',
+        trending: 'Strong continuation state with confirmed momentum and catalyst support.',
+        cooling_off: 'Momentum is fading; protect gains and avoid late chasing.',
+        quiet: 'No active catalyst state; treat this as low priority.',
+      },
+    },
+    next: {
+      watch: 'Wait for cleaner confirmation before acting (price strength + follow-through).',
+      catalyst_active: 'Prepare a plan and monitor for continuation trigger near support/resistance.',
+      trending: 'Use disciplined entries and predefined stops; avoid over-sizing.',
+      cooling_off: 'Tighten risk and require a fresh setup before new entries.',
+      quiet: 'Keep on watchlist only if structure improves or a new catalyst appears.',
+    },
+    risk: {
+      high: 'High score does not remove risk. Define invalidation and size before entry.',
+      medium: 'Decent edge, but confirmation matters. Keep risk tighter than usual.',
+      low: 'Weak edge right now. Prefer higher-conviction opportunities.',
+    },
+    evidence: {
+      fallback: 'No additional plain-language evidence was captured for this symbol.',
+    },
+  },
   educationGlossary: {
     title: 'Metric Glossary',
     entries: {
