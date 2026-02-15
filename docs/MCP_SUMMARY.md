@@ -1,5 +1,8 @@
 # MCP Server Integration - Analysis & Planning Summary
 
+> **Status: Historical snapshot (February 2026).** This document captures implementation context at the time and may not match the current code structure. Use `/docs/INDEX.md` for current canonical docs.
+
+
 **Project:** Swing Screener MCP Server Integration  
 **Approach:** Refactor-First, Coevolution  
 **Status:** Planning Complete ✅  

@@ -12,7 +12,7 @@ import type { RiskConfig } from '@/types/config';
 import GlossaryLegend from '@/components/domain/education/GlossaryLegend';
 import MetricHelpLabel from '@/components/domain/education/MetricHelpLabel';
 import { DAILY_REVIEW_GLOSSARY_KEYS } from '@/content/educationGlossary';
-import RecommendationDetailsModal from '@/components/domain/recommendation/RecommendationDetailsModal';
+import TradeInsightModal from '@/components/domain/recommendation/TradeInsightModal';
 import CandidateOrderModal from '@/components/domain/orders/CandidateOrderModal';
 import { queryKeys } from '@/lib/queryKeys';
 import { t } from '@/i18n/t';
@@ -35,7 +35,7 @@ export default function DailyReview() {
     update: true,
     close: true,
   });
-  const [recommendationCandidate, setRecommendationCandidate] = useState<DailyReviewCandidate | null>(null);
+  const [insightCandidate, setInsightCandidate] = useState<DailyReviewCandidate | null>(null);
   const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<DailyReviewCandidate | null>(null);
   const [intelligenceJobId, setIntelligenceJobId] = useState<string>();
@@ -343,7 +343,7 @@ export default function DailyReview() {
             ) : null}
             <CandidatesTable
               candidates={recommendedCandidates}
-              onShowRecommendation={setRecommendationCandidate}
+              onShowRecommendation={setInsightCandidate}
               onCreateOrder={(candidate) => {
                 setSelectedCandidate(candidate);
                 setShowCreateOrderModal(true);
@@ -397,11 +397,13 @@ export default function DailyReview() {
         )}
       </CollapsibleSection>
 
-      {recommendationCandidate ? (
-        <RecommendationDetailsModal
-          ticker={recommendationCandidate.ticker}
-          recommendation={recommendationCandidate.recommendation}
-          onClose={() => setRecommendationCandidate(null)}
+      {insightCandidate ? (
+        <TradeInsightModal
+          ticker={insightCandidate.ticker}
+          recommendation={insightCandidate.recommendation}
+          currency="USD"
+          defaultTab="recommendation"
+          onClose={() => setInsightCandidate(null)}
         />
       ) : null}
 

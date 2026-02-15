@@ -528,7 +528,7 @@ describe('Screener Page', () => {
       })
 
       await waitFor(() => {
-        expect(screen.getByText(/Recommendation — AAPL/i)).toBeInTheDocument()
+        expect(screen.getByText(/Trade Insight — AAPL/i)).toBeInTheDocument()
       })
     })
 
@@ -557,7 +557,7 @@ describe('Screener Page', () => {
       })
 
       await waitFor(() => {
-        expect(screen.getByText(/Recommendation — AAPL/i)).toBeInTheDocument()
+        expect(screen.getByText(/Trade Insight — AAPL/i)).toBeInTheDocument()
       })
 
       await act(async () => {
@@ -607,6 +607,47 @@ describe('Screener Page', () => {
       await waitFor(() => {
         expect(screen.getByText(/Social sentiment warmup:/i)).toBeInTheDocument()
       })
+    })
+
+    it('stops warmup polling when background sentiment job is no longer available', async () => {
+      const { server } = await import('@/test/mocks/server')
+      const { http, HttpResponse } = await import('msw')
+      let warmupRequestCount = 0
+
+      server.use(
+        http.post('*/api/screener/run', () => {
+          return HttpResponse.json({
+            candidates: [buildCandidate('RECOMMENDED')],
+            asof_date: '2026-02-08',
+            total_screened: 1,
+            warnings: [],
+            social_warmup_job_id: 'job-missing',
+          })
+        }),
+        http.get('*/api/social/warmup/job-missing', () => {
+          warmupRequestCount += 1
+          return HttpResponse.json(
+            { detail: 'Social warmup job not found: job-missing' },
+            { status: 404 }
+          )
+        })
+      )
+
+      const { user } = renderWithProviders(<Screener />)
+      await act(async () => {
+        await user.click(screen.getByRole('button', { name: /Run Screener/i }))
+      })
+
+      await waitFor(() => {
+        expect(screen.getByText(/warmup status unavailable/i)).toBeInTheDocument()
+      })
+
+      const initialCount = warmupRequestCount
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 2800))
+      })
+
+      expect(warmupRequestCount).toBe(initialCount)
     })
   })
 

@@ -127,7 +127,7 @@ describe('DailyReview Page', () => {
     })
 
     await waitFor(() => {
-      expect(screen.getByText(/Recommendation — VALE/i)).toBeInTheDocument()
+      expect(screen.getByText(/Trade Insight — VALE/i)).toBeInTheDocument()
     })
 
     await act(async () => {

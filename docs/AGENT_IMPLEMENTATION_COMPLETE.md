@@ -1,5 +1,8 @@
 # Agent Implementation - Complete ✅
 
+> **Status: Historical snapshot (February 2026).** This document captures implementation context at the time and may not match the current code structure. Use `/docs/INDEX.md` for current canonical docs.
+
+
 **Status:** Production Ready  
 **Date:** February 12, 2026  
 **Total Lines Added:** 3,545 lines across 13 files  
