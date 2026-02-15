@@ -1,5 +1,6 @@
 """Pytest configuration and shared fixtures for all tests."""
 
+import json
 import pytest
 from unittest.mock import MagicMock
 
@@ -25,17 +26,18 @@ def mock_ollama_client():
             event_type = "OTHER"
             severity = "LOW"
         
+        # Use json.dumps to ensure valid JSON without control characters
         return {
             "message": {
-                "content": f'''{{
-                    "event_type": "{event_type}",
-                    "severity": "{severity}",
+                "content": json.dumps({
+                    "event_type": event_type,
+                    "severity": severity,
                     "primary_symbol": "AAPL",
                     "secondary_symbols": [],
-                    "is_material": true,
+                    "is_material": True,
                     "confidence": 0.9,
-                    "summary": "Test classification for: {headline[:50]}"
-                }}''' 
+                    "summary": f"Test classification for: {headline[:50].strip()}"
+                })
             }
         }
     
