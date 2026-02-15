@@ -1,5 +1,8 @@
 # Daily Review Implementation Guide
 
+> **Status: Historical snapshot (February 2026).** This document captures implementation context at the time and may not match the current code structure. Use `/docs/INDEX.md` for current canonical docs.
+
+
 **Feature:** Daily Routine - Unified trading dashboard  
 **Status:** Production Ready ✅  
 **Branch:** v2/daily-routine-revamp  
@@ -74,8 +77,8 @@ for pos in positions_response.positions:  # Works!
 ```
 
 **Files:**
-- `api/services/daily_review_service.py:60-62`
-- `tests/api/test_daily_review_service.py:75-103`
+- `api/services/daily_review_service.py`
+- `tests/api/test_daily_review_service.py`
 
 **Why it matters:** This bug appeared during development (commit 708bf6b). Tests must mock correctly:
 
@@ -120,7 +123,7 @@ function transformCandidate(api: DailyReviewCandidateAPI): DailyReviewCandidate 
 ```
 
 **Files:**
-- `web-ui/src/types/dailyReview.ts:110-158`
+- `web-ui/src/types/dailyReview.ts`
 - See also: `position.ts`, `order.ts` for same pattern
 
 ---
@@ -152,8 +155,8 @@ const { refetch, isFetching } = useDailyReview(10);
 ```
 
 **Files:**
-- `web-ui/src/features/dailyReview/api.ts:31-37`
-- `web-ui/src/pages/DailyReview.tsx:78-87`
+- `web-ui/src/features/dailyReview/api.ts`
+- `web-ui/src/pages/DailyReview.tsx`
 
 ---
 
@@ -165,7 +168,7 @@ const { refetch, isFetching } = useDailyReview(10);
 
 ```tsx
 // Reused across pages
-<CreateOrderModal
+<CandidateOrderModal
   candidate={selectedCandidate}
   risk={riskConfig}
   onClose={() => setShowModal(false)}
@@ -177,16 +180,12 @@ const { refetch, isFetching } = useDailyReview(10);
 ```
 
 **Shared Modals:**
-1. `CreateOrderModal` - Used in Screener.tsx, DailyReview.tsx
-2. `RecommendationModal` - Used in Screener.tsx, DailyReview.tsx
-3. `UpdateStopModal` - Could be reused in Daily Review (not yet implemented)
-4. `ClosePositionModal` - Could be reused in Daily Review (not yet implemented)
+1. `CandidateOrderModal` - Used in Screener and Daily Review
+2. `RecommendationDetailsModal` - Used in Screener and Daily Review
 
 **Files:**
-- `web-ui/src/pages/DailyReview.tsx:624-858` - CreateOrderModal
-- `web-ui/src/pages/Screener.tsx:743-989` - Original CreateOrderModal
-
-**TODO:** Extract to `web-ui/src/components/domain/` for better organization
+- `web-ui/src/components/domain/orders/CandidateOrderModal.tsx`
+- `web-ui/src/components/domain/recommendation/RecommendationDetailsModal.tsx`
 
 ---
 
@@ -205,8 +204,7 @@ if (!isRecommended) {
 **Why it matters:** Aligns with project's "risk-first" philosophy. Prevents users from accidentally trading bad setups.
 
 **Files:**
-- `web-ui/src/pages/DailyReview.tsx:661-668`
-- `web-ui/src/pages/Screener.tsx:780-784`
+- `web-ui/src/components/domain/orders/CandidateOrderModal.tsx`
 
 **Rule:** NEVER bypass this validation—it's a safety mechanism.
 
@@ -253,7 +251,7 @@ def _save_review(self, review: DailyReview, strategy_name: str) -> None:
 ```
 
 **Files:**
-- `api/services/daily_review_service.py:140-156`
+- `api/services/daily_review_service.py`
 - `.gitignore` - Excludes `data/daily_reviews/`
 - `data/README.md` - Documentation
 
@@ -292,7 +290,7 @@ interface RiskConfig {
 ```
 
 **Files:**
-- `web-ui/src/types/config.ts:7-15`
+- `web-ui/src/types/config.ts`
 
 ---
 

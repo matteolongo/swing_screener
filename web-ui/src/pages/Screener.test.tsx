@@ -241,7 +241,7 @@ describe('Screener Page', () => {
       })
     })
 
-    it('displays candidates table with correct headers', async () => {
+    it('displays candidates table with simplified headers', async () => {
       const { user } = renderWithProviders(<Screener />)
 
       await act(async () => {
@@ -249,19 +249,14 @@ describe('Screener Page', () => {
       })
 
       await waitFor(() => {
+        // Essential columns visible by default
         expect(screen.getByText('Rank')).toBeInTheDocument()
-        expect(screen.getByText('Ticker')).toBeInTheDocument()
+        expect(screen.getByText('Symbol')).toBeInTheDocument()
         expect(screen.getByText('Last Bar')).toBeInTheDocument()
         expect(screen.getByText('Close')).toBeInTheDocument()
-        expect(screen.getByText('Stop')).toBeInTheDocument()
-        expect(screen.getByText('ATR')).toBeInTheDocument()
-        expect(screen.getByText('Risk $')).toBeInTheDocument()
-        expect(screen.getByText('RR')).toBeInTheDocument()
-        expect(screen.getByText('Mom 6M')).toBeInTheDocument()
-        expect(screen.getByText('Mom 12M')).toBeInTheDocument()
-        expect(screen.getByText('Score')).toBeInTheDocument()
-        expect(screen.getByText('Verdict')).toBeInTheDocument()
+        expect(screen.getByText('Setup')).toBeInTheDocument()
         expect(screen.getByText('Fix')).toBeInTheDocument()
+        expect(screen.getByText('Actions')).toBeInTheDocument()
       })
     })
 
@@ -292,11 +287,11 @@ describe('Screener Page', () => {
         expect(screen.getByText('AAPL')).toBeInTheDocument()
         expect(screen.getByText('#1')).toBeInTheDocument()
         expect(screen.getByText('$175.50')).toBeInTheDocument()
-        expect(screen.getByText('3.25')).toBeInTheDocument()
+        // ATR is now in expandable details, not visible by default
       })
     })
 
-    it('shows momentum values with color coding', async () => {
+    it('shows momentum values in expandable details', async () => {
       const { user } = renderWithProviders(<Screener />)
       
       await act(async () => {
@@ -304,12 +299,19 @@ describe('Screener Page', () => {
       })
       
       await waitFor(() => {
-        // Mock has positive momentum
-        const mom6m = screen.getByText('+25.0%')
-        const mom12m = screen.getByText('+45.0%')
-        
-        expect(mom6m).toHaveClass('text-green-600')
-        expect(mom12m).toHaveClass('text-green-600')
+        expect(screen.getByText('AAPL')).toBeInTheDocument()
+      })
+
+      // Expand the row to see advanced metrics
+      const expandButton = screen.getByRole('button', { name: /Expand details for AAPL/i })
+      await act(async () => {
+        await user.click(expandButton)
+      })
+      
+      await waitFor(() => {
+        // Mock has positive momentum - now in the details section
+        expect(screen.getByText('+2500.0%')).toBeInTheDocument() // momentum6m is 25.0 which gets multiplied by 100
+        expect(screen.getByText('+4500.0%')).toBeInTheDocument() // momentum12m is 45.0 which gets multiplied by 100
       })
     })
 
@@ -387,7 +389,7 @@ describe('Screener Page', () => {
       expect(createButtons.some((button) => button.hasAttribute('disabled'))).toBe(true)
     })
 
-    it('opens sentiment analysis modal from candidate row', async () => {
+    it('opens sentiment analysis modal from expandable details', async () => {
       const { user } = renderWithProviders(<Screener />)
 
       await act(async () => {
@@ -396,6 +398,17 @@ describe('Screener Page', () => {
 
       await waitFor(() => {
         expect(screen.getByText('AAPL')).toBeInTheDocument()
+      })
+
+      // Expand the row to access secondary actions
+      const expandButton = screen.getByRole('button', { name: /Expand details for AAPL/i })
+      await act(async () => {
+        await user.click(expandButton)
+      })
+
+      // Now the sentiment button should be visible in the expanded section
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Sentiment for AAPL/i })).toBeInTheDocument()
       })
 
       const sentimentButton = screen.getByRole('button', { name: /Sentiment for AAPL/i })
@@ -413,6 +426,64 @@ describe('Screener Page', () => {
       })
 
       expect(screen.getByLabelText(/Lookback Override/i)).toBeInTheDocument()
+    })
+
+    it('renders sentiment modal when API returns null numeric fields', async () => {
+      const { server } = await import('@/test/mocks/server')
+      const { http, HttpResponse } = await import('msw')
+
+      server.use(
+        http.post('*/api/social/analyze', async ({ request }) => {
+          const payload = (await request.json()) as { symbol?: string }
+          return HttpResponse.json({
+            status: 'ok',
+            symbol: payload.symbol ?? 'AAPL',
+            providers: ['reddit'],
+            sentiment_analyzer: 'keyword',
+            lookback_hours: 24,
+            last_execution_at: '2026-02-12T12:00:00',
+            sample_size: 0,
+            sentiment_score: null,
+            sentiment_confidence: null,
+            attention_score: null,
+            attention_z: null,
+            hype_score: null,
+            source_breakdown: {},
+            reasons: [],
+            raw_events: [],
+          })
+        })
+      )
+
+      const { user } = renderWithProviders(<Screener />)
+
+      await act(async () => {
+        await user.click(screen.getByRole('button', { name: /Run Screener/i }))
+      })
+
+      await waitFor(() => {
+        expect(screen.getByText('AAPL')).toBeInTheDocument()
+      })
+
+      await act(async () => {
+        await user.click(screen.getByRole('button', { name: /Expand details for AAPL/i }))
+      })
+
+      await act(async () => {
+        await user.click(screen.getByRole('button', { name: /Sentiment for AAPL/i }))
+      })
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole('heading', {
+            level: 2,
+            name: /Sentiment Analysis - AAPL/i,
+          })
+        ).toBeInTheDocument()
+      })
+
+      expect(screen.getAllByText('N/A').length).toBeGreaterThan(0)
+      expect(screen.queryByText(/Z-score:/i)).not.toBeInTheDocument()
     })
 
     it('opens recommendation details modal from candidate row', async () => {
@@ -511,6 +582,47 @@ describe('Screener Page', () => {
       await waitFor(() => {
         expect(screen.getByText(/Social sentiment warmup:/i)).toBeInTheDocument()
       })
+    })
+
+    it('stops warmup polling when background sentiment job is no longer available', async () => {
+      const { server } = await import('@/test/mocks/server')
+      const { http, HttpResponse } = await import('msw')
+      let warmupRequestCount = 0
+
+      server.use(
+        http.post('*/api/screener/run', () => {
+          return HttpResponse.json({
+            candidates: [buildCandidate('RECOMMENDED')],
+            asof_date: '2026-02-08',
+            total_screened: 1,
+            warnings: [],
+            social_warmup_job_id: 'job-missing',
+          })
+        }),
+        http.get('*/api/social/warmup/job-missing', () => {
+          warmupRequestCount += 1
+          return HttpResponse.json(
+            { detail: 'Social warmup job not found: job-missing' },
+            { status: 404 }
+          )
+        })
+      )
+
+      const { user } = renderWithProviders(<Screener />)
+      await act(async () => {
+        await user.click(screen.getByRole('button', { name: /Run Screener/i }))
+      })
+
+      await waitFor(() => {
+        expect(screen.getByText(/warmup status unavailable/i)).toBeInTheDocument()
+      })
+
+      const initialCount = warmupRequestCount
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 2800))
+      })
+
+      expect(warmupRequestCount).toBe(initialCount)
     })
   })
 

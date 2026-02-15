@@ -2,6 +2,11 @@
 
 Common issues and solutions for the Swing Screener system.
 
+Related docs:
+- [Web UI Guide](WEB_UI_GUIDE.md)
+- [API Reference](../api/README.md)
+- [Documentation Index](INDEX.md)
+
 ---
 
 ## API Errors
@@ -11,18 +16,18 @@ Common issues and solutions for the Swing Screener system.
 **Symptom:**
 ```json
 {
-  "detail": "Service temporarily unavailable - file locked: positions.json"
+  "detail": "Service temporarily unavailable - file locked: data/positions.json"
 }
 ```
 
 **Cause:**  
-Another process is holding a lock on `positions.json` or `orders.json` for more than 5 seconds.
+Another process is holding a lock on `data/positions.json` or `data/orders.json` for more than 5 seconds.
 
 **Solutions:**
 1. **Check for stuck processes:**
    ```bash
    # macOS/Linux
-   lsof positions.json orders.json
+   lsof data/positions.json data/orders.json
    
    # Kill stuck process if found
    kill <PID>
@@ -36,7 +41,7 @@ Another process is holding a lock on `positions.json` or `orders.json` for more 
 
 4. **Check file permissions:**
    ```bash
-   ls -la positions.json orders.json
+   ls -la data/positions.json data/orders.json
    # Should be readable/writable by current user
    ```
 
@@ -171,7 +176,7 @@ ticker = ticker.toUpperCase();
 **Common causes:**
 
 #### **Position not found**
-You're trying to update/close a position that doesn't exist in `positions.json`.
+You're trying to update/close a position that doesn't exist in `data/positions.json`.
 
 **Fix:**  
 Check current positions:
@@ -217,17 +222,17 @@ Unexpected error in the API. Details are logged server-side.
 
 2. **Check data file integrity:**
    ```bash
-   python -m json.tool positions.json  # Should parse without error
-   python -m json.tool orders.json
+   python -m json.tool data/positions.json  # Should parse without error
+   python -m json.tool data/orders.json
    ```
 
    If invalid:
    ```bash
    # Backup corrupted file
-   cp positions.json positions.json.backup
+   cp data/positions.json data/positions.json.backup
    
    # Reset to empty array
-   echo "[]" > positions.json
+   echo "[]" > data/positions.json
    ```
 
 3. **Check data directory:**
@@ -244,25 +249,25 @@ Unexpected error in the API. Details are logged server-side.
 
 ## Data Issues
 
-### Corrupted positions.json or orders.json
+### Corrupted data/positions.json or data/orders.json
 
 **Symptom:**  
 API fails to start or returns 500 errors on all position/order endpoints.
 
 **Diagnosis:**
 ```bash
-python -m json.tool positions.json
+python -m json.tool data/positions.json
 # Error: "Expecting value: line 1 column 1 (char 0)"
 ```
 
 **Fix:**
 ```bash
 # Option 1: Restore from backup (if available)
-cp positions.json.backup positions.json
+cp data/positions.json.backup data/positions.json
 
 # Option 2: Reset to empty (loses all positions)
-echo "[]" > positions.json
-echo "[]" > orders.json
+echo "[]" > data/positions.json
+echo "[]" > data/orders.json
 ```
 
 **Prevention:**  
@@ -444,7 +449,7 @@ Too many concurrent requests to position/order endpoints.
 CLI command hangs or returns `Resource temporarily unavailable`.
 
 **Cause:**  
-API is holding a lock on `positions.json` or `orders.json`.
+API is holding a lock on `data/positions.json` or `data/orders.json`.
 
 **Solution:**  
 Wait for API request to complete, or stop the API server temporarily:
@@ -472,12 +477,12 @@ The CLI and API both use file locking, so they're safe to run concurrently. Howe
 ```json
 {
   "status": "unhealthy",
-  "checks": {
-    "files": {
-      "status": "unhealthy",
-      "issues": ["positions.json: permission denied"]
-    }
-  }
+      "checks": {
+        "files": {
+          "status": "unhealthy",
+          "issues": ["data/positions.json: permission denied"]
+        }
+      }
 }
 ```
 
@@ -486,7 +491,7 @@ The CLI and API both use file locking, so they're safe to run concurrently. Howe
 #### **Permission denied**
 ```bash
 # Fix file permissions
-chmod 644 positions.json orders.json
+chmod 644 data/positions.json data/orders.json
 
 # Fix directory permissions
 chmod 755 .
@@ -498,7 +503,23 @@ chmod 755 data/
 ```
 
 #### **Corrupted JSON files**
-See "Corrupted positions.json" section above.
+See "Corrupted data/positions.json" section above.
+
+---
+
+### 404 on social warmup status endpoint
+
+**Symptom:**
+```text
+GET /api/social/warmup/<job_id> -> 404 Not Found
+```
+
+**Cause:**  
+The warmup job id is stale (for example after backend restart) and no longer exists in memory.
+
+**Fix:**  
+Run the screener again to start a new warmup job.  
+The UI should stop polling stale job ids and show a warmup-unavailable message.
 
 ---
 

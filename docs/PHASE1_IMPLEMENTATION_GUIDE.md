@@ -1,5 +1,8 @@
 # Phase 1 Implementation Guide - COMPLETED ✅
 
+> **Status: Historical snapshot (February 2026).** This document captures implementation context at the time and may not match the current code structure. Use `/docs/INDEX.md` for current canonical docs.
+
+
 ## Status
 ✅ Step 1.1: Added alpaca-py dependency
 ✅ Step 1.2: Created MarketDataProvider abstraction
