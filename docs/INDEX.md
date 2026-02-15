@@ -25,6 +25,11 @@ This index separates **canonical (actively maintained)** docs from **historical 
 - `/docs/MARKET_INTELLIGENCE_PHILOSOPHY.md` - Market intelligence operating philosophy.
 - `/docs/INTEL_SYSTEM_DESIGN.md` - Market intelligence technical architecture.
 
+### Proposals and Planning
+- `/docs/issues/README.md` - Index of adapted issue proposals
+- `/docs/issues/llm_market_intelligence_adapted.md` - LLM integration proposal (adapted)
+- `/docs/LLM_INTELLIGENCE_IMPLEMENTATION.md` - Full implementation guide for LLM enhancement
+
 ### Runtime data and config
 - `/data/README.md` - Runtime JSON/state files and conventions.
 - `/config/README.md` - Config directory usage.

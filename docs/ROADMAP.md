@@ -45,6 +45,26 @@ Restoring the daily workflow for position management and trade candidate review.
 
 ## 📋 Planned
 
+### LLM-Augmented Market Intelligence (Proposal)
+Enhance the existing intelligence layer with optional LLM capabilities for semantic event classification and educational explanations.
+
+**Features:**
+- Event classification (EARNINGS, M&A, PRODUCT, etc.)
+- Headline deduplication to reduce noise
+- Beginner-friendly explanations for top opportunities
+- Strict guardrails: LLMs interpret, never decide
+
+**Status:** Proposal stage (see `docs/issues/llm_market_intelligence_adapted.md`)  
+**Priority:** Medium (optional enhancement)  
+**Timeline:** 2-3 weeks if approved  
+**Cost:** ~$0.30/month  
+
+**Documentation:**
+- Short issue: `docs/issues/llm_market_intelligence_adapted.md`
+- Full implementation guide: `docs/LLM_INTELLIGENCE_IMPLEMENTATION.md`
+
+---
+
 ### Currency Filtering
 Allow filtering screener results by currency (USD/EUR) and display currency in all tables.
 
