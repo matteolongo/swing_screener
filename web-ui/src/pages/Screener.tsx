@@ -50,6 +50,15 @@ const normalizeUniverse = (value: string | null) => {
   if (!value) return null;
   return UNIVERSE_ALIASES[value] ?? value;
 };
+
+function getApiErrorStatus(error: unknown): number | undefined {
+  if (typeof error !== 'object' || error == null || !('status' in error)) {
+    return undefined;
+  }
+  const status = (error as { status?: unknown }).status;
+  return typeof status === 'number' ? status : undefined;
+}
+
 export default function Screener() {
   const { config } = useConfigStore();
   const { lastResult, setLastResult } = useScreenerStore();
@@ -149,12 +158,19 @@ export default function Screener() {
     queryKey: queryKeys.socialWarmupStatus(socialWarmupJobId),
     queryFn: () => fetchSocialWarmupStatus(socialWarmupJobId!),
     enabled: Boolean(socialWarmupJobId),
-    refetchInterval: (query) => (query.state.data?.status === 'completed' ? false : 2500),
+    refetchInterval: (query) => {
+      const status = getApiErrorStatus(query.state.error);
+      if (status === 404) return false;
+      return query.state.data?.status === 'completed' ? false : 2500;
+    },
     retry: false,
   });
   const socialWarmup = socialWarmupQuery.data;
+  const socialWarmupErrorStatus = getApiErrorStatus(socialWarmupQuery.error);
+  const socialWarmupNotFound = socialWarmupErrorStatus === 404;
   const resolveOverlayStatus = (status?: string | null) => {
     if (status !== 'PENDING') return status ?? 'OFF';
+    if (socialWarmupNotFound) return 'OFF';
     return socialWarmup?.status === 'completed' ? 'OFF' : 'PENDING';
   };
   const overlayCounts = candidates.reduce<Record<string, number>>((acc, c) => {
@@ -350,7 +366,9 @@ export default function Screener() {
             )}
             {socialWarmupJobId && (
               <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
-                {socialWarmup == null
+                {socialWarmupNotFound
+                  ? t('screener.summary.socialWarmupUnavailable')
+                  : socialWarmup == null
                   ? t('screener.summary.socialWarmupLoading')
                   : socialWarmup.status === 'completed'
                     ? t('screener.summary.socialWarmupCompleted', {
