@@ -9,6 +9,7 @@ from .config import (
 )
 from .ingestion import collect_events
 from .models import CatalystSignal, Event, Opportunity, SymbolState, ThemeCluster
+from .pipeline import IntelligenceSnapshot, run_intelligence_pipeline
 from .reaction import ReactionMetrics, build_catalyst_signals, evaluate_event_reaction
 from .relations import (
     apply_peer_confirmation,
@@ -50,4 +51,6 @@ __all__ = [
     "build_catalyst_score_map",
     "build_opportunities",
     "score_catalyst_signal",
+    "IntelligenceSnapshot",
+    "run_intelligence_pipeline",
 ]

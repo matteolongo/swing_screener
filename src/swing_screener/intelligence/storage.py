@@ -70,6 +70,43 @@ class IntelligenceStorage:
         path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
         return path
 
+    def load_opportunities(self, asof: date | str) -> list[Opportunity]:
+        path = self.opportunities_path(asof)
+        if not path.exists():
+            return []
+        raw = path.read_text(encoding="utf-8").strip()
+        if not raw:
+            return []
+        payload = json.loads(raw)
+        if not isinstance(payload, list):
+            return []
+        out: list[Opportunity] = []
+        for item in payload:
+            if not isinstance(item, dict):
+                continue
+            symbol = str(item.get("symbol", "")).strip().upper()
+            state = str(item.get("state", "QUIET")).strip().upper()
+            if not symbol:
+                continue
+            out.append(
+                Opportunity(
+                    symbol=symbol,
+                    technical_readiness=float(item.get("technical_readiness", 0.0)),
+                    catalyst_strength=float(item.get("catalyst_strength", 0.0)),
+                    opportunity_score=float(item.get("opportunity_score", 0.0)),
+                    state=state if state in {"QUIET", "WATCH", "CATALYST_ACTIVE", "TRENDING", "COOLING_OFF"} else "QUIET",
+                    explanations=[str(v) for v in item.get("explanations", [])],
+                )
+            )
+        return out
+
+    def latest_opportunities_date(self) -> str | None:
+        files = sorted(self.root_dir.glob("opportunities_*.json"))
+        if not files:
+            return None
+        latest = files[-1].stem.replace("opportunities_", "", 1)
+        return latest or None
+
     def load_symbol_state(self) -> dict[str, SymbolState]:
         path = self.symbol_state_path
         if not path.exists():
@@ -109,4 +146,3 @@ class IntelligenceStorage:
         payload.sort(key=lambda item: str(item.get("symbol", "")))
         path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
         return path
-
