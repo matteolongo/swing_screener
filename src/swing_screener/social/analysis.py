@@ -26,6 +26,13 @@ def _provider_for(name: str, cache: SocialCache):
             DEFAULT_RATE_LIMIT_PER_SEC,
             cache,
         )
+    elif name == "yahoo_finance":
+        from swing_screener.social.providers.yahoo_finance import YahooFinanceProvider
+        return YahooFinanceProvider(
+            DEFAULT_USER_AGENT,
+            DEFAULT_RATE_LIMIT_PER_SEC,
+            cache,
+        )
     raise ValueError(f"Unsupported social provider: {name}")
 
 
@@ -34,17 +41,34 @@ def analyze_social_symbol(
     *,
     lookback_hours: int,
     min_sample_size: int,
-    provider_name: str = "reddit",
+    provider_names: list[str] | None = None,
+    sentiment_analyzer_name: str = "keyword",
     max_events: int = 100,
     cache: Optional[SocialCache] = None,
 ) -> dict:
+    """Analyze social sentiment for a symbol across multiple providers.
+    
+    Args:
+        symbol: Stock symbol to analyze
+        lookback_hours: Hours to look back for events
+        min_sample_size: Minimum events required for valid analysis
+        provider_names: List of provider names (defaults to ["reddit"])
+        sentiment_analyzer_name: Name of sentiment analyzer to use
+        max_events: Maximum events to return in raw_events
+        cache: Optional cache instance
+    """
+    from swing_screener.social.sentiment.factory import get_sentiment_analyzer
+    
     cache = cache or SocialCache()
+    provider_names = provider_names or ["reddit"]
     symbol = str(symbol).strip().upper()
+    
     if not symbol:
         return {
             "status": "error",
             "symbol": "",
-            "provider": provider_name,
+            "providers": provider_names,
+            "sentiment_analyzer": sentiment_analyzer_name,
             "lookback_hours": lookback_hours,
             "last_execution_at": datetime.utcnow().replace(microsecond=0).isoformat(),
             "sample_size": 0,
@@ -65,9 +89,17 @@ def analyze_social_symbol(
     start_dt = now - timedelta(hours=lookback_hours)
 
     try:
-        provider = _provider_for(provider_name, cache)
-        events = provider.fetch_events(start_dt, now, [symbol])
-        events_sorted = sorted(events, key=lambda e: e.timestamp, reverse=True)
+        # Get sentiment analyzer
+        sentiment_analyzer = get_sentiment_analyzer(sentiment_analyzer_name)
+        
+        # Fetch events from all providers
+        all_events = []
+        for provider_name in provider_names:
+            provider = _provider_for(provider_name, cache)
+            events = provider.fetch_events(start_dt, now, [symbol])
+            all_events.extend(events)
+        
+        events_sorted = sorted(all_events, key=lambda e: e.timestamp, reverse=True)
         raw_events = events_sorted[:max_events]
 
         # Fetch minimal OHLCV data for hype_score calculation
@@ -88,12 +120,13 @@ def analyze_social_symbol(
             pass
 
         metrics = compute_daily_metrics(
-            events,
+            all_events,
             [symbol],
             ohlcv,
             now.date(),
             cache,
             z_lookback_days=DEFAULT_ATTENTION_LOOKBACK_DAYS,
+            sentiment_analyzer=sentiment_analyzer,
         )
         metric = metrics[0]
         reasons: list[str] = []
@@ -103,21 +136,23 @@ def analyze_social_symbol(
         else:
             status = "ok"
 
-        cache.update_symbol_run(
-            provider.name,
-            symbol,
-            {
-                "last_execution_at": now.isoformat(),
-                "status": status,
-                "sample_size": metric.sample_size,
-                "lookback_hours": lookback_hours,
-            },
-        )
+        for provider_name in provider_names:
+            cache.update_symbol_run(
+                provider_name,
+                symbol,
+                {
+                    "last_execution_at": now.isoformat(),
+                    "status": status,
+                    "sample_size": metric.sample_size,
+                    "lookback_hours": lookback_hours,
+                },
+            )
 
         return {
             "status": status,
             "symbol": symbol,
-            "provider": provider.name,
+            "providers": provider_names,
+            "sentiment_analyzer": sentiment_analyzer_name,
             "lookback_hours": lookback_hours,
             "last_execution_at": now.isoformat(),
             "sample_size": metric.sample_size,
@@ -126,24 +161,27 @@ def analyze_social_symbol(
             "attention_score": metric.attention_score,
             "attention_z": metric.attention_z,
             "hype_score": metric.hype_score,
+            "source_breakdown": metric.source_breakdown,
             "reasons": reasons,
             "raw_events": raw_events,
         }
     except Exception as exc:
-        cache.update_symbol_run(
-            provider_name,
-            symbol,
-            {
-                "last_execution_at": now.isoformat(),
-                "status": "error",
-                "error": str(exc),
-                "lookback_hours": lookback_hours,
-            },
-        )
+        for provider_name in provider_names:
+            cache.update_symbol_run(
+                provider_name,
+                symbol,
+                {
+                    "last_execution_at": now.isoformat(),
+                    "status": "error",
+                    "error": str(exc),
+                    "lookback_hours": lookback_hours,
+                },
+            )
         return {
             "status": "error",
             "symbol": symbol,
-            "provider": provider_name,
+            "providers": provider_names,
+            "sentiment_analyzer": sentiment_analyzer_name,
             "lookback_hours": lookback_hours,
             "last_execution_at": now.isoformat(),
             "sample_size": 0,

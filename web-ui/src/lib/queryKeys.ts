@@ -13,4 +13,5 @@ export const queryKeys = {
   positionStopSuggestion: (positionId?: string) =>
     ['positions', positionId, 'stop-suggestion'] as const,
   backtestSimulations: () => ['backtest-simulations'] as const,
+  socialWarmupStatus: (jobId?: string) => ['social-warmup', jobId] as const,
 };

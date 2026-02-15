@@ -12,7 +12,14 @@ from swing_screener.risk.position_sizing import RiskConfig
 from swing_screener.reporting.config import ReportConfig
 from swing_screener.portfolio.state import ManageConfig
 from swing_screener.backtest.simulator import BacktestConfig
-from swing_screener.social.config import SocialOverlayConfig
+from swing_screener.social.config import (
+    DEFAULT_PROVIDERS,
+    DEFAULT_SENTIMENT_ANALYZER,
+    SocialOverlayConfig,
+)
+
+SUPPORTED_SOCIAL_PROVIDERS = {"reddit", "yahoo_finance"}
+SUPPORTED_SENTIMENT_ANALYZERS = {"keyword", "vader"}
 
 
 def _get_nested(payload: dict, *keys: str, default: Optional[dict] = None) -> dict:
@@ -58,6 +65,24 @@ def build_manage_config(strategy: dict) -> ManageConfig:
 
 def build_social_overlay_config(strategy: dict) -> SocialOverlayConfig:
     raw = _get_nested(strategy, "social_overlay")
+    providers_raw = raw.get("providers", DEFAULT_PROVIDERS)
+    provider_candidates = (
+        providers_raw
+        if isinstance(providers_raw, (list, tuple, set))
+        else [providers_raw]
+    )
+    providers_clean: list[str] = []
+    for provider in provider_candidates:
+        normalized = str(provider).strip().lower()
+        if normalized and normalized in SUPPORTED_SOCIAL_PROVIDERS and normalized not in providers_clean:
+            providers_clean.append(normalized)
+
+    sentiment_analyzer = str(
+        raw.get("sentiment_analyzer", DEFAULT_SENTIMENT_ANALYZER)
+    ).strip().lower()
+    if sentiment_analyzer not in SUPPORTED_SENTIMENT_ANALYZERS:
+        sentiment_analyzer = DEFAULT_SENTIMENT_ANALYZER
+
     return SocialOverlayConfig(
         enabled=bool(raw.get("enabled", False)),
         lookback_hours=int(raw.get("lookback_hours", 24)),
@@ -66,6 +91,8 @@ def build_social_overlay_config(strategy: dict) -> SocialOverlayConfig:
         negative_sent_threshold=float(raw.get("negative_sent_threshold", -0.4)),
         sentiment_conf_threshold=float(raw.get("sentiment_conf_threshold", 0.7)),
         hype_percentile_threshold=float(raw.get("hype_percentile_threshold", 95.0)),
+        providers=tuple(providers_clean or DEFAULT_PROVIDERS),
+        sentiment_analyzer=sentiment_analyzer,
     )
 
 

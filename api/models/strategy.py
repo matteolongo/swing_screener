@@ -109,6 +109,8 @@ class StrategySocialOverlay(BaseModel):
     negative_sent_threshold: float = Field(default=-0.4)
     sentiment_conf_threshold: float = Field(default=0.7, ge=0, le=1)
     hype_percentile_threshold: float = Field(default=95.0, ge=0, le=100)
+    providers: list[str] = Field(default_factory=lambda: ["reddit"])
+    sentiment_analyzer: str = Field(default="keyword")
 
 
 class StrategyBase(BaseModel):

@@ -76,18 +76,22 @@
       "min_history": 260
     },
     "social_overlay": {
-      "enabled": false,
+      "enabled": true,
       "lookback_hours": 24,
       "attention_z_threshold": 3.0,
-      "min_sample_size": 20,
+      "min_sample_size": 1,
       "negative_sent_threshold": -0.4,
       "sentiment_conf_threshold": 0.7,
-      "hype_percentile_threshold": 95.0
+      "hype_percentile_threshold": 95.0,
+      "providers": [
+        "yahoo_finance"
+      ],
+      "sentiment_analyzer": "keyword"
     },
     "id": "default",
     "is_default": true,
     "created_at": "2026-02-08T00:00:00",
-    "updated_at": "2026-02-11T22:52:23"
+    "updated_at": "2026-02-15T01:00:50"
   },
   {
     "name": "1000",
@@ -243,7 +247,11 @@
       "min_sample_size": 20,
       "negative_sent_threshold": -0.4,
       "sentiment_conf_threshold": 0.7,
-      "hype_percentile_threshold": 95.0
+      "hype_percentile_threshold": 95.0,
+      "providers": [
+        "reddit"
+      ],
+      "sentiment_analyzer": "keyword"
     },
     "id": "2RISK-2ATR-EUR",
     "is_default": false,

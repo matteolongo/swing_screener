@@ -97,6 +97,7 @@ export interface ScreenerResponse {
   asofDate: string;
   totalScreened: number;
   warnings?: string[];
+  socialWarmupJobId?: string;
 }
 
 // API response format (snake_case)
@@ -105,6 +106,7 @@ export interface ScreenerResponseAPI {
   asof_date: string;
   total_screened: number;
   warnings?: string[];
+  social_warmup_job_id?: string;
 }
 
 export interface OrderPreview {
@@ -165,5 +167,6 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
     asofDate: apiResponse.asof_date,
     totalScreened: apiResponse.total_screened,
     warnings: apiResponse.warnings ?? [],
+    socialWarmupJobId: apiResponse.social_warmup_job_id ?? undefined,
   };
 }
