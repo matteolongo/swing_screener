@@ -62,6 +62,72 @@ describe('Dashboard Page', () => {
       await screen.findByText('Catalyst + follow-through confirmed.')
       expect(screen.getByText('Technical 82.0% | Catalyst 71.0%')).toBeInTheDocument()
     })
+
+    it('shows guidance and disables run when no symbols are available', async () => {
+      const { server } = await import('@/test/mocks/server')
+      const { http, HttpResponse } = await import('msw')
+
+      server.use(
+        http.get('*/api/portfolio/positions', () => HttpResponse.json({ positions: [] })),
+        http.get('*/api/portfolio/orders', () => HttpResponse.json({ orders: [] }))
+      )
+
+      renderWithProviders(<Dashboard />)
+
+      await waitFor(() => {
+        expect(
+          screen.getByText('Add at least one open position or pending order to run intelligence from the dashboard.')
+        ).toBeInTheDocument()
+      })
+      expect(screen.getByRole('button', { name: /Run Intelligence/i })).toBeDisabled()
+    })
+
+    it('shows launch error when intelligence run cannot start', async () => {
+      const { server } = await import('@/test/mocks/server')
+      const { http, HttpResponse } = await import('msw')
+      const { API_BASE_URL } = await import('@/lib/api')
+      const { user } = renderWithProviders(<Dashboard />)
+
+      server.use(
+        http.post(`${API_BASE_URL}/api/intelligence/run`, () =>
+          HttpResponse.json({ detail: 'launch failed' }, { status: 500 })
+        )
+      )
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Run Intelligence/i })).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByRole('button', { name: /Run Intelligence/i }))
+
+      await waitFor(() => {
+        expect(screen.getByText('Could not start intelligence run: launch failed')).toBeInTheDocument()
+      })
+    })
+
+    it('shows empty opportunities state when run returns none', async () => {
+      const { server } = await import('@/test/mocks/server')
+      const { http, HttpResponse } = await import('msw')
+      const { API_BASE_URL } = await import('@/lib/api')
+      const { user } = renderWithProviders(<Dashboard />)
+
+      server.use(
+        http.get(`${API_BASE_URL}/api/intelligence/opportunities`, () =>
+          HttpResponse.json({ asof_date: '2026-02-15', opportunities: [] })
+        )
+      )
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Run Intelligence/i })).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByRole('button', { name: /Run Intelligence/i }))
+
+      await waitFor(() => {
+        expect(screen.getByText('Opportunities (as of 2026-02-15)')).toBeInTheDocument()
+      })
+      await screen.findByText('No opportunities found for this run.')
+    })
   })
 
   describe('Strategy Coach', () => {
