@@ -326,6 +326,7 @@ npm run test:coverage # Run with coverage report
 ### Getting Started
 - **[Web UI Guide](docs/WEB_UI_GUIDE.md)** — Complete Web UI documentation (recommended)
 - **[CLI Usage](#cli-usage)** — Command-line interface reference (see above)
+- **[Docs Index](docs/INDEX.md)** — Canonical vs historical docs map
 
 ### Operational Guides
 - **[Operational Guide](docs/OPERATIONAL_GUIDE.md)** — Day-to-day CLI workflows
@@ -339,6 +340,8 @@ npm run test:coverage # Run with coverage report
 - **[Web UI README](web-ui/README.md)** — React/TypeScript architecture
 - **[Broker Integration](docs/BROKER_INTEGRATION.md)** — Market data providers (yfinance, Alpaca) ⭐ **NEW**
 - **[Indicator Validation](docs/INDICATOR_VALIDATION.md)** — TA-Lib validation approach ⭐ **NEW**
+- **[Market Intelligence Philosophy](docs/MARKET_INTELLIGENCE_PHILOSOPHY.md)** — Why the intelligence layer exists
+- **[Intelligence System Design](docs/INTEL_SYSTEM_DESIGN.md)** — Technical architecture and delivery phases
 - **[AGENTS.md](AGENTS.md)** — Guide for AI coding assistants
 
 ### Planning
