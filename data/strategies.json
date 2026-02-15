@@ -1,6 +1,6 @@
 [
   {
-    "name": "500",
+    "name": "Default",
     "description": "Default strategy seeded from current system settings.",
     "module": "momentum",
     "universe": {
@@ -33,17 +33,17 @@
       "w_mom_6m": 0.45,
       "w_mom_12m": 0.35,
       "w_rs_6m": 0.2,
-      "top_n": 200
+      "top_n": 50
     },
     "signals": {
       "breakout_lookback": 50,
       "pullback_ma": 20,
-      "min_history": 260
+      "min_history": 252
     },
     "risk": {
       "account_size": 500.0,
-      "risk_pct": 0.01,
-      "max_position_pct": 0.6,
+      "risk_pct": 0.015,
+      "max_position_pct": 0.2,
       "min_shares": 1,
       "k_atr": 2.0,
       "min_rr": 2.0,
@@ -76,7 +76,7 @@
       "min_history": 260
     },
     "social_overlay": {
-      "enabled": true,
+      "enabled": false,
       "lookback_hours": 24,
       "attention_z_threshold": 3.0,
       "min_sample_size": 1,
@@ -91,7 +91,7 @@
     "id": "default",
     "is_default": true,
     "created_at": "2026-02-08T00:00:00",
-    "updated_at": "2026-02-15T01:00:50"
+    "updated_at": "2026-02-15T03:59:00"
   },
   {
     "name": "1000",
