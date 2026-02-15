@@ -13,6 +13,7 @@ from api.models.portfolio import (
     Position,
     PositionUpdate,
     PositionsResponse,
+    CapitalStateResponse,
     Order,
     OrdersResponse,
     OrderSnapshot,
@@ -37,6 +38,10 @@ from swing_screener.execution.order_workflows import (
     fill_entry_order,
     infer_order_kind,
     normalize_orders,
+)
+from swing_screener.portfolio.capital import (
+    compute_capital_state,
+    check_capital_available,
 )
 from swing_screener.data.providers import MarketDataProvider, get_default_provider
 
@@ -457,6 +462,56 @@ class PortfolioService:
         return Order(**order)
 
     def create_order(self, request: CreateOrderRequest) -> Order:
+        """Create a new order with capital availability check.
+        
+        Args:
+            request: Order creation request
+            
+        Returns:
+            Created Order
+            
+        Raises:
+            HTTPException 400: If insufficient capital available for entry orders
+        """
+        # For entry orders, check capital availability
+        if request.order_kind == "entry" and request.limit_price is not None:
+            from api.routers import config as config_router
+            
+            # Load current state
+            positions = load_positions(self._positions_repo.path)
+            orders = load_orders(self._orders_repo.path)
+            
+            # Get account size from config
+            account_size = config_router.current_config.risk.account_size
+            
+            # Compute capital state
+            capital_state = compute_capital_state(positions, orders, account_size)
+            
+            # Calculate required capital for this order
+            required_capital = request.quantity * request.limit_price
+            
+            # Check if capital is available
+            check = check_capital_available(capital_state, required_capital)
+            
+            if not check.is_available:
+                raise HTTPException(
+                    status_code=400,
+                    detail={
+                        "error": "insufficient_capital",
+                        "message": check.reason,
+                        "capital_state": {
+                            "account_size": capital_state.account_size,
+                            "allocated_positions": capital_state.allocated_positions,
+                            "reserved_orders": capital_state.reserved_orders,
+                            "available": capital_state.available,
+                            "required": required_capital,
+                            "shortfall": check.shortfall,
+                            "utilization_pct": capital_state.utilization_pct
+                        }
+                    }
+                )
+        
+        # Proceed with order creation
         data = self._orders_repo.read()
 
         ticker = request.ticker.upper()
@@ -570,3 +625,29 @@ class PortfolioService:
         data["asof"] = get_today_str()
         self._orders_repo.write(data)
         return {"status": "ok", "order_id": order_id}
+
+    def get_capital_state(self) -> CapitalStateResponse:
+        """Get current capital allocation state.
+        
+        Returns:
+            CapitalStateResponse with breakdown of capital usage
+        """
+        from api.routers import config as config_router
+        
+        # Load current positions and orders
+        positions = load_positions(self._positions_repo.path)
+        orders = load_orders(self._orders_repo.path)
+        
+        # Get account size from config
+        account_size = config_router.current_config.risk.account_size
+        
+        # Compute capital state
+        capital_state = compute_capital_state(positions, orders, account_size)
+        
+        return CapitalStateResponse(
+            account_size=capital_state.account_size,
+            allocated_positions=capital_state.allocated_positions,
+            reserved_orders=capital_state.reserved_orders,
+            available=capital_state.available,
+            utilization_pct=capital_state.utilization_pct
+        )
