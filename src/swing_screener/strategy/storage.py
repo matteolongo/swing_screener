@@ -104,6 +104,8 @@ def _default_strategy_payload(now: dt.datetime | None = None) -> dict:
             "negative_sent_threshold": -0.4,
             "sentiment_conf_threshold": 0.7,
             "hype_percentile_threshold": 95.0,
+            "providers": ["reddit"],
+            "sentiment_analyzer": "keyword",
         },
     }
 
@@ -132,6 +134,16 @@ def load_strategies() -> list[dict]:
         currencies = filt.get("currencies")
         if currencies is None:
             filt["currencies"] = ["USD", "EUR"]
+            dirty = True
+
+        social_overlay = strategy.get("social_overlay")
+        if not isinstance(social_overlay, dict):
+            continue
+        if social_overlay.get("providers") is None:
+            social_overlay["providers"] = ["reddit"]
+            dirty = True
+        if social_overlay.get("sentiment_analyzer") is None:
+            social_overlay["sentiment_analyzer"] = "keyword"
             dirty = True
 
     if not any(s.get("id") == DEFAULT_STRATEGY_ID for s in data):

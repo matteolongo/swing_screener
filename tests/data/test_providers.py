@@ -163,6 +163,75 @@ class TestYfinanceProvider:
         assert "sector" in info
         assert info["name"] == "Apple Inc."
 
+    def test_configures_writable_yfinance_tz_cache(self, monkeypatch, tmp_path):
+        """Provider should set yfinance tz cache to a writable local directory."""
+        cache_dir = tmp_path / "test_market_data"
+        captured: dict[str, str] = {}
+
+        def fake_set_tz_cache_location(path: str):
+            captured["path"] = path
+
+        monkeypatch.setattr(
+            yfinance_provider_module.yf, "set_tz_cache_location", fake_set_tz_cache_location
+        )
+
+        YfinanceProvider(cache_dir=str(cache_dir))
+
+        assert "path" in captured
+        assert captured["path"].endswith("yfinance_tz_cache")
+        assert (cache_dir / "yfinance_tz_cache").exists()
+
+    def test_fetch_ohlcv_retries_missing_tickers(self, monkeypatch, tmp_path):
+        """If bulk download drops symbols, provider should retry missing tickers."""
+        calls: list[tuple[list[str], object]] = []
+
+        def normalize_tickers(arg) -> list[str]:
+            if isinstance(arg, str):
+                return [arg]
+            return [str(t) for t in arg]
+
+        def fake_download(*args, **kwargs):
+            tickers = normalize_tickers(args[0])
+            calls.append((tickers, kwargs.get("threads")))
+            if set(tickers) == {"AAPL", "MSFT"}:
+                return _mock_ohlcv_frame(["AAPL"])  # Missing MSFT in first response
+            if tickers == ["MSFT"]:
+                return _mock_ohlcv_frame(["MSFT"])
+            return _mock_ohlcv_frame(tickers)
+
+        monkeypatch.setattr(yfinance_provider_module.yf, "download", fake_download)
+        provider = YfinanceProvider(cache_dir=str(tmp_path / "cache"))
+        df = provider.fetch_ohlcv(["AAPL", "MSFT"], "2026-01-01", "2026-01-31")
+
+        assert df[("Close", "AAPL")].notna().any()
+        assert df[("Close", "MSFT")].notna().any()
+        assert any(tickers == ["MSFT"] and threads is False for tickers, threads in calls)
+
+    def test_fetch_ohlcv_falls_back_to_sequential_on_bulk_error(self, monkeypatch, tmp_path):
+        """If bulk call raises, provider should recover with one-by-one downloads."""
+        calls: list[list[str]] = []
+
+        def normalize_tickers(arg) -> list[str]:
+            if isinstance(arg, str):
+                return [arg]
+            return [str(t) for t in arg]
+
+        def fake_download(*args, **kwargs):
+            tickers = normalize_tickers(args[0])
+            calls.append(tickers)
+            if len(tickers) > 1:
+                raise RuntimeError("synthetic bulk failure")
+            return _mock_ohlcv_frame(tickers)
+
+        monkeypatch.setattr(yfinance_provider_module.yf, "download", fake_download)
+        provider = YfinanceProvider(cache_dir=str(tmp_path / "cache"))
+        df = provider.fetch_ohlcv(["AAPL", "MSFT"], "2026-01-01", "2026-01-31")
+
+        assert df[("Close", "AAPL")].notna().any()
+        assert df[("Close", "MSFT")].notna().any()
+        assert ["AAPL"] in calls
+        assert ["MSFT"] in calls
+
     def test_fetch_ohlcv_forces_refresh_on_live_edge(self, monkeypatch, tmp_path):
         """Today/end-date requests should bypass stale cache."""
         cache_dir = tmp_path / "test_cache"

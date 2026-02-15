@@ -89,6 +89,8 @@ export const mockStrategies = [
       negative_sent_threshold: -0.4,
       sentiment_conf_threshold: 0.7,
       hype_percentile_threshold: 95.0,
+      providers: ['reddit'],
+      sentiment_analyzer: 'keyword',
     },
   },
   {
@@ -162,6 +164,8 @@ export const mockStrategies = [
       negative_sent_threshold: -0.4,
       sentiment_conf_threshold: 0.7,
       hype_percentile_threshold: 95.0,
+      providers: ['reddit', 'yahoo_finance'],
+      sentiment_analyzer: 'vader',
     },
   },
 ]
@@ -428,7 +432,8 @@ const resolveActiveStrategy = () => {
 const buildSocialAnalysis = (symbol: string) => ({
   status: 'ok',
   symbol,
-  provider: 'reddit',
+  providers: ['reddit'],
+  sentiment_analyzer: 'keyword',
   lookback_hours: 24,
   last_execution_at: '2026-02-09T09:00:00',
   sample_size: 32,
@@ -437,6 +442,7 @@ const buildSocialAnalysis = (symbol: string) => ({
   attention_score: 32,
   attention_z: 1.9,
   hype_score: 2.1,
+  source_breakdown: { reddit: 32 },
   reasons: [],
   raw_events: [
     {
@@ -604,6 +610,13 @@ export const handlers = [
   }),
 
   // Social endpoints
+  http.get(`${API_BASE_URL}/api/social/providers`, () => {
+    return HttpResponse.json({
+      providers: ['reddit', 'yahoo_finance'],
+      analyzers: ['keyword', 'vader'],
+    })
+  }),
+
   http.post(`${API_BASE_URL}/api/social/analyze`, async ({ request }) => {
     const body = asObject(await request.json())
     const symbol = (body?.symbol || 'AAPL').toUpperCase()

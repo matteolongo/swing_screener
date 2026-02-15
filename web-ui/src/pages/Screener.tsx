@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { PlayCircle, RefreshCw, TrendingUp, AlertCircle, BarChart3, MessageSquare, ListChecks, Lightbulb } from 'lucide-react';
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
@@ -23,6 +23,7 @@ import RecommendationDetailsModal from '@/components/domain/recommendation/Recom
 import CandidateOrderModal from '@/components/domain/orders/CandidateOrderModal';
 import { queryKeys } from '@/lib/queryKeys';
 import { t } from '@/i18n/t';
+import { fetchSocialWarmupStatus } from '@/features/social/api';
 
 const TOP_N_MAX = 200;
 type CurrencyFilter = 'all' | 'usd' | 'eur';
@@ -146,8 +147,21 @@ export default function Screener() {
   const result = screenerMutation.data ?? lastResult;
   const candidates = result?.candidates || [];
   const warnings = result?.warnings || [];
+  const socialWarmupJobId = result?.socialWarmupJobId;
+  const socialWarmupQuery = useQuery({
+    queryKey: queryKeys.socialWarmupStatus(socialWarmupJobId),
+    queryFn: () => fetchSocialWarmupStatus(socialWarmupJobId!),
+    enabled: Boolean(socialWarmupJobId),
+    refetchInterval: (query) => (query.state.data?.status === 'completed' ? false : 2500),
+    retry: false,
+  });
+  const socialWarmup = socialWarmupQuery.data;
+  const resolveOverlayStatus = (status?: string | null) => {
+    if (status !== 'PENDING') return status ?? 'OFF';
+    return socialWarmup?.status === 'completed' ? 'OFF' : 'PENDING';
+  };
   const overlayCounts = candidates.reduce<Record<string, number>>((acc, c) => {
-    const status = c.overlayStatus ?? 'OFF';
+    const status = resolveOverlayStatus(c.overlayStatus);
     acc[status] = (acc[status] ?? 0) + 1;
     return acc;
   }, {});
@@ -335,6 +349,27 @@ export default function Screener() {
                     <div key={warning}>{warning}</div>
                   ))}
                 </div>
+              </div>
+            )}
+            {socialWarmupJobId && (
+              <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+                {socialWarmup == null
+                  ? t('screener.summary.socialWarmupLoading')
+                  : socialWarmup.status === 'completed'
+                    ? t('screener.summary.socialWarmupCompleted', {
+                        completed: socialWarmup.completedSymbols,
+                        total: socialWarmup.totalSymbols,
+                        ok: socialWarmup.okSymbols,
+                        noData: socialWarmup.noDataSymbols,
+                        errors: socialWarmup.errorSymbols,
+                      })
+                    : t('screener.summary.socialWarmupRunning', {
+                        completed: socialWarmup.completedSymbols,
+                        total: socialWarmup.totalSymbols,
+                        ok: socialWarmup.okSymbols,
+                        noData: socialWarmup.noDataSymbols,
+                        errors: socialWarmup.errorSymbols,
+                      })}
               </div>
             )}
             {candidates.length > 0 && (
@@ -552,7 +587,7 @@ export default function Screener() {
                                 : null,
                             ].filter(Boolean);
                             const title = [reasons, ...metrics].join(' | ');
-                            return <OverlayBadge status={candidate.overlayStatus} title={title} />;
+                            return <OverlayBadge status={resolveOverlayStatus(candidate.overlayStatus)} title={title} />;
                           })()}
                         </td>
                         <td className="py-3 px-4 text-center">

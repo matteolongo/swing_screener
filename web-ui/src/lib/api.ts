@@ -38,6 +38,8 @@ export const API_ENDPOINTS = {
 
   // Social
   socialAnalyze: '/api/social/analyze',
+  socialProviders: '/api/social/providers',
+  socialWarmupStatus: (jobId: string) => `/api/social/warmup/${jobId}`,
 
   // Daily Review
   dailyReview: '/api/daily-review',

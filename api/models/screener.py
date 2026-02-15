@@ -81,6 +81,7 @@ class ScreenerResponse(BaseModel):
     asof_date: str
     total_screened: int
     warnings: list[str] = Field(default_factory=list)
+    social_warmup_job_id: Optional[str] = None
 
 
 class OrderPreview(BaseModel):
