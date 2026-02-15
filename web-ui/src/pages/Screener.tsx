@@ -615,8 +615,8 @@ export default function Screener() {
                                   setSelectedCandidate(candidate);
                                   setShowThesisModal(true);
                                 }}
-                                title="View Trade Thesis"
-                                aria-label={`View trade thesis for ${candidate.ticker}`}
+                                title={t('screener.table.tradeThesisTitle')}
+                                aria-label={t('screener.table.tradeThesisAria', { ticker: candidate.ticker })}
                               >
                                 <Lightbulb className="w-4 h-4" />
                               </Button>
