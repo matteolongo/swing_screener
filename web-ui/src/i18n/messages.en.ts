@@ -99,13 +99,13 @@ export const messagesEn = {
       },
       thesis: {
         term: 'Trade Thesis',
-        definition: 'The reasoning behind why a trade meets the system's criteria. It explains what made this stock qualify and what could go wrong.',
+        definition: 'The reasoning behind why a trade meets the system\'s criteria. It explains what made this stock qualify and what could go wrong.',
       },
       remember: {
         title: 'Remember',
         point1: 'Never risk more than 1-2% of your account on a single trade',
         point2: 'Always know your exit before you enter',
-        point3: 'Follow the checklist – skip trades that don't meet all criteria',
+        point3: 'Follow the checklist - skip trades that don\'t meet all criteria',
       },
     },
   },

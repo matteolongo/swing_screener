@@ -6,23 +6,23 @@ export default function LearnSection() {
   const glossaryItems = [
     {
       icon: TrendingUp,
-      term: 'tradeInsight.learn.riskReward.term',
-      definition: 'tradeInsight.learn.riskReward.definition',
+      termKey: 'tradeInsight.learn.riskReward.term' as const,
+      definitionKey: 'tradeInsight.learn.riskReward.definition' as const,
     },
     {
       icon: Shield,
-      term: 'tradeInsight.learn.stopLoss.term',
-      definition: 'tradeInsight.learn.stopLoss.definition',
+      termKey: 'tradeInsight.learn.stopLoss.term' as const,
+      definitionKey: 'tradeInsight.learn.stopLoss.definition' as const,
     },
     {
       icon: DollarSign,
-      term: 'tradeInsight.learn.positionSize.term',
-      definition: 'tradeInsight.learn.positionSize.definition',
+      termKey: 'tradeInsight.learn.positionSize.term' as const,
+      definitionKey: 'tradeInsight.learn.positionSize.definition' as const,
     },
     {
       icon: BookOpen,
-      term: 'tradeInsight.learn.thesis.term',
-      definition: 'tradeInsight.learn.thesis.definition',
+      termKey: 'tradeInsight.learn.thesis.term' as const,
+      definitionKey: 'tradeInsight.learn.thesis.definition' as const,
     },
   ];
 
@@ -49,10 +49,10 @@ export default function LearnSection() {
                 </div>
                 <div>
                   <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">
-                    {t(item.term)}
+                    {t(item.termKey)}
                   </h4>
                   <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                    {t(item.definition)}
+                    {t(item.definitionKey)}
                   </p>
                 </div>
               </div>

@@ -71,22 +71,30 @@ export default function TradeInsightModal({
       {/* Tab Navigation */}
       <div className="border-b border-gray-200 dark:border-gray-700 -mt-6 mb-6">
         <nav className="flex gap-1" aria-label={t('tradeInsight.tabsAria')}>
-          {enabledTabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={cn(
-                'px-4 py-2 text-sm font-medium border-b-2 transition-colors',
-                activeTab === tab.id
-                  ? 'border-blue-600 text-blue-600 dark:text-blue-400'
-                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:border-gray-300',
-              )}
-              aria-selected={activeTab === tab.id}
-              role="tab"
-            >
-              {t(tab.labelKey)}
-            </button>
-          ))}
+          {enabledTabs.map((tab) => {
+            const labelText = tab.id === 'recommendation' 
+              ? t('tradeInsight.tabs.recommendation')
+              : tab.id === 'thesis'
+              ? t('tradeInsight.tabs.thesis')
+              : t('tradeInsight.tabs.learn');
+            
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  'px-4 py-2 text-sm font-medium border-b-2 transition-colors',
+                  activeTab === tab.id
+                    ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                    : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:border-gray-300',
+                )}
+                aria-selected={activeTab === tab.id}
+                role="tab"
+              >
+                {labelText}
+              </button>
+            );
+          })}
         </nav>
       </div>
 
@@ -98,7 +106,7 @@ export default function TradeInsightModal({
             currency={currency}
           />
         )}
-        {activeTab === 'thesis' && hasThesis && (
+        {activeTab === 'thesis' && hasThesis && recommendation?.thesis && (
           <ThesisSection thesis={recommendation.thesis} />
         )}
         {activeTab === 'learn' && <LearnSection />}
