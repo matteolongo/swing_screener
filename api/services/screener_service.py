@@ -39,6 +39,7 @@ from swing_screener.strategy.config import (
     build_universe_config,
 )
 from swing_screener.risk.regime import compute_regime_risk_multiplier
+from api.services.social_warmup import get_social_warmup_manager
 
 logger = logging.getLogger(__name__)
 
@@ -294,13 +295,17 @@ class ScreenerService:
                     warnings.append(f"Risk scaled by {multiplier:.2f}x due to regime conditions.")
 
             social_overlay_cfg = build_social_overlay_config(strategy)
+            report_social_overlay_cfg = social_overlay_cfg
+            if social_overlay_cfg.enabled:
+                # Run social analysis out-of-band to avoid blocking screener completion.
+                report_social_overlay_cfg = replace(social_overlay_cfg, enabled=False)
 
             report_cfg = ReportConfig(
                 universe=universe_cfg,
                 ranking=ranking_cfg,
                 signals=signals_cfg,
                 risk=risk_cfg,
-                social_overlay=social_overlay_cfg,
+                social_overlay=report_social_overlay_cfg,
             )
 
             results = build_daily_report(ohlcv, cfg=report_cfg, exclude_tickers=[])
@@ -367,6 +372,14 @@ class ScreenerService:
                 position_size = _safe_optional_float(row.get("position_value"))
                 risk_usd = _safe_optional_float(row.get("realized_risk"))
                 risk_pct = (risk_usd / risk_cfg.account_size) if risk_usd and risk_cfg.account_size else None
+                overlay_status = (
+                    str(row.get("overlay_status"))
+                    if not _is_na_scalar(row.get("overlay_status"))
+                    else ("PENDING" if social_overlay_cfg.enabled else None)
+                )
+                overlay_reasons = _safe_list(row.get("overlay_reasons"))
+                if social_overlay_cfg.enabled and not overlay_reasons:
+                    overlay_reasons = ["BACKGROUND_WARMUP"]
 
                 take_profit_r = _safe_float(backtest_cfg.get("take_profit_r", 2.0), default=2.0)
                 commission_pct = _safe_float(backtest_cfg.get("commission_pct", 0.0), default=0.0)
@@ -376,7 +389,7 @@ class ScreenerService:
                     entry=entry_val,
                     stop=stop_val,
                     shares=shares_val,
-                    overlay_status=str(row.get("overlay_status")) if not _is_na_scalar(row.get("overlay_status")) else None,
+                    overlay_status=overlay_status,
                     risk_cfg=risk_cfg,
                     rr_target=take_profit_r,
                     costs=RiskEngineConfig(
@@ -406,8 +419,8 @@ class ScreenerService:
                         score=_safe_float(row.get("score")),
                         confidence=_safe_float(row.get("confidence")),
                         rank=int(row.get("rank", len(candidates) + 1)),
-                        overlay_status=row.get("overlay_status"),
-                        overlay_reasons=_safe_list(row.get("overlay_reasons")),
+                        overlay_status=overlay_status,
+                        overlay_reasons=overlay_reasons,
                         overlay_risk_multiplier=_safe_optional_float(row.get("overlay_risk_multiplier")),
                         overlay_max_pos_multiplier=_safe_optional_float(row.get("overlay_max_pos_multiplier")),
                         overlay_attention_z=_safe_optional_float(row.get("overlay_attention_z")),
@@ -430,12 +443,25 @@ class ScreenerService:
 
             sector_map = {t: info.get("sector") for t, info in ticker_info.items()}
             warnings.extend(sector_concentration_warnings(ticker_list, sector_map))
+            social_warmup_job_id: Optional[str] = None
+            if social_overlay_cfg.enabled and ticker_list:
+                try:
+                    social_warmup_job_id = get_social_warmup_manager().start_job(
+                        symbols=ticker_list,
+                        lookback_hours=social_overlay_cfg.lookback_hours,
+                        min_sample_size=social_overlay_cfg.min_sample_size,
+                        providers=list(social_overlay_cfg.providers),
+                        sentiment_analyzer=social_overlay_cfg.sentiment_analyzer,
+                    )
+                except Exception as exc:
+                    logger.warning("Failed to start social warmup job: %s", exc)
 
             response = ScreenerResponse(
                 candidates=candidates,
                 asof_date=asof_str,
                 total_screened=len(tickers),
                 warnings=warnings,
+                social_warmup_job_id=social_warmup_job_id,
             )
             logger.info("Screener completed: candidates=%s", len(candidates))
             return response

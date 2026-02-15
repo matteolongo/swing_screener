@@ -1,8 +1,11 @@
 """Social analysis service."""
 from __future__ import annotations
 
+from fastapi import HTTPException
+
 from api.models.social import SocialAnalysisRequest, SocialAnalysisResponse, SocialRawEvent
 from api.repositories.strategy_repo import StrategyRepository
+from api.services.social_warmup import get_social_warmup_manager
 from swing_screener.strategy.config import build_social_overlay_config
 from swing_screener.social.analysis import analyze_social_symbol
 
@@ -61,3 +64,9 @@ class SocialService:
             raw_events=raw_events,
             error=result.get("error"),
         )
+
+    def get_warmup_status(self, job_id: str) -> dict:
+        payload = get_social_warmup_manager().get_job(job_id)
+        if payload is None:
+            raise HTTPException(status_code=404, detail=f"Social warmup job not found: {job_id}")
+        return payload.__dict__

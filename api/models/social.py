@@ -41,3 +41,15 @@ class SocialAnalysisResponse(BaseModel):
     reasons: list[str] = Field(default_factory=list)
     raw_events: list[SocialRawEvent] = Field(default_factory=list)
     error: Optional[str] = None
+
+
+class SocialWarmupStatusResponse(BaseModel):
+    job_id: str
+    status: Literal["queued", "running", "completed"]
+    total_symbols: int
+    completed_symbols: int
+    ok_symbols: int
+    no_data_symbols: int
+    error_symbols: int
+    created_at: str
+    updated_at: str

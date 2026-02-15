@@ -1,4 +1,5 @@
 from datetime import datetime
+from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
 
@@ -67,3 +68,32 @@ def test_social_analyze_returns_raw_events_when_no_data(monkeypatch, tmp_path):
     assert payload["symbol"] == "TSLA"
     assert payload["raw_events"]
     assert payload["raw_events"][0]["symbol"] == "TSLA"
+
+
+def test_social_warmup_status_returns_job_state(monkeypatch):
+    fake_job = SimpleNamespace(
+        job_id="job-123",
+        status="running",
+        total_symbols=5,
+        completed_symbols=2,
+        ok_symbols=1,
+        no_data_symbols=1,
+        error_symbols=0,
+        created_at="2026-02-15T10:00:00",
+        updated_at="2026-02-15T10:01:00",
+    )
+
+    monkeypatch.setattr(
+        social_service,
+        "get_social_warmup_manager",
+        lambda: SimpleNamespace(get_job=lambda _job_id: fake_job),
+    )
+
+    client = TestClient(app)
+    res = client.get("/api/social/warmup/job-123")
+    assert res.status_code == 200
+    payload = res.json()
+    assert payload["job_id"] == "job-123"
+    assert payload["status"] == "running"
+    assert payload["completed_symbols"] == 2
+    assert payload["total_symbols"] == 5

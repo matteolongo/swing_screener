@@ -63,6 +63,30 @@ export interface SocialProvidersResponse {
   analyzers: string[];
 }
 
+export interface SocialWarmupStatus {
+  jobId: string;
+  status: 'queued' | 'running' | 'completed';
+  totalSymbols: number;
+  completedSymbols: number;
+  okSymbols: number;
+  noDataSymbols: number;
+  errorSymbols: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SocialWarmupStatusAPI {
+  job_id: string;
+  status: 'queued' | 'running' | 'completed';
+  total_symbols: number;
+  completed_symbols: number;
+  ok_symbols: number;
+  no_data_symbols: number;
+  error_symbols: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export function transformSocialAnalysisResponse(
   api: SocialAnalysisResponseAPI
 ): SocialAnalysisResponse {
@@ -92,5 +116,19 @@ export function transformSocialAnalysisResponse(
       metadata: ev.metadata ?? {},
     })),
     error: api.error,
+  };
+}
+
+export function transformSocialWarmupStatus(api: SocialWarmupStatusAPI): SocialWarmupStatus {
+  return {
+    jobId: api.job_id,
+    status: api.status,
+    totalSymbols: api.total_symbols,
+    completedSymbols: api.completed_symbols,
+    okSymbols: api.ok_symbols,
+    noDataSymbols: api.no_data_symbols,
+    errorSymbols: api.error_symbols,
+    createdAt: api.created_at,
+    updatedAt: api.updated_at,
   };
 }

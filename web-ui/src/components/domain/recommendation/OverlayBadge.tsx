@@ -12,6 +12,7 @@ const OVERLAY_BADGES: Record<string, { className: string; labelKey: string }> = 
   REDUCED_RISK: { className: 'bg-yellow-100 text-yellow-800', labelKey: 'recommendation.overlay.reducedRisk' },
   REVIEW: { className: 'bg-orange-100 text-orange-800', labelKey: 'recommendation.overlay.review' },
   VETO: { className: 'bg-red-100 text-red-800', labelKey: 'recommendation.overlay.veto' },
+  PENDING: { className: 'bg-blue-100 text-blue-700', labelKey: 'recommendation.overlay.pending' },
   NO_DATA: { className: 'bg-gray-100 text-gray-600', labelKey: 'recommendation.overlay.noData' },
   OFF: { className: 'bg-gray-100 text-gray-600', labelKey: 'recommendation.overlay.off' },
 };
