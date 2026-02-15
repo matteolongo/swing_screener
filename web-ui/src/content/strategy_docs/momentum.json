@@ -1,0 +1,178 @@
+{
+  "strategy": {
+    "id": "momentum",
+    "name": "Momentum Strategy",
+    "philosophy": "Buy strong stocks making sustained upward moves and manage risk so that winners are larger than losers.",
+    "idealFor": "Beginners who want a systematic, once-per-day decision process instead of constant screen watching.",
+    "holdingPeriod": "Typically 5–20 trading days.",
+    "coreRule": "Protect capital first. Profits come from consistency, not prediction."
+  },
+  "parameters": {
+    "breakoutLookback": {
+      "parameter": "breakoutLookback",
+      "category": "signals",
+      "whatItIs": "The number of past trading days a stock must exceed to qualify as a breakout.",
+      "whyItMatters": "Stocks reaching new highs often attract institutional buyers, which can push prices higher.",
+      "howItAffectsTrades": "Controls how 'strong' a trend must be before you consider entering.",
+      "tradeoffs": {
+        "lower": "More signals but more false breakouts.",
+        "higher": "Stronger trends but fewer opportunities."
+      },
+      "beginnerRange": "40–60 days",
+      "defaultGuidance": "50 is a well-balanced setting used in many momentum models.",
+      "dangerZone": "Below 20 turns this into short-term trading, which is much harder psychologically.",
+      "proTip": "Your job is not to catch the bottom — it's to join proven strength."
+    },
+    "pullbackMa": {
+      "parameter": "pullbackMa",
+      "category": "signals",
+      "whatItIs": "The moving average price that a stock can pull back toward before continuing higher.",
+      "whyItMatters": "Healthy trends often pause before resuming. Pullbacks help avoid buying extended moves.",
+      "howItAffectsTrades": "Improves entry prices and reduces emotional chasing.",
+      "tradeoffs": {
+        "lower": "Tighter entries but more missed trades.",
+        "higher": "More entries but higher risk of buying overstretched stocks."
+      },
+      "beginnerRange": "20–30 MA",
+      "defaultGuidance": "20-day MA is widely used for swing structures.",
+      "dangerZone": "Ignoring pullbacks leads to buying tops — a classic beginner mistake.",
+      "proTip": "Professionals buy strength, but rarely buy spikes."
+    },
+    "trendSmaStack": {
+      "parameter": "trendSmaStack",
+      "category": "trend",
+      "whatItIs": "Three moving averages that define short, medium, and long-term trend direction.",
+      "whyItMatters": "Trading with the broader trend dramatically increases probability.",
+      "howItAffectsTrades": "Filters out stocks fighting the market direction.",
+      "tradeoffs": {
+        "looseFilter": "More trades but lower quality.",
+        "strictFilter": "Fewer trades but higher consistency."
+      },
+      "beginnerRange": "20 / 50 / 200",
+      "defaultGuidance": "This stack is considered the gold standard for trend confirmation.",
+      "dangerZone": "Trading against the 200 SMA is where many beginners experience large losses.",
+      "proTip": "Amateurs predict reversals. Professionals follow trends."
+    },
+    "atrWindow": {
+      "parameter": "atrWindow",
+      "category": "volatility",
+      "whatItIs": "The number of days used to calculate the Average True Range, a measure of price movement.",
+      "whyItMatters": "Volatility determines how wide your stop loss must be.",
+      "howItAffectsTrades": "Higher volatility = larger swings = more emotional pressure.",
+      "tradeoffs": {
+        "lower": "Faster reaction but noisier readings.",
+        "higher": "Smoother but slower to adapt."
+      },
+      "beginnerRange": "14–21",
+      "defaultGuidance": "14 is the industry standard.",
+      "dangerZone": "Ignoring volatility is one of the fastest ways to oversize positions.",
+      "proTip": "Position size should shrink as volatility expands."
+    },
+    "maxAtrPct": {
+      "parameter": "maxAtrPct",
+      "category": "volatility",
+      "whatItIs": "The maximum daily movement allowed for stocks in your universe.",
+      "whyItMatters": "Extremely volatile stocks behave unpredictably.",
+      "howItAffectsTrades": "Acts as a safety filter.",
+      "tradeoffs": {
+        "lower": "Safer but excludes explosive movers.",
+        "higher": "Bigger winners — but bigger emotional swings."
+      },
+      "beginnerRange": "8–15%",
+      "defaultGuidance": "15% balances opportunity with psychological manageability.",
+      "dangerZone": "Above 25% is closer to speculation than systematic trading.",
+      "proTip": "Your nervous system is part of your risk management."
+    },
+    "minimumRr": {
+      "parameter": "minimumRr",
+      "category": "risk",
+      "whatItIs": "The minimum ratio between potential profit and potential loss.",
+      "whyItMatters": "Profitability comes from asymmetric outcomes, not high win rates.",
+      "howItAffectsTrades": "Determines whether a setup is statistically worth taking.",
+      "tradeoffs": {
+        "lower": "Higher win rate illusion but fragile performance.",
+        "higher": "Fewer trades but stronger expectancy."
+      },
+      "beginnerRange": "2–3",
+      "defaultGuidance": "2R allows you to be wrong half the time and still grow.",
+      "dangerZone": "Below 1.5 makes long-term profitability mathematically difficult.",
+      "proTip": "Think like a casino — small losses, larger wins.",
+      "highlight": true
+    },
+    "breakevenR": {
+      "parameter": "breakevenR",
+      "category": "management",
+      "whatItIs": "When price moves in your favor by this multiple of risk, the stop moves to entry.",
+      "whyItMatters": "Protects capital once the trade proves itself.",
+      "howItAffectsTrades": "Reduces large losses but may exit winning trades early.",
+      "tradeoffs": {
+        "earlier": "Safer but can cut winners.",
+        "later": "More room but more exposure."
+      },
+      "beginnerRange": "1R",
+      "defaultGuidance": "Ideal balance between protection and flexibility.",
+      "dangerZone": "Moving stops emotionally instead of systematically.",
+      "proTip": "Your first goal is survival."
+    },
+    "trailAfterR": {
+      "parameter": "trailAfterR",
+      "category": "management",
+      "whatItIs": "Defines when a trailing stop activates to lock in profits.",
+      "whyItMatters": "Lets winners run — the foundation of momentum trading.",
+      "howItAffectsTrades": "Captures large trends automatically.",
+      "tradeoffs": {
+        "earlier": "Locks profits but limits big winners.",
+        "later": "Maximizes trends but increases giveback."
+      },
+      "beginnerRange": "2R",
+      "defaultGuidance": "Widely used in systematic swing models.",
+      "dangerZone": "Taking profits too quickly is the most common beginner error.",
+      "proTip": "One large winner can pay for many small losses."
+    },
+    "maxHoldingDays": {
+      "parameter": "maxHoldingDays",
+      "category": "management",
+      "whatItIs": "The maximum time a trade can stay open.",
+      "whyItMatters": "Momentum fades. Time protects capital.",
+      "howItAffectsTrades": "Prevents capital from being stuck in slow trades.",
+      "tradeoffs": {
+        "lower": "More rotation, less stagnation.",
+        "higher": "Allows slower trends."
+      },
+      "beginnerRange": "10–25 days",
+      "defaultGuidance": "20 is a strong baseline.",
+      "dangerZone": "Falling in love with a trade.",
+      "proTip": "Capital is inventory — keep it moving."
+    },
+    "momentumWeights": {
+      "parameter": "momentumWeights",
+      "category": "ranking",
+      "whatItIs": "Controls how recent vs long-term strength influences ranking.",
+      "whyItMatters": "Strong stocks tend to stay strong.",
+      "howItAffectsTrades": "Shapes the personality of your strategy.",
+      "tradeoffs": {
+        "recentHeavy": "Faster but noisier.",
+        "longTermHeavy": "More stable but slower."
+      },
+      "beginnerRange": "Balanced weighting",
+      "defaultGuidance": "Your current split is excellent.",
+      "dangerZone": "Over-optimizing weights without large backtests.",
+      "proTip": "Robust strategies beat perfectly tuned ones."
+    },
+    "socialOverlay": {
+      "parameter": "socialOverlay",
+      "category": "confirmation",
+      "whatItIs": "Measures unusual online attention and sentiment around a stock.",
+      "whyItMatters": "Crowd attention can accelerate price moves.",
+      "howItAffectsTrades": "Adds contextual awareness, not prediction.",
+      "tradeoffs": {
+        "enabled": "Earlier discovery but risk of hype.",
+        "disabled": "Cleaner systematic behavior."
+      },
+      "beginnerRange": "Use cautiously.",
+      "defaultGuidance": "Treat social data as a tailwind, not a reason to enter.",
+      "dangerZone": "If social hype is the ONLY reason for a trade — skip it.",
+      "proTip": "Attention follows price more often than it leads it."
+    }
+  }
+}
