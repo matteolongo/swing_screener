@@ -9,6 +9,7 @@ from .config import (
 )
 from .ingestion import collect_events
 from .models import CatalystSignal, Event, Opportunity, SymbolState, ThemeCluster
+from .reaction import ReactionMetrics, build_catalyst_signals, evaluate_event_reaction
 from .storage import IntelligenceStorage
 
 __all__ = [
@@ -23,5 +24,8 @@ __all__ = [
     "ThemeConfig",
     "ThemeCluster",
     "build_intelligence_config",
+    "build_catalyst_signals",
     "collect_events",
+    "evaluate_event_reaction",
+    "ReactionMetrics",
 ]
