@@ -55,8 +55,8 @@ def test_fetch_events_cached(tmp_path):
     ]
     test_cache.store_events("yahoo_finance", now.date(), cached_events)
     
-    # Patch httpx to avoid real network call
-    with patch("httpx.Client") as mock_client:
+    # Patch httpx at the module where it's imported
+    with patch("swing_screener.social.providers.yahoo_finance.httpx.Client") as mock_client:
         # Mock should not be called if cache hits
         mock_client.side_effect = Exception("Should not make HTTP request")
         
@@ -68,6 +68,7 @@ def test_fetch_events_cached(tmp_path):
         assert len(events) >= 1
         assert any(e.symbol == "AAPL" for e in events)
         assert any(e.source == "yahoo_finance" for e in events)
+
 
 
 def test_fetch_events_api_call(tmp_path):
@@ -104,7 +105,7 @@ def test_fetch_events_api_call(tmp_path):
         ]
     }
     
-    with patch("httpx.Client") as mock_client:
+    with patch("swing_screener.social.providers.yahoo_finance.httpx.Client") as mock_client:
         mock_get = Mock()
         mock_get.json.return_value = mock_response
         mock_get.raise_for_status = Mock()
@@ -134,7 +135,7 @@ def test_fetch_events_empty_response(tmp_path):
     
     mock_response = {"news": []}
     
-    with patch("httpx.Client") as mock_client:
+    with patch("swing_screener.social.providers.yahoo_finance.httpx.Client") as mock_client:
         mock_get = Mock()
         mock_get.json.return_value = mock_response
         mock_get.raise_for_status = Mock()
@@ -180,7 +181,7 @@ def test_fetch_events_multiple_symbols(tmp_path):
         mock_get.raise_for_status = Mock()
         return mock_get
     
-    with patch("httpx.Client") as mock_client:
+    with patch("swing_screener.social.providers.yahoo_finance.httpx.Client") as mock_client:
         mock_client.return_value.__enter__.return_value.get = mock_response
         
         start_dt = now - timedelta(hours=24)
