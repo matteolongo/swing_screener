@@ -1,271 +1,277 @@
+import { useMemo } from 'react';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import { useStrategyEditor } from '@/features/strategy/useStrategyEditor';
 import StrategyAdvancedSettingsCard from '@/components/domain/strategy/StrategyAdvancedSettingsCard';
 import StrategyCoreSettingsCards from '@/components/domain/strategy/StrategyCoreSettingsCards';
-import { t } from '@/i18n/t';
+import { useI18n } from '@/i18n/I18nProvider';
 import {
   buildHelp,
   strategyFieldClass,
   TextInput,
 } from '@/components/domain/strategy/StrategyFieldControls';
 
-const help = {
-  module: buildHelp(
-    'Strategy Module',
-    'Select the strategy logic used for screening.',
-    'Defines which strategy module drives signals and recommendations.',
-    'Keeps the architecture modular for future strategies.',
-    'Start with Momentum; add others later.'
-  ),
-  breakoutLookback: buildHelp(
-    'Breakout Lookback',
-    'Window for breakout highs/lows.',
-    'The lookback window used to define recent highs or lows for breakout signals.',
-    'Controls how strict the breakout condition is and filters out noise.',
-    'Shorter windows react faster; longer windows require stronger, longer-term breakouts.'
-  ),
-  pullbackMa: buildHelp(
-    'Pullback Moving Average',
-    'MA used to confirm pullback entries.',
-    'A moving average used as a reference line for pullback signals.',
-    'Keeps pullbacks aligned with the prevailing trend before re-entry.',
-    'Lower values track price closely; higher values require deeper pullbacks before entry.'
-  ),
-  minHistory: buildHelp(
-    'Minimum History',
-    'Bars required before indicators are valid.',
-    'The minimum number of daily bars required to compute indicators reliably.',
-    'Prevents signals based on insufficient data or partial lookbacks.',
-    'Set at least as long as your longest lookback (e.g., SMA long or 12m momentum).'
-  ),
-  smaFast: buildHelp(
-    'SMA Fast',
-    'Short-term trend filter.',
-    'A simple moving average over a short window.',
-    'Captures near-term trend direction and responsiveness.',
-    'Lower values respond faster but can whipsaw; higher values are smoother.'
-  ),
-  smaMid: buildHelp(
-    'SMA Mid',
-    'Intermediate trend filter.',
-    'A simple moving average over a medium window.',
-    'Defines the intermediate trend used in trend alignment checks.',
-    'Lower values respond faster; higher values provide a steadier mid-term trend.'
-  ),
-  smaLong: buildHelp(
-    'SMA Long',
-    'Primary trend filter.',
-    'A simple moving average over a long window.',
-    'Sets the primary trend filter to keep the universe in longer-term uptrends.',
-    'Higher values smooth long-term trend; lower values make the filter more responsive.'
-  ),
-  atrWindow: buildHelp(
-    'ATR Window',
-    'Lookback for volatility (ATR).',
-    'The lookback period used to compute Average True Range (ATR).',
-    'Volatility impacts position sizing, stops, and volatility filters.',
-    'Higher windows smooth volatility; lower windows react faster to recent changes.'
-  ),
-  atrMultiplier: buildHelp(
-    'ATR Multiplier',
-    'Scales ATR for stops/position sizing.',
-    'A multiplier applied to ATR when setting risk distance or stop logic.',
-    'Normalizes risk across different volatility regimes.',
-    'Higher values widen stops and reduce position size; lower values tighten stops.'
-  ),
-  minRr: buildHelp(
-    'Minimum RR',
-    'Minimum reward-to-risk for recommendations.',
-    'The minimum reward-to-risk ratio required for a setup to be labeled Recommended.',
-    'Encourages asymmetric payoff (letting winners run, cutting losers).',
-    'Typical baseline is 2.0 or higher.'
-  ),
-  maxFeeRiskPct: buildHelp(
-    'Max Fee/Risk %',
-    'Fee-to-risk threshold for micro-trading.',
-    'Maximum total estimated fees as a percentage of planned risk per trade.',
-    'Prevents tiny positions where fees dominate expected edge.',
-    'Example: 20% means fees must be <= 20% of planned risk.'
-  ),
-  maxAtrPct: buildHelp(
-    'Max ATR %',
-    'Maximum allowed ATR as % of price.',
-    'The maximum ATR percentage of price allowed for eligible stocks.',
-    'Filters out overly volatile names that can distort risk.',
-    'Lower thresholds are stricter; higher thresholds allow more volatile stocks.'
-  ),
-  requireTrendOk: buildHelp(
-    'Require Trend OK',
-    'Filter using SMA trend alignment.',
-    'Requires the trend filter to pass before a stock is eligible.',
-    'Keeps the universe focused on established uptrends.',
-    'Disable to allow counter-trend candidates or broader universes.'
-  ),
-  requireRsPositive: buildHelp(
-    'Require RS Positive',
-    'Require positive relative strength.',
-    'Requires 6m relative strength versus the benchmark to be positive.',
-    'Prioritizes stocks outperforming the market.',
-    'Disable to allow laggards or turnaround candidates.'
-  ),
-  currencies: buildHelp(
-    'Currencies',
-    'Filter eligible stocks by listing currency.',
-    'Limits the screener universe to selected trading currencies.',
-    'Helps keep selection aligned with account base currency and execution preferences.',
-    'Use All for mixed universes, or choose USD/EUR for stricter filtering.'
-  ),
-  momentum6m: buildHelp(
-    'Momentum 6m',
-    '6-month return lookback.',
-    'Percent return over the last ~6 months of trading days.',
-    'Captures medium-term momentum used for ranking.',
-    'Shorter values react quicker; longer values are more stable.'
-  ),
-  momentum12m: buildHelp(
-    'Momentum 12m',
-    '12-month return lookback.',
-    'Percent return over the last ~12 months of trading days.',
-    'Captures longer-term momentum for ranking stability.',
-    'Longer values smooth noise but react slower to reversals.'
-  ),
-  benchmark: buildHelp(
-    'Benchmark',
-    'Reference ticker for relative strength.',
-    'The benchmark used to compute relative strength comparisons.',
-    'Keeps momentum and RS metrics grounded to a market baseline.',
-    'Use a broad market ETF like SPY to focus on true outperformance.'
-  ),
-  weightMom6m: buildHelp(
-    'Weight 6m',
-    'Importance of 6m momentum in ranking.',
-    'Weight applied to 6m momentum in the ranking score.',
-    'Controls how strongly 6m momentum drives the final rank.',
-    'Higher weight means 6m momentum dominates the score.'
-  ),
-  weightMom12m: buildHelp(
-    'Weight 12m',
-    'Importance of 12m momentum in ranking.',
-    'Weight applied to 12m momentum in the ranking score.',
-    'Balances longer-term trend persistence in rankings.',
-    'Higher weight emphasizes longer-term strength.'
-  ),
-  weightRs: buildHelp(
-    'Weight RS',
-    'Importance of relative strength in ranking.',
-    'Weight applied to relative strength in the ranking score.',
-    'Rewards stocks outperforming the benchmark.',
-    'Higher weight makes RS a bigger driver of rank.'
-  ),
-  trailSma: buildHelp(
-    'Trail SMA',
-    'Moving average used for trailing stops.',
-    'The moving average used to trail stops once a position is in profit.',
-    'Helps stay in trends while locking in gains.',
-    'Shorter values tighten stops; longer values give trades more room.'
-  ),
-  smaBuffer: buildHelp(
-    'SMA Buffer',
-    'Extra cushion around the trailing SMA.',
-    'A percentage buffer applied around the trailing SMA.',
-    'Reduces stop-outs from minor volatility around the average.',
-    'Higher buffers allow more room but may give back more gains.'
-  ),
-  regimeEnabled: buildHelp(
-    'Regime Risk Scaling',
-    'Scale risk down in adverse regimes.',
-    'An optional ruleset that reduces risk when trend or volatility conditions are unfavorable.',
-    'Protects capital during downtrends or high-volatility regimes.',
-    'When enabled, risk is multiplied by the configured trend/volatility factors.'
-  ),
-  regimeTrendSma: buildHelp(
-    'Trend SMA Window',
-    'Benchmark SMA used for risk scaling.',
-    'The SMA window applied to the benchmark for regime detection.',
-    'A break below this SMA signals a risk-off trend.',
-    'Common choice is 200 for long-term trend.'
-  ),
-  regimeTrendMultiplier: buildHelp(
-    'Trend Multiplier',
-    'Risk scaling when below SMA.',
-    'Risk multiplier applied when the benchmark is below the trend SMA.',
-    'Reduces exposure in risk-off trends.',
-    '0.5 means you take half the normal risk.'
-  ),
-  regimeVolAtrWindow: buildHelp(
-    'Volatility ATR Window',
-    'ATR window for regime volatility.',
-    'ATR window used to compute benchmark ATR%.',
-    'Detects volatility spikes that merit reduced risk.',
-    'Use the same window as your ATR (e.g., 14) for consistency.'
-  ),
-  regimeVolAtrPctThreshold: buildHelp(
-    'Volatility Threshold',
-    'ATR% level that triggers scaling.',
-    'If benchmark ATR% exceeds this threshold, risk is reduced.',
-    'Limits exposure during volatility spikes.',
-    'Lower thresholds trigger scaling more often.'
-  ),
-  regimeVolMultiplier: buildHelp(
-    'Volatility Multiplier',
-    'Risk scaling during high volatility.',
-    'Risk multiplier applied when benchmark ATR% exceeds the threshold.',
-    'Reduces exposure during unstable periods.',
-    '0.5 means you take half the normal risk.'
-  ),
-  socialOverlayEnabled: buildHelp(
-    'Social Overlay',
-    'Risk-only overlay using social signals.',
-    'An optional safety layer that adjusts risk or flags trades when social activity is extreme.',
-    'Helps reduce gap and slippage risk without changing the strategy ranking.',
-    'Enable to apply conservative risk multipliers and review flags.'
-  ),
-  lookbackHours: buildHelp(
-    'Lookback Hours',
-    'Hours of social history to scan.',
-    'The number of hours to look back for social mentions.',
-    'Controls how far back the overlay searches for attention and sentiment.',
-    'Shorter windows are more responsive; longer windows capture broader context.'
-  ),
-  attentionZThreshold: buildHelp(
-    'Attention Z-Score',
-    'Spike threshold vs baseline.',
-    'Z-score threshold for attention spikes relative to recent history.',
-    'Large spikes often increase gap risk and execution slippage.',
-    'Higher values make the overlay trigger less often.'
-  ),
-  minSampleSize: buildHelp(
-    'Min Sample Size',
-    'Minimum mentions required.',
-    'Minimum number of social mentions required before applying the overlay.',
-    'Avoids acting on noisy, low-sample social data.',
-    'Higher values require more data to trigger overlay rules.'
-  ),
-  negativeSentThreshold: buildHelp(
-    'Negative Sentiment',
-    'Threshold for negative tone.',
-    'Sentiment score threshold that flags strong negative tone.',
-    'High-confidence negative sentiment can indicate news or crowd panic risk.',
-    'More negative values make the filter stricter.'
-  ),
-  sentimentConfThreshold: buildHelp(
-    'Sentiment Confidence',
-    'Confidence required for sentiment rule.',
-    'Confidence threshold needed to act on sentiment scores.',
-    'Prevents false positives from weak sentiment signals.',
-    'Higher values require stronger, more consistent sentiment.'
-  ),
-  hypePercentileThreshold: buildHelp(
-    'Hype Percentile',
-    'Crowding threshold vs history.',
-    'Percentile threshold for crowding based on mentions normalized by liquidity.',
-    'Highly crowded names can gap and whipsaw; review is advised.',
-    'Higher values make crowding alerts rarer.'
-  ),
-};
-
 export default function StrategyPage() {
+  const { locale, t } = useI18n();
+
+  const help = useMemo(
+    () => ({
+      module: buildHelp(
+        t('strategyPage.help.items.module.title'),
+        t('strategyPage.help.items.module.short'),
+        t('strategyPage.help.items.module.what'),
+        t('strategyPage.help.items.module.why'),
+        t('strategyPage.help.items.module.how')
+      ),
+      breakoutLookback: buildHelp(
+        t('strategyPage.help.items.breakoutLookback.title'),
+        t('strategyPage.help.items.breakoutLookback.short'),
+        t('strategyPage.help.items.breakoutLookback.what'),
+        t('strategyPage.help.items.breakoutLookback.why'),
+        t('strategyPage.help.items.breakoutLookback.how')
+      ),
+      pullbackMa: buildHelp(
+        t('strategyPage.help.items.pullbackMa.title'),
+        t('strategyPage.help.items.pullbackMa.short'),
+        t('strategyPage.help.items.pullbackMa.what'),
+        t('strategyPage.help.items.pullbackMa.why'),
+        t('strategyPage.help.items.pullbackMa.how')
+      ),
+      minHistory: buildHelp(
+        t('strategyPage.help.items.minHistory.title'),
+        t('strategyPage.help.items.minHistory.short'),
+        t('strategyPage.help.items.minHistory.what'),
+        t('strategyPage.help.items.minHistory.why'),
+        t('strategyPage.help.items.minHistory.how')
+      ),
+      smaFast: buildHelp(
+        t('strategyPage.help.items.smaFast.title'),
+        t('strategyPage.help.items.smaFast.short'),
+        t('strategyPage.help.items.smaFast.what'),
+        t('strategyPage.help.items.smaFast.why'),
+        t('strategyPage.help.items.smaFast.how')
+      ),
+      smaMid: buildHelp(
+        t('strategyPage.help.items.smaMid.title'),
+        t('strategyPage.help.items.smaMid.short'),
+        t('strategyPage.help.items.smaMid.what'),
+        t('strategyPage.help.items.smaMid.why'),
+        t('strategyPage.help.items.smaMid.how')
+      ),
+      smaLong: buildHelp(
+        t('strategyPage.help.items.smaLong.title'),
+        t('strategyPage.help.items.smaLong.short'),
+        t('strategyPage.help.items.smaLong.what'),
+        t('strategyPage.help.items.smaLong.why'),
+        t('strategyPage.help.items.smaLong.how')
+      ),
+      atrWindow: buildHelp(
+        t('strategyPage.help.items.atrWindow.title'),
+        t('strategyPage.help.items.atrWindow.short'),
+        t('strategyPage.help.items.atrWindow.what'),
+        t('strategyPage.help.items.atrWindow.why'),
+        t('strategyPage.help.items.atrWindow.how')
+      ),
+      atrMultiplier: buildHelp(
+        t('strategyPage.help.items.atrMultiplier.title'),
+        t('strategyPage.help.items.atrMultiplier.short'),
+        t('strategyPage.help.items.atrMultiplier.what'),
+        t('strategyPage.help.items.atrMultiplier.why'),
+        t('strategyPage.help.items.atrMultiplier.how')
+      ),
+      minRr: buildHelp(
+        t('strategyPage.help.items.minRr.title'),
+        t('strategyPage.help.items.minRr.short'),
+        t('strategyPage.help.items.minRr.what'),
+        t('strategyPage.help.items.minRr.why'),
+        t('strategyPage.help.items.minRr.how')
+      ),
+      maxFeeRiskPct: buildHelp(
+        t('strategyPage.help.items.maxFeeRiskPct.title'),
+        t('strategyPage.help.items.maxFeeRiskPct.short'),
+        t('strategyPage.help.items.maxFeeRiskPct.what'),
+        t('strategyPage.help.items.maxFeeRiskPct.why'),
+        t('strategyPage.help.items.maxFeeRiskPct.how')
+      ),
+      maxAtrPct: buildHelp(
+        t('strategyPage.help.items.maxAtrPct.title'),
+        t('strategyPage.help.items.maxAtrPct.short'),
+        t('strategyPage.help.items.maxAtrPct.what'),
+        t('strategyPage.help.items.maxAtrPct.why'),
+        t('strategyPage.help.items.maxAtrPct.how')
+      ),
+      requireTrendOk: buildHelp(
+        t('strategyPage.help.items.requireTrendOk.title'),
+        t('strategyPage.help.items.requireTrendOk.short'),
+        t('strategyPage.help.items.requireTrendOk.what'),
+        t('strategyPage.help.items.requireTrendOk.why'),
+        t('strategyPage.help.items.requireTrendOk.how')
+      ),
+      requireRsPositive: buildHelp(
+        t('strategyPage.help.items.requireRsPositive.title'),
+        t('strategyPage.help.items.requireRsPositive.short'),
+        t('strategyPage.help.items.requireRsPositive.what'),
+        t('strategyPage.help.items.requireRsPositive.why'),
+        t('strategyPage.help.items.requireRsPositive.how')
+      ),
+      currencies: buildHelp(
+        t('strategyPage.help.items.currencies.title'),
+        t('strategyPage.help.items.currencies.short'),
+        t('strategyPage.help.items.currencies.what'),
+        t('strategyPage.help.items.currencies.why'),
+        t('strategyPage.help.items.currencies.how')
+      ),
+      momentum6m: buildHelp(
+        t('strategyPage.help.items.momentum6m.title'),
+        t('strategyPage.help.items.momentum6m.short'),
+        t('strategyPage.help.items.momentum6m.what'),
+        t('strategyPage.help.items.momentum6m.why'),
+        t('strategyPage.help.items.momentum6m.how')
+      ),
+      momentum12m: buildHelp(
+        t('strategyPage.help.items.momentum12m.title'),
+        t('strategyPage.help.items.momentum12m.short'),
+        t('strategyPage.help.items.momentum12m.what'),
+        t('strategyPage.help.items.momentum12m.why'),
+        t('strategyPage.help.items.momentum12m.how')
+      ),
+      benchmark: buildHelp(
+        t('strategyPage.help.items.benchmark.title'),
+        t('strategyPage.help.items.benchmark.short'),
+        t('strategyPage.help.items.benchmark.what'),
+        t('strategyPage.help.items.benchmark.why'),
+        t('strategyPage.help.items.benchmark.how')
+      ),
+      weightMom6m: buildHelp(
+        t('strategyPage.help.items.weightMom6m.title'),
+        t('strategyPage.help.items.weightMom6m.short'),
+        t('strategyPage.help.items.weightMom6m.what'),
+        t('strategyPage.help.items.weightMom6m.why'),
+        t('strategyPage.help.items.weightMom6m.how')
+      ),
+      weightMom12m: buildHelp(
+        t('strategyPage.help.items.weightMom12m.title'),
+        t('strategyPage.help.items.weightMom12m.short'),
+        t('strategyPage.help.items.weightMom12m.what'),
+        t('strategyPage.help.items.weightMom12m.why'),
+        t('strategyPage.help.items.weightMom12m.how')
+      ),
+      weightRs: buildHelp(
+        t('strategyPage.help.items.weightRs.title'),
+        t('strategyPage.help.items.weightRs.short'),
+        t('strategyPage.help.items.weightRs.what'),
+        t('strategyPage.help.items.weightRs.why'),
+        t('strategyPage.help.items.weightRs.how')
+      ),
+      trailSma: buildHelp(
+        t('strategyPage.help.items.trailSma.title'),
+        t('strategyPage.help.items.trailSma.short'),
+        t('strategyPage.help.items.trailSma.what'),
+        t('strategyPage.help.items.trailSma.why'),
+        t('strategyPage.help.items.trailSma.how')
+      ),
+      smaBuffer: buildHelp(
+        t('strategyPage.help.items.smaBuffer.title'),
+        t('strategyPage.help.items.smaBuffer.short'),
+        t('strategyPage.help.items.smaBuffer.what'),
+        t('strategyPage.help.items.smaBuffer.why'),
+        t('strategyPage.help.items.smaBuffer.how')
+      ),
+      regimeEnabled: buildHelp(
+        t('strategyPage.help.items.regimeEnabled.title'),
+        t('strategyPage.help.items.regimeEnabled.short'),
+        t('strategyPage.help.items.regimeEnabled.what'),
+        t('strategyPage.help.items.regimeEnabled.why'),
+        t('strategyPage.help.items.regimeEnabled.how')
+      ),
+      regimeTrendSma: buildHelp(
+        t('strategyPage.help.items.regimeTrendSma.title'),
+        t('strategyPage.help.items.regimeTrendSma.short'),
+        t('strategyPage.help.items.regimeTrendSma.what'),
+        t('strategyPage.help.items.regimeTrendSma.why'),
+        t('strategyPage.help.items.regimeTrendSma.how')
+      ),
+      regimeTrendMultiplier: buildHelp(
+        t('strategyPage.help.items.regimeTrendMultiplier.title'),
+        t('strategyPage.help.items.regimeTrendMultiplier.short'),
+        t('strategyPage.help.items.regimeTrendMultiplier.what'),
+        t('strategyPage.help.items.regimeTrendMultiplier.why'),
+        t('strategyPage.help.items.regimeTrendMultiplier.how')
+      ),
+      regimeVolAtrWindow: buildHelp(
+        t('strategyPage.help.items.regimeVolAtrWindow.title'),
+        t('strategyPage.help.items.regimeVolAtrWindow.short'),
+        t('strategyPage.help.items.regimeVolAtrWindow.what'),
+        t('strategyPage.help.items.regimeVolAtrWindow.why'),
+        t('strategyPage.help.items.regimeVolAtrWindow.how')
+      ),
+      regimeVolAtrPctThreshold: buildHelp(
+        t('strategyPage.help.items.regimeVolAtrPctThreshold.title'),
+        t('strategyPage.help.items.regimeVolAtrPctThreshold.short'),
+        t('strategyPage.help.items.regimeVolAtrPctThreshold.what'),
+        t('strategyPage.help.items.regimeVolAtrPctThreshold.why'),
+        t('strategyPage.help.items.regimeVolAtrPctThreshold.how')
+      ),
+      regimeVolMultiplier: buildHelp(
+        t('strategyPage.help.items.regimeVolMultiplier.title'),
+        t('strategyPage.help.items.regimeVolMultiplier.short'),
+        t('strategyPage.help.items.regimeVolMultiplier.what'),
+        t('strategyPage.help.items.regimeVolMultiplier.why'),
+        t('strategyPage.help.items.regimeVolMultiplier.how')
+      ),
+      socialOverlayEnabled: buildHelp(
+        t('strategyPage.help.items.socialOverlayEnabled.title'),
+        t('strategyPage.help.items.socialOverlayEnabled.short'),
+        t('strategyPage.help.items.socialOverlayEnabled.what'),
+        t('strategyPage.help.items.socialOverlayEnabled.why'),
+        t('strategyPage.help.items.socialOverlayEnabled.how')
+      ),
+      lookbackHours: buildHelp(
+        t('strategyPage.help.items.lookbackHours.title'),
+        t('strategyPage.help.items.lookbackHours.short'),
+        t('strategyPage.help.items.lookbackHours.what'),
+        t('strategyPage.help.items.lookbackHours.why'),
+        t('strategyPage.help.items.lookbackHours.how')
+      ),
+      attentionZThreshold: buildHelp(
+        t('strategyPage.help.items.attentionZThreshold.title'),
+        t('strategyPage.help.items.attentionZThreshold.short'),
+        t('strategyPage.help.items.attentionZThreshold.what'),
+        t('strategyPage.help.items.attentionZThreshold.why'),
+        t('strategyPage.help.items.attentionZThreshold.how')
+      ),
+      minSampleSize: buildHelp(
+        t('strategyPage.help.items.minSampleSize.title'),
+        t('strategyPage.help.items.minSampleSize.short'),
+        t('strategyPage.help.items.minSampleSize.what'),
+        t('strategyPage.help.items.minSampleSize.why'),
+        t('strategyPage.help.items.minSampleSize.how')
+      ),
+      negativeSentThreshold: buildHelp(
+        t('strategyPage.help.items.negativeSentThreshold.title'),
+        t('strategyPage.help.items.negativeSentThreshold.short'),
+        t('strategyPage.help.items.negativeSentThreshold.what'),
+        t('strategyPage.help.items.negativeSentThreshold.why'),
+        t('strategyPage.help.items.negativeSentThreshold.how')
+      ),
+      sentimentConfThreshold: buildHelp(
+        t('strategyPage.help.items.sentimentConfThreshold.title'),
+        t('strategyPage.help.items.sentimentConfThreshold.short'),
+        t('strategyPage.help.items.sentimentConfThreshold.what'),
+        t('strategyPage.help.items.sentimentConfThreshold.why'),
+        t('strategyPage.help.items.sentimentConfThreshold.how')
+      ),
+      hypePercentileThreshold: buildHelp(
+        t('strategyPage.help.items.hypePercentileThreshold.title'),
+        t('strategyPage.help.items.hypePercentileThreshold.short'),
+        t('strategyPage.help.items.hypePercentileThreshold.what'),
+        t('strategyPage.help.items.hypePercentileThreshold.why'),
+        t('strategyPage.help.items.hypePercentileThreshold.how')
+      ),
+    }),
+    [locale, t]
+  );
+
   const {
     canCreate,
     createDescription,

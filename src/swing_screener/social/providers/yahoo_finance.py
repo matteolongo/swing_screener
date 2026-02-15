@@ -1,8 +1,9 @@
 """Yahoo Finance news provider."""
 from __future__ import annotations
 
+import logging
 import time
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from typing import Optional
 
 import httpx
@@ -10,6 +11,14 @@ import httpx
 from swing_screener.social.models import SocialRawEvent
 from swing_screener.social.cache import SocialCache
 from swing_screener.social.config import DEFAULT_CACHE_TTL_HOURS
+
+logger = logging.getLogger(__name__)
+
+
+def _to_utc_naive(dt: datetime) -> datetime:
+    if dt.tzinfo is not None:
+        return dt.astimezone(timezone.utc).replace(tzinfo=None)
+    return dt
 
 
 class YahooFinanceProvider:
@@ -35,7 +44,9 @@ class YahooFinanceProvider:
         self, start_dt: datetime, end_dt: datetime, symbols: list[str]
     ) -> list[SocialRawEvent]:
         """Fetch news events for symbols from Yahoo Finance."""
-        target_day: date = start_dt.date()
+        start_utc = _to_utc_naive(start_dt)
+        end_utc = _to_utc_naive(end_dt)
+        target_day: date = end_utc.date()
         cached = self.cache.get_events(
             self.name,
             target_day,
@@ -80,16 +91,14 @@ class YahooFinanceProvider:
                         # Parse timestamp (Unix timestamp in seconds)
                         timestamp = item.get("providerPublishTime")
                         if timestamp:
-                            dt = datetime.fromtimestamp(timestamp).replace(tzinfo=None)
+                            dt = datetime.fromtimestamp(timestamp, tz=timezone.utc).replace(
+                                tzinfo=None
+                            )
                         else:
-                            dt = datetime.utcnow()
-                        
-                        # Ensure timezone-naive comparison
-                        start_naive = start_dt.replace(tzinfo=None) if start_dt.tzinfo else start_dt
-                        end_naive = end_dt.replace(tzinfo=None) if end_dt.tzinfo else end_dt
-                        
+                            dt = datetime.now(timezone.utc).replace(tzinfo=None)
+
                         # Filter by date range
-                        if not (start_naive <= dt <= end_naive):
+                        if not (start_utc <= dt <= end_utc):
                             continue
                         
                         events.append(
@@ -113,7 +122,9 @@ class YahooFinanceProvider:
                     
                 except (httpx.HTTPError, KeyError, ValueError) as e:
                     # Log error but continue with other symbols
-                    print(f"Warning: Failed to fetch Yahoo Finance news for {symbol}: {e}")
+                    logger.warning(
+                        "Failed to fetch Yahoo Finance news for %s: %s", symbol, e
+                    )
                     continue
         
         # Cache the results

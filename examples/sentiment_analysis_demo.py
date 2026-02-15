@@ -27,8 +27,10 @@ def example_reddit_only():
     print(f"Symbol: {result['symbol']}")
     print(f"Status: {result['status']}")
     print(f"Sample size: {result['sample_size']}")
-    print(f"Sentiment score: {result['sentiment_score']:.3f}")
-    print(f"Sentiment confidence: {result['sentiment_confidence']:.3f}")
+    sentiment = result.get('sentiment_score')
+    print(f"Sentiment score: {sentiment:.3f}" if sentiment is not None else "Sentiment score: N/A")
+    confidence = result.get('sentiment_confidence')
+    print(f"Sentiment confidence: {confidence:.3f}" if confidence is not None else "Sentiment confidence: N/A")
     print(f"Attention score: {result['attention_score']:.1f}")
     
     if result.get('source_breakdown'):
@@ -52,7 +54,8 @@ def example_yahoo_finance():
     print(f"Symbol: {result['symbol']}")
     print(f"Status: {result['status']}")
     print(f"Sample size: {result['sample_size']}")
-    print(f"Sentiment: {result['sentiment_score']:.3f}")
+    sentiment = result.get('sentiment_score')
+    print(f"Sentiment: {sentiment:.3f}" if sentiment is not None else "Sentiment: N/A")
     
     print("\nRecent headlines:")
     for i, event in enumerate(result['raw_events'][:3], 1):
@@ -73,8 +76,10 @@ def example_multi_source():
     
     print(f"Symbol: {result['symbol']}")
     print(f"Total events: {result['sample_size']}")
-    print(f"Sentiment: {result['sentiment_score']:.3f}")
-    print(f"Confidence: {result['sentiment_confidence']:.3f}")
+    sentiment = result.get('sentiment_score')
+    print(f"Sentiment: {sentiment:.3f}" if sentiment is not None else "Sentiment: N/A")
+    confidence = result.get('sentiment_confidence')
+    print(f"Confidence: {confidence:.3f}" if confidence is not None else "Confidence: N/A")
     
     if result.get('source_breakdown'):
         print("\nEvents by source:")
@@ -104,8 +109,10 @@ def example_vader_analyzer():
     )
     
     print(f"\nSymbol: {result['symbol']}")
-    print(f"Sentiment (VADER): {result['sentiment_score']:.3f}")
-    print(f"Confidence: {result['sentiment_confidence']:.3f}")
+    sentiment = result.get('sentiment_score')
+    print(f"Sentiment (VADER): {sentiment:.3f}" if sentiment is not None else "Sentiment (VADER): N/A")
+    confidence = result.get('sentiment_confidence')
+    print(f"Confidence: {confidence:.3f}" if confidence is not None else "Confidence: N/A")
     print("Note: VADER typically provides more nuanced sentiment analysis")
 
 
