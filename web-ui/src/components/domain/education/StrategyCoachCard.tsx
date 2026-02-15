@@ -9,6 +9,7 @@ interface StrategyCoachCardProps {
   subtitle?: string;
   sections: StrategyCoachSection[];
   isLoading?: boolean;
+  defaultCollapsed?: boolean;
 }
 
 export default function StrategyCoachCard({
@@ -16,8 +17,9 @@ export default function StrategyCoachCard({
   subtitle,
   sections,
   isLoading = false,
+  defaultCollapsed = false,
 }: StrategyCoachCardProps) {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(!defaultCollapsed);
 
   return (
     <Card variant="bordered">

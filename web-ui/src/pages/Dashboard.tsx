@@ -15,7 +15,7 @@ import {
   useOrderSnapshots,
 } from '@/features/portfolio/hooks';
 import { formatCurrency, formatDateTime, formatPercent } from '@/utils/formatters';
-import { TrendingUp, AlertCircle, FileText, Search, RefreshCw } from 'lucide-react';
+import { TrendingUp, AlertCircle, FileText, Search, RefreshCw, CalendarCheck } from 'lucide-react';
 import StrategyCoachCard from '@/components/domain/education/StrategyCoachCard';
 import { buildFallbackStrategyCoachSections, buildStrategyCoachSections } from '@/content/strategyCoach';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
@@ -47,9 +47,11 @@ export default function Dashboard() {
   const openRisk = calcOpenRisk(positions);
   const openRiskPct = calcOpenRiskPct(openRisk, riskConfig.accountSize);
   const riskBudget = riskConfig.accountSize * riskConfig.riskPct;
+  const availableToDeploy = riskConfig.accountSize - totalPositionValue;
 
   const pendingOrdersCount = orders.length;
   const actionItems = pendingOrdersCount;
+  const isNewUser = positions.length === 0 && orders.length === 0;
   const strategyCoachSections = activeStrategyQuery.data
     ? buildStrategyCoachSections(activeStrategyQuery.data)
     : buildFallbackStrategyCoachSections(config);
@@ -64,58 +66,116 @@ export default function Dashboard() {
     <div className="max-w-7xl mx-auto space-y-6">
       <h1 className="text-3xl font-bold">{t('dashboardPage.header.title')}</h1>
 
-      {/* Portfolio Summary */}
+      {/* Portfolio Status - At-a-Glance Hero */}
       <Card variant="elevated">
         <CardHeader>
           <CardTitle>{t('dashboardPage.portfolioSummary.title')}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Primary Row - Most Important Metrics */}
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">{t('dashboardPage.portfolioSummary.accountSize')}</p>
-              <p className="text-2xl font-bold mt-1">{formatCurrency(riskConfig.accountSize)}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">{t('dashboardPage.portfolioSummary.riskBudgetPerTrade')}</p>
-              <p className="text-2xl font-bold mt-1">{formatCurrency(riskBudget)}</p>
-              <p className="text-xs text-gray-500 mt-1">
-                {t('dashboardPage.portfolioSummary.percentOfAccount', {
-                  value: (riskConfig.riskPct * 100).toFixed(2),
-                })}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">{t('dashboardPage.portfolioSummary.openRiskAtStops')}</p>
-              <p className="text-2xl font-bold mt-1">{formatCurrency(openRisk)}</p>
-              <p className="text-xs text-gray-500 mt-1">
-                {t('dashboardPage.portfolioSummary.percentOfAccount', {
-                  value: formatPercent(openRiskPct * 100),
-                })}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">{t('dashboardPage.portfolioSummary.openPositions')}</p>
-              <p className="text-2xl font-bold mt-1">{positions.length}</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 pt-4 border-t border-gray-100">
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">{t('dashboardPage.portfolioSummary.positionValue')}</p>
-              <p className="text-2xl font-bold mt-1">{formatCurrency(totalPositionValue)}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {t('dashboardPage.portfolioSummary.totalPnl')}{' '}
-                <span className="text-xs">{t('dashboardPage.portfolioSummary.totalPnlDisclaimer')}</span>
-              </p>
-              <p className={`text-xl font-semibold mt-1 ${totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {totalPnL >= 0 ? '+' : ''}{formatCurrency(totalPnL)}
-              </p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('dashboardPage.portfolioSummary.openPositions')}</p>
+              <div className="flex items-baseline gap-2">
+                <p className="text-3xl font-bold">{positions.length}</p>
+                <p className={`text-lg font-semibold ${totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {totalPnL >= 0 ? '+' : ''}{formatCurrency(totalPnL)}
+                </p>
+              </div>
               <p className="text-xs text-gray-500 mt-1">
                 {t('dashboardPage.portfolioSummary.totalPnlDetail')}
               </p>
             </div>
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('dashboardPage.portfolioSummary.openRiskAtStops')}</p>
+              <p className="text-3xl font-bold">{formatCurrency(openRisk)}</p>
+              <p className="text-xs text-gray-500 mt-1">
+                {formatPercent(openRiskPct * 100)} {t('dashboardPage.portfolioSummary.ofAccount')}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('dashboardPage.portfolioSummary.availableToDeploy')}</p>
+              <p className="text-3xl font-bold">{formatCurrency(availableToDeploy)}</p>
+              <p className="text-xs text-gray-500 mt-1">
+                {formatPercent((availableToDeploy / riskConfig.accountSize) * 100)} {t('dashboardPage.portfolioSummary.ofAccount')}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+            {/* Secondary Row - Context Metrics */}
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('dashboardPage.portfolioSummary.accountSize')}</p>
+              <p className="text-xl font-bold">{formatCurrency(riskConfig.accountSize)}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('dashboardPage.portfolioSummary.riskBudgetPerTrade')}</p>
+              <p className="text-xl font-bold">{formatCurrency(riskBudget)}</p>
+              <p className="text-xs text-gray-500 mt-1">
+                {(riskConfig.riskPct * 100).toFixed(2)}% {t('dashboardPage.portfolioSummary.perTrade')}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('dashboardPage.portfolioSummary.positionValue')}</p>
+              <p className="text-xl font-bold">{formatCurrency(totalPositionValue)}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Quick Actions Bar */}
+      <Card variant="bordered">
+        <CardContent className="py-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <Button
+              variant="secondary"
+              className="h-16 flex flex-col items-center justify-center gap-1"
+              onClick={() => navigate('/screener')}
+            >
+              <Search className="w-5 h-5" />
+              <span className="text-sm">{t('dashboardPage.quickActions.runScreener')}</span>
+            </Button>
+            {positions.length > 0 && (
+              <Button
+                variant="secondary"
+                className="h-16 flex flex-col items-center justify-center gap-1 relative"
+                onClick={() => navigate('/daily-review')}
+              >
+                <CalendarCheck className="w-5 h-5" />
+                <span className="text-sm">{t('dashboardPage.quickActions.dailyReview')}</span>
+                {positions.length > 0 && (
+                  <Badge variant="info" className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1.5 text-xs">
+                    {positions.length}
+                  </Badge>
+                )}
+              </Button>
+            )}
+            <Button
+              variant="secondary"
+              className="h-16 flex flex-col items-center justify-center gap-1 relative"
+              onClick={() => navigate('/positions')}
+            >
+              <TrendingUp className="w-5 h-5" />
+              <span className="text-sm">{t('dashboardPage.quickActions.managePositions')}</span>
+              {positions.length > 0 && (
+                <Badge variant="success" className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1.5 text-xs">
+                  {positions.length}
+                </Badge>
+              )}
+            </Button>
+            <Button
+              variant="secondary"
+              className="h-16 flex flex-col items-center justify-center gap-1 relative"
+              onClick={() => navigate('/orders')}
+            >
+              <FileText className="w-5 h-5" />
+              <span className="text-sm">{t('dashboardPage.quickActions.viewOrders')}</span>
+              {pendingOrdersCount > 0 && (
+                <Badge variant="warning" className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1.5 text-xs">
+                  {pendingOrdersCount}
+                </Badge>
+              )}
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -125,92 +185,125 @@ export default function Dashboard() {
         subtitle={strategyCoachSubtitle}
         sections={strategyCoachSections}
         isLoading={activeStrategyQuery.isLoading && !activeStrategyQuery.data}
+        defaultCollapsed={true}
       />
 
-      {/* Action Items */}
+      {/* Priority Actions - Merged Action Items + Orders Snapshot */}
       <Card variant="bordered">
-        <CardHeader>
-          <CardTitle>{t('dashboardPage.actionItems.title')}</CardTitle>
+        <CardHeader className="flex items-center justify-between">
+          <CardTitle>{t('dashboardPage.priorityActions.title')}</CardTitle>
+          {snapshotOrders.length > 0 && (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => refetchSnapshots()}
+              disabled={isFetchingSnapshots}
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${isFetchingSnapshots ? 'animate-spin' : ''}`} />
+              {t('dashboardPage.priorityActions.refreshPrices')}
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
-          {actionItems === 0 ? (
-            <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
-              <AlertCircle className="w-5 h-5" />
-              <p>{t('dashboardPage.actionItems.empty')}</p>
+          {isSnapshotError && (
+            <div className="mb-3 p-2 text-sm text-red-600 bg-red-50 dark:bg-red-900/20 rounded">
+              {t('dashboardPage.openOrdersSnapshot.loadError')}
+            </div>
+          )}
+          
+          {pendingOrdersCount === 0 && positions.length === 0 ? (
+            <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400 py-2">
+              <AlertCircle className="w-5 h-5 text-green-500" />
+              <p>{t('dashboardPage.priorityActions.allCaughtUp')}</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
+              {/* Pending Orders with Snapshot Data */}
               {pendingOrdersCount > 0 && (
-                <div className="flex items-start gap-3">
-                  <FileText className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="font-medium">
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <FileText className="w-4 h-4 text-blue-600" />
+                    <h3 className="font-semibold text-sm">
                       {pendingOrdersCount === 1
                         ? t('dashboardPage.actionItems.pendingOrderSingular', { count: pendingOrdersCount })
                         : t('dashboardPage.actionItems.pendingOrderPlural', { count: pendingOrdersCount })}
-                    </p>
-                    <div className="mt-2 space-y-1">
-                      {orders.slice(0, 3).map((order: Order) => (
-                        <div key={order.orderId} className="text-sm text-gray-600 dark:text-gray-400">
-                          <Badge variant="warning" className="mr-2">{order.ticker}</Badge>
-                          {t('dashboardPage.actionItems.orderRow', {
-                            orderType: order.orderType,
-                            quantity: order.quantity,
-                            price: formatCurrency(order.stopPrice || order.limitPrice || 0),
-                          })}
+                    </h3>
+                  </div>
+                  <div className="space-y-2">
+                    {snapshotOrders.slice(0, 5).map((order) => (
+                      <div key={order.orderId} className="flex items-center justify-between text-sm border-l-2 border-blue-400 pl-3 py-1">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="warning">{order.ticker}</Badge>
+                          <span className="text-gray-700 dark:text-gray-300">{order.orderType}</span>
+                          <span className="text-gray-500">×{order.quantity}</span>
                         </div>
-                      ))}
-                      {orders.length > 3 && (
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => navigate('/orders')}
-                          className="mt-2"
-                        >
-                          {t('dashboardPage.actionItems.viewAllOrders', { count: orders.length })}
-                        </Button>
-                      )}
-                    </div>
+                        <div className="flex items-center gap-3 text-xs">
+                          {order.lastPrice !== undefined && (
+                            <>
+                              <span className="text-gray-900 dark:text-gray-100 font-medium">
+                                {formatCurrency(order.lastPrice)}
+                              </span>
+                              {order.pctToLimit !== undefined && (
+                                <span className={order.pctToLimit < 0 ? 'text-red-600' : 'text-gray-600'}>
+                                  {formatPercent(order.pctToLimit)} to fill
+                                </span>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    {snapshotOrders.length > 5 && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => navigate('/orders')}
+                        className="w-full"
+                      >
+                        {t('dashboardPage.actionItems.viewAllOrders', { count: snapshotOrders.length })}
+                      </Button>
+                    )}
                   </div>
                 </div>
               )}
               
+              {/* Open Positions Summary */}
               {positions.length > 0 && (
-                <div className="flex items-start gap-3 pt-3 border-t">
-                  <TrendingUp className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="font-medium">
+                <div className={pendingOrdersCount > 0 ? 'pt-4 border-t' : ''}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <TrendingUp className="w-4 h-4 text-green-600" />
+                    <h3 className="font-semibold text-sm">
                       {positions.length === 1
                         ? t('dashboardPage.actionItems.openPositionSingular', { count: positions.length })
                         : t('dashboardPage.actionItems.openPositionPlural', { count: positions.length })}
-                    </p>
-                    <div className="mt-2 space-y-1">
-                      {positions.slice(0, 3).map((pos: Position) => {
-                        const pnl = calculatePnL(pos);
-                        return (
-                          <div key={pos.positionId} className="text-sm text-gray-600 dark:text-gray-400">
-                            <Badge variant="success" className="mr-2">{pos.ticker}</Badge>
-                            {t('dashboardPage.actionItems.positionRow', {
-                              quantity: pos.shares,
-                              entry: formatCurrency(pos.entryPrice),
-                            })}{' '}
-                            <span className={`ml-2 font-medium ${pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                              ({pnl >= 0 ? '+' : ''}{formatCurrency(pnl)})
-                            </span>
+                    </h3>
+                  </div>
+                  <div className="space-y-2">
+                    {positions.slice(0, 3).map((pos: Position) => {
+                      const pnl = calculatePnL(pos);
+                      return (
+                        <div key={pos.positionId} className="flex items-center justify-between text-sm border-l-2 border-green-400 pl-3 py-1">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="success">{pos.ticker}</Badge>
+                            <span className="text-gray-500">×{pos.shares}</span>
+                            <span className="text-gray-700 dark:text-gray-300">{formatCurrency(pos.entryPrice)}</span>
                           </div>
-                        );
-                      })}
-                      {positions.length > 3 && (
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => navigate('/positions')}
-                          className="mt-2"
-                        >
-                          {t('dashboardPage.actionItems.viewAllPositions', { count: positions.length })}
-                        </Button>
-                      )}
-                    </div>
+                          <span className={`text-sm font-medium ${pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {pnl >= 0 ? '+' : ''}{formatCurrency(pnl)}
+                          </span>
+                        </div>
+                      );
+                    })}
+                    {positions.length > 3 && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => navigate('/positions')}
+                        className="w-full"
+                      >
+                        {t('dashboardPage.actionItems.viewAllPositions', { count: positions.length })}
+                      </Button>
+                    )}
                   </div>
                 </div>
               )}
@@ -219,149 +312,25 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      {/* Daily Routine */}
-      <Card variant="bordered">
-        <CardHeader>
-          <CardTitle>{t('dashboardPage.dailyRoutine.title')}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            {t('dashboardPage.dailyRoutine.subtitle')}
-          </p>
-          <ul className="mt-3 space-y-2 text-sm">
-            <li>
-              <span className="font-semibold">{t('dashboardPage.dailyRoutine.steps.doNothingLead')}</span>{' '}
-              {t('dashboardPage.dailyRoutine.steps.doNothingBody')}
-            </li>
-            <li>
-              <span className="font-semibold">{t('dashboardPage.dailyRoutine.steps.increaseStopLead')}</span>{' '}
-              {t('dashboardPage.dailyRoutine.steps.increaseStopBody')}
-            </li>
-            <li>
-              <span className="font-semibold">{t('dashboardPage.dailyRoutine.steps.placeBuyLead')}</span>{' '}
-              {t('dashboardPage.dailyRoutine.steps.placeBuyBody')}
-            </li>
-          </ul>
-        </CardContent>
-      </Card>
-
-      {/* Open Orders Snapshot */}
-      <Card variant="bordered">
-        <CardHeader className="flex items-center justify-between">
-          <CardTitle>{t('dashboardPage.openOrdersSnapshot.title')}</CardTitle>
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => refetchSnapshots()}
-            disabled={isFetchingSnapshots}
-          >
-            <RefreshCw className={`w-4 h-4 mr-2 ${isFetchingSnapshots ? 'animate-spin' : ''}`} />
-            {t('dashboardPage.openOrdersSnapshot.refreshPrices')}
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {isSnapshotError && (
-            <div className="mb-3 text-sm text-red-600">
-              {t('dashboardPage.openOrdersSnapshot.loadError')}
-            </div>
-          )}
-          {snapshotOrders.length === 0 ? (
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              {t('dashboardPage.openOrdersSnapshot.empty')}
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-2 px-3 text-sm font-semibold text-gray-700">{t('dashboardPage.openOrdersSnapshot.headers.ticker')}</th>
-                    <th className="text-left py-2 px-3 text-sm font-semibold text-gray-700">{t('dashboardPage.openOrdersSnapshot.headers.type')}</th>
-                    <th className="text-right py-2 px-3 text-sm font-semibold text-gray-700">{t('dashboardPage.openOrdersSnapshot.headers.qty')}</th>
-                    <th className="text-right py-2 px-3 text-sm font-semibold text-gray-700">{t('dashboardPage.openOrdersSnapshot.headers.last')}</th>
-                    <th className="text-right py-2 px-3 text-sm font-semibold text-gray-700">{t('dashboardPage.openOrdersSnapshot.headers.toLimit')}</th>
-                    <th className="text-right py-2 px-3 text-sm font-semibold text-gray-700">{t('dashboardPage.openOrdersSnapshot.headers.toStop')}</th>
-                    <th className="text-right py-2 px-3 text-sm font-semibold text-gray-700">{t('dashboardPage.openOrdersSnapshot.headers.lastBar')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {snapshotOrders.map((order) => (
-                    <tr key={order.orderId} className="border-b border-gray-100">
-                      <td className="py-2 px-3 text-sm font-medium text-gray-900">
-                        {order.ticker}
-                      </td>
-                      <td className="py-2 px-3 text-sm text-gray-700">
-                        {order.orderType}
-                      </td>
-                      <td className="py-2 px-3 text-sm text-right text-gray-700">
-                        {order.quantity}
-                      </td>
-                      <td className="py-2 px-3 text-sm text-right text-gray-900">
-                        {order.lastPrice !== undefined ? formatCurrency(order.lastPrice) : t('common.placeholders.dash')}
-                      </td>
-                      <td className="py-2 px-3 text-sm text-right">
-                        {order.pctToLimit !== undefined ? formatPercent(order.pctToLimit) : t('common.placeholders.dash')}
-                      </td>
-                      <td className="py-2 px-3 text-sm text-right">
-                        {order.pctToStop !== undefined ? formatPercent(order.pctToStop) : t('common.placeholders.dash')}
-                      </td>
-                      <td className="py-2 px-3 text-sm text-right text-gray-600">
-                        {order.lastBar ? formatDateTime(order.lastBar) : t('common.placeholders.dash')}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Quick Actions */}
-      <Card variant="bordered">
-        <CardHeader>
-          <CardTitle>{t('dashboardPage.quickActions.title')}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button variant="primary" className="h-20 text-lg" onClick={() => navigate('/screener')}>
-              <div className="flex flex-col items-center gap-2">
-                <Search className="w-6 h-6" />
-                <span>{t('dashboardPage.quickActions.runScreener')}</span>
-              </div>
-            </Button>
-            <Button variant="secondary" className="h-20 text-lg" onClick={() => navigate('/positions')}>
-              <div className="flex flex-col items-center gap-2">
-                <TrendingUp className="w-6 h-6" />
-                <span>{t('dashboardPage.quickActions.managePositions')}</span>
-              </div>
-            </Button>
-            <Button variant="secondary" className="h-20 text-lg" onClick={() => navigate('/orders')}>
-              <div className="flex flex-col items-center gap-2">
-                <FileText className="w-6 h-6" />
-                <span>{t('dashboardPage.quickActions.viewOrders')}</span>
-              </div>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Getting Started */}
-      <Card variant="bordered" className="bg-primary/5">
-        <CardHeader>
-          <CardTitle>{t('dashboardPage.gettingStarted.title')}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm">
-            {t('dashboardPage.gettingStarted.subtitle')}
-          </p>
-          <ol className="list-decimal pl-5 space-y-2 text-sm">
-            <li>{t('dashboardPage.gettingStarted.step1Prefix')} <a href="/settings" className="text-primary underline">{t('dashboardPage.gettingStarted.step1LinkLabel')}</a> {t('dashboardPage.gettingStarted.step1Suffix')}</li>
-            <li>{t('dashboardPage.gettingStarted.step2')}</li>
-            <li>{t('dashboardPage.gettingStarted.step3')}</li>
-            <li>{t('dashboardPage.gettingStarted.step4')}</li>
-          </ol>
-        </CardContent>
-      </Card>
+      {/* Getting Started - Only for new users */}
+      {isNewUser && (
+        <Card variant="bordered" className="bg-primary/5">
+          <CardHeader>
+            <CardTitle>{t('dashboardPage.gettingStarted.title')}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm">
+              {t('dashboardPage.gettingStarted.subtitle')}
+            </p>
+            <ol className="list-decimal pl-5 space-y-2 text-sm">
+              <li>{t('dashboardPage.gettingStarted.step1Prefix')} <a href="/settings" className="text-primary underline">{t('dashboardPage.gettingStarted.step1LinkLabel')}</a> {t('dashboardPage.gettingStarted.step1Suffix')}</li>
+              <li>{t('dashboardPage.gettingStarted.step2')}</li>
+              <li>{t('dashboardPage.gettingStarted.step3')}</li>
+              <li>{t('dashboardPage.gettingStarted.step4')}</li>
+            </ol>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

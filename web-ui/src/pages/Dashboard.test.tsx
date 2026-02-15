@@ -26,25 +26,24 @@ describe('Dashboard Page', () => {
       await waitFor(() => {
         expect(screen.getByText('Portfolio Summary')).toBeInTheDocument()
         expect(screen.getByText('Strategy Coach')).toBeInTheDocument()
-        expect(screen.getByText("Today's Action Items")).toBeInTheDocument()
-        expect(screen.getByText('Daily Routine (Top 3)')).toBeInTheDocument()
-        expect(screen.getByText('Open Orders Snapshot')).toBeInTheDocument()
-        expect(screen.getByText('Quick Actions')).toBeInTheDocument()
-        expect(screen.getByText('Getting Started')).toBeInTheDocument()
+        expect(screen.getByText('Priority Actions')).toBeInTheDocument()
+        // Getting Started should not be visible when there are no positions/orders
+        // Daily Routine and large Quick Actions removed
+        // Open Orders Snapshot merged into Priority Actions
       })
     })
   })
 
   describe('Strategy Coach', () => {
-    it('renders strategy coach card with active strategy values', async () => {
+    it('renders strategy coach card collapsed by default', async () => {
       renderWithProviders(<Dashboard />)
 
       await waitFor(() => {
         expect(screen.getByText('Strategy Coach')).toBeInTheDocument()
         expect(screen.getByText(/Active:/i)).toBeInTheDocument()
         expect(screen.getByText('Default')).toBeInTheDocument()
-        expect(screen.getByText(/Stop = Entry - \(2.0 x ATR\(14\)\)/i)).toBeInTheDocument()
-        expect(screen.getByText(/Breakeven at \+1.0R, trail after \+2.0R using SMA\(20\)/i)).toBeInTheDocument()
+        // Strategy coach is collapsed by default, so formulas shouldn't be visible initially
+        expect(screen.queryByText(/Stop = Entry - \(2.0 x ATR\(14\)\)/i)).not.toBeInTheDocument()
       })
     })
 
@@ -61,19 +60,6 @@ describe('Dashboard Page', () => {
       await waitFor(() => {
         expect(screen.getByText('Strategy Coach')).toBeInTheDocument()
         expect(screen.getByText(/Using local Settings values because active strategy data could not be loaded/i)).toBeInTheDocument()
-      })
-    })
-  })
-
-  describe('Daily Routine', () => {
-    it('renders the daily routine checklist', async () => {
-      renderWithProviders(<Dashboard />)
-
-      await waitFor(() => {
-        expect(screen.getByText('Daily Routine (Top 3)')).toBeInTheDocument()
-        expect(screen.getByText(/DO NOTHING/)).toBeInTheDocument()
-        expect(screen.getByText(/INCREASE STOP LOSS PRICE/)).toBeInTheDocument()
-        expect(screen.getByText(/PLACE BUY LIMIT ORDER FOR TOP 3 screened symbols/)).toBeInTheDocument()
       })
     })
   })
@@ -133,7 +119,8 @@ describe('Dashboard Page', () => {
       renderWithProviders(<Dashboard />)
       
       await waitFor(() => {
-        expect(screen.getByText(/Total P&L/i)).toBeInTheDocument()
+        // P&L is now shown next to position count in the hero section
+        expect(screen.getByText('Open Positions')).toBeInTheDocument()
         // VALE: (currentPrice $16.30 - entryPrice $15.89) * 6 shares = +$2.46
         expect(screen.getByText('+$2.46')).toBeInTheDocument()
       })
@@ -149,7 +136,7 @@ describe('Dashboard Page', () => {
     })
   })
 
-  describe('Action Items', () => {
+  describe('Priority Actions', () => {
     it('displays pending orders count', async () => {
       renderWithProviders(<Dashboard />)
       
@@ -159,18 +146,20 @@ describe('Dashboard Page', () => {
       })
     })
 
-    it('displays pending order details', async () => {
+    it('displays pending order details with snapshot data', async () => {
       renderWithProviders(<Dashboard />)
       
       await waitFor(() => {
+        // Badge shows ticker
         expect(screen.getByText('VALE')).toBeInTheDocument()
-        expect(screen.getByText(/SELL_STOP/)).toBeInTheDocument()
-        // Order has 6 shares according to mock
-        expect(screen.getByText(/6 shares/)).toBeInTheDocument()
+        // Shows order type
+        expect(screen.getByText('SELL_STOP')).toBeInTheDocument()
+        // Shows quantity inline (×6 format)
+        expect(screen.getByText(/×6/)).toBeInTheDocument()
       })
     })
 
-    it('displays open positions in action items', async () => {
+    it('displays open positions in priority actions', async () => {
       renderWithProviders(<Dashboard />)
       
       await waitFor(() => {
@@ -178,7 +167,7 @@ describe('Dashboard Page', () => {
       })
     })
 
-    it('shows position P&L in action items', async () => {
+    it('shows position P&L in priority actions', async () => {
       renderWithProviders(<Dashboard />)
       
       await waitFor(() => {
@@ -204,26 +193,19 @@ describe('Dashboard Page', () => {
       renderWithProviders(<Dashboard />)
       
       await waitFor(() => {
-        expect(screen.getByText(/No action items/)).toBeInTheDocument()
-        expect(screen.getByText(/You're all caught up!/)).toBeInTheDocument()
+        expect(screen.getByText(/All caught up/)).toBeInTheDocument()
       })
     })
-  })
 
-  describe('Open Orders Snapshot', () => {
-    it('shows snapshot table with latest close and distance', async () => {
+    it('shows order snapshot data with latest price', async () => {
       renderWithProviders(<Dashboard />)
       
       await waitFor(() => {
-        expect(screen.getByText('Open Orders Snapshot')).toBeInTheDocument()
+        expect(screen.getByText('Priority Actions')).toBeInTheDocument()
       })
 
+      // Check that snapshot data is loaded with last price ($16.30 from mock)
       await screen.findByText('$16.30')
-      const table = screen.getByRole('table')
-      const tableScope = within(table)
-      expect(tableScope.getByText('VALE')).toBeInTheDocument()
-      expect(tableScope.getByText('SELL_STOP')).toBeInTheDocument()
-      expect(tableScope.getByText('-8.6%')).toBeInTheDocument()
     })
   })
 
