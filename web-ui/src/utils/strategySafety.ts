@@ -157,7 +157,8 @@ export function evaluateStrategy(strategy: Strategy): ParameterWarning[] {
   if (riskWarning) warnings.push(riskWarning);
 
   // Volatility
-  const atrWarning = evaluateMaxAtrPct(strategy.universe.filt.maxAtrPct * 100);
+  // maxAtrPct is already stored in percent points (e.g., 15 means 15%).
+  const atrWarning = evaluateMaxAtrPct(strategy.universe.filt.maxAtrPct);
   if (atrWarning) warnings.push(atrWarning);
 
   // Management

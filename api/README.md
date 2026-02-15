@@ -20,11 +20,11 @@ Server will be available at:
 
 ### File Locking (Concurrent Access)
 
-The API uses **file-level locking** to prevent race conditions when multiple clients/processes access `positions.json` and `orders.json` concurrently:
+The API uses **file-level locking** to prevent race conditions when multiple clients/processes access `data/positions.json` and `data/orders.json` concurrently:
 
 - **Lock type**: Exclusive locks for writes, shared locks for reads (via `portalocker`)
 - **Timeout**: 5 seconds (returns `503 Service Temporarily Unavailable` if lock can't be acquired)
-- **Granularity**: One lock per file (positions.json, orders.json)
+- **Granularity**: One lock per file (`data/positions.json`, `data/orders.json`)
 - **Compatibility**: Cross-platform (Linux, macOS, Windows)
 
 **Implementation:**
@@ -98,8 +98,9 @@ curl http://localhost:8000/
 **Response:**
 ```json
 {
-  "message": "Swing Screener API",
-  "version": "1.0.0",
+  "status": "ok",
+  "service": "swing-screener-api",
+  "version": "0.1.0",
   "docs": "/docs",
   "health": "/health"
 }
@@ -211,8 +212,8 @@ curl -X PUT http://localhost:8000/api/config \
       "sma_buffer_pct": 0.005,
       "max_holding_days": 20
     },
-    "positions_file": "positions.json",
-    "orders_file": "orders.json"
+    "positions_file": "data/positions.json",
+    "orders_file": "data/orders.json"
   }'
 ```
 
@@ -528,7 +529,13 @@ Fetch recent social events for a symbol and compute sentiment + attention metric
 ```bash
 curl -X POST http://localhost:8000/api/social/analyze \
   -H "Content-Type: application/json" \
-  -d '{ "symbol": "AAPL", "lookback_hours": 24, "max_events": 100, "provider": "reddit" }'
+  -d '{
+    "symbol": "AAPL",
+    "lookback_hours": 24,
+    "max_events": 100,
+    "providers": ["reddit", "yahoo_finance"],
+    "sentiment_analyzer": "keyword"
+  }'
 ```
 
 Response includes:
@@ -536,6 +543,22 @@ Response includes:
 - `last_execution_at`
 - metrics (sentiment, attention, hype)
 - `raw_events` (returned even when sample size is low)
+
+#### `GET /api/social/warmup/{job_id}`
+Get status of a background social warmup job started by screener runs.
+
+```bash
+curl http://localhost:8000/api/social/warmup/<job_id>
+```
+
+Response includes:
+- `status` (`queued` | `running` | `completed`)
+- symbol counters (`total_symbols`, `completed_symbols`, `ok_symbols`, `no_data_symbols`, `error_symbols`)
+- timestamps (`created_at`, `updated_at`)
+
+Notes:
+- `404 Not Found` means the job id is stale or no longer available (for example after backend restart).
+- In that case, run the screener again to start a fresh warmup job.
 
 ---
 
@@ -564,10 +587,17 @@ app.add_middleware(
 ## Data Files
 
 The API reads/writes to:
-- `positions.json` - Open and closed positions
-- `orders.json` - Pending, filled, and cancelled orders
+- `data/positions.json` - Open and closed positions
+- `data/orders.json` - Pending, filled, and cancelled orders
 
-These files are at the repository root.
+These paths are defaults and can be overridden via config.
+
+---
+
+## Related Docs
+
+- [Web UI Guide](../docs/WEB_UI_GUIDE.md)
+- [Troubleshooting Guide](../docs/TROUBLESHOOTING.md)
 
 ---
 
@@ -583,8 +613,16 @@ All endpoints return standard HTTP status codes:
 Error response format:
 ```json
 {
-  "detail": "Error message",
-  "error_type": "ValueError"
+  "detail": "Error message"
+}
+```
+
+Unexpected server errors may additionally include:
+
+```json
+{
+  "detail": "Internal server error",
+  "message": "An unexpected error occurred. Please contact support if the issue persists."
 }
 ```
 

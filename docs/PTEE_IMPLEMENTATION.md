@@ -1,5 +1,7 @@
 # Pre-Trade Explanation Engine - Implementation Summary
 
+> **Status: Historical snapshot (February 2026).** This document captures implementation context at the time. For current UI behavior, see `/docs/WEB_UI_GUIDE.md` and `/docs/INDEX.md`.
+
 ## What Was Built
 
 The Pre-Trade Explanation Engine (PTEE) has been successfully implemented following the requirements from the original issue. This document summarizes what was delivered.
@@ -150,7 +152,7 @@ Added TypeScript types:
 **File:** `web-ui/src/pages/Screener.tsx`
 
 **Changes:**
-- Added lightbulb icon (💡) button to view Trade Thesis
+- Added a Screener row action to view Trade Thesis
 - Button only appears when thesis is available
 - Opens `TradeThesisModal` on click
 - Positioned alongside existing action buttons
@@ -158,8 +160,9 @@ Added TypeScript types:
 **User Flow:**
 1. Run screener
 2. See candidate results
-3. Click lightbulb icon on any candidate
-4. View complete Trade Thesis in modal
+3. Expand candidate details
+4. Click **View Trade Thesis**
+5. View complete Trade Thesis in modal
 
 ---
 
