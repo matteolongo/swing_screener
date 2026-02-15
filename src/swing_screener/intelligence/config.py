@@ -136,6 +136,7 @@ def build_intelligence_config(strategy: dict) -> IntelligenceConfig:
     catalyst_raw = get_nested_dict(raw, "catalyst")
     theme_raw = get_nested_dict(raw, "theme")
     opportunity_raw = get_nested_dict(raw, "opportunity")
+    llm_raw = get_nested_dict(raw, "llm")
 
     providers = _clean_string_list(
         raw.get("providers"),
@@ -166,6 +167,16 @@ def build_intelligence_config(strategy: dict) -> IntelligenceConfig:
         universe_scope=universe_scope,
         market_context_symbols=market_context_symbols,
         symbol_states=DEFAULT_SYMBOL_STATES,
+        llm=LLMConfig(
+            enabled=bool(llm_raw.get("enabled", False)),
+            provider=str(llm_raw.get("provider", "ollama")).strip().lower(),
+            model=str(llm_raw.get("model", "mistral:7b-instruct")).strip(),
+            base_url=str(llm_raw.get("base_url", "http://localhost:11434")).strip(),
+            enable_cache=bool(llm_raw.get("enable_cache", True)),
+            enable_audit=bool(llm_raw.get("enable_audit", True)),
+            cache_path=str(llm_raw.get("cache_path", "data/intelligence/llm_cache.json")).strip(),
+            audit_path=str(llm_raw.get("audit_path", "data/intelligence/llm_audit")).strip(),
+        ),
         catalyst=CatalystConfig(
             lookback_hours=_clean_positive_int(catalyst_raw.get("lookback_hours"), 72),
             recency_half_life_hours=_clean_positive_int(

@@ -12,8 +12,7 @@ services:
       - PYTHONUNBUFFERED=1
       - OLLAMA_HOST=http://ollama:11434
     depends_on:
-      ollama:
-        condition: service_healthy
+      - ollama
 
   web:
     build:
