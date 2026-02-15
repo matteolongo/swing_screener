@@ -448,7 +448,7 @@ export default function Screener() {
                 {/* Intelligence status and results */}
                 {intelligenceStatus.data && (
                   <div>
-                    {intelligenceStatus.data.status === 'completed' && (
+                    {intelligenceStatus.data.status === 'completed' && intelligenceStatus.data.asofDate && (
                       <>
                         <p className="text-sm text-green-700 mb-3">
                           {t('screener.intelligence.statusCompleted', {
@@ -460,7 +460,7 @@ export default function Screener() {
                         <div>
                           <h3 className="text-lg font-semibold text-gray-900 mb-3">
                             {t('screener.intelligence.opportunitiesTitle', {
-                              date: intelligenceStatus.data.asofDate ?? 'unknown',
+                              date: intelligenceStatus.data.asofDate,
                             })}
                           </h3>
                           {intelligenceOpportunities.data && intelligenceOpportunities.data.opportunities.length > 0 ? (
@@ -500,7 +500,7 @@ export default function Screener() {
                     {intelligenceStatus.data.status === 'error' && (
                       <p className="text-sm text-red-700">
                         {t('screener.intelligence.statusError', {
-                          error: intelligenceStatus.data.error ?? 'Unknown error',
+                          error: intelligenceStatus.data.error || t('common.errors.generic'),
                         })}
                       </p>
                     )}
