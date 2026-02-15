@@ -8,6 +8,7 @@ from api.models.recommendation import Recommendation
 class DailyReviewCandidate(BaseModel):
     """A new trade candidate from the screener."""
     ticker: str
+    confidence: float | None = None
     signal: str
     entry: float
     stop: float

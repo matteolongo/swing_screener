@@ -58,3 +58,4 @@ class Recommendation(BaseModel):
     costs: RecommendationCosts
     checklist: list[ChecklistGate]
     education: RecommendationEducation
+    thesis: Optional[dict] = None  # Trade Thesis (structured explanation)

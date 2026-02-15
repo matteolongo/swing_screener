@@ -48,6 +48,8 @@ dist/
 *.parquet
 data/social_cache/
 data/daily_reviews/
+data/*.db
+data/*.db-journal
 
 # =========================
 # Logs

@@ -18,14 +18,22 @@ describe('Strategy Page', () => {
     await waitForQueriesToSettle(queryClient);
   });
 
-  it('toggles advanced settings', async () => {
+  it('toggles advanced settings via beginner mode', async () => {
     const { user, queryClient } = renderWithProviders(<StrategyPage />);
 
+    // In beginner mode, advanced settings are hidden
     expect(screen.queryByText('SMA Fast')).not.toBeInTheDocument();
 
-    const toggle = await screen.findByRole('button', { name: /show advanced/i });
+    // Find and toggle beginner mode off to access advanced settings
+    const beginnerModeCheckbox = await screen.findByRole('checkbox');
     await act(async () => {
-      await user.click(toggle);
+      await user.click(beginnerModeCheckbox);
+    });
+
+    // Now advanced settings card should be visible, need to expand it
+    const advancedToggle = await screen.findByRole('button', { name: /show advanced/i });
+    await act(async () => {
+      await user.click(advancedToggle);
     });
 
     expect(await screen.findByText('SMA Fast')).toBeInTheDocument();

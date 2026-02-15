@@ -1,347 +1,83 @@
-# ============================================================================
-# MCP Feature Configuration for Swing Screener
-# ============================================================================
-# This file controls which features are exposed through the MCP server.
-# Edit this file to enable/disable features without changing code.
-#
-# Version: 1.0
-# Last Updated: February 12, 2026
-# ============================================================================
+# MCP Server Feature Configuration
+# This file controls which tools and features are enabled in the MCP server
 
-version: "1.0"
-
-# Server metadata
+# Server Configuration
 server:
   name: "swing-screener-mcp"
   version: "0.1.0"
-  description: "MCP server for Swing Screener trading system - provides AI assistants access to trading operations"
+  description: "Model Context Protocol server for Swing Screener"
   
-# ============================================================================
-# FEATURES
-# ============================================================================
-# Each feature corresponds to a domain area of the application.
-# Tools within each feature can be individually enabled/disabled.
-#
-# Fields:
-#   enabled: Master switch for entire feature (boolean)
-#   description: Human-readable description
-#   tools: Map of tool_name -> configuration
-#     enabled: Whether this tool is available (boolean)
-#     timeout_seconds: Max execution time (optional, overrides default)
-#     confirm_required: Requires explicit confirmation (optional, boolean)
-#     requires_api_keys: Tool requires external API credentials (optional)
-# ============================================================================
+# Environment settings (dev/staging/prod)
+environment: "dev"
 
+# Feature flags - enables/disables entire feature domains
 features:
-  # --------------------------------------------------------------------------
-  # Configuration Management
-  # --------------------------------------------------------------------------
-  config:
+  # Portfolio Management (positions, orders) - Phase 3: Complete
+  portfolio:
     enabled: true
-    description: "Application settings and parameters"
     tools:
-      # Get current configuration
-      get:
-        enabled: true
-        description: "Retrieve current application configuration"
-      
-      # Update configuration
-      update:
-        enabled: true
-        description: "Modify application configuration"
-      
-      # Reset to defaults
-      reset:
-        enabled: true
-        confirm_required: true
-        description: "Reset configuration to factory defaults (requires confirmation)"
-      
-      # Get default configuration
-      get_defaults:
-        enabled: true
-        description: "Get default configuration template"
-
-  # --------------------------------------------------------------------------
-  # Strategy Management
-  # --------------------------------------------------------------------------
-  strategy:
-    enabled: true
-    description: "Trading strategy configuration and selection"
-    tools:
-      # List all strategies
-      list:
-        enabled: true
-        description: "List all available trading strategies"
-      
-      # Get single strategy
-      get:
-        enabled: true
-        description: "Get details of a specific strategy by ID"
-      
-      # Get active strategy
-      get_active:
-        enabled: true
-        description: "Get the currently active strategy"
-      
-      # Set active strategy
-      set_active:
-        enabled: true
-        description: "Switch to a different strategy"
-      
-      # Create new strategy
-      create:
-        enabled: true
-        description: "Create a new trading strategy"
-      
-      # Update existing strategy
-      update:
-        enabled: true
-        description: "Modify an existing strategy"
-      
-      # Delete strategy
-      delete:
-        enabled: true
-        confirm_required: true
-        description: "Delete a strategy (requires confirmation)"
-
-  # --------------------------------------------------------------------------
-  # Screener Operations
-  # --------------------------------------------------------------------------
+      - list_positions
+      - get_position
+      - update_position_stop
+      - list_orders
+      - create_order
+      - suggest_position_stop
+      - close_position
+      - fill_order
+      - cancel_order
+  
+  # Screener & Analysis - Phase 3: Enabled
   screener:
     enabled: true
-    description: "Market scanning and trade candidate generation"
     tools:
-      # List available universes
-      list_universes:
-        enabled: true
-        description: "List available stock universes (e.g., SP500, NASDAQ100)"
-      
-      # Run screener
-      run:
-        enabled: true
-        timeout_seconds: 300  # 5 minutes for market data fetch + computation
-        max_results: 100
-        description: "Execute screener to find trade candidates (may take several minutes)"
-      
-      # Preview order for candidate
-      preview_order:
-        enabled: true
-        description: "Calculate position sizing and risk for a trade candidate"
-
-  # --------------------------------------------------------------------------
-  # Portfolio Management - Positions
-  # --------------------------------------------------------------------------
-  positions:
+      - run_screener
+      - list_universes
+      - preview_order
+      - preview_order
+  
+  # Strategy Management
+  strategy:
     enabled: true
-    description: "Open position tracking and management"
     tools:
-      # List positions
-      list:
-        enabled: true
-        description: "Get all positions, optionally filtered by status (open/closed)"
-      
-      # Get single position
-      get:
-        enabled: true
-        description: "Get details of a specific position by ID"
-      
-      # Get stop suggestion
-      get_stop_suggestion:
-        enabled: true
-        description: "Calculate suggested trailing stop price for a position"
-      
-      # Update position stop
-      update_stop:
-        enabled: true
-        description: "Update stop price for a position (also syncs related orders)"
-      
-      # Close position
-      close:
-        enabled: true
-        confirm_required: true
-        description: "Close a position (requires confirmation)"
-
-  # --------------------------------------------------------------------------
-  # Portfolio Management - Orders
-  # --------------------------------------------------------------------------
-  orders:
+      - list_strategies
+      - get_strategy
+      - get_active_strategy
+      - set_active_strategy
+  
+  # Backtesting
+  backtest:
+    enabled: false
+    tools:
+      - run_backtest
+      - get_backtest_metrics
+  
+  # Configuration Management
+  config:
     enabled: true
-    description: "Order lifecycle management"
     tools:
-      # List orders
-      list:
-        enabled: true
-        description: "Get all orders, optionally filtered by status or ticker"
-      
-      # Get single order
-      get:
-        enabled: true
-        description: "Get details of a specific order by ID"
-      
-      # Get order snapshot with market data
-      get_snapshot:
-        enabled: true
-        description: "Get orders with latest prices and distance to limit/stop"
-      
-      # Create new order
-      create:
-        enabled: true
-        description: "Create a new order with risk validation"
-      
-      # Fill order
-      fill:
-        enabled: true
-        confirm_required: true
-        description: "Mark order as filled (creates position for entry orders)"
-      
-      # Cancel order
-      cancel:
-        enabled: true
-        description: "Cancel a pending order"
-
-  # --------------------------------------------------------------------------
-  # Daily Review
-  # --------------------------------------------------------------------------
+      - get_config
+      - update_config
+  
+  # Social Sentiment
+  social:
+    enabled: true
+    tools:
+      - get_social_sentiment
+      - analyze_ticker_sentiment
+  
+  # Daily Review (combines screener + portfolio management)
   daily_review:
     enabled: true
-    description: "Daily workflow - position review + new candidates"
     tools:
-      # Get daily review
-      get:
-        enabled: true
-        timeout_seconds: 300  # 5 minutes (runs full screener + position analysis)
-        description: "Get daily review: categorized positions + top trade candidates"
+      - get_daily_review
+      - get_candidate_recommendations
 
-  # --------------------------------------------------------------------------
-  # Backtesting
-  # --------------------------------------------------------------------------
-  backtest:
-    enabled: true
-    description: "Historical strategy simulation and analysis"
-    tools:
-      # Quick backtest (recent history)
-      quick:
-        enabled: true
-        timeout_seconds: 120  # 2 minutes
-        description: "Run quick backtest on recent history (faster)"
-      
-      # Full backtest (complete simulation)
-      full:
-        enabled: true
-        timeout_seconds: 600  # 10 minutes
-        description: "Run full backtest on entire history (may take several minutes)"
-      
-      # List saved simulations
-      list_simulations:
-        enabled: true
-        description: "List all saved backtest simulations"
-      
-      # Get simulation results
-      get_simulation:
-        enabled: true
-        description: "Get detailed results of a specific backtest simulation"
-      
-      # Delete simulation
-      delete_simulation:
-        enabled: true
-        description: "Delete a saved backtest simulation"
-
-  # --------------------------------------------------------------------------
-  # Social Sentiment Analysis
-  # --------------------------------------------------------------------------
-  social:
-    enabled: false  # Disabled by default (requires API keys)
-    description: "Social media sentiment analysis (Twitter, Reddit)"
-    tools:
-      # Analyze sentiment
-      analyze:
-        enabled: false
-        requires_api_keys: true
-        description: "Analyze social sentiment for a ticker (requires API keys)"
-
-# ============================================================================
-# EXECUTION SETTINGS
-# ============================================================================
-execution:
-  # Default timeout for all tools (seconds)
-  default_timeout_seconds: 30
-  
-  # Maximum allowed timeout (seconds)
-  max_timeout_seconds: 600
-  
-  # Enable progress updates for long-running operations (future feature)
-  enable_progress_updates: false
-  
-  # Maximum number of concurrent tool executions
-  max_concurrent_executions: 5
-
-# ============================================================================
-# SECURITY SETTINGS
-# ============================================================================
-security:
-  # Tools that require explicit confirmation before execution
-  # Format: "feature_toolname" or just "toolname"
-  require_confirmation:
-    - config_reset
-    - strategy_delete
-    - positions_close
-    - orders_fill
-  
-  # Read-only mode: Disable all write operations
-  # Useful for demo/testing environments or read-only AI assistants
-  read_only_mode: false
-  
-  # Restrict to specific operations (optional)
-  # If set, only these operation types are allowed
-  # Options: "read", "write", "delete"
-  # allowed_operations:
-  #   - read
-  #   - write
-
-# ============================================================================
-# RATE LIMITING (Future Feature)
-# ============================================================================
-# rate_limiting:
-#   enabled: false
-#   requests_per_minute: 60
-#   burst_size: 10
-#   by_tool: true  # Apply limits per-tool vs global
-
-# ============================================================================
-# LOGGING
-# ============================================================================
+# Logging configuration
 logging:
-  # Log level for MCP server
-  level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
   
-  # Log all tool executions
-  log_tool_calls: true
-  
-  # Log tool input parameters (may contain sensitive data)
-  log_tool_inputs: false
-  
-  # Log tool outputs (may be large)
-  log_tool_outputs: false
-
-# ============================================================================
-# FEATURE FLAGS (Experimental Features)
-# ============================================================================
-experimental:
-  # Enable streaming responses for large results (future)
-  enable_streaming: false
-  
-  # Enable job queue for long-running operations (future)
-  enable_job_queue: false
-  
-  # Enable caching of screener results (future)
-  enable_result_cache: false
-  cache_ttl_seconds: 300
-
-# ============================================================================
-# NOTES
-# ============================================================================
-# 1. Changes to this file require server restart
-# 2. Use read_only_mode for safe testing
-# 3. Social sentiment requires API keys in environment variables
-# 4. Long-running operations (screener, backtest) may timeout - adjust as needed
-# 5. Confirmation requirements help prevent accidental destructive operations
+# Rate limiting (future feature)
+rate_limiting:
+  enabled: false
+  requests_per_minute: 60

@@ -4,6 +4,8 @@ import logging
 from datetime import date
 from pathlib import Path
 
+from fastapi import HTTPException
+
 from api.models.daily_review import (
     DailyReview,
     DailyReviewCandidate,
@@ -53,6 +55,7 @@ class DailyReviewService:
         new_candidates = [
             DailyReviewCandidate(
                 ticker=c.ticker,
+                confidence=c.confidence,
                 signal=c.signal or "UNKNOWN",
                 entry=c.entry or 0.0,
                 stop=c.stop or 0.0,
@@ -75,7 +78,44 @@ class DailyReviewService:
         
         for pos in positions:
             # Get stop suggestion for this position
-            suggestion = self.portfolio.suggest_position_stop(pos.position_id)
+            try:
+                suggestion = self.portfolio.suggest_position_stop(pos.position_id)
+            except HTTPException as exc:
+                reason = exc.detail if isinstance(exc.detail, str) else str(exc.detail)
+                logger.warning(
+                    "Daily review stop suggestion unavailable for %s: %s",
+                    pos.ticker,
+                    reason,
+                )
+                positions_hold.append(
+                    DailyReviewPositionHold(
+                        position_id=pos.position_id,
+                        ticker=pos.ticker,
+                        entry_price=pos.entry_price,
+                        stop_price=pos.stop_price,
+                        current_price=pos.current_price or pos.entry_price,
+                        r_now=0.0,
+                        reason=f"Stop suggestion unavailable: {reason}",
+                    )
+                )
+                continue
+            except Exception as exc:
+                logger.exception(
+                    "Unexpected error generating stop suggestion for %s",
+                    pos.ticker,
+                )
+                positions_hold.append(
+                    DailyReviewPositionHold(
+                        position_id=pos.position_id,
+                        ticker=pos.ticker,
+                        entry_price=pos.entry_price,
+                        stop_price=pos.stop_price,
+                        current_price=pos.current_price or pos.entry_price,
+                        r_now=0.0,
+                        reason=f"Stop suggestion unavailable: {exc}",
+                    )
+                )
+                continue
             
             # Categorize based on action
             if suggestion.action == "NO_ACTION":

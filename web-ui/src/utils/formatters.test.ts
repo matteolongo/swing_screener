@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatCurrency, formatDate, formatPercent, formatNumber } from './formatters'
+import { formatCurrency, formatDate, formatPercent, formatNumber, formatRatioAsPercent } from './formatters'
 
 describe('Formatter Utilities', () => {
   describe('formatCurrency', () => {
@@ -82,6 +82,18 @@ describe('Formatter Utilities', () => {
 
     it('handles very large percentages', () => {
       expect(formatPercent(1050.5)).toBe('+1050.5%')
+    })
+  })
+
+  describe('formatRatioAsPercent', () => {
+    it('converts ratios to percents before formatting', () => {
+      expect(formatRatioAsPercent(0.0082)).toBe('+0.8%')
+      expect(formatRatioAsPercent(0.02)).toBe('+2.0%')
+      expect(formatRatioAsPercent(-0.015)).toBe('-1.5%')
+    })
+
+    it('supports custom decimal places', () => {
+      expect(formatRatioAsPercent(0.00821, 2)).toBe('+0.82%')
     })
   })
 

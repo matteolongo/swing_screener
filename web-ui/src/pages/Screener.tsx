@@ -1,19 +1,29 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { PlayCircle, RefreshCw, TrendingUp, AlertCircle, BarChart3, MessageSquare, ListChecks } from 'lucide-react';
+import { PlayCircle, RefreshCw, TrendingUp, AlertCircle, BarChart3, MessageSquare, ListChecks, Lightbulb } from 'lucide-react';
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
+import TableShell from '@/components/common/TableShell';
 import { useUniverses, useRunScreenerMutation } from '@/features/screener/hooks';
 import { ScreenerCandidate } from '@/features/screener/types';
-import { CreateOrderRequest } from '@/features/portfolio/types';
-import { createOrder } from '@/features/portfolio/api';
 import { useConfigStore } from '@/stores/configStore';
-import { fetchActiveStrategy } from '@/lib/strategyApi';
 import { RiskConfig } from '@/types/config';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { formatCurrency, formatPercent } from '@/utils/formatters';
 import QuickBacktestModal from '@/components/modals/QuickBacktestModal';
 import SocialAnalysisModal from '@/components/modals/SocialAnalysisModal';
+import TradeThesisModal from '@/components/modals/TradeThesisModal';
+import MetricHelpLabel from '@/components/domain/education/MetricHelpLabel';
+import GlossaryLegend from '@/components/domain/education/GlossaryLegend';
+import { SCREENER_GLOSSARY_KEYS } from '@/content/educationGlossary';
+import { useActiveStrategyQuery } from '@/features/strategy/hooks';
+import OverlayBadge from '@/components/domain/recommendation/OverlayBadge';
+import RecommendationBadge from '@/components/domain/recommendation/RecommendationBadge';
+import RecommendationDetailsModal from '@/components/domain/recommendation/RecommendationDetailsModal';
+import CandidateOrderModal from '@/components/domain/orders/CandidateOrderModal';
+import { queryKeys } from '@/lib/queryKeys';
+import { t } from '@/i18n/t';
+import { fetchSocialWarmupStatus } from '@/features/social/api';
 
 const TOP_N_MAX = 200;
 type CurrencyFilter = 'all' | 'usd' | 'eur';
@@ -30,9 +40,9 @@ const normalizeCurrencies = (currencies?: string[]): ('USD' | 'EUR')[] => {
   return normalized.length ? Array.from(new Set(normalized)) : ['USD', 'EUR'];
 };
 const formatCurrencyFilterLabel = (currencies: ('USD' | 'EUR')[]): string => {
-  if (currencies.length === 1 && currencies[0] === 'USD') return 'USD only';
-  if (currencies.length === 1 && currencies[0] === 'EUR') return 'EUR only';
-  return 'USD + EUR';
+  if (currencies.length === 1 && currencies[0] === 'USD') return t('screener.currencyFilter.usdOnly');
+  if (currencies.length === 1 && currencies[0] === 'EUR') return t('screener.currencyFilter.eurOnly');
+  return t('screener.currencyFilter.both');
 };
 const currencyFilterToRequest = (value: CurrencyFilter): string[] => {
   if (value === 'usd') return ['USD'];
@@ -43,28 +53,11 @@ const normalizeUniverse = (value: string | null) => {
   if (!value) return null;
   return UNIVERSE_ALIASES[value] ?? value;
 };
-const OVERLAY_BADGES: Record<string, { label: string; className: string }> = {
-  OK: { label: 'OK', className: 'bg-green-100 text-green-700' },
-  REDUCED_RISK: { label: 'Reduced', className: 'bg-yellow-100 text-yellow-800' },
-  REVIEW: { label: 'Review', className: 'bg-orange-100 text-orange-800' },
-  VETO: { label: 'Veto', className: 'bg-red-100 text-red-800' },
-  NO_DATA: { label: 'No Data', className: 'bg-gray-100 text-gray-600' },
-  OFF: { label: 'Off', className: 'bg-gray-100 text-gray-600' },
-};
-const VERDICT_BADGES: Record<string, { label: string; className: string }> = {
-  RECOMMENDED: { label: 'Recommended', className: 'bg-green-100 text-green-800' },
-  NOT_RECOMMENDED: { label: 'Not Recommended', className: 'bg-red-100 text-red-800' },
-  UNKNOWN: { label: 'No Verdict', className: 'bg-gray-100 text-gray-600' },
-};
-
 export default function Screener() {
   const { config } = useConfigStore();
   const { lastResult, setLastResult } = useScreenerStore();
   const queryClient = useQueryClient();
-  const activeStrategyQuery = useQuery({
-    queryKey: ['strategy-active'],
-    queryFn: fetchActiveStrategy,
-  });
+  const activeStrategyQuery = useActiveStrategyQuery();
   const riskConfig: RiskConfig = activeStrategyQuery.data?.risk ?? config.risk;
   const activeCurrencies = normalizeCurrencies(activeStrategyQuery.data?.universe?.filt?.currencies);
   
@@ -95,6 +88,7 @@ export default function Screener() {
   
   const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
   const [showBacktestModal, setShowBacktestModal] = useState(false);
+  const [showThesisModal, setShowThesisModal] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<ScreenerCandidate | null>(null);
   const [socialSymbol, setSocialSymbol] = useState<string | null>(null);
   const [recommendationCandidate, setRecommendationCandidate] = useState<ScreenerCandidate | null>(null);
@@ -153,8 +147,21 @@ export default function Screener() {
   const result = screenerMutation.data ?? lastResult;
   const candidates = result?.candidates || [];
   const warnings = result?.warnings || [];
+  const socialWarmupJobId = result?.socialWarmupJobId;
+  const socialWarmupQuery = useQuery({
+    queryKey: queryKeys.socialWarmupStatus(socialWarmupJobId),
+    queryFn: () => fetchSocialWarmupStatus(socialWarmupJobId!),
+    enabled: Boolean(socialWarmupJobId),
+    refetchInterval: (query) => (query.state.data?.status === 'completed' ? false : 2500),
+    retry: false,
+  });
+  const socialWarmup = socialWarmupQuery.data;
+  const resolveOverlayStatus = (status?: string | null) => {
+    if (status !== 'PENDING') return status ?? 'OFF';
+    return socialWarmup?.status === 'completed' ? 'OFF' : 'PENDING';
+  };
   const overlayCounts = candidates.reduce<Record<string, number>>((acc, c) => {
-    const status = c.overlayStatus ?? 'OFF';
+    const status = resolveOverlayStatus(c.overlayStatus);
     acc[status] = (acc[status] ?? 0) + 1;
     return acc;
   }, {});
@@ -163,10 +170,8 @@ export default function Screener() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Screener</h1>
-        <p className="mt-2 text-gray-600">
-          Find swing trade candidates based on momentum and relative strength
-        </p>
+        <h1 className="text-3xl font-bold text-gray-900">{t('screener.header.title')}</h1>
+        <p className="mt-2 text-gray-600">{t('screener.header.description')}</p>
       </div>
 
       {/* Controls */}
@@ -174,9 +179,7 @@ export default function Screener() {
         <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
           {/* Universe selection */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Universe
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.universe')}</label>
             <select
               value={selectedUniverse}
               onChange={(e) => handleUniverseChange(e.target.value)}
@@ -193,9 +196,7 @@ export default function Screener() {
 
           {/* Top N */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Top N
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.topN')}</label>
             <input
               type="number"
               value={topN}
@@ -209,9 +210,7 @@ export default function Screener() {
 
           {/* Min Price */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Min Price
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.minPrice')}</label>
             <input
               type="number"
               value={minPrice}
@@ -225,9 +224,7 @@ export default function Screener() {
 
           {/* Max Price */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Max Price
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.maxPrice')}</label>
             <input
               type="number"
               value={maxPrice}
@@ -241,27 +238,33 @@ export default function Screener() {
 
           {/* Currency filter */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Currency
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.currency')}</label>
             <select
               value={currencyFilter}
               onChange={(e) => handleCurrencyFilterChange(e.target.value as CurrencyFilter)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               disabled={screenerMutation.isPending}
             >
-              <option value="all">All</option>
-              <option value="usd">USD only</option>
-              <option value="eur">EUR only</option>
+              <option value="all">{t('screener.currencyFilter.all')}</option>
+              <option value="usd">{t('screener.currencyFilter.usdOnly')}</option>
+              <option value="eur">{t('screener.currencyFilter.eurOnly')}</option>
             </select>
           </div>
 
           {/* Account info */}
           <div className="flex items-end">
             <div className="text-sm text-gray-600">
-              <div>Account: {formatCurrency(riskConfig.accountSize)}</div>
-              <div>Risk: {formatPercent(riskConfig.riskPct)}</div>
-              <div>Currency: {formatCurrencyFilterLabel(activeCurrencies)}</div>
+              <div>
+                {t('screener.controls.account')}: {formatCurrency(riskConfig.accountSize)}
+              </div>
+              <div>
+                {t('screener.controls.risk')}: {formatPercent(riskConfig.riskPct)}
+              </div>
+              <div>
+                {t('screener.controls.currencySummary', {
+                  value: formatCurrencyFilterLabel(activeCurrencies),
+                })}
+              </div>
             </div>
           </div>
 
@@ -275,12 +278,12 @@ export default function Screener() {
               {screenerMutation.isPending ? (
                 <>
                   <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                  Running...
+                  {t('screener.controls.running')}
                 </>
               ) : (
                 <>
                   <PlayCircle className="w-4 h-4 mr-2" />
-                  Run Screener
+                  {t('screener.controls.run')}
                 </>
               )}
             </Button>
@@ -292,7 +295,7 @@ export default function Screener() {
           <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-start">
             <AlertCircle className="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" />
             <div className="text-sm text-blue-800">
-              <strong>Note:</strong> The screener downloads market data and may take 10-30 seconds to complete.
+              <strong>{t('screener.info.noteTitle')}</strong> {t('screener.info.noteBody')}
             </div>
           </div>
         )}
@@ -301,7 +304,9 @@ export default function Screener() {
         {screenerMutation.isError && (
           <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
             <p className="text-sm text-red-800">
-              Error: {screenerMutation.error instanceof Error ? screenerMutation.error.message : 'Unknown error'}
+              {t('screener.error.prefix')}: {screenerMutation.error instanceof Error
+                ? screenerMutation.error.message
+                : t('screener.error.unknown')}
             </p>
           </div>
         )}
@@ -316,22 +321,24 @@ export default function Screener() {
               <div className="flex items-center">
                 <TrendingUp className="w-6 h-6 text-green-600 mr-2" />
                 <div>
-                  <p className="text-sm text-gray-600">Screener completed</p>
+                  <p className="text-sm text-gray-600">{t('screener.summary.completed')}</p>
                   <p className="text-lg font-semibold text-gray-900">
-                    {candidates.length} candidates from {result.totalScreened} stocks
+                    {t('screener.summary.resultLine', {
+                      count: candidates.length,
+                      total: result.totalScreened,
+                    })}
                   </p>
-                  <p className="text-xs text-gray-500">
-                    As of: {result.asofDate}
-                  </p>
+                  <p className="text-xs text-gray-500">{t('screener.summary.asOf', { date: result.asofDate })}</p>
                 </div>
               </div>
               <Button
                 variant="secondary"
                 size="sm"
                 onClick={handleRunScreener}
+                title={t('screener.controls.refreshTitle')}
               >
                 <RefreshCw className="w-4 h-4 mr-1" />
-                Refresh
+                {t('screener.controls.refresh')}
               </Button>
             </div>
             {warnings.length > 0 && (
@@ -344,17 +351,34 @@ export default function Screener() {
                 </div>
               </div>
             )}
+            {socialWarmupJobId && (
+              <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+                {socialWarmup == null
+                  ? t('screener.summary.socialWarmupLoading')
+                  : socialWarmup.status === 'completed'
+                    ? t('screener.summary.socialWarmupCompleted', {
+                        completed: socialWarmup.completedSymbols,
+                        total: socialWarmup.totalSymbols,
+                        ok: socialWarmup.okSymbols,
+                        noData: socialWarmup.noDataSymbols,
+                        errors: socialWarmup.errorSymbols,
+                      })
+                    : t('screener.summary.socialWarmupRunning', {
+                        completed: socialWarmup.completedSymbols,
+                        total: socialWarmup.totalSymbols,
+                        ok: socialWarmup.okSymbols,
+                        noData: socialWarmup.noDataSymbols,
+                        errors: socialWarmup.errorSymbols,
+                      })}
+              </div>
+            )}
             {candidates.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-2 text-xs">
                 {Object.entries(overlayCounts).map(([status, count]) => {
-                  const badge = OVERLAY_BADGES[status] ?? OVERLAY_BADGES.OFF;
                   return (
-                    <span
-                      key={status}
-                      className={`px-2 py-1 rounded ${badge.className}`}
-                      title={`Overlay status: ${status}`}
-                    >
-                      {badge.label}: {count}
+                    <span key={status} className="inline-flex items-center gap-1">
+                      <OverlayBadge status={status} title={t('screener.table.overlayStatusTitle', { status })} />
+                      <span>{count}</span>
                     </span>
                   );
                 })}
@@ -363,42 +387,60 @@ export default function Screener() {
           </Card>
 
           {/* Candidates table */}
+          <GlossaryLegend
+            metricKeys={SCREENER_GLOSSARY_KEYS}
+            title={t('screener.glossary.title')}
+          />
           <Card>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Rank</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Ticker</th>
-                    <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">Currency</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Company</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Sector</th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Last Bar</th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Confidence</th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Score</th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Close</th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Stop</th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">ATR</th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Risk $</th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">RR</th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Mom 6M</th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Mom 12M</th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">RS</th>
-                    <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">Overlay</th>
-                    <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">Verdict</th>
-                    <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">Fix</th>
-                    <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">Actions</th>
+            <TableShell
+              empty={candidates.length === 0}
+              emptyMessage={t('screener.table.empty')}
+              headers={(
+                <tr className="border-b border-gray-200">
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.rank')}</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.ticker')}</th>
+                    <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.currency')}</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.company')}</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.sector')}</th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.lastBar')}</th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
+                      <MetricHelpLabel
+                        metricKey="CONFIDENCE"
+                        labelOverride={t('screener.table.headers.signalConfidence')}
+                        className="w-full justify-end"
+                      />
+                    </th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.close')}</th>
+                    <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.verdict')}</th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
+                      <MetricHelpLabel metricKey="SCORE" className="w-full justify-end" />
+                    </th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.stop')}</th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
+                      <MetricHelpLabel metricKey="ATR" className="w-full justify-end" />
+                    </th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.riskDollar')}</th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
+                      <MetricHelpLabel metricKey="RR" className="w-full justify-end" />
+                    </th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
+                      <MetricHelpLabel metricKey="MOM_6M" className="w-full justify-end" />
+                    </th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
+                      <MetricHelpLabel metricKey="MOM_12M" className="w-full justify-end" />
+                    </th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
+                      <MetricHelpLabel metricKey="RS" className="w-full justify-end" />
+                    </th>
+                    <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">
+                      <MetricHelpLabel metricKey="OVERLAY" className="justify-center" />
+                    </th>
+                    <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.fix')}</th>
+                    <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.actions')}</th>
                   </tr>
-                </thead>
-                <tbody>
-                  {candidates.length === 0 ? (
-                    <tr>
-                      <td colSpan={20} className="text-center py-8 text-gray-500">
-                        No candidates found
-                      </td>
-                    </tr>
-                  ) : (
-                    candidates.map((candidate) => (
+              )}
+            >
+              {candidates.map((candidate) => (
                       <tr key={candidate.ticker} className="border-b border-gray-100 hover:bg-gray-50">
                         <td className="py-3 px-4 text-sm text-gray-900 font-medium">
                           #{candidate.rank}
@@ -410,7 +452,7 @@ export default function Screener() {
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline"
-                              title={`View ${candidate.ticker} on Yahoo Finance`}
+                              title={t('screener.table.yahooTickerTitle', { ticker: candidate.ticker })}
                             >
                               {candidate.ticker}
                             </a>
@@ -418,8 +460,8 @@ export default function Screener() {
                               size="sm"
                               variant="secondary"
                               onClick={() => setSocialSymbol(candidate.ticker)}
-                              aria-label={`Sentiment for ${candidate.ticker}`}
-                              title="Sentiment"
+                              aria-label={t('screener.table.sentimentAria', { ticker: candidate.ticker })}
+                              title={t('screener.table.sentimentTitle')}
                             >
                               <MessageSquare className="w-4 h-4" />
                             </Button>
@@ -443,39 +485,45 @@ export default function Screener() {
                               target="_blank"
                               rel="noopener noreferrer"
                               className="hover:text-blue-600 hover:underline"
-                              title={`View ${candidate.name} on Yahoo Finance`}
+                              title={t('screener.table.yahooNameTitle', { name: candidate.name })}
                             >
                               {candidate.name}
                             </a>
-                          ) : '-'}
+                          ) : t('common.placeholders.dash')}
                         </td>
                         <td className="py-3 px-4 text-sm text-gray-600">
                           <span className="text-xs px-2 py-1 bg-gray-100 rounded">
-                            {candidate.sector || 'N/A'}
+                            {candidate.sector || t('common.placeholders.notAvailable')}
                           </span>
                         </td>
                         <td className="py-3 px-4 text-sm text-right text-gray-600">
                           {candidate.lastBar
                             ? new Date(candidate.lastBar).toLocaleString()
-                            : '-'}
+                            : t('common.placeholders.dash')}
                         </td>
                         <td className="py-3 px-4 text-sm text-right">
                           <span className="font-semibold text-purple-600">
                             {candidate.confidence.toFixed(1)}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-sm text-right font-medium text-gray-900">
-                          {(candidate.score * 100).toFixed(1)}
-                        </td>
                         <td className="py-3 px-4 text-sm text-right text-gray-900">
                           {formatCurrency(candidate.close, candidate.currency)}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          {(() => {
+                            const verdict = candidate.recommendation?.verdict ?? 'UNKNOWN';
+                            return <RecommendationBadge verdict={verdict} className="inline-block" />;
+                          })()}
+                        </td>
+                        <td className="py-3 px-4 text-sm text-right font-medium text-gray-900">
+                          {(candidate.score * 100).toFixed(1)}
                         </td>
                         <td className="py-3 px-4 text-sm text-right text-gray-900">
                           {(() => {
                             const stopValue = candidate.recommendation?.risk?.stop ?? candidate.stop;
                             return stopValue != null && stopValue > 0
                               ? formatCurrency(stopValue, candidate.currency)
-                              : '-';
+                              : t('common.placeholders.dash');
                           })()}
                         </td>
                         <td className="py-3 px-4 text-sm text-right text-gray-600">
@@ -485,13 +533,15 @@ export default function Screener() {
                           {(() => {
                             const riskValue =
                               candidate.recommendation?.risk?.riskAmount ?? candidate.riskUsd;
-                            return riskValue && riskValue > 0 ? formatCurrency(riskValue) : '-';
+                            return riskValue && riskValue > 0
+                              ? formatCurrency(riskValue)
+                              : t('common.placeholders.dash');
                           })()}
                         </td>
                         <td className="py-3 px-4 text-sm text-right text-gray-900">
                           {(() => {
                             const rrValue = candidate.recommendation?.risk?.rr ?? candidate.rr;
-                            return rrValue != null && rrValue > 0 ? rrValue.toFixed(2) : '-';
+                            return rrValue != null && rrValue > 0 ? rrValue.toFixed(2) : t('common.placeholders.dash');
                           })()}
                         </td>
                         <td className="py-3 px-4 text-sm text-right">
@@ -511,76 +561,72 @@ export default function Screener() {
                         </td>
                         <td className="py-3 px-4 text-center">
                           {(() => {
-                            const status = candidate.overlayStatus ?? 'OFF';
-                            const badge = OVERLAY_BADGES[status] ?? OVERLAY_BADGES.OFF;
                             const reasons = candidate.overlayReasons?.length
-                              ? `Reasons: ${candidate.overlayReasons.join(', ')}`
-                              : 'No overlay triggers';
+                              ? t('screener.table.overlayReasons', {
+                                  reasons: candidate.overlayReasons.join(', '),
+                                })
+                              : t('screener.table.overlayNoTriggers');
                             const metrics = [
                               candidate.overlayAttentionZ != null
-                                ? `Attention Z: ${candidate.overlayAttentionZ.toFixed(2)}`
+                                ? t('screener.table.overlayAttentionZ', {
+                                    value: candidate.overlayAttentionZ.toFixed(2),
+                                  })
                                 : null,
                               candidate.overlaySentimentScore != null
-                                ? `Sentiment: ${candidate.overlaySentimentScore.toFixed(2)}`
+                                ? t('screener.table.overlaySentiment', {
+                                    value: candidate.overlaySentimentScore.toFixed(2),
+                                  })
                                 : null,
                               candidate.overlayHypeScore != null
-                                ? `Hype: ${candidate.overlayHypeScore.toFixed(2)}`
+                                ? t('screener.table.overlayHype', {
+                                    value: candidate.overlayHypeScore.toFixed(2),
+                                  })
                                 : null,
                               candidate.overlaySampleSize != null
-                                ? `Sample: ${candidate.overlaySampleSize}`
+                                ? t('screener.table.overlaySample', { value: candidate.overlaySampleSize })
                                 : null,
                             ].filter(Boolean);
                             const title = [reasons, ...metrics].join(' | ');
-                            return (
-                              <span
-                                className={`text-xs px-2 py-1 rounded ${badge.className}`}
-                                title={title}
-                              >
-                                {badge.label}
-                              </span>
-                            );
-                          })()}
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          {(() => {
-                            const verdict = candidate.recommendation?.verdict ?? 'UNKNOWN';
-                            const badge = VERDICT_BADGES[verdict] ?? VERDICT_BADGES.UNKNOWN;
-                            const reasons = candidate.recommendation?.reasonsShort?.length
-                              ? candidate.recommendation.reasonsShort.join(' | ')
-                              : 'No recommendation available';
-                            return (
-                              <span
-                                className={`text-xs px-2 py-1 rounded ${badge.className}`}
-                                title={reasons}
-                              >
-                                {badge.label}
-                              </span>
-                            );
+                            return <OverlayBadge status={resolveOverlayStatus(candidate.overlayStatus)} title={title} />;
                           })()}
                         </td>
                         <td className="py-3 px-4 text-center">
                           {(() => {
                             const fixes = candidate.recommendation?.education?.whatWouldMakeValid ?? [];
-                            if (!fixes.length) return <span className="text-gray-400">—</span>;
+                            if (!fixes.length) return <span className="text-gray-400">{t('common.placeholders.emDash')}</span>;
                             const title = fixes.join(' | ');
                             return (
                               <span
                                 className="text-xs text-blue-700 underline decoration-dotted cursor-help"
                                 title={title}
                               >
-                                Fix
+                                {t('screener.table.fixLabel')}
                               </span>
                             );
                           })()}
                         </td>
                         <td className="py-3 px-4 text-center">
                           <div className="flex gap-2 justify-center">
+                            {candidate.recommendation?.thesis && (
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => {
+                                  setSelectedCandidate(candidate);
+                                  setShowThesisModal(true);
+                                }}
+                                title={t('screener.table.tradeThesisTitle')}
+                                aria-label={t('screener.table.tradeThesisAria', { ticker: candidate.ticker })}
+                              >
+                                <Lightbulb className="w-4 h-4" />
+                              </Button>
+                            )}
                             <Button
                               size="sm"
                               variant="secondary"
                               onClick={() => setRecommendationCandidate(candidate)}
-                              title="Recommendation details"
-                              aria-label={`Recommendation details for ${candidate.ticker}`}
+                              title={t('screener.table.recommendationDetailsTitle')}
+                              aria-label={t('screener.table.recommendationDetailsAria', { ticker: candidate.ticker })}
                             >
                               <ListChecks className="w-4 h-4" />
                             </Button>
@@ -591,7 +637,7 @@ export default function Screener() {
                                 setSelectedCandidate(candidate);
                                 setShowBacktestModal(true);
                               }}
-                              title="Quick Backtest"
+                              title={t('screener.table.quickBacktestTitle')}
                             >
                               <BarChart3 className="w-4 h-4" />
                             </Button>
@@ -604,35 +650,49 @@ export default function Screener() {
                               }}
                               title={
                                 candidate.recommendation?.verdict === 'NOT_RECOMMENDED'
-                                  ? 'Not recommended — open details to fix'
-                                  : 'Create Order'
+                                  ? t('screener.table.createOrderNotRecommendedTitle')
+                                  : t('screener.table.createOrderTitle')
                               }
                             >
-                              Create Order
+                              {t('screener.table.createOrderAction')}
                             </Button>
                           </div>
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                    ))}
+            </TableShell>
           </Card>
         </>
       )}
 
       {/* Create Order Modal */}
       {showCreateOrderModal && selectedCandidate && (
-        <CreateOrderModal
-          candidate={selectedCandidate}
+        <CandidateOrderModal
+          candidate={{
+            ticker: selectedCandidate.ticker,
+            entry: selectedCandidate.entry,
+            stop: selectedCandidate.stop,
+            close: selectedCandidate.close,
+            shares: selectedCandidate.shares,
+            recommendation: selectedCandidate.recommendation,
+            sector: selectedCandidate.sector ?? null,
+            rReward: selectedCandidate.rr,
+            score: selectedCandidate.score * 100,
+            rank: selectedCandidate.rank,
+            atr: selectedCandidate.atr,
+            currency: selectedCandidate.currency,
+          }}
           risk={riskConfig}
+          defaultNotes={t('screener.defaultNotes', {
+            score: (selectedCandidate.score * 100).toFixed(1),
+            rank: selectedCandidate.rank,
+          })}
           onClose={() => {
             setShowCreateOrderModal(false);
             setSelectedCandidate(null);
           }}
           onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ['orders'] });
+            queryClient.invalidateQueries({ queryKey: queryKeys.orders() });
             setShowCreateOrderModal(false);
             setSelectedCandidate(null);
           }}
@@ -657,399 +717,25 @@ export default function Screener() {
         />
       )}
 
+      {/* Trade Thesis Modal */}
+      {showThesisModal && selectedCandidate?.recommendation?.thesis && (
+        <TradeThesisModal
+          thesis={selectedCandidate.recommendation.thesis}
+          onClose={() => {
+            setShowThesisModal(false);
+            setSelectedCandidate(null);
+          }}
+        />
+      )}
+
       {recommendationCandidate && (
-        <RecommendationModal
-          candidate={recommendationCandidate}
+        <RecommendationDetailsModal
+          ticker={recommendationCandidate.ticker}
+          recommendation={recommendationCandidate.recommendation}
+          currency={recommendationCandidate.currency}
           onClose={() => setRecommendationCandidate(null)}
         />
       )}
-    </div>
-  );
-}
-
-function RecommendationModal({
-  candidate,
-  onClose,
-}: {
-  candidate: ScreenerCandidate;
-  onClose: () => void;
-}) {
-  const rec = candidate.recommendation;
-  const verdict = rec?.verdict ?? 'NOT_RECOMMENDED';
-  const verdictBadge = VERDICT_BADGES[verdict] ?? VERDICT_BADGES.NOT_RECOMMENDED;
-
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <Card variant="elevated" className="w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-        <div className="p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold">Recommendation — {candidate.ticker}</h2>
-            <Button variant="secondary" size="sm" onClick={onClose}>Close</Button>
-          </div>
-
-          <div className={`p-4 rounded ${verdict === 'RECOMMENDED' ? 'bg-green-50' : 'bg-red-50'}`}>
-            <div className="flex items-center gap-2">
-              <span className={`text-xs px-2 py-1 rounded ${verdictBadge.className}`}>
-                {verdictBadge.label}
-              </span>
-              <span className="text-sm text-gray-700">Summary</span>
-            </div>
-            {rec?.reasonsShort?.length ? (
-              <ul className="list-disc ml-5 mt-2 space-y-1 text-sm">
-                {rec.reasonsShort.map((reason) => (
-                  <li key={reason}>{reason}</li>
-                ))}
-              </ul>
-            ) : (
-              <div className="text-sm text-gray-700 mt-2">
-                No recommendation details available.
-              </div>
-            )}
-          </div>
-
-          <details className="bg-white rounded border border-gray-200 p-4" open>
-            <summary className="cursor-pointer font-semibold">Checklist Gates</summary>
-            <div className="mt-3 space-y-2 text-sm">
-              {rec?.checklist?.length ? rec.checklist.map((gate) => (
-                <div key={gate.gateName} className="flex items-start gap-3">
-                  <span className={`mt-0.5 h-2 w-2 rounded-full ${gate.passed ? 'bg-green-600' : 'bg-red-600'}`} />
-                  <div>
-                    <div className="font-medium">{gate.gateName}</div>
-                    <div className="text-gray-600">{gate.explanation}</div>
-                  </div>
-                </div>
-              )) : (
-                <div className="text-gray-600">No checklist data.</div>
-              )}
-            </div>
-          </details>
-
-          <details className="bg-white rounded border border-gray-200 p-4">
-            <summary className="cursor-pointer font-semibold">Risk & Costs</summary>
-            <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-              <div>
-                <div className="text-gray-500">Entry</div>
-                <div className="font-semibold">
-                  {rec?.risk?.entry != null ? formatCurrency(rec.risk.entry, candidate.currency) : '—'}
-                </div>
-              </div>
-              <div>
-                <div className="text-gray-500">Stop</div>
-                <div className="font-semibold">
-                  {rec?.risk?.stop != null ? formatCurrency(rec.risk.stop, candidate.currency) : '—'}
-                </div>
-              </div>
-              <div>
-                <div className="text-gray-500">Target</div>
-                <div className="font-semibold">
-                  {rec?.risk?.target != null ? formatCurrency(rec.risk.target, candidate.currency) : '—'}
-                </div>
-              </div>
-              <div>
-                <div className="text-gray-500">RR</div>
-                <div className="font-semibold">{rec?.risk?.rr != null ? rec.risk.rr.toFixed(2) : '—'}</div>
-              </div>
-              <div>
-                <div className="text-gray-500">Risk Amount</div>
-                <div className="font-semibold">{rec?.risk?.riskAmount != null ? formatCurrency(rec.risk.riskAmount) : '—'}</div>
-              </div>
-              <div>
-                <div className="text-gray-500">Risk %</div>
-                <div className="font-semibold">{rec?.risk?.riskPct != null ? formatPercent(rec.risk.riskPct) : '—'}</div>
-              </div>
-              <div>
-                <div className="text-gray-500">Position Size</div>
-                <div className="font-semibold">{rec?.risk?.positionSize != null ? formatCurrency(rec.risk.positionSize) : '—'}</div>
-              </div>
-              <div>
-                <div className="text-gray-500">Shares</div>
-                <div className="font-semibold">{rec?.risk?.shares != null ? rec.risk.shares : '—'}</div>
-              </div>
-              <div>
-                <div className="text-gray-500">Fees (est.)</div>
-                <div className="font-semibold">{rec?.costs?.totalCost != null ? formatCurrency(rec.costs.totalCost) : '—'}</div>
-              </div>
-              <div>
-                <div className="text-gray-500">Fee / Risk</div>
-                <div className="font-semibold">{rec?.costs?.feeToRiskPct != null ? formatPercent(rec.costs.feeToRiskPct) : '—'}</div>
-              </div>
-            </div>
-          </details>
-
-          <details className="bg-white rounded border border-gray-200 p-4">
-            <summary className="cursor-pointer font-semibold">Education</summary>
-            <div className="mt-3 text-sm space-y-2">
-              <div>
-                <div className="text-gray-500">Bias Warning</div>
-                <div className="font-medium">{rec?.education?.commonBiasWarning ?? '—'}</div>
-              </div>
-              <div>
-                <div className="text-gray-500">What to Learn</div>
-                <div className="font-medium">{rec?.education?.whatToLearn ?? '—'}</div>
-              </div>
-              {rec?.education?.whatWouldMakeValid?.length ? (
-                <div>
-                  <div className="text-gray-500">What would make this trade valid?</div>
-                  <ul className="list-disc ml-5 mt-1 space-y-1">
-                    {rec.education.whatWouldMakeValid.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-            </div>
-          </details>
-        </div>
-      </Card>
-    </div>
-  );
-}
-
-// Create Order Modal Component
-function CreateOrderModal({
-  candidate,
-  risk,
-  onClose,
-  onSuccess,
-}: {
-  candidate: ScreenerCandidate;
-  risk: RiskConfig;
-  onClose: () => void;
-  onSuccess: () => void;
-}) {
-  const recRisk = candidate.recommendation?.risk;
-  const suggestedEntry = recRisk?.entry ?? candidate.entry ?? candidate.close;
-  const suggestedStop = recRisk?.stop ?? candidate.stop ?? null;
-  const suggestedShares = recRisk?.shares ?? candidate.shares ?? risk.minShares;
-
-  const [formData, setFormData] = useState<CreateOrderRequest>({
-    ticker: candidate.ticker,
-    orderType: 'BUY_LIMIT',
-    quantity: suggestedShares,
-    limitPrice: parseFloat(suggestedEntry.toFixed(2)),
-    stopPrice: suggestedStop != null ? parseFloat(suggestedStop.toFixed(2)) : 0,
-    notes: `From screener: Score ${(candidate.score * 100).toFixed(1)}, Rank #${candidate.rank}`,
-    orderKind: 'entry',
-  });
-
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const verdict = candidate.recommendation?.verdict ?? 'NOT_RECOMMENDED';
-  const isRecommended = verdict === 'RECOMMENDED';
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setError(null);
-
-    // Validation
-    if (!isRecommended) {
-      setError('This setup is not recommended. Review the checklist and fix the issues first.');
-      setIsSubmitting(false);
-      return;
-    }
-    if (formData.quantity <= 0) {
-      setError('Quantity must be greater than 0');
-      setIsSubmitting(false);
-      return;
-    }
-    if (!formData.limitPrice || formData.limitPrice <= 0) {
-      setError('Limit price must be greater than 0');
-      setIsSubmitting(false);
-      return;
-    }
-    if (formData.stopPrice && formData.limitPrice <= formData.stopPrice) {
-      setError('Limit price must be higher than stop price');
-      setIsSubmitting(false);
-      return;
-    }
-
-    try {
-      await createOrder(formData);
-      onSuccess();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create order');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const positionSize = (formData.limitPrice || 0) * formData.quantity;
-  const riskAmount = formData.stopPrice ? (formData.limitPrice! - formData.stopPrice) * formData.quantity : 0;
-  const riskPercent = risk.accountSize > 0 ? (riskAmount / risk.accountSize) * 100 : 0;
-
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <Card variant="elevated" className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <h2 className="text-2xl font-bold mb-4">Create Order - {candidate.ticker}</h2>
-          
-          {/* Candidate Summary */}
-          <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded mb-4">
-            <h3 className="font-semibold mb-2">Candidate Details</h3>
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <div>
-                <span className="text-gray-600 dark:text-gray-400">Price:</span>{' '}
-                <strong>{formatCurrency(candidate.close)}</strong>
-              </div>
-              <div>
-                <span className="text-gray-600 dark:text-gray-400">ATR:</span>{' '}
-                <strong>{candidate.atr.toFixed(2)}</strong>
-              </div>
-              <div>
-                <span className="text-gray-600 dark:text-gray-400">Momentum 6M:</span>{' '}
-                <strong className={candidate.momentum6m >= 0 ? 'text-green-600' : 'text-red-600'}>
-                  {formatPercent(candidate.momentum6m)}
-                </strong>
-              </div>
-              <div>
-                <span className="text-gray-600 dark:text-gray-400">Score:</span>{' '}
-                <strong>{(candidate.score * 100).toFixed(1)}</strong>
-              </div>
-            </div>
-          </div>
-
-          {/* Recommendation Summary */}
-          <div className={`p-4 rounded mb-4 ${isRecommended ? 'bg-green-50' : 'bg-red-50'}`}>
-            <h3 className="font-semibold mb-2">Recommendation</h3>
-            <div className="text-sm">
-              <div className="font-semibold">
-                {isRecommended ? 'Recommended' : 'Not Recommended'}
-              </div>
-              {candidate.recommendation?.reasonsShort?.length ? (
-                <ul className="list-disc ml-5 mt-2 space-y-1">
-                  {candidate.recommendation.reasonsShort.map((reason) => (
-                    <li key={reason}>{reason}</li>
-                  ))}
-                </ul>
-              ) : (
-                <div className="mt-2 text-gray-700">No recommendation details available.</div>
-              )}
-              {candidate.recommendation?.education?.whatWouldMakeValid?.length ? (
-                <div className="mt-3">
-                  <div className="font-medium">What would make it valid?</div>
-                  <ul className="list-disc ml-5 mt-1 space-y-1">
-                    {candidate.recommendation.education.whatWouldMakeValid.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-            </div>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Order Type</label>
-                <select
-                  value={formData.orderType}
-                  onChange={(e) => setFormData({ ...formData, orderType: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
-                >
-                  <option value="BUY_LIMIT">BUY LIMIT</option>
-                  <option value="BUY_MARKET">BUY MARKET</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Quantity</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={formData.quantity}
-                  onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 1 })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Limit Price</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  value={formData.limitPrice}
-                  onChange={(e) => setFormData({ ...formData, limitPrice: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Stop Price</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  value={formData.stopPrice}
-                  onChange={(e) => setFormData({ ...formData, stopPrice: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Risk Summary */}
-            <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded">
-              <h3 className="font-semibold mb-2">Position Summary</h3>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div>
-                  <span className="text-gray-600 dark:text-gray-400">Position Size:</span>{' '}
-                  <strong>{formatCurrency(positionSize)}</strong>
-                </div>
-                <div>
-                  <span className="text-gray-600 dark:text-gray-400">% of Account:</span>{' '}
-                  <strong>{risk.accountSize > 0 ? ((positionSize / risk.accountSize) * 100).toFixed(1) : '0.0'}%</strong>
-                </div>
-                <div>
-                  <span className="text-gray-600 dark:text-gray-400">Risk Amount:</span>{' '}
-                  <strong className="text-red-600">{formatCurrency(riskAmount)}</strong>
-                </div>
-                <div>
-                  <span className="text-gray-600 dark:text-gray-400">Risk %:</span>{' '}
-                  <strong className={riskPercent > risk.riskPct * 100 ? 'text-red-600' : 'text-green-600'}>
-                    {riskPercent.toFixed(2)}%
-                  </strong>
-                </div>
-              </div>
-              {riskPercent > risk.riskPct * 100 && (
-                <p className="text-sm text-yellow-600 dark:text-yellow-500 mt-2">
-                  ⚠️ Risk exceeds target ({(risk.riskPct * 100).toFixed(1)}%)
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">Notes</label>
-              <textarea
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
-                rows={3}
-              />
-            </div>
-
-            {error && (
-              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3">
-                <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
-              </div>
-            )}
-
-            <div className="flex gap-3 justify-end">
-              <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>
-                Cancel
-              </Button>
-              <Button type="submit" variant="primary" disabled={isSubmitting || !isRecommended}>
-                {isSubmitting ? 'Creating...' : 'Create Order'}
-              </Button>
-            </div>
-          </form>
-        </div>
-      </Card>
     </div>
   );
 }

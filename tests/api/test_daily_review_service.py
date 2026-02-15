@@ -2,6 +2,7 @@
 from datetime import date
 from unittest.mock import Mock
 import pytest
+from fastapi import HTTPException
 
 from api.models.daily_review import DailyReview
 from api.models.screener import ScreenerResponse, ScreenerCandidate
@@ -195,6 +196,7 @@ def test_generate_daily_review_candidates_fields(mock_screener_service, mock_por
     
     candidate = review.new_candidates[0]
     assert candidate.ticker == "AAPL"
+    assert candidate.confidence == 0.9
     assert candidate.signal == "MOMENTUM"
     assert candidate.entry == 150.0
     assert candidate.stop == 145.0
@@ -282,3 +284,30 @@ def test_generate_daily_review_no_candidates(mock_portfolio_service, tmp_path):
     assert review.summary.new_candidates == 0
     # Positions should still be analyzed
     assert review.summary.total_positions == 3
+
+
+def test_generate_daily_review_survives_stop_suggestion_error(
+    mock_screener_service,
+    mock_portfolio_service,
+    tmp_path,
+):
+    """A single stop-suggestion failure should not fail the whole review."""
+    original_side_effect = mock_portfolio_service.suggest_position_stop.side_effect
+
+    def side_effect(position_id: str):
+        if position_id == "pos2":
+            raise HTTPException(status_code=502, detail="Failed to fetch market data for GOOGL")
+        return original_side_effect(position_id)
+
+    mock_portfolio_service.suggest_position_stop.side_effect = side_effect
+
+    service = DailyReviewService(mock_screener_service, mock_portfolio_service, data_dir=tmp_path)
+    review = service.generate_daily_review(top_n=10)
+
+    assert isinstance(review, DailyReview)
+    assert review.summary.total_positions == 3
+    assert len(review.positions_close) == 1
+    assert len(review.positions_update_stop) == 0
+    assert len(review.positions_hold) == 2
+    degraded = next(p for p in review.positions_hold if p.position_id == "pos2")
+    assert "stop suggestion unavailable" in degraded.reason.lower()

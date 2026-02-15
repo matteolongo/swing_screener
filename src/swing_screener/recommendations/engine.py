@@ -64,6 +64,7 @@ class RecommendationPayload:
     costs: CostPayload
     checklist: list[ChecklistGate]
     education: EducationPayload
+    thesis: Optional[dict] = None  # Trade Thesis (serialized from thesis.TradeThesis)
 
 
 def _estimate_costs(
@@ -104,6 +105,7 @@ def build_recommendation(
     fx_estimate_pct: float = 0.0,
     overlay_status: Optional[str] = None,
     min_shares: int = 1,
+    thesis: Optional[dict] = None,  # Trade Thesis dictionary
 ) -> RecommendationPayload:
     if entry is None or not math.isfinite(entry) or entry <= 0:
         entry = 0.0
@@ -349,4 +351,5 @@ def build_recommendation(
         costs=costs,
         checklist=checklist,
         education=education,
+        thesis=thesis,
     )

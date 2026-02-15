@@ -144,7 +144,12 @@ class SocialCache:
         path = self._metadata_path()
         if not path.exists():
             return None
-        return json.loads(path.read_text(encoding="utf-8"))
+        try:
+            loaded = json.loads(path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError, ValueError):
+            # Corrupt/partial metadata should not break request flow.
+            return None
+        return loaded if isinstance(loaded, dict) else None
 
     def get_hype_history(self, symbol: str, asof: date, lookback_days: int) -> list[float]:
         symbol = symbol.upper()
