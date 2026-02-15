@@ -469,6 +469,9 @@ export const messagesEn = {
       totalPnlDisclaimer: '(not a decision metric)',
       totalPnlDetail: 'Includes realized P&L, FX, and fees — focus on current risk/reward instead.',
       percentOfAccount: '{{value}} of account',
+      availableToDeploy: 'Available to Deploy',
+      ofAccount: 'of account',
+      perTrade: 'per trade',
     },
     actionItems: {
       title: "Today's Action Items",
@@ -512,8 +515,14 @@ export const messagesEn = {
     quickActions: {
       title: 'Quick Actions',
       runScreener: 'Run Screener',
+      dailyReview: 'Daily Review',
       managePositions: 'Manage Positions',
       viewOrders: 'View Orders',
+    },
+    priorityActions: {
+      title: 'Priority Actions',
+      refreshPrices: 'Refresh Prices',
+      allCaughtUp: "✓ All caught up! No pending actions.",
     },
     gettingStarted: {
       title: 'Getting Started',
@@ -577,6 +586,7 @@ export const messagesEn = {
       headers: {
         rank: 'Rank',
         ticker: 'Ticker',
+        symbol: 'Symbol',
         currency: 'Currency',
         company: 'Company',
         sector: 'Sector',
@@ -588,6 +598,7 @@ export const messagesEn = {
         verdict: 'Verdict',
         fix: 'Fix',
         actions: 'Actions',
+        setup: 'Setup',
       },
       yahooTickerTitle: 'View {{ticker}} on Yahoo Finance',
       yahooNameTitle: 'View {{name}} on Yahoo Finance',
@@ -609,6 +620,27 @@ export const messagesEn = {
       createOrderTitle: 'Create Order',
       createOrderNotRecommendedTitle: 'Not recommended — open details to fix',
       createOrderAction: 'Create Order',
+      expandRow: 'Expand details',
+      collapseRow: 'Collapse details',
+      expandRowAria: 'Expand details for {{ticker}}',
+      collapseRowAria: 'Collapse details for {{ticker}}',
+    },
+    identity: {
+      companyUnknown: 'Unknown',
+      sectorUnknown: 'Unknown',
+    },
+    setup: {
+      entry: 'Entry',
+      stop: 'Stop',
+      rr: 'R/R',
+      riskDollar: 'Risk $',
+    },
+    details: {
+      title: 'Details for {{ticker}}',
+      advancedMetrics: 'Advanced Metrics',
+      overlayInfo: 'Overlay Information',
+      secondaryActions: 'More Analysis',
+      noOverlayData: 'No overlay data available',
     },
     defaultNotes: 'From screener: Score {{score}}, Rank #{{rank}}',
   },
