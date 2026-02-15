@@ -404,7 +404,7 @@ describe('Screener Page', () => {
       })
 
       await waitFor(() => {
-        expect(screen.getByText('Sentiment Analysis - AAPL')).toBeInTheDocument()
+        expect(screen.getByRole('heading', { name: 'Sentiment Analysis - AAPL' })).toBeInTheDocument()
       })
 
       expect(screen.getByLabelText(/Lookback Override/i)).toBeInTheDocument()
