@@ -265,7 +265,8 @@ describe('Screener Page', () => {
       })
       expect(screen.getByText('Intelligence opportunities (as of 2026-02-15)')).toBeInTheDocument()
       await screen.findByText('Catalyst + follow-through confirmed.')
-      expect(screen.getByText('State: TRENDING')).toBeInTheDocument()
+      expect(screen.getByText('Trending')).toBeInTheDocument()
+      expect(screen.getByText('What to do next')).toBeInTheDocument()
     })
 
     it('uses the current universe symbols for intelligence instead of previous run symbols', async () => {

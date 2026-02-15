@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal, Optional, Dict, Any, List
+from typing import Literal, Optional, Any
 
 import pandas as pd
 
@@ -115,7 +115,7 @@ def backtest_single_ticker_R(
     if cfg.exit_mode == "trailing_stop":
         df["trail_sma"] = _sma(df["close"], cfg.trail_sma)
 
-    trades: List[Dict[str, Any]] = []
+    trades: list[dict[str, Any]] = []
 
     in_pos = False
     entry_date = None

@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from swing_screener.utils.helpers import get_nested_dict
+from swing_screener.utils import get_nested_dict
 
 DEFAULT_INTEL_PROVIDERS = ("yahoo_finance",)
 SUPPORTED_INTEL_PROVIDERS = {"yahoo_finance", "earnings_calendar"}
@@ -202,4 +202,3 @@ def build_intelligence_config(strategy: dict) -> IntelligenceConfig:
             ),
         ),
     )
-

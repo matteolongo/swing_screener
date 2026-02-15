@@ -11,6 +11,7 @@ import { useConfigStore } from '@/stores/configStore';
 import type { RiskConfig } from '@/types/config';
 import GlossaryLegend from '@/components/domain/education/GlossaryLegend';
 import MetricHelpLabel from '@/components/domain/education/MetricHelpLabel';
+import IntelligenceOpportunityCard from '@/components/domain/intelligence/IntelligenceOpportunityCard';
 import { DAILY_REVIEW_GLOSSARY_KEYS } from '@/content/educationGlossary';
 import TradeInsightModal from '@/components/domain/recommendation/TradeInsightModal';
 import CandidateOrderModal from '@/components/domain/orders/CandidateOrderModal';
@@ -93,8 +94,6 @@ export default function DailyReview() {
       symbols: scopedSymbols,
     });
   };
-  const formatScorePercent = (value: number) => `${(value * 100).toFixed(1)}%`;
-
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
   };
@@ -280,35 +279,7 @@ export default function DailyReview() {
             {intelligenceOpportunities.length > 0 && (
               <div className="space-y-2">
                 {intelligenceOpportunities.slice(0, 8).map((opportunity) => (
-                  <div
-                    key={opportunity.symbol}
-                    className="rounded-md border border-gray-200 dark:border-gray-700 p-3"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="primary">{opportunity.symbol}</Badge>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                          {t('dailyReview.intelligence.stateValue', { state: opportunity.state })}
-                        </span>
-                      </div>
-                      <span className="text-sm font-semibold text-green-700 dark:text-green-400">
-                        {t('dailyReview.intelligence.opportunityScore', {
-                          value: formatScorePercent(opportunity.opportunityScore),
-                        })}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-xs text-gray-600 dark:text-gray-300">
-                      {t('dailyReview.intelligence.componentsLine', {
-                        technical: formatScorePercent(opportunity.technicalReadiness),
-                        catalyst: formatScorePercent(opportunity.catalystStrength),
-                      })}
-                    </p>
-                    {opportunity.explanations[0] && (
-                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        {opportunity.explanations[0]}
-                      </p>
-                    )}
-                  </div>
+                  <IntelligenceOpportunityCard key={opportunity.symbol} opportunity={opportunity} />
                 ))}
               </div>
             )}

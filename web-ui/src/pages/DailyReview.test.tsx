@@ -266,6 +266,7 @@ describe('DailyReview Page', () => {
     })
 
     expect((await screen.findAllByText('Catalyst + follow-through confirmed.')).length).toBeGreaterThan(0)
-    expect((await screen.findAllByText('State: TRENDING')).length).toBeGreaterThan(0)
+    expect((await screen.findAllByText('Trending')).length).toBeGreaterThan(0)
+    expect((await screen.findAllByText('Risk note')).length).toBeGreaterThan(0)
   })
 })
