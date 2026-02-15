@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { screen, within } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { renderWithProviders } from '@/test/utils';
 import Sidebar from './Sidebar';
 import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
