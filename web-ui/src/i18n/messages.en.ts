@@ -469,6 +469,9 @@ export const messagesEn = {
       totalPnlDisclaimer: '(not a decision metric)',
       totalPnlDetail: 'Includes realized P&L, FX, and fees — focus on current risk/reward instead.',
       percentOfAccount: '{{value}} of account',
+      availableToDeploy: 'Available to Deploy',
+      ofAccount: 'of account',
+      perTrade: 'per trade',
     },
     actionItems: {
       title: "Today's Action Items",
@@ -512,8 +515,14 @@ export const messagesEn = {
     quickActions: {
       title: 'Quick Actions',
       runScreener: 'Run Screener',
+      dailyReview: 'Daily Review',
       managePositions: 'Manage Positions',
       viewOrders: 'View Orders',
+    },
+    priorityActions: {
+      title: 'Priority Actions',
+      refreshPrices: 'Refresh Prices',
+      allCaughtUp: "✓ All caught up! No pending actions.",
     },
     gettingStarted: {
       title: 'Getting Started',
