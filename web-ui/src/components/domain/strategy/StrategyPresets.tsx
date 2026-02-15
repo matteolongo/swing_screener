@@ -37,7 +37,7 @@ export const momentumPresets: StrategyPreset[] = [
       },
       universe: {
         filt: {
-          maxAtrPct: 0.12, // 12%
+          maxAtrPct: 12.0, // 12%
           requireTrendOk: true,
           requireRsPositive: true,
         } as any,
@@ -70,7 +70,7 @@ export const momentumPresets: StrategyPreset[] = [
       },
       universe: {
         filt: {
-          maxAtrPct: 0.15, // 15%
+          maxAtrPct: 15.0, // 15%
           requireTrendOk: true,
           requireRsPositive: false,
         } as any,
@@ -103,7 +103,7 @@ export const momentumPresets: StrategyPreset[] = [
       },
       universe: {
         filt: {
-          maxAtrPct: 0.18, // 18%
+          maxAtrPct: 18.0, // 18%
           requireTrendOk: false,
           requireRsPositive: false,
         } as any,
