@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { screen, waitFor, within, act } from '@testing-library/react'
+import { screen, waitFor, act } from '@testing-library/react'
 import { renderWithProviders } from '@/test/utils'
 import Dashboard from './Dashboard'
 import { useConfigStore } from '@/stores/configStore'

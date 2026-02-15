@@ -5,7 +5,6 @@ import Badge from '@/components/common/Badge';
 import { useConfigStore } from '@/stores/configStore';
 import {
   Position,
-  Order,
   calculatePnL,
 } from '@/features/portfolio/types';
 import { calcOpenRisk, calcOpenRiskPct, calcTotalPositionValue } from '@/features/portfolio/metrics';
@@ -14,7 +13,7 @@ import {
   useOrders,
   useOrderSnapshots,
 } from '@/features/portfolio/hooks';
-import { formatCurrency, formatDateTime, formatPercent } from '@/utils/formatters';
+import { formatCurrency, formatPercent } from '@/utils/formatters';
 import { TrendingUp, AlertCircle, FileText, Search, RefreshCw, CalendarCheck } from 'lucide-react';
 import StrategyCoachCard from '@/components/domain/education/StrategyCoachCard';
 import { buildFallbackStrategyCoachSections, buildStrategyCoachSections } from '@/content/strategyCoach';
@@ -50,7 +49,6 @@ export default function Dashboard() {
   const availableToDeploy = riskConfig.accountSize - totalPositionValue;
 
   const pendingOrdersCount = orders.length;
-  const actionItems = pendingOrdersCount;
   const isNewUser = positions.length === 0 && orders.length === 0;
   const strategyCoachSections = activeStrategyQuery.data
     ? buildStrategyCoachSections(activeStrategyQuery.data)
@@ -144,7 +142,7 @@ export default function Dashboard() {
                 <CalendarCheck className="w-5 h-5" />
                 <span className="text-sm">{t('dashboardPage.quickActions.dailyReview')}</span>
                 {positions.length > 0 && (
-                  <Badge variant="info" className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1.5 text-xs">
+                  <Badge variant="primary" className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1.5 text-xs">
                     {positions.length}
                   </Badge>
                 )}
