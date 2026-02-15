@@ -19,7 +19,7 @@ export interface SocialAnalysisResponse {
   sampleSize: number;
   sentimentScore?: number;
   sentimentConfidence?: number;
-  attentionScore: number;
+  attentionScore?: number;
   attentionZ?: number;
   hypeScore?: number;
   sourceBreakdown: Record<string, number>;
@@ -47,15 +47,19 @@ export interface SocialAnalysisResponseAPI {
   lookback_hours: number;
   last_execution_at: string;
   sample_size: number;
-  sentiment_score?: number;
-  sentiment_confidence?: number;
-  attention_score: number;
-  attention_z?: number;
-  hype_score?: number;
+  sentiment_score?: number | null;
+  sentiment_confidence?: number | null;
+  attention_score?: number | null;
+  attention_z?: number | null;
+  hype_score?: number | null;
   source_breakdown: Record<string, number>;
   reasons: string[];
   raw_events: SocialRawEventAPI[];
   error?: string;
+}
+
+function asOptionalNumber(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 }
 
 export interface SocialProvidersResponse {
@@ -98,11 +102,11 @@ export function transformSocialAnalysisResponse(
     lookbackHours: api.lookback_hours,
     lastExecutionAt: api.last_execution_at,
     sampleSize: api.sample_size,
-    sentimentScore: api.sentiment_score,
-    sentimentConfidence: api.sentiment_confidence,
-    attentionScore: api.attention_score,
-    attentionZ: api.attention_z,
-    hypeScore: api.hype_score,
+    sentimentScore: asOptionalNumber(api.sentiment_score),
+    sentimentConfidence: asOptionalNumber(api.sentiment_confidence),
+    attentionScore: asOptionalNumber(api.attention_score),
+    attentionZ: asOptionalNumber(api.attention_z),
+    hypeScore: asOptionalNumber(api.hype_score),
     sourceBreakdown: api.source_breakdown ?? {},
     reasons: api.reasons ?? [],
     rawEvents: (api.raw_events ?? []).map((ev) => ({
