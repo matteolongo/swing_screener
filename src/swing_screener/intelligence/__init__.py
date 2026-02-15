@@ -10,6 +10,11 @@ from .config import (
 from .ingestion import collect_events
 from .models import CatalystSignal, Event, Opportunity, SymbolState, ThemeCluster
 from .reaction import ReactionMetrics, build_catalyst_signals, evaluate_event_reaction
+from .relations import (
+    apply_peer_confirmation,
+    detect_theme_clusters,
+    load_curated_peer_map,
+)
 from .storage import IntelligenceStorage
 
 __all__ = [
@@ -27,5 +32,8 @@ __all__ = [
     "build_catalyst_signals",
     "collect_events",
     "evaluate_event_reaction",
+    "apply_peer_confirmation",
+    "detect_theme_clusters",
+    "load_curated_peer_map",
     "ReactionMetrics",
 ]
