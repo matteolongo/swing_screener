@@ -11,6 +11,7 @@ import yfinance as yf
 
 from .base import MarketDataProvider
 from ..market_data import fetch_ticker_metadata
+from swing_screener.utils import normalize_tickers
 
 logger = logging.getLogger(__name__)
 
@@ -47,17 +48,6 @@ class YfinanceProvider(MarketDataProvider):
         # Create cache directory
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self._configure_yf_tz_cache()
-    
-    def _normalize_tickers(self, tickers: Iterable[str]) -> list[str]:
-        """Normalize and deduplicate ticker list."""
-        out = []
-        for t in tickers:
-            t = t.strip().upper()
-            if t and t not in out:
-                out.append(t)
-        if not out:
-            raise ValueError("tickers is empty.")
-        return out
     
     def _cache_path(
         self,
@@ -287,7 +277,7 @@ class YfinanceProvider(MarketDataProvider):
         This method preserves the cache path behavior when end_date is None.
         """
         # Normalize tickers
-        tks = self._normalize_tickers(tickers)
+        tks = normalize_tickers(tickers)
         
         # Determine actual end date for yfinance call
         actual_end = end_date if end_date else None

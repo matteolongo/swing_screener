@@ -10,6 +10,8 @@ import json
 import pandas as pd
 import yfinance as yf
 
+from swing_screener.utils import normalize_tickers
+
 
 @dataclass(frozen=True)
 class MarketDataConfig:
@@ -18,17 +20,6 @@ class MarketDataConfig:
     auto_adjust: bool = True
     progress: bool = False
     cache_dir: str = ".cache/market_data"
-
-
-def _normalize_tickers(tickers: Iterable[str]) -> list[str]:
-    out = []
-    for t in tickers:
-        t = t.strip().upper()
-        if t and t not in out:
-            out.append(t)
-    if not out:
-        raise ValueError("tickers è vuoto.")
-    return out
 
 
 def _cache_path(
@@ -173,7 +164,7 @@ def fetch_ticker_metadata(
     Fetch lightweight metadata for tickers (name, currency, exchange) via yfinance.
     Uses a small JSON cache to avoid repeated network calls.
     """
-    tks = _normalize_tickers(tickers)
+    tks = normalize_tickers(tickers)
     cache_file = Path(cache_path)
     cache: dict[str, dict] = {}
     if use_cache and cache_file.exists():

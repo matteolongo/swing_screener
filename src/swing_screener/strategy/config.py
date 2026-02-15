@@ -17,42 +17,34 @@ from swing_screener.social.config import (
     DEFAULT_SENTIMENT_ANALYZER,
     SocialOverlayConfig,
 )
+from swing_screener.utils import get_nested_dict
 
 SUPPORTED_SOCIAL_PROVIDERS = {"reddit", "yahoo_finance"}
 SUPPORTED_SENTIMENT_ANALYZERS = {"keyword", "vader"}
 
 
-def _get_nested(payload: dict, *keys: str, default: Optional[dict] = None) -> dict:
-    out: Any = payload
-    for key in keys:
-        if not isinstance(out, dict):
-            return default or {}
-        out = out.get(key, {})
-    return out if isinstance(out, dict) else (default or {})
-
-
 def build_universe_config(strategy: dict) -> UniverseConfig:
-    trend = TrendConfig(**_get_nested(strategy, "universe", "trend"))
-    vol = VolatilityConfig(**_get_nested(strategy, "universe", "vol"))
-    mom = MomentumConfig(**_get_nested(strategy, "universe", "mom"))
-    filt = UniverseFilterConfig(**_get_nested(strategy, "universe", "filt"))
+    trend = TrendConfig(**get_nested_dict(strategy, "universe", "trend"))
+    vol = VolatilityConfig(**get_nested_dict(strategy, "universe", "vol"))
+    mom = MomentumConfig(**get_nested_dict(strategy, "universe", "mom"))
+    filt = UniverseFilterConfig(**get_nested_dict(strategy, "universe", "filt"))
     return UniverseConfig(trend=trend, vol=vol, mom=mom, filt=filt)
 
 
 def build_ranking_config(strategy: dict) -> RankingConfig:
-    return RankingConfig(**_get_nested(strategy, "ranking"))
+    return RankingConfig(**get_nested_dict(strategy, "ranking"))
 
 
 def build_entry_config(strategy: dict) -> EntrySignalConfig:
-    return EntrySignalConfig(**_get_nested(strategy, "signals"))
+    return EntrySignalConfig(**get_nested_dict(strategy, "signals"))
 
 
 def build_risk_config(strategy: dict) -> RiskConfig:
-    return RiskConfig(**_get_nested(strategy, "risk"))
+    return RiskConfig(**get_nested_dict(strategy, "risk"))
 
 
 def build_manage_config(strategy: dict) -> ManageConfig:
-    raw = _get_nested(strategy, "manage")
+    raw = get_nested_dict(strategy, "manage")
     return ManageConfig(
         breakeven_at_R=raw.get("breakeven_at_r", 1.0),
         trail_after_R=raw.get("trail_after_r", 2.0),
@@ -64,7 +56,7 @@ def build_manage_config(strategy: dict) -> ManageConfig:
 
 
 def build_social_overlay_config(strategy: dict) -> SocialOverlayConfig:
-    raw = _get_nested(strategy, "social_overlay")
+    raw = get_nested_dict(strategy, "social_overlay")
     providers_raw = raw.get("providers", DEFAULT_PROVIDERS)
     provider_candidates = (
         providers_raw
@@ -131,7 +123,7 @@ def build_backtest_config(
     universe = build_universe_config(strategy)
     risk = build_risk_config(strategy)
 
-    raw = _get_nested(strategy, "backtest")
+    raw = get_nested_dict(strategy, "backtest")
 
     entry_type = overrides.get("entry_type", raw.get("entry_type", "auto"))
     exit_mode = overrides.get("exit_mode", raw.get("exit_mode", "trailing_stop"))
