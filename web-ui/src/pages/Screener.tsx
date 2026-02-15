@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { PlayCircle, RefreshCw, TrendingUp, AlertCircle, BarChart3, MessageSquare, ListChecks, Lightbulb } from 'lucide-react';
+import { PlayCircle, RefreshCw, TrendingUp, AlertCircle } from 'lucide-react';
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
-import TableShell from '@/components/common/TableShell';
 import { useUniverses, useRunScreenerMutation } from '@/features/screener/hooks';
 import { ScreenerCandidate } from '@/features/screener/types';
 import { useConfigStore } from '@/stores/configStore';
@@ -13,14 +12,13 @@ import { formatCurrency, formatPercent } from '@/utils/formatters';
 import QuickBacktestModal from '@/components/modals/QuickBacktestModal';
 import SocialAnalysisModal from '@/components/modals/SocialAnalysisModal';
 import TradeThesisModal from '@/components/modals/TradeThesisModal';
-import MetricHelpLabel from '@/components/domain/education/MetricHelpLabel';
 import GlossaryLegend from '@/components/domain/education/GlossaryLegend';
 import { SCREENER_GLOSSARY_KEYS } from '@/content/educationGlossary';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 import OverlayBadge from '@/components/domain/recommendation/OverlayBadge';
-import RecommendationBadge from '@/components/domain/recommendation/RecommendationBadge';
 import RecommendationDetailsModal from '@/components/domain/recommendation/RecommendationDetailsModal';
 import CandidateOrderModal from '@/components/domain/orders/CandidateOrderModal';
+import ScreenerCandidatesTable from '@/components/domain/screener/ScreenerCandidatesTable';
 import { queryKeys } from '@/lib/queryKeys';
 import { t } from '@/i18n/t';
 import { fetchSocialWarmupStatus } from '@/features/social/api';
@@ -392,275 +390,23 @@ export default function Screener() {
             title={t('screener.glossary.title')}
           />
           <Card>
-            <TableShell
-              empty={candidates.length === 0}
-              emptyMessage={t('screener.table.empty')}
-              headers={(
-                <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.rank')}</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.ticker')}</th>
-                    <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.currency')}</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.company')}</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.sector')}</th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.lastBar')}</th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
-                      <MetricHelpLabel
-                        metricKey="CONFIDENCE"
-                        labelOverride={t('screener.table.headers.signalConfidence')}
-                        className="w-full justify-end"
-                      />
-                    </th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.close')}</th>
-                    <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.verdict')}</th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
-                      <MetricHelpLabel metricKey="SCORE" className="w-full justify-end" />
-                    </th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.stop')}</th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
-                      <MetricHelpLabel metricKey="ATR" className="w-full justify-end" />
-                    </th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.riskDollar')}</th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
-                      <MetricHelpLabel metricKey="RR" className="w-full justify-end" />
-                    </th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
-                      <MetricHelpLabel metricKey="MOM_6M" className="w-full justify-end" />
-                    </th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
-                      <MetricHelpLabel metricKey="MOM_12M" className="w-full justify-end" />
-                    </th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
-                      <MetricHelpLabel metricKey="RS" className="w-full justify-end" />
-                    </th>
-                    <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">
-                      <MetricHelpLabel metricKey="OVERLAY" className="justify-center" />
-                    </th>
-                    <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.fix')}</th>
-                    <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.actions')}</th>
-                  </tr>
-              )}
-            >
-              {candidates.map((candidate) => (
-                      <tr key={candidate.ticker} className="border-b border-gray-100 hover:bg-gray-50">
-                        <td className="py-3 px-4 text-sm text-gray-900 font-medium">
-                          #{candidate.rank}
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-2">
-                            <a 
-                              href={`https://finance.yahoo.com/quote/${candidate.ticker}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline"
-                              title={t('screener.table.yahooTickerTitle', { ticker: candidate.ticker })}
-                            >
-                              {candidate.ticker}
-                            </a>
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              onClick={() => setSocialSymbol(candidate.ticker)}
-                              aria-label={t('screener.table.sentimentAria', { ticker: candidate.ticker })}
-                              title={t('screener.table.sentimentTitle')}
-                            >
-                              <MessageSquare className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          <span
-                            className={
-                              candidate.currency === 'EUR'
-                                ? 'text-xs px-2 py-1 rounded bg-green-100 text-green-700'
-                                : 'text-xs px-2 py-1 rounded bg-blue-100 text-blue-700'
-                            }
-                          >
-                            {candidate.currency}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-sm text-gray-700">
-                          {candidate.name ? (
-                            <a 
-                              href={`https://finance.yahoo.com/quote/${candidate.ticker}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="hover:text-blue-600 hover:underline"
-                              title={t('screener.table.yahooNameTitle', { name: candidate.name })}
-                            >
-                              {candidate.name}
-                            </a>
-                          ) : t('common.placeholders.dash')}
-                        </td>
-                        <td className="py-3 px-4 text-sm text-gray-600">
-                          <span className="text-xs px-2 py-1 bg-gray-100 rounded">
-                            {candidate.sector || t('common.placeholders.notAvailable')}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-sm text-right text-gray-600">
-                          {candidate.lastBar
-                            ? new Date(candidate.lastBar).toLocaleString()
-                            : t('common.placeholders.dash')}
-                        </td>
-                        <td className="py-3 px-4 text-sm text-right">
-                          <span className="font-semibold text-purple-600">
-                            {candidate.confidence.toFixed(1)}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-sm text-right text-gray-900">
-                          {formatCurrency(candidate.close, candidate.currency)}
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          {(() => {
-                            const verdict = candidate.recommendation?.verdict ?? 'UNKNOWN';
-                            return <RecommendationBadge verdict={verdict} className="inline-block" />;
-                          })()}
-                        </td>
-                        <td className="py-3 px-4 text-sm text-right font-medium text-gray-900">
-                          {(candidate.score * 100).toFixed(1)}
-                        </td>
-                        <td className="py-3 px-4 text-sm text-right text-gray-900">
-                          {(() => {
-                            const stopValue = candidate.recommendation?.risk?.stop ?? candidate.stop;
-                            return stopValue != null && stopValue > 0
-                              ? formatCurrency(stopValue, candidate.currency)
-                              : t('common.placeholders.dash');
-                          })()}
-                        </td>
-                        <td className="py-3 px-4 text-sm text-right text-gray-600">
-                          {candidate.atr.toFixed(2)}
-                        </td>
-                        <td className="py-3 px-4 text-sm text-right text-gray-900">
-                          {(() => {
-                            const riskValue =
-                              candidate.recommendation?.risk?.riskAmount ?? candidate.riskUsd;
-                            return riskValue && riskValue > 0
-                              ? formatCurrency(riskValue)
-                              : t('common.placeholders.dash');
-                          })()}
-                        </td>
-                        <td className="py-3 px-4 text-sm text-right text-gray-900">
-                          {(() => {
-                            const rrValue = candidate.recommendation?.risk?.rr ?? candidate.rr;
-                            return rrValue != null && rrValue > 0 ? rrValue.toFixed(2) : t('common.placeholders.dash');
-                          })()}
-                        </td>
-                        <td className="py-3 px-4 text-sm text-right">
-                          <span className={candidate.momentum6m >= 0 ? 'text-green-600' : 'text-red-600'}>
-                            {formatPercent(candidate.momentum6m)}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-sm text-right">
-                          <span className={candidate.momentum12m >= 0 ? 'text-green-600' : 'text-red-600'}>
-                            {formatPercent(candidate.momentum12m)}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-sm text-right">
-                          <span className={candidate.relStrength >= 0 ? 'text-green-600' : 'text-red-600'}>
-                            {formatPercent(candidate.relStrength)}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          {(() => {
-                            const reasons = candidate.overlayReasons?.length
-                              ? t('screener.table.overlayReasons', {
-                                  reasons: candidate.overlayReasons.join(', '),
-                                })
-                              : t('screener.table.overlayNoTriggers');
-                            const metrics = [
-                              candidate.overlayAttentionZ != null
-                                ? t('screener.table.overlayAttentionZ', {
-                                    value: candidate.overlayAttentionZ.toFixed(2),
-                                  })
-                                : null,
-                              candidate.overlaySentimentScore != null
-                                ? t('screener.table.overlaySentiment', {
-                                    value: candidate.overlaySentimentScore.toFixed(2),
-                                  })
-                                : null,
-                              candidate.overlayHypeScore != null
-                                ? t('screener.table.overlayHype', {
-                                    value: candidate.overlayHypeScore.toFixed(2),
-                                  })
-                                : null,
-                              candidate.overlaySampleSize != null
-                                ? t('screener.table.overlaySample', { value: candidate.overlaySampleSize })
-                                : null,
-                            ].filter(Boolean);
-                            const title = [reasons, ...metrics].join(' | ');
-                            return <OverlayBadge status={resolveOverlayStatus(candidate.overlayStatus)} title={title} />;
-                          })()}
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          {(() => {
-                            const fixes = candidate.recommendation?.education?.whatWouldMakeValid ?? [];
-                            if (!fixes.length) return <span className="text-gray-400">{t('common.placeholders.emDash')}</span>;
-                            const title = fixes.join(' | ');
-                            return (
-                              <span
-                                className="text-xs text-blue-700 underline decoration-dotted cursor-help"
-                                title={title}
-                              >
-                                {t('screener.table.fixLabel')}
-                              </span>
-                            );
-                          })()}
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          <div className="flex gap-2 justify-center">
-                            {candidate.recommendation?.thesis && (
-                              <Button
-                                size="sm"
-                                variant="secondary"
-                                onClick={() => {
-                                  setSelectedCandidate(candidate);
-                                  setShowThesisModal(true);
-                                }}
-                                title={t('screener.table.tradeThesisTitle')}
-                                aria-label={t('screener.table.tradeThesisAria', { ticker: candidate.ticker })}
-                              >
-                                <Lightbulb className="w-4 h-4" />
-                              </Button>
-                            )}
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              onClick={() => setRecommendationCandidate(candidate)}
-                              title={t('screener.table.recommendationDetailsTitle')}
-                              aria-label={t('screener.table.recommendationDetailsAria', { ticker: candidate.ticker })}
-                            >
-                              <ListChecks className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              onClick={() => {
-                                setSelectedCandidate(candidate);
-                                setShowBacktestModal(true);
-                              }}
-                              title={t('screener.table.quickBacktestTitle')}
-                            >
-                              <BarChart3 className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="primary"
-                              onClick={() => {
-                                setSelectedCandidate(candidate);
-                                setShowCreateOrderModal(true);
-                              }}
-                              title={
-                                candidate.recommendation?.verdict === 'NOT_RECOMMENDED'
-                                  ? t('screener.table.createOrderNotRecommendedTitle')
-                                  : t('screener.table.createOrderTitle')
-                              }
-                            >
-                              {t('screener.table.createOrderAction')}
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-            </TableShell>
+            <ScreenerCandidatesTable
+              candidates={candidates}
+              onCreateOrder={(candidate) => {
+                setSelectedCandidate(candidate);
+                setShowCreateOrderModal(true);
+              }}
+              onRecommendationDetails={(candidate) => setRecommendationCandidate(candidate)}
+              onSocialAnalysis={(ticker) => setSocialSymbol(ticker)}
+              onTradeThesis={(candidate) => {
+                setSelectedCandidate(candidate);
+                setShowThesisModal(true);
+              }}
+              onQuickBacktest={(candidate) => {
+                setSelectedCandidate(candidate);
+                setShowBacktestModal(true);
+              }}
+            />
           </Card>
         </>
       )}
