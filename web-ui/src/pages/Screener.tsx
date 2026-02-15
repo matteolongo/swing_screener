@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { PlayCircle, RefreshCw, TrendingUp, AlertCircle } from 'lucide-react';
+import { PlayCircle, RefreshCw, TrendingUp, AlertCircle, Sparkles } from 'lucide-react';
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import { useUniverses, useRunScreenerMutation } from '@/features/screener/hooks';
@@ -21,6 +21,7 @@ import ScreenerCandidatesTable from '@/components/domain/screener/ScreenerCandid
 import { queryKeys } from '@/lib/queryKeys';
 import { t } from '@/i18n/t';
 import { fetchSocialWarmupStatus } from '@/features/social/api';
+import { useRunIntelligenceMutation, useIntelligenceRunStatus, useIntelligenceOpportunities } from '@/features/intelligence/hooks';
 
 const TOP_N_MAX = 200;
 type CurrencyFilter = 'all' | 'usd' | 'eur';
@@ -99,6 +100,14 @@ export default function Screener() {
   const [insightCandidate, setInsightCandidate] = useState<ScreenerCandidate | null>(null);
   const [insightDefaultTab, setInsightDefaultTab] = useState<'recommendation' | 'thesis' | 'learn'>('recommendation');
 
+  // Intelligence state
+  const [intelligenceJobId, setIntelligenceJobId] = useState<string | null>(null);
+  const intelligenceStatus = useIntelligenceRunStatus(intelligenceJobId ?? undefined);
+  const intelligenceOpportunities = useIntelligenceOpportunities(
+    intelligenceStatus.data?.asofDate,
+    Boolean(intelligenceStatus.data?.asofDate && intelligenceStatus.data?.status === 'completed')
+  );
+
   // Save preferences to localStorage when they change
   const handleUniverseChange = (value: string) => {
     setSelectedUniverse(value);
@@ -131,11 +140,21 @@ export default function Screener() {
   const screenerMutation = useRunScreenerMutation(
     (data) => {
       setLastResult(data);
+      setIntelligenceJobId(null);
     },
     (error) => {
       console.error('Screener failed', error);
     },
   );
+
+  const intelligenceMutation = useRunIntelligenceMutation((data) => {
+    setIntelligenceJobId(data.jobId);
+  });
+
+  const handleRunIntelligence = () => {
+    const symbols = candidates.map((c) => c.ticker);
+    intelligenceMutation.mutate({ symbols });
+  };
 
   const handleRunScreener = () => {
     screenerMutation.mutate({
@@ -400,6 +419,83 @@ export default function Screener() {
               </div>
             )}
           </Card>
+
+          {/* Intelligence Section */}
+          {candidates.length > 0 && (
+            <Card>
+              <div className="space-y-4">
+                {/* Run Intelligence button */}
+                {!intelligenceJobId && !intelligenceStatus.data && (
+                  <Button
+                    onClick={handleRunIntelligence}
+                    disabled={intelligenceMutation.isPending}
+                    variant="secondary"
+                  >
+                    {intelligenceMutation.isPending ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                        Running Intelligence...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Run Intelligence
+                      </>
+                    )}
+                  </Button>
+                )}
+
+                {/* Intelligence status and results */}
+                {intelligenceStatus.data && (
+                  <div>
+                    {intelligenceStatus.data.status === 'completed' && (
+                      <>
+                        <p className="text-sm text-green-700 mb-3">
+                          Intelligence run complete: {intelligenceStatus.data.completedSymbols}/{intelligenceStatus.data.totalSymbols} analyzed, {intelligenceStatus.data.opportunitiesCount} opportunities.
+                        </p>
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                            Intelligence opportunities (as of {intelligenceStatus.data.asofDate})
+                          </h3>
+                          {intelligenceOpportunities.data && intelligenceOpportunities.data.opportunities.length > 0 ? (
+                            <div className="space-y-3">
+                              {intelligenceOpportunities.data.opportunities.map((opp) => (
+                                <div key={opp.symbol} className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                  <div className="flex items-start justify-between">
+                                    <div>
+                                      <p className="font-semibold text-gray-900">{opp.symbol}</p>
+                                      <p className="text-sm text-gray-600">State: {opp.state}</p>
+                                      {opp.explanations.map((explanation, idx) => (
+                                        <p key={idx} className="text-sm text-gray-700 mt-1">{explanation}</p>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : intelligenceOpportunities.isLoading ? (
+                            <p className="text-sm text-gray-600">Loading opportunities...</p>
+                          ) : (
+                            <p className="text-sm text-gray-600">No opportunities found.</p>
+                          )}
+                        </div>
+                      </>
+                    )}
+                    {(intelligenceStatus.data.status === 'queued' || intelligenceStatus.data.status === 'running') && (
+                      <p className="text-sm text-blue-700">
+                        Intelligence running: {intelligenceStatus.data.completedSymbols}/{intelligenceStatus.data.totalSymbols} analyzed...
+                      </p>
+                    )}
+                    {intelligenceStatus.data.status === 'error' && (
+                      <p className="text-sm text-red-700">
+                        Intelligence run failed: {intelligenceStatus.data.error}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </Card>
+          )}
 
           {/* Candidates table */}
           <GlossaryLegend
