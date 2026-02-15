@@ -8,6 +8,8 @@ import {
   TextInput,
 } from '@/components/domain/strategy/StrategyFieldControls';
 import { Strategy, StrategyCurrency } from '@/features/strategy/types';
+import EnhancedSignalsCard from './EnhancedSignalsCard';
+import EnhancedRiskCard from './EnhancedRiskCard';
 
 type CurrencyFilterValue = 'all' | 'usd' | 'eur';
 
@@ -29,12 +31,14 @@ interface StrategyCoreSettingsCardsProps {
   draft: Strategy;
   setDraft: (value: Strategy) => void;
   help: Record<string, HelpInfo>;
+  useEnhancedEducation?: boolean; // Enable enhanced educational components
 }
 
 export default function StrategyCoreSettingsCards({
   draft,
   setDraft,
   help,
+  useEnhancedEducation = true, // Default to enhanced mode
 }: StrategyCoreSettingsCardsProps) {
   const strategyModules = [
     { value: 'momentum', label: t('strategyPage.core.options.moduleMomentumDefault') },
@@ -79,66 +83,71 @@ export default function StrategyCoreSettingsCards({
         </CardContent>
       </Card>
 
-      <Card variant="bordered">
-        <CardHeader>
-          <CardTitle>{t('strategyPage.core.cards.riskPosition.title')}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <NumberInput
-              label={t('strategyPage.core.fields.accountSize')}
-              value={draft.risk.accountSize}
-              onChange={(value) =>
-                setDraft({
-                  ...draft,
-                  risk: { ...draft.risk, accountSize: value },
-                })
-              }
-              step={1000}
-              min={0}
-            />
-            <NumberInput
-              label={t('strategyPage.core.fields.riskPerTrade')}
-              value={draft.risk.riskPct * 100}
-              onChange={(value) =>
-                setDraft({
-                  ...draft,
-                  risk: { ...draft.risk, riskPct: value / 100 },
-                })
-              }
-              step={0.1}
-              min={0}
-              suffix="%"
-            />
-            <NumberInput
-              label={t('strategyPage.core.fields.maxPositionSize')}
-              value={draft.risk.maxPositionPct * 100}
-              onChange={(value) =>
-                setDraft({
-                  ...draft,
-                  risk: { ...draft.risk, maxPositionPct: value / 100 },
-                })
-              }
-              step={1}
-              min={0}
-              suffix="%"
-            />
-            <NumberInput
-              label={t('strategyPage.core.fields.atrMultiplier')}
-              value={draft.risk.kAtr}
-              onChange={(value) =>
-                setDraft({
-                  ...draft,
-                  risk: { ...draft.risk, kAtr: value },
-                })
-              }
-              step={0.1}
-              min={0}
-              help={help.atrMultiplier}
-            />
-          </div>
-        </CardContent>
-      </Card>
+      {/* Risk & Position Sizing - Use enhanced version if enabled */}
+      {useEnhancedEducation ? (
+        <EnhancedRiskCard draft={draft} setDraft={setDraft} />
+      ) : (
+        <Card variant="bordered">
+          <CardHeader>
+            <CardTitle>{t('strategyPage.core.cards.riskPosition.title')}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <NumberInput
+                label={t('strategyPage.core.fields.accountSize')}
+                value={draft.risk.accountSize}
+                onChange={(value) =>
+                  setDraft({
+                    ...draft,
+                    risk: { ...draft.risk, accountSize: value },
+                  })
+                }
+                step={1000}
+                min={0}
+              />
+              <NumberInput
+                label={t('strategyPage.core.fields.riskPerTrade')}
+                value={draft.risk.riskPct * 100}
+                onChange={(value) =>
+                  setDraft({
+                    ...draft,
+                    risk: { ...draft.risk, riskPct: value / 100 },
+                  })
+                }
+                step={0.1}
+                min={0}
+                suffix="%"
+              />
+              <NumberInput
+                label={t('strategyPage.core.fields.maxPositionSize')}
+                value={draft.risk.maxPositionPct * 100}
+                onChange={(value) =>
+                  setDraft({
+                    ...draft,
+                    risk: { ...draft.risk, maxPositionPct: value / 100 },
+                  })
+                }
+                step={1}
+                min={0}
+                suffix="%"
+              />
+              <NumberInput
+                label={t('strategyPage.core.fields.atrMultiplier')}
+                value={draft.risk.kAtr}
+                onChange={(value) =>
+                  setDraft({
+                    ...draft,
+                    risk: { ...draft.risk, kAtr: value },
+                  })
+                }
+                step={0.1}
+                min={0}
+                help={help.atrMultiplier}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card variant="bordered">
         <CardHeader>
@@ -246,54 +255,59 @@ export default function StrategyCoreSettingsCards({
         </CardContent>
       </Card>
 
-      <Card variant="bordered">
-        <CardHeader>
-          <CardTitle>{t('strategyPage.core.cards.signals.title')}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <NumberInput
-              label={t('strategyPage.core.fields.breakoutLookback')}
-              value={draft.signals.breakoutLookback}
-              onChange={(value) =>
-                setDraft({
-                  ...draft,
-                  signals: { ...draft.signals, breakoutLookback: value },
-                })
-              }
-              step={1}
-              min={1}
-              help={help.breakoutLookback}
-            />
-            <NumberInput
-              label={t('strategyPage.core.fields.pullbackMa')}
-              value={draft.signals.pullbackMa}
-              onChange={(value) =>
-                setDraft({
-                  ...draft,
-                  signals: { ...draft.signals, pullbackMa: value },
-                })
-              }
-              step={1}
-              min={1}
-              help={help.pullbackMa}
-            />
-            <NumberInput
-              label={t('strategyPage.core.fields.minHistory')}
-              value={draft.signals.minHistory}
-              onChange={(value) =>
-                setDraft({
-                  ...draft,
-                  signals: { ...draft.signals, minHistory: value },
-                })
-              }
-              step={1}
-              min={1}
-              help={help.minHistory}
-            />
-          </div>
-        </CardContent>
-      </Card>
+      {/* Signals - Use enhanced version if enabled */}
+      {useEnhancedEducation ? (
+        <EnhancedSignalsCard draft={draft} setDraft={setDraft} />
+      ) : (
+        <Card variant="bordered">
+          <CardHeader>
+            <CardTitle>{t('strategyPage.core.cards.signals.title')}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <NumberInput
+                label={t('strategyPage.core.fields.breakoutLookback')}
+                value={draft.signals.breakoutLookback}
+                onChange={(value) =>
+                  setDraft({
+                    ...draft,
+                    signals: { ...draft.signals, breakoutLookback: value },
+                  })
+                }
+                step={1}
+                min={1}
+                help={help.breakoutLookback}
+              />
+              <NumberInput
+                label={t('strategyPage.core.fields.pullbackMa')}
+                value={draft.signals.pullbackMa}
+                onChange={(value) =>
+                  setDraft({
+                    ...draft,
+                    signals: { ...draft.signals, pullbackMa: value },
+                  })
+                }
+                step={1}
+                min={1}
+                help={help.pullbackMa}
+              />
+              <NumberInput
+                label={t('strategyPage.core.fields.minHistory')}
+                value={draft.signals.minHistory}
+                onChange={(value) =>
+                  setDraft({
+                    ...draft,
+                    signals: { ...draft.signals, minHistory: value },
+                  })
+                }
+                step={1}
+                min={1}
+                help={help.minHistory}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card variant="bordered">
         <CardHeader>
