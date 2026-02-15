@@ -63,8 +63,8 @@ export default function IntelligenceOpportunityCard({ opportunity }: Intelligenc
           {t('intelligenceEducation.sections.evidence')}
         </summary>
         <ul className="mt-2 ml-5 list-disc space-y-1 text-sm text-gray-600 dark:text-gray-400">
-          {education.evidence.map((line) => (
-            <li key={line}>{line}</li>
+          {education.evidence.map((line, idx) => (
+            <li key={`${opportunity.symbol}-${idx}`}>{line}</li>
           ))}
         </ul>
       </details>
