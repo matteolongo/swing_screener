@@ -434,12 +434,12 @@ export default function Screener() {
                     {intelligenceMutation.isPending ? (
                       <>
                         <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                        Running Intelligence...
+                        {t('screener.intelligence.runningAction')}
                       </>
                     ) : (
                       <>
                         <Sparkles className="w-4 h-4 mr-2" />
-                        Run Intelligence
+                        {t('screener.intelligence.runAction')}
                       </>
                     )}
                   </Button>
@@ -451,11 +451,17 @@ export default function Screener() {
                     {intelligenceStatus.data.status === 'completed' && (
                       <>
                         <p className="text-sm text-green-700 mb-3">
-                          Intelligence run complete: {intelligenceStatus.data.completedSymbols}/{intelligenceStatus.data.totalSymbols} analyzed, {intelligenceStatus.data.opportunitiesCount} opportunities.
+                          {t('screener.intelligence.statusCompleted', {
+                            completed: intelligenceStatus.data.completedSymbols,
+                            total: intelligenceStatus.data.totalSymbols,
+                            opportunities: intelligenceStatus.data.opportunitiesCount,
+                          })}
                         </p>
                         <div>
                           <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                            Intelligence opportunities (as of {intelligenceStatus.data.asofDate})
+                            {t('screener.intelligence.opportunitiesTitle', {
+                              date: intelligenceStatus.data.asofDate ?? 'unknown',
+                            })}
                           </h3>
                           {intelligenceOpportunities.data && intelligenceOpportunities.data.opportunities.length > 0 ? (
                             <div className="space-y-3">
@@ -464,7 +470,9 @@ export default function Screener() {
                                   <div className="flex items-start justify-between">
                                     <div>
                                       <p className="font-semibold text-gray-900">{opp.symbol}</p>
-                                      <p className="text-sm text-gray-600">State: {opp.state}</p>
+                                      <p className="text-sm text-gray-600">
+                                        {t('screener.intelligence.stateValue', { state: opp.state })}
+                                      </p>
                                       {opp.explanations.map((explanation, idx) => (
                                         <p key={idx} className="text-sm text-gray-700 mt-1">{explanation}</p>
                                       ))}
@@ -474,21 +482,26 @@ export default function Screener() {
                               ))}
                             </div>
                           ) : intelligenceOpportunities.isLoading ? (
-                            <p className="text-sm text-gray-600">Loading opportunities...</p>
+                            <p className="text-sm text-gray-600">{t('screener.intelligence.loading')}</p>
                           ) : (
-                            <p className="text-sm text-gray-600">No opportunities found.</p>
+                            <p className="text-sm text-gray-600">{t('screener.intelligence.empty')}</p>
                           )}
                         </div>
                       </>
                     )}
                     {(intelligenceStatus.data.status === 'queued' || intelligenceStatus.data.status === 'running') && (
                       <p className="text-sm text-blue-700">
-                        Intelligence running: {intelligenceStatus.data.completedSymbols}/{intelligenceStatus.data.totalSymbols} analyzed...
+                        {t('screener.intelligence.statusRunning', {
+                          completed: intelligenceStatus.data.completedSymbols,
+                          total: intelligenceStatus.data.totalSymbols,
+                        })}
                       </p>
                     )}
                     {intelligenceStatus.data.status === 'error' && (
                       <p className="text-sm text-red-700">
-                        Intelligence run failed: {intelligenceStatus.data.error}
+                        {t('screener.intelligence.statusError', {
+                          error: intelligenceStatus.data.error ?? 'Unknown error',
+                        })}
                       </p>
                     )}
                   </div>
