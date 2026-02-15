@@ -1,0 +1,27 @@
+[
+  {
+    "title": "Apple launches new enterprise AI stack",
+    "summary": "Management highlights recurring demand in software subscriptions.",
+    "providerPublishTime": 1771228800,
+    "publisher": "Reuters",
+    "type": "STORY",
+    "link": "https://example.com/apple-ai-stack"
+  },
+  {
+    "title": "Older Apple story",
+    "summary": "This should be filtered out by date range.",
+    "providerPublishTime": 1769900000,
+    "publisher": "Bloomberg",
+    "type": "STORY",
+    "link": "https://example.com/apple-older"
+  },
+  {
+    "title": "",
+    "summary": "",
+    "providerPublishTime": 1771228800,
+    "publisher": "CNBC",
+    "type": "VIDEO",
+    "link": "https://example.com/apple-empty"
+  }
+]
+

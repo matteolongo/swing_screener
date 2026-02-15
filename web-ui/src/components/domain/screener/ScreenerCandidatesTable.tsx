@@ -3,7 +3,7 @@ import { ChevronDown, ChevronUp, ListChecks } from 'lucide-react';
 import Button from '@/components/common/Button';
 import TableShell from '@/components/common/TableShell';
 import { ScreenerCandidate } from '@/features/screener/types';
-import { toCandidateViewModel, hasFixes } from '@/features/screener/viewModel';
+import { toCandidateViewModel } from '@/features/screener/viewModel';
 import ScreenerCandidateIdentityCell from './ScreenerCandidateIdentityCell';
 import ScreenerCandidateSetupCell from './ScreenerCandidateSetupCell';
 import ScreenerCandidateDetailsRow from './ScreenerCandidateDetailsRow';
@@ -20,7 +20,7 @@ interface ScreenerCandidatesTableProps {
 }
 
 /**
- * Simplified screener candidates table with 7 essential columns and expandable details
+ * Simplified screener candidates table with essential columns and expandable details
  */
 export default function ScreenerCandidatesTable({
   candidates,
@@ -73,9 +73,6 @@ export default function ScreenerCandidatesTable({
             {t('screener.table.headers.setup')}
           </th>
           <th className="py-3 px-4 text-sm font-semibold text-gray-700 text-center">
-            {t('screener.table.headers.fix')}
-          </th>
-          <th className="py-3 px-4 text-sm font-semibold text-gray-700 text-center">
             {t('screener.table.headers.actions')}
           </th>
         </tr>
@@ -114,20 +111,6 @@ export default function ScreenerCandidatesTable({
               {/* Setup Cell */}
               <td className="py-3 px-4">
                 <ScreenerCandidateSetupCell candidate={vm} />
-              </td>
-
-              {/* Fix */}
-              <td className="py-3 px-4 text-center">
-                {hasFixes(vm) ? (
-                  <span
-                    className="text-xs text-blue-700 dark:text-blue-400 underline decoration-dotted cursor-help"
-                    title={vm.fixes.join(' | ')}
-                  >
-                    {t('screener.table.fixLabel')}
-                  </span>
-                ) : (
-                  <span className="text-gray-400">—</span>
-                )}
               </td>
 
               {/* Actions */}

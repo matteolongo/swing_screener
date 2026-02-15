@@ -458,6 +458,48 @@ const buildSocialAnalysis = (symbol: string) => ({
   ],
 })
 
+const mockIntelligenceLaunch = {
+  job_id: 'intel-job-123',
+  status: 'queued',
+  total_symbols: 2,
+  created_at: '2026-02-15T20:00:00',
+  updated_at: '2026-02-15T20:00:00',
+}
+
+const mockIntelligenceStatus = {
+  job_id: 'intel-job-123',
+  status: 'completed',
+  total_symbols: 1,
+  completed_symbols: 1,
+  asof_date: '2026-02-15',
+  opportunities_count: 1,
+  error: null,
+  created_at: '2026-02-15T20:00:00',
+  updated_at: '2026-02-15T20:00:03',
+}
+
+const mockIntelligenceOpportunities = {
+  asof_date: '2026-02-15',
+  opportunities: [
+    {
+      symbol: 'AAPL',
+      technical_readiness: 0.82,
+      catalyst_strength: 0.71,
+      opportunity_score: 0.77,
+      state: 'TRENDING',
+      explanations: ['Catalyst + follow-through confirmed.'],
+    },
+    {
+      symbol: 'VALE',
+      technical_readiness: 0.82,
+      catalyst_strength: 0.71,
+      opportunity_score: 0.77,
+      state: 'TRENDING',
+      explanations: ['Catalyst + follow-through confirmed.'],
+    },
+  ],
+}
+
 // MSW request handlers
 export const handlers = [
   // Config endpoints
@@ -621,6 +663,48 @@ export const handlers = [
     const body = asObject(await request.json())
     const symbol = (body?.symbol || 'AAPL').toUpperCase()
     return HttpResponse.json(buildSocialAnalysis(symbol))
+  }),
+
+  // Intelligence endpoints
+  http.post(`${API_BASE_URL}/api/intelligence/run`, async ({ request }) => {
+    const body = asObject(await request.json())
+    const symbols = Array.isArray(body.symbols) ? body.symbols : []
+    if (symbols.length === 0) {
+      return HttpResponse.json({ detail: 'At least one valid symbol is required.' }, { status: 422 })
+    }
+    return HttpResponse.json({
+      ...mockIntelligenceLaunch,
+      total_symbols: symbols.length,
+    })
+  }),
+
+  http.get(`${API_BASE_URL}/api/intelligence/run/:jobId`, ({ params }) => {
+    return HttpResponse.json({
+      ...mockIntelligenceStatus,
+      job_id: params.jobId as string,
+    })
+  }),
+
+  http.get(`${API_BASE_URL}/api/intelligence/opportunities`, ({ request }) => {
+    const url = new URL(request.url)
+    const asofDate = url.searchParams.get('asof_date')
+    const symbols = url.searchParams
+      .getAll('symbols')
+      .map((value) => value.trim().toUpperCase())
+      .filter((value) => value.length > 0)
+    if (asofDate && asofDate !== mockIntelligenceOpportunities.asof_date) {
+      return HttpResponse.json({ asof_date: asofDate, opportunities: [] })
+    }
+    if (symbols.length > 0) {
+      const symbolSet = new Set(symbols)
+      return HttpResponse.json({
+        asof_date: mockIntelligenceOpportunities.asof_date,
+        opportunities: mockIntelligenceOpportunities.opportunities.filter((opportunity) =>
+          symbolSet.has(opportunity.symbol.toUpperCase())
+        ),
+      })
+    }
+    return HttpResponse.json(mockIntelligenceOpportunities)
   }),
 
   // Backtest endpoints

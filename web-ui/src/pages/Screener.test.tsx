@@ -13,6 +13,8 @@ describe('Screener Page', () => {
       config: DEFAULT_CONFIG,
     })
     useScreenerStore.setState({ lastResult: null })
+    localStorage.removeItem('screener.intelligenceAsofDate')
+    localStorage.removeItem('screener.intelligenceSymbols')
   })
 
   describe('Page Structure', () => {
@@ -241,6 +243,139 @@ describe('Screener Page', () => {
       })
     })
 
+    it('runs intelligence for screener candidates and shows opportunities', async () => {
+      const { user } = renderWithProviders(<Screener />)
+
+      await act(async () => {
+        await user.click(screen.getByRole('button', { name: /Run Screener/i }))
+      })
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Run Intelligence/i })).toBeInTheDocument()
+      })
+
+      await act(async () => {
+        await user.click(screen.getByRole('button', { name: /Run Intelligence/i }))
+      })
+
+      await waitFor(() => {
+        expect(
+          screen.getByText('Intelligence run complete: 1/1 analyzed, 1 opportunities.')
+        ).toBeInTheDocument()
+      })
+      expect(screen.getByText('Intelligence opportunities (as of 2026-02-15)')).toBeInTheDocument()
+      await screen.findByText('Catalyst + follow-through confirmed.')
+      expect(screen.getByText('State: TRENDING')).toBeInTheDocument()
+    })
+
+    it('uses the current universe symbols for intelligence instead of previous run symbols', async () => {
+      const { server } = await import('@/test/mocks/server')
+      const { http, HttpResponse } = await import('msw')
+      server.use(
+        http.post('*/api/screener/run', async ({ request }) => {
+          const body = await request.json() as { universe?: string }
+          const universe = String(body?.universe || '')
+          if (universe === 'SP500') {
+            return HttpResponse.json({
+              candidates: [buildCandidate('RECOMMENDED')].map((candidate) => ({ ...candidate, ticker: 'MSFT' })),
+              asof_date: '2026-02-08',
+              total_screened: 1,
+              warnings: [],
+            })
+          }
+          return HttpResponse.json({
+            candidates: [buildCandidate('RECOMMENDED')],
+            asof_date: '2026-02-08',
+            total_screened: 1,
+            warnings: [],
+          })
+        }),
+        http.get('*/api/intelligence/opportunities', ({ request }) => {
+          const url = new URL(request.url)
+          const symbols = url.searchParams.getAll('symbols').map((value) => value.toUpperCase())
+          if (symbols.includes('MSFT')) {
+            return HttpResponse.json({
+              asof_date: '2026-02-15',
+              opportunities: [
+                {
+                  symbol: 'MSFT',
+                  technical_readiness: 0.83,
+                  catalyst_strength: 0.68,
+                  opportunity_score: 0.76,
+                  state: 'TRENDING',
+                  explanations: ['Momentum + catalyst aligned for MSFT.'],
+                },
+              ],
+            })
+          }
+          return HttpResponse.json({
+            asof_date: '2026-02-15',
+            opportunities: [
+              {
+                symbol: 'AAPL',
+                technical_readiness: 0.82,
+                catalyst_strength: 0.71,
+                opportunity_score: 0.77,
+                state: 'TRENDING',
+                explanations: ['Catalyst + follow-through confirmed.'],
+              },
+            ],
+          })
+        })
+      )
+
+      const { user } = renderWithProviders(<Screener />)
+
+      await act(async () => {
+        await user.click(screen.getByRole('button', { name: /Run Screener/i }))
+      })
+      await act(async () => {
+        await user.click(screen.getByRole('button', { name: /Run Intelligence/i }))
+      })
+      await screen.findByText('AAPL')
+
+      const universeSelect = screen.getAllByRole('combobox')[0] as HTMLSelectElement
+      await act(async () => {
+        await user.selectOptions(universeSelect, 'SP500')
+      })
+      await act(async () => {
+        await user.click(screen.getByRole('button', { name: /Run Screener/i }))
+      })
+      await act(async () => {
+        await user.click(screen.getByRole('button', { name: /Run Intelligence/i }))
+      })
+
+      await screen.findByText('MSFT')
+      expect(screen.queryByText('AAPL')).not.toBeInTheDocument()
+    })
+
+    it('keeps intelligence opportunities visible after remount using persisted as-of date', async () => {
+      const firstRender = renderWithProviders(<Screener />)
+      const firstUser = firstRender.user
+
+      await act(async () => {
+        await firstUser.click(screen.getByRole('button', { name: /Run Screener/i }))
+      })
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Run Intelligence/i })).toBeInTheDocument()
+      })
+
+      await act(async () => {
+        await firstUser.click(screen.getByRole('button', { name: /Run Intelligence/i }))
+      })
+
+      await screen.findByText('Catalyst + follow-through confirmed.')
+      firstRender.unmount()
+
+      renderWithProviders(<Screener />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Intelligence opportunities (as of 2026-02-15)')).toBeInTheDocument()
+      })
+      await screen.findByText('Catalyst + follow-through confirmed.')
+    })
+
     it('displays candidates table with simplified headers', async () => {
       const { user } = renderWithProviders(<Screener />)
 
@@ -255,7 +390,6 @@ describe('Screener Page', () => {
         expect(screen.getByText('Last Bar')).toBeInTheDocument()
         expect(screen.getByText('Close')).toBeInTheDocument()
         expect(screen.getByText('Setup')).toBeInTheDocument()
-        expect(screen.getByText('Fix')).toBeInTheDocument()
         expect(screen.getByText('Actions')).toBeInTheDocument()
       })
     })
@@ -635,7 +769,7 @@ describe('Screener Page', () => {
       })
       
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /Refresh/i })).toBeInTheDocument()
+        expect(screen.getByTitle(/Refresh screener data/i)).toBeInTheDocument()
       })
     })
   })

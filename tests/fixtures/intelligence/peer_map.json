@@ -1,0 +1,8 @@
+{
+  "AAPL": ["MSFT", "NVDA", "AAPL"],
+  "MSFT": ["AAPL", "NVDA"],
+  "NVDA": ["AAPL", "MSFT", "AVGO"],
+  "AVGO": ["NVDA"],
+  "TSLA": ["F"]
+}
+
