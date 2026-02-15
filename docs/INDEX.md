@@ -22,6 +22,8 @@ This index separates **canonical (actively maintained)** docs from **historical 
 - `/docs/WEB_UI_ARCHITECTURE.md` - UI layering and reusable component patterns.
 - `/docs/SENTIMENT_PLUGIN_GUIDE.md` - Sentiment providers/analyzers and extension points.
 - `/docs/PRE_TRADE_EXPLANATION_ENGINE.md` - Thesis engine design and interpretation.
+- `/docs/MARKET_INTELLIGENCE_PHILOSOPHY.md` - Market intelligence operating philosophy.
+- `/docs/INTEL_SYSTEM_DESIGN.md` - Market intelligence technical architecture.
 
 ### Runtime data and config
 - `/data/README.md` - Runtime JSON/state files and conventions.

@@ -541,6 +541,31 @@ export const messagesEn = {
       subtitleFallback: 'Using local Settings values because active strategy data could not be loaded.',
       subtitleLoading: 'Loading strategy details...',
     },
+    intelligence: {
+      title: 'Market Intelligence',
+      subtitle:
+        'Run the catalyst scanner on your active portfolio symbols and review opportunities once processing completes.',
+      symbolsLine: 'Symbols in scope ({{count}}): {{symbols}}',
+      noneSymbol: 'none',
+      runAction: 'Run Intelligence',
+      runningAction: 'Running...',
+      noSymbols:
+        'Add at least one open position or pending order to run intelligence from the dashboard.',
+      startError: 'Could not start intelligence run: {{error}}',
+      statusQueued: 'Run queued for {{total}} symbols.',
+      statusRunning: 'Run in progress: {{completed}}/{{total}} symbols analyzed.',
+      statusCompleted:
+        'Run complete: {{completed}}/{{total}} symbols analyzed, {{opportunities}} opportunities found.',
+      statusError: 'Run failed: {{error}}',
+      updatedAt: 'Last update: {{updatedAt}}',
+      statusLoadError: 'Unable to load intelligence run status.',
+      opportunitiesTitle: 'Opportunities (as of {{date}})',
+      refreshOpportunities: 'Refresh opportunities',
+      loading: 'Loading opportunities...',
+      empty: 'No opportunities found for this run.',
+      opportunityScore: 'Opportunity {{value}}',
+      componentsLine: 'Technical {{technical}} | Catalyst {{catalyst}}',
+    },
     portfolioSummary: {
       title: 'Portfolio Summary',
       accountSize: 'Account Size',
@@ -666,6 +691,30 @@ export const messagesEn = {
     glossary: {
       title: 'Screener Glossary',
     },
+    intelligence: {
+      title: 'Market Intelligence (Candidates)',
+      subtitle:
+        'Run catalyst analysis in the background for the current screener symbols and review opportunities when ready.',
+      symbolsLine: 'Symbols in scope ({{count}}): {{symbols}}',
+      noneSymbol: 'none',
+      runAction: 'Run Intelligence',
+      runningAction: 'Running...',
+      startError: 'Could not start intelligence run: {{error}}',
+      statusQueued: 'Intelligence run queued for {{total}} symbols.',
+      statusRunning: 'Intelligence run in progress: {{completed}}/{{total}} analyzed.',
+      statusCompleted:
+        'Intelligence run complete: {{completed}}/{{total}} analyzed, {{opportunities}} opportunities.',
+      statusError: 'Intelligence run failed: {{error}}',
+      updatedAt: 'Last update: {{updatedAt}}',
+      statusLoadError: 'Unable to load intelligence run status.',
+      opportunitiesTitle: 'Intelligence opportunities (as of {{date}})',
+      refreshOpportunities: 'Refresh opportunities',
+      loading: 'Loading opportunities...',
+      empty: 'No intelligence opportunities found for this run.',
+      stateValue: 'State: {{state}}',
+      opportunityScore: 'Opportunity {{value}}',
+      componentsLine: 'Technical {{technical}} | Catalyst {{catalyst}}',
+    },
     table: {
       empty: 'No candidates found',
       headers: {
@@ -746,6 +795,30 @@ export const messagesEn = {
       updateStop: 'Update Stop',
       closePositions: 'Close Positions',
       holdPositions: 'Hold Positions',
+    },
+    intelligence: {
+      title: 'Market Intelligence',
+      subtitle:
+        'Run catalyst analysis in the background for symbols from this daily review and inspect opportunities when ready.',
+      symbolsLine: 'Symbols in scope ({{count}}): {{symbols}}',
+      noneSymbol: 'none',
+      runAction: 'Run Intelligence',
+      runningAction: 'Running...',
+      startError: 'Could not start intelligence run: {{error}}',
+      statusQueued: 'Run queued for {{total}} symbols.',
+      statusRunning: 'Run in progress: {{completed}}/{{total}} symbols analyzed.',
+      statusCompleted:
+        'Run complete: {{completed}}/{{total}} symbols analyzed, {{opportunities}} opportunities found.',
+      statusError: 'Run failed: {{error}}',
+      updatedAt: 'Last update: {{updatedAt}}',
+      statusLoadError: 'Unable to load intelligence run status.',
+      opportunitiesTitle: 'Opportunities (as of {{date}})',
+      refreshOpportunities: 'Refresh opportunities',
+      loading: 'Loading opportunities...',
+      empty: 'No opportunities found for this run.',
+      stateValue: 'State: {{state}}',
+      opportunityScore: 'Opportunity {{value}}',
+      componentsLine: 'Technical {{technical}} | Catalyst {{catalyst}}',
     },
     reason: {
       timeExit: 'Held for {{barsSince}} bars (max {{maxBars}}). Close to free capital for stronger setups.',

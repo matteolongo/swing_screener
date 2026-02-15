@@ -41,6 +41,11 @@ export const API_ENDPOINTS = {
   socialProviders: '/api/social/providers',
   socialWarmupStatus: (jobId: string) => `/api/social/warmup/${jobId}`,
 
+  // Intelligence
+  intelligenceRun: '/api/intelligence/run',
+  intelligenceRunStatus: (jobId: string) => `/api/intelligence/run/${jobId}`,
+  intelligenceOpportunities: '/api/intelligence/opportunities',
+
   // Daily Review
   dailyReview: '/api/daily-review',
 } as const;
