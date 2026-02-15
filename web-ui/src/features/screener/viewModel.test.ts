@@ -63,13 +63,28 @@ describe('screener viewModel', () => {
         riskUsd: 500,
         recommendation: {
           verdict: 'RECOMMENDED',
-          summary: 'Strong setup',
+          reasonsShort: ['Strong setup'],
+          reasonsDetailed: [],
           risk: {
+            entry: 180.0,
             stop: 176.0,
             rr: 3.0,
             riskAmount: 450,
-            riskPercent: 0.01,
-            isValid: true,
+            riskPct: 0.01,
+            positionSize: 5000,
+            shares: 27,
+          },
+          costs: {
+            commissionEstimate: 2.0,
+            fxEstimate: 0,
+            slippageEstimate: 5.0,
+            totalCost: 7.0,
+          },
+          checklist: [],
+          education: {
+            commonBiasWarning: '',
+            whatToLearn: '',
+            whatWouldMakeValid: [],
           },
         },
       };
@@ -88,8 +103,25 @@ describe('screener viewModel', () => {
         ...baseCandidate,
         recommendation: {
           verdict: 'NOT_RECOMMENDED',
-          summary: 'Issues present',
+          reasonsShort: ['Issues present'],
+          reasonsDetailed: [],
+          risk: {
+            entry: 180.0,
+            riskAmount: 500,
+            riskPct: 0.01,
+            positionSize: 5000,
+            shares: 27,
+          },
+          costs: {
+            commissionEstimate: 2.0,
+            fxEstimate: 0,
+            slippageEstimate: 5.0,
+            totalCost: 7.0,
+          },
+          checklist: [],
           education: {
+            commonBiasWarning: '',
+            whatToLearn: '',
             whatWouldMakeValid: ['Increase R/R to 2.0', 'Reduce fee/risk ratio'],
           },
         },
@@ -155,7 +187,15 @@ describe('screener viewModel', () => {
     it('returns true for RECOMMENDED verdict', () => {
       const vm = toCandidateViewModel({
         ...baseCandidate,
-        recommendation: { verdict: 'RECOMMENDED', summary: 'Good' },
+        recommendation: {
+          verdict: 'RECOMMENDED',
+          reasonsShort: ['Good'],
+          reasonsDetailed: [],
+          risk: { entry: 180, riskAmount: 500, riskPct: 0.01, positionSize: 5000, shares: 27 },
+          costs: { commissionEstimate: 2, fxEstimate: 0, slippageEstimate: 5, totalCost: 7 },
+          checklist: [],
+          education: { commonBiasWarning: '', whatToLearn: '', whatWouldMakeValid: [] },
+        },
       });
       
       expect(isRecommended(vm)).toBe(true);
@@ -164,7 +204,15 @@ describe('screener viewModel', () => {
     it('returns false for NOT_RECOMMENDED verdict', () => {
       const vm = toCandidateViewModel({
         ...baseCandidate,
-        recommendation: { verdict: 'NOT_RECOMMENDED', summary: 'Bad' },
+        recommendation: {
+          verdict: 'NOT_RECOMMENDED',
+          reasonsShort: ['Bad'],
+          reasonsDetailed: [],
+          risk: { entry: 180, riskAmount: 500, riskPct: 0.01, positionSize: 5000, shares: 27 },
+          costs: { commissionEstimate: 2, fxEstimate: 0, slippageEstimate: 5, totalCost: 7 },
+          checklist: [],
+          education: { commonBiasWarning: '', whatToLearn: '', whatWouldMakeValid: [] },
+        },
       });
       
       expect(isRecommended(vm)).toBe(false);
@@ -183,8 +231,12 @@ describe('screener viewModel', () => {
         ...baseCandidate,
         recommendation: {
           verdict: 'NOT_RECOMMENDED',
-          summary: 'Issues',
-          education: { whatWouldMakeValid: ['Fix 1'] },
+          reasonsShort: ['Issues'],
+          reasonsDetailed: [],
+          risk: { entry: 180, riskAmount: 500, riskPct: 0.01, positionSize: 5000, shares: 27 },
+          costs: { commissionEstimate: 2, fxEstimate: 0, slippageEstimate: 5, totalCost: 7 },
+          checklist: [],
+          education: { commonBiasWarning: '', whatToLearn: '', whatWouldMakeValid: ['Fix 1'] },
         },
       });
       
