@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { PlayCircle, RefreshCw, TrendingUp, AlertCircle } from 'lucide-react';
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
-import Badge from '@/components/common/Badge';
 import { useUniverses, useRunScreenerMutation } from '@/features/screener/hooks';
 import { ScreenerCandidate } from '@/features/screener/types';
 import { useConfigStore } from '@/stores/configStore';
@@ -12,22 +11,16 @@ import { useScreenerStore } from '@/stores/screenerStore';
 import { formatCurrency, formatPercent } from '@/utils/formatters';
 import QuickBacktestModal from '@/components/modals/QuickBacktestModal';
 import SocialAnalysisModal from '@/components/modals/SocialAnalysisModal';
-import TradeThesisModal from '@/components/modals/TradeThesisModal';
 import GlossaryLegend from '@/components/domain/education/GlossaryLegend';
 import { SCREENER_GLOSSARY_KEYS } from '@/content/educationGlossary';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 import OverlayBadge from '@/components/domain/recommendation/OverlayBadge';
-import RecommendationDetailsModal from '@/components/domain/recommendation/RecommendationDetailsModal';
+import TradeInsightModal from '@/components/domain/recommendation/TradeInsightModal';
 import CandidateOrderModal from '@/components/domain/orders/CandidateOrderModal';
 import ScreenerCandidatesTable from '@/components/domain/screener/ScreenerCandidatesTable';
 import { queryKeys } from '@/lib/queryKeys';
 import { t } from '@/i18n/t';
 import { fetchSocialWarmupStatus } from '@/features/social/api';
-import {
-  useIntelligenceOpportunities,
-  useIntelligenceRunStatus,
-  useRunIntelligenceMutation,
-} from '@/features/intelligence/hooks';
 
 const TOP_N_MAX = 200;
 type CurrencyFilter = 'all' | 'usd' | 'eur';
@@ -57,6 +50,15 @@ const normalizeUniverse = (value: string | null) => {
   if (!value) return null;
   return UNIVERSE_ALIASES[value] ?? value;
 };
+
+function getApiErrorStatus(error: unknown): number | undefined {
+  if (typeof error !== 'object' || error == null || !('status' in error)) {
+    return undefined;
+  }
+  const status = (error as { status?: unknown }).status;
+  return typeof status === 'number' ? status : undefined;
+}
+
 export default function Screener() {
   const { config } = useConfigStore();
   const { lastResult, setLastResult } = useScreenerStore();
@@ -92,12 +94,10 @@ export default function Screener() {
   
   const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
   const [showBacktestModal, setShowBacktestModal] = useState(false);
-  const [showThesisModal, setShowThesisModal] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<ScreenerCandidate | null>(null);
   const [socialSymbol, setSocialSymbol] = useState<string | null>(null);
-  const [recommendationCandidate, setRecommendationCandidate] = useState<ScreenerCandidate | null>(null);
-  const [intelligenceJobId, setIntelligenceJobId] = useState<string>();
-  const [intelligenceAsofDate, setIntelligenceAsofDate] = useState<string>();
+  const [insightCandidate, setInsightCandidate] = useState<ScreenerCandidate | null>(null);
+  const [insightDefaultTab, setInsightDefaultTab] = useState<'recommendation' | 'thesis' | 'learn'>('recommendation');
 
   // Save preferences to localStorage when they change
   const handleUniverseChange = (value: string) => {
@@ -153,49 +153,24 @@ export default function Screener() {
   const result = screenerMutation.data ?? lastResult;
   const candidates = result?.candidates || [];
   const warnings = result?.warnings || [];
-  const intelligenceSymbols = useMemo(
-    () =>
-      Array.from(
-        new Set(candidates.map((candidate) => candidate.ticker).filter((ticker) => ticker && ticker.trim().length > 0))
-      ),
-    [candidates]
-  );
-  const runIntelligenceMutation = useRunIntelligenceMutation((launch) => {
-    setIntelligenceJobId(launch.jobId);
-    setIntelligenceAsofDate(undefined);
-  });
-  const intelligenceStatusQuery = useIntelligenceRunStatus(intelligenceJobId);
-  const intelligenceStatus = intelligenceStatusQuery.data;
-  const intelligenceOpportunitiesQuery = useIntelligenceOpportunities(
-    intelligenceAsofDate,
-    Boolean(intelligenceAsofDate)
-  );
-  const intelligenceOpportunities = intelligenceOpportunitiesQuery.data?.opportunities ?? [];
-  useEffect(() => {
-    if (intelligenceStatus?.status === 'completed' && intelligenceStatus.asofDate) {
-      setIntelligenceAsofDate(intelligenceStatus.asofDate);
-    }
-  }, [intelligenceStatus?.asofDate, intelligenceStatus?.status]);
-  const handleRunIntelligence = () => {
-    if (!intelligenceSymbols.length) {
-      return;
-    }
-    runIntelligenceMutation.mutate({
-      symbols: intelligenceSymbols.slice(0, 100),
-    });
-  };
-  const formatScorePercent = (value: number) => `${(value * 100).toFixed(1)}%`;
   const socialWarmupJobId = result?.socialWarmupJobId;
   const socialWarmupQuery = useQuery({
     queryKey: queryKeys.socialWarmupStatus(socialWarmupJobId),
     queryFn: () => fetchSocialWarmupStatus(socialWarmupJobId!),
     enabled: Boolean(socialWarmupJobId),
-    refetchInterval: (query) => (query.state.data?.status === 'completed' ? false : 2500),
+    refetchInterval: (query) => {
+      const status = getApiErrorStatus(query.state.error);
+      if (status === 404) return false;
+      return query.state.data?.status === 'completed' ? false : 2500;
+    },
     retry: false,
   });
   const socialWarmup = socialWarmupQuery.data;
+  const socialWarmupErrorStatus = getApiErrorStatus(socialWarmupQuery.error);
+  const socialWarmupNotFound = socialWarmupErrorStatus === 404;
   const resolveOverlayStatus = (status?: string | null) => {
     if (status !== 'PENDING') return status ?? 'OFF';
+    if (socialWarmupNotFound) return 'OFF';
     return socialWarmup?.status === 'completed' ? 'OFF' : 'PENDING';
   };
   const overlayCounts = candidates.reduce<Record<string, number>>((acc, c) => {
@@ -391,7 +366,9 @@ export default function Screener() {
             )}
             {socialWarmupJobId && (
               <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
-                {socialWarmup == null
+                {socialWarmupNotFound
+                  ? t('screener.summary.socialWarmupUnavailable')
+                  : socialWarmup == null
                   ? t('screener.summary.socialWarmupLoading')
                   : socialWarmup.status === 'completed'
                     ? t('screener.summary.socialWarmupCompleted', {
@@ -424,140 +401,6 @@ export default function Screener() {
             )}
           </Card>
 
-          <Card variant="bordered">
-            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-              <div className="space-y-1">
-                <h2 className="text-lg font-semibold">{t('screener.intelligence.title')}</h2>
-                <p className="text-sm text-gray-600">{t('screener.intelligence.subtitle')}</p>
-                <p className="text-xs text-gray-500">
-                  {t('screener.intelligence.symbolsLine', {
-                    count: intelligenceSymbols.length,
-                    symbols:
-                      intelligenceSymbols.slice(0, 8).join(', ') || t('screener.intelligence.noneSymbol'),
-                  })}
-                </p>
-              </div>
-              <Button
-                onClick={handleRunIntelligence}
-                disabled={!intelligenceSymbols.length || runIntelligenceMutation.isPending}
-              >
-                {runIntelligenceMutation.isPending ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    {t('screener.intelligence.runningAction')}
-                  </>
-                ) : (
-                  t('screener.intelligence.runAction')
-                )}
-              </Button>
-            </div>
-
-            {runIntelligenceMutation.isError && (
-              <p className="mt-3 text-sm text-red-600">
-                {t('screener.intelligence.startError', {
-                  error:
-                    runIntelligenceMutation.error instanceof Error
-                      ? runIntelligenceMutation.error.message
-                      : t('common.errors.generic'),
-                })}
-              </p>
-            )}
-
-            {intelligenceStatus && (
-              <div className="mt-4 rounded-md border border-gray-200 p-3">
-                <p className="text-sm font-medium text-gray-900">
-                  {intelligenceStatus.status === 'completed' &&
-                    t('screener.intelligence.statusCompleted', {
-                      completed: intelligenceStatus.completedSymbols,
-                      total: intelligenceStatus.totalSymbols,
-                      opportunities: intelligenceStatus.opportunitiesCount,
-                    })}
-                  {intelligenceStatus.status === 'queued' &&
-                    t('screener.intelligence.statusQueued', {
-                      total: intelligenceStatus.totalSymbols,
-                    })}
-                  {intelligenceStatus.status === 'running' &&
-                    t('screener.intelligence.statusRunning', {
-                      completed: intelligenceStatus.completedSymbols,
-                      total: intelligenceStatus.totalSymbols,
-                    })}
-                  {intelligenceStatus.status === 'error' &&
-                    t('screener.intelligence.statusError', {
-                      error: intelligenceStatus.error || t('common.errors.generic'),
-                    })}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  {t('screener.intelligence.updatedAt', {
-                    updatedAt: intelligenceStatus.updatedAt,
-                  })}
-                </p>
-              </div>
-            )}
-
-            {intelligenceStatusQuery.isError && !intelligenceStatus && (
-              <p className="mt-3 text-sm text-red-600">
-                {t('screener.intelligence.statusLoadError')}
-              </p>
-            )}
-
-            {intelligenceAsofDate && (
-              <div className="mt-4 space-y-2">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold">
-                    {t('screener.intelligence.opportunitiesTitle', { date: intelligenceAsofDate })}
-                  </p>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => intelligenceOpportunitiesQuery.refetch()}
-                    disabled={intelligenceOpportunitiesQuery.isFetching}
-                  >
-                    {t('screener.intelligence.refreshOpportunities')}
-                  </Button>
-                </div>
-
-                {intelligenceOpportunitiesQuery.isFetching && (
-                  <p className="text-sm text-gray-600">{t('screener.intelligence.loading')}</p>
-                )}
-
-                {!intelligenceOpportunitiesQuery.isFetching && intelligenceOpportunities.length === 0 && (
-                  <p className="text-sm text-gray-600">{t('screener.intelligence.empty')}</p>
-                )}
-
-                {intelligenceOpportunities.length > 0 && (
-                  <div className="space-y-2">
-                    {intelligenceOpportunities.slice(0, 8).map((opportunity) => (
-                      <div key={opportunity.symbol} className="rounded-md border border-gray-200 p-3">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="primary">{opportunity.symbol}</Badge>
-                            <span className="text-xs text-gray-500">
-                              {t('screener.intelligence.stateValue', { state: opportunity.state })}
-                            </span>
-                          </div>
-                          <span className="text-sm font-semibold text-green-700">
-                            {t('screener.intelligence.opportunityScore', {
-                              value: formatScorePercent(opportunity.opportunityScore),
-                            })}
-                          </span>
-                        </div>
-                        <p className="mt-2 text-xs text-gray-600">
-                          {t('screener.intelligence.componentsLine', {
-                            technical: formatScorePercent(opportunity.technicalReadiness),
-                            catalyst: formatScorePercent(opportunity.catalystStrength),
-                          })}
-                        </p>
-                        {opportunity.explanations[0] && (
-                          <p className="mt-1 text-xs text-gray-500">{opportunity.explanations[0]}</p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </Card>
-
           {/* Candidates table */}
           <GlossaryLegend
             metricKeys={SCREENER_GLOSSARY_KEYS}
@@ -570,11 +413,14 @@ export default function Screener() {
                 setSelectedCandidate(candidate);
                 setShowCreateOrderModal(true);
               }}
-              onRecommendationDetails={(candidate) => setRecommendationCandidate(candidate)}
+              onRecommendationDetails={(candidate) => {
+                setInsightCandidate(candidate);
+                setInsightDefaultTab('recommendation');
+              }}
               onSocialAnalysis={(ticker) => setSocialSymbol(ticker)}
               onTradeThesis={(candidate) => {
-                setSelectedCandidate(candidate);
-                setShowThesisModal(true);
+                setInsightCandidate(candidate);
+                setInsightDefaultTab('thesis');
               }}
               onQuickBacktest={(candidate) => {
                 setSelectedCandidate(candidate);
@@ -637,23 +483,14 @@ export default function Screener() {
         />
       )}
 
-      {/* Trade Thesis Modal */}
-      {showThesisModal && selectedCandidate?.recommendation?.thesis && (
-        <TradeThesisModal
-          thesis={selectedCandidate.recommendation.thesis}
-          onClose={() => {
-            setShowThesisModal(false);
-            setSelectedCandidate(null);
-          }}
-        />
-      )}
-
-      {recommendationCandidate && (
-        <RecommendationDetailsModal
-          ticker={recommendationCandidate.ticker}
-          recommendation={recommendationCandidate.recommendation}
-          currency={recommendationCandidate.currency}
-          onClose={() => setRecommendationCandidate(null)}
+      {/* Trade Insight Modal - Unified recommendation + thesis */}
+      {insightCandidate && (
+        <TradeInsightModal
+          ticker={insightCandidate.ticker}
+          recommendation={insightCandidate.recommendation}
+          currency={insightCandidate.currency}
+          defaultTab={insightDefaultTab}
+          onClose={() => setInsightCandidate(null)}
         />
       )}
     </div>

@@ -14,13 +14,13 @@ Execution is intentionally **manual** (Degiro-friendly).
 
 ## 🤖 For AI Agents
 
-**New to this codebase?** Start with **[WELCOME.md](WELCOME.md)** for complete onboarding.
+**New to this codebase?** Start with **[docs/WELCOME.md](docs/WELCOME.md)** for complete onboarding.
 
 **Quick reference:**
 - **[.github/copilot-instructions.md](.github/copilot-instructions.md)** - GitHub Copilot configuration (auto-loaded by Copilot)
-- **[AGENTS.md](AGENTS.md)** - Complete guide: project philosophy and constraints (read this!)
-- **[ROADMAP.md](ROADMAP.md)** - Feature status and priorities
-- **[docs/DAILY_REVIEW_IMPLEMENTATION.md](docs/DAILY_REVIEW_IMPLEMENTATION.md)** - Recent implementation patterns
+- **[docs/AGENTS.md](docs/AGENTS.md)** - Complete guide: project philosophy and constraints (read this!)
+- **[docs/ROADMAP.md](docs/ROADMAP.md)** - Feature status and priorities
+- **[docs/INDEX.md](docs/INDEX.md)** - Documentation map (canonical vs historical)
 
 ---
 
@@ -326,7 +326,7 @@ npm run test:coverage # Run with coverage report
 ### Getting Started
 - **[Web UI Guide](docs/WEB_UI_GUIDE.md)** — Complete Web UI documentation (recommended)
 - **[CLI Usage](#cli-usage)** — Command-line interface reference (see above)
-- **[Docs Index](docs/INDEX.md)** — Canonical vs historical docs map
+- **[Documentation Index](docs/INDEX.md)** — Full docs map with current vs historical status
 
 ### Operational Guides
 - **[Operational Guide](docs/OPERATIONAL_GUIDE.md)** — Day-to-day CLI workflows
@@ -342,10 +342,14 @@ npm run test:coverage # Run with coverage report
 - **[Indicator Validation](docs/INDICATOR_VALIDATION.md)** — TA-Lib validation approach ⭐ **NEW**
 - **[Market Intelligence Philosophy](docs/MARKET_INTELLIGENCE_PHILOSOPHY.md)** — Why the intelligence layer exists
 - **[Intelligence System Design](docs/INTEL_SYSTEM_DESIGN.md)** — Technical architecture and delivery phases
-- **[AGENTS.md](AGENTS.md)** — Guide for AI coding assistants
+- **[docs/AGENTS.md](docs/AGENTS.md)** — Guide for AI coding assistants
 
 ### Planning
-- **[ROADMAP.md](ROADMAP.md)** — Feature roadmap and priorities
+- **[docs/ROADMAP.md](docs/ROADMAP.md)** — Feature roadmap and priorities
+
+### Historical Notes
+- Some `*IMPLEMENTATION*` and `PHASE*` markdown files are historical snapshots.
+- Use **[docs/INDEX.md](docs/INDEX.md)** to identify canonical, actively maintained docs.
 
 ## Technical Indicators
 
