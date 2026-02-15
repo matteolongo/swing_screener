@@ -15,6 +15,7 @@ from .relations import (
     detect_theme_clusters,
     load_curated_peer_map,
 )
+from .state import StateMachinePolicy, transition_symbol_state, update_symbol_states
 from .storage import IntelligenceStorage
 
 __all__ = [
@@ -36,4 +37,7 @@ __all__ = [
     "detect_theme_clusters",
     "load_curated_peer_map",
     "ReactionMetrics",
+    "StateMachinePolicy",
+    "transition_symbol_state",
+    "update_symbol_states",
 ]
