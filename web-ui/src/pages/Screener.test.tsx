@@ -428,6 +428,64 @@ describe('Screener Page', () => {
       expect(screen.getByLabelText(/Lookback Override/i)).toBeInTheDocument()
     })
 
+    it('renders sentiment modal when API returns null numeric fields', async () => {
+      const { server } = await import('@/test/mocks/server')
+      const { http, HttpResponse } = await import('msw')
+
+      server.use(
+        http.post('*/api/social/analyze', async ({ request }) => {
+          const payload = (await request.json()) as { symbol?: string }
+          return HttpResponse.json({
+            status: 'ok',
+            symbol: payload.symbol ?? 'AAPL',
+            providers: ['reddit'],
+            sentiment_analyzer: 'keyword',
+            lookback_hours: 24,
+            last_execution_at: '2026-02-12T12:00:00',
+            sample_size: 0,
+            sentiment_score: null,
+            sentiment_confidence: null,
+            attention_score: null,
+            attention_z: null,
+            hype_score: null,
+            source_breakdown: {},
+            reasons: [],
+            raw_events: [],
+          })
+        })
+      )
+
+      const { user } = renderWithProviders(<Screener />)
+
+      await act(async () => {
+        await user.click(screen.getByRole('button', { name: /Run Screener/i }))
+      })
+
+      await waitFor(() => {
+        expect(screen.getByText('AAPL')).toBeInTheDocument()
+      })
+
+      await act(async () => {
+        await user.click(screen.getByRole('button', { name: /Expand details for AAPL/i }))
+      })
+
+      await act(async () => {
+        await user.click(screen.getByRole('button', { name: /Sentiment for AAPL/i }))
+      })
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole('heading', {
+            level: 2,
+            name: /Sentiment Analysis - AAPL/i,
+          })
+        ).toBeInTheDocument()
+      })
+
+      expect(screen.getAllByText('N/A').length).toBeGreaterThan(0)
+      expect(screen.queryByText(/Z-score:/i)).not.toBeInTheDocument()
+    })
+
     it('opens recommendation details modal from candidate row', async () => {
       const { user } = renderWithProviders(<Screener />)
 
