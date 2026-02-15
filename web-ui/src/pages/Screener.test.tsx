@@ -241,6 +241,31 @@ describe('Screener Page', () => {
       })
     })
 
+    it('runs intelligence for screener candidates and shows opportunities', async () => {
+      const { user } = renderWithProviders(<Screener />)
+
+      await act(async () => {
+        await user.click(screen.getByRole('button', { name: /Run Screener/i }))
+      })
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Run Intelligence/i })).toBeInTheDocument()
+      })
+
+      await act(async () => {
+        await user.click(screen.getByRole('button', { name: /Run Intelligence/i }))
+      })
+
+      await waitFor(() => {
+        expect(
+          screen.getByText('Intelligence run complete: 1/1 analyzed, 1 opportunities.')
+        ).toBeInTheDocument()
+      })
+      expect(screen.getByText('Intelligence opportunities (as of 2026-02-15)')).toBeInTheDocument()
+      await screen.findByText('Catalyst + follow-through confirmed.')
+      expect(screen.getByText('State: TRENDING')).toBeInTheDocument()
+    })
+
     it('displays candidates table with simplified headers', async () => {
       const { user } = renderWithProviders(<Screener />)
 

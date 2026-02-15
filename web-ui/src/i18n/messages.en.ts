@@ -606,6 +606,30 @@ export const messagesEn = {
     glossary: {
       title: 'Screener Glossary',
     },
+    intelligence: {
+      title: 'Market Intelligence (Candidates)',
+      subtitle:
+        'Run catalyst analysis in the background for the current screener symbols and review opportunities when ready.',
+      symbolsLine: 'Symbols in scope ({{count}}): {{symbols}}',
+      noneSymbol: 'none',
+      runAction: 'Run Intelligence',
+      runningAction: 'Running...',
+      startError: 'Could not start intelligence run: {{error}}',
+      statusQueued: 'Intelligence run queued for {{total}} symbols.',
+      statusRunning: 'Intelligence run in progress: {{completed}}/{{total}} analyzed.',
+      statusCompleted:
+        'Intelligence run complete: {{completed}}/{{total}} analyzed, {{opportunities}} opportunities.',
+      statusError: 'Intelligence run failed: {{error}}',
+      updatedAt: 'Last update: {{updatedAt}}',
+      statusLoadError: 'Unable to load intelligence run status.',
+      opportunitiesTitle: 'Intelligence opportunities (as of {{date}})',
+      refreshOpportunities: 'Refresh opportunities',
+      loading: 'Loading opportunities...',
+      empty: 'No intelligence opportunities found for this run.',
+      stateValue: 'State: {{state}}',
+      opportunityScore: 'Opportunity {{value}}',
+      componentsLine: 'Technical {{technical}} | Catalyst {{catalyst}}',
+    },
     table: {
       empty: 'No candidates found',
       headers: {
