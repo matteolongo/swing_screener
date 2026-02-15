@@ -1,18 +1,24 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import { useStrategyEditor } from '@/features/strategy/useStrategyEditor';
 import StrategyAdvancedSettingsCard from '@/components/domain/strategy/StrategyAdvancedSettingsCard';
 import StrategyCoreSettingsCards from '@/components/domain/strategy/StrategyCoreSettingsCards';
+import StrategyPhilosophyCard from '@/components/domain/strategy/StrategyPhilosophyCard';
+import StrategySafetyScore from '@/components/domain/strategy/StrategySafetyScore';
+import BeginnerModeToggle from '@/components/domain/strategy/BeginnerModeToggle';
+import StrategyPresets, { applyPresetToStrategy } from '@/components/domain/strategy/StrategyPresets';
 import { useI18n } from '@/i18n/I18nProvider';
 import {
   buildHelp,
   strategyFieldClass,
   TextInput,
 } from '@/components/domain/strategy/StrategyFieldControls';
+import { getStrategyInfo } from '@/content/strategy_docs/loader';
 
 export default function StrategyPage() {
   const { locale, t } = useI18n();
+  const [isBeginnerMode, setIsBeginnerMode] = useState(true);
 
   const help = useMemo(
     () => ({
@@ -426,21 +432,51 @@ export default function StrategyPage() {
 
       {draft && (
         <>
+          {/* Strategy Philosophy Card - Shows the "Why" before the "What" */}
+          {(() => {
+            const strategyInfo = getStrategyInfo(draft.module ?? 'momentum');
+            return strategyInfo ? <StrategyPhilosophyCard strategyInfo={strategyInfo} /> : null;
+          })()}
+
+          {/* Beginner Mode Toggle */}
+          <BeginnerModeToggle
+            isBeginnerMode={isBeginnerMode}
+            onToggle={setIsBeginnerMode}
+          />
+
+          {/* Presets - Only show in beginner mode */}
+          {isBeginnerMode && (
+            <StrategyPresets
+              currentStrategy={draft}
+              onApplyPreset={(preset) => {
+                const updated = applyPresetToStrategy(draft, preset);
+                setDraft(updated);
+              }}
+            />
+          )}
+
+          {/* Safety Score - Provides feedback on configuration quality */}
+          <StrategySafetyScore strategy={draft} />
+
           <StrategyCoreSettingsCards
             draft={draft}
             setDraft={setDraft}
             help={help}
+            useEnhancedEducation={isBeginnerMode}
           />
 
-          <StrategyAdvancedSettingsCard
-            draft={draft}
-            setDraft={setDraft}
-            showAdvanced={showAdvanced}
-            setShowAdvanced={setShowAdvanced}
-            lowRrWarning={lowRrWarning}
-            highFeeWarning={highFeeWarning}
-            help={help}
-          />
+          {/* Advanced Settings - Hidden in beginner mode */}
+          {!isBeginnerMode && (
+            <StrategyAdvancedSettingsCard
+              draft={draft}
+              setDraft={setDraft}
+              showAdvanced={showAdvanced}
+              setShowAdvanced={setShowAdvanced}
+              lowRrWarning={lowRrWarning}
+              highFeeWarning={highFeeWarning}
+              help={help}
+            />
+          )}
         </>
       )}
     </div>
