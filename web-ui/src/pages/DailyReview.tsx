@@ -4,7 +4,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useDailyReview } from '@/features/dailyReview/api';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
-import Badge from '@/components/common/Badge';
 import TableShell from '@/components/common/TableShell';
 import { formatCurrency, formatNumber } from '@/utils/formatters';
 import { useConfigStore } from '@/stores/configStore';

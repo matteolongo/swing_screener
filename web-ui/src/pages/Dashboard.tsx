@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
-import Badge from '@/components/common/Badge';
 import { useConfigStore } from '@/stores/configStore';
 import {
   Position,
@@ -99,7 +98,6 @@ export default function Dashboard() {
       symbols: scopedSymbols,
     });
   };
-
   const isNewUser = positions.length === 0 && orders.length === 0;
   const strategyCoachSections = activeStrategyQuery.data
     ? buildStrategyCoachSections(activeStrategyQuery.data)
