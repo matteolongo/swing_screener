@@ -630,6 +630,8 @@ export const messagesEn = {
     identity: {
       companyUnknown: 'Unknown',
       sectorUnknown: 'Unknown',
+      confidenceLabel: '{{value}}% confidence',
+      confidenceUnknown: 'Confidence N/A',
     },
     setup: {
       entry: 'Entry',

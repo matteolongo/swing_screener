@@ -1,5 +1,6 @@
 import { CandidateViewModel } from '@/features/screener/viewModel';
 import RecommendationBadge from '@/components/domain/recommendation/RecommendationBadge';
+import { Gauge } from 'lucide-react';
 import { t } from '@/i18n/t';
 
 interface ScreenerCandidateIdentityCellProps {
@@ -13,6 +14,9 @@ export default function ScreenerCandidateIdentityCell({
   candidate,
 }: ScreenerCandidateIdentityCellProps) {
   const yahooUrl = `https://finance.yahoo.com/quote/${candidate.ticker}`;
+  const confidenceValue = Number.isFinite(candidate.confidence)
+    ? Math.max(0, Math.min(100, candidate.confidence <= 1 ? candidate.confidence * 100 : candidate.confidence))
+    : null;
   
   return (
     <div className="flex flex-col gap-1">
@@ -31,8 +35,11 @@ export default function ScreenerCandidateIdentityCell({
       </div>
 
       {/* Confidence */}
-      <div className="text-xs text-gray-600 dark:text-gray-400">
-        {(candidate.confidence * 100).toFixed(0)}% confidence
+      <div className="inline-flex w-fit items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-xs text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
+        <Gauge className="h-3 w-3" />
+        {confidenceValue == null
+          ? t('screener.identity.confidenceUnknown')
+          : t('screener.identity.confidenceLabel', { value: confidenceValue.toFixed(1) })}
       </div>
 
       {/* Company and metadata */}
