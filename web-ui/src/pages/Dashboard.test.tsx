@@ -26,11 +26,41 @@ describe('Dashboard Page', () => {
       await waitFor(() => {
         expect(screen.getByText('Portfolio Summary')).toBeInTheDocument()
         expect(screen.getByText('Strategy Coach')).toBeInTheDocument()
+        expect(screen.getByText('Market Intelligence')).toBeInTheDocument()
         expect(screen.getByText('Priority Actions')).toBeInTheDocument()
         // Getting Started should not be visible when there are no positions/orders
         // Daily Routine and large Quick Actions removed
         // Open Orders Snapshot merged into Priority Actions
       })
+    })
+  })
+
+  describe('Market Intelligence', () => {
+    it('renders intelligence card with run action', async () => {
+      renderWithProviders(<Dashboard />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Market Intelligence')).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /Run Intelligence/i })).toBeInTheDocument()
+      })
+    })
+
+    it('runs intelligence and renders opportunities', async () => {
+      const { user } = renderWithProviders(<Dashboard />)
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Run Intelligence/i })).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByRole('button', { name: /Run Intelligence/i }))
+
+      await waitFor(() => {
+        expect(screen.getByText('Run complete: 1/1 symbols analyzed, 1 opportunities found.')).toBeInTheDocument()
+        expect(screen.getByText('Opportunities (as of 2026-02-15)')).toBeInTheDocument()
+      })
+
+      await screen.findByText('Catalyst + follow-through confirmed.')
+      expect(screen.getByText('Technical 82.0% | Catalyst 71.0%')).toBeInTheDocument()
     })
   })
 

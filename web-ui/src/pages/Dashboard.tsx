@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
@@ -18,6 +19,11 @@ import { TrendingUp, AlertCircle, FileText, Search, RefreshCw, CalendarCheck } f
 import StrategyCoachCard from '@/components/domain/education/StrategyCoachCard';
 import { buildFallbackStrategyCoachSections, buildStrategyCoachSections } from '@/content/strategyCoach';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
+import {
+  useIntelligenceOpportunities,
+  useIntelligenceRunStatus,
+  useRunIntelligenceMutation,
+} from '@/features/intelligence/hooks';
 import { t } from '@/i18n/t';
 
 export default function Dashboard() {
@@ -49,6 +55,47 @@ export default function Dashboard() {
   const availableToDeploy = riskConfig.accountSize - totalPositionValue;
 
   const pendingOrdersCount = orders.length;
+  const intelligenceSymbols = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          [...positions.map((position) => position.ticker), ...orders.map((order) => order.ticker)].filter(
+            (ticker) => ticker && ticker.trim().length > 0
+          )
+        )
+      ),
+    [orders, positions]
+  );
+  const [intelligenceJobId, setIntelligenceJobId] = useState<string>();
+  const [intelligenceAsofDate, setIntelligenceAsofDate] = useState<string>();
+  const runIntelligenceMutation = useRunIntelligenceMutation((launch) => {
+    setIntelligenceJobId(launch.jobId);
+    setIntelligenceAsofDate(undefined);
+  });
+  const intelligenceStatusQuery = useIntelligenceRunStatus(intelligenceJobId);
+  const intelligenceStatus = intelligenceStatusQuery.data;
+  const intelligenceOpportunitiesQuery = useIntelligenceOpportunities(
+    intelligenceAsofDate,
+    Boolean(intelligenceAsofDate)
+  );
+  const intelligenceOpportunities = intelligenceOpportunitiesQuery.data?.opportunities ?? [];
+
+  useEffect(() => {
+    if (intelligenceStatus?.status === 'completed' && intelligenceStatus.asofDate) {
+      setIntelligenceAsofDate(intelligenceStatus.asofDate);
+    }
+  }, [intelligenceStatus?.asofDate, intelligenceStatus?.status]);
+
+  const handleRunIntelligence = () => {
+    if (!intelligenceSymbols.length) {
+      return;
+    }
+    runIntelligenceMutation.mutate({
+      symbols: intelligenceSymbols.slice(0, 50),
+    });
+  };
+
+  const formatScorePercent = (value: number) => `${(value * 100).toFixed(1)}%`;
   const isNewUser = positions.length === 0 && orders.length === 0;
   const strategyCoachSections = activeStrategyQuery.data
     ? buildStrategyCoachSections(activeStrategyQuery.data)
@@ -185,6 +232,149 @@ export default function Dashboard() {
         isLoading={activeStrategyQuery.isLoading && !activeStrategyQuery.data}
         defaultCollapsed={true}
       />
+
+      <Card variant="bordered">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div className="space-y-1">
+            <h2 className="text-lg font-semibold">{t('dashboardPage.intelligence.title')}</h2>
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              {t('dashboardPage.intelligence.subtitle')}
+            </p>
+            <p className="text-xs text-gray-500">
+              {t('dashboardPage.intelligence.symbolsLine', {
+                count: intelligenceSymbols.length,
+                symbols:
+                  intelligenceSymbols.slice(0, 6).join(', ') || t('dashboardPage.intelligence.noneSymbol'),
+              })}
+            </p>
+          </div>
+          <Button
+            onClick={handleRunIntelligence}
+            disabled={!intelligenceSymbols.length || runIntelligenceMutation.isPending}
+          >
+            {runIntelligenceMutation.isPending ? (
+              <>
+                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                {t('dashboardPage.intelligence.runningAction')}
+              </>
+            ) : (
+              t('dashboardPage.intelligence.runAction')
+            )}
+          </Button>
+        </div>
+
+        {!intelligenceSymbols.length && (
+          <p className="mt-3 text-sm text-amber-700 dark:text-amber-400">
+            {t('dashboardPage.intelligence.noSymbols')}
+          </p>
+        )}
+
+        {runIntelligenceMutation.isError && (
+          <p className="mt-3 text-sm text-red-600">
+            {t('dashboardPage.intelligence.startError', {
+              error:
+                runIntelligenceMutation.error instanceof Error
+                  ? runIntelligenceMutation.error.message
+                  : t('common.errors.generic'),
+            })}
+          </p>
+        )}
+
+        {intelligenceStatus && (
+          <div className="mt-4 rounded-md border border-gray-200 dark:border-gray-700 p-3">
+            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+              {intelligenceStatus.status === 'completed' &&
+                t('dashboardPage.intelligence.statusCompleted', {
+                  completed: intelligenceStatus.completedSymbols,
+                  total: intelligenceStatus.totalSymbols,
+                  opportunities: intelligenceStatus.opportunitiesCount,
+                })}
+              {intelligenceStatus.status === 'queued' &&
+                t('dashboardPage.intelligence.statusQueued', {
+                  total: intelligenceStatus.totalSymbols,
+                })}
+              {intelligenceStatus.status === 'running' &&
+                t('dashboardPage.intelligence.statusRunning', {
+                  completed: intelligenceStatus.completedSymbols,
+                  total: intelligenceStatus.totalSymbols,
+                })}
+              {intelligenceStatus.status === 'error' &&
+                t('dashboardPage.intelligence.statusError', {
+                  error: intelligenceStatus.error || t('common.errors.generic'),
+                })}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              {t('dashboardPage.intelligence.updatedAt', {
+                updatedAt: intelligenceStatus.updatedAt,
+              })}
+            </p>
+          </div>
+        )}
+
+        {intelligenceStatusQuery.isError && !intelligenceStatus && (
+          <p className="mt-3 text-sm text-red-600">
+            {t('dashboardPage.intelligence.statusLoadError')}
+          </p>
+        )}
+
+        {intelligenceAsofDate && (
+          <div className="mt-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold">
+                {t('dashboardPage.intelligence.opportunitiesTitle', { date: intelligenceAsofDate })}
+              </p>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => intelligenceOpportunitiesQuery.refetch()}
+                disabled={intelligenceOpportunitiesQuery.isFetching}
+              >
+                {t('dashboardPage.intelligence.refreshOpportunities')}
+              </Button>
+            </div>
+
+            {intelligenceOpportunitiesQuery.isFetching && (
+              <p className="text-sm text-gray-600">{t('dashboardPage.intelligence.loading')}</p>
+            )}
+
+            {!intelligenceOpportunitiesQuery.isFetching && intelligenceOpportunities.length === 0 && (
+              <p className="text-sm text-gray-600">{t('dashboardPage.intelligence.empty')}</p>
+            )}
+
+            {intelligenceOpportunities.length > 0 && (
+              <div className="space-y-2">
+                {intelligenceOpportunities.slice(0, 8).map((opportunity) => (
+                  <div
+                    key={opportunity.symbol}
+                    className="rounded-md border border-gray-200 dark:border-gray-700 p-3"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="primary">{opportunity.symbol}</Badge>
+                        <span className="text-xs text-gray-500">{opportunity.state}</span>
+                      </div>
+                      <span className="text-sm font-semibold text-green-700 dark:text-green-400">
+                        {t('dashboardPage.intelligence.opportunityScore', {
+                          value: formatScorePercent(opportunity.opportunityScore),
+                        })}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-xs text-gray-600 dark:text-gray-300">
+                      {t('dashboardPage.intelligence.componentsLine', {
+                        technical: formatScorePercent(opportunity.technicalReadiness),
+                        catalyst: formatScorePercent(opportunity.catalystStrength),
+                      })}
+                    </p>
+                    {opportunity.explanations[0] && (
+                      <p className="mt-1 text-xs text-gray-500">{opportunity.explanations[0]}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </Card>
 
       {/* Priority Actions - Merged Action Items + Orders Snapshot */}
       <Card variant="bordered">
