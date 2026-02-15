@@ -1,5 +1,8 @@
 # Phase 1 Complete: MCP Server Foundation ✅
 
+> **Status: Historical snapshot (February 2026).** This document captures implementation context at the time and may not match the current code structure. Use `/docs/INDEX.md` for current canonical docs.
+
+
 **Date:** February 12, 2026  
 **Status:** Complete  
 **Implementation Time:** ~2 hours

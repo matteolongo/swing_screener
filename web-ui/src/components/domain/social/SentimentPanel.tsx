@@ -10,6 +10,10 @@ interface SentimentPanelProps {
   error?: string;
 }
 
+function formatOptionalNumber(value: number | null | undefined, decimals: number): string {
+  return typeof value === 'number' && Number.isFinite(value) ? value.toFixed(decimals) : 'N/A';
+}
+
 function SentimentScore({ score, confidence }: { score?: number; confidence?: number }) {
   if (score === undefined || score === null) {
     return <span className="text-gray-500">N/A</span>;
@@ -37,7 +41,7 @@ function SentimentScore({ score, confidence }: { score?: number; confidence?: nu
       <div className="text-sm text-gray-600 dark:text-gray-400">
         {getScoreLabel(score)}
       </div>
-      {confidence !== undefined && (
+      {typeof confidence === 'number' && Number.isFinite(confidence) && (
         <div className="text-xs text-gray-500 dark:text-gray-500">
           Confidence: {(confidence * 100).toFixed(0)}%
         </div>
@@ -176,9 +180,9 @@ export default function SentimentPanel({ data, loading, error }: SentimentPanelP
             <div>
               <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Attention</div>
               <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                {data.attentionScore.toFixed(1)}
+                {formatOptionalNumber(data.attentionScore, 1)}
               </div>
-              {data.attentionZ !== undefined && (
+              {typeof data.attentionZ === 'number' && Number.isFinite(data.attentionZ) && (
                 <div className="text-xs text-gray-500">Z-score: {data.attentionZ.toFixed(2)}</div>
               )}
             </div>

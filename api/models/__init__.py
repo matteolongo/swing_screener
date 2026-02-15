@@ -45,6 +45,13 @@ from api.models.recommendation import (
     ChecklistGate,
 )
 from api.models.social import SocialRawEvent, SocialAnalysisRequest, SocialAnalysisResponse
+from api.models.intelligence import (
+    IntelligenceRunRequest,
+    IntelligenceRunLaunchResponse,
+    IntelligenceRunStatusResponse,
+    IntelligenceOpportunityResponse,
+    IntelligenceOpportunitiesResponse,
+)
 from api.models.backtest import (
     BacktestSummary,
     BacktestTrade,
@@ -112,6 +119,11 @@ __all__ = [
     "SocialRawEvent",
     "SocialAnalysisRequest",
     "SocialAnalysisResponse",
+    "IntelligenceRunRequest",
+    "IntelligenceRunLaunchResponse",
+    "IntelligenceRunStatusResponse",
+    "IntelligenceOpportunityResponse",
+    "IntelligenceOpportunitiesResponse",
     "BacktestSummary",
     "BacktestTrade",
     "BacktestCostSummary",

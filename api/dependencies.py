@@ -10,6 +10,7 @@ from api.repositories.orders_repo import OrdersRepository
 from api.repositories.positions_repo import PositionsRepository
 from api.repositories.strategy_repo import StrategyRepository
 from api.services.backtest_service import BacktestService
+from api.services.intelligence_service import IntelligenceService
 from api.services.portfolio_service import PortfolioService
 from api.services.screener_service import ScreenerService
 from api.services.social_service import SocialService
@@ -74,3 +75,9 @@ def get_social_service(
     strategy_repo: StrategyRepository = Depends(get_strategy_repo),
 ) -> SocialService:
     return SocialService(strategy_repo=strategy_repo)
+
+
+def get_intelligence_service(
+    strategy_repo: StrategyRepository = Depends(get_strategy_repo),
+) -> IntelligenceService:
+    return IntelligenceService(strategy_repo=strategy_repo)

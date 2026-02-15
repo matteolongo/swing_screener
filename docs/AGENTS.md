@@ -64,6 +64,7 @@ This project values **clarity over cleverness**.
 swing_screener/
 ├── docs/                 # All documentation (user + dev)
 ├── notebooks/            # Educational / exploratory notebooks
+├── data/                 # Runtime JSON state (positions, orders, daily reviews)
 ├── src/swing_screener/
 │   ├── cli.py            # Main CLI entrypoint
 │   ├── data/             # Market data + universe loading
@@ -73,7 +74,6 @@ swing_screener/
 │   ├── portfolio/        # Position state & management logic
 │   └── backtesting/      # Historical simulation
 ├── tests/                # Unit tests (pytest)
-├── positions.json        # User-maintained trade state
 └── pyproject.toml
 ```
 
@@ -150,9 +150,9 @@ Agents should not:
 
 ---
 
-## positions.json contract
+## data/positions.json contract
 
-`positions.json` is the **single source of truth** for open trades.
+`data/positions.json` is the **single source of truth** for open trades.
 
 Agents must:
 - never auto-create positions

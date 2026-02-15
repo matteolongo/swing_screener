@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Info, RefreshCw } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useDailyReview } from '@/features/dailyReview/api';
@@ -11,11 +11,17 @@ import { useConfigStore } from '@/stores/configStore';
 import type { RiskConfig } from '@/types/config';
 import GlossaryLegend from '@/components/domain/education/GlossaryLegend';
 import MetricHelpLabel from '@/components/domain/education/MetricHelpLabel';
+import IntelligenceOpportunityCard from '@/components/domain/intelligence/IntelligenceOpportunityCard';
 import { DAILY_REVIEW_GLOSSARY_KEYS } from '@/content/educationGlossary';
-import RecommendationDetailsModal from '@/components/domain/recommendation/RecommendationDetailsModal';
+import TradeInsightModal from '@/components/domain/recommendation/TradeInsightModal';
 import CandidateOrderModal from '@/components/domain/orders/CandidateOrderModal';
 import { queryKeys } from '@/lib/queryKeys';
 import { t } from '@/i18n/t';
+import {
+  useIntelligenceOpportunitiesScoped,
+  useIntelligenceRunStatus,
+  useRunIntelligenceMutation,
+} from '@/features/intelligence/hooks';
 import type {
   DailyReviewCandidate,
   DailyReviewPositionHold,
@@ -30,9 +36,12 @@ export default function DailyReview() {
     update: true,
     close: true,
   });
-  const [recommendationCandidate, setRecommendationCandidate] = useState<DailyReviewCandidate | null>(null);
+  const [insightCandidate, setInsightCandidate] = useState<DailyReviewCandidate | null>(null);
   const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<DailyReviewCandidate | null>(null);
+  const [intelligenceJobId, setIntelligenceJobId] = useState<string>();
+  const [intelligenceAsofDate, setIntelligenceAsofDate] = useState<string>();
+  const [intelligenceRunSymbols, setIntelligenceRunSymbols] = useState<string[]>([]);
 
   const queryClient = useQueryClient();
   const { data: review, isLoading, error, refetch, isFetching } = useDailyReview(10);
@@ -46,7 +55,45 @@ export default function DailyReview() {
     minRr: 2,
     maxFeeRiskPct: 0.05,
   };
-
+  const intelligenceSymbols = useMemo(() => {
+    if (!review) return [];
+    const candidateSymbols = review.newCandidates.map((candidate) => candidate.ticker);
+    const positionSymbols = [
+      ...review.positionsHold.map((position) => position.ticker),
+      ...review.positionsUpdateStop.map((position) => position.ticker),
+      ...review.positionsClose.map((position) => position.ticker),
+    ];
+    return Array.from(
+      new Set([...candidateSymbols, ...positionSymbols].filter((ticker) => ticker && ticker.trim().length > 0))
+    );
+  }, [review]);
+  const runIntelligenceMutation = useRunIntelligenceMutation((launch) => {
+    setIntelligenceJobId(launch.jobId);
+    setIntelligenceAsofDate(undefined);
+  });
+  const intelligenceStatusQuery = useIntelligenceRunStatus(intelligenceJobId);
+  const intelligenceStatus = intelligenceStatusQuery.data;
+  const intelligenceOpportunitiesQuery = useIntelligenceOpportunitiesScoped(
+    intelligenceAsofDate,
+    intelligenceRunSymbols,
+    Boolean(intelligenceAsofDate)
+  );
+  const intelligenceOpportunities = intelligenceOpportunitiesQuery.data?.opportunities ?? [];
+  useEffect(() => {
+    if (intelligenceStatus?.status === 'completed' && intelligenceStatus.asofDate) {
+      setIntelligenceAsofDate(intelligenceStatus.asofDate);
+    }
+  }, [intelligenceStatus?.asofDate, intelligenceStatus?.status]);
+  const handleRunIntelligence = () => {
+    if (!intelligenceSymbols.length) {
+      return;
+    }
+    const scopedSymbols = intelligenceSymbols.slice(0, 100);
+    setIntelligenceRunSymbols(scopedSymbols);
+    runIntelligenceMutation.mutate({
+      symbols: scopedSymbols,
+    });
+  };
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
   };
@@ -129,6 +176,117 @@ export default function DailyReview() {
         <SummaryCard title={t('dailyReview.summary.holdPositions')} value={summary.noAction} variant="green" icon="✅" />
       </div>
 
+      <Card variant="bordered">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div className="space-y-1">
+            <h2 className="text-lg font-semibold">{t('dailyReview.intelligence.title')}</h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400">{t('dailyReview.intelligence.subtitle')}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {t('dailyReview.intelligence.symbolsLine', {
+                count: intelligenceSymbols.length,
+                symbols:
+                  intelligenceSymbols.slice(0, 8).join(', ') || t('dailyReview.intelligence.noneSymbol'),
+              })}
+            </p>
+          </div>
+          <Button
+            onClick={handleRunIntelligence}
+            disabled={!intelligenceSymbols.length || runIntelligenceMutation.isPending}
+          >
+            {runIntelligenceMutation.isPending ? (
+              <>
+                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                {t('dailyReview.intelligence.runningAction')}
+              </>
+            ) : (
+              t('dailyReview.intelligence.runAction')
+            )}
+          </Button>
+        </div>
+
+        {runIntelligenceMutation.isError && (
+          <p className="mt-3 text-sm text-red-600 dark:text-red-400">
+            {t('dailyReview.intelligence.startError', {
+              error:
+                runIntelligenceMutation.error instanceof Error
+                  ? runIntelligenceMutation.error.message
+                  : t('common.errors.generic'),
+            })}
+          </p>
+        )}
+
+        {intelligenceStatus && (
+          <div className="mt-4 rounded-md border border-gray-200 dark:border-gray-700 p-3">
+            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+              {intelligenceStatus.status === 'completed' &&
+                t('dailyReview.intelligence.statusCompleted', {
+                  completed: intelligenceStatus.completedSymbols,
+                  total: intelligenceStatus.totalSymbols,
+                  opportunities: intelligenceStatus.opportunitiesCount,
+                })}
+              {intelligenceStatus.status === 'queued' &&
+                t('dailyReview.intelligence.statusQueued', {
+                  total: intelligenceStatus.totalSymbols,
+                })}
+              {intelligenceStatus.status === 'running' &&
+                t('dailyReview.intelligence.statusRunning', {
+                  completed: intelligenceStatus.completedSymbols,
+                  total: intelligenceStatus.totalSymbols,
+                })}
+              {intelligenceStatus.status === 'error' &&
+                t('dailyReview.intelligence.statusError', {
+                  error: intelligenceStatus.error || t('common.errors.generic'),
+                })}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              {t('dailyReview.intelligence.updatedAt', {
+                updatedAt: intelligenceStatus.updatedAt,
+              })}
+            </p>
+          </div>
+        )}
+
+        {intelligenceStatusQuery.isError && !intelligenceStatus && (
+          <p className="mt-3 text-sm text-red-600 dark:text-red-400">
+            {t('dailyReview.intelligence.statusLoadError')}
+          </p>
+        )}
+
+        {intelligenceAsofDate && (
+          <div className="mt-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold">
+                {t('dailyReview.intelligence.opportunitiesTitle', { date: intelligenceAsofDate })}
+              </p>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => intelligenceOpportunitiesQuery.refetch()}
+                disabled={intelligenceOpportunitiesQuery.isFetching}
+              >
+                {t('dailyReview.intelligence.refreshOpportunities')}
+              </Button>
+            </div>
+
+            {intelligenceOpportunitiesQuery.isFetching && (
+              <p className="text-sm text-gray-600 dark:text-gray-400">{t('dailyReview.intelligence.loading')}</p>
+            )}
+
+            {!intelligenceOpportunitiesQuery.isFetching && intelligenceOpportunities.length === 0 && (
+              <p className="text-sm text-gray-600 dark:text-gray-400">{t('dailyReview.intelligence.empty')}</p>
+            )}
+
+            {intelligenceOpportunities.length > 0 && (
+              <div className="space-y-2">
+                {intelligenceOpportunities.slice(0, 8).map((opportunity) => (
+                  <IntelligenceOpportunityCard key={opportunity.symbol} opportunity={opportunity} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </Card>
+
       <CollapsibleSection
         title={t('dailyReview.sections.newTradeCandidates', { count: recommendedCandidates.length })}
         isExpanded={expandedSections.candidates}
@@ -160,7 +318,7 @@ export default function DailyReview() {
             ) : null}
             <CandidatesTable
               candidates={recommendedCandidates}
-              onShowRecommendation={setRecommendationCandidate}
+              onShowRecommendation={setInsightCandidate}
               onCreateOrder={(candidate) => {
                 setSelectedCandidate(candidate);
                 setShowCreateOrderModal(true);
@@ -214,11 +372,13 @@ export default function DailyReview() {
         )}
       </CollapsibleSection>
 
-      {recommendationCandidate ? (
-        <RecommendationDetailsModal
-          ticker={recommendationCandidate.ticker}
-          recommendation={recommendationCandidate.recommendation}
-          onClose={() => setRecommendationCandidate(null)}
+      {insightCandidate ? (
+        <TradeInsightModal
+          ticker={insightCandidate.ticker}
+          recommendation={insightCandidate.recommendation}
+          currency="USD"
+          defaultTab="recommendation"
+          onClose={() => setInsightCandidate(null)}
         />
       ) : null}
 

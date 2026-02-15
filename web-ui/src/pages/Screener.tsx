@@ -1,9 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { PlayCircle, RefreshCw, TrendingUp, AlertCircle, BarChart3, MessageSquare, ListChecks, Lightbulb } from 'lucide-react';
+import { PlayCircle, RefreshCw, TrendingUp, AlertCircle, Sparkles } from 'lucide-react';
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
-import TableShell from '@/components/common/TableShell';
 import { useUniverses, useRunScreenerMutation } from '@/features/screener/hooks';
 import { ScreenerCandidate } from '@/features/screener/types';
 import { useConfigStore } from '@/stores/configStore';
@@ -12,20 +11,26 @@ import { useScreenerStore } from '@/stores/screenerStore';
 import { formatCurrency, formatPercent } from '@/utils/formatters';
 import QuickBacktestModal from '@/components/modals/QuickBacktestModal';
 import SocialAnalysisModal from '@/components/modals/SocialAnalysisModal';
-import TradeThesisModal from '@/components/modals/TradeThesisModal';
-import MetricHelpLabel from '@/components/domain/education/MetricHelpLabel';
 import GlossaryLegend from '@/components/domain/education/GlossaryLegend';
 import { SCREENER_GLOSSARY_KEYS } from '@/content/educationGlossary';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 import OverlayBadge from '@/components/domain/recommendation/OverlayBadge';
-import RecommendationBadge from '@/components/domain/recommendation/RecommendationBadge';
-import RecommendationDetailsModal from '@/components/domain/recommendation/RecommendationDetailsModal';
+import TradeInsightModal from '@/components/domain/recommendation/TradeInsightModal';
+import IntelligenceOpportunityCard from '@/components/domain/intelligence/IntelligenceOpportunityCard';
 import CandidateOrderModal from '@/components/domain/orders/CandidateOrderModal';
+import ScreenerCandidatesTable from '@/components/domain/screener/ScreenerCandidatesTable';
 import { queryKeys } from '@/lib/queryKeys';
 import { t } from '@/i18n/t';
 import { fetchSocialWarmupStatus } from '@/features/social/api';
+import {
+  useRunIntelligenceMutation,
+  useIntelligenceRunStatus,
+  useIntelligenceOpportunitiesScoped,
+} from '@/features/intelligence/hooks';
 
 const TOP_N_MAX = 200;
+const INTELLIGENCE_ASOF_STORAGE_KEY = 'screener.intelligenceAsofDate';
+const INTELLIGENCE_SYMBOLS_STORAGE_KEY = 'screener.intelligenceSymbols';
 type CurrencyFilter = 'all' | 'usd' | 'eur';
 const UNIVERSE_ALIASES: Record<string, string> = {
   mega: 'mega_all',
@@ -53,6 +58,15 @@ const normalizeUniverse = (value: string | null) => {
   if (!value) return null;
   return UNIVERSE_ALIASES[value] ?? value;
 };
+
+function getApiErrorStatus(error: unknown): number | undefined {
+  if (typeof error !== 'object' || error == null || !('status' in error)) {
+    return undefined;
+  }
+  const status = (error as { status?: unknown }).status;
+  return typeof status === 'number' ? status : undefined;
+}
+
 export default function Screener() {
   const { config } = useConfigStore();
   const { lastResult, setLastResult } = useScreenerStore();
@@ -88,10 +102,36 @@ export default function Screener() {
   
   const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
   const [showBacktestModal, setShowBacktestModal] = useState(false);
-  const [showThesisModal, setShowThesisModal] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<ScreenerCandidate | null>(null);
   const [socialSymbol, setSocialSymbol] = useState<string | null>(null);
-  const [recommendationCandidate, setRecommendationCandidate] = useState<ScreenerCandidate | null>(null);
+  const [insightCandidate, setInsightCandidate] = useState<ScreenerCandidate | null>(null);
+  const [insightDefaultTab, setInsightDefaultTab] = useState<'recommendation' | 'thesis' | 'learn'>('recommendation');
+
+  // Intelligence state
+  const [intelligenceJobId, setIntelligenceJobId] = useState<string | null>(null);
+  const [intelligenceAsofDate, setIntelligenceAsofDate] = useState<string | null>(() => {
+    const saved = localStorage.getItem(INTELLIGENCE_ASOF_STORAGE_KEY);
+    return saved && saved.trim().length > 0 ? saved : null;
+  });
+  const [intelligenceSymbols, setIntelligenceSymbols] = useState<string[]>(() => {
+    const saved = localStorage.getItem(INTELLIGENCE_SYMBOLS_STORAGE_KEY);
+    if (!saved) return [];
+    try {
+      const parsed = JSON.parse(saved);
+      if (!Array.isArray(parsed)) return [];
+      return parsed
+        .map((value) => String(value).trim().toUpperCase())
+        .filter((value) => value.length > 0);
+    } catch {
+      return [];
+    }
+  });
+  const intelligenceStatus = useIntelligenceRunStatus(intelligenceJobId ?? undefined);
+  const intelligenceOpportunities = useIntelligenceOpportunitiesScoped(
+    intelligenceAsofDate ?? undefined,
+    intelligenceSymbols.length > 0 ? intelligenceSymbols : undefined,
+    Boolean(intelligenceAsofDate)
+  );
 
   // Save preferences to localStorage when they change
   const handleUniverseChange = (value: string) => {
@@ -125,11 +165,40 @@ export default function Screener() {
   const screenerMutation = useRunScreenerMutation(
     (data) => {
       setLastResult(data);
+      setIntelligenceJobId(null);
+      setIntelligenceAsofDate(null);
+      setIntelligenceSymbols([]);
+      localStorage.removeItem(INTELLIGENCE_ASOF_STORAGE_KEY);
+      localStorage.removeItem(INTELLIGENCE_SYMBOLS_STORAGE_KEY);
     },
     (error) => {
       console.error('Screener failed', error);
     },
   );
+
+  const intelligenceMutation = useRunIntelligenceMutation((data) => {
+    setIntelligenceJobId(data.jobId);
+    setIntelligenceAsofDate(null);
+    localStorage.removeItem(INTELLIGENCE_ASOF_STORAGE_KEY);
+  });
+
+  useEffect(() => {
+    if (intelligenceStatus.data?.status !== 'completed' || !intelligenceStatus.data.asofDate) {
+      return;
+    }
+    setIntelligenceAsofDate(intelligenceStatus.data.asofDate);
+    localStorage.setItem(INTELLIGENCE_ASOF_STORAGE_KEY, intelligenceStatus.data.asofDate);
+  }, [intelligenceStatus.data?.asofDate, intelligenceStatus.data?.status]);
+
+  const handleRunIntelligence = () => {
+    const symbols = candidates.map((c) => c.ticker);
+    if (!symbols.length) {
+      return;
+    }
+    setIntelligenceSymbols(symbols);
+    localStorage.setItem(INTELLIGENCE_SYMBOLS_STORAGE_KEY, JSON.stringify(symbols));
+    intelligenceMutation.mutate({ symbols });
+  };
 
   const handleRunScreener = () => {
     screenerMutation.mutate({
@@ -152,12 +221,19 @@ export default function Screener() {
     queryKey: queryKeys.socialWarmupStatus(socialWarmupJobId),
     queryFn: () => fetchSocialWarmupStatus(socialWarmupJobId!),
     enabled: Boolean(socialWarmupJobId),
-    refetchInterval: (query) => (query.state.data?.status === 'completed' ? false : 2500),
+    refetchInterval: (query) => {
+      const status = getApiErrorStatus(query.state.error);
+      if (status === 404) return false;
+      return query.state.data?.status === 'completed' ? false : 2500;
+    },
     retry: false,
   });
   const socialWarmup = socialWarmupQuery.data;
+  const socialWarmupErrorStatus = getApiErrorStatus(socialWarmupQuery.error);
+  const socialWarmupNotFound = socialWarmupErrorStatus === 404;
   const resolveOverlayStatus = (status?: string | null) => {
     if (status !== 'PENDING') return status ?? 'OFF';
+    if (socialWarmupNotFound) return 'OFF';
     return socialWarmup?.status === 'completed' ? 'OFF' : 'PENDING';
   };
   const overlayCounts = candidates.reduce<Record<string, number>>((acc, c) => {
@@ -353,7 +429,9 @@ export default function Screener() {
             )}
             {socialWarmupJobId && (
               <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
-                {socialWarmup == null
+                {socialWarmupNotFound
+                  ? t('screener.summary.socialWarmupUnavailable')
+                  : socialWarmup == null
                   ? t('screener.summary.socialWarmupLoading')
                   : socialWarmup.status === 'completed'
                     ? t('screener.summary.socialWarmupCompleted', {
@@ -386,281 +464,156 @@ export default function Screener() {
             )}
           </Card>
 
+          {/* Intelligence Section */}
+          {(candidates.length > 0 || intelligenceAsofDate) && (
+            <Card>
+              <div className="space-y-4">
+                {/* Run Intelligence button */}
+                {candidates.length > 0 && !intelligenceJobId && !intelligenceStatus.data && (
+                  <Button
+                    onClick={handleRunIntelligence}
+                    disabled={intelligenceMutation.isPending}
+                    variant="secondary"
+                  >
+                    {intelligenceMutation.isPending ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                        {t('screener.intelligence.runningAction')}
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        {t('screener.intelligence.runAction')}
+                      </>
+                    )}
+                  </Button>
+                )}
+
+                {/* Intelligence status and results */}
+                {intelligenceStatus.data && (
+                  <div>
+                    {intelligenceStatus.data.status === 'completed' && intelligenceAsofDate && (
+                      <>
+                        <p className="text-sm text-green-700 mb-3">
+                          {t('screener.intelligence.statusCompleted', {
+                            completed: intelligenceStatus.data.completedSymbols,
+                            total: intelligenceStatus.data.totalSymbols,
+                            opportunities: intelligenceStatus.data.opportunitiesCount,
+                          })}
+                        </p>
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                            {t('screener.intelligence.opportunitiesTitle', {
+                              date: intelligenceAsofDate,
+                            })}
+                          </h3>
+                          <div className="mb-3">
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => intelligenceOpportunities.refetch()}
+                              disabled={intelligenceOpportunities.isFetching}
+                            >
+                              {t('screener.intelligence.refreshOpportunities')}
+                            </Button>
+                          </div>
+                          {intelligenceOpportunities.isError ? (
+                            <p className="text-sm text-red-700">{t('screener.intelligence.statusLoadError')}</p>
+                          ) : null}
+                          {intelligenceOpportunities.data && intelligenceOpportunities.data.opportunities.length > 0 ? (
+                            <div className="space-y-3">
+                              {intelligenceOpportunities.data.opportunities.map((opp) => (
+                                <IntelligenceOpportunityCard key={opp.symbol} opportunity={opp} />
+                              ))}
+                            </div>
+                          ) : intelligenceOpportunities.isLoading || intelligenceOpportunities.isFetching ? (
+                            <p className="text-sm text-gray-600">{t('screener.intelligence.loading')}</p>
+                          ) : (
+                            <p className="text-sm text-gray-600">{t('screener.intelligence.empty')}</p>
+                          )}
+                        </div>
+                      </>
+                    )}
+                    {(intelligenceStatus.data.status === 'queued' || intelligenceStatus.data.status === 'running') && (
+                      <p className="text-sm text-blue-700">
+                        {t('screener.intelligence.statusRunning', {
+                          completed: intelligenceStatus.data.completedSymbols,
+                          total: intelligenceStatus.data.totalSymbols,
+                        })}
+                      </p>
+                    )}
+                    {intelligenceStatus.data.status === 'error' && (
+                      <p className="text-sm text-red-700">
+                        {t('screener.intelligence.statusError', {
+                          error: intelligenceStatus.data.error || t('common.errors.generic'),
+                        })}
+                      </p>
+                    )}
+                  </div>
+                )}
+                {!intelligenceStatus.data && intelligenceAsofDate && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                      {t('screener.intelligence.opportunitiesTitle', {
+                        date: intelligenceAsofDate,
+                      })}
+                    </h3>
+                    <div className="mb-3">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => intelligenceOpportunities.refetch()}
+                        disabled={intelligenceOpportunities.isFetching}
+                      >
+                        {t('screener.intelligence.refreshOpportunities')}
+                      </Button>
+                    </div>
+                    {intelligenceOpportunities.isError ? (
+                      <p className="text-sm text-red-700">{t('screener.intelligence.statusLoadError')}</p>
+                    ) : null}
+                    {intelligenceOpportunities.data && intelligenceOpportunities.data.opportunities.length > 0 ? (
+                      <div className="space-y-3">
+                        {intelligenceOpportunities.data.opportunities.map((opp) => (
+                          <IntelligenceOpportunityCard key={opp.symbol} opportunity={opp} />
+                        ))}
+                      </div>
+                    ) : intelligenceOpportunities.isLoading || intelligenceOpportunities.isFetching ? (
+                      <p className="text-sm text-gray-600">{t('screener.intelligence.loading')}</p>
+                    ) : (
+                      <p className="text-sm text-gray-600">{t('screener.intelligence.empty')}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </Card>
+          )}
+
           {/* Candidates table */}
           <GlossaryLegend
             metricKeys={SCREENER_GLOSSARY_KEYS}
             title={t('screener.glossary.title')}
           />
           <Card>
-            <TableShell
-              empty={candidates.length === 0}
-              emptyMessage={t('screener.table.empty')}
-              headers={(
-                <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.rank')}</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.ticker')}</th>
-                    <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.currency')}</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.company')}</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.sector')}</th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.lastBar')}</th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
-                      <MetricHelpLabel
-                        metricKey="CONFIDENCE"
-                        labelOverride={t('screener.table.headers.signalConfidence')}
-                        className="w-full justify-end"
-                      />
-                    </th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.close')}</th>
-                    <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.verdict')}</th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
-                      <MetricHelpLabel metricKey="SCORE" className="w-full justify-end" />
-                    </th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.stop')}</th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
-                      <MetricHelpLabel metricKey="ATR" className="w-full justify-end" />
-                    </th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.riskDollar')}</th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
-                      <MetricHelpLabel metricKey="RR" className="w-full justify-end" />
-                    </th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
-                      <MetricHelpLabel metricKey="MOM_6M" className="w-full justify-end" />
-                    </th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
-                      <MetricHelpLabel metricKey="MOM_12M" className="w-full justify-end" />
-                    </th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
-                      <MetricHelpLabel metricKey="RS" className="w-full justify-end" />
-                    </th>
-                    <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">
-                      <MetricHelpLabel metricKey="OVERLAY" className="justify-center" />
-                    </th>
-                    <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.fix')}</th>
-                    <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">{t('screener.table.headers.actions')}</th>
-                  </tr>
-              )}
-            >
-              {candidates.map((candidate) => (
-                      <tr key={candidate.ticker} className="border-b border-gray-100 hover:bg-gray-50">
-                        <td className="py-3 px-4 text-sm text-gray-900 font-medium">
-                          #{candidate.rank}
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-2">
-                            <a 
-                              href={`https://finance.yahoo.com/quote/${candidate.ticker}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline"
-                              title={t('screener.table.yahooTickerTitle', { ticker: candidate.ticker })}
-                            >
-                              {candidate.ticker}
-                            </a>
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              onClick={() => setSocialSymbol(candidate.ticker)}
-                              aria-label={t('screener.table.sentimentAria', { ticker: candidate.ticker })}
-                              title={t('screener.table.sentimentTitle')}
-                            >
-                              <MessageSquare className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          <span
-                            className={
-                              candidate.currency === 'EUR'
-                                ? 'text-xs px-2 py-1 rounded bg-green-100 text-green-700'
-                                : 'text-xs px-2 py-1 rounded bg-blue-100 text-blue-700'
-                            }
-                          >
-                            {candidate.currency}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-sm text-gray-700">
-                          {candidate.name ? (
-                            <a 
-                              href={`https://finance.yahoo.com/quote/${candidate.ticker}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="hover:text-blue-600 hover:underline"
-                              title={t('screener.table.yahooNameTitle', { name: candidate.name })}
-                            >
-                              {candidate.name}
-                            </a>
-                          ) : t('common.placeholders.dash')}
-                        </td>
-                        <td className="py-3 px-4 text-sm text-gray-600">
-                          <span className="text-xs px-2 py-1 bg-gray-100 rounded">
-                            {candidate.sector || t('common.placeholders.notAvailable')}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-sm text-right text-gray-600">
-                          {candidate.lastBar
-                            ? new Date(candidate.lastBar).toLocaleString()
-                            : t('common.placeholders.dash')}
-                        </td>
-                        <td className="py-3 px-4 text-sm text-right">
-                          <span className="font-semibold text-purple-600">
-                            {candidate.confidence.toFixed(1)}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-sm text-right text-gray-900">
-                          {formatCurrency(candidate.close, candidate.currency)}
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          {(() => {
-                            const verdict = candidate.recommendation?.verdict ?? 'UNKNOWN';
-                            return <RecommendationBadge verdict={verdict} className="inline-block" />;
-                          })()}
-                        </td>
-                        <td className="py-3 px-4 text-sm text-right font-medium text-gray-900">
-                          {(candidate.score * 100).toFixed(1)}
-                        </td>
-                        <td className="py-3 px-4 text-sm text-right text-gray-900">
-                          {(() => {
-                            const stopValue = candidate.recommendation?.risk?.stop ?? candidate.stop;
-                            return stopValue != null && stopValue > 0
-                              ? formatCurrency(stopValue, candidate.currency)
-                              : t('common.placeholders.dash');
-                          })()}
-                        </td>
-                        <td className="py-3 px-4 text-sm text-right text-gray-600">
-                          {candidate.atr.toFixed(2)}
-                        </td>
-                        <td className="py-3 px-4 text-sm text-right text-gray-900">
-                          {(() => {
-                            const riskValue =
-                              candidate.recommendation?.risk?.riskAmount ?? candidate.riskUsd;
-                            return riskValue && riskValue > 0
-                              ? formatCurrency(riskValue)
-                              : t('common.placeholders.dash');
-                          })()}
-                        </td>
-                        <td className="py-3 px-4 text-sm text-right text-gray-900">
-                          {(() => {
-                            const rrValue = candidate.recommendation?.risk?.rr ?? candidate.rr;
-                            return rrValue != null && rrValue > 0 ? rrValue.toFixed(2) : t('common.placeholders.dash');
-                          })()}
-                        </td>
-                        <td className="py-3 px-4 text-sm text-right">
-                          <span className={candidate.momentum6m >= 0 ? 'text-green-600' : 'text-red-600'}>
-                            {formatPercent(candidate.momentum6m)}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-sm text-right">
-                          <span className={candidate.momentum12m >= 0 ? 'text-green-600' : 'text-red-600'}>
-                            {formatPercent(candidate.momentum12m)}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-sm text-right">
-                          <span className={candidate.relStrength >= 0 ? 'text-green-600' : 'text-red-600'}>
-                            {formatPercent(candidate.relStrength)}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          {(() => {
-                            const reasons = candidate.overlayReasons?.length
-                              ? t('screener.table.overlayReasons', {
-                                  reasons: candidate.overlayReasons.join(', '),
-                                })
-                              : t('screener.table.overlayNoTriggers');
-                            const metrics = [
-                              candidate.overlayAttentionZ != null
-                                ? t('screener.table.overlayAttentionZ', {
-                                    value: candidate.overlayAttentionZ.toFixed(2),
-                                  })
-                                : null,
-                              candidate.overlaySentimentScore != null
-                                ? t('screener.table.overlaySentiment', {
-                                    value: candidate.overlaySentimentScore.toFixed(2),
-                                  })
-                                : null,
-                              candidate.overlayHypeScore != null
-                                ? t('screener.table.overlayHype', {
-                                    value: candidate.overlayHypeScore.toFixed(2),
-                                  })
-                                : null,
-                              candidate.overlaySampleSize != null
-                                ? t('screener.table.overlaySample', { value: candidate.overlaySampleSize })
-                                : null,
-                            ].filter(Boolean);
-                            const title = [reasons, ...metrics].join(' | ');
-                            return <OverlayBadge status={resolveOverlayStatus(candidate.overlayStatus)} title={title} />;
-                          })()}
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          {(() => {
-                            const fixes = candidate.recommendation?.education?.whatWouldMakeValid ?? [];
-                            if (!fixes.length) return <span className="text-gray-400">{t('common.placeholders.emDash')}</span>;
-                            const title = fixes.join(' | ');
-                            return (
-                              <span
-                                className="text-xs text-blue-700 underline decoration-dotted cursor-help"
-                                title={title}
-                              >
-                                {t('screener.table.fixLabel')}
-                              </span>
-                            );
-                          })()}
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          <div className="flex gap-2 justify-center">
-                            {candidate.recommendation?.thesis && (
-                              <Button
-                                size="sm"
-                                variant="secondary"
-                                onClick={() => {
-                                  setSelectedCandidate(candidate);
-                                  setShowThesisModal(true);
-                                }}
-                                title={t('screener.table.tradeThesisTitle')}
-                                aria-label={t('screener.table.tradeThesisAria', { ticker: candidate.ticker })}
-                              >
-                                <Lightbulb className="w-4 h-4" />
-                              </Button>
-                            )}
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              onClick={() => setRecommendationCandidate(candidate)}
-                              title={t('screener.table.recommendationDetailsTitle')}
-                              aria-label={t('screener.table.recommendationDetailsAria', { ticker: candidate.ticker })}
-                            >
-                              <ListChecks className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              onClick={() => {
-                                setSelectedCandidate(candidate);
-                                setShowBacktestModal(true);
-                              }}
-                              title={t('screener.table.quickBacktestTitle')}
-                            >
-                              <BarChart3 className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="primary"
-                              onClick={() => {
-                                setSelectedCandidate(candidate);
-                                setShowCreateOrderModal(true);
-                              }}
-                              title={
-                                candidate.recommendation?.verdict === 'NOT_RECOMMENDED'
-                                  ? t('screener.table.createOrderNotRecommendedTitle')
-                                  : t('screener.table.createOrderTitle')
-                              }
-                            >
-                              {t('screener.table.createOrderAction')}
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-            </TableShell>
+            <ScreenerCandidatesTable
+              candidates={candidates}
+              onCreateOrder={(candidate) => {
+                setSelectedCandidate(candidate);
+                setShowCreateOrderModal(true);
+              }}
+              onRecommendationDetails={(candidate) => {
+                setInsightCandidate(candidate);
+                setInsightDefaultTab('recommendation');
+              }}
+              onSocialAnalysis={(ticker) => setSocialSymbol(ticker)}
+              onTradeThesis={(candidate) => {
+                setInsightCandidate(candidate);
+                setInsightDefaultTab('thesis');
+              }}
+              onQuickBacktest={(candidate) => {
+                setSelectedCandidate(candidate);
+                setShowBacktestModal(true);
+              }}
+            />
           </Card>
         </>
       )}
@@ -717,23 +670,14 @@ export default function Screener() {
         />
       )}
 
-      {/* Trade Thesis Modal */}
-      {showThesisModal && selectedCandidate?.recommendation?.thesis && (
-        <TradeThesisModal
-          thesis={selectedCandidate.recommendation.thesis}
-          onClose={() => {
-            setShowThesisModal(false);
-            setSelectedCandidate(null);
-          }}
-        />
-      )}
-
-      {recommendationCandidate && (
-        <RecommendationDetailsModal
-          ticker={recommendationCandidate.ticker}
-          recommendation={recommendationCandidate.recommendation}
-          currency={recommendationCandidate.currency}
-          onClose={() => setRecommendationCandidate(null)}
+      {/* Trade Insight Modal - Unified recommendation + thesis */}
+      {insightCandidate && (
+        <TradeInsightModal
+          ticker={insightCandidate.ticker}
+          recommendation={insightCandidate.recommendation}
+          currency={insightCandidate.currency}
+          defaultTab={insightDefaultTab}
+          onClose={() => setInsightCandidate(null)}
         />
       )}
     </div>

@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Optional
 
 from swing_screener.recommendations.engine import RecommendationPayload, build_recommendation
 from swing_screener.recommendations.thesis import build_trade_thesis, thesis_to_dict
 from swing_screener.risk.position_sizing import RiskConfig
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -85,8 +88,10 @@ def evaluate_recommendation(
                 confidence=confidence,
             )
             thesis_dict = thesis_to_dict(thesis)
-        except Exception:
+        except Exception as e:
             # If thesis building fails, continue without it
+            # This is expected when optional data (like SMA values) is unavailable
+            logger.debug(f"Could not build trade thesis for {ticker}: {e}")
             thesis_dict = None
     
     return build_recommendation(
