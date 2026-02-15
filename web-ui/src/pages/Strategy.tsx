@@ -4,12 +4,15 @@ import Button from '@/components/common/Button';
 import { useStrategyEditor } from '@/features/strategy/useStrategyEditor';
 import StrategyAdvancedSettingsCard from '@/components/domain/strategy/StrategyAdvancedSettingsCard';
 import StrategyCoreSettingsCards from '@/components/domain/strategy/StrategyCoreSettingsCards';
+import StrategyPhilosophyCard from '@/components/domain/strategy/StrategyPhilosophyCard';
+import StrategySafetyScore from '@/components/domain/strategy/StrategySafetyScore';
 import { useI18n } from '@/i18n/I18nProvider';
 import {
   buildHelp,
   strategyFieldClass,
   TextInput,
 } from '@/components/domain/strategy/StrategyFieldControls';
+import { getStrategyInfo } from '@/content/strategy_docs/loader';
 
 export default function StrategyPage() {
   const { locale, t } = useI18n();
@@ -426,6 +429,15 @@ export default function StrategyPage() {
 
       {draft && (
         <>
+          {/* Strategy Philosophy Card - Shows the "Why" before the "What" */}
+          {(() => {
+            const strategyInfo = getStrategyInfo(draft.module ?? 'momentum');
+            return strategyInfo ? <StrategyPhilosophyCard strategyInfo={strategyInfo} /> : null;
+          })()}
+
+          {/* Safety Score - Provides feedback on configuration quality */}
+          <StrategySafetyScore strategy={draft} />
+
           <StrategyCoreSettingsCards
             draft={draft}
             setDraft={setDraft}
