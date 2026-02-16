@@ -2,10 +2,12 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { screen, waitFor, act } from '@testing-library/react'
 import { renderWithProviders, waitForQueriesToSettle } from '@/test/utils'
 import Orders from './Orders'
+import { useBeginnerModeStore } from '@/stores/beginnerModeStore'
 
 describe('Orders Page', () => {
   beforeEach(() => {
-    // Reset any state if needed
+    // Reset beginner mode to advanced for tests
+    useBeginnerModeStore.setState({ isBeginnerMode: false })
   })
 
   describe('Page Structure', () => {

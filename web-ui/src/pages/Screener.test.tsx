@@ -4,6 +4,7 @@ import { renderWithProviders, waitForQueriesToSettle } from '@/test/utils'
 import Screener from './Screener'
 import { useConfigStore } from '@/stores/configStore'
 import { useScreenerStore } from '@/stores/screenerStore'
+import { useBeginnerModeStore } from '@/stores/beginnerModeStore'
 import { DEFAULT_CONFIG } from '@/types/config'
 
 describe('Screener Page', () => {
@@ -13,6 +14,7 @@ describe('Screener Page', () => {
       config: DEFAULT_CONFIG,
     })
     useScreenerStore.setState({ lastResult: null })
+    useBeginnerModeStore.setState({ isBeginnerMode: false }) // Default to advanced mode for tests
     localStorage.removeItem('screener.intelligenceAsofDate')
     localStorage.removeItem('screener.intelligenceSymbols')
   })
@@ -47,13 +49,13 @@ describe('Screener Page', () => {
       })
     })
 
-    it('defaults to mega universe', async () => {
+    it('defaults to usd all universe', async () => {
       renderWithProviders(<Screener />)
       
       await waitFor(() => {
         const selects = screen.getAllByRole('combobox')
         const universeSelect = selects[0] as HTMLSelectElement
-        expect(universeSelect.value).toBe('mega_all')
+        expect(universeSelect.value).toBe('usd_all')
       })
     })
 
@@ -854,6 +856,83 @@ describe('Screener Page', () => {
       
       await waitFor(() => {
         expect(screen.getByText(/Only 0 candidates found for top 200/i)).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('Beginner Mode', () => {
+    beforeEach(() => {
+      // Set beginner mode for these tests
+      useBeginnerModeStore.setState({ isBeginnerMode: true })
+    })
+
+    it('shows simplified controls in beginner mode', async () => {
+      renderWithProviders(<Screener />)
+      
+      await waitFor(() => {
+        expect(screen.getByText('Universe')).toBeInTheDocument()
+      })
+      
+      // Should show beginner controls
+      expect(screen.getByText('Show recommended only')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /Run Screener/i })).toBeInTheDocument()
+      
+      // Advanced controls should be collapsed
+      expect(screen.queryByText('Top N')).not.toBeInTheDocument()
+      expect(screen.queryByText('Min Price')).not.toBeInTheDocument()
+    })
+
+    it('can expand advanced filters in beginner mode', async () => {
+      const { user } = renderWithProviders(<Screener />)
+      
+      await waitFor(() => {
+        expect(screen.getByText('Universe')).toBeInTheDocument()
+      })
+      
+      // Initially collapsed
+      expect(screen.queryByText('Top N')).not.toBeInTheDocument()
+      
+      // Click to expand
+      await act(async () => {
+        await user.click(screen.getByRole('button', { name: /Show advanced filters/i }))
+      })
+      
+      // Now visible
+      await waitFor(() => {
+        expect(screen.getByText('Top N')).toBeInTheDocument()
+      })
+      expect(screen.getByText('Min Price')).toBeInTheDocument()
+      expect(screen.getByText('Max Price')).toBeInTheDocument()
+      expect(screen.getByText('Currency')).toBeInTheDocument()
+    })
+
+    it('filters candidates when recommended only is checked', async () => {
+      const { user } = renderWithProviders(<Screener />)
+      
+      // Wait for page to load
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Run Screener/i })).toBeInTheDocument()
+      })
+      
+      // Run screener
+      await act(async () => {
+        await user.click(screen.getByRole('button', { name: /Run Screener/i }))
+      })
+      
+      // Wait for results
+      await waitFor(() => {
+        expect(screen.getByText(/candidates from/i)).toBeInTheDocument()
+      })
+      
+      // Check the recommended only checkbox
+      const checkbox = screen.getByRole('checkbox', { name: /Show recommended only/i })
+      await act(async () => {
+        await user.click(checkbox)
+      })
+      
+      // Should show filtered count in results summary
+      await waitFor(() => {
+        expect(screen.getByText(/0 recommended \(1 total candidates from 500 stocks\)/i)).toBeInTheDocument()
       })
     })
   })

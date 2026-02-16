@@ -28,12 +28,28 @@ import type {
   DailyReviewPositionUpdate,
   DailyReviewPositionClose,
 } from '@/features/dailyReview/types';
+import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
+import { useStrategyReadiness } from '@/features/strategy/useStrategyReadiness';
+import StrategyReadinessBlocker from '@/components/domain/onboarding/StrategyReadinessBlocker';
 
 const UNIVERSE_ALIASES: Record<string, string> = {
-  mega: 'mega_all',
-  mega_defense: 'defense_all',
-  mega_healthcare_biotech: 'healthcare_all',
-  mega_europe: 'europe_large',
+  mega: 'usd_all',
+  mega_all: 'usd_all',
+  mega_stocks: 'usd_mega_stocks',
+  core_etfs: 'usd_core_etfs',
+  defense_all: 'usd_defense_all',
+  defense_stocks: 'usd_defense_stocks',
+  defense_etfs: 'usd_defense_etfs',
+  healthcare_all: 'usd_healthcare_all',
+  healthcare_stocks: 'usd_healthcare_stocks',
+  healthcare_etfs: 'usd_healthcare_etfs',
+  mega_defense: 'usd_defense_all',
+  mega_healthcare_biotech: 'usd_healthcare_all',
+  mega_europe: 'eur_europe_large',
+  europe_large: 'eur_europe_large',
+  amsterdam_all: 'eur_amsterdam_all',
+  amsterdam_aex: 'eur_amsterdam_aex',
+  amsterdam_amx: 'eur_amsterdam_amx',
 };
 
 const normalizeUniverse = (value: string | null): string | null => {
@@ -54,11 +70,22 @@ export default function DailyReview() {
   const [intelligenceJobId, setIntelligenceJobId] = useState<string>();
   const [intelligenceAsofDate, setIntelligenceAsofDate] = useState<string>();
   const [intelligenceRunSymbols, setIntelligenceRunSymbols] = useState<string[]>([]);
+  const [dismissedReadinessBlocker, setDismissedReadinessBlocker] = useState(() => {
+    // Persist dismissal state in localStorage
+    return localStorage.getItem('dailyReview.dismissedReadinessBlocker') === 'true';
+  });
 
   const queryClient = useQueryClient();
   const selectedUniverse = normalizeUniverse(localStorage.getItem('screener.universe'));
   const { data: review, isLoading, error, refetch, isFetching } = useDailyReview(10, selectedUniverse);
   const config = useConfigStore((state) => state.config);
+  const { isBeginnerMode } = useBeginnerModeStore();
+  const { isReady: strategyReady } = useStrategyReadiness();
+  
+  // Persist dismissal to localStorage
+  useEffect(() => {
+    localStorage.setItem('dailyReview.dismissedReadinessBlocker', String(dismissedReadinessBlocker));
+  }, [dismissedReadinessBlocker]);
   const riskConfig: RiskConfig = config?.risk ?? {
     accountSize: 10000,
     riskPct: 0.01,
@@ -171,6 +198,11 @@ export default function DailyReview() {
           {isFetching ? t('dailyReview.header.refreshing') : t('dailyReview.header.refresh')}
         </Button>
       </div>
+
+      {/* Strategy Readiness Blocker - Beginner Mode */}
+      {isBeginnerMode && !strategyReady && !dismissedReadinessBlocker && (
+        <StrategyReadinessBlocker onDismiss={() => setDismissedReadinessBlocker(true)} />
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <SummaryCard title={t('dailyReview.summary.newCandidates')} value={summary.newCandidates} variant="blue" icon="📈" />

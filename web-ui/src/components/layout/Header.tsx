@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { TrendingUp, BookOpen } from 'lucide-react';
 import { useI18n } from '@/i18n/I18nProvider';
+import UserModeToggle from '@/components/common/UserModeToggle';
 import Button from '@/components/common/Button';
 import GettingStartedModal from '@/components/modals/GettingStartedModal';
 
@@ -28,6 +29,7 @@ export default function Header() {
         </div>
         
         <div className="flex items-center gap-4">
+          <UserModeToggle />
           <Button
             variant="secondary"
             size="sm"
@@ -44,7 +46,6 @@ export default function Header() {
           </div>
         </div>
       </header>
-      
       {showGettingStarted && (
         <GettingStartedModal onClose={() => setShowGettingStarted(false)} />
       )}

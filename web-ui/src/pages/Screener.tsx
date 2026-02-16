@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { PlayCircle, RefreshCw, TrendingUp, AlertCircle, Sparkles } from 'lucide-react';
+import { PlayCircle, RefreshCw, TrendingUp, AlertCircle, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import { useUniverses, useRunScreenerMutation } from '@/features/screener/hooks';
@@ -8,6 +8,7 @@ import { ScreenerCandidate } from '@/features/screener/types';
 import { useConfigStore } from '@/stores/configStore';
 import { RiskConfig } from '@/types/config';
 import { useScreenerStore } from '@/stores/screenerStore';
+import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 import { formatCurrency, formatPercent } from '@/utils/formatters';
 import QuickBacktestModal from '@/components/modals/QuickBacktestModal';
 import SocialAnalysisModal from '@/components/modals/SocialAnalysisModal';
@@ -33,10 +34,23 @@ const INTELLIGENCE_ASOF_STORAGE_KEY = 'screener.intelligenceAsofDate';
 const INTELLIGENCE_SYMBOLS_STORAGE_KEY = 'screener.intelligenceSymbols';
 type CurrencyFilter = 'all' | 'usd' | 'eur';
 const UNIVERSE_ALIASES: Record<string, string> = {
-  mega: 'mega_all',
-  mega_defense: 'defense_all',
-  mega_healthcare_biotech: 'healthcare_all',
-  mega_europe: 'europe_large',
+  mega: 'usd_all',
+  mega_all: 'usd_all',
+  mega_stocks: 'usd_mega_stocks',
+  core_etfs: 'usd_core_etfs',
+  defense_all: 'usd_defense_all',
+  defense_stocks: 'usd_defense_stocks',
+  defense_etfs: 'usd_defense_etfs',
+  healthcare_all: 'usd_healthcare_all',
+  healthcare_stocks: 'usd_healthcare_stocks',
+  healthcare_etfs: 'usd_healthcare_etfs',
+  mega_defense: 'usd_defense_all',
+  mega_healthcare_biotech: 'usd_healthcare_all',
+  mega_europe: 'eur_europe_large',
+  europe_large: 'eur_europe_large',
+  amsterdam_all: 'eur_amsterdam_all',
+  amsterdam_aex: 'eur_amsterdam_aex',
+  amsterdam_amx: 'eur_amsterdam_amx',
 };
 const normalizeCurrencies = (currencies?: string[]): ('USD' | 'EUR')[] => {
   const normalized = (currencies ?? [])
@@ -70,6 +84,7 @@ function getApiErrorStatus(error: unknown): number | undefined {
 export default function Screener() {
   const { config } = useConfigStore();
   const { lastResult, setLastResult } = useScreenerStore();
+  const { isBeginnerMode } = useBeginnerModeStore();
   const queryClient = useQueryClient();
   const activeStrategyQuery = useActiveStrategyQuery();
   const riskConfig: RiskConfig = activeStrategyQuery.data?.risk ?? config.risk;
@@ -77,7 +92,7 @@ export default function Screener() {
   
   // Load saved preferences from localStorage or use defaults
   const [selectedUniverse, setSelectedUniverse] = useState<string>(() => {
-    return normalizeUniverse(localStorage.getItem('screener.universe')) || 'mega_all';
+    return normalizeUniverse(localStorage.getItem('screener.universe')) || 'usd_all';
   });
   const [topN, setTopN] = useState<number>(() => {
     const saved = localStorage.getItem('screener.topN');
@@ -98,6 +113,20 @@ export default function Screener() {
     const saved = localStorage.getItem('screener.currencyFilter');
     if (saved === 'usd' || saved === 'eur' || saved === 'all') return saved;
     return 'all';
+  });
+  
+  // Beginner mode: recommended-only filter (default OFF for backward compatibility)
+  const [recommendedOnly, setRecommendedOnly] = useState<boolean>(() => {
+    const saved = localStorage.getItem('screener.recommendedOnly');
+    if (saved !== null) return saved === 'true';
+    return false; // Default OFF to maintain existing behavior
+  });
+  
+  // Advanced filters collapsed by default in beginner mode
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState<boolean>(() => {
+    const saved = localStorage.getItem('screener.showAdvancedFilters');
+    if (saved !== null) return saved === 'true';
+    return !isBeginnerMode; // Collapsed in beginner mode
   });
   
   const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
@@ -159,6 +188,17 @@ export default function Screener() {
     setCurrencyFilter(value);
     localStorage.setItem('screener.currencyFilter', value);
   };
+  
+  const handleRecommendedOnlyChange = (value: boolean) => {
+    setRecommendedOnly(value);
+    localStorage.setItem('screener.recommendedOnly', value.toString());
+  };
+  
+  const handleShowAdvancedFiltersChange = (value: boolean) => {
+    setShowAdvancedFilters(value);
+    localStorage.setItem('screener.showAdvancedFilters', value.toString());
+  };
+  
   const universesQuery = useUniverses();
   const universesData = universesQuery.data;
 
@@ -214,7 +254,14 @@ export default function Screener() {
   };
 
   const result = screenerMutation.data ?? lastResult;
-  const candidates = result?.candidates || [];
+  const allCandidates = result?.candidates || [];
+  // Apply recommended-only filter in UI
+  const candidates = recommendedOnly
+    ? allCandidates.filter((c) => {
+        const verdict = c.recommendation?.verdict ?? 'UNKNOWN';
+        return verdict === 'RECOMMENDED';
+      })
+    : allCandidates;
   const warnings = result?.warnings || [];
   const socialWarmupJobId = result?.socialWarmupJobId;
   const socialWarmupQuery = useQuery({
@@ -252,119 +299,285 @@ export default function Screener() {
 
       {/* Controls */}
       <Card>
-        <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
-          {/* Universe selection */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.universe')}</label>
-            <select
-              value={selectedUniverse}
-              onChange={(e) => handleUniverseChange(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              disabled={screenerMutation.isPending}
-            >
-              {universesData?.universes.map((universe) => (
-                <option key={universe} value={universe}>
-                  {universe}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Top N */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.topN')}</label>
-            <input
-              type="number"
-              value={topN}
-              onChange={(e) => handleTopNChange(parseInt(e.target.value) || 20)}
-              min="1"
-              max={TOP_N_MAX}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              disabled={screenerMutation.isPending}
-            />
-          </div>
-
-          {/* Min Price */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.minPrice')}</label>
-            <input
-              type="number"
-              value={minPrice}
-              onChange={(e) => handleMinPriceChange(parseFloat(e.target.value) || 0)}
-              min="0"
-              step="0.1"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              disabled={screenerMutation.isPending}
-            />
-          </div>
-
-          {/* Max Price */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.maxPrice')}</label>
-            <input
-              type="number"
-              value={maxPrice}
-              onChange={(e) => handleMaxPriceChange(parseFloat(e.target.value) || 1000)}
-              min="0"
-              step="1"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              disabled={screenerMutation.isPending}
-            />
-          </div>
-
-          {/* Currency filter */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.currency')}</label>
-            <select
-              value={currencyFilter}
-              onChange={(e) => handleCurrencyFilterChange(e.target.value as CurrencyFilter)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              disabled={screenerMutation.isPending}
-            >
-              <option value="all">{t('screener.currencyFilter.all')}</option>
-              <option value="usd">{t('screener.currencyFilter.usdOnly')}</option>
-              <option value="eur">{t('screener.currencyFilter.eurOnly')}</option>
-            </select>
-          </div>
-
-          {/* Account info */}
-          <div className="flex items-end">
-            <div className="text-sm text-gray-600">
+        {/* Beginner Mode: Simple controls layout */}
+        {isBeginnerMode && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Universe selection */}
               <div>
-                {t('screener.controls.account')}: {formatCurrency(riskConfig.accountSize)}
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.universe')}</label>
+                <select
+                  value={selectedUniverse}
+                  onChange={(e) => handleUniverseChange(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  disabled={screenerMutation.isPending}
+                >
+                  {universesData?.universes.map((universe) => (
+                    <option key={universe} value={universe}>
+                      {universe}
+                    </option>
+                  ))}
+                </select>
               </div>
-              <div>
-                {t('screener.controls.risk')}: {formatPercent(riskConfig.riskPct)}
+
+              {/* Recommended Only Filter */}
+              <div className="flex items-end">
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={recommendedOnly}
+                    onChange={(e) => handleRecommendedOnlyChange(e.target.checked)}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    disabled={screenerMutation.isPending}
+                  />
+                  <span className="text-sm font-medium text-gray-700">
+                    {t('screener.controls.recommendedOnly')}
+                  </span>
+                </label>
               </div>
-              <div>
-                {t('screener.controls.currencySummary', {
-                  value: formatCurrencyFilterLabel(activeCurrencies),
-                })}
+
+              {/* Run button */}
+              <div className="flex items-end">
+                <Button
+                  onClick={handleRunScreener}
+                  disabled={screenerMutation.isPending}
+                  className="w-full"
+                >
+                  {screenerMutation.isPending ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      {t('screener.controls.running')}
+                    </>
+                  ) : (
+                    <>
+                      <PlayCircle className="w-4 h-4 mr-2" />
+                      {t('screener.controls.run')}
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            {/* Advanced filters toggle */}
+            <div>
+              <button
+                type="button"
+                onClick={() => handleShowAdvancedFiltersChange(!showAdvancedFilters)}
+                className="flex items-center text-sm text-blue-600 hover:text-blue-800"
+              >
+                {showAdvancedFilters ? (
+                  <>
+                    <ChevronUp className="w-4 h-4 mr-1" />
+                    {t('screener.controls.hideAdvanced')}
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="w-4 h-4 mr-1" />
+                    {t('screener.controls.showAdvanced')}
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Advanced filters (collapsible in beginner mode) */}
+            {showAdvancedFilters && (
+              <div className="pt-4 border-t border-gray-200">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  {/* Top N */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.topN')}</label>
+                    <input
+                      type="number"
+                      value={topN}
+                      onChange={(e) => handleTopNChange(parseInt(e.target.value) || 20)}
+                      min="1"
+                      max={TOP_N_MAX}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      disabled={screenerMutation.isPending}
+                    />
+                  </div>
+
+                  {/* Min Price */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.minPrice')}</label>
+                    <input
+                      type="number"
+                      value={minPrice}
+                      onChange={(e) => handleMinPriceChange(parseFloat(e.target.value) || 0)}
+                      min="0"
+                      step="0.1"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      disabled={screenerMutation.isPending}
+                    />
+                  </div>
+
+                  {/* Max Price */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.maxPrice')}</label>
+                    <input
+                      type="number"
+                      value={maxPrice}
+                      onChange={(e) => handleMaxPriceChange(parseFloat(e.target.value) || 1000)}
+                      min="0"
+                      step="1"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      disabled={screenerMutation.isPending}
+                    />
+                  </div>
+
+                  {/* Currency filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.currency')}</label>
+                    <select
+                      value={currencyFilter}
+                      onChange={(e) => handleCurrencyFilterChange(e.target.value as CurrencyFilter)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      disabled={screenerMutation.isPending}
+                    >
+                      <option value="all">{t('screener.currencyFilter.all')}</option>
+                      <option value="usd">{t('screener.currencyFilter.usdOnly')}</option>
+                      <option value="eur">{t('screener.currencyFilter.eurOnly')}</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Account info (always visible in beginner mode) */}
+            <div className="pt-4 border-t border-gray-200">
+              <div className="text-sm text-gray-600">
+                <div>
+                  {t('screener.controls.account')}: {formatCurrency(riskConfig.accountSize)}
+                </div>
+                <div>
+                  {t('screener.controls.risk')}: {formatPercent(riskConfig.riskPct)}
+                </div>
+                <div>
+                  {t('screener.controls.currencySummary', {
+                    value: formatCurrencyFilterLabel(activeCurrencies),
+                  })}
+                </div>
               </div>
             </div>
           </div>
+        )}
 
-          {/* Run button */}
-          <div className="flex items-end">
-            <Button
-              onClick={handleRunScreener}
-              disabled={screenerMutation.isPending}
-              className="w-full"
-            >
-              {screenerMutation.isPending ? (
-                <>
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                  {t('screener.controls.running')}
-                </>
-              ) : (
-                <>
-                  <PlayCircle className="w-4 h-4 mr-2" />
-                  {t('screener.controls.run')}
-                </>
-              )}
-            </Button>
+        {/* Advanced Mode: Full controls layout */}
+        {!isBeginnerMode && (
+          <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
+            {/* Universe selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.universe')}</label>
+              <select
+                value={selectedUniverse}
+                onChange={(e) => handleUniverseChange(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                disabled={screenerMutation.isPending}
+              >
+                {universesData?.universes.map((universe) => (
+                  <option key={universe} value={universe}>
+                    {universe}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Top N */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.topN')}</label>
+              <input
+                type="number"
+                value={topN}
+                onChange={(e) => handleTopNChange(parseInt(e.target.value) || 20)}
+                min="1"
+                max={TOP_N_MAX}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                disabled={screenerMutation.isPending}
+              />
+            </div>
+
+            {/* Min Price */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.minPrice')}</label>
+              <input
+                type="number"
+                value={minPrice}
+                onChange={(e) => handleMinPriceChange(parseFloat(e.target.value) || 0)}
+                min="0"
+                step="0.1"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                disabled={screenerMutation.isPending}
+              />
+            </div>
+
+            {/* Max Price */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.maxPrice')}</label>
+              <input
+                type="number"
+                value={maxPrice}
+                onChange={(e) => handleMaxPriceChange(parseFloat(e.target.value) || 1000)}
+                min="0"
+                step="1"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                disabled={screenerMutation.isPending}
+              />
+            </div>
+
+            {/* Currency filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.currency')}</label>
+              <select
+                value={currencyFilter}
+                onChange={(e) => handleCurrencyFilterChange(e.target.value as CurrencyFilter)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                disabled={screenerMutation.isPending}
+              >
+                <option value="all">{t('screener.currencyFilter.all')}</option>
+                <option value="usd">{t('screener.currencyFilter.usdOnly')}</option>
+                <option value="eur">{t('screener.currencyFilter.eurOnly')}</option>
+              </select>
+            </div>
+
+            {/* Account info */}
+            <div className="flex items-end">
+              <div className="text-sm text-gray-600">
+                <div>
+                  {t('screener.controls.account')}: {formatCurrency(riskConfig.accountSize)}
+                </div>
+                <div>
+                  {t('screener.controls.risk')}: {formatPercent(riskConfig.riskPct)}
+                </div>
+                <div>
+                  {t('screener.controls.currencySummary', {
+                    value: formatCurrencyFilterLabel(activeCurrencies),
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Run button */}
+            <div className="flex items-end">
+              <Button
+                onClick={handleRunScreener}
+                disabled={screenerMutation.isPending}
+                className="w-full"
+              >
+                {screenerMutation.isPending ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    {t('screener.controls.running')}
+                  </>
+                ) : (
+                  <>
+                    <PlayCircle className="w-4 h-4 mr-2" />
+                    {t('screener.controls.run')}
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Info banner */}
         {!screenerMutation.isPending && !result && (
@@ -399,10 +612,16 @@ export default function Screener() {
                 <div>
                   <p className="text-sm text-gray-600">{t('screener.summary.completed')}</p>
                   <p className="text-lg font-semibold text-gray-900">
-                    {t('screener.summary.resultLine', {
-                      count: candidates.length,
-                      total: result.totalScreened,
-                    })}
+                    {recommendedOnly && candidates.length < allCandidates.length
+                      ? t('screener.summary.resultLineFiltered', {
+                          count: candidates.length,
+                          total: allCandidates.length,
+                          screened: result.totalScreened,
+                        })
+                      : t('screener.summary.resultLine', {
+                          count: candidates.length,
+                          total: result.totalScreened,
+                        })}
                   </p>
                   <p className="text-xs text-gray-500">{t('screener.summary.asOf', { date: result.asofDate })}</p>
                 </div>
