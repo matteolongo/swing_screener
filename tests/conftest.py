@@ -1,6 +1,7 @@
 """Pytest configuration and shared fixtures for all tests."""
 
 import json
+import re
 import pytest
 from unittest.mock import MagicMock
 
@@ -59,7 +60,6 @@ def mock_ollama_client():
         # Extract both headline and snippet from the prompt
         # Format: Headline: "actual headline text"
         # Format: Snippet: "actual snippet text"
-        import re
         headline_match = re.search(r'Headline:\s*"([^"]+)"', user_msg)
         snippet_match = re.search(r'Snippet:\s*"([^"]+)"', user_msg)
         
