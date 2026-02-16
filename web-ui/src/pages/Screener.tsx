@@ -33,10 +33,23 @@ const INTELLIGENCE_ASOF_STORAGE_KEY = 'screener.intelligenceAsofDate';
 const INTELLIGENCE_SYMBOLS_STORAGE_KEY = 'screener.intelligenceSymbols';
 type CurrencyFilter = 'all' | 'usd' | 'eur';
 const UNIVERSE_ALIASES: Record<string, string> = {
-  mega: 'mega_all',
-  mega_defense: 'defense_all',
-  mega_healthcare_biotech: 'healthcare_all',
-  mega_europe: 'europe_large',
+  mega: 'usd_all',
+  mega_all: 'usd_all',
+  mega_stocks: 'usd_mega_stocks',
+  core_etfs: 'usd_core_etfs',
+  defense_all: 'usd_defense_all',
+  defense_stocks: 'usd_defense_stocks',
+  defense_etfs: 'usd_defense_etfs',
+  healthcare_all: 'usd_healthcare_all',
+  healthcare_stocks: 'usd_healthcare_stocks',
+  healthcare_etfs: 'usd_healthcare_etfs',
+  mega_defense: 'usd_defense_all',
+  mega_healthcare_biotech: 'usd_healthcare_all',
+  mega_europe: 'eur_europe_large',
+  europe_large: 'eur_europe_large',
+  amsterdam_all: 'eur_amsterdam_all',
+  amsterdam_aex: 'eur_amsterdam_aex',
+  amsterdam_amx: 'eur_amsterdam_amx',
 };
 const normalizeCurrencies = (currencies?: string[]): ('USD' | 'EUR')[] => {
   const normalized = (currencies ?? [])
@@ -77,7 +90,7 @@ export default function Screener() {
   
   // Load saved preferences from localStorage or use defaults
   const [selectedUniverse, setSelectedUniverse] = useState<string>(() => {
-    return normalizeUniverse(localStorage.getItem('screener.universe')) || 'mega_all';
+    return normalizeUniverse(localStorage.getItem('screener.universe')) || 'usd_all';
   });
   const [topN, setTopN] = useState<number>(() => {
     const saved = localStorage.getItem('screener.topN');
