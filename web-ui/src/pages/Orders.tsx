@@ -15,6 +15,7 @@ import { Plus, X, CheckCircle, MessageSquare } from 'lucide-react';
 import SocialAnalysisModal from '@/components/modals/SocialAnalysisModal';
 import CreateOrderModalForm from '@/components/domain/orders/CreateOrderModalForm';
 import FillOrderModalForm from '@/components/domain/orders/FillOrderModalForm';
+import { useUserPreferencesStore } from '@/stores/userPreferencesStore';
 import { t } from '@/i18n/t';
 
 type FilterStatus = OrderStatus | 'all';
@@ -25,6 +26,8 @@ export default function Orders() {
   const [showFillModal, setShowFillModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [socialSymbol, setSocialSymbol] = useState<string | null>(null);
+  const { mode } = useUserPreferencesStore();
+  const isBeginnerMode = mode === 'beginner';
 
   const ordersQuery = useOrders(filterStatus);
   const orders = ordersQuery.data ?? [];
@@ -111,14 +114,22 @@ export default function Orders() {
             headers={(
               <tr className="border-b border-gray-200 dark:border-gray-700">
                 <th className="text-left py-3 px-4 font-semibold">{t('ordersPage.headers.ticker')}</th>
-                <th className="text-left py-3 px-4 font-semibold">{t('ordersPage.headers.type')}</th>
-                <th className="text-left py-3 px-4 font-semibold">{t('ordersPage.headers.kind')}</th>
+                {!isBeginnerMode && (
+                  <>
+                    <th className="text-left py-3 px-4 font-semibold">{t('ordersPage.headers.type')}</th>
+                    <th className="text-left py-3 px-4 font-semibold">{t('ordersPage.headers.kind')}</th>
+                  </>
+                )}
+                <th className="text-left py-3 px-4 font-semibold">{t('ordersPage.headers.status')}</th>
                 <th className="text-right py-3 px-4 font-semibold">{t('ordersPage.headers.qty')}</th>
                 <th className="text-right py-3 px-4 font-semibold">{t('ordersPage.headers.limit')}</th>
-                <th className="text-right py-3 px-4 font-semibold">{t('ordersPage.headers.stop')}</th>
-                <th className="text-left py-3 px-4 font-semibold">{t('ordersPage.headers.status')}</th>
-                <th className="text-left py-3 px-4 font-semibold">{t('ordersPage.headers.created')}</th>
-                <th className="text-left py-3 px-4 font-semibold">{t('ordersPage.headers.notes')}</th>
+                {!isBeginnerMode && (
+                  <>
+                    <th className="text-right py-3 px-4 font-semibold">{t('ordersPage.headers.stop')}</th>
+                    <th className="text-left py-3 px-4 font-semibold">{t('ordersPage.headers.created')}</th>
+                    <th className="text-left py-3 px-4 font-semibold">{t('ordersPage.headers.notes')}</th>
+                  </>
+                )}
                 <th className="text-right py-3 px-4 font-semibold">{t('ordersPage.headers.actions')}</th>
               </tr>
             )}
@@ -150,27 +161,24 @@ export default function Orders() {
                     </Button>
                   </div>
                 </td>
-                <td className="py-3 px-4 text-sm">{order.orderType}</td>
-                <td className="py-3 px-4">
-                  <Badge
-                    variant={
-                      order.orderKind === 'entry'
-                        ? 'success'
-                        : order.orderKind === 'stop'
-                          ? 'error'
-                      : 'default'
-                    }
-                  >
-                    {order.orderKind || t('ordersPage.orderKindUnknown')}
-                  </Badge>
-                </td>
-                <td className="py-3 px-4 text-right">{order.quantity}</td>
-                <td className="py-3 px-4 text-right">
-                  {order.limitPrice ? formatCurrency(order.limitPrice) : t('common.placeholders.dash')}
-                </td>
-                <td className="py-3 px-4 text-right">
-                  {order.stopPrice ? formatCurrency(order.stopPrice) : t('common.placeholders.dash')}
-                </td>
+                {!isBeginnerMode && (
+                  <>
+                    <td className="py-3 px-4 text-sm">{order.orderType}</td>
+                    <td className="py-3 px-4">
+                      <Badge
+                        variant={
+                          order.orderKind === 'entry'
+                            ? 'success'
+                            : order.orderKind === 'stop'
+                              ? 'error'
+                          : 'default'
+                        }
+                      >
+                        {order.orderKind || t('ordersPage.orderKindUnknown')}
+                      </Badge>
+                    </td>
+                  </>
+                )}
                 <td className="py-3 px-4">
                   <Badge
                     variant={
@@ -184,10 +192,21 @@ export default function Orders() {
                     {order.status}
                   </Badge>
                 </td>
-                <td className="py-3 px-4 text-sm">{formatDate(order.orderDate)}</td>
-                <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 max-w-xs truncate">
-                  {order.notes || t('ordersPage.notesFallback')}
+                <td className="py-3 px-4 text-right">{order.quantity}</td>
+                <td className="py-3 px-4 text-right">
+                  {order.limitPrice ? formatCurrency(order.limitPrice) : t('common.placeholders.dash')}
                 </td>
+                {!isBeginnerMode && (
+                  <>
+                    <td className="py-3 px-4 text-right">
+                      {order.stopPrice ? formatCurrency(order.stopPrice) : t('common.placeholders.dash')}
+                    </td>
+                    <td className="py-3 px-4 text-sm">{formatDate(order.orderDate)}</td>
+                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 max-w-xs truncate">
+                      {order.notes || t('ordersPage.notesFallback')}
+                    </td>
+                  </>
+                )}
                 <td className="py-3 px-4">
                   <div className="flex justify-end gap-2">
                     {order.status === 'pending' ? (

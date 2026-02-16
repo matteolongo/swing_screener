@@ -389,6 +389,87 @@ Use the **Strategy** page to edit:
 
 ## Features in Detail
 
+### Beginner/Advanced Mode Toggle
+
+**Location:** Top-right corner of the application header
+
+The application supports two interface modes to accommodate different experience levels:
+
+#### Beginner Mode (Default for New Users)
+
+**Purpose:** Reduces cognitive load by hiding advanced features while preserving essential functionality.
+
+**Screener Page in Beginner Mode:**
+- **Simplified Controls:**
+  - Universe selector
+  - "Show recommended only" checkbox (filter candidates by recommendation)
+  - Run Screener button
+  - Account summary (always visible)
+  
+- **Collapsed Advanced Filters:**
+  - Top N, Min Price, Max Price, and Currency filters are hidden by default
+  - Click "Show advanced filters" to expand these options when needed
+  - Your filter preferences are saved to localStorage
+
+- **Same Results Display:**
+  - Full candidate table with all metrics
+  - Intelligence opportunities (when available)
+  - All modals and actions remain available
+
+**Orders Page in Beginner Mode:**
+- **Simplified Columns:**
+  - Ticker (with sentiment button)
+  - Status
+  - Quantity
+  - Limit Price
+  - Actions
+  
+- **Hidden Columns:**
+  - Order Type (LIMIT/STOP)
+  - Order Kind (entry/stop)
+  - Stop Price
+  - Created Date
+  - Notes
+
+**Positions Page in Beginner Mode:**
+- **Simplified Columns:**
+  - Ticker (with sentiment button)
+  - Status
+  - Shares
+  - Current Value
+  - P&L ($)
+  - P&L (%)
+  - Actions
+  
+- **Hidden Columns:**
+  - Entry Date
+  - Entry Price
+  - Stop Price
+  - Exit Price
+  - Notes
+
+#### Advanced Mode
+
+**Purpose:** Full visibility and control over all features and data.
+
+**Features:**
+- All controls visible on Screener (no collapsed sections)
+- All table columns visible in Orders and Positions
+- No simplified layouts
+
+#### Switching Modes
+
+1. Click the mode toggle in the header (top-right)
+2. Mode is persisted to localStorage
+3. All pages immediately reflect the new mode
+4. Your filter preferences and settings are preserved across mode switches
+
+**Recommendation:**
+- Start with **Beginner Mode** to learn the workflow
+- Switch to **Advanced Mode** when you need detailed control or additional context
+
+---
+
 ### Create Order Modal
 
 **Triggered from:** Screener results (click "Create Order" on a candidate)
