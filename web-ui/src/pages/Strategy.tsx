@@ -15,10 +15,11 @@ import {
   TextInput,
 } from '@/components/domain/strategy/StrategyFieldControls';
 import { getStrategyInfo } from '@/content/strategy_docs/loader';
+import { useUserPreferencesStore } from '@/stores/userPreferencesStore';
 
 export default function StrategyPage() {
   const { locale, t } = useI18n();
-  const [isBeginnerMode, setIsBeginnerMode] = useState(true);
+  const { isBeginnerMode, setBeginnerMode } = useUserPreferencesStore();
 
   const help = useMemo(
     () => ({

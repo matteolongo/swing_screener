@@ -26,10 +26,15 @@ import {
   useRunIntelligenceMutation,
 } from '@/features/intelligence/hooks';
 import { t } from '@/i18n/t';
+import { useUserPreferencesStore } from '@/stores/userPreferencesStore';
+import OnboardingModal from '@/components/modals/OnboardingModal';
+import TodaysNextActionCard from '@/components/domain/onboarding/TodaysNextActionCard';
 
 export default function Dashboard() {
   const { config } = useConfigStore();
   const navigate = useNavigate();
+  const { onboardingCompleted, onboardingDismissed } = useUserPreferencesStore();
+  const [showOnboarding, setShowOnboarding] = useState(!onboardingCompleted && !onboardingDismissed);
   const activeStrategyQuery = useActiveStrategyQuery();
   const riskConfig = activeStrategyQuery.data?.risk ?? config.risk;
 
@@ -112,7 +117,13 @@ export default function Dashboard() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
+      {/* Onboarding Modal */}
+      <OnboardingModal isOpen={showOnboarding} onClose={() => setShowOnboarding(false)} />
+      
       <h1 className="text-3xl font-bold">{t('dashboardPage.header.title')}</h1>
+
+      {/* Today's Next Action Card - Beginner Mode */}
+      <TodaysNextActionCard />
 
       {/* Portfolio Status - At-a-Glance Hero */}
       <Card variant="elevated">
