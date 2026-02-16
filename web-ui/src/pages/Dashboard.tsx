@@ -34,12 +34,17 @@ export default function Dashboard() {
   const { config } = useConfigStore();
   const navigate = useNavigate();
   const { status: onboardingStatus } = useOnboardingStore();
-  const [showOnboarding, setShowOnboarding] = useState(onboardingStatus === 'new');
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const activeStrategyQuery = useActiveStrategyQuery();
   const riskConfig = activeStrategyQuery.data?.risk ?? config.risk;
 
   const { data: positions = [] } = useOpenPositions();
   const { data: orders = [] } = useOrders('pending');
+  
+  // Sync local state with store status
+  useEffect(() => {
+    setShowOnboarding(onboardingStatus === 'new');
+  }, [onboardingStatus]);
   const {
     data: orderSnapshots,
     isFetching: isFetchingSnapshots,

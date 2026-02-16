@@ -145,24 +145,27 @@ export default function OnboardingModal({ isOpen, onClose }: OnboardingModalProp
   const step = STEPS[stepIndex];
   const IconComponent = step.icon;
   
-  const handleDismiss = () => {
-    dismissOnboarding();
-    onClose();
-  };
-  
-  // Handle escape key
+  // Handle escape key - using stable refs to avoid recreating handler
   useEffect(() => {
+    if (!isOpen) return;
+    
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        handleDismiss();
+      if (e.key === 'Escape') {
+        dismissOnboarding();
+        onClose();
       }
     };
     
     window.addEventListener('keydown', handleEscape);
     return () => window.removeEventListener('keydown', handleEscape);
-  }, [isOpen, handleDismiss]);
+  }, [isOpen, dismissOnboarding, onClose]);
   
   if (!isOpen) return null;
+  
+  const handleDismiss = () => {
+    dismissOnboarding();
+    onClose();
+  };
   
   const handleNext = () => {
     if (stepIndex < STEPS.length - 1) {
