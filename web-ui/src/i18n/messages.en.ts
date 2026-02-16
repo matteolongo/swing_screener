@@ -288,6 +288,7 @@ export const messagesEn = {
   },
   header: {
     brand: 'Swing Screener',
+    gettingStarted: 'Getting Started',
   },
   strategyCoach: {
     title: 'Strategy Coach',
