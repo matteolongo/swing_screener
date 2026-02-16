@@ -29,6 +29,18 @@ import type {
   DailyReviewPositionClose,
 } from '@/features/dailyReview/types';
 
+const UNIVERSE_ALIASES: Record<string, string> = {
+  mega: 'mega_all',
+  mega_defense: 'defense_all',
+  mega_healthcare_biotech: 'healthcare_all',
+  mega_europe: 'europe_large',
+};
+
+const normalizeUniverse = (value: string | null): string | null => {
+  if (!value) return null;
+  return UNIVERSE_ALIASES[value] ?? value;
+};
+
 export default function DailyReview() {
   const [expandedSections, setExpandedSections] = useState({
     candidates: true,
@@ -44,7 +56,8 @@ export default function DailyReview() {
   const [intelligenceRunSymbols, setIntelligenceRunSymbols] = useState<string[]>([]);
 
   const queryClient = useQueryClient();
-  const { data: review, isLoading, error, refetch, isFetching } = useDailyReview(10);
+  const selectedUniverse = normalizeUniverse(localStorage.getItem('screener.universe'));
+  const { data: review, isLoading, error, refetch, isFetching } = useDailyReview(10, selectedUniverse);
   const config = useConfigStore((state) => state.config);
   const riskConfig: RiskConfig = config?.risk ?? {
     accountSize: 10000,
