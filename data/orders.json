@@ -1,5 +1,5 @@
 {
-  "asof": "2026-02-13",
+  "asof": "2026-02-16",
   "orders": [
     {
       "order_id": "ORD-INTC-20260115-ENTRY",
@@ -441,6 +441,23 @@
       "order_kind": "stop",
       "parent_order_id": "INTC-20260208124849",
       "position_id": "POS-INTC-20260209-01",
+      "tif": "GTC"
+    },
+    {
+      "order_id": "ALLFG.AS-20260216014014",
+      "ticker": "ALLFG.AS",
+      "status": "pending",
+      "order_type": "BUY_LIMIT",
+      "quantity": 4,
+      "limit_price": 8.21,
+      "stop_price": 7.95,
+      "order_date": "2026-02-16",
+      "filled_date": "",
+      "entry_price": null,
+      "notes": "From screener: Score 82.6, Rank #3",
+      "order_kind": "entry",
+      "parent_order_id": null,
+      "position_id": null,
       "tif": "GTC"
     }
   ]

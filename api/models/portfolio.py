@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import math
+import re
 from typing import Literal, Optional
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -129,8 +130,8 @@ class CreateOrderRequest(BaseModel):
             raise ValueError("Ticker cannot be empty")
         if len(v) > 10:
             raise ValueError("Ticker must be 10 characters or less")
-        if not v.isalnum():
-            raise ValueError("Ticker must be alphanumeric")
+        if not re.fullmatch(r"[A-Z0-9][A-Z0-9.-]*", v):
+            raise ValueError("Ticker must contain only letters, numbers, dots, or hyphens")
         return v
 
     @field_validator("quantity")
