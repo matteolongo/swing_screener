@@ -1,7 +1,8 @@
 """Date utility functions for dynamic date calculations."""
 
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, Union
+import pandas as pd
 
 
 def get_lookback_start_date(
@@ -67,3 +68,36 @@ def get_ytd_start_date(from_date: Optional[datetime] = None) -> str:
         from_date = datetime.now()
     
     return f"{from_date.year}-01-01"
+
+
+def to_iso_date(timestamp: Union[None, str, datetime, pd.Timestamp]) -> Optional[str]:
+    """Convert various date types to ISO format string (YYYY-MM-DD).
+    
+    Args:
+        timestamp: Date/timestamp to convert (None, str, datetime, or pd.Timestamp)
+    
+    Returns:
+        ISO format date string, or None if input is None/NaN
+    
+    Examples:
+        >>> to_iso_date(datetime(2026, 2, 16))
+        '2026-02-16'
+        >>> to_iso_date('2026-02-16')
+        '2026-02-16'
+        >>> to_iso_date(None)
+        None
+    """
+    if timestamp is None or (isinstance(timestamp, float) and pd.isna(timestamp)):
+        return None
+    
+    if isinstance(timestamp, str):
+        return timestamp
+    
+    if isinstance(timestamp, pd.Timestamp):
+        timestamp = timestamp.to_pydatetime()
+    
+    if isinstance(timestamp, datetime):
+        return timestamp.strftime("%Y-%m-%d")
+    
+    # Try to convert to string as last resort
+    return str(timestamp)
