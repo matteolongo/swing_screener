@@ -13,6 +13,7 @@ from swing_screener.intelligence.models import (
     SymbolState,
     ThemeCluster,
 )
+from swing_screener.utils.file_lock import locked_write_json_cli
 
 
 class IntelligenceStorage:
@@ -141,8 +142,10 @@ class IntelligenceStorage:
         return state
 
     def write_symbol_state(self, states: Iterable[SymbolState]) -> Path:
+        """Write symbol state with file locking to prevent race conditions."""
         path = self.symbol_state_path
         payload = [asdict(s) for s in states]
         payload.sort(key=lambda item: str(item.get("symbol", "")))
-        path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+        # Use locked write to prevent concurrent access issues
+        locked_write_json_cli(path, payload)
         return path
