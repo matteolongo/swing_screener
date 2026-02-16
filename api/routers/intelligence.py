@@ -1,6 +1,8 @@
 """Market intelligence router."""
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from api.dependencies import get_intelligence_service
@@ -16,6 +18,57 @@ from api.models.intelligence import (
 from api.services.intelligence_service import IntelligenceService
 
 router = APIRouter()
+
+
+# Singleton classifier cache to reuse instances and avoid file handle leaks
+# Key: (provider, model), Value: EventClassifier instance
+_classifier_cache: dict[tuple[str, str], Any] = {}
+
+
+def get_or_create_classifier(provider_name: str, model: str) -> Any:
+    """Get or create a singleton EventClassifier for the given provider and model.
+    
+    This prevents file handle leaks from creating new classifier instances on each request.
+    Classifiers are cached per (provider, model) combination.
+    """
+    from swing_screener.intelligence.llm import (
+        EventClassifier,
+        MockLLMProvider,
+        OllamaProvider,
+    )
+    
+    cache_key = (provider_name, model)
+    
+    if cache_key not in _classifier_cache:
+        # Initialize provider
+        if provider_name == "mock":
+            provider = MockLLMProvider()
+        elif provider_name == "ollama":
+            try:
+                provider = OllamaProvider(model=model)
+            except RuntimeError as e:
+                # ollama package not installed
+                raise HTTPException(
+                    status_code=503,
+                    detail=str(e)
+                )
+            
+            if not provider.is_available():
+                raise HTTPException(
+                    status_code=503,
+                    detail=f"Ollama model '{model}' not available. "
+                           f"Ensure Ollama is running and model is pulled."
+                )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unknown provider: {provider_name}. Use 'ollama' or 'mock'."
+            )
+        
+        # Create and cache classifier
+        _classifier_cache[cache_key] = EventClassifier(provider=provider)
+    
+    return _classifier_cache[cache_key]
 
 
 @router.post("/run", response_model=IntelligenceRunLaunchResponse)
@@ -56,37 +109,9 @@ def classify_news(request: LLMClassifyNewsRequest):
     Raises:
         HTTPException: If LLM provider is unavailable or classification fails
     """
-    from swing_screener.intelligence.llm import (
-        EventClassifier,
-        MockLLMProvider,
-        OllamaProvider,
-    )
-    
-    # Initialize LLM provider
+    # Get or create singleton classifier (prevents file handle leaks)
     try:
-        if request.provider == "mock":
-            provider = MockLLMProvider()
-        elif request.provider == "ollama":
-            try:
-                provider = OllamaProvider(model=request.model)
-            except RuntimeError as e:
-                # ollama package not installed
-                raise HTTPException(
-                    status_code=503,
-                    detail=str(e)
-                )
-            
-            if not provider.is_available():
-                raise HTTPException(
-                    status_code=503,
-                    detail=f"Ollama model '{request.model}' not available. "
-                           f"Ensure Ollama is running and model is pulled."
-                )
-        else:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Unknown provider: {request.provider}. Use 'ollama' or 'mock'."
-            )
+        classifier = get_or_create_classifier(request.provider, request.model)
     except HTTPException:
         # Re-raise HTTPException as-is
         raise
@@ -95,9 +120,6 @@ def classify_news(request: LLMClassifyNewsRequest):
             status_code=500,
             detail=f"Failed to initialize LLM provider: {str(e)}"
         )
-    
-    # Initialize classifier
-    classifier = EventClassifier(provider=provider)
     
     # Classify all headlines
     results = []
@@ -141,5 +163,5 @@ def classify_news(request: LLMClassifyNewsRequest):
         avg_processing_time_ms=avg_time,
         cached_count=cached_count,
         material_count=material_count,
-        provider_available=provider.is_available(),
+        provider_available=classifier.provider.is_available(),
     )

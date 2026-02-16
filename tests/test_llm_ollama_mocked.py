@@ -1,4 +1,8 @@
-"""Tests for LLM classification with mocked Ollama (no external dependencies)."""
+"""Unit tests for LLM classification with mocked Ollama (no external dependencies).
+
+These tests use mocked Ollama responses and do not require a running Ollama instance.
+For integration tests with real Ollama, see test_cli_classify_news.py (marked with @pytest.mark.integration).
+"""
 
 import pytest
 
@@ -11,7 +15,7 @@ from swing_screener.intelligence.llm import (
 
 
 class TestOllamaWithMocks:
-    """Test Ollama provider with mocked client - no real Ollama needed."""
+    """Unit tests for Ollama provider with mocked client - no real Ollama needed."""
     
     def test_ollama_availability(self, mock_ollama_provider):
         """Test that mocked Ollama reports as available."""
