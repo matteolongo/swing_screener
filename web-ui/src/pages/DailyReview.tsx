@@ -28,6 +28,9 @@ import type {
   DailyReviewPositionUpdate,
   DailyReviewPositionClose,
 } from '@/features/dailyReview/types';
+import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
+import { useStrategyReadiness } from '@/features/strategy/useStrategyReadiness';
+import StrategyReadinessBlocker from '@/components/domain/onboarding/StrategyReadinessBlocker';
 
 const UNIVERSE_ALIASES: Record<string, string> = {
   mega: 'mega_all',
@@ -54,11 +57,22 @@ export default function DailyReview() {
   const [intelligenceJobId, setIntelligenceJobId] = useState<string>();
   const [intelligenceAsofDate, setIntelligenceAsofDate] = useState<string>();
   const [intelligenceRunSymbols, setIntelligenceRunSymbols] = useState<string[]>([]);
+  const [dismissedReadinessBlocker, setDismissedReadinessBlocker] = useState(() => {
+    // Persist dismissal state in localStorage
+    return localStorage.getItem('dailyReview.dismissedReadinessBlocker') === 'true';
+  });
 
   const queryClient = useQueryClient();
   const selectedUniverse = normalizeUniverse(localStorage.getItem('screener.universe'));
   const { data: review, isLoading, error, refetch, isFetching } = useDailyReview(10, selectedUniverse);
   const config = useConfigStore((state) => state.config);
+  const { isBeginnerMode } = useBeginnerModeStore();
+  const { isReady: strategyReady } = useStrategyReadiness();
+  
+  // Persist dismissal to localStorage
+  useEffect(() => {
+    localStorage.setItem('dailyReview.dismissedReadinessBlocker', String(dismissedReadinessBlocker));
+  }, [dismissedReadinessBlocker]);
   const riskConfig: RiskConfig = config?.risk ?? {
     accountSize: 10000,
     riskPct: 0.01,
@@ -171,6 +185,11 @@ export default function DailyReview() {
           {isFetching ? t('dailyReview.header.refreshing') : t('dailyReview.header.refresh')}
         </Button>
       </div>
+
+      {/* Strategy Readiness Blocker - Beginner Mode */}
+      {isBeginnerMode && !strategyReady && !dismissedReadinessBlocker && (
+        <StrategyReadinessBlocker onDismiss={() => setDismissedReadinessBlocker(true)} />
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <SummaryCard title={t('dailyReview.summary.newCandidates')} value={summary.newCandidates} variant="blue" icon="📈" />
