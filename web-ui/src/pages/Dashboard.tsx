@@ -26,15 +26,15 @@ import {
   useRunIntelligenceMutation,
 } from '@/features/intelligence/hooks';
 import { t } from '@/i18n/t';
-import { useUserPreferencesStore } from '@/stores/userPreferencesStore';
+import { useOnboardingStore } from '@/stores/onboardingStore';
 import OnboardingModal from '@/components/modals/OnboardingModal';
 import TodaysNextActionCard from '@/components/domain/onboarding/TodaysNextActionCard';
 
 export default function Dashboard() {
   const { config } = useConfigStore();
   const navigate = useNavigate();
-  const { onboardingCompleted, onboardingDismissed } = useUserPreferencesStore();
-  const [showOnboarding, setShowOnboarding] = useState(!onboardingCompleted && !onboardingDismissed);
+  const { status: onboardingStatus } = useOnboardingStore();
+  const [showOnboarding, setShowOnboarding] = useState(onboardingStatus === 'new');
   const activeStrategyQuery = useActiveStrategyQuery();
   const riskConfig = activeStrategyQuery.data?.risk ?? config.risk;
 

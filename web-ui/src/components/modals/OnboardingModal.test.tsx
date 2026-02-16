@@ -2,11 +2,11 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import OnboardingModal from './OnboardingModal';
-import { useUserPreferencesStore } from '@/stores/userPreferencesStore';
+import { useOnboardingStore } from '@/stores/onboardingStore';
 
 // Mock the store
-vi.mock('@/stores/userPreferencesStore', () => ({
-  useUserPreferencesStore: vi.fn(),
+vi.mock('@/stores/onboardingStore', () => ({
+  useOnboardingStore: vi.fn(),
 }));
 
 // Mock useNavigate
@@ -20,16 +20,16 @@ vi.mock('react-router-dom', async () => {
 });
 
 describe('OnboardingModal', () => {
-  const mockSetOnboardingStep = vi.fn();
+  const mockSetCurrentStep = vi.fn();
   const mockCompleteOnboarding = vi.fn();
   const mockDismissOnboarding = vi.fn();
   const mockOnClose = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (useUserPreferencesStore as any).mockReturnValue({
-      onboardingStep: 0,
-      setOnboardingStep: mockSetOnboardingStep,
+    (useOnboardingStore as any).mockReturnValue({
+      currentStep: 0,
+      setCurrentStep: mockSetCurrentStep,
       completeOnboarding: mockCompleteOnboarding,
       dismissOnboarding: mockDismissOnboarding,
     });
@@ -71,13 +71,13 @@ describe('OnboardingModal', () => {
     const nextButton = screen.getByRole('button', { name: /next/i });
     fireEvent.click(nextButton);
     
-    expect(mockSetOnboardingStep).toHaveBeenCalledWith(1);
+    expect(mockSetCurrentStep).toHaveBeenCalledWith(1);
   });
 
   it('should go back to previous step when Back is clicked', () => {
-    (useUserPreferencesStore as any).mockReturnValue({
-      onboardingStep: 2,
-      setOnboardingStep: mockSetOnboardingStep,
+    (useOnboardingStore as any).mockReturnValue({
+      currentStep: 2,
+      setCurrentStep: mockSetCurrentStep,
       completeOnboarding: mockCompleteOnboarding,
       dismissOnboarding: mockDismissOnboarding,
     });
@@ -87,7 +87,7 @@ describe('OnboardingModal', () => {
     const backButton = screen.getByRole('button', { name: /back/i });
     fireEvent.click(backButton);
     
-    expect(mockSetOnboardingStep).toHaveBeenCalledWith(1);
+    expect(mockSetCurrentStep).toHaveBeenCalledWith(1);
   });
 
   it('should not show Back button on first step', () => {
@@ -97,9 +97,9 @@ describe('OnboardingModal', () => {
   });
 
   it('should complete onboarding on last step', () => {
-    (useUserPreferencesStore as any).mockReturnValue({
-      onboardingStep: 4,
-      setOnboardingStep: mockSetOnboardingStep,
+    (useOnboardingStore as any).mockReturnValue({
+      currentStep: 4,
+      setCurrentStep: mockSetCurrentStep,
       completeOnboarding: mockCompleteOnboarding,
       dismissOnboarding: mockDismissOnboarding,
     });
@@ -124,9 +124,9 @@ describe('OnboardingModal', () => {
   });
 
   it('should navigate to Strategy page when action button is clicked on step 2', () => {
-    (useUserPreferencesStore as any).mockReturnValue({
-      onboardingStep: 1,
-      setOnboardingStep: mockSetOnboardingStep,
+    (useOnboardingStore as any).mockReturnValue({
+      currentStep: 1,
+      setCurrentStep: mockSetCurrentStep,
       completeOnboarding: mockCompleteOnboarding,
       dismissOnboarding: mockDismissOnboarding,
     });

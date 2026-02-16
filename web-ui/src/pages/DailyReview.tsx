@@ -28,8 +28,8 @@ import type {
   DailyReviewPositionUpdate,
   DailyReviewPositionClose,
 } from '@/features/dailyReview/types';
-import { useUserPreferencesStore } from '@/stores/userPreferencesStore';
-import { isStrategyConfigured } from '@/utils/strategyReadiness';
+import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
+import { useStrategyReadiness } from '@/features/strategy/useStrategyReadiness';
 import StrategyReadinessBlocker from '@/components/domain/onboarding/StrategyReadinessBlocker';
 
 const UNIVERSE_ALIASES: Record<string, string> = {
@@ -57,14 +57,22 @@ export default function DailyReview() {
   const [intelligenceJobId, setIntelligenceJobId] = useState<string>();
   const [intelligenceAsofDate, setIntelligenceAsofDate] = useState<string>();
   const [intelligenceRunSymbols, setIntelligenceRunSymbols] = useState<string[]>([]);
-  const [dismissedReadinessBlocker, setDismissedReadinessBlocker] = useState(false);
+  const [dismissedReadinessBlocker, setDismissedReadinessBlocker] = useState(() => {
+    // Persist dismissal state in localStorage
+    return localStorage.getItem('dailyReview.dismissedReadinessBlocker') === 'true';
+  });
 
   const queryClient = useQueryClient();
   const selectedUniverse = normalizeUniverse(localStorage.getItem('screener.universe'));
   const { data: review, isLoading, error, refetch, isFetching } = useDailyReview(10, selectedUniverse);
   const config = useConfigStore((state) => state.config);
-  const { isBeginnerMode } = useUserPreferencesStore();
-  const strategyConfigured = isStrategyConfigured(config);
+  const { isBeginnerMode } = useBeginnerModeStore();
+  const { isReady: strategyReady } = useStrategyReadiness();
+  
+  // Persist dismissal to localStorage
+  useEffect(() => {
+    localStorage.setItem('dailyReview.dismissedReadinessBlocker', String(dismissedReadinessBlocker));
+  }, [dismissedReadinessBlocker]);
   const riskConfig: RiskConfig = config?.risk ?? {
     accountSize: 10000,
     riskPct: 0.01,
@@ -179,7 +187,7 @@ export default function DailyReview() {
       </div>
 
       {/* Strategy Readiness Blocker - Beginner Mode */}
-      {isBeginnerMode && !strategyConfigured && !dismissedReadinessBlocker && (
+      {isBeginnerMode && !strategyReady && !dismissedReadinessBlocker && (
         <StrategyReadinessBlocker onDismiss={() => setDismissedReadinessBlocker(true)} />
       )}
 

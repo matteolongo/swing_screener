@@ -3,16 +3,15 @@ import { Calendar, ArrowRight, CheckCircle } from 'lucide-react';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
-import { useUserPreferencesStore } from '@/stores/userPreferencesStore';
-import { useConfigStore } from '@/stores/configStore';
-import { isStrategyConfigured } from '@/utils/strategyReadiness';
+import { useOnboardingStore } from '@/stores/onboardingStore';
+import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
+import { useStrategyReadiness } from '@/features/strategy/useStrategyReadiness';
 
 export default function TodaysNextActionCard() {
   const navigate = useNavigate();
-  const { isBeginnerMode, onboardingCompleted } = useUserPreferencesStore();
-  const { config } = useConfigStore();
-  
-  const strategyConfigured = isStrategyConfigured(config);
+  const { status: onboardingStatus } = useOnboardingStore();
+  const { isBeginnerMode } = useBeginnerModeStore();
+  const { isReady: strategyReady } = useStrategyReadiness();
   
   // Don't show this card in advanced mode
   if (!isBeginnerMode) {
@@ -21,7 +20,7 @@ export default function TodaysNextActionCard() {
   
   // Determine the next action based on state
   const getNextAction = () => {
-    if (!strategyConfigured) {
+    if (!strategyReady) {
       return {
         title: 'Configure Your Strategy',
         description: 'Set up your risk parameters and trading strategy before reviewing opportunities.',
@@ -65,7 +64,7 @@ export default function TodaysNextActionCard() {
             <p className="text-sm text-gray-600">{nextAction.description}</p>
           </div>
           
-          {!onboardingCompleted && (
+          {onboardingStatus !== 'completed' && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
               <p className="text-sm text-blue-800">
                 💡 <strong>First time here?</strong> Complete the onboarding guide to learn the daily workflow.

@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, CheckCircle, Calendar, Search, ShoppingCart } from 'lucide-react';
 import Button from '@/components/common/Button';
-import { useUserPreferencesStore } from '@/stores/userPreferencesStore';
+import { useOnboardingStore } from '@/stores/onboardingStore';
 
 interface OnboardingModalProps {
   isOpen: boolean;
@@ -139,11 +139,16 @@ const STEPS = [
 
 export default function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
   const navigate = useNavigate();
-  const { onboardingStep, setOnboardingStep, completeOnboarding, dismissOnboarding } = useUserPreferencesStore();
+  const { currentStep, setCurrentStep, completeOnboarding, dismissOnboarding } = useOnboardingStore();
   
-  const currentStep = Math.min(onboardingStep, STEPS.length - 1);
-  const step = STEPS[currentStep];
+  const stepIndex = Math.min(currentStep, STEPS.length - 1);
+  const step = STEPS[stepIndex];
   const IconComponent = step.icon;
+  
+  const handleDismiss = () => {
+    dismissOnboarding();
+    onClose();
+  };
   
   // Handle escape key
   useEffect(() => {
@@ -155,31 +160,26 @@ export default function OnboardingModal({ isOpen, onClose }: OnboardingModalProp
     
     window.addEventListener('keydown', handleEscape);
     return () => window.removeEventListener('keydown', handleEscape);
-  }, [isOpen]);
+  }, [isOpen, handleDismiss]);
   
   if (!isOpen) return null;
   
   const handleNext = () => {
-    if (currentStep < STEPS.length - 1) {
-      setOnboardingStep(currentStep + 1);
+    if (stepIndex < STEPS.length - 1) {
+      setCurrentStep(stepIndex + 1);
     } else {
       handleComplete();
     }
   };
   
   const handleBack = () => {
-    if (currentStep > 0) {
-      setOnboardingStep(currentStep - 1);
+    if (stepIndex > 0) {
+      setCurrentStep(stepIndex - 1);
     }
   };
   
   const handleComplete = () => {
     completeOnboarding();
-    onClose();
-  };
-  
-  const handleDismiss = () => {
-    dismissOnboarding();
     onClose();
   };
   
@@ -215,13 +215,13 @@ export default function OnboardingModal({ isOpen, onClose }: OnboardingModalProp
               <div
                 key={index}
                 className={`h-2 flex-1 rounded-full transition-colors ${
-                  index <= currentStep ? 'bg-blue-600' : 'bg-gray-200'
+                  index <= stepIndex ? 'bg-blue-600' : 'bg-gray-200'
                 }`}
               />
             ))}
           </div>
           <p className="text-sm text-gray-600 mt-2">
-            Step {currentStep + 1} of {STEPS.length}
+            Step {stepIndex + 1} of {STEPS.length}
           </p>
         </div>
         
@@ -235,7 +235,7 @@ export default function OnboardingModal({ isOpen, onClose }: OnboardingModalProp
         <div className="border-t p-6 bg-gray-50">
           <div className="flex items-center justify-between">
             <div>
-              {currentStep > 0 && (
+              {stepIndex > 0 && (
                 <Button variant="secondary" onClick={handleBack}>
                   Back
                 </Button>
@@ -250,12 +250,12 @@ export default function OnboardingModal({ isOpen, onClose }: OnboardingModalProp
               )}
               
               <Button onClick={handleNext}>
-                {currentStep === STEPS.length - 1 ? 'Complete' : 'Next'}
+                {stepIndex === STEPS.length - 1 ? 'Complete' : 'Next'}
               </Button>
             </div>
           </div>
           
-          {currentStep === 0 && (
+          {stepIndex === 0 && (
             <p className="text-sm text-gray-500 mt-4 text-center">
               You can resume this guide anytime by clicking "Reset Onboarding" in Settings
             </p>
