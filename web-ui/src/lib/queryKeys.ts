@@ -4,7 +4,7 @@ export const queryKeys = {
   strategies: () => ['strategies'] as const,
   strategyActive: () => ['strategy-active'] as const,
   universes: () => ['universes'] as const,
-  dailyReview: (topN: number) => ['dailyReview', topN] as const,
+  dailyReview: (topN: number, universe?: string | null) => ['dailyReview', topN, universe ?? null] as const,
   orders: (status?: OrderFilterStatus) =>
     status == null ? (['orders'] as const) : (['orders', status] as const),
   ordersSnapshot: () => ['orders', 'snapshot'] as const,

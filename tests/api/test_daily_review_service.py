@@ -188,6 +188,17 @@ def test_generate_daily_review_top_n_limit(mock_screener_service, mock_portfolio
     assert review.summary.new_candidates == 1
 
 
+def test_generate_daily_review_passes_universe_to_screener(mock_screener_service, mock_portfolio_service, tmp_path):
+    """Daily review should reuse the requested screener universe when provided."""
+    service = DailyReviewService(mock_screener_service, mock_portfolio_service, data_dir=tmp_path)
+
+    service.generate_daily_review(top_n=10, universe="amsterdam_all")
+
+    assert mock_screener_service.run_screener.call_count >= 1
+    request = mock_screener_service.run_screener.call_args[0][0]
+    assert request.universe == "amsterdam_all"
+
+
 def test_generate_daily_review_candidates_fields(mock_screener_service, mock_portfolio_service, tmp_path):
     """Test that candidate fields are correctly mapped."""
     service = DailyReviewService(mock_screener_service, mock_portfolio_service, data_dir=tmp_path)

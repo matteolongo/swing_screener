@@ -80,7 +80,25 @@ class TestCreateOrderValidation:
                 order_type="MARKET",
                 quantity=100
             )
-        assert "alphanumeric" in str(exc_info.value)
+        assert "letters, numbers, dots, or hyphens" in str(exc_info.value)
+
+    def test_ticker_with_exchange_suffix_passes(self):
+        """Tickers with exchange suffixes should be accepted."""
+        order = CreateOrderRequest(
+            ticker="heijm.as",
+            order_type="MARKET",
+            quantity=100,
+        )
+        assert order.ticker == "HEIJM.AS"
+
+    def test_ticker_with_hyphen_and_suffix_passes(self):
+        """Tickers with class separators should be accepted."""
+        order = CreateOrderRequest(
+            ticker="novo-b.co",
+            order_type="MARKET",
+            quantity=25,
+        )
+        assert order.ticker == "NOVO-B.CO"
 
     def test_quantity_zero_fails(self):
         """Test that zero quantity fails."""
