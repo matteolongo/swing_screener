@@ -442,7 +442,7 @@ export default function StrategyPage() {
           {/* Beginner Mode Toggle */}
           <BeginnerModeToggle
             isBeginnerMode={isBeginnerMode}
-            onToggle={setIsBeginnerMode}
+            onToggle={setBeginnerMode}
           />
 
           {/* Presets - Only show in beginner mode */}
