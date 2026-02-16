@@ -1,6 +1,7 @@
 """Pytest configuration and shared fixtures for all tests."""
 
 import json
+import re
 import pytest
 from unittest.mock import MagicMock
 
@@ -9,10 +10,10 @@ from unittest.mock import MagicMock
 def mock_ollama_client():
     """Mock Ollama client that returns valid classification responses."""
     
-    def create_mock_response(headline: str):
-        """Generate mock Ollama response based on headline."""
-        # Determine event type from headline
-        headline_lower = headline.lower()
+    def create_mock_response(text: str):
+        """Generate mock Ollama response based on headline/snippet text."""
+        # Determine event type from available text context.
+        headline_lower = text.lower()
         if "earnings" in headline_lower or "revenue" in headline_lower:
             event_type = "EARNINGS"
             severity = "HIGH"
@@ -36,7 +37,7 @@ def mock_ollama_client():
                     "secondary_symbols": [],
                     "is_material": True,
                     "confidence": 0.9,
-                    "summary": f"Test classification for: {headline[:50].strip()}"
+                    "summary": f"Test classification for: {text[:50].strip()}"
                 })
             }
         }
@@ -53,9 +54,13 @@ def mock_ollama_client():
     
     # Mock chat() to return classification
     def mock_chat(model, messages, format=None, options=None):
-        # Extract headline from user message
+        # Extract headline from the full prompt payload.
         user_msg = next((m["content"] for m in messages if m["role"] == "user"), "")
-        return create_mock_response(user_msg)
+        headline_match = re.search(r'Headline:\s*"([^"]*)"', user_msg)
+        snippet_match = re.search(r'Snippet:\s*"([^"]*)"', user_msg)
+        headline = headline_match.group(1) if headline_match else user_msg
+        snippet = snippet_match.group(1) if snippet_match else ""
+        return create_mock_response(f"{headline} {snippet}".strip())
     
     mock_client.chat.side_effect = mock_chat
     

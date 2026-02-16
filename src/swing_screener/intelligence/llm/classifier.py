@@ -28,8 +28,9 @@ class EventClassifier:
     def __init__(
         self,
         provider: LLMProvider,
-        cache_path: Optional[Path] = None,
-        audit_path: Optional[Path] = None,
+        cache_path: Optional[Path | str] = None,
+        cache_dir: Optional[Path | str] = None,
+        audit_path: Optional[Path | str] = None,
         enable_cache: bool = True,
         enable_audit: bool = True,
     ):
@@ -38,6 +39,8 @@ class EventClassifier:
         Args:
             provider: LLM provider instance
             cache_path: Path to cache file (default: data/intelligence/llm_cache.json)
+            cache_dir: Backward-compatible cache directory alias. If provided and
+                cache_path is unset, cache file will be `<cache_dir>/llm_cache.json`.
             audit_path: Path to audit log directory (default: data/intelligence/llm_audit/)
             enable_cache: Whether to use caching
             enable_audit: Whether to write audit logs
@@ -48,12 +51,15 @@ class EventClassifier:
         
         # Set default paths
         if cache_path is None:
-            cache_path = Path("data/intelligence/llm_cache.json")
+            if cache_dir is not None:
+                cache_path = Path(cache_dir) / "llm_cache.json"
+            else:
+                cache_path = Path("data/intelligence/llm_cache.json")
         if audit_path is None:
             audit_path = Path("data/intelligence/llm_audit")
         
-        self.cache_path = cache_path
-        self.audit_path = audit_path
+        self.cache_path = Path(cache_path)
+        self.audit_path = Path(audit_path)
         
         # Ensure directories exist
         if enable_cache:
