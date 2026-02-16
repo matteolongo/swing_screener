@@ -62,3 +62,66 @@ class IntelligenceOpportunitiesResponse(BaseModel):
     asof_date: str
     opportunities: list[IntelligenceOpportunityResponse] = Field(default_factory=list)
 
+
+# LLM Classification Models
+
+class LLMClassifyNewsRequest(BaseModel):
+    """Request to classify news headlines using LLM."""
+    headlines: list[dict[str, str]] = Field(
+        min_length=1,
+        max_length=100,
+        description="List of news items with 'headline' and optional 'snippet' fields"
+    )
+    provider: Optional[str] = Field(
+        default="ollama",
+        description="LLM provider (ollama, mock)"
+    )
+    model: Optional[str] = Field(
+        default="mistral:7b-instruct",
+        description="Model name for the provider"
+    )
+
+    @field_validator("headlines")
+    @classmethod
+    def _validate_headlines(cls, values: list[dict]) -> list[dict]:
+        validated = []
+        for item in values:
+            if not isinstance(item, dict):
+                raise ValueError("Each headline must be a dictionary")
+            if "headline" not in item:
+                raise ValueError("Each item must have a 'headline' field")
+            if not isinstance(item["headline"], str) or len(item["headline"]) < 10:
+                raise ValueError("Headline must be a string with at least 10 characters")
+            validated.append({
+                "headline": item["headline"],
+                "snippet": item.get("snippet", ""),
+            })
+        return validated
+
+
+class LLMEventClassificationResponse(BaseModel):
+    """Single classified event response."""
+    headline: str
+    snippet: Optional[str]
+    event_type: str
+    severity: str
+    primary_symbol: Optional[str]
+    secondary_symbols: list[str]
+    is_material: bool
+    confidence: float
+    summary: str
+    model: str
+    processing_time_ms: float
+    cached: bool
+
+
+class LLMClassifyNewsResponse(BaseModel):
+    """Response with classified news events."""
+    total: int
+    classifications: list[LLMEventClassificationResponse]
+    avg_processing_time_ms: float
+    cached_count: int
+    material_count: int
+    provider_available: bool
+
+
