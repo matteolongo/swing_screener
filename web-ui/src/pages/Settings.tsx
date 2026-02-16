@@ -5,6 +5,7 @@ import Button from '@/components/common/Button';
 import IndicatorConfigForm from '@/components/domain/settings/IndicatorConfigForm';
 import ManageConfigForm from '@/components/domain/settings/ManageConfigForm';
 import SentimentConfigForm from '@/components/domain/settings/SentimentConfigForm';
+import LLMConfigForm from '@/components/domain/settings/LLMConfigForm';
 import { t } from '@/i18n/t';
 
 export default function Settings() {
@@ -58,6 +59,15 @@ export default function Settings() {
         </CardHeader>
         <CardContent>
           <SentimentConfigForm />
+        </CardContent>
+      </Card>
+
+      <Card variant="bordered">
+        <CardHeader>
+          <CardTitle>LLM Intelligence Configuration</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <LLMConfigForm />
         </CardContent>
       </Card>
     </div>

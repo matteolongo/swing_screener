@@ -31,12 +31,30 @@ export interface ManageConfig {
   maxHoldingDays: number;
 }
 
+export interface LLMConfig {
+  enabled: boolean;
+  provider: string; // 'openai' | 'anthropic' | 'ollama' | 'mock'
+  model: string;
+  api_key: string;
+  base_url: string;
+  enable_cache: boolean;
+  enable_audit: boolean;
+  cache_path: string;
+  audit_path: string;
+}
+
+export interface MarketIntelligenceConfig {
+  llm: LLMConfig;
+  // Add other market intelligence configs as needed
+}
+
 export interface AppConfig {
   risk: RiskConfig;
   indicators: IndicatorConfig;
   manage: ManageConfig;
   positionsFile: string;
   ordersFile: string;
+  market_intelligence?: MarketIntelligenceConfig;
 }
 
 export const DEFAULT_CONFIG: AppConfig = {
@@ -70,4 +88,17 @@ export const DEFAULT_CONFIG: AppConfig = {
   },
   positionsFile: 'data/positions.json',
   ordersFile: 'data/orders.json',
+  market_intelligence: {
+    llm: {
+      enabled: false,
+      provider: 'openai',
+      model: 'gpt-4o-mini',
+      api_key: '',
+      base_url: 'http://localhost:11434',
+      enable_cache: true,
+      enable_audit: true,
+      cache_path: 'data/intelligence/llm_cache.json',
+      audit_path: 'data/intelligence/llm_audit',
+    },
+  },
 };
