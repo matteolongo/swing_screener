@@ -71,6 +71,14 @@ export const useConfigStore = create<ConfigStore>()(
               ...current.config.manage,
               ...(persistedConfig as AppConfig).manage,
             },
+            market_intelligence: {
+              ...current.config.market_intelligence,
+              ...(persistedConfig as AppConfig).market_intelligence,
+              llm: {
+                ...current.config.market_intelligence?.llm,
+                ...(persistedConfig as AppConfig).market_intelligence?.llm,
+              },
+            },
           },
         }
       },

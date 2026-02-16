@@ -6,7 +6,14 @@ events but never predict prices or generate trading signals.
 """
 
 from .classifier import EventClassifier
-from .client import LLMProvider, MockLLMProvider, OllamaProvider
+from .client import (
+    AnthropicProvider,
+    LLMProvider,
+    MockLLMProvider,
+    OllamaProvider,
+    OpenAIProvider,
+    get_llm_provider,
+)
 from .schemas import (
     EventClassification,
     EventSeverity,
@@ -21,4 +28,7 @@ __all__ = [
     "LLMProvider",
     "MockLLMProvider",
     "OllamaProvider",
+    "OpenAIProvider",
+    "AnthropicProvider",
+    "get_llm_provider",
 ]
