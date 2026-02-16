@@ -216,3 +216,20 @@ class PositionsResponse(BaseModel):
 class OrdersResponse(BaseModel):
     orders: list[Order]
     asof: str
+
+
+class CapitalStateResponse(BaseModel):
+    """Portfolio capital allocation state response.
+    
+    Shows breakdown of capital usage:
+    - account_size: Total account size from config
+    - allocated_positions: Capital in open positions
+    - reserved_orders: Capital reserved by pending entry orders
+    - available: Remaining available capital
+    - utilization_pct: Portfolio utilization percentage (0-1)
+    """
+    account_size: float = Field(description="Total account size")
+    allocated_positions: float = Field(description="Capital allocated to open positions")
+    reserved_orders: float = Field(description="Capital reserved by pending entry orders")
+    available: float = Field(description="Available capital for new orders")
+    utilization_pct: float = Field(ge=0, le=1, description="Portfolio utilization (0-1)")

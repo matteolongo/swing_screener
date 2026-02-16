@@ -12,6 +12,7 @@ from api.models.portfolio import (
     PositionsResponse,
     OrdersResponse,
     OrdersSnapshotResponse,
+    CapitalStateResponse,
     CreateOrderRequest,
     FillOrderRequest,
     UpdateStopRequest,
@@ -128,3 +129,27 @@ async def cancel_order(
 ):
     """Cancel an order."""
     return service.cancel_order(order_id)
+
+
+# ===== Capital =====
+
+@router.get("/capital", response_model=CapitalStateResponse)
+async def get_capital_state(
+    service: PortfolioService = Depends(get_portfolio_service),
+):
+    """Get current capital allocation state.
+    
+    Returns breakdown of:
+    - Total account size (from config)
+    - Capital allocated to open positions
+    - Capital reserved by pending entry orders
+    - Available capital for new orders
+    - Portfolio utilization percentage
+    
+    This endpoint helps users understand:
+    - How much capital is currently in use
+    - How much is committed to pending orders
+    - How much remains available for new trades
+    - Overall portfolio capital utilization
+    """
+    return service.get_capital_state()
