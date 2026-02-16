@@ -30,7 +30,6 @@ export default function Header() {
         
         <div className="flex items-center gap-4">
           <UserModeToggle />
-
           <Button
             variant="secondary"
             size="sm"
@@ -47,7 +46,6 @@ export default function Header() {
           </div>
         </div>
       </header>
-
       {showGettingStarted && (
         <GettingStartedModal onClose={() => setShowGettingStarted(false)} />
       )}
