@@ -36,18 +36,27 @@ class DailyReviewService:
         self.daily_reviews_dir = data_dir / "daily_reviews"
         self.daily_reviews_dir.mkdir(parents=True, exist_ok=True)
 
-    def generate_daily_review(self, top_n: int = 10) -> DailyReview:
+    def generate_daily_review(
+        self,
+        top_n: int = 10,
+        universe: str | None = None,
+    ) -> DailyReview:
         """
         Generate comprehensive daily review.
         
         Args:
             top_n: Number of top screener candidates to include (default: 10)
+            universe: Optional named universe to screen (e.g., "amsterdam_all")
         
         Returns:
             DailyReview with new candidates and position actions categorized
         """
         # 1. Run screener to get new candidates
-        screener_request = ScreenerRequest(top=top_n)
+        selected_universe = universe.strip() if isinstance(universe, str) else None
+        screener_request = ScreenerRequest(
+            top=top_n,
+            universe=selected_universe or None,
+        )
         screener_result = self.screener.run_screener(screener_request)
         candidates = screener_result.candidates[:top_n]
         
