@@ -9,17 +9,19 @@ import { useState, useEffect, useCallback } from 'react';
  * @template T The type of the value stored in localStorage
  * @param key The localStorage key
  * @param defaultValue The default value if key doesn't exist or parsing fails
+ * @param transformer Optional function to transform/validate values when loading from storage
  * @returns A tuple of [value, setValue] similar to useState
  * 
  * @example
  * ```tsx
  * const [name, setName] = useLocalStorage('username', 'Guest');
- * const [settings, setSettings] = useLocalStorage('app-settings', { theme: 'dark' });
+ * const [count, setCount] = useLocalStorage('count', 0, (val) => Math.max(0, Number(val) || 0));
  * ```
  */
 export function useLocalStorage<T>(
   key: string,
-  defaultValue: T
+  defaultValue: T,
+  transformer?: (value: unknown) => T
 ): [T, (value: T | ((prev: T) => T)) => void] {
   // Initialize state from localStorage or use default
   const [value, setValue] = useState<T>(() => {
@@ -35,8 +37,14 @@ export function useLocalStorage<T>(
       }
       
       // Parse the stored value
-      const parsed = JSON.parse(item) as T;
-      return parsed;
+      const parsed = JSON.parse(item);
+      
+      // Apply transformer if provided
+      if (transformer) {
+        return transformer(parsed);
+      }
+      
+      return parsed as T;
     } catch (error) {
       console.warn(`Error loading localStorage key "${key}":`, error);
       return defaultValue;

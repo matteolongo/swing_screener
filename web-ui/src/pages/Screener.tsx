@@ -28,6 +28,7 @@ import {
   useIntelligenceRunStatus,
   useIntelligenceOpportunitiesScoped,
 } from '@/features/intelligence/hooks';
+import { useLocalStorage, useModal } from '@/hooks';
 
 const TOP_N_MAX = 200;
 const INTELLIGENCE_ASOF_STORAGE_KEY = 'screener.intelligenceAsofDate';
@@ -90,115 +91,56 @@ export default function Screener() {
   const riskConfig: RiskConfig = activeStrategyQuery.data?.risk ?? config.risk;
   const activeCurrencies = normalizeCurrencies(activeStrategyQuery.data?.universe?.filt?.currencies);
   
-  // Load saved preferences from localStorage or use defaults
-  const [selectedUniverse, setSelectedUniverse] = useState<string>(() => {
-    return normalizeUniverse(localStorage.getItem('screener.universe')) || 'usd_all';
+  // Screener form state with localStorage persistence
+  const [selectedUniverse, setSelectedUniverse] = useLocalStorage('screener.universe', 'usd_all', (val: unknown) => {
+    const normalized = normalizeUniverse(typeof val === 'string' ? val : null);
+    return normalized ?? 'usd_all';
   });
-  const [topN, setTopN] = useState<number>(() => {
-    const saved = localStorage.getItem('screener.topN');
-    if (!saved) return 20;
-    const parsed = parseInt(saved, 10);
+  const [topN, setTopN] = useLocalStorage('screener.topN', 20, (val: unknown) => {
+    const parsed = typeof val === 'number' ? val : parseInt(String(val), 10);
     if (Number.isNaN(parsed)) return 20;
     return Math.min(Math.max(parsed, 1), TOP_N_MAX);
   });
-  const [minPrice, setMinPrice] = useState<number>(() => {
-    const saved = localStorage.getItem('screener.minPrice');
-    return saved ? parseFloat(saved) : 5;
-  });
-  const [maxPrice, setMaxPrice] = useState<number>(() => {
-    const saved = localStorage.getItem('screener.maxPrice');
-    return saved ? parseFloat(saved) : 500;
-  });
-  const [currencyFilter, setCurrencyFilter] = useState<CurrencyFilter>(() => {
-    const saved = localStorage.getItem('screener.currencyFilter');
-    if (saved === 'usd' || saved === 'eur' || saved === 'all') return saved;
+  const [minPrice, setMinPrice] = useLocalStorage('screener.minPrice', 5);
+  const [maxPrice, setMaxPrice] = useLocalStorage('screener.maxPrice', 500);
+  const [currencyFilter, setCurrencyFilter] = useLocalStorage<CurrencyFilter>('screener.currencyFilter', 'all', (val: unknown) => {
+    if (val === 'usd' || val === 'eur' || val === 'all') return val;
     return 'all';
   });
+  const [recommendedOnly, setRecommendedOnly] = useLocalStorage('screener.recommendedOnly', false);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useLocalStorage('screener.showAdvancedFilters', !isBeginnerMode);
   
-  // Beginner mode: recommended-only filter (default OFF for backward compatibility)
-  const [recommendedOnly, setRecommendedOnly] = useState<boolean>(() => {
-    const saved = localStorage.getItem('screener.recommendedOnly');
-    if (saved !== null) return saved === 'true';
-    return false; // Default OFF to maintain existing behavior
-  });
-  
-  // Advanced filters collapsed by default in beginner mode
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState<boolean>(() => {
-    const saved = localStorage.getItem('screener.showAdvancedFilters');
-    if (saved !== null) return saved === 'true';
-    return !isBeginnerMode; // Collapsed in beginner mode
-  });
-  
-  const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
-  const [showBacktestModal, setShowBacktestModal] = useState(false);
-  const [selectedCandidate, setSelectedCandidate] = useState<ScreenerCandidate | null>(null);
-  const [socialSymbol, setSocialSymbol] = useState<string | null>(null);
-  const [insightCandidate, setInsightCandidate] = useState<ScreenerCandidate | null>(null);
-  const [insightDefaultTab, setInsightDefaultTab] = useState<'recommendation' | 'thesis' | 'learn'>('recommendation');
+  // Modal state
+  const createOrderModal = useModal<ScreenerCandidate>();
+  const backtestModal = useModal<ScreenerCandidate>();
+  const socialModal = useModal<string>();
+  const insightModal = useModal<{ candidate: ScreenerCandidate; defaultTab: 'recommendation' | 'thesis' | 'learn' }>();
+
 
   // Intelligence state
   const [intelligenceJobId, setIntelligenceJobId] = useState<string | null>(null);
-  const [intelligenceAsofDate, setIntelligenceAsofDate] = useState<string | null>(() => {
-    const saved = localStorage.getItem(INTELLIGENCE_ASOF_STORAGE_KEY);
-    return saved && saved.trim().length > 0 ? saved : null;
-  });
-  const [intelligenceSymbols, setIntelligenceSymbols] = useState<string[]>(() => {
-    const saved = localStorage.getItem(INTELLIGENCE_SYMBOLS_STORAGE_KEY);
-    if (!saved) return [];
-    try {
-      const parsed = JSON.parse(saved);
-      if (!Array.isArray(parsed)) return [];
-      return parsed
-        .map((value) => String(value).trim().toUpperCase())
-        .filter((value) => value.length > 0);
-    } catch {
-      return [];
+  const [intelligenceAsofDate, setIntelligenceAsofDate] = useLocalStorage(
+    INTELLIGENCE_ASOF_STORAGE_KEY,
+    '',
+    (val: unknown) => (val && String(val).trim().length > 0 ? String(val) : '')
+  );
+  const [intelligenceSymbols, setIntelligenceSymbols] = useLocalStorage<string[]>(
+    INTELLIGENCE_SYMBOLS_STORAGE_KEY,
+    [],
+    (val: unknown) => {
+      if (!Array.isArray(val)) return [];
+      return val
+        .map((v) => String(v).trim().toUpperCase())
+        .filter((v) => v.length > 0);
     }
-  });
+  );
   const intelligenceStatus = useIntelligenceRunStatus(intelligenceJobId ?? undefined);
   const intelligenceOpportunities = useIntelligenceOpportunitiesScoped(
-    intelligenceAsofDate ?? undefined,
+    intelligenceAsofDate || undefined,
     intelligenceSymbols.length > 0 ? intelligenceSymbols : undefined,
     Boolean(intelligenceAsofDate)
   );
 
-  // Save preferences to localStorage when they change
-  const handleUniverseChange = (value: string) => {
-    setSelectedUniverse(value);
-    localStorage.setItem('screener.universe', value);
-  };
-  
-  const handleTopNChange = (value: number) => {
-    const next = Math.min(Math.max(value, 1), TOP_N_MAX);
-    setTopN(next);
-    localStorage.setItem('screener.topN', next.toString());
-  };
-  
-  const handleMinPriceChange = (value: number) => {
-    setMinPrice(value);
-    localStorage.setItem('screener.minPrice', value.toString());
-  };
-  
-  const handleMaxPriceChange = (value: number) => {
-    setMaxPrice(value);
-    localStorage.setItem('screener.maxPrice', value.toString());
-  };
-  
-  const handleCurrencyFilterChange = (value: CurrencyFilter) => {
-    setCurrencyFilter(value);
-    localStorage.setItem('screener.currencyFilter', value);
-  };
-  
-  const handleRecommendedOnlyChange = (value: boolean) => {
-    setRecommendedOnly(value);
-    localStorage.setItem('screener.recommendedOnly', value.toString());
-  };
-  
-  const handleShowAdvancedFiltersChange = (value: boolean) => {
-    setShowAdvancedFilters(value);
-    localStorage.setItem('screener.showAdvancedFilters', value.toString());
-  };
-  
   const universesQuery = useUniverses();
   const universesData = universesQuery.data;
 
@@ -206,10 +148,8 @@ export default function Screener() {
     (data) => {
       setLastResult(data);
       setIntelligenceJobId(null);
-      setIntelligenceAsofDate(null);
+      setIntelligenceAsofDate('');
       setIntelligenceSymbols([]);
-      localStorage.removeItem(INTELLIGENCE_ASOF_STORAGE_KEY);
-      localStorage.removeItem(INTELLIGENCE_SYMBOLS_STORAGE_KEY);
     },
     (error) => {
       console.error('Screener failed', error);
@@ -218,8 +158,7 @@ export default function Screener() {
 
   const intelligenceMutation = useRunIntelligenceMutation((data) => {
     setIntelligenceJobId(data.jobId);
-    setIntelligenceAsofDate(null);
-    localStorage.removeItem(INTELLIGENCE_ASOF_STORAGE_KEY);
+    setIntelligenceAsofDate('');
   });
 
   useEffect(() => {
@@ -227,8 +166,7 @@ export default function Screener() {
       return;
     }
     setIntelligenceAsofDate(intelligenceStatus.data.asofDate);
-    localStorage.setItem(INTELLIGENCE_ASOF_STORAGE_KEY, intelligenceStatus.data.asofDate);
-  }, [intelligenceStatus.data?.asofDate, intelligenceStatus.data?.status]);
+  }, [intelligenceStatus.data?.asofDate, intelligenceStatus.data?.status, setIntelligenceAsofDate]);
 
   const handleRunIntelligence = () => {
     const symbols = candidates.map((c) => c.ticker);
@@ -236,7 +174,6 @@ export default function Screener() {
       return;
     }
     setIntelligenceSymbols(symbols);
-    localStorage.setItem(INTELLIGENCE_SYMBOLS_STORAGE_KEY, JSON.stringify(symbols));
     intelligenceMutation.mutate({ symbols });
   };
 
@@ -308,7 +245,7 @@ export default function Screener() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.universe')}</label>
                 <select
                   value={selectedUniverse}
-                  onChange={(e) => handleUniverseChange(e.target.value)}
+                  onChange={(e) => setSelectedUniverse(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   disabled={screenerMutation.isPending}
                 >
@@ -326,7 +263,7 @@ export default function Screener() {
                   <input
                     type="checkbox"
                     checked={recommendedOnly}
-                    onChange={(e) => handleRecommendedOnlyChange(e.target.checked)}
+                    onChange={(e) => setRecommendedOnly(e.target.checked)}
                     className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                     disabled={screenerMutation.isPending}
                   />
@@ -362,7 +299,7 @@ export default function Screener() {
             <div>
               <button
                 type="button"
-                onClick={() => handleShowAdvancedFiltersChange(!showAdvancedFilters)}
+                onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
                 className="flex items-center text-sm text-blue-600 hover:text-blue-800"
               >
                 {showAdvancedFilters ? (
@@ -389,7 +326,7 @@ export default function Screener() {
                     <input
                       type="number"
                       value={topN}
-                      onChange={(e) => handleTopNChange(parseInt(e.target.value) || 20)}
+                      onChange={(e) => setTopN(parseInt(e.target.value) || 20)}
                       min="1"
                       max={TOP_N_MAX}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -403,7 +340,7 @@ export default function Screener() {
                     <input
                       type="number"
                       value={minPrice}
-                      onChange={(e) => handleMinPriceChange(parseFloat(e.target.value) || 0)}
+                      onChange={(e) => setMinPrice(parseFloat(e.target.value) || 0)}
                       min="0"
                       step="0.1"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -417,7 +354,7 @@ export default function Screener() {
                     <input
                       type="number"
                       value={maxPrice}
-                      onChange={(e) => handleMaxPriceChange(parseFloat(e.target.value) || 1000)}
+                      onChange={(e) => setMaxPrice(parseFloat(e.target.value) || 1000)}
                       min="0"
                       step="1"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -430,7 +367,7 @@ export default function Screener() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.currency')}</label>
                     <select
                       value={currencyFilter}
-                      onChange={(e) => handleCurrencyFilterChange(e.target.value as CurrencyFilter)}
+                      onChange={(e) => setCurrencyFilter(e.target.value as CurrencyFilter)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       disabled={screenerMutation.isPending}
                     >
@@ -470,7 +407,7 @@ export default function Screener() {
               <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.universe')}</label>
               <select
                 value={selectedUniverse}
-                onChange={(e) => handleUniverseChange(e.target.value)}
+                onChange={(e) => setSelectedUniverse(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 disabled={screenerMutation.isPending}
               >
@@ -488,7 +425,7 @@ export default function Screener() {
               <input
                 type="number"
                 value={topN}
-                onChange={(e) => handleTopNChange(parseInt(e.target.value) || 20)}
+                onChange={(e) => setTopN(parseInt(e.target.value) || 20)}
                 min="1"
                 max={TOP_N_MAX}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -502,7 +439,7 @@ export default function Screener() {
               <input
                 type="number"
                 value={minPrice}
-                onChange={(e) => handleMinPriceChange(parseFloat(e.target.value) || 0)}
+                onChange={(e) => setMinPrice(parseFloat(e.target.value) || 0)}
                 min="0"
                 step="0.1"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -516,7 +453,7 @@ export default function Screener() {
               <input
                 type="number"
                 value={maxPrice}
-                onChange={(e) => handleMaxPriceChange(parseFloat(e.target.value) || 1000)}
+                onChange={(e) => setMaxPrice(parseFloat(e.target.value) || 1000)}
                 min="0"
                 step="1"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -529,7 +466,7 @@ export default function Screener() {
               <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.currency')}</label>
               <select
                 value={currencyFilter}
-                onChange={(e) => handleCurrencyFilterChange(e.target.value as CurrencyFilter)}
+                onChange={(e) => setCurrencyFilter(e.target.value as CurrencyFilter)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 disabled={screenerMutation.isPending}
               >
@@ -816,21 +753,17 @@ export default function Screener() {
             <ScreenerCandidatesTable
               candidates={candidates}
               onCreateOrder={(candidate) => {
-                setSelectedCandidate(candidate);
-                setShowCreateOrderModal(true);
+                createOrderModal.open(candidate);
               }}
               onRecommendationDetails={(candidate) => {
-                setInsightCandidate(candidate);
-                setInsightDefaultTab('recommendation');
+                insightModal.open({ candidate, defaultTab: 'recommendation' });
               }}
-              onSocialAnalysis={(ticker) => setSocialSymbol(ticker)}
+              onSocialAnalysis={(ticker) => socialModal.open(ticker)}
               onTradeThesis={(candidate) => {
-                setInsightCandidate(candidate);
-                setInsightDefaultTab('thesis');
+                insightModal.open({ candidate, defaultTab: 'thesis' });
               }}
               onQuickBacktest={(candidate) => {
-                setSelectedCandidate(candidate);
-                setShowBacktestModal(true);
+                backtestModal.open(candidate);
               }}
             />
           </Card>
@@ -838,65 +771,58 @@ export default function Screener() {
       )}
 
       {/* Create Order Modal */}
-      {showCreateOrderModal && selectedCandidate && (
+      {createOrderModal.isOpen && createOrderModal.data && (
         <CandidateOrderModal
           candidate={{
-            ticker: selectedCandidate.ticker,
-            entry: selectedCandidate.entry,
-            stop: selectedCandidate.stop,
-            close: selectedCandidate.close,
-            shares: selectedCandidate.shares,
-            recommendation: selectedCandidate.recommendation,
-            sector: selectedCandidate.sector ?? null,
-            rReward: selectedCandidate.rr,
-            score: selectedCandidate.score * 100,
-            rank: selectedCandidate.rank,
-            atr: selectedCandidate.atr,
-            currency: selectedCandidate.currency,
+            ticker: createOrderModal.data.ticker,
+            entry: createOrderModal.data.entry,
+            stop: createOrderModal.data.stop,
+            close: createOrderModal.data.close,
+            shares: createOrderModal.data.shares,
+            recommendation: createOrderModal.data.recommendation,
+            sector: createOrderModal.data.sector ?? null,
+            rReward: createOrderModal.data.rr,
+            score: createOrderModal.data.score * 100,
+            rank: createOrderModal.data.rank,
+            atr: createOrderModal.data.atr,
+            currency: createOrderModal.data.currency,
           }}
           risk={riskConfig}
           defaultNotes={t('screener.defaultNotes', {
-            score: (selectedCandidate.score * 100).toFixed(1),
-            rank: selectedCandidate.rank,
+            score: (createOrderModal.data.score * 100).toFixed(1),
+            rank: createOrderModal.data.rank,
           })}
-          onClose={() => {
-            setShowCreateOrderModal(false);
-            setSelectedCandidate(null);
-          }}
+          onClose={createOrderModal.close}
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: queryKeys.orders() });
-            setShowCreateOrderModal(false);
-            setSelectedCandidate(null);
+            createOrderModal.close();
           }}
         />
       )}
 
       {/* Quick Backtest Modal */}
-      {showBacktestModal && selectedCandidate && (
+      {backtestModal.isOpen && backtestModal.data && (
         <QuickBacktestModal
-          ticker={selectedCandidate.ticker}
-          onClose={() => {
-            setShowBacktestModal(false);
-            setSelectedCandidate(null);
-          }}
+          ticker={backtestModal.data.ticker}
+          onClose={backtestModal.close}
         />
       )}
 
-      {socialSymbol && (
+      {socialModal.isOpen && socialModal.data && (
         <SocialAnalysisModal
-          symbol={socialSymbol}
-          onClose={() => setSocialSymbol(null)}
+          symbol={socialModal.data}
+          onClose={socialModal.close}
         />
       )}
 
       {/* Trade Insight Modal - Unified recommendation + thesis */}
-      {insightCandidate && (
+      {insightModal.isOpen && insightModal.data && (
         <TradeInsightModal
-          ticker={insightCandidate.ticker}
-          recommendation={insightCandidate.recommendation}
-          currency={insightCandidate.currency}
-          defaultTab={insightDefaultTab}
-          onClose={() => setInsightCandidate(null)}
+          ticker={insightModal.data.candidate.ticker}
+          recommendation={insightModal.data.candidate.recommendation}
+          currency={insightModal.data.candidate.currency}
+          defaultTab={insightModal.data.defaultTab}
+          onClose={insightModal.close}
         />
       )}
     </div>
