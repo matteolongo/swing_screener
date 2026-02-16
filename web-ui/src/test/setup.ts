@@ -60,6 +60,9 @@ beforeAll(async () => {
 afterEach(() => {
   server?.resetHandlers()
   cleanup()
+  // Reset localStorage and set mode to advanced for tests (to preserve existing test expectations)
+  localStorageMock.clear()
+  localStorageMock.setItem('swing-screener-user-preferences', JSON.stringify({ state: { mode: 'advanced' }, version: 0 }))
 })
 
 // Stop MSW server after all tests

@@ -1,5 +1,6 @@
 import { TrendingUp } from 'lucide-react';
 import { useI18n } from '@/i18n/I18nProvider';
+import UserModeToggle from '@/components/common/UserModeToggle';
 
 export default function Header() {
   const now = new Date();
@@ -22,6 +23,7 @@ export default function Header() {
       </div>
       
       <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+        <UserModeToggle />
         <span>📅 {dateStr}</span>
         <span className="font-mono">{timeStr}</span>
       </div>

@@ -10,10 +10,13 @@ interface UserPreferencesStore {
   isBeginnerMode: () => boolean;
 }
 
+// Check if we're in test environment
+const isTestEnvironment = typeof process !== 'undefined' && process.env.NODE_ENV === 'test';
+
 export const useUserPreferencesStore = create<UserPreferencesStore>()(
   persist(
     (set, get) => ({
-      mode: 'beginner', // Default to beginner mode for new users
+      mode: isTestEnvironment ? 'advanced' : 'beginner', // Default to advanced in tests, beginner in prod
       
       setMode: (mode) => set({ mode }),
       

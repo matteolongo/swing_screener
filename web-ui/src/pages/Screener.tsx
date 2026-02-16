@@ -28,7 +28,6 @@ import {
   useIntelligenceRunStatus,
   useIntelligenceOpportunitiesScoped,
 } from '@/features/intelligence/hooks';
-import { isRecommended } from '@/features/screener/viewModel';
 
 const TOP_N_MAX = 200;
 const INTELLIGENCE_ASOF_STORAGE_KEY = 'screener.intelligenceAsofDate';
@@ -104,11 +103,11 @@ export default function Screener() {
     return 'all';
   });
   
-  // Beginner mode: recommended-only filter (default ON in beginner mode)
+  // Beginner mode: recommended-only filter (default OFF for backward compatibility)
   const [recommendedOnly, setRecommendedOnly] = useState<boolean>(() => {
     const saved = localStorage.getItem('screener.recommendedOnly');
     if (saved !== null) return saved === 'true';
-    return isBeginnerMode; // Default ON for beginner mode
+    return false; // Default OFF to maintain existing behavior
   });
   
   // Advanced filters collapsed by default in beginner mode
@@ -246,7 +245,10 @@ export default function Screener() {
   const allCandidates = result?.candidates || [];
   // Apply recommended-only filter in UI
   const candidates = recommendedOnly
-    ? allCandidates.filter((c) => isRecommended(c))
+    ? allCandidates.filter((c) => {
+        const verdict = c.recommendation?.verdict ?? 'UNKNOWN';
+        return verdict === 'RECOMMENDED';
+      })
     : allCandidates;
   const warnings = result?.warnings || [];
   const socialWarmupJobId = result?.socialWarmupJobId;
