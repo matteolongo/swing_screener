@@ -76,9 +76,11 @@ docker compose exec ollama ollama list
 docker compose exec ollama ollama run mistral:7b-instruct "Hello"
 ```
 
-### GPU Configuration
+### GPU Configuration (Optional)
 
-The docker-compose.yml includes NVIDIA GPU support:
+GPU support is available but disabled by default in `docker-compose.yml`. To enable:
+
+1. Uncomment the `deploy` section in `docker-compose.yml`:
 
 ```yaml
 deploy:
@@ -95,8 +97,8 @@ deploy:
 - nvidia-docker2 installed
 - NVIDIA Container Toolkit configured
 
-**Without GPU:**  
-Remove the `deploy` section from `docker-compose.yml`. Ollama will run on CPU (slower).
+**Default (CPU-only):**  
+Ollama runs on CPU by default. This works on any system but is slower (2-5 seconds per classification vs 0.2-0.5 seconds with GPU).
 
 ## Usage
 
