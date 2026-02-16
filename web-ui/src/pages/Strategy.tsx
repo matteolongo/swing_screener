@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import { useStrategyEditor } from '@/features/strategy/useStrategyEditor';
@@ -15,10 +15,11 @@ import {
   TextInput,
 } from '@/components/domain/strategy/StrategyFieldControls';
 import { getStrategyInfo } from '@/content/strategy_docs/loader';
+import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 
 export default function StrategyPage() {
   const { locale, t } = useI18n();
-  const [isBeginnerMode, setIsBeginnerMode] = useState(true);
+  const { isBeginnerMode, setBeginnerMode } = useBeginnerModeStore();
 
   const help = useMemo(
     () => ({
@@ -441,7 +442,7 @@ export default function StrategyPage() {
           {/* Beginner Mode Toggle */}
           <BeginnerModeToggle
             isBeginnerMode={isBeginnerMode}
-            onToggle={setIsBeginnerMode}
+            onToggle={setBeginnerMode}
           />
 
           {/* Presets - Only show in beginner mode */}

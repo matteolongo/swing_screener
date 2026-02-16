@@ -83,3 +83,12 @@ export function createStrategyFromDraft(
   if (!draft) throw new Error('No strategy selected');
   return createStrategy(draft, payload);
 }
+
+// Re-export strategy readiness utilities for convenience
+export { 
+  useStrategyReadiness, 
+  isStrategyConfigured, 
+  getStrategyReadiness 
+} from './useStrategyReadiness';
+export type { StrategyReadiness } from './useStrategyReadiness';
+
