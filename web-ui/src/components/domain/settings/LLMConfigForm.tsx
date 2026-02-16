@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useConfigStore } from '@/stores/configStore';
 import Button from '@/components/common/Button';
-import { t } from '@/i18n/t';
+import { DEFAULT_CONFIG } from '@/types/config';
 
 const LLM_PROVIDERS = [
   { value: 'openai', label: 'OpenAI (Cloud)', requiresKey: true },
@@ -19,18 +19,18 @@ const DEFAULT_MODELS: Record<string, string> = {
 
 export default function LLMConfigForm() {
   const { config, updateConfig } = useConfigStore();
-  const llmConfig = config.market_intelligence?.llm || {};
+  const llmConfig = config.market_intelligence?.llm ?? DEFAULT_CONFIG.market_intelligence!.llm;
 
   const [showApiKey, setShowApiKey] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
 
-  const currentProvider = llmConfig.provider || 'openai';
-  const currentModel = llmConfig.model || DEFAULT_MODELS[currentProvider];
-  const currentApiKey = llmConfig.api_key || '';
-  const currentBaseUrl = llmConfig.base_url || 'http://localhost:11434';
-  const enabled = llmConfig.enabled || false;
+  const currentProvider = llmConfig.provider;
+  const currentModel = llmConfig.model;
+  const currentApiKey = llmConfig.api_key;
+  const currentBaseUrl = llmConfig.base_url;
+  const enabled = llmConfig.enabled;
 
   const selectedProvider = LLM_PROVIDERS.find(p => p.value === currentProvider);
 
@@ -197,7 +197,7 @@ export default function LLMConfigForm() {
               value={currentApiKey}
               onChange={(e) => handleApiKeyChange(e.target.value)}
               disabled={!enabled}
-              className="w-full px-3 py-2 pr-20 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed font-mono text-sm"
+              className="w-full px-3 py-2 pr-20 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
               placeholder={currentProvider === 'openai' ? 'sk-...' : 'sk-ant-...'}
             />
             <button
@@ -254,7 +254,7 @@ export default function LLMConfigForm() {
             connectionStatus === 'success'
               ? 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200'
               : 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200'
-          }`}>
+          }`}>  
             <p className="text-sm font-medium">
               {connectionStatus === 'success' ? '✓ Connection successful' : '✗ Connection failed'}
             </p>
