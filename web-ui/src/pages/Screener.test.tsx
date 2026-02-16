@@ -47,13 +47,13 @@ describe('Screener Page', () => {
       })
     })
 
-    it('defaults to mega universe', async () => {
+    it('defaults to usd all universe', async () => {
       renderWithProviders(<Screener />)
       
       await waitFor(() => {
         const selects = screen.getAllByRole('combobox')
         const universeSelect = selects[0] as HTMLSelectElement
-        expect(universeSelect.value).toBe('mega_all')
+        expect(universeSelect.value).toBe('usd_all')
       })
     })
 

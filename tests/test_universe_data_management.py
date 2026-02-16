@@ -10,9 +10,10 @@ from swing_screener.data.universe import (
 )
 
 
-def test_list_package_universes_includes_mega_all():
+def test_list_package_universes_includes_currency_all():
     universes = list_package_universes()
-    assert "mega_all" in universes
+    assert "usd_all" in universes
+    assert "eur_all" in universes
 
 
 def test_filter_ticker_list_include_exclude_and_grep():
@@ -40,8 +41,17 @@ def test_save_universe_file_and_apply_config(tmp_path: Path):
     assert applied[-1] == "SPY"
 
 
-def test_universe_alias_mega_resolves_to_mega_all():
+def test_universe_aliases_resolve_to_usd_all():
     cfg = UniverseConfig(benchmark="SPY", ensure_benchmark=False)
     by_alias = load_universe_from_package("mega", cfg)
-    by_canonical = load_universe_from_package("mega_all", cfg)
+    by_legacy = load_universe_from_package("mega_all", cfg)
+    by_canonical = load_universe_from_package("usd_all", cfg)
     assert by_alias == by_canonical
+    assert by_legacy == by_canonical
+
+
+def test_universe_alias_amsterdam_all_resolves():
+    cfg = UniverseConfig(benchmark="VGK", ensure_benchmark=False)
+    by_legacy = load_universe_from_package("amsterdam_all", cfg)
+    by_canonical = load_universe_from_package("eur_amsterdam_all", cfg)
+    assert by_legacy == by_canonical

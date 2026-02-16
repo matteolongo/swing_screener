@@ -220,7 +220,7 @@ class ScreenerService:
             else:
                 universe_cap = max(500, requested_top * 2)
                 ucfg = DataUniverseConfig(benchmark=benchmark, ensure_benchmark=True, max_tickers=universe_cap)
-                tickers = load_universe_from_package("mega_all", ucfg)
+                tickers = load_universe_from_package("usd_all", ucfg)
 
             from swing_screener.data.market_data import MarketDataConfig
 
@@ -231,7 +231,7 @@ class ScreenerService:
             
             logger.info(
                 "Screener run: universe=%s top=%s tickers=%s provider=%s",
-                request.universe or "mega_all",
+                request.universe or "usd_all",
                 requested_top,
                 len(tickers),
                 self._provider.get_provider_name(),
