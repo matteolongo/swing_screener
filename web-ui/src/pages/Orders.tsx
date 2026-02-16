@@ -15,7 +15,7 @@ import { Plus, X, CheckCircle, MessageSquare } from 'lucide-react';
 import SocialAnalysisModal from '@/components/modals/SocialAnalysisModal';
 import CreateOrderModalForm from '@/components/domain/orders/CreateOrderModalForm';
 import FillOrderModalForm from '@/components/domain/orders/FillOrderModalForm';
-import { useUserPreferencesStore } from '@/stores/userPreferencesStore';
+import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 import { t } from '@/i18n/t';
 
 type FilterStatus = OrderStatus | 'all';
@@ -26,8 +26,7 @@ export default function Orders() {
   const [showFillModal, setShowFillModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [socialSymbol, setSocialSymbol] = useState<string | null>(null);
-  const { mode } = useUserPreferencesStore();
-  const isBeginnerMode = mode === 'beginner';
+  const { isBeginnerMode } = useBeginnerModeStore();
 
   const ordersQuery = useOrders(filterStatus);
   const orders = ordersQuery.data ?? [];

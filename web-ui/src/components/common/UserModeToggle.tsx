@@ -1,17 +1,17 @@
 /**
  * User Mode Toggle Component
  * Allows users to switch between beginner and advanced modes globally
+ * Synchronized with the sidebar toggle via beginnerModeStore
  */
 import { GraduationCap, Settings } from 'lucide-react';
-import { useUserPreferencesStore } from '@/stores/userPreferencesStore';
+import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 
 export default function UserModeToggle() {
-  const { mode, toggleMode } = useUserPreferencesStore();
-  const isBeginnerMode = mode === 'beginner';
+  const { isBeginnerMode, toggleBeginnerMode } = useBeginnerModeStore();
 
   return (
     <button
-      onClick={toggleMode}
+      onClick={toggleBeginnerMode}
       className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
       title={isBeginnerMode ? 'Switch to Advanced Mode' : 'Switch to Beginner Mode'}
     >

@@ -54,6 +54,8 @@ beforeAll(async () => {
   notifyManager.setBatchNotifyFunction((fn) => {
     act(fn)
   })
+  // Initialize beginner mode to false for tests (to preserve existing test expectations)
+  localStorageMock.setItem('swing-screener-beginner-mode', JSON.stringify({ state: { isBeginnerMode: false }, version: 0 }))
 })
 
 // Reset handlers after each test (important for test isolation)
@@ -62,7 +64,7 @@ afterEach(() => {
   cleanup()
   // Reset localStorage and set mode to advanced for tests (to preserve existing test expectations)
   localStorageMock.clear()
-  localStorageMock.setItem('swing-screener-user-preferences', JSON.stringify({ state: { mode: 'advanced' }, version: 0 }))
+  localStorageMock.setItem('swing-screener-beginner-mode', JSON.stringify({ state: { isBeginnerMode: false }, version: 0 }))
 })
 
 // Stop MSW server after all tests

@@ -2,12 +2,12 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import UserModeToggle from './UserModeToggle';
-import { useUserPreferencesStore } from '@/stores/userPreferencesStore';
+import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 
 describe('UserModeToggle', () => {
   it('renders with beginner mode by default in production', () => {
     // Reset to beginner mode for this test
-    useUserPreferencesStore.setState({ mode: 'beginner' });
+    useBeginnerModeStore.setState({ isBeginnerMode: true });
     
     render(<UserModeToggle />);
     
@@ -16,7 +16,7 @@ describe('UserModeToggle', () => {
 
   it('renders with advanced mode when set', () => {
     // Set to advanced mode
-    useUserPreferencesStore.setState({ mode: 'advanced' });
+    useBeginnerModeStore.setState({ isBeginnerMode: false });
     
     render(<UserModeToggle />);
     
@@ -25,7 +25,7 @@ describe('UserModeToggle', () => {
 
   it('toggles between beginner and advanced modes', async () => {
     const user = userEvent.setup();
-    useUserPreferencesStore.setState({ mode: 'beginner' });
+    useBeginnerModeStore.setState({ isBeginnerMode: true });
     
     const { rerender } = render(<UserModeToggle />);
     
@@ -51,7 +51,7 @@ describe('UserModeToggle', () => {
 
   it('persists mode to localStorage', async () => {
     const user = userEvent.setup();
-    useUserPreferencesStore.setState({ mode: 'beginner' });
+    useBeginnerModeStore.setState({ isBeginnerMode: true });
     
     render(<UserModeToggle />);
     
@@ -59,9 +59,9 @@ describe('UserModeToggle', () => {
     await user.click(screen.getByRole('button'));
     
     // Check localStorage
-    const stored = localStorage.getItem('swing-screener-user-preferences');
+    const stored = localStorage.getItem('swing-screener-beginner-mode');
     expect(stored).toBeTruthy();
     const parsed = JSON.parse(stored!);
-    expect(parsed.state.mode).toBe('advanced');
+    expect(parsed.state.isBeginnerMode).toBe(false);
   });
 });

@@ -22,7 +22,7 @@ import SocialAnalysisModal from '@/components/modals/SocialAnalysisModal';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 import UpdateStopModalForm from '@/components/domain/positions/UpdateStopModalForm';
 import ClosePositionModalForm from '@/components/domain/positions/ClosePositionModalForm';
-import { useUserPreferencesStore } from '@/stores/userPreferencesStore';
+import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 import { t } from '@/i18n/t';
 
 type FilterStatus = PositionStatus | 'all';
@@ -33,8 +33,7 @@ export default function Positions() {
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [selectedPosition, setSelectedPosition] = useState<Position | null>(null);
   const [socialSymbol, setSocialSymbol] = useState<string | null>(null);
-  const { mode } = useUserPreferencesStore();
-  const isBeginnerMode = mode === 'beginner';
+  const { isBeginnerMode } = useBeginnerModeStore();
 
   const activeStrategyQuery = useActiveStrategyQuery();
 

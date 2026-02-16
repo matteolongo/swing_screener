@@ -8,7 +8,7 @@ import { ScreenerCandidate } from '@/features/screener/types';
 import { useConfigStore } from '@/stores/configStore';
 import { RiskConfig } from '@/types/config';
 import { useScreenerStore } from '@/stores/screenerStore';
-import { useUserPreferencesStore } from '@/stores/userPreferencesStore';
+import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 import { formatCurrency, formatPercent } from '@/utils/formatters';
 import QuickBacktestModal from '@/components/modals/QuickBacktestModal';
 import SocialAnalysisModal from '@/components/modals/SocialAnalysisModal';
@@ -84,8 +84,7 @@ function getApiErrorStatus(error: unknown): number | undefined {
 export default function Screener() {
   const { config } = useConfigStore();
   const { lastResult, setLastResult } = useScreenerStore();
-  const { mode } = useUserPreferencesStore();
-  const isBeginnerMode = mode === 'beginner';
+  const { isBeginnerMode } = useBeginnerModeStore();
   const queryClient = useQueryClient();
   const activeStrategyQuery = useActiveStrategyQuery();
   const riskConfig: RiskConfig = activeStrategyQuery.data?.risk ?? config.risk;

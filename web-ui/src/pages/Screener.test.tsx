@@ -4,7 +4,7 @@ import { renderWithProviders, waitForQueriesToSettle } from '@/test/utils'
 import Screener from './Screener'
 import { useConfigStore } from '@/stores/configStore'
 import { useScreenerStore } from '@/stores/screenerStore'
-import { useUserPreferencesStore } from '@/stores/userPreferencesStore'
+import { useBeginnerModeStore } from '@/stores/beginnerModeStore'
 import { DEFAULT_CONFIG } from '@/types/config'
 
 describe('Screener Page', () => {
@@ -14,6 +14,7 @@ describe('Screener Page', () => {
       config: DEFAULT_CONFIG,
     })
     useScreenerStore.setState({ lastResult: null })
+    useBeginnerModeStore.setState({ isBeginnerMode: false }) // Default to advanced mode for tests
     localStorage.removeItem('screener.intelligenceAsofDate')
     localStorage.removeItem('screener.intelligenceSymbols')
   })
@@ -862,7 +863,7 @@ describe('Screener Page', () => {
   describe('Beginner Mode', () => {
     beforeEach(() => {
       // Set beginner mode for these tests
-      useUserPreferencesStore.setState({ mode: 'beginner' })
+      useBeginnerModeStore.setState({ isBeginnerMode: true })
     })
 
     it('shows simplified controls in beginner mode', async () => {
