@@ -1,7 +1,10 @@
-"""Abstract LLM provider interface with Ollama implementation.
+"""Abstract LLM provider interface with multiple provider implementations.
 
-Provides pluggable architecture for multiple LLM providers while maintaining
-consistent event classification behavior.
+Provides pluggable architecture for multiple LLM providers (OpenAI, Anthropic, Ollama)
+while maintaining consistent event classification behavior.
+
+Provider Factory:
+    get_llm_provider() - Factory function to instantiate providers by name
 """
 
 import json
@@ -170,8 +173,254 @@ class OllamaProvider(LLMProvider):
             raise RuntimeError(f"Classification failed: {e}") from e
 
 
+class OpenAIProvider(LLMProvider):
+    """OpenAI LLM provider for cloud-based model inference.
+    
+    Uses OpenAI's Chat Completions API with structured outputs (JSON mode)
+    to ensure schema compliance. Requires OPENAI_API_KEY environment variable.
+    """
+    
+    def __init__(
+        self,
+        model: str = "gpt-4o-mini",
+        api_key: Optional[str] = None,
+    ):
+        """Initialize OpenAI provider.
+        
+        Args:
+            model: OpenAI model name (e.g., "gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo")
+            api_key: OpenAI API key (defaults to OPENAI_API_KEY env var)
+        
+        Raises:
+            ValueError: If API key is not provided and not in environment
+        """
+        self._model = model
+        self._api_key = api_key or os.environ.get("OPENAI_API_KEY")
+        
+        if not self._api_key:
+            raise ValueError(
+                "OpenAI API key required. Set OPENAI_API_KEY environment variable "
+                "or pass api_key parameter."
+            )
+        
+        self._client = None
+    
+    def _get_client(self):
+        """Lazy-load OpenAI client to avoid import errors if not installed."""
+        if self._client is None:
+            try:
+                from openai import OpenAI
+                self._client = OpenAI(api_key=self._api_key)
+            except ImportError as e:
+                raise RuntimeError(
+                    "openai package not installed. Install with: pip install 'swing-screener[llm]'"
+                ) from e
+        return self._client
+    
+    def is_available(self) -> bool:
+        """Check if OpenAI API is accessible.
+        
+        Makes a lightweight API call to verify credentials and connectivity.
+        """
+        try:
+            client = self._get_client()
+            # Simple models list call to verify API access
+            client.models.list()
+            return True
+        except Exception:
+            return False
+    
+    @property
+    def model_name(self) -> str:
+        """Return the OpenAI model identifier."""
+        return self._model
+    
+    def classify_event(
+        self,
+        headline: str,
+        snippet: str = "",
+    ) -> EventClassification:
+        """Classify event using OpenAI model.
+        
+        Uses JSON mode with response_format to ensure valid JSON response
+        that matches EventClassification schema.
+        
+        Args:
+            headline: News headline to classify
+            snippet: Optional article snippet
+        
+        Returns:
+            EventClassification object
+        
+        Raises:
+            RuntimeError: If OpenAI API is unavailable
+            ValueError: If response fails validation
+        """
+        if not self.is_available():
+            raise RuntimeError(
+                "OpenAI API unavailable. Check API key and network connectivity."
+            )
+        
+        client = self._get_client()
+        user_prompt = build_user_prompt(headline, snippet)
+        
+        try:
+            # Call OpenAI with JSON mode
+            response = client.chat.completions.create(
+                model=self._model,
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": user_prompt},
+                ],
+                response_format={"type": "json_object"},  # Force JSON output
+                temperature=0,  # Consistency over creativity
+                max_tokens=500,  # Reasonable limit for classification
+            )
+            
+            # Extract JSON from response
+            content = response.choices[0].message.content
+            if not content:
+                raise ValueError("OpenAI returned empty response")
+            
+            classification_data = json.loads(content)
+            
+            # Validate against schema
+            classification = EventClassification.model_validate(classification_data)
+            return classification
+            
+        except json.JSONDecodeError as e:
+            raise ValueError(f"LLM returned invalid JSON: {e}") from e
+        except Exception as e:
+            raise RuntimeError(f"Classification failed: {e}") from e
+
+
+class AnthropicProvider(LLMProvider):
+    """Anthropic (Claude) LLM provider for cloud-based model inference.
+    
+    Uses Anthropic's Messages API with prefilled assistant response
+    to ensure JSON output. Requires ANTHROPIC_API_KEY environment variable.
+    """
+    
+    def __init__(
+        self,
+        model: str = "claude-3-haiku-20240307",
+        api_key: Optional[str] = None,
+    ):
+        """Initialize Anthropic provider.
+        
+        Args:
+            model: Anthropic model name (e.g., "claude-3-haiku-20240307", "claude-3-5-sonnet-20241022")
+            api_key: Anthropic API key (defaults to ANTHROPIC_API_KEY env var)
+        
+        Raises:
+            ValueError: If API key is not provided and not in environment
+        """
+        self._model = model
+        self._api_key = api_key or os.environ.get("ANTHROPIC_API_KEY")
+        
+        if not self._api_key:
+            raise ValueError(
+                "Anthropic API key required. Set ANTHROPIC_API_KEY environment variable "
+                "or pass api_key parameter."
+            )
+        
+        self._client = None
+    
+    def _get_client(self):
+        """Lazy-load Anthropic client to avoid import errors if not installed."""
+        if self._client is None:
+            try:
+                from anthropic import Anthropic
+                self._client = Anthropic(api_key=self._api_key)
+            except ImportError as e:
+                raise RuntimeError(
+                    "anthropic package not installed. Install with: pip install 'swing-screener[llm]'"
+                ) from e
+        return self._client
+    
+    def is_available(self) -> bool:
+        """Check if Anthropic API is accessible.
+        
+        Makes a lightweight API call to verify credentials and connectivity.
+        """
+        try:
+            client = self._get_client()
+            # Test with a minimal message
+            client.messages.create(
+                model=self._model,
+                max_tokens=1,
+                messages=[{"role": "user", "content": "test"}]
+            )
+            return True
+        except Exception:
+            return False
+    
+    @property
+    def model_name(self) -> str:
+        """Return the Anthropic model identifier."""
+        return self._model
+    
+    def classify_event(
+        self,
+        headline: str,
+        snippet: str = "",
+    ) -> EventClassification:
+        """Classify event using Anthropic model.
+        
+        Uses system prompt + user message with prefilled assistant response
+        to guide JSON output format.
+        
+        Args:
+            headline: News headline to classify
+            snippet: Optional article snippet
+        
+        Returns:
+            EventClassification object
+        
+        Raises:
+            RuntimeError: If Anthropic API is unavailable
+            ValueError: If response fails validation
+        """
+        if not self.is_available():
+            raise RuntimeError(
+                "Anthropic API unavailable. Check API key and network connectivity."
+            )
+        
+        client = self._get_client()
+        user_prompt = build_user_prompt(headline, snippet)
+        
+        try:
+            # Call Anthropic with prefilled assistant response for JSON
+            response = client.messages.create(
+                model=self._model,
+                max_tokens=500,
+                temperature=0,  # Consistency over creativity
+                system=SYSTEM_PROMPT,
+                messages=[
+                    {"role": "user", "content": user_prompt},
+                    {"role": "assistant", "content": "{"},  # Prefill to force JSON
+                ],
+            )
+            
+            # Extract JSON from response (prepend the opening brace we prefilled)
+            content = "{" + response.content[0].text if response.content else None
+            if not content:
+                raise ValueError("Anthropic returned empty response")
+            
+            classification_data = json.loads(content)
+            
+            # Validate against schema
+            classification = EventClassification.model_validate(classification_data)
+            return classification
+            
+        except json.JSONDecodeError as e:
+            raise ValueError(f"LLM returned invalid JSON: {e}") from e
+        except Exception as e:
+            raise RuntimeError(f"Classification failed: {e}") from e
+
+
 class MockLLMProvider(LLMProvider):
-    """Mock LLM provider for testing without Ollama dependency.
+    """Mock LLM provider for testing without external dependencies.
     
     Returns deterministic classifications based on headline keywords.
     Useful for unit tests and CI environments.
@@ -241,3 +490,58 @@ class MockLLMProvider(LLMProvider):
             confidence=0.85,
             summary=f"Mock classification: {headline[:100]}"
         )
+
+
+def get_llm_provider(
+    provider_name: str,
+    model: Optional[str] = None,
+    api_key: Optional[str] = None,
+    base_url: Optional[str] = None,
+) -> LLMProvider:
+    """Factory function to create LLM provider by name.
+    
+    Args:
+        provider_name: Provider type ("openai", "anthropic", "ollama", "mock")
+        model: Model name/identifier (provider-specific defaults if None)
+        api_key: API key for cloud providers (uses env vars if None)
+        base_url: Base URL for Ollama (uses OLLAMA_HOST env var if None)
+    
+    Returns:
+        LLMProvider instance
+    
+    Raises:
+        ValueError: If provider_name is not supported or required credentials missing
+    
+    Examples:
+        >>> # OpenAI with defaults
+        >>> provider = get_llm_provider("openai")
+        
+        >>> # Ollama with custom model
+        >>> provider = get_llm_provider("ollama", model="llama2:13b")
+        
+        >>> # Mock for testing
+        >>> provider = get_llm_provider("mock")
+    """
+    provider_lower = provider_name.lower().strip()
+    
+    if provider_lower == "openai":
+        model = model or "gpt-4o-mini"
+        return OpenAIProvider(model=model, api_key=api_key)
+    
+    elif provider_lower == "anthropic":
+        model = model or "claude-3-haiku-20240307"
+        return AnthropicProvider(model=model, api_key=api_key)
+    
+    elif provider_lower == "ollama":
+        model = model or "mistral:7b-instruct"
+        return OllamaProvider(model=model, base_url=base_url)
+    
+    elif provider_lower == "mock":
+        return MockLLMProvider()
+    
+    else:
+        raise ValueError(
+            f"Unsupported LLM provider: {provider_name}. "
+            f"Supported: openai, anthropic, ollama, mock"
+        )
+
