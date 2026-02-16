@@ -3,6 +3,7 @@
 from .config import (
     CatalystConfig,
     IntelligenceConfig,
+    LLMConfig,
     OpportunityConfig,
     ThemeConfig,
     build_intelligence_config,
@@ -31,6 +32,7 @@ __all__ = [
     "Event",
     "IntelligenceConfig",
     "IntelligenceStorage",
+    "LLMConfig",
     "Opportunity",
     "OpportunityConfig",
     "SymbolState",

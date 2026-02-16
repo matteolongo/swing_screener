@@ -23,22 +23,22 @@ jobs:
 
       - name: Run backend tests in Docker
         run: |
-          docker compose run --rm -e PYTHONPATH=/app api pytest --verbose --tb=short \
+          docker compose run --rm --no-deps -e PYTHONPATH=/app api pytest --verbose --tb=short \
             --cov=swing_screener --cov=api --cov=mcp_server \
             --cov-report=term --cov-report=xml \
             --junit-xml=test-results.xml
 
       - name: Run web typecheck in Docker
         run: |
-          docker compose run --rm web npm run typecheck
+          docker compose run --rm --no-deps web npm run typecheck
 
       - name: Run web lint in Docker
         run: |
-          docker compose run --rm web npm run lint
+          docker compose run --rm --no-deps web npm run lint
 
       - name: Run web tests in Docker
         run: |
-          docker compose run --rm web npm test -- --run
+          docker compose run --rm --no-deps web npm test -- --run
           
       - name: Upload coverage reports
         uses: codecov/codecov-action@v4

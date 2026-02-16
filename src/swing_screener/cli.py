@@ -410,6 +410,42 @@ def main() -> None:
         help="Provider folder to export (default: reddit)",
     )
 
+    # -------------------------
+    # CLASSIFY NEWS (LLM event classification)
+    # -------------------------
+    classify = sub.add_parser("classify-news", help="Classify financial news using LLM")
+    classify.add_argument(
+        "--symbols",
+        nargs="+",
+        required=True,
+        help="Ticker symbols to fetch news for",
+    )
+    classify.add_argument(
+        "--mock",
+        action="store_true",
+        help="Use mock news data (no real API calls)",
+    )
+    classify.add_argument(
+        "--provider",
+        choices=["ollama", "mock"],
+        default="ollama",
+        help="LLM provider to use (default: ollama)",
+    )
+    classify.add_argument(
+        "--model",
+        default="mistral:7b-instruct",
+        help="Model name for provider (default: mistral:7b-instruct)",
+    )
+    classify.add_argument(
+        "--base-url",
+        default=None,
+        help="Base URL for Ollama (default: http://localhost:11434)",
+    )
+    classify.add_argument(
+        "--output",
+        help="Optional output JSON file path",
+    )
+
     args = parser.parse_args()
 
     # -------------------------
@@ -568,6 +604,19 @@ def main() -> None:
 
         for key, path in saved.items():
             print(f"Saved {key}: {path}")
+        return
+
+    if args.command == "classify-news":
+        from swing_screener.intelligence.llm.cli import classify_news_command
+        
+        classify_news_command(
+            symbols=args.symbols,
+            mock=args.mock,
+            provider=args.provider,
+            model=args.model,
+            base_url=args.base_url,
+            output=args.output,
+        )
         return
 
     if args.command == "manage":
