@@ -3,6 +3,7 @@ import { screen, waitFor, act } from '@testing-library/react'
 import { renderWithProviders } from '@/test/utils'
 import Positions from './Positions'
 import { useConfigStore } from '@/stores/configStore'
+import { useBeginnerModeStore } from '@/stores/beginnerModeStore'
 import { DEFAULT_CONFIG } from '@/types/config'
 
 describe('Positions Page', () => {
@@ -11,6 +12,8 @@ describe('Positions Page', () => {
     useConfigStore.setState({
       config: DEFAULT_CONFIG,
     })
+    // Reset beginner mode to advanced for tests
+    useBeginnerModeStore.setState({ isBeginnerMode: false })
   })
 
   describe('Page Structure', () => {

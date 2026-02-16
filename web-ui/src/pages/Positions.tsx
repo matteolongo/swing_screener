@@ -22,6 +22,7 @@ import SocialAnalysisModal from '@/components/modals/SocialAnalysisModal';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 import UpdateStopModalForm from '@/components/domain/positions/UpdateStopModalForm';
 import ClosePositionModalForm from '@/components/domain/positions/ClosePositionModalForm';
+import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 import { t } from '@/i18n/t';
 
 type FilterStatus = PositionStatus | 'all';
@@ -32,6 +33,7 @@ export default function Positions() {
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [selectedPosition, setSelectedPosition] = useState<Position | null>(null);
   const [socialSymbol, setSocialSymbol] = useState<string | null>(null);
+  const { isBeginnerMode } = useBeginnerModeStore();
 
   const activeStrategyQuery = useActiveStrategyQuery();
 
@@ -141,15 +143,25 @@ export default function Positions() {
               <tr className="border-b border-gray-200 dark:border-gray-700">
                 <th className="text-left py-3 px-4 font-semibold">{t('positionsPage.headers.ticker')}</th>
                 <th className="text-left py-3 px-4 font-semibold">{t('positionsPage.headers.status')}</th>
-                <th className="text-left py-3 px-4 font-semibold">{t('positionsPage.headers.entryDate')}</th>
+                {!isBeginnerMode && (
+                  <th className="text-left py-3 px-4 font-semibold">{t('positionsPage.headers.entryDate')}</th>
+                )}
                 <th className="text-right py-3 px-4 font-semibold">{t('positionsPage.headers.shares')}</th>
-                <th className="text-right py-3 px-4 font-semibold">{t('positionsPage.headers.entry')}</th>
+                {!isBeginnerMode && (
+                  <th className="text-right py-3 px-4 font-semibold">{t('positionsPage.headers.entry')}</th>
+                )}
                 <th className="text-right py-3 px-4 font-semibold">{t('positionsPage.headers.value')}</th>
-                <th className="text-right py-3 px-4 font-semibold">{t('positionsPage.headers.stop')}</th>
-                <th className="text-right py-3 px-4 font-semibold">{t('positionsPage.headers.exit')}</th>
+                {!isBeginnerMode && (
+                  <>
+                    <th className="text-right py-3 px-4 font-semibold">{t('positionsPage.headers.stop')}</th>
+                    <th className="text-right py-3 px-4 font-semibold">{t('positionsPage.headers.exit')}</th>
+                  </>
+                )}
                 <th className="text-right py-3 px-4 font-semibold">{t('positionsPage.headers.pnl')}</th>
                 <th className="text-right py-3 px-4 font-semibold">{t('positionsPage.headers.pnlPct')}</th>
-                <th className="text-left py-3 px-4 font-semibold">{t('positionsPage.headers.notes')}</th>
+                {!isBeginnerMode && (
+                  <th className="text-left py-3 px-4 font-semibold">{t('positionsPage.headers.notes')}</th>
+                )}
                 <th className="text-right py-3 px-4 font-semibold">{t('positionsPage.headers.actions')}</th>
               </tr>
             )}
@@ -197,26 +209,36 @@ export default function Positions() {
                       {position.status}
                     </Badge>
                   </td>
-                  <td className="py-3 px-4 text-sm">{formatDate(position.entryDate)}</td>
+                  {!isBeginnerMode && (
+                    <td className="py-3 px-4 text-sm">{formatDate(position.entryDate)}</td>
+                  )}
                   <td className="py-3 px-4 text-right">{position.shares}</td>
-                  <td className="py-3 px-4 text-right">{formatCurrency(position.entryPrice)}</td>
+                  {!isBeginnerMode && (
+                    <td className="py-3 px-4 text-right">{formatCurrency(position.entryPrice)}</td>
+                  )}
                   <td
                     className={`py-3 px-4 text-right ${
                       isProfitable ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
                     }`}
                   >
                     <div className="font-semibold">{formatCurrency(currentValue)}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                      {t('positionsPage.valueFrom', {
-                        entryValue: formatCurrency(entryValue),
-                        pnlPercent: formatPercent(pnlPercent),
-                      })}
-                    </div>
+                    {!isBeginnerMode && (
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        {t('positionsPage.valueFrom', {
+                          entryValue: formatCurrency(entryValue),
+                          pnlPercent: formatPercent(pnlPercent),
+                        })}
+                      </div>
+                    )}
                   </td>
-                  <td className="py-3 px-4 text-right">{formatCurrency(position.stopPrice)}</td>
-                  <td className="py-3 px-4 text-right">
-                    {position.exitPrice != null ? formatCurrency(position.exitPrice) : t('positionsPage.exitFallback')}
-                  </td>
+                  {!isBeginnerMode && (
+                    <>
+                      <td className="py-3 px-4 text-right">{formatCurrency(position.stopPrice)}</td>
+                      <td className="py-3 px-4 text-right">
+                        {position.exitPrice != null ? formatCurrency(position.exitPrice) : t('positionsPage.exitFallback')}
+                      </td>
+                    </>
+                  )}
                   <td
                     className={`py-3 px-4 text-right font-semibold ${
                       isProfitable ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
@@ -235,9 +257,11 @@ export default function Positions() {
                       {formatPercent(pnlPercent)}
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 max-w-xs truncate">
-                    {position.notes || t('positionsPage.notesFallback')}
-                  </td>
+                  {!isBeginnerMode && (
+                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 max-w-xs truncate">
+                      {position.notes || t('positionsPage.notesFallback')}
+                    </td>
+                  )}
                   <td className="py-3 px-4">
                     <div className="flex justify-end gap-2">
                       {position.status === 'open' && position.positionId ? (

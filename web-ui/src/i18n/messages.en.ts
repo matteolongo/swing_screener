@@ -721,6 +721,9 @@ export const messagesEn = {
       refresh: 'Refresh',
       refreshTitle: 'Refresh screener data',
       currencySummary: 'Currency: {{value}}',
+      recommendedOnly: 'Show recommended only',
+      showAdvanced: 'Show advanced filters',
+      hideAdvanced: 'Hide advanced filters',
     },
     currencyFilter: {
       all: 'All',
@@ -739,6 +742,7 @@ export const messagesEn = {
     summary: {
       completed: 'Screener completed',
       resultLine: '{{count}} candidates from {{total}} stocks',
+      resultLineFiltered: '{{count}} recommended ({{total}} total candidates from {{screened}} stocks)',
       asOf: 'As of: {{date}}',
       socialWarmupLoading: 'Social sentiment warmup: starting...',
       socialWarmupRunning:
