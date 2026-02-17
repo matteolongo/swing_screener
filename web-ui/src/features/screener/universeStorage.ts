@@ -22,6 +22,7 @@ const UNIVERSE_ALIASES: Record<string, string> = {
 };
 
 function looksLikeJsonLiteral(value: string): boolean {
+  const trimmed = value.trim();
   return (
     value.startsWith('"') ||
     value.startsWith('{') ||
@@ -29,7 +30,7 @@ function looksLikeJsonLiteral(value: string): boolean {
     value === 'true' ||
     value === 'false' ||
     value === 'null' ||
-    (value !== '' && !Number.isNaN(Number(value)))
+    (trimmed !== '' && !Number.isNaN(Number(trimmed)))
   );
 }
 
