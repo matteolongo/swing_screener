@@ -213,6 +213,33 @@ class PositionsResponse(BaseModel):
     asof: str
 
 
+class PositionMetrics(BaseModel):
+    """Calculated metrics for a position."""
+
+    ticker: str = Field(..., description="Stock ticker symbol")
+    pnl: float = Field(..., description="Absolute profit/loss in dollars")
+    pnl_percent: float = Field(..., description="P&L as percentage")
+    r_now: float = Field(..., description="Current R-multiple")
+    entry_value: float = Field(..., description="Total entry value (shares × entry_price)")
+    current_value: float = Field(..., description="Current market value (shares × current_price)")
+    per_share_risk: float = Field(..., description="Risk per share in dollars")
+    total_risk: float = Field(..., description="Total position risk (per_share_risk × shares)")
+
+
+class PortfolioSummary(BaseModel):
+    """Portfolio-level aggregations."""
+
+    total_positions: int = Field(..., description="Number of open positions")
+    total_value: float = Field(..., description="Total market value of all open positions")
+    total_cost_basis: float = Field(..., description="Total entry value of all open positions")
+    total_pnl: float = Field(..., description="Total unrealized P&L across open positions")
+    total_pnl_percent: float = Field(..., description="Portfolio unrealized P&L percentage")
+    open_risk: float = Field(..., description="Total open risk (sum of position risks)")
+    open_risk_percent: float = Field(..., description="Open risk as % of account size")
+    account_size: float = Field(..., description="Account size from strategy config")
+    available_capital: float = Field(..., description="Account size minus total position value")
+
+
 class OrdersResponse(BaseModel):
     orders: list[Order]
     asof: str

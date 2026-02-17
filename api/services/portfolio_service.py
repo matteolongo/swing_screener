@@ -13,6 +13,8 @@ from api.models.portfolio import (
     Position,
     PositionUpdate,
     PositionsResponse,
+    PositionMetrics,
+    PortfolioSummary,
     Order,
     OrdersResponse,
     OrderSnapshot,
@@ -39,6 +41,14 @@ from swing_screener.execution.order_workflows import (
     normalize_orders,
 )
 from swing_screener.data.providers import MarketDataProvider, get_default_provider
+from swing_screener.portfolio.metrics import (
+    calculate_current_position_value,
+    calculate_per_share_risk,
+    calculate_pnl,
+    calculate_pnl_percent,
+    calculate_r_now,
+    calculate_total_position_value,
+)
 from swing_screener.utils.date_helpers import get_default_backtest_start
 
 logger = logging.getLogger(__name__)
@@ -150,25 +160,38 @@ class PortfolioService:
         self._positions_repo = positions_repo
         self._provider = provider or get_default_provider()
 
+    def _fetch_last_prices(self, tickers: list[str]) -> dict[str, float]:
+        if not tickers:
+            return {}
+
+        start_date = get_default_backtest_start()
+        end_date = get_today_str()
+        ohlcv = self._provider.fetch_ohlcv(tickers, start_date=start_date, end_date=end_date)
+        prices, _ = _last_close_map(ohlcv)
+        return prices
+
+    @staticmethod
+    def _fallback_price(position: dict) -> float:
+        exit_price = position.get("exit_price")
+        if exit_price is not None:
+            return float(exit_price)
+        current_price = position.get("current_price")
+        if current_price is not None:
+            return float(current_price)
+        return float(position.get("entry_price", 0.0))
+
     def list_positions(self, status: Optional[str] = None) -> PositionsResponse:
         positions, asof = self._positions_repo.list_positions(status=status)
 
         open_positions = [p for p in positions if p.get("status") == "open"]
         if open_positions:
             try:
-                tickers = list({p["ticker"] for p in open_positions})
-                start_date = get_default_backtest_start()
-                end_date = get_today_str()
-                
-                ohlcv = self._provider.fetch_ohlcv(tickers, start_date=start_date, end_date=end_date)
-                latest_date = ohlcv.index.max()
+                tickers = list({str(p.get("ticker", "")).upper() for p in open_positions if p.get("ticker")})
+                last_prices = self._fetch_last_prices(tickers)
                 for pos in positions:
                     if pos.get("status") == "open":
-                        try:
-                            price = ohlcv.loc[latest_date, ("Close", pos["ticker"])]
-                            pos["current_price"] = float(price) if not pd.isna(price) else None
-                        except (KeyError, IndexError):
-                            pos["current_price"] = None
+                        ticker = str(pos.get("ticker", "")).upper()
+                        pos["current_price"] = last_prices.get(ticker)
             except (KeyError, ValueError, TypeError) as exc:
                 # Known data access errors - log and continue with null prices
                 logger.warning("Failed to fetch current prices (data error): %s", exc)
@@ -189,6 +212,90 @@ class PortfolioService:
         if position is None:
             raise HTTPException(status_code=404, detail=f"Position not found: {position_id}")
         return Position(**position)
+
+    def get_position_metrics(self, position_id: str) -> PositionMetrics:
+        position = self._positions_repo.get_position(position_id)
+        if position is None:
+            raise HTTPException(status_code=404, detail=f"Position not found: {position_id}")
+
+        ticker = str(position.get("ticker", "")).upper()
+        current_price = self._fallback_price(position)
+
+        if position.get("status") == "open" and ticker:
+            try:
+                current_price = self._fetch_last_prices([ticker]).get(ticker, current_price)
+            except Exception as exc:
+                logger.warning("Failed to fetch current price for %s metrics: %s", ticker, exc)
+
+        state_position = _to_state_position(position)
+        pnl = calculate_pnl(state_position.entry_price, current_price, state_position.shares)
+        per_share_risk = calculate_per_share_risk(state_position)
+
+        return PositionMetrics(
+            ticker=ticker,
+            pnl=pnl,
+            pnl_percent=calculate_pnl_percent(state_position.entry_price, current_price),
+            r_now=calculate_r_now(state_position, current_price),
+            entry_value=calculate_total_position_value(state_position.entry_price, state_position.shares),
+            current_value=calculate_current_position_value(current_price, state_position.shares),
+            per_share_risk=per_share_risk,
+            total_risk=per_share_risk * state_position.shares,
+        )
+
+    def get_portfolio_summary(self, account_size: float) -> PortfolioSummary:
+        positions, _ = self._positions_repo.list_positions(status="open")
+        if not positions:
+            return PortfolioSummary(
+                total_positions=0,
+                total_value=0.0,
+                total_cost_basis=0.0,
+                total_pnl=0.0,
+                total_pnl_percent=0.0,
+                open_risk=0.0,
+                open_risk_percent=0.0,
+                account_size=account_size,
+                available_capital=account_size,
+            )
+
+        tickers = list({str(p.get("ticker", "")).upper() for p in positions if p.get("ticker")})
+        current_prices: dict[str, float] = {}
+        try:
+            current_prices = self._fetch_last_prices(tickers)
+        except Exception as exc:
+            logger.warning("Failed to fetch portfolio summary prices: %s", exc)
+
+        total_value = 0.0
+        total_cost_basis = 0.0
+        total_pnl = 0.0
+        open_risk = 0.0
+
+        for position in positions:
+            state_position = _to_state_position(position)
+            ticker = state_position.ticker.upper()
+            current_price = current_prices.get(ticker, self._fallback_price(position))
+
+            total_cost_basis += calculate_total_position_value(state_position.entry_price, state_position.shares)
+            total_value += calculate_current_position_value(current_price, state_position.shares)
+            total_pnl += calculate_pnl(state_position.entry_price, current_price, state_position.shares)
+
+            per_share_risk = calculate_per_share_risk(state_position)
+            if per_share_risk > 0:
+                open_risk += per_share_risk * state_position.shares
+
+        total_pnl_percent = (total_pnl / total_cost_basis * 100.0) if total_cost_basis > 0 else 0.0
+        open_risk_percent = (open_risk / account_size * 100.0) if account_size > 0 else 0.0
+
+        return PortfolioSummary(
+            total_positions=len(positions),
+            total_value=total_value,
+            total_cost_basis=total_cost_basis,
+            total_pnl=total_pnl,
+            total_pnl_percent=total_pnl_percent,
+            open_risk=open_risk,
+            open_risk_percent=open_risk_percent,
+            account_size=account_size,
+            available_capital=account_size - total_value,
+        )
 
     def update_position_stop(self, position_id: str, request: UpdateStopRequest) -> dict:
         data = self._positions_repo.read()

@@ -9,9 +9,17 @@ export async function invalidateStrategyQueries(queryClient: QueryClient): Promi
 }
 
 export async function invalidateOrderQueries(queryClient: QueryClient): Promise<void> {
-  await queryClient.invalidateQueries({ queryKey: queryKeys.orders() });
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: queryKeys.orders() }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.portfolioSummary() }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.positionMetrics() }),
+  ]);
 }
 
 export async function invalidatePositionQueries(queryClient: QueryClient): Promise<void> {
-  await queryClient.invalidateQueries({ queryKey: queryKeys.positions() });
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: queryKeys.positions() }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.portfolioSummary() }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.positionMetrics() }),
+  ]);
 }

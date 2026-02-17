@@ -305,6 +305,29 @@ export const mockOrderSnapshots = {
   asof: '2026-02-08',
 }
 
+export const mockPortfolioSummary = {
+  total_positions: 1,
+  total_value: 97.8,
+  total_cost_basis: 95.34,
+  total_pnl: 2.46,
+  total_pnl_percent: 2.58,
+  open_risk: 7.74,
+  open_risk_percent: 0.01548,
+  account_size: 50000,
+  available_capital: 49902.2,
+}
+
+export const mockPositionMetrics = {
+  ticker: 'VALE',
+  pnl: 2.46,
+  pnl_percent: 2.58,
+  r_now: 0.3178,
+  entry_value: 95.34,
+  current_value: 97.8,
+  per_share_risk: 1.29,
+  total_risk: 7.74,
+}
+
 export const mockBacktestRun = {
   tickers: ['AAPL', 'MSFT'],
   start: '2024-02-01',
@@ -611,6 +634,24 @@ export const handlers = [
     return HttpResponse.json({ positions, asof: '2026-02-08' })
   }),
 
+  http.get(`${API_BASE_URL}/api/portfolio/positions/:id/metrics`, ({ params }) => {
+    const id = params.id as string
+    const position = mockPositions.find((p) => p.position_id === id)
+    if (!position) {
+      return HttpResponse.json({ detail: 'Position not found' }, { status: 404 })
+    }
+    return HttpResponse.json({
+      ...mockPositionMetrics,
+      ticker: position.ticker,
+      pnl: ((position.current_price ?? position.entry_price) - position.entry_price) * position.shares,
+      pnl_percent: (((position.current_price ?? position.entry_price) - position.entry_price) / position.entry_price) * 100,
+      entry_value: position.entry_price * position.shares,
+      current_value: (position.current_price ?? position.entry_price) * position.shares,
+      per_share_risk: position.initial_risk ?? (position.entry_price - position.stop_price),
+      total_risk: (position.initial_risk ?? (position.entry_price - position.stop_price)) * position.shares,
+    })
+  }),
+
   http.get(`${API_BASE_URL}/api/portfolio/positions/:id/stop-suggestion`, ({ params }) => {
     const id = params.id as string
     const position = mockPositions.find((p) => p.position_id === id) ?? mockPositions[0]
@@ -639,6 +680,10 @@ export const handlers = [
     }
     
     return HttpResponse.json({ orders, asof: '2026-02-08' })
+  }),
+
+  http.get(`${API_BASE_URL}/api/portfolio/summary`, () => {
+    return HttpResponse.json(mockPortfolioSummary)
   }),
 
   http.post(`${API_BASE_URL}/api/portfolio/orders`, async ({ request }) => {

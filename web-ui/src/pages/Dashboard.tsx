@@ -6,14 +6,13 @@ import Badge from '@/components/common/Badge';
 import CurrencyBadge from '@/components/common/CurrencyBadge';
 import { useConfigStore } from '@/stores/configStore';
 import {
-  Position,
   calculatePnL,
 } from '@/features/portfolio/types';
-import { calcOpenRisk, calcOpenRiskPct, calcTotalPositionValue } from '@/features/portfolio/metrics';
 import {
   useOpenPositions,
   useOrders,
   useOrderSnapshots,
+  usePortfolioSummary,
 } from '@/features/portfolio/hooks';
 import { formatCurrency, formatPercent } from '@/utils/formatters';
 import { TrendingUp, AlertCircle, FileText, Search, RefreshCw, CalendarCheck } from 'lucide-react';
@@ -38,6 +37,7 @@ export default function Dashboard() {
 
   const { data: positions = [] } = useOpenPositions();
   const { data: orders = [] } = useOrders('pending');
+  const { data: portfolioSummary } = usePortfolioSummary();
   
   // Sync local state with store status
   useEffect(() => {
@@ -52,16 +52,14 @@ export default function Dashboard() {
 
   const snapshotOrders = orderSnapshots?.orders ?? [];
 
-  // Calculate portfolio metrics
-  const totalPositionValue = calcTotalPositionValue(positions);
-  const totalPnL = positions.reduce((sum: number, pos: Position) => {
-    return sum + calculatePnL(pos);
-  }, 0);
-
-  const openRisk = calcOpenRisk(positions);
-  const openRiskPct = calcOpenRiskPct(openRisk, riskConfig.accountSize);
+  // Portfolio summary is authoritative and computed on backend.
+  const totalPositionValue = portfolioSummary?.totalValue ?? 0;
+  const totalPnL = portfolioSummary?.totalPnl ?? 0;
+  const openRisk = portfolioSummary?.openRisk ?? 0;
+  const openRiskPct = portfolioSummary?.openRiskPercent ?? 0;
+  const accountSize = portfolioSummary?.accountSize ?? riskConfig.accountSize;
   const riskBudget = riskConfig.accountSize * riskConfig.riskPct;
-  const availableToDeploy = riskConfig.accountSize - totalPositionValue;
+  const availableToDeploy = portfolioSummary?.availableCapital ?? accountSize - totalPositionValue;
 
   const pendingOrdersCount = orders.length;
   const intelligenceSymbols = useMemo(
@@ -137,14 +135,14 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('dashboardPage.portfolioSummary.openRiskAtStops')}</p>
               <p className="text-3xl font-bold">{formatCurrency(openRisk)}</p>
               <p className="text-xs text-gray-500 mt-1">
-                {formatPercent(openRiskPct * 100)} {t('dashboardPage.portfolioSummary.ofAccount')}
+                {formatPercent(openRiskPct)} {t('dashboardPage.portfolioSummary.ofAccount')}
               </p>
             </div>
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('dashboardPage.portfolioSummary.availableToDeploy')}</p>
               <p className="text-3xl font-bold">{formatCurrency(availableToDeploy)}</p>
               <p className="text-xs text-gray-500 mt-1">
-                {formatPercent((availableToDeploy / riskConfig.accountSize) * 100)} {t('dashboardPage.portfolioSummary.ofAccount')}
+                {formatPercent((availableToDeploy / accountSize) * 100)} {t('dashboardPage.portfolioSummary.ofAccount')}
               </p>
             </div>
           </div>
@@ -153,7 +151,7 @@ export default function Dashboard() {
             {/* Secondary Row - Context Metrics */}
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('dashboardPage.portfolioSummary.accountSize')}</p>
-              <p className="text-xl font-bold">{formatCurrency(riskConfig.accountSize)}</p>
+              <p className="text-xl font-bold">{formatCurrency(accountSize)}</p>
             </div>
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('dashboardPage.portfolioSummary.riskBudgetPerTrade')}</p>
@@ -446,7 +444,7 @@ export default function Dashboard() {
                     </h3>
                   </div>
                   <div className="space-y-2">
-                    {positions.slice(0, 3).map((pos: Position) => {
+                    {positions.slice(0, 3).map((pos) => {
                       const pnl = calculatePnL(pos);
                       const currentPrice = pos.currentPrice ?? pos.entryPrice;
                       const currentValue = currentPrice * pos.shares;

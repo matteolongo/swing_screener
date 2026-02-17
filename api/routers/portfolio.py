@@ -8,6 +8,8 @@ from fastapi import APIRouter, Depends
 from api.models.portfolio import (
     Position,
     PositionUpdate,
+    PositionMetrics,
+    PortfolioSummary,
     Order,
     PositionsResponse,
     OrdersResponse,
@@ -17,7 +19,8 @@ from api.models.portfolio import (
     UpdateStopRequest,
     ClosePositionRequest,
 )
-from api.dependencies import get_portfolio_service
+from api.dependencies import get_config_repo, get_portfolio_service
+from api.repositories.config_repo import ConfigRepository
 from api.services.portfolio_service import PortfolioService
 
 router = APIRouter()
@@ -41,6 +44,15 @@ async def get_position(
 ):
     """Get a specific position by ID."""
     return service.get_position(position_id)
+
+
+@router.get("/positions/{position_id}/metrics", response_model=PositionMetrics)
+async def get_position_metrics(
+    position_id: str,
+    service: PortfolioService = Depends(get_portfolio_service),
+):
+    """Get authoritative calculated metrics for a specific position."""
+    return service.get_position_metrics(position_id)
 
 
 @router.put("/positions/{position_id}/stop")
@@ -70,6 +82,16 @@ async def close_position(
 ):
     """Close a position."""
     return service.close_position(position_id, request)
+
+
+@router.get("/summary", response_model=PortfolioSummary)
+async def get_portfolio_summary(
+    service: PortfolioService = Depends(get_portfolio_service),
+    config_repo: ConfigRepository = Depends(get_config_repo),
+):
+    """Get aggregated portfolio metrics for all open positions."""
+    account_size = float(config_repo.get().risk.account_size)
+    return service.get_portfolio_summary(account_size=account_size)
 
 
 # ===== Orders =====
