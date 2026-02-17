@@ -8,6 +8,11 @@ from api.dependencies import get_config_repo
 
 router = APIRouter()
 
+# Backward compatibility for tests/helpers that still patch router-level config.
+# Runtime reads/writes use ConfigRepository via dependency injection.
+DEFAULT_CONFIG = ConfigRepository.get_defaults()
+current_config = DEFAULT_CONFIG.model_copy(deep=True)
+
 
 @router.get("", response_model=AppConfig)
 async def get_config(repo: ConfigRepository = Depends(get_config_repo)):
