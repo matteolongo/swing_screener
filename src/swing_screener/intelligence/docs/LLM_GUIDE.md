@@ -4,6 +4,14 @@
 > **Last Reviewed:** February 17, 2026.  
 > **Note:** CLI-based news fetching remains mock-only; real news ingestion is still pending integration.
 
+## Capabilities
+
+- Classify headlines into a fixed event taxonomy with severity and materiality
+- Enforce schema validation and deterministic output (temperature 0)
+- Cache classifications to avoid reprocessing
+- Audit logging for traceability
+- Providers: Ollama (local) and Mock (testing)
+
 ## Overview
 
 The LLM Event Classification system provides semantic interpretation of financial news using Large Language Models while preserving deterministic decision-making. LLMs classify and structure events but **never predict prices or generate trading signals**.

@@ -9,6 +9,17 @@ React + TypeScript frontend for the Swing Screener system.
 - `web-ui/docs/DAILY_REVIEW_IMPLEMENTATION.md` (archived snapshot)
 - `docs/overview/INDEX.md` (full documentation map)
 
+## Functional Areas
+
+- **Dashboard**: portfolio summary and action items
+- **Screener**: run screens, review candidates, create orders
+- **Orders**: list, create, fill, cancel
+- **Positions**: open/closed positions, stop updates
+- **Strategy**: list and activate strategies
+- **Backtest**: run quick/full backtests and review simulations
+- **Daily Review**: consolidated workflow view
+- **Settings**: local preferences and configuration
+
 ## Current Architecture
 
 - Routing and page composition: `src/App.tsx`, `src/pages/*`

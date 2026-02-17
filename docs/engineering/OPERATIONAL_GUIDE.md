@@ -52,8 +52,6 @@ This guide covers **CLI-only** operations for advanced use cases.
 
 ### This file is NOT:
 - a replacement for `README.md`
-- a replacement for `README_BEGINNER.md`
-- a replacement for `README_technical.md`
 
 👉 **This is a new document. Do NOT replace existing READMEs.**
 

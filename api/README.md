@@ -2,6 +2,17 @@
 
 FastAPI REST API for the Swing Screener trading system.
 
+## Service Domains
+
+- **Screener**: universe listing, screening runs, order previews
+- **Portfolio & Orders**: positions, stops, summaries, orders CRUD
+- **Strategy**: list, get, set active, validate, CRUD
+- **Config**: get/update/reset/defaults
+- **Daily Review**: consolidated daily review payload
+- **Backtest**: quick and full backtests with saved simulations
+- **Intelligence**: run jobs, status, opportunities, LLM classify
+- **Social**: providers list, sentiment analysis, warmup status
+
 ## Quick Start
 
 ### Start the API Server

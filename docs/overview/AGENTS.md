@@ -189,9 +189,10 @@ Agents should:
 - keep operational docs accurate
 
 The most important docs:
+- `docs/overview/INDEX.md`
 - `docs/engineering/OPERATIONAL_GUIDE.md`
-- `CLI.md`
-- `README_technical.md`
+- `api/README.md`
+- `web-ui/docs/WEB_UI_GUIDE.md`
 
 ---
 

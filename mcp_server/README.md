@@ -30,6 +30,10 @@ Model Context Protocol (MCP) server for Swing Screener, exposing trading system 
 - **Configuration** - YAML-based feature toggles
 - **Tool Registry** - Multi-domain support
 
+**Not implemented in MCP tools (yet):**
+- Backtest tool domain
+- Intelligence tool domain
+
 ## Quick Start
 
 ### Installation

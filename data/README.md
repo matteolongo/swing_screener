@@ -10,12 +10,12 @@ This directory contains runtime data for the Swing Screener application.
 
 ### Execution State
 
-**⚠️ Database-Based (Recommended)**
-- `swing_screener.db` - SQLite database containing orders and positions
+**⚠️ Database Module (Not Yet Wired by Default)**
+- `swing_screener.db` - SQLite database file (planned/optional)
   - **Not committed to git** (in .gitignore)
-  - Created automatically on first use
-  - Provides atomic transactions and data integrity
-  - See `docs/engineering/DATABASE_MIGRATION.md` for details
+  - Database module exists in `src/swing_screener/db.py`
+  - Persistence is **not** the default path today; JSON files remain primary
+  - See `docs/engineering/DATABASE_MIGRATION.md` for migration notes
 
 **Legacy JSON Files (Deprecated)**
 - `orders.json` - Pending and filled orders (file-based, deprecated)
@@ -37,21 +37,22 @@ This directory contains runtime data for the Swing Screener application.
 
 ## Database vs JSON Files
 
-### Database (Recommended) ✅
+### Database (Planned/Optional) ⚠️
 - **File:** `swing_screener.db`
 - **Format:** SQLite with SQLAlchemy ORM
-- **Advantages:**
+- **Status:** Module exists but services are not wired to it yet
+- **Advantages (once wired):**
   - Atomic transactions (all-or-nothing updates)
   - Foreign key constraints ensure data integrity
   - No file locking issues
   - Better performance for queries
   - Supports concurrent reads
-- **Usage:** Automatically used by new code
-- **Migration:** Run `python scripts/migrate_json_to_sqlite.py`
+-- **Usage:** Not enabled by default
+- **Migration:** Run `python scripts/migrate_json_to_sqlite.py` when wiring is complete
 
-### JSON Files (Legacy) ⚠️
+### JSON Files (Primary Today) ✅
 - **Files:** `orders.json`, `positions.json`
-- **Status:** Deprecated but still supported
+- **Status:** Primary storage today (deprecated once DB is wired)
 - **Limitations:**
   - No transactions (partial updates possible on crash)
   - File locking can cause issues

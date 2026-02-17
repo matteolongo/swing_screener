@@ -4,8 +4,8 @@
 > **Last Reviewed:** February 17, 2026.
 
 **Last Updated:** February 11, 2026  
-**Current Branch:** v2/daily-routine-revamp (ready to merge)  
-**Next Feature:** Currency Filter (planned)
+**Current Branch:** See `git status` for the active branch  
+**Next Feature:** See `docs/engineering/ROADMAP.md`
 
 ---
 

@@ -10,6 +10,12 @@ The swing screener now supports a pluggable sentiment analysis architecture that
 - **Select different sentiment analyzers** (keyword-based, VADER, or custom)
 - **Extend the system** with your own providers and analyzers
 
+## Capabilities
+
+- Providers: Reddit and Yahoo Finance
+- Analyzers: keyword-based and VADER (plus custom extensions)
+- Caching of social data to reduce API load
+
 ## Architecture
 
 ### Social Data Providers

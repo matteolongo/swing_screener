@@ -14,6 +14,16 @@ The Swing Screener Agent is an intelligent automation layer that connects to the
 
 The agent acts as an MCP client, calling the 22 available MCP tools to mimic the daily trading routine while providing explanations and feedback.
 
+## Capabilities
+
+- **Daily screening**: `daily_screening()` for candidate discovery
+- **Order creation**: `create_order_from_candidate()` from screening output
+- **Position review**: `review_positions()` with categorization
+- **Stop suggestions**: `suggest_stop_updates()` and `update_position_stop()`
+- **Order management**: `list_orders()` and `fill_order()`
+- **Position exits**: `close_position()`
+- **Daily review**: `daily_review()` (uses MCP tool if available, otherwise fallbacks)
+
 ## Architecture
 
 ```

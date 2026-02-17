@@ -1,6 +1,6 @@
 # Database Migration Guide
 
-> **Status: Needs review.** Confirm current database usage and migration steps.  
+> **Status: Planned/partial.** Database module exists but is not the default persistence path yet.  
 > **Last Reviewed:** February 17, 2026.
 
 ## Overview
@@ -12,7 +12,7 @@ The Swing Screener application has added SQLite database infrastructure using SQ
 - **Concurrency**: Better handling of concurrent operations
 - **Performance**: Faster queries with indexed lookups
 
-> **Note:** The database infrastructure is complete and ready to use, but core workflow functions still use file-based operations for backward compatibility. Future updates can incrementally adopt database operations.
+> **Note:** The database infrastructure exists, but core workflow functions still use file-based operations by default. Migration can proceed once services are wired to the database.
 
 ## Architecture
 
