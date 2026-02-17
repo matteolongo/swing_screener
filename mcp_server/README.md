@@ -54,5 +54,4 @@ Not implemented as MCP tools:
 - Feature toggles live in `config/mcp_features.yaml`.
 
 ## Related Docs
-- `mcp_server/docs/` (archived snapshots)
 - `docs/overview/INDEX.md`
