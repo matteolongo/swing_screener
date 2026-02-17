@@ -15,6 +15,7 @@ import IntelligenceOpportunityCard from '@/components/domain/intelligence/Intell
 import { DAILY_REVIEW_GLOSSARY_KEYS } from '@/content/educationGlossary';
 import TradeInsightModal from '@/components/domain/recommendation/TradeInsightModal';
 import CandidateOrderModal from '@/components/domain/orders/CandidateOrderModal';
+import CachedSymbolPriceChart from '@/components/domain/market/CachedSymbolPriceChart';
 import { queryKeys } from '@/lib/queryKeys';
 import { t } from '@/i18n/t';
 import { useIntelligenceWorkflow } from '@/features/intelligence/useIntelligenceWorkflow';
@@ -536,7 +537,18 @@ function CandidatesTable({
     >
       {candidates.map((candidate) => (
         <tr key={candidate.ticker} className="border-b dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
-          <td className="p-2 font-mono font-bold">{candidate.ticker}</td>
+          <td className="p-2 font-mono font-bold">
+            <a
+              href={`https://finance.yahoo.com/quote/${candidate.ticker}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:text-blue-800 hover:underline"
+              title={`Open ${candidate.ticker} on Yahoo Finance`}
+            >
+              {candidate.ticker}
+            </a>
+            <CachedSymbolPriceChart ticker={candidate.ticker} className="mt-1" />
+          </td>
           <td className="p-2 text-right">
             <span className="font-semibold text-purple-600">
               {candidate.confidence != null ? formatNumber(candidate.confidence, 1) : '-'}
@@ -622,7 +634,18 @@ function UpdateStopTable({ positions }: { positions: DailyReviewPositionUpdate[]
     >
       {positions.map((pos) => (
         <tr key={pos.positionId} className="border-b dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
-          <td className="p-2 font-mono font-bold">{pos.ticker}</td>
+          <td className="p-2 font-mono font-bold">
+            <a
+              href={`https://finance.yahoo.com/quote/${pos.ticker}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:text-blue-800 hover:underline"
+              title={`Open ${pos.ticker} on Yahoo Finance`}
+            >
+              {pos.ticker}
+            </a>
+            <CachedSymbolPriceChart ticker={pos.ticker} className="mt-1" />
+          </td>
           <td className="p-2 text-right">{formatCurrency(pos.entryPrice)}</td>
           <td className="p-2 text-right">{formatCurrency(pos.currentPrice)}</td>
           <td className="p-2 text-right text-gray-600 dark:text-gray-400">{formatCurrency(pos.stopCurrent)}</td>
@@ -671,7 +694,18 @@ function CloseTable({ positions }: { positions: DailyReviewPositionClose[] }) {
     >
       {positions.map((pos) => (
         <tr key={pos.positionId} className="border-b dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
-          <td className="p-2 font-mono font-bold">{pos.ticker}</td>
+          <td className="p-2 font-mono font-bold">
+            <a
+              href={`https://finance.yahoo.com/quote/${pos.ticker}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:text-blue-800 hover:underline"
+              title={`Open ${pos.ticker} on Yahoo Finance`}
+            >
+              {pos.ticker}
+            </a>
+            <CachedSymbolPriceChart ticker={pos.ticker} className="mt-1" />
+          </td>
           <td className="p-2 text-right">{formatCurrency(pos.entryPrice)}</td>
           <td className="p-2 text-right">{formatCurrency(pos.currentPrice)}</td>
           <td className="p-2 text-right">{formatCurrency(pos.stopPrice)}</td>
@@ -718,7 +752,18 @@ function HoldTable({ positions }: { positions: DailyReviewPositionHold[] }) {
     >
       {positions.map((pos) => (
         <tr key={pos.positionId} className="border-b dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
-          <td className="p-2 font-mono font-bold">{pos.ticker}</td>
+          <td className="p-2 font-mono font-bold">
+            <a
+              href={`https://finance.yahoo.com/quote/${pos.ticker}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:text-blue-800 hover:underline"
+              title={`Open ${pos.ticker} on Yahoo Finance`}
+            >
+              {pos.ticker}
+            </a>
+            <CachedSymbolPriceChart ticker={pos.ticker} className="mt-1" />
+          </td>
           <td className="p-2 text-right">{formatCurrency(pos.entryPrice)}</td>
           <td className="p-2 text-right">{formatCurrency(pos.currentPrice)}</td>
           <td className="p-2 text-right">{formatCurrency(pos.stopPrice)}</td>

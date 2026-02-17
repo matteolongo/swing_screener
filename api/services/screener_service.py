@@ -42,6 +42,7 @@ from swing_screener.risk.regime import compute_regime_risk_multiplier
 from api.services.social_warmup import get_social_warmup_manager
 
 logger = logging.getLogger(__name__)
+PRICE_HISTORY_MAX_BARS = 252
 
 
 def _merge_ohlcv(base: pd.DataFrame, extra: pd.DataFrame) -> pd.DataFrame:
@@ -90,6 +91,18 @@ def _to_iso(ts) -> Optional[str]:
     return str(ts)
 
 
+def _to_date_iso(ts) -> Optional[str]:
+    if ts is None or pd.isna(ts):
+        return None
+    if isinstance(ts, pd.Timestamp):
+        return ts.date().isoformat()
+    if isinstance(ts, dt.datetime):
+        return ts.date().isoformat()
+    if isinstance(ts, dt.date):
+        return ts.isoformat()
+    return str(ts)
+
+
 def _last_bar_map(ohlcv: pd.DataFrame) -> dict[str, str]:
     out: dict[str, str] = {}
     if ohlcv is None or ohlcv.empty:
@@ -105,6 +118,34 @@ def _last_bar_map(ohlcv: pd.DataFrame) -> dict[str, str]:
         iso = _to_iso(ts)
         if iso:
             out[str(t)] = iso
+    return out
+
+
+def _price_history_map(ohlcv: pd.DataFrame, max_bars: int = PRICE_HISTORY_MAX_BARS) -> dict[str, list[dict]]:
+    out: dict[str, list[dict]] = {}
+    if ohlcv is None or ohlcv.empty:
+        return out
+    if "Close" not in ohlcv.columns.get_level_values(0):
+        return out
+
+    close = ohlcv["Close"]
+    for ticker in close.columns:
+        series = close[ticker].dropna()
+        if series.empty:
+            continue
+        if max_bars > 0 and len(series) > max_bars:
+            series = series.iloc[-max_bars:]
+        points = []
+        for ts, px in series.items():
+            date = _to_date_iso(ts)
+            if date is None:
+                continue
+            points.append({
+                "date": date,
+                "close": float(px),
+            })
+        if points:
+            out[str(ticker)] = points
     return out
 
 
@@ -254,6 +295,7 @@ class ScreenerService:
                     raise HTTPException(status_code=500, detail="Benchmark data missing; cannot compute momentum.")
 
             last_bar_map = _last_bar_map(ohlcv)
+            price_history_map = _price_history_map(ohlcv)
             overall_last_bar = _to_iso(ohlcv.index.max())
 
             if "min_price" in fields_set or "max_price" in fields_set:
@@ -450,6 +492,7 @@ class ScreenerService:
                         risk_usd=risk_usd if risk_usd is not None else rec_risk.risk_amount,
                         risk_pct=risk_pct if risk_pct is not None else rec_risk.risk_pct,
                         recommendation=recommendation,
+                        price_history=price_history_map.get(ticker_str, []),
                     )
                 )
 
