@@ -11,7 +11,8 @@ Configuration file for the MCP (Model Context Protocol) server.
 **Purpose:** Controls which features and tools are exposed through the MCP server interface.
 
 **Structure:**
-- `features`: Feature domains (config, strategy, screener, positions, orders, etc.)
+- `features`: Feature domains (portfolio, strategy, screener, config, daily_review, social)
+  - Backtest is listed in the sample config but is **not implemented** in MCP tools yet
   - Each feature has tools that can be individually enabled/disabled
   - Per-tool settings: timeout, confirmation requirements
 - `security`: Security settings
@@ -28,13 +29,11 @@ Edit this file to enable/disable MCP features:
 
 ```yaml
 features:
-  positions:
-    enabled: true    # Enable positions feature
+  portfolio:
+    enabled: true    # Enable portfolio feature
     tools:
-      list:
-        enabled: true
-      close:
-        enabled: false  # Disable close position tool
+      - list_positions
+      - close_position
 ```
 
 Changes require MCP server restart.

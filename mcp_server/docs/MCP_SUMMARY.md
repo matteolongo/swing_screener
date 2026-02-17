@@ -2,6 +2,7 @@
 
 > **Status: Archived planning snapshot.** Implementation completed in February 2026; see `/mcp_server/docs/PHASE4_MCP_COMPLETE.md` and `/mcp_server/docs/MCP_SERVER_COMPLETE.md`.  
 > **Last Reviewed:** February 17, 2026.
+> **Note:** Tool naming in this document reflects pre-implementation conventions (e.g., `positions_list`), not the current `list_positions` style.
 
 
 **Project:** Swing Screener MCP Server Integration  

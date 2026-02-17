@@ -3,7 +3,7 @@
 > **Status: Needs review.** Verify which tasks are complete vs pending.  
 > **Last Reviewed:** February 17, 2026.
 
-This document outlines a detailed, phased plan to implement the recommendations from `CODE_REVIEW.md`. The goal is to improve the project's robustness, maintainability, and testability.
+This document outlines a detailed, phased plan to implement the recommendations from `docs/engineering/CODE_REVIEW.md`. The goal is to improve the project's robustness, maintainability, and testability.
 
 ## Phase 1: Foundational Refactoring (Low-Risk Changes)
 

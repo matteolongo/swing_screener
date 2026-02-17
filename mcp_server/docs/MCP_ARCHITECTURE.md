@@ -2,6 +2,7 @@
 
 > **Status: Archived design snapshot.** Implementation completed in February 2026; consult `/mcp_server/docs/PHASE4_MCP_COMPLETE.md` for current architecture.  
 > **Last Reviewed:** February 17, 2026.
+> **Note:** This document uses pre-implementation tool names (e.g., `positions_list`). Current tools use names like `list_positions` and `run_screener`.
 
 **Purpose:** Define the architecture for wrapping Swing Screener in an MCP server  
 **Approach:** Refactor-first, coevolution of FastAPI and MCP interfaces  

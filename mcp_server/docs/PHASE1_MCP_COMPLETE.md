@@ -2,6 +2,7 @@
 
 > **Status: Archived (Phase 1 complete).** Historical snapshot from February 2026. Use `/mcp_server/docs/PHASE4_MCP_COMPLETE.md` and `/mcp_server/docs/MCP_SERVER_COMPLETE.md` for current canonical docs.  
 > **Last Reviewed:** February 17, 2026.
+> **Note:** Tool counts and names in this phase snapshot reflect the original plan, not the final implemented tool set.
 
 
 **Date:** February 12, 2026  

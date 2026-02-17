@@ -2,6 +2,7 @@
 
 > **Status: Archived (pre-implementation planning).** The MCP server has since been implemented; tool names and configuration may differ. Use `mcp_server/docs/MCP_QUICK_REFERENCE.md`, `mcp_server/docs/MCP_SERVER_COMPLETE.md`, and `mcp_server/README.md` for current usage.  
 > **Last Reviewed:** February 17, 2026.
+> **Note:** Examples in this document use pre-implementation tool names (e.g., `positions_list`). Current tools use names like `list_positions` and `run_screener`.
 
 **Purpose:** Guide for using the Swing Screener MCP server  
 **Audience:** AI assistants, developers, power users  

@@ -2,6 +2,7 @@
 
 > **Status: Archived decision log.** Implementation completed in February 2026; validate against current MCP server behavior.  
 > **Last Reviewed:** February 17, 2026.
+> **Note:** Tool naming in this document reflects pre-implementation conventions (e.g., `positions_list`), not the current `list_positions` style.
 
 **Purpose:** Document key decisions, assumptions, and rationale for MCP integration  
 **Date:** February 12, 2026  

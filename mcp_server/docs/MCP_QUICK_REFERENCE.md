@@ -49,12 +49,12 @@
 
 | Document | Purpose | Size |
 |----------|---------|------|
-| [MCP_SUMMARY.md](MCP_SUMMARY.md) | Executive summary | 545 lines |
-| [MCP_FEATURE_MAP.md](MCP_FEATURE_MAP.md) | Complete feature inventory | 525 lines |
-| [MCP_ARCHITECTURE.md](MCP_ARCHITECTURE.md) | Detailed design | 988 lines |
-| [MCP_IMPLEMENTATION_ROADMAP.md](MCP_IMPLEMENTATION_ROADMAP.md) | 6-week plan | 780 lines |
-| [MCP_USAGE_GUIDE.md](MCP_USAGE_GUIDE.md) | User guide | 708 lines |
-| [config/mcp_features.yaml](../config/mcp_features.yaml) | Configuration | 347 lines |
+| [MCP_SUMMARY.md](MCP_SUMMARY.md) | Executive summary | Historical |
+| [MCP_FEATURE_MAP.md](MCP_FEATURE_MAP.md) | Feature inventory | Historical |
+| [MCP_ARCHITECTURE.md](MCP_ARCHITECTURE.md) | Design snapshot | Historical |
+| [MCP_IMPLEMENTATION_ROADMAP.md](MCP_IMPLEMENTATION_ROADMAP.md) | Planning roadmap | Historical |
+| [MCP_USAGE_GUIDE.md](MCP_USAGE_GUIDE.md) | Planning guide | Historical |
+| [config/mcp_features.yaml](/config/mcp_features.yaml) | Configuration | Current |
 
 **Total:** ~3,900 lines of documentation
 
@@ -62,36 +62,40 @@
 
 ## Features at a Glance
 
-### 8 Domain Areas
+### 6 Active Domains (22 tools)
 
-1. **Config** - Application settings
-2. **Strategy** - Trading strategy management
-3. **Screener** - Market scanning
-4. **Positions** - Open position management
-5. **Orders** - Order lifecycle
-6. **Daily Review** - Combined workflow
-7. **Backtest** - Historical simulation
-8. **Social** - Sentiment analysis (optional)
+1. **Portfolio** - Positions + orders (9 tools)
+2. **Screener** - Screening + sizing (3 tools)
+3. **Strategy** - Strategy management (4 tools)
+4. **Config** - App configuration (2 tools)
+5. **Daily Review** - Consolidated workflow (2 tools)
+6. **Social** - Sentiment analysis (2 tools)
 
-### 29 Tools Total
-
-- **15 Read operations** (query data)
-- **14 Write operations** (modify data)
+**Not implemented in MCP tools:** backtest, intelligence
 
 ---
 
-## Implementation Timeline
+## Tool Names (Current)
 
-| Phase | Duration | Focus |
-|-------|----------|-------|
-| Phase 1 | Week 1 | Foundation (server structure, config) |
-| Phase 2 | Week 2 | Simple reads (config, strategy) |
-| Phase 3 | Week 3 | Simple writes (config, strategy CRUD) |
-| Phase 4 | Week 4 | Portfolio (positions, orders) |
-| Phase 5 | Week 5 | Complex ops (screener, backtest) |
-| Phase 6 | Week 6 | Testing + docs |
+**Portfolio**
+- `list_positions`, `get_position`, `update_position_stop`
+- `list_orders`, `create_order`, `fill_order`, `cancel_order`
+- `suggest_position_stop`, `close_position`
 
-**Total:** 6 weeks, 120-150 hours
+**Screener**
+- `run_screener`, `list_universes`, `preview_order`
+
+**Strategy**
+- `list_strategies`, `get_strategy`, `get_active_strategy`, `set_active_strategy`
+
+**Config**
+- `get_config`, `update_config`
+
+**Daily Review**
+- `get_daily_review`, `get_candidate_recommendations`
+
+**Social**
+- `get_social_sentiment`, `analyze_ticker_sentiment`
 
 ---
 
@@ -106,7 +110,7 @@
 
 ---
 
-## Quick Start (After Implementation)
+## Quick Start
 
 ### Start MCP Server
 
@@ -123,13 +127,13 @@ from mcp import Client
 client = Client("http://localhost:8001")
 
 # List positions
-positions = client.call_tool("positions_list", {"status": "open"})
+positions = client.call_tool("list_positions", {"status": "open"})
 
 # Run screener
-candidates = client.call_tool("screener_run", {"top_n": 10})
+candidates = client.call_tool("run_screener", {"top": 10})
 
 # Create order
-order = client.call_tool("orders_create", {
+order = client.call_tool("create_order", {
     "ticker": "AAPL",
     "order_type": "BUY_LIMIT",
     "quantity": 100,
@@ -146,20 +150,12 @@ Edit `config/mcp_features.yaml`:
 
 ```yaml
 features:
-  positions:
+  portfolio:
     enabled: true
     tools:
-      list:
-        enabled: true
-      close:
-        enabled: true
-        confirm_required: true  # Safety!
+      - list_positions
+      - close_position
   
-security:
-  read_only_mode: false  # Set true for safe testing
-  require_confirmation:
-    - positions_close
-    - orders_fill
 ```
 
 ---
@@ -176,13 +172,10 @@ security:
 
 ---
 
-## Next Steps
+## Notes
 
-1. ✅ Planning complete (this document)
-2. ⏳ Add MCP dependencies
-3. ⏳ Create mcp_server/ structure
-4. ⏳ Implement Phase 1 (Foundation)
-5. ⏳ Incremental development (Phases 2-6)
+- MCP tools are a subset of API capabilities.
+- Backtest and intelligence exist in the API/UI but not as MCP tools yet.
 
 ---
 
@@ -194,6 +187,5 @@ security:
 
 ---
 
-**Status:** Planning Complete ✅  
-**Ready For:** Implementation Phase 1  
-**Date:** February 12, 2026
+**Status:** Current snapshot (implemented)  
+**Date:** February 17, 2026
