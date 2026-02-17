@@ -931,6 +931,7 @@ export const messagesEn = {
         createOrder: 'Create Order',
         createOrderTitle: 'Create Order',
         createOrderNotRecommendedTitle: 'Not recommended — open details to fix',
+        yahooFinanceTooltip: 'Open {{ticker}} on Yahoo Finance',
       },
       update: {
         empty: 'No stop updates.',
@@ -945,6 +946,7 @@ export const messagesEn = {
         },
         actionDisabledTitle: 'Update stop action not yet available',
         actionLabel: 'Update Stop',
+        yahooFinanceTooltip: 'Open {{ticker}} on Yahoo Finance',
       },
       close: {
         empty: 'No close candidates.',
@@ -958,6 +960,7 @@ export const messagesEn = {
         },
         actionDisabledTitle: 'Close position action not yet available',
         actionLabel: 'Close Position',
+        yahooFinanceTooltip: 'Open {{ticker}} on Yahoo Finance',
       },
       hold: {
         empty: 'No hold positions.',
@@ -968,6 +971,7 @@ export const messagesEn = {
           stop: 'Stop',
           reason: 'Reason',
         },
+        yahooFinanceTooltip: 'Open {{ticker}} on Yahoo Finance',
       },
     },
     defaultNotes: 'From daily review: Entry {{entry}}, R:R {{rr}}',

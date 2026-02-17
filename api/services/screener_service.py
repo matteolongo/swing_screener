@@ -121,7 +121,21 @@ def _last_bar_map(ohlcv: pd.DataFrame) -> dict[str, str]:
     return out
 
 
-def _price_history_map(ohlcv: pd.DataFrame, max_bars: int = PRICE_HISTORY_MAX_BARS) -> dict[str, list[dict]]:
+def _price_history_map(
+    ohlcv: pd.DataFrame,
+    tickers: list[str] | None = None,
+    max_bars: int = PRICE_HISTORY_MAX_BARS,
+) -> dict[str, list[dict]]:
+    """Build price history map for specified tickers only.
+    
+    Args:
+        ohlcv: OHLCV DataFrame with MultiIndex columns
+        tickers: List of tickers to process. If None, processes all tickers.
+        max_bars: Maximum number of bars to include per ticker
+        
+    Returns:
+        Dict mapping ticker to list of {date, close} points
+    """
     out: dict[str, list[dict]] = {}
     if ohlcv is None or ohlcv.empty:
         return out
@@ -129,7 +143,9 @@ def _price_history_map(ohlcv: pd.DataFrame, max_bars: int = PRICE_HISTORY_MAX_BA
         return out
 
     close = ohlcv["Close"]
-    for ticker in close.columns:
+    columns_to_process = close.columns if tickers is None else [t for t in tickers if t in close.columns]
+    
+    for ticker in columns_to_process:
         series = close[ticker].dropna()
         if series.empty:
             continue
@@ -295,7 +311,6 @@ class ScreenerService:
                     raise HTTPException(status_code=500, detail="Benchmark data missing; cannot compute momentum.")
 
             last_bar_map = _last_bar_map(ohlcv)
-            price_history_map = _price_history_map(ohlcv)
             overall_last_bar = _to_iso(ohlcv.index.max())
 
             if "min_price" in fields_set or "max_price" in fields_set:
@@ -383,6 +398,9 @@ class ScreenerService:
 
             ticker_list = [str(idx) for idx in results.index]
             ticker_info = get_multiple_ticker_info(ticker_list) if ticker_list else {}
+            
+            # Build price history only for candidate tickers to improve performance
+            price_history_map = _price_history_map(ohlcv, tickers=ticker_list)
 
             atr_col = f"atr{universe_cfg.vol.atr_window}"
             ma_col = f"ma{signals_cfg.pullback_ma}_level"

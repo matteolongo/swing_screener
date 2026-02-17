@@ -17,6 +17,7 @@ interface CachedSymbolPriceChartProps {
 const CHART_WIDTH = 220;
 const CHART_HEIGHT = 72;
 const CHART_PADDING = 4;
+const EMPTY_HISTORY: never[] = [];
 
 function toShortDate(raw: string): string {
   const parsed = new Date(raw);
@@ -26,6 +27,7 @@ function toShortDate(raw: string): string {
   return parsed.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
+    timeZone: 'UTC',
   });
 }
 
@@ -54,7 +56,7 @@ export default function CachedSymbolPriceChart({ ticker, className }: CachedSymb
   const history = useScreenerStore((state) => {
     const symbol = ticker.trim().toUpperCase();
     const candidate = state.lastResult?.candidates.find((item) => item.ticker.toUpperCase() === symbol);
-    return candidate?.priceHistory ?? [];
+    return candidate?.priceHistory ?? EMPTY_HISTORY;
   });
 
   const [isOpen, setIsOpen] = useState(false);

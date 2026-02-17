@@ -543,7 +543,7 @@ function CandidatesTable({
               target="_blank"
               rel="noopener noreferrer"
               className="text-blue-600 hover:text-blue-800 hover:underline"
-              title={`Open ${candidate.ticker} on Yahoo Finance`}
+              title={t('dailyReview.table.candidates.yahooFinanceTooltip', { ticker: candidate.ticker })}
             >
               {candidate.ticker}
             </a>
@@ -640,7 +640,7 @@ function UpdateStopTable({ positions }: { positions: DailyReviewPositionUpdate[]
               target="_blank"
               rel="noopener noreferrer"
               className="text-blue-600 hover:text-blue-800 hover:underline"
-              title={`Open ${pos.ticker} on Yahoo Finance`}
+              title={t('dailyReview.table.update.yahooFinanceTooltip', { ticker: pos.ticker })}
             >
               {pos.ticker}
             </a>
@@ -700,7 +700,7 @@ function CloseTable({ positions }: { positions: DailyReviewPositionClose[] }) {
               target="_blank"
               rel="noopener noreferrer"
               className="text-blue-600 hover:text-blue-800 hover:underline"
-              title={`Open ${pos.ticker} on Yahoo Finance`}
+              title={t('dailyReview.table.close.yahooFinanceTooltip', { ticker: pos.ticker })}
             >
               {pos.ticker}
             </a>
@@ -758,7 +758,7 @@ function HoldTable({ positions }: { positions: DailyReviewPositionHold[] }) {
               target="_blank"
               rel="noopener noreferrer"
               className="text-blue-600 hover:text-blue-800 hover:underline"
-              title={`Open ${pos.ticker} on Yahoo Finance`}
+              title={t('dailyReview.table.hold.yahooFinanceTooltip', { ticker: pos.ticker })}
             >
               {pos.ticker}
             </a>
