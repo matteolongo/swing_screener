@@ -36,10 +36,15 @@ def locked_read_json_cli(path: Path, timeout: float = DEFAULT_TIMEOUT) -> dict:
         raise
 
 
-def locked_write_json_cli(path: Path, data: dict, timeout: float = DEFAULT_TIMEOUT) -> None:
+def locked_write_json_cli(path: Path, data: dict | list, timeout: float = DEFAULT_TIMEOUT) -> None:
     """Write JSON file with file lock (CLI version).
     
     Falls back to non-locked write if portalocker unavailable.
+    
+    Args:
+        path: Path to write to
+        data: Data to write (dict or list)
+        timeout: Lock timeout in seconds
     """
     if not PORTALOCKER_AVAILABLE:
         path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + '\n', encoding="utf-8")

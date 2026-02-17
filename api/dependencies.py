@@ -6,6 +6,7 @@ from typing import Optional
 
 from fastapi import Depends
 
+from api.repositories.config_repo import ConfigRepository
 from api.repositories.orders_repo import OrdersRepository
 from api.repositories.positions_repo import PositionsRepository
 from api.repositories.strategy_repo import StrategyRepository
@@ -22,6 +23,9 @@ ROOT_DIR = Path(__file__).parent.parent.resolve()
 DATA_DIR = ROOT_DIR / "data"
 POSITIONS_FILE = DATA_DIR / "positions.json"
 ORDERS_FILE = DATA_DIR / "orders.json"
+
+# Global singleton config repository (thread-safe)
+_config_repository: Optional[ConfigRepository] = None
 
 
 def get_positions_path() -> Path:
@@ -44,6 +48,17 @@ def get_positions_repo() -> PositionsRepository:
 
 def get_strategy_repo() -> StrategyRepository:
     return StrategyRepository()
+
+
+def get_config_repo() -> ConfigRepository:
+    """Get the singleton config repository (thread-safe).
+    
+    Returns a singleton instance to maintain config state across requests.
+    """
+    global _config_repository
+    if _config_repository is None:
+        _config_repository = ConfigRepository()
+    return _config_repository
 
 
 def get_portfolio_service(
