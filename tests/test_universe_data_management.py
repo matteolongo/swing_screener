@@ -55,3 +55,10 @@ def test_universe_alias_amsterdam_all_resolves():
     by_legacy = load_universe_from_package("amsterdam_all", cfg)
     by_canonical = load_universe_from_package("eur_amsterdam_all", cfg)
     assert by_legacy == by_canonical
+
+
+def test_quoted_universe_name_is_normalized():
+    cfg = UniverseConfig(benchmark="VGK", ensure_benchmark=False)
+    quoted = load_universe_from_package('"eur_all"', cfg)
+    canonical = load_universe_from_package("eur_all", cfg)
+    assert quoted == canonical
