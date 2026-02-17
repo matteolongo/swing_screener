@@ -91,7 +91,15 @@ export default function Screener() {
   
   // Screener form state with localStorage persistence
   const [selectedUniverse, setSelectedUniverse] = useLocalStorage('screener.universe', 'usd_all', (val: unknown) => {
-    const normalized = normalizeUniverse(typeof val === 'string' ? val : null);
+    // Handle both JSON-encoded strings and plain strings
+    let rawValue = typeof val === 'string' ? val : null;
+    
+    // Remove surrounding quotes if present (legacy data)
+    if (rawValue && rawValue.startsWith('"') && rawValue.endsWith('"')) {
+      rawValue = rawValue.slice(1, -1);
+    }
+    
+    const normalized = normalizeUniverse(rawValue);
     return normalized ?? 'usd_all';
   });
   const [topN, setTopN] = useLocalStorage('screener.topN', 20, (val: unknown) => {
