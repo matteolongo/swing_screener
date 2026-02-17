@@ -1,5 +1,5 @@
 {
-  "asof": "2026-02-16",
+  "asof": "2026-02-17",
   "orders": [
     {
       "order_id": "ORD-INTC-20260115-ENTRY",
@@ -463,18 +463,35 @@
     {
       "order_id": "ORD-STOP-POS-ALLFG.AS-20260216-01",
       "ticker": "ALLFG.AS",
-      "status": "pending",
+      "status": "filled",
       "order_type": "SELL_STOP",
       "limit_price": null,
       "quantity": 4,
       "stop_price": 7.95,
       "order_date": "2026-02-16",
-      "filled_date": "",
-      "entry_price": null,
+      "filled_date": "2026-02-16",
+      "entry_price": 8.18,
       "notes": "auto-linked stop",
       "order_kind": "stop",
       "parent_order_id": "ALLFG.AS-20260216014014",
       "position_id": "POS-ALLFG.AS-20260216-01",
+      "tif": "GTC"
+    },
+    {
+      "order_id": "BAMNB.AS-20260217032500",
+      "ticker": "BAMNB.AS",
+      "status": "pending",
+      "order_type": "BUY_LIMIT",
+      "quantity": 10,
+      "limit_price": 9.97,
+      "stop_price": 9.37,
+      "order_date": "2026-02-17",
+      "filled_date": "",
+      "entry_price": null,
+      "notes": "From daily review: Entry $9.97, R:R 2.0",
+      "order_kind": "entry",
+      "parent_order_id": null,
+      "position_id": null,
       "tif": "GTC"
     }
   ]
