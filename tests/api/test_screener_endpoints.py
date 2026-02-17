@@ -74,6 +74,8 @@ def test_screener_top_over_100_returns_candidates(monkeypatch):
     assert data["warnings"] == ["Only 150 candidates found for top 200."]
     assert data["candidates"][0]["last_bar"] == "2024-01-03T00:00:00"
     assert data["candidates"][0]["currency"] == "USD"
+    assert "price_history" in data["candidates"][0]
+    assert isinstance(data["candidates"][0]["price_history"], list)
 
 
 def test_screener_empty_ohlcv_returns_404(monkeypatch):

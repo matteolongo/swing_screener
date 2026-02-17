@@ -7,6 +7,11 @@ from pydantic import BaseModel, Field, field_validator
 from api.models.recommendation import Recommendation
 
 
+class PriceHistoryPoint(BaseModel):
+    date: str
+    close: float
+
+
 class ScreenerCandidate(BaseModel):
     ticker: str
     currency: str = "USD"
@@ -44,6 +49,7 @@ class ScreenerCandidate(BaseModel):
     risk_usd: Optional[float] = None
     risk_pct: Optional[float] = None
     recommendation: Optional[Recommendation] = None
+    price_history: list[PriceHistoryPoint] = Field(default_factory=list)
 
 
 class ScreenerRequest(BaseModel):
