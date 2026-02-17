@@ -29,7 +29,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 export function useModal<T = void>() {
   const [isOpen, setIsOpen] = useState(false);
   const [data, setData] = useState<T | null>(null);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<number | null>(null);
 
   /**
    * Open the modal, optionally with data
