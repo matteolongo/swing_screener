@@ -39,6 +39,7 @@ from swing_screener.execution.order_workflows import (
     normalize_orders,
 )
 from swing_screener.data.providers import MarketDataProvider, get_default_provider
+from swing_screener.utils.date_helpers import get_default_backtest_start
 
 logger = logging.getLogger(__name__)
 
@@ -156,7 +157,7 @@ class PortfolioService:
         if open_positions:
             try:
                 tickers = list({p["ticker"] for p in open_positions})
-                start_date = "2025-01-01"
+                start_date = get_default_backtest_start()
                 end_date = get_today_str()
                 
                 ohlcv = self._provider.fetch_ohlcv(tickers, start_date=start_date, end_date=end_date)
@@ -416,7 +417,7 @@ class PortfolioService:
 
         if tickers:
             try:
-                start_date = "2025-01-01"
+                start_date = get_default_backtest_start()
                 end_date = get_today_str()
                 ohlcv = self._provider.fetch_ohlcv(tickers, start_date=start_date, end_date=end_date)
                 last_prices, last_bars = _last_close_map(ohlcv)

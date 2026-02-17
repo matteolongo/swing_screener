@@ -2,6 +2,10 @@
 import pytest
 from pathlib import Path
 
+# SQLAlchemy-backed DB tests are optional in environments where the dependency
+# is not installed (e.g., offline/local minimal venvs).
+pytest.importorskip("sqlalchemy", reason="sqlalchemy is not installed in this test environment")
+
 from swing_screener.db import (
     Database,
     PositionModel,

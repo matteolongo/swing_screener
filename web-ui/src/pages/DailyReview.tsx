@@ -76,7 +76,17 @@ export default function DailyReview() {
   });
 
   const queryClient = useQueryClient();
-  const selectedUniverse = normalizeUniverse(localStorage.getItem('screener.universe'));
+  const selectedUniverse = normalizeUniverse((() => {
+    const raw = localStorage.getItem('screener.universe');
+    if (!raw) return null;
+    try {
+      // Try to parse as JSON first (useLocalStorage stores as JSON)
+      return JSON.parse(raw);
+    } catch {
+      // Fallback to raw value for plain strings
+      return raw;
+    }
+  })());
   const { data: review, isLoading, error, refetch, isFetching } = useDailyReview(10, selectedUniverse);
   const config = useConfigStore((state) => state.config);
   const { isBeginnerMode } = useBeginnerModeStore();

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import pandas as pd
+from swing_screener.utils.dataframe_helpers import get_close_matrix
 
 
 @dataclass(frozen=True)
@@ -10,24 +11,6 @@ class MomentumConfig:
     lookback_6m: int = 126
     lookback_12m: int = 252
     benchmark: str = "SPY"
-
-
-def _get_close_matrix(ohlcv: pd.DataFrame) -> pd.DataFrame:
-    """
-    Extract Close matrix from OHLCV MultiIndex DataFrame (field, ticker).
-    Returns: DataFrame index=date, columns=ticker
-    """
-    if not isinstance(ohlcv.columns, pd.MultiIndex):
-        raise ValueError("OHLCV must have MultiIndex columns (field, ticker).")
-
-    if "Close" not in ohlcv.columns.get_level_values(0):
-        raise ValueError("Field 'Close' not found in OHLCV.")
-
-    close = ohlcv["Close"].copy()
-    if not isinstance(close, pd.DataFrame):
-        close = close.to_frame()
-
-    return close.dropna(axis=1, how="all").sort_index()
 
 
 def compute_returns(close: pd.DataFrame, lookback: int) -> pd.Series:
@@ -70,7 +53,7 @@ def compute_momentum_features(
 
     Benchmark ticker is removed from the output index.
     """
-    close = _get_close_matrix(ohlcv)
+    close = get_close_matrix(ohlcv)
     if close.empty:
         cols = ["mom_6m", "mom_12m", "rs_6m"]
         return pd.DataFrame(columns=cols, index=pd.Index([], name="ticker"))
