@@ -641,6 +641,15 @@ export const messagesEn = {
       ofAccount: 'of account',
       perTrade: 'per trade',
     },
+    performanceHighlights: {
+      title: 'Performance Highlights',
+      bestPerformer: 'Best Performer',
+      worstPerformer: 'Worst Performer',
+      winRate: 'Win Rate',
+      avgRNow: 'Average R Now',
+      none: '—',
+      empty: 'No open positions yet.',
+    },
     actionItems: {
       title: "Today's Action Items",
       empty: "No action items. You're all caught up!",

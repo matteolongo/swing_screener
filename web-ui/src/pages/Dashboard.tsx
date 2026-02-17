@@ -6,9 +6,6 @@ import Badge from '@/components/common/Badge';
 import CurrencyBadge from '@/components/common/CurrencyBadge';
 import { useConfigStore } from '@/stores/configStore';
 import {
-  calculatePnL,
-} from '@/features/portfolio/types';
-import {
   useOpenPositions,
   useOrders,
   useOrderSnapshots,
@@ -60,6 +57,10 @@ export default function Dashboard() {
   const accountSize = portfolioSummary?.accountSize ?? riskConfig.accountSize;
   const riskBudget = riskConfig.accountSize * riskConfig.riskPct;
   const availableToDeploy = portfolioSummary?.availableCapital ?? accountSize - totalPositionValue;
+  const bestPerformerTicker = portfolioSummary?.bestPerformerTicker ?? '';
+  const worstPerformerTicker = portfolioSummary?.worstPerformerTicker ?? '';
+  const totalPositions = portfolioSummary?.totalPositions ?? positions.length;
+  const hasPortfolioHighlights = totalPositions > 0;
 
   const pendingOrdersCount = orders.length;
   const intelligenceSymbols = useMemo(
@@ -165,6 +166,52 @@ export default function Dashboard() {
               <p className="text-xl font-bold">{formatCurrency(totalPositionValue)}</p>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card variant="bordered">
+        <CardHeader>
+          <CardTitle>{t('dashboardPage.performanceHighlights.title')}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {hasPortfolioHighlights ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('dashboardPage.performanceHighlights.bestPerformer')}</p>
+                <p className="text-lg font-semibold text-green-600 dark:text-green-400">
+                  {bestPerformerTicker || t('dashboardPage.performanceHighlights.none')}
+                  {bestPerformerTicker
+                    ? ` (${formatPercent(portfolioSummary?.bestPerformerPnlPct ?? 0)})`
+                    : ''}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('dashboardPage.performanceHighlights.worstPerformer')}</p>
+                <p className="text-lg font-semibold text-red-600 dark:text-red-400">
+                  {worstPerformerTicker || t('dashboardPage.performanceHighlights.none')}
+                  {worstPerformerTicker
+                    ? ` (${formatPercent(portfolioSummary?.worstPerformerPnlPct ?? 0)})`
+                    : ''}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('dashboardPage.performanceHighlights.winRate')}</p>
+                <p className="text-lg font-semibold">
+                  {formatPercent(portfolioSummary?.winRate ?? 0)} ({portfolioSummary?.positionsProfitable ?? 0}/{totalPositions})
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('dashboardPage.performanceHighlights.avgRNow')}</p>
+                <p className="text-lg font-semibold">
+                  {(portfolioSummary?.avgRNow ?? 0).toFixed(2)}R
+                </p>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              {t('dashboardPage.performanceHighlights.empty')}
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -445,9 +492,9 @@ export default function Dashboard() {
                   </div>
                   <div className="space-y-2">
                     {positions.slice(0, 3).map((pos) => {
-                      const pnl = calculatePnL(pos);
+                      const pnl = pos.pnl;
                       const currentPrice = pos.currentPrice ?? pos.entryPrice;
-                      const currentValue = currentPrice * pos.shares;
+                      const currentValue = pos.currentValue;
                       return (
                         <div key={pos.positionId} className="flex items-center justify-between text-sm border-l-2 border-green-400 pl-3 py-1">
                           <div className="flex items-center gap-2">
