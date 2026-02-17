@@ -1,5 +1,5 @@
 {
-  "asof": "2026-02-16",
+  "asof": "2026-02-17",
   "orders": [
     {
       "order_id": "ORD-INTC-20260115-ENTRY",
@@ -463,7 +463,7 @@
     {
       "order_id": "ORD-STOP-POS-ALLFG.AS-20260216-01",
       "ticker": "ALLFG.AS",
-      "status": "pending",
+      "status": "cancelled",
       "order_type": "SELL_STOP",
       "limit_price": null,
       "quantity": 4,
@@ -471,10 +471,61 @@
       "order_date": "2026-02-16",
       "filled_date": "",
       "entry_price": null,
-      "notes": "auto-linked stop",
+      "notes": "auto-linked stop\nReplaced with new stop at 8.18 (was 7.95)",
       "order_kind": "stop",
       "parent_order_id": "ALLFG.AS-20260216014014",
       "position_id": "POS-ALLFG.AS-20260216-01",
+      "tif": "GTC"
+    },
+    {
+      "order_id": "ORD-46AF6332",
+      "ticker": "ALLFG.AS",
+      "status": "filled",
+      "order_type": "STOP",
+      "limit_price": null,
+      "quantity": 4,
+      "stop_price": 8.18,
+      "order_date": "2026-02-17",
+      "filled_date": "2026-02-17",
+      "entry_price": 8.18,
+      "notes": "Auto-created from position stop update (was 7.95)",
+      "order_kind": "stop",
+      "parent_order_id": null,
+      "position_id": "POS-ALLFG.AS-20260216-01",
+      "tif": "GTC"
+    },
+    {
+      "order_id": "BAMNB.AS-20260217112538",
+      "ticker": "BAMNB.AS",
+      "status": "filled",
+      "order_type": "BUY_LIMIT",
+      "limit_price": 9.97,
+      "quantity": 2,
+      "stop_price": 9.37,
+      "order_date": "2026-02-17",
+      "filled_date": "2026-02-17",
+      "entry_price": 9.97,
+      "notes": "From screener: Score 78.4, Rank #3",
+      "order_kind": "entry",
+      "parent_order_id": null,
+      "position_id": "POS-BAMNB.AS-20260217-01",
+      "tif": "GTC"
+    },
+    {
+      "order_id": "ORD-STOP-POS-BAMNB.AS-20260217-01",
+      "ticker": "BAMNB.AS",
+      "status": "pending",
+      "order_type": "SELL_STOP",
+      "limit_price": null,
+      "quantity": 2,
+      "stop_price": 9.37,
+      "order_date": "2026-02-17",
+      "filled_date": "",
+      "entry_price": null,
+      "notes": "auto-linked stop",
+      "order_kind": "stop",
+      "parent_order_id": "BAMNB.AS-20260217112538",
+      "position_id": "POS-BAMNB.AS-20260217-01",
       "tif": "GTC"
     }
   ]
