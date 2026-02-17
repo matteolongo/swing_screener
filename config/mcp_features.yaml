@@ -46,10 +46,22 @@ features:
   
   # Backtesting
   backtest:
-    enabled: false
+    enabled: true
     tools:
-      - run_backtest
-      - get_backtest_metrics
+      - run_quick_backtest
+      - run_full_backtest
+      - list_backtest_simulations
+      - get_backtest_simulation
+      - delete_backtest_simulation
+  
+  # Intelligence & AI Trade Discovery
+  intelligence:
+    enabled: true
+    tools:
+      - run_intelligence
+      - get_intelligence_status
+      - list_intelligence_opportunities
+      - classify_news_sentiment
   
   # Configuration Management
   config:
