@@ -70,7 +70,7 @@ You should see the Dashboard page with your portfolio summary.
 
 ## Daily Workflow
 
-This is the recommended daily routine (after market close, ~22:00 CET):
+This is the recommended daily routine (after US market close; time varies with DST). See `docs/product/DAILY_USAGE_GUIDE.md` for timing guidance:
 
 ### 1. **Check Dashboard** 📊
 

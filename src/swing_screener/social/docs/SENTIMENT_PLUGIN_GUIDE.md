@@ -16,6 +16,12 @@ The swing screener now supports a pluggable sentiment analysis architecture that
 - Analyzers: keyword-based and VADER (plus custom extensions)
 - Caching of social data to reduce API load
 
+## API Endpoints
+
+- `GET /api/social/providers`
+- `POST /api/social/analyze`
+- `GET /api/social/warmup/{job_id}`
+
 ## Architecture
 
 ### Social Data Providers

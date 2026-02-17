@@ -11,6 +11,16 @@ Primary goal:
 
 - detect fresh market attention
 - validate attention through price reaction
+
+## Current Capabilities (Observed)
+
+- API endpoints:
+  - `POST /api/intelligence/run`
+  - `GET /api/intelligence/run/{job_id}`
+  - `GET /api/intelligence/opportunities`
+  - `POST /api/intelligence/classify`
+- LLM classification via `OllamaProvider` or mock provider
+- Yahoo Finance ingestion modules for headlines
 - merge catalyst quality with technical readiness
 - publish a short, explainable focus list
 

@@ -27,7 +27,7 @@ This is not about code — it's about **correct behavior**.
 7. **Next Morning:** Execute at broker, then "Fill Order" in UI
 8. **Manage Positions:** Update stops for positions at +1.5R or +2R
 
-👉 **See [WEB_UI_GUIDE.md](WEB_UI_GUIDE.md) for detailed Web UI documentation**
+👉 **See [WEB_UI_GUIDE.md](../../web-ui/docs/WEB_UI_GUIDE.md) for detailed Web UI documentation**
 
 ---
 
@@ -37,7 +37,6 @@ This is not about code — it's about **correct behavior**.
 
 ---
 
-## 🌐 Two Ways to Work
 
 ### Web UI Workflow (Recommended)
 
