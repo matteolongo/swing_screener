@@ -190,8 +190,8 @@ describe('Dashboard Page', () => {
       
       await waitFor(() => {
         expect(screen.getByText('Position Value')).toBeInTheDocument()
-        // VALE: 6 shares @ $15.89 = $95.34
-        expect(screen.getByText('$95.34')).toBeInTheDocument()
+        // Backend summary returns current market value for open positions.
+        expect(screen.getByText('$97.80')).toBeInTheDocument()
       })
     })
 

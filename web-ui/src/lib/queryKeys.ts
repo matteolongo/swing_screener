@@ -10,6 +10,9 @@ export const queryKeys = {
   ordersSnapshot: () => ['orders', 'snapshot'] as const,
   positions: (status?: PositionFilterStatus | 'open') =>
     status == null ? (['positions'] as const) : (['positions', status] as const),
+  positionMetrics: (positionId?: string) =>
+    positionId == null ? (['position-metrics'] as const) : (['position-metrics', positionId] as const),
+  portfolioSummary: () => ['portfolio-summary'] as const,
   positionStopSuggestion: (positionId?: string) =>
     ['positions', positionId, 'stop-suggestion'] as const,
   backtestSimulations: () => ['backtest-simulations'] as const,

@@ -18,6 +18,52 @@ import {
   PositionUpdate,
 } from './types';
 
+interface PositionMetricsApiResponse {
+  ticker: string;
+  pnl: number;
+  pnl_percent: number;
+  r_now: number;
+  entry_value: number;
+  current_value: number;
+  per_share_risk: number;
+  total_risk: number;
+}
+
+interface PortfolioSummaryApiResponse {
+  total_positions: number;
+  total_value: number;
+  total_cost_basis: number;
+  total_pnl: number;
+  total_pnl_percent: number;
+  open_risk: number;
+  open_risk_percent: number;
+  account_size: number;
+  available_capital: number;
+}
+
+export interface PositionMetrics {
+  ticker: string;
+  pnl: number;
+  pnlPercent: number;
+  rNow: number;
+  entryValue: number;
+  currentValue: number;
+  perShareRisk: number;
+  totalRisk: number;
+}
+
+export interface PortfolioSummary {
+  totalPositions: number;
+  totalValue: number;
+  totalCostBasis: number;
+  totalPnl: number;
+  totalPnlPercent: number;
+  openRisk: number;
+  openRiskPercent: number;
+  accountSize: number;
+  availableCapital: number;
+}
+
 export type OrderFilterStatus = OrderStatus | 'all';
 export type PositionFilterStatus = PositionStatus | 'all';
 
@@ -96,6 +142,20 @@ export async function fetchPositions(status: PositionFilterStatus): Promise<Posi
   return data.positions.map(transformPosition);
 }
 
+export async function fetchPositionMetrics(positionId: string): Promise<PositionMetrics> {
+  const response = await fetch(apiUrl(API_ENDPOINTS.positionMetrics(positionId)));
+  if (!response.ok) throw new Error('Failed to fetch position metrics');
+  const data: PositionMetricsApiResponse = await response.json();
+  return transformPositionMetrics(data);
+}
+
+export async function fetchPortfolioSummary(): Promise<PortfolioSummary> {
+  const response = await fetch(apiUrl(API_ENDPOINTS.portfolioSummary));
+  if (!response.ok) throw new Error('Failed to fetch portfolio summary');
+  const data: PortfolioSummaryApiResponse = await response.json();
+  return transformPortfolioSummary(data);
+}
+
 export async function updatePositionStop(
   positionId: string,
   request: UpdateStopRequest,
@@ -140,4 +200,31 @@ export async function closePosition(
     const error = await response.json();
     throw new Error(error.detail || 'Failed to close position');
   }
+}
+
+function transformPositionMetrics(data: PositionMetricsApiResponse): PositionMetrics {
+  return {
+    ticker: data.ticker,
+    pnl: data.pnl,
+    pnlPercent: data.pnl_percent,
+    rNow: data.r_now,
+    entryValue: data.entry_value,
+    currentValue: data.current_value,
+    perShareRisk: data.per_share_risk,
+    totalRisk: data.total_risk,
+  };
+}
+
+function transformPortfolioSummary(data: PortfolioSummaryApiResponse): PortfolioSummary {
+  return {
+    totalPositions: data.total_positions,
+    totalValue: data.total_value,
+    totalCostBasis: data.total_cost_basis,
+    totalPnl: data.total_pnl,
+    totalPnlPercent: data.total_pnl_percent,
+    openRisk: data.open_risk,
+    openRiskPercent: data.open_risk_percent,
+    accountSize: data.account_size,
+    availableCapital: data.available_capital,
+  };
 }
