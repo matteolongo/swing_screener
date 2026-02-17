@@ -17,6 +17,8 @@ from api.models.strategy import (
     StrategyUpdateRequest,
     Strategy,
     ActiveStrategyRequest,
+    ValidationWarningModel,
+    StrategyValidationResult,
 )
 from api.models.portfolio import (
     PositionStatus,
@@ -93,6 +95,8 @@ __all__ = [
     "StrategyUpdateRequest",
     "Strategy",
     "ActiveStrategyRequest",
+    "ValidationWarningModel",
+    "StrategyValidationResult",
     "PositionStatus",
     "ActionType",
     "Position",
