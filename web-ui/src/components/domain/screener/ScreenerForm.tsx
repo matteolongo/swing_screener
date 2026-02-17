@@ -1,4 +1,5 @@
 import { PlayCircle, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
+import { useCallback, type ChangeEvent } from 'react';
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import { formatCurrency, formatPercent } from '@/utils/formatters';
@@ -61,6 +62,21 @@ export default function ScreenerForm({
   activeCurrencies,
   onRun,
 }: ScreenerFormProps) {
+  // Memoized handlers to avoid recreating on every render and reduce duplication
+  const handleTopNChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    const parsed = parseInt(e.target.value) || 20;
+    const clamped = Math.min(Math.max(parsed, 1), TOP_N_MAX);
+    setTopN(clamped);
+  }, [setTopN]);
+
+  const handleMinPriceChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    setMinPrice(parseFloat(e.target.value) || 0);
+  }, [setMinPrice]);
+
+  const handleMaxPriceChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    setMaxPrice(parseFloat(e.target.value) || 1000);
+  }, [setMaxPrice]);
+
   return (
     <Card>
       {/* Beginner Mode: Simple controls layout */}
@@ -153,11 +169,7 @@ export default function ScreenerForm({
                   <input
                     type="number"
                     value={topN}
-                    onChange={(e) => {
-                      const parsed = parseInt(e.target.value) || 20;
-                      const clamped = Math.min(Math.max(parsed, 1), TOP_N_MAX);
-                      setTopN(clamped);
-                    }}
+                    onChange={handleTopNChange}
                     min="1"
                     max={TOP_N_MAX}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -171,7 +183,7 @@ export default function ScreenerForm({
                   <input
                     type="number"
                     value={minPrice}
-                    onChange={(e) => setMinPrice(parseFloat(e.target.value) || 0)}
+                    onChange={handleMinPriceChange}
                     min="0"
                     step="0.1"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -185,7 +197,7 @@ export default function ScreenerForm({
                   <input
                     type="number"
                     value={maxPrice}
-                    onChange={(e) => setMaxPrice(parseFloat(e.target.value) || 1000)}
+                    onChange={handleMaxPriceChange}
                     min="0"
                     step="1"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -256,11 +268,7 @@ export default function ScreenerForm({
             <input
               type="number"
               value={topN}
-              onChange={(e) => {
-                const parsed = parseInt(e.target.value) || 20;
-                const clamped = Math.min(Math.max(parsed, 1), TOP_N_MAX);
-                setTopN(clamped);
-              }}
+              onChange={handleTopNChange}
               min="1"
               max={TOP_N_MAX}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -274,7 +282,7 @@ export default function ScreenerForm({
             <input
               type="number"
               value={minPrice}
-              onChange={(e) => setMinPrice(parseFloat(e.target.value) || 0)}
+              onChange={handleMinPriceChange}
               min="0"
               step="0.1"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -288,7 +296,7 @@ export default function ScreenerForm({
             <input
               type="number"
               value={maxPrice}
-              onChange={(e) => setMaxPrice(parseFloat(e.target.value) || 1000)}
+              onChange={handleMaxPriceChange}
               min="0"
               step="1"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"

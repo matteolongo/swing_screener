@@ -1,6 +1,7 @@
 """Shared dependencies for API routers."""
 from __future__ import annotations
 
+import threading
 from pathlib import Path
 from typing import Optional
 
@@ -26,6 +27,7 @@ ORDERS_FILE = DATA_DIR / "orders.json"
 
 # Global singleton config repository (thread-safe)
 _config_repository: Optional[ConfigRepository] = None
+_config_repository_lock = threading.Lock()
 
 
 def get_positions_path() -> Path:
@@ -54,10 +56,14 @@ def get_config_repo() -> ConfigRepository:
     """Get the singleton config repository (thread-safe).
     
     Returns a singleton instance to maintain config state across requests.
+    Uses double-checked locking for thread-safe lazy initialization.
     """
     global _config_repository
     if _config_repository is None:
-        _config_repository = ConfigRepository()
+        with _config_repository_lock:
+            # Double-check inside the lock
+            if _config_repository is None:
+                _config_repository = ConfigRepository()
     return _config_repository
 
 
