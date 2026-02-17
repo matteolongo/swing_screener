@@ -106,7 +106,7 @@ export function useLocalStorage<T>(
         }
       });
     },
-    [transformer]
+    [transformer, key]
   );
 
   return [value, setStoredValue];
