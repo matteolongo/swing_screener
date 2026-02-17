@@ -82,6 +82,84 @@ def test_position_metrics_endpoint(monkeypatch: pytest.MonkeyPatch, tmp_path) ->
     assert data["total_risk"] == pytest.approx(7.74, abs=0.01)
 
 
+def test_positions_endpoint_returns_precomputed_metrics(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    positions_file = tmp_path / "positions.json"
+    orders_file = tmp_path / "orders.json"
+    positions_file.write_text(
+        json.dumps(
+            {
+                "asof": "2026-02-08",
+                "positions": [
+                    {
+                        "ticker": "VALE",
+                        "status": "open",
+                        "entry_date": "2026-01-16",
+                        "entry_price": 15.89,
+                        "stop_price": 14.60,
+                        "shares": 6,
+                        "position_id": "POS-VALE-1",
+                        "initial_risk": 1.29,
+                    },
+                    {
+                        "ticker": "INTC",
+                        "status": "closed",
+                        "entry_date": "2026-01-15",
+                        "entry_price": 48.0,
+                        "stop_price": 47.0,
+                        "shares": 1,
+                        "position_id": "POS-INTC-1",
+                        "exit_price": 47.29,
+                        "exit_date": "2026-01-23",
+                        "initial_risk": 1.0,
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    orders_file.write_text(json.dumps({"asof": "2026-02-08", "orders": []}), encoding="utf-8")
+
+    monkeypatch.setattr(api.dependencies, "POSITIONS_FILE", positions_file)
+    monkeypatch.setattr(api.dependencies, "ORDERS_FILE", orders_file)
+
+    mock_provider = MagicMock(spec=MarketDataProvider)
+    mock_provider.fetch_ohlcv.return_value = _ohlcv_with_closes({"VALE": [16.30, 16.65]})
+    mock_provider.get_provider_name.return_value = "mock"
+    monkeypatch.setattr(portfolio_service, "get_default_provider", lambda **kwargs: mock_provider)
+
+    client = TestClient(app)
+    res = client.get("/api/portfolio/positions")
+    assert res.status_code == 200
+
+    data = res.json()
+    assert data["asof"] == "2026-02-08"
+    assert len(data["positions"]) == 2
+
+    vale = next(position for position in data["positions"] if position["ticker"] == "VALE")
+    assert vale["status"] == "open"
+    assert vale["current_price"] == pytest.approx(16.65, abs=0.01)
+    assert vale["pnl"] == pytest.approx(4.56, abs=0.01)
+    assert vale["pnl_percent"] == pytest.approx(4.78, abs=0.01)
+    assert vale["r_now"] == pytest.approx(0.59, abs=0.01)
+    assert vale["entry_value"] == pytest.approx(95.34, abs=0.01)
+    assert vale["current_value"] == pytest.approx(99.90, abs=0.01)
+    assert vale["per_share_risk"] == pytest.approx(1.29, abs=0.01)
+    assert vale["total_risk"] == pytest.approx(7.74, abs=0.01)
+
+    intc = next(position for position in data["positions"] if position["ticker"] == "INTC")
+    assert intc["status"] == "closed"
+    assert intc["current_price"] is None
+    assert intc["pnl"] == pytest.approx(-0.71, abs=0.01)
+    assert intc["pnl_percent"] == pytest.approx(-1.48, abs=0.01)
+    assert intc["r_now"] == pytest.approx(-0.71, abs=0.01)
+    assert intc["entry_value"] == pytest.approx(48.00, abs=0.01)
+    assert intc["current_value"] == pytest.approx(47.29, abs=0.01)
+    assert intc["per_share_risk"] == pytest.approx(1.00, abs=0.01)
+    assert intc["total_risk"] == pytest.approx(1.00, abs=0.01)
+
+
 def test_portfolio_summary_endpoint(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
     positions_file = tmp_path / "positions.json"
     orders_file = tmp_path / "orders.json"
@@ -155,6 +233,16 @@ def test_portfolio_summary_endpoint(monkeypatch: pytest.MonkeyPatch, tmp_path) -
     assert data["open_risk_percent"] == pytest.approx(1.274, abs=0.001)
     assert data["account_size"] == 1000.0
     assert data["available_capital"] == pytest.approx(845.10, abs=0.01)
+    assert data["largest_position_value"] == pytest.approx(99.90, abs=0.01)
+    assert data["largest_position_ticker"] == "VALE"
+    assert data["best_performer_ticker"] == "MUFG"
+    assert data["best_performer_pnl_pct"] == pytest.approx(10.0, abs=0.01)
+    assert data["worst_performer_ticker"] == "VALE"
+    assert data["worst_performer_pnl_pct"] == pytest.approx(4.78, abs=0.01)
+    assert data["avg_r_now"] == pytest.approx(0.79, abs=0.01)
+    assert data["positions_profitable"] == 2
+    assert data["positions_losing"] == 0
+    assert data["win_rate"] == pytest.approx(100.0, abs=0.01)
 
 
 def test_portfolio_summary_endpoint_no_open_positions(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
@@ -204,3 +292,13 @@ def test_portfolio_summary_endpoint_no_open_positions(monkeypatch: pytest.Monkey
     assert data["open_risk_percent"] == 0.0
     assert data["account_size"] == 1000.0
     assert data["available_capital"] == 1000.0
+    assert data["largest_position_value"] == 0.0
+    assert data["largest_position_ticker"] == ""
+    assert data["best_performer_ticker"] == ""
+    assert data["best_performer_pnl_pct"] == 0.0
+    assert data["worst_performer_ticker"] == ""
+    assert data["worst_performer_pnl_pct"] == 0.0
+    assert data["avg_r_now"] == 0.0
+    assert data["positions_profitable"] == 0
+    assert data["positions_losing"] == 0
+    assert data["win_rate"] == 0.0

@@ -2,27 +2,21 @@
  * Enhanced Signals Card - Demonstrates Layer 1-3 education integration
  * This is a proof-of-concept showing how to integrate educational components
  */
-import { useMemo } from 'react';
 import Card, { CardContent, CardHeader, CardTitle } from '@/components/common/Card';
 import { t } from '@/i18n/t';
 import { Strategy } from '@/features/strategy/types';
 import { EducationalNumberInput } from './EducationalFieldControls';
-import { evaluateStrategy } from '@/utils/strategySafety';
+import type { ValidationWarning } from '@/features/strategy/api';
 
 interface EnhancedSignalsCardProps {
   draft: Strategy;
   setDraft: (value: Strategy) => void;
+  warnings: ValidationWarning[];
 }
 
-export default function EnhancedSignalsCard({ draft, setDraft }: EnhancedSignalsCardProps) {
-  // Get warnings for current configuration
-  const warnings = useMemo(() => {
-    const allWarnings = evaluateStrategy(draft);
-    return {
-      breakoutLookback: allWarnings.find((w) => w.parameter === 'breakoutLookback'),
-      pullbackMa: allWarnings.find((w) => w.parameter === 'pullbackMa'),
-    };
-  }, [draft]);
+export default function EnhancedSignalsCard({ draft, setDraft, warnings }: EnhancedSignalsCardProps) {
+  const breakoutWarning = warnings.find((warning) => warning.parameter === 'breakoutLookback');
+  const pullbackWarning = warnings.find((warning) => warning.parameter === 'pullbackMa');
 
   return (
     <Card variant="bordered">
@@ -46,7 +40,7 @@ export default function EnhancedSignalsCard({ draft, setDraft }: EnhancedSignals
             min={1}
             parameterKey="breakoutLookback"
             strategyModule={draft.module ?? 'momentum'}
-            warning={warnings.breakoutLookback}
+            warning={breakoutWarning}
             recommendedBadge={draft.signals.breakoutLookback >= 40 && draft.signals.breakoutLookback <= 60}
           />
 
@@ -65,7 +59,7 @@ export default function EnhancedSignalsCard({ draft, setDraft }: EnhancedSignals
             min={1}
             parameterKey="pullbackMa"
             strategyModule={draft.module ?? 'momentum'}
-            warning={warnings.pullbackMa}
+            warning={pullbackWarning}
             recommendedBadge={draft.signals.pullbackMa >= 20 && draft.signals.pullbackMa <= 30}
           />
 

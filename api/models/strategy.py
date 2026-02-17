@@ -143,3 +143,24 @@ class Strategy(StrategyBase):
 
 class ActiveStrategyRequest(BaseModel):
     strategy_id: str
+
+
+class ValidationWarningModel(BaseModel):
+    """Validation warning for a strategy parameter."""
+
+    parameter: str = Field(..., description="Parameter name that triggered warning")
+    level: Literal["danger", "warning", "info"] = Field(..., description="Warning severity")
+    message: str = Field(..., description="Human-readable warning message")
+
+
+class StrategyValidationResult(BaseModel):
+    """Result payload for strategy validation."""
+
+    is_valid: bool = Field(..., description="True if no danger-level warnings are present")
+    warnings: list[ValidationWarningModel] = Field(default_factory=list)
+    safety_score: int = Field(..., ge=0, le=100)
+    safety_level: Literal["beginner-safe", "requires-discipline", "expert-only"]
+    total_warnings: int = Field(..., ge=0)
+    danger_count: int = Field(..., ge=0)
+    warning_count: int = Field(..., ge=0)
+    info_count: int = Field(..., ge=0)

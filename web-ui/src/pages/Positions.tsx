@@ -7,15 +7,12 @@ import TableShell from '@/components/common/TableShell';
 import {
   Position,
   PositionStatus,
-  calculatePnL,
-  calculatePnLPercent,
 } from '@/features/portfolio/types';
-import { calcOpenRisk, calcOpenRiskPct } from '@/features/portfolio/metrics';
 import {
   usePositions,
-  useOpenPositions,
   useUpdateStopMutation,
   useClosePositionMutation,
+  usePortfolioSummary,
 } from '@/features/portfolio/hooks';
 import { formatCurrency, formatDate, formatPercent } from '@/utils/formatters';
 import { TrendingUp, TrendingDown, X, MessageSquare } from 'lucide-react';
@@ -62,12 +59,10 @@ export default function Positions() {
     return titles[status];
   };
 
-  const openPositionsQuery = useOpenPositions();
-  const openPositions = openPositionsQuery.data ?? [];
-
-  const accountSize = activeStrategyQuery.data?.risk.accountSize ?? 0;
-  const totalOpenRisk = calcOpenRisk(openPositions);
-  const openRiskPct = calcOpenRiskPct(totalOpenRisk, accountSize) * 100;
+  const summaryQuery = usePortfolioSummary();
+  const accountSize = summaryQuery.data?.accountSize ?? activeStrategyQuery.data?.risk.accountSize ?? 0;
+  const totalOpenRisk = summaryQuery.data?.openRisk ?? 0;
+  const openRiskPct = summaryQuery.data?.openRiskPercent ?? 0;
 
   const updateStopMutation = useUpdateStopMutation(() => {
     setShowUpdateStopModal(false);
@@ -169,16 +164,16 @@ export default function Positions() {
               </tr>
             )}
           >
-            {positions.map((position: Position) => {
-              const pnl = calculatePnL(position);
-              const pnlPercent = calculatePnLPercent(position);
+            {positions.map((position) => {
+              const pnl = position.pnl;
+              const pnlPercent = position.pnlPercent;
               const isProfitable = pnl >= 0;
-              const entryValue = position.entryPrice * position.shares;
+              const entryValue = position.entryValue;
               const currentPrice =
                 position.status === 'closed'
                   ? (position.exitPrice ?? position.entryPrice)
                   : (position.currentPrice ?? position.entryPrice);
-              const currentValue = currentPrice * position.shares;
+              const currentValue = position.currentValue;
 
               return (
                 <tr

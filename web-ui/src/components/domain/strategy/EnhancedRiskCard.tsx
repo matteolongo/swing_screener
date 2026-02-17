@@ -2,25 +2,19 @@
  * Enhanced Risk Card - Critical parameters with emphasis on education
  * Demonstrates high-impact parameter treatment
  */
-import { useMemo } from 'react';
 import Card, { CardContent, CardHeader, CardTitle } from '@/components/common/Card';
 import { Strategy } from '@/features/strategy/types';
 import { EducationalNumberInput } from './EducationalFieldControls';
-import { evaluateStrategy } from '@/utils/strategySafety';
+import type { ValidationWarning } from '@/features/strategy/api';
 
 interface EnhancedRiskCardProps {
   draft: Strategy;
   setDraft: (value: Strategy) => void;
+  warnings: ValidationWarning[];
 }
 
-export default function EnhancedRiskCard({ draft, setDraft }: EnhancedRiskCardProps) {
-  const warnings = useMemo(() => {
-    const allWarnings = evaluateStrategy(draft);
-    return {
-      riskPerTrade: allWarnings.find((w) => w.parameter === 'riskPerTrade'),
-      minimumRr: allWarnings.find((w) => w.parameter === 'minimumRr'),
-    };
-  }, [draft]);
+export default function EnhancedRiskCard({ draft, setDraft, warnings }: EnhancedRiskCardProps) {
+  const riskPerTradeWarning = warnings.find((warning) => warning.parameter === 'riskPerTrade');
 
   return (
     <Card variant="bordered" className="border-orange-200 bg-orange-50/30 dark:bg-orange-900/10 dark:border-orange-800">
@@ -63,7 +57,7 @@ export default function EnhancedRiskCard({ draft, setDraft }: EnhancedRiskCardPr
               min={0}
               max={10}
               suffix="%"
-              warning={warnings.riskPerTrade}
+              warning={riskPerTradeWarning}
               recommendedBadge={draft.risk.riskPct * 100 >= 1 && draft.risk.riskPct * 100 <= 2}
             />
           </div>
