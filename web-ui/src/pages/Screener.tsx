@@ -22,11 +22,7 @@ import IntelligencePanel from '@/components/domain/screener/IntelligencePanel';
 import { queryKeys } from '@/lib/queryKeys';
 import { t } from '@/i18n/t';
 import { fetchSocialWarmupStatus } from '@/features/social/api';
-import {
-  useRunIntelligenceMutation,
-  useIntelligenceRunStatus,
-  useIntelligenceOpportunitiesScoped,
-} from '@/features/intelligence/hooks';
+import { useIntelligenceWorkflow } from '@/features/intelligence/useIntelligenceWorkflow';
 import { useLocalStorage, useModal } from '@/hooks';
 
 const TOP_N_MAX = 200;
@@ -151,7 +147,7 @@ export default function Screener() {
 
 
   // Intelligence state
-  const [intelligenceJobId, setIntelligenceJobId] = useState<string | null>(null);
+  const [intelligenceJobId, setIntelligenceJobId] = useState<string>();
   const [intelligenceAsofDate, setIntelligenceAsofDate] = useLocalStorage(
     INTELLIGENCE_ASOF_STORAGE_KEY,
     '',
@@ -167,12 +163,6 @@ export default function Screener() {
         .filter((v) => v.length > 0);
     }
   );
-  const intelligenceStatus = useIntelligenceRunStatus(intelligenceJobId ?? undefined);
-  const intelligenceOpportunities = useIntelligenceOpportunitiesScoped(
-    intelligenceAsofDate || undefined,
-    intelligenceSymbols.length > 0 ? intelligenceSymbols : undefined,
-    Boolean(intelligenceAsofDate)
-  );
 
   const universesQuery = useUniverses();
   const universesData = universesQuery.data;
@@ -180,7 +170,7 @@ export default function Screener() {
   const screenerMutation = useRunScreenerMutation(
     (data) => {
       setLastResult(data);
-      setIntelligenceJobId(null);
+      setIntelligenceJobId(undefined);
       setIntelligenceAsofDate('');
       setIntelligenceSymbols([]);
     },
@@ -188,27 +178,6 @@ export default function Screener() {
       console.error('Screener failed', error);
     },
   );
-
-  const intelligenceMutation = useRunIntelligenceMutation((data) => {
-    setIntelligenceJobId(data.jobId);
-    setIntelligenceAsofDate('');
-  });
-
-  useEffect(() => {
-    if (intelligenceStatus.data?.status !== 'completed' || !intelligenceStatus.data.asofDate) {
-      return;
-    }
-    setIntelligenceAsofDate(intelligenceStatus.data.asofDate);
-  }, [intelligenceStatus.data?.asofDate, intelligenceStatus.data?.status, setIntelligenceAsofDate]);
-
-  const handleRunIntelligence = () => {
-    const symbols = candidates.map((c) => c.ticker);
-    if (!symbols.length) {
-      return;
-    }
-    setIntelligenceSymbols(symbols);
-    intelligenceMutation.mutate({ symbols });
-  };
 
   const handleRunScreener = () => {
     screenerMutation.mutate({
@@ -233,6 +202,15 @@ export default function Screener() {
       })
     : allCandidates;
   const warnings = result?.warnings || [];
+  const intelligenceWorkflow = useIntelligenceWorkflow({
+    availableSymbols: candidates.map((candidate) => candidate.ticker),
+    jobId: intelligenceJobId,
+    setJobId: setIntelligenceJobId,
+    asofDate: intelligenceAsofDate || undefined,
+    setAsofDate: (value) => setIntelligenceAsofDate(value ?? ''),
+    runSymbols: intelligenceSymbols,
+    setRunSymbols: setIntelligenceSymbols,
+  });
   const socialWarmupJobId = result?.socialWarmupJobId;
   const socialWarmupQuery = useQuery({
     queryKey: queryKeys.socialWarmupStatus(socialWarmupJobId),
@@ -339,11 +317,11 @@ export default function Screener() {
           <IntelligencePanel
             hasCandidates={candidates.length > 0}
             intelligenceAsofDate={intelligenceAsofDate}
-            intelligenceJobId={intelligenceJobId}
-            intelligenceStatus={intelligenceStatus}
-            intelligenceOpportunities={intelligenceOpportunities}
-            isRunningIntelligence={intelligenceMutation.isPending}
-            onRunIntelligence={handleRunIntelligence}
+            intelligenceJobId={intelligenceWorkflow.jobId}
+            intelligenceStatus={intelligenceWorkflow.statusQuery}
+            intelligenceOpportunities={intelligenceWorkflow.opportunitiesQuery}
+            isRunningIntelligence={intelligenceWorkflow.runMutation.isPending}
+            onRunIntelligence={intelligenceWorkflow.run}
           />
 
           {/* Candidates table */}

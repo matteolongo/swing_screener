@@ -17,11 +17,7 @@ import TradeInsightModal from '@/components/domain/recommendation/TradeInsightMo
 import CandidateOrderModal from '@/components/domain/orders/CandidateOrderModal';
 import { queryKeys } from '@/lib/queryKeys';
 import { t } from '@/i18n/t';
-import {
-  useIntelligenceOpportunitiesScoped,
-  useIntelligenceRunStatus,
-  useRunIntelligenceMutation,
-} from '@/features/intelligence/hooks';
+import { useIntelligenceWorkflow } from '@/features/intelligence/useIntelligenceWorkflow';
 import type {
   DailyReviewCandidate,
   DailyReviewPositionHold,
@@ -117,33 +113,20 @@ export default function DailyReview() {
       new Set([...candidateSymbols, ...positionSymbols].filter((ticker) => ticker && ticker.trim().length > 0))
     );
   }, [review]);
-  const runIntelligenceMutation = useRunIntelligenceMutation((launch) => {
-    setIntelligenceJobId(launch.jobId);
-    setIntelligenceAsofDate(undefined);
+  const intelligenceWorkflow = useIntelligenceWorkflow({
+    availableSymbols: intelligenceSymbols,
+    maxSymbols: 100,
+    jobId: intelligenceJobId,
+    setJobId: setIntelligenceJobId,
+    asofDate: intelligenceAsofDate,
+    setAsofDate: setIntelligenceAsofDate,
+    runSymbols: intelligenceRunSymbols,
+    setRunSymbols: setIntelligenceRunSymbols,
   });
-  const intelligenceStatusQuery = useIntelligenceRunStatus(intelligenceJobId);
-  const intelligenceStatus = intelligenceStatusQuery.data;
-  const intelligenceOpportunitiesQuery = useIntelligenceOpportunitiesScoped(
-    intelligenceAsofDate,
-    intelligenceRunSymbols,
-    Boolean(intelligenceAsofDate)
-  );
-  const intelligenceOpportunities = intelligenceOpportunitiesQuery.data?.opportunities ?? [];
-  useEffect(() => {
-    if (intelligenceStatus?.status === 'completed' && intelligenceStatus.asofDate) {
-      setIntelligenceAsofDate(intelligenceStatus.asofDate);
-    }
-  }, [intelligenceStatus?.asofDate, intelligenceStatus?.status]);
-  const handleRunIntelligence = () => {
-    if (!intelligenceSymbols.length) {
-      return;
-    }
-    const scopedSymbols = intelligenceSymbols.slice(0, 100);
-    setIntelligenceRunSymbols(scopedSymbols);
-    runIntelligenceMutation.mutate({
-      symbols: scopedSymbols,
-    });
-  };
+  const intelligenceStatusQuery = intelligenceWorkflow.statusQuery;
+  const intelligenceStatus = intelligenceWorkflow.status;
+  const intelligenceOpportunitiesQuery = intelligenceWorkflow.opportunitiesQuery;
+  const intelligenceOpportunities = intelligenceWorkflow.opportunities;
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
   };
@@ -245,10 +228,10 @@ export default function DailyReview() {
             </p>
           </div>
           <Button
-            onClick={handleRunIntelligence}
-            disabled={!intelligenceSymbols.length || runIntelligenceMutation.isPending}
+            onClick={intelligenceWorkflow.run}
+            disabled={!intelligenceWorkflow.canRun || intelligenceWorkflow.runMutation.isPending}
           >
-            {runIntelligenceMutation.isPending ? (
+            {intelligenceWorkflow.runMutation.isPending ? (
               <>
                 <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
                 {t('dailyReview.intelligence.runningAction')}
@@ -259,12 +242,12 @@ export default function DailyReview() {
           </Button>
         </div>
 
-        {runIntelligenceMutation.isError && (
+        {intelligenceWorkflow.runMutation.isError && (
           <p className="mt-3 text-sm text-red-600 dark:text-red-400">
             {t('dailyReview.intelligence.startError', {
               error:
-                runIntelligenceMutation.error instanceof Error
-                  ? runIntelligenceMutation.error.message
+                intelligenceWorkflow.runMutation.error instanceof Error
+                  ? intelligenceWorkflow.runMutation.error.message
                   : t('common.errors.generic'),
             })}
           </p>
