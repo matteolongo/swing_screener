@@ -122,9 +122,9 @@ export default function Orders() {
                 <th className="text-left py-3 px-4 font-semibold">{t('ordersPage.headers.status')}</th>
                 <th className="text-right py-3 px-4 font-semibold">{t('ordersPage.headers.qty')}</th>
                 <th className="text-right py-3 px-4 font-semibold">{t('ordersPage.headers.limit')}</th>
+                <th className="text-right py-3 px-4 font-semibold">{t('ordersPage.headers.stop')}</th>
                 {!isBeginnerMode && (
                   <>
-                    <th className="text-right py-3 px-4 font-semibold">{t('ordersPage.headers.stop')}</th>
                     <th className="text-left py-3 px-4 font-semibold">{t('ordersPage.headers.created')}</th>
                     <th className="text-left py-3 px-4 font-semibold">{t('ordersPage.headers.notes')}</th>
                   </>
@@ -195,11 +195,11 @@ export default function Orders() {
                 <td className="py-3 px-4 text-right">
                   {order.limitPrice ? formatCurrency(order.limitPrice) : t('common.placeholders.dash')}
                 </td>
+                <td className="py-3 px-4 text-right">
+                  {order.stopPrice ? formatCurrency(order.stopPrice) : t('common.placeholders.dash')}
+                </td>
                 {!isBeginnerMode && (
                   <>
-                    <td className="py-3 px-4 text-right">
-                      {order.stopPrice ? formatCurrency(order.stopPrice) : t('common.placeholders.dash')}
-                    </td>
                     <td className="py-3 px-4 text-sm">{formatDate(order.orderDate)}</td>
                     <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 max-w-xs truncate">
                       {order.notes || t('ordersPage.notesFallback')}
