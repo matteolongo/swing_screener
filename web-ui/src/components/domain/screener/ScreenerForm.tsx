@@ -8,6 +8,24 @@ type CurrencyFilter = 'all' | 'usd' | 'eur';
 
 const TOP_N_MAX = 200;
 
+/**
+ * Helper functions for form input handlers to reduce duplication
+ */
+const createTopNChangeHandler = (setTopN: (value: number) => void) => 
+  (e: React.ChangeEvent<HTMLInputElement>) => {
+    const parsed = parseInt(e.target.value) || 20;
+    const clamped = Math.min(Math.max(parsed, 1), TOP_N_MAX);
+    setTopN(clamped);
+  };
+
+const createMinPriceChangeHandler = (setMinPrice: (value: number) => void) =>
+  (e: React.ChangeEvent<HTMLInputElement>) => 
+    setMinPrice(parseFloat(e.target.value) || 0);
+
+const createMaxPriceChangeHandler = (setMaxPrice: (value: number) => void) =>
+  (e: React.ChangeEvent<HTMLInputElement>) => 
+    setMaxPrice(parseFloat(e.target.value) || 1000);
+
 const formatCurrencyFilterLabel = (currencies: ('USD' | 'EUR')[]): string => {
   if (currencies.length === 1 && currencies[0] === 'USD') return t('screener.currencyFilter.usdOnly');
   if (currencies.length === 1 && currencies[0] === 'EUR') return t('screener.currencyFilter.eurOnly');
@@ -61,6 +79,11 @@ export default function ScreenerForm({
   activeCurrencies,
   onRun,
 }: ScreenerFormProps) {
+  // Create memoized handlers to avoid recreating on every render
+  const handleTopNChange = createTopNChangeHandler(setTopN);
+  const handleMinPriceChange = createMinPriceChangeHandler(setMinPrice);
+  const handleMaxPriceChange = createMaxPriceChangeHandler(setMaxPrice);
+
   return (
     <Card>
       {/* Beginner Mode: Simple controls layout */}
@@ -153,11 +176,7 @@ export default function ScreenerForm({
                   <input
                     type="number"
                     value={topN}
-                    onChange={(e) => {
-                      const parsed = parseInt(e.target.value) || 20;
-                      const clamped = Math.min(Math.max(parsed, 1), TOP_N_MAX);
-                      setTopN(clamped);
-                    }}
+                    onChange={handleTopNChange}
                     min="1"
                     max={TOP_N_MAX}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -171,7 +190,7 @@ export default function ScreenerForm({
                   <input
                     type="number"
                     value={minPrice}
-                    onChange={(e) => setMinPrice(parseFloat(e.target.value) || 0)}
+                    onChange={handleMinPriceChange}
                     min="0"
                     step="0.1"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -185,7 +204,7 @@ export default function ScreenerForm({
                   <input
                     type="number"
                     value={maxPrice}
-                    onChange={(e) => setMaxPrice(parseFloat(e.target.value) || 1000)}
+                    onChange={handleMaxPriceChange}
                     min="0"
                     step="1"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -256,11 +275,7 @@ export default function ScreenerForm({
             <input
               type="number"
               value={topN}
-              onChange={(e) => {
-                const parsed = parseInt(e.target.value) || 20;
-                const clamped = Math.min(Math.max(parsed, 1), TOP_N_MAX);
-                setTopN(clamped);
-              }}
+              onChange={handleTopNChange}
               min="1"
               max={TOP_N_MAX}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -274,7 +289,7 @@ export default function ScreenerForm({
             <input
               type="number"
               value={minPrice}
-              onChange={(e) => setMinPrice(parseFloat(e.target.value) || 0)}
+              onChange={handleMinPriceChange}
               min="0"
               step="0.1"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -288,7 +303,7 @@ export default function ScreenerForm({
             <input
               type="number"
               value={maxPrice}
-              onChange={(e) => setMaxPrice(parseFloat(e.target.value) || 1000)}
+              onChange={handleMaxPriceChange}
               min="0"
               step="1"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
