@@ -63,7 +63,22 @@ export function useModal<T = void>() {
    * Toggle the modal state
    */
   const toggle = useCallback(() => {
-    setIsOpen((prev) => !prev);
+    setIsOpen((prev) => {
+      if (prev) {
+        // Closing - schedule data cleanup with timeout
+        timeoutRef.current = setTimeout(() => {
+          setData(null);
+          timeoutRef.current = null;
+        }, 200);
+      } else {
+        // Opening - cancel any pending cleanup
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+        }
+      }
+      return !prev;
+    });
   }, []);
 
   // Cleanup timeout on unmount

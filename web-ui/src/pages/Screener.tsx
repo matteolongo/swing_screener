@@ -108,7 +108,7 @@ export default function Screener() {
           trimmed === 'true' ||
           trimmed === 'false' ||
           trimmed === 'null' ||
-          !isNaN(Number(trimmed));
+          (trimmed !== '' && !isNaN(Number(trimmed)));
         if (!looksLikeJson) {
           localStorage.setItem(key, JSON.stringify(raw));
         }
