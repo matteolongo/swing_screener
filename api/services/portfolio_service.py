@@ -215,20 +215,24 @@ class PortfolioService:
     ) -> PositionWithMetrics:
         state_position = _to_state_position(position)
         ticker = state_position.ticker.upper()
-        current_price = current_prices.get(ticker, self._fallback_price(position))
+        # Live price from provider (may be None / missing)
+        live_price = current_prices.get(ticker)
+        # Effective price for metrics: fall back if live price is unavailable
+        current_price_for_metrics = live_price if live_price is not None else self._fallback_price(position)
         per_share_risk = calculate_per_share_risk(state_position)
 
         payload = dict(position)
-        if state_position.status == "open":
-            payload["current_price"] = current_price
+        # Only expose current_price in the API payload when we have a live quote
+        if state_position.status == "open" and live_price is not None:
+            payload["current_price"] = live_price
 
         return PositionWithMetrics(
             **payload,
-            pnl=calculate_pnl(state_position.entry_price, current_price, state_position.shares),
-            pnl_percent=calculate_pnl_percent(state_position.entry_price, current_price),
-            r_now=calculate_r_now(state_position, current_price),
+            pnl=calculate_pnl(state_position.entry_price, current_price_for_metrics, state_position.shares),
+            pnl_percent=calculate_pnl_percent(state_position.entry_price, current_price_for_metrics),
+            r_now=calculate_r_now(state_position, current_price_for_metrics),
             entry_value=calculate_total_position_value(state_position.entry_price, state_position.shares),
-            current_value=calculate_current_position_value(current_price, state_position.shares),
+            current_value=calculate_current_position_value(current_price_for_metrics, state_position.shares),
             per_share_risk=per_share_risk,
             total_risk=per_share_risk * state_position.shares,
         )
