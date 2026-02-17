@@ -27,8 +27,10 @@ def get_lookback_start_date(
     if from_date is None:
         from_date = datetime.now()
     
-    # Use 365.25 to account for leap years
-    start_date = from_date - timedelta(days=years * 365.25)
+    # Use 365 days per year for simple, deterministic calculation.
+    # This provides a consistent lookback period without fractional-day offsets.
+    # The small leap year imprecision is acceptable for historical data queries.
+    start_date = from_date - timedelta(days=years * 365)
     return start_date.strftime("%Y-%m-%d")
 
 

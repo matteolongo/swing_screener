@@ -89,33 +89,6 @@ export default function Screener() {
   const riskConfig: RiskConfig = activeStrategyQuery.data?.risk ?? config.risk;
   const activeCurrencies = normalizeCurrencies(activeStrategyQuery.data?.universe?.filt?.currencies);
   
-  // Clean legacy localStorage data on mount (one-time migration)
-  useEffect(() => {
-    const legacyKeys = ['screener.universe', 'screener.currencyFilter'];
-    legacyKeys.forEach(key => {
-      const raw = localStorage.getItem(key);
-      if (raw && raw.startsWith('""') && raw.endsWith('""')) {
-        // Double-quoted value like ""usd_all"" - strip outer quotes
-        const cleaned = raw.slice(1, -1);
-        localStorage.setItem(key, cleaned);
-      } else if (raw) {
-        // Legacy plain string like usd_all - JSON-encode so JSON.parse in useLocalStorage succeeds
-        const trimmed = raw.trim();
-        const looksLikeJson =
-          trimmed.startsWith('"') ||
-          trimmed.startsWith('{') ||
-          trimmed.startsWith('[') ||
-          trimmed === 'true' ||
-          trimmed === 'false' ||
-          trimmed === 'null' ||
-          (trimmed !== '' && !isNaN(Number(trimmed)));
-        if (!looksLikeJson) {
-          localStorage.setItem(key, JSON.stringify(raw));
-        }
-      }
-    });
-  }, []);
-  
   // Screener form state with localStorage persistence
   const [selectedUniverse, setSelectedUniverse] = useLocalStorage('screener.universe', 'usd_all', (val: unknown) => {
     // Handle both JSON-encoded strings and plain strings
