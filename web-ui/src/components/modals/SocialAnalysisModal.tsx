@@ -5,6 +5,20 @@ import { analyzeSocial } from '@/features/social/api';
 import SentimentPanel from '@/components/domain/social/SentimentPanel';
 import { t } from '@/i18n/t';
 
+type SocialAnalysisParams = {
+  symbol: string;
+  lookbackInput: string;
+};
+
+function parseLookbackHours(rawValue: string): number | undefined {
+  const trimmed = rawValue.trim();
+  if (trimmed === '') {
+    return undefined;
+  }
+  const parsed = parseInt(trimmed, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
 export default function SocialAnalysisModal({
   symbol,
   onClose,
@@ -15,20 +29,10 @@ export default function SocialAnalysisModal({
   const [lookbackInput, setLookbackInput] = useState('');
 
   const analysisMutation = useMutation({
-    mutationFn: async () => {
-      const trimmed = lookbackInput.trim();
-      let lookbackHours: number | undefined;
-      
-      if (trimmed !== '') {
-        const parsed = parseInt(trimmed, 10);
-        // Only include if it's a valid positive integer
-        if (Number.isFinite(parsed) && parsed > 0) {
-          lookbackHours = parsed;
-        }
-      }
-      
+    mutationFn: async (params: SocialAnalysisParams) => {
+      const lookbackHours = parseLookbackHours(params.lookbackInput);
       return analyzeSocial({
-        symbol,
+        symbol: params.symbol,
         maxEvents: 100,
         lookbackHours,
       });
@@ -37,8 +41,8 @@ export default function SocialAnalysisModal({
 
   useEffect(() => {
     setLookbackInput('');
-    analysisMutation.mutate();
-  }, [symbol]);
+    analysisMutation.mutate({ symbol, lookbackInput: '' });
+  }, [symbol, analysisMutation.mutate]);
 
   const data = analysisMutation.data;
   const defaultLookback = data?.lookbackHours;
@@ -76,7 +80,7 @@ export default function SocialAnalysisModal({
             </div>
             <Button
               variant="primary"
-              onClick={() => analysisMutation.mutate()}
+              onClick={() => analysisMutation.mutate({ symbol, lookbackInput })}
               disabled={analysisMutation.isPending}
             >
               {analysisMutation.isPending ? t('socialAnalysisModal.refreshing') : t('common.actions.refresh')}

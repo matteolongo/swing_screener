@@ -9,7 +9,7 @@ import { IntelligenceRunStatus, IntelligenceOpportunitiesResponse } from '@/feat
 interface IntelligencePanelProps {
   hasCandidates: boolean;
   intelligenceAsofDate: string;
-  intelligenceJobId: string | null;
+  intelligenceJobId?: string;
   intelligenceStatus: UseQueryResult<IntelligenceRunStatus>;
   intelligenceOpportunities: UseQueryResult<IntelligenceOpportunitiesResponse>;
   isRunningIntelligence: boolean;

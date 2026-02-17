@@ -1,5 +1,5 @@
 import { PlayCircle, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
-import { useCallback } from 'react';
+import { useCallback, type ChangeEvent } from 'react';
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import { formatCurrency, formatPercent } from '@/utils/formatters';
@@ -63,17 +63,17 @@ export default function ScreenerForm({
   onRun,
 }: ScreenerFormProps) {
   // Memoized handlers to avoid recreating on every render and reduce duplication
-  const handleTopNChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleTopNChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     const parsed = parseInt(e.target.value) || 20;
     const clamped = Math.min(Math.max(parsed, 1), TOP_N_MAX);
     setTopN(clamped);
   }, [setTopN]);
 
-  const handleMinPriceChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMinPriceChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     setMinPrice(parseFloat(e.target.value) || 0);
   }, [setMinPrice]);
 
-  const handleMaxPriceChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMaxPriceChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     setMaxPrice(parseFloat(e.target.value) || 1000);
   }, [setMaxPrice]);
 

@@ -22,37 +22,18 @@ import IntelligencePanel from '@/components/domain/screener/IntelligencePanel';
 import { queryKeys } from '@/lib/queryKeys';
 import { t } from '@/i18n/t';
 import { fetchSocialWarmupStatus } from '@/features/social/api';
+import { useIntelligenceWorkflow } from '@/features/intelligence/useIntelligenceWorkflow';
 import {
-  useRunIntelligenceMutation,
-  useIntelligenceRunStatus,
-  useIntelligenceOpportunitiesScoped,
-} from '@/features/intelligence/hooks';
+  migrateLegacyScreenerStorage,
+  parseUniverseValue,
+  SCREENER_UNIVERSE_STORAGE_KEY,
+} from '@/features/screener/universeStorage';
 import { useLocalStorage, useModal } from '@/hooks';
 
 const TOP_N_MAX = 200;
 const INTELLIGENCE_ASOF_STORAGE_KEY = 'screener.intelligenceAsofDate';
 const INTELLIGENCE_SYMBOLS_STORAGE_KEY = 'screener.intelligenceSymbols';
 type CurrencyFilter = 'all' | 'usd' | 'eur';
-
-const UNIVERSE_ALIASES: Record<string, string> = {
-  mega: 'usd_all',
-  mega_all: 'usd_all',
-  mega_stocks: 'usd_mega_stocks',
-  core_etfs: 'usd_core_etfs',
-  defense_all: 'usd_defense_all',
-  defense_stocks: 'usd_defense_stocks',
-  defense_etfs: 'usd_defense_etfs',
-  healthcare_all: 'usd_healthcare_all',
-  healthcare_stocks: 'usd_healthcare_stocks',
-  healthcare_etfs: 'usd_healthcare_etfs',
-  mega_defense: 'usd_defense_all',
-  mega_healthcare_biotech: 'usd_healthcare_all',
-  mega_europe: 'eur_europe_large',
-  europe_large: 'eur_europe_large',
-  amsterdam_all: 'eur_amsterdam_all',
-  amsterdam_aex: 'eur_amsterdam_aex',
-  amsterdam_amx: 'eur_amsterdam_amx',
-};
 
 const normalizeCurrencies = (currencies?: string[]): ('USD' | 'EUR')[] => {
   const normalized = (currencies ?? [])
@@ -65,11 +46,6 @@ const currencyFilterToRequest = (value: CurrencyFilter): string[] => {
   if (value === 'usd') return ['USD'];
   if (value === 'eur') return ['EUR'];
   return ['USD', 'EUR'];
-};
-
-const normalizeUniverse = (value: string | null) => {
-  if (!value) return null;
-  return UNIVERSE_ALIASES[value] ?? value;
 };
 
 function getApiErrorStatus(error: unknown): number | undefined {
@@ -89,19 +65,15 @@ export default function Screener() {
   const riskConfig: RiskConfig = activeStrategyQuery.data?.risk ?? config.risk;
   const activeCurrencies = normalizeCurrencies(activeStrategyQuery.data?.universe?.filt?.currencies);
   
-  // Screener form state with localStorage persistence
-  const [selectedUniverse, setSelectedUniverse] = useLocalStorage('screener.universe', 'usd_all', (val: unknown) => {
-    // Handle both JSON-encoded strings and plain strings
-    let rawValue = typeof val === 'string' ? val : null;
-    
-    // Remove surrounding quotes if present (legacy data)
-    if (rawValue && rawValue.startsWith('"') && rawValue.endsWith('"')) {
-      rawValue = rawValue.slice(1, -1);
-    }
-    
-    const normalized = normalizeUniverse(rawValue);
-    return normalized ?? 'usd_all';
-  });
+  useEffect(() => {
+    migrateLegacyScreenerStorage(localStorage);
+  }, []);
+  
+  const [selectedUniverse, setSelectedUniverse] = useLocalStorage(
+    SCREENER_UNIVERSE_STORAGE_KEY,
+    'usd_all',
+    (value: unknown) => parseUniverseValue(value) ?? 'usd_all'
+  );
   const [topN, setTopN] = useLocalStorage('screener.topN', 20, (val: unknown) => {
     const parsed = typeof val === 'number' ? val : parseInt(String(val), 10);
     if (Number.isNaN(parsed)) return 20;
@@ -124,7 +96,7 @@ export default function Screener() {
 
 
   // Intelligence state
-  const [intelligenceJobId, setIntelligenceJobId] = useState<string | null>(null);
+  const [intelligenceJobId, setIntelligenceJobId] = useState<string>();
   const [intelligenceAsofDate, setIntelligenceAsofDate] = useLocalStorage(
     INTELLIGENCE_ASOF_STORAGE_KEY,
     '',
@@ -140,12 +112,6 @@ export default function Screener() {
         .filter((v) => v.length > 0);
     }
   );
-  const intelligenceStatus = useIntelligenceRunStatus(intelligenceJobId ?? undefined);
-  const intelligenceOpportunities = useIntelligenceOpportunitiesScoped(
-    intelligenceAsofDate || undefined,
-    intelligenceSymbols.length > 0 ? intelligenceSymbols : undefined,
-    Boolean(intelligenceAsofDate)
-  );
 
   const universesQuery = useUniverses();
   const universesData = universesQuery.data;
@@ -153,7 +119,7 @@ export default function Screener() {
   const screenerMutation = useRunScreenerMutation(
     (data) => {
       setLastResult(data);
-      setIntelligenceJobId(null);
+      setIntelligenceJobId(undefined);
       setIntelligenceAsofDate('');
       setIntelligenceSymbols([]);
     },
@@ -161,27 +127,6 @@ export default function Screener() {
       console.error('Screener failed', error);
     },
   );
-
-  const intelligenceMutation = useRunIntelligenceMutation((data) => {
-    setIntelligenceJobId(data.jobId);
-    setIntelligenceAsofDate('');
-  });
-
-  useEffect(() => {
-    if (intelligenceStatus.data?.status !== 'completed' || !intelligenceStatus.data.asofDate) {
-      return;
-    }
-    setIntelligenceAsofDate(intelligenceStatus.data.asofDate);
-  }, [intelligenceStatus.data?.asofDate, intelligenceStatus.data?.status, setIntelligenceAsofDate]);
-
-  const handleRunIntelligence = () => {
-    const symbols = candidates.map((c) => c.ticker);
-    if (!symbols.length) {
-      return;
-    }
-    setIntelligenceSymbols(symbols);
-    intelligenceMutation.mutate({ symbols });
-  };
 
   const handleRunScreener = () => {
     screenerMutation.mutate({
@@ -206,6 +151,15 @@ export default function Screener() {
       })
     : allCandidates;
   const warnings = result?.warnings || [];
+  const intelligenceWorkflow = useIntelligenceWorkflow({
+    availableSymbols: candidates.map((candidate) => candidate.ticker),
+    jobId: intelligenceJobId,
+    setJobId: setIntelligenceJobId,
+    asofDate: intelligenceAsofDate || undefined,
+    setAsofDate: (value) => setIntelligenceAsofDate(value ?? ''),
+    runSymbols: intelligenceSymbols,
+    setRunSymbols: setIntelligenceSymbols,
+  });
   const socialWarmupJobId = result?.socialWarmupJobId;
   const socialWarmupQuery = useQuery({
     queryKey: queryKeys.socialWarmupStatus(socialWarmupJobId),
@@ -312,11 +266,11 @@ export default function Screener() {
           <IntelligencePanel
             hasCandidates={candidates.length > 0}
             intelligenceAsofDate={intelligenceAsofDate}
-            intelligenceJobId={intelligenceJobId}
-            intelligenceStatus={intelligenceStatus}
-            intelligenceOpportunities={intelligenceOpportunities}
-            isRunningIntelligence={intelligenceMutation.isPending}
-            onRunIntelligence={handleRunIntelligence}
+            intelligenceJobId={intelligenceWorkflow.jobId}
+            intelligenceStatus={intelligenceWorkflow.statusQuery}
+            intelligenceOpportunities={intelligenceWorkflow.opportunitiesQuery}
+            isRunningIntelligence={intelligenceWorkflow.runMutation.isPending}
+            onRunIntelligence={intelligenceWorkflow.run}
           />
 
           {/* Candidates table */}

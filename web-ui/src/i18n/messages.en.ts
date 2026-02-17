@@ -1057,6 +1057,9 @@ export const messagesEn = {
       positionManagement: {
         title: 'Position Management Rules',
       },
+      sentiment: {
+        title: 'Sentiment Analysis Configuration',
+      },
     },
     indicatorForm: {
       common: {
