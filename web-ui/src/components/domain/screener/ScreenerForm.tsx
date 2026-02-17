@@ -153,7 +153,11 @@ export default function ScreenerForm({
                   <input
                     type="number"
                     value={topN}
-                    onChange={(e) => setTopN(parseInt(e.target.value) || 20)}
+                    onChange={(e) => {
+                      const parsed = parseInt(e.target.value) || 20;
+                      const clamped = Math.min(Math.max(parsed, 1), TOP_N_MAX);
+                      setTopN(clamped);
+                    }}
                     min="1"
                     max={TOP_N_MAX}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -252,7 +256,11 @@ export default function ScreenerForm({
             <input
               type="number"
               value={topN}
-              onChange={(e) => setTopN(parseInt(e.target.value) || 20)}
+              onChange={(e) => {
+                const parsed = parseInt(e.target.value) || 20;
+                const clamped = Math.min(Math.max(parsed, 1), TOP_N_MAX);
+                setTopN(clamped);
+              }}
               min="1"
               max={TOP_N_MAX}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"

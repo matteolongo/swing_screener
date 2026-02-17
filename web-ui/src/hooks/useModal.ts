@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 
 /**
  * Generic modal state management hook.
@@ -29,11 +29,18 @@ import { useState, useCallback } from 'react';
 export function useModal<T = void>() {
   const [isOpen, setIsOpen] = useState(false);
   const [data, setData] = useState<T | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   /**
    * Open the modal, optionally with data
    */
   const open = useCallback((payload?: T) => {
+    // Cancel any pending timeout from previous close
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    
     if (payload !== undefined) {
       setData(payload as T);
     }
@@ -46,8 +53,9 @@ export function useModal<T = void>() {
   const close = useCallback(() => {
     setIsOpen(false);
     // Clear data after a short delay to allow closing animation
-    setTimeout(() => {
+    timeoutRef.current = setTimeout(() => {
       setData(null);
+      timeoutRef.current = null;
     }, 200);
   }, []);
 
@@ -56,6 +64,15 @@ export function useModal<T = void>() {
    */
   const toggle = useCallback(() => {
     setIsOpen((prev) => !prev);
+  }, []);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
   }, []);
 
   return {
