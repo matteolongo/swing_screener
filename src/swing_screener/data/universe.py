@@ -25,6 +25,17 @@ class UniverseConfig:
     max_tickers: Optional[int] = None  # optional cap after loading
 
 
+def _normalize_universe_token(name: str) -> str:
+    """Normalize a universe name token from API/client inputs.
+
+    Accepts accidental wrapping quotes (e.g. '"eur_all"' or "'usd_all'").
+    """
+    token = str(name).strip()
+    while len(token) >= 2 and token[0] == token[-1] and token[0] in {"'", '"'}:
+        token = token[1:-1].strip()
+    return token
+
+
 def normalize_tickers(items: Iterable[str]) -> list[str]:
     out: list[str] = []
     for raw in items:
@@ -98,7 +109,7 @@ def load_universe_from_package(
     Load universe tickers from package data:
       swing_screener/data/universes/<name>.csv
     """
-    raw_name = str(name).strip()
+    raw_name = _normalize_universe_token(name)
     if not raw_name:
         raise ValueError("Universe name is empty.")
 
@@ -119,7 +130,7 @@ def load_universe_from_package(
 
 
 def resolve_universe_name(name: str) -> str:
-    key = str(name).strip().lower()
+    key = _normalize_universe_token(name).lower()
     if not key:
         raise ValueError("Universe name is empty.")
     by_name = _manifest_by_name()
@@ -142,7 +153,7 @@ def resolve_universe_filename(name: str) -> str:
 
 
 def get_universe_meta(name: str) -> Optional[dict]:
-    key = str(name).strip().lower()
+    key = _normalize_universe_token(name).lower()
     if not key:
         return None
     by_name = _manifest_by_name()
