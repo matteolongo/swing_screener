@@ -1,4 +1,5 @@
 import { PlayCircle, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
+import { useCallback } from 'react';
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import { formatCurrency, formatPercent } from '@/utils/formatters';
@@ -7,24 +8,6 @@ import { t } from '@/i18n/t';
 type CurrencyFilter = 'all' | 'usd' | 'eur';
 
 const TOP_N_MAX = 200;
-
-/**
- * Helper functions for form input handlers to reduce duplication
- */
-const createTopNChangeHandler = (setTopN: (value: number) => void) => 
-  (e: React.ChangeEvent<HTMLInputElement>) => {
-    const parsed = parseInt(e.target.value) || 20;
-    const clamped = Math.min(Math.max(parsed, 1), TOP_N_MAX);
-    setTopN(clamped);
-  };
-
-const createMinPriceChangeHandler = (setMinPrice: (value: number) => void) =>
-  (e: React.ChangeEvent<HTMLInputElement>) => 
-    setMinPrice(parseFloat(e.target.value) || 0);
-
-const createMaxPriceChangeHandler = (setMaxPrice: (value: number) => void) =>
-  (e: React.ChangeEvent<HTMLInputElement>) => 
-    setMaxPrice(parseFloat(e.target.value) || 1000);
 
 const formatCurrencyFilterLabel = (currencies: ('USD' | 'EUR')[]): string => {
   if (currencies.length === 1 && currencies[0] === 'USD') return t('screener.currencyFilter.usdOnly');
@@ -79,10 +62,20 @@ export default function ScreenerForm({
   activeCurrencies,
   onRun,
 }: ScreenerFormProps) {
-  // Create memoized handlers to avoid recreating on every render
-  const handleTopNChange = createTopNChangeHandler(setTopN);
-  const handleMinPriceChange = createMinPriceChangeHandler(setMinPrice);
-  const handleMaxPriceChange = createMaxPriceChangeHandler(setMaxPrice);
+  // Memoized handlers to avoid recreating on every render and reduce duplication
+  const handleTopNChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const parsed = parseInt(e.target.value) || 20;
+    const clamped = Math.min(Math.max(parsed, 1), TOP_N_MAX);
+    setTopN(clamped);
+  }, [setTopN]);
+
+  const handleMinPriceChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setMinPrice(parseFloat(e.target.value) || 0);
+  }, [setMinPrice]);
+
+  const handleMaxPriceChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setMaxPrice(parseFloat(e.target.value) || 1000);
+  }, [setMaxPrice]);
 
   return (
     <Card>
