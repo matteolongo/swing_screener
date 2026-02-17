@@ -48,6 +48,9 @@ def test_position_stop_suggestion(monkeypatch, tmp_path):
     positions_file.write_text(json.dumps(positions_data))
 
     config_router.current_config = config_router.DEFAULT_CONFIG.model_copy(deep=True)
+    # Keep this test focused on breakeven behavior only.
+    config_router.current_config.manage.trail_after_r = 999.0
+    config_router.current_config.manage.max_holding_days = 999
 
     monkeypatch.setattr(api.dependencies, "POSITIONS_FILE", positions_file)
     # Mock the provider
