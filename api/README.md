@@ -1,724 +1,83 @@
 # Swing Screener API
 
-FastAPI REST API for the Swing Screener trading system.
+FastAPI service that exposes the Swing Screener backend as a REST API.
 
-## Quick Start
-
-### Start the API Server
-
-```bash
-cd /Users/matteo.longo/projects/randomness/trading/swing_screener
-python -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
-```
-
-Server will be available at:
-- **API**: http://localhost:8000
-- **Interactive docs**: http://localhost:8000/docs
-- **OpenAPI schema**: http://localhost:8000/openapi.json
-
-## Architecture & Reliability
-
-### File Locking (Concurrent Access)
-
-The API uses **file-level locking** to prevent race conditions when multiple clients/processes access `data/positions.json` and `data/orders.json` concurrently:
-
-- **Lock type**: Exclusive locks for writes, shared locks for reads (via `portalocker`)
-- **Timeout**: 5 seconds (returns `503 Service Temporarily Unavailable` if lock can't be acquired)
-- **Granularity**: One lock per file (`data/positions.json`, `data/orders.json`)
-- **Compatibility**: Cross-platform (Linux, macOS, Windows)
-
-**Implementation:**
-- All file I/O goes through `api/utils/file_lock.py`
-- Functions: `locked_read_json()`, `locked_write_json()`
-- CLI also uses locking (`src/swing_screener/utils/file_lock.py`)
-
-**Safe concurrency:**
-- ✅ Multiple browser tabs
-- ✅ Concurrent API requests
-- ✅ CLI + API simultaneously
-- ✅ Multiple users (if shared filesystem)
-
-### Input Validation
-
-The API enforces strict validation on all inputs using **Pydantic validators**:
-
-**Price validation:**
-- Must be positive, finite (no NaN, no Infinity)
-- Reasonable bounds (< $1,000,000 per share)
-- Relationship checks: `entry_price > stop_price` for longs
-
-**Quantity validation:**
-- Positive integers only
-- Maximum: 1,000,000 shares
-
-**Risk validation:**
-- `risk_pct`: 0.01% to 10% (0.0001 to 0.10)
-- `account_size`: positive, max $1B
-
-**Ticker validation:**
-- 1-5 uppercase alphanumeric characters
-- Examples: `AAPL`, `SPY`, `TSLA`
-
-**Stop price validation:**
-- Trailing stops only (new_stop > old_stop)
-- Must remain below entry price for longs
-
-**Invalid requests return:**
-- `400 Bad Request` for business logic errors
-- `422 Unprocessable Entity` for validation errors
-- Detailed error messages with field names
-
-### Error Handling & Security
-
-**Error masking** (prevents information leakage):
-- Unexpected errors → `500 Internal Server Error` with generic message
-- Full stack traces logged server-side only
-- Preserves `HTTPException` and `ValidationError` details
-
-**CORS configuration** (tightened for security):
-- Methods: `["GET", "POST", "PUT", "DELETE", "PATCH"]` (no wildcards)
-- Headers: `["Content-Type", "Authorization"]` (explicit list)
-- Origins: `http://localhost:5173` (dev), configurable for production
-
-**Logging:**
-- All errors logged with context (ticker, endpoint, request ID)
-- No sensitive data in logs (no account_size, positions, PII)
-
-## API Endpoints
-
-### Health & Monitoring
-
-#### `GET /`
-Root endpoint - API information.
-
-```bash
-curl http://localhost:8000/
-```
-
-**Response:**
-```json
-{
-  "status": "ok",
-  "service": "swing-screener-api",
-  "version": "0.1.0",
-  "docs": "/docs",
-  "health": "/health"
-}
-```
-
-#### `GET /health`
-Comprehensive health check for load balancers and monitoring.
-
-```bash
-curl http://localhost:8000/health
-```
-
-**Response (healthy):**
-```json
-{
-  "status": "healthy",
-  "checks": {
-    "files": {
-      "status": "healthy",
-      "positions_file": "ok",
-      "orders_file": "ok",
-      "issues": null
-    },
-    "data_directory": {
-      "status": "ok"
-    }
-  },
-  "metrics": {
-    "uptime_seconds": 12345.67,
-    "lock_contention_total": 3,
-    "validation_failures_total": 0
-  }
-}
-```
-
-**Status codes:**
-- `200 OK` - Healthy or degraded (non-critical issues)
-- `503 Service Unavailable` - Unhealthy (critical issues)
-
-**Status types:**
-- `healthy` - All checks pass
-- `degraded` - Non-critical issues (e.g., invalid JSON, warnings)
-- `unhealthy` - Critical issues (e.g., permission errors, missing files)
-
-#### `GET /metrics`
-Basic metrics for monitoring and debugging.
-
-```bash
-curl http://localhost:8000/metrics
-```
-
-**Response:**
-```json
-{
-  "uptime_seconds": 12345.67,
-  "lock_contention_total": 3,
-  "validation_failures_total": 0
-}
-```
-
-**Metrics:**
-- `uptime_seconds` - Time since server started
-- `lock_contention_total` - Number of times lock acquisition timed out
-- `validation_failures_total` - Count of Pydantic validation errors (422 status)
-
----
-
-### Config Router (`/api/config`)
-
-Manage application settings (risk, indicators, position management).
-
-#### `GET /api/config`
-Get current configuration.
-
-```bash
-curl http://localhost:8000/api/config
-```
-
-#### `PUT /api/config`
-Update configuration.
-
-```bash
-curl -X PUT http://localhost:8000/api/config \
-  -H "Content-Type: application/json" \
-  -d '{
-    "risk": {
-      "account_size": 100000,
-      "risk_pct": 0.02,
-      "max_position_pct": 0.60,
-      "min_shares": 1,
-      "k_atr": 2.0
-    },
-    "indicators": {
-      "sma_fast": 20,
-      "sma_mid": 50,
-      "sma_long": 200,
-      "atr_window": 14,
-      "lookback_6m": 126,
-      "lookback_12m": 252,
-      "benchmark": "SPY",
-      "breakout_lookback": 50,
-      "pullback_ma": 20,
-      "min_history": 260
-    },
-    "manage": {
-      "breakeven_at_r": 1.0,
-      "trail_after_r": 2.0,
-      "trail_sma": 20,
-      "sma_buffer_pct": 0.005,
-      "max_holding_days": 20
-    },
-    "positions_file": "data/positions.json",
-    "orders_file": "data/orders.json"
-  }'
-```
-
-#### `POST /api/config/reset`
-Reset configuration to defaults.
-
-```bash
-curl -X POST http://localhost:8000/api/config/reset
-```
-
-#### `GET /api/config/defaults`
-Get default configuration.
-
-```bash
-curl http://localhost:8000/api/config/defaults
-```
-
----
-
-### Strategy Router (`/api/strategy`)
-
-Manage strategy definitions stored on disk (default strategy is always present).
-
-#### `GET /api/strategy`
-List all strategies.
-
-```bash
-curl http://localhost:8000/api/strategy
-```
-
-#### `GET /api/strategy/active`
-Get the active strategy.
-
-```bash
-curl http://localhost:8000/api/strategy/active
-```
-
-#### `POST /api/strategy/active`
-Set active strategy.
-
-```bash
-curl -X POST http://localhost:8000/api/strategy/active \
-  -H "Content-Type: application/json" \
-  -d '{ "strategy_id": "default" }'
-```
-
-#### `POST /api/strategy`
-Create a new strategy (full payload required).
-
-#### `PUT /api/strategy/{strategy_id}`
-Update an existing strategy.
-
-#### `DELETE /api/strategy/{strategy_id}`
-Delete a strategy (default strategy cannot be deleted).
-
----
-
-### Portfolio Router (`/api/portfolio`)
-
-Manage positions and orders.
-
-#### Positions
-
-**`GET /api/portfolio/positions`**  
-Get all positions, optionally filtered by status.
-
-```bash
-# Get all positions
-curl http://localhost:8000/api/portfolio/positions
-
-# Get only open positions
-curl http://localhost:8000/api/portfolio/positions?status=open
-
-# Get only closed positions
-curl http://localhost:8000/api/portfolio/positions?status=closed
-```
-
-**`GET /api/portfolio/positions/{position_id}`**  
-Get a specific position by ID.
-
-```bash
-curl http://localhost:8000/api/portfolio/positions/POS-VALE-20260116-01
-```
-
-**`PUT /api/portfolio/positions/{position_id}/stop`**  
-Update stop price for a position (only moves UP).
-
-```bash
-curl -X PUT http://localhost:8000/api/portfolio/positions/POS-VALE-20260116-01/stop \
-  -H "Content-Type: application/json" \
-  -d '{
-    "new_stop": 15.50,
-    "reason": "trailing stop after +2R"
-  }'
-```
-
-**`GET /api/portfolio/positions/{position_id}/stop-suggestion`**  
-Get a suggested stop price based on the strategy manage rules.
-
-```bash
-curl http://localhost:8000/api/portfolio/positions/POS-VALE-20260116-01/stop-suggestion
-```
-
-**`POST /api/portfolio/positions/{position_id}/close`**  
-Close a position.
-
-```bash
-curl -X POST http://localhost:8000/api/portfolio/positions/POS-VALE-20260116-01/close \
-  -H "Content-Type: application/json" \
-  -d '{
-    "exit_price": 17.25,
-    "reason": "profit target reached"
-  }'
-```
-
-#### Orders
-
-**`GET /api/portfolio/orders`**  
-Get all orders, optionally filtered.
-
-```bash
-# Get all orders
-curl http://localhost:8000/api/portfolio/orders
-
-# Get only pending orders
-curl http://localhost:8000/api/portfolio/orders?status=pending
-
-# Get orders for a ticker
-curl http://localhost:8000/api/portfolio/orders?ticker=VALE
-```
-
-**`GET /api/portfolio/orders/snapshot`**  
-Get pending orders enriched with latest close and distance to limit/stop.
-
-```bash
-curl http://localhost:8000/api/portfolio/orders/snapshot
-```
-
-**`GET /api/portfolio/orders/{order_id}`**  
-Get a specific order by ID.
-
-```bash
-curl http://localhost:8000/api/portfolio/orders/ORD-VALE-20260116-ENTRY
-```
-
-**`POST /api/portfolio/orders`**  
-Create a new order.
-
-```bash
-curl -X POST http://localhost:8000/api/portfolio/orders \
-  -H "Content-Type: application/json" \
-  -d '{
-    "ticker": "AAPL",
-    "order_type": "BUY_LIMIT",
-    "quantity": 10,
-    "limit_price": 175.50,
-    "stop_price": 170.00,
-    "notes": "breakout entry",
-    "order_kind": "entry"
-  }'
-```
-
-**`POST /api/portfolio/orders/{order_id}/fill`**  
-Fill an order.
-
-```bash
-curl -X POST http://localhost:8000/api/portfolio/orders/AAPL-20260205001815/fill \
-  -H "Content-Type: application/json" \
-  -d '{
-    "filled_price": 175.45,
-    "filled_date": "2026-02-05"
-  }'
-```
-
----
-
-### Backtest Router (`/api/backtest`)
-
-Run backtests and manage saved simulations.
-
-**`POST /api/backtest/quick`**  
-Quick single‑ticker backtest (existing modal).
-
-**`POST /api/backtest/run`**  
-Full backtest for one or more tickers. Automatically saves the simulation to disk.
-
-Key request fields:
-- `tickers` (list of symbols)
-- `start`, `end` (YYYY‑MM‑DD)
-- `strategy_id` (optional, defaults to active)
-- `entry_type` (`auto`, `breakout`, `pullback`)
-- Backtest params: `breakout_lookback`, `pullback_ma`, `min_history`, `atr_window`, `k_atr`,
-  `breakeven_at_r`, `trail_after_r`, `trail_sma`, `sma_buffer_pct`, `max_holding_days`, `commission_pct`
-
-**`GET /api/backtest/simulations`**  
-List saved simulations (metadata only).
-
-**`GET /api/backtest/simulations/{id}`**  
-Load a saved simulation (params + results).
-
-**`DELETE /api/backtest/simulations/{id}`**  
-Delete a saved simulation.
-
-**`DELETE /api/portfolio/orders/{order_id}`**  
-Cancel an order.
-
-```bash
-curl -X DELETE http://localhost:8000/api/portfolio/orders/AAPL-20260205001815
-```
-
----
-
-### Screener Router (`/api/screener`)
-
-Run the screener and preview orders.
-
-#### `GET /api/screener/universes`
-List available universe files.
-
-```bash
-curl http://localhost:8000/api/screener/universes
-```
-
-Response:
-```json
-{
-  "universes": ["mega_all", "mega_stocks", "core_etfs", "defense_all", "defense_stocks", "defense_etfs", "healthcare_all", "healthcare_stocks", "healthcare_etfs", "europe_large", "amsterdam_aex", "amsterdam_all", "amsterdam_amx"]
-}
-```
-
-#### `POST /api/screener/run`
-Run the screener on a universe.
-
-```bash
-# Using a named universe
-curl -X POST http://localhost:8000/api/screener/run \
-  -H "Content-Type: application/json" \
-  -d '{
-    "universe": "mega_all",
-    "top": 20
-  }'
-
-# Using explicit tickers
-curl -X POST http://localhost:8000/api/screener/run \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tickers": ["AAPL", "MSFT", "GOOGL"],
-    "top": 10
-  }'
-
-# With specific date
-curl -X POST http://localhost:8000/api/screener/run \
-  -H "Content-Type: application/json" \
-  -d '{
-    "universe": "mega_all",
-    "top": 20,
-    "asof_date": "2026-02-03"
-  }'
-```
-
-Response:
-```json
-{
-  "candidates": [
-    {
-      "ticker": "NVDA",
-      "close": 750.25,
-      "sma_20": 735.50,
-      "sma_50": 720.00,
-      "sma_200": 650.00,
-      "atr": 15.75,
-      "momentum_6m": 0.45,
-      "momentum_12m": 1.25,
-      "rel_strength": 0.35,
-      "score": 0.92,
-      "rank": 1
-    }
-  ],
-  "asof_date": "2026-02-05",
-  "total_screened": 50
-}
-```
-
-#### `POST /api/screener/preview-order`
-Preview order calculations (shares, position size, risk).
-
-```bash
-curl -X POST "http://localhost:8000/api/screener/preview-order?ticker=NVDA&entry_price=750.25&stop_price=735.00&account_size=50000&risk_pct=0.01"
-```
-
-Response:
-```json
-{
-  "ticker": "NVDA",
-  "entry_price": 750.25,
-  "stop_price": 735.00,
-  "atr": 15.25,
-  "shares": 32,
-  "position_size_usd": 24008.00,
-  "risk_usd": 488.00,
-  "risk_pct": 0.00976
-}
-```
-
----
-
-### Social Router (`/api/social`)
-On‑demand social sentiment analysis (risk/awareness only).
-
-#### `POST /api/social/analyze`
-Fetch recent social events for a symbol and compute sentiment + attention metrics.
-
-```bash
-curl -X POST http://localhost:8000/api/social/analyze \
-  -H "Content-Type: application/json" \
-  -d '{
-    "symbol": "AAPL",
-    "lookback_hours": 24,
-    "max_events": 100,
-    "providers": ["reddit", "yahoo_finance"],
-    "sentiment_analyzer": "keyword"
-  }'
-```
-
-Response includes:
-- `status` (`ok` | `no_data` | `error`)
-- `last_execution_at`
-- metrics (sentiment, attention, hype)
-- `raw_events` (returned even when sample size is low)
-
-#### `GET /api/social/warmup/{job_id}`
-Get status of a background social warmup job started by screener runs.
-
-```bash
-curl http://localhost:8000/api/social/warmup/<job_id>
-```
-
-Response includes:
-- `status` (`queued` | `running` | `completed`)
-- symbol counters (`total_symbols`, `completed_symbols`, `ok_symbols`, `no_data_symbols`, `error_symbols`)
-- timestamps (`created_at`, `updated_at`)
-
-Notes:
-- `404 Not Found` means the job id is stale or no longer available (for example after backend restart).
-- In that case, run the screener again to start a fresh warmup job.
-
----
-
-## CORS Configuration
-
-The API allows requests from:
-- `http://localhost:5173` (Vite dev server)
-- `http://localhost:5174` (Vite dev server alternate)
-
-To add more origins, edit `api/main.py`:
-
-```python
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://your-domain.com",  # Add your domain
-    ],
-    ...
-)
-```
-
----
-
-## Data Files
-
-The API reads/writes to:
-- `data/positions.json` - Open and closed positions
-- `data/orders.json` - Pending, filled, and cancelled orders
-
-These paths are defaults and can be overridden via config.
-
----
-
-## Related Docs
-
-- [Web UI Guide](../docs/WEB_UI_GUIDE.md)
-- [Troubleshooting Guide](../docs/TROUBLESHOOTING.md)
-
----
-
-## Error Handling
-
-All endpoints return standard HTTP status codes:
-
-- **200 OK** - Success
-- **400 Bad Request** - Validation error
-- **404 Not Found** - Resource not found
-- **500 Internal Server Error** - Server error
-
-Error response format:
-```json
-{
-  "detail": "Error message"
-}
-```
-
-Unexpected server errors may additionally include:
-
-```json
-{
-  "detail": "Internal server error",
-  "message": "An unexpected error occurred. Please contact support if the issue persists."
-}
-```
-
----
-
-## Development
-
-### Run in development mode (auto-reload)
-
+## Run
 ```bash
 python -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-### Run in production mode
+Docs:
+- `http://localhost:8000/docs`
+- `http://localhost:8000/openapi.json`
 
-```bash
-python -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --workers 4
-```
+## Data + Concurrency
+- Primary persistence: JSON files in `data/` (orders, positions, strategies, config).
+- File access is guarded by `api/utils/file_lock.py` to avoid concurrent write races.
+- Database module exists but is not wired by default (see `docs/engineering/DATABASE_MIGRATION.md`).
 
----
+## API Surface (by router)
+Health:
+- `GET /`
+- `GET /health`
+- `GET /metrics`
 
-## Testing
+Config (`/api/config`):
+- `GET /api/config`
+- `PUT /api/config`
+- `POST /api/config/reset`
+- `GET /api/config/defaults`
 
-### Quick health check
+Strategy (`/api/strategy`):
+- `GET /api/strategy`
+- `GET /api/strategy/active`
+- `POST /api/strategy/active`
+- `POST /api/strategy/validate`
+- `GET /api/strategy/{strategy_id}`
+- `POST /api/strategy`
+- `PUT /api/strategy/{strategy_id}`
+- `DELETE /api/strategy/{strategy_id}`
 
-```bash
-curl http://localhost:8000/health
-```
+Screener (`/api/screener`):
+- `GET /api/screener/universes`
+- `POST /api/screener/run`
+- `POST /api/screener/preview-order`
 
-### Test all endpoints
+Portfolio (`/api/portfolio`):
+- `GET /api/portfolio/positions`
+- `GET /api/portfolio/positions/{position_id}`
+- `GET /api/portfolio/positions/{position_id}/metrics`
+- `PUT /api/portfolio/positions/{position_id}/stop`
+- `GET /api/portfolio/positions/{position_id}/stop-suggestion`
+- `POST /api/portfolio/positions/{position_id}/close`
+- `GET /api/portfolio/summary`
+- `GET /api/portfolio/orders`
+- `GET /api/portfolio/orders/snapshot`
+- `GET /api/portfolio/orders/{order_id}`
+- `POST /api/portfolio/orders`
+- `POST /api/portfolio/orders/{order_id}/fill`
+- `DELETE /api/portfolio/orders/{order_id}`
 
-```bash
-# Config
-curl http://localhost:8000/api/config
+Backtest (`/api/backtest`):
+- `POST /api/backtest/quick`
+- `POST /api/backtest/run`
+- `GET /api/backtest/simulations`
+- `GET /api/backtest/simulations/{sim_id}`
+- `DELETE /api/backtest/simulations/{sim_id}`
 
-# Positions
-curl http://localhost:8000/api/portfolio/positions?status=open
+Daily Review (`/api/daily-review`):
+- `GET /api/daily-review`
 
-# Orders
-curl http://localhost:8000/api/portfolio/orders?status=pending
+Intelligence (`/api/intelligence`):
+- `POST /api/intelligence/run`
+- `GET /api/intelligence/run/{job_id}`
+- `GET /api/intelligence/opportunities`
+- `POST /api/intelligence/classify`
 
-# Universes
-curl http://localhost:8000/api/screener/universes
-```
+Social (`/api/social`):
+- `GET /api/social/providers`
+- `POST /api/social/analyze`
+- `GET /api/social/warmup/{job_id}`
 
----
-
-## Architecture
-
-```
-api/
-├── main.py              # FastAPI app, CORS, lifespan
-├── models.py            # Pydantic models (request/response)
-├── dependencies.py      # Shared helpers (JSON I/O)
-└── routers/
-    ├── config.py        # Config endpoints
-    ├── screener.py      # Screener endpoints
-    └── portfolio.py     # Positions & orders endpoints
-```
-
----
-
-## Notes
-
-### Risk-First Principles
-
-- **Stop updates**: Can only move stops UP (never down)
-- **R-multiples**: All position management based on R
-- **No auto-execution**: All orders require manual action
-- **Transparent**: No hidden state or magic
-
-### State Management
-
-- **Filesystem-based**: JSON files are single source of truth
-- **No caching**: Every request reads fresh data
-- **Atomic writes**: Changes written immediately
-
-### Integration with CLI
-
-The API uses the same Python modules as the CLI:
-- `swing_screener.data.*` - Market data & universes
-- `swing_screener.portfolio.*` - Position management
-- `swing_screener.execution.*` - Order handling
-- `swing_screener.reporting.*` - Screener logic
-
-No duplication of business logic.
-
----
-
-## Next Steps
-
-To connect the web UI:
-1. Start the API server
-2. Start the web UI: `cd web-ui && npm run dev`
-3. Web UI will connect to `http://localhost:8000`
-
----
-
-_End of API README_
+## Ownership
+Routers live in `api/routers/` and call services in `api/services/`.
