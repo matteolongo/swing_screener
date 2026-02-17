@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
+import CurrencyBadge from '@/components/common/CurrencyBadge';
 import { useConfigStore } from '@/stores/configStore';
 import {
   Position,
@@ -25,6 +26,7 @@ import {
   useIntelligenceRunStatus,
   useRunIntelligenceMutation,
 } from '@/features/intelligence/hooks';
+import { detectCurrency } from '@/utils/currency';
 import { t } from '@/i18n/t';
 import { useOnboardingStore } from '@/stores/onboardingStore';
 import OnboardingModal from '@/components/modals/OnboardingModal';
@@ -417,6 +419,7 @@ export default function Dashboard() {
                       <div key={order.orderId} className="flex items-center justify-between text-sm border-l-2 border-blue-400 pl-3 py-1">
                         <div className="flex items-center gap-2">
                           <Badge variant="warning">{order.ticker}</Badge>
+                          <CurrencyBadge currency={detectCurrency(order.ticker)} />
                           <span className="text-gray-700 dark:text-gray-300">{order.orderType}</span>
                           <span className="text-gray-500">×{order.quantity}</span>
                         </div>
@@ -464,16 +467,25 @@ export default function Dashboard() {
                   <div className="space-y-2">
                     {positions.slice(0, 3).map((pos: Position) => {
                       const pnl = calculatePnL(pos);
+                      const currentPrice = pos.currentPrice ?? pos.entryPrice;
+                      const currentValue = currentPrice * pos.shares;
                       return (
                         <div key={pos.positionId} className="flex items-center justify-between text-sm border-l-2 border-green-400 pl-3 py-1">
                           <div className="flex items-center gap-2">
                             <Badge variant="success">{pos.ticker}</Badge>
-                            <span className="text-gray-500">×{pos.shares}</span>
-                            <span className="text-gray-700 dark:text-gray-300">{formatCurrency(pos.entryPrice)}</span>
+                            <CurrencyBadge currency={detectCurrency(pos.ticker)} />
+                            <span className="text-gray-500 text-xs">
+                              {pos.shares} × {formatCurrency(currentPrice)}
+                            </span>
                           </div>
-                          <span className={`text-sm font-medium ${pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {pnl >= 0 ? '+' : ''}{formatCurrency(pnl)}
-                          </span>
+                          <div className="flex flex-col items-end">
+                            <span className={`text-sm font-semibold ${pnl >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                              {formatCurrency(currentValue)}
+                            </span>
+                            <span className={`text-xs ${pnl >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                              {pnl >= 0 ? '+' : ''}{formatCurrency(pnl)}
+                            </span>
+                          </div>
                         </div>
                       );
                     })}

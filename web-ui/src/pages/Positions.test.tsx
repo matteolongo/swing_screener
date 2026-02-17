@@ -107,7 +107,8 @@ describe('Positions Page', () => {
         expect(screen.getByText('VALE')).toBeInTheDocument()
         expect(screen.getByText('Value')).toBeInTheDocument()
         expect(screen.getByText('$97.80')).toBeInTheDocument()
-        expect(screen.getByText(/from \$95\.34/)).toBeInTheDocument()
+        // Now displays inline calculation format: shares × price
+        expect(screen.getByText(/6 × \$16\.30/)).toBeInTheDocument()
       })
     })
   })

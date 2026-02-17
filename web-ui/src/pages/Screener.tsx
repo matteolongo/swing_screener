@@ -98,6 +98,20 @@ export default function Screener() {
         // Double-quoted value like ""usd_all"" - strip outer quotes
         const cleaned = raw.slice(1, -1);
         localStorage.setItem(key, cleaned);
+      } else if (raw) {
+        // Legacy plain string like usd_all - JSON-encode so JSON.parse in useLocalStorage succeeds
+        const trimmed = raw.trim();
+        const looksLikeJson =
+          trimmed.startsWith('"') ||
+          trimmed.startsWith('{') ||
+          trimmed.startsWith('[') ||
+          trimmed === 'true' ||
+          trimmed === 'false' ||
+          trimmed === 'null' ||
+          (trimmed !== '' && !isNaN(Number(trimmed)));
+        if (!looksLikeJson) {
+          localStorage.setItem(key, JSON.stringify(raw));
+        }
       }
     });
   }, []);

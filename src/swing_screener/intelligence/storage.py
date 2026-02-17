@@ -13,7 +13,7 @@ from swing_screener.intelligence.models import (
     SymbolState,
     ThemeCluster,
 )
-from swing_screener.utils.file_lock import locked_write_json_cli
+from swing_screener.utils.file_lock import locked_write_json_cli, locked_read_json_cli
 
 
 class IntelligenceStorage:
@@ -109,15 +109,24 @@ class IntelligenceStorage:
         return latest or None
 
     def load_symbol_state(self) -> dict[str, SymbolState]:
+        """Load symbol state with file locking to prevent race conditions during concurrent reads/writes."""
         path = self.symbol_state_path
         if not path.exists():
             return {}
-        raw = path.read_text(encoding="utf-8").strip()
-        if not raw:
+        
+        try:
+            # Use locked read to prevent partial/invalid reads during concurrent writes
+            records = locked_read_json_cli(path)
+        except Exception as e:
+            # If lock fails or file is empty/invalid, return empty state
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Error reading symbol_state.json: {e}")
             return {}
-        records = json.loads(raw)
+        
         if not isinstance(records, list):
             return {}
+        
         state: dict[str, SymbolState] = {}
         for record in records:
             if not isinstance(record, dict):

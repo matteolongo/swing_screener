@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
 from api.models.config import AppConfig
-from api.repositories.config_repo import ConfigRepository, DEFAULT_CONFIG
+from api.repositories.config_repo import ConfigRepository
 from api.dependencies import get_config_repo
 
 router = APIRouter()
