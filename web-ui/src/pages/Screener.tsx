@@ -104,7 +104,11 @@ export default function Screener() {
         const looksLikeJson =
           trimmed.startsWith('"') ||
           trimmed.startsWith('{') ||
-          trimmed.startsWith('[');
+          trimmed.startsWith('[') ||
+          trimmed === 'true' ||
+          trimmed === 'false' ||
+          trimmed === 'null' ||
+          !isNaN(Number(trimmed));
         if (!looksLikeJson) {
           localStorage.setItem(key, JSON.stringify(raw));
         }

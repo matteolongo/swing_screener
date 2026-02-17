@@ -117,8 +117,11 @@ class IntelligenceStorage:
         try:
             # Use locked read to prevent partial/invalid reads during concurrent writes
             records = locked_read_json_cli(path)
-        except Exception:
+        except Exception as e:
             # If lock fails or file is empty/invalid, return empty state
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Error reading symbol_state.json: {e}")
             return {}
         
         if not isinstance(records, list):
