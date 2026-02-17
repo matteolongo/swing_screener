@@ -3,7 +3,8 @@ import type { OrderFilterStatus, PositionFilterStatus } from '@/features/portfol
 export const queryKeys = {
   strategies: () => ['strategies'] as const,
   strategyActive: () => ['strategy-active'] as const,
-  strategyValidation: (payloadHash?: string | null) => ['strategy-validation', payloadHash ?? null] as const,
+  strategyValidation: (payloadHash?: string | null) =>
+    payloadHash == null ? (['strategy-validation'] as const) : (['strategy-validation', payloadHash] as const),
   universes: () => ['universes'] as const,
   dailyReview: (topN: number, universe?: string | null) => ['dailyReview', topN, universe ?? null] as const,
   orders: (status?: OrderFilterStatus) =>

@@ -47,7 +47,7 @@ export const mockStrategies = [
     },
     signals: { breakout_lookback: 50, pullback_ma: 20, min_history: 260 },
     risk: {
-      account_size: 50000.0,
+      account_size: 500.0,
       risk_pct: 0.01,
       max_position_pct: 0.6,
       min_shares: 1,
@@ -122,7 +122,7 @@ export const mockStrategies = [
     },
     signals: { breakout_lookback: 40, pullback_ma: 15, min_history: 200 },
     risk: {
-      account_size: 50000.0,
+      account_size: 500.0,
       risk_pct: 0.01,
       max_position_pct: 0.5,
       min_shares: 1,
@@ -447,9 +447,19 @@ export const mockPortfolioSummary = {
   total_pnl: 2.46,
   total_pnl_percent: 2.58,
   open_risk: 7.74,
-  open_risk_percent: 0.01548,
-  account_size: 50000,
-  available_capital: 49902.2,
+  open_risk_percent: 1.548,
+  account_size: 500,
+  available_capital: 402.2,
+  largest_position_value: 97.8,
+  largest_position_ticker: 'VALE',
+  best_performer_ticker: 'VALE',
+  best_performer_pnl_pct: 2.58,
+  worst_performer_ticker: 'VALE',
+  worst_performer_pnl_pct: 2.58,
+  avg_r_now: 0.3178,
+  positions_profitable: 1,
+  positions_losing: 0,
+  win_rate: 100,
 }
 
 export const mockPositionMetrics = {
@@ -461,6 +471,26 @@ export const mockPositionMetrics = {
   current_value: 97.8,
   per_share_risk: 1.29,
   total_risk: 7.74,
+}
+
+const buildPositionMetrics = (position: (typeof mockPositions)[number]) => {
+  const referencePrice = position.exit_price ?? position.current_price ?? position.entry_price
+  const pnl = (referencePrice - position.entry_price) * position.shares
+  const pnlPercent = ((referencePrice - position.entry_price) / position.entry_price) * 100
+  const perShareRisk = position.initial_risk ?? (position.entry_price - position.stop_price)
+  const totalRisk = perShareRisk * position.shares
+  const rNow = totalRisk > 0 ? pnl / totalRisk : 0
+
+  return {
+    ticker: position.ticker,
+    pnl,
+    pnl_percent: pnlPercent,
+    r_now: rNow,
+    entry_value: position.entry_price * position.shares,
+    current_value: referencePrice * position.shares,
+    per_share_risk: perShareRisk,
+    total_risk: totalRisk,
+  }
 }
 
 export const mockBacktestRun = {
@@ -771,7 +801,13 @@ export const handlers = [
       positions = mockPositions.filter((p) => p.status === status)
     }
     
-    return HttpResponse.json({ positions, asof: '2026-02-08' })
+    return HttpResponse.json({
+      positions: positions.map((position) => ({
+        ...position,
+        ...buildPositionMetrics(position),
+      })),
+      asof: '2026-02-08',
+    })
   }),
 
   http.get(`${API_BASE_URL}/api/portfolio/positions/:id/metrics`, ({ params }) => {
@@ -782,13 +818,7 @@ export const handlers = [
     }
     return HttpResponse.json({
       ...mockPositionMetrics,
-      ticker: position.ticker,
-      pnl: ((position.current_price ?? position.entry_price) - position.entry_price) * position.shares,
-      pnl_percent: (((position.current_price ?? position.entry_price) - position.entry_price) / position.entry_price) * 100,
-      entry_value: position.entry_price * position.shares,
-      current_value: (position.current_price ?? position.entry_price) * position.shares,
-      per_share_risk: position.initial_risk ?? (position.entry_price - position.stop_price),
-      total_risk: (position.initial_risk ?? (position.entry_price - position.stop_price)) * position.shares,
+      ...buildPositionMetrics(position),
     })
   }),
 

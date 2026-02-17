@@ -8,10 +8,10 @@ from fastapi import APIRouter, Depends
 from api.models.portfolio import (
     Position,
     PositionUpdate,
+    PositionsWithMetricsResponse,
     PositionMetrics,
     PortfolioSummary,
     Order,
-    PositionsResponse,
     OrdersResponse,
     OrdersSnapshotResponse,
     CreateOrderRequest,
@@ -28,7 +28,7 @@ router = APIRouter()
 
 # ===== Positions =====
 
-@router.get("/positions", response_model=PositionsResponse)
+@router.get("/positions", response_model=PositionsWithMetricsResponse)
 async def get_positions(
     status: Optional[str] = None,
     service: PortfolioService = Depends(get_portfolio_service),
