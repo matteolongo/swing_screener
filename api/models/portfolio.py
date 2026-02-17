@@ -213,6 +213,23 @@ class PositionsResponse(BaseModel):
     asof: str
 
 
+class PositionWithMetrics(Position):
+    """Position with precomputed financial metrics."""
+
+    pnl: float = Field(..., description="Absolute profit/loss in dollars")
+    pnl_percent: float = Field(..., description="P&L as percentage")
+    r_now: float = Field(..., description="Current R-multiple")
+    entry_value: float = Field(..., description="Total entry value (shares × entry_price)")
+    current_value: float = Field(..., description="Current market value (shares × current_price)")
+    per_share_risk: float = Field(..., description="Risk per share in dollars")
+    total_risk: float = Field(..., description="Total position risk (per_share_risk × shares)")
+
+
+class PositionsWithMetricsResponse(BaseModel):
+    positions: list[PositionWithMetrics]
+    asof: str
+
+
 class PositionMetrics(BaseModel):
     """Calculated metrics for a position."""
 
@@ -238,6 +255,16 @@ class PortfolioSummary(BaseModel):
     open_risk_percent: float = Field(..., description="Open risk as % of account size")
     account_size: float = Field(..., description="Account size from strategy config")
     available_capital: float = Field(..., description="Account size minus total position value")
+    largest_position_value: float = Field(..., description="Value of largest single position")
+    largest_position_ticker: str = Field(..., description="Ticker of largest position")
+    best_performer_ticker: str = Field(..., description="Ticker with highest P&L %")
+    best_performer_pnl_pct: float = Field(..., description="Best P&L percentage")
+    worst_performer_ticker: str = Field(..., description="Ticker with lowest P&L %")
+    worst_performer_pnl_pct: float = Field(..., description="Worst P&L percentage")
+    avg_r_now: float = Field(..., description="Average R-multiple across all positions")
+    positions_profitable: int = Field(..., description="Number of positions in profit")
+    positions_losing: int = Field(..., description="Number of positions at loss")
+    win_rate: float = Field(..., description="Percentage of positions profitable")
 
 
 class OrdersResponse(BaseModel):

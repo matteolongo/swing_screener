@@ -12,7 +12,8 @@ from fastapi import HTTPException
 from api.models.portfolio import (
     Position,
     PositionUpdate,
-    PositionsResponse,
+    PositionWithMetrics,
+    PositionsWithMetricsResponse,
     PositionMetrics,
     PortfolioSummary,
     Order,
@@ -180,9 +181,9 @@ class PortfolioService:
             return float(current_price)
         return float(position.get("entry_price", 0.0))
 
-    def list_positions(self, status: Optional[str] = None) -> PositionsResponse:
-        positions, asof = self._positions_repo.list_positions(status=status)
-
+    def _attach_live_prices(self, positions: list[dict]) -> dict[str, float]:
+        """Attach latest price to open positions and return fetched price map."""
+        last_prices: dict[str, float] = {}
         open_positions = [p for p in positions if p.get("status") == "open"]
         if open_positions:
             try:
@@ -205,7 +206,42 @@ class PortfolioService:
                     if pos.get("status") == "open":
                         pos["current_price"] = None
 
-        return PositionsResponse(positions=positions, asof=asof)
+        return last_prices
+
+    def _build_position_with_metrics(
+        self,
+        position: dict,
+        current_prices: dict[str, float],
+    ) -> PositionWithMetrics:
+        state_position = _to_state_position(position)
+        ticker = state_position.ticker.upper()
+        current_price = current_prices.get(ticker, self._fallback_price(position))
+        per_share_risk = calculate_per_share_risk(state_position)
+
+        payload = dict(position)
+        if state_position.status == "open":
+            payload["current_price"] = current_price
+
+        return PositionWithMetrics(
+            **payload,
+            pnl=calculate_pnl(state_position.entry_price, current_price, state_position.shares),
+            pnl_percent=calculate_pnl_percent(state_position.entry_price, current_price),
+            r_now=calculate_r_now(state_position, current_price),
+            entry_value=calculate_total_position_value(state_position.entry_price, state_position.shares),
+            current_value=calculate_current_position_value(current_price, state_position.shares),
+            per_share_risk=per_share_risk,
+            total_risk=per_share_risk * state_position.shares,
+        )
+
+    def list_positions(self, status: Optional[str] = None) -> PositionsWithMetricsResponse:
+        positions, asof = self._positions_repo.list_positions(status=status)
+        current_prices = self._attach_live_prices(positions)
+
+        positions_with_metrics = [
+            self._build_position_with_metrics(position, current_prices)
+            for position in positions
+        ]
+        return PositionsWithMetricsResponse(positions=positions_with_metrics, asof=asof)
 
     def get_position(self, position_id: str) -> Position:
         position = self._positions_repo.get_position(position_id)
@@ -243,7 +279,8 @@ class PortfolioService:
         )
 
     def get_portfolio_summary(self, account_size: float) -> PortfolioSummary:
-        positions, _ = self._positions_repo.list_positions(status="open")
+        positions_response = self.list_positions(status="open")
+        positions = positions_response.positions
         if not positions:
             return PortfolioSummary(
                 total_positions=0,
@@ -255,35 +292,64 @@ class PortfolioService:
                 open_risk_percent=0.0,
                 account_size=account_size,
                 available_capital=account_size,
+                largest_position_value=0.0,
+                largest_position_ticker="",
+                best_performer_ticker="",
+                best_performer_pnl_pct=0.0,
+                worst_performer_ticker="",
+                worst_performer_pnl_pct=0.0,
+                avg_r_now=0.0,
+                positions_profitable=0,
+                positions_losing=0,
+                win_rate=0.0,
             )
-
-        tickers = list({str(p.get("ticker", "")).upper() for p in positions if p.get("ticker")})
-        current_prices: dict[str, float] = {}
-        try:
-            current_prices = self._fetch_last_prices(tickers)
-        except Exception as exc:
-            logger.warning("Failed to fetch portfolio summary prices: %s", exc)
 
         total_value = 0.0
         total_cost_basis = 0.0
         total_pnl = 0.0
         open_risk = 0.0
+        largest_position_value = 0.0
+        largest_position_ticker = ""
+        best_performer_ticker = ""
+        best_performer_pnl_pct = float("-inf")
+        worst_performer_ticker = ""
+        worst_performer_pnl_pct = float("inf")
+        total_r_now = 0.0
+        r_count = 0
+        positions_profitable = 0
+        positions_losing = 0
 
         for position in positions:
-            state_position = _to_state_position(position)
-            ticker = state_position.ticker.upper()
-            current_price = current_prices.get(ticker, self._fallback_price(position))
+            total_cost_basis += position.entry_value
+            total_value += position.current_value
+            total_pnl += position.pnl
 
-            total_cost_basis += calculate_total_position_value(state_position.entry_price, state_position.shares)
-            total_value += calculate_current_position_value(current_price, state_position.shares)
-            total_pnl += calculate_pnl(state_position.entry_price, current_price, state_position.shares)
+            if position.total_risk > 0:
+                open_risk += position.total_risk
+                total_r_now += position.r_now
+                r_count += 1
 
-            per_share_risk = calculate_per_share_risk(state_position)
-            if per_share_risk > 0:
-                open_risk += per_share_risk * state_position.shares
+            if position.current_value > largest_position_value:
+                largest_position_value = position.current_value
+                largest_position_ticker = position.ticker
+
+            if position.pnl_percent > best_performer_pnl_pct:
+                best_performer_pnl_pct = position.pnl_percent
+                best_performer_ticker = position.ticker
+
+            if position.pnl_percent < worst_performer_pnl_pct:
+                worst_performer_pnl_pct = position.pnl_percent
+                worst_performer_ticker = position.ticker
+
+            if position.pnl > 0:
+                positions_profitable += 1
+            elif position.pnl < 0:
+                positions_losing += 1
 
         total_pnl_percent = (total_pnl / total_cost_basis * 100.0) if total_cost_basis > 0 else 0.0
         open_risk_percent = (open_risk / account_size * 100.0) if account_size > 0 else 0.0
+        avg_r_now = (total_r_now / r_count) if r_count > 0 else 0.0
+        win_rate = (positions_profitable / len(positions) * 100.0) if positions else 0.0
 
         return PortfolioSummary(
             total_positions=len(positions),
@@ -295,6 +361,16 @@ class PortfolioService:
             open_risk_percent=open_risk_percent,
             account_size=account_size,
             available_capital=account_size - total_value,
+            largest_position_value=largest_position_value,
+            largest_position_ticker=largest_position_ticker,
+            best_performer_ticker=best_performer_ticker,
+            best_performer_pnl_pct=best_performer_pnl_pct if best_performer_ticker else 0.0,
+            worst_performer_ticker=worst_performer_ticker,
+            worst_performer_pnl_pct=worst_performer_pnl_pct if worst_performer_ticker else 0.0,
+            avg_r_now=avg_r_now,
+            positions_profitable=positions_profitable,
+            positions_losing=positions_losing,
+            win_rate=win_rate,
         )
 
     def update_position_stop(self, position_id: str, request: UpdateStopRequest) -> dict:
