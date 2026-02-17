@@ -33,6 +33,8 @@ from api.models.portfolio import (
     OrdersSnapshotResponse,
     FillOrderRequest,
     PositionsResponse,
+    PositionMetrics,
+    PortfolioSummary,
     OrdersResponse,
 )
 from api.models.screener import ScreenerCandidate, ScreenerRequest, ScreenerResponse, OrderPreview
@@ -105,6 +107,8 @@ __all__ = [
     "OrdersSnapshotResponse",
     "FillOrderRequest",
     "PositionsResponse",
+    "PositionMetrics",
+    "PortfolioSummary",
     "OrdersResponse",
     "ScreenerCandidate",
     "ScreenerRequest",
