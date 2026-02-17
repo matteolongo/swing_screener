@@ -10,7 +10,6 @@ import api.routers.config as config_router
 import api.services.portfolio_service as portfolio_service
 from swing_screener.data.providers import MarketDataProvider
 
-
 def _ohlcv_for_ticker() -> pd.DataFrame:
     idx = pd.date_range("2026-01-01", periods=3, freq="D")
     data = {
@@ -23,7 +22,6 @@ def _ohlcv_for_ticker() -> pd.DataFrame:
     df = pd.DataFrame(data, index=idx)
     df.columns = pd.MultiIndex.from_tuples(df.columns)
     return df
-
 
 def test_position_stop_suggestion(monkeypatch, tmp_path):
     positions_file = tmp_path / "positions.json"
@@ -54,7 +52,7 @@ def test_position_stop_suggestion(monkeypatch, tmp_path):
     mock_provider = MagicMock(spec=MarketDataProvider)
     mock_provider.fetch_ohlcv.return_value = ohlcv
     mock_provider.get_provider_name.return_value = "mock"
-    monkeypatch.setattr(portfolio_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(portfolio_service, "get_default_provider", lambda *args, **kwargs: mock_provider)
 
     client = TestClient(app)
     res = client.get("/api/portfolio/positions/POS-AAPL-1/stop-suggestion")
