@@ -42,7 +42,7 @@ export default function SocialAnalysisModal({
   useEffect(() => {
     setLookbackInput('');
     analysisMutation.mutate({ symbol, lookbackInput: '' });
-  }, [symbol]);
+  }, [symbol, analysisMutation.mutate]);
 
   const data = analysisMutation.data;
   const defaultLookback = data?.lookbackHours;
