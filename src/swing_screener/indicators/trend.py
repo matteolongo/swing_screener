@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import pandas as pd
-from swing_screener.utils.dataframe_helpers import get_close_matrix, sma as calculate_sma
+from swing_screener.utils.dataframe_helpers import get_close_matrix
 
 
 @dataclass(frozen=True)
