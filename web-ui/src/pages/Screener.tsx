@@ -89,6 +89,19 @@ export default function Screener() {
   const riskConfig: RiskConfig = activeStrategyQuery.data?.risk ?? config.risk;
   const activeCurrencies = normalizeCurrencies(activeStrategyQuery.data?.universe?.filt?.currencies);
   
+  // Clean legacy localStorage data on mount (one-time migration)
+  useEffect(() => {
+    const legacyKeys = ['screener.universe', 'screener.currencyFilter'];
+    legacyKeys.forEach(key => {
+      const raw = localStorage.getItem(key);
+      if (raw && raw.startsWith('""') && raw.endsWith('""')) {
+        // Double-quoted value like ""usd_all"" - strip outer quotes
+        const cleaned = raw.slice(1, -1);
+        localStorage.setItem(key, cleaned);
+      }
+    });
+  }, []);
+  
   // Screener form state with localStorage persistence
   const [selectedUniverse, setSelectedUniverse] = useLocalStorage('screener.universe', 'usd_all', (val: unknown) => {
     // Handle both JSON-encoded strings and plain strings
