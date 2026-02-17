@@ -66,6 +66,8 @@ class OrderModel(Base):
     parent_order_id = Column(String, nullable=True)
     position_id_fk = Column(String, ForeignKey("positions.position_id"), nullable=True, index=True)
     tif = Column(String, nullable=True)
+    fee_eur = Column(Float, nullable=True)
+    fill_fx_rate = Column(Float, nullable=True)
 
     # Relationship
     position = relationship("PositionModel", back_populates="orders", foreign_keys=[position_id_fk])
@@ -193,6 +195,8 @@ def order_to_model(order) -> OrderModel:
         parent_order_id=order.parent_order_id,
         position_id_fk=order.position_id,
         tif=order.tif,
+        fee_eur=order.fee_eur,
+        fill_fx_rate=order.fill_fx_rate,
     )
 
 
@@ -223,4 +227,6 @@ def model_to_order(model: OrderModel):
         parent_order_id=model.parent_order_id,
         position_id=model.position_id_fk,
         tif=model.tif,
+        fee_eur=model.fee_eur,
+        fill_fx_rate=model.fill_fx_rate,
     )

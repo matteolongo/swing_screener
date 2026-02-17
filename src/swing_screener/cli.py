@@ -72,6 +72,8 @@ def _orders_fill_to_files(
     quantity: int,
     stop_price: float,
     tp_price: float | None,
+    fee_eur: float | None = None,
+    fill_fx_rate: float | None = None,
 ) -> None:
     orders = load_orders(orders_path)
     positions = load_positions(positions_path)
@@ -84,6 +86,8 @@ def _orders_fill_to_files(
         quantity=quantity,
         stop_price=stop_price,
         tp_price=tp_price,
+        fee_eur=fee_eur,
+        fill_fx_rate=fill_fx_rate,
     )
     save_orders(orders_path, new_orders, asof=str(dt.date.today()))
     save_positions(positions_path, new_positions, asof=str(dt.date.today()))
@@ -96,6 +100,8 @@ def _orders_scale_in_to_files(
     fill_price: float,
     fill_date: str,
     quantity: int,
+    fee_eur: float | None = None,
+    fill_fx_rate: float | None = None,
 ) -> None:
     orders = load_orders(orders_path)
     positions = load_positions(positions_path)
@@ -106,6 +112,8 @@ def _orders_scale_in_to_files(
         fill_price=fill_price,
         fill_date=fill_date,
         quantity=quantity,
+        fee_eur=fee_eur,
+        fill_fx_rate=fill_fx_rate,
     )
     save_orders(orders_path, new_orders, asof=str(dt.date.today()))
     save_positions(positions_path, new_positions, asof=str(dt.date.today()))
@@ -262,6 +270,18 @@ def main() -> None:
     orders_fill.add_argument("--quantity", type=int, required=True, help="Filled quantity")
     orders_fill.add_argument("--stop-price", type=float, required=True, help="Stop-loss price")
     orders_fill.add_argument("--tp-price", type=float, default=None, help="Take-profit price (optional)")
+    orders_fill.add_argument(
+        "--fee-eur",
+        type=float,
+        default=None,
+        help="Execution fee in EUR (optional, for DeGiro alignment)",
+    )
+    orders_fill.add_argument(
+        "--fx-rate",
+        type=float,
+        default=None,
+        help="Fill FX rate quote_ccy per EUR (optional, e.g. 1.18 for USD/EUR)",
+    )
 
     orders_scale = orders_sub.add_parser("scale-in", help="Scale into an existing position")
     orders_scale.add_argument("--orders", required=True, help="Path to orders.json")
@@ -274,6 +294,18 @@ def main() -> None:
         help="Fill date (YYYY-MM-DD). Default: today.",
     )
     orders_scale.add_argument("--quantity", type=int, required=True, help="Filled quantity")
+    orders_scale.add_argument(
+        "--fee-eur",
+        type=float,
+        default=None,
+        help="Execution fee in EUR (optional, for DeGiro alignment)",
+    )
+    orders_scale.add_argument(
+        "--fx-rate",
+        type=float,
+        default=None,
+        help="Fill FX rate quote_ccy per EUR (optional, e.g. 1.18 for USD/EUR)",
+    )
 
     orders_list = orders_sub.add_parser("list", help="List orders")
     orders_list.add_argument("--orders", required=True, help="Path to orders.json")
@@ -785,6 +817,8 @@ def main() -> None:
                     quantity=int(args.quantity),
                     stop_price=float(args.stop_price),
                     tp_price=float(args.tp_price) if args.tp_price is not None else None,
+                    fee_eur=float(args.fee_eur) if args.fee_eur is not None else None,
+                    fill_fx_rate=float(args.fx_rate) if args.fx_rate is not None else None,
                 )
                 print(f"Order filled: {args.order_id}")
             elif args.orders_command == "scale-in":
@@ -795,6 +829,8 @@ def main() -> None:
                     fill_price=float(args.fill_price),
                     fill_date=str(args.fill_date),
                     quantity=int(args.quantity),
+                    fee_eur=float(args.fee_eur) if args.fee_eur is not None else None,
+                    fill_fx_rate=float(args.fx_rate) if args.fx_rate is not None else None,
                 )
                 print(f"Scale-in filled: {args.order_id}")
             elif args.orders_command == "list":

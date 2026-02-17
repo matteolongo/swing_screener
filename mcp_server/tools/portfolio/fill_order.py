@@ -49,6 +49,16 @@ class FillOrderTool(BaseTool):
                     "type": "number",
                     "description": "Stop price for entry orders (required for entry fills)",
                     "minimum": 0.01
+                },
+                "fee_eur": {
+                    "type": "number",
+                    "description": "Execution fee in EUR (optional)",
+                    "minimum": 0
+                },
+                "fill_fx_rate": {
+                    "type": "number",
+                    "description": "FX rate quote_ccy per EUR at fill time (optional, e.g. 1.18 for USD/EUR)",
+                    "minimum": 0.000001
                 }
             },
             "required": ["order_id", "filled_price", "filled_date"]
@@ -70,6 +80,8 @@ class FillOrderTool(BaseTool):
         filled_price = arguments.get("filled_price")
         filled_date = arguments.get("filled_date")
         stop_price = arguments.get("stop_price")
+        fee_eur = arguments.get("fee_eur")
+        fill_fx_rate = arguments.get("fill_fx_rate")
         
         if not order_id or filled_price is None or not filled_date:
             return {"error": "order_id, filled_price, and filled_date are required"}
@@ -78,7 +90,9 @@ class FillOrderTool(BaseTool):
             request = FillOrderRequest(
                 filled_price=filled_price,
                 filled_date=filled_date,
-                stop_price=stop_price
+                stop_price=stop_price,
+                fee_eur=fee_eur,
+                fill_fx_rate=fill_fx_rate,
             )
             result = service.fill_order(order_id, request)
             return result

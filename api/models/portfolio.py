@@ -111,6 +111,8 @@ class Order(BaseModel):
     parent_order_id: Optional[str] = None
     position_id: Optional[str] = None
     tif: Optional[str] = None
+    fee_eur: Optional[float] = None
+    fill_fx_rate: Optional[float] = None
 
 
 class CreateOrderRequest(BaseModel):
@@ -206,6 +208,16 @@ class FillOrderRequest(BaseModel):
         gt=0,
         description="Stop price to use when filling entry orders (optional override)",
     )
+    fee_eur: Optional[float] = Field(
+        default=None,
+        ge=0,
+        description="Execution fee in EUR (optional)",
+    )
+    fill_fx_rate: Optional[float] = Field(
+        default=None,
+        gt=0,
+        description="FX rate quote_ccy per EUR at fill time (optional, e.g. 1.18 for USD/EUR)",
+    )
 
 
 class PositionsResponse(BaseModel):
@@ -217,6 +229,7 @@ class PositionWithMetrics(Position):
     """Position with precomputed financial metrics."""
 
     pnl: float = Field(..., description="Absolute profit/loss in dollars")
+    fees_eur: float = Field(default=0.0, description="Accumulated execution fees in EUR")
     pnl_percent: float = Field(..., description="P&L as percentage")
     r_now: float = Field(..., description="Current R-multiple")
     entry_value: float = Field(..., description="Total entry value (shares × entry_price)")
@@ -235,6 +248,7 @@ class PositionMetrics(BaseModel):
 
     ticker: str = Field(..., description="Stock ticker symbol")
     pnl: float = Field(..., description="Absolute profit/loss in dollars")
+    fees_eur: float = Field(default=0.0, description="Accumulated execution fees in EUR")
     pnl_percent: float = Field(..., description="P&L as percentage")
     r_now: float = Field(..., description="Current R-multiple")
     entry_value: float = Field(..., description="Total entry value (shares × entry_price)")
@@ -250,6 +264,7 @@ class PortfolioSummary(BaseModel):
     total_value: float = Field(..., description="Total market value of all open positions")
     total_cost_basis: float = Field(..., description="Total entry value of all open positions")
     total_pnl: float = Field(..., description="Total unrealized P&L across open positions")
+    total_fees_eur: float = Field(default=0.0, description="Total execution fees across open positions (EUR)")
     total_pnl_percent: float = Field(..., description="Portfolio unrealized P&L percentage")
     open_risk: float = Field(..., description="Total open risk (sum of position risks)")
     open_risk_percent: float = Field(..., description="Open risk as % of account size")
