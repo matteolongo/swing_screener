@@ -9,13 +9,17 @@ import { useState, useEffect, useCallback } from 'react';
  * @template T The type of the value stored in localStorage
  * @param key The localStorage key
  * @param defaultValue The default value if key doesn't exist or parsing fails
- * @param transformer Optional function to transform/validate values when loading from storage
+ * @param transformer Optional function to transform/validate/sanitize values when loading from storage
+ *                   AND when setting new values. This serves dual purpose:
+ *                   1. Parse/transform values loaded from localStorage (e.g., clamp numbers to range)
+ *                   2. Validate/sanitize values before saving to localStorage (e.g., prevent invalid values)
  * @returns A tuple of [value, setValue] similar to useState
  * 
  * @example
  * ```tsx
  * const [name, setName] = useLocalStorage('username', 'Guest');
  * const [count, setCount] = useLocalStorage('count', 0, (val) => Math.max(0, Number(val) || 0));
+ * // Transformer ensures count is always >= 0, both when loading and setting
  * ```
  */
 export function useLocalStorage<T>(
@@ -35,16 +39,35 @@ export function useLocalStorage<T>(
       if (item === null) {
         return defaultValue;
       }
-      
-      // Parse the stored value
-      const parsed = JSON.parse(item);
-      
-      // Apply transformer if provided
-      if (transformer) {
-        return transformer(parsed);
+
+      // First, try to parse the stored value as JSON (current format)
+      try {
+        const parsed = JSON.parse(item);
+
+        // Apply transformer if provided
+        if (transformer) {
+          return transformer(parsed);
+        }
+
+        return parsed as T;
+      } catch (error) {
+        console.warn(`Error parsing localStorage key "${key}" as JSON:`, error);
+
+        // Fallback: treat the stored value as a raw string (legacy format)
+        try {
+          if (transformer) {
+            return transformer(item);
+          }
+
+          return item as unknown as T;
+        } catch (transformError) {
+          console.warn(
+            `Error transforming localStorage key "${key}" from raw string:`,
+            transformError
+          );
+          return defaultValue;
+        }
       }
-      
-      return parsed as T;
     } catch (error) {
       console.warn(`Error loading localStorage key "${key}":`, error);
       return defaultValue;
@@ -69,10 +92,21 @@ export function useLocalStorage<T>(
     (newValue: T | ((prev: T) => T)) => {
       setValue((prevValue) => {
         const valueToStore = newValue instanceof Function ? newValue(prevValue) : newValue;
-        return valueToStore;
+
+        // Apply transformer for validation/sanitization before saving
+        if (!transformer) {
+          return valueToStore;
+        }
+
+        try {
+          return transformer(valueToStore as unknown);
+        } catch (error) {
+          console.warn(`Error transforming value for localStorage key "${key}":`, error);
+          return prevValue;
+        }
       });
     },
-    []
+    [transformer]
   );
 
   return [value, setStoredValue];
