@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
+import CurrencyBadge from '@/components/common/CurrencyBadge';
 import TableShell from '@/components/common/TableShell';
 import {
   Position,
@@ -22,7 +23,9 @@ import SocialAnalysisModal from '@/components/modals/SocialAnalysisModal';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 import UpdateStopModalForm from '@/components/domain/positions/UpdateStopModalForm';
 import ClosePositionModalForm from '@/components/domain/positions/ClosePositionModalForm';
+import PositionValueWithCalculation from '@/components/domain/positions/PositionValueWithCalculation';
 import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
+import { detectCurrency } from '@/utils/currency';
 import { t } from '@/i18n/t';
 
 type FilterStatus = PositionStatus | 'all';
@@ -193,6 +196,7 @@ export default function Positions() {
                       >
                         {position.ticker}
                       </a>
+                      <CurrencyBadge currency={detectCurrency(position.ticker)} />
                       <Button
                         size="sm"
                         variant="secondary"
@@ -216,20 +220,19 @@ export default function Positions() {
                   {!isBeginnerMode && (
                     <td className="py-3 px-4 text-right">{formatCurrency(position.entryPrice)}</td>
                   )}
-                  <td
-                    className={`py-3 px-4 text-right ${
-                      isProfitable ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
-                    }`}
-                  >
-                    <div className="font-semibold">{formatCurrency(currentValue)}</div>
-                    {!isBeginnerMode && (
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {t('positionsPage.valueFrom', {
-                          entryValue: formatCurrency(entryValue),
-                          pnlPercent: formatPercent(pnlPercent),
-                        })}
-                      </div>
-                    )}
+                  <td className="py-3 px-4 text-right">
+                    <PositionValueWithCalculation
+                      shares={position.shares}
+                      currentPrice={currentPrice}
+                      entryPrice={position.entryPrice}
+                      entryValue={entryValue}
+                      currentValue={currentValue}
+                      pnl={pnl}
+                      pnlPercent={pnlPercent}
+                      isProfitable={isProfitable}
+                      showInline={true}
+                      showTooltip={true}
+                    />
                   </td>
                   {!isBeginnerMode && (
                     <>
