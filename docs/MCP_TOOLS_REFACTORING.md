@@ -1,5 +1,8 @@
 # MCP Tools Refactoring - Modular Architecture
 
+> **Status: Snapshot.**  
+> **Last Reviewed:** February 17, 2026.
+
 **Date:** February 12, 2026  
 **Status:** Complete  
 **Commit:** f99a772

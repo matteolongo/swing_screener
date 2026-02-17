@@ -1,5 +1,8 @@
 # PR Summary: M1 Foundations and Gating for Beginner-Guided UX
 
+> **Status: Archived PR summary.**  
+> **Last Reviewed:** February 17, 2026.
+
 ## 🎯 Objective
 
 Implement Milestone 1 of the Beginner-Guided UX refactor (GitHub issue #87) to establish the core infrastructure for guiding new users through the Swing Screener workflow.

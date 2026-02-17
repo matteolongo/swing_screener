@@ -1,5 +1,8 @@
 # Web UI Architecture
 
+> **Status: Current.**  
+> **Last Reviewed:** February 17, 2026.
+
 ## Goals
 
 - Keep page components thin and readable.

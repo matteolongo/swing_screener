@@ -1,5 +1,9 @@
 # LLM Event Classification Guide
 
+> **Status: Current.**  
+> **Last Reviewed:** February 17, 2026.  
+> **Note:** CLI-based news fetching remains mock-only; real news ingestion is still pending integration.
+
 ## Overview
 
 The LLM Event Classification system provides semantic interpretation of financial news using Large Language Models while preserving deterministic decision-making. LLMs classify and structure events but **never predict prices or generate trading signals**.
@@ -339,7 +343,7 @@ pip install ollama>=0.1.0
 - Audit logs stored locally for inspection
 - Models are reproducible at specific versions
 
-## Phase 2 Roadmap
+## Roadmap (As of February 17, 2026)
 
 **Not Yet Implemented:**
 - Real news provider integration (currently mock data only)

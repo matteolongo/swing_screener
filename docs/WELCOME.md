@@ -1,5 +1,8 @@
 # Welcome, AI Agent! 🤖
 
+> **Status: Needs review.** Branch name and next feature are time-sensitive; verify against current roadmap.  
+> **Last Reviewed:** February 17, 2026.
+
 **Last Updated:** February 11, 2026  
 **Current Branch:** v2/daily-routine-revamp (ready to merge)  
 **Next Feature:** Currency Filter (planned)

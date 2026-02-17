@@ -1,6 +1,7 @@
 # MCP Server Integration - Analysis & Planning Summary
 
-> **Status: Historical snapshot (February 2026).** This document captures implementation context at the time and may not match the current code structure. Use `/docs/INDEX.md` for current canonical docs.
+> **Status: Archived planning snapshot.** Implementation completed in February 2026; see `/docs/PHASE4_MCP_COMPLETE.md` and `/docs/MCP_SERVER_COMPLETE.md`.  
+> **Last Reviewed:** February 17, 2026.
 
 
 **Project:** Swing Screener MCP Server Integration  

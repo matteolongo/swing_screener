@@ -1,5 +1,8 @@
 # MCP Quick Reference
 
+> **Status: Current snapshot.**  
+> **Last Reviewed:** February 17, 2026.
+
 **Quick reference for Swing Screener MCP server integration**
 
 ---

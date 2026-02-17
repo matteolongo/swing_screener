@@ -1,5 +1,8 @@
 # Onboarding & Beginner Guide Features
 
+> **Status: Needs review.** Verify against current UI and education flow.  
+> **Last Reviewed:** February 17, 2026.
+
 ## Overview
 
 Swing Screener implements a **progressive education system** rather than traditional modal-based onboarding. The goal is to provide contextual, opt-in education that helps beginners without disrupting experienced users.

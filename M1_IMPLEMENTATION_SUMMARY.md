@@ -1,5 +1,8 @@
 # M1: Foundations and Gating for Beginner-Guided UX
 
+> **Status: Archived milestone summary.**  
+> **Last Reviewed:** February 17, 2026.
+
 ## Overview
 
 This milestone implements the core infrastructure for the Beginner-Guided UX as defined in GitHub issue #87, Milestone 1.

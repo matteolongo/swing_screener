@@ -1,6 +1,7 @@
 # Daily Review Implementation Guide
 
-> **Status: Historical snapshot (February 2026).** This document captures implementation context at the time and may not match the current code structure. Use `/docs/INDEX.md` for current canonical docs.
+> **Status: Archived implementation summary.** Snapshot from February 2026. Use `/docs/INDEX.md` and `/docs/WEB_UI_GUIDE.md` for current canonical docs.  
+> **Last Reviewed:** February 17, 2026.
 
 
 **Feature:** Daily Routine - Unified trading dashboard  

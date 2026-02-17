@@ -1,5 +1,8 @@
 # MCP Server Implementation Roadmap
 
+> **Status: Archived (roadmap complete).** Implementation finished in February 2026.  
+> **Last Reviewed:** February 17, 2026.
+
 **Purpose:** Incremental implementation plan for MCP server integration  
 **Approach:** Refactor-first, feature-by-feature, test-driven  
 **Date:** February 12, 2026  

@@ -1,5 +1,8 @@
 # Indicator Validation
 
+> **Status: Current.**  
+> **Last Reviewed:** February 17, 2026.
+
 ## Overview
 
 The Swing Screener uses **TA-Lib as a validation oracle** for technical indicators.

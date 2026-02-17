@@ -1,5 +1,8 @@
 # Onboarding Features Investigation - Visual Summary
 
+> **Status: Historical snapshot.**  
+> **Last Reviewed:** February 17, 2026.
+
 ## Investigation Results
 
 **Date**: February 16, 2026  

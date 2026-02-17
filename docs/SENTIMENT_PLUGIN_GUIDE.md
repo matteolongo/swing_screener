@@ -1,5 +1,8 @@
 # Sentiment Analysis Plugin System
 
+> **Status: Needs review.** Verify providers/analyzers against current implementation.  
+> **Last Reviewed:** February 17, 2026.
+
 ## Overview
 
 The swing screener now supports a pluggable sentiment analysis architecture that allows you to:

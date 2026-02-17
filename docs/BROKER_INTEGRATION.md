@@ -1,5 +1,8 @@
 # Broker Integration Guide
 
+> **Status: Current.**  
+> **Last Reviewed:** February 17, 2026.
+
 This document explains how to configure and use different market data providers in swing_screener.
 
 ## Overview
@@ -238,10 +241,9 @@ Alpaca enforces 200 requests/minute. The provider handles this automatically wit
 
 ### CLI Integration
 
-The CLI can be extended to support provider selection:
+The CLI reads provider selection from environment variables (no CLI flag required):
 
 ```bash
-# Future enhancement
 export SWING_SCREENER_PROVIDER=alpaca
 python -m swing_screener.cli run --universe SP500
 ```
@@ -297,7 +299,7 @@ pytest tests/data/test_providers.py::TestProviderCompatibility -v
 **Solution** (Fixed in Feb 2026):
 - Yfinance's `end` parameter is exclusive (doesn't include the end date)
 - Provider now automatically adds +1 day to ensure current data is included
-- After US market close (22:00 CET / 16:00 ET), screener correctly shows today's data
+- After US market close (time varies with daylight savings; e.g., ~22:00 CET / 16:00 ET), screener correctly shows today's data
 - To verify: Check the "Last Bar" column in screener results
 
 ---

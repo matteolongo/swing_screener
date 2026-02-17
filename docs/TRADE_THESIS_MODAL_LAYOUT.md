@@ -1,6 +1,7 @@
 # Trade Thesis Modal - Visual Layout
 
-> **Status: Historical snapshot (February 2026).** This layout document describes the original thesis modal design and may not match the current UI composition.
+> **Status: Historical snapshot (February 2026).** This layout document describes the original thesis modal design and may not match the current UI composition.  
+> **Last Reviewed:** February 17, 2026.
 
 This document describes the visual layout of the Trade Thesis Modal.
 

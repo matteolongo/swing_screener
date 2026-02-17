@@ -1,5 +1,8 @@
 # Swing Screener - Application Feature Map
 
+> **Status: Snapshot.**  
+> **Last Reviewed:** February 17, 2026.
+
 **Purpose:** Complete inventory of all domain features for MCP server integration  
 **Date:** February 12, 2026  
 **Status:** Analysis Phase

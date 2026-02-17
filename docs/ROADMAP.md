@@ -1,5 +1,8 @@
 # Swing Screener - Implementation Roadmap
 
+> **Status: Needs review.** Roadmap milestones may have shifted since February 2026.  
+> **Last Reviewed:** February 17, 2026.
+
 **Current Status:** ✅ Production-Ready (Core + Web UI + Testing Complete)  
 **Last Updated:** February 11, 2026
 

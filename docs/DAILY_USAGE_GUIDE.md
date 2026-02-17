@@ -1,5 +1,8 @@
 # How to Use Swing Screener (Daily Guide – Barcelona / CET)
 
+> **Status: Needs review.** Schedule examples are timezone and DST dependent; update for your locale and current market hours.  
+> **Last Reviewed:** February 17, 2026.
+
 This guide explains **how and when to use Swing Screener in real life**  
 if you live in **Barcelona (CET / CEST)** and trade **US stocks**.
 

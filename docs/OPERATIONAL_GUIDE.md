@@ -1,5 +1,8 @@
 # Swing Screener — Operational Guide (CLI Workflows)
 
+> **Status: Needs review.** CLI commands and flags may change; verify against `swing_screener.cli --help` and current docs.  
+> **Last Reviewed:** February 17, 2026.
+
 This document explains **how to use Swing Screener via command-line interface (CLI)** for:
 - Automation and scripting
 - Headless server environments

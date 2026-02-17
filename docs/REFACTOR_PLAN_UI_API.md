@@ -1,5 +1,8 @@
 # UI + API Refactor Plan (Feature-Based, UI-First)
 
+> **Status: Needs review.** Validate which reorg steps have landed.  
+> **Last Reviewed:** February 17, 2026.
+
 **Status:** Proposed → In progress  
 **Scope:** React UI (`web-ui/`) + API (`api/`) reorg for maintainability  
 **Goal:** Reduce duplication, centralize domain logic, keep behavior unchanged.
@@ -156,4 +159,3 @@ Routers become thin:
 
 - Keep `api/models.py` and `web-ui/src/types` as temporary re-exports until migration completes.
 - DI via FastAPI `Depends` only (no external DI frameworks).
-

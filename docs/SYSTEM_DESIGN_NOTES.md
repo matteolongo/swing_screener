@@ -1,5 +1,8 @@
 # System Design Notes (Trading OS Mindset)
 
+> **Status: Evergreen principles.**  
+> **Last Reviewed:** February 17, 2026.
+
 This document distills a practical systems-level perspective for the Swing Screener project. It translates the guidance below into concrete, project-aligned principles and operational rules. The goal is not to invent a new strategy, but to protect a robust edge through disciplined system design.
 
 ## 1. The Edge Is Already There
@@ -109,4 +112,3 @@ These recommendations stay within the project’s conservative scope:
 - No intraday logic
 - No ML/curve-fitting
 - No auto-execution
-

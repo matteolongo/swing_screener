@@ -1,5 +1,8 @@
 # MCP Server Architecture Design
 
+> **Status: Archived design snapshot.** Implementation completed in February 2026; consult `/docs/PHASE4_MCP_COMPLETE.md` for current architecture.  
+> **Last Reviewed:** February 17, 2026.
+
 **Purpose:** Define the architecture for wrapping Swing Screener in an MCP server  
 **Approach:** Refactor-first, coevolution of FastAPI and MCP interfaces  
 **Date:** February 12, 2026  

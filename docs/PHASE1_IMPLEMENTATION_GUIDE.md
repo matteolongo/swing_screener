@@ -1,6 +1,7 @@
 # Phase 1 Implementation Guide - COMPLETED ✅
 
-> **Status: Historical snapshot (February 2026).** This document captures implementation context at the time and may not match the current code structure. Use `/docs/INDEX.md` for current canonical docs.
+> **Status: Archived (Phase 1 complete).** Historical snapshot from February 2026; phases 2+ have since completed. Use `/docs/INDEX.md` and `/docs/BROKER_INTEGRATION.md` for current guidance.  
+> **Last Reviewed:** February 17, 2026.
 
 
 ## Status
@@ -27,15 +28,15 @@ Phase 1 is now **complete**! The broker integration foundation is in place:
 5. **Testing**: Comprehensive test suite in `tests/data/test_providers.py`
 6. **Documentation**: Complete guide in `docs/BROKER_INTEGRATION.md`
 
-## What's Next: Phase 2
+## What Happened Next (Historical)
 
-Phase 2 will integrate these providers into the service layer:
+Phase 2 has since completed. The list below reflects the plan at the time:
 - Update `api/services/screener_service.py` to use provider abstraction
 - Update `api/services/portfolio_service.py` to use provider abstraction
 - Maintain backward compatibility with existing code
 - Add CLI flag for provider selection
 
-See ROADMAP.md for Phase 2-4 details.
+See `docs/PHASE2_MCP_COMPLETE.md`, `docs/ROADMAP.md`, and `docs/MCP_SERVER_COMPLETE.md` for current state.
 
 ---
 
@@ -112,7 +113,7 @@ pyproject.toml                                 # UPDATED: alpaca-py dependency (
 
 ---
 
-## Remaining Steps (Deprecated)
+## Remaining Steps (Historical, Already Completed)
 
 The following sections are kept for reference but are now COMPLETE.
 
@@ -173,7 +174,9 @@ Create `tests/data/test_providers.py`:
 - Document configuration
 - Update README.md
 
-## Quick Start (For You)
+## Quick Start (Historical Only)
+
+> These steps were part of the February 2026 implementation checklist and are no longer current.
 
 1. **Get Alpaca API Keys** (5 minutes):
    - Sign up: https://app.alpaca.markets/signup
@@ -189,9 +192,9 @@ Create `tests/data/test_providers.py`:
    ```
 
 3. **Continue Implementation**:
-   Follow steps 1.3-1.9 above, or ask me to continue when ready!
+   Historical note only. Phase 2+ have been completed since this document was written.
 
-## Commit What We Have So Far
+## Commit What We Have So Far (Historical Only)
 
 ```bash
 git add -A

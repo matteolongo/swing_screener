@@ -1,5 +1,8 @@
 # Database Migration Guide
 
+> **Status: Needs review.** Confirm current database usage and migration steps.  
+> **Last Reviewed:** February 17, 2026.
+
 ## Overview
 
 The Swing Screener application has added SQLite database infrastructure using SQLAlchemy. This provides a foundation for:

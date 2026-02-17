@@ -1,5 +1,8 @@
 # Market Intelligence Layer - Philosophy & Design
 
+> **Status: Evergreen principles.**  
+> **Last Reviewed:** February 17, 2026.
+
 ## Why This Exists
 
 Swing Screener is intentionally deterministic and risk-first.
@@ -177,4 +180,3 @@ Together:
 > Where should I focus tomorrow?
 
 Objective: informed selectivity, not activity.
-

@@ -1,5 +1,8 @@
 # Backend Code Review: `src/swing_screener`
 
+> **Status: Snapshot.**  
+> **Last Reviewed:** February 17, 2026.
+
 This document provides a software engineering review of the `src/swing_screener` module. The analysis focuses on architecture, maintainability, potential risks, and areas for improvement.
 
 ## 1. High-Level Architecture

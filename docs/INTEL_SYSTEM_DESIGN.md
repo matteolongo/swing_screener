@@ -1,5 +1,8 @@
 # Intelligence System Design
 
+> **Status: Needs review.** Validate implementation status and pipeline details.  
+> **Last Reviewed:** February 17, 2026.
+
 ## Scope
 
 This document defines the technical architecture for the Market Intelligence Layer.
@@ -238,4 +241,3 @@ Regression tests:
 - [Market Intelligence Philosophy](MARKET_INTELLIGENCE_PHILOSOPHY.md)
 - [Web UI Guide](WEB_UI_GUIDE.md)
 - [Operational Guide](OPERATIONAL_GUIDE.md)
-

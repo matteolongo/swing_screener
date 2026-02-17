@@ -1,7 +1,8 @@
 # TA-Lib Migration Analysis (Archive)
 
 **Date:** February 11, 2026  
-**Status:** Decided on Option C (Validation Layer)
+**Status:** Archived — decided on Option C (Validation Layer)  
+**Last Reviewed:** February 17, 2026
 
 This document archives the analysis of whether to migrate indicators to TA-Lib.
 

@@ -1,5 +1,8 @@
 # MCP Server - Architectural Decisions & Assumptions
 
+> **Status: Archived decision log.** Implementation completed in February 2026; validate against current MCP server behavior.  
+> **Last Reviewed:** February 17, 2026.
+
 **Purpose:** Document key decisions, assumptions, and rationale for MCP integration  
 **Date:** February 12, 2026  
 **Status:** Planning Phase - Analysis Complete

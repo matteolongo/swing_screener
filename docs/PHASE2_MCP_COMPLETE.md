@@ -1,6 +1,7 @@
 # Phase 2 Complete: Portfolio Tools & MCP Protocol ✅
 
-> **Status: Historical snapshot (February 2026).** This document captures implementation context at the time and may not match the current code structure. Use `/docs/INDEX.md` for current canonical docs.
+> **Status: Archived (Phase 2 complete).** Historical snapshot from February 2026. Use `/docs/PHASE4_MCP_COMPLETE.md` and `/docs/MCP_SERVER_COMPLETE.md` for current canonical docs.  
+> **Last Reviewed:** February 17, 2026.
 
 
 **Date:** February 12, 2026  

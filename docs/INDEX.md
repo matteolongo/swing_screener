@@ -1,5 +1,8 @@
 # Documentation Index
 
+> **Status: Needs review.** Ensure canonical vs historical categorization stays current.  
+> **Last Reviewed:** February 17, 2026.
+
 This index separates **canonical (actively maintained)** docs from **historical snapshots**.
 
 ## Canonical / Actively Maintained

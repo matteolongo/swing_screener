@@ -1,5 +1,8 @@
 # Swing Screener Education-First Refactor Plan
 
+> **Status: Needs review.** Confirm which education refactor steps are complete.  
+> **Last Reviewed:** February 17, 2026.
+
 Date: 2026-02-10
 
 ## Executive Summary
@@ -110,4 +113,3 @@ Frontend
 - Screener tests for verdict display and gating
 - Create Order modal tests for block-on-not-recommended
 - Backtest tests for new metrics and education report
-

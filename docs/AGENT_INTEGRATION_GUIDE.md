@@ -1,5 +1,8 @@
 # Agent Integration Guide
 
+> **Status: Needs review.** Examples, tool names, and schedules may drift; validate against current MCP tool registry and CLI help.  
+> **Last Reviewed:** February 17, 2026.
+
 This guide explains how to integrate and use the Swing Screener Agent in different scenarios:
 - AI Assistant Integration (Claude Desktop, etc.)
 - Automation Scripts and Cron Jobs
@@ -155,7 +158,7 @@ python -m agent.cli positions review
 echo "Daily screening complete"
 ```
 
-**Cron schedule (daily at 22:30 CET):**
+**Cron schedule (example only; adjust for your timezone and local market close):**
 
 ```cron
 30 22 * * 1-5 /path/to/scripts/daily_screening.sh >> /var/log/swing_screener.log 2>&1

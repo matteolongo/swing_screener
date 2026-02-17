@@ -1,6 +1,7 @@
 # Pre-Trade Explanation Engine - Implementation Summary
 
-> **Status: Historical snapshot (February 2026).** This document captures implementation context at the time. For current UI behavior, see `/docs/WEB_UI_GUIDE.md` and `/docs/INDEX.md`.
+> **Status: Archived implementation summary.** Snapshot from February 2026. For current UI behavior, see `/docs/WEB_UI_GUIDE.md` and `/docs/INDEX.md`.  
+> **Last Reviewed:** February 17, 2026.
 
 ## What Was Built
 

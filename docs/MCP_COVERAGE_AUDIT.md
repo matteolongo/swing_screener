@@ -1,5 +1,8 @@
 # MCP Server Coverage Audit
 
+> **Status: Snapshot.**  
+> **Last Reviewed:** February 17, 2026.
+
 **Date:** 2026-02-17  
 **Status:** Complete mapping of all API endpoints vs MCP tools
 

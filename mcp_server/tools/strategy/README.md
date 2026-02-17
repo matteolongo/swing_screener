@@ -1,5 +1,8 @@
 # Strategy Tools Module
 
+> **Status: Current.**  
+> **Last Reviewed:** February 17, 2026.
+
 This module provides MCP tools for managing and using trading strategies in the Swing Screener application.
 
 ## Overview

@@ -1,6 +1,7 @@
 # Phase 3 Complete: Portfolio + Screener Tools ✅
 
-> **Status: Historical snapshot (February 2026).** This document captures implementation context at the time and may not match the current code structure. Use `/docs/INDEX.md` for current canonical docs.
+> **Status: Archived (Phase 3 complete).** Historical snapshot from February 2026; Phase 4 is now complete. Use `/docs/INDEX.md` and `/docs/PHASE4_MCP_COMPLETE.md` for current canonical docs.  
+> **Last Reviewed:** February 17, 2026.
 
 
 **Date:** February 12, 2026  
@@ -265,7 +266,7 @@ async def execute(self, arguments: dict) -> dict:
 - Disk: +300 lines of code
 - Dependencies: None (reuses existing)
 
-## Tool Coverage Matrix
+## Tool Coverage Matrix (Historical Snapshot)
 
 | Domain | Total Tools | Status | Coverage |
 |--------|-------------|--------|----------|
@@ -279,7 +280,9 @@ async def execute(self, arguments: dict) -> dict:
 
 **Total: 12 tools operational**
 
-## Next Steps: Future Phases
+## Next Steps: Future Phases (Historical)
+
+**Phase 4 is complete** — see `docs/PHASE4_MCP_COMPLETE.md` for current status. The items below reflect planned work at the time.
 
 **Phase 4: Additional Domains**
 - Strategy tools (4 tools): list, get, set_active, create

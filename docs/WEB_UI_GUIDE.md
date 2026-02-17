@@ -1,5 +1,8 @@
 # Swing Screener Web UI - User Guide
 
+> **Status: Needs review.** UI layout and labels may drift; verify against current application.  
+> **Last Reviewed:** February 17, 2026.
+
 Complete guide to using the Swing Screener web interface for daily swing trading operations.
 
 ---

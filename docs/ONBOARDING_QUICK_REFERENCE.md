@@ -1,5 +1,8 @@
 # Onboarding Features - Quick Reference
 
+> **Status: Needs review.** Ensure quick-reference matches current UI.  
+> **Last Reviewed:** February 17, 2026.
+
 ## TL;DR
 
 **No modal-based onboarding exists.** Instead, the app uses integrated, contextual education features.

@@ -1,5 +1,8 @@
 # Educational Transformation - Code Examples
 
+> **Status: Snapshot.**  
+> **Last Reviewed:** February 17, 2026.
+
 This document provides code examples showing how the educational system works.
 
 ## 📚 Documentation Format

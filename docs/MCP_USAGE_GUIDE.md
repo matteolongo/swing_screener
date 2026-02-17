@@ -1,9 +1,12 @@
 # MCP Server Usage Guide
 
+> **Status: Archived (pre-implementation planning).** The MCP server has since been implemented; tool names and configuration may differ. Use `docs/MCP_QUICK_REFERENCE.md`, `docs/MCP_SERVER_COMPLETE.md`, and `mcp_server/README.md` for current usage.  
+> **Last Reviewed:** February 17, 2026.
+
 **Purpose:** Guide for using the Swing Screener MCP server  
 **Audience:** AI assistants, developers, power users  
 **Date:** February 12, 2026  
-**Status:** Planning (Pre-Implementation)
+**Status:** Archived (Pre-Implementation Snapshot)
 
 ---
 
@@ -703,6 +706,6 @@ client.call_tool("positions_close", {..., "confirmed": True})  # Dangerous!
 
 ---
 
-**Document Status:** Complete (Planning Phase)  
+**Document Status:** Archived (Planning Phase Snapshot)  
 **Last Updated:** February 12, 2026  
-**Next Review:** After implementation begins
+**Next Review:** Not scheduled (superseded by implementation docs)
