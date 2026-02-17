@@ -15,7 +15,7 @@ This directory contains runtime data for the Swing Screener application.
   - **Not committed to git** (in .gitignore)
   - Created automatically on first use
   - Provides atomic transactions and data integrity
-  - See `docs/DATABASE_MIGRATION.md` for details
+  - See `docs/engineering/DATABASE_MIGRATION.md` for details
 
 **Legacy JSON Files (Deprecated)**
 - `orders.json` - Pending and filled orders (file-based, deprecated)
@@ -111,4 +111,4 @@ cp data/swing_screener.db.backup data/swing_screener.db
 - All JSON files use snake_case for keys (Python convention)
 - Dates are in ISO 8601 format (YYYY-MM-DD)
 - Files are created with `indent=2` for readability
-- Database schema documented in `docs/DATABASE_MIGRATION.md`
+- Database schema documented in `docs/engineering/DATABASE_MIGRATION.md`

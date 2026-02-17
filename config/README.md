@@ -39,7 +39,7 @@ features:
 
 Changes require MCP server restart.
 
-**Documentation:** See `docs/MCP_*.md` for complete documentation.
+**Documentation:** See `mcp_server/docs/` for complete documentation.
 
 ## Notes
 
@@ -50,7 +50,7 @@ Changes require MCP server restart.
 
 ## Related Documentation
 
-- [MCP Architecture](../docs/MCP_ARCHITECTURE.md) - Complete architecture design
-- [MCP Feature Map](../docs/MCP_FEATURE_MAP.md) - All available features
-- [MCP Usage Guide](../docs/MCP_USAGE_GUIDE.md) - How to use MCP server
-- [MCP Implementation Roadmap](../docs/MCP_IMPLEMENTATION_ROADMAP.md) - Development plan
+- [MCP Architecture](../mcp_server/docs/MCP_ARCHITECTURE.md) - Complete architecture design
+- [MCP Feature Map](../mcp_server/docs/MCP_FEATURE_MAP.md) - All available features
+- [MCP Usage Guide](../mcp_server/docs/MCP_USAGE_GUIDE.md) - How to use MCP server
+- [MCP Implementation Roadmap](../mcp_server/docs/MCP_IMPLEMENTATION_ROADMAP.md) - Development plan

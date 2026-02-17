@@ -36,7 +36,7 @@ Use TA-Lib in tests only to verify custom implementations.
 
 ## Validation Results
 
-See `docs/INDICATOR_VALIDATION.md` for full results.
+See `src/swing_screener/data/docs/INDICATOR_VALIDATION.md` for full results.
 
 **Summary:**
 - ✅ SMA: Perfect match (11/11 tests)
@@ -74,7 +74,7 @@ Validation infrastructure:
 - `tests/test_sma_validation.py` - 11 SMA tests
 - `tests/test_momentum_validation.py` - 8 momentum tests
 - `tests/test_atr_validation.py` - Documents difference
-- `docs/INDICATOR_VALIDATION.md` - User-facing docs
+- `src/swing_screener/data/docs/INDICATOR_VALIDATION.md` - User-facing docs
 
 ---
 

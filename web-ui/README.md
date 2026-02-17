@@ -2,6 +2,13 @@
 
 React + TypeScript frontend for the Swing Screener system.
 
+## Documentation
+
+- `web-ui/docs/WEB_UI_GUIDE.md`
+- `web-ui/docs/WEB_UI_ARCHITECTURE.md`
+- `web-ui/docs/DAILY_REVIEW_IMPLEMENTATION.md` (archived snapshot)
+- `docs/overview/INDEX.md` (full documentation map)
+
 ## Current Architecture
 
 - Routing and page composition: `src/App.tsx`, `src/pages/*`

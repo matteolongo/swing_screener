@@ -11,6 +11,13 @@ Model Context Protocol (MCP) server for Swing Screener, exposing trading system 
 
 **Total:** 22 tools across 6 feature domains
 
+## Documentation
+
+- `mcp_server/docs/MCP_QUICK_REFERENCE.md`
+- `mcp_server/docs/MCP_SERVER_COMPLETE.md`
+- `mcp_server/docs/MCP_USAGE_GUIDE.md` (archived planning snapshot)
+- `docs/overview/INDEX.md` (full documentation map)
+
 ### Currently Available
 
 - **9 Portfolio Tools** - Complete position and order management

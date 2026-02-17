@@ -496,7 +496,7 @@ This is by design. Swing Screener values **clarity over cleverness**.
 
 ## Support
 
-- **Documentation**: See `docs/` directory
+- **Documentation**: See `docs/overview/INDEX.md`
 - **Issues**: GitHub Issues
 - **MCP Server**: See `mcp_server/README.md`
 
@@ -504,6 +504,6 @@ This is by design. Swing Screener values **clarity over cleverness**.
 
 **Related Documentation:**
 - [MCP Server README](../mcp_server/README.md)
-- [MCP Server Implementation Guide](../docs/MCP_SERVER_COMPLETE.md)
-- [Daily Usage Guide](../docs/DAILY_USAGE_GUIDE.md)
-- [Operational Guide](../docs/OPERATIONAL_GUIDE.md)
+- [MCP Server Implementation Guide](../mcp_server/docs/MCP_SERVER_COMPLETE.md)
+- [Daily Usage Guide](../docs/product/DAILY_USAGE_GUIDE.md)
+- [Operational Guide](../docs/engineering/OPERATIONAL_GUIDE.md)

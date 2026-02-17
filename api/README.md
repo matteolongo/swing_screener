@@ -596,8 +596,8 @@ These paths are defaults and can be overridden via config.
 
 ## Related Docs
 
-- [Web UI Guide](../docs/WEB_UI_GUIDE.md)
-- [Troubleshooting Guide](../docs/TROUBLESHOOTING.md)
+- [Web UI Guide](../web-ui/docs/WEB_UI_GUIDE.md)
+- [Troubleshooting Guide](../docs/engineering/TROUBLESHOOTING.md)
 
 ---
 

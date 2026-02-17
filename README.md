@@ -14,13 +14,13 @@ Execution is intentionally **manual** (Degiro-friendly).
 
 ## 🤖 For AI Agents
 
-**New to this codebase?** Start with **[docs/WELCOME.md](docs/WELCOME.md)** for complete onboarding.
+**New to this codebase?** Start with **[docs/overview/WELCOME.md](docs/overview/WELCOME.md)** for complete onboarding.
 
 **Quick reference:**
 - **[.github/copilot-instructions.md](.github/copilot-instructions.md)** - GitHub Copilot configuration (auto-loaded by Copilot)
-- **[docs/AGENTS.md](docs/AGENTS.md)** - Complete guide: project philosophy and constraints (read this!)
-- **[docs/ROADMAP.md](docs/ROADMAP.md)** - Feature status and priorities
-- **[docs/INDEX.md](docs/INDEX.md)** - Documentation map (canonical vs historical)
+- **[docs/overview/AGENTS.md](docs/overview/AGENTS.md)** - Complete guide: project philosophy and constraints (read this!)
+- **[docs/engineering/ROADMAP.md](docs/engineering/ROADMAP.md)** - Feature status and priorities
+- **[docs/overview/INDEX.md](docs/overview/INDEX.md)** - Documentation map (canonical vs historical)
 
 ---
 
@@ -42,7 +42,7 @@ cd web-ui && npm run dev
 
 Then open [http://localhost:5173](http://localhost:5173)
 
-👉 **See [docs/WEB_UI_GUIDE.md](docs/WEB_UI_GUIDE.md) for complete Web UI documentation**
+👉 **See [web-ui/docs/WEB_UI_GUIDE.md](web-ui/docs/WEB_UI_GUIDE.md) for complete Web UI documentation**
 
 ---
 
@@ -299,7 +299,7 @@ export ALPACA_API_KEY=your_key
 export ALPACA_SECRET_KEY=your_secret
 ```
 
-See [docs/BROKER_INTEGRATION.md](docs/BROKER_INTEGRATION.md) for complete setup guide.
+See [src/swing_screener/data/docs/BROKER_INTEGRATION.md](src/swing_screener/data/docs/BROKER_INTEGRATION.md) for complete setup guide.
 
 ## Testing
 
@@ -324,32 +324,32 @@ npm run test:coverage # Run with coverage report
 ## Documentation
 
 ### Getting Started
-- **[Web UI Guide](docs/WEB_UI_GUIDE.md)** — Complete Web UI documentation (recommended)
+- **[Web UI Guide](web-ui/docs/WEB_UI_GUIDE.md)** — Complete Web UI documentation (recommended)
 - **[CLI Usage](#cli-usage)** — Command-line interface reference (see above)
-- **[Documentation Index](docs/INDEX.md)** — Full docs map with current vs historical status
+- **[Documentation Index](docs/overview/INDEX.md)** — Full docs map with current vs historical status
 
 ### Operational Guides
-- **[Operational Guide](docs/OPERATIONAL_GUIDE.md)** — Day-to-day CLI workflows
-- **[Daily Usage Guide](docs/DAILY_USAGE_GUIDE.md)** — Daily routine and timing (Barcelona/CET)
-- **[Troubleshooting](docs/TROUBLESHOOTING.md)** — Common issues and solutions ⭐ **NEW**
+- **[Operational Guide](docs/engineering/OPERATIONAL_GUIDE.md)** — Day-to-day CLI workflows
+- **[Daily Usage Guide](docs/product/DAILY_USAGE_GUIDE.md)** — Daily routine and timing (Barcelona/CET)
+- **[Troubleshooting](docs/engineering/TROUBLESHOOTING.md)** — Common issues and solutions ⭐ **NEW**
 
 ### Technical References
 - **[API Documentation](api/README.md)** — FastAPI REST API reference (18 endpoints, health checks, monitoring)
 - **[MCP Server Documentation](mcp_server/README.md)** — Model Context Protocol server (22 tools for AI assistants) ⭐ **NEW**
-- **[Sentiment Analysis Plugin Guide](docs/SENTIMENT_PLUGIN_GUIDE.md)** — Pluggable sentiment analysis system (Reddit, Yahoo Finance, VADER) ⭐ **NEW**
+- **[Sentiment Analysis Plugin Guide](src/swing_screener/social/docs/SENTIMENT_PLUGIN_GUIDE.md)** — Pluggable sentiment analysis system (Reddit, Yahoo Finance, VADER) ⭐ **NEW**
 - **[Web UI README](web-ui/README.md)** — React/TypeScript architecture
-- **[Broker Integration](docs/BROKER_INTEGRATION.md)** — Market data providers (yfinance, Alpaca) ⭐ **NEW**
-- **[Indicator Validation](docs/INDICATOR_VALIDATION.md)** — TA-Lib validation approach ⭐ **NEW**
-- **[Market Intelligence Philosophy](docs/MARKET_INTELLIGENCE_PHILOSOPHY.md)** — Why the intelligence layer exists
-- **[Intelligence System Design](docs/INTEL_SYSTEM_DESIGN.md)** — Technical architecture and delivery phases
-- **[docs/AGENTS.md](docs/AGENTS.md)** — Guide for AI coding assistants
+- **[Broker Integration](src/swing_screener/data/docs/BROKER_INTEGRATION.md)** — Market data providers (yfinance, Alpaca) ⭐ **NEW**
+- **[Indicator Validation](src/swing_screener/data/docs/INDICATOR_VALIDATION.md)** — TA-Lib validation approach ⭐ **NEW**
+- **[Market Intelligence Philosophy](src/swing_screener/intelligence/docs/MARKET_INTELLIGENCE_PHILOSOPHY.md)** — Why the intelligence layer exists
+- **[Intelligence System Design](src/swing_screener/intelligence/docs/INTEL_SYSTEM_DESIGN.md)** — Technical architecture and delivery phases
+- **[docs/overview/AGENTS.md](docs/overview/AGENTS.md)** — Guide for AI coding assistants
 
 ### Planning
-- **[docs/ROADMAP.md](docs/ROADMAP.md)** — Feature roadmap and priorities
+- **[docs/engineering/ROADMAP.md](docs/engineering/ROADMAP.md)** — Feature roadmap and priorities
 
 ### Historical Notes
 - Some `*IMPLEMENTATION*` and `PHASE*` markdown files are historical snapshots.
-- Use **[docs/INDEX.md](docs/INDEX.md)** to identify canonical, actively maintained docs.
+- Use **[docs/overview/INDEX.md](docs/overview/INDEX.md)** to identify canonical, actively maintained docs.
 
 ## Technical Indicators
 
@@ -359,7 +359,7 @@ The Swing Screener uses simple, transparent technical indicators:
 - **Momentum** - Price returns over lookback periods
 
 All indicators are **validated against TA-Lib** (industry-standard library) to ensure correctness
-while maintaining code simplicity. See [`docs/INDICATOR_VALIDATION.md`](docs/INDICATOR_VALIDATION.md) for details.
+while maintaining code simplicity. See [`src/swing_screener/data/docs/INDICATOR_VALIDATION.md`](src/swing_screener/data/docs/INDICATOR_VALIDATION.md) for details.
 
 ## Social Sentiment Analysis
 
@@ -370,4 +370,4 @@ while maintaining code simplicity. See [`docs/INDICATOR_VALIDATION.md`](docs/IND
 - **Extensible architecture**: Add custom providers and analyzers
 - **Integrated with risk**: Sentiment affects position sizing and trade vetoes
 
-See [`docs/SENTIMENT_PLUGIN_GUIDE.md`](docs/SENTIMENT_PLUGIN_GUIDE.md) for complete documentation and examples.
+See [`src/swing_screener/social/docs/SENTIMENT_PLUGIN_GUIDE.md`](src/swing_screener/social/docs/SENTIMENT_PLUGIN_GUIDE.md) for complete documentation and examples.
