@@ -43,6 +43,9 @@ features:
       - get_strategy
       - get_active_strategy
       - set_active_strategy
+      - create_strategy
+      - update_strategy
+      - delete_strategy
   
   # Backtesting
   backtest:
