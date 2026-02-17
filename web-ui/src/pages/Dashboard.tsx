@@ -20,11 +20,7 @@ import StrategyCoachCard from '@/components/domain/education/StrategyCoachCard';
 import IntelligenceOpportunityCard from '@/components/domain/intelligence/IntelligenceOpportunityCard';
 import { buildFallbackStrategyCoachSections, buildStrategyCoachSections } from '@/content/strategyCoach';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
-import {
-  useIntelligenceOpportunitiesScoped,
-  useIntelligenceRunStatus,
-  useRunIntelligenceMutation,
-} from '@/features/intelligence/hooks';
+import { useIntelligenceWorkflow } from '@/features/intelligence/useIntelligenceWorkflow';
 import { detectCurrency } from '@/utils/currency';
 import { t } from '@/i18n/t';
 import { useOnboardingStore } from '@/stores/onboardingStore';
@@ -80,35 +76,20 @@ export default function Dashboard() {
   const [intelligenceJobId, setIntelligenceJobId] = useState<string>();
   const [intelligenceAsofDate, setIntelligenceAsofDate] = useState<string>();
   const [intelligenceRunSymbols, setIntelligenceRunSymbols] = useState<string[]>([]);
-  const runIntelligenceMutation = useRunIntelligenceMutation((launch) => {
-    setIntelligenceJobId(launch.jobId);
-    setIntelligenceAsofDate(undefined);
+  const intelligenceWorkflow = useIntelligenceWorkflow({
+    availableSymbols: intelligenceSymbols,
+    maxSymbols: 50,
+    jobId: intelligenceJobId,
+    setJobId: setIntelligenceJobId,
+    asofDate: intelligenceAsofDate,
+    setAsofDate: setIntelligenceAsofDate,
+    runSymbols: intelligenceRunSymbols,
+    setRunSymbols: setIntelligenceRunSymbols,
   });
-  const intelligenceStatusQuery = useIntelligenceRunStatus(intelligenceJobId);
-  const intelligenceStatus = intelligenceStatusQuery.data;
-  const intelligenceOpportunitiesQuery = useIntelligenceOpportunitiesScoped(
-    intelligenceAsofDate,
-    intelligenceRunSymbols,
-    Boolean(intelligenceAsofDate)
-  );
-  const intelligenceOpportunities = intelligenceOpportunitiesQuery.data?.opportunities ?? [];
-
-  useEffect(() => {
-    if (intelligenceStatus?.status === 'completed' && intelligenceStatus.asofDate) {
-      setIntelligenceAsofDate(intelligenceStatus.asofDate);
-    }
-  }, [intelligenceStatus?.asofDate, intelligenceStatus?.status]);
-
-  const handleRunIntelligence = () => {
-    if (!intelligenceSymbols.length) {
-      return;
-    }
-    const scopedSymbols = intelligenceSymbols.slice(0, 50);
-    setIntelligenceRunSymbols(scopedSymbols);
-    runIntelligenceMutation.mutate({
-      symbols: scopedSymbols,
-    });
-  };
+  const intelligenceStatus = intelligenceWorkflow.status;
+  const intelligenceStatusQuery = intelligenceWorkflow.statusQuery;
+  const intelligenceOpportunities = intelligenceWorkflow.opportunities;
+  const intelligenceOpportunitiesQuery = intelligenceWorkflow.opportunitiesQuery;
   const isNewUser = positions.length === 0 && orders.length === 0;
   const strategyCoachSections = activeStrategyQuery.data
     ? buildStrategyCoachSections(activeStrategyQuery.data)
@@ -268,10 +249,10 @@ export default function Dashboard() {
             </p>
           </div>
           <Button
-            onClick={handleRunIntelligence}
-            disabled={!intelligenceSymbols.length || runIntelligenceMutation.isPending}
+            onClick={intelligenceWorkflow.run}
+            disabled={!intelligenceWorkflow.canRun || intelligenceWorkflow.runMutation.isPending}
           >
-            {runIntelligenceMutation.isPending ? (
+            {intelligenceWorkflow.runMutation.isPending ? (
               <>
                 <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
                 {t('dashboardPage.intelligence.runningAction')}
@@ -288,12 +269,12 @@ export default function Dashboard() {
           </p>
         )}
 
-        {runIntelligenceMutation.isError && (
+        {intelligenceWorkflow.runMutation.isError && (
           <p className="mt-3 text-sm text-red-600">
             {t('dashboardPage.intelligence.startError', {
               error:
-                runIntelligenceMutation.error instanceof Error
-                  ? runIntelligenceMutation.error.message
+                intelligenceWorkflow.runMutation.error instanceof Error
+                  ? intelligenceWorkflow.runMutation.error.message
                   : t('common.errors.generic'),
             })}
           </p>
