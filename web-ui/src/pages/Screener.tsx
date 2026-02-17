@@ -23,32 +23,17 @@ import { queryKeys } from '@/lib/queryKeys';
 import { t } from '@/i18n/t';
 import { fetchSocialWarmupStatus } from '@/features/social/api';
 import { useIntelligenceWorkflow } from '@/features/intelligence/useIntelligenceWorkflow';
+import {
+  migrateLegacyScreenerStorage,
+  parseUniverseValue,
+  SCREENER_UNIVERSE_STORAGE_KEY,
+} from '@/features/screener/universeStorage';
 import { useLocalStorage, useModal } from '@/hooks';
 
 const TOP_N_MAX = 200;
 const INTELLIGENCE_ASOF_STORAGE_KEY = 'screener.intelligenceAsofDate';
 const INTELLIGENCE_SYMBOLS_STORAGE_KEY = 'screener.intelligenceSymbols';
 type CurrencyFilter = 'all' | 'usd' | 'eur';
-
-const UNIVERSE_ALIASES: Record<string, string> = {
-  mega: 'usd_all',
-  mega_all: 'usd_all',
-  mega_stocks: 'usd_mega_stocks',
-  core_etfs: 'usd_core_etfs',
-  defense_all: 'usd_defense_all',
-  defense_stocks: 'usd_defense_stocks',
-  defense_etfs: 'usd_defense_etfs',
-  healthcare_all: 'usd_healthcare_all',
-  healthcare_stocks: 'usd_healthcare_stocks',
-  healthcare_etfs: 'usd_healthcare_etfs',
-  mega_defense: 'usd_defense_all',
-  mega_healthcare_biotech: 'usd_healthcare_all',
-  mega_europe: 'eur_europe_large',
-  europe_large: 'eur_europe_large',
-  amsterdam_all: 'eur_amsterdam_all',
-  amsterdam_aex: 'eur_amsterdam_aex',
-  amsterdam_amx: 'eur_amsterdam_amx',
-};
 
 const normalizeCurrencies = (currencies?: string[]): ('USD' | 'EUR')[] => {
   const normalized = (currencies ?? [])
@@ -61,11 +46,6 @@ const currencyFilterToRequest = (value: CurrencyFilter): string[] => {
   if (value === 'usd') return ['USD'];
   if (value === 'eur') return ['EUR'];
   return ['USD', 'EUR'];
-};
-
-const normalizeUniverse = (value: string | null) => {
-  if (!value) return null;
-  return UNIVERSE_ALIASES[value] ?? value;
 };
 
 function getApiErrorStatus(error: unknown): number | undefined {
@@ -85,46 +65,15 @@ export default function Screener() {
   const riskConfig: RiskConfig = activeStrategyQuery.data?.risk ?? config.risk;
   const activeCurrencies = normalizeCurrencies(activeStrategyQuery.data?.universe?.filt?.currencies);
   
-  // Clean legacy localStorage data on mount (one-time migration)
   useEffect(() => {
-    const legacyKeys = ['screener.universe', 'screener.currencyFilter'];
-    legacyKeys.forEach(key => {
-      const raw = localStorage.getItem(key);
-      if (raw && raw.startsWith('""') && raw.endsWith('""')) {
-        // Double-quoted value like ""usd_all"" - strip outer quotes
-        const cleaned = raw.slice(1, -1);
-        localStorage.setItem(key, cleaned);
-      } else if (raw) {
-        // Legacy plain string like usd_all - JSON-encode so JSON.parse in useLocalStorage succeeds
-        const trimmed = raw.trim();
-        const looksLikeJson =
-          trimmed.startsWith('"') ||
-          trimmed.startsWith('{') ||
-          trimmed.startsWith('[') ||
-          trimmed === 'true' ||
-          trimmed === 'false' ||
-          trimmed === 'null' ||
-          (trimmed !== '' && !isNaN(Number(trimmed)));
-        if (!looksLikeJson) {
-          localStorage.setItem(key, JSON.stringify(raw));
-        }
-      }
-    });
+    migrateLegacyScreenerStorage(localStorage);
   }, []);
   
-  // Screener form state with localStorage persistence
-  const [selectedUniverse, setSelectedUniverse] = useLocalStorage('screener.universe', 'usd_all', (val: unknown) => {
-    // Handle both JSON-encoded strings and plain strings
-    let rawValue = typeof val === 'string' ? val : null;
-    
-    // Remove surrounding quotes if present (legacy data)
-    if (rawValue && rawValue.startsWith('"') && rawValue.endsWith('"')) {
-      rawValue = rawValue.slice(1, -1);
-    }
-    
-    const normalized = normalizeUniverse(rawValue);
-    return normalized ?? 'usd_all';
-  });
+  const [selectedUniverse, setSelectedUniverse] = useLocalStorage(
+    SCREENER_UNIVERSE_STORAGE_KEY,
+    'usd_all',
+    (value: unknown) => parseUniverseValue(value) ?? 'usd_all'
+  );
   const [topN, setTopN] = useLocalStorage('screener.topN', 20, (val: unknown) => {
     const parsed = typeof val === 'number' ? val : parseInt(String(val), 10);
     if (Number.isNaN(parsed)) return 20;

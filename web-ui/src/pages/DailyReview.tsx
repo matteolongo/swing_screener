@@ -18,6 +18,10 @@ import CandidateOrderModal from '@/components/domain/orders/CandidateOrderModal'
 import { queryKeys } from '@/lib/queryKeys';
 import { t } from '@/i18n/t';
 import { useIntelligenceWorkflow } from '@/features/intelligence/useIntelligenceWorkflow';
+import {
+  parseUniverseFromStorage,
+  SCREENER_UNIVERSE_STORAGE_KEY,
+} from '@/features/screener/universeStorage';
 import type {
   DailyReviewCandidate,
   DailyReviewPositionHold,
@@ -27,31 +31,6 @@ import type {
 import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 import { useStrategyReadiness } from '@/features/strategy/useStrategyReadiness';
 import StrategyReadinessBlocker from '@/components/domain/onboarding/StrategyReadinessBlocker';
-
-const UNIVERSE_ALIASES: Record<string, string> = {
-  mega: 'usd_all',
-  mega_all: 'usd_all',
-  mega_stocks: 'usd_mega_stocks',
-  core_etfs: 'usd_core_etfs',
-  defense_all: 'usd_defense_all',
-  defense_stocks: 'usd_defense_stocks',
-  defense_etfs: 'usd_defense_etfs',
-  healthcare_all: 'usd_healthcare_all',
-  healthcare_stocks: 'usd_healthcare_stocks',
-  healthcare_etfs: 'usd_healthcare_etfs',
-  mega_defense: 'usd_defense_all',
-  mega_healthcare_biotech: 'usd_healthcare_all',
-  mega_europe: 'eur_europe_large',
-  europe_large: 'eur_europe_large',
-  amsterdam_all: 'eur_amsterdam_all',
-  amsterdam_aex: 'eur_amsterdam_aex',
-  amsterdam_amx: 'eur_amsterdam_amx',
-};
-
-const normalizeUniverse = (value: string | null): string | null => {
-  if (!value) return null;
-  return UNIVERSE_ALIASES[value] ?? value;
-};
 
 export default function DailyReview() {
   const [expandedSections, setExpandedSections] = useState({
@@ -72,17 +51,7 @@ export default function DailyReview() {
   });
 
   const queryClient = useQueryClient();
-  const selectedUniverse = normalizeUniverse((() => {
-    const raw = localStorage.getItem('screener.universe');
-    if (!raw) return null;
-    try {
-      // Try to parse as JSON first (useLocalStorage stores as JSON)
-      return JSON.parse(raw);
-    } catch {
-      // Fallback to raw value for plain strings
-      return raw;
-    }
-  })());
+  const selectedUniverse = parseUniverseFromStorage(localStorage.getItem(SCREENER_UNIVERSE_STORAGE_KEY));
   const { data: review, isLoading, error, refetch, isFetching } = useDailyReview(10, selectedUniverse);
   const config = useConfigStore((state) => state.config);
   const { isBeginnerMode } = useBeginnerModeStore();
