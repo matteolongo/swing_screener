@@ -11,6 +11,7 @@ export const API_ENDPOINTS = {
   // Strategy
   strategy: '/api/strategy',
   strategyActive: '/api/strategy/active',
+  strategyValidate: '/api/strategy/validate',
   strategyById: (id: string) => `/api/strategy/${id}`,
   
   // Screener

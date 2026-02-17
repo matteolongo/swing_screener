@@ -179,6 +179,141 @@ const asObject = (value: unknown): Record<string, any> => (
   value && typeof value === 'object' ? (value as Record<string, any>) : {}
 )
 
+type ValidationWarningLevel = 'danger' | 'warning' | 'info'
+
+const buildStrategyValidation = (payload: Record<string, any>) => {
+  const warnings: Array<{ parameter: string; level: ValidationWarningLevel; message: string }> = []
+  const signals = asObject(payload.signals)
+  const risk = asObject(payload.risk)
+  const universe = asObject(payload.universe)
+  const filt = asObject(universe.filt)
+  const manage = asObject(payload.manage)
+
+  const breakoutLookback = Number(signals.breakout_lookback)
+  if (Number.isFinite(breakoutLookback)) {
+    if (breakoutLookback < 20) {
+      warnings.push({
+        parameter: 'breakoutLookback',
+        level: 'danger',
+        message: 'Breakout Lookback below 20 behaves more like day trading than swing trading.',
+      })
+    } else if (breakoutLookback < 40) {
+      warnings.push({
+        parameter: 'breakoutLookback',
+        level: 'warning',
+        message: 'Lower lookback periods increase signal frequency but may include more false breakouts.',
+      })
+    }
+  }
+
+  const pullbackMa = Number(signals.pullback_ma)
+  if (Number.isFinite(pullbackMa)) {
+    if (pullbackMa < 10) {
+      warnings.push({
+        parameter: 'pullbackMa',
+        level: 'warning',
+        message: 'Very short pullback periods may lead to entries on minor retracements that fail.',
+      })
+    } else if (pullbackMa > 50) {
+      warnings.push({
+        parameter: 'pullbackMa',
+        level: 'info',
+        message: 'Longer pullback periods are more conservative but may miss faster-moving opportunities.',
+      })
+    }
+  }
+
+  const minRr = Number(risk.min_rr)
+  if (Number.isFinite(minRr)) {
+    if (minRr < 1.5) {
+      warnings.push({
+        parameter: 'minimumRr',
+        level: 'danger',
+        message: 'Minimum R/R under 1.5 makes profitability statistically harder. Consider raising to 2 or higher.',
+      })
+    } else if (minRr < 2.0) {
+      warnings.push({
+        parameter: 'minimumRr',
+        level: 'warning',
+        message: 'R/R below 2 requires a higher win rate to be profitable. Most professionals target 2:1 or better.',
+      })
+    }
+  }
+
+  const riskPct = Number(risk.risk_pct) * 100
+  if (Number.isFinite(riskPct)) {
+    if (riskPct > 3) {
+      warnings.push({
+        parameter: 'riskPerTrade',
+        level: 'danger',
+        message: 'Risking more than 3% per trade significantly increases the risk of large drawdowns.',
+      })
+    } else if (riskPct > 2) {
+      warnings.push({
+        parameter: 'riskPerTrade',
+        level: 'warning',
+        message: 'Most professional traders risk 1-2% per trade. Higher risk requires perfect execution.',
+      })
+    }
+  }
+
+  const maxAtrPct = Number(filt.max_atr_pct)
+  if (Number.isFinite(maxAtrPct)) {
+    if (maxAtrPct > 25) {
+      warnings.push({
+        parameter: 'maxAtrPct',
+        level: 'danger',
+        message: 'Max ATR above 25% indicates extremely volatile stocks — beginners often struggle managing risk at this level.',
+      })
+    } else if (maxAtrPct > 18) {
+      warnings.push({
+        parameter: 'maxAtrPct',
+        level: 'warning',
+        message: 'Higher volatility means larger stop distances and more emotional pressure. Ensure your risk management is solid.',
+      })
+    }
+  }
+
+  const maxHoldingDays = Number(manage.max_holding_days)
+  if (Number.isFinite(maxHoldingDays)) {
+    if (maxHoldingDays < 5) {
+      warnings.push({
+        parameter: 'maxHoldingDays',
+        level: 'warning',
+        message: 'Very short holding periods may not give momentum enough time to develop.',
+      })
+    } else if (maxHoldingDays > 30) {
+      warnings.push({
+        parameter: 'maxHoldingDays',
+        level: 'info',
+        message: 'Longer holding periods can tie up capital in stagnant trades. Monitor performance closely.',
+      })
+    }
+  }
+
+  const dangerCount = warnings.filter((warning) => warning.level === 'danger').length
+  const warningCount = warnings.filter((warning) => warning.level === 'warning').length
+  const infoCount = warnings.filter((warning) => warning.level === 'info').length
+  const safetyScore = Math.max(0, Math.min(100, 100 - dangerCount * 15 - warningCount * 8 - infoCount * 3))
+  const safetyLevel =
+    safetyScore >= 85
+      ? 'beginner-safe'
+      : safetyScore >= 70
+        ? 'requires-discipline'
+        : 'expert-only'
+
+  return {
+    is_valid: dangerCount === 0,
+    warnings,
+    safety_score: safetyScore,
+    safety_level: safetyLevel,
+    total_warnings: warnings.length,
+    danger_count: dangerCount,
+    warning_count: warningCount,
+    info_count: infoCount,
+  }
+}
+
 export const mockPositions = [
   {
     ticker: 'VALE',
@@ -602,6 +737,11 @@ export const handlers = [
     }
     activeStrategyId = target.id
     return HttpResponse.json(target)
+  }),
+
+  http.post(`${API_BASE_URL}/api/strategy/validate`, async ({ request }) => {
+    const body = asObject(await request.json())
+    return HttpResponse.json(buildStrategyValidation(body))
   }),
 
   http.put(`${API_BASE_URL}/api/strategy/:id`, async ({ request, params }) => {

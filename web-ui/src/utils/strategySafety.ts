@@ -1,6 +1,10 @@
 /**
  * Parameter safety evaluation utilities
  * Analyzes strategy configuration and provides behavioral warnings
+ *
+ * @deprecated UI-side strategy validation is deprecated.
+ * Use backend `/api/strategy/validate` via `useStrategyValidationQuery`.
+ * This module remains for compatibility and test coverage only.
  */
 import type { Strategy } from '@/features/strategy/types';
 
