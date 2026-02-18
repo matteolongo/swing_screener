@@ -23,6 +23,22 @@ def _ohlcv_with_spy() -> pd.DataFrame:
     return df
 
 
+def _ohlcv_for_tickers(tickers: list[str]) -> pd.DataFrame:
+    idx = pd.date_range("2024-01-01", periods=3, freq="D")
+    data = {}
+    for i, ticker in enumerate(tickers):
+        base = float(100 + i)
+        close = pd.Series([base, base + 1.0, base + 2.0], index=idx, dtype=float)
+        data[("Close", ticker)] = close
+        data[("Open", ticker)] = close
+        data[("High", ticker)] = close + 1.0
+        data[("Low", ticker)] = close - 1.0
+        data[("Volume", ticker)] = pd.Series(1_000_000, index=idx, dtype=float)
+    df = pd.DataFrame(data, index=idx)
+    df.columns = pd.MultiIndex.from_tuples(df.columns)
+    return df
+
+
 def _create_mock_provider(ohlcv_data: pd.DataFrame) -> MarketDataProvider:
     """Create a mock provider that returns the given OHLCV data."""
     mock_provider = MagicMock(spec=MarketDataProvider)
@@ -228,3 +244,108 @@ def test_screener_invalid_currency_rejected():
         json={"universe": "mega_all", "top": 20, "currencies": ["JPY"]},
     )
     assert res.status_code == 422
+
+
+def test_screener_currency_universe_mismatch_autoadjusts_to_eur(monkeypatch):
+    _disable_social_warmup(monkeypatch)
+    captured: dict[str, object] = {}
+    mock_provider = MagicMock(spec=MarketDataProvider)
+
+    def fake_fetch_ohlcv(tickers, start_date=None, end_date=None):
+        return _ohlcv_for_tickers([str(t).upper() for t in tickers])
+
+    mock_provider.fetch_ohlcv.side_effect = fake_fetch_ohlcv
+    mock_provider.get_provider_name.return_value = "mock"
+
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None):
+        captured["currencies"] = list(cfg.universe.filt.currencies)
+        idx = ["SAN.MC"]
+        data = {
+            "atr14": [1.2],
+            "mom_6m": [0.1],
+            "mom_12m": [0.2],
+            "rs_6m": [0.05],
+            "score": [0.55],
+            "confidence": [60.0],
+            "last": [10.5],
+            "ma20_level": [10.2],
+            "dist_sma50_pct": [1.0],
+            "dist_sma200_pct": [2.0],
+            "rank": [1],
+        }
+        return pd.DataFrame(data, index=idx)
+
+    def fake_load_universe(name, cfg):
+        captured["effective_universe"] = name
+        return ["SAN.MC", "VGK"]
+
+    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
+    monkeypatch.setattr(screener_service, "load_universe_from_package", fake_load_universe)
+    monkeypatch.setattr(
+        screener_service,
+        "get_universe_benchmark",
+        lambda name: "VGK" if str(name).lower().startswith("eur_") else "SPY",
+    )
+    monkeypatch.setattr(screener_service, "get_multiple_ticker_info", lambda tickers: {})
+
+    client = TestClient(app)
+    res = client.post(
+        "/api/screener/run",
+        json={"universe": "usd_all", "top": 20, "currencies": ["EUR"]},
+    )
+
+    assert res.status_code == 200
+    payload = res.json()
+    assert captured["effective_universe"] == "eur_all"
+    assert captured["currencies"] == ["EUR"]
+    assert any("adjusted to 'eur_all'" in warning for warning in payload["warnings"])
+
+
+def test_screener_defaults_to_eur_universe_when_eur_only(monkeypatch):
+    _disable_social_warmup(monkeypatch)
+    captured: dict[str, object] = {}
+    mock_provider = MagicMock(spec=MarketDataProvider)
+
+    def fake_fetch_ohlcv(tickers, start_date=None, end_date=None):
+        return _ohlcv_for_tickers([str(t).upper() for t in tickers])
+
+    mock_provider.fetch_ohlcv.side_effect = fake_fetch_ohlcv
+    mock_provider.get_provider_name.return_value = "mock"
+
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None):
+        idx = ["ASML.AS"]
+        data = {
+            "atr14": [1.2],
+            "mom_6m": [0.1],
+            "mom_12m": [0.2],
+            "rs_6m": [0.05],
+            "score": [0.55],
+            "confidence": [60.0],
+            "last": [100.0],
+            "ma20_level": [98.0],
+            "dist_sma50_pct": [1.0],
+            "dist_sma200_pct": [2.0],
+            "rank": [1],
+        }
+        return pd.DataFrame(data, index=idx)
+
+    def fake_load_universe(name, cfg):
+        captured["effective_universe"] = name
+        return ["ASML.AS", "VGK"]
+
+    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
+    monkeypatch.setattr(screener_service, "load_universe_from_package", fake_load_universe)
+    monkeypatch.setattr(
+        screener_service,
+        "get_universe_benchmark",
+        lambda name: "VGK" if str(name).lower().startswith("eur_") else "SPY",
+    )
+    monkeypatch.setattr(screener_service, "get_multiple_ticker_info", lambda tickers: {})
+
+    client = TestClient(app)
+    res = client.post("/api/screener/run", json={"top": 20, "currencies": ["EUR"]})
+
+    assert res.status_code == 200
+    assert captured["effective_universe"] == "eur_all"

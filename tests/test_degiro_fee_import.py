@@ -104,3 +104,47 @@ def test_import_degiro_fees_reports_unmatched_rows(tmp_path: Path) -> None:
     assert result.unmatched_rows == 1
     assert result.updated_orders == 0
     assert result.unmatched[0].reason == "no_match"
+
+
+def test_import_degiro_fees_accepts_17_column_rows(tmp_path: Path) -> None:
+    orders_path = tmp_path / "orders.json"
+    csv_path = tmp_path / "Transactions.csv"
+
+    save_orders(
+        orders_path,
+        [
+            Order(
+                order_id="TSLA-ENTRY-1",
+                ticker="TSLA",
+                status="filled",
+                order_type="BUY_LIMIT",
+                quantity=1,
+                limit_price=180.0,
+                filled_date="2026-02-05",
+                entry_price=180.00,
+                order_kind="entry",
+            )
+        ],
+        asof="2026-02-05",
+    )
+
+    # 17-column DeGiro row: no extra trailing empty column after "ID Ordine".
+    csv_path.write_text(
+        CSV_HEADER
+        + "05-02-2026,15:30,TESLA INC,US88160R1014,NSY,XNYS,1,\"180,0000\",USD,\"-180,00\",USD,\"-152,54\",\"1,1800\",\"-0,46\",\"-2,00\",\"-154,54\",33333333-3333-3333-3333-333333333333\n",
+        encoding="utf-8",
+    )
+
+    result = import_degiro_fees_to_orders(
+        orders_path=orders_path,
+        csv_path=csv_path,
+        apply_changes=True,
+    )
+    assert result.total_csv_rows == 1
+    assert result.deduped_rows == 1
+    assert result.matched_rows == 1
+    assert result.unmatched_rows == 0
+    assert result.updated_orders == 1
+
+    updated_orders = load_orders(orders_path)
+    assert updated_orders[0].fee_eur == 2.0

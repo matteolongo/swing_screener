@@ -212,6 +212,41 @@ def _safe_list(val):
     return [str(val)]
 
 
+def _normalize_currency_codes(values: list[str] | tuple[str, ...] | None) -> list[str]:
+    if not values:
+        return []
+    out: list[str] = []
+    for raw in values:
+        code = str(raw).strip().upper()
+        if code in {"USD", "EUR"} and code not in out:
+            out.append(code)
+    return out
+
+
+def _single_currency(values: list[str] | tuple[str, ...] | None) -> Optional[str]:
+    normalized = _normalize_currency_codes(values)
+    if len(normalized) == 1:
+        return normalized[0]
+    return None
+
+
+def _universe_bucket(universe: Optional[str]) -> Optional[str]:
+    if not universe:
+        return None
+    name = str(universe).strip().lower()
+    if name.startswith("eur_"):
+        return "EUR"
+    if name.startswith("usd_"):
+        return "USD"
+    return None
+
+
+def _default_universe_for_currency(currency: Optional[str]) -> str:
+    if currency == "EUR":
+        return "eur_all"
+    return "usd_all"
+
+
 class ScreenerService:
     def __init__(
         self, 
@@ -251,9 +286,33 @@ class ScreenerService:
             strategy = self._resolve_strategy(request.strategy_id)
             backtest_cfg = strategy.get("backtest", {}) if isinstance(strategy, dict) else {}
             universe_cfg = build_universe_config(strategy)
+            strategy_currencies = _normalize_currency_codes(universe_cfg.filt.currencies)
+            requested_currencies = (
+                _normalize_currency_codes(request.currencies)
+                if request.currencies is not None
+                else strategy_currencies
+            )
+            target_currency = _single_currency(requested_currencies)
+            effective_universe = request.universe
+
+            # Keep market selection coherent with requested currency.
+            # Example: EUR-only screening should default to eur_all if no universe is given.
+            if not request.tickers and not effective_universe:
+                effective_universe = _default_universe_for_currency(target_currency)
+
+            if not request.tickers and effective_universe and target_currency:
+                bucket = _universe_bucket(effective_universe)
+                if bucket and bucket != target_currency:
+                    replacement = _default_universe_for_currency(target_currency)
+                    warnings.append(
+                        f"Universe '{effective_universe}' adjusted to '{replacement}' "
+                        f"to match currency filter {target_currency}."
+                    )
+                    effective_universe = replacement
+
             benchmark = universe_cfg.mom.benchmark
-            if request.universe:
-                uni_benchmark = get_universe_benchmark(request.universe)
+            if effective_universe:
+                uni_benchmark = get_universe_benchmark(effective_universe)
                 if uni_benchmark and uni_benchmark != benchmark:
                     universe_cfg = replace(
                         universe_cfg,
@@ -270,10 +329,10 @@ class ScreenerService:
                 tickers = [t.upper() for t in request.tickers]
                 if benchmark not in tickers:
                     tickers.append(benchmark)
-            elif request.universe:
+            elif effective_universe:
                 universe_cap = max(500, requested_top * 2)
                 ucfg = DataUniverseConfig(benchmark=benchmark, ensure_benchmark=True, max_tickers=universe_cap)
-                tickers = load_universe_from_package(request.universe, ucfg)
+                tickers = load_universe_from_package(effective_universe, ucfg)
             else:
                 universe_cap = max(500, requested_top * 2)
                 ucfg = DataUniverseConfig(benchmark=benchmark, ensure_benchmark=True, max_tickers=universe_cap)
@@ -288,7 +347,7 @@ class ScreenerService:
             
             logger.info(
                 "Screener run: universe=%s top=%s tickers=%s provider=%s",
-                request.universe or "usd_all",
+                effective_universe or "usd_all",
                 requested_top,
                 len(tickers),
                 self._provider.get_provider_name(),
