@@ -107,7 +107,7 @@ def fill_entry_order(
         order_kind="entry",
         position_id=position_id,
         tif=order.tif or "GTC",
-        fee_eur=float(fee_eur) if fee_eur is not None else None,
+        fee_eur=float(fee_eur) if fee_eur not in (None, 0, 0.0) else None,
         fill_fx_rate=float(fill_fx_rate) if fill_fx_rate is not None else None,
     )
 

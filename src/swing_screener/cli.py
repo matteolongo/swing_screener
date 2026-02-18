@@ -280,7 +280,10 @@ def main() -> None:
         "--fx-rate",
         type=float,
         default=None,
-        help="Fill FX rate quote_ccy per EUR (optional, e.g. 1.18 for USD/EUR)",
+        help=(
+            "Fill FX rate as quote currency units per 1 EUR "
+            "(optional, e.g. 1 EUR = 1.18 USD for EUR/USD = 1.18)"
+        ),
     )
 
     orders_scale = orders_sub.add_parser("scale-in", help="Scale into an existing position")

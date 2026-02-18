@@ -57,7 +57,7 @@ class FillOrderTool(BaseTool):
                 },
                 "fill_fx_rate": {
                     "type": "number",
-                    "description": "FX rate quote_ccy per EUR at fill time (optional, e.g. 1.18 for USD/EUR)",
+                    "description": "FX rate at fill time, expressed as quote_ccy units per 1 EUR (optional, e.g. EUR/USD rate 1.18 means 1 EUR = 1.18 USD)",
                     "minimum": 0.000001
                 }
             },

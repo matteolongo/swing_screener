@@ -87,7 +87,7 @@ export default function FillOrderModalForm({
         ) : null}
 
         <div>
-          <label className="block text-sm font-medium mb-1">Fee (EUR, optional)</label>
+          <label className="block text-sm font-medium mb-1">{t('order.fillModal.feeEurOptional')}</label>
           <input
             type="number"
             step="0.01"
@@ -100,7 +100,7 @@ export default function FillOrderModalForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">FX Rate (optional)</label>
+          <label className="block text-sm font-medium mb-1">{t('order.fillModal.fxRateOptional')}</label>
           <input
             type="number"
             step="0.0001"

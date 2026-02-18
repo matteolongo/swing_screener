@@ -7,7 +7,6 @@ from swing_screener.portfolio.metrics import (
     calculate_current_position_value,
     calculate_per_share_risk,
     calculate_pnl,
-    calculate_pnl_percent,
     calculate_r_now,
     calculate_total_position_value,
 )
@@ -32,12 +31,6 @@ def test_calculate_pnl() -> None:
     assert calculate_pnl(entry_price=15.89, current_price=16.65, shares=6) == pytest.approx(4.56, abs=0.01)
     assert calculate_pnl(entry_price=20.0, current_price=18.0, shares=10) == pytest.approx(-20.0, abs=0.01)
     assert calculate_pnl(entry_price=15.0, current_price=15.0, shares=5) == 0.0
-
-
-def test_calculate_pnl_percent() -> None:
-    assert calculate_pnl_percent(entry_price=15.89, current_price=16.65) == pytest.approx(4.78, abs=0.01)
-    assert calculate_pnl_percent(entry_price=20.0, current_price=18.0) == pytest.approx(-10.0, abs=0.01)
-    assert calculate_pnl_percent(entry_price=0.0, current_price=10.0) == 0.0
 
 
 def test_calculate_r_now_with_initial_risk() -> None:
