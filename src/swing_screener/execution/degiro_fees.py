@@ -18,6 +18,7 @@ UUID_RE = re.compile(
 @dataclass(frozen=True)
 class DegiroFeeRow:
     broker_order_id: str
+    isin: str
     fill_date: str
     fill_time: str
     quantity_signed: int
@@ -98,7 +99,9 @@ def _parse_rows(csv_path: str | Path) -> tuple[int, list[DegiroFeeRow]]:
         _ = next(reader, None)  # header
         for raw in reader:
             total += 1
-            if len(raw) < 18:
+            # DeGiro exports can be either 17 cols (id in last col) or
+            # 18 cols (extra trailing empty + id). Support both.
+            if len(raw) < 17:
                 continue
             broker_order_id = _row_order_id(raw)
             if not broker_order_id:
@@ -132,6 +135,7 @@ def _parse_rows(csv_path: str | Path) -> tuple[int, list[DegiroFeeRow]]:
             rows.append(
                 DegiroFeeRow(
                     broker_order_id=broker_order_id,
+                    isin=str(raw[3]).strip().upper(),
                     fill_date=fill_date,
                     fill_time=time_raw,
                     quantity_signed=quantity_signed,

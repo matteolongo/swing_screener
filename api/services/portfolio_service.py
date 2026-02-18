@@ -808,6 +808,94 @@ class PortfolioService:
                 "position_id": position_id,
             }
 
+        if kind in {"stop", "take_profit"}:
+            pos_idx = None
+            linked_position = None
+
+            if order.position_id:
+                for idx, pos in enumerate(positions):
+                    if pos.position_id == order.position_id:
+                        pos_idx = idx
+                        linked_position = pos
+                        break
+
+            if linked_position is None:
+                matches = [
+                    (idx, pos)
+                    for idx, pos in enumerate(positions)
+                    if pos.status == "open" and pos.ticker == order.ticker
+                ]
+                if len(matches) == 1:
+                    pos_idx, linked_position = matches[0]
+                else:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Linked open position not found for exit fill.",
+                    )
+
+            if linked_position.status != "open":
+                raise HTTPException(status_code=400, detail="Linked position is not open.")
+
+            if int(order.quantity) != int(linked_position.shares):
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        "Exit order quantity does not match position shares "
+                        "(partial exits via API fill are not supported)."
+                    ),
+                )
+
+            updated_orders: list = []
+            for o in orders:
+                if o.order_id == order_id:
+                    updated_orders.append(
+                        replace(
+                            o,
+                            status="filled",
+                            filled_date=request.filled_date,
+                            entry_price=request.filled_price,
+                            fee_eur=request.fee_eur,
+                            fill_fx_rate=request.fill_fx_rate,
+                            position_id=linked_position.position_id,
+                        )
+                    )
+                    continue
+
+                sibling_kind = infer_order_kind(o)
+                if (
+                    o.position_id == linked_position.position_id
+                    and o.status == "pending"
+                    and sibling_kind in {"stop", "take_profit"}
+                ):
+                    cancel_note = "auto-cancelled after linked exit fill"
+                    next_notes = f"{o.notes}\n{cancel_note}".strip() if o.notes else cancel_note
+                    updated_orders.append(replace(o, status="cancelled", notes=next_notes))
+                    continue
+
+                updated_orders.append(o)
+
+            exit_ids = list(linked_position.exit_order_ids or [])
+            if order_id not in exit_ids:
+                exit_ids.append(order_id)
+
+            updated_positions = list(positions)
+            updated_positions[pos_idx] = replace(
+                linked_position,
+                status="closed",
+                exit_date=request.filled_date,
+                exit_price=request.filled_price,
+                exit_order_ids=exit_ids,
+            )
+
+            save_orders(orders_path, updated_orders, asof=get_today_str())
+            save_positions(positions_path, updated_positions, asof=get_today_str())
+            return {
+                "status": "ok",
+                "order_id": order_id,
+                "filled_price": request.filled_price,
+                "position_id": linked_position.position_id,
+            }
+
         for idx, o in enumerate(orders):
             if o.order_id == order_id:
                 orders[idx] = replace(

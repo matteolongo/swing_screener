@@ -48,6 +48,20 @@ const currencyFilterToRequest = (value: CurrencyFilter): string[] => {
   return ['USD', 'EUR'];
 };
 
+const universeCurrencyBucket = (universe: string): CurrencyFilter | null => {
+  const normalized = String(universe || '').toLowerCase();
+  if (normalized.startsWith('usd_')) return 'usd';
+  if (normalized.startsWith('eur_')) return 'eur';
+  return null;
+};
+
+const alignUniverseToCurrency = (universe: string, currencyFilter: CurrencyFilter): string => {
+  const bucket = universeCurrencyBucket(universe);
+  if (currencyFilter === 'eur' && bucket === 'usd') return 'eur_all';
+  if (currencyFilter === 'usd' && bucket === 'eur') return 'usd_all';
+  return universe;
+};
+
 function getApiErrorStatus(error: unknown): number | undefined {
   if (typeof error !== 'object' || error == null || !('status' in error)) {
     return undefined;
@@ -129,8 +143,12 @@ export default function Screener() {
   );
 
   const handleRunScreener = () => {
+    const effectiveUniverse = alignUniverseToCurrency(selectedUniverse, currencyFilter);
+    if (effectiveUniverse !== selectedUniverse) {
+      setSelectedUniverse(effectiveUniverse);
+    }
     screenerMutation.mutate({
-      universe: selectedUniverse,
+      universe: effectiveUniverse,
       top: topN,
       minPrice: minPrice,
       maxPrice: maxPrice,

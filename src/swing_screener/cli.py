@@ -26,6 +26,7 @@ from swing_screener.data.universe import (
 from swing_screener.execution.order_workflows import fill_entry_order, scale_in_fill, normalize_orders
 from swing_screener.execution.orders import Order, load_orders, save_orders
 from swing_screener.execution.degiro_fees import import_degiro_fees_to_orders
+from swing_screener.execution.degiro_bootstrap import bootstrap_orders_positions_from_degiro
 from swing_screener.portfolio.state import load_positions, save_positions
 from swing_screener.strategy.config import build_manage_config, build_report_config, build_risk_config
 from swing_screener.strategy.storage import get_active_strategy, get_strategy_by_id
@@ -357,6 +358,63 @@ def main() -> None:
         type=int,
         default=10,
         help="How many unmatched rows to print (default: 10)",
+    )
+
+    orders_sync_degiro = orders_sub.add_parser(
+        "sync-degiro",
+        help="One-step DeGiro sync: import fees and reconcile orders/positions links",
+    )
+    orders_sync_degiro.add_argument("--orders", required=True, help="Path to orders.json")
+    orders_sync_degiro.add_argument("--positions", required=True, help="Path to positions.json")
+    orders_sync_degiro.add_argument(
+        "--csv",
+        required=True,
+        help="Path to DeGiro transactions export CSV (e.g. Transactions.csv)",
+    )
+    orders_sync_degiro.add_argument(
+        "--price-tolerance",
+        type=float,
+        default=0.02,
+        help="Allowed price difference for heuristic fee matching (default: 0.02)",
+    )
+    orders_sync_degiro.add_argument(
+        "--show-unmatched",
+        type=int,
+        default=10,
+        help="How many unmatched fee rows to print (default: 10)",
+    )
+    orders_sync_degiro.add_argument(
+        "--apply",
+        action="store_true",
+        help="Apply changes (default is dry-run preview)",
+    )
+
+    orders_bootstrap_degiro = orders_sub.add_parser(
+        "bootstrap-degiro",
+        help="Rebuild orders.json and positions.json from DeGiro transactions export",
+    )
+    orders_bootstrap_degiro.add_argument("--orders", required=True, help="Path to orders.json")
+    orders_bootstrap_degiro.add_argument("--positions", required=True, help="Path to positions.json")
+    orders_bootstrap_degiro.add_argument(
+        "--csv",
+        required=True,
+        help="Path to DeGiro transactions export CSV",
+    )
+    orders_bootstrap_degiro.add_argument(
+        "--isin-map",
+        default="config/degiro_isin_map.json",
+        help="Path to ISIN->ticker map JSON (default: config/degiro_isin_map.json)",
+    )
+    orders_bootstrap_degiro.add_argument(
+        "--show-issues",
+        type=int,
+        default=20,
+        help="How many bootstrap issues to print (default: 20)",
+    )
+    orders_bootstrap_degiro.add_argument(
+        "--apply",
+        action="store_true",
+        help="Write rebuilt orders/positions files (default is dry-run)",
     )
 
     # -------------------------
@@ -923,6 +981,77 @@ def main() -> None:
                         print(f"  ... {len(result.unmatched) - limit} more unmatched rows")
                 if not args.apply:
                     print("Run again with --apply to write updates.")
+            elif args.orders_command == "sync-degiro":
+                from swing_screener.portfolio.migrate import migrate_orders_positions
+
+                fee_result = import_degiro_fees_to_orders(
+                    orders_path=args.orders,
+                    csv_path=args.csv,
+                    price_tolerance=float(args.price_tolerance),
+                    apply_changes=bool(args.apply),
+                )
+                mode = "APPLIED" if args.apply else "DRY-RUN"
+                print(f"DeGiro fee import ({mode})")
+                print(f"  CSV rows:           {fee_result.total_csv_rows}")
+                print(f"  Deduped rows:       {fee_result.deduped_rows}")
+                print(f"  Matched rows:       {fee_result.matched_rows}")
+                print(f"  Unmatched rows:     {fee_result.unmatched_rows}")
+                print(f"  Orders updated:     {fee_result.updated_orders}")
+                if fee_result.unmatched:
+                    limit = max(0, int(args.show_unmatched))
+                    for item in fee_result.unmatched[:limit]:
+                        candidates = ", ".join(item.candidates) if item.candidates else "-"
+                        print(
+                            f"  - {item.reason}: broker_order_id={item.broker_order_id} "
+                            f"date={item.fill_date} qty={item.quantity_signed} "
+                            f"price={item.fill_price:.4f} fee_eur={item.fee_eur:.4f} "
+                            f"candidates={candidates}"
+                        )
+                    if len(fee_result.unmatched) > limit:
+                        print(f"  ... {len(fee_result.unmatched) - limit} more unmatched rows")
+
+                if args.apply:
+                    _, _, migrated = migrate_orders_positions(
+                        args.orders,
+                        args.positions,
+                        create_stop_orders=True,
+                    )
+                    print(f"Reconcile orders/positions: {'updated' if migrated else 'no changes'}")
+                else:
+                    print("Dry-run: no files were changed. Run again with --apply to write updates.")
+            elif args.orders_command == "bootstrap-degiro":
+                result = bootstrap_orders_positions_from_degiro(
+                    csv_path=args.csv,
+                    isin_map_path=args.isin_map,
+                    orders_path=args.orders,
+                    positions_path=args.positions,
+                    apply_changes=bool(args.apply),
+                )
+                mode = "APPLIED" if args.apply else "DRY-RUN"
+                print(f"DeGiro bootstrap ({mode})")
+                print(f"  CSV rows:            {result.total_csv_rows}")
+                print(f"  Deduped rows:        {result.deduped_rows}")
+                print(f"  Orders generated:    {result.orders_generated}")
+                print(f"  Positions generated: {result.positions_generated}")
+                print(f"  Open positions:      {result.open_positions}")
+                print(f"  Closed positions:    {result.closed_positions}")
+                if result.unresolved_isins:
+                    print("  Unresolved ISINs:")
+                    for isin in result.unresolved_isins:
+                        print(f"    - {isin}")
+                if result.issues:
+                    limit = max(0, int(args.show_issues))
+                    print("  Issues:")
+                    for issue in result.issues[:limit]:
+                        print(
+                            f"    - {issue.reason}: {issue.broker_order_id} "
+                            f"(isin={issue.isin}, date={issue.fill_date}, qty={issue.quantity_signed}, "
+                            f"price={issue.fill_price:.4f}) {issue.detail}"
+                        )
+                    if len(result.issues) > limit:
+                        print(f"    ... {len(result.issues) - limit} more")
+                if not args.apply:
+                    print("Dry-run: no files changed. Run again with --apply to write rebuilt state.")
         except ValueError as e:
             print(f"Error: {e}", file=sys.stderr)
             sys.exit(1)
