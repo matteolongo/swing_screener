@@ -54,6 +54,10 @@ from swing_screener.utils.date_helpers import get_default_backtest_start
 
 logger = logging.getLogger(__name__)
 
+# Simple cache for EURUSD rate with 5-minute TTL
+_eurusd_cache: dict[str, tuple[float, float]] = {}  # {"eurusd": (rate, timestamp)}
+_CACHE_TTL_SECONDS = 300  # 5 minutes
+
 
 def _to_iso(ts) -> Optional[str]:
     if ts is None or pd.isna(ts):
@@ -226,10 +230,21 @@ class PortfolioService:
         return fees
 
     def _eurusd_rate(self) -> float:
+        """Fetch EURUSD rate with simple caching to avoid redundant API calls."""
+        import time
+        now = time.time()
+        cached = _eurusd_cache.get("eurusd")
+        if cached is not None:
+            rate, timestamp = cached
+            if now - timestamp < _CACHE_TTL_SECONDS:
+                return rate
+        
         try:
             fx = self._fetch_last_prices(["EURUSD=X"])
             rate = float(fx.get("EURUSD=X", 0.0))
-            return rate if rate > 0 else 1.0
+            rate = rate if rate > 0 else 1.0
+            _eurusd_cache["eurusd"] = (rate, now)
+            return rate
         except Exception as exc:
             logger.warning("Failed to fetch EURUSD fx rate for fee conversion: %s", exc)
             return 1.0
@@ -249,7 +264,19 @@ class PortfolioService:
         current_price_for_metrics = live_price if live_price is not None else self._fallback_price(position)
         per_share_risk = calculate_per_share_risk(state_position)
         fees_eur = fee_map.get(state_position.position_id or "", 0.0)
-        fee_in_quote_ccy = fees_eur if detect_currency(ticker) == "EUR" else fees_eur * eurusd_rate
+        position_ccy = detect_currency(ticker)
+        if position_ccy == "EUR":
+            fee_in_quote_ccy = fees_eur
+        elif position_ccy == "USD":
+            fee_in_quote_ccy = fees_eur * eurusd_rate
+        else:
+            logger.warning(
+                "Unexpected currency '%s' detected for ticker '%s' when converting fees; "
+                "using raw EUR fee amount without FX conversion.",
+                position_ccy,
+                ticker,
+            )
+            fee_in_quote_ccy = fees_eur
         pnl = calculate_pnl(state_position.entry_price, current_price_for_metrics, state_position.shares) - fee_in_quote_ccy
         entry_value = calculate_total_position_value(state_position.entry_price, state_position.shares)
         pnl_percent = (pnl / entry_value * 100.0) if entry_value > 0 else 0.0

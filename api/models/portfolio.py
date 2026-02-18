@@ -216,7 +216,7 @@ class FillOrderRequest(BaseModel):
     fill_fx_rate: Optional[float] = Field(
         default=None,
         gt=0,
-        description="FX rate quote_ccy per EUR at fill time (optional, e.g. 1.18 for USD/EUR)",
+        description="Exchange rate at fill time (e.g., 1.18 means 1 EUR = 1.18 USD). Optional.",
     )
 
 

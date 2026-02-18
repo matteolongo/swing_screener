@@ -9,13 +9,6 @@ def calculate_pnl(entry_price: float, current_price: float, shares: int) -> floa
     return (current_price - entry_price) * shares
 
 
-def calculate_pnl_percent(entry_price: float, current_price: float) -> float:
-    """Calculate percentage P&L for a position."""
-    if entry_price == 0:
-        return 0.0
-    return ((current_price - entry_price) / entry_price) * 100.0
-
-
 def calculate_per_share_risk(position: Position) -> float:
     """Calculate per-share risk using initial risk when available."""
     if position.initial_risk is not None and position.initial_risk > 0:

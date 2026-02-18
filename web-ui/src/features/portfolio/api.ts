@@ -159,7 +159,7 @@ export async function fillOrder(orderId: string, request: FillOrderRequest): Pro
   if (request.stopPrice && request.stopPrice > 0) {
     payload.stop_price = request.stopPrice;
   }
-  if (request.feeEur !== undefined && request.feeEur >= 0) {
+  if (request.feeEur !== undefined) {
     payload.fee_eur = request.feeEur;
   }
   if (request.fillFxRate !== undefined && request.fillFxRate > 0) {

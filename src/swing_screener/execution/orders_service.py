@@ -192,6 +192,9 @@ def fill_exit_order_dicts(
     order["entry_price"] = float(fill_price)
     order["fee_eur"] = float(fee_eur) if fee_eur is not None else None
     order["fill_fx_rate"] = float(fill_fx_rate) if fill_fx_rate is not None else None
+    # Ensure exit order has position_id so fees are properly tracked
+    if pos and pos.position_id:
+        order["position_id"] = pos.position_id
 
     positions = list(positions)
     positions[pos_idx] = replace(
