@@ -21,6 +21,7 @@ import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 import UpdateStopModalForm from '@/components/domain/positions/UpdateStopModalForm';
 import ClosePositionModalForm from '@/components/domain/positions/ClosePositionModalForm';
 import PositionValueWithCalculation from '@/components/domain/positions/PositionValueWithCalculation';
+import CachedSymbolPriceChart from '@/components/domain/market/CachedSymbolPriceChart';
 import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 import { detectCurrency } from '@/utils/currency';
 import { t } from '@/i18n/t';
@@ -181,26 +182,29 @@ export default function Positions() {
                   className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800"
                 >
                   <td className="py-3 px-4 font-mono font-semibold">
-                    <div className="flex items-center gap-2">
-                      <a
-                        href={`https://finance.yahoo.com/quote/${position.ticker}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-800 hover:underline"
-                        title={t('positionsPage.yahooTitle', { ticker: position.ticker })}
-                      >
-                        {position.ticker}
-                      </a>
-                      <CurrencyBadge currency={detectCurrency(position.ticker)} />
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => setSocialSymbol(position.ticker)}
-                        aria-label={t('positionsPage.sentimentAria', { ticker: position.ticker })}
-                        title={t('positionsPage.sentimentTitle')}
-                      >
-                        <MessageSquare className="w-4 h-4" />
-                      </Button>
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-2">
+                        <a
+                          href={`https://finance.yahoo.com/quote/${position.ticker}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800 hover:underline"
+                          title={t('positionsPage.yahooTitle', { ticker: position.ticker })}
+                        >
+                          {position.ticker}
+                        </a>
+                        <CurrencyBadge currency={detectCurrency(position.ticker)} />
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => setSocialSymbol(position.ticker)}
+                          aria-label={t('positionsPage.sentimentAria', { ticker: position.ticker })}
+                          title={t('positionsPage.sentimentTitle')}
+                        >
+                          <MessageSquare className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      <CachedSymbolPriceChart ticker={position.ticker} className="mt-1" />
                     </div>
                   </td>
                   <td className="py-3 px-4">
