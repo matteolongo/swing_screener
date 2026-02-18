@@ -25,6 +25,7 @@ from swing_screener.data.universe import (
 )
 from swing_screener.execution.order_workflows import fill_entry_order, scale_in_fill, normalize_orders
 from swing_screener.execution.orders import Order, load_orders, save_orders
+from swing_screener.execution.degiro_fees import import_degiro_fees_to_orders
 from swing_screener.portfolio.state import load_positions, save_positions
 from swing_screener.strategy.config import build_manage_config, build_report_config, build_risk_config
 from swing_screener.strategy.storage import get_active_strategy, get_strategy_by_id
@@ -329,6 +330,34 @@ def main() -> None:
     orders_cancel = orders_sub.add_parser("cancel", help="Cancel a pending order")
     orders_cancel.add_argument("--orders", required=True, help="Path to orders.json")
     orders_cancel.add_argument("--order-id", required=True, help="Order ID to cancel")
+
+    orders_import_fees = orders_sub.add_parser(
+        "import-degiro-fees",
+        help="Import fees from DeGiro Transactions.csv into filled orders",
+    )
+    orders_import_fees.add_argument("--orders", required=True, help="Path to orders.json")
+    orders_import_fees.add_argument(
+        "--csv",
+        required=True,
+        help="Path to DeGiro transactions export CSV (e.g. Transactions.csv)",
+    )
+    orders_import_fees.add_argument(
+        "--price-tolerance",
+        type=float,
+        default=0.02,
+        help="Allowed price difference for heuristic matching (default: 0.02)",
+    )
+    orders_import_fees.add_argument(
+        "--apply",
+        action="store_true",
+        help="Write matched fees into orders.json (default is dry-run preview)",
+    )
+    orders_import_fees.add_argument(
+        "--show-unmatched",
+        type=int,
+        default=10,
+        help="How many unmatched rows to print (default: 10)",
+    )
 
     # -------------------------
     # UNIVERSES (list/show/filter)
@@ -866,6 +895,34 @@ def main() -> None:
                     order_id=args.order_id,
                 )
                 print(f"Order cancelled: {args.order_id}")
+            elif args.orders_command == "import-degiro-fees":
+                result = import_degiro_fees_to_orders(
+                    orders_path=args.orders,
+                    csv_path=args.csv,
+                    price_tolerance=float(args.price_tolerance),
+                    apply_changes=bool(args.apply),
+                )
+                mode = "APPLIED" if args.apply else "DRY-RUN"
+                print(f"DeGiro fee import ({mode})")
+                print(f"  CSV rows:           {result.total_csv_rows}")
+                print(f"  Deduped rows:       {result.deduped_rows}")
+                print(f"  Matched rows:       {result.matched_rows}")
+                print(f"  Unmatched rows:     {result.unmatched_rows}")
+                print(f"  Orders updated:     {result.updated_orders}")
+                if result.unmatched:
+                    limit = max(0, int(args.show_unmatched))
+                    for item in result.unmatched[:limit]:
+                        candidates = ", ".join(item.candidates) if item.candidates else "-"
+                        print(
+                            f"  - {item.reason}: broker_order_id={item.broker_order_id} "
+                            f"date={item.fill_date} qty={item.quantity_signed} "
+                            f"price={item.fill_price:.4f} fee_eur={item.fee_eur:.4f} "
+                            f"candidates={candidates}"
+                        )
+                    if len(result.unmatched) > limit:
+                        print(f"  ... {len(result.unmatched) - limit} more unmatched rows")
+                if not args.apply:
+                    print("Run again with --apply to write updates.")
         except ValueError as e:
             print(f"Error: {e}", file=sys.stderr)
             sys.exit(1)
