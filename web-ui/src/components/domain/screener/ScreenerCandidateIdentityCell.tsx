@@ -1,5 +1,6 @@
 import { CandidateViewModel } from '@/features/screener/viewModel';
 import RecommendationBadge from '@/components/domain/recommendation/RecommendationBadge';
+import CachedSymbolPriceChart from '@/components/domain/market/CachedSymbolPriceChart';
 import { Gauge } from 'lucide-react';
 import { t } from '@/i18n/t';
 
@@ -33,6 +34,7 @@ export default function ScreenerCandidateIdentityCell({
         </a>
         <RecommendationBadge verdict={candidate.verdict} />
       </div>
+      <CachedSymbolPriceChart ticker={candidate.ticker} />
 
       {/* Confidence */}
       <div className="inline-flex w-fit items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-xs text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">

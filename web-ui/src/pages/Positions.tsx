@@ -7,15 +7,12 @@ import TableShell from '@/components/common/TableShell';
 import {
   Position,
   PositionStatus,
-  calculatePnL,
-  calculatePnLPercent,
 } from '@/features/portfolio/types';
-import { calcOpenRisk, calcOpenRiskPct } from '@/features/portfolio/metrics';
 import {
   usePositions,
-  useOpenPositions,
   useUpdateStopMutation,
   useClosePositionMutation,
+  usePortfolioSummary,
 } from '@/features/portfolio/hooks';
 import { formatCurrency, formatDate, formatPercent } from '@/utils/formatters';
 import { TrendingUp, TrendingDown, X, MessageSquare } from 'lucide-react';
@@ -24,6 +21,7 @@ import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 import UpdateStopModalForm from '@/components/domain/positions/UpdateStopModalForm';
 import ClosePositionModalForm from '@/components/domain/positions/ClosePositionModalForm';
 import PositionValueWithCalculation from '@/components/domain/positions/PositionValueWithCalculation';
+import CachedSymbolPriceChart from '@/components/domain/market/CachedSymbolPriceChart';
 import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 import { detectCurrency } from '@/utils/currency';
 import { t } from '@/i18n/t';
@@ -62,12 +60,10 @@ export default function Positions() {
     return titles[status];
   };
 
-  const openPositionsQuery = useOpenPositions();
-  const openPositions = openPositionsQuery.data ?? [];
-
-  const accountSize = activeStrategyQuery.data?.risk.accountSize ?? 0;
-  const totalOpenRisk = calcOpenRisk(openPositions);
-  const openRiskPct = calcOpenRiskPct(totalOpenRisk, accountSize) * 100;
+  const summaryQuery = usePortfolioSummary();
+  const accountSize = summaryQuery.data?.accountSize ?? activeStrategyQuery.data?.risk.accountSize ?? 0;
+  const totalOpenRisk = summaryQuery.data?.openRisk ?? 0;
+  const openRiskPct = summaryQuery.data?.openRiskPercent ?? 0;
 
   const updateStopMutation = useUpdateStopMutation(() => {
     setShowUpdateStopModal(false);
@@ -169,16 +165,16 @@ export default function Positions() {
               </tr>
             )}
           >
-            {positions.map((position: Position) => {
-              const pnl = calculatePnL(position);
-              const pnlPercent = calculatePnLPercent(position);
+            {positions.map((position) => {
+              const pnl = position.pnl;
+              const pnlPercent = position.pnlPercent;
               const isProfitable = pnl >= 0;
-              const entryValue = position.entryPrice * position.shares;
+              const entryValue = position.entryValue;
               const currentPrice =
                 position.status === 'closed'
                   ? (position.exitPrice ?? position.entryPrice)
                   : (position.currentPrice ?? position.entryPrice);
-              const currentValue = currentPrice * position.shares;
+              const currentValue = position.currentValue;
 
               return (
                 <tr
@@ -186,26 +182,29 @@ export default function Positions() {
                   className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800"
                 >
                   <td className="py-3 px-4 font-mono font-semibold">
-                    <div className="flex items-center gap-2">
-                      <a
-                        href={`https://finance.yahoo.com/quote/${position.ticker}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-800 hover:underline"
-                        title={t('positionsPage.yahooTitle', { ticker: position.ticker })}
-                      >
-                        {position.ticker}
-                      </a>
-                      <CurrencyBadge currency={detectCurrency(position.ticker)} />
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => setSocialSymbol(position.ticker)}
-                        aria-label={t('positionsPage.sentimentAria', { ticker: position.ticker })}
-                        title={t('positionsPage.sentimentTitle')}
-                      >
-                        <MessageSquare className="w-4 h-4" />
-                      </Button>
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-2">
+                        <a
+                          href={`https://finance.yahoo.com/quote/${position.ticker}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800 hover:underline"
+                          title={t('positionsPage.yahooTitle', { ticker: position.ticker })}
+                        >
+                          {position.ticker}
+                        </a>
+                        <CurrencyBadge currency={detectCurrency(position.ticker)} />
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => setSocialSymbol(position.ticker)}
+                          aria-label={t('positionsPage.sentimentAria', { ticker: position.ticker })}
+                          title={t('positionsPage.sentimentTitle')}
+                        >
+                          <MessageSquare className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      <CachedSymbolPriceChart ticker={position.ticker} className="mt-1" />
                     </div>
                   </td>
                   <td className="py-3 px-4">

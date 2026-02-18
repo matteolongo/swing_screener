@@ -8,6 +8,7 @@ import {
   TextInput,
 } from '@/components/domain/strategy/StrategyFieldControls';
 import { Strategy, StrategyCurrency } from '@/features/strategy/types';
+import type { ValidationWarning } from '@/features/strategy/api';
 import EnhancedSignalsCard from './EnhancedSignalsCard';
 import EnhancedRiskCard from './EnhancedRiskCard';
 
@@ -31,6 +32,7 @@ interface StrategyCoreSettingsCardsProps {
   draft: Strategy;
   setDraft: (value: Strategy) => void;
   help: Record<string, HelpInfo>;
+  validationWarnings: ValidationWarning[];
   useEnhancedEducation?: boolean; // Enable enhanced educational components
 }
 
@@ -38,6 +40,7 @@ export default function StrategyCoreSettingsCards({
   draft,
   setDraft,
   help,
+  validationWarnings,
   useEnhancedEducation = true, // Default to enhanced mode
 }: StrategyCoreSettingsCardsProps) {
   const strategyModules = [
@@ -85,7 +88,7 @@ export default function StrategyCoreSettingsCards({
 
       {/* Risk & Position Sizing - Use enhanced version if enabled */}
       {useEnhancedEducation ? (
-        <EnhancedRiskCard draft={draft} setDraft={setDraft} />
+        <EnhancedRiskCard draft={draft} setDraft={setDraft} warnings={validationWarnings} />
       ) : (
         <Card variant="bordered">
           <CardHeader>
@@ -257,7 +260,7 @@ export default function StrategyCoreSettingsCards({
 
       {/* Signals - Use enhanced version if enabled */}
       {useEnhancedEducation ? (
-        <EnhancedSignalsCard draft={draft} setDraft={setDraft} />
+        <EnhancedSignalsCard draft={draft} setDraft={setDraft} warnings={validationWarnings} />
       ) : (
         <Card variant="bordered">
           <CardHeader>

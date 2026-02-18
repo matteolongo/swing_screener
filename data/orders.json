@@ -1,5 +1,5 @@
 {
-  "asof": "2026-02-17",
+  "asof": "2026-02-18",
   "orders": [
     {
       "order_id": "ORD-INTC-20260115-ENTRY",
@@ -16,7 +16,9 @@
       "order_kind": "entry",
       "parent_order_id": null,
       "position_id": "POS-INTC-20260115-01",
-      "tif": "GTC"
+      "tif": "GTC",
+      "fee_eur": null,
+      "fill_fx_rate": null
     },
     {
       "order_id": "ORD-INTC-20260115-STOP",
@@ -33,7 +35,9 @@
       "order_kind": "stop",
       "parent_order_id": "ORD-INTC-20260115-ENTRY",
       "position_id": "POS-INTC-20260115-01",
-      "tif": "GTC"
+      "tif": "GTC",
+      "fee_eur": null,
+      "fill_fx_rate": null
     },
     {
       "order_id": "ORD-VALE-20260116-ENTRY",
@@ -50,24 +54,28 @@
       "order_kind": "entry",
       "parent_order_id": null,
       "position_id": "POS-VALE-20260116-01",
-      "tif": "GTC"
+      "tif": "GTC",
+      "fee_eur": null,
+      "fill_fx_rate": null
     },
     {
       "order_id": "ORD-VALE-20260116-STOP",
       "ticker": "VALE",
-      "status": "pending",
+      "status": "filled",
       "order_type": "SELL_STOP",
       "limit_price": null,
       "quantity": 6,
       "stop_price": 16.36,
       "order_date": "2026-01-16",
-      "filled_date": "",
-      "entry_price": null,
+      "filled_date": "2026-02-17",
+      "entry_price": 16.07,
       "notes": "Synced with Degiro pending stop on 2026-02-13.",
       "order_kind": "stop",
       "parent_order_id": "ORD-VALE-20260116-ENTRY",
       "position_id": "POS-VALE-20260116-01",
-      "tif": "GTC"
+      "tif": "GTC",
+      "fee_eur": 2.0,
+      "fill_fx_rate": 1.182
     },
     {
       "order_id": "GSK-20260201204528",
@@ -84,7 +92,9 @@
       "order_kind": "entry",
       "parent_order_id": null,
       "position_id": null,
-      "tif": "GTC"
+      "tif": "GTC",
+      "fee_eur": null,
+      "fill_fx_rate": null
     },
     {
       "order_id": "TAK-20260202134017",
@@ -101,7 +111,9 @@
       "order_kind": "entry",
       "parent_order_id": null,
       "position_id": null,
-      "tif": "GTC"
+      "tif": "GTC",
+      "fee_eur": null,
+      "fill_fx_rate": null
     },
     {
       "order_id": "HSBC-20260202145834",
@@ -118,7 +130,9 @@
       "order_kind": "entry",
       "parent_order_id": null,
       "position_id": "POS-HSBC-20260202-01",
-      "tif": "GTC"
+      "tif": "GTC",
+      "fee_eur": 2.0,
+      "fill_fx_rate": 1.1825
     },
     {
       "order_id": "ORD-STOP-POS-HSBC-20260202-01",
@@ -135,7 +149,9 @@
       "order_kind": "stop",
       "parent_order_id": "HSBC-20260202145834",
       "position_id": "POS-HSBC-20260202-01",
-      "tif": "GTC"
+      "tif": "GTC",
+      "fee_eur": 2.0,
+      "fill_fx_rate": 1.1789
     },
     {
       "order_id": "VALE-20260202172823",
@@ -152,7 +168,9 @@
       "order_kind": "entry",
       "parent_order_id": null,
       "position_id": "POS-VALE-20260116-01",
-      "tif": "GTC"
+      "tif": "GTC",
+      "fee_eur": 2.0,
+      "fill_fx_rate": 1.1805
     },
     {
       "order_id": "MUFG-20260202202527",
@@ -169,7 +187,9 @@
       "order_kind": "entry",
       "parent_order_id": null,
       "position_id": "POS-MUFG-20260202-01",
-      "tif": "GTC"
+      "tif": "GTC",
+      "fee_eur": null,
+      "fill_fx_rate": null
     },
     {
       "order_id": "ORD-STOP-POS-MUFG-20260202-01",
@@ -186,7 +206,9 @@
       "order_kind": "stop",
       "parent_order_id": "MUFG-20260202202527",
       "position_id": "POS-MUFG-20260202-01",
-      "tif": "GTC"
+      "tif": "GTC",
+      "fee_eur": null,
+      "fill_fx_rate": null
     },
     {
       "order_id": "UPS-20260202230041",
@@ -203,7 +225,9 @@
       "order_kind": "entry",
       "parent_order_id": null,
       "position_id": null,
-      "tif": "GTC"
+      "tif": "GTC",
+      "fee_eur": null,
+      "fill_fx_rate": null
     },
     {
       "order_id": "SAN-20260203014018",
@@ -220,7 +244,9 @@
       "order_kind": "entry",
       "parent_order_id": null,
       "position_id": "POS-SAN-20260203-01",
-      "tif": "GTC"
+      "tif": "GTC",
+      "fee_eur": 2.0,
+      "fill_fx_rate": 1.1788
     },
     {
       "order_id": "ORD-STOP-POS-SAN-20260203-01",
@@ -237,7 +263,9 @@
       "order_kind": "stop",
       "parent_order_id": "SAN-20260203014018",
       "position_id": "POS-SAN-20260203-01",
-      "tif": "GTC"
+      "tif": "GTC",
+      "fee_eur": 2.0,
+      "fill_fx_rate": 1.1808
     },
     {
       "order_id": "MFG-20260203234917",
@@ -254,7 +282,9 @@
       "order_kind": "entry",
       "parent_order_id": null,
       "position_id": null,
-      "tif": "GTC"
+      "tif": "GTC",
+      "fee_eur": null,
+      "fill_fx_rate": null
     },
     {
       "order_id": "MFG-20260203235636",
@@ -271,7 +301,9 @@
       "order_kind": "entry",
       "parent_order_id": null,
       "position_id": null,
-      "tif": "GTC"
+      "tif": "GTC",
+      "fee_eur": null,
+      "fill_fx_rate": null
     },
     {
       "order_id": "SMFG-20260205001815",
@@ -288,7 +320,9 @@
       "order_kind": "entry",
       "parent_order_id": null,
       "position_id": "POS-SMFG-20260205-01",
-      "tif": "GTC"
+      "tif": "GTC",
+      "fee_eur": null,
+      "fill_fx_rate": null
     },
     {
       "order_id": "ORD-STOP-POS-SMFG-20260205-01",
@@ -305,7 +339,9 @@
       "order_kind": "stop",
       "parent_order_id": "SMFG-20260205001815",
       "position_id": "POS-SMFG-20260205-01",
-      "tif": "GTC"
+      "tif": "GTC",
+      "fee_eur": null,
+      "fill_fx_rate": null
     },
     {
       "order_id": "GSK-20260205221655",
@@ -322,7 +358,9 @@
       "order_kind": "entry",
       "parent_order_id": null,
       "position_id": "POS-GSK-20260205-01",
-      "tif": "GTC"
+      "tif": "GTC",
+      "fee_eur": null,
+      "fill_fx_rate": null
     },
     {
       "order_id": "ORD-STOP-POS-GSK-20260205-01",
@@ -339,7 +377,9 @@
       "order_kind": "stop",
       "parent_order_id": "GSK-20260205221655",
       "position_id": "POS-GSK-20260205-01",
-      "tif": "GTC"
+      "tif": "GTC",
+      "fee_eur": null,
+      "fill_fx_rate": null
     },
     {
       "order_id": "ABEV-20260205222343",
@@ -356,7 +396,9 @@
       "order_kind": "entry",
       "parent_order_id": null,
       "position_id": null,
-      "tif": "GTC"
+      "tif": "GTC",
+      "fee_eur": null,
+      "fill_fx_rate": null
     },
     {
       "order_id": "AAPL-20260206003730",
@@ -373,7 +415,9 @@
       "order_kind": "entry",
       "parent_order_id": null,
       "position_id": null,
-      "tif": "GTC"
+      "tif": "GTC",
+      "fee_eur": null,
+      "fill_fx_rate": null
     },
     {
       "order_id": "MSFT-20260206003746",
@@ -390,7 +434,9 @@
       "order_kind": "entry",
       "parent_order_id": null,
       "position_id": null,
-      "tif": "GTC"
+      "tif": "GTC",
+      "fee_eur": null,
+      "fill_fx_rate": null
     },
     {
       "order_id": "MFG-20260207154147",
@@ -407,7 +453,9 @@
       "order_kind": "entry",
       "parent_order_id": null,
       "position_id": null,
-      "tif": "GTC"
+      "tif": "GTC",
+      "fee_eur": null,
+      "fill_fx_rate": null
     },
     {
       "order_id": "INTC-20260208124849",
@@ -424,7 +472,9 @@
       "order_kind": "entry",
       "parent_order_id": null,
       "position_id": "POS-INTC-20260209-01",
-      "tif": "GTC"
+      "tif": "GTC",
+      "fee_eur": 2.0,
+      "fill_fx_rate": 1.1916
     },
     {
       "order_id": "ORD-STOP-POS-INTC-20260209-01",
@@ -441,7 +491,9 @@
       "order_kind": "stop",
       "parent_order_id": "INTC-20260208124849",
       "position_id": "POS-INTC-20260209-01",
-      "tif": "GTC"
+      "tif": "GTC",
+      "fee_eur": null,
+      "fill_fx_rate": null
     },
     {
       "order_id": "ALLFG.AS-20260216014014",
@@ -458,7 +510,9 @@
       "order_kind": "entry",
       "parent_order_id": null,
       "position_id": "POS-ALLFG.AS-20260216-01",
-      "tif": "GTC"
+      "tif": "GTC",
+      "fee_eur": 4.9,
+      "fill_fx_rate": null
     },
     {
       "order_id": "ORD-STOP-POS-ALLFG.AS-20260216-01",
@@ -475,7 +529,9 @@
       "order_kind": "stop",
       "parent_order_id": "ALLFG.AS-20260216014014",
       "position_id": "POS-ALLFG.AS-20260216-01",
-      "tif": "GTC"
+      "tif": "GTC",
+      "fee_eur": null,
+      "fill_fx_rate": null
     },
     {
       "order_id": "ORD-46AF6332",
@@ -492,7 +548,9 @@
       "order_kind": "stop",
       "parent_order_id": null,
       "position_id": "POS-ALLFG.AS-20260216-01",
-      "tif": "GTC"
+      "tif": "GTC",
+      "fee_eur": null,
+      "fill_fx_rate": null
     },
     {
       "order_id": "BAMNB.AS-20260217112538",
@@ -509,24 +567,85 @@
       "order_kind": "entry",
       "parent_order_id": null,
       "position_id": "POS-BAMNB.AS-20260217-01",
-      "tif": "GTC"
+      "tif": "GTC",
+      "fee_eur": 4.9,
+      "fill_fx_rate": null
     },
     {
       "order_id": "ORD-STOP-POS-BAMNB.AS-20260217-01",
       "ticker": "BAMNB.AS",
-      "status": "pending",
+      "status": "filled",
       "order_type": "SELL_STOP",
       "limit_price": null,
       "quantity": 2,
       "stop_price": 9.37,
       "order_date": "2026-02-17",
-      "filled_date": "",
-      "entry_price": null,
+      "filled_date": "2026-02-17",
+      "entry_price": 9.68,
       "notes": "auto-linked stop",
       "order_kind": "stop",
       "parent_order_id": "BAMNB.AS-20260217112538",
       "position_id": "POS-BAMNB.AS-20260217-01",
-      "tif": "GTC"
+      "tif": "GTC",
+      "fee_eur": 4.9,
+      "fill_fx_rate": null
+    },
+    {
+      "order_id": "BAYN.DE-20260218001106",
+      "ticker": "BAYN.DE",
+      "status": "filled",
+      "order_type": "BUY_LIMIT",
+      "limit_price": 49.31,
+      "quantity": 2,
+      "stop_price": 46.6,
+      "order_date": "2026-02-18",
+      "filled_date": "2026-02-18",
+      "entry_price": 48.61,
+      "notes": "From screener: Score 98.5, Rank #1",
+      "order_kind": "entry",
+      "parent_order_id": null,
+      "position_id": "POS-BAYN.DE-20260218-01",
+      "tif": "GTC",
+      "fee_eur": 4.9,
+      "fill_fx_rate": null
+    },
+    {
+      "order_id": "IBE.MC-20260218004553",
+      "ticker": "IBE.MC",
+      "status": "pending",
+      "order_type": "BUY_LIMIT",
+      "limit_price": 20.09,
+      "quantity": 4,
+      "stop_price": 19.47,
+      "order_date": "2026-02-18",
+      "filled_date": "",
+      "entry_price": null,
+      "notes": "From daily review: Entry $20.09, R:R 2.0",
+      "order_kind": "entry",
+      "parent_order_id": null,
+      "position_id": null,
+      "tif": "GTC",
+      "fee_eur": null,
+      "fill_fx_rate": null
+    },
+    {
+      "order_id": "ORD-STOP-POS-BAYN.DE-20260218-01",
+      "ticker": "BAYN.DE",
+      "status": "pending",
+      "order_type": "SELL_STOP",
+      "limit_price": null,
+      "quantity": 2,
+      "stop_price": 46.6,
+      "order_date": "2026-02-18",
+      "filled_date": "",
+      "entry_price": null,
+      "notes": "auto-linked stop",
+      "order_kind": "stop",
+      "parent_order_id": "BAYN.DE-20260218001106",
+      "position_id": "POS-BAYN.DE-20260218-01",
+      "tif": "GTC",
+      "fee_eur": null,
+      "fill_fx_rate": null
     }
   ]
 }

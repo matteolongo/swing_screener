@@ -3,6 +3,8 @@ import type { OrderFilterStatus, PositionFilterStatus } from '@/features/portfol
 export const queryKeys = {
   strategies: () => ['strategies'] as const,
   strategyActive: () => ['strategy-active'] as const,
+  strategyValidation: (payloadHash?: string | null) =>
+    payloadHash == null ? (['strategy-validation'] as const) : (['strategy-validation', payloadHash] as const),
   universes: () => ['universes'] as const,
   dailyReview: (topN: number, universe?: string | null) => ['dailyReview', topN, universe ?? null] as const,
   orders: (status?: OrderFilterStatus) =>
@@ -10,6 +12,9 @@ export const queryKeys = {
   ordersSnapshot: () => ['orders', 'snapshot'] as const,
   positions: (status?: PositionFilterStatus | 'open') =>
     status == null ? (['positions'] as const) : (['positions', status] as const),
+  positionMetrics: (positionId?: string) =>
+    positionId == null ? (['position-metrics'] as const) : (['position-metrics', positionId] as const),
+  portfolioSummary: () => ['portfolio-summary'] as const,
   positionStopSuggestion: (positionId?: string) =>
     ['positions', positionId, 'stop-suggestion'] as const,
   backtestSimulations: () => ['backtest-simulations'] as const,

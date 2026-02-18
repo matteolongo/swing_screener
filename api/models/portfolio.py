@@ -111,6 +111,8 @@ class Order(BaseModel):
     parent_order_id: Optional[str] = None
     position_id: Optional[str] = None
     tif: Optional[str] = None
+    fee_eur: Optional[float] = None
+    fill_fx_rate: Optional[float] = None
 
 
 class CreateOrderRequest(BaseModel):
@@ -206,11 +208,78 @@ class FillOrderRequest(BaseModel):
         gt=0,
         description="Stop price to use when filling entry orders (optional override)",
     )
+    fee_eur: Optional[float] = Field(
+        default=None,
+        ge=0,
+        description="Execution fee in EUR (optional)",
+    )
+    fill_fx_rate: Optional[float] = Field(
+        default=None,
+        gt=0,
+        description="Exchange rate at fill time (e.g., 1.18 means 1 EUR = 1.18 USD). Optional.",
+    )
 
 
 class PositionsResponse(BaseModel):
     positions: list[Position]
     asof: str
+
+
+class PositionWithMetrics(Position):
+    """Position with precomputed financial metrics."""
+
+    pnl: float = Field(..., description="Absolute profit/loss in dollars")
+    fees_eur: float = Field(default=0.0, description="Accumulated execution fees in EUR")
+    pnl_percent: float = Field(..., description="P&L as percentage")
+    r_now: float = Field(..., description="Current R-multiple")
+    entry_value: float = Field(..., description="Total entry value (shares × entry_price)")
+    current_value: float = Field(..., description="Current market value (shares × current_price)")
+    per_share_risk: float = Field(..., description="Risk per share in dollars")
+    total_risk: float = Field(..., description="Total position risk (per_share_risk × shares)")
+
+
+class PositionsWithMetricsResponse(BaseModel):
+    positions: list[PositionWithMetrics]
+    asof: str
+
+
+class PositionMetrics(BaseModel):
+    """Calculated metrics for a position."""
+
+    ticker: str = Field(..., description="Stock ticker symbol")
+    pnl: float = Field(..., description="Absolute profit/loss in dollars")
+    fees_eur: float = Field(default=0.0, description="Accumulated execution fees in EUR")
+    pnl_percent: float = Field(..., description="P&L as percentage")
+    r_now: float = Field(..., description="Current R-multiple")
+    entry_value: float = Field(..., description="Total entry value (shares × entry_price)")
+    current_value: float = Field(..., description="Current market value (shares × current_price)")
+    per_share_risk: float = Field(..., description="Risk per share in dollars")
+    total_risk: float = Field(..., description="Total position risk (per_share_risk × shares)")
+
+
+class PortfolioSummary(BaseModel):
+    """Portfolio-level aggregations."""
+
+    total_positions: int = Field(..., description="Number of open positions")
+    total_value: float = Field(..., description="Total market value of all open positions")
+    total_cost_basis: float = Field(..., description="Total entry value of all open positions")
+    total_pnl: float = Field(..., description="Total unrealized P&L across open positions")
+    total_fees_eur: float = Field(default=0.0, description="Total execution fees across open positions (EUR)")
+    total_pnl_percent: float = Field(..., description="Portfolio unrealized P&L percentage")
+    open_risk: float = Field(..., description="Total open risk (sum of position risks)")
+    open_risk_percent: float = Field(..., description="Open risk as % of account size")
+    account_size: float = Field(..., description="Account size from strategy config")
+    available_capital: float = Field(..., description="Account size minus total position value")
+    largest_position_value: float = Field(..., description="Value of largest single position")
+    largest_position_ticker: str = Field(..., description="Ticker of largest position")
+    best_performer_ticker: str = Field(..., description="Ticker with highest P&L %")
+    best_performer_pnl_pct: float = Field(..., description="Best P&L percentage")
+    worst_performer_ticker: str = Field(..., description="Ticker with lowest P&L %")
+    worst_performer_pnl_pct: float = Field(..., description="Worst P&L percentage")
+    avg_r_now: float = Field(..., description="Average R-multiple across all positions")
+    positions_profitable: int = Field(..., description="Number of positions in profit")
+    positions_losing: int = Field(..., description="Number of positions at loss")
+    win_rate: float = Field(..., description="Percentage of positions profitable")
 
 
 class OrdersResponse(BaseModel):

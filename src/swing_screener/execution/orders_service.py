@@ -40,6 +40,16 @@ def orders_dicts_to_models(orders: list[dict]) -> list[Order]:
                 parent_order_id=item.get("parent_order_id", None),
                 position_id=item.get("position_id", None),
                 tif=item.get("tif", None),
+                fee_eur=(
+                    float(item["fee_eur"])
+                    if item.get("fee_eur") is not None
+                    else None
+                ),
+                fill_fx_rate=(
+                    float(item["fill_fx_rate"])
+                    if item.get("fill_fx_rate") is not None
+                    else None
+                ),
             )
         )
     return out
@@ -65,6 +75,8 @@ def orders_models_to_dicts(orders: list[Order]) -> list[dict]:
                 "parent_order_id": o.parent_order_id,
                 "tif": o.tif,
                 "notes": o.notes,
+                "fee_eur": o.fee_eur,
+                "fill_fx_rate": o.fill_fx_rate,
             }
         )
     return out
@@ -80,6 +92,8 @@ def fill_entry_order_dicts(
     quantity: int,
     stop_price: float,
     tp_price: Optional[float],
+    fee_eur: Optional[float] = None,
+    fill_fx_rate: Optional[float] = None,
 ) -> tuple[list[dict], list[Position]]:
     order_models = orders_dicts_to_models(orders)
     new_orders, new_positions = fill_entry_order(
@@ -91,6 +105,8 @@ def fill_entry_order_dicts(
         quantity=quantity,
         stop_price=stop_price,
         tp_price=tp_price,
+        fee_eur=fee_eur,
+        fill_fx_rate=fill_fx_rate,
     )
     return orders_models_to_dicts(new_orders), new_positions
 
@@ -103,6 +119,8 @@ def scale_in_fill_dicts(
     fill_price: float,
     fill_date: str,
     quantity: int,
+    fee_eur: Optional[float] = None,
+    fill_fx_rate: Optional[float] = None,
 ) -> tuple[list[dict], list[Position]]:
     order_models = orders_dicts_to_models(orders)
     new_orders, new_positions = scale_in_fill(
@@ -112,6 +130,8 @@ def scale_in_fill_dicts(
         fill_price=fill_price,
         fill_date=fill_date,
         quantity=quantity,
+        fee_eur=fee_eur,
+        fill_fx_rate=fill_fx_rate,
     )
     return orders_models_to_dicts(new_orders), new_positions
 
@@ -123,6 +143,8 @@ def fill_exit_order_dicts(
     order_id: str,
     fill_price: float,
     fill_date: str,
+    fee_eur: Optional[float] = None,
+    fill_fx_rate: Optional[float] = None,
 ) -> tuple[list[dict], list[Position]]:
     order = next((o for o in orders if o.get("order_id") == order_id), None)
     if order is None:
@@ -168,6 +190,11 @@ def fill_exit_order_dicts(
     order["status"] = "filled"
     order["filled_date"] = str(fill_date)
     order["entry_price"] = float(fill_price)
+    order["fee_eur"] = float(fee_eur) if fee_eur is not None else None
+    order["fill_fx_rate"] = float(fill_fx_rate) if fill_fx_rate is not None else None
+    # Ensure exit order has position_id so fees are properly tracked
+    if pos and pos.position_id:
+        order["position_id"] = pos.position_id
 
     positions = list(positions)
     positions[pos_idx] = replace(

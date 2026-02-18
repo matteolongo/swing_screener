@@ -30,6 +30,8 @@ def test_cli_orders_fill(tmp_path):
         quantity=2,
         stop_price=9.5,
         tp_price=None,
+        fee_eur=2.0,
+        fill_fx_rate=1.18,
     )
 
     orders_after = load_orders(orders_path)
@@ -38,6 +40,8 @@ def test_cli_orders_fill(tmp_path):
     entry = next(o for o in orders_after if o.order_id == "ORD-AAA-ENTRY")
     assert entry.status == "filled"
     assert entry.position_id == "POS-AAA-20260202-01"
+    assert entry.fee_eur == 2.0
+    assert entry.fill_fx_rate == 1.18
 
     stop = next(o for o in orders_after if o.order_kind == "stop")
     assert stop.quantity == 2
@@ -98,6 +102,8 @@ def test_cli_orders_scale_in(tmp_path):
         fill_price=12.0,
         fill_date="2026-02-02",
         quantity=2,
+        fee_eur=1.5,
+        fill_fx_rate=1.17,
     )
 
     orders_after = load_orders(orders_path)
@@ -106,6 +112,8 @@ def test_cli_orders_scale_in(tmp_path):
     entry = next(o for o in orders_after if o.order_id == "ORD-AAA-ENTRY")
     assert entry.status == "filled"
     assert entry.position_id == "POS-AAA-20260101-01"
+    assert entry.fee_eur == 1.5
+    assert entry.fill_fx_rate == 1.17
 
     stop = next(o for o in orders_after if o.order_kind == "stop")
     assert stop.quantity == 3

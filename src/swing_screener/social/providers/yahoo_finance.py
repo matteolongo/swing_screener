@@ -14,7 +14,6 @@ from swing_screener.social.config import DEFAULT_CACHE_TTL_HOURS
 
 logger = logging.getLogger(__name__)
 
-
 def _to_utc_naive(dt: datetime) -> datetime:
     if dt.tzinfo is not None:
         return dt.astimezone(timezone.utc).replace(tzinfo=None)
@@ -30,8 +29,7 @@ class YahooFinanceProvider:
     
     name = "yahoo_finance"
     
-    def __init__(
-        self,
+    def __init__(self,
         user_agent: str,
         rate_limit_per_sec: float,
         cache: SocialCache,
@@ -54,7 +52,12 @@ class YahooFinanceProvider:
             max_age_hours=DEFAULT_CACHE_TTL_HOURS,
         )
         if cached is not None:
-            return cached
+            # Filter cached events to match the requested time range
+            filtered = [
+                event for event in cached
+                if start_utc <= event.timestamp <= end_utc
+            ]
+            return filtered
         
         headers = {"User-Agent": self.user_agent}
         events: list[SocialRawEvent] = []

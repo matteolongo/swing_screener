@@ -27,12 +27,16 @@ def test_fill_entry_order_creates_position_and_stop():
         fill_date="2026-02-02",
         quantity=3,
         stop_price=9.5,
+        fee_eur=2.0,
+        fill_fx_rate=1.18,
     )
 
     entry = next(o for o in new_orders if o.order_id == "ORD-AAA-ENTRY")
     assert entry.status == "filled"
     assert entry.position_id == "POS-AAA-20260202-01"
     assert entry.entry_price == 10.5
+    assert entry.fee_eur == 2.0
+    assert entry.fill_fx_rate == 1.18
 
     stop = next(o for o in new_orders if o.order_kind == "stop")
     assert stop.order_type == "SELL_STOP"
@@ -130,6 +134,8 @@ def test_scale_in_fill_blends_and_updates_stop():
         fill_price=12.0,
         fill_date="2026-02-02",
         quantity=3,
+        fee_eur=1.5,
+        fill_fx_rate=1.17,
     )
 
     pos = next(p for p in new_positions if p.ticker == "AAA")
@@ -145,6 +151,8 @@ def test_scale_in_fill_blends_and_updates_stop():
     entry = next(o for o in new_orders if o.order_id == "ORD-AAA-ENTRY")
     assert entry.status == "filled"
     assert entry.position_id == "POS-AAA-20260101-01"
+    assert entry.fee_eur == 1.5
+    assert entry.fill_fx_rate == 1.17
 
 
 def test_scale_in_fill_creates_stop_if_missing():

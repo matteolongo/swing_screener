@@ -5,6 +5,8 @@ import {
   closePosition,
   fetchOrderSnapshots,
   fetchOrders,
+  fetchPortfolioSummary,
+  fetchPositionMetrics,
   fetchPositions,
   fetchPositionStopSuggestion,
   fillOrder,
@@ -80,6 +82,23 @@ export function useOpenPositions() {
   return useQuery({
     queryKey: queryKeys.positions('open'),
     queryFn: () => fetchPositions('open'),
+  });
+}
+
+export function usePositionMetrics(positionId?: string) {
+  return useQuery({
+    queryKey: queryKeys.positionMetrics(positionId),
+    queryFn: () => fetchPositionMetrics(positionId as string),
+    enabled: Boolean(positionId),
+    staleTime: 30_000,
+  });
+}
+
+export function usePortfolioSummary() {
+  return useQuery({
+    queryKey: queryKeys.portfolioSummary(),
+    queryFn: fetchPortfolioSummary,
+    staleTime: 30_000,
   });
 }
 

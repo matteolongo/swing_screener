@@ -221,6 +221,8 @@ export const messagesEn = {
       filledPrice: 'Filled Price',
       filledDate: 'Filled Date',
       linkedStopPrice: 'Stop Price (for linked stop)',
+      feeEurOptional: 'Fee (EUR, optional)',
+      fxRateOptional: 'FX Rate (optional)',
       filling: 'Filling...',
       fillAction: 'Fill Order',
       orderDetails: 'Order Details:',
@@ -641,6 +643,15 @@ export const messagesEn = {
       ofAccount: 'of account',
       perTrade: 'per trade',
     },
+    performanceHighlights: {
+      title: 'Performance Highlights',
+      bestPerformer: 'Best Performer',
+      worstPerformer: 'Worst Performer',
+      winRate: 'Win Rate',
+      avgRNow: 'Average R Now',
+      none: '—',
+      empty: 'No open positions yet.',
+    },
     actionItems: {
       title: "Today's Action Items",
       empty: "No action items. You're all caught up!",
@@ -922,6 +933,7 @@ export const messagesEn = {
         createOrder: 'Create Order',
         createOrderTitle: 'Create Order',
         createOrderNotRecommendedTitle: 'Not recommended — open details to fix',
+        yahooFinanceTooltip: 'Open {{ticker}} on Yahoo Finance',
       },
       update: {
         empty: 'No stop updates.',
@@ -936,6 +948,7 @@ export const messagesEn = {
         },
         actionDisabledTitle: 'Update stop action not yet available',
         actionLabel: 'Update Stop',
+        yahooFinanceTooltip: 'Open {{ticker}} on Yahoo Finance',
       },
       close: {
         empty: 'No close candidates.',
@@ -949,6 +962,7 @@ export const messagesEn = {
         },
         actionDisabledTitle: 'Close position action not yet available',
         actionLabel: 'Close Position',
+        yahooFinanceTooltip: 'Open {{ticker}} on Yahoo Finance',
       },
       hold: {
         empty: 'No hold positions.',
@@ -959,6 +973,7 @@ export const messagesEn = {
           stop: 'Stop',
           reason: 'Reason',
         },
+        yahooFinanceTooltip: 'Open {{ticker}} on Yahoo Finance',
       },
     },
     defaultNotes: 'From daily review: Entry {{entry}}, R:R {{rr}}',
@@ -1056,6 +1071,9 @@ export const messagesEn = {
       },
       positionManagement: {
         title: 'Position Management Rules',
+      },
+      sentiment: {
+        title: 'Sentiment Analysis Configuration',
       },
     },
     indicatorForm: {

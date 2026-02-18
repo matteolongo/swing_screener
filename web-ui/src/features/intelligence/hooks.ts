@@ -43,10 +43,6 @@ export function useIntelligenceRunStatus(jobId?: string) {
   });
 }
 
-export function useIntelligenceOpportunities(asofDate?: string, enabled: boolean = true) {
-  return useIntelligenceOpportunitiesScoped(asofDate, undefined, enabled);
-}
-
 export function useIntelligenceOpportunitiesScoped(
   asofDate?: string,
   symbols?: string[],

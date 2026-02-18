@@ -2,6 +2,8 @@ import { useMemo } from 'react';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import { useStrategyEditor } from '@/features/strategy/useStrategyEditor';
+import { useStrategyValidationQuery } from '@/features/strategy/hooks';
+import { toStrategyUpdateRequest } from '@/features/strategy/types';
 import StrategyAdvancedSettingsCard from '@/components/domain/strategy/StrategyAdvancedSettingsCard';
 import StrategyCoreSettingsCards from '@/components/domain/strategy/StrategyCoreSettingsCards';
 import StrategyPhilosophyCard from '@/components/domain/strategy/StrategyPhilosophyCard';
@@ -311,6 +313,14 @@ export default function StrategyPage() {
     updateMutation,
   } = useStrategyEditor();
 
+  const validationPayload = useMemo(
+    () => (draft ? toStrategyUpdateRequest(draft) : null),
+    [draft],
+  );
+  const strategyValidationQuery = useStrategyValidationQuery(validationPayload);
+  const validationResult = strategyValidationQuery.data;
+  const validationWarnings = validationResult?.warnings ?? [];
+
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -457,12 +467,17 @@ export default function StrategyPage() {
           )}
 
           {/* Safety Score - Provides feedback on configuration quality */}
-          <StrategySafetyScore strategy={draft} />
+          <StrategySafetyScore
+            validation={validationResult}
+            isLoading={strategyValidationQuery.isLoading || strategyValidationQuery.isFetching}
+            isError={strategyValidationQuery.isError}
+          />
 
           <StrategyCoreSettingsCards
             draft={draft}
             setDraft={setDraft}
             help={help}
+            validationWarnings={validationWarnings}
             useEnhancedEducation={isBeginnerMode}
           />
 

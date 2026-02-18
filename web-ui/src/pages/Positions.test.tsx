@@ -149,9 +149,8 @@ describe('Positions Page', () => {
         expect(screen.getByText('VALE')).toBeInTheDocument()
       })
       
-      // Should have Update Stop and Close buttons
-      const buttons = screen.getAllByRole('button')
-      expect(buttons.length).toBeGreaterThan(2)
+      expect(screen.getByRole('button', { name: 'Update Stop' })).toBeInTheDocument()
+      expect(screen.getByTitle('Close Position')).toBeInTheDocument()
     })
 
     it('shows suggested stop in update modal', async () => {
@@ -220,8 +219,7 @@ describe('Positions Page', () => {
       renderWithProviders(<Positions />)
       
       await waitFor(() => {
-        const badges = screen.getAllByText('open')
-        expect(badges.length).toBeGreaterThan(0)
+        expect(screen.getByText('open')).toBeInTheDocument()
       })
     })
   })
@@ -231,10 +229,7 @@ describe('Positions Page', () => {
       renderWithProviders(<Positions />)
       
       await waitFor(() => {
-        expect(screen.getByText('VALE')).toBeInTheDocument()
-        // Entry date should be visible somewhere
-        const dates = screen.queryAllByText(/\d{4}|Jan|Feb|Mar/i)
-        expect(dates.length).toBeGreaterThanOrEqual(0)
+        expect(screen.getByText(/Jan 16, 2026/i)).toBeInTheDocument()
       })
     })
   })
@@ -244,10 +239,9 @@ describe('Positions Page', () => {
       renderWithProviders(<Positions />)
       
       await waitFor(() => {
-        // R = (currentPrice - entryPrice) / initialRisk
-        // R = ($16.30 - $15.89) / $1.29 ≈ 0.32R
-        const rMultiples = screen.queryAllByText(/R/)
-        expect(rMultiples.length).toBeGreaterThanOrEqual(0)
+        // Should at least show the open-risk summary card values.
+        expect(screen.getByText('Open Risk')).toBeInTheDocument()
+        expect(screen.getByText('Open Risk %')).toBeInTheDocument()
       })
     })
   })
@@ -266,8 +260,7 @@ describe('Positions Page', () => {
       renderWithProviders(<Positions />)
       
       await waitFor(() => {
-        const tables = screen.queryAllByRole('table')
-        expect(tables.length).toBeGreaterThanOrEqual(0)
+        expect(screen.getByRole('table')).toBeInTheDocument()
       })
     })
   })

@@ -47,7 +47,7 @@ export const mockStrategies = [
     },
     signals: { breakout_lookback: 50, pullback_ma: 20, min_history: 260 },
     risk: {
-      account_size: 50000.0,
+      account_size: 500.0,
       risk_pct: 0.01,
       max_position_pct: 0.6,
       min_shares: 1,
@@ -122,7 +122,7 @@ export const mockStrategies = [
     },
     signals: { breakout_lookback: 40, pullback_ma: 15, min_history: 200 },
     risk: {
-      account_size: 50000.0,
+      account_size: 500.0,
       risk_pct: 0.01,
       max_position_pct: 0.5,
       min_shares: 1,
@@ -178,6 +178,141 @@ let strategies: StrategyPayload[] = [...mockStrategies]
 const asObject = (value: unknown): Record<string, any> => (
   value && typeof value === 'object' ? (value as Record<string, any>) : {}
 )
+
+type ValidationWarningLevel = 'danger' | 'warning' | 'info'
+
+const buildStrategyValidation = (payload: Record<string, any>) => {
+  const warnings: Array<{ parameter: string; level: ValidationWarningLevel; message: string }> = []
+  const signals = asObject(payload.signals)
+  const risk = asObject(payload.risk)
+  const universe = asObject(payload.universe)
+  const filt = asObject(universe.filt)
+  const manage = asObject(payload.manage)
+
+  const breakoutLookback = Number(signals.breakout_lookback)
+  if (Number.isFinite(breakoutLookback)) {
+    if (breakoutLookback < 20) {
+      warnings.push({
+        parameter: 'breakoutLookback',
+        level: 'danger',
+        message: 'Breakout Lookback below 20 behaves more like day trading than swing trading.',
+      })
+    } else if (breakoutLookback < 40) {
+      warnings.push({
+        parameter: 'breakoutLookback',
+        level: 'warning',
+        message: 'Lower lookback periods increase signal frequency but may include more false breakouts.',
+      })
+    }
+  }
+
+  const pullbackMa = Number(signals.pullback_ma)
+  if (Number.isFinite(pullbackMa)) {
+    if (pullbackMa < 10) {
+      warnings.push({
+        parameter: 'pullbackMa',
+        level: 'warning',
+        message: 'Very short pullback periods may lead to entries on minor retracements that fail.',
+      })
+    } else if (pullbackMa > 50) {
+      warnings.push({
+        parameter: 'pullbackMa',
+        level: 'info',
+        message: 'Longer pullback periods are more conservative but may miss faster-moving opportunities.',
+      })
+    }
+  }
+
+  const minRr = Number(risk.min_rr)
+  if (Number.isFinite(minRr)) {
+    if (minRr < 1.5) {
+      warnings.push({
+        parameter: 'minimumRr',
+        level: 'danger',
+        message: 'Minimum R/R under 1.5 makes profitability statistically harder. Consider raising to 2 or higher.',
+      })
+    } else if (minRr < 2.0) {
+      warnings.push({
+        parameter: 'minimumRr',
+        level: 'warning',
+        message: 'R/R below 2 requires a higher win rate to be profitable. Most professionals target 2:1 or better.',
+      })
+    }
+  }
+
+  const riskPct = Number(risk.risk_pct) * 100
+  if (Number.isFinite(riskPct)) {
+    if (riskPct > 3) {
+      warnings.push({
+        parameter: 'riskPerTrade',
+        level: 'danger',
+        message: 'Risking more than 3% per trade significantly increases the risk of large drawdowns.',
+      })
+    } else if (riskPct > 2) {
+      warnings.push({
+        parameter: 'riskPerTrade',
+        level: 'warning',
+        message: 'Most professional traders risk 1-2% per trade. Higher risk requires perfect execution.',
+      })
+    }
+  }
+
+  const maxAtrPct = Number(filt.max_atr_pct)
+  if (Number.isFinite(maxAtrPct)) {
+    if (maxAtrPct > 25) {
+      warnings.push({
+        parameter: 'maxAtrPct',
+        level: 'danger',
+        message: 'Max ATR above 25% indicates extremely volatile stocks — beginners often struggle managing risk at this level.',
+      })
+    } else if (maxAtrPct > 18) {
+      warnings.push({
+        parameter: 'maxAtrPct',
+        level: 'warning',
+        message: 'Higher volatility means larger stop distances and more emotional pressure. Ensure your risk management is solid.',
+      })
+    }
+  }
+
+  const maxHoldingDays = Number(manage.max_holding_days)
+  if (Number.isFinite(maxHoldingDays)) {
+    if (maxHoldingDays < 5) {
+      warnings.push({
+        parameter: 'maxHoldingDays',
+        level: 'warning',
+        message: 'Very short holding periods may not give momentum enough time to develop.',
+      })
+    } else if (maxHoldingDays > 30) {
+      warnings.push({
+        parameter: 'maxHoldingDays',
+        level: 'info',
+        message: 'Longer holding periods can tie up capital in stagnant trades. Monitor performance closely.',
+      })
+    }
+  }
+
+  const dangerCount = warnings.filter((warning) => warning.level === 'danger').length
+  const warningCount = warnings.filter((warning) => warning.level === 'warning').length
+  const infoCount = warnings.filter((warning) => warning.level === 'info').length
+  const safetyScore = Math.max(0, Math.min(100, 100 - dangerCount * 15 - warningCount * 8 - infoCount * 3))
+  const safetyLevel =
+    safetyScore >= 85
+      ? 'beginner-safe'
+      : safetyScore >= 70
+        ? 'requires-discipline'
+        : 'expert-only'
+
+  return {
+    is_valid: dangerCount === 0,
+    warnings,
+    safety_score: safetyScore,
+    safety_level: safetyLevel,
+    total_warnings: warnings.length,
+    danger_count: dangerCount,
+    warning_count: warningCount,
+    info_count: infoCount,
+  }
+}
 
 export const mockPositions = [
   {
@@ -303,6 +438,59 @@ export const mockOrderSnapshots = {
     },
   ],
   asof: '2026-02-08',
+}
+
+export const mockPortfolioSummary = {
+  total_positions: 1,
+  total_value: 97.8,
+  total_cost_basis: 95.34,
+  total_pnl: 2.46,
+  total_pnl_percent: 2.58,
+  open_risk: 7.74,
+  open_risk_percent: 1.548,
+  account_size: 500,
+  available_capital: 402.2,
+  largest_position_value: 97.8,
+  largest_position_ticker: 'VALE',
+  best_performer_ticker: 'VALE',
+  best_performer_pnl_pct: 2.58,
+  worst_performer_ticker: 'VALE',
+  worst_performer_pnl_pct: 2.58,
+  avg_r_now: 0.3178,
+  positions_profitable: 1,
+  positions_losing: 0,
+  win_rate: 100,
+}
+
+export const mockPositionMetrics = {
+  ticker: 'VALE',
+  pnl: 2.46,
+  pnl_percent: 2.58,
+  r_now: 0.3178,
+  entry_value: 95.34,
+  current_value: 97.8,
+  per_share_risk: 1.29,
+  total_risk: 7.74,
+}
+
+const buildPositionMetrics = (position: (typeof mockPositions)[number]) => {
+  const referencePrice = position.exit_price ?? position.current_price ?? position.entry_price
+  const pnl = (referencePrice - position.entry_price) * position.shares
+  const pnlPercent = ((referencePrice - position.entry_price) / position.entry_price) * 100
+  const perShareRisk = position.initial_risk ?? (position.entry_price - position.stop_price)
+  const totalRisk = perShareRisk * position.shares
+  const rNow = totalRisk > 0 ? pnl / totalRisk : 0
+
+  return {
+    ticker: position.ticker,
+    pnl,
+    pnl_percent: pnlPercent,
+    r_now: rNow,
+    entry_value: position.entry_price * position.shares,
+    current_value: referencePrice * position.shares,
+    per_share_risk: perShareRisk,
+    total_risk: totalRisk,
+  }
 }
 
 export const mockBacktestRun = {
@@ -581,6 +769,11 @@ export const handlers = [
     return HttpResponse.json(target)
   }),
 
+  http.post(`${API_BASE_URL}/api/strategy/validate`, async ({ request }) => {
+    const body = asObject(await request.json())
+    return HttpResponse.json(buildStrategyValidation(body))
+  }),
+
   http.put(`${API_BASE_URL}/api/strategy/:id`, async ({ request, params }) => {
     const body = asObject(await request.json()) as Partial<StrategyPayload>
     const id = params.id as string
@@ -608,7 +801,25 @@ export const handlers = [
       positions = mockPositions.filter((p) => p.status === status)
     }
     
-    return HttpResponse.json({ positions, asof: '2026-02-08' })
+    return HttpResponse.json({
+      positions: positions.map((position) => ({
+        ...position,
+        ...buildPositionMetrics(position),
+      })),
+      asof: '2026-02-08',
+    })
+  }),
+
+  http.get(`${API_BASE_URL}/api/portfolio/positions/:id/metrics`, ({ params }) => {
+    const id = params.id as string
+    const position = mockPositions.find((p) => p.position_id === id)
+    if (!position) {
+      return HttpResponse.json({ detail: 'Position not found' }, { status: 404 })
+    }
+    return HttpResponse.json({
+      ...mockPositionMetrics,
+      ...buildPositionMetrics(position),
+    })
   }),
 
   http.get(`${API_BASE_URL}/api/portfolio/positions/:id/stop-suggestion`, ({ params }) => {
@@ -639,6 +850,10 @@ export const handlers = [
     }
     
     return HttpResponse.json({ orders, asof: '2026-02-08' })
+  }),
+
+  http.get(`${API_BASE_URL}/api/portfolio/summary`, () => {
+    return HttpResponse.json(mockPortfolioSummary)
   }),
 
   http.post(`${API_BASE_URL}/api/portfolio/orders`, async ({ request }) => {

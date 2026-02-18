@@ -45,6 +45,8 @@ describe('Order Type Transformations', () => {
         parentOrderId: null,
         tif: 'GTC',
         notes: 'Test order',
+        feeEur: null,
+        fillFxRate: null,
       })
     })
 

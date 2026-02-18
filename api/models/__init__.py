@@ -17,6 +17,8 @@ from api.models.strategy import (
     StrategyUpdateRequest,
     Strategy,
     ActiveStrategyRequest,
+    ValidationWarningModel,
+    StrategyValidationResult,
 )
 from api.models.portfolio import (
     PositionStatus,
@@ -33,6 +35,10 @@ from api.models.portfolio import (
     OrdersSnapshotResponse,
     FillOrderRequest,
     PositionsResponse,
+    PositionWithMetrics,
+    PositionsWithMetricsResponse,
+    PositionMetrics,
+    PortfolioSummary,
     OrdersResponse,
 )
 from api.models.screener import ScreenerCandidate, ScreenerRequest, ScreenerResponse, OrderPreview
@@ -91,6 +97,8 @@ __all__ = [
     "StrategyUpdateRequest",
     "Strategy",
     "ActiveStrategyRequest",
+    "ValidationWarningModel",
+    "StrategyValidationResult",
     "PositionStatus",
     "ActionType",
     "Position",
@@ -105,6 +113,10 @@ __all__ = [
     "OrdersSnapshotResponse",
     "FillOrderRequest",
     "PositionsResponse",
+    "PositionWithMetrics",
+    "PositionsWithMetricsResponse",
+    "PositionMetrics",
+    "PortfolioSummary",
     "OrdersResponse",
     "ScreenerCandidate",
     "ScreenerRequest",

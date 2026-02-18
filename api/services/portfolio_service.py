@@ -12,7 +12,10 @@ from fastapi import HTTPException
 from api.models.portfolio import (
     Position,
     PositionUpdate,
-    PositionsResponse,
+    PositionWithMetrics,
+    PositionsWithMetricsResponse,
+    PositionMetrics,
+    PortfolioSummary,
     Order,
     OrdersResponse,
     OrderSnapshot,
@@ -39,9 +42,21 @@ from swing_screener.execution.order_workflows import (
     normalize_orders,
 )
 from swing_screener.data.providers import MarketDataProvider, get_default_provider
+from swing_screener.data.currency import detect_currency
+from swing_screener.portfolio.metrics import (
+    calculate_current_position_value,
+    calculate_per_share_risk,
+    calculate_pnl,
+    calculate_r_now,
+    calculate_total_position_value,
+)
 from swing_screener.utils.date_helpers import get_default_backtest_start
 
 logger = logging.getLogger(__name__)
+
+# Simple cache for EURUSD rate with 5-minute TTL
+_eurusd_cache: dict[str, tuple[float, float]] = {}  # {"eurusd": (rate, timestamp)}
+_CACHE_TTL_SECONDS = 300  # 5 minutes
 
 
 def _to_iso(ts) -> Optional[str]:
@@ -150,25 +165,38 @@ class PortfolioService:
         self._positions_repo = positions_repo
         self._provider = provider or get_default_provider()
 
-    def list_positions(self, status: Optional[str] = None) -> PositionsResponse:
-        positions, asof = self._positions_repo.list_positions(status=status)
+    def _fetch_last_prices(self, tickers: list[str]) -> dict[str, float]:
+        if not tickers:
+            return {}
 
+        start_date = get_default_backtest_start()
+        end_date = get_today_str()
+        ohlcv = self._provider.fetch_ohlcv(tickers, start_date=start_date, end_date=end_date)
+        prices, _ = _last_close_map(ohlcv)
+        return prices
+
+    @staticmethod
+    def _fallback_price(position: dict) -> float:
+        exit_price = position.get("exit_price")
+        if exit_price is not None:
+            return float(exit_price)
+        current_price = position.get("current_price")
+        if current_price is not None:
+            return float(current_price)
+        return float(position.get("entry_price", 0.0))
+
+    def _attach_live_prices(self, positions: list[dict]) -> dict[str, float]:
+        """Attach latest price to open positions and return fetched price map."""
+        last_prices: dict[str, float] = {}
         open_positions = [p for p in positions if p.get("status") == "open"]
         if open_positions:
             try:
-                tickers = list({p["ticker"] for p in open_positions})
-                start_date = get_default_backtest_start()
-                end_date = get_today_str()
-                
-                ohlcv = self._provider.fetch_ohlcv(tickers, start_date=start_date, end_date=end_date)
-                latest_date = ohlcv.index.max()
+                tickers = list({str(p.get("ticker", "")).upper() for p in open_positions if p.get("ticker")})
+                last_prices = self._fetch_last_prices(tickers)
                 for pos in positions:
                     if pos.get("status") == "open":
-                        try:
-                            price = ohlcv.loc[latest_date, ("Close", pos["ticker"])]
-                            pos["current_price"] = float(price) if not pd.isna(price) else None
-                        except (KeyError, IndexError):
-                            pos["current_price"] = None
+                        ticker = str(pos.get("ticker", "")).upper()
+                        pos["current_price"] = last_prices.get(ticker)
             except (KeyError, ValueError, TypeError) as exc:
                 # Known data access errors - log and continue with null prices
                 logger.warning("Failed to fetch current prices (data error): %s", exc)
@@ -182,13 +210,251 @@ class PortfolioService:
                     if pos.get("status") == "open":
                         pos["current_price"] = None
 
-        return PositionsResponse(positions=positions, asof=asof)
+        return last_prices
+
+    def _fee_map_by_position_id(self) -> dict[str, float]:
+        fees: dict[str, float] = {}
+        try:
+            orders = load_orders(self._orders_repo.path)
+            for order in orders:
+                if order.status != "filled":
+                    continue
+                if not order.position_id:
+                    continue
+                if order.fee_eur is None:
+                    continue
+                fee_value = abs(float(order.fee_eur))
+                fees[order.position_id] = fees.get(order.position_id, 0.0) + fee_value
+        except Exception as exc:
+            logger.warning("Failed to load order fees: %s", exc)
+        return fees
+
+    def _eurusd_rate(self) -> float:
+        """Fetch EURUSD rate with simple caching to avoid redundant API calls."""
+        import time
+        now = time.time()
+        cached = _eurusd_cache.get("eurusd")
+        if cached is not None:
+            rate, timestamp = cached
+            if now - timestamp < _CACHE_TTL_SECONDS:
+                return rate
+        
+        try:
+            fx = self._fetch_last_prices(["EURUSD=X"])
+            rate = float(fx.get("EURUSD=X", 0.0))
+            rate = rate if rate > 0 else 1.0
+            _eurusd_cache["eurusd"] = (rate, now)
+            return rate
+        except Exception as exc:
+            logger.warning("Failed to fetch EURUSD fx rate for fee conversion: %s", exc)
+            return 1.0
+
+    def _build_position_with_metrics(
+        self,
+        position: dict,
+        current_prices: dict[str, float],
+        fee_map: dict[str, float],
+        eurusd_rate: float,
+    ) -> PositionWithMetrics:
+        state_position = _to_state_position(position)
+        ticker = state_position.ticker.upper()
+        # Live price from provider (may be None / missing)
+        live_price = current_prices.get(ticker)
+        # Effective price for metrics: fall back if live price is unavailable
+        current_price_for_metrics = live_price if live_price is not None else self._fallback_price(position)
+        per_share_risk = calculate_per_share_risk(state_position)
+        fees_eur = fee_map.get(state_position.position_id or "", 0.0)
+        position_ccy = detect_currency(ticker)
+        if position_ccy == "EUR":
+            fee_in_quote_ccy = fees_eur
+        elif position_ccy == "USD":
+            fee_in_quote_ccy = fees_eur * eurusd_rate
+        else:
+            logger.warning(
+                "Unexpected currency '%s' detected for ticker '%s' when converting fees; "
+                "using raw EUR fee amount without FX conversion.",
+                position_ccy,
+                ticker,
+            )
+            fee_in_quote_ccy = fees_eur
+        pnl = calculate_pnl(state_position.entry_price, current_price_for_metrics, state_position.shares) - fee_in_quote_ccy
+        entry_value = calculate_total_position_value(state_position.entry_price, state_position.shares)
+        pnl_percent = (pnl / entry_value * 100.0) if entry_value > 0 else 0.0
+
+        payload = dict(position)
+        # Only expose current_price in the API payload when we have a live quote
+        if state_position.status == "open" and live_price is not None:
+            payload["current_price"] = live_price
+
+        return PositionWithMetrics(
+            **payload,
+            pnl=pnl,
+            fees_eur=fees_eur,
+            pnl_percent=pnl_percent,
+            r_now=calculate_r_now(state_position, current_price_for_metrics),
+            entry_value=entry_value,
+            current_value=calculate_current_position_value(current_price_for_metrics, state_position.shares),
+            per_share_risk=per_share_risk,
+            total_risk=per_share_risk * state_position.shares,
+        )
+
+    def list_positions(self, status: Optional[str] = None) -> PositionsWithMetricsResponse:
+        positions, asof = self._positions_repo.list_positions(status=status)
+        current_prices = self._attach_live_prices(positions)
+        fee_map = self._fee_map_by_position_id()
+        has_usd_positions = any(
+            detect_currency(str(position.get("ticker", "")).upper()) == "USD"
+            for position in positions
+        )
+        eurusd_rate = self._eurusd_rate() if has_usd_positions else 1.0
+
+        positions_with_metrics = [
+            self._build_position_with_metrics(position, current_prices, fee_map, eurusd_rate)
+            for position in positions
+        ]
+        return PositionsWithMetricsResponse(positions=positions_with_metrics, asof=asof)
 
     def get_position(self, position_id: str) -> Position:
         position = self._positions_repo.get_position(position_id)
         if position is None:
             raise HTTPException(status_code=404, detail=f"Position not found: {position_id}")
         return Position(**position)
+
+    def get_position_metrics(self, position_id: str) -> PositionMetrics:
+        position = self._positions_repo.get_position(position_id)
+        if position is None:
+            raise HTTPException(status_code=404, detail=f"Position not found: {position_id}")
+
+        ticker = str(position.get("ticker", "")).upper()
+        current_price = self._fallback_price(position)
+
+        if position.get("status") == "open" and ticker:
+            try:
+                current_price = self._fetch_last_prices([ticker]).get(ticker, current_price)
+            except Exception as exc:
+                logger.warning("Failed to fetch current price for %s metrics: %s", ticker, exc)
+
+        state_position = _to_state_position(position)
+        fee_map = self._fee_map_by_position_id()
+        fees_eur = fee_map.get(state_position.position_id or "", 0.0)
+        ticker_currency = detect_currency(ticker)
+        eurusd_rate = self._eurusd_rate() if ticker_currency == "USD" else 1.0
+        fee_in_quote_ccy = fees_eur if ticker_currency == "EUR" else fees_eur * eurusd_rate
+        pnl = calculate_pnl(state_position.entry_price, current_price, state_position.shares) - fee_in_quote_ccy
+        per_share_risk = calculate_per_share_risk(state_position)
+        entry_value = calculate_total_position_value(state_position.entry_price, state_position.shares)
+        pnl_percent = (pnl / entry_value * 100.0) if entry_value > 0 else 0.0
+
+        return PositionMetrics(
+            ticker=ticker,
+            pnl=pnl,
+            fees_eur=fees_eur,
+            pnl_percent=pnl_percent,
+            r_now=calculate_r_now(state_position, current_price),
+            entry_value=entry_value,
+            current_value=calculate_current_position_value(current_price, state_position.shares),
+            per_share_risk=per_share_risk,
+            total_risk=per_share_risk * state_position.shares,
+        )
+
+    def get_portfolio_summary(self, account_size: float) -> PortfolioSummary:
+        positions_response = self.list_positions(status="open")
+        positions = positions_response.positions
+        if not positions:
+            return PortfolioSummary(
+                total_positions=0,
+                total_value=0.0,
+                total_cost_basis=0.0,
+                total_pnl=0.0,
+                total_fees_eur=0.0,
+                total_pnl_percent=0.0,
+                open_risk=0.0,
+                open_risk_percent=0.0,
+                account_size=account_size,
+                available_capital=account_size,
+                largest_position_value=0.0,
+                largest_position_ticker="",
+                best_performer_ticker="",
+                best_performer_pnl_pct=0.0,
+                worst_performer_ticker="",
+                worst_performer_pnl_pct=0.0,
+                avg_r_now=0.0,
+                positions_profitable=0,
+                positions_losing=0,
+                win_rate=0.0,
+            )
+
+        total_value = 0.0
+        total_cost_basis = 0.0
+        total_pnl = 0.0
+        total_fees_eur = 0.0
+        open_risk = 0.0
+        largest_position_value = 0.0
+        largest_position_ticker = ""
+        best_performer_ticker = ""
+        best_performer_pnl_pct = float("-inf")
+        worst_performer_ticker = ""
+        worst_performer_pnl_pct = float("inf")
+        total_r_now = 0.0
+        r_count = 0
+        positions_profitable = 0
+        positions_losing = 0
+
+        for position in positions:
+            total_cost_basis += position.entry_value
+            total_value += position.current_value
+            total_pnl += position.pnl
+            total_fees_eur += position.fees_eur
+
+            if position.total_risk > 0:
+                open_risk += position.total_risk
+                total_r_now += position.r_now
+                r_count += 1
+
+            if position.current_value > largest_position_value:
+                largest_position_value = position.current_value
+                largest_position_ticker = position.ticker
+
+            if position.pnl_percent > best_performer_pnl_pct:
+                best_performer_pnl_pct = position.pnl_percent
+                best_performer_ticker = position.ticker
+
+            if position.pnl_percent < worst_performer_pnl_pct:
+                worst_performer_pnl_pct = position.pnl_percent
+                worst_performer_ticker = position.ticker
+
+            if position.pnl > 0:
+                positions_profitable += 1
+            elif position.pnl < 0:
+                positions_losing += 1
+
+        total_pnl_percent = (total_pnl / total_cost_basis * 100.0) if total_cost_basis > 0 else 0.0
+        open_risk_percent = (open_risk / account_size * 100.0) if account_size > 0 else 0.0
+        avg_r_now = (total_r_now / r_count) if r_count > 0 else 0.0
+        win_rate = (positions_profitable / len(positions) * 100.0) if positions else 0.0
+
+        return PortfolioSummary(
+            total_positions=len(positions),
+            total_value=total_value,
+            total_cost_basis=total_cost_basis,
+            total_pnl=total_pnl,
+            total_fees_eur=total_fees_eur,
+            total_pnl_percent=total_pnl_percent,
+            open_risk=open_risk,
+            open_risk_percent=open_risk_percent,
+            account_size=account_size,
+            available_capital=account_size - total_value,
+            largest_position_value=largest_position_value,
+            largest_position_ticker=largest_position_ticker,
+            best_performer_ticker=best_performer_ticker,
+            best_performer_pnl_pct=best_performer_pnl_pct if best_performer_ticker else 0.0,
+            worst_performer_ticker=worst_performer_ticker,
+            worst_performer_pnl_pct=worst_performer_pnl_pct if worst_performer_ticker else 0.0,
+            avg_r_now=avg_r_now,
+            positions_profitable=positions_profitable,
+            positions_losing=positions_losing,
+            win_rate=win_rate,
+        )
 
     def update_position_stop(self, position_id: str, request: UpdateStopRequest) -> dict:
         data = self._positions_repo.read()
@@ -480,6 +746,8 @@ class PortfolioService:
             "parent_order_id": None,
             "position_id": None,
             "tif": "GTC",
+            "fee_eur": None,
+            "fill_fx_rate": None,
         }
 
         orders = data.get("orders", [])
@@ -524,6 +792,8 @@ class PortfolioService:
                 quantity=order.quantity,
                 stop_price=stop_price,
                 tp_price=None,
+                fee_eur=request.fee_eur,
+                fill_fx_rate=request.fill_fx_rate,
             )
             save_orders(orders_path, new_orders, asof=get_today_str())
             save_positions(positions_path, new_positions, asof=get_today_str())
@@ -545,6 +815,8 @@ class PortfolioService:
                     status="filled",
                     filled_date=request.filled_date,
                     entry_price=request.filled_price,
+                    fee_eur=request.fee_eur,
+                    fill_fx_rate=request.fill_fx_rate,
                 )
                 break
 
