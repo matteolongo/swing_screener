@@ -38,7 +38,8 @@ def test_fetch_events_cached(tmp_path):
     test_cache = SocialCache(base_dir=tmp_path / "test_cached")
     
     # Store cached events first
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    # Use a fixed midday timestamp to avoid midnight boundary flakiness.
+    now = datetime(2026, 2, 17, 12, 0, 0, tzinfo=timezone.utc).replace(tzinfo=None)
     target_date = now.date()
     cached_events = [
         SocialRawEvent(
