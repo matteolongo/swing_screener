@@ -82,6 +82,154 @@ def test_position_metrics_endpoint(monkeypatch: pytest.MonkeyPatch, tmp_path) ->
     assert data["total_risk"] == pytest.approx(7.74, abs=0.01)
 
 
+def test_position_metrics_subtracts_recorded_fees(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+    positions_file = tmp_path / "positions.json"
+    orders_file = tmp_path / "orders.json"
+    positions_file.write_text(
+        json.dumps(
+            {
+                "asof": "2026-02-08",
+                "positions": [
+                    {
+                        "ticker": "BAMNB.AS",
+                        "status": "open",
+                        "entry_date": "2026-02-17",
+                        "entry_price": 9.97,
+                        "stop_price": 9.37,
+                        "shares": 2,
+                        "position_id": "POS-BAMNB.AS-1",
+                        "initial_risk": 0.60,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    orders_file.write_text(
+        json.dumps(
+            {
+                "asof": "2026-02-08",
+                "orders": [
+                    {
+                        "order_id": "ORD-BAMNB-ENTRY",
+                        "ticker": "BAMNB.AS",
+                        "status": "filled",
+                        "order_type": "BUY_LIMIT",
+                        "quantity": 2,
+                        "limit_price": 9.97,
+                        "stop_price": 9.37,
+                        "order_date": "2026-02-17",
+                        "filled_date": "2026-02-17",
+                        "entry_price": 9.97,
+                        "notes": "",
+                        "order_kind": "entry",
+                        "parent_order_id": None,
+                        "position_id": "POS-BAMNB.AS-1",
+                        "tif": "GTC",
+                        "fee_eur": 4.90,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(api.dependencies, "POSITIONS_FILE", positions_file)
+    monkeypatch.setattr(api.dependencies, "ORDERS_FILE", orders_file)
+
+    mock_provider = MagicMock(spec=MarketDataProvider)
+    mock_provider.fetch_ohlcv.return_value = _ohlcv_with_closes({"BAMNB.AS": [9.98, 10.0]})
+    mock_provider.get_provider_name.return_value = "mock"
+    monkeypatch.setattr(portfolio_service, "get_default_provider", lambda **kwargs: mock_provider)
+
+    client = TestClient(app)
+    res = client.get("/api/portfolio/positions/POS-BAMNB.AS-1/metrics")
+    assert res.status_code == 200
+
+    data = res.json()
+    assert data["fees_eur"] == pytest.approx(4.90, abs=0.01)
+    assert data["pnl"] == pytest.approx(-4.84, abs=0.01)
+
+
+def test_position_metrics_subtracts_recorded_fees_usd(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    """Test that fees are converted using EURUSD rate for USD-denominated positions."""
+    # Clear EURUSD cache to ensure fresh fetch
+    import api.services.portfolio_service as ps
+    ps._eurusd_cache.clear()
+    
+    positions_file = tmp_path / "positions.json"
+    orders_file = tmp_path / "orders.json"
+    positions_file.write_text(
+        json.dumps(
+            {
+                "asof": "2026-02-08",
+                "positions": [
+                    {
+                        "ticker": "INTC",
+                        "status": "open",
+                        "entry_date": "2026-02-17",
+                        "entry_price": 48.0,
+                        "stop_price": 47.0,
+                        "shares": 1,
+                        "position_id": "POS-INTC-USD-1",
+                        "initial_risk": 1.0,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    # Record a simple executed order with non-zero fees for the USD-denominated INTC position.
+    orders_file.write_text(
+        json.dumps(
+            {
+                "asof": "2026-02-08",
+                "orders": [
+                    {
+                        "order_id": "ORD-INTC-1",
+                        "ticker": "INTC",
+                        "position_id": "POS-INTC-USD-1",
+                        "status": "filled",
+                        "side": "buy",
+                        "order_type": "BUY_LIMIT",
+                        "quantity": 1,
+                        "fee_eur": 5.0,
+                        "order_kind": "entry",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(api.dependencies, "POSITIONS_FILE", positions_file)
+    monkeypatch.setattr(api.dependencies, "ORDERS_FILE", orders_file)
+
+    mock_provider = MagicMock(spec=MarketDataProvider)
+    # Mock fetch_ohlcv to return data for both INTC and EURUSD=X
+    def mock_fetch_ohlcv(tickers, **kwargs):
+        if "EURUSD=X" in tickers:
+            return _ohlcv_with_closes({"EURUSD=X": [1.18, 1.18]})
+        return _ohlcv_with_closes({"INTC": [48.0, 47.5]})
+    mock_provider.fetch_ohlcv = mock_fetch_ohlcv
+    mock_provider.get_provider_name.return_value = "mock"
+    monkeypatch.setattr(portfolio_service, "get_default_provider", lambda **kwargs: mock_provider)
+
+    client = TestClient(app)
+    res = client.get("/api/portfolio/positions/POS-INTC-USD-1/metrics")
+    assert res.status_code == 200
+
+    data = res.json()
+    # Verify fees are recorded in EUR
+    assert data["fees_eur"] == pytest.approx(5.0, abs=0.01)
+    # Verify P&L accounts for fees converted to USD (5 EUR * 1.18 = 5.90 USD)
+    # Position P&L: (47.5 - 48.0) * 1 = -0.50 USD
+    # P&L after fees: -0.50 - 5.90 = -6.40 USD
+    assert data["pnl"] == pytest.approx(-6.40, abs=0.01)
+
+
 def test_positions_endpoint_returns_precomputed_metrics(
     monkeypatch: pytest.MonkeyPatch, tmp_path
 ) -> None:

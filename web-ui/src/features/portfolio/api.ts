@@ -159,6 +159,12 @@ export async function fillOrder(orderId: string, request: FillOrderRequest): Pro
   if (request.stopPrice && request.stopPrice > 0) {
     payload.stop_price = request.stopPrice;
   }
+  if (request.feeEur !== undefined) {
+    payload.fee_eur = request.feeEur;
+  }
+  if (request.fillFxRate !== undefined && request.fillFxRate > 0) {
+    payload.fill_fx_rate = request.fillFxRate;
+  }
 
   const response = await fetch(apiUrl(API_ENDPOINTS.orderFill(orderId)), {
     method: 'POST',

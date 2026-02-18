@@ -61,6 +61,8 @@ def test_fill_entry_creates_position_and_stop(monkeypatch, tmp_path):
             "filled_price": 50.59,
             "filled_date": "2026-02-09",
             "stop_price": 43.50,
+            "fee_eur": 2.10,
+            "fill_fx_rate": 1.1916,
         },
     )
     assert res.status_code == 200
@@ -75,6 +77,10 @@ def test_fill_entry_creates_position_and_stop(monkeypatch, tmp_path):
     assert pos["source_order_id"] == "ORD-INTC-ENTRY"
 
     orders = json.loads(orders_path.read_text(encoding="utf-8"))["orders"]
+    entry_orders = [o for o in orders if o.get("order_id") == "ORD-INTC-ENTRY"]
+    assert entry_orders
+    assert entry_orders[0]["fee_eur"] == 2.10
+    assert entry_orders[0]["fill_fx_rate"] == 1.1916
     stop_orders = [o for o in orders if o.get("order_kind") == "stop"]
     assert stop_orders
     stop = stop_orders[0]

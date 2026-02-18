@@ -25,6 +25,7 @@ from swing_screener.data.universe import (
 )
 from swing_screener.execution.order_workflows import fill_entry_order, scale_in_fill, normalize_orders
 from swing_screener.execution.orders import Order, load_orders, save_orders
+from swing_screener.execution.degiro_fees import import_degiro_fees_to_orders
 from swing_screener.portfolio.state import load_positions, save_positions
 from swing_screener.strategy.config import build_manage_config, build_report_config, build_risk_config
 from swing_screener.strategy.storage import get_active_strategy, get_strategy_by_id
@@ -72,6 +73,8 @@ def _orders_fill_to_files(
     quantity: int,
     stop_price: float,
     tp_price: float | None,
+    fee_eur: float | None = None,
+    fill_fx_rate: float | None = None,
 ) -> None:
     orders = load_orders(orders_path)
     positions = load_positions(positions_path)
@@ -84,6 +87,8 @@ def _orders_fill_to_files(
         quantity=quantity,
         stop_price=stop_price,
         tp_price=tp_price,
+        fee_eur=fee_eur,
+        fill_fx_rate=fill_fx_rate,
     )
     save_orders(orders_path, new_orders, asof=str(dt.date.today()))
     save_positions(positions_path, new_positions, asof=str(dt.date.today()))
@@ -96,6 +101,8 @@ def _orders_scale_in_to_files(
     fill_price: float,
     fill_date: str,
     quantity: int,
+    fee_eur: float | None = None,
+    fill_fx_rate: float | None = None,
 ) -> None:
     orders = load_orders(orders_path)
     positions = load_positions(positions_path)
@@ -106,6 +113,8 @@ def _orders_scale_in_to_files(
         fill_price=fill_price,
         fill_date=fill_date,
         quantity=quantity,
+        fee_eur=fee_eur,
+        fill_fx_rate=fill_fx_rate,
     )
     save_orders(orders_path, new_orders, asof=str(dt.date.today()))
     save_positions(positions_path, new_positions, asof=str(dt.date.today()))
@@ -262,6 +271,21 @@ def main() -> None:
     orders_fill.add_argument("--quantity", type=int, required=True, help="Filled quantity")
     orders_fill.add_argument("--stop-price", type=float, required=True, help="Stop-loss price")
     orders_fill.add_argument("--tp-price", type=float, default=None, help="Take-profit price (optional)")
+    orders_fill.add_argument(
+        "--fee-eur",
+        type=float,
+        default=None,
+        help="Execution fee in EUR (optional, for DeGiro alignment)",
+    )
+    orders_fill.add_argument(
+        "--fx-rate",
+        type=float,
+        default=None,
+        help=(
+            "Fill FX rate as quote currency units per 1 EUR "
+            "(optional, e.g. 1 EUR = 1.18 USD for EUR/USD = 1.18)"
+        ),
+    )
 
     orders_scale = orders_sub.add_parser("scale-in", help="Scale into an existing position")
     orders_scale.add_argument("--orders", required=True, help="Path to orders.json")
@@ -274,6 +298,18 @@ def main() -> None:
         help="Fill date (YYYY-MM-DD). Default: today.",
     )
     orders_scale.add_argument("--quantity", type=int, required=True, help="Filled quantity")
+    orders_scale.add_argument(
+        "--fee-eur",
+        type=float,
+        default=None,
+        help="Execution fee in EUR (optional, for DeGiro alignment)",
+    )
+    orders_scale.add_argument(
+        "--fx-rate",
+        type=float,
+        default=None,
+        help="Fill FX rate quote_ccy per EUR (optional, e.g. 1.18 for USD/EUR)",
+    )
 
     orders_list = orders_sub.add_parser("list", help="List orders")
     orders_list.add_argument("--orders", required=True, help="Path to orders.json")
@@ -294,6 +330,34 @@ def main() -> None:
     orders_cancel = orders_sub.add_parser("cancel", help="Cancel a pending order")
     orders_cancel.add_argument("--orders", required=True, help="Path to orders.json")
     orders_cancel.add_argument("--order-id", required=True, help="Order ID to cancel")
+
+    orders_import_fees = orders_sub.add_parser(
+        "import-degiro-fees",
+        help="Import fees from DeGiro Transactions.csv into filled orders",
+    )
+    orders_import_fees.add_argument("--orders", required=True, help="Path to orders.json")
+    orders_import_fees.add_argument(
+        "--csv",
+        required=True,
+        help="Path to DeGiro transactions export CSV (e.g. Transactions.csv)",
+    )
+    orders_import_fees.add_argument(
+        "--price-tolerance",
+        type=float,
+        default=0.02,
+        help="Allowed price difference for heuristic matching (default: 0.02)",
+    )
+    orders_import_fees.add_argument(
+        "--apply",
+        action="store_true",
+        help="Write matched fees into orders.json (default is dry-run preview)",
+    )
+    orders_import_fees.add_argument(
+        "--show-unmatched",
+        type=int,
+        default=10,
+        help="How many unmatched rows to print (default: 10)",
+    )
 
     # -------------------------
     # UNIVERSES (list/show/filter)
@@ -785,6 +849,8 @@ def main() -> None:
                     quantity=int(args.quantity),
                     stop_price=float(args.stop_price),
                     tp_price=float(args.tp_price) if args.tp_price is not None else None,
+                    fee_eur=float(args.fee_eur) if args.fee_eur is not None else None,
+                    fill_fx_rate=float(args.fx_rate) if args.fx_rate is not None else None,
                 )
                 print(f"Order filled: {args.order_id}")
             elif args.orders_command == "scale-in":
@@ -795,6 +861,8 @@ def main() -> None:
                     fill_price=float(args.fill_price),
                     fill_date=str(args.fill_date),
                     quantity=int(args.quantity),
+                    fee_eur=float(args.fee_eur) if args.fee_eur is not None else None,
+                    fill_fx_rate=float(args.fx_rate) if args.fx_rate is not None else None,
                 )
                 print(f"Scale-in filled: {args.order_id}")
             elif args.orders_command == "list":
@@ -827,6 +895,34 @@ def main() -> None:
                     order_id=args.order_id,
                 )
                 print(f"Order cancelled: {args.order_id}")
+            elif args.orders_command == "import-degiro-fees":
+                result = import_degiro_fees_to_orders(
+                    orders_path=args.orders,
+                    csv_path=args.csv,
+                    price_tolerance=float(args.price_tolerance),
+                    apply_changes=bool(args.apply),
+                )
+                mode = "APPLIED" if args.apply else "DRY-RUN"
+                print(f"DeGiro fee import ({mode})")
+                print(f"  CSV rows:           {result.total_csv_rows}")
+                print(f"  Deduped rows:       {result.deduped_rows}")
+                print(f"  Matched rows:       {result.matched_rows}")
+                print(f"  Unmatched rows:     {result.unmatched_rows}")
+                print(f"  Orders updated:     {result.updated_orders}")
+                if result.unmatched:
+                    limit = max(0, int(args.show_unmatched))
+                    for item in result.unmatched[:limit]:
+                        candidates = ", ".join(item.candidates) if item.candidates else "-"
+                        print(
+                            f"  - {item.reason}: broker_order_id={item.broker_order_id} "
+                            f"date={item.fill_date} qty={item.quantity_signed} "
+                            f"price={item.fill_price:.4f} fee_eur={item.fee_eur:.4f} "
+                            f"candidates={candidates}"
+                        )
+                    if len(result.unmatched) > limit:
+                        print(f"  ... {len(result.unmatched) - limit} more unmatched rows")
+                if not args.apply:
+                    print("Run again with --apply to write updates.")
         except ValueError as e:
             print(f"Error: {e}", file=sys.stderr)
             sys.exit(1)

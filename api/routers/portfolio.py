@@ -20,7 +20,9 @@ from api.models.portfolio import (
     ClosePositionRequest,
 )
 from api.dependencies import get_config_repo, get_portfolio_service
+from api.dependencies import get_strategy_repo
 from api.repositories.config_repo import ConfigRepository
+from api.repositories.strategy_repo import StrategyRepository
 from api.services.portfolio_service import PortfolioService
 
 router = APIRouter()
@@ -88,9 +90,24 @@ async def close_position(
 async def get_portfolio_summary(
     service: PortfolioService = Depends(get_portfolio_service),
     config_repo: ConfigRepository = Depends(get_config_repo),
+    strategy_repo: StrategyRepository = Depends(get_strategy_repo),
 ):
     """Get aggregated portfolio metrics for all open positions."""
-    account_size = float(config_repo.get().risk.account_size)
+    config_account_size = float(config_repo.get().risk.account_size)
+    default_config_account_size = float(ConfigRepository.get_defaults().risk.account_size)
+    account_size = config_account_size
+
+    # Keep backwards compatibility for explicit config overrides:
+    # use active strategy account size only when config is still at default value.
+    if abs(config_account_size - default_config_account_size) <= 1e-9:
+        try:
+            active_strategy = strategy_repo.get_active_strategy()
+            strategy_account_size = float(active_strategy.get("risk", {}).get("account_size", 0.0))
+            if strategy_account_size > 0:
+                account_size = strategy_account_size
+        except (TypeError, ValueError):
+            pass
+
     return service.get_portfolio_summary(account_size=account_size)
 
 

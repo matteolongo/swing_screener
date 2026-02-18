@@ -50,6 +50,8 @@ export const fillOrderSchema = z.object({
   filledPrice: z.number().positive(),
   filledDate: z.string().min(1),
   stopPrice: z.number().positive().optional(),
+  feeEur: z.number().nonnegative().optional(),
+  fillFxRate: z.number().positive().optional(),
 });
 
 export type FillOrderFormValues = z.infer<typeof fillOrderSchema>;

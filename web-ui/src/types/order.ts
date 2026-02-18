@@ -19,6 +19,8 @@ export interface Order {
   parentOrderId: string | null;
   positionId: string | null;
   tif: string | null;
+  feeEur?: number | null;
+  fillFxRate?: number | null;
 }
 
 export interface CreateOrderRequest {
@@ -35,6 +37,8 @@ export interface FillOrderRequest {
   filledPrice: number;
   filledDate: string;
   stopPrice?: number;
+  feeEur?: number;
+  fillFxRate?: number;
 }
 
 // Backend uses snake_case, transform to camelCase
@@ -54,6 +58,8 @@ export interface OrderApiResponse {
   parent_order_id: string | null;
   position_id: string | null;
   tif: string | null;
+  fee_eur?: number | null;
+  fill_fx_rate?: number | null;
 }
 
 export interface OrderSnapshot {
@@ -108,6 +114,8 @@ export function transformOrder(apiOrder: OrderApiResponse): Order {
     parentOrderId: apiOrder.parent_order_id,
     positionId: apiOrder.position_id,
     tif: apiOrder.tif,
+    feeEur: apiOrder.fee_eur ?? null,
+    fillFxRate: apiOrder.fill_fx_rate ?? null,
   };
 }
 

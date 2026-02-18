@@ -221,6 +221,8 @@ export const messagesEn = {
       filledPrice: 'Filled Price',
       filledDate: 'Filled Date',
       linkedStopPrice: 'Stop Price (for linked stop)',
+      feeEurOptional: 'Fee (EUR, optional)',
+      fxRateOptional: 'FX Rate (optional)',
       filling: 'Filling...',
       fillAction: 'Fill Order',
       orderDetails: 'Order Details:',
