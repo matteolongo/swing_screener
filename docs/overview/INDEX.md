@@ -20,6 +20,7 @@
 - `/docs/engineering/PHASE1_DEPLOYMENT_RUNBOOK.md`
 - `/docs/engineering/PHASE2_AUTH_RUNBOOK.md`
 - `/docs/engineering/PHASE3_TENANT_FILES_RUNBOOK.md`
+- `/docs/engineering/PHASE4_MANAGED_AUTH_RUNBOOK.md`
 - `/docs/engineering/OPERATIONAL_GUIDE.md`
 - `/docs/engineering/TROUBLESHOOTING.md`
 - `/docs/engineering/GITHUB_ACTIONS.md`

@@ -20,14 +20,21 @@ def _build_client(
     monkeypatch,
     *,
     auth_enabled: bool,
+    auth_mode: str = "csv",
     users_csv_path: Path | None = None,
+    memberships_csv_path: Path | None = None,
     tenants_dir: Path | None = None,
 ) -> TestClient:
     monkeypatch.setenv("API_AUTH_ENABLED", "true" if auth_enabled else "false")
+    monkeypatch.setenv("API_AUTH_MODE", auth_mode)
     if users_csv_path is not None:
         monkeypatch.setenv("API_AUTH_USERS_CSV_PATH", str(users_csv_path))
+    if memberships_csv_path is not None:
+        monkeypatch.setenv("API_AUTH_MEMBERSHIPS_CSV_PATH", str(memberships_csv_path))
     monkeypatch.setenv("API_AUTH_JWT_SECRET", "test-secret")
     monkeypatch.setenv("API_AUTH_JWT_EXPIRE_MINUTES", "30")
+    monkeypatch.setenv("API_AUTH_MANAGED_PROVIDER", "oidc")
+    monkeypatch.setenv("API_AUTH_MANAGED_JWT_SECRET", "provider-secret")
 
     import api.runtime_config as runtime_config
     import api.dependencies as dependencies
@@ -101,6 +108,7 @@ def test_tenant_order_files_are_isolated(monkeypatch, tmp_path: Path):
     client = _build_client(
         monkeypatch,
         auth_enabled=True,
+        auth_mode="csv",
         users_csv_path=users_csv_path,
         tenants_dir=tenants_dir,
     )
@@ -135,3 +143,74 @@ def test_tenant_order_files_are_isolated(monkeypatch, tmp_path: Path):
 
     assert (tenants_dir / "tenant-a" / "orders.json").exists()
     assert (tenants_dir / "tenant-b" / "orders.json").exists()
+
+
+def test_managed_exchange_and_access(monkeypatch, tmp_path: Path):
+    memberships_csv = tmp_path / "tenant_memberships.csv"
+    memberships_csv.write_text(
+        "provider,subject,email,tenant_id,role,active\n"
+        "oidc,user-123,friend@example.com,tenant-managed,member,true\n",
+        encoding="utf-8",
+    )
+
+    client = _build_client(
+        monkeypatch,
+        auth_enabled=True,
+        auth_mode="managed",
+        memberships_csv_path=memberships_csv,
+        tenants_dir=tmp_path / "tenants",
+    )
+
+    from api.security import create_access_token
+    import time
+
+    now = int(time.time())
+    provider_token = create_access_token(
+        {
+            "sub": "user-123",
+            "email": "friend@example.com",
+            "iat": now,
+            "exp": now + 3600,
+        },
+        secret="provider-secret",
+    )
+
+    exchange_response = client.post(
+        "/api/auth/exchange",
+        json={"provider_token": provider_token},
+    )
+    assert exchange_response.status_code == 200
+    app_token = exchange_response.json()["access_token"]
+
+    me_response = client.get("/api/auth/me", headers={"Authorization": f"Bearer {app_token}"})
+    assert me_response.status_code == 200
+    assert me_response.json()["tenant_id"] == "tenant-managed"
+
+    protected_response = client.get("/api/portfolio/orders", headers={"Authorization": f"Bearer {app_token}"})
+    assert protected_response.status_code == 200
+
+    direct_provider_response = client.get(
+        "/api/portfolio/orders",
+        headers={"Authorization": f"Bearer {provider_token}"},
+    )
+    assert direct_provider_response.status_code == 200
+
+
+def test_csv_login_disabled_in_managed_mode(monkeypatch, tmp_path: Path):
+    users_csv_path = tmp_path / "users.csv"
+    _write_users_csv(
+        users_csv_path,
+        [("friend@example.com", hash_password("secret-pass"), "tenant-demo", "member", "true")],
+    )
+    client = _build_client(
+        monkeypatch,
+        auth_enabled=True,
+        auth_mode="managed",
+        users_csv_path=users_csv_path,
+    )
+
+    response = client.post(
+        "/api/auth/login",
+        json={"email": "friend@example.com", "password": "secret-pass"},
+    )
+    assert response.status_code == 400
