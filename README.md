@@ -331,6 +331,9 @@ npm run test:coverage # Run with coverage report
 ### Operational Guides
 - **[Operational Guide](docs/engineering/OPERATIONAL_GUIDE.md)** — Day-to-day CLI workflows
 - **[Phase 1 Deployment Runbook](docs/engineering/PHASE1_DEPLOYMENT_RUNBOOK.md)** — Deploy web/API with env-driven CORS and smoke checks
+- **[Phase 2 Auth Runbook](docs/engineering/PHASE2_AUTH_RUNBOOK.md)** — Temporary CSV login and JWT protection setup
+- **[Phase 3 Tenant Files Runbook](docs/engineering/PHASE3_TENANT_FILES_RUNBOOK.md)** — Tenant-scoped file isolation for orders/positions/strategy/config/intelligence
+- **[Phase 4 Managed Auth Runbook](docs/engineering/PHASE4_MANAGED_AUTH_RUNBOOK.md)** — Provider token exchange and tenant membership mapping
 - **[Daily Usage Guide](docs/product/DAILY_USAGE_GUIDE.md)** — Daily routine and timing (Barcelona/CET)
 - **[Troubleshooting](docs/engineering/TROUBLESHOOTING.md)** — Common issues and solutions ⭐ **NEW**
 

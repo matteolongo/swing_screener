@@ -1,0 +1,2 @@
+provider,subject,email,tenant_id,role,active
+oidc,user-123,friend@example.com,demo-tenant,member,true

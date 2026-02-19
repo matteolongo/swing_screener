@@ -1,4 +1,4 @@
-import { API_ENDPOINTS, apiUrl } from '@/lib/api';
+import { API_ENDPOINTS, apiFetch } from '@/lib/api';
 import {
   SocialAnalysisResponse,
   SocialAnalysisResponseAPI,
@@ -35,7 +35,7 @@ export async function analyzeSocial(params: {
     payload.lookback_hours = params.lookbackHours;
   }
 
-  const response = await fetch(apiUrl(API_ENDPOINTS.socialAnalyze), {
+  const response = await apiFetch(API_ENDPOINTS.socialAnalyze, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -48,7 +48,7 @@ export async function analyzeSocial(params: {
 }
 
 export async function fetchSocialWarmupStatus(jobId: string): Promise<SocialWarmupStatus> {
-  const response = await fetch(apiUrl(API_ENDPOINTS.socialWarmupStatus(jobId)));
+  const response = await apiFetch(API_ENDPOINTS.socialWarmupStatus(jobId));
   if (!response.ok) {
     throw await buildApiError(response, 'Failed to fetch social warmup status');
   }

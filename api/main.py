@@ -3,14 +3,16 @@ from __future__ import annotations
 
 import logging
 import sys
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
+from api.dependencies import get_current_user
 from api.runtime_config import load_runtime_config
 
 # Import routers
 from api.routers import (
+    auth,
     backtest,
     config,
     daily_review,
@@ -25,6 +27,7 @@ LOG_FORMAT = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
 logging.basicConfig(level=logging.INFO, format=LOG_FORMAT, stream=sys.stdout)
 logger = logging.getLogger("swing_screener.api")
 runtime_config = load_runtime_config()
+protected_dependencies = [Depends(get_current_user)] if runtime_config.auth_enabled else []
 
 
 def reload_runtime_config_for_testing() -> None:
@@ -176,14 +179,15 @@ async def metrics():
 
 
 # Include routers
-app.include_router(config.router, prefix="/api/config", tags=["config"])
-app.include_router(strategy.router, prefix="/api/strategy", tags=["strategy"])
+app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
+app.include_router(config.router, prefix="/api/config", tags=["config"], dependencies=protected_dependencies)
+app.include_router(strategy.router, prefix="/api/strategy", tags=["strategy"], dependencies=protected_dependencies)
 app.include_router(screener.router, prefix="/api/screener", tags=["screener"])
-app.include_router(portfolio.router, prefix="/api/portfolio", tags=["portfolio"])
-app.include_router(backtest.router, prefix="/api/backtest", tags=["backtest"])
-app.include_router(social.router, prefix="/api/social", tags=["social"])
-app.include_router(intelligence.router, prefix="/api/intelligence", tags=["intelligence"])
-app.include_router(daily_review.router, prefix="/api", tags=["daily-review"])
+app.include_router(portfolio.router, prefix="/api/portfolio", tags=["portfolio"], dependencies=protected_dependencies)
+app.include_router(backtest.router, prefix="/api/backtest", tags=["backtest"], dependencies=protected_dependencies)
+app.include_router(social.router, prefix="/api/social", tags=["social"], dependencies=protected_dependencies)
+app.include_router(intelligence.router, prefix="/api/intelligence", tags=["intelligence"], dependencies=protected_dependencies)
+app.include_router(daily_review.router, prefix="/api", tags=["daily-review"], dependencies=protected_dependencies)
 
 
 if __name__ == "__main__":
