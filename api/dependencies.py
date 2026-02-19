@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 import threading
 from datetime import date
@@ -16,11 +17,13 @@ from api.repositories.config_repo import ConfigRepository
 from api.repositories.orders_repo import OrdersRepository
 from api.repositories.positions_repo import PositionsRepository
 from api.repositories.strategy_repo import StrategyRepository
+from api.repositories.tenant_memberships_repo import TenantMembershipRepository
 from api.repositories.users_repo import UsersRepository
 from api.runtime_config import load_runtime_config
 from api.services.auth_service import AuthService
 from api.services.backtest_service import BacktestService
 from api.services.intelligence_service import IntelligenceService
+from api.services.managed_auth_service import ManagedAuthService
 from api.services.portfolio_service import PortfolioService
 from api.services.screener_service import ScreenerService
 from api.services.social_service import SocialService
@@ -34,6 +37,7 @@ POSITIONS_FILE = DATA_DIR / "positions.json"
 ORDERS_FILE = DATA_DIR / "orders.json"
 TENANT_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 _bearer_scheme = HTTPBearer(auto_error=False)
+_log = logging.getLogger(__name__)
 
 # Global singleton config repositories (thread-safe)
 _config_repository: Optional[ConfigRepository] = None
@@ -79,13 +83,28 @@ def get_users_path() -> Path:
     return users_path if users_path.is_absolute() else ROOT_DIR / users_path
 
 
+def get_memberships_path() -> Path:
+    """Get path to managed auth tenant memberships CSV."""
+    memberships_path = Path(load_runtime_config().auth_memberships_csv_path)
+    return memberships_path if memberships_path.is_absolute() else ROOT_DIR / memberships_path
+
+
 def is_auth_enabled() -> bool:
     """Check whether auth is enabled by environment."""
     return load_runtime_config().auth_enabled
 
 
+def get_auth_mode() -> str:
+    """Get auth mode: csv or managed."""
+    return load_runtime_config().auth_mode
+
+
 def get_users_repo() -> UsersRepository:
     return UsersRepository(get_users_path())
+
+
+def get_memberships_repo() -> TenantMembershipRepository:
+    return TenantMembershipRepository(get_memberships_path())
 
 
 def get_auth_service(
@@ -99,16 +118,50 @@ def get_auth_service(
     )
 
 
+def get_managed_auth_service(
+    memberships_repo: TenantMembershipRepository = Depends(get_memberships_repo),
+) -> ManagedAuthService:
+    runtime_config = load_runtime_config()
+    return ManagedAuthService(
+        memberships_repo=memberships_repo,
+        app_jwt_secret=runtime_config.auth_jwt_secret,
+        app_jwt_expire_minutes=runtime_config.auth_jwt_expire_minutes,
+        provider=runtime_config.auth_managed_provider,
+        provider_jwt_secret=runtime_config.auth_managed_jwt_secret,
+        subject_claim=runtime_config.auth_managed_subject_claim,
+        email_claim=runtime_config.auth_managed_email_claim,
+        tenant_claim=runtime_config.auth_managed_tenant_claim,
+        role_claim=runtime_config.auth_managed_role_claim,
+        active_claim=runtime_config.auth_managed_active_claim,
+    )
+
+
 def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),
     auth_service: AuthService = Depends(get_auth_service),
+    managed_auth_service: ManagedAuthService = Depends(get_managed_auth_service),
 ) -> AuthUser:
     if not is_auth_enabled():
         return AuthUser(email="local@dev.local", tenant_id="default", role="owner", active=True)
 
     if credentials is None or credentials.scheme.lower() != "bearer":
         raise HTTPException(status_code=401, detail="Authentication required")
-    return auth_service.verify_token(credentials.credentials)
+
+    token = credentials.credentials
+    mode = get_auth_mode()
+    if mode == "csv":
+        return auth_service.verify_token(token)
+
+    # Managed mode: accept app tokens (issued by /api/auth/exchange) and
+    # provider tokens directly to support incremental client migration.
+    try:
+        return auth_service.verify_token(token)
+    except HTTPException:
+        _log.debug(
+            "App token verification failed; falling back to provider token verification "
+            "(client may not yet use exchanged tokens)"
+        )
+        return managed_auth_service.authenticate_provider_token(token)
 
 
 def get_tenant_id(current_user: AuthUser = Depends(get_current_user)) -> str:
