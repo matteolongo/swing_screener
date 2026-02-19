@@ -75,6 +75,7 @@ from api.models.backtest import (
     BacktestSimulationMeta,
     BacktestSimulation,
 )
+from api.models.auth import LoginRequest, LoginResponse, AuthUser, ManagedTokenExchangeRequest
 
 __all__ = [
     "AppConfig",
@@ -151,4 +152,8 @@ __all__ = [
     "FullBacktestResponse",
     "BacktestSimulationMeta",
     "BacktestSimulation",
+    "LoginRequest",
+    "LoginResponse",
+    "AuthUser",
+    "ManagedTokenExchangeRequest",
 ]

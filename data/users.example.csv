@@ -1,0 +1,2 @@
+email,password_hash,tenant_id,role,active
+friend@example.com,pbkdf2_sha256$120000$CHANGE_ME_SALT_HEX$CHANGE_ME_HASH_HEX,demo-tenant,member,true

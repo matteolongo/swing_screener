@@ -3,13 +3,16 @@ from __future__ import annotations
 
 import logging
 import sys
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
+from api.dependencies import get_current_user
+from api.runtime_config import load_runtime_config
 
 # Import routers
 from api.routers import (
+    auth,
     backtest,
     config,
     daily_review,
@@ -23,14 +26,28 @@ from api.routers import (
 LOG_FORMAT = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
 logging.basicConfig(level=logging.INFO, format=LOG_FORMAT, stream=sys.stdout)
 logger = logging.getLogger("swing_screener.api")
+runtime_config = load_runtime_config()
+protected_dependencies = [Depends(get_current_user)] if runtime_config.auth_enabled else []
+
+
+def reload_runtime_config_for_testing() -> None:
+    """Reload runtime configuration.
+
+    This is intended for use in tests that need to change environment
+    variables after importing ``api.main``. Production code should not
+    normally call this.
+    """
+    global runtime_config
+    runtime_config = load_runtime_config()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup/shutdown."""
+    docs_host = "localhost" if runtime_config.host == "0.0.0.0" else runtime_config.host
     logger.info("Swing Screener API starting up...")
-    logger.info("API docs available at: http://localhost:8000/docs")
-    logger.info("OpenAPI schema: http://localhost:8000/openapi.json")
+    logger.info("API docs available at: http://%s:%s/docs", docs_host, runtime_config.port)
+    logger.info("OpenAPI schema: http://%s:%s/openapi.json", docs_host, runtime_config.port)
     yield
     logger.info("Shutting down...")
 
@@ -46,17 +63,10 @@ app = FastAPI(
 # Security: Use explicit allowed methods and headers instead of wildcards
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:5174"],  # Vite dev servers
+    allow_origins=list(runtime_config.cors_allowed_origins),
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],  # Explicit instead of ["*"]
-    allow_headers=[
-        "Content-Type",
-        "Authorization",
-        "Accept",
-        "Origin",
-        "User-Agent",
-        "X-Requested-With",
-    ],  # Explicit instead of ["*"]
+    allow_methods=list(runtime_config.cors_allowed_methods),
+    allow_headers=list(runtime_config.cors_allowed_headers),
 )
 
 
@@ -169,21 +179,22 @@ async def metrics():
 
 
 # Include routers
-app.include_router(config.router, prefix="/api/config", tags=["config"])
-app.include_router(strategy.router, prefix="/api/strategy", tags=["strategy"])
+app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
+app.include_router(config.router, prefix="/api/config", tags=["config"], dependencies=protected_dependencies)
+app.include_router(strategy.router, prefix="/api/strategy", tags=["strategy"], dependencies=protected_dependencies)
 app.include_router(screener.router, prefix="/api/screener", tags=["screener"])
-app.include_router(portfolio.router, prefix="/api/portfolio", tags=["portfolio"])
-app.include_router(backtest.router, prefix="/api/backtest", tags=["backtest"])
-app.include_router(social.router, prefix="/api/social", tags=["social"])
-app.include_router(intelligence.router, prefix="/api/intelligence", tags=["intelligence"])
-app.include_router(daily_review.router, prefix="/api", tags=["daily-review"])
+app.include_router(portfolio.router, prefix="/api/portfolio", tags=["portfolio"], dependencies=protected_dependencies)
+app.include_router(backtest.router, prefix="/api/backtest", tags=["backtest"], dependencies=protected_dependencies)
+app.include_router(social.router, prefix="/api/social", tags=["social"], dependencies=protected_dependencies)
+app.include_router(intelligence.router, prefix="/api/intelligence", tags=["intelligence"], dependencies=protected_dependencies)
+app.include_router(daily_review.router, prefix="/api", tags=["daily-review"], dependencies=protected_dependencies)
 
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
         "api.main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True,
+        host=runtime_config.host,
+        port=runtime_config.port,
+        reload=runtime_config.reload,
     )

@@ -1,4 +1,4 @@
-import { API_ENDPOINTS, apiUrl } from '@/lib/api';
+import { API_ENDPOINTS, apiFetch, apiUrl } from '@/lib/api';
 import {
   IntelligenceOpportunitiesResponse,
   IntelligenceOpportunitiesResponseAPI,
@@ -26,7 +26,7 @@ function toRequestPayload(request: IntelligenceRunRequest): IntelligenceRunReque
 export async function runIntelligence(
   request: IntelligenceRunRequest
 ): Promise<IntelligenceRunLaunchResponse> {
-  const response = await fetch(apiUrl(API_ENDPOINTS.intelligenceRun), {
+  const response = await apiFetch(API_ENDPOINTS.intelligenceRun, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(toRequestPayload(request)),
@@ -40,7 +40,7 @@ export async function runIntelligence(
 }
 
 export async function fetchIntelligenceRunStatus(jobId: string): Promise<IntelligenceRunStatus> {
-  const response = await fetch(apiUrl(API_ENDPOINTS.intelligenceRunStatus(jobId)));
+  const response = await apiFetch(API_ENDPOINTS.intelligenceRunStatus(jobId));
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
     throw new Error(error.detail || 'Failed to fetch intelligence run status');
@@ -64,7 +64,7 @@ export async function fetchIntelligenceOpportunities(
       .forEach((symbol) => endpoint.searchParams.append('symbols', symbol));
   }
 
-  const response = await fetch(endpoint.toString());
+  const response = await apiFetch(endpoint.toString());
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
     throw new Error(error.detail || 'Failed to fetch intelligence opportunities');

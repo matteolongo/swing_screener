@@ -15,6 +15,12 @@
 - `/docs/engineering/REFACTOR_PLAN_UI_API.md`
 - `/docs/engineering/CODE_REVIEW.md`
 - `/docs/engineering/DATABASE_MIGRATION.md`
+- `/docs/engineering/DEPLOYMENT_AUTH_MULTITENANCY_PLAN.md`
+- `/docs/engineering/BRANCH_ROADMAP.md`
+- `/docs/engineering/PHASE1_DEPLOYMENT_RUNBOOK.md`
+- `/docs/engineering/PHASE2_AUTH_RUNBOOK.md`
+- `/docs/engineering/PHASE3_TENANT_FILES_RUNBOOK.md`
+- `/docs/engineering/PHASE4_MANAGED_AUTH_RUNBOOK.md`
 - `/docs/engineering/OPERATIONAL_GUIDE.md`
 - `/docs/engineering/TROUBLESHOOTING.md`
 - `/docs/engineering/GITHUB_ACTIONS.md`

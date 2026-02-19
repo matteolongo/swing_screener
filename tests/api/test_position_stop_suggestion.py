@@ -8,6 +8,7 @@ from api.main import app
 import api.dependencies
 import api.routers.config as config_router
 import api.services.portfolio_service as portfolio_service
+from api.repositories.config_repo import ConfigRepository
 from swing_screener.data.providers import MarketDataProvider
 
 def _ohlcv_for_ticker() -> pd.DataFrame:
@@ -47,10 +48,14 @@ def test_position_stop_suggestion(monkeypatch, tmp_path):
     }
     positions_file.write_text(json.dumps(positions_data))
 
-    config_router.current_config = config_router.DEFAULT_CONFIG.model_copy(deep=True)
-    # Keep this test focused on breakeven behavior only.
-    config_router.current_config.manage.trail_after_r = 999.0
-    config_router.current_config.manage.max_holding_days = 999
+    # Build test config with high trail_after_r to focus on breakeven behavior
+    test_config = config_router.DEFAULT_CONFIG.model_copy(deep=True)
+    test_config.manage.trail_after_r = 999.0
+    test_config.manage.max_holding_days = 999
+
+    # Create config repo with test config and override the DI dependency
+    test_config_repo = ConfigRepository(initial_config=test_config)
+    app.dependency_overrides[api.dependencies.get_config_repo] = lambda: test_config_repo
 
     monkeypatch.setattr(api.dependencies, "POSITIONS_FILE", positions_file)
     # Mock the provider
@@ -60,11 +65,14 @@ def test_position_stop_suggestion(monkeypatch, tmp_path):
     mock_provider.get_provider_name.return_value = "mock"
     monkeypatch.setattr(portfolio_service, "get_default_provider", lambda *args, **kwargs: mock_provider)
 
-    client = TestClient(app)
-    res = client.get("/api/portfolio/positions/POS-AAPL-1/stop-suggestion")
-    assert res.status_code == 200
-    data = res.json()
-    assert data["ticker"] == "AAPL"
-    assert data["stop_old"] == 90.0
-    assert data["stop_suggested"] == 100.0
-    assert data["action"] == "MOVE_STOP_UP"
+    try:
+        client = TestClient(app)
+        res = client.get("/api/portfolio/positions/POS-AAPL-1/stop-suggestion")
+        assert res.status_code == 200
+        data = res.json()
+        assert data["ticker"] == "AAPL"
+        assert data["stop_old"] == 90.0
+        assert data["stop_suggested"] == 100.0
+        assert data["action"] == "MOVE_STOP_UP"
+    finally:
+        app.dependency_overrides.clear()
