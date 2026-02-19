@@ -313,6 +313,7 @@ export const messagesEn = {
         chartHint: 'Open chart to view cached price history',
         metricsTitle: 'Key Metrics',
         noMetrics: 'No screener metrics are available for this ticker yet.',
+        sentimentLookback: 'Sentiment lookback override (hours)',
         tradeThesisTitle: 'Trade Thesis',
         tradeThesisPlaceholder: 'Write your thesis for {{ticker}}...',
         placeholder: 'Select a ticker to review chart, metrics, and trade inputs.',
