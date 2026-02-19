@@ -1,4 +1,5 @@
 import Card from '@/components/common/Card';
+import AnalysisCanvasPanel from '@/components/domain/workspace/AnalysisCanvasPanel';
 import ScreenerInboxPanel from '@/components/domain/workspace/ScreenerInboxPanel';
 import { t } from '@/i18n/t';
 
@@ -26,10 +27,7 @@ export default function Workspace() {
           <ScreenerInboxPanel />
         </div>
         <div className="min-h-[420px]">
-          <PanelPlaceholder
-            title={t('workspacePage.panels.analysis.title')}
-            description={t('workspacePage.panels.analysis.placeholder')}
-          />
+          <AnalysisCanvasPanel />
         </div>
         <div className="lg:col-span-2 min-h-[360px]">
           <PanelPlaceholder

@@ -308,6 +308,13 @@ export const messagesEn = {
       },
       analysis: {
         title: 'Analysis Canvas',
+        description: 'Review the selected ticker before creating an order.',
+        empty: 'Select a candidate from the screener to begin analysis.',
+        chartHint: 'Open chart to view cached price history',
+        metricsTitle: 'Key Metrics',
+        noMetrics: 'No screener metrics are available for this ticker yet.',
+        tradeThesisTitle: 'Trade Thesis',
+        tradeThesisPlaceholder: 'Write your thesis for {{ticker}}...',
         placeholder: 'Select a ticker to review chart, metrics, and trade inputs.',
       },
       portfolio: {
