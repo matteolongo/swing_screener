@@ -21,7 +21,8 @@ interface DataTableProps<RowT> {
   emptyMessage?: string;
   error?: string;
   tableClassName?: string;
-  rowClassName?: string;
+  rowClassName?: string | ((row: RowT, index: number) => string);
+  onRowClick?: (row: RowT, index: number) => void;
 }
 
 function alignClass(align: DataTableAlign | undefined): string {
@@ -40,6 +41,7 @@ export default function DataTable<RowT>({
   error,
   tableClassName,
   rowClassName = 'border-t',
+  onRowClick,
 }: DataTableProps<RowT>) {
   return (
     <TableShell
@@ -62,7 +64,11 @@ export default function DataTable<RowT>({
       )}
     >
       {rows.map((row, index) => (
-        <tr key={getRowKey(row, index)} className={rowClassName}>
+        <tr
+          key={getRowKey(row, index)}
+          className={typeof rowClassName === 'function' ? rowClassName(row, index) : rowClassName}
+          onClick={onRowClick ? () => onRowClick(row, index) : undefined}
+        >
           {columns.map((column) => (
             <td
               key={column.key}
