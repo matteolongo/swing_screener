@@ -135,3 +135,69 @@ def test_tenant_order_files_are_isolated(monkeypatch, tmp_path: Path):
 
     assert (tenants_dir / "tenant-a" / "orders.json").exists()
     assert (tenants_dir / "tenant-b" / "orders.json").exists()
+
+
+def test_tenant_position_files_are_isolated(monkeypatch, tmp_path: Path):
+    users_csv_path = tmp_path / "users.csv"
+    _write_users_csv(
+        users_csv_path,
+        [
+            ("alice@example.com", hash_password("alice-pass"), "tenant-a", "member", "true"),
+            ("bob@example.com", hash_password("bob-pass"), "tenant-b", "member", "true"),
+        ],
+    )
+    tenants_dir = tmp_path / "tenants"
+    client = _build_client(
+        monkeypatch,
+        auth_enabled=True,
+        users_csv_path=users_csv_path,
+        tenants_dir=tenants_dir,
+    )
+
+    alice_login = client.post("/api/auth/login", json={"email": "alice@example.com", "password": "alice-pass"})
+    bob_login = client.post("/api/auth/login", json={"email": "bob@example.com", "password": "bob-pass"})
+    assert alice_login.status_code == 200
+    assert bob_login.status_code == 200
+    alice_token = alice_login.json()["access_token"]
+    bob_token = bob_login.json()["access_token"]
+
+    alice_positions = client.get("/api/portfolio/positions", headers={"Authorization": f"Bearer {alice_token}"})
+    bob_positions = client.get("/api/portfolio/positions", headers={"Authorization": f"Bearer {bob_token}"})
+    assert alice_positions.status_code == 200
+    assert bob_positions.status_code == 200
+    assert alice_positions.json() != bob_positions.json() or alice_positions.json().get("positions", []) == []
+
+    assert (tenants_dir / "tenant-a" / "positions.json").exists()
+    assert (tenants_dir / "tenant-b" / "positions.json").exists()
+
+
+def test_sanitize_tenant_id_rejects_invalid_values(monkeypatch, tmp_path: Path):
+    import api.dependencies as dependencies
+
+    import importlib
+    import api.runtime_config as runtime_config
+    importlib.reload(runtime_config)
+    importlib.reload(dependencies)
+
+    from fastapi import HTTPException
+
+    invalid_cases = [
+        "",
+        "   ",
+        "../etc/passwd",
+        "/absolute",
+        "tenant with spaces",
+        "tenant@bad",
+        "a" * 65,
+    ]
+    for bad_id in invalid_cases:
+        try:
+            dependencies._sanitize_tenant_id(bad_id)
+            raise AssertionError(f"Expected HTTPException for tenant_id={bad_id!r}")
+        except HTTPException as exc:
+            assert exc.status_code in (400,), f"Expected 400 for {bad_id!r}, got {exc.status_code}"
+
+    valid_cases = ["tenant-a", "tenant_b", "TenantC1", "a", "A" * 64]
+    for good_id in valid_cases:
+        result = dependencies._sanitize_tenant_id(good_id)
+        assert result == good_id.strip()
