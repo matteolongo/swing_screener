@@ -111,24 +111,3 @@ export function transformPositionUpdate(apiUpdate: PositionUpdateApiResponse): P
     reason: apiUpdate.reason,
   };
 }
-
-// Calculate current R-multiple for open position
-export function calculateRNow(position: Position, currentPrice: number): number {
-  if (!position.initialRisk || position.initialRisk === 0) return 0;
-  const profitLoss = (currentPrice - position.entryPrice) * position.shares;
-  return profitLoss / position.initialRisk;
-}
-
-// Calculate P&L
-export function calculatePnL(position: Position, currentPrice?: number): number {
-  // Priority: exitPrice (closed) > passed currentPrice > position.currentPrice (live) > entryPrice (fallback)
-  const exitOrCurrent = position.exitPrice ?? currentPrice ?? position.currentPrice ?? position.entryPrice;
-  return (exitOrCurrent - position.entryPrice) * position.shares;
-}
-
-// Calculate P&L percentage
-export function calculatePnLPercent(position: Position, currentPrice?: number): number {
-  // Priority: exitPrice (closed) > passed currentPrice > position.currentPrice (live) > entryPrice (fallback)
-  const exitOrCurrent = position.exitPrice ?? currentPrice ?? position.currentPrice ?? position.entryPrice;
-  return ((exitOrCurrent - position.entryPrice) / position.entryPrice) * 100;
-}

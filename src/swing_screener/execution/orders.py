@@ -29,6 +29,8 @@ class Order:
     parent_order_id: Optional[str] = None
     position_id: Optional[str] = None
     tif: Optional[str] = None
+    fee_eur: Optional[float] = None
+    fill_fx_rate: Optional[float] = None
 
 
 def load_orders(path: str | Path) -> list[Order]:
@@ -78,6 +80,16 @@ def load_orders(path: str | Path) -> list[Order]:
                 parent_order_id=item.get("parent_order_id", None),
                 position_id=item.get("position_id", None),
                 tif=item.get("tif", None),
+                fee_eur=(
+                    float(item["fee_eur"])
+                    if item.get("fee_eur") is not None
+                    else None
+                ),
+                fill_fx_rate=(
+                    float(item["fill_fx_rate"])
+                    if item.get("fill_fx_rate") is not None
+                    else None
+                ),
             )
         )
     return out
@@ -104,6 +116,8 @@ def save_orders(path: str | Path, orders: list[Order], asof: Optional[str] = Non
                 "parent_order_id": o.parent_order_id,
                 "position_id": o.position_id,
                 "tif": o.tif,
+                "fee_eur": o.fee_eur,
+                "fill_fx_rate": o.fill_fx_rate,
             }
             for o in orders
         ],

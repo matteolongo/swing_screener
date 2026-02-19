@@ -3,10 +3,45 @@ import {
   Strategy,
   StrategyAPI,
   ActiveStrategyRequestAPI,
+  StrategyUpdateRequestAPI,
   transformStrategy,
   toStrategyCreateRequest,
   toStrategyUpdateRequest,
 } from '@/features/strategy/types';
+
+export interface ValidationWarning {
+  parameter: string;
+  level: 'danger' | 'warning' | 'info';
+  message: string;
+}
+
+export interface StrategyValidationResult {
+  isValid: boolean;
+  warnings: ValidationWarning[];
+  safetyScore: number;
+  safetyLevel: 'beginner-safe' | 'requires-discipline' | 'expert-only';
+  totalWarnings: number;
+  dangerCount: number;
+  warningCount: number;
+  infoCount: number;
+}
+
+interface ValidationWarningApi {
+  parameter: string;
+  level: 'danger' | 'warning' | 'info';
+  message: string;
+}
+
+interface StrategyValidationResultApi {
+  is_valid: boolean;
+  warnings: ValidationWarningApi[];
+  safety_score: number;
+  safety_level: 'beginner-safe' | 'requires-discipline' | 'expert-only';
+  total_warnings: number;
+  danger_count: number;
+  warning_count: number;
+  info_count: number;
+}
 
 export async function fetchStrategies(): Promise<Strategy[]> {
   const res = await fetch(apiUrl(API_ENDPOINTS.strategy));
@@ -76,4 +111,37 @@ export async function createStrategy(
   }
   const data: StrategyAPI = await res.json();
   return transformStrategy(data);
+}
+
+export async function validateStrategy(
+  strategyPayload: StrategyUpdateRequestAPI,
+): Promise<StrategyValidationResult> {
+  const res = await fetch(apiUrl(API_ENDPOINTS.strategyValidate), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(strategyPayload),
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || 'Failed to validate strategy');
+  }
+  const data: StrategyValidationResultApi = await res.json();
+  return transformValidationResult(data);
+}
+
+function transformValidationResult(data: StrategyValidationResultApi): StrategyValidationResult {
+  return {
+    isValid: data.is_valid,
+    warnings: data.warnings.map((warning) => ({
+      parameter: warning.parameter,
+      level: warning.level,
+      message: warning.message,
+    })),
+    safetyScore: data.safety_score,
+    safetyLevel: data.safety_level,
+    totalWarnings: data.total_warnings,
+    dangerCount: data.danger_count,
+    warningCount: data.warning_count,
+    infoCount: data.info_count,
+  };
 }

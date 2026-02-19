@@ -2,19 +2,23 @@
  * StrategySafetyScore - Displays the safety score for the current strategy configuration
  * Provides visual feedback on configuration risk level
  */
-import { useMemo } from 'react';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
-import type { Strategy } from '@/features/strategy/types';
-import { calculateSafetyScore, getSafetyLevel, evaluateStrategy } from '@/utils/strategySafety';
+import type { StrategyValidationResult } from '@/features/strategy/api';
 
 interface StrategySafetyScoreProps {
-  strategy: Strategy;
+  validation?: StrategyValidationResult;
+  isLoading?: boolean;
+  isError?: boolean;
 }
 
-export default function StrategySafetyScore({ strategy }: StrategySafetyScoreProps) {
-  const score = useMemo(() => calculateSafetyScore(strategy), [strategy]);
-  const level = useMemo(() => getSafetyLevel(score), [score]);
-  const warnings = useMemo(() => evaluateStrategy(strategy), [strategy]);
+export default function StrategySafetyScore({
+  validation,
+  isLoading = false,
+  isError = false,
+}: StrategySafetyScoreProps) {
+  const score = validation?.safetyScore ?? 100;
+  const level = validation?.safetyLevel ?? 'beginner-safe';
+  const warnings = validation?.warnings ?? [];
 
   const levelConfig = {
     'beginner-safe': {
@@ -46,6 +50,7 @@ export default function StrategySafetyScore({ strategy }: StrategySafetyScorePro
   const config = levelConfig[level];
   const dangerWarnings = warnings.filter((w) => w.level === 'danger');
   const regularWarnings = warnings.filter((w) => w.level === 'warning');
+  const infoWarnings = warnings.filter((w) => w.level === 'info');
 
   return (
     <Card variant="bordered" className={`${config.borderColor} ${config.bgColor}`}>
@@ -57,6 +62,18 @@ export default function StrategySafetyScore({ strategy }: StrategySafetyScorePro
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
+          {isLoading && (
+            <div className="text-sm text-gray-600 dark:text-gray-300">
+              Validating current parameters...
+            </div>
+          )}
+
+          {isError && (
+            <div className="text-sm text-red-600 dark:text-red-400">
+              Validation service unavailable. Showing last known result.
+            </div>
+          )}
+
           <div className={`flex items-center gap-3 p-3 rounded-lg border ${config.borderColor} bg-white dark:bg-gray-800`}>
             <span className="text-3xl">{config.icon}</span>
             <div className="flex-1">
@@ -87,6 +104,19 @@ export default function StrategySafetyScore({ strategy }: StrategySafetyScorePro
               </div>
               {regularWarnings.map((warning, idx) => (
                 <div key={idx} className="text-sm text-yellow-600 dark:text-yellow-400 pl-4">
+                  • {warning.message}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {infoWarnings.length > 0 && (
+            <div className="space-y-2">
+              <div className="font-semibold text-sm text-blue-700 dark:text-blue-300">
+                Notes ({infoWarnings.length}):
+              </div>
+              {infoWarnings.map((warning, idx) => (
+                <div key={idx} className="text-sm text-blue-600 dark:text-blue-300 pl-4">
                   • {warning.message}
                 </div>
               ))}

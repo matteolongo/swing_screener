@@ -2,6 +2,11 @@
 
 import { Recommendation, RecommendationAPI, transformRecommendation } from '@/types/recommendation';
 
+export interface PriceHistoryPoint {
+  date: string;
+  close: number;
+}
+
 export interface ScreenerCandidate {
   ticker: string;
   currency: 'USD' | 'EUR';
@@ -38,6 +43,7 @@ export interface ScreenerCandidate {
   riskUsd?: number;
   riskPct?: number;
   recommendation?: Recommendation;
+  priceHistory?: PriceHistoryPoint[];
 }
 
 // API response format (snake_case)
@@ -77,6 +83,7 @@ export interface ScreenerCandidateAPI {
   risk_usd?: number;
   risk_pct?: number;
   recommendation?: RecommendationAPI;
+  price_history?: PriceHistoryPoint[];
 }
 
 export interface ScreenerRequest {
@@ -163,6 +170,7 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
       riskUsd: c.risk_usd,
       riskPct: c.risk_pct,
       recommendation: c.recommendation ? transformRecommendation(c.recommendation) : undefined,
+      priceHistory: c.price_history ?? [],
     })),
     asofDate: apiResponse.asof_date,
     totalScreened: apiResponse.total_screened,

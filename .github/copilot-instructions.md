@@ -23,7 +23,7 @@ AGENTS.md is the authoritative guide covering:
 
 ### Project Overview
 
-**Swing Screener** is a systematic swing-trading framework for US equities that:
+**Swing Screener** is a systematic swing-trading framework for equities that:
 - Screens stock universes with rule-based filters
 - Generates daily trade candidates post-market-close
 - Manages positions with R-based risk rules
@@ -137,7 +137,7 @@ AGENTS.md is the authoritative guide covering:
 ### Documentation
 
 When changing behavior:
-- Update relevant docs in `docs/`
+- Update relevant docs in `docs/` and module-level `*/docs/` folders
 - Keep docs accurate, avoid duplication
 - Most important: `OPERATIONAL_GUIDE.md`, `CLI.md`, `WEB_UI_GUIDE.md`
 
@@ -173,11 +173,11 @@ If a change:
 
 ## Additional Resources
 
-- **[WELCOME.md](../WELCOME.md)** - New contributor onboarding
-- **[ROADMAP.md](../ROADMAP.md)** - Feature status and priorities
+- **[WELCOME.md](../docs/overview/WELCOME.md)** - New contributor onboarding
+- **[ROADMAP.md](../docs/engineering/ROADMAP.md)** - Feature status and priorities
 - **[README.md](../README.md)** - Project setup and usage
-- **[docs/WEB_UI_GUIDE.md](../docs/WEB_UI_GUIDE.md)** - Complete Web UI documentation
-- **[docs/DAILY_REVIEW_IMPLEMENTATION.md](../docs/DAILY_REVIEW_IMPLEMENTATION.md)** - Recent implementation patterns
+- **[docs/WEB_UI_GUIDE.md](../web-ui/docs/WEB_UI_GUIDE.md)** - Complete Web UI documentation
+- **[docs/DAILY_REVIEW_IMPLEMENTATION.md](../web-ui/docs/DAILY_REVIEW_IMPLEMENTATION.md)** - Recent implementation patterns
 
 ---
 

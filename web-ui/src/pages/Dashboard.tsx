@@ -3,16 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
+import CurrencyBadge from '@/components/common/CurrencyBadge';
 import { useConfigStore } from '@/stores/configStore';
-import {
-  Position,
-  calculatePnL,
-} from '@/features/portfolio/types';
-import { calcOpenRisk, calcOpenRiskPct, calcTotalPositionValue } from '@/features/portfolio/metrics';
 import {
   useOpenPositions,
   useOrders,
   useOrderSnapshots,
+  usePortfolioSummary,
 } from '@/features/portfolio/hooks';
 import { formatCurrency, formatPercent } from '@/utils/formatters';
 import { TrendingUp, AlertCircle, FileText, Search, RefreshCw, CalendarCheck } from 'lucide-react';
@@ -20,11 +17,8 @@ import StrategyCoachCard from '@/components/domain/education/StrategyCoachCard';
 import IntelligenceOpportunityCard from '@/components/domain/intelligence/IntelligenceOpportunityCard';
 import { buildFallbackStrategyCoachSections, buildStrategyCoachSections } from '@/content/strategyCoach';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
-import {
-  useIntelligenceOpportunitiesScoped,
-  useIntelligenceRunStatus,
-  useRunIntelligenceMutation,
-} from '@/features/intelligence/hooks';
+import { useIntelligenceWorkflow } from '@/features/intelligence/useIntelligenceWorkflow';
+import { detectCurrency } from '@/utils/currency';
 import { t } from '@/i18n/t';
 import { useOnboardingStore } from '@/stores/onboardingStore';
 import OnboardingModal from '@/components/modals/OnboardingModal';
@@ -40,6 +34,7 @@ export default function Dashboard() {
 
   const { data: positions = [] } = useOpenPositions();
   const { data: orders = [] } = useOrders('pending');
+  const { data: portfolioSummary } = usePortfolioSummary();
   
   // Sync local state with store status
   useEffect(() => {
@@ -54,16 +49,18 @@ export default function Dashboard() {
 
   const snapshotOrders = orderSnapshots?.orders ?? [];
 
-  // Calculate portfolio metrics
-  const totalPositionValue = calcTotalPositionValue(positions);
-  const totalPnL = positions.reduce((sum: number, pos: Position) => {
-    return sum + calculatePnL(pos);
-  }, 0);
-
-  const openRisk = calcOpenRisk(positions);
-  const openRiskPct = calcOpenRiskPct(openRisk, riskConfig.accountSize);
+  // Portfolio summary is authoritative and computed on backend.
+  const totalPositionValue = portfolioSummary?.totalValue ?? 0;
+  const totalPnL = portfolioSummary?.totalPnl ?? 0;
+  const openRisk = portfolioSummary?.openRisk ?? 0;
+  const openRiskPct = portfolioSummary?.openRiskPercent ?? 0;
+  const accountSize = portfolioSummary?.accountSize ?? riskConfig.accountSize;
   const riskBudget = riskConfig.accountSize * riskConfig.riskPct;
-  const availableToDeploy = riskConfig.accountSize - totalPositionValue;
+  const availableToDeploy = portfolioSummary?.availableCapital ?? accountSize - totalPositionValue;
+  const bestPerformerTicker = portfolioSummary?.bestPerformerTicker ?? '';
+  const worstPerformerTicker = portfolioSummary?.worstPerformerTicker ?? '';
+  const totalPositions = portfolioSummary?.totalPositions ?? positions.length;
+  const hasPortfolioHighlights = totalPositions > 0;
 
   const pendingOrdersCount = orders.length;
   const intelligenceSymbols = useMemo(
@@ -80,35 +77,20 @@ export default function Dashboard() {
   const [intelligenceJobId, setIntelligenceJobId] = useState<string>();
   const [intelligenceAsofDate, setIntelligenceAsofDate] = useState<string>();
   const [intelligenceRunSymbols, setIntelligenceRunSymbols] = useState<string[]>([]);
-  const runIntelligenceMutation = useRunIntelligenceMutation((launch) => {
-    setIntelligenceJobId(launch.jobId);
-    setIntelligenceAsofDate(undefined);
+  const intelligenceWorkflow = useIntelligenceWorkflow({
+    availableSymbols: intelligenceSymbols,
+    maxSymbols: 50,
+    jobId: intelligenceJobId,
+    setJobId: setIntelligenceJobId,
+    asofDate: intelligenceAsofDate,
+    setAsofDate: setIntelligenceAsofDate,
+    runSymbols: intelligenceRunSymbols,
+    setRunSymbols: setIntelligenceRunSymbols,
   });
-  const intelligenceStatusQuery = useIntelligenceRunStatus(intelligenceJobId);
-  const intelligenceStatus = intelligenceStatusQuery.data;
-  const intelligenceOpportunitiesQuery = useIntelligenceOpportunitiesScoped(
-    intelligenceAsofDate,
-    intelligenceRunSymbols,
-    Boolean(intelligenceAsofDate)
-  );
-  const intelligenceOpportunities = intelligenceOpportunitiesQuery.data?.opportunities ?? [];
-
-  useEffect(() => {
-    if (intelligenceStatus?.status === 'completed' && intelligenceStatus.asofDate) {
-      setIntelligenceAsofDate(intelligenceStatus.asofDate);
-    }
-  }, [intelligenceStatus?.asofDate, intelligenceStatus?.status]);
-
-  const handleRunIntelligence = () => {
-    if (!intelligenceSymbols.length) {
-      return;
-    }
-    const scopedSymbols = intelligenceSymbols.slice(0, 50);
-    setIntelligenceRunSymbols(scopedSymbols);
-    runIntelligenceMutation.mutate({
-      symbols: scopedSymbols,
-    });
-  };
+  const intelligenceStatus = intelligenceWorkflow.status;
+  const intelligenceStatusQuery = intelligenceWorkflow.statusQuery;
+  const intelligenceOpportunities = intelligenceWorkflow.opportunities;
+  const intelligenceOpportunitiesQuery = intelligenceWorkflow.opportunitiesQuery;
   const isNewUser = positions.length === 0 && orders.length === 0;
   const strategyCoachSections = activeStrategyQuery.data
     ? buildStrategyCoachSections(activeStrategyQuery.data)
@@ -154,14 +136,14 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('dashboardPage.portfolioSummary.openRiskAtStops')}</p>
               <p className="text-3xl font-bold">{formatCurrency(openRisk)}</p>
               <p className="text-xs text-gray-500 mt-1">
-                {formatPercent(openRiskPct * 100)} {t('dashboardPage.portfolioSummary.ofAccount')}
+                {formatPercent(openRiskPct)} {t('dashboardPage.portfolioSummary.ofAccount')}
               </p>
             </div>
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('dashboardPage.portfolioSummary.availableToDeploy')}</p>
               <p className="text-3xl font-bold">{formatCurrency(availableToDeploy)}</p>
               <p className="text-xs text-gray-500 mt-1">
-                {formatPercent((availableToDeploy / riskConfig.accountSize) * 100)} {t('dashboardPage.portfolioSummary.ofAccount')}
+                {formatPercent((availableToDeploy / accountSize) * 100)} {t('dashboardPage.portfolioSummary.ofAccount')}
               </p>
             </div>
           </div>
@@ -170,7 +152,7 @@ export default function Dashboard() {
             {/* Secondary Row - Context Metrics */}
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('dashboardPage.portfolioSummary.accountSize')}</p>
-              <p className="text-xl font-bold">{formatCurrency(riskConfig.accountSize)}</p>
+              <p className="text-xl font-bold">{formatCurrency(accountSize)}</p>
             </div>
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('dashboardPage.portfolioSummary.riskBudgetPerTrade')}</p>
@@ -184,6 +166,52 @@ export default function Dashboard() {
               <p className="text-xl font-bold">{formatCurrency(totalPositionValue)}</p>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card variant="bordered">
+        <CardHeader>
+          <CardTitle>{t('dashboardPage.performanceHighlights.title')}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {hasPortfolioHighlights ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('dashboardPage.performanceHighlights.bestPerformer')}</p>
+                <p className="text-lg font-semibold text-green-600 dark:text-green-400">
+                  {bestPerformerTicker || t('dashboardPage.performanceHighlights.none')}
+                  {bestPerformerTicker
+                    ? ` (${formatPercent(portfolioSummary?.bestPerformerPnlPct ?? 0)})`
+                    : ''}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('dashboardPage.performanceHighlights.worstPerformer')}</p>
+                <p className="text-lg font-semibold text-red-600 dark:text-red-400">
+                  {worstPerformerTicker || t('dashboardPage.performanceHighlights.none')}
+                  {worstPerformerTicker
+                    ? ` (${formatPercent(portfolioSummary?.worstPerformerPnlPct ?? 0)})`
+                    : ''}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('dashboardPage.performanceHighlights.winRate')}</p>
+                <p className="text-lg font-semibold">
+                  {formatPercent(portfolioSummary?.winRate ?? 0)} ({portfolioSummary?.positionsProfitable ?? 0}/{totalPositions})
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('dashboardPage.performanceHighlights.avgRNow')}</p>
+                <p className="text-lg font-semibold">
+                  {(portfolioSummary?.avgRNow ?? 0).toFixed(2)}R
+                </p>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              {t('dashboardPage.performanceHighlights.empty')}
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -268,10 +296,10 @@ export default function Dashboard() {
             </p>
           </div>
           <Button
-            onClick={handleRunIntelligence}
-            disabled={!intelligenceSymbols.length || runIntelligenceMutation.isPending}
+            onClick={intelligenceWorkflow.run}
+            disabled={!intelligenceWorkflow.canRun || intelligenceWorkflow.runMutation.isPending}
           >
-            {runIntelligenceMutation.isPending ? (
+            {intelligenceWorkflow.runMutation.isPending ? (
               <>
                 <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
                 {t('dashboardPage.intelligence.runningAction')}
@@ -288,12 +316,12 @@ export default function Dashboard() {
           </p>
         )}
 
-        {runIntelligenceMutation.isError && (
+        {intelligenceWorkflow.runMutation.isError && (
           <p className="mt-3 text-sm text-red-600">
             {t('dashboardPage.intelligence.startError', {
               error:
-                runIntelligenceMutation.error instanceof Error
-                  ? runIntelligenceMutation.error.message
+                intelligenceWorkflow.runMutation.error instanceof Error
+                  ? intelligenceWorkflow.runMutation.error.message
                   : t('common.errors.generic'),
             })}
           </p>
@@ -417,6 +445,7 @@ export default function Dashboard() {
                       <div key={order.orderId} className="flex items-center justify-between text-sm border-l-2 border-blue-400 pl-3 py-1">
                         <div className="flex items-center gap-2">
                           <Badge variant="warning">{order.ticker}</Badge>
+                          <CurrencyBadge currency={detectCurrency(order.ticker)} />
                           <span className="text-gray-700 dark:text-gray-300">{order.orderType}</span>
                           <span className="text-gray-500">×{order.quantity}</span>
                         </div>
@@ -462,18 +491,27 @@ export default function Dashboard() {
                     </h3>
                   </div>
                   <div className="space-y-2">
-                    {positions.slice(0, 3).map((pos: Position) => {
-                      const pnl = calculatePnL(pos);
+                    {positions.slice(0, 3).map((pos) => {
+                      const pnl = pos.pnl;
+                      const currentPrice = pos.currentPrice ?? pos.entryPrice;
+                      const currentValue = pos.currentValue;
                       return (
                         <div key={pos.positionId} className="flex items-center justify-between text-sm border-l-2 border-green-400 pl-3 py-1">
                           <div className="flex items-center gap-2">
                             <Badge variant="success">{pos.ticker}</Badge>
-                            <span className="text-gray-500">×{pos.shares}</span>
-                            <span className="text-gray-700 dark:text-gray-300">{formatCurrency(pos.entryPrice)}</span>
+                            <CurrencyBadge currency={detectCurrency(pos.ticker)} />
+                            <span className="text-gray-500 text-xs">
+                              {pos.shares} × {formatCurrency(currentPrice)}
+                            </span>
                           </div>
-                          <span className={`text-sm font-medium ${pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {pnl >= 0 ? '+' : ''}{formatCurrency(pnl)}
-                          </span>
+                          <div className="flex flex-col items-end">
+                            <span className={`text-sm font-semibold ${pnl >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                              {formatCurrency(currentValue)}
+                            </span>
+                            <span className={`text-xs ${pnl >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                              {pnl >= 0 ? '+' : ''}{formatCurrency(pnl)}
+                            </span>
+                          </div>
                         </div>
                       );
                     })}

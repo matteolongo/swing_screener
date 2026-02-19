@@ -55,7 +55,7 @@ export default function Settings() {
 
       <Card variant="bordered">
         <CardHeader>
-          <CardTitle>Sentiment Analysis Configuration</CardTitle>
+          <CardTitle>{t('settingsPage.sections.sentiment.title')}</CardTitle>
         </CardHeader>
         <CardContent>
           <SentimentConfigForm />

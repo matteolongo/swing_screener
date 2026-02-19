@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Iterable
 
 import pandas as pd
+from swing_screener.utils.dataframe_helpers import get_close_matrix, sma
 
 
 @dataclass(frozen=True)
@@ -11,21 +12,6 @@ class EntrySignalConfig:
     breakout_lookback: int = 50
     pullback_ma: int = 20
     min_history: int = 260
-
-
-def _get_close_matrix(ohlcv: pd.DataFrame) -> pd.DataFrame:
-    if not isinstance(ohlcv.columns, pd.MultiIndex):
-        raise ValueError("OHLCV must have MultiIndex columns (field, ticker).")
-    if "Close" not in ohlcv.columns.get_level_values(0):
-        raise ValueError("Field 'Close' not found in OHLCV.")
-    close = ohlcv["Close"].copy()
-    if not isinstance(close, pd.DataFrame):
-        close = close.to_frame()
-    return close.sort_index()
-
-
-def _sma(s: pd.Series, n: int) -> pd.Series:
-    return s.rolling(n, min_periods=n).mean()
 
 
 def breakout_signal(close_s: pd.Series, lookback: int) -> tuple[bool, float]:
@@ -48,7 +34,7 @@ def pullback_reclaim_signal(close_s: pd.Series, ma_window: int) -> tuple[bool, f
     if len(close_s) < ma_window + 5:
         return False, float("nan")
 
-    ma = _sma(close_s, ma_window)
+    ma = sma(close_s, ma_window)
     y = close_s.iloc[-2]
     t = close_s.iloc[-1]
     y_ma = ma.iloc[-2]
@@ -70,7 +56,7 @@ def build_signal_board(
       - pullback_ma{ma} (bool) + ma{ma}_level
       - signal in {'both','breakout','pullback','none'}
     """
-    close = _get_close_matrix(ohlcv)
+    close = get_close_matrix(ohlcv)
 
     tks = [str(t).strip().upper() for t in tickers if t and str(t).strip()]
     tks = [t for i, t in enumerate(tks) if t not in tks[:i]]  # unique preserve order

@@ -58,6 +58,8 @@ data/*.db-journal
 # Execution files
 data/orders.json
 data/positions.json
+orders.json
+positions.json
 # =========================
 # Node.js / npm
 # =========================

@@ -10,20 +10,24 @@ import api.routers.config as config_router
 import api.services.portfolio_service as portfolio_service
 from swing_screener.data.providers import MarketDataProvider
 
-
 def _ohlcv_for_ticker() -> pd.DataFrame:
-    idx = pd.date_range("2026-01-01", periods=3, freq="D")
+    # Provide enough historical data (200+ days) for trailing stop calculation
+    idx = pd.date_range("2025-06-01", periods=250, freq="D")
+    
+    # Create realistic price progression: uptrend from 90 to 110
+    prices = pd.Series(range(90, 90 + 250), index=idx)[:250]
+    closes = prices.astype(float)
+    
     data = {
-        ("Close", "AAPL"): [100.0, 105.0, 110.0],
-        ("Open", "AAPL"): [99.0, 104.0, 109.0],
-        ("High", "AAPL"): [101.0, 106.0, 111.0],
-        ("Low", "AAPL"): [98.0, 103.0, 108.0],
-        ("Volume", "AAPL"): [1_000_000, 1_100_000, 1_050_000],
+        ("Close", "AAPL"): closes.values,
+        ("Open", "AAPL"): (closes - 1).values,
+        ("High", "AAPL"): (closes + 1).values,
+        ("Low", "AAPL"): (closes - 2).values,
+        ("Volume", "AAPL"): [1_000_000] * len(idx),
     }
     df = pd.DataFrame(data, index=idx)
     df.columns = pd.MultiIndex.from_tuples(df.columns)
     return df
-
 
 def test_position_stop_suggestion(monkeypatch, tmp_path):
     positions_file = tmp_path / "positions.json"
@@ -44,9 +48,9 @@ def test_position_stop_suggestion(monkeypatch, tmp_path):
     positions_file.write_text(json.dumps(positions_data))
 
     config_router.current_config = config_router.DEFAULT_CONFIG.model_copy(deep=True)
-
-    def fake_fetch_ohlcv(tickers, cfg):
-        return _ohlcv_for_ticker()
+    # Keep this test focused on breakeven behavior only.
+    config_router.current_config.manage.trail_after_r = 999.0
+    config_router.current_config.manage.max_holding_days = 999
 
     monkeypatch.setattr(api.dependencies, "POSITIONS_FILE", positions_file)
     # Mock the provider
@@ -54,7 +58,7 @@ def test_position_stop_suggestion(monkeypatch, tmp_path):
     mock_provider = MagicMock(spec=MarketDataProvider)
     mock_provider.fetch_ohlcv.return_value = ohlcv
     mock_provider.get_provider_name.return_value = "mock"
-    monkeypatch.setattr(portfolio_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(portfolio_service, "get_default_provider", lambda *args, **kwargs: mock_provider)
 
     client = TestClient(app)
     res = client.get("/api/portfolio/positions/POS-AAPL-1/stop-suggestion")

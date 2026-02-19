@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import pandas as pd
+from swing_screener.utils.dataframe_helpers import get_close_matrix
 
 
 @dataclass(frozen=True)
@@ -9,24 +10,6 @@ class TrendConfig:
     sma_fast: int = 20
     sma_mid: int = 50
     sma_long: int = 200
-
-
-def _get_close_matrix(ohlcv: pd.DataFrame) -> pd.DataFrame:
-    """
-    Extract Close matrix from OHLCV MultiIndex DataFrame (field, ticker).
-    Returns: DataFrame index=date, columns=ticker
-    """
-    if not isinstance(ohlcv.columns, pd.MultiIndex):
-        raise ValueError("OHLCV must have MultiIndex columns (field, ticker).")
-
-    if "Close" not in ohlcv.columns.get_level_values(0):
-        raise ValueError("Field 'Close' not found in OHLCV.")
-
-    close = ohlcv["Close"].copy()
-    if not isinstance(close, pd.DataFrame):
-        close = close.to_frame()
-
-    return close.dropna(axis=1, how="all").sort_index()
 
 
 def sma_per_ticker(close_series: pd.Series, window: int) -> float:
@@ -70,7 +53,7 @@ def compute_trend_features(
     Computes SMAs per ticker on their actual trading days only,
     ignoring NaN gaps from sparse calendars (e.g., EUR vs USD holidays).
     """
-    close = _get_close_matrix(ohlcv)
+    close = get_close_matrix(ohlcv)
     if close.empty:
         cols = [
             "last",

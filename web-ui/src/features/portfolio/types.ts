@@ -14,6 +14,7 @@ export {
 
 export type {
   Position,
+  PositionApiResponse,
   PositionStatus,
   PositionUpdate,
   UpdateStopRequest,
@@ -22,6 +23,4 @@ export type {
 export {
   transformPosition,
   transformPositionUpdate,
-  calculatePnL,
-  calculatePnLPercent,
 } from '@/types/position';

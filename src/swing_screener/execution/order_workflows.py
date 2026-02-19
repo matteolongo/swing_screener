@@ -75,6 +75,8 @@ def fill_entry_order(
     quantity: int,
     stop_price: float,
     tp_price: Optional[float] = None,
+    fee_eur: Optional[float] = None,
+    fill_fx_rate: Optional[float] = None,
 ) -> tuple[list[Order], list[Position]]:
     order = next((o for o in orders if o.order_id == order_id), None)
     if order is None:
@@ -83,6 +85,10 @@ def fill_entry_order(
         raise ValueError("Only entry orders can be filled.")
     if quantity <= 0:
         raise ValueError("quantity must be > 0")
+    if fee_eur is not None and fee_eur < 0:
+        raise ValueError("fee_eur must be >= 0")
+    if fill_fx_rate is not None and fill_fx_rate <= 0:
+        raise ValueError("fill_fx_rate must be > 0")
     if stop_price >= fill_price:
         raise ValueError("stop_price must be below fill_price.")
 
@@ -101,6 +107,8 @@ def fill_entry_order(
         order_kind="entry",
         position_id=position_id,
         tif=order.tif or "GTC",
+        fee_eur=float(fee_eur) if fee_eur not in (None, 0, 0.0) else None,
+        fill_fx_rate=float(fill_fx_rate) if fill_fx_rate is not None else None,
     )
 
     stop_order_id = f"ORD-STOP-{position_id}"
@@ -182,6 +190,8 @@ def scale_in_fill(
     fill_price: float,
     fill_date: str,
     quantity: int,
+    fee_eur: Optional[float] = None,
+    fill_fx_rate: Optional[float] = None,
 ) -> tuple[list[Order], list[Position]]:
     order = next((o for o in orders if o.order_id == order_id), None)
     if order is None:
@@ -190,6 +200,10 @@ def scale_in_fill(
         raise ValueError("Only entry orders can be filled.")
     if quantity <= 0:
         raise ValueError("quantity must be > 0")
+    if fee_eur is not None and fee_eur < 0:
+        raise ValueError("fee_eur must be >= 0")
+    if fill_fx_rate is not None and fill_fx_rate <= 0:
+        raise ValueError("fill_fx_rate must be > 0")
 
     pos_idx, open_pos = _find_open_position(positions, order.ticker)
     if open_pos is None or pos_idx is None:
@@ -219,6 +233,8 @@ def scale_in_fill(
         order_kind="entry",
         position_id=blended.position_id,
         tif=order.tif or "GTC",
+        fee_eur=float(fee_eur) if fee_eur is not None else None,
+        fill_fx_rate=float(fill_fx_rate) if fill_fx_rate is not None else None,
     )
 
     updated_orders: list[Order] = []

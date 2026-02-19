@@ -15,6 +15,7 @@ import { Plus, X, CheckCircle, MessageSquare } from 'lucide-react';
 import SocialAnalysisModal from '@/components/modals/SocialAnalysisModal';
 import CreateOrderModalForm from '@/components/domain/orders/CreateOrderModalForm';
 import FillOrderModalForm from '@/components/domain/orders/FillOrderModalForm';
+import CachedSymbolPriceChart from '@/components/domain/market/CachedSymbolPriceChart';
 import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 import { t } from '@/i18n/t';
 
@@ -122,9 +123,9 @@ export default function Orders() {
                 <th className="text-left py-3 px-4 font-semibold">{t('ordersPage.headers.status')}</th>
                 <th className="text-right py-3 px-4 font-semibold">{t('ordersPage.headers.qty')}</th>
                 <th className="text-right py-3 px-4 font-semibold">{t('ordersPage.headers.limit')}</th>
+                <th className="text-right py-3 px-4 font-semibold">{t('ordersPage.headers.stop')}</th>
                 {!isBeginnerMode && (
                   <>
-                    <th className="text-right py-3 px-4 font-semibold">{t('ordersPage.headers.stop')}</th>
                     <th className="text-left py-3 px-4 font-semibold">{t('ordersPage.headers.created')}</th>
                     <th className="text-left py-3 px-4 font-semibold">{t('ordersPage.headers.notes')}</th>
                   </>
@@ -139,25 +140,28 @@ export default function Orders() {
                 className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800"
               >
                 <td className="py-3 px-4 font-mono font-semibold">
-                  <div className="flex items-center gap-2">
-                    <a
-                      href={`https://finance.yahoo.com/quote/${order.ticker}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-800 hover:underline"
-                      title={t('ordersPage.yahooTitle', { ticker: order.ticker })}
-                    >
-                      {order.ticker}
-                    </a>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => setSocialSymbol(order.ticker)}
-                      aria-label={t('ordersPage.sentimentAria', { ticker: order.ticker })}
-                      title={t('ordersPage.sentimentTitle')}
-                    >
-                      <MessageSquare className="w-4 h-4" />
-                    </Button>
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={`https://finance.yahoo.com/quote/${order.ticker}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 hover:underline"
+                        title={t('ordersPage.yahooTitle', { ticker: order.ticker })}
+                      >
+                        {order.ticker}
+                      </a>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => setSocialSymbol(order.ticker)}
+                        aria-label={t('ordersPage.sentimentAria', { ticker: order.ticker })}
+                        title={t('ordersPage.sentimentTitle')}
+                      >
+                        <MessageSquare className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <CachedSymbolPriceChart ticker={order.ticker} className="mt-1" />
                   </div>
                 </td>
                 {!isBeginnerMode && (
@@ -195,11 +199,11 @@ export default function Orders() {
                 <td className="py-3 px-4 text-right">
                   {order.limitPrice ? formatCurrency(order.limitPrice) : t('common.placeholders.dash')}
                 </td>
+                <td className="py-3 px-4 text-right">
+                  {order.stopPrice ? formatCurrency(order.stopPrice) : t('common.placeholders.dash')}
+                </td>
                 {!isBeginnerMode && (
                   <>
-                    <td className="py-3 px-4 text-right">
-                      {order.stopPrice ? formatCurrency(order.stopPrice) : t('common.placeholders.dash')}
-                    </td>
                     <td className="py-3 px-4 text-sm">{formatDate(order.orderDate)}</td>
                     <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 max-w-xs truncate">
                       {order.notes || t('ordersPage.notesFallback')}

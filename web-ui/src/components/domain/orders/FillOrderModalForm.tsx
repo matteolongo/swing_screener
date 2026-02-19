@@ -26,6 +26,8 @@ export default function FillOrderModalForm({
       filledPrice: order.limitPrice || 0,
       filledDate: new Date().toISOString().split('T')[0],
       stopPrice: order.orderKind === 'entry' ? (order.stopPrice || 0) : undefined,
+      feeEur: order.feeEur ?? undefined,
+      fillFxRate: order.fillFxRate ?? undefined,
     },
   });
 
@@ -34,6 +36,8 @@ export default function FillOrderModalForm({
       filledPrice: values.filledPrice,
       filledDate: values.filledDate,
       stopPrice: order.orderKind === 'entry' ? values.stopPrice : undefined,
+      feeEur: values.feeEur,
+      fillFxRate: values.fillFxRate,
     });
   });
 
@@ -81,6 +85,33 @@ export default function FillOrderModalForm({
             />
           </div>
         ) : null}
+
+        <div>
+          <label className="block text-sm font-medium mb-1">{t('order.fillModal.feeEurOptional')}</label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            {...form.register('feeEur', {
+              setValueAs: (value) => (value === '' ? undefined : Number(value)),
+            })}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">{t('order.fillModal.fxRateOptional')}</label>
+          <input
+            type="number"
+            step="0.0001"
+            min="0.0001"
+            placeholder="1.1800"
+            {...form.register('fillFxRate', {
+              setValueAs: (value) => (value === '' ? undefined : Number(value)),
+            })}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+          />
+        </div>
 
         <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
           <p className="text-sm text-gray-600 dark:text-gray-400">{t('order.fillModal.orderDetails')}</p>

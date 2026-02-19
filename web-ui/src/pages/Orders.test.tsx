@@ -67,8 +67,7 @@ describe('Orders Page', () => {
       renderWithProviders(<Orders />)
       
       await waitFor(() => {
-        const badges = screen.getAllByText('pending')
-        expect(badges.length).toBeGreaterThan(0)
+        expect(screen.getByText('pending')).toBeInTheDocument()
       })
     })
 
@@ -149,11 +148,9 @@ describe('Orders Page', () => {
         await user.click(createButton)
       })
       
-      // Modal should open (assuming it has a title or close button)
       await waitFor(() => {
-        // Look for modal indicators - could be title, close button, etc.
-        const buttons = screen.getAllByRole('button')
-        expect(buttons.length).toBeGreaterThan(1)
+        expect(screen.getByRole('heading', { name: 'Create Order' })).toBeInTheDocument()
+        expect(screen.getAllByRole('button', { name: /Create Order/i })).toHaveLength(2)
       })
     })
   })
@@ -165,10 +162,9 @@ describe('Orders Page', () => {
       await waitFor(() => {
         expect(screen.getByText('VALE')).toBeInTheDocument()
       })
-      
-      // Should have Fill and Cancel buttons (or similar)
-      const buttons = screen.getAllByRole('button')
-      expect(buttons.length).toBeGreaterThan(1)
+
+      expect(screen.getByRole('button', { name: /Sentiment for VALE/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /Create Order/i })).toBeInTheDocument()
     })
   })
 
@@ -250,9 +246,7 @@ describe('Orders Page', () => {
       renderWithProviders(<Orders />)
       
       await waitFor(() => {
-        const tables = screen.queryAllByRole('table')
-        // Should have a table or list structure
-        expect(tables.length).toBeGreaterThanOrEqual(0)
+        expect(screen.getByRole('table')).toBeInTheDocument()
       })
     })
   })

@@ -15,13 +15,14 @@ import IntelligenceOpportunityCard from '@/components/domain/intelligence/Intell
 import { DAILY_REVIEW_GLOSSARY_KEYS } from '@/content/educationGlossary';
 import TradeInsightModal from '@/components/domain/recommendation/TradeInsightModal';
 import CandidateOrderModal from '@/components/domain/orders/CandidateOrderModal';
+import CachedSymbolPriceChart from '@/components/domain/market/CachedSymbolPriceChart';
 import { queryKeys } from '@/lib/queryKeys';
 import { t } from '@/i18n/t';
+import { useIntelligenceWorkflow } from '@/features/intelligence/useIntelligenceWorkflow';
 import {
-  useIntelligenceOpportunitiesScoped,
-  useIntelligenceRunStatus,
-  useRunIntelligenceMutation,
-} from '@/features/intelligence/hooks';
+  parseUniverseFromStorage,
+  SCREENER_UNIVERSE_STORAGE_KEY,
+} from '@/features/screener/universeStorage';
 import type {
   DailyReviewCandidate,
   DailyReviewPositionHold,
@@ -31,31 +32,6 @@ import type {
 import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 import { useStrategyReadiness } from '@/features/strategy/useStrategyReadiness';
 import StrategyReadinessBlocker from '@/components/domain/onboarding/StrategyReadinessBlocker';
-
-const UNIVERSE_ALIASES: Record<string, string> = {
-  mega: 'usd_all',
-  mega_all: 'usd_all',
-  mega_stocks: 'usd_mega_stocks',
-  core_etfs: 'usd_core_etfs',
-  defense_all: 'usd_defense_all',
-  defense_stocks: 'usd_defense_stocks',
-  defense_etfs: 'usd_defense_etfs',
-  healthcare_all: 'usd_healthcare_all',
-  healthcare_stocks: 'usd_healthcare_stocks',
-  healthcare_etfs: 'usd_healthcare_etfs',
-  mega_defense: 'usd_defense_all',
-  mega_healthcare_biotech: 'usd_healthcare_all',
-  mega_europe: 'eur_europe_large',
-  europe_large: 'eur_europe_large',
-  amsterdam_all: 'eur_amsterdam_all',
-  amsterdam_aex: 'eur_amsterdam_aex',
-  amsterdam_amx: 'eur_amsterdam_amx',
-};
-
-const normalizeUniverse = (value: string | null): string | null => {
-  if (!value) return null;
-  return UNIVERSE_ALIASES[value] ?? value;
-};
 
 export default function DailyReview() {
   const [expandedSections, setExpandedSections] = useState({
@@ -76,7 +52,7 @@ export default function DailyReview() {
   });
 
   const queryClient = useQueryClient();
-  const selectedUniverse = normalizeUniverse(localStorage.getItem('screener.universe'));
+  const selectedUniverse = parseUniverseFromStorage(localStorage.getItem(SCREENER_UNIVERSE_STORAGE_KEY));
   const { data: review, isLoading, error, refetch, isFetching } = useDailyReview(10, selectedUniverse);
   const config = useConfigStore((state) => state.config);
   const { isBeginnerMode } = useBeginnerModeStore();
@@ -107,33 +83,20 @@ export default function DailyReview() {
       new Set([...candidateSymbols, ...positionSymbols].filter((ticker) => ticker && ticker.trim().length > 0))
     );
   }, [review]);
-  const runIntelligenceMutation = useRunIntelligenceMutation((launch) => {
-    setIntelligenceJobId(launch.jobId);
-    setIntelligenceAsofDate(undefined);
+  const intelligenceWorkflow = useIntelligenceWorkflow({
+    availableSymbols: intelligenceSymbols,
+    maxSymbols: 100,
+    jobId: intelligenceJobId,
+    setJobId: setIntelligenceJobId,
+    asofDate: intelligenceAsofDate,
+    setAsofDate: setIntelligenceAsofDate,
+    runSymbols: intelligenceRunSymbols,
+    setRunSymbols: setIntelligenceRunSymbols,
   });
-  const intelligenceStatusQuery = useIntelligenceRunStatus(intelligenceJobId);
-  const intelligenceStatus = intelligenceStatusQuery.data;
-  const intelligenceOpportunitiesQuery = useIntelligenceOpportunitiesScoped(
-    intelligenceAsofDate,
-    intelligenceRunSymbols,
-    Boolean(intelligenceAsofDate)
-  );
-  const intelligenceOpportunities = intelligenceOpportunitiesQuery.data?.opportunities ?? [];
-  useEffect(() => {
-    if (intelligenceStatus?.status === 'completed' && intelligenceStatus.asofDate) {
-      setIntelligenceAsofDate(intelligenceStatus.asofDate);
-    }
-  }, [intelligenceStatus?.asofDate, intelligenceStatus?.status]);
-  const handleRunIntelligence = () => {
-    if (!intelligenceSymbols.length) {
-      return;
-    }
-    const scopedSymbols = intelligenceSymbols.slice(0, 100);
-    setIntelligenceRunSymbols(scopedSymbols);
-    runIntelligenceMutation.mutate({
-      symbols: scopedSymbols,
-    });
-  };
+  const intelligenceStatusQuery = intelligenceWorkflow.statusQuery;
+  const intelligenceStatus = intelligenceWorkflow.status;
+  const intelligenceOpportunitiesQuery = intelligenceWorkflow.opportunitiesQuery;
+  const intelligenceOpportunities = intelligenceWorkflow.opportunities;
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
   };
@@ -235,10 +198,10 @@ export default function DailyReview() {
             </p>
           </div>
           <Button
-            onClick={handleRunIntelligence}
-            disabled={!intelligenceSymbols.length || runIntelligenceMutation.isPending}
+            onClick={intelligenceWorkflow.run}
+            disabled={!intelligenceWorkflow.canRun || intelligenceWorkflow.runMutation.isPending}
           >
-            {runIntelligenceMutation.isPending ? (
+            {intelligenceWorkflow.runMutation.isPending ? (
               <>
                 <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
                 {t('dailyReview.intelligence.runningAction')}
@@ -249,12 +212,12 @@ export default function DailyReview() {
           </Button>
         </div>
 
-        {runIntelligenceMutation.isError && (
+        {intelligenceWorkflow.runMutation.isError && (
           <p className="mt-3 text-sm text-red-600 dark:text-red-400">
             {t('dailyReview.intelligence.startError', {
               error:
-                runIntelligenceMutation.error instanceof Error
-                  ? runIntelligenceMutation.error.message
+                intelligenceWorkflow.runMutation.error instanceof Error
+                  ? intelligenceWorkflow.runMutation.error.message
                   : t('common.errors.generic'),
             })}
           </p>
@@ -574,7 +537,18 @@ function CandidatesTable({
     >
       {candidates.map((candidate) => (
         <tr key={candidate.ticker} className="border-b dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
-          <td className="p-2 font-mono font-bold">{candidate.ticker}</td>
+          <td className="p-2 font-mono font-bold">
+            <a
+              href={`https://finance.yahoo.com/quote/${candidate.ticker}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:text-blue-800 hover:underline"
+              title={t('dailyReview.table.candidates.yahooFinanceTooltip', { ticker: candidate.ticker })}
+            >
+              {candidate.ticker}
+            </a>
+            <CachedSymbolPriceChart ticker={candidate.ticker} className="mt-1" />
+          </td>
           <td className="p-2 text-right">
             <span className="font-semibold text-purple-600">
               {candidate.confidence != null ? formatNumber(candidate.confidence, 1) : '-'}
@@ -660,7 +634,18 @@ function UpdateStopTable({ positions }: { positions: DailyReviewPositionUpdate[]
     >
       {positions.map((pos) => (
         <tr key={pos.positionId} className="border-b dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
-          <td className="p-2 font-mono font-bold">{pos.ticker}</td>
+          <td className="p-2 font-mono font-bold">
+            <a
+              href={`https://finance.yahoo.com/quote/${pos.ticker}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:text-blue-800 hover:underline"
+              title={t('dailyReview.table.update.yahooFinanceTooltip', { ticker: pos.ticker })}
+            >
+              {pos.ticker}
+            </a>
+            <CachedSymbolPriceChart ticker={pos.ticker} className="mt-1" />
+          </td>
           <td className="p-2 text-right">{formatCurrency(pos.entryPrice)}</td>
           <td className="p-2 text-right">{formatCurrency(pos.currentPrice)}</td>
           <td className="p-2 text-right text-gray-600 dark:text-gray-400">{formatCurrency(pos.stopCurrent)}</td>
@@ -709,7 +694,18 @@ function CloseTable({ positions }: { positions: DailyReviewPositionClose[] }) {
     >
       {positions.map((pos) => (
         <tr key={pos.positionId} className="border-b dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
-          <td className="p-2 font-mono font-bold">{pos.ticker}</td>
+          <td className="p-2 font-mono font-bold">
+            <a
+              href={`https://finance.yahoo.com/quote/${pos.ticker}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:text-blue-800 hover:underline"
+              title={t('dailyReview.table.close.yahooFinanceTooltip', { ticker: pos.ticker })}
+            >
+              {pos.ticker}
+            </a>
+            <CachedSymbolPriceChart ticker={pos.ticker} className="mt-1" />
+          </td>
           <td className="p-2 text-right">{formatCurrency(pos.entryPrice)}</td>
           <td className="p-2 text-right">{formatCurrency(pos.currentPrice)}</td>
           <td className="p-2 text-right">{formatCurrency(pos.stopPrice)}</td>
@@ -756,7 +752,18 @@ function HoldTable({ positions }: { positions: DailyReviewPositionHold[] }) {
     >
       {positions.map((pos) => (
         <tr key={pos.positionId} className="border-b dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
-          <td className="p-2 font-mono font-bold">{pos.ticker}</td>
+          <td className="p-2 font-mono font-bold">
+            <a
+              href={`https://finance.yahoo.com/quote/${pos.ticker}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:text-blue-800 hover:underline"
+              title={t('dailyReview.table.hold.yahooFinanceTooltip', { ticker: pos.ticker })}
+            >
+              {pos.ticker}
+            </a>
+            <CachedSymbolPriceChart ticker={pos.ticker} className="mt-1" />
+          </td>
           <td className="p-2 text-right">{formatCurrency(pos.entryPrice)}</td>
           <td className="p-2 text-right">{formatCurrency(pos.currentPrice)}</td>
           <td className="p-2 text-right">{formatCurrency(pos.stopPrice)}</td>
