@@ -8,13 +8,13 @@ import ScreenerCandidatesTable from '@/components/domain/screener/ScreenerCandid
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 import { useUniverses, useRunScreenerMutation } from '@/features/screener/hooks';
 import type { ScreenerCandidate } from '@/features/screener/types';
-import { useConfigStore } from '@/stores/configStore';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { t } from '@/i18n/t';
 import { useLocalStorage } from '@/hooks';
 import { formatDate } from '@/utils/formatters';
+import { DEFAULT_CONFIG } from '@/types/config';
 import {
   migrateLegacyScreenerStorage,
   parseUniverseValue,
@@ -41,7 +41,6 @@ const currencyFilterToRequest = (value: CurrencyFilter): string[] => {
 
 export default function ScreenerInboxPanel() {
   const navigate = useNavigate();
-  const { config } = useConfigStore();
   const { isBeginnerMode } = useBeginnerModeStore();
   const { lastResult, setLastResult } = useScreenerStore();
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
@@ -50,8 +49,10 @@ export default function ScreenerInboxPanel() {
   const setAnalysisTab = useWorkspaceStore((state) => state.setAnalysisTab);
   const runScreenerTrigger = useWorkspaceStore((state) => state.runScreenerTrigger);
   const activeStrategyQuery = useActiveStrategyQuery();
+  const activeStrategy = activeStrategyQuery.data;
+  const strategySignals = activeStrategy?.signals;
   const activeCurrencies = normalizeCurrencies(activeStrategyQuery.data?.universe?.filt?.currencies);
-  const riskConfig = activeStrategyQuery.data?.risk ?? config.risk;
+  const riskConfig = activeStrategy?.risk ?? DEFAULT_CONFIG.risk;
 
   useEffect(() => {
     migrateLegacyScreenerStorage(localStorage);
@@ -98,9 +99,9 @@ export default function ScreenerInboxPanel() {
       minPrice,
       maxPrice,
       currencies: currencyFilterToRequest(currencyFilter),
-      breakoutLookback: config.indicators.breakoutLookback,
-      pullbackMa: config.indicators.pullbackMa,
-      minHistory: config.indicators.minHistory,
+      breakoutLookback: strategySignals?.breakoutLookback ?? DEFAULT_CONFIG.indicators.breakoutLookback,
+      pullbackMa: strategySignals?.pullbackMa ?? DEFAULT_CONFIG.indicators.pullbackMa,
+      minHistory: strategySignals?.minHistory ?? DEFAULT_CONFIG.indicators.minHistory,
     });
   }, [
     screenerMutation.mutate,
@@ -109,9 +110,9 @@ export default function ScreenerInboxPanel() {
     minPrice,
     maxPrice,
     currencyFilter,
-    config.indicators.breakoutLookback,
-    config.indicators.pullbackMa,
-    config.indicators.minHistory,
+    strategySignals?.breakoutLookback,
+    strategySignals?.pullbackMa,
+    strategySignals?.minHistory,
   ]);
 
   const result = screenerMutation.data ?? lastResult;

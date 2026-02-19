@@ -7,8 +7,8 @@ import Button from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
 import TableShell from '@/components/common/TableShell';
 import { formatCurrency, formatNumber } from '@/utils/formatters';
-import { useConfigStore } from '@/stores/configStore';
-import type { RiskConfig } from '@/types/config';
+import { useActiveStrategyQuery } from '@/features/strategy/hooks';
+import { DEFAULT_CONFIG, type RiskConfig } from '@/types/config';
 import GlossaryLegend from '@/components/domain/education/GlossaryLegend';
 import MetricHelpLabel from '@/components/domain/education/MetricHelpLabel';
 import IntelligenceOpportunityCard from '@/components/domain/intelligence/IntelligenceOpportunityCard';
@@ -54,7 +54,7 @@ export default function DailyReview() {
   const queryClient = useQueryClient();
   const selectedUniverse = parseUniverseFromStorage(localStorage.getItem(SCREENER_UNIVERSE_STORAGE_KEY));
   const { data: review, isLoading, error, refetch, isFetching } = useDailyReview(10, selectedUniverse);
-  const config = useConfigStore((state) => state.config);
+  const activeStrategyQuery = useActiveStrategyQuery();
   const { isBeginnerMode } = useBeginnerModeStore();
   const { isReady: strategyReady } = useStrategyReadiness();
   
@@ -62,15 +62,7 @@ export default function DailyReview() {
   useEffect(() => {
     localStorage.setItem('dailyReview.dismissedReadinessBlocker', String(dismissedReadinessBlocker));
   }, [dismissedReadinessBlocker]);
-  const riskConfig: RiskConfig = config?.risk ?? {
-    accountSize: 10000,
-    riskPct: 0.01,
-    minShares: 1,
-    maxPositionPct: 0.2,
-    kAtr: 2,
-    minRr: 2,
-    maxFeeRiskPct: 0.05,
-  };
+  const riskConfig: RiskConfig = activeStrategyQuery.data?.risk ?? DEFAULT_CONFIG.risk;
   const intelligenceSymbols = useMemo(() => {
     if (!review) return [];
     const candidateSymbols = review.newCandidates.map((candidate) => candidate.ticker);

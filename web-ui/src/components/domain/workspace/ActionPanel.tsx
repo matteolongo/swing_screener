@@ -6,8 +6,8 @@ import { useOrderRiskMetrics } from '@/components/domain/orders/useOrderRiskMetr
 import { candidateOrderSchema, type CandidateOrderFormValues } from '@/components/domain/orders/schemas';
 import { useCreateOrderMutation } from '@/features/portfolio/hooks';
 import { useScreenerStore } from '@/stores/screenerStore';
-import { useConfigStore } from '@/stores/configStore';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
+import { DEFAULT_CONFIG } from '@/types/config';
 import { formatCurrency } from '@/utils/formatters';
 import { t } from '@/i18n/t';
 
@@ -17,9 +17,8 @@ interface ActionPanelProps {
 
 export default function ActionPanel({ ticker }: ActionPanelProps) {
   const normalizedTicker = ticker.trim().toUpperCase();
-  const { config } = useConfigStore();
   const activeStrategyQuery = useActiveStrategyQuery();
-  const risk = activeStrategyQuery.data?.risk ?? config.risk;
+  const risk = activeStrategyQuery.data?.risk ?? DEFAULT_CONFIG.risk;
   const candidate = useScreenerStore((state) =>
     state.lastResult?.candidates.find((item) => item.ticker.toUpperCase() === normalizedTicker)
   );
