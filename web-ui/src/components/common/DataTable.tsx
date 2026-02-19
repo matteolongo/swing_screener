@@ -20,6 +20,7 @@ interface DataTableProps<RowT> {
   empty?: boolean;
   emptyMessage?: string;
   error?: string;
+  wrapperClassName?: string;
   tableClassName?: string;
   rowClassName?: string | ((row: RowT, index: number) => string);
   onRowClick?: (row: RowT, index: number) => void;
@@ -39,6 +40,7 @@ export default function DataTable<RowT>({
   empty = rows.length === 0,
   emptyMessage,
   error,
+  wrapperClassName,
   tableClassName,
   rowClassName = 'border-t',
   onRowClick,
@@ -49,6 +51,7 @@ export default function DataTable<RowT>({
       empty={empty}
       emptyMessage={emptyMessage}
       error={error}
+      wrapperClassName={wrapperClassName}
       tableClassName={tableClassName}
       headers={(
         <tr className="text-left text-xs text-gray-500">

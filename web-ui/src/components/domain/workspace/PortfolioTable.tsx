@@ -200,6 +200,8 @@ export default function PortfolioTable() {
         empty={!isLoading && rows.length === 0}
         emptyMessage={t('workspacePage.panels.portfolio.empty')}
         error={isError ? t('workspacePage.panels.portfolio.loadError') : undefined}
+        wrapperClassName="max-h-[420px] overflow-auto rounded-md border border-gray-200 dark:border-gray-700"
+        tableClassName="text-sm"
         rowClassName={(row) => {
           const isSelected = selectedTicker?.toUpperCase() === row.ticker.toUpperCase();
           const base =

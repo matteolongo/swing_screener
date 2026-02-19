@@ -28,14 +28,14 @@ export default function Workspace() {
 
       <TodaysNextActionCard onRunScreener={requestRunScreener} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="min-h-[420px]">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 items-stretch">
+        <div className="min-h-[520px] xl:max-h-[calc(100vh-220px)]">
           <ScreenerInboxPanel />
         </div>
-        <div className="min-h-[420px]">
+        <div className="min-h-[520px] xl:max-h-[calc(100vh-220px)]">
           <AnalysisCanvasPanel />
         </div>
-        <div className="lg:col-span-2 min-h-[360px]">
+        <div className="xl:col-span-2 min-h-[360px]">
           <PortfolioPanel />
         </div>
       </div>

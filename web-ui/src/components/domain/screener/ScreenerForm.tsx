@@ -78,11 +78,11 @@ export default function ScreenerForm({
   }, [setMaxPrice]);
 
   return (
-    <Card>
+    <Card className="p-4 md:p-5">
       {/* Beginner Mode: Simple controls layout */}
       {isBeginnerMode && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-3 items-end">
             {/* Universe selection */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.universe')}</label>
@@ -117,11 +117,11 @@ export default function ScreenerForm({
             </div>
 
             {/* Run button */}
-            <div className="flex items-end">
+            <div className="flex items-end md:justify-end">
               <Button
                 onClick={onRun}
                 disabled={isLoading}
-                className="w-full"
+                className="w-full md:w-40 whitespace-nowrap"
               >
                 {isLoading ? (
                   <>
@@ -161,8 +161,8 @@ export default function ScreenerForm({
 
           {/* Advanced filters (collapsible in beginner mode) */}
           {showAdvancedFilters && (
-            <div className="pt-4 border-t border-gray-200">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="pt-3 border-t border-gray-200">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
                 {/* Top N */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.topN')}</label>
@@ -224,27 +224,22 @@ export default function ScreenerForm({
           )}
 
           {/* Account info (always visible in beginner mode) */}
-          <div className="pt-4 border-t border-gray-200">
-            <div className="text-sm text-gray-600">
-              <div>
-                {t('screener.controls.account')}: {formatCurrency(accountSize)}
-              </div>
-              <div>
-                {t('screener.controls.risk')}: {formatPercent(riskPct)}
-              </div>
-              <div>
-                {t('screener.controls.currencySummary', {
-                  value: formatCurrencyFilterLabel(activeCurrencies),
-                })}
-              </div>
-            </div>
+          <div className="pt-3 border-t border-gray-200 text-sm text-gray-600 flex flex-wrap items-center gap-x-4 gap-y-1">
+            <span>{t('screener.controls.account')}: {formatCurrency(accountSize)}</span>
+            <span>{t('screener.controls.risk')}: {formatPercent(riskPct)}</span>
+            <span>
+              {t('screener.controls.currencySummary', {
+                value: formatCurrencyFilterLabel(activeCurrencies),
+              })}
+            </span>
           </div>
         </div>
       )}
 
       {/* Advanced Mode: Full controls layout */}
       {!isBeginnerMode && (
-        <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3 items-end">
           {/* Universe selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.universe')}</label>
@@ -320,28 +315,12 @@ export default function ScreenerForm({
           </div>
 
           {/* Account info */}
-          <div className="flex items-end">
-            <div className="text-sm text-gray-600">
-              <div>
-                {t('screener.controls.account')}: {formatCurrency(accountSize)}
-              </div>
-              <div>
-                {t('screener.controls.risk')}: {formatPercent(riskPct)}
-              </div>
-              <div>
-                {t('screener.controls.currencySummary', {
-                  value: formatCurrencyFilterLabel(activeCurrencies),
-                })}
-              </div>
-            </div>
-          </div>
-
           {/* Run button */}
-          <div className="flex items-end">
+          <div className="flex items-end xl:justify-end">
             <Button
               onClick={onRun}
               disabled={isLoading}
-              className="w-full"
+              className="w-full xl:w-40 whitespace-nowrap"
             >
               {isLoading ? (
                 <>
@@ -355,6 +334,17 @@ export default function ScreenerForm({
                 </>
               )}
             </Button>
+          </div>
+          </div>
+
+          <div className="pt-2 border-t border-gray-200 text-sm text-gray-600 flex flex-wrap items-center gap-x-4 gap-y-1">
+            <span>{t('screener.controls.account')}: {formatCurrency(accountSize)}</span>
+            <span>{t('screener.controls.risk')}: {formatPercent(riskPct)}</span>
+            <span>
+              {t('screener.controls.currencySummary', {
+                value: formatCurrencyFilterLabel(activeCurrencies),
+              })}
+            </span>
           </div>
         </div>
       )}

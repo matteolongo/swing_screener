@@ -4,7 +4,7 @@ import { t } from '@/i18n/t';
 
 export default function PortfolioPanel() {
   return (
-    <Card variant="bordered" className="h-full space-y-4">
+    <Card variant="bordered" className="h-full p-4 md:p-5 space-y-4 overflow-hidden">
       <div>
         <h2 className="text-lg font-semibold">{t('workspacePage.panels.portfolio.title')}</h2>
         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">

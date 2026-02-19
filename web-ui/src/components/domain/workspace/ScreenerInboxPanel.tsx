@@ -129,7 +129,7 @@ export default function ScreenerInboxPanel() {
   }, [handleRunScreener, runScreenerTrigger]);
 
   return (
-    <Card variant="bordered" className="h-full flex flex-col gap-4">
+    <Card variant="bordered" className="h-full p-4 md:p-5 flex flex-col gap-4 overflow-hidden">
       <div>
         <h2 className="text-lg font-semibold">{t('workspacePage.panels.screener.title')}</h2>
         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
@@ -182,7 +182,7 @@ export default function ScreenerInboxPanel() {
       ) : null}
 
       {result ? (
-        <div className="space-y-3">
+        <div className="space-y-3 flex-1 min-h-0 flex flex-col">
           <div className="text-sm text-gray-600 dark:text-gray-400">
             {t('workspacePage.panels.screener.resultSummary', {
               shown: candidates.length,
@@ -190,7 +190,7 @@ export default function ScreenerInboxPanel() {
               screened: result.totalScreened,
             })}
           </div>
-          <div className="overflow-x-auto">
+          <div className="flex-1 min-h-0 overflow-auto rounded-md border border-gray-200 dark:border-gray-700">
             <ScreenerCandidatesTable
               candidates={candidates}
               selectedTicker={selectedTicker}

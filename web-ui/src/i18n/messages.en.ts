@@ -305,6 +305,11 @@ export const messagesEn = {
       analysis: {
         title: 'Analysis Canvas',
         description: 'Review the selected ticker before creating an order.',
+        tabs: {
+          overview: 'Overview',
+          sentiment: 'Sentiment',
+          order: 'Order',
+        },
         empty: 'Select a candidate from the screener to begin analysis.',
         chartHint: 'Open chart to view cached price history',
         metricsTitle: 'Key Metrics',
