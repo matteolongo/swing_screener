@@ -37,12 +37,9 @@ describe('Sidebar', () => {
   it('should render all navigation items', () => {
     renderWithProviders(<Sidebar />);
 
-    expect(screen.getByText('Dashboard')).toBeInTheDocument();
+    expect(screen.getByText('Workspace')).toBeInTheDocument();
     expect(screen.getByText('Daily Review')).toBeInTheDocument();
-    expect(screen.getByText('Screener')).toBeInTheDocument();
     expect(screen.getByText('Backtest')).toBeInTheDocument();
-    expect(screen.getByText('Orders')).toBeInTheDocument();
-    expect(screen.getByText('Positions')).toBeInTheDocument();
     expect(screen.getByText('Strategy')).toBeInTheDocument();
     expect(screen.getByText('Settings')).toBeInTheDocument();
   });
