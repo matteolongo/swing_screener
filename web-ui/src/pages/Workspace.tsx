@@ -1,4 +1,5 @@
 import Card from '@/components/common/Card';
+import ScreenerInboxPanel from '@/components/domain/workspace/ScreenerInboxPanel';
 import { t } from '@/i18n/t';
 
 function PanelPlaceholder({ title, description }: { title: string; description: string }) {
@@ -22,10 +23,7 @@ export default function Workspace() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="min-h-[420px]">
-          <PanelPlaceholder
-            title={t('workspacePage.panels.screener.title')}
-            description={t('workspacePage.panels.screener.placeholder')}
-          />
+          <ScreenerInboxPanel />
         </div>
         <div className="min-h-[420px]">
           <PanelPlaceholder

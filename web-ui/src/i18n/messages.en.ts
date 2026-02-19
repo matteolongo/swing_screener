@@ -302,6 +302,8 @@ export const messagesEn = {
     panels: {
       screener: {
         title: 'Screener Inbox',
+        description: 'Run the screener and select a candidate to load in the analysis canvas.',
+        resultSummary: 'Showing {{shown}} of {{total}} candidates ({{screened}} screened).',
         placeholder: 'Screener controls and candidates will appear here.',
       },
       analysis: {
