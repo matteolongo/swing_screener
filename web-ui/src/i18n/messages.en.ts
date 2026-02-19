@@ -316,6 +316,11 @@ export const messagesEn = {
         sentimentLookback: 'Sentiment lookback override (hours)',
         tradeThesisTitle: 'Trade Thesis',
         tradeThesisPlaceholder: 'Write your thesis for {{ticker}}...',
+        actionTitle: 'Action Panel',
+        actionDescription: 'Create an entry order using the selected screener setup.',
+        noActionCandidate: 'No screener setup is available for this ticker, so order defaults cannot be generated.',
+        thesisWillBeAttached: 'Your trade thesis will be appended to the order notes.',
+        createOrderSuccess: 'Order created successfully.',
         placeholder: 'Select a ticker to review chart, metrics, and trade inputs.',
       },
       portfolio: {

@@ -1,5 +1,6 @@
 import Card from '@/components/common/Card';
 import CachedSymbolPriceChart from '@/components/domain/market/CachedSymbolPriceChart';
+import ActionPanel from '@/components/domain/workspace/ActionPanel';
 import KeyMetrics from '@/components/domain/workspace/KeyMetrics';
 import TradeThesisInput from '@/components/domain/workspace/TradeThesisInput';
 import WorkspaceSentimentPanel from '@/components/domain/workspace/WorkspaceSentimentPanel';
@@ -39,6 +40,7 @@ export default function AnalysisCanvasPanel() {
           <KeyMetrics ticker={selectedTicker} />
           <WorkspaceSentimentPanel ticker={selectedTicker} />
           <TradeThesisInput ticker={selectedTicker} />
+          <ActionPanel ticker={selectedTicker} />
         </div>
       )}
     </Card>
