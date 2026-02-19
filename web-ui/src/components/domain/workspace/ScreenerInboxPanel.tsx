@@ -1,5 +1,6 @@
 import { useCallback, useEffect } from 'react';
 import { AlertCircle } from 'lucide-react';
+import Badge from '@/components/common/Badge';
 import Card from '@/components/common/Card';
 import ScreenerForm from '@/components/domain/screener/ScreenerForm';
 import ScreenerCandidatesTable from '@/components/domain/screener/ScreenerCandidatesTable';
@@ -11,6 +12,7 @@ import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { t } from '@/i18n/t';
 import { useLocalStorage } from '@/hooks';
+import { formatDate } from '@/utils/formatters';
 import {
   migrateLegacyScreenerStorage,
   parseUniverseValue,
@@ -183,12 +185,26 @@ export default function ScreenerInboxPanel() {
 
       {result ? (
         <div className="rounded-lg border border-gray-200 bg-white p-3 flex-1 min-h-0 flex flex-col gap-3">
-          <div className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
-            {t('workspacePage.panels.screener.resultSummary', {
-              shown: candidates.length,
-              total: allCandidates.length,
-              screened: result.totalScreened,
-            })}
+          <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+            <div className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+              {t('workspacePage.panels.screener.resultSummary', {
+                shown: candidates.length,
+                total: allCandidates.length,
+                screened: result.totalScreened,
+              })}
+            </div>
+            <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+              <span>
+                {t('workspacePage.panels.screener.asOf', {
+                  date: formatDate(result.asofDate),
+                })}
+              </span>
+              <Badge variant={result.dataFreshness === 'intraday' ? 'warning' : 'success'}>
+                {result.dataFreshness === 'intraday'
+                  ? t('workspacePage.panels.screener.freshness.intraday')
+                  : t('workspacePage.panels.screener.freshness.finalClose')}
+              </Badge>
+            </div>
           </div>
           <div className="flex-1 min-h-0 overflow-auto rounded-md border border-gray-200 dark:border-gray-700">
             <ScreenerCandidatesTable

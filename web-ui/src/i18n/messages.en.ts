@@ -300,6 +300,11 @@ export const messagesEn = {
         title: 'Screener Inbox',
         description: 'Run the screener and select a candidate to load in the analysis canvas.',
         resultSummary: 'Showing {{shown}} of {{total}} candidates ({{screened}} screened).',
+        asOf: 'Data as of {{date}}',
+        freshness: {
+          finalClose: 'Final close',
+          intraday: 'Intraday',
+        },
         placeholder: 'Screener controls and candidates will appear here.',
       },
       analysis: {

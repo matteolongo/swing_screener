@@ -103,6 +103,7 @@ export interface ScreenerResponse {
   candidates: ScreenerCandidate[];
   asofDate: string;
   totalScreened: number;
+  dataFreshness: 'final_close' | 'intraday';
   warnings?: string[];
   socialWarmupJobId?: string;
 }
@@ -112,6 +113,7 @@ export interface ScreenerResponseAPI {
   candidates: ScreenerCandidateAPI[];
   asof_date: string;
   total_screened: number;
+  data_freshness?: 'final_close' | 'intraday';
   warnings?: string[];
   social_warmup_job_id?: string;
 }
@@ -174,6 +176,7 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
     })),
     asofDate: apiResponse.asof_date,
     totalScreened: apiResponse.total_screened,
+    dataFreshness: apiResponse.data_freshness ?? 'final_close',
     warnings: apiResponse.warnings ?? [],
     socialWarmupJobId: apiResponse.social_warmup_job_id ?? undefined,
   };
