@@ -9,7 +9,7 @@ python -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
 
 Production-style run (platform injects `PORT`):
 ```bash
-PORT=8000 API_RELOAD=false python -m uvicorn api.main:app --host 0.0.0.0 --port "${PORT}"
+PORT=8000 API_RELOAD=false python -m api.main
 ```
 
 ## Environment Variables
