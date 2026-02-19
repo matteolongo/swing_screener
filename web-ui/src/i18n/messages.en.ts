@@ -270,12 +270,8 @@ export const messagesEn = {
   sidebar: {
     nav: {
       workspace: 'Workspace',
-      dashboard: 'Dashboard',
       dailyReview: 'Daily Review',
-      screener: 'Screener',
       backtest: 'Backtest',
-      orders: 'Orders',
-      positions: 'Positions',
       strategy: 'Strategy',
       settings: 'Settings',
     },
