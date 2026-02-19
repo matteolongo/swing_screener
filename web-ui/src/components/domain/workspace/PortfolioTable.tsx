@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import DataTable, { type DataTableColumn } from '@/components/common/DataTable';
 import Button from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
@@ -47,6 +47,7 @@ export default function PortfolioTable() {
   const positions = positionsQuery.data ?? [];
   const orders = ordersQuery.data ?? [];
   const isLoading = positionsQuery.isLoading || ordersQuery.isLoading;
+  const isReady = positionsQuery.isFetched && ordersQuery.isFetched;
   const isError = positionsQuery.isError || ordersQuery.isError;
 
   const [selectedPosition, setSelectedPosition] = useState<PositionWithMetrics | null>(null);
@@ -123,6 +124,81 @@ export default function PortfolioTable() {
 
     return [...positionRows, ...standaloneRows];
   }, [orders, positions]);
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const action = searchParams.get('portfolioAction');
+    if (!action || !isReady) return;
+
+    const tickerParam = searchParams.get('ticker');
+    const positionId = searchParams.get('positionId');
+    const orderId = searchParams.get('orderId');
+    const normalizedTicker = tickerParam?.trim().toUpperCase();
+
+    const clearPortfolioIntent = () => {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('portfolioAction');
+      url.searchParams.delete('ticker');
+      url.searchParams.delete('positionId');
+      url.searchParams.delete('orderId');
+      const nextSearch = url.searchParams.toString();
+      const nextUrl = `${url.pathname}${nextSearch ? `?${nextSearch}` : ''}${url.hash}`;
+      window.history.replaceState(window.history.state, '', nextUrl);
+    };
+
+    if (tickerParam) {
+      setSelectedTicker(tickerParam);
+    }
+
+    if (action === 'update-stop' || action === 'close-position') {
+      const matchedPosition = rows.find((row) => {
+        if (!row.position?.positionId) return false;
+        if (positionId) return row.position.positionId === positionId;
+        return normalizedTicker ? row.ticker.toUpperCase() === normalizedTicker : false;
+      })?.position;
+
+      if (!matchedPosition) {
+        clearPortfolioIntent();
+        return;
+      }
+
+      setSelectedPosition(matchedPosition);
+      setSelectedPendingOrder(null);
+      setShowFillOrderModal(false);
+      if (action === 'update-stop') {
+        setShowCloseModal(false);
+        setShowUpdateStopModal(true);
+      } else {
+        setShowUpdateStopModal(false);
+        setShowCloseModal(true);
+      }
+      clearPortfolioIntent();
+      return;
+    }
+
+    if (action === 'fill-order') {
+      const matchedOrder = rows.find((row) => {
+        if (!row.order?.orderId) return false;
+        if (orderId) return row.order.orderId === orderId;
+        return normalizedTicker ? row.ticker.toUpperCase() === normalizedTicker : false;
+      })?.order;
+
+      if (!matchedOrder) {
+        clearPortfolioIntent();
+        return;
+      }
+
+      setSelectedPendingOrder(matchedOrder);
+      setSelectedPosition(null);
+      setShowUpdateStopModal(false);
+      setShowCloseModal(false);
+      setShowFillOrderModal(true);
+      clearPortfolioIntent();
+      return;
+    }
+
+    clearPortfolioIntent();
+  }, [isReady, rows, setSelectedTicker]);
 
   const columns: DataTableColumn<PortfolioRow>[] = [
     {
