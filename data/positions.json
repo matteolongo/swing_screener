@@ -1,5 +1,5 @@
 {
-  "asof": "2026-02-17",
+  "asof": "2026-02-19",
   "positions": [
     {
       "ticker": "INTC",
@@ -180,6 +180,42 @@
       "notes": "From screener: Score 78.4, Rank #3\nClosed: sto triggered",
       "exit_order_ids": [
         "ORD-STOP-POS-BAMNB.AS-20260217-01"
+      ]
+    },
+    {
+      "ticker": "IBE.MC",
+      "status": "closed",
+      "position_id": "POS-IBE.MC-20260219-01",
+      "source_order_id": "IBE.MC-20260218004553",
+      "entry_date": "2026-02-19",
+      "entry_price": 20.09,
+      "stop_price": 19.47,
+      "shares": 4,
+      "initial_risk": 0.620000000000001,
+      "max_favorable_price": 20.09,
+      "exit_date": "2026-02-19",
+      "exit_price": 20.0,
+      "notes": "From daily review: Entry $20.09, R:R 2.0",
+      "exit_order_ids": [
+        "ORD-STOP-POS-IBE.MC-20260219-01"
+      ]
+    },
+    {
+      "ticker": "REP.MC",
+      "status": "open",
+      "position_id": "POS-REP.MC-20260218-01",
+      "source_order_id": "REP.MC-20260219172724",
+      "entry_date": "2026-02-18",
+      "entry_price": 17.32,
+      "stop_price": 16.48,
+      "shares": 5,
+      "initial_risk": 0.8399999999999999,
+      "max_favorable_price": 17.32,
+      "exit_date": null,
+      "exit_price": null,
+      "notes": "From daily review: Entry $17.64, R:R 2.0",
+      "exit_order_ids": [
+        "ORD-STOP-POS-REP.MC-20260218-01"
       ]
     }
   ]
