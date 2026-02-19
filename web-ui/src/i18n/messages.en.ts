@@ -269,6 +269,7 @@ export const messagesEn = {
   },
   sidebar: {
     nav: {
+      workspace: 'Workspace',
       dashboard: 'Dashboard',
       dailyReview: 'Daily Review',
       screener: 'Screener',
@@ -294,6 +295,24 @@ export const messagesEn = {
       toggle: 'Toggle between Beginner and Advanced mode',
     },
     disabledHint: 'Enable Advanced Mode to access',
+  },
+  workspacePage: {
+    title: 'Workspace',
+    subtitle: 'Screen, analyze, act, and manage from one unified view.',
+    panels: {
+      screener: {
+        title: 'Screener Inbox',
+        placeholder: 'Screener controls and candidates will appear here.',
+      },
+      analysis: {
+        title: 'Analysis Canvas',
+        placeholder: 'Select a ticker to review chart, metrics, and trade inputs.',
+      },
+      portfolio: {
+        title: 'Portfolio',
+        placeholder: 'Open positions and pending orders will be consolidated here.',
+      },
+    },
   },
   header: {
     brand: 'Swing Screener',

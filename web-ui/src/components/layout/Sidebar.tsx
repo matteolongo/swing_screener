@@ -20,6 +20,12 @@ import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 
 const navigation = [
   { 
+    labelKey: 'sidebar.nav.workspace', 
+    href: '/workspace', 
+    icon: LayoutDashboard,
+    advanced: false, // Always enabled
+  },
+  { 
     labelKey: 'sidebar.nav.dashboard', 
     href: '/dashboard', 
     icon: LayoutDashboard,
