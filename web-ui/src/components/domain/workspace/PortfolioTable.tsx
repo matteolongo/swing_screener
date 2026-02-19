@@ -2,10 +2,18 @@ import { useMemo, useState } from 'react';
 import DataTable, { type DataTableColumn } from '@/components/common/DataTable';
 import Button from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
+import FillOrderModalForm from '@/components/domain/orders/FillOrderModalForm';
 import ClosePositionModalForm from '@/components/domain/positions/ClosePositionModalForm';
 import UpdateStopModalForm from '@/components/domain/positions/UpdateStopModalForm';
 import type { PositionWithMetrics } from '@/features/portfolio/api';
-import { useClosePositionMutation, useOrders, usePositions, useUpdateStopMutation } from '@/features/portfolio/hooks';
+import {
+  useCancelOrderMutation,
+  useClosePositionMutation,
+  useFillOrderMutation,
+  useOrders,
+  usePositions,
+  useUpdateStopMutation,
+} from '@/features/portfolio/hooks';
 import { type Order } from '@/features/portfolio/types';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { formatCurrency, formatPercent } from '@/utils/formatters';
@@ -23,6 +31,7 @@ interface PortfolioRow {
   target: number | null;
   shares: number | null;
   position: PositionWithMetrics | null;
+  order: Order | null;
 }
 
 function formatOptionalCurrency(value: number | null): string {
@@ -41,8 +50,10 @@ export default function PortfolioTable() {
   const isError = positionsQuery.isError || ordersQuery.isError;
 
   const [selectedPosition, setSelectedPosition] = useState<PositionWithMetrics | null>(null);
+  const [selectedPendingOrder, setSelectedPendingOrder] = useState<Order | null>(null);
   const [showUpdateStopModal, setShowUpdateStopModal] = useState(false);
   const [showCloseModal, setShowCloseModal] = useState(false);
+  const [showFillOrderModal, setShowFillOrderModal] = useState(false);
 
   const updateStopMutation = useUpdateStopMutation(() => {
     setShowUpdateStopModal(false);
@@ -52,6 +63,11 @@ export default function PortfolioTable() {
     setShowCloseModal(false);
     setSelectedPosition(null);
   });
+  const fillOrderMutation = useFillOrderMutation(() => {
+    setShowFillOrderModal(false);
+    setSelectedPendingOrder(null);
+  });
+  const cancelOrderMutation = useCancelOrderMutation();
 
   const rows = useMemo<PortfolioRow[]>(() => {
     const byPositionId = new Map<string, { stopOrder?: Order; targetOrder?: Order }>();
@@ -86,6 +102,7 @@ export default function PortfolioTable() {
         target: linked?.targetOrder?.limitPrice ?? null,
         shares: position.shares,
         position,
+        order: null,
       };
     });
 
@@ -101,6 +118,7 @@ export default function PortfolioTable() {
       target: order.orderKind === 'take_profit' ? order.limitPrice ?? null : null,
       shares: order.quantity,
       position: null,
+      order,
     }));
 
     return [...positionRows, ...standaloneRows];
@@ -184,6 +202,33 @@ export default function PortfolioTable() {
               {t('positionsPage.closePosition')}
             </Button>
           </div>
+        ) : row.order ? (
+          <div className="flex justify-end gap-2" onClick={(event) => event.stopPropagation()}>
+            <Button
+              size="sm"
+              variant="primary"
+              disabled={!row.order || cancelOrderMutation.isPending || fillOrderMutation.isPending}
+              onClick={() => {
+                if (!row.order) return;
+                setSelectedPendingOrder(row.order);
+                setShowFillOrderModal(true);
+              }}
+            >
+              {t('common.actions.fillOrder')}
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={!row.order || cancelOrderMutation.isPending || fillOrderMutation.isPending}
+              onClick={() => {
+                if (!row.order) return;
+                if (!window.confirm(t('ordersPage.confirmCancel'))) return;
+                cancelOrderMutation.mutate(row.order.orderId);
+              }}
+            >
+              {cancelOrderMutation.isPending ? t('common.table.loading') : t('common.actions.cancel')}
+            </Button>
+          </div>
         ) : (
           <span className="text-xs text-gray-500">{t('workspacePage.panels.portfolio.pendingOnly')}</span>
         ),
@@ -247,6 +292,24 @@ export default function PortfolioTable() {
           }
           isLoading={closePositionMutation.isPending}
           error={closePositionMutation.error?.message}
+        />
+      ) : null}
+
+      {showFillOrderModal && selectedPendingOrder ? (
+        <FillOrderModalForm
+          order={selectedPendingOrder}
+          onClose={() => {
+            setShowFillOrderModal(false);
+            setSelectedPendingOrder(null);
+          }}
+          onSubmit={(request) =>
+            fillOrderMutation.mutate({
+              orderId: selectedPendingOrder.orderId,
+              request,
+            })
+          }
+          isLoading={fillOrderMutation.isPending}
+          error={fillOrderMutation.error?.message}
         />
       ) : null}
     </>

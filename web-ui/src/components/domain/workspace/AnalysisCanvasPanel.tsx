@@ -2,7 +2,7 @@ import Card from '@/components/common/Card';
 import CachedSymbolPriceChart from '@/components/domain/market/CachedSymbolPriceChart';
 import ActionPanel from '@/components/domain/workspace/ActionPanel';
 import KeyMetrics from '@/components/domain/workspace/KeyMetrics';
-import TradeThesisInput from '@/components/domain/workspace/TradeThesisInput';
+import TradeThesisPanel from '@/components/domain/workspace/TradeThesisPanel';
 import WorkspaceSentimentPanel from '@/components/domain/workspace/WorkspaceSentimentPanel';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { t } from '@/i18n/t';
@@ -79,7 +79,7 @@ export default function AnalysisCanvasPanel() {
 
             {activeTab === 'order' && (
               <>
-                <TradeThesisInput ticker={selectedTicker} />
+                <TradeThesisPanel ticker={selectedTicker} />
                 <ActionPanel ticker={selectedTicker} />
               </>
             )}

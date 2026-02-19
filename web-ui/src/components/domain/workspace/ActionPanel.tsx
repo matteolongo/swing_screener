@@ -6,7 +6,6 @@ import { useOrderRiskMetrics } from '@/components/domain/orders/useOrderRiskMetr
 import { candidateOrderSchema, type CandidateOrderFormValues } from '@/components/domain/orders/schemas';
 import { useCreateOrderMutation } from '@/features/portfolio/hooks';
 import { useScreenerStore } from '@/stores/screenerStore';
-import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useConfigStore } from '@/stores/configStore';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 import { formatCurrency } from '@/utils/formatters';
@@ -21,7 +20,6 @@ export default function ActionPanel({ ticker }: ActionPanelProps) {
   const { config } = useConfigStore();
   const activeStrategyQuery = useActiveStrategyQuery();
   const risk = activeStrategyQuery.data?.risk ?? config.risk;
-  const tradeThesis = useWorkspaceStore((state) => state.tradeThesisByTicker[normalizedTicker] ?? '');
   const candidate = useScreenerStore((state) =>
     state.lastResult?.candidates.find((item) => item.ticker.toUpperCase() === normalizedTicker)
   );
@@ -77,12 +75,6 @@ export default function ActionPanel({ ticker }: ActionPanelProps) {
   const handleSubmit = form.handleSubmit((values) => {
     if (!candidate) return;
 
-    const noteParts = [values.notes?.trim() ?? ''].filter((value) => value.length > 0);
-    const thesis = tradeThesis.trim();
-    if (thesis.length > 0) {
-      noteParts.push(`Thesis: ${thesis}`);
-    }
-
     createOrderMutation.mutate({
       ticker: normalizedTicker,
       orderType: values.orderType,
@@ -90,7 +82,7 @@ export default function ActionPanel({ ticker }: ActionPanelProps) {
       limitPrice: values.limitPrice,
       stopPrice: values.stopPrice,
       orderKind: 'entry',
-      notes: noteParts.join('\n\n'),
+      notes: values.notes?.trim() ?? '',
     });
   });
 
@@ -205,11 +197,6 @@ export default function ActionPanel({ ticker }: ActionPanelProps) {
             {...form.register('notes')}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-sm"
           />
-          {tradeThesis.trim().length > 0 ? (
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              {t('workspacePage.panels.analysis.thesisWillBeAttached')}
-            </p>
-          ) : null}
         </div>
 
         {createOrderMutation.isError ? (
