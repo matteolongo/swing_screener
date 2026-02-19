@@ -11,9 +11,10 @@ import pandas as pd
 def classify_news_command(
     symbols: list[str],
     mock: bool = False,
-    provider: str = "ollama",
-    model: str = "mistral:7b-instruct",
+    provider: str = "openai",
+    model: Optional[str] = None,
     base_url: Optional[str] = None,
+    api_key: Optional[str] = None,
     output: Optional[str] = None,
 ) -> None:
     """Classify news headlines for given symbols using LLM.
@@ -21,25 +22,38 @@ def classify_news_command(
     Args:
         symbols: List of ticker symbols to fetch news for
         mock: Use mock news provider (no real API calls)
-        provider: LLM provider (ollama, mock)
-        model: Model name for provider
+        provider: LLM provider (openai, anthropic, ollama, mock)
+        model: Model name for provider (provider-specific defaults if None)
         base_url: Base URL for Ollama (default: http://localhost:11434)
+        api_key: API key for cloud providers (uses env vars if None)
         output: Optional output JSON file path
     """
-    from swing_screener.intelligence.llm import EventClassifier, OllamaProvider, MockLLMProvider
+    from swing_screener.intelligence.llm import EventClassifier, get_llm_provider
     
-    # Initialize LLM provider
-    if provider == "mock":
-        llm_provider = MockLLMProvider()
-    elif provider == "ollama":
-        llm_provider = OllamaProvider(model=model, base_url=base_url)
-        if not llm_provider.is_available():
-            print(f"ERROR: Ollama model '{model}' not available.", file=sys.stderr)
-            print(f"Ensure Ollama is running: docker compose up ollama", file=sys.stderr)
-            print(f"And model is pulled: ollama pull {model}", file=sys.stderr)
-            sys.exit(1)
-    else:
-        print(f"ERROR: Unknown provider: {provider}", file=sys.stderr)
+    # Initialize LLM provider using factory
+    try:
+        llm_provider = get_llm_provider(
+            provider_name=provider,
+            model=model,
+            api_key=api_key,
+            base_url=base_url,
+        )
+    except ValueError as e:
+        print(f"ERROR: {e}", file=sys.stderr)
+        sys.exit(1)
+    
+    # Check availability
+    if not llm_provider.is_available():
+        print(f"ERROR: {provider} provider not available.", file=sys.stderr)
+        
+        if provider == "ollama":
+            print(f"Ensure Ollama is running and model is pulled:", file=sys.stderr)
+            print(f"  ollama pull {model or 'mistral:7b-instruct'}", file=sys.stderr)
+        elif provider in ("openai", "anthropic"):
+            env_var = "OPENAI_API_KEY" if provider == "openai" else "ANTHROPIC_API_KEY"
+            print(f"Ensure API key is set:", file=sys.stderr)
+            print(f"  export {env_var}=your-key-here", file=sys.stderr)
+        
         sys.exit(1)
     
     # Initialize classifier
