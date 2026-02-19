@@ -1,10 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import { 
   LayoutDashboard, 
-  Search, 
   BarChart3,
-  FileText, 
-  TrendingUp,
   SlidersHorizontal,
   Settings,
   ClipboardCheck,
@@ -26,21 +23,9 @@ const navigation = [
     advanced: false, // Always enabled
   },
   { 
-    labelKey: 'sidebar.nav.dashboard', 
-    href: '/dashboard', 
-    icon: LayoutDashboard,
-    advanced: false, // Always enabled
-  },
-  { 
     labelKey: 'sidebar.nav.dailyReview', 
     href: '/daily-review', 
     icon: ClipboardCheck,
-    advanced: false, // Always enabled
-  },
-  { 
-    labelKey: 'sidebar.nav.screener', 
-    href: '/screener', 
-    icon: Search,
     advanced: false, // Always enabled
   },
   { 
@@ -48,18 +33,6 @@ const navigation = [
     href: '/backtest', 
     icon: BarChart3,
     advanced: true, // Disabled in Beginner Mode
-  },
-  { 
-    labelKey: 'sidebar.nav.orders', 
-    href: '/orders', 
-    icon: FileText,
-    advanced: false, // Always enabled
-  },
-  { 
-    labelKey: 'sidebar.nav.positions', 
-    href: '/positions', 
-    icon: TrendingUp,
-    advanced: false, // Always enabled
   },
   { 
     labelKey: 'sidebar.nav.strategy', 
