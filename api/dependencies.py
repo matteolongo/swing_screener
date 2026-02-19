@@ -49,6 +49,10 @@ def _sanitize_tenant_id(raw_tenant_id: str) -> str:
     tenant_id = str(raw_tenant_id).strip()
     if not tenant_id:
         raise HTTPException(status_code=400, detail="Missing tenant identifier")
+    # Defense-in-depth: explicitly reject path-like patterns even though the
+    # regex does not allow dots or slashes. This makes the intent clearer.
+    if ".." in tenant_id or tenant_id.startswith("/"):
+        raise HTTPException(status_code=400, detail="Invalid tenant identifier")
     if not TENANT_ID_RE.fullmatch(tenant_id):
         raise HTTPException(status_code=400, detail="Invalid tenant identifier")
     return tenant_id
@@ -56,7 +60,7 @@ def _sanitize_tenant_id(raw_tenant_id: str) -> str:
 
 def _get_tenant_data_dir(tenant_id: str) -> Path:
     tenant_dir = TENANTS_DIR / tenant_id
-    tenant_dir.mkdir(parents=True, exist_ok=True)
+    tenant_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
     return tenant_dir
 
 
@@ -210,6 +214,9 @@ def get_config_repo(current_user: AuthUser = Depends(get_current_user)) -> Confi
             repo = _tenant_config_repositories.get(tenant_id)
             if repo is None:
                 initial = ConfigRepository.get_defaults()
+                # NOTE: These are display-only relative paths kept in the config for transparency.
+                # All actual file I/O uses DI-provided absolute Paths via get_positions_path()
+                # and get_orders_path() in this module.
                 initial.positions_file = f"data/tenants/{tenant_id}/positions.json"
                 initial.orders_file = f"data/tenants/{tenant_id}/orders.json"
                 repo = ConfigRepository(initial_config=initial, path=tenant_dir / "config.json")
