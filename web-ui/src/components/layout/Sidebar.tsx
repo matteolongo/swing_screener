@@ -3,7 +3,6 @@ import {
   LayoutDashboard, 
   BarChart3,
   SlidersHorizontal,
-  Settings,
   ClipboardCheck,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
@@ -38,12 +37,6 @@ const navigation = [
     labelKey: 'sidebar.nav.strategy', 
     href: '/strategy', 
     icon: SlidersHorizontal,
-    advanced: false, // Always enabled
-  },
-  { 
-    labelKey: 'sidebar.nav.settings', 
-    href: '/settings', 
-    icon: Settings,
     advanced: false, // Always enabled
   },
 ] as const;

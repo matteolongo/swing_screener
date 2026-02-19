@@ -7,7 +7,6 @@ const Workspace = lazy(() => import('./pages/Workspace'));
 const DailyReview = lazy(() => import('./pages/DailyReview'));
 const Backtest = lazy(() => import('./pages/Backtest'));
 const Strategy = lazy(() => import('./pages/Strategy'));
-const Settings = lazy(() => import('./pages/Settings'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -34,7 +33,7 @@ function App() {
               <Route path="orders" element={<Navigate to="/workspace" replace />} />
               <Route path="positions" element={<Navigate to="/workspace" replace />} />
               <Route path="strategy" element={<Strategy />} />
-              <Route path="settings" element={<Settings />} />
+              <Route path="settings" element={<Navigate to="/strategy" replace />} />
               <Route path="*" element={<Navigate to="/workspace" replace />} />
             </Route>
           </Routes>

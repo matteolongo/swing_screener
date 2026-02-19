@@ -41,7 +41,6 @@ describe('Sidebar', () => {
     expect(screen.getByText('Daily Review')).toBeInTheDocument();
     expect(screen.getByText('Backtest')).toBeInTheDocument();
     expect(screen.getByText('Strategy')).toBeInTheDocument();
-    expect(screen.getByText('Settings')).toBeInTheDocument();
   });
 
   it('should show mode toggle with beginner mode enabled by default', () => {

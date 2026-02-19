@@ -284,7 +284,7 @@ export default function OnboardingModal({ isOpen, onClose }: OnboardingModalProp
           
           {stepIndex === 0 && (
             <p className="text-sm text-gray-500 mt-4 text-center">
-              You can resume this guide anytime by clicking "Reset Onboarding" in Settings
+              You can resume this guide anytime from the Getting Started button in the header.
             </p>
           )}
         </div>
