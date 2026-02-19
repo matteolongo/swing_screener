@@ -11,7 +11,7 @@ export default function MainLayout() {
     () => location.pathname === '/workspace' || location.pathname.startsWith('/workspace/'),
     [location.pathname]
   );
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(isWorkspaceRoute);
 
   useEffect(() => {
     setIsSidebarCollapsed(isWorkspaceRoute);
@@ -28,7 +28,7 @@ export default function MainLayout() {
         <main
           className={cn(
             'flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900',
-            isWorkspaceRoute ? 'p-4 md:p-5' : 'p-6'
+            isWorkspaceRoute ? 'p-3 md:p-4 lg:p-5' : 'p-6'
           )}
         >
           <Outlet />

@@ -346,6 +346,7 @@ export const messagesEn = {
   header: {
     brand: 'Swing Screener',
     gettingStarted: 'Getting Started',
+    focusView: 'Focus view',
   },
   strategyCoach: {
     title: 'Strategy Coach',

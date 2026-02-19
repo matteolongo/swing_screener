@@ -12,30 +12,35 @@ export default function Workspace() {
   const { status: onboardingStatus } = useOnboardingStore();
   const requestRunScreener = useWorkspaceStore((state) => state.requestRunScreener);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const showNextActionCard = onboardingStatus !== 'completed';
 
   useEffect(() => {
     setShowOnboarding(onboardingStatus === 'new');
   }, [onboardingStatus]);
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="mx-auto max-w-[1600px] space-y-4">
       <OnboardingModal isOpen={showOnboarding} onClose={() => setShowOnboarding(false)} />
 
-      <div>
-        <h1 className="text-3xl font-bold">{t('workspacePage.title')}</h1>
-        <p className="mt-2 text-gray-600 dark:text-gray-400">{t('workspacePage.subtitle')}</p>
+      <div className="space-y-1">
+        <h1 className="text-2xl md:text-3xl font-bold">{t('workspacePage.title')}</h1>
+        <p className="text-sm md:text-base text-gray-600 dark:text-gray-400">{t('workspacePage.subtitle')}</p>
       </div>
 
-      <TodaysNextActionCard onRunScreener={requestRunScreener} />
+      {showNextActionCard ? (
+        <div className="xl:max-w-3xl">
+          <TodaysNextActionCard onRunScreener={requestRunScreener} />
+        </div>
+      ) : null}
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 items-stretch">
-        <div className="min-h-[520px] xl:max-h-[calc(100vh-220px)]">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 items-stretch">
+        <div className="min-h-[520px] xl:col-span-7 xl:max-h-[calc(100vh-190px)]">
           <ScreenerInboxPanel />
         </div>
-        <div className="min-h-[520px] xl:max-h-[calc(100vh-220px)]">
+        <div className="min-h-[520px] xl:col-span-5 xl:max-h-[calc(100vh-190px)]">
           <AnalysisCanvasPanel />
         </div>
-        <div className="xl:col-span-2 min-h-[360px]">
+        <div className="xl:col-span-12 min-h-[340px]">
           <PortfolioPanel />
         </div>
       </div>

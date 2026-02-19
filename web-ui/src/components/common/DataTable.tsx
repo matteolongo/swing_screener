@@ -54,11 +54,11 @@ export default function DataTable<RowT>({
       wrapperClassName={wrapperClassName}
       tableClassName={tableClassName}
       headers={(
-        <tr className="text-left text-xs text-gray-500">
+        <tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 bg-gray-50/80">
           {columns.map((column) => (
             <th
               key={column.key}
-              className={`py-2 ${alignClass(column.align)} ${column.headerClassName ?? ''}`.trim()}
+              className={`px-2 py-2.5 ${alignClass(column.align)} ${column.headerClassName ?? ''}`.trim()}
             >
               {column.header}
             </th>
@@ -75,7 +75,7 @@ export default function DataTable<RowT>({
           {columns.map((column) => (
             <td
               key={column.key}
-              className={`py-2 ${alignClass(column.align)} ${column.cellClassName ?? ''}`.trim()}
+              className={`px-2 py-2.5 ${alignClass(column.align)} ${column.cellClassName ?? ''}`.trim()}
             >
               {column.render(row)}
             </td>

@@ -200,14 +200,14 @@ export default function PortfolioTable() {
         empty={!isLoading && rows.length === 0}
         emptyMessage={t('workspacePage.panels.portfolio.empty')}
         error={isError ? t('workspacePage.panels.portfolio.loadError') : undefined}
-        wrapperClassName="max-h-[420px] overflow-auto rounded-md border border-gray-200 dark:border-gray-700"
+        wrapperClassName="max-h-[420px] overflow-auto rounded-md bg-white"
         tableClassName="text-sm"
         rowClassName={(row) => {
           const isSelected = selectedTicker?.toUpperCase() === row.ticker.toUpperCase();
           const base =
             'border-t transition-colors cursor-pointer ' +
             (isSelected
-              ? 'bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30'
+              ? 'bg-blue-50/70 hover:bg-blue-100/80 dark:bg-blue-900/20 dark:hover:bg-blue-900/30'
               : 'hover:bg-gray-50 dark:hover:bg-gray-800');
           return base;
         }}
