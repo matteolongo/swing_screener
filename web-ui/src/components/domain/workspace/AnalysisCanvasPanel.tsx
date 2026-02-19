@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import Card from '@/components/common/Card';
 import CachedSymbolPriceChart from '@/components/domain/market/CachedSymbolPriceChart';
 import ActionPanel from '@/components/domain/workspace/ActionPanel';
@@ -11,7 +10,8 @@ import { cn } from '@/utils/cn';
 
 export default function AnalysisCanvasPanel() {
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
-  const [activeTab, setActiveTab] = useState<'overview' | 'sentiment' | 'order'>('overview');
+  const activeTab = useWorkspaceStore((state) => state.analysisTab);
+  const setAnalysisTab = useWorkspaceStore((state) => state.setAnalysisTab);
   const tabs: Array<{
     id: 'overview' | 'sentiment' | 'order';
     label: string;
@@ -20,10 +20,6 @@ export default function AnalysisCanvasPanel() {
     { id: 'sentiment', label: t('workspacePage.panels.analysis.tabs.sentiment') },
     { id: 'order', label: t('workspacePage.panels.analysis.tabs.order') },
   ];
-
-  useEffect(() => {
-    setActiveTab('overview');
-  }, [selectedTicker]);
 
   return (
     <Card variant="bordered" className="h-full p-4 md:p-5 flex flex-col gap-3 overflow-hidden">
@@ -51,7 +47,7 @@ export default function AnalysisCanvasPanel() {
                   type="button"
                   role="tab"
                   aria-selected={isActive}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => setAnalysisTab(tab.id)}
                   className={cn(
                     'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
                     isActive ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'

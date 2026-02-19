@@ -13,6 +13,7 @@ describe('Workspace Page', () => {
     useScreenerStore.setState({ lastResult: null });
     useWorkspaceStore.setState({
       selectedTicker: null,
+      analysisTab: 'overview',
       tradeThesisByTicker: {},
       runScreenerTrigger: 0,
     });
@@ -50,6 +51,24 @@ describe('Workspace Page', () => {
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: 'VALE' })).toBeInTheDocument();
       expect(screen.getByText('No screener metrics are available for this ticker yet.')).toBeInTheDocument();
+    });
+  });
+
+  it('opens sentiment tab when quick action is clicked', async () => {
+    const { user } = renderWithProviders(<Workspace />);
+
+    const runButtons = screen.getAllByRole('button', { name: /Run Screener/i });
+    await user.click(runButtons[0]);
+    await screen.findByRole('heading', { name: 'AAPL' });
+
+    const expandButtons = await screen.findAllByRole('button', { name: /Expand details/i });
+    await user.click(expandButtons[0]);
+
+    const sentimentAction = await screen.findByRole('button', { name: /Sentiment/i });
+    await user.click(sentimentAction);
+
+    await waitFor(() => {
+      expect(screen.getByText('Sentiment lookback override (hours)')).toBeInTheDocument();
     });
   });
 });

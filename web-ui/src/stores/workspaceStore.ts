@@ -1,11 +1,15 @@
 import { create } from 'zustand';
 
+export type WorkspaceAnalysisTab = 'overview' | 'sentiment' | 'order';
+
 interface WorkspaceStore {
   selectedTicker: string | null;
+  analysisTab: WorkspaceAnalysisTab;
   tradeThesisByTicker: Record<string, string>;
   runScreenerTrigger: number;
   setSelectedTicker: (ticker: string | null) => void;
   clearSelectedTicker: () => void;
+  setAnalysisTab: (tab: WorkspaceAnalysisTab) => void;
   setTradeThesis: (ticker: string, thesis: string) => void;
   clearTradeThesis: (ticker: string) => void;
   requestRunScreener: () => void;
@@ -13,10 +17,12 @@ interface WorkspaceStore {
 
 export const useWorkspaceStore = create<WorkspaceStore>()((set) => ({
   selectedTicker: null,
+  analysisTab: 'overview',
   tradeThesisByTicker: {},
   runScreenerTrigger: 0,
   setSelectedTicker: (ticker) => set({ selectedTicker: ticker ? ticker.trim().toUpperCase() : null }),
-  clearSelectedTicker: () => set({ selectedTicker: null }),
+  clearSelectedTicker: () => set({ selectedTicker: null, analysisTab: 'overview' }),
+  setAnalysisTab: (tab) => set({ analysisTab: tab }),
   setTradeThesis: (ticker, thesis) =>
     set((state) => ({
       tradeThesisByTicker: {

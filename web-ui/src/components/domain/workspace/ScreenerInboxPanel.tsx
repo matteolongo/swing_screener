@@ -1,11 +1,13 @@
 import { useCallback, useEffect } from 'react';
 import { AlertCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import Badge from '@/components/common/Badge';
 import Card from '@/components/common/Card';
 import ScreenerForm from '@/components/domain/screener/ScreenerForm';
 import ScreenerCandidatesTable from '@/components/domain/screener/ScreenerCandidatesTable';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 import { useUniverses, useRunScreenerMutation } from '@/features/screener/hooks';
+import type { ScreenerCandidate } from '@/features/screener/types';
 import { useConfigStore } from '@/stores/configStore';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
@@ -20,6 +22,7 @@ import {
 } from '@/features/screener/universeStorage';
 
 const TOP_N_MAX = 200;
+const BACKTEST_STORAGE_KEY = 'backtest.params.v1';
 
 type CurrencyFilter = 'all' | 'usd' | 'eur';
 
@@ -37,11 +40,16 @@ const currencyFilterToRequest = (value: CurrencyFilter): string[] => {
 };
 
 export default function ScreenerInboxPanel() {
+  const navigate = useNavigate();
   const { config } = useConfigStore();
   const { isBeginnerMode } = useBeginnerModeStore();
   const { lastResult, setLastResult } = useScreenerStore();
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
+  const analysisTab = useWorkspaceStore((state) => state.analysisTab);
   const setSelectedTicker = useWorkspaceStore((state) => state.setSelectedTicker);
+  const setAnalysisTab = useWorkspaceStore((state) => state.setAnalysisTab);
+  const setTradeThesis = useWorkspaceStore((state) => state.setTradeThesis);
+  const tradeThesisByTicker = useWorkspaceStore((state) => state.tradeThesisByTicker);
   const runScreenerTrigger = useWorkspaceStore((state) => state.runScreenerTrigger);
   const activeStrategyQuery = useActiveStrategyQuery();
   const activeCurrencies = normalizeCurrencies(activeStrategyQuery.data?.universe?.filt?.currencies);
@@ -130,6 +138,47 @@ export default function ScreenerInboxPanel() {
     }
   }, [handleRunScreener, runScreenerTrigger]);
 
+  const handleSelectCandidate = useCallback((ticker: string, tab: 'overview' | 'sentiment' | 'order') => {
+    setSelectedTicker(ticker);
+    setAnalysisTab(tab);
+  }, [setAnalysisTab, setSelectedTicker]);
+
+  const handleTradeThesisAction = useCallback((candidate: ScreenerCandidate) => {
+    const ticker = candidate.ticker.toUpperCase();
+    const existing = (tradeThesisByTicker[ticker] ?? '').trim();
+    if (!existing) {
+      const thesis = candidate.recommendation?.thesis;
+      const seededParts = [
+        thesis?.professionalInsight,
+        ...(thesis?.explanation?.whyQualified ?? []),
+      ]
+        .map((part) => part?.trim())
+        .filter((part): part is string => Boolean(part));
+      if (seededParts.length > 0) {
+        setTradeThesis(ticker, seededParts.join('\n'));
+      }
+    }
+    handleSelectCandidate(candidate.ticker, 'order');
+  }, [handleSelectCandidate, setTradeThesis, tradeThesisByTicker]);
+
+  const handleQuickBacktest = useCallback((candidate: ScreenerCandidate) => {
+    const ticker = candidate.ticker.toUpperCase();
+    try {
+      const raw = localStorage.getItem(BACKTEST_STORAGE_KEY);
+      const existing = raw ? JSON.parse(raw) as Record<string, unknown> : {};
+      localStorage.setItem(
+        BACKTEST_STORAGE_KEY,
+        JSON.stringify({
+          ...existing,
+          tickersText: ticker,
+        }),
+      );
+    } catch {
+      localStorage.setItem(BACKTEST_STORAGE_KEY, JSON.stringify({ tickersText: ticker }));
+    }
+    navigate('/backtest');
+  }, [navigate]);
+
   return (
     <Card variant="bordered" className="h-full p-4 md:p-5 flex flex-col gap-3 overflow-hidden">
       <div>
@@ -210,12 +259,14 @@ export default function ScreenerInboxPanel() {
             <ScreenerCandidatesTable
               candidates={candidates}
               selectedTicker={selectedTicker}
-              onRowClick={(candidate) => setSelectedTicker(candidate.ticker)}
-              onCreateOrder={(candidate) => setSelectedTicker(candidate.ticker)}
-              onRecommendationDetails={(candidate) => setSelectedTicker(candidate.ticker)}
-              onSocialAnalysis={(ticker) => setSelectedTicker(ticker)}
-              onTradeThesis={(candidate) => setSelectedTicker(candidate.ticker)}
-              onQuickBacktest={(candidate) => setSelectedTicker(candidate.ticker)}
+              onRowClick={(candidate) =>
+                handleSelectCandidate(candidate.ticker, analysisTab === 'sentiment' ? 'sentiment' : 'overview')
+              }
+              onCreateOrder={(candidate) => handleSelectCandidate(candidate.ticker, 'order')}
+              onRecommendationDetails={(candidate) => handleSelectCandidate(candidate.ticker, 'overview')}
+              onSocialAnalysis={(ticker) => handleSelectCandidate(ticker, 'sentiment')}
+              onTradeThesis={handleTradeThesisAction}
+              onQuickBacktest={handleQuickBacktest}
             />
           </div>
         </div>
