@@ -20,6 +20,7 @@ describe('API Client', () => {
   describe('API_ENDPOINTS', () => {
     it('has auth endpoints', () => {
       expect(API_ENDPOINTS.authLogin).toBe('/api/auth/login')
+      expect(API_ENDPOINTS.authExchange).toBe('/api/auth/exchange')
       expect(API_ENDPOINTS.authMe).toBe('/api/auth/me')
     })
 

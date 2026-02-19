@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from pathlib import Path
 from fastapi import HTTPException
 
 from api.models.intelligence import (
@@ -18,9 +19,11 @@ from swing_screener.intelligence.storage import IntelligenceStorage
 
 
 class IntelligenceService:
-    def __init__(self, strategy_repo: StrategyRepository) -> None:
+    def __init__(self, strategy_repo: StrategyRepository, storage_root: str | Path | None = None) -> None:
+        if storage_root is None:
+            storage_root = Path(__file__).resolve().parents[2] / "data" / "intelligence"
         self._strategy_repo = strategy_repo
-        self._storage = IntelligenceStorage()
+        self._storage = IntelligenceStorage(root_dir=storage_root)
 
     def start_run(self, request: IntelligenceRunRequest) -> IntelligenceRunLaunchResponse:
         strategy = self._strategy_repo.get_active_strategy()

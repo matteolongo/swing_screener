@@ -21,3 +21,7 @@ class LoginResponse(BaseModel):
     token_type: str = "bearer"
     expires_in_seconds: int
     user: AuthUser
+
+
+class ManagedTokenExchangeRequest(BaseModel):
+    provider_token: str = Field(min_length=1, max_length=8192)

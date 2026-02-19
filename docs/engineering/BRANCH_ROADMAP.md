@@ -20,23 +20,22 @@ This file is updated on every new implementation branch.
 7. `codex/phase-7-cutover-cleanup`
 
 ## Current Branch
-- Branch: `codex/phase-2-csv-auth`
-- Phase: 2 (Temporary CSV auth + authorization)
+- Branch: `codex/phase-4-managed-auth`
+- Phase: 4 (Managed auth provider integration)
 - Scope:
-  - Add CSV-backed users repository.
-  - Add login/me endpoints with JWT.
-  - Protect sensitive API routers when auth is enabled.
-  - Add web login page, session storage, auth header injection, and logout.
+  - Add managed auth mode (`API_AUTH_MODE=managed`) with provider token validation.
+  - Add identity-to-tenant mapping via memberships CSV.
+  - Add provider-token exchange endpoint and dual-mode web login handling.
+  - Preserve CSV mode as fallback for local/dev workflows.
 - Status: Completed
 
 ## Next Branch (Planned)
-- Branch: `codex/phase-3-tenant-files`
-- Phase: 3 (Tenant-scoped file persistence)
+- Branch: `codex/phase-5-db-migration`
+- Phase: 5 (Database migration for durable multi-tenant storage)
 - Planned scope:
-  - Resolve data paths by `tenant_id`.
-  - Isolate positions/orders/config/strategy data per tenant.
-  - Add tenant bootstrap path for first-time tenants.
-  - Ensure cross-tenant access is rejected.
+  - Wire services/repositories to DB storage.
+  - Preserve tenant isolation in schema and queries.
+  - Provide migration from tenant JSON files to DB records.
 
 ## Update Rules For Next Branch
 When creating the next branch:
@@ -49,3 +48,5 @@ When creating the next branch:
 ## Completed Branches
 - `codex/phase-1-deployment-docs` (docs + deployment env/CORS readiness)
 - `codex/phase-2-csv-auth` (temporary CSV auth, JWT, protected routes, web login flow)
+- `codex/phase-3-tenant-files` (tenant-scoped orders/positions/strategy/config/intelligence files)
+- `codex/phase-4-managed-auth` (managed provider token mode + tenant membership mapping)

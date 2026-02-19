@@ -46,6 +46,32 @@ export async function login(email: string, password: string): Promise<LoginResul
   };
 }
 
+export async function exchangeProviderToken(providerToken: string): Promise<LoginResult> {
+  const response = await fetch(apiUrl(API_ENDPOINTS.authExchange), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ provider_token: providerToken }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.detail || 'Provider token exchange failed');
+  }
+
+  const payload: LoginResponseApi = await response.json();
+  return {
+    accessToken: payload.access_token,
+    tokenType: payload.token_type,
+    expiresInSeconds: payload.expires_in_seconds,
+    user: {
+      email: payload.user.email,
+      tenantId: payload.user.tenant_id,
+      role: payload.user.role,
+      active: payload.user.active,
+    },
+  };
+}
+
 export async function fetchCurrentUser(): Promise<AuthUser> {
   const response = await apiFetch(API_ENDPOINTS.authMe, { skipAuthRedirect: true });
   if (!response.ok) {
@@ -60,4 +86,3 @@ export async function fetchCurrentUser(): Promise<AuthUser> {
     active: payload.active,
   };
 }
-
