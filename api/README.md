@@ -36,6 +36,17 @@ Docs:
 - File access is guarded by `api/utils/file_lock.py` to avoid concurrent write races.
 - Database module exists but is not wired by default (see `docs/engineering/DATABASE_MIGRATION.md`).
 
+### Tenant file mode
+
+When `API_AUTH_ENABLED=true`, file-backed state is tenant-scoped under:
+
+- `data/tenants/<tenant_id>/orders.json`
+- `data/tenants/<tenant_id>/positions.json`
+- `data/tenants/<tenant_id>/strategies.json`
+- `data/tenants/<tenant_id>/active_strategy.json`
+- `data/tenants/<tenant_id>/config.json`
+- `data/tenants/<tenant_id>/intelligence/*`
+
 ## API Surface (by router)
 Health:
 - `GET /`

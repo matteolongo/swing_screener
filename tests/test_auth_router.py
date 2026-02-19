@@ -9,15 +9,20 @@ from fastapi.testclient import TestClient
 from api.security import hash_password
 
 
-def _write_users_csv(path: Path, password_hash: str) -> None:
-    path.write_text(
-        "email,password_hash,tenant_id,role,active\n"
-        f"friend@example.com,{password_hash},tenant-demo,member,true\n",
-        encoding="utf-8",
-    )
+def _write_users_csv(path: Path, rows: list[tuple[str, str, str, str, str]]) -> None:
+    lines = ["email,password_hash,tenant_id,role,active"]
+    for email, password_hash, tenant_id, role, active in rows:
+        lines.append(f"{email},{password_hash},{tenant_id},{role},{active}")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def _build_client(monkeypatch, *, auth_enabled: bool, users_csv_path: Path | None = None) -> TestClient:
+def _build_client(
+    monkeypatch,
+    *,
+    auth_enabled: bool,
+    users_csv_path: Path | None = None,
+    tenants_dir: Path | None = None,
+) -> TestClient:
     monkeypatch.setenv("API_AUTH_ENABLED", "true" if auth_enabled else "false")
     if users_csv_path is not None:
         monkeypatch.setenv("API_AUTH_USERS_CSV_PATH", str(users_csv_path))
@@ -30,13 +35,18 @@ def _build_client(monkeypatch, *, auth_enabled: bool, users_csv_path: Path | Non
 
     importlib.reload(runtime_config)
     importlib.reload(dependencies)
+    if tenants_dir is not None:
+        dependencies.TENANTS_DIR = tenants_dir
     importlib.reload(main)
     return TestClient(main.app)
 
 
 def test_login_and_me_when_auth_enabled(monkeypatch, tmp_path: Path):
     users_csv_path = tmp_path / "users.csv"
-    _write_users_csv(users_csv_path, hash_password("secret-pass"))
+    _write_users_csv(
+        users_csv_path,
+        [("friend@example.com", hash_password("secret-pass"), "tenant-demo", "member", "true")],
+    )
     client = _build_client(monkeypatch, auth_enabled=True, users_csv_path=users_csv_path)
 
     login_response = client.post(
@@ -58,7 +68,10 @@ def test_login_and_me_when_auth_enabled(monkeypatch, tmp_path: Path):
 
 def test_protected_router_requires_auth_when_enabled(monkeypatch, tmp_path: Path):
     users_csv_path = tmp_path / "users.csv"
-    _write_users_csv(users_csv_path, hash_password("secret-pass"))
+    _write_users_csv(
+        users_csv_path,
+        [("friend@example.com", hash_password("secret-pass"), "tenant-demo", "member", "true")],
+    )
     client = _build_client(monkeypatch, auth_enabled=True, users_csv_path=users_csv_path)
 
     response = client.get("/api/portfolio/orders")
@@ -74,3 +87,51 @@ def test_login_endpoint_returns_503_when_auth_disabled(monkeypatch):
     )
     assert response.status_code == 503
 
+
+def test_tenant_order_files_are_isolated(monkeypatch, tmp_path: Path):
+    users_csv_path = tmp_path / "users.csv"
+    _write_users_csv(
+        users_csv_path,
+        [
+            ("alice@example.com", hash_password("alice-pass"), "tenant-a", "member", "true"),
+            ("bob@example.com", hash_password("bob-pass"), "tenant-b", "member", "true"),
+        ],
+    )
+    tenants_dir = tmp_path / "tenants"
+    client = _build_client(
+        monkeypatch,
+        auth_enabled=True,
+        users_csv_path=users_csv_path,
+        tenants_dir=tenants_dir,
+    )
+
+    alice_login = client.post("/api/auth/login", json={"email": "alice@example.com", "password": "alice-pass"})
+    bob_login = client.post("/api/auth/login", json={"email": "bob@example.com", "password": "bob-pass"})
+    assert alice_login.status_code == 200
+    assert bob_login.status_code == 200
+    alice_token = alice_login.json()["access_token"]
+    bob_token = bob_login.json()["access_token"]
+
+    create_order_payload = {
+        "ticker": "AAPL",
+        "order_type": "LIMIT",
+        "quantity": 10,
+        "limit_price": 100.0,
+        "order_kind": "entry",
+    }
+    create_response = client.post(
+        "/api/portfolio/orders",
+        json=create_order_payload,
+        headers={"Authorization": f"Bearer {alice_token}"},
+    )
+    assert create_response.status_code == 200
+
+    alice_orders = client.get("/api/portfolio/orders", headers={"Authorization": f"Bearer {alice_token}"})
+    bob_orders = client.get("/api/portfolio/orders", headers={"Authorization": f"Bearer {bob_token}"})
+    assert alice_orders.status_code == 200
+    assert bob_orders.status_code == 200
+    assert len(alice_orders.json().get("orders", [])) == 1
+    assert len(bob_orders.json().get("orders", [])) == 0
+
+    assert (tenants_dir / "tenant-a" / "orders.json").exists()
+    assert (tenants_dir / "tenant-b" / "orders.json").exists()

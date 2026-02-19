@@ -27,6 +27,7 @@ from api.models.portfolio import (
 )
 from api.repositories.orders_repo import OrdersRepository
 from api.repositories.positions_repo import PositionsRepository
+from api.repositories.config_repo import ConfigRepository
 from api.utils.files import get_today_str
 from swing_screener.portfolio.state import (
     ManageConfig as ManageStateConfig,
@@ -97,7 +98,17 @@ def _pct_to_target(target: Optional[float], last_price: Optional[float]) -> Opti
     return (target - last_price) / last_price * 100.0
 
 
-def _manage_cfg_from_app() -> ManageStateConfig:
+def _manage_cfg_from_app(config_repo: ConfigRepository | None = None) -> ManageStateConfig:
+    if config_repo is not None:
+        manage = config_repo.get().manage
+        return ManageStateConfig(
+            breakeven_at_R=manage.breakeven_at_r,
+            trail_sma=manage.trail_sma,
+            trail_after_R=manage.trail_after_r,
+            sma_buffer_pct=manage.sma_buffer_pct,
+            max_holding_days=manage.max_holding_days,
+        )
+
     from api.routers import config as config_router
 
     manage = config_router.current_config.manage
@@ -159,10 +170,12 @@ class PortfolioService:
         self,
         orders_repo: OrdersRepository,
         positions_repo: PositionsRepository,
+        config_repo: ConfigRepository | None = None,
         provider: Optional[MarketDataProvider] = None
     ) -> None:
         self._orders_repo = orders_repo
         self._positions_repo = positions_repo
+        self._config_repo = config_repo
         self._provider = provider or get_default_provider()
 
     def _fetch_last_prices(self, tickers: list[str]) -> dict[str, float]:
@@ -624,7 +637,7 @@ class PortfolioService:
         if not ticker:
             raise HTTPException(status_code=400, detail="Position ticker is missing")
 
-        manage_cfg = _manage_cfg_from_app()
+        manage_cfg = _manage_cfg_from_app(config_repo=self._config_repo)
         start_date = _calc_start_date(position.get("entry_date"), manage_cfg.trail_sma)
         end_date = get_today_str()
         
