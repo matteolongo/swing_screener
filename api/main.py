@@ -30,6 +30,17 @@ runtime_config = load_runtime_config()
 protected_dependencies = [Depends(get_current_user)] if runtime_config.auth_enabled else []
 
 
+def reload_runtime_config_for_testing() -> None:
+    """Reload runtime configuration.
+
+    This is intended for use in tests that need to change environment
+    variables after importing ``api.main``. Production code should not
+    normally call this.
+    """
+    global runtime_config
+    runtime_config = load_runtime_config()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup/shutdown."""
