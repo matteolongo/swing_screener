@@ -59,7 +59,7 @@ export default function Backtest() {
     setFormState,
     canRun,
     presets,
-    resetToSettings,
+    resetToStrategyDefaults,
     buildRunParams,
   } = useBacktestForm({
     config,
@@ -171,8 +171,8 @@ export default function Backtest() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="secondary" onClick={resetToSettings}>
-              {t('backtestPage.parameters.resetToSettings')}
+            <Button variant="secondary" onClick={resetToStrategyDefaults}>
+              {t('backtestPage.parameters.resetToStrategy')}
             </Button>
             <Button onClick={() => runMutation.mutate(buildRunParams())} disabled={runMutation.isPending || !canRun}>
               {runMutation.isPending ? (

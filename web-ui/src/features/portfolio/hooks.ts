@@ -3,7 +3,6 @@ import {
   createOrder,
   cancelOrder,
   closePosition,
-  fetchOrderSnapshots,
   fetchOrders,
   fetchPortfolioSummary,
   fetchPositionMetrics,
@@ -27,14 +26,6 @@ export function useOrders(status: OrderFilterStatus) {
   return useQuery({
     queryKey: queryKeys.orders(status),
     queryFn: () => fetchOrders(status),
-  });
-}
-
-export function useOrderSnapshots() {
-  return useQuery({
-    queryKey: queryKeys.ordersSnapshot(),
-    queryFn: fetchOrderSnapshots,
-    refetchOnWindowFocus: false,
   });
 }
 

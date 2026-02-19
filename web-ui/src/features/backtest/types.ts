@@ -1,4 +1,4 @@
-// Backtest types for quick backtesting feature
+// Backtest types
 
 export interface BacktestSummary {
   trades: number;
@@ -24,27 +24,6 @@ export interface BacktestTrade {
   exitPrice: number;
   r: number;  // lowercase to match modal usage
   exitReason: string;
-}
-
-export interface QuickBacktestRequest {
-  ticker: string;
-  monthsBack?: number;
-  entryType?: 'breakout' | 'pullback';
-  kAtr?: number;
-  maxHoldingDays?: number;
-}
-
-export interface QuickBacktestResponse {
-  ticker: string;
-  start: string;
-  end: string;
-  bars: number;
-  trades: number;
-  summary: BacktestSummary;  // Use transformed camelCase version
-  tradesDetail: BacktestTrade[];  // Use transformed camelCase version
-  warnings: string[];
-  costs?: BacktestCostSummary;
-  education?: BacktestEducation;
 }
 
 export interface BacktestCostSummary {
@@ -89,19 +68,6 @@ export interface BacktestTradeAPI {
   exit_price: number;
   R: number;
   exit_reason: string;
-}
-
-export interface QuickBacktestResponseAPI {
-  ticker: string;
-  start: string;
-  end: string;
-  bars: number;
-  trades: number;
-  summary: BacktestSummaryAPI;
-  trades_detail: BacktestTradeAPI[];
-  warnings: string[];
-  costs?: BacktestCostSummaryAPI;
-  education?: BacktestEducationAPI;
 }
 
 export interface BacktestCostSummaryAPI {
@@ -149,38 +115,6 @@ export function transformBacktestTrade(api: BacktestTradeAPI): BacktestTrade {
     exitPrice: api.exit_price,
     r: api.R,  // API uses capital R, we use lowercase
     exitReason: api.exit_reason,
-  };
-}
-
-export function transformQuickBacktestResponse(api: QuickBacktestResponseAPI): QuickBacktestResponse {
-  return {
-    ticker: api.ticker,
-    start: api.start,
-    end: api.end,
-    bars: api.bars,
-    trades: api.trades,
-    summary: transformBacktestSummary(api.summary),  // Transform summary!
-    tradesDetail: api.trades_detail.map(transformBacktestTrade),  // Transform each trade!
-    warnings: api.warnings,
-    costs: api.costs
-      ? {
-          commissionPct: api.costs.commission_pct,
-          slippageBps: api.costs.slippage_bps,
-          fxPct: api.costs.fx_pct,
-          grossRTotal: api.costs.gross_R_total ?? undefined,
-          netRTotal: api.costs.net_R_total ?? undefined,
-          feeImpactPct: api.costs.fee_impact_pct ?? undefined,
-          avgCostR: api.costs.avg_cost_R ?? undefined,
-          totalCostR: api.costs.total_cost_R ?? undefined,
-        }
-      : undefined,
-    education: api.education
-      ? {
-          overview: api.education.overview,
-          drivers: api.education.drivers,
-          caveats: api.education.caveats,
-        }
-      : undefined,
   };
 }
 
