@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { AlertCircle } from 'lucide-react';
 import Card from '@/components/common/Card';
 import ScreenerForm from '@/components/domain/screener/ScreenerForm';
@@ -40,6 +40,7 @@ export default function ScreenerInboxPanel() {
   const { lastResult, setLastResult } = useScreenerStore();
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
   const setSelectedTicker = useWorkspaceStore((state) => state.setSelectedTicker);
+  const runScreenerTrigger = useWorkspaceStore((state) => state.runScreenerTrigger);
   const activeStrategyQuery = useActiveStrategyQuery();
   const activeCurrencies = normalizeCurrencies(activeStrategyQuery.data?.universe?.filt?.currencies);
   const riskConfig = activeStrategyQuery.data?.risk ?? config.risk;
@@ -82,7 +83,7 @@ export default function ScreenerInboxPanel() {
     }
   });
 
-  const handleRunScreener = () => {
+  const handleRunScreener = useCallback(() => {
     screenerMutation.mutate({
       universe: selectedUniverse,
       top: topN,
@@ -93,7 +94,17 @@ export default function ScreenerInboxPanel() {
       pullbackMa: config.indicators.pullbackMa,
       minHistory: config.indicators.minHistory,
     });
-  };
+  }, [
+    screenerMutation.mutate,
+    selectedUniverse,
+    topN,
+    minPrice,
+    maxPrice,
+    currencyFilter,
+    config.indicators.breakoutLookback,
+    config.indicators.pullbackMa,
+    config.indicators.minHistory,
+  ]);
 
   const result = screenerMutation.data ?? lastResult;
   const allCandidates = result?.candidates ?? [];
@@ -110,6 +121,12 @@ export default function ScreenerInboxPanel() {
       setSelectedTicker(candidates[0].ticker);
     }
   }, [candidates, selectedTicker, setSelectedTicker]);
+
+  useEffect(() => {
+    if (runScreenerTrigger > 0) {
+      handleRunScreener();
+    }
+  }, [handleRunScreener, runScreenerTrigger]);
 
   return (
     <Card variant="bordered" className="h-full flex flex-col gap-4">

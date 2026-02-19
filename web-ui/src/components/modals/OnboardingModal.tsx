@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { X, CheckCircle, Calendar, Search, ShoppingCart } from 'lucide-react';
 import Button from '@/components/common/Button';
 import { useOnboardingStore } from '@/stores/onboardingStore';
+import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 
 interface OnboardingModalProps {
   isOpen: boolean;
@@ -140,6 +141,7 @@ const STEPS = [
 export default function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
   const navigate = useNavigate();
   const { currentStep, setCurrentStep, completeOnboarding, dismissOnboarding } = useOnboardingStore();
+  const { isBeginnerMode, setBeginnerMode } = useBeginnerModeStore();
   
   const stepIndex = Math.min(currentStep, STEPS.length - 1);
   const step = STEPS[stepIndex];
@@ -231,6 +233,28 @@ export default function OnboardingModal({ isOpen, onClose }: OnboardingModalProp
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
           <p className="text-gray-600 mb-4">{step.description}</p>
+          {stepIndex === 0 && (
+            <div className="mb-4 rounded-lg border border-gray-200 p-4">
+              <p className="text-sm font-medium text-gray-900 mb-2">Choose your mode</p>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button
+                  variant={isBeginnerMode ? 'primary' : 'secondary'}
+                  onClick={() => setBeginnerMode(true)}
+                >
+                  Beginner
+                </Button>
+                <Button
+                  variant={!isBeginnerMode ? 'primary' : 'secondary'}
+                  onClick={() => setBeginnerMode(false)}
+                >
+                  Advanced
+                </Button>
+              </div>
+              <p className="text-xs text-gray-600 mt-2">
+                Beginner hides advanced surfaces, Advanced unlocks all navigation.
+              </p>
+            </div>
+          )}
           {step.content}
         </div>
         
