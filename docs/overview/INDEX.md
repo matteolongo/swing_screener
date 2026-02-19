@@ -18,6 +18,7 @@
 - `/docs/engineering/DEPLOYMENT_AUTH_MULTITENANCY_PLAN.md`
 - `/docs/engineering/BRANCH_ROADMAP.md`
 - `/docs/engineering/PHASE1_DEPLOYMENT_RUNBOOK.md`
+- `/docs/engineering/PHASE2_AUTH_RUNBOOK.md`
 - `/docs/engineering/OPERATIONAL_GUIDE.md`
 - `/docs/engineering/TROUBLESHOOTING.md`
 - `/docs/engineering/GITHUB_ACTIONS.md`

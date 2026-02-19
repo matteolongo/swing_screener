@@ -1,8 +1,14 @@
 // API client configuration and base URL
 
+import { clearSession, getAccessToken } from '@/lib/auth';
+
 export const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 export const API_ENDPOINTS = {
+  // Auth
+  authLogin: '/api/auth/login',
+  authMe: '/api/auth/me',
+
   // Config
   config: '/api/config',
   configReset: '/api/config/reset',
@@ -57,3 +63,34 @@ export const API_ENDPOINTS = {
 export const apiUrl = (endpoint: string): string => {
   return `${API_BASE_URL}${endpoint}`;
 };
+
+interface ApiFetchOptions extends RequestInit {
+  skipAuthRedirect?: boolean;
+}
+
+export async function apiFetch(endpointOrUrl: string, options: ApiFetchOptions = {}): Promise<Response> {
+  const { skipAuthRedirect = false, ...init } = options;
+  const headers = new Headers(init.headers);
+  const token = getAccessToken();
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+
+  const targetUrl = endpointOrUrl.startsWith('http://') || endpointOrUrl.startsWith('https://')
+    ? endpointOrUrl
+    : apiUrl(endpointOrUrl);
+
+  const response = await fetch(targetUrl, {
+    ...init,
+    headers,
+  });
+
+  if (response.status === 401 && !skipAuthRedirect) {
+    clearSession();
+    if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+      window.location.assign('/login');
+    }
+  }
+
+  return response;
+}

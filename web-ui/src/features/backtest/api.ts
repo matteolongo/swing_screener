@@ -1,4 +1,4 @@
-import { API_ENDPOINTS, apiUrl } from '@/lib/api';
+import { API_ENDPOINTS, apiFetch } from '@/lib/api';
 import { t } from '@/i18n/t';
 import {
   FullBacktestParams,
@@ -17,7 +17,7 @@ import {
 } from './types';
 
 export async function fetchSimulations(): Promise<BacktestSimulationMeta[]> {
-  const res = await fetch(apiUrl(API_ENDPOINTS.backtestSimulations));
+  const res = await apiFetch(API_ENDPOINTS.backtestSimulations);
   if (!res.ok) throw new Error(t('backtestPage.apiErrors.fetchSimulations'));
   const data: BacktestSimulationMetaAPI[] = await res.json();
   return data.map(transformBacktestSimulationMeta);
@@ -43,7 +43,7 @@ export async function runBacktest(params: FullBacktestParams): Promise<FullBackt
     commission_pct: params.commissionPct,
   };
 
-  const res = await fetch(apiUrl(API_ENDPOINTS.backtestRun), {
+  const res = await apiFetch(API_ENDPOINTS.backtestRun, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -57,14 +57,14 @@ export async function runBacktest(params: FullBacktestParams): Promise<FullBackt
 }
 
 export async function fetchSimulation(id: string): Promise<BacktestSimulation> {
-  const res = await fetch(apiUrl(API_ENDPOINTS.backtestSimulation(id)));
+  const res = await apiFetch(API_ENDPOINTS.backtestSimulation(id));
   if (!res.ok) throw new Error(t('backtestPage.apiErrors.fetchSimulation'));
   const data: BacktestSimulationAPI = await res.json();
   return transformBacktestSimulation(data);
 }
 
 export async function deleteSimulation(id: string): Promise<void> {
-  const res = await fetch(apiUrl(API_ENDPOINTS.backtestSimulation(id)), {
+  const res = await apiFetch(API_ENDPOINTS.backtestSimulation(id), {
     method: 'DELETE',
   });
   if (!res.ok) throw new Error(t('backtestPage.apiErrors.deleteSimulation'));
@@ -76,7 +76,7 @@ export async function runQuickBacktest(params: {
   kAtr: number;
   maxHoldingDays: number;
 }): Promise<QuickBacktestResponse> {
-  const response = await fetch(apiUrl('/api/backtest/quick'), {
+  const response = await apiFetch('/api/backtest/quick', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

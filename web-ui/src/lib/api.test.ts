@@ -1,9 +1,15 @@
-import { describe, it, expect } from 'vitest'
-import { API_BASE_URL, API_ENDPOINTS, apiUrl } from './api'
+import { beforeEach, describe, it, expect, vi } from 'vitest'
+import { API_BASE_URL, API_ENDPOINTS, apiFetch, apiUrl } from './api'
+import { clearSession, saveSession } from './auth'
 
 describe('API Client', () => {
   const expectedBase = import.meta.env.VITE_API_URL || ''
   const expectedUrl = (path: string) => `${expectedBase}${path}`
+
+  beforeEach(() => {
+    clearSession()
+    vi.restoreAllMocks()
+  })
 
   describe('API_BASE_URL', () => {
     it('has default base URL', () => {
@@ -12,6 +18,11 @@ describe('API Client', () => {
   })
 
   describe('API_ENDPOINTS', () => {
+    it('has auth endpoints', () => {
+      expect(API_ENDPOINTS.authLogin).toBe('/api/auth/login')
+      expect(API_ENDPOINTS.authMe).toBe('/api/auth/me')
+    })
+
     it('has all config endpoints', () => {
       expect(API_ENDPOINTS.config).toBe('/api/config')
       expect(API_ENDPOINTS.configReset).toBe('/api/config/reset')
@@ -65,6 +76,27 @@ describe('API Client', () => {
 
     it('handles absolute paths', () => {
       expect(apiUrl('/api/screener/run')).toBe(expectedUrl('/api/screener/run'))
+    })
+  })
+
+  describe('apiFetch', () => {
+    it('adds bearer token when present in session storage', async () => {
+      saveSession('test-token', {
+        email: 'friend@example.com',
+        tenantId: 'tenant-demo',
+        role: 'member',
+        active: true,
+      })
+      const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response('{}', { status: 200 })
+      )
+
+      await apiFetch('/api/config')
+
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      const [, init] = fetchMock.mock.calls[0]
+      expect(init?.headers).toBeInstanceOf(Headers)
+      expect((init?.headers as Headers).get('Authorization')).toBe('Bearer test-token')
     })
   })
 })

@@ -20,6 +20,10 @@ PORT=8000 API_RELOAD=false python -m uvicorn api.main:app --host 0.0.0.0 --port 
 - `API_CORS_ALLOWED_ORIGINS` (default: `http://localhost:5173,http://localhost:5174`): comma-separated origin allowlist.
 - `API_CORS_ALLOWED_METHODS` (default: `GET,POST,PUT,DELETE,PATCH`): comma-separated CORS methods.
 - `API_CORS_ALLOWED_HEADERS` (default: `Content-Type,Authorization,Accept,Origin,User-Agent,X-Requested-With`): comma-separated CORS headers.
+- `API_AUTH_ENABLED` (default: `false`): enable temporary CSV authentication.
+- `API_AUTH_USERS_CSV_PATH` (default: `data/users.csv`): path to CSV users file.
+- `API_AUTH_JWT_SECRET` (default: `dev-only-insecure-secret`): JWT signing secret (must be replaced in non-local envs).
+- `API_AUTH_JWT_EXPIRE_MINUTES` (default: `480`): bearer token validity in minutes.
 
 See `api/.env.example` for a ready-to-copy template.
 
@@ -37,6 +41,19 @@ Health:
 - `GET /`
 - `GET /health`
 - `GET /metrics`
+
+Auth (`/api/auth`):
+- `POST /api/auth/login`
+- `GET /api/auth/me`
+
+When `API_AUTH_ENABLED=true`, these router groups require bearer auth:
+- `/api/config`
+- `/api/strategy`
+- `/api/portfolio`
+- `/api/backtest`
+- `/api/social`
+- `/api/intelligence`
+- `/api/daily-review`
 
 Config (`/api/config`):
 - `GET /api/config`

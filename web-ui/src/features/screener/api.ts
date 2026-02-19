@@ -1,4 +1,4 @@
-import { API_ENDPOINTS, apiUrl } from '@/lib/api';
+import { API_ENDPOINTS, apiFetch } from '@/lib/api';
 import {
   ScreenerRequest,
   ScreenerResponse,
@@ -8,7 +8,7 @@ import {
 } from './types';
 
 export async function fetchUniverses(): Promise<UniversesResponse> {
-  const res = await fetch(apiUrl(API_ENDPOINTS.screenerUniverses));
+  const res = await apiFetch(API_ENDPOINTS.screenerUniverses);
   if (!res.ok) throw new Error('Failed to fetch universes');
   return res.json();
 }
@@ -27,7 +27,7 @@ export async function runScreener(request: ScreenerRequest): Promise<ScreenerRes
     min_history: request.minHistory,
   };
 
-  const res = await fetch(apiUrl(API_ENDPOINTS.screenerRun), {
+  const res = await apiFetch(API_ENDPOINTS.screenerRun, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(apiRequest),

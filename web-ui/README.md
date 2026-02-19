@@ -33,3 +33,9 @@ Examples:
 - deployed API: `VITE_API_URL=https://your-api-host.example.com`
 
 See `web-ui/.env.example` for a ready-to-copy template.
+
+## Auth Behavior
+
+- When API auth is enabled (`API_AUTH_ENABLED=true`), the web app redirects unauthenticated users to `/login`.
+- Login calls `POST /api/auth/login` and stores the bearer token in local storage.
+- API requests automatically include `Authorization: Bearer <token>`.

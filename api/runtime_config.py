@@ -14,6 +14,8 @@ DEFAULT_CORS_HEADERS = (
     "User-Agent",
     "X-Requested-With",
 )
+DEFAULT_USERS_CSV_PATH = "data/users.csv"
+DEFAULT_JWT_EXPIRE_MINUTES = 480
 
 
 @dataclass(frozen=True)
@@ -24,6 +26,10 @@ class ApiRuntimeConfig:
     cors_allowed_origins: tuple[str, ...]
     cors_allowed_methods: tuple[str, ...]
     cors_allowed_headers: tuple[str, ...]
+    auth_enabled: bool
+    auth_users_csv_path: str
+    auth_jwt_secret: str
+    auth_jwt_expire_minutes: int
 
 
 def _parse_csv_env(var_name: str, default: tuple[str, ...]) -> tuple[str, ...]:
@@ -58,6 +64,19 @@ def _parse_port_env(var_name: str, default: int) -> int:
     return value if 1 <= value <= 65535 else default
 
 
+def _parse_int_env(var_name: str, default: int, minimum: int | None = None) -> int:
+    raw = os.getenv(var_name)
+    if raw is None or not raw.strip():
+        return default
+    try:
+        value = int(raw)
+    except ValueError:
+        return default
+    if minimum is not None and value < minimum:
+        return default
+    return value
+
+
 def load_runtime_config() -> ApiRuntimeConfig:
     """Load API runtime settings from environment variables."""
     return ApiRuntimeConfig(
@@ -67,5 +86,12 @@ def load_runtime_config() -> ApiRuntimeConfig:
         cors_allowed_origins=_parse_csv_env("API_CORS_ALLOWED_ORIGINS", DEFAULT_CORS_ORIGINS),
         cors_allowed_methods=_parse_csv_env("API_CORS_ALLOWED_METHODS", DEFAULT_CORS_METHODS),
         cors_allowed_headers=_parse_csv_env("API_CORS_ALLOWED_HEADERS", DEFAULT_CORS_HEADERS),
+        auth_enabled=_parse_bool_env("API_AUTH_ENABLED", default=False),
+        auth_users_csv_path=os.getenv("API_AUTH_USERS_CSV_PATH", DEFAULT_USERS_CSV_PATH),
+        auth_jwt_secret=os.getenv("API_AUTH_JWT_SECRET", "dev-only-insecure-secret"),
+        auth_jwt_expire_minutes=_parse_int_env(
+            "API_AUTH_JWT_EXPIRE_MINUTES",
+            default=DEFAULT_JWT_EXPIRE_MINUTES,
+            minimum=1,
+        ),
     )
-
