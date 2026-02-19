@@ -7,6 +7,22 @@ FastAPI service that exposes the Swing Screener backend as a REST API.
 python -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
+Production-style run (platform injects `PORT`):
+```bash
+PORT=8000 API_RELOAD=false python -m uvicorn api.main:app --host 0.0.0.0 --port "${PORT}"
+```
+
+## Environment Variables
+
+- `PORT` (default: `8000`): API bind port.
+- `API_HOST` (default: `0.0.0.0`): API bind host.
+- `API_RELOAD` (default: `true`): enable/disable uvicorn reload.
+- `API_CORS_ALLOWED_ORIGINS` (default: `http://localhost:5173,http://localhost:5174`): comma-separated origin allowlist.
+- `API_CORS_ALLOWED_METHODS` (default: `GET,POST,PUT,DELETE,PATCH`): comma-separated CORS methods.
+- `API_CORS_ALLOWED_HEADERS` (default: `Content-Type,Authorization,Accept,Origin,User-Agent,X-Requested-With`): comma-separated CORS headers.
+
+See `api/.env.example` for a ready-to-copy template.
+
 Docs:
 - `http://localhost:8000/docs`
 - `http://localhost:8000/openapi.json`

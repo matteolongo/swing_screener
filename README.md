@@ -330,6 +330,7 @@ npm run test:coverage # Run with coverage report
 
 ### Operational Guides
 - **[Operational Guide](docs/engineering/OPERATIONAL_GUIDE.md)** — Day-to-day CLI workflows
+- **[Phase 1 Deployment Runbook](docs/engineering/PHASE1_DEPLOYMENT_RUNBOOK.md)** — Deploy web/API with env-driven CORS and smoke checks
 - **[Daily Usage Guide](docs/product/DAILY_USAGE_GUIDE.md)** — Daily routine and timing (Barcelona/CET)
 - **[Troubleshooting](docs/engineering/TROUBLESHOOTING.md)** — Common issues and solutions ⭐ **NEW**
 

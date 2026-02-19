@@ -23,3 +23,13 @@ cd web-ui
 npm install
 npm run dev
 ```
+
+## Environment Variables
+
+- `VITE_API_URL` (default: empty): base URL for API requests.
+
+Examples:
+- local API: `VITE_API_URL=http://localhost:8000`
+- deployed API: `VITE_API_URL=https://your-api-host.example.com`
+
+See `web-ui/.env.example` for a ready-to-copy template.

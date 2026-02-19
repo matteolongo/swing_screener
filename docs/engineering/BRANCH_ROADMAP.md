@@ -1,7 +1,7 @@
 # Branch Roadmap (Deployment/Auth/Multi-Tenant)
 
 > **Status: Active.**  
-> **Last Reviewed:** February 18, 2026.
+> **Last Reviewed:** February 19, 2026.
 
 ## Purpose
 Track implementation progress by branch, aligned to:
@@ -25,8 +25,9 @@ This file is updated on every new implementation branch.
 - Scope:
   - Add phased implementation docs.
   - Add branch roadmap doc.
-  - Prepare docs index for navigation.
-- Status: In progress
+  - Add env-driven API runtime configuration (`PORT`, `API_HOST`, CORS allowlist).
+  - Add deployment runbook and env examples for API/web.
+- Status: Completed
 
 ## Next Branch (Planned)
 - Branch: `codex/phase-2-csv-auth`
@@ -46,4 +47,4 @@ When creating the next branch:
 4. Update `Last Reviewed` date.
 
 ## Completed Branches
-- None yet.
+- `codex/phase-1-deployment-docs` (docs + deployment env/CORS readiness)
