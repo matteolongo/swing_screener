@@ -3,8 +3,6 @@ import { act, screen, waitFor } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { renderWithProviders } from '@/test/utils'
 import { server } from '@/test/mocks/server'
-import { useConfigStore } from '@/stores/configStore'
-import { DEFAULT_CONFIG } from '@/types/config'
 import DailyReview from './DailyReview'
 
 const mockDailyReview = {
@@ -93,10 +91,6 @@ const mockDailyReview = {
 
 describe('DailyReview Page', () => {
   beforeEach(() => {
-    useConfigStore.setState({
-      config: DEFAULT_CONFIG,
-    })
-
     server.use(
       http.get('*/api/daily-review', () => HttpResponse.json(mockDailyReview))
     )

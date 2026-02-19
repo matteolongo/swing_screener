@@ -1,12 +1,8 @@
 import { NavLink } from 'react-router-dom';
 import { 
   LayoutDashboard, 
-  Search, 
   BarChart3,
-  FileText, 
-  TrendingUp,
   SlidersHorizontal,
-  Settings,
   ClipboardCheck,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
@@ -20,8 +16,8 @@ import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 
 const navigation = [
   { 
-    labelKey: 'sidebar.nav.dashboard', 
-    href: '/dashboard', 
+    labelKey: 'sidebar.nav.workspace', 
+    href: '/workspace', 
     icon: LayoutDashboard,
     advanced: false, // Always enabled
   },
@@ -32,39 +28,15 @@ const navigation = [
     advanced: false, // Always enabled
   },
   { 
-    labelKey: 'sidebar.nav.screener', 
-    href: '/screener', 
-    icon: Search,
-    advanced: false, // Always enabled
-  },
-  { 
     labelKey: 'sidebar.nav.backtest', 
     href: '/backtest', 
     icon: BarChart3,
     advanced: true, // Disabled in Beginner Mode
   },
   { 
-    labelKey: 'sidebar.nav.orders', 
-    href: '/orders', 
-    icon: FileText,
-    advanced: false, // Always enabled
-  },
-  { 
-    labelKey: 'sidebar.nav.positions', 
-    href: '/positions', 
-    icon: TrendingUp,
-    advanced: false, // Always enabled
-  },
-  { 
     labelKey: 'sidebar.nav.strategy', 
     href: '/strategy', 
     icon: SlidersHorizontal,
-    advanced: false, // Always enabled
-  },
-  { 
-    labelKey: 'sidebar.nav.settings', 
-    href: '/settings', 
-    icon: Settings,
     advanced: false, // Always enabled
   },
 ] as const;

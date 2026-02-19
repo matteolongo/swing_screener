@@ -7,7 +7,11 @@ import { useOnboardingStore } from '@/stores/onboardingStore';
 import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 import { useStrategyReadiness } from '@/features/strategy/useStrategyReadiness';
 
-export default function TodaysNextActionCard() {
+interface TodaysNextActionCardProps {
+  onRunScreener?: () => void;
+}
+
+export default function TodaysNextActionCard({ onRunScreener }: TodaysNextActionCardProps = {}) {
   const navigate = useNavigate();
   const { status: onboardingStatus } = useOnboardingStore();
   const { isBeginnerMode } = useBeginnerModeStore();
@@ -31,6 +35,17 @@ export default function TodaysNextActionCard() {
       };
     }
     
+    if (onRunScreener) {
+      return {
+        title: 'Run the Screener',
+        description: 'Start your workspace flow by screening for candidates now.',
+        icon: Calendar,
+        buttonLabel: 'Run Screener',
+        buttonAction: onRunScreener,
+        priority: 'normal' as const,
+      };
+    }
+
     return {
       title: 'Review Today\'s Opportunities',
       description: 'Check Daily Review for new trade candidates and position management actions.',

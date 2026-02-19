@@ -1,6 +1,5 @@
 import { PlayCircle, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
 import { useCallback, type ChangeEvent } from 'react';
-import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import { formatCurrency, formatPercent } from '@/utils/formatters';
 import { t } from '@/i18n/t';
@@ -78,11 +77,11 @@ export default function ScreenerForm({
   }, [setMaxPrice]);
 
   return (
-    <Card>
+    <div className="rounded-lg border border-gray-200 bg-gray-50/60 p-3 md:p-4">
       {/* Beginner Mode: Simple controls layout */}
       {isBeginnerMode && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-3 items-end">
             {/* Universe selection */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.universe')}</label>
@@ -101,7 +100,7 @@ export default function ScreenerForm({
             </div>
 
             {/* Recommended Only Filter */}
-            <div className="flex items-end">
+            <div className="h-10 flex items-center">
               <label className="flex items-center space-x-2 cursor-pointer">
                 <input
                   type="checkbox"
@@ -117,11 +116,11 @@ export default function ScreenerForm({
             </div>
 
             {/* Run button */}
-            <div className="flex items-end">
+            <div className="flex items-end xl:justify-end">
               <Button
                 onClick={onRun}
                 disabled={isLoading}
-                className="w-full"
+                className="w-full xl:w-auto xl:min-w-[10rem] whitespace-nowrap"
               >
                 {isLoading ? (
                   <>
@@ -161,8 +160,8 @@ export default function ScreenerForm({
 
           {/* Advanced filters (collapsible in beginner mode) */}
           {showAdvancedFilters && (
-            <div className="pt-4 border-t border-gray-200">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="pt-3 border-t border-gray-200">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
                 {/* Top N */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.topN')}</label>
@@ -224,27 +223,26 @@ export default function ScreenerForm({
           )}
 
           {/* Account info (always visible in beginner mode) */}
-          <div className="pt-4 border-t border-gray-200">
-            <div className="text-sm text-gray-600">
-              <div>
-                {t('screener.controls.account')}: {formatCurrency(accountSize)}
-              </div>
-              <div>
-                {t('screener.controls.risk')}: {formatPercent(riskPct)}
-              </div>
-              <div>
-                {t('screener.controls.currencySummary', {
-                  value: formatCurrencyFilterLabel(activeCurrencies),
-                })}
-              </div>
-            </div>
+          <div className="pt-3 border-t border-gray-200 text-xs text-gray-600 flex flex-wrap items-center gap-2">
+            <span className="rounded-md border border-gray-200 bg-white px-2 py-1">
+              {t('screener.controls.account')}: {formatCurrency(accountSize)}
+            </span>
+            <span className="rounded-md border border-gray-200 bg-white px-2 py-1">
+              {t('screener.controls.risk')}: {formatPercent(riskPct)}
+            </span>
+            <span className="rounded-md border border-gray-200 bg-white px-2 py-1">
+              {t('screener.controls.currencySummary', {
+                value: formatCurrencyFilterLabel(activeCurrencies),
+              })}
+            </span>
           </div>
         </div>
       )}
 
       {/* Advanced Mode: Full controls layout */}
       {!isBeginnerMode && (
-        <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-7 gap-3 items-end">
           {/* Universe selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.universe')}</label>
@@ -320,28 +318,12 @@ export default function ScreenerForm({
           </div>
 
           {/* Account info */}
-          <div className="flex items-end">
-            <div className="text-sm text-gray-600">
-              <div>
-                {t('screener.controls.account')}: {formatCurrency(accountSize)}
-              </div>
-              <div>
-                {t('screener.controls.risk')}: {formatPercent(riskPct)}
-              </div>
-              <div>
-                {t('screener.controls.currencySummary', {
-                  value: formatCurrencyFilterLabel(activeCurrencies),
-                })}
-              </div>
-            </div>
-          </div>
-
           {/* Run button */}
-          <div className="flex items-end">
+          <div className="md:col-span-2 xl:col-span-2 flex items-end xl:justify-end">
             <Button
               onClick={onRun}
               disabled={isLoading}
-              className="w-full"
+              className="w-full xl:w-auto xl:min-w-[10rem] whitespace-nowrap"
             >
               {isLoading ? (
                 <>
@@ -356,8 +338,23 @@ export default function ScreenerForm({
               )}
             </Button>
           </div>
+          </div>
+
+          <div className="pt-2 border-t border-gray-200 text-xs text-gray-600 flex flex-wrap items-center gap-2">
+            <span className="rounded-md border border-gray-200 bg-white px-2 py-1">
+              {t('screener.controls.account')}: {formatCurrency(accountSize)}
+            </span>
+            <span className="rounded-md border border-gray-200 bg-white px-2 py-1">
+              {t('screener.controls.risk')}: {formatPercent(riskPct)}
+            </span>
+            <span className="rounded-md border border-gray-200 bg-white px-2 py-1">
+              {t('screener.controls.currencySummary', {
+                value: formatCurrencyFilterLabel(activeCurrencies),
+              })}
+            </span>
+          </div>
         </div>
       )}
-    </Card>
+    </div>
   );
 }

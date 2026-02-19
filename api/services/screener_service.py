@@ -6,6 +6,7 @@ from typing import Optional
 import datetime as dt
 import logging
 import math
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 from fastapi import HTTPException
@@ -43,6 +44,12 @@ from api.services.social_warmup import get_social_warmup_manager
 
 logger = logging.getLogger(__name__)
 PRICE_HISTORY_MAX_BARS = 252
+SUPPORTED_CURRENCIES = {"USD", "EUR"}
+MARKET_CLOSE_BY_CURRENCY: dict[str, tuple[str, int, int]] = {
+    # (IANA timezone, close hour, close minute), with a small post-close buffer.
+    "USD": ("America/New_York", 16, 10),
+    "EUR": ("Europe/Amsterdam", 17, 40),
+}
 
 
 def _merge_ohlcv(base: pd.DataFrame, extra: pd.DataFrame) -> pd.DataFrame:
@@ -77,6 +84,96 @@ def _fetch_ohlcv_chunked(
     for df in frames[1:]:
         out = _merge_ohlcv(out, df)
     return out
+
+
+def _normalize_currency_codes(values: list[str] | tuple[str, ...] | None) -> list[str]:
+    if not values:
+        return []
+    cleaned = []
+    for value in values:
+        code = str(value).strip().upper()
+        if code in SUPPORTED_CURRENCIES:
+            cleaned.append(code)
+    return list(dict.fromkeys(cleaned))
+
+
+def _previous_weekday(day: dt.date) -> dt.date:
+    cursor = day - dt.timedelta(days=1)
+    while cursor.weekday() >= 5:
+        cursor -= dt.timedelta(days=1)
+    return cursor
+
+
+def _market_effective_date(currency: str, now_utc: dt.datetime) -> tuple[dt.date, bool]:
+    tz_name, close_hour, close_minute = MARKET_CLOSE_BY_CURRENCY.get(
+        currency,
+        MARKET_CLOSE_BY_CURRENCY["USD"],
+    )
+    tz = ZoneInfo(tz_name)
+    local_now = now_utc.astimezone(tz)
+    local_date = local_now.date()
+
+    if local_date.weekday() >= 5:
+        return _previous_weekday(local_date), True
+
+    close_local = dt.datetime.combine(
+        local_date,
+        dt.time(hour=close_hour, minute=close_minute),
+        tzinfo=tz,
+    )
+    is_closed = local_now >= close_local
+    if is_closed:
+        return local_date, True
+    return _previous_weekday(local_date), False
+
+
+def _infer_active_currencies(
+    request: ScreenerRequest,
+    strategy_currencies: list[str] | tuple[str, ...] | None,
+) -> list[str]:
+    requested = _normalize_currency_codes(request.currencies)
+    universe_name = (request.universe or "").strip().lower()
+    universe_hint: list[str] = []
+    if universe_name.startswith("eur_"):
+        universe_hint = ["EUR"]
+    elif universe_name.startswith("usd_"):
+        universe_hint = ["USD"]
+
+    # If universe explicitly maps to one market, keep that unless user selected a single override.
+    if universe_hint:
+        if len(requested) == 1:
+            return requested
+        return universe_hint
+
+    if requested:
+        return requested
+
+    strategy_defaults = _normalize_currency_codes(list(strategy_currencies or []))
+    return strategy_defaults or ["USD", "EUR"]
+
+
+def _resolve_default_asof_date(now_utc: dt.datetime, currencies: list[str]) -> dt.date:
+    active = _normalize_currency_codes(currencies) or ["USD", "EUR"]
+    effective_dates = [_market_effective_date(currency, now_utc)[0] for currency in active]
+    return min(effective_dates)
+
+
+def _all_markets_closed(now_utc: dt.datetime, currencies: list[str]) -> bool:
+    active = _normalize_currency_codes(currencies) or ["USD", "EUR"]
+    return all(_market_effective_date(currency, now_utc)[1] for currency in active)
+
+
+def _resolve_data_freshness(asof_date: str, now_utc: dt.datetime, currencies: list[str]) -> str:
+    try:
+        resolved = dt.date.fromisoformat(asof_date)
+    except ValueError:
+        return "final_close"
+
+    if resolved < now_utc.date():
+        return "final_close"
+    if resolved > now_utc.date():
+        return "intraday"
+    return "final_close" if _all_markets_closed(now_utc, currencies) else "intraday"
 
 
 def _to_iso(ts) -> Optional[str]:
@@ -251,6 +348,8 @@ class ScreenerService:
             strategy = self._resolve_strategy(request.strategy_id)
             backtest_cfg = strategy.get("backtest", {}) if isinstance(strategy, dict) else {}
             universe_cfg = build_universe_config(strategy)
+            active_currencies = _infer_active_currencies(request, universe_cfg.filt.currencies)
+            now_utc = dt.datetime.now(dt.timezone.utc)
             benchmark = universe_cfg.mom.benchmark
             if request.universe:
                 uni_benchmark = get_universe_benchmark(request.universe)
@@ -264,7 +363,7 @@ class ScreenerService:
             if request.asof_date:
                 asof_str = request.asof_date
             else:
-                asof_str = dt.date.today().isoformat()
+                asof_str = _resolve_default_asof_date(now_utc, active_currencies).isoformat()
 
             if request.tickers:
                 tickers = [t.upper() for t in request.tickers]
@@ -312,6 +411,7 @@ class ScreenerService:
 
             last_bar_map = _last_bar_map(ohlcv)
             overall_last_bar = _to_iso(ohlcv.index.max())
+            data_freshness = _resolve_data_freshness(asof_str, now_utc, active_currencies)
 
             if "min_price" in fields_set or "max_price" in fields_set:
                 filt = universe_cfg.filt
@@ -377,6 +477,7 @@ class ScreenerService:
                     candidates=[],
                     asof_date=asof_str,
                     total_screened=len(tickers),
+                    data_freshness=data_freshness,
                     warnings=warnings,
                 )
 
@@ -533,6 +634,7 @@ class ScreenerService:
                 candidates=candidates,
                 asof_date=asof_str,
                 total_screened=len(tickers),
+                data_freshness=data_freshness,
                 warnings=warnings,
                 social_warmup_job_id=social_warmup_job_id,
             )

@@ -225,6 +225,8 @@ export const messagesEn = {
       fxRateOptional: 'FX Rate (optional)',
       filling: 'Filling...',
       fillAction: 'Fill Order',
+      invalidNumber: 'Enter a valid positive number.',
+      stopRequired: 'Stop price is required for entry order fills.',
       orderDetails: 'Order Details:',
       type: 'Type',
       quantity: 'Quantity',
@@ -269,14 +271,10 @@ export const messagesEn = {
   },
   sidebar: {
     nav: {
-      dashboard: 'Dashboard',
+      workspace: 'Workspace',
       dailyReview: 'Daily Review',
-      screener: 'Screener',
       backtest: 'Backtest',
-      orders: 'Orders',
-      positions: 'Positions',
       strategy: 'Strategy',
-      settings: 'Settings',
     },
     activeStrategy: 'Active Strategy',
     loadingStrategies: 'Loading strategies...',
@@ -295,9 +293,68 @@ export const messagesEn = {
     },
     disabledHint: 'Enable Advanced Mode to access',
   },
+  workspacePage: {
+    title: 'Workspace',
+    subtitle: 'Screen, analyze, act, and manage from one unified view.',
+    panels: {
+      screener: {
+        title: 'Screener Inbox',
+        description: 'Run the screener and select a candidate to load in the analysis canvas.',
+        resultSummary: 'Showing {{shown}} of {{total}} candidates ({{screened}} screened).',
+        asOf: 'Data as of {{date}}',
+        freshness: {
+          finalClose: 'Final close',
+          intraday: 'Intraday',
+        },
+        placeholder: 'Screener controls and candidates will appear here.',
+      },
+      analysis: {
+        title: 'Analysis Canvas',
+        description: 'Review the selected ticker before creating an order.',
+        tabs: {
+          overview: 'Overview',
+          sentiment: 'Sentiment',
+          order: 'Order',
+        },
+        empty: 'Select a candidate from the screener to begin analysis.',
+        chartHint: 'Open chart to view cached price history',
+        metricsTitle: 'Key Metrics',
+        noMetrics: 'No screener metrics are available for this ticker yet.',
+        sentimentLookback: 'Sentiment lookback override (hours)',
+        tradeThesisTitle: 'Trade Thesis',
+        tradeThesisDescription: 'Structured system rationale for this setup.',
+        tradeThesisPlaceholder: 'Write your thesis for {{ticker}}...',
+        noThesis: 'No structured thesis is available for this ticker yet.',
+        actionTitle: 'Action Panel',
+        actionDescription: 'Create an entry order using the selected screener setup.',
+        noActionCandidate: 'No screener setup is available for this ticker, so order defaults cannot be generated.',
+        thesisWillBeAttached: 'Your trade thesis will be appended to the order notes.',
+        createOrderSuccess: 'Order created successfully.',
+        placeholder: 'Select a ticker to review chart, metrics, and trade inputs.',
+      },
+      portfolio: {
+        title: 'Portfolio',
+        description: 'Review open positions and pending orders in one table.',
+        columns: {
+          symbol: 'Symbol',
+          pnl: 'P/L',
+          entry: 'Entry',
+          current: 'Current',
+          stop: 'Stop Loss',
+          target: 'Target',
+          actions: 'Actions',
+        },
+        pendingOnly: 'Pending order',
+        empty: 'No open positions or pending orders.',
+        loadError: 'Failed to load portfolio data.',
+        placeholder: 'Open positions and pending orders will be consolidated here.',
+      },
+    },
+  },
   header: {
     brand: 'Swing Screener',
     gettingStarted: 'Getting Started',
+    focusView: 'Focus view',
   },
   strategyCoach: {
     title: 'Strategy Coach',
@@ -364,7 +421,7 @@ export const messagesEn = {
       goal: {
         title: 'What this strategy tries to do',
         explanation:
-          'This fallback explanation uses your local Settings values because active strategy details were unavailable.',
+          'This fallback explanation uses default strategy parameters because active strategy details were unavailable.',
       },
       filters: {
         title: 'How symbols are filtered',
@@ -600,7 +657,7 @@ export const messagesEn = {
     },
     strategyCoach: {
       subtitleActive: 'Teacher-style explanation of how this strategy makes decisions.',
-      subtitleFallback: 'Using local Settings values because active strategy data could not be loaded.',
+      subtitleFallback: 'Using default strategy parameters because active strategy data could not be loaded.',
       subtitleLoading: 'Loading strategy details...',
     },
     intelligence: {
@@ -707,7 +764,7 @@ export const messagesEn = {
       title: 'Getting Started',
       subtitle: "Welcome to Swing Screener! Here's what to do next:",
       step1Prefix: 'Review and customize your',
-      step1LinkLabel: 'Settings',
+      step1LinkLabel: 'Strategy',
       step1Suffix: '(risk parameters, indicators)',
       step2: 'Run the Screener to find trade candidates',
       step3: 'Create orders for your best setups',
@@ -946,7 +1003,7 @@ export const messagesEn = {
           reason: 'Reason',
           action: 'Action',
         },
-        actionDisabledTitle: 'Update stop action not yet available',
+        actionTitle: 'Open Workspace portfolio and apply this stop update',
         actionLabel: 'Update Stop',
         yahooFinanceTooltip: 'Open {{ticker}} on Yahoo Finance',
       },
@@ -960,7 +1017,7 @@ export const messagesEn = {
           reason: 'Reason',
           action: 'Action',
         },
-        actionDisabledTitle: 'Close position action not yet available',
+        actionTitle: 'Open Workspace portfolio and close this position',
         actionLabel: 'Close Position',
         yahooFinanceTooltip: 'Open {{ticker}} on Yahoo Finance',
       },
@@ -1054,220 +1111,6 @@ export const messagesEn = {
     accountFallback: '—',
     updateStop: 'Update Stop',
     closePosition: 'Close Position',
-  },
-  settingsPage: {
-    header: {
-      title: 'Settings',
-      reset: 'Reset to Defaults',
-    },
-    sections: {
-      accountRisk: {
-        title: 'Account & Risk Management',
-        message: 'Risk settings and account sizing now live in the Strategy page.',
-        goToStrategy: 'Go to Strategy',
-      },
-      technicalIndicators: {
-        title: 'Technical Indicators',
-      },
-      positionManagement: {
-        title: 'Position Management Rules',
-      },
-      sentiment: {
-        title: 'Sentiment Analysis Configuration',
-      },
-    },
-    indicatorForm: {
-      common: {
-        formula: 'Formula:',
-        example: 'Example:',
-      },
-      smaWindows: {
-        label: 'SMA Windows (Fast / Mid / Long)',
-        fast: 'Fast (20)',
-        mid: 'Mid (50)',
-        long: 'Long (200)',
-        tooltip: {
-          short: 'Simple Moving Average periods for trend identification',
-          title: 'SMA Windows',
-          content: {
-            intro: 'Simple Moving Averages smooth out price action to identify trends.',
-            formulaValue: 'SMA(n) = (P1 + P2 + ... + Pn) / n',
-            standardWindowsTitle: 'Standard Windows:',
-            sma20: 'Short-term trend (~1 month of trading days)',
-            sma50: 'Intermediate trend (~2.5 months)',
-            sma200: 'Long-term trend (~1 year)',
-            howWeUseTitle: 'How we use them:',
-            howWeUseLine1: '• Price above SMA200 = uptrend filter',
-            howWeUseLine2: '• SMA50 > SMA200 = trend strength confirmation',
-            howWeUseLine3: '• SMA20 = trailing stop reference (after +2R)',
-          },
-        },
-      },
-      atrWindow: {
-        label: 'ATR Window',
-        tooltip: {
-          short: 'Period for volatility calculation (default: 14 days)',
-          title: 'ATR Window',
-          content: {
-            intro: 'Number of trading days used to calculate Average True Range (volatility measure).',
-            standardTitle: 'Standard: 14 days',
-            standardBody:
-              'Developed by J. Welles Wilder. Industry standard is 14 periods. Most traders stick with this default.',
-          },
-        },
-      },
-      entrySignalWindows: {
-        label: 'Entry Signal Windows',
-        breakoutLookback: 'Breakout Lookback',
-        pullbackMa: 'Pullback MA',
-        minHistory: 'Min History',
-        tooltip: {
-          short: 'Breakout lookback and pullback MA windows',
-          title: 'Entry Signal Windows',
-          content: {
-            intro: 'These windows control breakout and pullback entry signals used across the screener and backtests.',
-            breakoutTitle: 'Breakout:',
-            breakoutBody: "Trigger when today's close exceeds the prior high over the lookback period.",
-            pullbackTitle: 'Pullback:',
-            pullbackBody: 'Trigger when yesterday was below the MA and today closes back above it.',
-          },
-        },
-      },
-      momentumLookback: {
-        label: 'Momentum Lookback (6m / 12m in trading days)',
-        sixMonths: '6 months (126)',
-        twelveMonths: '12 months (252)',
-        tooltip: {
-          short: 'Trading days for momentum calculation',
-          title: 'Momentum Lookback Periods',
-          content: {
-            intro: 'We measure momentum (% return) over 6 and 12 month periods.',
-            tradingDaysTitle: 'Trading Days:',
-            tradingDays126: '126 days ≈ 6 months (252 trading days/year ÷ 2)',
-            tradingDays252: '252 days ≈ 12 months (1 year)',
-            formulaValue: 'mom_6m = (Price_now / Price_126_days_ago) - 1',
-            whyTitle: 'Why measure momentum?',
-            whyBody:
-              'Academic research shows momentum persists: past winners tend to keep winning (at least for 3-12 months). We rank stocks by momentum to find the strongest.',
-          },
-        },
-      },
-      benchmark: {
-        label: 'Benchmark Ticker',
-        placeholder: 'SPY',
-        tooltip: {
-          short: 'Reference index for relative strength calculation',
-          title: 'Benchmark Ticker',
-          content: {
-            intro: 'The benchmark is used to calculate Relative Strength (RS).',
-            formulaValue: 'RS = mom_6m[stock] - mom_6m[benchmark]',
-            exampleLine1: 'Stock up 20%, SPY up 10%',
-            exampleLine2: 'RS = +10% (outperforming)',
-            defaultPrefix: 'Default:',
-            defaultSuffix: '(S&P 500 ETF). We want stocks beating the market.',
-          },
-        },
-      },
-    },
-    manageForm: {
-      intro: 'These rules protect profits and limit losses on open positions.',
-      common: {
-        rUnit: 'R',
-        formula: 'Formula:',
-        example: 'Example:',
-      },
-      breakeven: {
-        label: 'Move Stop to Breakeven At',
-        defaultHint: 'Default: 1.0R (lock in breakeven after 1× initial risk gain)',
-        tooltip: {
-          short: 'When profit reaches this R, move stop to entry',
-          title: 'Breakeven Rule',
-          content: {
-            intro: 'When your position reaches +1R profit, automatically suggest moving the stop to your entry price.',
-            whyTitle: 'Why +1R?',
-            whyBody:
-              "At +1R, you've made back your initial risk. Moving stop to entry locks in a \"no-lose\" trade. If the trade reverses, you exit at breakeven (no loss).",
-            exampleLine1: 'Entry: $100, Stop: $95, 1R = $5',
-            exampleLine2: 'Current: $105 → R = +1.0',
-            exampleLine3: '→ Move stop from $95 to $100',
-            goldenRuleTitle: '✅ Golden Rule',
-            goldenRuleBody: 'Never let a winner become a loser. Once at +1R, worst case is breakeven.',
-          },
-        },
-      },
-      trailAfter: {
-        label: 'Start Trailing Stop After',
-        defaultHint: 'Default: 2.0R (start trailing after 2× initial risk)',
-        tooltip: {
-          short: 'After this R, trail stop below SMA',
-          title: 'Trailing Stop Activation',
-          content: {
-            intro: 'After reaching +2R, switch from breakeven stop to a trailing stop that follows SMA20.',
-            whyTitle: 'Why +2R?',
-            whyBody:
-              "At +2R, you've locked in breakeven (+1R). Now we want to \"let winners run\" while protecting downside. Trailing below SMA20 gives the stock room to breathe.",
-            howTitle: 'How it works:',
-            howLine1: 'New Stop = SMA20 × (1 - buffer%)',
-            howLine2: 'Updates daily as SMA20 rises',
-            tipTitle: '💡 Let winners run',
-            tipBody:
-              'Your big winners (+5R, +10R) come from letting good trades run. Trailing stops protect gains without cutting profits short.',
-          },
-        },
-      },
-      trailSma: {
-        label: 'Trail Below SMA',
-        tooltip: {
-          short: 'SMA period for trailing stop reference',
-          title: 'Trailing SMA Period',
-          content: {
-            intro: 'Which moving average to use as the trailing stop reference. Default: SMA20.',
-            whyTitle: 'Why SMA20?',
-            whyPoint1: 'Tracks short-term trend (~1 month)',
-            whyPoint2: 'Not too tight (less whipsaws)',
-            whyPoint3: 'Not too loose (protects profits)',
-            whyPoint4: 'Widely used standard',
-            note: 'Some traders use SMA10 (tighter) or SMA50 (looser). Experiment to find what works for you.',
-          },
-        },
-      },
-      smaBuffer: {
-        label: 'SMA Buffer (%)',
-        defaultHint: 'Default: 0.5% (small safety cushion)',
-        tooltip: {
-          short: 'Safety buffer below SMA (prevents false stops)',
-          title: 'SMA Buffer Percentage',
-          content: {
-            intro: 'Small buffer below the SMA to avoid getting stopped on minor dips below the moving average.',
-            formulaValue: 'Stop = SMA20 × (1 - buffer%)',
-            exampleLine1: 'SMA20 = $108',
-            exampleLine2: 'Buffer = 0.5%',
-            exampleLine3: 'Stop = $108 × 0.995 = $107.46',
-            note: 'Typical: 0.5%. Too tight → whipsaws. Too wide → gives back too much profit.',
-          },
-        },
-      },
-      maxHolding: {
-        label: 'Max Holding Period (bars)',
-        defaultHint: 'Default: 20 bars (~4 weeks for daily charts)',
-        tooltip: {
-          short: 'Exit if position held longer than this many trading days',
-          title: 'Time-Based Exit',
-          content: {
-            intro: 'Automatically suggest closing positions held longer than this many trading days (bars).',
-            whyTitle: 'Why time exits?',
-            whyPoint1: '"Dead money" - capital not working',
-            whyPoint2: 'Swing trades should move within weeks',
-            whyPoint3: "If nothing's happening, find better opportunities",
-            whyPoint4: 'Frees up capital for fresh ideas',
-            typicalRangeTitle: 'Typical Range:',
-            typicalRangeBody: '15-30 trading days (3-6 weeks). Default: 20 bars.',
-            noteTitle: '⚠️ Note',
-            noteBody: 'This is a suggestion, not automatic. Review why the trade stalled before closing.',
-          },
-        },
-      },
-    },
   },
   strategyPage: {
     header: {
@@ -1696,8 +1539,8 @@ export const messagesEn = {
     },
     parameters: {
       title: 'Backtest Parameters',
-      subtitle: 'Defaults come from Settings and the active Strategy. Changes are stored locally.',
-      resetToSettings: 'Reset to Settings',
+      subtitle: 'Defaults come from the active Strategy. Changes are stored locally.',
+      resetToStrategy: 'Reset to Strategy',
       running: 'Running...',
       runBacktest: 'Run Backtest',
       presets: 'Presets:',

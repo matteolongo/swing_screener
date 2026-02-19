@@ -4,8 +4,6 @@ import {
   FullBacktestParams,
   FullBacktestResponse,
   FullBacktestResponseAPI,
-  QuickBacktestResponse,
-  QuickBacktestResponseAPI,
   BacktestSimulationMeta,
   BacktestSimulationMetaAPI,
   BacktestSimulation,
@@ -13,7 +11,6 @@ import {
   transformFullBacktestResponse,
   transformBacktestSimulationMeta,
   transformBacktestSimulation,
-  transformQuickBacktestResponse,
 } from './types';
 
 export async function fetchSimulations(): Promise<BacktestSimulationMeta[]> {
@@ -68,30 +65,4 @@ export async function deleteSimulation(id: string): Promise<void> {
     method: 'DELETE',
   });
   if (!res.ok) throw new Error(t('backtestPage.apiErrors.deleteSimulation'));
-}
-
-export async function runQuickBacktest(params: {
-  ticker: string;
-  monthsBack: number;
-  kAtr: number;
-  maxHoldingDays: number;
-}): Promise<QuickBacktestResponse> {
-  const response = await fetch(apiUrl('/api/backtest/quick'), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      ticker: params.ticker,
-      months_back: params.monthsBack,
-      k_atr: params.kAtr,
-      max_holding_days: params.maxHoldingDays,
-    }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || t('backtestPage.apiErrors.quickBacktest'));
-  }
-
-  const data: QuickBacktestResponseAPI = await response.json();
-  return transformQuickBacktestResponse(data);
 }

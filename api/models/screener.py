@@ -86,6 +86,7 @@ class ScreenerResponse(BaseModel):
     candidates: list[ScreenerCandidate]
     asof_date: str
     total_screened: int
+    data_freshness: str = "final_close"
     warnings: list[str] = Field(default_factory=list)
     social_warmup_job_id: Optional[str] = None
 

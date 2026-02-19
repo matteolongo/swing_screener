@@ -17,6 +17,8 @@ interface ScreenerCandidatesTableProps {
   onSocialAnalysis: (ticker: string) => void;
   onTradeThesis: (candidate: ScreenerCandidate) => void;
   onQuickBacktest: (candidate: ScreenerCandidate) => void;
+  selectedTicker?: string | null;
+  onRowClick?: (candidate: ScreenerCandidate) => void;
 }
 
 /**
@@ -29,6 +31,8 @@ export default function ScreenerCandidatesTable({
   onSocialAnalysis,
   onTradeThesis,
   onQuickBacktest,
+  selectedTicker,
+  onRowClick,
 }: ScreenerCandidatesTableProps) {
   // Track expanded rows by ticker
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -81,12 +85,18 @@ export default function ScreenerCandidatesTable({
       {candidates.map((candidate) => {
         const vm = toCandidateViewModel(candidate);
         const isExpanded = expandedRows.has(candidate.ticker);
+        const isSelected = selectedTicker != null && selectedTicker.toUpperCase() === candidate.ticker.toUpperCase();
 
         return (
           <React.Fragment key={candidate.ticker}>
             {/* Main row with essential data */}
             <tr
-              className="border-b border-gray-100 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+              onClick={onRowClick ? () => onRowClick(candidate) : undefined}
+              className={`border-b border-gray-100 dark:border-gray-700 ${
+                isSelected
+                  ? 'bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30'
+                  : 'hover:bg-gray-50 dark:hover:bg-gray-800'
+              } ${onRowClick ? 'cursor-pointer' : ''}`}
             >
               {/* Rank */}
               <td className="py-3 px-4 text-sm text-gray-900 dark:text-gray-100 font-medium">
@@ -119,7 +129,10 @@ export default function ScreenerCandidatesTable({
                   {/* Expand/Collapse toggle */}
                   <button
                     type="button"
-                    onClick={() => toggleRow(candidate.ticker)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      toggleRow(candidate.ticker);
+                    }}
                     className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
                     aria-label={
                       isExpanded
@@ -139,7 +152,10 @@ export default function ScreenerCandidatesTable({
                   <Button
                     size="sm"
                     variant="secondary"
-                    onClick={() => onRecommendationDetails(candidate)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onRecommendationDetails(candidate);
+                    }}
                     title={t('screener.table.recommendationDetailsTitle')}
                     aria-label={t('screener.table.recommendationDetailsAria', { ticker: candidate.ticker })}
                   >
@@ -150,7 +166,10 @@ export default function ScreenerCandidatesTable({
                   <Button
                     size="sm"
                     variant="primary"
-                    onClick={() => onCreateOrder(candidate)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onCreateOrder(candidate);
+                    }}
                     title={
                       vm.verdict === 'NOT_RECOMMENDED'
                         ? t('screener.table.createOrderNotRecommendedTitle')
