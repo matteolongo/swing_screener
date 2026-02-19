@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import csv
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 
@@ -30,10 +30,15 @@ def _parse_bool(value: str | None, default: bool = True) -> bool:
 @dataclass
 class TenantMembershipRepository:
     path: Path
+    _cache: list[TenantMembershipRecord] | None = field(default=None, init=False, repr=False)
 
     def list_memberships(self) -> list[TenantMembershipRecord]:
+        if self._cache is not None:
+            return self._cache
+
         if not self.path.exists():
-            return []
+            self._cache = []
+            return self._cache
 
         rows: list[TenantMembershipRecord] = []
         with self.path.open("r", encoding="utf-8", newline="") as handle:
@@ -56,7 +61,11 @@ class TenantMembershipRepository:
                         active=_parse_bool(row.get("active"), default=True),
                     )
                 )
-        return rows
+        self._cache = rows
+        return self._cache
+
+    def invalidate_cache(self) -> None:
+        self._cache = None
 
     def get_by_provider_subject(self, provider: str, subject: str) -> TenantMembershipRecord | None:
         provider_key = str(provider).strip().lower()

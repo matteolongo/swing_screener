@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 import threading
 from datetime import date
@@ -36,6 +37,7 @@ POSITIONS_FILE = DATA_DIR / "positions.json"
 ORDERS_FILE = DATA_DIR / "orders.json"
 TENANT_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 _bearer_scheme = HTTPBearer(auto_error=False)
+_log = logging.getLogger(__name__)
 
 # Global singleton config repositories (thread-safe)
 _config_repository: Optional[ConfigRepository] = None
@@ -151,6 +153,10 @@ def get_current_user(
     try:
         return auth_service.verify_token(token)
     except HTTPException:
+        _log.debug(
+            "App token verification failed; falling back to provider token verification "
+            "(client may not yet use exchanged tokens)"
+        )
         return managed_auth_service.authenticate_provider_token(token)
 
 
