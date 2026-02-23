@@ -18,6 +18,8 @@ from api.models.portfolio import (
     FillOrderRequest,
     UpdateStopRequest,
     ClosePositionRequest,
+    PortfolioSyncResponse,
+    PortfolioExportResponse,
 )
 from api.dependencies import get_config_repo, get_portfolio_service
 from api.dependencies import get_strategy_repo
@@ -109,6 +111,23 @@ async def get_portfolio_summary(
             pass
 
     return service.get_portfolio_summary(account_size=account_size)
+
+
+@router.post("/sync", response_model=PortfolioSyncResponse)
+async def sync_portfolio_from_provider(
+    persist_projection: bool = False,
+    service: PortfolioService = Depends(get_portfolio_service),
+):
+    """Sync positions/orders from execution provider into API projection."""
+    return service.sync_broker_state(persist_projection=persist_projection)
+
+
+@router.get("/export", response_model=PortfolioExportResponse)
+async def export_portfolio_state(
+    service: PortfolioService = Depends(get_portfolio_service),
+):
+    """Export portfolio state from the active source (broker or local)."""
+    return service.export_portfolio_state()
 
 
 # ===== Orders =====

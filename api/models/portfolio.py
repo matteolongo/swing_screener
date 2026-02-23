@@ -113,6 +113,11 @@ class Order(BaseModel):
     tif: Optional[str] = None
     fee_eur: Optional[float] = None
     fill_fx_rate: Optional[float] = None
+    broker_provider: Optional[str] = None
+    broker_order_id: Optional[str] = None
+    broker_status: Optional[str] = None
+    broker_updated_at: Optional[str] = None
+    broker_client_order_id: Optional[str] = None
 
 
 class CreateOrderRequest(BaseModel):
@@ -285,3 +290,20 @@ class PortfolioSummary(BaseModel):
 class OrdersResponse(BaseModel):
     orders: list[Order]
     asof: str
+
+
+class PortfolioSyncResponse(BaseModel):
+    status: str
+    provider: str
+    asof: str
+    positions: int
+    orders: int
+    persisted_projection: bool = False
+
+
+class PortfolioExportResponse(BaseModel):
+    provider: str
+    asof: str
+    positions: list[PositionWithMetrics]
+    orders: list[Order]
+    counts: dict[str, int]

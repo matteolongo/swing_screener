@@ -297,6 +297,8 @@ Configure via environment variables:
 export SWING_SCREENER_PROVIDER=alpaca  # or yfinance (default)
 export ALPACA_API_KEY=your_key
 export ALPACA_SECRET_KEY=your_secret
+export ALPACA_PAPER=true
+export SWING_SCREENER_EXECUTION_PROVIDER=alpaca  # local (default) | alpaca
 ```
 
 See [src/swing_screener/data/docs/BROKER_INTEGRATION.md](src/swing_screener/data/docs/BROKER_INTEGRATION.md) for complete setup guide.
