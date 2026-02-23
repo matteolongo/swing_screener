@@ -44,7 +44,7 @@ export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: 
               size="sm"
               onClick={onToggleSidebar}
               className="gap-2"
-              title={isSidebarCollapsed ? 'Show navigation' : 'Hide navigation'}
+              title={isSidebarCollapsed ? t('header.showNavigation') : t('header.hideNavigation')}
             >
               {isSidebarCollapsed ? <PanelLeft className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
             </Button>
