@@ -36,6 +36,16 @@ def test_intelligence_run_launches_job(monkeypatch):
     assert payload["total_symbols"] == 3
 
 
+def test_intelligence_run_rejects_unsupported_provider():
+    client = TestClient(app)
+    res = client.post(
+        "/api/intelligence/run",
+        json={"symbols": ["AAPL"], "providers": ["unsupported_provider"]},
+    )
+    assert res.status_code == 422
+    assert "unsupported provider" in res.text.lower()
+
+
 def test_intelligence_status_returns_404_when_missing(monkeypatch):
     fake_manager = SimpleNamespace(
         start_job=lambda **kwargs: None,

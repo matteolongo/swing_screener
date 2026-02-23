@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Optional
+import logging
+from typing import Any, Optional
 
 import pandas as pd
 
@@ -19,6 +20,8 @@ from swing_screener.intelligence.relations import (
 from swing_screener.intelligence.scoring import build_catalyst_score_map, build_opportunities
 from swing_screener.intelligence.state import update_symbol_states
 from swing_screener.intelligence.storage import IntelligenceStorage
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -42,6 +45,132 @@ def _normalize_symbols(symbols: list[str] | tuple[str, ...]) -> list[str]:
         seen.add(text)
         out.append(text)
     return out
+
+
+def _clamp01(value: float) -> float:
+    return max(0.0, min(1.0, float(value)))
+
+
+def _severity_to_weight(severity: str) -> float:
+    mapping = {"LOW": 0.35, "MEDIUM": 0.7, "HIGH": 1.0}
+    return mapping.get(str(severity).strip().upper(), 0.5)
+
+
+def _build_llm_classifier(cfg: IntelligenceConfig) -> Any | None:
+    if not cfg.llm.enabled:
+        return None
+
+    provider_name = str(cfg.llm.provider).strip().lower()
+    try:
+        from swing_screener.intelligence.llm import EventClassifier, MockLLMProvider, OllamaProvider
+    except Exception as exc:  # pragma: no cover - import guard
+        logger.warning("LLM module unavailable, skipping LLM enrichment: %s", exc)
+        return None
+
+    if provider_name == "mock":
+        provider = MockLLMProvider()
+    elif provider_name == "ollama":
+        try:
+            provider = OllamaProvider(model=cfg.llm.model, base_url=cfg.llm.base_url)
+        except RuntimeError as exc:
+            logger.warning("Failed to initialize ollama provider, skipping LLM enrichment: %s", exc)
+            return None
+        if not provider.is_available():
+            logger.warning(
+                "Ollama model '%s' is unavailable at '%s'; skipping LLM enrichment.",
+                cfg.llm.model,
+                cfg.llm.base_url,
+            )
+            return None
+    else:
+        logger.warning("Unsupported LLM provider '%s'; skipping LLM enrichment.", provider_name)
+        return None
+
+    return EventClassifier(
+        provider=provider,
+        cache_path=cfg.llm.cache_path,
+        audit_path=cfg.llm.audit_path,
+        enable_cache=cfg.llm.enable_cache,
+        enable_audit=cfg.llm.enable_audit,
+    )
+
+
+def _enrich_events_with_llm(
+    *,
+    events: list[Event],
+    cfg: IntelligenceConfig,
+    llm_classifier: Any | None = None,
+) -> list[Event]:
+    classifier = llm_classifier or _build_llm_classifier(cfg)
+    if classifier is None:
+        return events
+
+    enriched: list[Event] = []
+    for event in events:
+        snippet = str(event.metadata.get("summary", "")).strip() if event.metadata else ""
+        try:
+            result = classifier.classify(
+                headline=event.headline,
+                snippet=snippet,
+                source=event.source,
+                timestamp=event.occurred_at,
+            )
+            classification = result.classification
+            llm_confidence = _clamp01(float(classification.confidence))
+            llm_severity = str(classification.severity.value).strip().upper()
+            llm_credibility = _clamp01(
+                0.45 * llm_confidence
+                + 0.45 * _severity_to_weight(llm_severity)
+                + (0.1 if bool(classification.is_material) else 0.0)
+            )
+            blended_credibility = round(_clamp01(0.6 * event.credibility + 0.4 * llm_credibility), 6)
+
+            metadata = dict(event.metadata)
+            metadata["llm_event_type"] = str(classification.event_type.value)
+            metadata["llm_severity"] = llm_severity
+            metadata["llm_confidence"] = round(llm_confidence, 6)
+            metadata["llm_is_material"] = bool(classification.is_material)
+            metadata["llm_summary"] = str(classification.summary)
+            metadata["llm_cached"] = bool(result.cached)
+            metadata["llm_model"] = str(result.model_name)
+            if classification.primary_symbol:
+                metadata["llm_primary_symbol"] = str(classification.primary_symbol)
+            if classification.secondary_symbols:
+                metadata["llm_secondary_symbols"] = ",".join(
+                    str(symbol) for symbol in classification.secondary_symbols
+                )
+
+            event_type = str(classification.event_type.value).strip().lower() or event.event_type
+            enriched.append(
+                Event(
+                    event_id=event.event_id,
+                    symbol=event.symbol,
+                    source=event.source,
+                    occurred_at=event.occurred_at,
+                    headline=event.headline,
+                    event_type=event_type,
+                    credibility=blended_credibility,
+                    url=event.url,
+                    metadata=metadata,
+                )
+            )
+        except Exception as exc:  # pragma: no cover - defensive degradation
+            metadata = dict(event.metadata)
+            metadata["llm_error"] = str(exc)
+            enriched.append(
+                Event(
+                    event_id=event.event_id,
+                    symbol=event.symbol,
+                    source=event.source,
+                    occurred_at=event.occurred_at,
+                    headline=event.headline,
+                    event_type=event.event_type,
+                    credibility=event.credibility,
+                    url=event.url,
+                    metadata=metadata,
+                )
+            )
+    return enriched
 
 
 def _normalize_technical(
@@ -86,6 +215,7 @@ def run_intelligence_pipeline(
     storage: Optional[IntelligenceStorage] = None,
     ohlcv: Optional[pd.DataFrame] = None,
     peer_map: Optional[dict[str, tuple[str, ...]]] = None,
+    llm_classifier: Any | None = None,
 ) -> IntelligenceSnapshot:
     if asof_dt is None:
         now = datetime.utcnow()
@@ -115,6 +245,7 @@ def run_intelligence_pipeline(
         end_dt=now,
         provider_names=list(cfg.providers),
     )
+    events = _enrich_events_with_llm(events=events, cfg=cfg, llm_classifier=llm_classifier)
 
     ohlcv_data = _fetch_ohlcv(symbols_clean, start_dt=start_dt, end_dt=now, ohlcv=ohlcv)
     raw_signals = build_catalyst_signals(events=events, ohlcv=ohlcv_data, cfg=cfg.catalyst, asof_dt=now)
