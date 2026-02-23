@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import Button from '@/components/common/Button';
 import ModalShell from '@/components/common/ModalShell';
 import type { FillOrderRequest, Order } from '@/features/portfolio/types';
@@ -51,7 +51,7 @@ export default function FillOrderModalForm({
   const [fillFxRateValue, setFillFxRateValue] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
     setFormError(null);
 

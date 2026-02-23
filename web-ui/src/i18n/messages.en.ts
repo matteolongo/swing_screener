@@ -355,6 +355,8 @@ export const messagesEn = {
     brand: 'Swing Screener',
     gettingStarted: 'Getting Started',
     focusView: 'Focus view',
+    showNavigation: 'Show navigation',
+    hideNavigation: 'Hide navigation',
   },
   strategyCoach: {
     title: 'Strategy Coach',
@@ -1683,6 +1685,34 @@ export const messagesEn = {
     loadingFallback: 'Loading data...',
     emptyFallback: 'No records found.',
     errorPrefix: 'Error',
+  },
+  onboardingModal: {
+    modeSelect: {
+      title: 'Choose your mode',
+      beginner: 'Beginner',
+      advanced: 'Advanced',
+      hint: 'Beginner hides advanced surfaces, Advanced unlocks all navigation.',
+    },
+  },
+  todaysNextActionCard: {
+    cardTitle: "Today's Next Action",
+    actionRequired: 'Action Required',
+    firstTimeHint: 'First time here? Complete the onboarding guide to learn the daily workflow.',
+    configureStrategy: {
+      title: 'Configure Your Strategy',
+      description: 'Set up your risk parameters and trading strategy before reviewing opportunities.',
+      buttonLabel: 'Go to Strategy',
+    },
+    runScreener: {
+      title: 'Run the Screener',
+      description: 'Start your workspace flow by screening for candidates now.',
+      buttonLabel: 'Run Screener',
+    },
+    reviewOpportunities: {
+      title: "Review Today's Opportunities",
+      description: 'Check Daily Review for new trade candidates and position management actions.',
+      buttonLabel: 'Open Daily Review',
+    },
   },
 } as const;
 
