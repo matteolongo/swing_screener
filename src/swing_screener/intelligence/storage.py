@@ -13,7 +13,11 @@ from swing_screener.intelligence.models import (
     SymbolState,
     ThemeCluster,
 )
-from swing_screener.utils.file_lock import locked_write_json_cli, locked_read_json_cli
+from swing_screener.utils.file_lock import (
+    locked_read_json_cli,
+    locked_write_json_cli,
+    locked_write_text_cli,
+)
 
 
 class IntelligenceStorage:
@@ -47,12 +51,11 @@ class IntelligenceStorage:
 
     def write_events(self, events: Iterable[Event], asof: date | str) -> Path:
         path = self.events_path(asof)
-        tmp_path = path.with_suffix(f"{path.suffix}.tmp")
-        with tmp_path.open("w", encoding="utf-8") as handle:
-            for event in events:
-                handle.write(json.dumps(asdict(event), sort_keys=True))
-                handle.write("\n")
-        tmp_path.replace(path)
+        lines = [json.dumps(asdict(event), sort_keys=True) for event in events]
+        payload = "\n".join(lines)
+        if payload:
+            payload += "\n"
+        locked_write_text_cli(path, payload)
         return path
 
     def write_signals(self, signals: Iterable[CatalystSignal], asof: date | str) -> Path:

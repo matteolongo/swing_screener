@@ -118,6 +118,7 @@ def _enrich_events_with_llm(
             classification = result.classification
             llm_confidence = _clamp01(float(classification.confidence))
             llm_severity = str(classification.severity.value).strip().upper()
+            # Non-material events are intentionally capped below full credibility.
             llm_credibility = _clamp01(
                 0.45 * llm_confidence
                 + 0.45 * _severity_to_weight(llm_severity)
