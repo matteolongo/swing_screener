@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import DataTable, { type DataTableColumn } from '@/components/common/DataTable';
 import Button from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
@@ -41,6 +42,7 @@ function formatOptionalCurrency(value: number | null): string {
 export default function PortfolioTable() {
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
   const setSelectedTicker = useWorkspaceStore((state) => state.setSelectedTicker);
+  const location = useLocation();
 
   const positionsQuery = usePositions('open');
   const ordersQuery = useOrders('pending');
@@ -126,7 +128,7 @@ export default function PortfolioTable() {
   }, [orders, positions]);
 
   useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search);
+    const searchParams = new URLSearchParams(location.search);
     const action = searchParams.get('portfolioAction');
     if (!action || !isReady) return;
 
@@ -198,7 +200,7 @@ export default function PortfolioTable() {
     }
 
     clearPortfolioIntent();
-  }, [isReady, rows, setSelectedTicker]);
+  }, [isReady, location, rows, setSelectedTicker]);
 
   const columns: DataTableColumn<PortfolioRow>[] = [
     {

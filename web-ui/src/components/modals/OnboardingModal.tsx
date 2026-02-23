@@ -4,6 +4,7 @@ import { X, CheckCircle, Calendar, Search, ShoppingCart } from 'lucide-react';
 import Button from '@/components/common/Button';
 import { useOnboardingStore } from '@/stores/onboardingStore';
 import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
+import { t } from '@/i18n/t';
 
 interface OnboardingModalProps {
   isOpen: boolean;
@@ -235,23 +236,23 @@ export default function OnboardingModal({ isOpen, onClose }: OnboardingModalProp
           <p className="text-gray-600 mb-4">{step.description}</p>
           {stepIndex === 0 && (
             <div className="mb-4 rounded-lg border border-gray-200 p-4">
-              <p className="text-sm font-medium text-gray-900 mb-2">Choose your mode</p>
+              <p className="text-sm font-medium text-gray-900 mb-2">{t('onboardingModal.modeSelect.title')}</p>
               <div className="flex flex-col sm:flex-row gap-2">
                 <Button
                   variant={isBeginnerMode ? 'primary' : 'secondary'}
                   onClick={() => setBeginnerMode(true)}
                 >
-                  Beginner
+                  {t('onboardingModal.modeSelect.beginner')}
                 </Button>
                 <Button
                   variant={!isBeginnerMode ? 'primary' : 'secondary'}
                   onClick={() => setBeginnerMode(false)}
                 >
-                  Advanced
+                  {t('onboardingModal.modeSelect.advanced')}
                 </Button>
               </div>
               <p className="text-xs text-gray-600 mt-2">
-                Beginner hides advanced surfaces, Advanced unlocks all navigation.
+                {t('onboardingModal.modeSelect.hint')}
               </p>
             </div>
           )}

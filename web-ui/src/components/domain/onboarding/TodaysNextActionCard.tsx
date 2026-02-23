@@ -6,6 +6,7 @@ import Badge from '@/components/common/Badge';
 import { useOnboardingStore } from '@/stores/onboardingStore';
 import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 import { useStrategyReadiness } from '@/features/strategy/useStrategyReadiness';
+import { t } from '@/i18n/t';
 
 interface TodaysNextActionCardProps {
   onRunScreener?: () => void;
@@ -26,10 +27,10 @@ export default function TodaysNextActionCard({ onRunScreener }: TodaysNextAction
   const getNextAction = () => {
     if (!strategyReady) {
       return {
-        title: 'Configure Your Strategy',
-        description: 'Set up your risk parameters and trading strategy before reviewing opportunities.',
+        title: t('todaysNextActionCard.configureStrategy.title'),
+        description: t('todaysNextActionCard.configureStrategy.description'),
         icon: CheckCircle,
-        buttonLabel: 'Go to Strategy',
+        buttonLabel: t('todaysNextActionCard.configureStrategy.buttonLabel'),
         buttonAction: () => navigate('/strategy'),
         priority: 'high' as const,
       };
@@ -37,20 +38,20 @@ export default function TodaysNextActionCard({ onRunScreener }: TodaysNextAction
     
     if (onRunScreener) {
       return {
-        title: 'Run the Screener',
-        description: 'Start your workspace flow by screening for candidates now.',
+        title: t('todaysNextActionCard.runScreener.title'),
+        description: t('todaysNextActionCard.runScreener.description'),
         icon: Calendar,
-        buttonLabel: 'Run Screener',
+        buttonLabel: t('todaysNextActionCard.runScreener.buttonLabel'),
         buttonAction: onRunScreener,
         priority: 'normal' as const,
       };
     }
 
     return {
-      title: 'Review Today\'s Opportunities',
-      description: 'Check Daily Review for new trade candidates and position management actions.',
+      title: t('todaysNextActionCard.reviewOpportunities.title'),
+      description: t('todaysNextActionCard.reviewOpportunities.description'),
       icon: Calendar,
-      buttonLabel: 'Open Daily Review',
+      buttonLabel: t('todaysNextActionCard.reviewOpportunities.buttonLabel'),
       buttonAction: () => navigate('/daily-review'),
       priority: 'normal' as const,
     };
@@ -65,10 +66,10 @@ export default function TodaysNextActionCard({ onRunScreener }: TodaysNextAction
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <IconComponent className="w-5 h-5 text-blue-600" />
-            Today's Next Action
+            {t('todaysNextActionCard.cardTitle')}
           </CardTitle>
           {nextAction.priority === 'high' && (
-            <Badge variant="warning">Action Required</Badge>
+            <Badge variant="warning">{t('todaysNextActionCard.actionRequired')}</Badge>
           )}
         </div>
       </CardHeader>
@@ -82,7 +83,7 @@ export default function TodaysNextActionCard({ onRunScreener }: TodaysNextAction
           {onboardingStatus !== 'completed' && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
               <p className="text-sm text-blue-800">
-                💡 <strong>First time here?</strong> Complete the onboarding guide to learn the daily workflow.
+                💡 {t('todaysNextActionCard.firstTimeHint')}
               </p>
             </div>
           )}
