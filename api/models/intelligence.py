@@ -109,13 +109,13 @@ class LLMClassifyNewsRequest(BaseModel):
         max_length=100,
         description="List of news items with 'headline' and optional 'snippet' fields"
     )
-    provider: Optional[str] = Field(
+    provider: Literal["openai", "anthropic", "ollama", "mock"] = Field(
         default="ollama",
-        description="LLM provider (ollama, mock)"
+        description="LLM provider"
     )
     model: Optional[str] = Field(
-        default="mistral:7b-instruct",
-        description="Model name for the provider"
+        default=None,
+        description="Model name for the provider (provider default when omitted)"
     )
 
     @field_validator("headlines")
@@ -134,6 +134,16 @@ class LLMClassifyNewsRequest(BaseModel):
                 "snippet": item.get("snippet", ""),
             })
         return validated
+
+    @field_validator("model")
+    @classmethod
+    def _validate_model(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        model = str(value).strip()
+        if not model:
+            raise ValueError("Model must be a non-empty string")
+        return model
 
 
 class LLMEventClassificationResponse(BaseModel):

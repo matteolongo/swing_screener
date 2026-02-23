@@ -1,7 +1,65 @@
 # Intelligence Module
 
-> Status: current.  
-> Last reviewed: 2026-02-23.
+> Status: current  
+> Last reviewed: 2026-02-23
+
+## Quick Start
+
+```python
+from swing_screener.intelligence import (
+    IntelligenceConfig,
+    run_intelligence_pipeline,
+    IntelligenceStorage,
+)
+
+# Basic configuration
+cfg = IntelligenceConfig(
+    enabled=True,
+    providers=("yahoo_finance",),
+)
+
+# Run pipeline
+symbols = ["NVDA", "AMD", "INTC", "TSM", "AVGO"]
+snapshot = run_intelligence_pipeline(symbols=symbols, cfg=cfg)
+
+print(f"Found {len(snapshot.opportunities)} opportunities")
+for opp in snapshot.opportunities[:5]:
+    print(f"  {opp.symbol}: {opp.opportunity_score:.2f}")
+```
+
+```python
+# Use LLM classification via gateway
+from swing_screener.intelligence.llm import get_llm_gateway
+
+gateway = get_llm_gateway(provider="openai", model="gpt-4o-mini")
+if gateway.is_available():
+    result = gateway.classify_event(
+        headline="NVDA reports record earnings",
+        snippet="Revenue up 25% YoY"
+    )
+    print(f"Type: {result.event_type.value}, Severity: {result.severity.value}")
+```
+
+```python
+# Load saved results
+storage = IntelligenceStorage()
+opportunities = storage.load_opportunities("2026-02-23")
+```
+
+## Submodules
+
+| Module | Description |
+|--------|-------------|
+| `pipeline` | Main intelligence pipeline orchestration |
+| `config` | Configuration classes (IntelligenceConfig, LLMConfig, etc.) |
+| `models` | Domain models (Event, CatalystSignal, Opportunity, etc.) |
+| `ingestion` | Event collection from providers |
+| `llm` | LLM classification via LangChain gateway |
+| `reaction` | Event reaction metrics calculation |
+| `relations` | Peer confirmation and theme detection |
+| `scoring` | Catalyst and opportunity scoring |
+| `state` | Symbol lifecycle state machine |
+| `storage` | Persistence to JSON files |
 
 ## Purpose
 Post-close market intelligence pipeline that enriches technical screening with:
@@ -10,77 +68,61 @@ Post-close market intelligence pipeline that enriches technical screening with:
 - theme/peer confirmation
 - ranked daily opportunities
 
-This layer is advisory only. It does not place orders.
+This layer is advisory only and never places orders.
 
-## Current Usage
-- Runs are currently manual.
-- UI entry point is the Daily page intelligence action.
-- API entry point is `POST /api/intelligence/run`.
+## Runtime Entry Points
+- Manual run from Daily Review UI.
+- API run trigger: `POST /api/intelligence/run`.
+- API classify utility: `POST /api/intelligence/classify`.
 
-## Run Flow
-1. `IntelligenceService.start_run()` loads active strategy and builds config from `strategy.market_intelligence`.
-2. A background job is queued in `api/services/intelligence_warmup.py`.
-3. Worker executes `run_intelligence_pipeline()` in `src/swing_screener/intelligence/pipeline.py`.
-4. Providers ingest events (`ingestion/`).
-5. Optional LLM enrichment classifies each event and adjusts credibility (`llm/` + `pipeline.py`).
-6. Event reaction metrics are computed against OHLCV (`reaction.py`).
-7. Peer confirmation and theme clusters are built (`relations.py`).
-8. Symbol lifecycle state is updated (`state.py`).
-9. Catalyst scores and final opportunities are computed (`scoring.py`).
-10. Snapshot is persisted to `data/intelligence/*` (`storage.py`).
+## Architecture
+The module now uses a LangChain-first LLM path:
 
-## Scoring
+1. `pipeline.py` collects events from ingestion providers.
+2. `llm/classifier.py` applies cache/audit wrappers and delegates model calls.
+3. `llm/gateway.py` resolves provider/model credentials and invokes LangChain chat models.
+4. Classification metadata is persisted in `event.metadata.llm_trace`.
+5. Scoring/state/theme/opportunity logic remains deterministic and unchanged.
 
-### 1) Event Credibility
-Base credibility comes from ingestion events.
+## LLM Providers
+Supported provider values:
+- `openai`
+- `anthropic`
+- `ollama`
+- `mock`
 
-When LLM is enabled, per-event credibility is blended:
-- `llm_credibility = clamp01(0.45*confidence + 0.45*severity_weight + 0.1*is_material)`
-- `blended_credibility = clamp01(0.6*base_credibility + 0.4*llm_credibility)`
-
-Severity weights:
-- `LOW=0.35`
-- `MEDIUM=0.7`
-- `HIGH=1.0`
-
-### 2) Catalyst Score
-For each signal (non false-catalyst), score is:
-- `0.30*reaction_z + 0.20*atr_shock + 0.15*peer_confirmation + 0.15*recency + 0.10*theme_strength + 0.10*event_credibility`
-
-Where each component is normalized/clamped to `[0,1]`.
-
-### 3) Opportunity Score
-Per symbol:
-- `opportunity_score = technical_weight*technical_readiness + catalyst_weight*catalyst_score`
-
-Then:
-- filter by `min_opportunity_score`
-- sort descending
-- keep top `max_daily_opportunities`
+Model defaults when omitted:
+- OpenAI: `gpt-4o-mini`
+- Anthropic: `claude-3-haiku-20240307`
+- Ollama: `mistral:7b-instruct`
+- Mock: `mock-classifier`
 
 ## Configuration Source Of Truth
-Intelligence config is strategy-scoped under:
+Strategy-scoped config:
 - `strategy.market_intelligence`
 
-That is the canonical place to configure providers, LLM, catalyst, theme, and opportunity weights.
+### LLM Fields
+- `enabled`
+- `provider`
+- `model`
+- `api_key`
+- `base_url`
+- `enable_cache`
+- `enable_audit`
+- `cache_path`
+- `audit_path`
 
-### UI Configuration
-In Strategy settings, Advanced section includes Market Intelligence controls for:
-- enable/disable pipeline
-- providers and universe scope
-- market context symbols
-- LLM provider/model/base URL/cache/audit
-- catalyst thresholds
-- theme thresholds and curated peer map path
-- opportunity weighting and limits
+Semantics:
+- `base_url` is primarily for Ollama.
+- For OpenAI-compatible custom endpoints, `base_url` can be set explicitly.
+- `api_key` can be provided in strategy or inherited from environment variables.
 
-### Environment Variables
-There is no separate env toggle required for normal strategy-based intelligence configuration.
+## Environment Variables
+- `OPENAI_API_KEY` for OpenAI (fallback when `llm.api_key` is empty).
+- `ANTHROPIC_API_KEY` for Anthropic (fallback when `llm.api_key` is empty).
+- `OLLAMA_HOST` for Ollama host fallback.
 
-LLM credentials/endpoints depend on provider:
-- `openai`: set `OPENAI_API_KEY` (or provide `llm.api_key` in strategy config).
-- `anthropic`: set `ANTHROPIC_API_KEY` (or provide `llm.api_key` in strategy config).
-- `ollama`: `OLLAMA_HOST` can be used as fallback host when `llm.base_url` is omitted or still default localhost in containerized runs.
+LangSmith / LangChain tracing works out-of-the-box when standard LangSmith env vars are configured in the runtime.
 
 ## Storage
 Default root:
@@ -93,9 +135,23 @@ Artifacts:
 - `opportunities_YYYY-MM-DD.json`
 - `symbol_state.json`
 - `run_jobs.json`
+- `llm_cache.json`
+- `llm_audit/*.jsonl`
+
+## Scoring
+Event credibility when LLM is enabled:
+- `llm_credibility = clamp01(0.45*confidence + 0.45*severity_weight + 0.1*is_material)`
+- `blended_credibility = clamp01(0.6*base_credibility + 0.4*llm_credibility)`
+
+Catalyst score:
+- `0.30*reaction_z + 0.20*atr_shock + 0.15*peer_confirmation + 0.15*recency + 0.10*theme_strength + 0.10*event_credibility`
+
+Opportunity score:
+- `technical_weight*technical_readiness + catalyst_weight*catalyst_score`
 
 ## API Endpoints
 - `POST /api/intelligence/run`
 - `GET /api/intelligence/run/{job_id}`
 - `GET /api/intelligence/opportunities`
+- `GET /api/intelligence/events`
 - `POST /api/intelligence/classify`

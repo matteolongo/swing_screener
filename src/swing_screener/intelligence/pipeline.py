@@ -62,37 +62,37 @@ def _build_llm_classifier(cfg: IntelligenceConfig) -> Any | None:
 
     provider_name = str(cfg.llm.provider).strip().lower()
     try:
-        from swing_screener.intelligence.llm import EventClassifier, get_llm_provider
+        from swing_screener.intelligence.llm import EventClassifier
     except Exception as exc:  # pragma: no cover - import guard
         logger.warning("LLM module unavailable, skipping LLM enrichment: %s", exc)
         return None
 
     try:
-        provider = get_llm_provider(
+        classifier = EventClassifier.from_provider_config(
             provider_name=provider_name,
             model=cfg.llm.model,
             api_key=cfg.llm.api_key,
             base_url=cfg.llm.base_url,
+            cache_path=cfg.llm.cache_path,
+            audit_path=cfg.llm.audit_path,
+            enable_cache=cfg.llm.enable_cache,
+            enable_audit=cfg.llm.enable_audit,
         )
     except (RuntimeError, ValueError) as exc:
         logger.warning("Failed to initialize LLM provider '%s', skipping LLM enrichment: %s", provider_name, exc)
         return None
 
-    if not provider.is_available():
+    if not classifier.is_available():
+        availability_error = classifier.availability_error
         logger.warning(
-            "LLM provider '%s' model '%s' is unavailable; skipping LLM enrichment.",
+            "LLM provider '%s' model '%s' is unavailable; skipping LLM enrichment. Reason: %s",
             provider_name,
             cfg.llm.model,
+            availability_error or "unknown",
         )
         return None
 
-    return EventClassifier(
-        provider=provider,
-        cache_path=cfg.llm.cache_path,
-        audit_path=cfg.llm.audit_path,
-        enable_cache=cfg.llm.enable_cache,
-        enable_audit=cfg.llm.enable_audit,
-    )
+    return classifier
 
 
 def _enrich_events_with_llm(

@@ -28,23 +28,28 @@ def classify_news_command(
         api_key: API key for cloud providers (uses env vars if None)
         output: Optional output JSON file path
     """
-    from swing_screener.intelligence.llm import EventClassifier, get_llm_provider
-    
-    # Initialize LLM provider using factory
+    from swing_screener.intelligence.llm import EventClassifier
+
+    # Initialize classifier using shared gateway-backed factory
     try:
-        llm_provider = get_llm_provider(
+        classifier = EventClassifier.from_provider_config(
             provider_name=provider,
             model=model,
             api_key=api_key,
             base_url=base_url,
+            enable_cache=True,
+            enable_audit=True,
         )
     except ValueError as e:
         print(f"ERROR: {e}", file=sys.stderr)
         sys.exit(1)
     
     # Check availability
-    if not llm_provider.is_available():
-        print(f"ERROR: {provider} provider not available.", file=sys.stderr)
+    if not classifier.is_available():
+        print(
+            f"ERROR: {provider} provider not available. Reason: {classifier.availability_error or 'unknown'}",
+            file=sys.stderr,
+        )
         
         if provider == "ollama":
             print(f"Ensure Ollama is running and model is pulled:", file=sys.stderr)
@@ -56,10 +61,7 @@ def classify_news_command(
         
         sys.exit(1)
     
-    # Initialize classifier
-    classifier = EventClassifier(provider=llm_provider)
-    
-    print(f"Using LLM: {llm_provider.model_name}")
+    print(f"Using LLM: {classifier.model_name}")
     print(f"Classifying news for symbols: {', '.join(symbols)}")
     
     # Fetch news (mock or real)

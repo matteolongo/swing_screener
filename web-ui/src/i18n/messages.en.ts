@@ -1547,6 +1547,8 @@ export const messagesEn = {
         intelligenceLlmAuditPath: 'LLM Audit Path',
         intelligenceLlmEnableCache: 'Enable LLM Cache',
         intelligenceLlmEnableAudit: 'Enable LLM Audit',
+        intelligenceLlmProviderHint:
+          'OpenAI/Anthropic use API key (and optional env-based LangSmith tracing). Ollama uses base URL + model.',
         intelligenceCatalystLookbackHours: 'Lookback Hours',
         intelligenceCatalystRecencyHalfLifeHours: 'Recency Half-Life Hours',
         intelligenceCatalystFalseCatalystReturnZ: 'False Catalyst Return Z',

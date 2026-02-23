@@ -60,6 +60,11 @@ class LLMProvider(ABC):
         """Return the model identifier being used."""
         pass
 
+    @property
+    def availability_error(self) -> Optional[str]:
+        """Return the last availability check error, if any."""
+        return getattr(self, "_last_availability_error", None)
+
 
 class OllamaProvider(LLMProvider):
     """Ollama LLM provider for local model inference.
@@ -114,8 +119,16 @@ class OllamaProvider(LLMProvider):
                 text = str(name).strip()
                 if text:
                     model_names.append(text)
-            return any(self._model in name for name in model_names)
-        except Exception:
+            available = any(self._model in name for name in model_names)
+            if available:
+                self._last_availability_error = None
+            else:
+                self._last_availability_error = (
+                    f"model '{self._model}' not found in Ollama model list at {self._base_url}"
+                )
+            return available
+        except Exception as exc:
+            self._last_availability_error = str(exc)
             return False
     
     @property
@@ -235,8 +248,10 @@ class OpenAIProvider(LLMProvider):
             client = self._get_client()
             # Simple models list call to verify API access
             client.models.list()
+            self._last_availability_error = None
             return True
-        except Exception:
+        except Exception as exc:
+            self._last_availability_error = str(exc)
             return False
     
     @property
@@ -360,8 +375,10 @@ class AnthropicProvider(LLMProvider):
                 max_tokens=1,
                 messages=[{"role": "user", "content": "test"}]
             )
+            self._last_availability_error = None
             return True
-        except Exception:
+        except Exception as exc:
+            self._last_availability_error = str(exc)
             return False
     
     @property
@@ -441,6 +458,7 @@ class MockLLMProvider(LLMProvider):
     
     def is_available(self) -> bool:
         """Mock provider is always available."""
+        self._last_availability_error = None
         return True
     
     @property
@@ -553,4 +571,3 @@ def get_llm_provider(
             f"Unsupported LLM provider: {provider_name}. "
             f"Supported: openai, anthropic, ollama, mock"
         )
-

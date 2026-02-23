@@ -63,6 +63,9 @@ export default function StrategyAdvancedSettingsCard({
     { value: 'ollama', label: t('strategyPage.advanced.options.intelligenceLlmProviderOllama') },
     { value: 'mock', label: t('strategyPage.advanced.options.intelligenceLlmProviderMock') },
   ];
+  const llmProvider = draft.marketIntelligence.llm.provider;
+  const showLlmApiKey = llmProvider === 'openai' || llmProvider === 'anthropic';
+  const showLlmBaseUrl = llmProvider === 'ollama';
 
   return (
     <Card variant="bordered">
@@ -796,32 +799,36 @@ export default function StrategyAdvancedSettingsCard({
                           })
                         }
                       />
-                      <TextInput
-                        label={t('strategyPage.advanced.fields.intelligenceLlmApiKey')}
-                        value={draft.marketIntelligence.llm.apiKey}
-                        onChange={(value) =>
-                          setDraft({
-                            ...draft,
-                            marketIntelligence: {
-                              ...draft.marketIntelligence,
-                              llm: { ...draft.marketIntelligence.llm, apiKey: value },
-                            },
-                          })
-                        }
-                      />
-                      <TextInput
-                        label={t('strategyPage.advanced.fields.intelligenceLlmBaseUrl')}
-                        value={draft.marketIntelligence.llm.baseUrl}
-                        onChange={(value) =>
-                          setDraft({
-                            ...draft,
-                            marketIntelligence: {
-                              ...draft.marketIntelligence,
-                              llm: { ...draft.marketIntelligence.llm, baseUrl: value },
-                            },
-                          })
-                        }
-                      />
+                      {showLlmApiKey && (
+                        <TextInput
+                          label={t('strategyPage.advanced.fields.intelligenceLlmApiKey')}
+                          value={draft.marketIntelligence.llm.apiKey}
+                          onChange={(value) =>
+                            setDraft({
+                              ...draft,
+                              marketIntelligence: {
+                                ...draft.marketIntelligence,
+                                llm: { ...draft.marketIntelligence.llm, apiKey: value },
+                              },
+                            })
+                          }
+                        />
+                      )}
+                      {showLlmBaseUrl && (
+                        <TextInput
+                          label={t('strategyPage.advanced.fields.intelligenceLlmBaseUrl')}
+                          value={draft.marketIntelligence.llm.baseUrl}
+                          onChange={(value) =>
+                            setDraft({
+                              ...draft,
+                              marketIntelligence: {
+                                ...draft.marketIntelligence,
+                                llm: { ...draft.marketIntelligence.llm, baseUrl: value },
+                              },
+                            })
+                          }
+                        />
+                      )}
                       <TextInput
                         label={t('strategyPage.advanced.fields.intelligenceLlmCachePath')}
                         value={draft.marketIntelligence.llm.cachePath}
@@ -849,6 +856,9 @@ export default function StrategyAdvancedSettingsCard({
                         }
                       />
                     </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {t('strategyPage.advanced.fields.intelligenceLlmProviderHint')}
+                    </p>
                     <div className="flex flex-wrap gap-4">
                       <CheckboxInput
                         label={t('strategyPage.advanced.fields.intelligenceLlmEnableCache')}
