@@ -1,5 +1,5 @@
 {
-  "asof": "2026-02-19",
+  "asof": "2026-02-20",
   "orders": [
     {
       "order_id": "ORD-INTC-20260115-ENTRY",
@@ -327,7 +327,7 @@
     {
       "order_id": "ORD-STOP-POS-SMFG-20260205-01",
       "ticker": "SMFG",
-      "status": "pending",
+      "status": "cancelled",
       "order_type": "SELL_STOP",
       "limit_price": null,
       "quantity": 4,
@@ -631,7 +631,7 @@
     {
       "order_id": "ORD-STOP-POS-BAYN.DE-20260218-01",
       "ticker": "BAYN.DE",
-      "status": "pending",
+      "status": "cancelled",
       "order_type": "SELL_STOP",
       "limit_price": null,
       "quantity": 2,
@@ -650,7 +650,7 @@
     {
       "order_id": "ORD-STOP-POS-IBE.MC-20260219-01",
       "ticker": "IBE.MC",
-      "status": "pending",
+      "status": "cancelled",
       "order_type": "SELL_STOP",
       "limit_price": null,
       "quantity": 4,
