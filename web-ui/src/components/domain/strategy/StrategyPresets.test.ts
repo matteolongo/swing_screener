@@ -88,6 +88,41 @@ function buildStrategy(): Strategy {
       providers: ['reddit'],
       sentimentAnalyzer: 'keyword',
     },
+    marketIntelligence: {
+      enabled: false,
+      providers: ['yahoo_finance'],
+      universeScope: 'screener_universe',
+      marketContextSymbols: ['SPY', 'QQQ', 'XLK', 'SMH', 'XBI'],
+      llm: {
+        enabled: false,
+        provider: 'ollama',
+        model: 'mistral:7b-instruct',
+        baseUrl: 'http://localhost:11434',
+        enableCache: true,
+        enableAudit: true,
+        cachePath: 'data/intelligence/llm_cache.json',
+        auditPath: 'data/intelligence/llm_audit',
+      },
+      catalyst: {
+        lookbackHours: 72,
+        recencyHalfLifeHours: 36,
+        falseCatalystReturnZ: 1.5,
+        minPriceReactionAtr: 0.8,
+        requirePriceConfirmation: true,
+      },
+      theme: {
+        enabled: true,
+        minClusterSize: 3,
+        minPeerConfirmation: 2,
+        curatedPeerMapPath: 'data/intelligence/peer_map.yaml',
+      },
+      opportunity: {
+        technicalWeight: 0.55,
+        catalystWeight: 0.45,
+        maxDailyOpportunities: 8,
+        minOpportunityScore: 0.55,
+      },
+    },
     isDefault: true,
     createdAt: '2026-02-08T00:00:00',
     updatedAt: '2026-02-08T00:00:00',
@@ -113,4 +148,3 @@ describe('StrategyPresets ATR % values', () => {
     expect(updated.universe.filt.maxAtrPct).toBe(15.0);
   });
 });
-
