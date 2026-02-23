@@ -20,8 +20,10 @@ interface DataTableProps<RowT> {
   empty?: boolean;
   emptyMessage?: string;
   error?: string;
+  wrapperClassName?: string;
   tableClassName?: string;
-  rowClassName?: string;
+  rowClassName?: string | ((row: RowT, index: number) => string);
+  onRowClick?: (row: RowT, index: number) => void;
 }
 
 function alignClass(align: DataTableAlign | undefined): string {
@@ -38,8 +40,10 @@ export default function DataTable<RowT>({
   empty = rows.length === 0,
   emptyMessage,
   error,
+  wrapperClassName,
   tableClassName,
   rowClassName = 'border-t',
+  onRowClick,
 }: DataTableProps<RowT>) {
   return (
     <TableShell
@@ -47,13 +51,14 @@ export default function DataTable<RowT>({
       empty={empty}
       emptyMessage={emptyMessage}
       error={error}
+      wrapperClassName={wrapperClassName}
       tableClassName={tableClassName}
       headers={(
-        <tr className="text-left text-xs text-gray-500">
+        <tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 bg-gray-50/80">
           {columns.map((column) => (
             <th
               key={column.key}
-              className={`py-2 ${alignClass(column.align)} ${column.headerClassName ?? ''}`.trim()}
+              className={`px-2 py-2.5 ${alignClass(column.align)} ${column.headerClassName ?? ''}`.trim()}
             >
               {column.header}
             </th>
@@ -62,11 +67,15 @@ export default function DataTable<RowT>({
       )}
     >
       {rows.map((row, index) => (
-        <tr key={getRowKey(row, index)} className={rowClassName}>
+        <tr
+          key={getRowKey(row, index)}
+          className={typeof rowClassName === 'function' ? rowClassName(row, index) : rowClassName}
+          onClick={onRowClick ? () => onRowClick(row, index) : undefined}
+        >
           {columns.map((column) => (
             <td
               key={column.key}
-              className={`py-2 ${alignClass(column.align)} ${column.cellClassName ?? ''}`.trim()}
+              className={`px-2 py-2.5 ${alignClass(column.align)} ${column.cellClassName ?? ''}`.trim()}
             >
               {column.render(row)}
             </td>

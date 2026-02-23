@@ -1,14 +1,15 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Info, RefreshCw } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { useDailyReview } from '@/features/dailyReview/api';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
 import TableShell from '@/components/common/TableShell';
 import { formatCurrency, formatNumber } from '@/utils/formatters';
-import { useConfigStore } from '@/stores/configStore';
-import type { RiskConfig } from '@/types/config';
+import { useActiveStrategyQuery } from '@/features/strategy/hooks';
+import { DEFAULT_CONFIG, type RiskConfig } from '@/types/config';
 import GlossaryLegend from '@/components/domain/education/GlossaryLegend';
 import MetricHelpLabel from '@/components/domain/education/MetricHelpLabel';
 import IntelligenceOpportunityCard from '@/components/domain/intelligence/IntelligenceOpportunityCard';
@@ -52,9 +53,10 @@ export default function DailyReview() {
   });
 
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const selectedUniverse = parseUniverseFromStorage(localStorage.getItem(SCREENER_UNIVERSE_STORAGE_KEY));
   const { data: review, isLoading, error, refetch, isFetching } = useDailyReview(10, selectedUniverse);
-  const config = useConfigStore((state) => state.config);
+  const activeStrategyQuery = useActiveStrategyQuery();
   const { isBeginnerMode } = useBeginnerModeStore();
   const { isReady: strategyReady } = useStrategyReadiness();
   
@@ -62,15 +64,7 @@ export default function DailyReview() {
   useEffect(() => {
     localStorage.setItem('dailyReview.dismissedReadinessBlocker', String(dismissedReadinessBlocker));
   }, [dismissedReadinessBlocker]);
-  const riskConfig: RiskConfig = config?.risk ?? {
-    accountSize: 10000,
-    riskPct: 0.01,
-    minShares: 1,
-    maxPositionPct: 0.2,
-    kAtr: 2,
-    minRr: 2,
-    maxFeeRiskPct: 0.05,
-  };
+  const riskConfig: RiskConfig = activeStrategyQuery.data?.risk ?? DEFAULT_CONFIG.risk;
   const intelligenceSymbols = useMemo(() => {
     if (!review) return [];
     const candidateSymbols = review.newCandidates.map((candidate) => candidate.ticker);
@@ -97,6 +91,16 @@ export default function DailyReview() {
   const intelligenceStatus = intelligenceWorkflow.status;
   const intelligenceOpportunitiesQuery = intelligenceWorkflow.opportunitiesQuery;
   const intelligenceOpportunities = intelligenceWorkflow.opportunities;
+  const openWorkspacePortfolioAction = useCallback(
+    (params: { action: 'update-stop' | 'close-position'; ticker: string; positionId: string }) => {
+      const searchParams = new URLSearchParams();
+      searchParams.set('portfolioAction', params.action);
+      searchParams.set('ticker', params.ticker);
+      searchParams.set('positionId', params.positionId);
+      navigate(`/workspace?${searchParams.toString()}`);
+    },
+    [navigate],
+  );
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
   };
@@ -348,7 +352,16 @@ export default function DailyReview() {
         ) : (
           <div className="space-y-3">
             <GlossaryLegend metricKeys={DAILY_REVIEW_GLOSSARY_KEYS} title={t('dailyReview.sections.stopGlossary')} />
-            <UpdateStopTable positions={review.positionsUpdateStop} />
+            <UpdateStopTable
+              positions={review.positionsUpdateStop}
+              onAction={(position) =>
+                openWorkspacePortfolioAction({
+                  action: 'update-stop',
+                  ticker: position.ticker,
+                  positionId: position.positionId,
+                })
+              }
+            />
           </div>
         )}
       </CollapsibleSection>
@@ -363,7 +376,16 @@ export default function DailyReview() {
         {review.positionsClose.length === 0 ? (
           <p className="text-gray-600 dark:text-gray-400">{t('dailyReview.sections.noClose')}</p>
         ) : (
-          <CloseTable positions={review.positionsClose} />
+          <CloseTable
+            positions={review.positionsClose}
+            onAction={(position) =>
+              openWorkspacePortfolioAction({
+                action: 'close-position',
+                ticker: position.ticker,
+                positionId: position.positionId,
+              })
+            }
+          />
         )}
       </CollapsibleSection>
 
@@ -611,7 +633,13 @@ function formatDailyReviewReason(reason: string): string {
   return reason;
 }
 
-function UpdateStopTable({ positions }: { positions: DailyReviewPositionUpdate[] }) {
+function UpdateStopTable({
+  positions,
+  onAction,
+}: {
+  positions: DailyReviewPositionUpdate[];
+  onAction: (position: DailyReviewPositionUpdate) => void;
+}) {
   return (
     <TableShell
       empty={positions.length === 0}
@@ -660,8 +688,8 @@ function UpdateStopTable({ positions }: { positions: DailyReviewPositionUpdate[]
             <Button
               variant="secondary"
               size="sm"
-              disabled
-              title={t('dailyReview.table.update.actionDisabledTitle')}
+              onClick={() => onAction(pos)}
+              title={t('dailyReview.table.update.actionTitle')}
             >
               {t('dailyReview.table.update.actionLabel')}
             </Button>
@@ -672,7 +700,13 @@ function UpdateStopTable({ positions }: { positions: DailyReviewPositionUpdate[]
   );
 }
 
-function CloseTable({ positions }: { positions: DailyReviewPositionClose[] }) {
+function CloseTable({
+  positions,
+  onAction,
+}: {
+  positions: DailyReviewPositionClose[];
+  onAction: (position: DailyReviewPositionClose) => void;
+}) {
   return (
     <TableShell
       empty={positions.length === 0}
@@ -719,8 +753,8 @@ function CloseTable({ positions }: { positions: DailyReviewPositionClose[] }) {
             <Button
               variant="danger"
               size="sm"
-              disabled
-              title={t('dailyReview.table.close.actionDisabledTitle')}
+              onClick={() => onAction(pos)}
+              title={t('dailyReview.table.close.actionTitle')}
             >
               {t('dailyReview.table.close.actionLabel')}
             </Button>
