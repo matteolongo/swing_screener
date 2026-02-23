@@ -1,5 +1,5 @@
 {
-  "asof": "2026-02-20",
+  "asof": "2026-02-23",
   "orders": [
     {
       "order_id": "ORD-INTC-20260115-ENTRY",
@@ -688,7 +688,7 @@
     {
       "order_id": "ORD-STOP-POS-REP.MC-20260218-01",
       "ticker": "REP.MC",
-      "status": "pending",
+      "status": "cancelled",
       "order_type": "SELL_STOP",
       "limit_price": null,
       "quantity": 5,
@@ -696,13 +696,26 @@
       "order_date": "2026-02-18",
       "filled_date": "",
       "entry_price": null,
-      "notes": "auto-linked stop",
+      "notes": "auto-linked stop\nReplaced with new stop at 17.32 (was 16.48)",
       "order_kind": "stop",
       "parent_order_id": "REP.MC-20260219172724",
       "position_id": "POS-REP.MC-20260218-01",
       "tif": "GTC",
       "fee_eur": null,
       "fill_fx_rate": null
+    },
+    {
+      "order_id": "ORD-AADC0305",
+      "ticker": "REP.MC",
+      "status": "pending",
+      "order_type": "STOP",
+      "quantity": 5,
+      "stop_price": 17.32,
+      "order_date": "2026-02-23",
+      "notes": "Auto-created from position stop update (was 16.48)",
+      "order_kind": "stop",
+      "position_id": "POS-REP.MC-20260218-01",
+      "tif": "GTC"
     }
   ]
 }
