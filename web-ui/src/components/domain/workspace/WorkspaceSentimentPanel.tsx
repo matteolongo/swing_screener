@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import Button from '@/components/common/Button';
 import SentimentPanel from '@/components/domain/social/SentimentPanel';
@@ -37,10 +37,18 @@ export default function WorkspaceSentimentPanel({ ticker }: WorkspaceSentimentPa
     },
   });
 
+  const { mutate } = analysisMutation;
+  const runAnalysis = useCallback(
+    (params: SocialAnalysisParams) => {
+      mutate(params);
+    },
+    [mutate],
+  );
+
   useEffect(() => {
     setLookbackInput('');
-    analysisMutation.mutate({ symbol: ticker, lookbackInput: '' });
-  }, [ticker, analysisMutation.mutate]);
+    runAnalysis({ symbol: ticker, lookbackInput: '' });
+  }, [ticker, runAnalysis]);
 
   const data = analysisMutation.data;
   const defaultLookback = data?.lookbackHours;
