@@ -1,4 +1,5 @@
 import pandas as pd
+import datetime as dt
 from fastapi.testclient import TestClient
 from unittest.mock import MagicMock
 from types import SimpleNamespace
@@ -228,3 +229,21 @@ def test_screener_invalid_currency_rejected():
         json={"universe": "mega_all", "top": 20, "currencies": ["JPY"]},
     )
     assert res.status_code == 422
+
+
+def test_default_asof_uses_previous_day_before_eur_close():
+    now_utc = dt.datetime(2026, 2, 19, 15, 0, tzinfo=dt.timezone.utc)
+    resolved = screener_service._resolve_default_asof_date(now_utc, ["EUR"])
+    assert resolved.isoformat() == "2026-02-18"
+
+
+def test_default_asof_uses_same_day_after_eur_close():
+    now_utc = dt.datetime(2026, 2, 19, 18, 0, tzinfo=dt.timezone.utc)
+    resolved = screener_service._resolve_default_asof_date(now_utc, ["EUR"])
+    assert resolved.isoformat() == "2026-02-19"
+
+
+def test_data_freshness_is_intraday_for_today_before_close():
+    now_utc = dt.datetime(2026, 2, 19, 15, 0, tzinfo=dt.timezone.utc)
+    freshness = screener_service._resolve_data_freshness("2026-02-19", now_utc, ["EUR"])
+    assert freshness == "intraday"

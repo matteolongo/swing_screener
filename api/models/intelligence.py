@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator
+from swing_screener.intelligence.config import SUPPORTED_INTEL_PROVIDERS
 
 
 class IntelligenceRunRequest(BaseModel):
@@ -27,6 +28,24 @@ class IntelligenceRunRequest(BaseModel):
         if not normalized:
             raise ValueError("At least one valid symbol is required.")
         return normalized
+
+    @field_validator("providers")
+    @classmethod
+    def _validate_providers(cls, values: Optional[list[str]]) -> Optional[list[str]]:
+        if values is None:
+            return None
+        normalized: list[str] = []
+        seen: set[str] = set()
+        for value in values:
+            provider = str(value).strip().lower()
+            if not provider or provider in seen:
+                continue
+            if provider not in SUPPORTED_INTEL_PROVIDERS:
+                allowed = ", ".join(sorted(SUPPORTED_INTEL_PROVIDERS))
+                raise ValueError(f"Unsupported provider: {provider}. Allowed values: {allowed}")
+            seen.add(provider)
+            normalized.append(provider)
+        return normalized or None
 
 
 class IntelligenceRunLaunchResponse(BaseModel):
@@ -123,5 +142,4 @@ class LLMClassifyNewsResponse(BaseModel):
     cached_count: int
     material_count: int
     provider_available: bool
-
 

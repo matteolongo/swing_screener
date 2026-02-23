@@ -113,6 +113,79 @@ class StrategySocialOverlay(BaseModel):
     sentiment_analyzer: str = Field(default="keyword")
 
 
+class StrategyIntelligenceLLM(BaseModel):
+    enabled: bool = False
+    provider: Literal["openai", "anthropic", "ollama", "mock"] = "openai"
+    model: str = "gpt-4o-mini"
+    api_key: str = ""
+    base_url: str = "http://localhost:11434"
+    enable_cache: bool = True
+    enable_audit: bool = True
+    cache_path: str = "data/intelligence/llm_cache.json"
+    audit_path: str = "data/intelligence/llm_audit"
+
+
+class StrategyIntelligenceCatalyst(BaseModel):
+    lookback_hours: int = Field(default=72, ge=1)
+    recency_half_life_hours: int = Field(default=36, ge=1)
+    false_catalyst_return_z: float = Field(default=1.5, ge=0)
+    min_price_reaction_atr: float = Field(default=0.8, ge=0)
+    require_price_confirmation: bool = True
+
+
+class StrategyIntelligenceTheme(BaseModel):
+    enabled: bool = True
+    min_cluster_size: int = Field(default=3, ge=1)
+    min_peer_confirmation: int = Field(default=2, ge=1)
+    curated_peer_map_path: str = "data/intelligence/peer_map.yaml"
+
+
+class StrategyIntelligenceOpportunity(BaseModel):
+    technical_weight: float = Field(default=0.55, ge=0)
+    catalyst_weight: float = Field(default=0.45, ge=0)
+    max_daily_opportunities: int = Field(default=8, ge=1, le=20)
+    min_opportunity_score: float = Field(default=0.55, ge=0, le=1)
+
+
+class StrategyMarketIntelligence(BaseModel):
+    enabled: bool = False
+    providers: list[str] = Field(default_factory=lambda: ["yahoo_finance"])
+    universe_scope: Literal["screener_universe", "strategy_universe"] = "screener_universe"
+    market_context_symbols: list[str] = Field(
+        default_factory=lambda: ["SPY", "QQQ", "XLK", "SMH", "XBI"]
+    )
+    llm: StrategyIntelligenceLLM = Field(default_factory=StrategyIntelligenceLLM)
+    catalyst: StrategyIntelligenceCatalyst = Field(default_factory=StrategyIntelligenceCatalyst)
+    theme: StrategyIntelligenceTheme = Field(default_factory=StrategyIntelligenceTheme)
+    opportunity: StrategyIntelligenceOpportunity = Field(default_factory=StrategyIntelligenceOpportunity)
+
+    @field_validator("providers")
+    @classmethod
+    def validate_intel_providers(cls, values: list[str]) -> list[str]:
+        cleaned: list[str] = []
+        for value in values:
+            text = str(value).strip().lower()
+            if not text:
+                continue
+            if text not in {"yahoo_finance", "earnings_calendar"}:
+                continue
+            if text not in cleaned:
+                cleaned.append(text)
+        return cleaned or ["yahoo_finance"]
+
+    @field_validator("market_context_symbols")
+    @classmethod
+    def validate_market_context_symbols(cls, values: list[str]) -> list[str]:
+        cleaned: list[str] = []
+        for value in values:
+            text = str(value).strip().upper()
+            if not text:
+                continue
+            if text not in cleaned:
+                cleaned.append(text)
+        return cleaned or ["SPY", "QQQ", "XLK", "SMH", "XBI"]
+
+
 class StrategyBase(BaseModel):
     name: str
     description: Optional[str] = None
@@ -124,6 +197,7 @@ class StrategyBase(BaseModel):
     manage: StrategyManage
     backtest: StrategyBacktest
     social_overlay: StrategySocialOverlay = Field(default_factory=StrategySocialOverlay)
+    market_intelligence: StrategyMarketIntelligence = Field(default_factory=StrategyMarketIntelligence)
 
 
 class StrategyCreateRequest(StrategyBase):

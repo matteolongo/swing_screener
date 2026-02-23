@@ -9,7 +9,6 @@ export const queryKeys = {
   dailyReview: (topN: number, universe?: string | null) => ['dailyReview', topN, universe ?? null] as const,
   orders: (status?: OrderFilterStatus) =>
     status == null ? (['orders'] as const) : (['orders', status] as const),
-  ordersSnapshot: () => ['orders', 'snapshot'] as const,
   positions: (status?: PositionFilterStatus | 'open') =>
     status == null ? (['positions'] as const) : (['positions', status] as const),
   positionMetrics: (positionId?: string) =>

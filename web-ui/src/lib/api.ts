@@ -3,11 +3,6 @@
 export const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 export const API_ENDPOINTS = {
-  // Config
-  config: '/api/config',
-  configReset: '/api/config/reset',
-  configDefaults: '/api/config/defaults',
-
   // Strategy
   strategy: '/api/strategy',
   strategyActive: '/api/strategy/active',
@@ -21,7 +16,6 @@ export const API_ENDPOINTS = {
   
   // Portfolio - Positions
   positions: '/api/portfolio/positions',
-  position: (id: string) => `/api/portfolio/positions/${id}`,
   positionMetrics: (id: string) => `/api/portfolio/positions/${id}/metrics`,
   positionStop: (id: string) => `/api/portfolio/positions/${id}/stop`,
   positionStopSuggestion: (id: string) => `/api/portfolio/positions/${id}/stop-suggestion`,
@@ -30,7 +24,6 @@ export const API_ENDPOINTS = {
   
   // Portfolio - Orders
   orders: '/api/portfolio/orders',
-  ordersSnapshot: '/api/portfolio/orders/snapshot',
   order: (id: string) => `/api/portfolio/orders/${id}`,
   orderFill: (id: string) => `/api/portfolio/orders/${id}/fill`,
 
@@ -41,7 +34,6 @@ export const API_ENDPOINTS = {
 
   // Social
   socialAnalyze: '/api/social/analyze',
-  socialProviders: '/api/social/providers',
   socialWarmupStatus: (jobId: string) => `/api/social/warmup/${jobId}`,
 
   // Intelligence

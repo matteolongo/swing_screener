@@ -4,8 +4,6 @@ import {
   FillOrderRequest,
   Order,
   OrderStatus,
-  OrderSnapshot,
-  OrderSnapshotResponseApi,
   Position,
   PositionApiResponse,
   PositionStatus,
@@ -13,7 +11,6 @@ import {
   ClosePositionRequest,
   transformOrder,
   transformCreateOrderRequest,
-  transformOrderSnapshot,
   transformPosition,
   transformPositionUpdate,
   PositionUpdate,
@@ -114,16 +111,6 @@ export async function fetchOrders(status: OrderFilterStatus): Promise<Order[]> {
   if (!response.ok) throw new Error('Failed to fetch orders');
   const data = await response.json();
   return data.orders.map(transformOrder);
-}
-
-export async function fetchOrderSnapshots(): Promise<{ orders: OrderSnapshot[]; asof: string }> {
-  const response = await fetch(apiUrl(API_ENDPOINTS.ordersSnapshot));
-  if (!response.ok) throw new Error('Failed to fetch order snapshots');
-  const data: OrderSnapshotResponseApi = await response.json();
-  return {
-    orders: data.orders.map(transformOrderSnapshot),
-    asof: data.asof,
-  };
 }
 
 export async function createOrder(request: CreateOrderRequest): Promise<void> {

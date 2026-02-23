@@ -12,12 +12,6 @@ describe('API Client', () => {
   })
 
   describe('API_ENDPOINTS', () => {
-    it('has all config endpoints', () => {
-      expect(API_ENDPOINTS.config).toBe('/api/config')
-      expect(API_ENDPOINTS.configReset).toBe('/api/config/reset')
-      expect(API_ENDPOINTS.configDefaults).toBe('/api/config/defaults')
-    })
-
     it('has all strategy endpoints', () => {
       expect(API_ENDPOINTS.strategy).toBe('/api/strategy')
       expect(API_ENDPOINTS.strategyActive).toBe('/api/strategy/active')
@@ -33,11 +27,9 @@ describe('API Client', () => {
     it('has all portfolio endpoints', () => {
       expect(API_ENDPOINTS.positions).toBe('/api/portfolio/positions')
       expect(API_ENDPOINTS.orders).toBe('/api/portfolio/orders')
-      expect(API_ENDPOINTS.ordersSnapshot).toBe('/api/portfolio/orders/snapshot')
     })
 
     it('has dynamic position endpoint function', () => {
-      expect(API_ENDPOINTS.position('POS-123')).toBe('/api/portfolio/positions/POS-123')
       expect(API_ENDPOINTS.positionStop('POS-123')).toBe('/api/portfolio/positions/POS-123/stop')
       expect(API_ENDPOINTS.positionStopSuggestion('POS-123')).toBe(
         '/api/portfolio/positions/POS-123/stop-suggestion'

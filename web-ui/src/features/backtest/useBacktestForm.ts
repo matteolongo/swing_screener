@@ -126,7 +126,7 @@ export function useBacktestForm({ config, strategyKAtr }: UseBacktestFormArgs) {
     });
   }, [config, strategyKAtr]);
 
-  const resetToSettings = useCallback(() => {
+  const resetToStrategyDefaults = useCallback(() => {
     const defaults = buildDefaultFormState(config, { kAtr: strategyKAtr });
     setFormState((prev) => ({
       ...prev,
@@ -173,7 +173,7 @@ export function useBacktestForm({ config, strategyKAtr }: UseBacktestFormArgs) {
     tickers,
     canRun,
     presets,
-    resetToSettings,
+    resetToStrategyDefaults,
     buildRunParams,
   };
 }

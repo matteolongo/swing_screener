@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import os
 from typing import Any
 
 from swing_screener.utils import get_nested_dict
@@ -132,6 +133,20 @@ def _clean_string_list(
     return tuple(cleaned) if cleaned else fallback
 
 
+def _resolve_llm_base_url(llm_raw: dict[str, Any]) -> str:
+    configured = str(llm_raw.get("base_url", "")).strip()
+    env_ollama_host = str(os.environ.get("OLLAMA_HOST", "")).strip()
+
+    if configured:
+        # If strategy persisted the generic localhost default, prefer container/runtime override.
+        if configured == "http://localhost:11434" and env_ollama_host and env_ollama_host != configured:
+            return env_ollama_host
+        return configured
+    if env_ollama_host:
+        return env_ollama_host
+    return "http://localhost:11434"
+
+
 def build_intelligence_config(strategy: dict) -> IntelligenceConfig:
     raw = get_nested_dict(strategy, "market_intelligence")
     catalyst_raw = get_nested_dict(raw, "catalyst")
@@ -173,7 +188,7 @@ def build_intelligence_config(strategy: dict) -> IntelligenceConfig:
             provider=str(llm_raw.get("provider", "openai")).strip().lower(),
             model=str(llm_raw.get("model", "gpt-4o-mini")).strip(),
             api_key=str(llm_raw.get("api_key", "")).strip(),
-            base_url=str(llm_raw.get("base_url", "http://localhost:11434")).strip(),
+            base_url=_resolve_llm_base_url(llm_raw),
             enable_cache=bool(llm_raw.get("enable_cache", True)),
             enable_audit=bool(llm_raw.get("enable_audit", True)),
             cache_path=str(llm_raw.get("cache_path", "data/intelligence/llm_cache.json")).strip(),

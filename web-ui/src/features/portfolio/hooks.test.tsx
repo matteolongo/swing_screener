@@ -5,7 +5,6 @@ import type { ReactNode } from 'react'
 
 vi.mock('@/features/portfolio/api', () => ({
   fetchOrders: vi.fn(),
-  fetchOrderSnapshots: vi.fn(),
   createOrder: vi.fn(),
   fillOrder: vi.fn(),
   cancelOrder: vi.fn(),
