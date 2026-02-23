@@ -107,7 +107,7 @@ def _enrich_events_with_llm(
 
     enriched: list[Event] = []
     for event in events:
-        snippet = str(event.metadata.get("summary", "")).strip() if event.metadata else ""
+        snippet = str(event.metadata.get("summary", "")).strip()
         try:
             result = classifier.classify(
                 headline=event.headline,
@@ -155,6 +155,12 @@ def _enrich_events_with_llm(
                 )
             )
         except Exception as exc:  # pragma: no cover - defensive degradation
+            logger.warning(
+                "LLM enrichment failed for event_id=%s symbol=%s: %s",
+                event.event_id,
+                event.symbol,
+                exc,
+            )
             metadata = dict(event.metadata)
             metadata["llm_error"] = str(exc)
             enriched.append(

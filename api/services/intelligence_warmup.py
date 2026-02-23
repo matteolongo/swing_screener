@@ -97,14 +97,19 @@ class IntelligenceRunManager:
         if len(recovered) > self._max_jobs:
             recovered = recovered[-self._max_jobs :]
 
-        for job in recovered:
-            self._jobs[job.job_id] = job
+        with self._lock:
+            for job in recovered:
+                self._jobs[job.job_id] = job
+            self._trim_jobs_locked()
+            payload = self._build_jobs_payload_locked()
 
-        self._persist_jobs()
+        self._persist_jobs(payload)
 
-    def _persist_jobs(self) -> None:
+    def _build_jobs_payload_locked(self) -> list[dict]:
         jobs = sorted(self._jobs.values(), key=lambda item: item.updated_at)
-        payload = [asdict(job) for job in jobs]
+        return [asdict(job) for job in jobs]
+
+    def _persist_jobs(self, payload: list[dict]) -> None:
         try:
             locked_write_json_cli(self._jobs_path, payload)
         except Exception as exc:
@@ -140,10 +145,12 @@ class IntelligenceRunManager:
             created_at=now,
             updated_at=now,
         )
+        payload: list[dict]
         with self._lock:
             self._jobs[job_id] = job
             self._trim_jobs_locked()
-            self._persist_jobs()
+            payload = self._build_jobs_payload_locked()
+        self._persist_jobs(payload)
 
         worker = threading.Thread(
             target=self._run_job,
@@ -207,6 +214,7 @@ class IntelligenceRunManager:
         opportunities_count: int | None = None,
         error: str | None = None,
     ) -> None:
+        payload: list[dict] | None = None
         with self._lock:
             job = self._jobs.get(job_id)
             if job is None:
@@ -221,7 +229,9 @@ class IntelligenceRunManager:
                 job.opportunities_count = opportunities_count
             job.error = error
             job.updated_at = _now_iso()
-            self._persist_jobs()
+            payload = self._build_jobs_payload_locked()
+        if payload is not None:
+            self._persist_jobs(payload)
 
     def _trim_jobs_locked(self) -> None:
         if len(self._jobs) <= self._max_jobs:
