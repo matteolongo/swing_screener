@@ -2,7 +2,7 @@ name: Tests
 
 on:
   push:
-    branches: ["main", "refactor/**", "feature/**"]  # Only test main and feature branches
+    branches: ["main", "refactor/**", "feature/**", "codex/**", "copilot/**"]  # Only test main and feature branches
   pull_request:
     branches: ["main"]  # Only test PRs to main
 

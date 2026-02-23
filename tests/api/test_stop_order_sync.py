@@ -215,7 +215,34 @@ def test_update_stop_validation_still_works(
     request_above = UpdateStopRequest(new_stop=146.0, reason="Too high")
     with pytest.raises(HTTPException) as exc:
         service.update_position_stop("POS-001", request_above)
-    assert "must be below entry price" in str(exc.value.detail)
+    assert "must be at or below entry price" in str(exc.value.detail)
+
+
+def test_update_stop_to_breakeven_entry_is_allowed(
+    mock_provider,
+    temp_positions_file,
+    temp_orders_file
+):
+    """Breakeven (new stop == entry) is valid for long positions."""
+    from api.repositories.positions_repo import PositionsRepository
+    from api.repositories.orders_repo import OrdersRepository
+    from pathlib import Path
+
+    positions_repo = PositionsRepository(Path(temp_positions_file))
+    orders_repo = OrdersRepository(Path(temp_orders_file))
+
+    service = PortfolioService(
+        orders_repo=orders_repo,
+        positions_repo=positions_repo,
+        provider=mock_provider
+    )
+
+    # Move stop from 140 to entry (145): should pass as breakeven.
+    request = UpdateStopRequest(new_stop=145.0, reason="Breakeven")
+    result = service.update_position_stop("POS-001", request)
+
+    assert result["status"] == "ok"
+    assert result["new_stop"] == 145.0
 
 
 def test_update_stop_only_cancels_pending_orders(

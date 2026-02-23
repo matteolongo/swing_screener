@@ -19,7 +19,7 @@ export default function GettingStartedModal({ onClose }: GettingStartedModalProp
         <ol className="list-decimal pl-5 space-y-3 text-sm">
           <li>
             {t('dashboardPage.gettingStarted.step1Prefix')}{' '}
-            <a href="/settings" className="text-primary underline hover:text-primary/80" onClick={onClose}>
+            <a href="/strategy" className="text-primary underline hover:text-primary/80" onClick={onClose}>
               {t('dashboardPage.gettingStarted.step1LinkLabel')}
             </a>{' '}
             {t('dashboardPage.gettingStarted.step1Suffix')}
