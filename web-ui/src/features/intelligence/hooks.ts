@@ -1,10 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  fetchIntelligenceEvents,
   fetchIntelligenceOpportunities,
   fetchIntelligenceRunStatus,
   runIntelligence,
 } from '@/features/intelligence/api';
 import {
+  IntelligenceEventsResponse,
   IntelligenceOpportunitiesResponse,
   IntelligenceRunLaunchResponse,
   IntelligenceRunRequest,
@@ -20,7 +22,10 @@ export function useRunIntelligenceMutation(
     mutationFn: (request: IntelligenceRunRequest) => runIntelligence(request),
     onSuccess: async (data) => {
       await queryClient.invalidateQueries({
-        predicate: (query) => Array.isArray(query.queryKey) && query.queryKey[0] === 'intelligence-opportunities',
+        predicate: (query) =>
+          Array.isArray(query.queryKey) &&
+          (query.queryKey[0] === 'intelligence-opportunities' ||
+            query.queryKey[0] === 'intelligence-events'),
       });
       onSuccess?.(data);
     },
@@ -55,6 +60,24 @@ export function useIntelligenceOpportunitiesScoped(
   return useQuery<IntelligenceOpportunitiesResponse>({
     queryKey: queryKeys.intelligenceOpportunities(asofDate, symbolScope || undefined),
     queryFn: () => fetchIntelligenceOpportunities(asofDate, normalizedSymbols),
+    enabled,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+}
+
+export function useIntelligenceEventsScoped(
+  asofDate?: string,
+  symbols?: string[],
+  enabled: boolean = true
+) {
+  const normalizedSymbols = (symbols ?? [])
+    .map((symbol) => symbol.trim().toUpperCase())
+    .filter((symbol) => symbol.length > 0);
+  const symbolScope = normalizedSymbols.join(',');
+  return useQuery<IntelligenceEventsResponse>({
+    queryKey: queryKeys.intelligenceEvents(asofDate, symbolScope || undefined),
+    queryFn: () => fetchIntelligenceEvents(asofDate, normalizedSymbols),
     enabled,
     retry: false,
     refetchOnWindowFocus: false,

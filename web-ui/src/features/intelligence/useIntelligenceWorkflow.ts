@@ -1,5 +1,10 @@
 import { useCallback, useEffect } from 'react';
-import { useIntelligenceOpportunitiesScoped, useIntelligenceRunStatus, useRunIntelligenceMutation } from '@/features/intelligence/hooks';
+import {
+  useIntelligenceEventsScoped,
+  useIntelligenceOpportunitiesScoped,
+  useIntelligenceRunStatus,
+  useRunIntelligenceMutation,
+} from '@/features/intelligence/hooks';
 
 type UseIntelligenceWorkflowArgs = {
   availableSymbols: string[];
@@ -34,6 +39,12 @@ export function useIntelligenceWorkflow({
     Boolean(asofDate)
   );
   const opportunities = opportunitiesQuery.data?.opportunities ?? [];
+  const eventsQuery = useIntelligenceEventsScoped(
+    asofDate,
+    runSymbols.length > 0 ? runSymbols : undefined,
+    Boolean(asofDate)
+  );
+  const events = eventsQuery.data?.events ?? [];
 
   useEffect(() => {
     if (status?.status === 'completed' && status.asofDate) {
@@ -65,6 +76,8 @@ export function useIntelligenceWorkflow({
     status,
     opportunitiesQuery,
     opportunities,
+    eventsQuery,
+    events,
     asofDate,
     jobId,
   };

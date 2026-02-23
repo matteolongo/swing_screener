@@ -1,5 +1,7 @@
 import { API_ENDPOINTS, apiUrl } from '@/lib/api';
 import {
+  IntelligenceEventsResponse,
+  IntelligenceEventsResponseAPI,
   IntelligenceOpportunitiesResponse,
   IntelligenceOpportunitiesResponseAPI,
   IntelligenceRunLaunchResponse,
@@ -8,6 +10,7 @@ import {
   IntelligenceRunRequestAPI,
   IntelligenceRunStatus,
   IntelligenceRunStatusAPI,
+  transformIntelligenceEventsResponse,
   transformIntelligenceOpportunitiesResponse,
   transformIntelligenceRunLaunchResponse,
   transformIntelligenceRunStatus,
@@ -71,4 +74,28 @@ export async function fetchIntelligenceOpportunities(
   }
   const payload: IntelligenceOpportunitiesResponseAPI = await response.json();
   return transformIntelligenceOpportunitiesResponse(payload);
+}
+
+export async function fetchIntelligenceEvents(
+  asofDate?: string,
+  symbols?: string[]
+): Promise<IntelligenceEventsResponse> {
+  const endpoint = new URL(apiUrl(API_ENDPOINTS.intelligenceEvents), window.location.origin);
+  if (asofDate) {
+    endpoint.searchParams.set('asof_date', asofDate);
+  }
+  if (symbols && symbols.length > 0) {
+    symbols
+      .map((symbol) => symbol.trim().toUpperCase())
+      .filter((symbol) => symbol.length > 0)
+      .forEach((symbol) => endpoint.searchParams.append('symbols', symbol));
+  }
+
+  const response = await fetch(endpoint.toString());
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.detail || 'Failed to fetch intelligence events');
+  }
+  const payload: IntelligenceEventsResponseAPI = await response.json();
+  return transformIntelligenceEventsResponse(payload);
 }

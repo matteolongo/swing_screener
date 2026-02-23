@@ -37,6 +37,22 @@ def locked_read_json_cli(path: Path, timeout: float = DEFAULT_TIMEOUT) -> Any:
         raise
 
 
+def locked_read_text_cli(path: Path, timeout: float = DEFAULT_TIMEOUT) -> str:
+    """Read plain text file with file lock (CLI version)."""
+    if not PORTALOCKER_AVAILABLE:
+        return path.read_text(encoding="utf-8")
+
+    try:
+        with portalocker.Lock(path, mode="r", timeout=timeout, encoding="utf-8") as fh:
+            return fh.read()
+    except portalocker.exceptions.LockException:
+        logger.error(f"Lock timeout reading {path.name} after {timeout}s")
+        raise RuntimeError(f"Could not acquire lock on {path.name} within {timeout}s")
+    except Exception:
+        logger.exception(f"Error reading {path.name}")
+        raise
+
+
 def locked_write_json_cli(path: Path, data: dict | list, timeout: float = DEFAULT_TIMEOUT) -> None:
     """Write JSON file with file lock (CLI version).
     

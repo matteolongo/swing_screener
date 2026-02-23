@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from api.dependencies import get_intelligence_service
 from api.models.intelligence import (
+    IntelligenceEventsResponse,
     IntelligenceOpportunitiesResponse,
     IntelligenceRunLaunchResponse,
     IntelligenceRunRequest,
@@ -94,6 +95,15 @@ def get_opportunities(
     service: IntelligenceService = Depends(get_intelligence_service),
 ):
     return service.get_opportunities(asof_date=asof_date, symbols=symbols)
+
+
+@router.get("/events", response_model=IntelligenceEventsResponse)
+def get_events(
+    asof_date: str | None = Query(default=None),
+    symbols: list[str] | None = Query(default=None),
+    service: IntelligenceService = Depends(get_intelligence_service),
+):
+    return service.get_events(asof_date=asof_date, symbols=symbols)
 
 
 @router.post("/classify", response_model=LLMClassifyNewsResponse)

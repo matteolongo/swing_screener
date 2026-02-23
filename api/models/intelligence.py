@@ -1,6 +1,7 @@
 """Market intelligence API models."""
 from __future__ import annotations
 
+from typing import Any
 from typing import Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator
@@ -82,6 +83,23 @@ class IntelligenceOpportunitiesResponse(BaseModel):
     opportunities: list[IntelligenceOpportunityResponse] = Field(default_factory=list)
 
 
+class IntelligenceEventResponse(BaseModel):
+    event_id: str
+    symbol: str
+    source: str
+    occurred_at: str
+    headline: str
+    event_type: str
+    credibility: float
+    url: Optional[str] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class IntelligenceEventsResponse(BaseModel):
+    asof_date: str
+    events: list[IntelligenceEventResponse] = Field(default_factory=list)
+
+
 # LLM Classification Models
 
 class LLMClassifyNewsRequest(BaseModel):
@@ -142,4 +160,3 @@ class LLMClassifyNewsResponse(BaseModel):
     cached_count: int
     material_count: int
     provider_available: bool
-

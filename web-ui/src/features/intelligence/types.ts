@@ -63,6 +63,32 @@ export interface IntelligenceOpportunity {
   explanations: string[];
 }
 
+export interface IntelligenceEventLLMTrace {
+  provider?: string;
+  model?: string;
+  cached?: boolean;
+  latencyMs?: number;
+  eventType?: string;
+  severity?: string;
+  confidence?: number;
+  isMaterial?: boolean;
+  summary?: string;
+  error?: string;
+}
+
+export interface IntelligenceEvent {
+  eventId: string;
+  symbol: string;
+  source: string;
+  occurredAt: string;
+  headline: string;
+  eventType: string;
+  credibility: number;
+  url?: string;
+  llmTrace?: IntelligenceEventLLMTrace;
+  metadata: Record<string, unknown>;
+}
+
 export interface IntelligenceOpportunityAPI {
   symbol: string;
   technical_readiness: number;
@@ -72,14 +98,36 @@ export interface IntelligenceOpportunityAPI {
   explanations: string[];
 }
 
+export interface IntelligenceEventAPI {
+  event_id: string;
+  symbol: string;
+  source: string;
+  occurred_at: string;
+  headline: string;
+  event_type: string;
+  credibility: number;
+  url?: string | null;
+  metadata?: Record<string, unknown>;
+}
+
 export interface IntelligenceOpportunitiesResponse {
   asofDate: string;
   opportunities: IntelligenceOpportunity[];
 }
 
+export interface IntelligenceEventsResponse {
+  asofDate: string;
+  events: IntelligenceEvent[];
+}
+
 export interface IntelligenceOpportunitiesResponseAPI {
   asof_date: string;
   opportunities: IntelligenceOpportunityAPI[];
+}
+
+export interface IntelligenceEventsResponseAPI {
+  asof_date: string;
+  events: IntelligenceEventAPI[];
 }
 
 export function transformIntelligenceRunLaunchResponse(
@@ -124,3 +172,56 @@ export function transformIntelligenceOpportunitiesResponse(
   };
 }
 
+export function transformIntelligenceEventsResponse(
+  api: IntelligenceEventsResponseAPI
+): IntelligenceEventsResponse {
+  return {
+    asofDate: api.asof_date,
+    events: (api.events ?? []).map((event): IntelligenceEvent => {
+      const metadata = event.metadata ?? {};
+      const llmTraceRaw =
+        typeof metadata.llm_trace === 'object' && metadata.llm_trace != null
+          ? (metadata.llm_trace as Record<string, unknown>)
+          : null;
+      return {
+        eventId: event.event_id,
+        symbol: event.symbol,
+        source: event.source,
+        occurredAt: event.occurred_at,
+        headline: event.headline,
+        eventType: event.event_type,
+        credibility: event.credibility,
+        url: event.url ?? undefined,
+        llmTrace: llmTraceRaw
+          ? {
+              provider:
+                typeof llmTraceRaw.provider === 'string' ? llmTraceRaw.provider : undefined,
+              model: typeof llmTraceRaw.model === 'string' ? llmTraceRaw.model : undefined,
+              cached:
+                typeof llmTraceRaw.cached === 'boolean' ? llmTraceRaw.cached : undefined,
+              latencyMs:
+                typeof llmTraceRaw.latency_ms === 'number'
+                  ? llmTraceRaw.latency_ms
+                  : undefined,
+              eventType:
+                typeof llmTraceRaw.event_type === 'string'
+                  ? llmTraceRaw.event_type
+                  : undefined,
+              severity:
+                typeof llmTraceRaw.severity === 'string' ? llmTraceRaw.severity : undefined,
+              confidence:
+                typeof llmTraceRaw.confidence === 'number' ? llmTraceRaw.confidence : undefined,
+              isMaterial:
+                typeof llmTraceRaw.is_material === 'boolean'
+                  ? llmTraceRaw.is_material
+                  : undefined,
+              summary:
+                typeof llmTraceRaw.summary === 'string' ? llmTraceRaw.summary : undefined,
+              error: typeof llmTraceRaw.error === 'string' ? llmTraceRaw.error : undefined,
+            }
+          : undefined,
+        metadata,
+      };
+    }),
+  };
+}

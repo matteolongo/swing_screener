@@ -118,6 +118,10 @@ def _enrich_events_with_llm(
             classification = result.classification
             llm_confidence = _clamp01(float(classification.confidence))
             llm_severity = str(classification.severity.value).strip().upper()
+            llm_provider = str(cfg.llm.provider).strip().lower()
+            llm_model_name = str(getattr(result, "model_name", cfg.llm.model))
+            llm_cached = bool(getattr(result, "cached", False))
+            llm_latency_ms = round(float(getattr(result, "processing_time_ms", 0.0) or 0.0), 3)
             # Non-material events are intentionally capped below full credibility.
             llm_credibility = _clamp01(
                 0.45 * llm_confidence
@@ -132,14 +136,40 @@ def _enrich_events_with_llm(
             metadata["llm_confidence"] = round(llm_confidence, 6)
             metadata["llm_is_material"] = bool(classification.is_material)
             metadata["llm_summary"] = str(classification.summary)
-            metadata["llm_cached"] = bool(result.cached)
-            metadata["llm_model"] = str(result.model_name)
+            metadata["llm_cached"] = llm_cached
+            metadata["llm_model"] = llm_model_name
+            metadata["llm_provider"] = llm_provider
+            metadata["llm_latency_ms"] = llm_latency_ms
+            metadata["llm_trace"] = {
+                "provider": llm_provider,
+                "model": llm_model_name,
+                "cached": llm_cached,
+                "latency_ms": llm_latency_ms,
+                "event_type": str(classification.event_type.value),
+                "severity": llm_severity,
+                "confidence": round(llm_confidence, 6),
+                "is_material": bool(classification.is_material),
+                "summary": str(classification.summary),
+            }
             if classification.primary_symbol:
                 metadata["llm_primary_symbol"] = str(classification.primary_symbol)
             if classification.secondary_symbols:
                 metadata["llm_secondary_symbols"] = ",".join(
                     str(symbol) for symbol in classification.secondary_symbols
                 )
+            logger.info(
+                "LLM classification success event_id=%s symbol=%s provider=%s model=%s cached=%s latency_ms=%.3f event_type=%s severity=%s confidence=%.3f material=%s",
+                event.event_id,
+                event.symbol,
+                llm_provider,
+                llm_model_name,
+                llm_cached,
+                llm_latency_ms,
+                str(classification.event_type.value),
+                llm_severity,
+                llm_confidence,
+                bool(classification.is_material),
+            )
 
             event_type = str(classification.event_type.value).strip().lower() or event.event_type
             enriched.append(
@@ -157,13 +187,20 @@ def _enrich_events_with_llm(
             )
         except Exception as exc:  # pragma: no cover - defensive degradation
             logger.warning(
-                "LLM enrichment failed for event_id=%s symbol=%s: %s",
+                "LLM enrichment failed event_id=%s symbol=%s provider=%s model=%s error=%s",
                 event.event_id,
                 event.symbol,
+                str(cfg.llm.provider).strip().lower(),
+                str(cfg.llm.model).strip(),
                 exc,
             )
             metadata = dict(event.metadata)
             metadata["llm_error"] = str(exc)
+            metadata["llm_trace"] = {
+                "provider": str(cfg.llm.provider).strip().lower(),
+                "model": str(cfg.llm.model).strip(),
+                "error": str(exc),
+            }
             enriched.append(
                 Event(
                     event_id=event.event_id,

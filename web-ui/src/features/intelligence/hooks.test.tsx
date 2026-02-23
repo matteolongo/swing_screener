@@ -5,6 +5,7 @@ import type { ReactNode } from 'react'
 import { queryKeys } from '@/lib/queryKeys'
 
 vi.mock('@/features/intelligence/api', () => ({
+  fetchIntelligenceEvents: vi.fn(),
   fetchIntelligenceOpportunities: vi.fn(),
   fetchIntelligenceRunStatus: vi.fn(),
   runIntelligence: vi.fn(),
@@ -12,6 +13,7 @@ vi.mock('@/features/intelligence/api', () => ({
 
 import * as intelligenceApi from '@/features/intelligence/api'
 import {
+  useIntelligenceEventsScoped,
   useIntelligenceOpportunitiesScoped,
   useIntelligenceRunStatus,
   useRunIntelligenceMutation,
@@ -34,6 +36,7 @@ function createWrapper(queryClient: QueryClient) {
 
 describe('intelligence hooks', () => {
   const mockedRunIntelligence = vi.mocked(intelligenceApi.runIntelligence)
+  const mockedFetchIntelligenceEvents = vi.mocked(intelligenceApi.fetchIntelligenceEvents)
   const mockedFetchIntelligenceRunStatus = vi.mocked(intelligenceApi.fetchIntelligenceRunStatus)
   const mockedFetchIntelligenceOpportunities = vi.mocked(intelligenceApi.fetchIntelligenceOpportunities)
 
@@ -189,5 +192,28 @@ describe('intelligence hooks', () => {
     })
 
     expect(mockedFetchIntelligenceOpportunities).not.toHaveBeenCalled()
+  })
+
+  it('fetches scoped intelligence events', async () => {
+    const queryClient = createQueryClient()
+    mockedFetchIntelligenceEvents.mockResolvedValue({
+      asofDate: '2026-02-15',
+      events: [],
+    })
+
+    const { result } = renderHook(
+      () => useIntelligenceEventsScoped('2026-02-15', [' aapl ', 'MSFT']),
+      { wrapper: createWrapper(queryClient) }
+    )
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true)
+    })
+
+    expect(mockedFetchIntelligenceEvents).toHaveBeenCalledWith('2026-02-15', ['AAPL', 'MSFT'])
+    const query = queryClient.getQueryCache().find({
+      queryKey: queryKeys.intelligenceEvents('2026-02-15', 'AAPL,MSFT'),
+    })
+    expect(query).toBeDefined()
   })
 })
