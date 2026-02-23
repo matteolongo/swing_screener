@@ -100,8 +100,17 @@ class OllamaProvider(LLMProvider):
             client = self._get_client()
             # List available models to verify connection
             models = client.list()
-            # Check if our model is pulled
-            model_names = [m["name"] for m in models.get("models", [])]
+            # Check if our model is pulled (supports dict and object responses)
+            raw_models = models.get("models", []) if isinstance(models, dict) else getattr(models, "models", [])
+            model_names: list[str] = []
+            for item in raw_models or []:
+                if isinstance(item, dict):
+                    name = item.get("name") or item.get("model") or ""
+                else:
+                    name = getattr(item, "name", "") or getattr(item, "model", "")
+                text = str(name).strip()
+                if text:
+                    model_names.append(text)
             return any(self._model in name for name in model_names)
         except Exception:
             return False
