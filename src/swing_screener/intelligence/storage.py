@@ -47,38 +47,40 @@ class IntelligenceStorage:
 
     def write_events(self, events: Iterable[Event], asof: date | str) -> Path:
         path = self.events_path(asof)
-        with path.open("w", encoding="utf-8") as handle:
+        tmp_path = path.with_suffix(f"{path.suffix}.tmp")
+        with tmp_path.open("w", encoding="utf-8") as handle:
             for event in events:
                 handle.write(json.dumps(asdict(event), sort_keys=True))
                 handle.write("\n")
+        tmp_path.replace(path)
         return path
 
     def write_signals(self, signals: Iterable[CatalystSignal], asof: date | str) -> Path:
         path = self.signals_path(asof)
         payload = [asdict(signal) for signal in signals]
-        path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+        locked_write_json_cli(path, payload)
         return path
 
     def write_themes(self, themes: Iterable[ThemeCluster], asof: date | str) -> Path:
         path = self.themes_path(asof)
         payload = [asdict(theme) for theme in themes]
-        path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+        locked_write_json_cli(path, payload)
         return path
 
     def write_opportunities(self, opportunities: Iterable[Opportunity], asof: date | str) -> Path:
         path = self.opportunities_path(asof)
         payload = [asdict(opportunity) for opportunity in opportunities]
-        path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+        locked_write_json_cli(path, payload)
         return path
 
     def load_opportunities(self, asof: date | str) -> list[Opportunity]:
         path = self.opportunities_path(asof)
         if not path.exists():
             return []
-        raw = path.read_text(encoding="utf-8").strip()
-        if not raw:
+        try:
+            payload = locked_read_json_cli(path)
+        except Exception:
             return []
-        payload = json.loads(raw)
         if not isinstance(payload, list):
             return []
         out: list[Opportunity] = []
