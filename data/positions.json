@@ -1,5 +1,5 @@
 {
-  "asof": "2026-02-19",
+  "asof": "2026-02-23",
   "positions": [
     {
       "ticker": "INTC",
@@ -129,7 +129,7 @@
     },
     {
       "ticker": "INTC",
-      "status": "open",
+      "status": "closed",
       "position_id": "POS-INTC-20260209-01",
       "source_order_id": "INTC-20260208124849",
       "entry_date": "2026-02-09",
@@ -138,8 +138,8 @@
       "shares": 1,
       "initial_risk": 6.579999999999998,
       "max_favorable_price": 49.55,
-      "exit_date": null,
-      "exit_price": null,
+      "exit_date": "2026-02-23",
+      "exit_price": 42.97,
       "notes": "Synced with Degiro snapshot (stocks only) on 2026-02-13.",
       "exit_order_ids": [
         "ORD-STOP-POS-INTC-20260209-01"
@@ -207,15 +207,16 @@
       "source_order_id": "REP.MC-20260219172724",
       "entry_date": "2026-02-18",
       "entry_price": 17.32,
-      "stop_price": 16.48,
+      "stop_price": 17.32,
       "shares": 5,
       "initial_risk": 0.8399999999999999,
       "max_favorable_price": 17.32,
       "exit_date": null,
       "exit_price": null,
-      "notes": "From daily review: Entry $17.64, R:R 2.0",
+      "notes": "From daily review: Entry $17.64, R:R 2.0\nStop updated to 17.32: Breakeven: R=1.43 >= 1.0",
       "exit_order_ids": [
-        "ORD-STOP-POS-REP.MC-20260218-01"
+        "ORD-STOP-POS-REP.MC-20260218-01",
+        "ORD-AADC0305"
       ]
     }
   ]
