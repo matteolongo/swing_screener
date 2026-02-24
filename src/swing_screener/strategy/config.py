@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from swing_screener.screeners.universe import UniverseConfig, UniverseFilterConfig
+from swing_screener.selection.universe import UniverseConfig, UniverseFilterConfig
 from swing_screener.indicators.trend import TrendConfig
 from swing_screener.indicators.volatility import VolatilityConfig
 from swing_screener.indicators.momentum import MomentumConfig
-from swing_screener.screeners.ranking import RankingConfig
-from swing_screener.signals.entries import EntrySignalConfig
+from swing_screener.selection.ranking import RankingConfig
+from swing_screener.selection.entries import EntrySignalConfig
 from swing_screener.risk.position_sizing import RiskConfig
-from swing_screener.reporting.config import ReportConfig
+from swing_screener.strategy.report_config import ReportConfig
 from swing_screener.portfolio.state import ManageConfig
 from swing_screener.social.config import (
     DEFAULT_PROVIDERS,

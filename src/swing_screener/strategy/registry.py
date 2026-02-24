@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Dict
 
-from swing_screener.strategies.base import StrategyModule
+from swing_screener.strategy.base import StrategyModule
 
 
 _REGISTRY: Dict[str, StrategyModule] = {}
@@ -11,7 +11,7 @@ _REGISTRY: Dict[str, StrategyModule] = {}
 def _ensure_defaults() -> None:
     if _REGISTRY:
         return
-    from swing_screener.strategies.momentum import MomentumStrategyModule
+    from swing_screener.strategy.modules.momentum import MomentumStrategyModule
 
     register(MomentumStrategyModule())
 
@@ -30,4 +30,3 @@ def get_strategy_module(name: str | None) -> StrategyModule:
 def list_strategy_modules() -> list[str]:
     _ensure_defaults()
     return sorted(_REGISTRY.keys())
-

@@ -1,6 +1,6 @@
 import pandas as pd
 
-from swing_screener.screeners.ranking import (
+from swing_screener.selection.ranking import (
     compute_hot_score,
     top_candidates,
     RankingConfig,

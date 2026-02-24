@@ -4,8 +4,8 @@ import logging
 from dataclasses import dataclass
 from typing import Optional
 
-from swing_screener.recommendations.engine import RecommendationPayload, build_recommendation
-from swing_screener.recommendations.thesis import build_trade_thesis, thesis_to_dict
+from swing_screener.risk.recommendations.engine import RecommendationPayload, build_recommendation
+from swing_screener.risk.recommendations.thesis import build_trade_thesis, thesis_to_dict
 from swing_screener.risk.position_sizing import RiskConfig
 
 logger = logging.getLogger(__name__)
@@ -111,4 +111,3 @@ def evaluate_recommendation(
         min_shares=risk_cfg.min_shares,
         thesis=thesis_dict,
     )
-

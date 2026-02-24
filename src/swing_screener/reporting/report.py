@@ -5,8 +5,7 @@ from typing import Iterable
 
 import pandas as pd
 
-from swing_screener.reporting.config import ReportConfig
-from swing_screener.strategies.registry import get_strategy_module
+from swing_screener.strategy.report_config import ReportConfig
 
 
 def build_daily_report(
@@ -14,8 +13,13 @@ def build_daily_report(
     cfg: ReportConfig = ReportConfig(),
     exclude_tickers: Iterable[str] | None = None,
 ) -> pd.DataFrame:
-    module = get_strategy_module(cfg.strategy_module)
-    return module.build_report(ohlcv, cfg=cfg, exclude_tickers=exclude_tickers)
+    from swing_screener.strategy.orchestrator import build_strategy_report
+
+    return build_strategy_report(
+        ohlcv=ohlcv,
+        cfg=cfg,
+        exclude_tickers=exclude_tickers,
+    )
 
 
 def export_report_csv(report: pd.DataFrame, path: str = "out/daily_report.csv") -> str:
@@ -63,4 +67,3 @@ def today_actions(report: pd.DataFrame, max_rows: int = 5) -> str:
 
 
 __all__ = ["ReportConfig", "build_daily_report", "export_report_csv", "today_actions"]
-

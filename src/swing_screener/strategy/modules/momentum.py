@@ -5,10 +5,10 @@ from typing import Iterable
 
 import pandas as pd
 
-from swing_screener.reporting.config import ReportConfig
-from swing_screener.screeners.universe import eligible_universe
-from swing_screener.screeners.ranking import top_candidates
-from swing_screener.signals.entries import build_signal_board
+from swing_screener.strategy.report_config import ReportConfig
+from swing_screener.selection.universe import eligible_universe
+from swing_screener.selection.ranking import top_candidates
+from swing_screener.selection.entries import build_signal_board
 from swing_screener.risk.position_sizing import build_trade_plans
 from swing_screener.execution.guidance import add_execution_guidance
 from swing_screener.social import run_social_overlay

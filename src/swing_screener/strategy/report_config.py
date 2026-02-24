@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from swing_screener.screeners.universe import UniverseConfig
-from swing_screener.screeners.ranking import RankingConfig
-from swing_screener.signals.entries import EntrySignalConfig
+from swing_screener.selection.universe import UniverseConfig
+from swing_screener.selection.ranking import RankingConfig
+from swing_screener.selection.entries import EntrySignalConfig
 from swing_screener.risk.position_sizing import RiskConfig
 from swing_screener.social.config import SocialOverlayConfig
 
