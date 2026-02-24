@@ -33,7 +33,6 @@ features:
       - run_screener
       - list_universes
       - preview_order
-      - preview_order
   
   # Strategy Management
   strategy:
