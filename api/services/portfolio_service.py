@@ -821,11 +821,12 @@ class PortfolioService:
                         detail=f"Cannot move stop down. Current: {old_stop}, Requested: {new_stop}",
                     )
                 
-                # Validation: stop must be below entry (for long positions)
-                if entry_price and new_stop >= entry_price:
+                # Validation: stop must not exceed entry (for long positions).
+                # Breakeven stop at entry is valid and expected by manage rules.
+                if entry_price and new_stop > entry_price:
                     raise HTTPException(
                         status_code=400,
-                        detail=f"Stop price ({new_stop}) must be below entry price ({entry_price}) for long positions"
+                        detail=f"Stop price ({new_stop}) must be at or below entry price ({entry_price}) for long positions"
                     )
                 
                 # Optional: fetch current price and validate stop is reasonable

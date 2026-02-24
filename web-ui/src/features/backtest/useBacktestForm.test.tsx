@@ -46,7 +46,7 @@ describe('useBacktestForm', () => {
     expect(params.investedBudget).toBe(10000);
   });
 
-  it('resets tactical fields to settings without clearing tickers', () => {
+  it('resets tactical fields to strategy defaults without clearing tickers', () => {
     const { result } = renderHook(() =>
       useBacktestForm({
         config: DEFAULT_CONFIG,
@@ -64,7 +64,7 @@ describe('useBacktestForm', () => {
     });
 
     act(() => {
-      result.current.resetToSettings();
+      result.current.resetToStrategyDefaults();
     });
 
     expect(result.current.formState.tickersText).toBe('NVDA');

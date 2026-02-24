@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import { AlertCircle, BarChart3, RefreshCw, Trash2 } from 'lucide-react';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
-import { useConfigStore } from '@/stores/configStore';
 import { FullBacktestResponse, type FullEntryType } from '@/features/backtest/types';
 import {
   useBacktestSimulations,
@@ -16,11 +15,43 @@ import EquityCurveChart from '@/components/domain/backtest/EquityCurveChart';
 import BacktestTickerSummaryTable from '@/components/domain/backtest/BacktestTickerSummaryTable';
 import BacktestTradesTable from '@/components/domain/backtest/BacktestTradesTable';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
+import { DEFAULT_CONFIG } from '@/types/config';
 import { t } from '@/i18n/t';
 
 export default function Backtest() {
-  const { config } = useConfigStore();
   const activeStrategyQuery = useActiveStrategyQuery();
+  const strategy = activeStrategyQuery.data;
+  const config = useMemo(() => {
+    if (!strategy) return DEFAULT_CONFIG;
+    return {
+      ...DEFAULT_CONFIG,
+      risk: {
+        ...DEFAULT_CONFIG.risk,
+        ...strategy.risk,
+      },
+      indicators: {
+        ...DEFAULT_CONFIG.indicators,
+        smaFast: strategy.universe.trend.smaFast,
+        smaMid: strategy.universe.trend.smaMid,
+        smaLong: strategy.universe.trend.smaLong,
+        atrWindow: strategy.universe.vol.atrWindow,
+        lookback6m: strategy.universe.mom.lookback6m,
+        lookback12m: strategy.universe.mom.lookback12m,
+        benchmark: strategy.universe.mom.benchmark,
+        breakoutLookback: strategy.signals.breakoutLookback,
+        pullbackMa: strategy.signals.pullbackMa,
+        minHistory: strategy.signals.minHistory,
+      },
+      manage: {
+        ...DEFAULT_CONFIG.manage,
+        breakevenAtR: strategy.manage.breakevenAtR,
+        trailAfterR: strategy.manage.trailAfterR,
+        trailSma: strategy.manage.trailSma,
+        smaBufferPct: strategy.manage.smaBufferPct,
+        maxHoldingDays: strategy.manage.maxHoldingDays,
+      },
+    };
+  }, [strategy]);
   const emDash = t('common.placeholders.emDash');
 
   const {
@@ -28,7 +59,7 @@ export default function Backtest() {
     setFormState,
     canRun,
     presets,
-    resetToSettings,
+    resetToStrategyDefaults,
     buildRunParams,
   } = useBacktestForm({
     config,
@@ -109,7 +140,7 @@ export default function Backtest() {
 
   const budgetCards = useMemo(() => {
     if (!result || !formState.investedBudget) return [];
-    const riskPct = activeStrategyQuery.data?.risk.riskPct ?? config.risk.riskPct;
+    const riskPct = strategy?.risk.riskPct ?? config.risk.riskPct;
     if (!riskPct || riskPct <= 0) return [];
     const riskPerR = formState.investedBudget * riskPct;
     const s = result.summary;
@@ -122,7 +153,7 @@ export default function Backtest() {
       { label: t('backtestPage.summary.budgetCards.bestTrade'), value: formatMoney(s.bestTradeR) },
       { label: t('backtestPage.summary.budgetCards.worstTrade'), value: formatMoney(s.worstTradeR) },
     ];
-  }, [emDash, result, formState.investedBudget, activeStrategyQuery.data, config.risk.riskPct]);
+  }, [emDash, result, formState.investedBudget, strategy, config.risk.riskPct]);
 
   return (
     <div className="space-y-6">
@@ -140,8 +171,8 @@ export default function Backtest() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="secondary" onClick={resetToSettings}>
-              {t('backtestPage.parameters.resetToSettings')}
+            <Button variant="secondary" onClick={resetToStrategyDefaults}>
+              {t('backtestPage.parameters.resetToStrategy')}
             </Button>
             <Button onClick={() => runMutation.mutate(buildRunParams())} disabled={runMutation.isPending || !canRun}>
               {runMutation.isPending ? (

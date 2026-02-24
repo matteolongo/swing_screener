@@ -865,6 +865,20 @@ export const handlers = [
     }, { status: 201 })
   }),
 
+  http.post(`${API_BASE_URL}/api/portfolio/orders/:orderId/fill`, ({ params }) => {
+    return HttpResponse.json({
+      status: 'ok',
+      order_id: params.orderId,
+    })
+  }),
+
+  http.delete(`${API_BASE_URL}/api/portfolio/orders/:orderId`, ({ params }) => {
+    return HttpResponse.json({
+      status: 'ok',
+      order_id: params.orderId,
+    })
+  }),
+
   http.get(`${API_BASE_URL}/api/portfolio/orders/snapshot`, () => {
     return HttpResponse.json(mockOrderSnapshots)
   }),
