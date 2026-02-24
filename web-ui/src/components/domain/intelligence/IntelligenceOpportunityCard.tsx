@@ -1,10 +1,11 @@
 import Badge from '@/components/common/Badge';
-import { IntelligenceOpportunity } from '@/features/intelligence/types';
+import { IntelligenceEvent, IntelligenceOpportunity } from '@/features/intelligence/types';
 import { buildOpportunityEducation } from '@/features/intelligence/presentation';
 import { t } from '@/i18n/t';
 
 interface IntelligenceOpportunityCardProps {
   opportunity: IntelligenceOpportunity;
+  events?: IntelligenceEvent[];
 }
 
 const STATE_BADGE_VARIANT: Record<string, 'default' | 'primary' | 'success' | 'warning' | 'error'> = {
@@ -15,7 +16,10 @@ const STATE_BADGE_VARIANT: Record<string, 'default' | 'primary' | 'success' | 'w
   QUIET: 'default',
 };
 
-export default function IntelligenceOpportunityCard({ opportunity }: IntelligenceOpportunityCardProps) {
+export default function IntelligenceOpportunityCard({
+  opportunity,
+  events = [],
+}: IntelligenceOpportunityCardProps) {
   const education = buildOpportunityEducation(opportunity);
   const state = opportunity.state.trim().toUpperCase();
   const stateBadge = STATE_BADGE_VARIANT[state] ?? 'default';
@@ -68,7 +72,47 @@ export default function IntelligenceOpportunityCard({ opportunity }: Intelligenc
           ))}
         </ul>
       </details>
+
+      {events.length > 0 && (
+        <details className="mt-3">
+          <summary className="cursor-pointer text-xs font-semibold text-gray-600 dark:text-gray-300">
+            {t('dailyReview.intelligence.llmEvidenceTitle')}
+          </summary>
+          <div className="mt-2 space-y-2">
+            {events.slice(0, 3).map((event) => {
+              const trace = event.llmTrace;
+              const summary = trace?.summary ?? t('dailyReview.intelligence.llmNoSummary');
+              const provider = trace?.provider ?? t('dailyReview.intelligence.llmUnknown');
+              const model = trace?.model ?? t('dailyReview.intelligence.llmUnknown');
+              return (
+                <div
+                  key={event.eventId}
+                  className="rounded-md border border-gray-200 dark:border-gray-700 p-2 bg-gray-50 dark:bg-gray-900/30"
+                >
+                  <p className="text-xs font-semibold text-gray-700 dark:text-gray-200">{event.headline}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    {t('dailyReview.intelligence.llmMetaLine', {
+                      provider,
+                      model,
+                      confidence:
+                        typeof trace?.confidence === 'number'
+                          ? `${(trace.confidence * 100).toFixed(1)}%`
+                          : t('dailyReview.intelligence.llmUnknown'),
+                      severity: trace?.severity ?? t('dailyReview.intelligence.llmUnknown'),
+                    })}
+                  </p>
+                  <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">{summary}</p>
+                  {trace?.error && (
+                    <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                      {t('dailyReview.intelligence.llmErrorLine', { error: trace.error })}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </details>
+      )}
     </div>
   );
 }
-

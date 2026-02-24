@@ -1,9 +1,14 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { renderWithProviders, screen, within, waitForQueriesToSettle } from '@/test/utils';
 import { act } from '@testing-library/react';
+import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 import StrategyPage from './Strategy';
 
 describe('Strategy Page', () => {
+  beforeEach(() => {
+    useBeginnerModeStore.setState({ isBeginnerMode: true });
+  });
+
   it('renders strategy editor and loads options', async () => {
     const { queryClient } = renderWithProviders(<StrategyPage />);
 
@@ -77,5 +82,26 @@ describe('Strategy Page', () => {
 
     expect(await screen.findByRole('combobox', { name: /currencies/i })).toBeInTheDocument();
     await waitForQueriesToSettle(queryClient);
+  });
+
+  it('shows provider-aware LLM settings fields', async () => {
+    useBeginnerModeStore.setState({ isBeginnerMode: false });
+    const { user } = renderWithProviders(<StrategyPage />);
+
+    const advancedToggle = await screen.findByRole('button', { name: /show advanced/i });
+    await act(async () => {
+      await user.click(advancedToggle);
+    });
+
+    const llmProvider = await screen.findByLabelText(/LLM Provider/i);
+    expect(await screen.findByLabelText(/LLM API Key/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/LLM Base URL/i)).not.toBeInTheDocument();
+
+    await act(async () => {
+      await user.selectOptions(llmProvider, 'ollama');
+    });
+
+    expect(await screen.findByLabelText(/LLM Base URL/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/LLM API Key/i)).not.toBeInTheDocument();
   });
 });

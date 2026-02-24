@@ -1,7 +1,7 @@
 [
   {
     "name": "Balanced",
-    "description": "Conservative strategy",
+    "description": "Balanced strategy",
     "module": "momentum",
     "universe": {
       "trend": {
@@ -89,10 +89,54 @@
       ],
       "sentiment_analyzer": "keyword"
     },
+    "market_intelligence": {
+      "enabled": true,
+      "providers": [
+        "yahoo_finance"
+      ],
+      "universe_scope": "screener_universe",
+      "market_context_symbols": [
+        "SPY",
+        "QQQ",
+        "XLK",
+        "SMH",
+        "XBI"
+      ],
+      "llm": {
+        "enabled": true,
+        "provider": "ollama",
+        "model": "mistral:7b-instruct",
+        "base_url": "http://localhost:11434",
+        "enable_cache": true,
+        "enable_audit": true,
+        "cache_path": "data/intelligence/llm_cache.json",
+        "audit_path": "data/intelligence/llm_audit",
+        "api_key": ""
+      },
+      "catalyst": {
+        "lookback_hours": 72,
+        "recency_half_life_hours": 36,
+        "false_catalyst_return_z": 1.5,
+        "min_price_reaction_atr": 0.8,
+        "require_price_confirmation": true
+      },
+      "theme": {
+        "enabled": true,
+        "min_cluster_size": 3,
+        "min_peer_confirmation": 2,
+        "curated_peer_map_path": "data/intelligence/peer_map.yaml"
+      },
+      "opportunity": {
+        "technical_weight": 0.55,
+        "catalyst_weight": 0.45,
+        "max_daily_opportunities": 8,
+        "min_opportunity_score": 0.55
+      }
+    },
     "id": "default",
     "is_default": true,
     "created_at": "2026-02-08T00:00:00",
-    "updated_at": "2026-02-23T19:04:57"
+    "updated_at": "2026-02-23T21:20:11"
   },
   {
     "name": "1000",
@@ -257,6 +301,50 @@
     "id": "2RISK-2ATR-EUR",
     "is_default": false,
     "created_at": "2026-02-12T02:17:02",
-    "updated_at": "2026-02-12T02:45:04"
+    "updated_at": "2026-02-12T02:45:04",
+    "market_intelligence": {
+      "enabled": false,
+      "providers": [
+        "yahoo_finance"
+      ],
+      "universe_scope": "screener_universe",
+      "market_context_symbols": [
+        "SPY",
+        "QQQ",
+        "XLK",
+        "SMH",
+        "XBI"
+      ],
+      "llm": {
+        "enabled": false,
+        "provider": "ollama",
+        "model": "mistral:7b-instruct",
+        "base_url": "http://localhost:11434",
+        "enable_cache": true,
+        "enable_audit": true,
+        "cache_path": "data/intelligence/llm_cache.json",
+        "audit_path": "data/intelligence/llm_audit",
+        "api_key": ""
+      },
+      "catalyst": {
+        "lookback_hours": 72,
+        "recency_half_life_hours": 36,
+        "false_catalyst_return_z": 1.5,
+        "min_price_reaction_atr": 0.8,
+        "require_price_confirmation": true
+      },
+      "theme": {
+        "enabled": true,
+        "min_cluster_size": 3,
+        "min_peer_confirmation": 2,
+        "curated_peer_map_path": "data/intelligence/peer_map.yaml"
+      },
+      "opportunity": {
+        "technical_weight": 0.55,
+        "catalyst_weight": 0.45,
+        "max_daily_opportunities": 8,
+        "min_opportunity_score": 0.55
+      }
+    }
   }
 ]

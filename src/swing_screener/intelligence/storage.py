@@ -13,7 +13,12 @@ from swing_screener.intelligence.models import (
     SymbolState,
     ThemeCluster,
 )
-from swing_screener.utils.file_lock import locked_write_json_cli, locked_read_json_cli
+from swing_screener.utils.file_lock import (
+    locked_read_json_cli,
+    locked_read_text_cli,
+    locked_write_json_cli,
+    locked_write_text_cli,
+)
 
 
 class IntelligenceStorage:
@@ -47,38 +52,39 @@ class IntelligenceStorage:
 
     def write_events(self, events: Iterable[Event], asof: date | str) -> Path:
         path = self.events_path(asof)
-        with path.open("w", encoding="utf-8") as handle:
-            for event in events:
-                handle.write(json.dumps(asdict(event), sort_keys=True))
-                handle.write("\n")
+        lines = [json.dumps(asdict(event), sort_keys=True) for event in events]
+        payload = "\n".join(lines)
+        if payload:
+            payload += "\n"
+        locked_write_text_cli(path, payload)
         return path
 
     def write_signals(self, signals: Iterable[CatalystSignal], asof: date | str) -> Path:
         path = self.signals_path(asof)
         payload = [asdict(signal) for signal in signals]
-        path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+        locked_write_json_cli(path, payload)
         return path
 
     def write_themes(self, themes: Iterable[ThemeCluster], asof: date | str) -> Path:
         path = self.themes_path(asof)
         payload = [asdict(theme) for theme in themes]
-        path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+        locked_write_json_cli(path, payload)
         return path
 
     def write_opportunities(self, opportunities: Iterable[Opportunity], asof: date | str) -> Path:
         path = self.opportunities_path(asof)
         payload = [asdict(opportunity) for opportunity in opportunities]
-        path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+        locked_write_json_cli(path, payload)
         return path
 
     def load_opportunities(self, asof: date | str) -> list[Opportunity]:
         path = self.opportunities_path(asof)
         if not path.exists():
             return []
-        raw = path.read_text(encoding="utf-8").strip()
-        if not raw:
+        try:
+            payload = locked_read_json_cli(path)
+        except Exception:
             return []
-        payload = json.loads(raw)
         if not isinstance(payload, list):
             return []
         out: list[Opportunity] = []
@@ -100,6 +106,59 @@ class IntelligenceStorage:
                 )
             )
         return out
+
+    def load_events(self, asof: date | str) -> list[Event]:
+        path = self.events_path(asof)
+        if not path.exists():
+            return []
+        try:
+            raw = locked_read_text_cli(path)
+        except Exception:
+            return []
+
+        out: list[Event] = []
+        for line in raw.splitlines():
+            text = line.strip()
+            if not text:
+                continue
+            try:
+                item = json.loads(text)
+            except Exception:
+                continue
+            if not isinstance(item, dict):
+                continue
+            symbol = str(item.get("symbol", "")).strip().upper()
+            event_id = str(item.get("event_id", "")).strip()
+            source = str(item.get("source", "")).strip().lower()
+            headline = str(item.get("headline", "")).strip()
+            event_type = str(item.get("event_type", "news")).strip().lower() or "news"
+            occurred_at = str(item.get("occurred_at", "")).strip()
+            if not symbol or not event_id or not occurred_at or not headline:
+                continue
+            metadata = item.get("metadata")
+            if not isinstance(metadata, dict):
+                metadata = {}
+            out.append(
+                Event(
+                    event_id=event_id,
+                    symbol=symbol,
+                    source=source or "unknown",
+                    occurred_at=occurred_at,
+                    headline=headline,
+                    event_type=event_type,
+                    credibility=float(item.get("credibility", 0.0)),
+                    url=(str(item.get("url")) if item.get("url") else None),
+                    metadata=metadata,
+                )
+            )
+        return out
+
+    def latest_events_date(self) -> str | None:
+        files = sorted(self.root_dir.glob("events_*.jsonl"))
+        if not files:
+            return None
+        latest = files[-1].stem.replace("events_", "", 1)
+        return latest or None
 
     def latest_opportunities_date(self) -> str | None:
         files = sorted(self.root_dir.glob("opportunities_*.json"))

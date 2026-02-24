@@ -4,6 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 import json
 import logging
+from typing import Any
 
 try:
     import portalocker
@@ -17,7 +18,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_TIMEOUT = 5.0  # seconds
 
 
-def locked_read_json_cli(path: Path, timeout: float = DEFAULT_TIMEOUT) -> dict:
+def locked_read_json_cli(path: Path, timeout: float = DEFAULT_TIMEOUT) -> Any:
     """Read JSON file with file lock (CLI version).
     
     Falls back to non-locked read if portalocker unavailable.
@@ -32,6 +33,22 @@ def locked_read_json_cli(path: Path, timeout: float = DEFAULT_TIMEOUT) -> dict:
         logger.error(f"Lock timeout reading {path.name} after {timeout}s")
         raise RuntimeError(f"Could not acquire lock on {path.name} within {timeout}s")
     except Exception as exc:
+        logger.exception(f"Error reading {path.name}")
+        raise
+
+
+def locked_read_text_cli(path: Path, timeout: float = DEFAULT_TIMEOUT) -> str:
+    """Read plain text file with file lock (CLI version)."""
+    if not PORTALOCKER_AVAILABLE:
+        return path.read_text(encoding="utf-8")
+
+    try:
+        with portalocker.Lock(path, mode="r", timeout=timeout, encoding="utf-8") as fh:
+            return fh.read()
+    except portalocker.exceptions.LockException:
+        logger.error(f"Lock timeout reading {path.name} after {timeout}s")
+        raise RuntimeError(f"Could not acquire lock on {path.name} within {timeout}s")
+    except Exception:
         logger.exception(f"Error reading {path.name}")
         raise
 
@@ -74,5 +91,35 @@ def locked_write_json_cli(path: Path, data: dict | list, timeout: float = DEFAUL
         logger.error(f"Lock timeout writing {path.name} after {timeout}s")
         raise RuntimeError(f"Could not acquire lock on {path.name} within {timeout}s")
     except Exception as exc:
+        logger.exception(f"Error writing {path.name}")
+        raise
+
+
+def locked_write_text_cli(path: Path, text: str, timeout: float = DEFAULT_TIMEOUT) -> None:
+    """Write plain text with file lock (CLI version)."""
+    if not PORTALOCKER_AVAILABLE:
+        path.write_text(text, encoding="utf-8")
+        return
+
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if not path.exists():
+            path.touch()
+
+        with portalocker.Lock(
+            path,
+            mode="r+",
+            timeout=timeout,
+            encoding="utf-8",
+            flags=portalocker.LOCK_EX,
+        ) as fh:
+            fh.seek(0)
+            fh.truncate()
+            fh.write(text)
+            fh.flush()
+    except portalocker.exceptions.LockException:
+        logger.error(f"Lock timeout writing {path.name} after {timeout}s")
+        raise RuntimeError(f"Could not acquire lock on {path.name} within {timeout}s")
+    except Exception:
         logger.exception(f"Error writing {path.name}")
         raise

@@ -497,8 +497,8 @@ def main() -> None:
     )
     classify.add_argument(
         "--model",
-        default="mistral:7b-instruct",
-        help="Model name for provider (default: mistral:7b-instruct)",
+        default=None,
+        help="Model name for provider (uses provider default when omitted)",
     )
     classify.add_argument(
         "--base-url",

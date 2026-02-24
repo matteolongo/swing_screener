@@ -120,7 +120,7 @@ class TestLLMClassifyEndpoint:
         assert response.status_code == 422  # Validation error
     
     def test_classify_unknown_provider(self):
-        """Test that unknown provider returns error."""
+        """Test that unknown provider is rejected by request validation."""
         response = client.post(
             "/api/intelligence/classify",
             json={
@@ -129,8 +129,7 @@ class TestLLMClassifyEndpoint:
             },
         )
         
-        assert response.status_code == 400
-        assert "Unknown provider" in response.json()["detail"]
+        assert response.status_code == 422
     
     def test_classify_caching_behavior(self):
         """Test that identical headlines use cache."""
@@ -208,4 +207,4 @@ class TestLLMClassifyEndpoint:
         # Should return 503 if Ollama not available
         assert response.status_code in (200, 503)
         if response.status_code == 503:
-            assert "not available" in response.json()["detail"]
+            assert "unavailable" in response.json()["detail"]

@@ -36,6 +36,16 @@ def test_intelligence_run_launches_job(monkeypatch):
     assert payload["total_symbols"] == 3
 
 
+def test_intelligence_run_rejects_unsupported_provider():
+    client = TestClient(app)
+    res = client.post(
+        "/api/intelligence/run",
+        json={"symbols": ["AAPL"], "providers": ["unsupported_provider"]},
+    )
+    assert res.status_code == 422
+    assert "unsupported provider" in res.text.lower()
+
+
 def test_intelligence_status_returns_404_when_missing(monkeypatch):
     fake_manager = SimpleNamespace(
         start_job=lambda **kwargs: None,
@@ -128,5 +138,94 @@ def test_intelligence_opportunities_filters_by_symbols_query(monkeypatch):
         assert payload["asof_date"] == "2026-02-15"
         assert len(payload["opportunities"]) == 1
         assert payload["opportunities"][0]["symbol"] == "MSFT"
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_intelligence_events_returns_payload(monkeypatch):
+    class FakeStorage:
+        def latest_events_date(self):
+            return "2026-02-15"
+
+        def load_events(self, asof_date):
+            assert asof_date == "2026-02-15"
+            from swing_screener.intelligence.models import Event
+
+            return [
+                Event(
+                    event_id="evt-aapl-1",
+                    symbol="AAPL",
+                    source="yahoo_finance",
+                    occurred_at="2026-02-15T20:00:00",
+                    headline="AAPL receives analyst upgrade",
+                    event_type="analyst",
+                    credibility=0.74,
+                    metadata={"llm_model": "gpt-5-nano", "llm_provider": "openai"},
+                )
+            ]
+
+    service = intelligence_service.IntelligenceService(strategy_repo=SimpleNamespace(get_active_strategy=lambda: {}))
+    monkeypatch.setattr(service, "_storage", FakeStorage())
+    app.dependency_overrides = {}
+    from api.routers.intelligence import get_intelligence_service as dep
+
+    app.dependency_overrides[dep] = lambda: service
+    try:
+        client = TestClient(app)
+        res = client.get("/api/intelligence/events")
+        assert res.status_code == 200
+        payload = res.json()
+        assert payload["asof_date"] == "2026-02-15"
+        assert len(payload["events"]) == 1
+        assert payload["events"][0]["event_id"] == "evt-aapl-1"
+        assert payload["events"][0]["metadata"]["llm_provider"] == "openai"
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_intelligence_events_filters_by_symbols_query(monkeypatch):
+    class FakeStorage:
+        def latest_events_date(self):
+            return "2026-02-15"
+
+        def load_events(self, asof_date):
+            assert asof_date == "2026-02-15"
+            from swing_screener.intelligence.models import Event
+
+            return [
+                Event(
+                    event_id="evt-aapl-1",
+                    symbol="AAPL",
+                    source="yahoo_finance",
+                    occurred_at="2026-02-15T20:00:00",
+                    headline="AAPL receives analyst upgrade",
+                    event_type="analyst",
+                    credibility=0.74,
+                ),
+                Event(
+                    event_id="evt-msft-1",
+                    symbol="MSFT",
+                    source="yahoo_finance",
+                    occurred_at="2026-02-15T20:01:00",
+                    headline="MSFT expands cloud deal",
+                    event_type="news",
+                    credibility=0.68,
+                ),
+            ]
+
+    service = intelligence_service.IntelligenceService(strategy_repo=SimpleNamespace(get_active_strategy=lambda: {}))
+    monkeypatch.setattr(service, "_storage", FakeStorage())
+    app.dependency_overrides = {}
+    from api.routers.intelligence import get_intelligence_service as dep
+
+    app.dependency_overrides[dep] = lambda: service
+    try:
+        client = TestClient(app)
+        res = client.get("/api/intelligence/events?asof_date=2026-02-15&symbols=MSFT")
+        assert res.status_code == 200
+        payload = res.json()
+        assert payload["asof_date"] == "2026-02-15"
+        assert len(payload["events"]) == 1
+        assert payload["events"][0]["symbol"] == "MSFT"
     finally:
         app.dependency_overrides.clear()

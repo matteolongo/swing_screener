@@ -1,8 +1,9 @@
 from datetime import datetime
+from types import SimpleNamespace
 
 import pandas as pd
 
-from swing_screener.intelligence.config import IntelligenceConfig
+from swing_screener.intelligence.config import IntelligenceConfig, LLMConfig
 from swing_screener.intelligence.models import Event
 from swing_screener.intelligence.pipeline import run_intelligence_pipeline
 from swing_screener.intelligence.storage import IntelligenceStorage
@@ -83,3 +84,57 @@ def test_run_intelligence_pipeline_handles_empty_symbols(tmp_path):
     assert snapshot.signals == []
     assert snapshot.opportunities == []
 
+
+def test_run_intelligence_pipeline_enriches_event_credibility_with_llm(tmp_path, monkeypatch):
+    symbols = ["AAPL"]
+    events = [
+        Event(
+            event_id="evt-aapl",
+            symbol="AAPL",
+            source="yahoo_finance",
+            occurred_at="2026-02-02T00:00:00",
+            headline="AAPL reports strong quarterly earnings",
+            event_type="news",
+            credibility=0.65,
+        )
+    ]
+    monkeypatch.setattr(
+        "swing_screener.intelligence.pipeline.collect_events",
+        lambda **kwargs: events,
+    )
+
+    class FakeClassifier:
+        def classify(self, **kwargs):
+            classification = SimpleNamespace(
+                event_type=SimpleNamespace(value="EARNINGS"),
+                severity=SimpleNamespace(value="HIGH"),
+                primary_symbol="AAPL",
+                secondary_symbols=[],
+                is_material=True,
+                confidence=0.95,
+                summary="Apple reported earnings above expectations.",
+            )
+            return SimpleNamespace(classification=classification, cached=False, model_name="mock-classifier")
+
+    storage = IntelligenceStorage(tmp_path / "intel")
+    snapshot = run_intelligence_pipeline(
+        symbols=symbols,
+        cfg=IntelligenceConfig(enabled=True, llm=LLMConfig(enabled=True, provider="mock")),
+        technical_readiness={"AAPL": 0.8},
+        asof_dt=datetime.fromisoformat("2026-02-15T00:00:00"),
+        storage=storage,
+        ohlcv=_ohlcv(symbols),
+        llm_classifier=FakeClassifier(),
+    )
+
+    assert len(snapshot.events) == 1
+    enriched = snapshot.events[0]
+    assert enriched.event_type == "earnings"
+    assert enriched.credibility > 0.65
+    assert enriched.metadata.get("llm_event_type") == "EARNINGS"
+    assert enriched.metadata.get("llm_severity") == "HIGH"
+    assert enriched.metadata.get("llm_provider") == "mock"
+    assert isinstance(enriched.metadata.get("llm_trace"), dict)
+    trace = enriched.metadata["llm_trace"]
+    assert trace["provider"] == "mock"
+    assert trace["model"] == "mock-classifier"
