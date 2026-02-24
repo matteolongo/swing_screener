@@ -1,5 +1,9 @@
-from swing_screener.strategies.base import StrategyModule
-from swing_screener.strategies.registry import get_strategy_module, list_strategy_modules
+"""Compatibility shim for legacy imports.
 
-__all__ = ["StrategyModule", "get_strategy_module", "list_strategy_modules"]
+Use `swing_screener.strategy` as canonical import path.
+"""
 
+from swing_screener.strategy import StrategyModule
+from swing_screener.strategy.registry import get_strategy_module, list_strategy_modules, register
+
+__all__ = ["StrategyModule", "get_strategy_module", "list_strategy_modules", "register"]

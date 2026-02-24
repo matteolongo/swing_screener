@@ -1,8 +1,3 @@
-"""Compatibility shim for legacy imports.
-
-Use `swing_screener.risk.recommendations.engine` as canonical import path.
-"""
-
 from swing_screener.risk.recommendations.engine import (
     ChecklistGate,
     CostPayload,
@@ -12,6 +7,11 @@ from swing_screener.risk.recommendations.engine import (
     RiskPayload,
     build_recommendation,
 )
+from swing_screener.risk.recommendations.thesis import (
+    TradeThesis,
+    build_trade_thesis,
+    thesis_to_dict,
+)
 
 __all__ = [
     "ChecklistGate",
@@ -20,5 +20,8 @@ __all__ = [
     "Reason",
     "RecommendationPayload",
     "RiskPayload",
+    "TradeThesis",
     "build_recommendation",
+    "build_trade_thesis",
+    "thesis_to_dict",
 ]

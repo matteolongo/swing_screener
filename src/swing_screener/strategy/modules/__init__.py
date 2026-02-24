@@ -1,8 +1,3 @@
-"""Compatibility shim for legacy imports.
-
-Use `swing_screener.strategy.modules.momentum` as canonical import path.
-"""
-
 from swing_screener.strategy.modules.momentum import (
     MomentumStrategyModule,
     build_momentum_report,

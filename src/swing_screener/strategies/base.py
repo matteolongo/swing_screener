@@ -1,19 +1,8 @@
-from __future__ import annotations
+"""Compatibility shim for legacy imports.
 
-from typing import Protocol, Iterable
-import pandas as pd
+Use `swing_screener.strategy.base` as canonical import path.
+"""
 
-from swing_screener.reporting.config import ReportConfig
+from swing_screener.strategy.base import StrategyModule
 
-
-class StrategyModule(Protocol):
-    name: str
-
-    def build_report(
-        self,
-        ohlcv: pd.DataFrame,
-        cfg: ReportConfig,
-        exclude_tickers: Iterable[str] | None = None,
-    ) -> pd.DataFrame:
-        ...
-
+__all__ = ["StrategyModule"]
