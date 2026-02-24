@@ -1,5 +1,5 @@
 {
-  "asof": "2026-02-23",
+  "asof": "2026-02-24",
   "positions": [
     {
       "ticker": "INTC",
@@ -57,7 +57,7 @@
     },
     {
       "ticker": "MUFG",
-      "status": "open",
+      "status": "closed",
       "position_id": "POS-MUFG-20260202-01",
       "source_order_id": "MUFG-20260202202527",
       "entry_date": "2026-02-02",
@@ -66,8 +66,8 @@
       "shares": 4,
       "initial_risk": 1.64,
       "max_favorable_price": 19.139999389648438,
-      "exit_date": null,
-      "exit_price": null,
+      "exit_date": "2026-02-24",
+      "exit_price": 18.44,
       "notes": "Synced with Degiro snapshot (stocks only) on 2026-02-13.",
       "exit_order_ids": [
         "ORD-STOP-POS-MUFG-20260202-01"

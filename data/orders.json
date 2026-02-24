@@ -1,5 +1,5 @@
 {
-  "asof": "2026-02-23",
+  "asof": "2026-02-24",
   "orders": [
     {
       "order_id": "ORD-INTC-20260115-ENTRY",
@@ -716,6 +716,25 @@
       "order_kind": "stop",
       "position_id": "POS-REP.MC-20260218-01",
       "tif": "GTC"
+    },
+    {
+      "order_id": "ENGI.PA-20260224203641",
+      "ticker": "ENGI.PA",
+      "status": "pending",
+      "order_type": "BUY_LIMIT",
+      "quantity": 3,
+      "limit_price": 26.98,
+      "stop_price": 25.98,
+      "order_date": "2026-02-24",
+      "filled_date": "",
+      "entry_price": null,
+      "notes": "From screener: Score 90.3, Rank #3",
+      "order_kind": "entry",
+      "parent_order_id": null,
+      "position_id": null,
+      "tif": "GTC",
+      "fee_eur": null,
+      "fill_fx_rate": null
     }
   ]
 }
