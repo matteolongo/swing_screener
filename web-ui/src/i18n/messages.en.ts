@@ -954,7 +954,16 @@ export const messagesEn = {
         'Run complete: {{completed}}/{{total}} symbols analyzed, {{opportunities}} opportunities found.',
       statusError: 'Run failed: {{error}}',
       updatedAt: 'Last update: {{updatedAt}}',
+      llmStatus:
+        'LLM classified {{classified}} events (failures: {{failures}}). Providers: {{providers}}. Models: {{models}}.',
+      llmEvidenceTitle: 'LLM evidence from latest scan',
+      llmMetaLine:
+        'Provider {{provider}} | Model {{model}} | Confidence {{confidence}} | Severity {{severity}}',
+      llmErrorLine: 'LLM error: {{error}}',
+      llmNoSummary: 'No LLM summary available for this event.',
+      llmUnknown: 'unknown',
       statusLoadError: 'Unable to load intelligence run status.',
+      eventsLoadError: 'Unable to load intelligence event evidence.',
       opportunitiesTitle: 'Opportunities (as of {{date}})',
       refreshOpportunities: 'Refresh opportunities',
       loading: 'Loading opportunities...',
