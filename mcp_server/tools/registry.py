@@ -195,6 +195,18 @@ def create_registry(config: MCPConfig) -> ToolRegistry:
         registry.register_tools(get_social_tools())
         logger.info("Registered social tools")
     
+    # Register intelligence tools if enabled
+    if config.is_feature_enabled('intelligence'):
+        from mcp_server.tools.intelligence import get_intelligence_tools
+        registry.register_tools(get_intelligence_tools())
+        logger.info("Registered intelligence tools")
+    
+    # Register backtest tools if enabled
+    if config.is_feature_enabled('backtest'):
+        from mcp_server.tools.backtest import get_backtest_tools
+        registry.register_tools(get_backtest_tools())
+        logger.info("Registered backtest tools")
+    
     logger.info(
         "Tool registry initialized: %d tools registered across %d features",
         registry.tool_count(),
