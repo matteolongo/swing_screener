@@ -1,7 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { 
   LayoutDashboard, 
-  BarChart3,
   SlidersHorizontal,
   ClipboardCheck,
 } from 'lucide-react';
@@ -26,12 +25,6 @@ const navigation = [
     href: '/daily-review', 
     icon: ClipboardCheck,
     advanced: false, // Always enabled
-  },
-  { 
-    labelKey: 'sidebar.nav.backtest', 
-    href: '/backtest', 
-    icon: BarChart3,
-    advanced: true, // Disabled in Beginner Mode
   },
   { 
     labelKey: 'sidebar.nav.strategy', 

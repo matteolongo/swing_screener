@@ -11,7 +11,6 @@ from swing_screener.signals.entries import EntrySignalConfig
 from swing_screener.risk.position_sizing import RiskConfig
 from swing_screener.reporting.config import ReportConfig
 from swing_screener.portfolio.state import ManageConfig
-from swing_screener.backtest.simulator import BacktestConfig
 from swing_screener.social.config import (
     DEFAULT_PROVIDERS,
     DEFAULT_SENTIMENT_ANALYZER,
@@ -112,47 +111,4 @@ def build_report_config(strategy: dict, *, top_override: Optional[int] = None) -
         social_overlay=social_overlay,
         only_active_signals=False,
         strategy_module=strategy_module,
-    )
-
-
-def build_backtest_config(
-    strategy: dict, *, overrides: Optional[dict] = None
-) -> BacktestConfig:
-    overrides = overrides or {}
-    signals = build_entry_config(strategy)
-    universe = build_universe_config(strategy)
-    risk = build_risk_config(strategy)
-
-    raw = get_nested_dict(strategy, "backtest")
-
-    entry_type = overrides.get("entry_type", raw.get("entry_type", "auto"))
-    exit_mode = overrides.get("exit_mode", raw.get("exit_mode", "trailing_stop"))
-    take_profit_r = overrides.get("take_profit_r", raw.get("take_profit_r", 2.0))
-    max_holding_days = overrides.get("max_holding_days", raw.get("max_holding_days", 20))
-    breakeven_at_r = overrides.get("breakeven_at_r", raw.get("breakeven_at_r", 1.0))
-    trail_after_r = overrides.get("trail_after_r", raw.get("trail_after_r", 2.0))
-    trail_sma = overrides.get("trail_sma", raw.get("trail_sma", 20))
-    sma_buffer_pct = overrides.get("sma_buffer_pct", raw.get("sma_buffer_pct", 0.005))
-    commission_pct = overrides.get("commission_pct", raw.get("commission_pct", 0.0))
-    slippage_bps = overrides.get("slippage_bps", raw.get("slippage_bps", 5.0))
-    fx_pct = overrides.get("fx_pct", raw.get("fx_pct", 0.0))
-    min_history = overrides.get("min_history", raw.get("min_history", signals.min_history))
-
-    return BacktestConfig(
-        entry_type=entry_type,
-        breakout_lookback=signals.breakout_lookback,
-        pullback_ma=signals.pullback_ma,
-        atr_window=universe.vol.atr_window,
-        k_atr=risk.k_atr,
-        exit_mode=exit_mode,
-        take_profit_R=take_profit_r,
-        max_holding_days=max_holding_days,
-        breakeven_at_R=breakeven_at_r,
-        trail_sma=trail_sma,
-        trail_after_R=trail_after_r,
-        sma_buffer_pct=sma_buffer_pct,
-        min_history=min_history,
-        commission_pct=commission_pct,
-        slippage_bps=slippage_bps,
-        fx_pct=fx_pct,
     )

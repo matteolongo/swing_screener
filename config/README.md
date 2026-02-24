@@ -12,7 +12,6 @@ Configuration file for the MCP (Model Context Protocol) server.
 
 **Structure:**
 - `features`: Feature domains (portfolio, strategy, screener, config, daily_review, social)
-  - Backtest is listed in the sample config but is **not implemented** in MCP tools yet
   - Each feature has tools that can be individually enabled/disabled
   - Per-tool settings: timeout, confirmation requirements
 - `security`: Security settings

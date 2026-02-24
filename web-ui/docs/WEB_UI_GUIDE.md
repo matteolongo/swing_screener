@@ -12,7 +12,6 @@ Daily trading workflow through the Swing Screener web interface.
 - Orders: list, create, fill, cancel
 - Positions: open/closed positions, stop updates
 - Strategy: list and activate strategies
-- Backtest: quick and full backtests
 - Daily Review: consolidated daily workflow
 - Settings: app configuration and preferences
 

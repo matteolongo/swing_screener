@@ -50,7 +50,7 @@ from swing_screener.portfolio.metrics import (
     calculate_r_now,
     calculate_total_position_value,
 )
-from swing_screener.utils.date_helpers import get_default_backtest_start
+from swing_screener.utils.date_helpers import get_default_history_start
 
 logger = logging.getLogger(__name__)
 
@@ -169,7 +169,7 @@ class PortfolioService:
         if not tickers:
             return {}
 
-        start_date = get_default_backtest_start()
+        start_date = get_default_history_start()
         end_date = get_today_str()
         ohlcv = self._provider.fetch_ohlcv(tickers, start_date=start_date, end_date=end_date)
         prices, _ = _last_close_map(ohlcv)
@@ -684,7 +684,7 @@ class PortfolioService:
 
         if tickers:
             try:
-                start_date = get_default_backtest_start()
+                start_date = get_default_history_start()
                 end_date = get_today_str()
                 ohlcv = self._provider.fetch_ohlcv(tickers, start_date=start_date, end_date=end_date)
                 last_prices, last_bars = _last_close_map(ohlcv)

@@ -178,7 +178,6 @@ src/swing_screener/
   reporting/            # Daily report pipeline + exports
   execution/            # Order guidance and order-state models
   portfolio/            # Position state + management + migration helpers
-  backtest/             # Deterministic historical simulation in R units
 
 api/                    # FastAPI backend (REST API)
   services/             # Business logic (shared with MCP server)

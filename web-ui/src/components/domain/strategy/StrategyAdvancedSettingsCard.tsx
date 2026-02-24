@@ -6,14 +6,9 @@ import {
   CheckboxInput,
   HelpInfo,
   NumberInput,
-  SelectInput,
   TextInput,
 } from '@/components/domain/strategy/StrategyFieldControls';
-import {
-  Strategy,
-  StrategyEntryType,
-  StrategyExitMode,
-} from '@/features/strategy/types';
+import { Strategy } from '@/features/strategy/types';
 
 interface StrategyAdvancedSettingsCardProps {
   draft: Strategy;
@@ -34,17 +29,6 @@ export default function StrategyAdvancedSettingsCard({
   highFeeWarning,
   help,
 }: StrategyAdvancedSettingsCardProps) {
-  const backtestEntryOptions = [
-    { value: 'auto', label: t('strategyPage.advanced.options.entryAuto') },
-    { value: 'breakout', label: t('strategyPage.advanced.options.entryBreakout') },
-    { value: 'pullback', label: t('strategyPage.advanced.options.entryPullback') },
-  ];
-
-  const backtestExitOptions = [
-    { value: 'trailing_stop', label: t('strategyPage.advanced.options.exitTrailingStop') },
-    { value: 'take_profit', label: t('strategyPage.advanced.options.exitTakeProfit') },
-  ];
-
   return (
     <Card variant="bordered">
       <CardHeader>
@@ -311,6 +295,18 @@ export default function StrategyAdvancedSettingsCard({
                   help={help.minRr}
                 />
                 <NumberInput
+                  label={t('strategyPage.advanced.fields.takeProfitR')}
+                  value={draft.risk.rrTarget}
+                  onChange={(value) =>
+                    setDraft({
+                      ...draft,
+                      risk: { ...draft.risk, rrTarget: value },
+                    })
+                  }
+                  step={0.1}
+                  min={0.1}
+                />
+                <NumberInput
                   label={t('strategyPage.advanced.fields.maxFeeRisk')}
                   value={draft.risk.maxFeeRiskPct * 100}
                   onChange={(value) =>
@@ -324,6 +320,19 @@ export default function StrategyAdvancedSettingsCard({
                   max={100}
                   suffix="%"
                   help={help.maxFeeRiskPct}
+                />
+                <NumberInput
+                  label={t('strategyPage.advanced.fields.commission')}
+                  value={draft.risk.commissionPct * 100}
+                  onChange={(value) =>
+                    setDraft({
+                      ...draft,
+                      risk: { ...draft.risk, commissionPct: value / 100 },
+                    })
+                  }
+                  step={0.05}
+                  min={0}
+                  suffix="%"
                 />
               </div>
               {(lowRrWarning || highFeeWarning) && (
@@ -501,136 +510,6 @@ export default function StrategyAdvancedSettingsCard({
                       manage: { ...draft.manage, benchmark: value.toUpperCase() },
                     })
                   }
-                />
-              </div>
-            </div>
-
-            <div>
-              <div className="text-sm font-semibold mb-3">
-                {t('strategyPage.advanced.sections.backtestDefaults')}
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <SelectInput
-                  label={t('strategyPage.advanced.fields.entryType')}
-                  value={draft.backtest.entryType}
-                  options={backtestEntryOptions}
-                  onChange={(value) =>
-                    setDraft({
-                      ...draft,
-                      backtest: { ...draft.backtest, entryType: value as StrategyEntryType },
-                    })
-                  }
-                />
-                <SelectInput
-                  label={t('strategyPage.advanced.fields.exitMode')}
-                  value={draft.backtest.exitMode}
-                  options={backtestExitOptions}
-                  onChange={(value) =>
-                    setDraft({
-                      ...draft,
-                      backtest: { ...draft.backtest, exitMode: value as StrategyExitMode },
-                    })
-                  }
-                />
-                <NumberInput
-                  label={t('strategyPage.advanced.fields.takeProfitR')}
-                  value={draft.backtest.takeProfitR}
-                  onChange={(value) =>
-                    setDraft({
-                      ...draft,
-                      backtest: { ...draft.backtest, takeProfitR: value },
-                    })
-                  }
-                  step={0.1}
-                  min={0}
-                />
-                <NumberInput
-                  label={t('strategyPage.advanced.fields.maxHoldingDays')}
-                  value={draft.backtest.maxHoldingDays}
-                  onChange={(value) =>
-                    setDraft({
-                      ...draft,
-                      backtest: { ...draft.backtest, maxHoldingDays: value },
-                    })
-                  }
-                  step={1}
-                  min={1}
-                />
-                <NumberInput
-                  label={t('strategyPage.advanced.fields.breakevenAtR')}
-                  value={draft.backtest.breakevenAtR}
-                  onChange={(value) =>
-                    setDraft({
-                      ...draft,
-                      backtest: { ...draft.backtest, breakevenAtR: value },
-                    })
-                  }
-                  step={0.1}
-                  min={0}
-                />
-                <NumberInput
-                  label={t('strategyPage.advanced.fields.trailAfterR')}
-                  value={draft.backtest.trailAfterR}
-                  onChange={(value) =>
-                    setDraft({
-                      ...draft,
-                      backtest: { ...draft.backtest, trailAfterR: value },
-                    })
-                  }
-                  step={0.1}
-                  min={0}
-                />
-                <NumberInput
-                  label={t('strategyPage.advanced.fields.trailSma')}
-                  value={draft.backtest.trailSma}
-                  onChange={(value) =>
-                    setDraft({
-                      ...draft,
-                      backtest: { ...draft.backtest, trailSma: value },
-                    })
-                  }
-                  step={1}
-                  min={1}
-                  help={help.trailSma}
-                />
-                <NumberInput
-                  label={t('strategyPage.advanced.fields.smaBuffer')}
-                  value={draft.backtest.smaBufferPct * 100}
-                  onChange={(value) =>
-                    setDraft({
-                      ...draft,
-                      backtest: { ...draft.backtest, smaBufferPct: value / 100 },
-                    })
-                  }
-                  step={0.1}
-                  min={0}
-                  suffix="%"
-                  help={help.smaBuffer}
-                />
-                <NumberInput
-                  label={t('strategyPage.advanced.fields.commission')}
-                  value={draft.backtest.commissionPct * 100}
-                  onChange={(value) =>
-                    setDraft({
-                      ...draft,
-                      backtest: { ...draft.backtest, commissionPct: value / 100 },
-                    })
-                  }
-                  step={0.05}
-                  min={0}
-                  suffix="%"
-                />
-                <NumberInput
-                  label={t('strategyPage.advanced.fields.minHistory')}
-                  value={draft.backtest.minHistory}
-                  onChange={(value) =>
-                    setDraft({
-                      ...draft,
-                      backtest: { ...draft.backtest, minHistory: value },
-                    })
-                  }
-                  step={1}
-                  min={1}
                 />
               </div>
             </div>

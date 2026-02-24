@@ -156,7 +156,7 @@
       },
       "beginnerRange": "Balanced weighting",
       "defaultGuidance": "Your current split is excellent.",
-      "dangerZone": "Over-optimizing weights without large backtests.",
+      "dangerZone": "Over-optimizing weights without enough live observation.",
       "proTip": "Robust strategies beat perfectly tuned ones."
     },
     "socialOverlay": {

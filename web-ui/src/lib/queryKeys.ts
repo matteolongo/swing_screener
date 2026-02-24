@@ -16,7 +16,6 @@ export const queryKeys = {
   portfolioSummary: () => ['portfolio-summary'] as const,
   positionStopSuggestion: (positionId?: string) =>
     ['positions', positionId, 'stop-suggestion'] as const,
-  backtestSimulations: () => ['backtest-simulations'] as const,
   socialWarmupStatus: (jobId?: string) => ['social-warmup', jobId] as const,
   intelligenceRunStatus: (jobId?: string) => ['intelligence-run-status', jobId] as const,
   intelligenceOpportunities: (asofDate?: string, symbolScope?: string) =>

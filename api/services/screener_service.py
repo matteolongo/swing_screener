@@ -346,7 +346,6 @@ class ScreenerService:
 
             fields_set = request.model_fields_set
             strategy = self._resolve_strategy(request.strategy_id)
-            backtest_cfg = strategy.get("backtest", {}) if isinstance(strategy, dict) else {}
             universe_cfg = build_universe_config(strategy)
             active_currencies = _infer_active_currencies(request, universe_cfg.filt.currencies)
             now_utc = dt.datetime.now(dt.timezone.utc)
@@ -542,8 +541,8 @@ class ScreenerService:
                 if social_overlay_cfg.enabled and not overlay_reasons:
                     overlay_reasons = ["BACKGROUND_WARMUP"]
 
-                take_profit_r = _safe_float(backtest_cfg.get("take_profit_r", 2.0), default=2.0)
-                commission_pct = _safe_float(backtest_cfg.get("commission_pct", 0.0), default=0.0)
+                rr_target = _safe_float(getattr(risk_cfg, "rr_target", 2.0), default=2.0)
+                commission_pct = _safe_float(getattr(risk_cfg, "commission_pct", 0.0), default=0.0)
 
                 rec_payload = evaluate_recommendation(
                     signal=str(signal) if not _is_na_scalar(signal) else None,
@@ -552,7 +551,7 @@ class ScreenerService:
                     shares=shares_val,
                     overlay_status=overlay_status,
                     risk_cfg=risk_cfg,
-                    rr_target=take_profit_r,
+                    rr_target=rr_target,
                     costs=RiskEngineConfig(
                         commission_pct=commission_pct,
                         slippage_bps=5.0,
