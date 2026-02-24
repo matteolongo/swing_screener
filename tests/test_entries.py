@@ -1,6 +1,6 @@
 import pandas as pd
 
-from swing_screener.signals.entries import (
+from swing_screener.selection.entries import (
     breakout_signal,
     pullback_reclaim_signal,
     build_signal_board,

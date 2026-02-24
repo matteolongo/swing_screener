@@ -5,7 +5,7 @@ from typing import Iterable
 
 import pandas as pd
 
-from swing_screener.reporting.config import ReportConfig
+from swing_screener.strategy.report_config import ReportConfig
 
 
 def build_daily_report(

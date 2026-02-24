@@ -1,7 +1,7 @@
 import pandas as pd
 
 from swing_screener.reporting.report import build_daily_report, ReportConfig
-from swing_screener.screeners.universe import UniverseConfig, UniverseFilterConfig
+from swing_screener.selection.universe import UniverseConfig, UniverseFilterConfig
 from swing_screener.risk.position_sizing import RiskConfig
 from swing_screener.portfolio.state import Position, evaluate_positions, ManageConfig
 from swing_screener.portfolio.state import render_degiro_actions_md
