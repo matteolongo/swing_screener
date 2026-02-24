@@ -18,6 +18,10 @@ from api.services.screener_service import ScreenerService
 from api.services.social_service import SocialService
 from api.services.strategy_service import StrategyService
 from api.utils.files import read_json_file, write_json_file, get_today_str
+from swing_screener.execution.providers import (
+    ExecutionProvider,
+    get_execution_provider as resolve_execution_provider,
+)
 
 # Repository root
 ROOT_DIR = Path(__file__).parent.parent.resolve()
@@ -28,6 +32,8 @@ ORDERS_FILE = DATA_DIR / "orders.json"
 # Global singleton config repository (thread-safe)
 _config_repository: Optional[ConfigRepository] = None
 _config_repository_lock = threading.Lock()
+_execution_provider: Optional[ExecutionProvider] = None
+_execution_provider_lock = threading.Lock()
 
 
 def get_positions_path() -> Path:
@@ -67,11 +73,26 @@ def get_config_repo() -> ConfigRepository:
     return _config_repository
 
 
+def get_execution_provider() -> Optional[ExecutionProvider]:
+    """Get singleton execution provider from environment configuration."""
+    global _execution_provider
+    if _execution_provider is None:
+        with _execution_provider_lock:
+            if _execution_provider is None:
+                _execution_provider = resolve_execution_provider()
+    return _execution_provider
+
+
 def get_portfolio_service(
     orders_repo: OrdersRepository = Depends(get_orders_repo),
     positions_repo: PositionsRepository = Depends(get_positions_repo),
+    execution_provider: Optional[ExecutionProvider] = Depends(get_execution_provider),
 ) -> PortfolioService:
-    return PortfolioService(orders_repo=orders_repo, positions_repo=positions_repo)
+    return PortfolioService(
+        orders_repo=orders_repo,
+        positions_repo=positions_repo,
+        execution_provider=execution_provider,
+    )
 
 
 def get_strategy_service(

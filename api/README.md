@@ -16,6 +16,11 @@ Docs:
 - File access is guarded by `api/utils/file_lock.py` to avoid concurrent write races.
 - Database module exists but is not wired by default (see `docs/engineering/DATABASE_MIGRATION.md`).
 
+## Broker Execution Provider
+- `SWING_SCREENER_EXECUTION_PROVIDER=local` (default) keeps local JSON as the portfolio/order source.
+- `SWING_SCREENER_EXECUTION_PROVIDER=alpaca` uses Alpaca Trading API as source of truth for open positions and orders.
+- Required with Alpaca mode: `ALPACA_API_KEY`, `ALPACA_SECRET_KEY`, optional `ALPACA_PAPER=true|false`.
+
 ## API Surface (by router)
 Health:
 - `GET /`
@@ -51,6 +56,8 @@ Portfolio (`/api/portfolio`):
 - `GET /api/portfolio/positions/{position_id}/stop-suggestion`
 - `POST /api/portfolio/positions/{position_id}/close`
 - `GET /api/portfolio/summary`
+- `POST /api/portfolio/sync`
+- `GET /api/portfolio/export`
 - `GET /api/portfolio/orders`
 - `GET /api/portfolio/orders/snapshot`
 - `GET /api/portfolio/orders/{order_id}`
