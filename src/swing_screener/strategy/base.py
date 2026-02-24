@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Protocol, Iterable
 import pandas as pd
 
-from swing_screener.reporting.config import ReportConfig
+from swing_screener.strategy.report_config import ReportConfig
 
 
 class StrategyModule(Protocol):
@@ -16,4 +16,3 @@ class StrategyModule(Protocol):
         exclude_tickers: Iterable[str] | None = None,
     ) -> pd.DataFrame:
         ...
-

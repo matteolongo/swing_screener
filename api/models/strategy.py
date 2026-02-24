@@ -4,8 +4,6 @@ from __future__ import annotations
 from typing import Optional, Literal
 from pydantic import BaseModel, Field, field_validator
 
-from api.models.backtest import FullEntryType
-
 
 class StrategyTrend(BaseModel):
     sma_fast: int = Field(gt=0)
@@ -70,6 +68,8 @@ class StrategyRisk(BaseModel):
     min_shares: int = Field(ge=1)
     k_atr: float = Field(gt=0)
     min_rr: float = Field(gt=0, default=2.0)
+    rr_target: float = Field(gt=0, default=2.0)
+    commission_pct: float = Field(ge=0, default=0.0)
     max_fee_risk_pct: float = Field(ge=0, le=1, default=0.2)
     regime_enabled: bool = False
     regime_trend_sma: int = Field(gt=1, default=200)
@@ -86,19 +86,6 @@ class StrategyManage(BaseModel):
     sma_buffer_pct: float = Field(ge=0)
     max_holding_days: int = Field(gt=0)
     benchmark: str
-
-
-class StrategyBacktest(BaseModel):
-    entry_type: FullEntryType = "auto"
-    exit_mode: Literal["take_profit", "trailing_stop"] = "trailing_stop"
-    take_profit_r: float = Field(gt=0)
-    max_holding_days: int = Field(gt=0)
-    breakeven_at_r: float = Field(ge=0)
-    trail_after_r: float = Field(ge=0)
-    trail_sma: int = Field(gt=0)
-    sma_buffer_pct: float = Field(ge=0)
-    commission_pct: float = Field(ge=0)
-    min_history: int = Field(gt=0)
 
 
 class StrategySocialOverlay(BaseModel):
@@ -122,7 +109,6 @@ class StrategyBase(BaseModel):
     signals: StrategySignals
     risk: StrategyRisk
     manage: StrategyManage
-    backtest: StrategyBacktest
     social_overlay: StrategySocialOverlay = Field(default_factory=StrategySocialOverlay)
 
 

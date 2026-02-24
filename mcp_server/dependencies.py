@@ -13,7 +13,6 @@ from pathlib import Path
 from api.repositories.orders_repo import OrdersRepository
 from api.repositories.positions_repo import PositionsRepository
 from api.repositories.strategy_repo import StrategyRepository
-from api.services.backtest_service import BacktestService
 from api.services.daily_review_service import DailyReviewService
 from api.services.portfolio_service import PortfolioService
 from api.services.screener_service import ScreenerService
@@ -70,11 +69,6 @@ def get_screener_service() -> ScreenerService:
     return ScreenerService(strategy_repo=get_strategy_repo())
 
 
-def get_backtest_service() -> BacktestService:
-    """Get backtest service instance with injected dependencies."""
-    return BacktestService(strategy_repo=get_strategy_repo())
-
-
 def get_social_service() -> SocialService:
     """Get social service instance with injected dependencies."""
     return SocialService(strategy_repo=get_strategy_repo())
@@ -87,4 +81,3 @@ def get_daily_review_service() -> DailyReviewService:
         portfolio_service=get_portfolio_service(),
         data_dir=DATA_DIR,
     )
-

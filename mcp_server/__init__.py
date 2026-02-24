@@ -7,7 +7,6 @@ The server is organized into feature domains:
 - Portfolio: Position and order management
 - Screener: Stock screening and analysis
 - Strategy: Trading strategy configuration
-- Backtest: Historical strategy testing
 - Config: System configuration management
 - Social: Social sentiment analysis
 - Daily Review: Combined workflow tools

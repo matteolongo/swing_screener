@@ -99,7 +99,7 @@ class TestExceptionHandlingRobustness:
 
     def test_file_not_found_returns_404(self):
         """Test that file not found errors return 404."""
-        response = client.get("/api/backtest/simulations/nonexistent-simulation-id")
+        response = client.get("/api/strategy/nonexistent-strategy-id")
         
         assert response.status_code == 404
         data = response.json()

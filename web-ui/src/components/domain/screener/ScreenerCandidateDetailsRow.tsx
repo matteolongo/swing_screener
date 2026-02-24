@@ -1,5 +1,5 @@
 import { CandidateViewModel, hasOverlayData } from '@/features/screener/viewModel';
-import { BarChart3, FlaskConical, MessageCircle, Sparkles } from 'lucide-react';
+import { FlaskConical, MessageCircle, Sparkles } from 'lucide-react';
 import MetricHelpLabel from '@/components/domain/education/MetricHelpLabel';
 import OverlayBadge from '@/components/domain/recommendation/OverlayBadge';
 import { formatPercent } from '@/utils/formatters';
@@ -9,7 +9,6 @@ interface ScreenerCandidateDetailsRowProps {
   candidate: CandidateViewModel;
   onSocialClick: () => void;
   onThesisClick: () => void;
-  onBacktestClick: () => void;
 }
 
 /**
@@ -19,7 +18,6 @@ export default function ScreenerCandidateDetailsRow({
   candidate,
   onSocialClick,
   onThesisClick,
-  onBacktestClick,
 }: ScreenerCandidateDetailsRowProps) {
   const overlayClassByStatus: Record<string, string> = {
     OFF: 'bg-gray-50 border-gray-200',
@@ -92,15 +90,6 @@ export default function ScreenerCandidateDetailsRow({
                   </button>
                 )}
 
-                <button
-                  type="button"
-                  onClick={onBacktestClick}
-                  className="inline-flex items-center justify-center gap-2 rounded-md border border-violet-300 bg-white px-3 py-2 text-sm text-violet-800 hover:bg-violet-50 dark:border-violet-700 dark:bg-violet-950/30 dark:text-violet-200 dark:hover:bg-violet-900/30"
-                  title={t('screener.table.quickBacktestTitle')}
-                >
-                  <BarChart3 className="h-4 w-4" />
-                  {t('screener.table.quickBacktestTitle')}
-                </button>
               </div>
             </div>
           </div>

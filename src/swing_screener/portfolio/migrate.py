@@ -2,12 +2,36 @@ from __future__ import annotations
 
 from dataclasses import replace
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 import datetime as dt
+import importlib
 
-from swing_screener.execution.orders import Order, load_orders, save_orders
-from swing_screener.execution.order_workflows import normalize_orders
-from swing_screener.portfolio.state import Position, load_positions, save_positions
+
+def _load_orders(path: str | Path) -> list[Any]:
+    module = importlib.import_module("swing_screener.execution.orders")
+    return module.load_orders(path)
+
+
+def _save_orders(path: str | Path, orders: list[Any], *, asof: str) -> None:
+    module = importlib.import_module("swing_screener.execution.orders")
+    module.save_orders(path, orders, asof=asof)
+
+
+def _normalize_orders_impl(orders: list[Any]) -> tuple[list[Any], bool]:
+    module = importlib.import_module("swing_screener.execution.order_workflows")
+    return module.normalize_orders(orders)
+
+
+def _load_positions(path: str | Path) -> list[Any]:
+    from swing_screener.portfolio.state import load_positions
+
+    return load_positions(path)
+
+
+def _save_positions(path: str | Path, positions: list[Any], *, asof: str) -> None:
+    from swing_screener.portfolio.state import save_positions
+
+    save_positions(path, positions, asof=asof)
 
 
 def _slug_date(value: str) -> str:
@@ -26,11 +50,11 @@ def _generate_position_id(
     return f"POS-{ticker}-{slug}-{seq:02d}"
 
 
-def _assign_position_ids(positions: list[Position]) -> tuple[list[Position], bool]:
+def _assign_position_ids(positions: list[Any]) -> tuple[list[Any], bool]:
     used = {p.position_id for p in positions if p.position_id}
     counts: dict[tuple[str, str], int] = {}
     updated = False
-    out: list[Position] = []
+    out: list[Any] = []
     for pos in positions:
         if pos.position_id:
             out.append(pos)
@@ -48,11 +72,11 @@ def _assign_position_ids(positions: list[Position]) -> tuple[list[Position], boo
     return out, updated
 
 
-def _normalize_orders(orders: list[Order]) -> tuple[list[Order], bool]:
-    return normalize_orders(orders)
+def _normalize_orders(orders: list[Any]) -> tuple[list[Any], bool]:
+    return _normalize_orders_impl(orders)
 
 
-def _match_entry_order(position: Position, orders: list[Order]) -> Optional[Order]:
+def _match_entry_order(position: Any, orders: list[Any]) -> Optional[Any]:
     candidates = [
         o
         for o in orders
@@ -63,7 +87,7 @@ def _match_entry_order(position: Position, orders: list[Order]) -> Optional[Orde
     if not candidates:
         return None
 
-    def score(o: Order) -> tuple[int, int]:
+    def score(o: Any) -> tuple[int, int]:
         score_date = 1 if o.filled_date == position.entry_date else 0
         score_price = 0
         if position.entry_price and o.entry_price is not None:
@@ -75,7 +99,7 @@ def _match_entry_order(position: Position, orders: list[Order]) -> Optional[Orde
     return candidates[0]
 
 
-def _ensure_exit_ids(position: Position, orders: list[Order]) -> Position:
+def _ensure_exit_ids(position: Any, orders: list[Any]) -> Any:
     exit_ids = set(position.exit_order_ids or [])
     for order in orders:
         if order.position_id != position.position_id:
@@ -88,9 +112,9 @@ def _ensure_exit_ids(position: Position, orders: list[Order]) -> Position:
 
 
 def _backfill_initial_risk(
-    position: Position,
-    orders: list[Order],
-) -> tuple[Position, bool]:
+    position: Any,
+    orders: list[Any],
+) -> tuple[Any, bool]:
     if position.initial_risk is not None:
         return position, False
     if not position.source_order_id:
@@ -111,17 +135,18 @@ def _backfill_initial_risk(
 
 
 def _create_stop_orders(
-    positions: list[Position],
-    orders: list[Order],
+    positions: list[Any],
+    orders: list[Any],
     asof: str,
-) -> tuple[list[Order], bool]:
+) -> tuple[list[Any], bool]:
     updated = False
     existing = {
         (o.position_id, o.order_kind)
         for o in orders
         if o.position_id and o.order_kind in {"stop"}
     }
-    out = list(orders)
+    out: list[Any] = list(orders)
+    Order = importlib.import_module("swing_screener.execution.orders").Order
     for pos in positions:
         if pos.position_id is None or pos.stop_price is None:
             continue
@@ -156,10 +181,10 @@ def migrate_orders_positions(
     positions_path: str | Path,
     create_stop_orders: bool = False,
     asof: Optional[str] = None,
-) -> tuple[list[Order], list[Position], bool]:
+) -> tuple[list[Any], list[Any], bool]:
     asof = asof or str(dt.date.today())
-    orders = load_orders(orders_path)
-    positions = load_positions(positions_path)
+    orders = _load_orders(orders_path)
+    positions = _load_positions(positions_path)
 
     orders, orders_updated = _normalize_orders(orders)
     positions, positions_updated = _assign_position_ids(positions)
@@ -210,7 +235,7 @@ def migrate_orders_positions(
     positions = [_ensure_exit_ids(p, orders) for p in new_positions]
 
     if updated:
-        save_orders(orders_path, orders, asof=asof)
-        save_positions(positions_path, positions, asof=asof)
+        _save_orders(orders_path, orders, asof=asof)
+        _save_positions(positions_path, positions, asof=asof)
 
     return orders, positions, updated

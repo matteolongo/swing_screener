@@ -16,6 +16,8 @@ class RiskConfig:
     max_position_pct: float = 0.60  # max capital allocated to a single position
     min_shares: int = 1
     min_rr: float = 2.0  # minimum reward-to-risk to recommend
+    rr_target: float = 2.0  # default RR used to compute target and projected RR
+    commission_pct: float = 0.0  # per-side commission as % of price (for recommendation costs)
     max_fee_risk_pct: float = 0.20  # max fees as % of planned risk
     # Regime-aware risk scaling (optional)
     regime_enabled: bool = False

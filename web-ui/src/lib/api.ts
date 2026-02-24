@@ -27,11 +27,6 @@ export const API_ENDPOINTS = {
   order: (id: string) => `/api/portfolio/orders/${id}`,
   orderFill: (id: string) => `/api/portfolio/orders/${id}/fill`,
 
-  // Backtest
-  backtestRun: '/api/backtest/run',
-  backtestSimulations: '/api/backtest/simulations',
-  backtestSimulation: (id: string) => `/api/backtest/simulations/${id}`,
-
   // Social
   socialAnalyze: '/api/social/analyze',
   socialWarmupStatus: (jobId: string) => `/api/social/warmup/${jobId}`,

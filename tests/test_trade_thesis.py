@@ -1,7 +1,7 @@
 """Tests for Trade Thesis generation."""
 
 import pytest
-from swing_screener.recommendations.thesis import (
+from swing_screener.risk.recommendations.thesis import (
     build_trade_thesis,
     calculate_setup_score,
     get_setup_quality_tier,

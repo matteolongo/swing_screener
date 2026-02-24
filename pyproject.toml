@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "swing-screener"
 version = "0.1.0"
-description = "Modular swing trading screener, ranking and backtesting framework"
+description = "Modular swing trading screener and ranking framework"
 readme = "README.md"
 requires-python = ">=3.10,<4.0"
 license = { text = "MIT" }

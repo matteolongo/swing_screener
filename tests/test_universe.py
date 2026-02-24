@@ -1,6 +1,6 @@
 import pandas as pd
 
-from swing_screener.screeners.universe import (
+from swing_screener.selection.universe import (
     apply_universe_filters,
     build_feature_table,
     build_universe,

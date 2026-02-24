@@ -11,7 +11,6 @@ from api.repositories.config_repo import ConfigRepository
 from api.repositories.orders_repo import OrdersRepository
 from api.repositories.positions_repo import PositionsRepository
 from api.repositories.strategy_repo import StrategyRepository
-from api.services.backtest_service import BacktestService
 from api.services.intelligence_service import IntelligenceService
 from api.services.portfolio_service import PortfolioService
 from api.services.screener_service import ScreenerService
@@ -84,12 +83,6 @@ def get_screener_service(
     strategy_repo: StrategyRepository = Depends(get_strategy_repo),
 ) -> ScreenerService:
     return ScreenerService(strategy_repo=strategy_repo)
-
-
-def get_backtest_service(
-    strategy_repo: StrategyRepository = Depends(get_strategy_repo),
-) -> BacktestService:
-    return BacktestService(strategy_repo=strategy_repo)
 
 
 def get_social_service(

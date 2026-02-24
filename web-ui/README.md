@@ -8,7 +8,6 @@ React + TypeScript frontend for Swing Screener.
 - Orders
 - Positions
 - Strategy
-- Backtest
 - Daily Review
 - Settings
 

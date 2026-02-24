@@ -1,4 +1,4 @@
-from swing_screener.recommendations.engine import build_recommendation
+from swing_screener.risk.recommendations.engine import build_recommendation
 
 
 def test_recommendation_happy_path():
@@ -66,4 +66,3 @@ def test_recommendation_blocks_fee_drag():
 
     assert rec.verdict == "NOT_RECOMMENDED"
     assert any(r.code == "FEES_TOO_HIGH" for r in rec.reasons_detailed)
-

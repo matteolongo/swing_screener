@@ -16,7 +16,6 @@ interface ScreenerCandidatesTableProps {
   onRecommendationDetails: (candidate: ScreenerCandidate) => void;
   onSocialAnalysis: (ticker: string) => void;
   onTradeThesis: (candidate: ScreenerCandidate) => void;
-  onQuickBacktest: (candidate: ScreenerCandidate) => void;
   selectedTicker?: string | null;
   onRowClick?: (candidate: ScreenerCandidate) => void;
 }
@@ -30,7 +29,6 @@ export default function ScreenerCandidatesTable({
   onRecommendationDetails,
   onSocialAnalysis,
   onTradeThesis,
-  onQuickBacktest,
   selectedTicker,
   onRowClick,
 }: ScreenerCandidatesTableProps) {
@@ -188,7 +186,6 @@ export default function ScreenerCandidatesTable({
                 candidate={vm}
                 onSocialClick={() => onSocialAnalysis(candidate.ticker)}
                 onThesisClick={() => onTradeThesis(candidate)}
-                onBacktestClick={() => onQuickBacktest(candidate)}
               />
             )}
           </React.Fragment>
