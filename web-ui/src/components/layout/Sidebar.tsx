@@ -1,9 +1,9 @@
 import { NavLink } from 'react-router-dom';
 import { 
   LayoutDashboard, 
-  BarChart3,
   SlidersHorizontal,
   ClipboardCheck,
+  Brain,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import {
@@ -28,16 +28,16 @@ const navigation = [
     advanced: false, // Always enabled
   },
   { 
-    labelKey: 'sidebar.nav.backtest', 
-    href: '/backtest', 
-    icon: BarChart3,
-    advanced: true, // Disabled in Beginner Mode
-  },
-  { 
     labelKey: 'sidebar.nav.strategy', 
     href: '/strategy', 
     icon: SlidersHorizontal,
     advanced: false, // Always enabled
+  },
+  {
+    labelKey: 'sidebar.nav.intelligence',
+    href: '/intelligence',
+    icon: Brain,
+    advanced: false,
   },
 ] as const;
 

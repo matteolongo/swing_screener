@@ -58,13 +58,6 @@ Portfolio (`/api/portfolio`):
 - `POST /api/portfolio/orders/{order_id}/fill`
 - `DELETE /api/portfolio/orders/{order_id}`
 
-Backtest (`/api/backtest`):
-- `POST /api/backtest/quick`
-- `POST /api/backtest/run`
-- `GET /api/backtest/simulations`
-- `GET /api/backtest/simulations/{sim_id}`
-- `DELETE /api/backtest/simulations/{sim_id}`
-
 Daily Review (`/api/daily-review`):
 - `GET /api/daily-review`
 

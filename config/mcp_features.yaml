@@ -33,7 +33,6 @@ features:
       - run_screener
       - list_universes
       - preview_order
-      - preview_order
   
   # Strategy Management
   strategy:
@@ -43,13 +42,6 @@ features:
       - get_strategy
       - get_active_strategy
       - set_active_strategy
-  
-  # Backtesting
-  backtest:
-    enabled: false
-    tools:
-      - run_backtest
-      - get_backtest_metrics
   
   # Configuration Management
   config:

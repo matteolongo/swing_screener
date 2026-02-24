@@ -1,6 +1,5 @@
 import { useCallback, useEffect } from 'react';
 import { AlertCircle } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import Badge from '@/components/common/Badge';
 import Card from '@/components/common/Card';
 import ScreenerForm from '@/components/domain/screener/ScreenerForm';
@@ -22,7 +21,6 @@ import {
 } from '@/features/screener/universeStorage';
 
 const TOP_N_MAX = 200;
-const BACKTEST_STORAGE_KEY = 'backtest.params.v1';
 
 type CurrencyFilter = 'all' | 'usd' | 'eur';
 
@@ -40,7 +38,6 @@ const currencyFilterToRequest = (value: CurrencyFilter): string[] => {
 };
 
 export default function ScreenerInboxPanel() {
-  const navigate = useNavigate();
   const { isBeginnerMode } = useBeginnerModeStore();
   const { lastResult, setLastResult } = useScreenerStore();
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
@@ -146,24 +143,6 @@ export default function ScreenerInboxPanel() {
     handleSelectCandidate(candidate.ticker, 'order');
   }, [handleSelectCandidate]);
 
-  const handleQuickBacktest = useCallback((candidate: ScreenerCandidate) => {
-    const ticker = candidate.ticker.toUpperCase();
-    try {
-      const raw = localStorage.getItem(BACKTEST_STORAGE_KEY);
-      const existing = raw ? JSON.parse(raw) as Record<string, unknown> : {};
-      localStorage.setItem(
-        BACKTEST_STORAGE_KEY,
-        JSON.stringify({
-          ...existing,
-          tickersText: ticker,
-        }),
-      );
-    } catch {
-      localStorage.setItem(BACKTEST_STORAGE_KEY, JSON.stringify({ tickersText: ticker }));
-    }
-    navigate('/backtest');
-  }, [navigate]);
-
   return (
     <Card variant="bordered" className="h-full p-4 md:p-5 flex flex-col gap-3 overflow-hidden">
       <div>
@@ -251,7 +230,6 @@ export default function ScreenerInboxPanel() {
               onRecommendationDetails={(candidate) => handleSelectCandidate(candidate.ticker, 'overview')}
               onSocialAnalysis={(ticker) => handleSelectCandidate(ticker, 'sentiment')}
               onTradeThesis={handleTradeThesisAction}
-              onQuickBacktest={handleQuickBacktest}
             />
           </div>
         </div>

@@ -1,5 +1,3 @@
-export type StrategyEntryType = 'auto' | 'breakout' | 'pullback';
-export type StrategyExitMode = 'take_profit' | 'trailing_stop';
 export type StrategyCurrency = 'USD' | 'EUR';
 
 export interface StrategyTrend {
@@ -54,6 +52,8 @@ export interface StrategyRisk {
   minShares: number;
   kAtr: number;
   minRr: number;
+  rrTarget: number;
+  commissionPct: number;
   maxFeeRiskPct: number;
   regimeEnabled: boolean;
   regimeTrendSma: number;
@@ -72,19 +72,6 @@ export interface StrategyManage {
   benchmark: string;
 }
 
-export interface StrategyBacktest {
-  entryType: StrategyEntryType;
-  exitMode: StrategyExitMode;
-  takeProfitR: number;
-  maxHoldingDays: number;
-  breakevenAtR: number;
-  trailAfterR: number;
-  trailSma: number;
-  smaBufferPct: number;
-  commissionPct: number;
-  minHistory: number;
-}
-
 export interface StrategySocialOverlay {
   enabled: boolean;
   lookbackHours: number;
@@ -99,13 +86,15 @@ export interface StrategySocialOverlay {
 
 export interface StrategyIntelligenceLLM {
   enabled: boolean;
-  provider: 'ollama' | 'mock';
+  provider: 'ollama' | 'mock' | 'openai';
   model: string;
   baseUrl: string;
+  apiKey?: string;
   enableCache: boolean;
   enableAudit: boolean;
   cachePath: string;
   auditPath: string;
+  maxConcurrency: number;
 }
 
 export interface StrategyIntelligenceCatalyst {
@@ -151,7 +140,6 @@ export interface Strategy {
   signals: StrategySignals;
   risk: StrategyRisk;
   manage: StrategyManage;
-  backtest: StrategyBacktest;
   socialOverlay: StrategySocialOverlay;
   marketIntelligence: StrategyMarketIntelligence;
   isDefault: boolean;
@@ -211,6 +199,8 @@ export interface StrategyRiskAPI {
   min_shares: number;
   k_atr: number;
   min_rr?: number;
+  rr_target?: number;
+  commission_pct?: number;
   max_fee_risk_pct?: number;
   regime_enabled?: boolean;
   regime_trend_sma?: number;
@@ -229,19 +219,6 @@ export interface StrategyManageAPI {
   benchmark: string;
 }
 
-export interface StrategyBacktestAPI {
-  entry_type: StrategyEntryType;
-  exit_mode: StrategyExitMode;
-  take_profit_r: number;
-  max_holding_days: number;
-  breakeven_at_r: number;
-  trail_after_r: number;
-  trail_sma: number;
-  sma_buffer_pct: number;
-  commission_pct: number;
-  min_history: number;
-}
-
 export interface StrategySocialOverlayAPI {
   enabled?: boolean;
   lookback_hours?: number;
@@ -256,13 +233,15 @@ export interface StrategySocialOverlayAPI {
 
 export interface StrategyIntelligenceLLMAPI {
   enabled?: boolean;
-  provider?: 'ollama' | 'mock';
+  provider?: 'ollama' | 'mock' | 'openai';
   model?: string;
   base_url?: string;
+  api_key?: string;
   enable_cache?: boolean;
   enable_audit?: boolean;
   cache_path?: string;
   audit_path?: string;
+  max_concurrency?: number;
 }
 
 export interface StrategyIntelligenceCatalystAPI {
@@ -308,7 +287,6 @@ export interface StrategyAPI {
   signals: StrategySignalsAPI;
   risk: StrategyRiskAPI;
   manage: StrategyManageAPI;
-  backtest: StrategyBacktestAPI;
   social_overlay?: StrategySocialOverlayAPI;
   market_intelligence?: StrategyMarketIntelligenceAPI;
   is_default: boolean;
@@ -325,7 +303,6 @@ export interface StrategyUpdateRequestAPI {
   signals: StrategySignalsAPI;
   risk: StrategyRiskAPI;
   manage: StrategyManageAPI;
-  backtest: StrategyBacktestAPI;
   social_overlay: StrategySocialOverlayAPI;
   market_intelligence: StrategyMarketIntelligenceAPI;
 }
@@ -400,6 +377,8 @@ export function transformStrategy(api: StrategyAPI): Strategy {
       minShares: api.risk.min_shares,
       kAtr: api.risk.k_atr,
       minRr: api.risk.min_rr ?? 2.0,
+      rrTarget: api.risk.rr_target ?? 2.0,
+      commissionPct: api.risk.commission_pct ?? 0.0,
       maxFeeRiskPct: api.risk.max_fee_risk_pct ?? 0.2,
       regimeEnabled: api.risk.regime_enabled ?? false,
       regimeTrendSma: api.risk.regime_trend_sma ?? 200,
@@ -415,18 +394,6 @@ export function transformStrategy(api: StrategyAPI): Strategy {
       smaBufferPct: api.manage.sma_buffer_pct,
       maxHoldingDays: api.manage.max_holding_days,
       benchmark: api.manage.benchmark,
-    },
-    backtest: {
-      entryType: api.backtest.entry_type,
-      exitMode: api.backtest.exit_mode,
-      takeProfitR: api.backtest.take_profit_r,
-      maxHoldingDays: api.backtest.max_holding_days,
-      breakevenAtR: api.backtest.breakeven_at_r,
-      trailAfterR: api.backtest.trail_after_r,
-      trailSma: api.backtest.trail_sma,
-      smaBufferPct: api.backtest.sma_buffer_pct,
-      commissionPct: api.backtest.commission_pct,
-      minHistory: api.backtest.min_history,
     },
     socialOverlay: {
       enabled: socialOverlayApi.enabled ?? false,
@@ -449,10 +416,12 @@ export function transformStrategy(api: StrategyAPI): Strategy {
         provider: marketIntelligenceLlmApi.provider ?? 'ollama',
         model: marketIntelligenceLlmApi.model ?? 'mistral:7b-instruct',
         baseUrl: marketIntelligenceLlmApi.base_url ?? 'http://localhost:11434',
+        apiKey: marketIntelligenceLlmApi.api_key ?? '',
         enableCache: marketIntelligenceLlmApi.enable_cache ?? true,
         enableAudit: marketIntelligenceLlmApi.enable_audit ?? true,
         cachePath: marketIntelligenceLlmApi.cache_path ?? 'data/intelligence/llm_cache.json',
         auditPath: marketIntelligenceLlmApi.audit_path ?? 'data/intelligence/llm_audit',
+        maxConcurrency: marketIntelligenceLlmApi.max_concurrency ?? 4,
       },
       catalyst: {
         lookbackHours: marketIntelligenceCatalystApi.lookback_hours ?? 72,
@@ -533,6 +502,8 @@ export function toStrategyUpdateRequest(strategy: Strategy): StrategyUpdateReque
       min_shares: strategy.risk.minShares,
       k_atr: strategy.risk.kAtr,
       min_rr: strategy.risk.minRr,
+      rr_target: strategy.risk.rrTarget,
+      commission_pct: strategy.risk.commissionPct,
       max_fee_risk_pct: strategy.risk.maxFeeRiskPct,
       regime_enabled: strategy.risk.regimeEnabled,
       regime_trend_sma: strategy.risk.regimeTrendSma,
@@ -548,18 +519,6 @@ export function toStrategyUpdateRequest(strategy: Strategy): StrategyUpdateReque
       sma_buffer_pct: strategy.manage.smaBufferPct,
       max_holding_days: strategy.manage.maxHoldingDays,
       benchmark: strategy.manage.benchmark,
-    },
-    backtest: {
-      entry_type: strategy.backtest.entryType,
-      exit_mode: strategy.backtest.exitMode,
-      take_profit_r: strategy.backtest.takeProfitR,
-      max_holding_days: strategy.backtest.maxHoldingDays,
-      breakeven_at_r: strategy.backtest.breakevenAtR,
-      trail_after_r: strategy.backtest.trailAfterR,
-      trail_sma: strategy.backtest.trailSma,
-      sma_buffer_pct: strategy.backtest.smaBufferPct,
-      commission_pct: strategy.backtest.commissionPct,
-      min_history: strategy.backtest.minHistory,
     },
     social_overlay: {
       enabled: strategy.socialOverlay.enabled,
@@ -582,10 +541,12 @@ export function toStrategyUpdateRequest(strategy: Strategy): StrategyUpdateReque
         provider: strategy.marketIntelligence.llm.provider,
         model: strategy.marketIntelligence.llm.model,
         base_url: strategy.marketIntelligence.llm.baseUrl,
+        api_key: strategy.marketIntelligence.llm.apiKey ?? '',
         enable_cache: strategy.marketIntelligence.llm.enableCache,
         enable_audit: strategy.marketIntelligence.llm.enableAudit,
         cache_path: strategy.marketIntelligence.llm.cachePath,
         audit_path: strategy.marketIntelligence.llm.auditPath,
+        max_concurrency: strategy.marketIntelligence.llm.maxConcurrency,
       },
       catalyst: {
         lookback_hours: strategy.marketIntelligence.catalyst.lookbackHours,

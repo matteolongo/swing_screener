@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Info, RefreshCw } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -12,14 +12,12 @@ import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 import { DEFAULT_CONFIG, type RiskConfig } from '@/types/config';
 import GlossaryLegend from '@/components/domain/education/GlossaryLegend';
 import MetricHelpLabel from '@/components/domain/education/MetricHelpLabel';
-import IntelligenceOpportunityCard from '@/components/domain/intelligence/IntelligenceOpportunityCard';
 import { DAILY_REVIEW_GLOSSARY_KEYS } from '@/content/educationGlossary';
 import TradeInsightModal from '@/components/domain/recommendation/TradeInsightModal';
 import CandidateOrderModal from '@/components/domain/orders/CandidateOrderModal';
 import CachedSymbolPriceChart from '@/components/domain/market/CachedSymbolPriceChart';
 import { queryKeys } from '@/lib/queryKeys';
 import { t } from '@/i18n/t';
-import { useIntelligenceWorkflow } from '@/features/intelligence/useIntelligenceWorkflow';
 import {
   parseUniverseFromStorage,
   SCREENER_UNIVERSE_STORAGE_KEY,
@@ -44,9 +42,6 @@ export default function DailyReview() {
   const [insightCandidate, setInsightCandidate] = useState<DailyReviewCandidate | null>(null);
   const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<DailyReviewCandidate | null>(null);
-  const [intelligenceJobId, setIntelligenceJobId] = useState<string>();
-  const [intelligenceAsofDate, setIntelligenceAsofDate] = useState<string>();
-  const [intelligenceRunSymbols, setIntelligenceRunSymbols] = useState<string[]>([]);
   const [dismissedReadinessBlocker, setDismissedReadinessBlocker] = useState(() => {
     // Persist dismissal state in localStorage
     return localStorage.getItem('dailyReview.dismissedReadinessBlocker') === 'true';
@@ -65,32 +60,6 @@ export default function DailyReview() {
     localStorage.setItem('dailyReview.dismissedReadinessBlocker', String(dismissedReadinessBlocker));
   }, [dismissedReadinessBlocker]);
   const riskConfig: RiskConfig = activeStrategyQuery.data?.risk ?? DEFAULT_CONFIG.risk;
-  const intelligenceSymbols = useMemo(() => {
-    if (!review) return [];
-    const candidateSymbols = review.newCandidates.map((candidate) => candidate.ticker);
-    const positionSymbols = [
-      ...review.positionsHold.map((position) => position.ticker),
-      ...review.positionsUpdateStop.map((position) => position.ticker),
-      ...review.positionsClose.map((position) => position.ticker),
-    ];
-    return Array.from(
-      new Set([...candidateSymbols, ...positionSymbols].filter((ticker) => ticker && ticker.trim().length > 0))
-    );
-  }, [review]);
-  const intelligenceWorkflow = useIntelligenceWorkflow({
-    availableSymbols: intelligenceSymbols,
-    maxSymbols: 100,
-    jobId: intelligenceJobId,
-    setJobId: setIntelligenceJobId,
-    asofDate: intelligenceAsofDate,
-    setAsofDate: setIntelligenceAsofDate,
-    runSymbols: intelligenceRunSymbols,
-    setRunSymbols: setIntelligenceRunSymbols,
-  });
-  const intelligenceStatusQuery = intelligenceWorkflow.statusQuery;
-  const intelligenceStatus = intelligenceWorkflow.status;
-  const intelligenceOpportunitiesQuery = intelligenceWorkflow.opportunitiesQuery;
-  const intelligenceOpportunities = intelligenceWorkflow.opportunities;
   const openWorkspacePortfolioAction = useCallback(
     (params: { action: 'update-stop' | 'close-position'; ticker: string; positionId: string }) => {
       const searchParams = new URLSearchParams();
@@ -187,117 +156,6 @@ export default function DailyReview() {
         />
         <SummaryCard title={t('dailyReview.summary.holdPositions')} value={summary.noAction} variant="green" icon="✅" />
       </div>
-
-      <Card variant="bordered">
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div className="space-y-1">
-            <h2 className="text-lg font-semibold">{t('dailyReview.intelligence.title')}</h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400">{t('dailyReview.intelligence.subtitle')}</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              {t('dailyReview.intelligence.symbolsLine', {
-                count: intelligenceSymbols.length,
-                symbols:
-                  intelligenceSymbols.slice(0, 8).join(', ') || t('dailyReview.intelligence.noneSymbol'),
-              })}
-            </p>
-          </div>
-          <Button
-            onClick={intelligenceWorkflow.run}
-            disabled={!intelligenceWorkflow.canRun || intelligenceWorkflow.runMutation.isPending}
-          >
-            {intelligenceWorkflow.runMutation.isPending ? (
-              <>
-                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                {t('dailyReview.intelligence.runningAction')}
-              </>
-            ) : (
-              t('dailyReview.intelligence.runAction')
-            )}
-          </Button>
-        </div>
-
-        {intelligenceWorkflow.runMutation.isError && (
-          <p className="mt-3 text-sm text-red-600 dark:text-red-400">
-            {t('dailyReview.intelligence.startError', {
-              error:
-                intelligenceWorkflow.runMutation.error instanceof Error
-                  ? intelligenceWorkflow.runMutation.error.message
-                  : t('common.errors.generic'),
-            })}
-          </p>
-        )}
-
-        {intelligenceStatus && (
-          <div className="mt-4 rounded-md border border-gray-200 dark:border-gray-700 p-3">
-            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-              {intelligenceStatus.status === 'completed' &&
-                t('dailyReview.intelligence.statusCompleted', {
-                  completed: intelligenceStatus.completedSymbols,
-                  total: intelligenceStatus.totalSymbols,
-                  opportunities: intelligenceStatus.opportunitiesCount,
-                })}
-              {intelligenceStatus.status === 'queued' &&
-                t('dailyReview.intelligence.statusQueued', {
-                  total: intelligenceStatus.totalSymbols,
-                })}
-              {intelligenceStatus.status === 'running' &&
-                t('dailyReview.intelligence.statusRunning', {
-                  completed: intelligenceStatus.completedSymbols,
-                  total: intelligenceStatus.totalSymbols,
-                })}
-              {intelligenceStatus.status === 'error' &&
-                t('dailyReview.intelligence.statusError', {
-                  error: intelligenceStatus.error || t('common.errors.generic'),
-                })}
-            </p>
-            <p className="text-xs text-gray-500 mt-1">
-              {t('dailyReview.intelligence.updatedAt', {
-                updatedAt: intelligenceStatus.updatedAt,
-              })}
-            </p>
-          </div>
-        )}
-
-        {intelligenceStatusQuery.isError && !intelligenceStatus && (
-          <p className="mt-3 text-sm text-red-600 dark:text-red-400">
-            {t('dailyReview.intelligence.statusLoadError')}
-          </p>
-        )}
-
-        {intelligenceAsofDate && (
-          <div className="mt-4 space-y-2">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold">
-                {t('dailyReview.intelligence.opportunitiesTitle', { date: intelligenceAsofDate })}
-              </p>
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => intelligenceOpportunitiesQuery.refetch()}
-                disabled={intelligenceOpportunitiesQuery.isFetching}
-              >
-                {t('dailyReview.intelligence.refreshOpportunities')}
-              </Button>
-            </div>
-
-            {intelligenceOpportunitiesQuery.isFetching && (
-              <p className="text-sm text-gray-600 dark:text-gray-400">{t('dailyReview.intelligence.loading')}</p>
-            )}
-
-            {!intelligenceOpportunitiesQuery.isFetching && intelligenceOpportunities.length === 0 && (
-              <p className="text-sm text-gray-600 dark:text-gray-400">{t('dailyReview.intelligence.empty')}</p>
-            )}
-
-            {intelligenceOpportunities.length > 0 && (
-              <div className="space-y-2">
-                {intelligenceOpportunities.slice(0, 8).map((opportunity) => (
-                  <IntelligenceOpportunityCard key={opportunity.symbol} opportunity={opportunity} />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </Card>
 
       <CollapsibleSection
         title={t('dailyReview.sections.newTradeCandidates', { count: recommendedCandidates.length })}

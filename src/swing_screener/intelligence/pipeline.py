@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from concurrent.futures import ThreadPoolExecutor
 import logging
 from typing import Any, Optional
 
@@ -20,6 +21,7 @@ from swing_screener.intelligence.relations import (
 from swing_screener.intelligence.scoring import build_catalyst_score_map, build_opportunities
 from swing_screener.intelligence.state import update_symbol_states
 from swing_screener.intelligence.storage import IntelligenceStorage
+from swing_screener.intelligence.llm.factory import build_event_classifier
 
 logger = logging.getLogger(__name__)
 
@@ -60,39 +62,29 @@ def _build_llm_classifier(cfg: IntelligenceConfig) -> Any | None:
     if not cfg.llm.enabled:
         return None
 
-    provider_name = str(cfg.llm.provider).strip().lower()
     try:
-        from swing_screener.intelligence.llm import EventClassifier, MockLLMProvider, OllamaProvider
-    except Exception as exc:  # pragma: no cover - import guard
-        logger.warning("LLM module unavailable, skipping LLM enrichment: %s", exc)
-        return None
-
-    if provider_name == "mock":
-        provider = MockLLMProvider()
-    elif provider_name == "ollama":
-        try:
-            provider = OllamaProvider(model=cfg.llm.model, base_url=cfg.llm.base_url)
-        except RuntimeError as exc:
-            logger.warning("Failed to initialize ollama provider, skipping LLM enrichment: %s", exc)
-            return None
-        if not provider.is_available():
+        classifier = build_event_classifier(
+            provider_name=cfg.llm.provider,
+            model=cfg.llm.model,
+            base_url=cfg.llm.base_url,
+            api_key=cfg.llm.api_key,
+            cache_path=cfg.llm.cache_path,
+            audit_path=cfg.llm.audit_path,
+            enable_cache=cfg.llm.enable_cache,
+            enable_audit=cfg.llm.enable_audit,
+        )
+        if not classifier.provider.is_available():
             logger.warning(
-                "Ollama model '%s' is unavailable at '%s'; skipping LLM enrichment.",
+                "LLM provider '%s' model '%s' unavailable at '%s'; skipping enrichment.",
+                cfg.llm.provider,
                 cfg.llm.model,
                 cfg.llm.base_url,
             )
             return None
-    else:
-        logger.warning("Unsupported LLM provider '%s'; skipping LLM enrichment.", provider_name)
+        return classifier
+    except Exception as exc:
+        logger.warning("Failed to initialize LLM classifier, skipping LLM enrichment: %s", exc)
         return None
-
-    return EventClassifier(
-        provider=provider,
-        cache_path=cfg.llm.cache_path,
-        audit_path=cfg.llm.audit_path,
-        enable_cache=cfg.llm.enable_cache,
-        enable_audit=cfg.llm.enable_audit,
-    )
 
 
 def _enrich_events_with_llm(
@@ -105,8 +97,7 @@ def _enrich_events_with_llm(
     if classifier is None:
         return events
 
-    enriched: list[Event] = []
-    for event in events:
+    def classify_single_event(event: Event) -> Event:
         snippet = str(event.metadata.get("summary", "")).strip()
         try:
             result = classifier.classify(
@@ -142,18 +133,16 @@ def _enrich_events_with_llm(
                 )
 
             event_type = str(classification.event_type.value).strip().lower() or event.event_type
-            enriched.append(
-                Event(
-                    event_id=event.event_id,
-                    symbol=event.symbol,
-                    source=event.source,
-                    occurred_at=event.occurred_at,
-                    headline=event.headline,
-                    event_type=event_type,
-                    credibility=blended_credibility,
-                    url=event.url,
-                    metadata=metadata,
-                )
+            return Event(
+                event_id=event.event_id,
+                symbol=event.symbol,
+                source=event.source,
+                occurred_at=event.occurred_at,
+                headline=event.headline,
+                event_type=event_type,
+                credibility=blended_credibility,
+                url=event.url,
+                metadata=metadata,
             )
         except Exception as exc:  # pragma: no cover - defensive degradation
             logger.warning(
@@ -164,20 +153,25 @@ def _enrich_events_with_llm(
             )
             metadata = dict(event.metadata)
             metadata["llm_error"] = str(exc)
-            enriched.append(
-                Event(
-                    event_id=event.event_id,
-                    symbol=event.symbol,
-                    source=event.source,
-                    occurred_at=event.occurred_at,
-                    headline=event.headline,
-                    event_type=event.event_type,
-                    credibility=event.credibility,
-                    url=event.url,
-                    metadata=metadata,
-                )
+            return Event(
+                event_id=event.event_id,
+                symbol=event.symbol,
+                source=event.source,
+                occurred_at=event.occurred_at,
+                headline=event.headline,
+                event_type=event.event_type,
+                credibility=event.credibility,
+                url=event.url,
+                metadata=metadata,
             )
-    return enriched
+
+    max_workers = max(1, int(getattr(cfg.llm, "max_concurrency", 4)))
+    if max_workers <= 1 or len(events) <= 1:
+        return [classify_single_event(event) for event in events]
+
+    worker_count = min(max_workers, len(events))
+    with ThreadPoolExecutor(max_workers=worker_count) as executor:
+        return list(executor.map(classify_single_event, events))
 
 
 def _normalize_technical(

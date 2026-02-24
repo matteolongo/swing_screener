@@ -53,6 +53,8 @@ export const mockStrategies = [
       min_shares: 1,
       k_atr: 2.0,
       min_rr: 2.0,
+      rr_target: 2.0,
+      commission_pct: 0.0,
       max_fee_risk_pct: 0.2,
       regime_enabled: false,
       regime_trend_sma: 200,
@@ -68,18 +70,6 @@ export const mockStrategies = [
       sma_buffer_pct: 0.005,
       max_holding_days: 20,
       benchmark: 'SPY',
-    },
-    backtest: {
-      entry_type: 'auto',
-      exit_mode: 'trailing_stop',
-      take_profit_r: 2.0,
-      max_holding_days: 20,
-      breakeven_at_r: 1.0,
-      trail_after_r: 2.0,
-      trail_sma: 20,
-      sma_buffer_pct: 0.005,
-      commission_pct: 0.0,
-      min_history: 260,
     },
     social_overlay: {
       enabled: false,
@@ -128,6 +118,8 @@ export const mockStrategies = [
       min_shares: 1,
       k_atr: 1.8,
       min_rr: 2.0,
+      rr_target: 2.0,
+      commission_pct: 0.0,
       max_fee_risk_pct: 0.2,
       regime_enabled: false,
       regime_trend_sma: 200,
@@ -143,18 +135,6 @@ export const mockStrategies = [
       sma_buffer_pct: 0.004,
       max_holding_days: 15,
       benchmark: 'SPY',
-    },
-    backtest: {
-      entry_type: 'breakout',
-      exit_mode: 'trailing_stop',
-      take_profit_r: 2.0,
-      max_holding_days: 15,
-      breakeven_at_r: 1.0,
-      trail_after_r: 1.5,
-      trail_sma: 15,
-      sma_buffer_pct: 0.004,
-      commission_pct: 0.0,
-      min_history: 200,
     },
     social_overlay: {
       enabled: true,
@@ -493,133 +473,6 @@ const buildPositionMetrics = (position: (typeof mockPositions)[number]) => {
   }
 }
 
-export const mockBacktestRun = {
-  tickers: ['AAPL', 'MSFT'],
-  start: '2024-02-01',
-  end: '2026-02-08',
-  entry_type: 'auto',
-  summary: {
-    trades: 4,
-    expectancy_R: 0.75,
-    winrate: 0.5,
-    profit_factor_R: 1.8,
-    max_drawdown_R: -1.2,
-    avg_R: 0.6,
-    avg_win_R: 1.4,
-    avg_loss_R: -0.8,
-    trade_frequency_per_year: 8.0,
-    rr_distribution: {
-      '<-1R': 0,
-      '-1 to 0R': 1,
-      '0 to 1R': 1,
-      '1 to 2R': 1,
-      '2 to 3R': 1,
-      '>=3R': 0,
-    },
-    best_trade_R: 2.4,
-    worst_trade_R: -1.3,
-  },
-  summary_by_ticker: [
-    {
-      ticker: 'AAPL',
-      trades: 2,
-      expectancy_R: 0.9,
-      winrate: 0.5,
-      profit_factor_R: 2.0,
-      max_drawdown_R: null,
-      avg_R: 0.7,
-      avg_win_R: 1.6,
-      avg_loss_R: -0.9,
-      trade_frequency_per_year: 4.0,
-      rr_distribution: {
-        '<-1R': 0,
-        '-1 to 0R': 1,
-        '0 to 1R': 0,
-        '1 to 2R': 1,
-        '2 to 3R': 0,
-        '>=3R': 0,
-      },
-      best_trade_R: 2.4,
-      worst_trade_R: -1.0,
-    },
-  ],
-  trades: [
-    {
-      ticker: 'AAPL',
-      entry_date: '2025-01-10',
-      entry_price: 150.0,
-      exit_date: '2025-01-20',
-      exit_price: 165.0,
-      R: 2.4,
-      exit_reason: 'trailing_stop',
-      holding_days: 8,
-      stop_price: 145.0,
-    },
-  ],
-  curve_total: [
-    { date: '2025-01-20', R: 2.4, cum_R: 2.4, ticker: null },
-  ],
-  curve_by_ticker: [
-    { date: '2025-01-20', R: 2.4, cum_R: 2.4, ticker: 'AAPL' },
-  ],
-  warnings: [],
-  costs: {
-    commission_pct: 0.0,
-    slippage_bps: 5.0,
-    fx_pct: 0.0,
-    gross_R_total: 2.9,
-    net_R_total: 2.4,
-    fee_impact_pct: 0.17,
-    avg_cost_R: 0.1,
-    total_cost_R: 0.5,
-  },
-  education: {
-    overview: 'Results are net of basic execution costs and designed for learning, not prediction.',
-    drivers: ['Expectancy: 0.75R', 'Win rate: 50%', 'Avg win/loss: 1.40R / -0.80R'],
-    caveats: ['Assumes entries at next bar open and ignores intraday liquidity constraints.'],
-  },
-  simulation_id: '20260208_223000_abcd12',
-  simulation_name: '2026-02-08 22:30 • AAPL, MSFT • auto • 2024-02-01→2026-02-08',
-  created_at: '2026-02-08T22:30:00',
-}
-
-export const mockBacktestSimulationList = [
-  {
-    id: '20260208_223000_abcd12',
-    name: '2026-02-08 22:30 • AAPL, MSFT • auto • 2024-02-01→2026-02-08',
-    created_at: '2026-02-08T22:30:00',
-    tickers: ['AAPL', 'MSFT'],
-    start: '2024-02-01',
-    end: '2026-02-08',
-    entry_type: 'auto',
-    trades: 4,
-  },
-]
-
-export const mockBacktestSimulation = {
-  id: '20260208_223000_abcd12',
-  name: '2026-02-08 22:30 • AAPL, MSFT • auto • 2024-02-01→2026-02-08',
-  created_at: '2026-02-08T22:30:00',
-  params: {
-    tickers: ['AAPL', 'MSFT'],
-    start: '2024-02-01',
-    end: '2026-02-08',
-    entry_type: 'auto',
-    breakout_lookback: 50,
-    pullback_ma: 20,
-    min_history: 260,
-    atr_window: 14,
-    k_atr: 2.0,
-    breakeven_at_r: 1.0,
-    trail_after_r: 2.0,
-    trail_sma: 20,
-    sma_buffer_pct: 0.005,
-    max_holding_days: 20,
-    commission_pct: 0.0,
-  },
-  result: mockBacktestRun,
-}
-
 const resolveActiveStrategy = () => {
   const found = strategies.find((s) => s.id === activeStrategyId)
   if (!found) {
@@ -948,20 +801,4 @@ export const handlers = [
     return HttpResponse.json(mockIntelligenceOpportunities)
   }),
 
-  // Backtest endpoints
-  http.get(`${API_BASE_URL}/api/backtest/simulations`, () => {
-    return HttpResponse.json(mockBacktestSimulationList)
-  }),
-
-  http.get(`${API_BASE_URL}/api/backtest/simulations/:id`, () => {
-    return HttpResponse.json(mockBacktestSimulation)
-  }),
-
-  http.delete(`${API_BASE_URL}/api/backtest/simulations/:id`, () => {
-    return HttpResponse.json({ status: 'deleted' })
-  }),
-
-  http.post(`${API_BASE_URL}/api/backtest/run`, async () => {
-    return HttpResponse.json(mockBacktestRun)
-  }),
 ]

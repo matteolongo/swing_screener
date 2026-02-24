@@ -106,3 +106,52 @@ def test_strategy_backfills_missing_currency_field(monkeypatch, tmp_path):
     client = TestClient(app)
     active = client.get("/api/strategy/active").json()
     assert active["universe"]["filt"]["currencies"] == ["USD", "EUR"]
+
+
+def test_strategy_migrates_legacy_backtest_fields_into_risk(monkeypatch, tmp_path):
+    _patch_strategy_storage(monkeypatch, tmp_path)
+    strategy_storage.DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+    legacy = strategy_storage._default_strategy_payload()  # noqa: SLF001
+    legacy["risk"].pop("rr_target", None)
+    legacy["risk"].pop("commission_pct", None)
+    legacy["backtest"] = {
+        "take_profit_r": 2.7,
+        "commission_pct": 0.003,
+    }
+    strategy_storage.STRATEGIES_FILE.write_text(json.dumps([legacy]), encoding="utf-8")
+    strategy_storage.ACTIVE_STRATEGY_FILE.write_text(json.dumps({"id": "default"}), encoding="utf-8")
+
+    client = TestClient(app)
+    active = client.get("/api/strategy/active").json()
+
+    assert active["risk"]["rr_target"] == 2.7
+    assert active["risk"]["commission_pct"] == 0.003
+    assert "backtest" not in active
+
+    persisted = json.loads(strategy_storage.STRATEGIES_FILE.read_text(encoding="utf-8"))
+    assert persisted[0]["risk"]["rr_target"] == 2.7
+    assert persisted[0]["risk"]["commission_pct"] == 0.003
+    assert "backtest" not in persisted[0]
+
+
+def test_strategy_migration_prefers_existing_risk_fields(monkeypatch, tmp_path):
+    _patch_strategy_storage(monkeypatch, tmp_path)
+    strategy_storage.DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+    legacy = strategy_storage._default_strategy_payload()  # noqa: SLF001
+    legacy["risk"]["rr_target"] = 3.1
+    legacy["risk"]["commission_pct"] = 0.001
+    legacy["backtest"] = {
+        "take_profit_r": 4.5,
+        "commission_pct": 0.02,
+    }
+    strategy_storage.STRATEGIES_FILE.write_text(json.dumps([legacy]), encoding="utf-8")
+    strategy_storage.ACTIVE_STRATEGY_FILE.write_text(json.dumps({"id": "default"}), encoding="utf-8")
+
+    client = TestClient(app)
+    active = client.get("/api/strategy/active").json()
+
+    assert active["risk"]["rr_target"] == 3.1
+    assert active["risk"]["commission_pct"] == 0.001
+    assert "backtest" not in active

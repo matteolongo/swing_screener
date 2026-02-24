@@ -6,8 +6,8 @@
 ## Current State (Observed in Code)
 
 - Core screening, portfolio, and order workflows exist in the API and CLI.
-- Web UI includes Dashboard, Screener, Orders, Positions, Strategy, Backtest, Daily Review, and Settings pages.
-- MCP server is implemented with tool domains for portfolio, screener, strategy, config, daily review, social, and intelligence. A backtest tools domain exists as a directory but is not implemented.
+- Web UI includes Workspace, Daily Review, and Strategy pages for the current workflow.
+- MCP server is implemented with tool domains for portfolio, screener, strategy, config, daily review, social, and intelligence.
 - Agent integration exists and wraps MCP workflows for automation.
 - Market data providers include yfinance (default) and Alpaca.
 - Intelligence stack includes LLM classification and news ingestion modules. CLI classification currently uses mock news data and real ingestion is not wired into the CLI flow.
@@ -39,7 +39,7 @@
 ## Later (Nice to Have)
 
 - Real-time price updates and notifications
-- MCP backtest tools and parity with API/UI backtest features
+- Additional MCP tool parity for newly introduced UI/API workflows
 - Mobile UX polish and accessibility pass
 - Education v2 if it aligns with product goals
 

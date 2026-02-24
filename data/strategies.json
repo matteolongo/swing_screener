@@ -53,7 +53,9 @@
       "regime_trend_multiplier": 0.5,
       "regime_vol_atr_window": 14,
       "regime_vol_atr_pct_threshold": 6.0,
-      "regime_vol_multiplier": 0.5
+      "regime_vol_multiplier": 0.5,
+      "rr_target": 2.0,
+      "commission_pct": 0.0
     },
     "manage": {
       "breakeven_at_r": 1.0,
@@ -62,18 +64,6 @@
       "sma_buffer_pct": 0.005,
       "max_holding_days": 20,
       "benchmark": "SPY"
-    },
-    "backtest": {
-      "entry_type": "auto",
-      "exit_mode": "trailing_stop",
-      "take_profit_r": 2.0,
-      "max_holding_days": 20,
-      "breakeven_at_r": 1.0,
-      "trail_after_r": 2.0,
-      "trail_sma": 20,
-      "sma_buffer_pct": 0.005,
-      "commission_pct": 0.0,
-      "min_history": 260
     },
     "social_overlay": {
       "enabled": false,
@@ -182,7 +172,9 @@
       "risk_pct": 0.02,
       "max_position_pct": 0.6,
       "min_shares": 1,
-      "k_atr": 2.0
+      "k_atr": 2.0,
+      "rr_target": 2.0,
+      "commission_pct": 0.0
     },
     "manage": {
       "breakeven_at_r": 1.0,
@@ -191,18 +183,6 @@
       "sma_buffer_pct": 0.005,
       "max_holding_days": 20,
       "benchmark": "SPY"
-    },
-    "backtest": {
-      "entry_type": "auto",
-      "exit_mode": "trailing_stop",
-      "take_profit_r": 2.0,
-      "max_holding_days": 20,
-      "breakeven_at_r": 1.0,
-      "trail_after_r": 2.0,
-      "trail_sma": 20,
-      "sma_buffer_pct": 0.005,
-      "commission_pct": 0.0,
-      "min_history": 260
     },
     "id": "streategy-1000",
     "is_default": false,
@@ -262,7 +242,9 @@
       "regime_trend_multiplier": 0.5,
       "regime_vol_atr_window": 14,
       "regime_vol_atr_pct_threshold": 6.0,
-      "regime_vol_multiplier": 0.5
+      "regime_vol_multiplier": 0.5,
+      "rr_target": 2.0,
+      "commission_pct": 0.0
     },
     "manage": {
       "breakeven_at_r": 1.0,
@@ -271,18 +253,6 @@
       "sma_buffer_pct": 0.005,
       "max_holding_days": 20,
       "benchmark": "SPY"
-    },
-    "backtest": {
-      "entry_type": "auto",
-      "exit_mode": "trailing_stop",
-      "take_profit_r": 2.0,
-      "max_holding_days": 20,
-      "breakeven_at_r": 1.0,
-      "trail_after_r": 2.0,
-      "trail_sma": 20,
-      "sma_buffer_pct": 0.005,
-      "commission_pct": 0.0,
-      "min_history": 260
     },
     "social_overlay": {
       "enabled": false,

@@ -11,7 +11,9 @@ from api.repositories.config_repo import ConfigRepository
 from api.repositories.orders_repo import OrdersRepository
 from api.repositories.positions_repo import PositionsRepository
 from api.repositories.strategy_repo import StrategyRepository
-from api.services.backtest_service import BacktestService
+from api.repositories.intelligence_config_repo import IntelligenceConfigRepository
+from api.repositories.intelligence_symbol_sets_repo import IntelligenceSymbolSetsRepository
+from api.services.intelligence_config_service import IntelligenceConfigService
 from api.services.intelligence_service import IntelligenceService
 from api.services.portfolio_service import PortfolioService
 from api.services.screener_service import ScreenerService
@@ -52,6 +54,26 @@ def get_strategy_repo() -> StrategyRepository:
     return StrategyRepository()
 
 
+def get_intelligence_config_repo() -> IntelligenceConfigRepository:
+    return IntelligenceConfigRepository()
+
+
+def get_intelligence_symbol_sets_repo() -> IntelligenceSymbolSetsRepository:
+    return IntelligenceSymbolSetsRepository()
+
+
+def get_intelligence_config_service(
+    strategy_repo: StrategyRepository = Depends(get_strategy_repo),
+    config_repo: IntelligenceConfigRepository = Depends(get_intelligence_config_repo),
+    symbol_sets_repo: IntelligenceSymbolSetsRepository = Depends(get_intelligence_symbol_sets_repo),
+) -> IntelligenceConfigService:
+    return IntelligenceConfigService(
+        strategy_repo=strategy_repo,
+        config_repo=config_repo,
+        symbol_sets_repo=symbol_sets_repo,
+    )
+
+
 def get_config_repo() -> ConfigRepository:
     """Get the singleton config repository (thread-safe).
     
@@ -86,12 +108,6 @@ def get_screener_service(
     return ScreenerService(strategy_repo=strategy_repo)
 
 
-def get_backtest_service(
-    strategy_repo: StrategyRepository = Depends(get_strategy_repo),
-) -> BacktestService:
-    return BacktestService(strategy_repo=strategy_repo)
-
-
 def get_social_service(
     strategy_repo: StrategyRepository = Depends(get_strategy_repo),
 ) -> SocialService:
@@ -100,5 +116,6 @@ def get_social_service(
 
 def get_intelligence_service(
     strategy_repo: StrategyRepository = Depends(get_strategy_repo),
+    config_service: IntelligenceConfigService = Depends(get_intelligence_config_service),
 ) -> IntelligenceService:
-    return IntelligenceService(strategy_repo=strategy_repo)
+    return IntelligenceService(strategy_repo=strategy_repo, config_service=config_service)

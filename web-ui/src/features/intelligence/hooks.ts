@@ -1,16 +1,98 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  createIntelligenceSymbolSet,
+  deleteIntelligenceSymbolSet,
+  fetchIntelligenceConfig,
   fetchIntelligenceOpportunities,
+  fetchIntelligenceProviders,
   fetchIntelligenceRunStatus,
+  fetchIntelligenceSymbolSets,
   runIntelligence,
+  testIntelligenceProvider,
+  updateIntelligenceConfig,
+  updateIntelligenceSymbolSet,
 } from '@/features/intelligence/api';
 import {
+  IntelligenceConfig,
   IntelligenceOpportunitiesResponse,
+  IntelligenceProviderInfo,
+  IntelligenceProviderTestRequest,
+  IntelligenceProviderTestResponse,
   IntelligenceRunLaunchResponse,
   IntelligenceRunRequest,
   IntelligenceRunStatus,
+  IntelligenceSymbolSet,
+  IntelligenceSymbolSetUpsertRequest,
 } from '@/features/intelligence/types';
 import { queryKeys } from '@/lib/queryKeys';
+
+export function useIntelligenceConfigQuery() {
+  return useQuery<IntelligenceConfig>({
+    queryKey: queryKeys.intelligenceConfig(),
+    queryFn: fetchIntelligenceConfig,
+  });
+}
+
+export function useUpdateIntelligenceConfigMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (config: IntelligenceConfig) => updateIntelligenceConfig(config),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.intelligenceConfig() });
+    },
+  });
+}
+
+export function useIntelligenceProvidersQuery() {
+  return useQuery<IntelligenceProviderInfo[]>({
+    queryKey: queryKeys.intelligenceProviders(),
+    queryFn: fetchIntelligenceProviders,
+    refetchOnWindowFocus: false,
+  });
+}
+
+export function useTestIntelligenceProviderMutation() {
+  return useMutation<IntelligenceProviderTestResponse, Error, IntelligenceProviderTestRequest>({
+    mutationFn: (request) => testIntelligenceProvider(request),
+  });
+}
+
+export function useIntelligenceSymbolSetsQuery() {
+  return useQuery({
+    queryKey: queryKeys.intelligenceSymbolSets(),
+    queryFn: fetchIntelligenceSymbolSets,
+  });
+}
+
+export function useCreateIntelligenceSymbolSetMutation() {
+  const queryClient = useQueryClient();
+  return useMutation<IntelligenceSymbolSet, Error, IntelligenceSymbolSetUpsertRequest>({
+    mutationFn: (request) => createIntelligenceSymbolSet(request),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.intelligenceSymbolSets() });
+    },
+  });
+}
+
+export function useUpdateIntelligenceSymbolSetMutation() {
+  const queryClient = useQueryClient();
+  return useMutation<IntelligenceSymbolSet, Error, { id: string; payload: IntelligenceSymbolSetUpsertRequest }>({
+    mutationFn: ({ id, payload }) => updateIntelligenceSymbolSet(id, payload),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.intelligenceSymbolSets() });
+    },
+  });
+}
+
+export function useDeleteIntelligenceSymbolSetMutation() {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, string>({
+    mutationFn: (id) => deleteIntelligenceSymbolSet(id),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.intelligenceSymbolSets() });
+    },
+  });
+}
 
 export function useRunIntelligenceMutation(
   onSuccess?: (data: IntelligenceRunLaunchResponse) => void

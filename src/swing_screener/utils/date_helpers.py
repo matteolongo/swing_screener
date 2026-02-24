@@ -34,10 +34,10 @@ def get_lookback_start_date(
     return start_date.strftime("%Y-%m-%d")
 
 
-def get_default_backtest_start(years: int = 1) -> str:
-    """Get default start date for backtests.
+def get_default_history_start(years: int = 1) -> str:
+    """Get a default historical start date.
     
-    This function provides a dynamic start date for backtests, avoiding
+    This function provides a dynamic start date for historical lookbacks, avoiding
     hardcoded dates that become stale over time.
     
     Args:
@@ -47,7 +47,7 @@ def get_default_backtest_start(years: int = 1) -> str:
         ISO format date string (YYYY-MM-DD)
     
     Examples:
-        >>> get_default_backtest_start()  # doctest: +SKIP
+        >>> get_default_history_start()  # doctest: +SKIP
         '2025-02-16'  # if today is 2026-02-16
     """
     return get_lookback_start_date(years)

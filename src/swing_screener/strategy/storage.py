@@ -42,10 +42,12 @@ def _default_market_intelligence_payload() -> dict:
             "provider": "ollama",
             "model": "mistral:7b-instruct",
             "base_url": "http://localhost:11434",
+            "api_key": "",
             "enable_cache": True,
             "enable_audit": True,
             "cache_path": "data/intelligence/llm_cache.json",
             "audit_path": "data/intelligence/llm_audit",
+            "max_concurrency": 4,
         },
         "catalyst": {
             "lookback_hours": 72,
@@ -106,6 +108,8 @@ def _default_strategy_payload(now: dt.datetime | None = None) -> dict:
             "min_shares": 1,
             "k_atr": 2.0,
             "min_rr": 2.0,
+            "rr_target": 2.0,
+            "commission_pct": 0.0,
             "max_fee_risk_pct": 0.2,
             "regime_enabled": False,
             "regime_trend_sma": 200,
@@ -121,18 +125,6 @@ def _default_strategy_payload(now: dt.datetime | None = None) -> dict:
             "sma_buffer_pct": 0.005,
             "max_holding_days": 20,
             "benchmark": "SPY",
-        },
-        "backtest": {
-            "entry_type": "auto",
-            "exit_mode": "trailing_stop",
-            "take_profit_r": 2.0,
-            "max_holding_days": 20,
-            "breakeven_at_r": 1.0,
-            "trail_after_r": 2.0,
-            "trail_sma": 20,
-            "sma_buffer_pct": 0.005,
-            "commission_pct": 0.0,
-            "min_history": 260,
         },
         "social_overlay": {
             "enabled": False,
@@ -164,26 +156,58 @@ def load_strategies() -> list[dict]:
     for strategy in data:
         if not isinstance(strategy, dict):
             continue
-        universe = strategy.get("universe")
-        if not isinstance(universe, dict):
-            continue
-        filt = universe.get("filt")
-        if not isinstance(filt, dict):
-            continue
-        currencies = filt.get("currencies")
-        if currencies is None:
-            filt["currencies"] = ["USD", "EUR"]
+
+        # Migrate legacy backtest defaults into risk config and remove backtest block.
+        risk = strategy.get("risk")
+        if not isinstance(risk, dict):
+            risk = {}
+            strategy["risk"] = risk
             dirty = True
 
+        legacy_backtest = strategy.get("backtest")
+        legacy_take_profit = None
+        legacy_commission = None
+        if isinstance(legacy_backtest, dict):
+            legacy_take_profit = legacy_backtest.get("take_profit_r")
+            legacy_commission = legacy_backtest.get("commission_pct")
+
+        if risk.get("rr_target") is None:
+            risk["rr_target"] = (
+                float(legacy_take_profit)
+                if legacy_take_profit is not None
+                else 2.0
+            )
+            dirty = True
+
+        if risk.get("commission_pct") is None:
+            risk["commission_pct"] = (
+                float(legacy_commission)
+                if legacy_commission is not None
+                else 0.0
+            )
+            dirty = True
+
+        if "backtest" in strategy:
+            strategy.pop("backtest", None)
+            dirty = True
+
+        universe = strategy.get("universe")
+        if isinstance(universe, dict):
+            filt = universe.get("filt")
+            if isinstance(filt, dict):
+                currencies = filt.get("currencies")
+                if currencies is None:
+                    filt["currencies"] = ["USD", "EUR"]
+                    dirty = True
+
         social_overlay = strategy.get("social_overlay")
-        if not isinstance(social_overlay, dict):
-            continue
-        if social_overlay.get("providers") is None:
-            social_overlay["providers"] = ["reddit"]
-            dirty = True
-        if social_overlay.get("sentiment_analyzer") is None:
-            social_overlay["sentiment_analyzer"] = "keyword"
-            dirty = True
+        if isinstance(social_overlay, dict):
+            if social_overlay.get("providers") is None:
+                social_overlay["providers"] = ["reddit"]
+                dirty = True
+            if social_overlay.get("sentiment_analyzer") is None:
+                social_overlay["sentiment_analyzer"] = "keyword"
+                dirty = True
 
         market_intelligence_default = _default_market_intelligence_payload()
         market_intelligence = strategy.get("market_intelligence")

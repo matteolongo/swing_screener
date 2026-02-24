@@ -1,7 +1,7 @@
 """Tests for strategy validation."""
 from __future__ import annotations
 
-from swing_screener.strategies.validation import (
+from swing_screener.strategy.validation import (
     ValidationWarning,
     calculate_safety_score,
     evaluate_breakout_lookback,

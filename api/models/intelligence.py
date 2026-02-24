@@ -3,12 +3,13 @@ from __future__ import annotations
 
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from swing_screener.intelligence.config import SUPPORTED_INTEL_PROVIDERS
 
 
 class IntelligenceRunRequest(BaseModel):
-    symbols: list[str] = Field(min_length=1, max_length=500)
+    symbols: Optional[list[str]] = Field(default=None, max_length=500)
+    symbol_set_id: Optional[str] = None
     technical_readiness: Optional[dict[str, float]] = None
     providers: Optional[list[str]] = None
     lookback_hours: Optional[int] = Field(default=None, ge=1, le=240)
@@ -16,7 +17,9 @@ class IntelligenceRunRequest(BaseModel):
 
     @field_validator("symbols")
     @classmethod
-    def _validate_symbols(cls, values: list[str]) -> list[str]:
+    def _validate_symbols(cls, values: Optional[list[str]]) -> list[str]:
+        if values is None:
+            return []
         normalized: list[str] = []
         seen: set[str] = set()
         for value in values:
@@ -25,9 +28,15 @@ class IntelligenceRunRequest(BaseModel):
                 continue
             seen.add(symbol)
             normalized.append(symbol)
-        if not normalized:
-            raise ValueError("At least one valid symbol is required.")
         return normalized
+
+    @field_validator("symbol_set_id")
+    @classmethod
+    def _validate_symbol_set_id(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        cleaned = str(value).strip()
+        return cleaned or None
 
     @field_validator("providers")
     @classmethod
@@ -46,6 +55,14 @@ class IntelligenceRunRequest(BaseModel):
             seen.add(provider)
             normalized.append(provider)
         return normalized or None
+
+    @model_validator(mode="after")
+    def _validate_scope(self) -> "IntelligenceRunRequest":
+        has_symbols = bool(self.symbols)
+        has_symbol_set = bool(self.symbol_set_id)
+        if has_symbols == has_symbol_set:
+            raise ValueError("Provide exactly one of 'symbols' or 'symbol_set_id'.")
+        return self
 
 
 class IntelligenceRunLaunchResponse(BaseModel):
@@ -91,13 +108,21 @@ class LLMClassifyNewsRequest(BaseModel):
         max_length=100,
         description="List of news items with 'headline' and optional 'snippet' fields"
     )
-    provider: Optional[str] = Field(
+    provider: Optional[Literal["ollama", "mock", "openai"]] = Field(
         default="ollama",
-        description="LLM provider (ollama, mock)"
+        description="LLM provider (ollama, mock, openai)"
     )
     model: Optional[str] = Field(
         default="mistral:7b-instruct",
         description="Model name for the provider"
+    )
+    base_url: Optional[str] = Field(
+        default=None,
+        description="Optional base URL override for provider"
+    )
+    api_key: Optional[str] = Field(
+        default=None,
+        description="Optional API key override (required for openai unless env is set)"
     )
 
     @field_validator("headlines")
@@ -142,4 +167,3 @@ class LLMClassifyNewsResponse(BaseModel):
     cached_count: int
     material_count: int
     provider_available: bool
-

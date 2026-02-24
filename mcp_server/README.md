@@ -46,7 +46,6 @@ Social:
 - `analyze_ticker_sentiment`
 
 Not implemented as MCP tools:
-- Backtest
 - Intelligence
 
 ## Architecture Notes

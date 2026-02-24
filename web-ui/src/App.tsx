@@ -5,8 +5,8 @@ import MainLayout from './components/layout/MainLayout';
 
 const Workspace = lazy(() => import('./pages/Workspace'));
 const DailyReview = lazy(() => import('./pages/DailyReview'));
-const Backtest = lazy(() => import('./pages/Backtest'));
 const Strategy = lazy(() => import('./pages/Strategy'));
+const Intelligence = lazy(() => import('./pages/Intelligence'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -28,8 +28,8 @@ function App() {
               <Route path="workspace" element={<Workspace />} />
               <Route path="dashboard" element={<Navigate to="/workspace" replace />} />
               <Route path="daily-review" element={<DailyReview />} />
+              <Route path="intelligence" element={<Intelligence />} />
               <Route path="screener" element={<Navigate to="/workspace" replace />} />
-              <Route path="backtest" element={<Backtest />} />
               <Route path="orders" element={<Navigate to="/workspace" replace />} />
               <Route path="positions" element={<Navigate to="/workspace" replace />} />
               <Route path="strategy" element={<Strategy />} />

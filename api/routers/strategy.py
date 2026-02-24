@@ -15,7 +15,7 @@ from api.models.strategy import (
 )
 from api.dependencies import get_strategy_service
 from api.services.strategy_service import StrategyService
-from swing_screener.strategies.validation import validate_strategy_full
+from swing_screener.strategy.validation import validate_strategy_full
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

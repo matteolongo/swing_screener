@@ -162,7 +162,7 @@ def _orders_cancel(
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="swing-screener",
-        description="Swing trading screener and backtesting framework",
+        description="Swing trading screener framework",
     )
     sub = parser.add_subparsers(dest="command")
 

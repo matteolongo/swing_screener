@@ -48,13 +48,15 @@ class OpportunityConfig:
 class LLMConfig:
     """LLM-based event classification configuration."""
     enabled: bool = False
-    provider: str = "ollama"  # ollama, openai, anthropic, mock
+    provider: str = "ollama"
     model: str = "mistral:7b-instruct"
     base_url: str = "http://localhost:11434"
+    api_key: str = ""
     enable_cache: bool = True
     enable_audit: bool = True
     cache_path: str = "data/intelligence/llm_cache.json"
     audit_path: str = "data/intelligence/llm_audit"
+    max_concurrency: int = 4
 
 
 @dataclass(frozen=True)
@@ -132,8 +134,18 @@ def _clean_string_list(
     return tuple(cleaned) if cleaned else fallback
 
 
-def _resolve_llm_base_url(llm_raw: dict[str, Any]) -> str:
+def _resolve_llm_base_url(llm_raw: dict[str, Any], provider_name: str) -> str:
     configured = str(llm_raw.get("base_url", "")).strip()
+    provider = str(provider_name).strip().lower()
+
+    if provider == "openai":
+        env_openai_base = str(os.environ.get("OPENAI_BASE_URL", "")).strip()
+        if configured:
+            return configured
+        if env_openai_base:
+            return env_openai_base
+        return "https://api.openai.com/v1"
+
     env_ollama_host = str(os.environ.get("OLLAMA_HOST", "")).strip()
 
     if configured:
@@ -144,6 +156,15 @@ def _resolve_llm_base_url(llm_raw: dict[str, Any]) -> str:
     if env_ollama_host:
         return env_ollama_host
     return "http://localhost:11434"
+
+
+def _resolve_llm_api_key(llm_raw: dict[str, Any], provider_name: str) -> str:
+    configured = str(llm_raw.get("api_key", "")).strip()
+    if configured:
+        return configured
+    if str(provider_name).strip().lower() == "openai":
+        return str(os.environ.get("OPENAI_API_KEY", "")).strip()
+    return ""
 
 
 def build_intelligence_config(strategy: dict) -> IntelligenceConfig:
@@ -176,6 +197,9 @@ def build_intelligence_config(strategy: dict) -> IntelligenceConfig:
         opportunity_raw.get("catalyst_weight"),
     )
 
+    llm_provider = str(llm_raw.get("provider", "ollama")).strip().lower()
+    default_model = "gpt-4o-mini" if llm_provider == "openai" else "mistral:7b-instruct"
+
     return IntelligenceConfig(
         enabled=bool(raw.get("enabled", False)),
         providers=providers,
@@ -184,13 +208,15 @@ def build_intelligence_config(strategy: dict) -> IntelligenceConfig:
         symbol_states=DEFAULT_SYMBOL_STATES,
         llm=LLMConfig(
             enabled=bool(llm_raw.get("enabled", False)),
-            provider=str(llm_raw.get("provider", "ollama")).strip().lower(),
-            model=str(llm_raw.get("model", "mistral:7b-instruct")).strip(),
-            base_url=_resolve_llm_base_url(llm_raw),
+            provider=llm_provider,
+            model=str(llm_raw.get("model", default_model)).strip(),
+            base_url=_resolve_llm_base_url(llm_raw, llm_provider),
+            api_key=_resolve_llm_api_key(llm_raw, llm_provider),
             enable_cache=bool(llm_raw.get("enable_cache", True)),
             enable_audit=bool(llm_raw.get("enable_audit", True)),
             cache_path=str(llm_raw.get("cache_path", "data/intelligence/llm_cache.json")).strip(),
             audit_path=str(llm_raw.get("audit_path", "data/intelligence/llm_audit")).strip(),
+            max_concurrency=_clean_positive_int(llm_raw.get("max_concurrency"), 4),
         ),
         catalyst=CatalystConfig(
             lookback_hours=_clean_positive_int(catalyst_raw.get("lookback_hours"), 72),

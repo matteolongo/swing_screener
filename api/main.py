@@ -10,7 +10,6 @@ from contextlib import asynccontextmanager
 
 # Import routers
 from api.routers import (
-    backtest,
     config,
     daily_review,
     intelligence,
@@ -173,7 +172,6 @@ app.include_router(config.router, prefix="/api/config", tags=["config"])
 app.include_router(strategy.router, prefix="/api/strategy", tags=["strategy"])
 app.include_router(screener.router, prefix="/api/screener", tags=["screener"])
 app.include_router(portfolio.router, prefix="/api/portfolio", tags=["portfolio"])
-app.include_router(backtest.router, prefix="/api/backtest", tags=["backtest"])
 app.include_router(social.router, prefix="/api/social", tags=["social"])
 app.include_router(intelligence.router, prefix="/api/intelligence", tags=["intelligence"])
 app.include_router(daily_review.router, prefix="/api", tags=["daily-review"])
