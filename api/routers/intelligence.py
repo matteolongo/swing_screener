@@ -1,12 +1,14 @@
 """Market intelligence router."""
 from __future__ import annotations
 
+import threading
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from api.dependencies import get_intelligence_service
 from api.models.intelligence import (
+    IntelligenceEventsResponse,
     IntelligenceOpportunitiesResponse,
     IntelligenceRunLaunchResponse,
     IntelligenceRunRequest,
@@ -20,55 +22,56 @@ from api.services.intelligence_service import IntelligenceService
 router = APIRouter()
 
 
-# Singleton classifier cache to reuse instances and avoid file handle leaks
-# Key: (provider, model), Value: EventClassifier instance
-_classifier_cache: dict[tuple[str, str], Any] = {}
+# Singleton classifier cache to reuse instances and avoid file handle leaks.
+# Key: (provider, model, cache_path, audit_path), Value: EventClassifier instance.
+_classifier_cache: dict[tuple[str, str, str, str], Any] = {}
+_classifier_cache_lock = threading.Lock()
 
 
-def get_or_create_classifier(provider_name: str, model: str) -> Any:
-    """Get or create a singleton EventClassifier for the given provider and model.
-    
-    This prevents file handle leaks from creating new classifier instances on each request.
-    Classifiers are cached per (provider, model) combination.
-    """
-    from swing_screener.intelligence.llm import (
-        EventClassifier,
-        MockLLMProvider,
-        OllamaProvider,
-    )
-    
-    cache_key = (provider_name, model)
-    
-    if cache_key not in _classifier_cache:
-        # Initialize provider
-        if provider_name == "mock":
-            provider = MockLLMProvider()
-        elif provider_name == "ollama":
+def get_or_create_classifier(
+    provider_name: str,
+    model: str | None,
+    *,
+    api_key: str | None = None,
+    base_url: str | None = None,
+    cache_path: str = "data/intelligence/llm_cache.json",
+    audit_path: str = "data/intelligence/llm_audit",
+) -> Any:
+    """Get or create a singleton EventClassifier for provider/model/path tuple."""
+    from swing_screener.intelligence.llm import EventClassifier
+
+    model_key = str(model).strip() or "__default__"
+    key = (provider_name, model_key, cache_path, audit_path)
+
+    with _classifier_cache_lock:
+        classifier = _classifier_cache.get(key)
+        if classifier is None:
             try:
-                provider = OllamaProvider(model=model)
-            except RuntimeError as e:
-                # ollama package not installed
+                classifier = EventClassifier.from_provider_config(
+                    provider_name=provider_name,
+                    model=model,
+                    api_key=api_key,
+                    base_url=base_url,
+                    cache_path=cache_path,
+                    audit_path=audit_path,
+                    enable_cache=True,
+                    enable_audit=True,
+                )
+            except (RuntimeError, ValueError) as exc:
                 raise HTTPException(
                     status_code=503,
-                    detail=str(e)
-                )
-            
-            if not provider.is_available():
-                raise HTTPException(
-                    status_code=503,
-                    detail=f"Ollama model '{model}' not available. "
-                           f"Ensure Ollama is running and model is pulled."
-                )
-        else:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Unknown provider: {provider_name}. Use 'ollama' or 'mock'."
-            )
-        
-        # Create and cache classifier
-        _classifier_cache[cache_key] = EventClassifier(provider=provider)
-    
-    return _classifier_cache[cache_key]
+                    detail=f"Failed to initialize LLM provider '{provider_name}': {exc}",
+                ) from exc
+            _classifier_cache[key] = classifier
+
+    if not classifier.is_available():
+        reason = classifier.availability_error or "unknown"
+        raise HTTPException(
+            status_code=503,
+            detail=f"LLM provider '{provider_name}' model '{model_key}' is unavailable: {reason}",
+        )
+
+    return classifier
 
 
 @router.post("/run", response_model=IntelligenceRunLaunchResponse)
@@ -94,6 +97,15 @@ def get_opportunities(
     service: IntelligenceService = Depends(get_intelligence_service),
 ):
     return service.get_opportunities(asof_date=asof_date, symbols=symbols)
+
+
+@router.get("/events", response_model=IntelligenceEventsResponse)
+def get_events(
+    asof_date: str | None = Query(default=None),
+    symbols: list[str] | None = Query(default=None),
+    service: IntelligenceService = Depends(get_intelligence_service),
+):
+    return service.get_events(asof_date=asof_date, symbols=symbols)
 
 
 @router.post("/classify", response_model=LLMClassifyNewsResponse)
@@ -163,5 +175,5 @@ def classify_news(request: LLMClassifyNewsRequest):
         avg_processing_time_ms=avg_time,
         cached_count=cached_count,
         material_count=material_count,
-        provider_available=classifier.provider.is_available(),
+        provider_available=classifier.is_available(),
     )

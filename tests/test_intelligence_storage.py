@@ -96,10 +96,44 @@ def test_symbol_state_roundtrip(tmp_path):
     assert loaded["SMCI"].state_score == 0.0
 
 
+def test_events_roundtrip_with_llm_trace(tmp_path):
+    storage = IntelligenceStorage(tmp_path)
+    asof = date(2026, 2, 15)
+    events = [
+        Event(
+            event_id="evt-llm-1",
+            symbol="AAPL",
+            source="yahoo_finance",
+            occurred_at="2026-02-15T20:00:00",
+            headline="Apple beats estimates",
+            event_type="earnings",
+            credibility=0.82,
+            metadata={
+                "llm_trace": {
+                    "provider": "openai",
+                    "model": "gpt-5-nano",
+                    "event_type": "EARNINGS",
+                    "severity": "HIGH",
+                    "confidence": 0.93,
+                }
+            },
+        )
+    ]
+
+    storage.write_events(events, asof)
+    loaded = storage.load_events(asof)
+
+    assert len(loaded) == 1
+    assert loaded[0].event_id == "evt-llm-1"
+    assert isinstance(loaded[0].metadata.get("llm_trace"), dict)
+    trace = loaded[0].metadata["llm_trace"]
+    assert trace["provider"] == "openai"
+    assert storage.latest_events_date() == "2026-02-15"
+
+
 def test_load_symbol_state_handles_missing_or_empty_file(tmp_path):
     storage = IntelligenceStorage(tmp_path)
     assert storage.load_symbol_state() == {}
 
     storage.symbol_state_path.write_text("", encoding="utf-8")
     assert storage.load_symbol_state() == {}
-

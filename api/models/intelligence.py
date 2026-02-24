@@ -1,6 +1,7 @@
 """Market intelligence API models."""
 from __future__ import annotations
 
+from typing import Any
 from typing import Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator
@@ -82,6 +83,23 @@ class IntelligenceOpportunitiesResponse(BaseModel):
     opportunities: list[IntelligenceOpportunityResponse] = Field(default_factory=list)
 
 
+class IntelligenceEventResponse(BaseModel):
+    event_id: str
+    symbol: str
+    source: str
+    occurred_at: str
+    headline: str
+    event_type: str
+    credibility: float
+    url: Optional[str] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class IntelligenceEventsResponse(BaseModel):
+    asof_date: str
+    events: list[IntelligenceEventResponse] = Field(default_factory=list)
+
+
 # LLM Classification Models
 
 class LLMClassifyNewsRequest(BaseModel):
@@ -91,13 +109,13 @@ class LLMClassifyNewsRequest(BaseModel):
         max_length=100,
         description="List of news items with 'headline' and optional 'snippet' fields"
     )
-    provider: Optional[str] = Field(
+    provider: Literal["openai", "anthropic", "ollama", "mock"] = Field(
         default="ollama",
-        description="LLM provider (ollama, mock)"
+        description="LLM provider"
     )
     model: Optional[str] = Field(
-        default="mistral:7b-instruct",
-        description="Model name for the provider"
+        default=None,
+        description="Model name for the provider (provider default when omitted)"
     )
 
     @field_validator("headlines")
@@ -116,6 +134,16 @@ class LLMClassifyNewsRequest(BaseModel):
                 "snippet": item.get("snippet", ""),
             })
         return validated
+
+    @field_validator("model")
+    @classmethod
+    def _validate_model(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        model = str(value).strip()
+        if not model:
+            raise ValueError("Model must be a non-empty string")
+        return model
 
 
 class LLMEventClassificationResponse(BaseModel):
@@ -142,4 +170,3 @@ class LLMClassifyNewsResponse(BaseModel):
     cached_count: int
     material_count: int
     provider_available: bool
-

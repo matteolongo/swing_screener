@@ -21,4 +21,6 @@ export const queryKeys = {
   intelligenceRunStatus: (jobId?: string) => ['intelligence-run-status', jobId] as const,
   intelligenceOpportunities: (asofDate?: string, symbolScope?: string) =>
     ['intelligence-opportunities', asofDate, symbolScope] as const,
+  intelligenceEvents: (asofDate?: string, symbolScope?: string) =>
+    ['intelligence-events', asofDate, symbolScope] as const,
 };

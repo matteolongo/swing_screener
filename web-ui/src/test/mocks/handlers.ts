@@ -700,6 +700,57 @@ const mockIntelligenceOpportunities = {
   ],
 }
 
+const mockIntelligenceEvents = {
+  asof_date: '2026-02-15',
+  events: [
+    {
+      event_id: 'evt-aapl-1',
+      symbol: 'AAPL',
+      source: 'yahoo_finance',
+      occurred_at: '2026-02-15T19:55:00',
+      headline: 'AAPL upgraded by major broker on services momentum',
+      event_type: 'analyst',
+      credibility: 0.74,
+      url: 'https://finance.yahoo.com/news/example-aapl-upgrade',
+      metadata: {
+        llm_trace: {
+          provider: 'openai',
+          model: 'gpt-5-nano',
+          cached: false,
+          latency_ms: 142.3,
+          event_type: 'ANALYST',
+          severity: 'MEDIUM',
+          confidence: 0.87,
+          is_material: true,
+          summary: 'Analyst upgrade highlights improving services growth expectations.',
+        },
+      },
+    },
+    {
+      event_id: 'evt-vale-1',
+      symbol: 'VALE',
+      source: 'yahoo_finance',
+      occurred_at: '2026-02-15T19:40:00',
+      headline: 'Vale sees stronger iron ore demand in Asia',
+      event_type: 'news',
+      credibility: 0.69,
+      metadata: {
+        llm_trace: {
+          provider: 'openai',
+          model: 'gpt-5-nano',
+          cached: true,
+          latency_ms: 0.0,
+          event_type: 'OTHER',
+          severity: 'LOW',
+          confidence: 0.72,
+          is_material: false,
+          summary: 'Demand commentary could support sentiment but has limited immediate impact.',
+        },
+      },
+    },
+  ],
+}
+
 // MSW request handlers
 export const handlers = [
   // Config endpoints
@@ -946,6 +997,28 @@ export const handlers = [
       })
     }
     return HttpResponse.json(mockIntelligenceOpportunities)
+  }),
+
+  http.get(`${API_BASE_URL}/api/intelligence/events`, ({ request }) => {
+    const url = new URL(request.url)
+    const asofDate = url.searchParams.get('asof_date')
+    const symbols = url.searchParams
+      .getAll('symbols')
+      .map((value) => value.trim().toUpperCase())
+      .filter((value) => value.length > 0)
+    if (asofDate && asofDate !== mockIntelligenceEvents.asof_date) {
+      return HttpResponse.json({ asof_date: asofDate, events: [] })
+    }
+    if (symbols.length > 0) {
+      const symbolSet = new Set(symbols)
+      return HttpResponse.json({
+        asof_date: mockIntelligenceEvents.asof_date,
+        events: mockIntelligenceEvents.events.filter((event) =>
+          symbolSet.has(event.symbol.toUpperCase())
+        ),
+      })
+    }
+    return HttpResponse.json(mockIntelligenceEvents)
   }),
 
   // Backtest endpoints

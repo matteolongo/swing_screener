@@ -91,6 +91,46 @@ export default function DailyReview() {
   const intelligenceStatus = intelligenceWorkflow.status;
   const intelligenceOpportunitiesQuery = intelligenceWorkflow.opportunitiesQuery;
   const intelligenceOpportunities = intelligenceWorkflow.opportunities;
+  const intelligenceEventsQuery = intelligenceWorkflow.eventsQuery;
+  const intelligenceEvents = intelligenceWorkflow.events;
+  const intelligenceEventsBySymbol = useMemo(() => {
+    const grouped = new Map<string, typeof intelligenceEvents>();
+    for (const event of intelligenceEvents) {
+      const symbol = event.symbol.trim().toUpperCase();
+      if (!symbol) continue;
+      const items = grouped.get(symbol) ?? [];
+      items.push(event);
+      grouped.set(symbol, items);
+    }
+    for (const [symbol, items] of grouped.entries()) {
+      items.sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
+      grouped.set(symbol, items);
+    }
+    return grouped;
+  }, [intelligenceEvents]);
+  const llmRunSummary = useMemo(() => {
+    let classified = 0;
+    let failures = 0;
+    const providers = new Set<string>();
+    const models = new Set<string>();
+    for (const event of intelligenceEvents) {
+      const trace = event.llmTrace;
+      if (!trace) continue;
+      if (trace.error) {
+        failures += 1;
+      } else {
+        classified += 1;
+      }
+      if (trace.provider) providers.add(trace.provider);
+      if (trace.model) models.add(trace.model);
+    }
+    return {
+      classified,
+      failures,
+      providers: Array.from(providers).join(', ') || t('dailyReview.intelligence.llmUnknown'),
+      models: Array.from(models).join(', ') || t('dailyReview.intelligence.llmUnknown'),
+    };
+  }, [intelligenceEvents, t]);
   const openWorkspacePortfolioAction = useCallback(
     (params: { action: 'update-stop' | 'close-position'; ticker: string; positionId: string }) => {
       const searchParams = new URLSearchParams();
@@ -255,6 +295,16 @@ export default function DailyReview() {
                 updatedAt: intelligenceStatus.updatedAt,
               })}
             </p>
+            {intelligenceStatus.status === 'completed' && (
+              <p className="text-xs text-gray-500 mt-1">
+                {t('dailyReview.intelligence.llmStatus', {
+                  classified: llmRunSummary.classified,
+                  failures: llmRunSummary.failures,
+                  providers: llmRunSummary.providers,
+                  models: llmRunSummary.models,
+                })}
+              </p>
+            )}
           </div>
         )}
 
@@ -291,9 +341,19 @@ export default function DailyReview() {
             {intelligenceOpportunities.length > 0 && (
               <div className="space-y-2">
                 {intelligenceOpportunities.slice(0, 8).map((opportunity) => (
-                  <IntelligenceOpportunityCard key={opportunity.symbol} opportunity={opportunity} />
+                  <IntelligenceOpportunityCard
+                    key={opportunity.symbol}
+                    opportunity={opportunity}
+                    events={intelligenceEventsBySymbol.get(opportunity.symbol.trim().toUpperCase()) ?? []}
+                  />
                 ))}
               </div>
+            )}
+
+            {intelligenceEventsQuery.isError && (
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {t('dailyReview.intelligence.eventsLoadError')}
+              </p>
             )}
           </div>
         )}

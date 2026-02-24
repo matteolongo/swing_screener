@@ -15,6 +15,7 @@ from swing_screener.intelligence.models import (
 )
 from swing_screener.utils.file_lock import (
     locked_read_json_cli,
+    locked_read_text_cli,
     locked_write_json_cli,
     locked_write_text_cli,
 )
@@ -105,6 +106,59 @@ class IntelligenceStorage:
                 )
             )
         return out
+
+    def load_events(self, asof: date | str) -> list[Event]:
+        path = self.events_path(asof)
+        if not path.exists():
+            return []
+        try:
+            raw = locked_read_text_cli(path)
+        except Exception:
+            return []
+
+        out: list[Event] = []
+        for line in raw.splitlines():
+            text = line.strip()
+            if not text:
+                continue
+            try:
+                item = json.loads(text)
+            except Exception:
+                continue
+            if not isinstance(item, dict):
+                continue
+            symbol = str(item.get("symbol", "")).strip().upper()
+            event_id = str(item.get("event_id", "")).strip()
+            source = str(item.get("source", "")).strip().lower()
+            headline = str(item.get("headline", "")).strip()
+            event_type = str(item.get("event_type", "news")).strip().lower() or "news"
+            occurred_at = str(item.get("occurred_at", "")).strip()
+            if not symbol or not event_id or not occurred_at or not headline:
+                continue
+            metadata = item.get("metadata")
+            if not isinstance(metadata, dict):
+                metadata = {}
+            out.append(
+                Event(
+                    event_id=event_id,
+                    symbol=symbol,
+                    source=source or "unknown",
+                    occurred_at=occurred_at,
+                    headline=headline,
+                    event_type=event_type,
+                    credibility=float(item.get("credibility", 0.0)),
+                    url=(str(item.get("url")) if item.get("url") else None),
+                    metadata=metadata,
+                )
+            )
+        return out
+
+    def latest_events_date(self) -> str | None:
+        files = sorted(self.root_dir.glob("events_*.jsonl"))
+        if not files:
+            return None
+        latest = files[-1].stem.replace("events_", "", 1)
+        return latest or None
 
     def latest_opportunities_date(self) -> str | None:
         files = sorted(self.root_dir.glob("opportunities_*.json"))

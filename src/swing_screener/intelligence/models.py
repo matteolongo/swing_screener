@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
+from typing import Any
 from typing import Literal
 
 SymbolLifecycleState = Literal[
@@ -23,7 +24,7 @@ class Event:
     event_type: str
     credibility: float
     url: str | None = None
-    metadata: dict[str, str | float | int | bool] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -89,4 +90,3 @@ class SymbolState:
             state_score=0.0,
             last_event_id=None,
         )
-

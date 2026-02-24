@@ -5,6 +5,8 @@ from dataclasses import replace
 from fastapi import HTTPException
 
 from api.models.intelligence import (
+    IntelligenceEventResponse,
+    IntelligenceEventsResponse,
     IntelligenceOpportunityResponse,
     IntelligenceOpportunitiesResponse,
     IntelligenceRunLaunchResponse,
@@ -103,3 +105,33 @@ class IntelligenceService:
             for opportunity in opportunities
         ]
         return IntelligenceOpportunitiesResponse(asof_date=target_date, opportunities=payload)
+
+    def get_events(
+        self,
+        asof_date: str | None = None,
+        symbols: list[str] | None = None,
+    ) -> IntelligenceEventsResponse:
+        target_date = asof_date or self._storage.latest_events_date()
+        if target_date is None:
+            raise HTTPException(status_code=404, detail="No intelligence events available.")
+
+        events = self._storage.load_events(target_date)
+        if symbols:
+            symbol_set = {str(symbol).strip().upper() for symbol in symbols if str(symbol).strip()}
+            events = [event for event in events if event.symbol in symbol_set]
+
+        payload = [
+            IntelligenceEventResponse(
+                event_id=event.event_id,
+                symbol=event.symbol,
+                source=event.source,
+                occurred_at=event.occurred_at,
+                headline=event.headline,
+                event_type=event.event_type,
+                credibility=event.credibility,
+                url=event.url,
+                metadata=event.metadata,
+            )
+            for event in events
+        ]
+        return IntelligenceEventsResponse(asof_date=target_date, events=payload)

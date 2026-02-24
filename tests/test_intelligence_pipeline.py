@@ -133,3 +133,8 @@ def test_run_intelligence_pipeline_enriches_event_credibility_with_llm(tmp_path,
     assert enriched.credibility > 0.65
     assert enriched.metadata.get("llm_event_type") == "EARNINGS"
     assert enriched.metadata.get("llm_severity") == "HIGH"
+    assert enriched.metadata.get("llm_provider") == "mock"
+    assert isinstance(enriched.metadata.get("llm_trace"), dict)
+    trace = enriched.metadata["llm_trace"]
+    assert trace["provider"] == "mock"
+    assert trace["model"] == "mock-classifier"

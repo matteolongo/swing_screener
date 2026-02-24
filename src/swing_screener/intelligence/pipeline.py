@@ -62,37 +62,37 @@ def _build_llm_classifier(cfg: IntelligenceConfig) -> Any | None:
 
     provider_name = str(cfg.llm.provider).strip().lower()
     try:
-        from swing_screener.intelligence.llm import EventClassifier, MockLLMProvider, OllamaProvider
+        from swing_screener.intelligence.llm import EventClassifier
     except Exception as exc:  # pragma: no cover - import guard
         logger.warning("LLM module unavailable, skipping LLM enrichment: %s", exc)
         return None
 
-    if provider_name == "mock":
-        provider = MockLLMProvider()
-    elif provider_name == "ollama":
-        try:
-            provider = OllamaProvider(model=cfg.llm.model, base_url=cfg.llm.base_url)
-        except RuntimeError as exc:
-            logger.warning("Failed to initialize ollama provider, skipping LLM enrichment: %s", exc)
-            return None
-        if not provider.is_available():
-            logger.warning(
-                "Ollama model '%s' is unavailable at '%s'; skipping LLM enrichment.",
-                cfg.llm.model,
-                cfg.llm.base_url,
-            )
-            return None
-    else:
-        logger.warning("Unsupported LLM provider '%s'; skipping LLM enrichment.", provider_name)
+    try:
+        classifier = EventClassifier.from_provider_config(
+            provider_name=provider_name,
+            model=cfg.llm.model,
+            api_key=cfg.llm.api_key,
+            base_url=cfg.llm.base_url,
+            cache_path=cfg.llm.cache_path,
+            audit_path=cfg.llm.audit_path,
+            enable_cache=cfg.llm.enable_cache,
+            enable_audit=cfg.llm.enable_audit,
+        )
+    except (RuntimeError, ValueError) as exc:
+        logger.warning("Failed to initialize LLM provider '%s', skipping LLM enrichment: %s", provider_name, exc)
         return None
 
-    return EventClassifier(
-        provider=provider,
-        cache_path=cfg.llm.cache_path,
-        audit_path=cfg.llm.audit_path,
-        enable_cache=cfg.llm.enable_cache,
-        enable_audit=cfg.llm.enable_audit,
-    )
+    if not classifier.is_available():
+        availability_error = classifier.availability_error
+        logger.warning(
+            "LLM provider '%s' model '%s' is unavailable; skipping LLM enrichment. Reason: %s",
+            provider_name,
+            cfg.llm.model,
+            availability_error or "unknown",
+        )
+        return None
+
+    return classifier
 
 
 def _enrich_events_with_llm(
@@ -118,6 +118,10 @@ def _enrich_events_with_llm(
             classification = result.classification
             llm_confidence = _clamp01(float(classification.confidence))
             llm_severity = str(classification.severity.value).strip().upper()
+            llm_provider = str(cfg.llm.provider).strip().lower()
+            llm_model_name = str(getattr(result, "model_name", cfg.llm.model))
+            llm_cached = bool(getattr(result, "cached", False))
+            llm_latency_ms = round(float(getattr(result, "processing_time_ms", 0.0) or 0.0), 3)
             # Non-material events are intentionally capped below full credibility.
             llm_credibility = _clamp01(
                 0.45 * llm_confidence
@@ -132,14 +136,40 @@ def _enrich_events_with_llm(
             metadata["llm_confidence"] = round(llm_confidence, 6)
             metadata["llm_is_material"] = bool(classification.is_material)
             metadata["llm_summary"] = str(classification.summary)
-            metadata["llm_cached"] = bool(result.cached)
-            metadata["llm_model"] = str(result.model_name)
+            metadata["llm_cached"] = llm_cached
+            metadata["llm_model"] = llm_model_name
+            metadata["llm_provider"] = llm_provider
+            metadata["llm_latency_ms"] = llm_latency_ms
+            metadata["llm_trace"] = {
+                "provider": llm_provider,
+                "model": llm_model_name,
+                "cached": llm_cached,
+                "latency_ms": llm_latency_ms,
+                "event_type": str(classification.event_type.value),
+                "severity": llm_severity,
+                "confidence": round(llm_confidence, 6),
+                "is_material": bool(classification.is_material),
+                "summary": str(classification.summary),
+            }
             if classification.primary_symbol:
                 metadata["llm_primary_symbol"] = str(classification.primary_symbol)
             if classification.secondary_symbols:
                 metadata["llm_secondary_symbols"] = ",".join(
                     str(symbol) for symbol in classification.secondary_symbols
                 )
+            logger.info(
+                "LLM classification success event_id=%s symbol=%s provider=%s model=%s cached=%s latency_ms=%.3f event_type=%s severity=%s confidence=%.3f material=%s",
+                event.event_id,
+                event.symbol,
+                llm_provider,
+                llm_model_name,
+                llm_cached,
+                llm_latency_ms,
+                str(classification.event_type.value),
+                llm_severity,
+                llm_confidence,
+                bool(classification.is_material),
+            )
 
             event_type = str(classification.event_type.value).strip().lower() or event.event_type
             enriched.append(
@@ -157,13 +187,20 @@ def _enrich_events_with_llm(
             )
         except Exception as exc:  # pragma: no cover - defensive degradation
             logger.warning(
-                "LLM enrichment failed for event_id=%s symbol=%s: %s",
+                "LLM enrichment failed event_id=%s symbol=%s provider=%s model=%s error=%s",
                 event.event_id,
                 event.symbol,
+                str(cfg.llm.provider).strip().lower(),
+                str(cfg.llm.model).strip(),
                 exc,
             )
             metadata = dict(event.metadata)
             metadata["llm_error"] = str(exc)
+            metadata["llm_trace"] = {
+                "provider": str(cfg.llm.provider).strip().lower(),
+                "model": str(cfg.llm.model).strip(),
+                "error": str(exc),
+            }
             enriched.append(
                 Event(
                     event_id=event.event_id,

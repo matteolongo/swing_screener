@@ -40,6 +40,7 @@ export const API_ENDPOINTS = {
   intelligenceRun: '/api/intelligence/run',
   intelligenceRunStatus: (jobId: string) => `/api/intelligence/run/${jobId}`,
   intelligenceOpportunities: '/api/intelligence/opportunities',
+  intelligenceEvents: '/api/intelligence/events',
 
   // Daily Review
   dailyReview: '/api/daily-review',
