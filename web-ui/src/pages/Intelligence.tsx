@@ -287,6 +287,36 @@ export default function IntelligencePage() {
                 className="w-full rounded border border-gray-300 px-2 py-1"
               />
             </label>
+            <label className="text-sm md:col-span-2">
+              <span className="block text-xs text-gray-500 mb-1">{t('intelligencePage.config.llmSystemPrompt')}</span>
+              <textarea
+                value={draftConfig.llm.systemPrompt}
+                onChange={(event) =>
+                  setDraftConfig({ ...draftConfig, llm: { ...draftConfig.llm, systemPrompt: event.target.value } })
+                }
+                rows={4}
+                placeholder={t('intelligencePage.config.llmSystemPromptPlaceholder')}
+                className="w-full rounded border border-gray-300 px-2 py-1 font-mono text-xs"
+              />
+            </label>
+            <label className="text-sm md:col-span-2">
+              <span className="block text-xs text-gray-500 mb-1">
+                {t('intelligencePage.config.llmUserPromptTemplate')}
+              </span>
+              <textarea
+                value={draftConfig.llm.userPromptTemplate}
+                onChange={(event) =>
+                  setDraftConfig({
+                    ...draftConfig,
+                    llm: { ...draftConfig.llm, userPromptTemplate: event.target.value },
+                  })
+                }
+                rows={8}
+                placeholder={t('intelligencePage.config.llmUserPromptTemplatePlaceholder')}
+                className="w-full rounded border border-gray-300 px-2 py-1 font-mono text-xs"
+              />
+              <p className="mt-1 text-xs text-gray-500">{t('intelligencePage.config.llmPromptTemplateHint')}</p>
+            </label>
             <label className="text-sm">
               <span className="block text-xs text-gray-500 mb-1">{t('intelligencePage.config.maxConcurrency')}</span>
               <input

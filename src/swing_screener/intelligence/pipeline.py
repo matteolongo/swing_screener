@@ -68,6 +68,8 @@ def _build_llm_classifier(cfg: IntelligenceConfig) -> Any | None:
             model=cfg.llm.model,
             base_url=cfg.llm.base_url,
             api_key=cfg.llm.api_key,
+            system_prompt=cfg.llm.system_prompt,
+            user_prompt_template=cfg.llm.user_prompt_template,
             cache_path=cfg.llm.cache_path,
             audit_path=cfg.llm.audit_path,
             enable_cache=cfg.llm.enable_cache,

@@ -284,12 +284,18 @@ def test_intelligence_config_roundtrip():
     payload = get_res.json()
 
     payload["llm"]["provider"] = "mock"
+    payload["llm"]["system_prompt"] = "You are a strict event classifier."
+    payload["llm"]["user_prompt_template"] = (
+        "Classify this headline.\nHeadline: \"{{headline}}\"\n{{taxonomy}}\n{{instructions}}"
+    )
     put_res = client.put("/api/intelligence/config", json=payload)
     assert put_res.status_code == 200
 
     get_res_2 = client.get("/api/intelligence/config")
     assert get_res_2.status_code == 200
     assert get_res_2.json()["llm"]["provider"] == "mock"
+    assert get_res_2.json()["llm"]["system_prompt"] == "You are a strict event classifier."
+    assert "{{headline}}" in get_res_2.json()["llm"]["user_prompt_template"]
 
 
 def test_intelligence_symbol_set_crud():

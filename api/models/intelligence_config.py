@@ -15,11 +15,20 @@ class IntelligenceLLMConfigModel(BaseModel):
     model: str = "mistral:7b-instruct"
     base_url: str = "http://localhost:11434"
     api_key: str = ""
+    system_prompt: str = Field(default="", max_length=20000)
+    user_prompt_template: str = Field(default="", max_length=40000)
     enable_cache: bool = True
     enable_audit: bool = True
     cache_path: str = "data/intelligence/llm_cache.json"
     audit_path: str = "data/intelligence/llm_audit"
     max_concurrency: int = Field(default=4, ge=1, le=16)
+
+    @field_validator("system_prompt", "user_prompt_template", mode="before")
+    @classmethod
+    def _normalize_prompt_text(cls, value: object) -> str:
+        if value is None:
+            return ""
+        return str(value).replace("\r\n", "\n").strip()
 
 
 class IntelligenceCatalystConfigModel(BaseModel):

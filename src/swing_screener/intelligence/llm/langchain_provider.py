@@ -6,7 +6,12 @@ import os
 from typing import Optional
 
 from .client import LLMProvider
-from .prompts import SYSTEM_PROMPT, build_user_prompt
+from .prompts import (
+    build_prompt_fingerprint,
+    build_user_prompt,
+    resolve_system_prompt,
+    resolve_user_prompt_template,
+)
 from .schemas import EventClassification
 
 
@@ -33,9 +38,17 @@ class LangChainOllamaProvider(LLMProvider):
         self,
         model: str = "mistral:7b-instruct",
         base_url: Optional[str] = None,
+        system_prompt: Optional[str] = None,
+        user_prompt_template: Optional[str] = None,
     ) -> None:
         self._model = model
         self._base_url = base_url or os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+        self._system_prompt = resolve_system_prompt(system_prompt)
+        self._user_prompt_template = resolve_user_prompt_template(user_prompt_template)
+        self._prompt_version = build_prompt_fingerprint(
+            system_prompt_override=self._system_prompt,
+            user_prompt_template_override=self._user_prompt_template,
+        )
         self._llm = None
 
     def _get_llm(self):
@@ -78,6 +91,14 @@ class LangChainOllamaProvider(LLMProvider):
     def model_name(self) -> str:
         return self._model
 
+    @property
+    def prompt_version(self) -> str:
+        return self._prompt_version
+
+    @property
+    def prompt_cache_key(self) -> str:
+        return self._prompt_version
+
     def classify_event(self, headline: str, snippet: str = "") -> EventClassification:
         if not self.is_available():
             raise RuntimeError(
@@ -85,13 +106,17 @@ class LangChainOllamaProvider(LLMProvider):
             )
 
         llm = self._get_llm()
-        user_prompt = build_user_prompt(headline, snippet)
+        user_prompt = build_user_prompt(
+            headline,
+            snippet,
+            user_prompt_template=self._user_prompt_template,
+        )
         try:
             from langchain_core.messages import HumanMessage, SystemMessage
 
             response = llm.invoke(
                 [
-                    SystemMessage(content=SYSTEM_PROMPT),
+                    SystemMessage(content=self._system_prompt),
                     HumanMessage(content=user_prompt),
                 ]
             )
@@ -111,10 +136,18 @@ class LangChainOpenAIProvider(LLMProvider):
         model: str = "gpt-4o-mini",
         base_url: Optional[str] = None,
         api_key: Optional[str] = None,
+        system_prompt: Optional[str] = None,
+        user_prompt_template: Optional[str] = None,
     ) -> None:
         self._model = str(model).strip() or "gpt-4o-mini"
         self._base_url = base_url or os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
         self._api_key = str(api_key or os.environ.get("OPENAI_API_KEY", "")).strip()
+        self._system_prompt = resolve_system_prompt(system_prompt)
+        self._user_prompt_template = resolve_user_prompt_template(user_prompt_template)
+        self._prompt_version = build_prompt_fingerprint(
+            system_prompt_override=self._system_prompt,
+            user_prompt_template_override=self._user_prompt_template,
+        )
         self._llm = None
 
     def _get_llm(self):
@@ -143,18 +176,30 @@ class LangChainOpenAIProvider(LLMProvider):
     def model_name(self) -> str:
         return self._model
 
+    @property
+    def prompt_version(self) -> str:
+        return self._prompt_version
+
+    @property
+    def prompt_cache_key(self) -> str:
+        return self._prompt_version
+
     def classify_event(self, headline: str, snippet: str = "") -> EventClassification:
         if not self.is_available():
             raise RuntimeError("OpenAI API key is required and currently missing.")
 
         llm = self._get_llm()
-        user_prompt = build_user_prompt(headline, snippet)
+        user_prompt = build_user_prompt(
+            headline,
+            snippet,
+            user_prompt_template=self._user_prompt_template,
+        )
         try:
             from langchain_core.messages import HumanMessage, SystemMessage
 
             response = llm.invoke(
                 [
-                    SystemMessage(content=SYSTEM_PROMPT),
+                    SystemMessage(content=self._system_prompt),
                     HumanMessage(content=user_prompt),
                 ]
             )

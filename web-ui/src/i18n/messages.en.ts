@@ -1023,6 +1023,12 @@ export const messagesEn = {
       llmModel: 'LLM model',
       llmBaseUrl: 'LLM base URL',
       llmApiKey: 'LLM API key',
+      llmSystemPrompt: 'LLM system prompt override',
+      llmSystemPromptPlaceholder: 'Leave blank to use the built-in system prompt',
+      llmUserPromptTemplate: 'LLM user prompt template override',
+      llmUserPromptTemplatePlaceholder: 'Leave blank to use the built-in user prompt template',
+      llmPromptTemplateHint:
+        'Supported placeholders: {{headline}}, {{snippet}}, {{snippet_block}}, {{taxonomy}}, {{instructions}}.',
       maxConcurrency: 'LLM max concurrency',
       lookbackHours: 'Catalyst lookback (hours)',
       minScore: 'Minimum opportunity score',

@@ -363,5 +363,135 @@
         "min_opportunity_score": 0.55
       }
     }
+  },
+  {
+    "name": "test-fabio",
+    "description": "test-fabio",
+    "module": "momentum",
+    "universe": {
+      "trend": {
+        "sma_fast": 20,
+        "sma_mid": 50,
+        "sma_long": 200
+      },
+      "vol": {
+        "atr_window": 14
+      },
+      "mom": {
+        "lookback_6m": 126,
+        "lookback_12m": 252,
+        "benchmark": "SPY"
+      },
+      "filt": {
+        "min_price": 5.0,
+        "max_price": 500.0,
+        "max_atr_pct": 15.0,
+        "require_trend_ok": true,
+        "require_rs_positive": false,
+        "currencies": [
+          "USD",
+          "EUR"
+        ]
+      }
+    },
+    "ranking": {
+      "w_mom_6m": 0.45,
+      "w_mom_12m": 0.35,
+      "w_rs_6m": 0.2,
+      "top_n": 50
+    },
+    "signals": {
+      "breakout_lookback": 50,
+      "pullback_ma": 20,
+      "min_history": 252
+    },
+    "risk": {
+      "account_size": 500.0,
+      "risk_pct": 0.015,
+      "max_position_pct": 0.2,
+      "min_shares": 1,
+      "k_atr": 2.0,
+      "min_rr": 2.0,
+      "rr_target": 2.0,
+      "commission_pct": 0.0,
+      "max_fee_risk_pct": 0.2,
+      "regime_enabled": false,
+      "regime_trend_sma": 200,
+      "regime_trend_multiplier": 0.5,
+      "regime_vol_atr_window": 14,
+      "regime_vol_atr_pct_threshold": 6.0,
+      "regime_vol_multiplier": 0.5
+    },
+    "manage": {
+      "breakeven_at_r": 1.0,
+      "trail_after_r": 2.0,
+      "trail_sma": 20,
+      "sma_buffer_pct": 0.005,
+      "max_holding_days": 20,
+      "benchmark": "SPY"
+    },
+    "social_overlay": {
+      "enabled": false,
+      "lookback_hours": 24,
+      "attention_z_threshold": 3.0,
+      "min_sample_size": 1,
+      "negative_sent_threshold": -0.4,
+      "sentiment_conf_threshold": 0.7,
+      "hype_percentile_threshold": 95.0,
+      "providers": [
+        "yahoo_finance",
+        "reddit"
+      ],
+      "sentiment_analyzer": "keyword"
+    },
+    "market_intelligence": {
+      "enabled": true,
+      "providers": [
+        "yahoo_finance"
+      ],
+      "universe_scope": "screener_universe",
+      "market_context_symbols": [
+        "SPY",
+        "QQQ",
+        "XLK",
+        "SMH",
+        "XBI"
+      ],
+      "llm": {
+        "enabled": true,
+        "provider": "ollama",
+        "model": "mistral:7b-instruct",
+        "base_url": "http://localhost:11434",
+        "api_key": "",
+        "enable_cache": true,
+        "enable_audit": true,
+        "cache_path": "data/intelligence/llm_cache.json",
+        "audit_path": "data/intelligence/llm_audit",
+        "max_concurrency": 4
+      },
+      "catalyst": {
+        "lookback_hours": 72,
+        "recency_half_life_hours": 36,
+        "false_catalyst_return_z": 1.5,
+        "min_price_reaction_atr": 0.8,
+        "require_price_confirmation": true
+      },
+      "theme": {
+        "enabled": true,
+        "min_cluster_size": 3,
+        "min_peer_confirmation": 2,
+        "curated_peer_map_path": "data/intelligence/peer_map.yaml"
+      },
+      "opportunity": {
+        "technical_weight": 0.55,
+        "catalyst_weight": 0.45,
+        "max_daily_opportunities": 8,
+        "min_opportunity_score": 0.55
+      }
+    },
+    "id": "test-fabio",
+    "is_default": false,
+    "created_at": "2026-02-25T21:33:22",
+    "updated_at": "2026-02-25T21:33:22"
   }
 ]

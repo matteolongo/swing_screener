@@ -204,6 +204,54 @@ class TestEventClassifier:
         assert result1.cached is False
         assert result2.cached is False
 
+    def test_cache_key_changes_with_prompt_version(self):
+        """Prompt version/fingerprint must invalidate stale cache entries."""
+
+        class _VersionedMockProvider(MockLLMProvider):
+            def __init__(self, prompt_version: str):
+                super().__init__()
+                self._prompt_version = prompt_version
+
+            @property
+            def prompt_version(self) -> str:
+                return self._prompt_version
+
+            @property
+            def prompt_cache_key(self) -> str:
+                return self._prompt_version
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cache_path = Path(tmpdir) / "test_cache.json"
+            first_provider = _VersionedMockProvider("vA")
+            first_classifier = EventClassifier(
+                provider=first_provider,
+                cache_path=cache_path,
+                enable_cache=True,
+                enable_audit=False,
+            )
+            first_result = first_classifier.classify("Prompt-sensitive headline", "Prompt-sensitive snippet")
+            assert first_result.cached is False
+
+            second_provider = _VersionedMockProvider("vA")
+            second_classifier = EventClassifier(
+                provider=second_provider,
+                cache_path=cache_path,
+                enable_cache=True,
+                enable_audit=False,
+            )
+            second_result = second_classifier.classify("Prompt-sensitive headline", "Prompt-sensitive snippet")
+            assert second_result.cached is True
+
+            third_provider = _VersionedMockProvider("vB")
+            third_classifier = EventClassifier(
+                provider=third_provider,
+                cache_path=cache_path,
+                enable_cache=True,
+                enable_audit=False,
+            )
+            third_result = third_classifier.classify("Prompt-sensitive headline", "Prompt-sensitive snippet")
+            assert third_result.cached is False
+
 
 class TestMockLLMProvider:
     """Test mock LLM provider behavior."""

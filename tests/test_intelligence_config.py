@@ -142,3 +142,20 @@ def test_build_intelligence_config_keeps_explicit_non_default_base_url(monkeypat
     cfg = build_intelligence_config(strategy)
 
     assert cfg.llm.base_url == "http://custom-ollama.internal:11434"
+
+
+def test_build_intelligence_config_maps_prompt_overrides():
+    strategy = {
+        "market_intelligence": {
+            "llm": {
+                "system_prompt": "  You are a strict classifier.  ",
+                "user_prompt_template": "Headline: {{headline}}\r\n{{taxonomy}}\r\n{{instructions}}",
+            }
+        }
+    }
+
+    cfg = build_intelligence_config(strategy)
+
+    assert cfg.llm.system_prompt == "You are a strict classifier."
+    assert "{{headline}}" in cfg.llm.user_prompt_template
+    assert "\r" not in cfg.llm.user_prompt_template

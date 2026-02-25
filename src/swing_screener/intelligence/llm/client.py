@@ -9,7 +9,13 @@ import os
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from .prompts import PROMPT_VERSION, SYSTEM_PROMPT, build_user_prompt
+from .prompts import (
+    PROMPT_VERSION,
+    build_prompt_fingerprint,
+    build_user_prompt,
+    resolve_system_prompt,
+    resolve_user_prompt_template,
+)
 from .schemas import EventClassification, RawNewsItem
 
 
@@ -57,6 +63,16 @@ class LLMProvider(ABC):
         """Return the model identifier being used."""
         pass
 
+    @property
+    def prompt_version(self) -> str:
+        """Return prompt version/fingerprint for metadata and audit trails."""
+        return PROMPT_VERSION
+
+    @property
+    def prompt_cache_key(self) -> str:
+        """Return cache key segment that changes when prompt semantics change."""
+        return self.prompt_version
+
 
 class OllamaProvider(LLMProvider):
     """Ollama LLM provider for local model inference.
@@ -69,6 +85,8 @@ class OllamaProvider(LLMProvider):
         self,
         model: str = "mistral:7b-instruct",
         base_url: Optional[str] = None,
+        system_prompt: Optional[str] = None,
+        user_prompt_template: Optional[str] = None,
     ):
         """Initialize Ollama provider.
         
@@ -79,6 +97,12 @@ class OllamaProvider(LLMProvider):
         self._model = model
         self._base_url = base_url or os.environ.get(
             "OLLAMA_HOST", "http://localhost:11434"
+        )
+        self._system_prompt = resolve_system_prompt(system_prompt)
+        self._user_prompt_template = resolve_user_prompt_template(user_prompt_template)
+        self._prompt_version = build_prompt_fingerprint(
+            system_prompt_override=self._system_prompt,
+            user_prompt_template_override=self._user_prompt_template,
         )
         self._client = None
     
@@ -119,6 +143,14 @@ class OllamaProvider(LLMProvider):
     def model_name(self) -> str:
         """Return the Ollama model identifier."""
         return self._model
+
+    @property
+    def prompt_version(self) -> str:
+        return self._prompt_version
+
+    @property
+    def prompt_cache_key(self) -> str:
+        return self._prompt_version
     
     def classify_event(
         self,
@@ -148,14 +180,18 @@ class OllamaProvider(LLMProvider):
             )
         
         client = self._get_client()
-        user_prompt = build_user_prompt(headline, snippet)
+        user_prompt = build_user_prompt(
+            headline,
+            snippet,
+            user_prompt_template=self._user_prompt_template,
+        )
         
         try:
             # Call Ollama with structured output mode
             response = client.chat(
                 model=self._model,
                 messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "system", "content": self._system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
                 format="json",  # Force JSON output

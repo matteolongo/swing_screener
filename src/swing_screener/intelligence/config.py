@@ -52,6 +52,8 @@ class LLMConfig:
     model: str = "mistral:7b-instruct"
     base_url: str = "http://localhost:11434"
     api_key: str = ""
+    system_prompt: str = ""
+    user_prompt_template: str = ""
     enable_cache: bool = True
     enable_audit: bool = True
     cache_path: str = "data/intelligence/llm_cache.json"
@@ -167,6 +169,12 @@ def _resolve_llm_api_key(llm_raw: dict[str, Any], provider_name: str) -> str:
     return ""
 
 
+def _clean_prompt_override(raw: Any) -> str:
+    if raw is None:
+        return ""
+    return str(raw).replace("\r\n", "\n").strip()
+
+
 def build_intelligence_config(strategy: dict) -> IntelligenceConfig:
     raw = get_nested_dict(strategy, "market_intelligence")
     catalyst_raw = get_nested_dict(raw, "catalyst")
@@ -212,6 +220,8 @@ def build_intelligence_config(strategy: dict) -> IntelligenceConfig:
             model=str(llm_raw.get("model", default_model)).strip(),
             base_url=_resolve_llm_base_url(llm_raw, llm_provider),
             api_key=_resolve_llm_api_key(llm_raw, llm_provider),
+            system_prompt=_clean_prompt_override(llm_raw.get("system_prompt", "")),
+            user_prompt_template=_clean_prompt_override(llm_raw.get("user_prompt_template", "")),
             enable_cache=bool(llm_raw.get("enable_cache", True)),
             enable_audit=bool(llm_raw.get("enable_audit", True)),
             cache_path=str(llm_raw.get("cache_path", "data/intelligence/llm_cache.json")).strip(),

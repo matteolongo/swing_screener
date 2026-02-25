@@ -84,7 +84,8 @@ class EventClassifier:
         
         Uses SHA256 hash of concatenated text to create deterministic key.
         """
-        text = f"{headline}|{snippet}|{PROMPT_VERSION}"
+        prompt_cache_key = str(getattr(self.provider, "prompt_cache_key", PROMPT_VERSION))
+        text = f"{headline}|{snippet}|{prompt_cache_key}"
         return hashlib.sha256(text.encode()).hexdigest()
     
     def _get_from_cache(self, cache_key: str) -> Optional[EventClassification]:
@@ -195,7 +196,7 @@ class EventClassifier:
                 news_item=news_item,
                 classification=cached_classification,
                 model_name=self.provider.model_name,
-                prompt_version=PROMPT_VERSION,
+                prompt_version=str(getattr(self.provider, "prompt_version", PROMPT_VERSION)),
                 processing_time_ms=0.0,
                 cached=True,
             )
@@ -216,7 +217,7 @@ class EventClassifier:
             news_item=news_item,
             classification=classification,
             model_name=self.provider.model_name,
-            prompt_version=PROMPT_VERSION,
+            prompt_version=str(getattr(self.provider, "prompt_version", PROMPT_VERSION)),
             processing_time_ms=processing_time_ms,
             cached=False,
         )
