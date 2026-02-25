@@ -40,6 +40,7 @@ describe('Sidebar', () => {
     expect(screen.getByText('Workspace')).toBeInTheDocument();
     expect(screen.getByText('Daily Review')).toBeInTheDocument();
     expect(screen.getByText('Strategy')).toBeInTheDocument();
+    expect(screen.getByText('Intelligence')).toBeInTheDocument();
   });
 
   it('should show mode toggle with beginner mode enabled by default', () => {

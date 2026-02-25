@@ -87,6 +87,7 @@ const createMockStrategy = (overrides?: Partial<Strategy>): Strategy => ({
       enableAudit: true,
       cachePath: 'data/intelligence/llm_cache.json',
       auditPath: 'data/intelligence/llm_audit',
+      maxConcurrency: 4,
     },
     catalyst: {
       lookbackHours: 72,

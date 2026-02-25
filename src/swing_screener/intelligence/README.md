@@ -14,11 +14,11 @@ This layer is advisory only. It does not place orders.
 
 ## Current Usage
 - Runs are currently manual.
-- UI entry point is the Daily page intelligence action.
+- UI entry point is the dedicated Intelligence page.
 - API entry point is `POST /api/intelligence/run`.
 
 ## Run Flow
-1. `IntelligenceService.start_run()` loads active strategy and builds config from `strategy.market_intelligence`.
+1. `IntelligenceService.start_run()` loads dedicated intelligence config from `data/intelligence/config.json`.
 2. A background job is queued in `api/services/intelligence_warmup.py`.
 3. Worker executes `run_intelligence_pipeline()` in `src/swing_screener/intelligence/pipeline.py`.
 4. Providers ingest events (`ingestion/`).
@@ -59,13 +59,13 @@ Then:
 - keep top `max_daily_opportunities`
 
 ## Configuration Source Of Truth
-Intelligence config is strategy-scoped under:
-- `strategy.market_intelligence`
+Intelligence config is dedicated and persisted under:
+- `data/intelligence/config.json`
 
-That is the canonical place to configure providers, LLM, catalyst, theme, and opportunity weights.
+Strategy-scoped `market_intelligence` is only used as one-time bootstrap fallback when dedicated config is absent.
 
 ### UI Configuration
-In Strategy settings, Advanced section includes Market Intelligence controls for:
+In the Intelligence page, controls cover:
 - enable/disable pipeline
 - providers and universe scope
 - market context symbols
@@ -75,7 +75,7 @@ In Strategy settings, Advanced section includes Market Intelligence controls for
 - opportunity weighting and limits
 
 ### Environment Variables
-There is no separate env toggle required for normal strategy-based intelligence configuration.
+There is no separate env toggle required for normal intelligence configuration.
 
 For Ollama, `OLLAMA_HOST` can be used as a fallback host in the LLM client when `base_url` is not explicitly passed.
 
@@ -92,6 +92,14 @@ Artifacts:
 - `run_jobs.json`
 
 ## API Endpoints
+- `GET /api/intelligence/config`
+- `PUT /api/intelligence/config`
+- `GET /api/intelligence/providers`
+- `POST /api/intelligence/providers/test`
+- `GET /api/intelligence/symbol-sets`
+- `POST /api/intelligence/symbol-sets`
+- `PUT /api/intelligence/symbol-sets/{id}`
+- `DELETE /api/intelligence/symbol-sets/{id}`
 - `POST /api/intelligence/run`
 - `GET /api/intelligence/run/{job_id}`
 - `GET /api/intelligence/opportunities`
