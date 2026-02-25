@@ -10,6 +10,7 @@ import threading
 import uuid
 from typing import Optional
 
+from api.services.intelligence_summary import build_intelligence_run_summary
 from swing_screener.intelligence.config import IntelligenceConfig
 from swing_screener.intelligence.pipeline import run_intelligence_pipeline
 from swing_screener.utils.file_lock import locked_read_json_cli, locked_write_json_cli
@@ -31,6 +32,7 @@ class IntelligenceRunJob:
     opportunities_count: int
     llm_warnings_count: int
     llm_warning_sample: str | None
+    analysis_summary: str | None
     error: str | None
     created_at: str
     updated_at: str
@@ -81,6 +83,11 @@ class IntelligenceRunManager:
                     llm_warning_sample=(
                         str(item.get("llm_warning_sample"))
                         if item.get("llm_warning_sample")
+                        else None
+                    ),
+                    analysis_summary=(
+                        str(item.get("analysis_summary"))
+                        if item.get("analysis_summary")
                         else None
                     ),
                     error=str(item.get("error")) if item.get("error") else None,
@@ -151,6 +158,7 @@ class IntelligenceRunManager:
             opportunities_count=0,
             llm_warnings_count=0,
             llm_warning_sample=None,
+            analysis_summary=None,
             error=None,
             created_at=now,
             updated_at=now,
@@ -211,6 +219,11 @@ class IntelligenceRunManager:
                 opportunities_count=len(snapshot.opportunities),
                 llm_warnings_count=len(llm_warnings),
                 llm_warning_sample=(llm_warnings[0][:300] if llm_warnings else None),
+                analysis_summary=build_intelligence_run_summary(
+                    cfg=cfg,
+                    snapshot=snapshot,
+                    llm_warnings_count=len(llm_warnings),
+                ),
                 error=None,
             )
         except Exception as exc:
@@ -221,6 +234,7 @@ class IntelligenceRunManager:
                 opportunities_count=0,
                 llm_warnings_count=0,
                 llm_warning_sample=None,
+                analysis_summary=None,
                 error=str(exc),
             )
 
@@ -234,6 +248,7 @@ class IntelligenceRunManager:
         opportunities_count: int | None = None,
         llm_warnings_count: int | None = None,
         llm_warning_sample: str | None = None,
+        analysis_summary: str | None = None,
         error: str | None = None,
     ) -> None:
         payload: list[dict] | None = None
@@ -252,6 +267,7 @@ class IntelligenceRunManager:
             if llm_warnings_count is not None:
                 job.llm_warnings_count = llm_warnings_count
             job.llm_warning_sample = llm_warning_sample
+            job.analysis_summary = analysis_summary
             job.error = error
             job.updated_at = _now_iso()
             payload = self._build_jobs_payload_locked()

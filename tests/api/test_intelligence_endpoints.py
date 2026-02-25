@@ -168,6 +168,7 @@ def test_intelligence_status_includes_llm_warnings(monkeypatch):
         opportunities_count=2,
         llm_warnings_count=1,
         llm_warning_sample="Invalid symbol format: KEYSIGHT",
+        analysis_summary="Scanned 3 symbols and found 2 opportunities.",
         error=None,
         created_at="2026-02-24T23:00:00",
         updated_at="2026-02-24T23:00:05",
@@ -184,6 +185,7 @@ def test_intelligence_status_includes_llm_warnings(monkeypatch):
     payload = res.json()
     assert payload["llm_warnings_count"] == 1
     assert "KEYSIGHT" in payload["llm_warning_sample"]
+    assert "Scanned 3 symbols" in payload["analysis_summary"]
 
 
 def test_intelligence_opportunities_returns_payload(monkeypatch):

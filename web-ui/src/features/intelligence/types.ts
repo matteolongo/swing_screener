@@ -43,6 +43,7 @@ export interface IntelligenceRunStatus {
   opportunitiesCount: number;
   llmWarningsCount: number;
   llmWarningSample?: string;
+  analysisSummary?: string;
   error?: string;
   createdAt: string;
   updatedAt: string;
@@ -57,6 +58,7 @@ export interface IntelligenceRunStatusAPI {
   opportunities_count: number;
   llm_warnings_count?: number;
   llm_warning_sample?: string | null;
+  analysis_summary?: string | null;
   error?: string | null;
   created_at: string;
   updated_at: string;
@@ -273,6 +275,7 @@ export function transformIntelligenceRunStatus(api: IntelligenceRunStatusAPI): I
     opportunitiesCount: api.opportunities_count,
     llmWarningsCount: api.llm_warnings_count ?? 0,
     llmWarningSample: api.llm_warning_sample ?? undefined,
+    analysisSummary: api.analysis_summary ?? undefined,
     error: api.error ?? undefined,
     createdAt: api.created_at,
     updatedAt: api.updated_at,

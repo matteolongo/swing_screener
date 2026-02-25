@@ -1051,6 +1051,7 @@ export const messagesEn = {
         'Status: {{status}} ({{completed}}/{{total}} symbols, {{opportunities}} opportunities)',
       llmWarningsLine: 'LLM completed with {{count}} warning(s). Some events used fallback metadata.',
       llmWarningSample: 'Latest warning: {{sample}}',
+      analysisSummaryTitle: 'Run summary',
       polling: 'Polling run status...',
       opportunitiesTitle: 'Opportunities ({{date}})',
       loadingOpportunities: 'Loading opportunities...',

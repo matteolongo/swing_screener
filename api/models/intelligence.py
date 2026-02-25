@@ -82,6 +82,7 @@ class IntelligenceRunStatusResponse(BaseModel):
     opportunities_count: int = 0
     llm_warnings_count: int = 0
     llm_warning_sample: Optional[str] = None
+    analysis_summary: Optional[str] = None
     error: Optional[str] = None
     created_at: str
     updated_at: str

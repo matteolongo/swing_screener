@@ -478,6 +478,13 @@ export default function IntelligencePage() {
             </div>
           )}
 
+          {status?.analysisSummary && (
+            <div className="mt-2 rounded border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900">
+              <p className="font-medium">{t('intelligencePage.run.analysisSummaryTitle')}</p>
+              <p className="mt-1 text-sm">{status.analysisSummary}</p>
+            </div>
+          )}
+
           {statusQuery.isFetching && (
             <div className="mt-2 text-xs text-gray-500 flex items-center gap-2">
               <RefreshCw className="w-4 h-4 animate-spin" />
