@@ -10,6 +10,10 @@ from typing import Optional
 from pydantic import BaseModel, Field, field_validator
 
 
+def _is_valid_symbol(value: str) -> bool:
+    return value.isupper() and value.isalpha() and len(value) <= 5
+
+
 class EventType(str, Enum):
     """Event taxonomy organized by market impact tiers.
     
@@ -113,25 +117,34 @@ class EventClassification(BaseModel):
         description="Single factual sentence with no speculation or prediction"
     )
     
-    @field_validator("primary_symbol", "secondary_symbols", mode="after")
+    @field_validator("primary_symbol", mode="after")
     @classmethod
-    def validate_symbols(cls, v):
-        """Ensure symbols are uppercase and valid format."""
+    def validate_primary_symbol(cls, v):
+        """Ensure primary symbol is uppercase and valid ticker format."""
         if v is None:
             return v
-        if isinstance(v, str):
-            # Basic validation - symbols should be uppercase letters, 1-5 chars
-            if not v.isupper() or not v.isalpha() or len(v) > 5:
-                raise ValueError(f"Invalid symbol format: {v}")
-            return v
-        if isinstance(v, list):
-            validated = []
-            for symbol in v:
-                if not symbol.isupper() or not symbol.isalpha() or len(symbol) > 5:
-                    raise ValueError(f"Invalid symbol format: {symbol}")
-                validated.append(symbol)
-            return validated
-        return v
+        if not isinstance(v, str):
+            raise ValueError(f"Invalid symbol format: {v}")
+        text = v.strip()
+        if not _is_valid_symbol(text):
+            raise ValueError(f"Invalid symbol format: {v}")
+        return text
+
+    @field_validator("secondary_symbols", mode="after")
+    @classmethod
+    def validate_secondary_symbols(cls, values):
+        """Normalize and keep only valid secondary ticker symbols."""
+        if not isinstance(values, list):
+            return []
+        normalized: list[str] = []
+        seen: set[str] = set()
+        for value in values:
+            text = str(value).strip().upper()
+            if not _is_valid_symbol(text) or text in seen:
+                continue
+            seen.add(text)
+            normalized.append(text)
+        return normalized
     
     @field_validator("summary")
     @classmethod

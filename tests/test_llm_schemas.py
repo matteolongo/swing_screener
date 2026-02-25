@@ -238,6 +238,19 @@ class TestEventClassification:
                 summary="Apple reported quarterly earnings.",
             )
 
+    def test_secondary_symbols_filter_invalid_values(self):
+        """Secondary symbols should drop invalid values instead of failing classification."""
+        classification = EventClassification(
+            event_type=EventType.SECTOR,
+            severity=EventSeverity.MEDIUM,
+            primary_symbol="INTC",
+            secondary_symbols=["AMD", "HIMS", "KEYSIGHT", "amd", "WHIRLPOOL", "VIR"],
+            is_material=False,
+            confidence=0.72,
+            summary="Chip names and related companies were highlighted in the movers list.",
+        )
+        assert classification.secondary_symbols == ["AMD", "HIMS", "VIR"]
+
 
 class TestRawNewsItem:
     """Test raw news item model."""

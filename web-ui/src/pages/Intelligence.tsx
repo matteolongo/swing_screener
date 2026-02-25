@@ -461,6 +461,23 @@ export default function IntelligencePage() {
             </div>
           )}
 
+          {status && status.llmWarningsCount > 0 && (
+            <div className="mt-2 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              <p>
+                {t('intelligencePage.run.llmWarningsLine', {
+                  count: status.llmWarningsCount,
+                })}
+              </p>
+              {status.llmWarningSample && (
+                <p className="mt-1 text-xs">
+                  {t('intelligencePage.run.llmWarningSample', {
+                    sample: status.llmWarningSample,
+                  })}
+                </p>
+              )}
+            </div>
+          )}
+
           {statusQuery.isFetching && (
             <div className="mt-2 text-xs text-gray-500 flex items-center gap-2">
               <RefreshCw className="w-4 h-4 animate-spin" />

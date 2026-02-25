@@ -1049,6 +1049,8 @@ export const messagesEn = {
       scopeHint: 'Provide manual symbols or select a symbol set.',
       statusLine:
         'Status: {{status}} ({{completed}}/{{total}} symbols, {{opportunities}} opportunities)',
+      llmWarningsLine: 'LLM completed with {{count}} warning(s). Some events used fallback metadata.',
+      llmWarningSample: 'Latest warning: {{sample}}',
       polling: 'Polling run status...',
       opportunitiesTitle: 'Opportunities ({{date}})',
       loadingOpportunities: 'Loading opportunities...',

@@ -29,6 +29,8 @@ class IntelligenceRunJob:
     completed_symbols: int
     asof_date: str | None
     opportunities_count: int
+    llm_warnings_count: int
+    llm_warning_sample: str | None
     error: str | None
     created_at: str
     updated_at: str
@@ -75,6 +77,12 @@ class IntelligenceRunManager:
                     completed_symbols=int(item.get("completed_symbols", 0)),
                     asof_date=str(item.get("asof_date")) if item.get("asof_date") else None,
                     opportunities_count=int(item.get("opportunities_count", 0)),
+                    llm_warnings_count=int(item.get("llm_warnings_count", 0)),
+                    llm_warning_sample=(
+                        str(item.get("llm_warning_sample"))
+                        if item.get("llm_warning_sample")
+                        else None
+                    ),
                     error=str(item.get("error")) if item.get("error") else None,
                     created_at=str(item.get("created_at", now)),
                     updated_at=str(item.get("updated_at", now)),
@@ -141,6 +149,8 @@ class IntelligenceRunManager:
             completed_symbols=0,
             asof_date=None,
             opportunities_count=0,
+            llm_warnings_count=0,
+            llm_warning_sample=None,
             error=None,
             created_at=now,
             updated_at=now,
@@ -187,12 +197,20 @@ class IntelligenceRunManager:
                 cfg=cfg,
                 technical_readiness=technical_readiness,
             )
+            events = list(getattr(snapshot, "events", []) or [])
+            llm_warnings = [
+                str(event.metadata.get("llm_error", "")).strip()
+                for event in events
+                if str(event.metadata.get("llm_error", "")).strip()
+            ]
             self._update(
                 job_id,
                 status="completed",
                 completed_symbols=len(snapshot.symbols),
                 asof_date=snapshot.asof_date,
                 opportunities_count=len(snapshot.opportunities),
+                llm_warnings_count=len(llm_warnings),
+                llm_warning_sample=(llm_warnings[0][:300] if llm_warnings else None),
                 error=None,
             )
         except Exception as exc:
@@ -201,6 +219,8 @@ class IntelligenceRunManager:
                 status="error",
                 completed_symbols=0,
                 opportunities_count=0,
+                llm_warnings_count=0,
+                llm_warning_sample=None,
                 error=str(exc),
             )
 
@@ -212,6 +232,8 @@ class IntelligenceRunManager:
         completed_symbols: int | None = None,
         asof_date: str | None = None,
         opportunities_count: int | None = None,
+        llm_warnings_count: int | None = None,
+        llm_warning_sample: str | None = None,
         error: str | None = None,
     ) -> None:
         payload: list[dict] | None = None
@@ -227,6 +249,9 @@ class IntelligenceRunManager:
                 job.asof_date = asof_date
             if opportunities_count is not None:
                 job.opportunities_count = opportunities_count
+            if llm_warnings_count is not None:
+                job.llm_warnings_count = llm_warnings_count
+            job.llm_warning_sample = llm_warning_sample
             job.error = error
             job.updated_at = _now_iso()
             payload = self._build_jobs_payload_locked()

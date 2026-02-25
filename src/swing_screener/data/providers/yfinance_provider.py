@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Iterable, Iterator, Optional
 import hashlib
 import logging
+import uuid
 import pandas as pd
 import yfinance as yf
 
@@ -77,6 +78,38 @@ class YfinanceProvider(MarketDataProvider):
             yf.set_tz_cache_location(str(tz_cache_dir))
         except Exception as exc:  # pragma: no cover - defensive, depends on host FS perms
             logger.warning("Failed to configure yfinance tz cache at %s: %s", tz_cache_dir, exc)
+
+    def _read_cached_ohlcv(self, cache_file: Path, tickers: list[str]) -> pd.DataFrame | None:
+        """
+        Read cached OHLCV parquet defensively.
+
+        If cache is corrupted/invalid, remove it so subsequent reads do not loop forever.
+        """
+        try:
+            cached = pd.read_parquet(cache_file)
+            return self._clean_ohlcv(cached, tickers)
+        except Exception as exc:
+            logger.warning("Invalid OHLCV cache detected at %s: %s", cache_file, exc)
+            try:
+                cache_file.unlink(missing_ok=True)
+            except Exception as remove_exc:
+                logger.warning("Failed to remove invalid OHLCV cache %s: %s", cache_file, remove_exc)
+            return None
+
+    def _write_cached_ohlcv(self, cache_file: Path, df: pd.DataFrame) -> None:
+        """
+        Persist OHLCV cache atomically to avoid partial/corrupted parquet files.
+        """
+        tmp_file = cache_file.with_name(f".{cache_file.name}.tmp-{uuid.uuid4().hex}")
+        try:
+            df.to_parquet(tmp_file)
+            tmp_file.replace(cache_file)
+        except Exception as exc:
+            logger.warning("Failed writing OHLCV cache %s: %s", cache_file, exc)
+            try:
+                tmp_file.unlink(missing_ok=True)
+            except Exception:
+                pass
 
     def _iter_chunks(self, tickers: list[str], size: int) -> Iterator[list[str]]:
         """Yield fixed-size chunks from a ticker list."""
@@ -286,8 +319,9 @@ class YfinanceProvider(MarketDataProvider):
         cache_file = self._cache_path(tks, start_date, end_date, self.auto_adjust)
         
         if use_cache and (not force_refresh) and cache_file.exists():
-            df = pd.read_parquet(cache_file)
-            return self._clean_ohlcv(df, tks)
+            cached = self._read_cached_ohlcv(cache_file, tks)
+            if cached is not None:
+                return cached
         
         # Download from Yahoo Finance (bulk first, then targeted retries for missing symbols)
         df = self._download_batch(tks, start_date, actual_end)
@@ -301,8 +335,9 @@ class YfinanceProvider(MarketDataProvider):
 
         if df is None or df.empty:
             if allow_cache_fallback_on_error and cache_file.exists():
-                df = pd.read_parquet(cache_file)
-                return self._clean_ohlcv(df, tks)
+                cached = self._read_cached_ohlcv(cache_file, tks)
+                if cached is not None:
+                    return cached
             raise RuntimeError("Download empty. Check tickers or connection.")
 
         missing_tickers = self._missing_close_tickers(df, tks)
@@ -325,7 +360,7 @@ class YfinanceProvider(MarketDataProvider):
         
         # Cache result
         if use_cache:
-            df.to_parquet(cache_file)
+            self._write_cached_ohlcv(cache_file, df)
         
         return self._clean_ohlcv(df, tks)
     

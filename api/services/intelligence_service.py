@@ -85,6 +85,8 @@ class IntelligenceService:
             completed_symbols=job.completed_symbols,
             asof_date=job.asof_date,
             opportunities_count=job.opportunities_count,
+            llm_warnings_count=getattr(job, "llm_warnings_count", 0),
+            llm_warning_sample=getattr(job, "llm_warning_sample", None),
             error=job.error,
             created_at=job.created_at,
             updated_at=job.updated_at,

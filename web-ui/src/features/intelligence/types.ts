@@ -41,6 +41,8 @@ export interface IntelligenceRunStatus {
   completedSymbols: number;
   asofDate?: string;
   opportunitiesCount: number;
+  llmWarningsCount: number;
+  llmWarningSample?: string;
   error?: string;
   createdAt: string;
   updatedAt: string;
@@ -53,6 +55,8 @@ export interface IntelligenceRunStatusAPI {
   completed_symbols: number;
   asof_date?: string | null;
   opportunities_count: number;
+  llm_warnings_count?: number;
+  llm_warning_sample?: string | null;
   error?: string | null;
   created_at: string;
   updated_at: string;
@@ -267,6 +271,8 @@ export function transformIntelligenceRunStatus(api: IntelligenceRunStatusAPI): I
     completedSymbols: api.completed_symbols,
     asofDate: api.asof_date ?? undefined,
     opportunitiesCount: api.opportunities_count,
+    llmWarningsCount: api.llm_warnings_count ?? 0,
+    llmWarningSample: api.llm_warning_sample ?? undefined,
     error: api.error ?? undefined,
     createdAt: api.created_at,
     updatedAt: api.updated_at,
