@@ -1,7 +1,7 @@
 """Market intelligence API models."""
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import ClassVar, Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 from swing_screener.intelligence.config import SUPPORTED_INTEL_PROVIDERS
@@ -106,12 +106,14 @@ class IntelligenceOpportunitiesResponse(BaseModel):
 
 class LLMClassifyNewsRequest(BaseModel):
     """Request to classify news headlines using LLM."""
+    SUPPORTED_LLM_PROVIDERS: ClassVar[set[str]] = {"ollama", "mock", "openai"}
+
     headlines: list[dict[str, str]] = Field(
         min_length=1,
         max_length=100,
         description="List of news items with 'headline' and optional 'snippet' fields"
     )
-    provider: Optional[Literal["ollama", "mock", "openai"]] = Field(
+    provider: Optional[str] = Field(
         default="ollama",
         description="LLM provider (ollama, mock, openai)"
     )
@@ -144,6 +146,14 @@ class LLMClassifyNewsRequest(BaseModel):
                 "snippet": item.get("snippet", ""),
             })
         return validated
+
+    @field_validator("provider")
+    @classmethod
+    def _normalize_provider(cls, value: Optional[str]) -> str:
+        if value is None:
+            return "ollama"
+        normalized = str(value).strip().lower()
+        return normalized or "ollama"
 
 
 class LLMEventClassificationResponse(BaseModel):

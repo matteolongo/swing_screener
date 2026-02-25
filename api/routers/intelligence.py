@@ -80,7 +80,7 @@ def get_or_create_classifier(
         if not classifier.provider.is_available():
             raise HTTPException(
                 status_code=503,
-                detail=f"Provider '{normalized_provider}' model '{normalized_model}' is unavailable.",
+                detail=f"Provider '{normalized_provider}' model '{normalized_model}' is not available.",
             )
 
         _classifier_cache[cache_key] = classifier
@@ -182,6 +182,13 @@ def get_opportunities(
 def classify_news(request: LLMClassifyNewsRequest):
     """Classify financial news headlines using the configured LLM provider."""
     provider_name = str(request.provider or "ollama").strip().lower()
+    if provider_name not in LLMClassifyNewsRequest.SUPPORTED_LLM_PROVIDERS:
+        allowed = ", ".join(sorted(LLMClassifyNewsRequest.SUPPORTED_LLM_PROVIDERS))
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown provider: {provider_name}. Allowed providers: {allowed}",
+        )
+
     model_default = "gpt-4o-mini" if provider_name == "openai" else "mistral:7b-instruct"
     model = str(request.model or model_default).strip() or model_default
     base_url = str(request.base_url or "").strip() or None

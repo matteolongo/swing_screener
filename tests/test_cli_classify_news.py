@@ -199,9 +199,13 @@ class TestClassifyNewsCLI:
         assert "Cache:" in output
         assert "entries" in output.lower()
     
-    def test_classify_news_with_ollama_unavailable(self, capsys):
+    def test_classify_news_with_ollama_unavailable(self, capsys, monkeypatch):
         """Test classify-news with ollama provider when unavailable."""
-        # Try to use ollama provider (likely not available in test env)
+        # Force unavailability to keep this test deterministic and offline-safe.
+        from swing_screener.intelligence.llm.client import OllamaProvider
+
+        monkeypatch.setattr(OllamaProvider, "is_available", lambda self: False)
+
         with pytest.raises(SystemExit):
             _run_cli([
                 "classify-news",
