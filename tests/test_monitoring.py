@@ -81,11 +81,11 @@ class TestMetrics:
 
 
 class TestRootEndpoint:
-    """Test root endpoint includes health link."""
+    """Test root endpoints include health metadata for API clients."""
 
-    def test_root_includes_health_link(self):
-        """Test that root endpoint mentions /health."""
-        response = client.get("/")
+    def test_api_root_includes_health_link(self):
+        """Test that API root endpoint mentions /health."""
+        response = client.get("/api")
         
         assert response.status_code == 200
         data = response.json()
