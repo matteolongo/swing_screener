@@ -10,6 +10,7 @@ import type { ScreenerCandidate } from '@/features/screener/types';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
+import { useCreateOrderMutation } from '@/features/portfolio/hooks';
 import { t } from '@/i18n/t';
 import { useLocalStorage } from '@/hooks';
 import { formatDate } from '@/utils/formatters';
@@ -82,6 +83,7 @@ export default function ScreenerInboxPanel() {
   );
 
   const universesQuery = useUniverses();
+  const quickCreateOrderMutation = useCreateOrderMutation();
   const screenerMutation = useRunScreenerMutation((data) => {
     setLastResult(data);
     if (data.candidates.length > 0) {
@@ -139,6 +141,45 @@ export default function ScreenerInboxPanel() {
     setAnalysisTab(tab);
   }, [setAnalysisTab, setSelectedTicker]);
 
+  const handleCreateOrder = useCallback(
+    (candidate: ScreenerCandidate) => {
+      handleSelectCandidate(candidate.ticker, 'order');
+
+      if (quickCreateOrderMutation.isPending || candidate.recommendation?.verdict === 'NOT_RECOMMENDED') {
+        return;
+      }
+
+      const entry = candidate.recommendation?.risk?.entry ?? candidate.entry ?? candidate.close;
+      if (typeof entry !== 'number' || !Number.isFinite(entry) || entry <= 0) {
+        return;
+      }
+
+      const atr = Number.isFinite(candidate.atr) && candidate.atr > 0 ? candidate.atr : entry * 0.03;
+      const fallbackStop = Math.max(0.01, entry - atr);
+      const stopCandidate = candidate.recommendation?.risk?.stop ?? candidate.stop ?? fallbackStop;
+      const stop =
+        Number.isFinite(stopCandidate) && stopCandidate > 0 && stopCandidate < entry
+          ? stopCandidate
+          : Math.max(0.01, entry - Math.max(atr * 0.5, entry * 0.01));
+      const shares = candidate.recommendation?.risk?.shares ?? candidate.shares ?? riskConfig.minShares ?? 1;
+      const quantity = Number.isFinite(shares) && shares > 0 ? Math.max(1, Math.round(shares)) : 1;
+
+      quickCreateOrderMutation.mutate({
+        ticker: candidate.ticker,
+        orderType: 'BUY_LIMIT',
+        quantity,
+        limitPrice: parseFloat(entry.toFixed(2)),
+        stopPrice: parseFloat(stop.toFixed(2)),
+        orderKind: 'entry',
+        notes: t('screener.defaultNotes', {
+          score: (candidate.score * 100).toFixed(1),
+          rank: candidate.rank,
+        }),
+      });
+    },
+    [handleSelectCandidate, quickCreateOrderMutation, riskConfig.minShares],
+  );
+
   const handleTradeThesisAction = useCallback((candidate: ScreenerCandidate) => {
     handleSelectCandidate(candidate.ticker, 'order');
   }, [handleSelectCandidate]);
@@ -186,6 +227,16 @@ export default function ScreenerInboxPanel() {
           </p>
         </div>
       ) : null}
+      {quickCreateOrderMutation.isError ? (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-xs md:text-sm text-red-800">
+            {t('screener.error.prefix')}:{' '}
+            {quickCreateOrderMutation.error instanceof Error
+              ? quickCreateOrderMutation.error.message
+              : t('screener.error.unknown')}
+          </p>
+        </div>
+      ) : null}
 
       {!screenerMutation.isPending && !result ? (
         <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-start">
@@ -226,10 +277,11 @@ export default function ScreenerInboxPanel() {
               onRowClick={(candidate) =>
                 handleSelectCandidate(candidate.ticker, analysisTab === 'sentiment' ? 'sentiment' : 'overview')
               }
-              onCreateOrder={(candidate) => handleSelectCandidate(candidate.ticker, 'order')}
+              onCreateOrder={handleCreateOrder}
               onRecommendationDetails={(candidate) => handleSelectCandidate(candidate.ticker, 'overview')}
               onSocialAnalysis={(ticker) => handleSelectCandidate(ticker, 'sentiment')}
               onTradeThesis={handleTradeThesisAction}
+              disableCreateOrder={quickCreateOrderMutation.isPending}
             />
           </div>
         </div>

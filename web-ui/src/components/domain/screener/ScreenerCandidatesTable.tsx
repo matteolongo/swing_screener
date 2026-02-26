@@ -18,6 +18,7 @@ interface ScreenerCandidatesTableProps {
   onTradeThesis: (candidate: ScreenerCandidate) => void;
   selectedTicker?: string | null;
   onRowClick?: (candidate: ScreenerCandidate) => void;
+  disableCreateOrder?: boolean;
 }
 
 /**
@@ -31,6 +32,7 @@ export default function ScreenerCandidatesTable({
   onTradeThesis,
   selectedTicker,
   onRowClick,
+  disableCreateOrder = false,
 }: ScreenerCandidatesTableProps) {
   // Track expanded rows by ticker
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -164,6 +166,7 @@ export default function ScreenerCandidatesTable({
                   <Button
                     size="sm"
                     variant="primary"
+                    disabled={disableCreateOrder}
                     onClick={(event) => {
                       event.stopPropagation();
                       onCreateOrder(candidate);
@@ -174,7 +177,7 @@ export default function ScreenerCandidatesTable({
                         : t('screener.table.createOrderTitle')
                     }
                   >
-                    {t('screener.table.createOrderAction')}
+                    {disableCreateOrder ? t('order.candidateModal.creating') : t('screener.table.createOrderAction')}
                   </Button>
                 </div>
               </td>

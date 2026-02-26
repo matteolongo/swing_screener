@@ -73,6 +73,47 @@ describe('Workspace Page', () => {
     });
   });
 
+  it('creates an order from the screener table quick action', async () => {
+    let postedOrder: Record<string, unknown> | null = null;
+    server.use(
+      http.post('*/api/portfolio/orders', async ({ request }) => {
+        postedOrder = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json(
+          {
+            order_id: 'ORD-AAPL-TEST',
+            status: 'pending',
+            ...postedOrder,
+          },
+          { status: 201 },
+        );
+      }),
+    );
+
+    const { user } = renderWithProviders(<Workspace />);
+
+    const runButtons = screen.getAllByRole('button', { name: /Run Screener/i });
+    await user.click(runButtons[0]);
+    await screen.findByRole('heading', { name: 'AAPL' });
+
+    const createButtons = await screen.findAllByRole('button', { name: 'Create Order' });
+    await user.click(createButtons[0]);
+
+    await waitFor(() => {
+      expect(postedOrder).not.toBeNull();
+    });
+    expect(postedOrder).toMatchObject({
+      ticker: 'AAPL',
+      order_type: 'BUY_LIMIT',
+      quantity: 1,
+      limit_price: 175.5,
+      stop_price: 172.25,
+      order_kind: 'entry',
+    });
+    await waitFor(() => {
+      expect(screen.getByRole('tab', { name: 'Order', selected: true })).toBeInTheDocument();
+    });
+  });
+
   it('opens fill-order modal for pending entry orders in the portfolio panel', async () => {
     server.use(
       http.get('*/api/portfolio/orders', ({ request }) => {
