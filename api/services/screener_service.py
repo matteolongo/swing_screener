@@ -13,6 +13,8 @@ from fastapi import HTTPException
 
 from api.models.screener import (
     ScreenerRequest,
+    ScreenerRunLaunchResponse,
+    ScreenerRunStatusResponse,
     ScreenerResponse,
     ScreenerCandidate,
     OrderPreview,
@@ -41,6 +43,7 @@ from swing_screener.strategy.config import (
 )
 from swing_screener.risk.regime import compute_regime_risk_multiplier
 from api.services.social_warmup import get_social_warmup_manager
+from api.services.screener_run_manager import get_screener_run_manager
 
 logger = logging.getLogger(__name__)
 PRICE_HISTORY_MAX_BARS = 252
@@ -653,6 +656,34 @@ class ScreenerService:
         except Exception as exc:
             logger.exception("Unexpected screener error")
             raise HTTPException(status_code=500, detail="Screener failed unexpectedly")
+
+    def start_run_async(self, request: ScreenerRequest) -> ScreenerRunLaunchResponse:
+        """Start screener run in background and return job metadata."""
+        manager = get_screener_run_manager()
+        job_id = manager.start_job(run_fn=lambda: self.run_screener(request))
+        job = manager.get_job(job_id)
+        if job is None:
+            raise HTTPException(status_code=500, detail="Failed to start screener run.")
+        return ScreenerRunLaunchResponse(
+            job_id=job.job_id,
+            status=job.status,  # type: ignore[arg-type]
+            created_at=job.created_at,
+            updated_at=job.updated_at,
+        )
+
+    def get_run_status(self, job_id: str) -> ScreenerRunStatusResponse:
+        """Get status for background screener run."""
+        job = get_screener_run_manager().get_job(job_id)
+        if job is None:
+            raise HTTPException(status_code=404, detail=f"Screener run job not found: {job_id}")
+        return ScreenerRunStatusResponse(
+            job_id=job.job_id,
+            status=job.status,  # type: ignore[arg-type]
+            result=job.result,
+            error=job.error,
+            created_at=job.created_at,
+            updated_at=job.updated_at,
+        )
 
     def preview_order(
         self,

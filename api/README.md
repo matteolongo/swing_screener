@@ -40,7 +40,8 @@ Strategy (`/api/strategy`):
 
 Screener (`/api/screener`):
 - `GET /api/screener/universes`
-- `POST /api/screener/run`
+- `POST /api/screener/run` (sync locally, async job launch on dyno by default)
+- `GET /api/screener/run/{job_id}` (poll async screener status/result)
 - `POST /api/screener/preview-order`
 
 Portfolio (`/api/portfolio`):

@@ -88,6 +88,10 @@ heroku buildpacks:add --index 2 heroku/python -a <app-name>
 heroku config:set SERVE_WEB_UI=auto -a <app-name>
 ```
 
+By default, Heroku startup script also sets:
+- `SCREENER_RUN_MODE=async` (avoids Heroku 30s request timeout on `/api/screener/run`)
+- `WEB_CONCURRENCY=1` (single-process consistency for in-memory background jobs)
+
 **Deploy:**
 
 ```bash
@@ -125,6 +129,10 @@ If startup fails with missing modules, ensure:
 1. `.python-version` exists at repo root.
 2. `uv.lock` is committed and matches `pyproject.toml`.
 3. You redeploy after dependency changes.
+
+If screener requests fail with `H12 Request timeout`:
+1. Ensure `SCREENER_RUN_MODE=async` (default in `scripts/heroku_start.sh`).
+2. Confirm frontend requests to `/api/screener/run` eventually receive data after background polling.
 
 ---
 

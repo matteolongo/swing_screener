@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import math
-from typing import Optional
+from typing import Literal, Optional
 from pydantic import BaseModel, Field, field_validator
 from api.models.recommendation import Recommendation
 
@@ -89,6 +89,22 @@ class ScreenerResponse(BaseModel):
     data_freshness: str = "final_close"
     warnings: list[str] = Field(default_factory=list)
     social_warmup_job_id: Optional[str] = None
+
+
+class ScreenerRunLaunchResponse(BaseModel):
+    job_id: str
+    status: Literal["queued", "running", "completed", "error"]
+    created_at: str
+    updated_at: str
+
+
+class ScreenerRunStatusResponse(BaseModel):
+    job_id: str
+    status: Literal["queued", "running", "completed", "error"]
+    result: Optional[ScreenerResponse] = None
+    error: Optional[str] = None
+    created_at: str
+    updated_at: str
 
 
 class OrderPreview(BaseModel):

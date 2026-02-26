@@ -20,6 +20,7 @@ describe('API Client', () => {
 
     it('has all screener endpoints', () => {
       expect(API_ENDPOINTS.screenerRun).toBe('/api/screener/run')
+      expect(API_ENDPOINTS.screenerRunStatus('job-1')).toBe('/api/screener/run/job-1')
       expect(API_ENDPOINTS.screenerUniverses).toBe('/api/screener/universes')
       expect(API_ENDPOINTS.screenerPreview).toBe('/api/screener/preview-order')
     })

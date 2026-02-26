@@ -13,6 +13,12 @@
   "env": {
     "SERVE_WEB_UI": {
       "value": "1"
+    },
+    "SCREENER_RUN_MODE": {
+      "value": "async"
+    },
+    "WEB_CONCURRENCY": {
+      "value": "1"
     }
   }
 }
