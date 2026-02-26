@@ -90,7 +90,7 @@ heroku config:set SERVE_WEB_UI=auto -a <app-name>
 
 By default, Heroku startup script also sets:
 - `SCREENER_RUN_MODE=async` (avoids Heroku 30s request timeout on `/api/screener/run`)
-- `WEB_CONCURRENCY=1` (single-process consistency for in-memory background jobs)
+- `WEB_CONCURRENCY=1` (single-worker consistency for background jobs)
 
 **Deploy:**
 
@@ -133,6 +133,8 @@ If startup fails with missing modules, ensure:
 If screener requests fail with `H12 Request timeout`:
 1. Ensure `SCREENER_RUN_MODE=async` (default in `scripts/heroku_start.sh`).
 2. Confirm frontend requests to `/api/screener/run` eventually receive data after background polling.
+3. Ensure `WEB_CONCURRENCY=1` for this app:
+   `heroku config:set WEB_CONCURRENCY=1 -a <app-name>`
 
 ---
 
