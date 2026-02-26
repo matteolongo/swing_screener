@@ -49,6 +49,7 @@ dist/
 *.parquet
 data/social_cache/
 data/daily_reviews/
+data/screener/
 data/*.db
 data/*.db-journal
 
