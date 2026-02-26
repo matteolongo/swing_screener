@@ -1,5 +1,5 @@
 {
-  "asof": "2026-02-25",
+  "asof": "2026-02-26",
   "positions": [
     {
       "ticker": "INTC",
@@ -226,7 +226,7 @@
       "source_order_id": "ENGI.PA-20260224203641",
       "entry_date": "2026-02-25",
       "entry_price": 26.92,
-      "stop_price": 25.98,
+      "stop_price": 26.92,
       "shares": 3,
       "initial_risk": 0.9400000000000013,
       "max_favorable_price": 26.92,
@@ -234,7 +234,8 @@
       "exit_price": null,
       "notes": "From screener: Score 90.3, Rank #3",
       "exit_order_ids": [
-        "ORD-STOP-POS-ENGI.PA-20260225-01"
+        "ORD-STOP-POS-ENGI.PA-20260225-01",
+        "ORD-FA641E8F"
       ]
     }
   ]

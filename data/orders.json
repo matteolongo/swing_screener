@@ -1,5 +1,5 @@
 {
-  "asof": "2026-02-25",
+  "asof": "2026-02-26",
   "orders": [
     {
       "order_id": "ORD-INTC-20260115-ENTRY",
@@ -745,7 +745,7 @@
     {
       "order_id": "ORD-STOP-POS-ENGI.PA-20260225-01",
       "ticker": "ENGI.PA",
-      "status": "pending",
+      "status": "cancelled",
       "order_type": "SELL_STOP",
       "limit_price": null,
       "quantity": 3,
@@ -753,13 +753,26 @@
       "order_date": "2026-02-25",
       "filled_date": "",
       "entry_price": null,
-      "notes": "auto-linked stop",
+      "notes": "auto-linked stop\nReplaced with new stop at 26.92 (was 25.98)",
       "order_kind": "stop",
       "parent_order_id": "ENGI.PA-20260224203641",
       "position_id": "POS-ENGI.PA-20260225-01",
       "tif": "GTC",
       "fee_eur": null,
       "fill_fx_rate": null
+    },
+    {
+      "order_id": "ORD-FA641E8F",
+      "ticker": "ENGI.PA",
+      "status": "pending",
+      "order_type": "STOP",
+      "quantity": 3,
+      "stop_price": 26.92,
+      "order_date": "2026-02-26",
+      "notes": "Auto-created from position stop update (was 25.98)",
+      "order_kind": "stop",
+      "position_id": "POS-ENGI.PA-20260225-01",
+      "tif": "GTC"
     }
   ]
 }
