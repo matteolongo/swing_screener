@@ -1,11 +1,13 @@
 import pandas as pd
 import datetime as dt
+import time
 from fastapi.testclient import TestClient
 from unittest.mock import MagicMock
 from types import SimpleNamespace
 
 from api.main import app
 import api.services.screener_service as screener_service
+from api.models.screener import ScreenerResponse
 from swing_screener.data.providers import MarketDataProvider
 
 
@@ -247,3 +249,40 @@ def test_data_freshness_is_intraday_for_today_before_close():
     now_utc = dt.datetime(2026, 2, 19, 15, 0, tzinfo=dt.timezone.utc)
     freshness = screener_service._resolve_data_freshness("2026-02-19", now_utc, ["EUR"])
     assert freshness == "intraday"
+
+
+def test_screener_async_mode_returns_job_and_status(monkeypatch):
+    monkeypatch.setenv("SCREENER_RUN_MODE", "async")
+
+    def fake_run(self, request, strategy_override=None):
+        return ScreenerResponse(
+            candidates=[],
+            asof_date="2026-02-26",
+            total_screened=0,
+            data_freshness="final_close",
+            warnings=[],
+            social_warmup_job_id=None,
+        )
+
+    monkeypatch.setattr(screener_service.ScreenerService, "run_screener", fake_run)
+
+    client = TestClient(app)
+    launch_res = client.post("/api/screener/run", json={"universe": "mega_all", "top": 20})
+    assert launch_res.status_code == 202
+    launch_payload = launch_res.json()
+    assert launch_payload["status"] in {"queued", "running", "completed"}
+    job_id = launch_payload["job_id"]
+
+    final_payload = None
+    for _ in range(20):
+        status_res = client.get(f"/api/screener/run/{job_id}")
+        assert status_res.status_code == 200
+        payload = status_res.json()
+        if payload["status"] == "completed":
+            final_payload = payload
+            break
+        time.sleep(0.05)
+
+    assert final_payload is not None
+    assert final_payload["result"]["asof_date"] == "2026-02-26"
+    assert final_payload["result"]["total_screened"] == 0

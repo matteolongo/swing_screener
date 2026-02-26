@@ -2,14 +2,34 @@
 from __future__ import annotations
 
 import math
+import os
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import JSONResponse
 
-from api.models.screener import ScreenerRequest, ScreenerResponse, OrderPreview
+from api.models.screener import (
+    ScreenerRequest,
+    ScreenerResponse,
+    ScreenerRunLaunchResponse,
+    ScreenerRunStatusResponse,
+    OrderPreview,
+)
 from api.dependencies import get_screener_service
 from api.services.screener_service import ScreenerService
 from pydantic import BaseModel, Field, field_validator
 
 router = APIRouter()
+
+
+def _resolve_screener_run_mode() -> str:
+    """
+    Resolve screener execution mode.
+
+    Defaults to async on dyno platforms to avoid Heroku H12 request timeouts.
+    """
+    configured = str(os.getenv("SCREENER_RUN_MODE", "")).strip().lower()
+    if configured in {"sync", "async"}:
+        return configured
+    return "async" if os.getenv("DYNO") else "sync"
 
 
 class OrderPreviewRequest(BaseModel):
@@ -49,13 +69,29 @@ async def list_universes(service: ScreenerService = Depends(get_screener_service
     return service.list_universes()
 
 
-@router.post("/run", response_model=ScreenerResponse)
+@router.post(
+    "/run",
+    response_model=ScreenerResponse,
+    responses={202: {"model": ScreenerRunLaunchResponse}},
+)
 async def run_screener(
     request: ScreenerRequest,
     service: ScreenerService = Depends(get_screener_service),
 ):
-    """Run the screener on a universe of stocks."""
+    """Run screener sync or launch async job depending on environment mode."""
+    if _resolve_screener_run_mode() == "async":
+        launch = service.start_run_async(request)
+        return JSONResponse(status_code=202, content=launch.model_dump())
     return service.run_screener(request)
+
+
+@router.get("/run/{job_id}", response_model=ScreenerRunStatusResponse)
+def get_run_status(
+    job_id: str,
+    service: ScreenerService = Depends(get_screener_service),
+):
+    """Get background screener run status."""
+    return service.get_run_status(job_id)
 
 
 @router.post("/preview-order", response_model=OrderPreview)
@@ -78,4 +114,3 @@ async def preview_order(
         account_size=request.account_size,
         risk_pct=request.risk_pct,
     )
-

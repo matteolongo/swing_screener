@@ -11,6 +11,7 @@ export const API_ENDPOINTS = {
   
   // Screener
   screenerRun: '/api/screener/run',
+  screenerRunStatus: (jobId: string) => `/api/screener/run/${jobId}`,
   screenerUniverses: '/api/screener/universes',
   screenerPreview: '/api/screener/preview-order',
   

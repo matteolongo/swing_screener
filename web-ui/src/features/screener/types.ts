@@ -118,6 +118,22 @@ export interface ScreenerResponseAPI {
   social_warmup_job_id?: string;
 }
 
+export interface ScreenerRunLaunchResponseAPI {
+  job_id: string;
+  status: 'queued' | 'running' | 'completed' | 'error';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ScreenerRunStatusResponseAPI {
+  job_id: string;
+  status: 'queued' | 'running' | 'completed' | 'error';
+  result?: ScreenerResponseAPI;
+  error?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface OrderPreview {
   ticker: string;
   entryPrice: number;
