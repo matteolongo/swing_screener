@@ -70,6 +70,8 @@ Deploy one Heroku app that serves both:
 - `scripts/heroku_build_ui.sh`
 - `scripts/heroku_start.sh`
 - `app.json` (buildpack order + defaults)
+- `.python-version` (pins Python runtime)
+- `pyproject.toml` + `uv.lock` (Python dependency source of truth)
 
 **Required buildpack order:**
 1. Node.js
