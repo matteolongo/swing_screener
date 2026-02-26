@@ -113,3 +113,49 @@ def test_build_intelligence_config_guards_invalid_threshold_values():
     assert cfg.opportunity.max_daily_opportunities == 8
     assert cfg.opportunity.min_opportunity_score == 0.55
 
+
+def test_build_intelligence_config_prefers_ollama_host_env_for_default_localhost(monkeypatch):
+    monkeypatch.setenv("OLLAMA_HOST", "http://ollama:11434")
+    strategy = {
+        "market_intelligence": {
+            "llm": {
+                "base_url": "http://localhost:11434",
+            }
+        }
+    }
+
+    cfg = build_intelligence_config(strategy)
+
+    assert cfg.llm.base_url == "http://ollama:11434"
+
+
+def test_build_intelligence_config_keeps_explicit_non_default_base_url(monkeypatch):
+    monkeypatch.setenv("OLLAMA_HOST", "http://ollama:11434")
+    strategy = {
+        "market_intelligence": {
+            "llm": {
+                "base_url": "http://custom-ollama.internal:11434",
+            }
+        }
+    }
+
+    cfg = build_intelligence_config(strategy)
+
+    assert cfg.llm.base_url == "http://custom-ollama.internal:11434"
+
+
+def test_build_intelligence_config_maps_prompt_overrides():
+    strategy = {
+        "market_intelligence": {
+            "llm": {
+                "system_prompt": "  You are a strict classifier.  ",
+                "user_prompt_template": "Headline: {{headline}}\r\n{{taxonomy}}\r\n{{instructions}}",
+            }
+        }
+    }
+
+    cfg = build_intelligence_config(strategy)
+
+    assert cfg.llm.system_prompt == "You are a strict classifier."
+    assert "{{headline}}" in cfg.llm.user_prompt_template
+    assert "\r" not in cfg.llm.user_prompt_template

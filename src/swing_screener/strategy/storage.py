@@ -31,6 +31,46 @@ def _write_json(path: Path, payload: Any) -> None:
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
+def _default_market_intelligence_payload() -> dict:
+    return {
+        "enabled": False,
+        "providers": ["yahoo_finance"],
+        "universe_scope": "screener_universe",
+        "market_context_symbols": ["SPY", "QQQ", "XLK", "SMH", "XBI"],
+        "llm": {
+            "enabled": False,
+            "provider": "ollama",
+            "model": "mistral:7b-instruct",
+            "base_url": "http://localhost:11434",
+            "api_key": "",
+            "enable_cache": True,
+            "enable_audit": True,
+            "cache_path": "data/intelligence/llm_cache.json",
+            "audit_path": "data/intelligence/llm_audit",
+            "max_concurrency": 4,
+        },
+        "catalyst": {
+            "lookback_hours": 72,
+            "recency_half_life_hours": 36,
+            "false_catalyst_return_z": 1.5,
+            "min_price_reaction_atr": 0.8,
+            "require_price_confirmation": True,
+        },
+        "theme": {
+            "enabled": True,
+            "min_cluster_size": 3,
+            "min_peer_confirmation": 2,
+            "curated_peer_map_path": "data/intelligence/peer_map.yaml",
+        },
+        "opportunity": {
+            "technical_weight": 0.55,
+            "catalyst_weight": 0.45,
+            "max_daily_opportunities": 8,
+            "min_opportunity_score": 0.55,
+        },
+    }
+
+
 def _default_strategy_payload(now: dt.datetime | None = None) -> dict:
     ts = (now or dt.datetime.now()).replace(microsecond=0).isoformat()
     return {
@@ -97,6 +137,7 @@ def _default_strategy_payload(now: dt.datetime | None = None) -> dict:
             "providers": ["reddit"],
             "sentiment_analyzer": "keyword",
         },
+        "market_intelligence": _default_market_intelligence_payload(),
     }
 
 
@@ -167,6 +208,34 @@ def load_strategies() -> list[dict]:
             if social_overlay.get("sentiment_analyzer") is None:
                 social_overlay["sentiment_analyzer"] = "keyword"
                 dirty = True
+
+        market_intelligence_default = _default_market_intelligence_payload()
+        market_intelligence = strategy.get("market_intelligence")
+        if not isinstance(market_intelligence, dict):
+            strategy["market_intelligence"] = market_intelligence_default
+            dirty = True
+        else:
+            if market_intelligence.get("providers") is None:
+                market_intelligence["providers"] = market_intelligence_default["providers"]
+                dirty = True
+            if market_intelligence.get("universe_scope") is None:
+                market_intelligence["universe_scope"] = market_intelligence_default["universe_scope"]
+                dirty = True
+            if market_intelligence.get("market_context_symbols") is None:
+                market_intelligence["market_context_symbols"] = market_intelligence_default["market_context_symbols"]
+                dirty = True
+
+            for section in ("llm", "catalyst", "theme", "opportunity"):
+                current_section = market_intelligence.get(section)
+                default_section = market_intelligence_default[section]
+                if not isinstance(current_section, dict):
+                    market_intelligence[section] = default_section
+                    dirty = True
+                    continue
+                for key, value in default_section.items():
+                    if current_section.get(key) is None:
+                        current_section[key] = value
+                        dirty = True
 
     if not any(s.get("id") == DEFAULT_STRATEGY_ID for s in data):
         data.append(_default_strategy_payload())

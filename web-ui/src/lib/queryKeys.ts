@@ -17,6 +17,9 @@ export const queryKeys = {
   positionStopSuggestion: (positionId?: string) =>
     ['positions', positionId, 'stop-suggestion'] as const,
   socialWarmupStatus: (jobId?: string) => ['social-warmup', jobId] as const,
+  intelligenceConfig: () => ['intelligence-config'] as const,
+  intelligenceProviders: () => ['intelligence-providers'] as const,
+  intelligenceSymbolSets: () => ['intelligence-symbol-sets'] as const,
   intelligenceRunStatus: (jobId?: string) => ['intelligence-run-status', jobId] as const,
   intelligenceOpportunities: (asofDate?: string, symbolScope?: string) =>
     ['intelligence-opportunities', asofDate, symbolScope] as const,

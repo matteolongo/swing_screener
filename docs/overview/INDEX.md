@@ -49,9 +49,7 @@ Data Providers:
 - `/src/swing_screener/data/docs/INDICATOR_VALIDATION.md`
 
 Intelligence and Social:
-- `/src/swing_screener/intelligence/docs/LLM_GUIDE.md`
-- `/src/swing_screener/intelligence/docs/INTEL_SYSTEM_DESIGN.md`
-- `/src/swing_screener/intelligence/docs/MARKET_INTELLIGENCE_PHILOSOPHY.md`
+- `/src/swing_screener/intelligence/README.md`
 - `/src/swing_screener/social/docs/SENTIMENT_PLUGIN_GUIDE.md`
 
 Config:

@@ -4,6 +4,7 @@ from __future__ import annotations
 from dataclasses import replace
 from fastapi import HTTPException
 
+from api.services.intelligence_config_service import IntelligenceConfigService
 from api.models.intelligence import (
     IntelligenceOpportunityResponse,
     IntelligenceOpportunitiesResponse,
@@ -18,13 +19,19 @@ from swing_screener.intelligence.storage import IntelligenceStorage
 
 
 class IntelligenceService:
-    def __init__(self, strategy_repo: StrategyRepository) -> None:
+    def __init__(
+        self,
+        *,
+        strategy_repo: StrategyRepository,
+        config_service: IntelligenceConfigService,
+    ) -> None:
         self._strategy_repo = strategy_repo
+        self._config_service = config_service
         self._storage = IntelligenceStorage()
 
     def start_run(self, request: IntelligenceRunRequest) -> IntelligenceRunLaunchResponse:
-        strategy = self._strategy_repo.get_active_strategy()
-        cfg = build_intelligence_config(strategy)
+        config_payload = self._config_service.get_config().model_dump()
+        cfg = build_intelligence_config({"market_intelligence": config_payload})
 
         if request.providers:
             cfg = replace(cfg, providers=tuple(str(provider).strip().lower() for provider in request.providers if str(provider).strip()))
@@ -43,9 +50,13 @@ class IntelligenceService:
                 for symbol, value in request.technical_readiness.items()
                 if str(symbol).strip()
             }
+        symbols = self._config_service.resolve_symbol_scope(
+            symbols=request.symbols,
+            symbol_set_id=request.symbol_set_id,
+        )
 
         job_id = get_intelligence_run_manager().start_job(
-            symbols=request.symbols,
+            symbols=symbols,
             cfg=cfg,
             technical_readiness=technical,
         )
@@ -74,6 +85,9 @@ class IntelligenceService:
             completed_symbols=job.completed_symbols,
             asof_date=job.asof_date,
             opportunities_count=job.opportunities_count,
+            llm_warnings_count=getattr(job, "llm_warnings_count", 0),
+            llm_warning_sample=getattr(job, "llm_warning_sample", None),
+            analysis_summary=getattr(job, "analysis_summary", None),
             error=job.error,
             created_at=job.created_at,
             updated_at=job.updated_at,

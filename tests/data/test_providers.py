@@ -302,6 +302,34 @@ class TestYfinanceProvider:
         cache_files = list(cache_dir.glob("*.parquet"))
         assert len(cache_files) > 0
 
+    def test_fetch_ohlcv_recovers_from_corrupted_cache(self, monkeypatch, tmp_path):
+        """Corrupted parquet cache should be deleted and refreshed from provider."""
+        cache_dir = tmp_path / "test_corrupted_cache"
+        provider = YfinanceProvider(cache_dir=str(cache_dir))
+        cache_dir.mkdir(parents=True, exist_ok=True)
+
+        calls = {"count": 0}
+
+        def fake_download(*args, **kwargs):
+            calls["count"] += 1
+            return _mock_ohlcv_frame(["AAPL"])
+
+        monkeypatch.setattr(yfinance_provider_module.yf, "download", fake_download)
+
+        # Use historical window so normal cache reads apply.
+        start = "2026-01-01"
+        end = "2026-01-31"
+        cache_file = provider._cache_path(["AAPL"], start, "2026-02-01", provider.auto_adjust)
+        cache_file.write_bytes(b"not-a-parquet-file")
+
+        df = provider.fetch_ohlcv(["AAPL"], start, end)
+
+        assert not df.empty
+        assert calls["count"] == 1
+        # Should have replaced corrupt bytes with a readable parquet file.
+        reread = pd.read_parquet(cache_file)
+        assert not reread.empty
+
 
 class TestBrokerConfig:
     """Test BrokerConfig."""

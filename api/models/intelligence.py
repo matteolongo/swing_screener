@@ -1,13 +1,15 @@
 """Market intelligence API models."""
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import ClassVar, Literal, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
+from swing_screener.intelligence.config import SUPPORTED_INTEL_PROVIDERS
 
 
 class IntelligenceRunRequest(BaseModel):
-    symbols: list[str] = Field(min_length=1, max_length=500)
+    symbols: Optional[list[str]] = Field(default=None, max_length=500)
+    symbol_set_id: Optional[str] = None
     technical_readiness: Optional[dict[str, float]] = None
     providers: Optional[list[str]] = None
     lookback_hours: Optional[int] = Field(default=None, ge=1, le=240)
@@ -15,7 +17,9 @@ class IntelligenceRunRequest(BaseModel):
 
     @field_validator("symbols")
     @classmethod
-    def _validate_symbols(cls, values: list[str]) -> list[str]:
+    def _validate_symbols(cls, values: Optional[list[str]]) -> list[str]:
+        if values is None:
+            return []
         normalized: list[str] = []
         seen: set[str] = set()
         for value in values:
@@ -24,9 +28,41 @@ class IntelligenceRunRequest(BaseModel):
                 continue
             seen.add(symbol)
             normalized.append(symbol)
-        if not normalized:
-            raise ValueError("At least one valid symbol is required.")
         return normalized
+
+    @field_validator("symbol_set_id")
+    @classmethod
+    def _validate_symbol_set_id(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        cleaned = str(value).strip()
+        return cleaned or None
+
+    @field_validator("providers")
+    @classmethod
+    def _validate_providers(cls, values: Optional[list[str]]) -> Optional[list[str]]:
+        if values is None:
+            return None
+        normalized: list[str] = []
+        seen: set[str] = set()
+        for value in values:
+            provider = str(value).strip().lower()
+            if not provider or provider in seen:
+                continue
+            if provider not in SUPPORTED_INTEL_PROVIDERS:
+                allowed = ", ".join(sorted(SUPPORTED_INTEL_PROVIDERS))
+                raise ValueError(f"Unsupported provider: {provider}. Allowed values: {allowed}")
+            seen.add(provider)
+            normalized.append(provider)
+        return normalized or None
+
+    @model_validator(mode="after")
+    def _validate_scope(self) -> "IntelligenceRunRequest":
+        has_symbols = bool(self.symbols)
+        has_symbol_set = bool(self.symbol_set_id)
+        if has_symbols == has_symbol_set:
+            raise ValueError("Provide exactly one of 'symbols' or 'symbol_set_id'.")
+        return self
 
 
 class IntelligenceRunLaunchResponse(BaseModel):
@@ -44,6 +80,9 @@ class IntelligenceRunStatusResponse(BaseModel):
     completed_symbols: int
     asof_date: Optional[str] = None
     opportunities_count: int = 0
+    llm_warnings_count: int = 0
+    llm_warning_sample: Optional[str] = None
+    analysis_summary: Optional[str] = None
     error: Optional[str] = None
     created_at: str
     updated_at: str
@@ -67,6 +106,8 @@ class IntelligenceOpportunitiesResponse(BaseModel):
 
 class LLMClassifyNewsRequest(BaseModel):
     """Request to classify news headlines using LLM."""
+    SUPPORTED_LLM_PROVIDERS: ClassVar[set[str]] = {"ollama", "mock", "openai"}
+
     headlines: list[dict[str, str]] = Field(
         min_length=1,
         max_length=100,
@@ -74,11 +115,19 @@ class LLMClassifyNewsRequest(BaseModel):
     )
     provider: Optional[str] = Field(
         default="ollama",
-        description="LLM provider (ollama, mock)"
+        description="LLM provider (ollama, mock, openai)"
     )
     model: Optional[str] = Field(
         default="mistral:7b-instruct",
         description="Model name for the provider"
+    )
+    base_url: Optional[str] = Field(
+        default=None,
+        description="Optional base URL override for provider"
+    )
+    api_key: Optional[str] = Field(
+        default=None,
+        description="Optional API key override (required for openai unless env is set)"
     )
 
     @field_validator("headlines")
@@ -97,6 +146,14 @@ class LLMClassifyNewsRequest(BaseModel):
                 "snippet": item.get("snippet", ""),
             })
         return validated
+
+    @field_validator("provider")
+    @classmethod
+    def _normalize_provider(cls, value: Optional[str]) -> str:
+        if value is None:
+            return "ollama"
+        normalized = str(value).strip().lower()
+        return normalized or "ollama"
 
 
 class LLMEventClassificationResponse(BaseModel):
@@ -123,5 +180,3 @@ class LLMClassifyNewsResponse(BaseModel):
     cached_count: int
     material_count: int
     provider_available: bool
-
-

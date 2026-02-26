@@ -4,10 +4,12 @@ Prompts are treated as production code - versioned, tested, and carefully mainta
 to prevent taxonomy drift and ensure consistent classification behavior.
 """
 
+import hashlib
+
 from .schemas import EventType, EventSeverity
 
 # Prompt version identifier - increment when making breaking changes
-PROMPT_VERSION = "v1.0.0"
+PROMPT_VERSION = "v1.2.0"
 
 SYSTEM_PROMPT = """You are a financial event classifier.
 
@@ -22,6 +24,28 @@ Do not speculate.
 Do not predict price direction.
 
 Focus only on what objectively happened."""
+
+DEFAULT_USER_PROMPT_TEMPLATE = """Classify the following financial headline.
+
+Return ONLY valid JSON matching the EventClassification schema.
+
+Headline: "{{headline}}"
+{{snippet_block}}
+{{taxonomy}}
+
+{{instructions}}
+
+Return your response as a JSON object with these exact fields:
+{
+  "event_type": "one of the types from taxonomy",
+  "severity": "LOW | MEDIUM | HIGH",
+  "primary_symbol": "TICKER or null",
+  "secondary_symbols": ["TICKER1", "TICKER2"] or [],
+  "is_material": true or false,
+  "confidence": 0.0 to 1.0,
+  "summary": "Single factual sentence, no speculation"
+}
+"""
 
 
 def build_event_taxonomy_description() -> str:
@@ -86,61 +110,104 @@ CRITICAL RULES:
 EXAMPLES OF CORRECT CLASSIFICATION:
 
 Headline: "NVIDIA beats Q4 earnings expectations, revenue up 20%"
-→ event_type: EARNINGS, severity: HIGH, primary_symbol: "NVDA", is_material: true
-→ summary: "NVIDIA reported Q4 earnings exceeding expectations with 20% revenue growth."
+{
+  "event_type": "EARNINGS",
+  "severity": "HIGH",
+  "primary_symbol": "NVDA",
+  "secondary_symbols": [],
+  "is_material": true,
+  "confidence": 0.95,
+  "summary": "NVIDIA reported Q4 earnings exceeding expectations with 20% revenue growth."
+}
 
 Headline: "Apple announces Vision Pro launch date"
-→ event_type: PRODUCT, severity: MEDIUM, primary_symbol: "AAPL", is_material: true
-→ summary: "Apple announced the launch date for its Vision Pro mixed-reality headset."
+{
+  "event_type": "PRODUCT",
+  "severity": "MEDIUM",
+  "primary_symbol": "AAPL",
+  "secondary_symbols": [],
+  "is_material": true,
+  "confidence": 0.88,
+  "summary": "Apple announced the launch date for its Vision Pro mixed-reality headset."
+}
 
 Headline: "Semiconductors rally on AI demand optimism"
-→ event_type: SECTOR, severity: MEDIUM, primary_symbol: null, is_material: false
-→ summary: "Semiconductor stocks rose broadly on expectations for AI-related demand."
+{
+  "event_type": "SECTOR",
+  "severity": "MEDIUM",
+  "primary_symbol": null,
+  "secondary_symbols": [],
+  "is_material": false,
+  "confidence": 0.55,
+  "summary": "Semiconductor stocks rose broadly on expectations for AI-related demand."
+}
 
 Headline: "Morgan Stanley upgrades Tesla to Overweight"
-→ event_type: ANALYST, severity: LOW, primary_symbol: "TSLA", is_material: false
-→ summary: "Morgan Stanley upgraded Tesla to Overweight rating."
+{
+  "event_type": "ANALYST",
+  "severity": "LOW",
+  "primary_symbol": "TSLA",
+  "secondary_symbols": [],
+  "is_material": false,
+  "confidence": 0.72,
+  "summary": "Morgan Stanley upgraded Tesla to Overweight rating."
+}
 """
 
 
-def build_user_prompt(headline: str, snippet: str = "") -> str:
-    """Build the complete user prompt for classification.
-    
-    Args:
-        headline: News headline to classify
-        snippet: Optional article snippet for additional context
-    
-    Returns:
-        Formatted prompt string
-    """
-    prompt = f"""Classify the following financial headline.
+def resolve_system_prompt(system_prompt_override: str | None = None) -> str:
+    """Resolve system prompt with optional override."""
+    override = str(system_prompt_override or "").strip()
+    return override or SYSTEM_PROMPT
 
-Return ONLY valid JSON matching the EventClassification schema.
 
-Headline: "{headline}"
-"""
-    
-    if snippet:
-        prompt += f'\nSnippet: "{snippet}"\n'
-    
-    prompt += f"""
-{build_event_taxonomy_description()}
+def resolve_user_prompt_template(user_prompt_template_override: str | None = None) -> str:
+    """Resolve user prompt template with optional override."""
+    override = str(user_prompt_template_override or "").replace("\r\n", "\n")
+    return override if override.strip() else DEFAULT_USER_PROMPT_TEMPLATE
 
-{build_classification_instructions()}
 
-Return your response as a JSON object with these exact fields:
-{{
-  "event_type": "one of the types from taxonomy",
-  "severity": "LOW | MEDIUM | HIGH",
-  "primary_symbol": "TICKER or null",
-  "secondary_symbols": ["TICKER1", "TICKER2"] or [],
-  "is_material": true or false,
-  "confidence": 0.0 to 1.0,
-  "summary": "Single factual sentence, no speculation"
-}}
-"""
-    
-    return prompt
+def build_prompt_fingerprint(
+    *,
+    system_prompt_override: str | None = None,
+    user_prompt_template_override: str | None = None,
+) -> str:
+    """Build a deterministic prompt fingerprint for cache/version tagging."""
+    system_prompt = resolve_system_prompt(system_prompt_override)
+    user_prompt_template = resolve_user_prompt_template(user_prompt_template_override)
+
+    if system_prompt == SYSTEM_PROMPT and user_prompt_template == DEFAULT_USER_PROMPT_TEMPLATE:
+        return PROMPT_VERSION
+
+    payload = f"{system_prompt}\n\n---\n\n{user_prompt_template}"
+    digest = hashlib.sha256(payload.encode("utf-8")).hexdigest()[:12]
+    return f"{PROMPT_VERSION}+custom-{digest}"
+
+
+def _build_snippet_block(snippet: str) -> str:
+    snippet_text = str(snippet or "").strip()
+    if not snippet_text:
+        return ""
+    return f'Snippet: "{snippet_text}"'
+
+
+def _render_user_prompt_template(template: str, headline: str, snippet: str = "") -> str:
+    rendered = str(template).replace("\r\n", "\n")
+    rendered = rendered.replace("{{headline}}", str(headline))
+    rendered = rendered.replace("{{snippet}}", str(snippet or "").strip())
+    rendered = rendered.replace("{{snippet_block}}", _build_snippet_block(snippet))
+    rendered = rendered.replace("{{taxonomy}}", build_event_taxonomy_description().strip())
+    rendered = rendered.replace("{{instructions}}", build_classification_instructions().strip())
+    return rendered
+
+
+def build_user_prompt(headline: str, snippet: str = "", user_prompt_template: str | None = None) -> str:
+    """Build the complete user prompt for classification."""
+    template = resolve_user_prompt_template(user_prompt_template)
+    prompt = _render_user_prompt_template(template, headline, snippet)
+    if prompt.strip():
+        return prompt
+    return _render_user_prompt_template(DEFAULT_USER_PROMPT_TEMPLATE, headline, snippet)
 
 
 def get_prompt_metadata() -> dict[str, str]:

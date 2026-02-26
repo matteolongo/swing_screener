@@ -3,6 +3,7 @@ import {
   LayoutDashboard, 
   SlidersHorizontal,
   ClipboardCheck,
+  Brain,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import {
@@ -31,6 +32,12 @@ const navigation = [
     href: '/strategy', 
     icon: SlidersHorizontal,
     advanced: false, // Always enabled
+  },
+  {
+    labelKey: 'sidebar.nav.intelligence',
+    href: '/intelligence',
+    icon: Brain,
+    advanced: false,
   },
 ] as const;
 

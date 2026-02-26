@@ -32,6 +32,11 @@ export const API_ENDPOINTS = {
   socialWarmupStatus: (jobId: string) => `/api/social/warmup/${jobId}`,
 
   // Intelligence
+  intelligenceConfig: '/api/intelligence/config',
+  intelligenceProviders: '/api/intelligence/providers',
+  intelligenceProviderTest: '/api/intelligence/providers/test',
+  intelligenceSymbolSets: '/api/intelligence/symbol-sets',
+  intelligenceSymbolSetById: (id: string) => `/api/intelligence/symbol-sets/${id}`,
   intelligenceRun: '/api/intelligence/run',
   intelligenceRunStatus: (jobId: string) => `/api/intelligence/run/${jobId}`,
   intelligenceOpportunities: '/api/intelligence/opportunities',

@@ -11,6 +11,7 @@ import json
 import time
 from datetime import datetime
 from pathlib import Path
+import threading
 from typing import Optional
 
 from .client import LLMProvider
@@ -48,6 +49,7 @@ class EventClassifier:
         self.provider = provider
         self.enable_cache = enable_cache
         self.enable_audit = enable_audit
+        self._cache_lock = threading.Lock()
         
         # Set default paths
         if cache_path is None:
@@ -82,7 +84,8 @@ class EventClassifier:
         
         Uses SHA256 hash of concatenated text to create deterministic key.
         """
-        text = f"{headline}|{snippet}|{PROMPT_VERSION}"
+        prompt_cache_key = str(getattr(self.provider, "prompt_cache_key", PROMPT_VERSION))
+        text = f"{headline}|{snippet}|{prompt_cache_key}"
         return hashlib.sha256(text.encode()).hexdigest()
     
     def _get_from_cache(self, cache_key: str) -> Optional[EventClassification]:
@@ -90,7 +93,8 @@ class EventClassifier:
         if not self.enable_cache:
             return None
         
-        cached_data = self._cache.get(cache_key)
+        with self._cache_lock:
+            cached_data = self._cache.get(cache_key)
         if cached_data is None:
             return None
         
@@ -105,13 +109,16 @@ class EventClassifier:
         if not self.enable_cache:
             return
         
-        self._cache[cache_key] = classification.model_dump()
+        with self._cache_lock:
+            self._cache[cache_key] = classification.model_dump()
         
         # Write cache file (atomic write)
         tmp_path = self.cache_path.with_suffix(".tmp")
         try:
+            with self._cache_lock:
+                cache_snapshot = dict(self._cache)
             with open(tmp_path, "w") as f:
-                json.dump(self._cache, f, indent=2)
+                json.dump(cache_snapshot, f, indent=2)
             tmp_path.replace(self.cache_path)
         except Exception:
             # If cache write fails, continue without caching
@@ -189,7 +196,7 @@ class EventClassifier:
                 news_item=news_item,
                 classification=cached_classification,
                 model_name=self.provider.model_name,
-                prompt_version=PROMPT_VERSION,
+                prompt_version=str(getattr(self.provider, "prompt_version", PROMPT_VERSION)),
                 processing_time_ms=0.0,
                 cached=True,
             )
@@ -210,7 +217,7 @@ class EventClassifier:
             news_item=news_item,
             classification=classification,
             model_name=self.provider.model_name,
-            prompt_version=PROMPT_VERSION,
+            prompt_version=str(getattr(self.provider, "prompt_version", PROMPT_VERSION)),
             processing_time_ms=processing_time_ms,
             cached=False,
         )
@@ -240,14 +247,17 @@ class EventClassifier:
     
     def get_cache_stats(self) -> dict:
         """Return cache statistics."""
+        with self._cache_lock:
+            total_entries = len(self._cache)
         return {
-            "total_entries": len(self._cache),
+            "total_entries": total_entries,
             "cache_enabled": self.enable_cache,
             "cache_path": str(self.cache_path),
         }
     
     def clear_cache(self):
         """Clear all cached classifications."""
-        self._cache = {}
+        with self._cache_lock:
+            self._cache = {}
         if self.cache_path.exists():
             self.cache_path.unlink()

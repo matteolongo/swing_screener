@@ -57,6 +57,17 @@ from api.models.intelligence import (
     IntelligenceOpportunityResponse,
     IntelligenceOpportunitiesResponse,
 )
+from api.models.intelligence_config import (
+    IntelligenceConfigModel,
+    IntelligenceProviderInfoResponse,
+    IntelligenceProviderTestRequest,
+    IntelligenceProviderTestResponse,
+    IntelligenceSymbolSetCreateRequest,
+    IntelligenceSymbolSetUpdateRequest,
+    IntelligenceSymbolSetResponse,
+    IntelligenceSymbolSetsResponse,
+    IntelligenceSymbolSetDeleteResponse,
+)
 
 __all__ = [
     "AppConfig",
@@ -117,4 +128,13 @@ __all__ = [
     "IntelligenceRunStatusResponse",
     "IntelligenceOpportunityResponse",
     "IntelligenceOpportunitiesResponse",
+    "IntelligenceConfigModel",
+    "IntelligenceProviderInfoResponse",
+    "IntelligenceProviderTestRequest",
+    "IntelligenceProviderTestResponse",
+    "IntelligenceSymbolSetCreateRequest",
+    "IntelligenceSymbolSetUpdateRequest",
+    "IntelligenceSymbolSetResponse",
+    "IntelligenceSymbolSetsResponse",
+    "IntelligenceSymbolSetDeleteResponse",
 ]
