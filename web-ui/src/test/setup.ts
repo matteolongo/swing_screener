@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest'
-import { expect, afterEach, beforeAll, afterAll } from 'vitest'
+import { expect, afterEach, beforeAll, afterAll, vi } from 'vitest'
 import { cleanup, act } from '@testing-library/react'
 import * as matchers from '@testing-library/jest-dom/matchers'
 import { notifyManager } from '@tanstack/react-query'
@@ -39,6 +39,7 @@ Object.defineProperty(window, 'localStorage', {
 
 // Start MSW server before all tests
 beforeAll(async () => {
+  vi.stubEnv('VITE_PERSISTENCE_MODE', 'api')
   const mod = await import('./mocks/server')
   server = mod.server
   server.listen({ onUnhandledRequest: 'warn' })
@@ -60,6 +61,7 @@ beforeAll(async () => {
 
 // Reset handlers after each test (important for test isolation)
 afterEach(() => {
+  vi.stubEnv('VITE_PERSISTENCE_MODE', 'api')
   server?.resetHandlers()
   cleanup()
   // Reset localStorage and set mode to advanced for tests (to preserve existing test expectations)
@@ -69,6 +71,7 @@ afterEach(() => {
 
 // Stop MSW server after all tests
 afterAll(() => {
+  vi.unstubAllEnvs()
   console.error = originalConsoleError
   server?.close()
 })

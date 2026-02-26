@@ -68,3 +68,53 @@ def test_position_stop_suggestion(monkeypatch, tmp_path):
     assert data["stop_old"] == 90.0
     assert data["stop_suggested"] == 100.0
     assert data["action"] == "MOVE_STOP_UP"
+
+
+def test_position_stop_suggestion_compute_endpoint(monkeypatch):
+    # Keep this test focused on compute endpoint behavior from payload only.
+    config_router.current_config = config_router.DEFAULT_CONFIG.model_copy(deep=True)
+    config_router.current_config.manage.trail_after_r = 999.0
+    config_router.current_config.manage.max_holding_days = 999
+
+    ohlcv = _ohlcv_for_ticker()
+    mock_provider = MagicMock(spec=MarketDataProvider)
+    mock_provider.fetch_ohlcv.return_value = ohlcv
+    mock_provider.get_provider_name.return_value = "mock"
+    monkeypatch.setattr(portfolio_service, "get_default_provider", lambda *args, **kwargs: mock_provider)
+
+    client = TestClient(app)
+    res = client.post(
+        "/api/portfolio/stop-suggestion/compute",
+        json={
+            "position": {
+                "ticker": "AAPL",
+                "status": "open",
+                "entry_date": "2026-01-01",
+                "entry_price": 100.0,
+                "stop_price": 90.0,
+                "shares": 10,
+                "position_id": "POS-AAPL-LOCAL",
+                "source_order_id": "ORD-AAPL-ENTRY",
+                "initial_risk": 10.0,
+                "max_favorable_price": 120.0,
+                "exit_date": None,
+                "exit_price": None,
+                "current_price": None,
+                "notes": "",
+                "exit_order_ids": None,
+            },
+            "manage": {
+                "breakeven_at_r": 1.0,
+                "trail_after_r": 999.0,
+                "trail_sma": 20,
+                "sma_buffer_pct": 0.005,
+                "max_holding_days": 999,
+            },
+        },
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["ticker"] == "AAPL"
+    assert data["stop_old"] == 90.0
+    assert data["stop_suggested"] == 100.0
+    assert data["action"] == "MOVE_STOP_UP"

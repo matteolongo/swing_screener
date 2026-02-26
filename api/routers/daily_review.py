@@ -1,7 +1,7 @@
 """API endpoints for daily review."""
 from fastapi import APIRouter, Depends, Query
 
-from api.models.daily_review import DailyReview
+from api.models.daily_review import DailyReview, DailyReviewComputeRequest
 from api.services.daily_review_service import DailyReviewService
 from api.services.screener_service import ScreenerService
 from api.services.portfolio_service import PortfolioService
@@ -41,3 +41,18 @@ def get_daily_review(
         - Summary statistics
     """
     return service.generate_daily_review(top_n=top_n, universe=universe)
+
+
+@router.post("/compute", response_model=DailyReview)
+def compute_daily_review(
+    request: DailyReviewComputeRequest,
+    service: DailyReviewService = Depends(get_daily_review_service),
+) -> DailyReview:
+    """Compute daily review from client-provided state without backend persistence writes."""
+    return service.compute_daily_review_from_state(
+        strategy=request.strategy.model_dump(),
+        positions=[position.model_dump() for position in request.positions],
+        orders=[order.model_dump() for order in request.orders],
+        top_n=request.top_n,
+        universe=request.universe,
+    )

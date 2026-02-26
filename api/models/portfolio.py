@@ -74,6 +74,19 @@ class ClosePositionRequest(BaseModel):
         return v
 
 
+class StopSuggestionManageConfig(BaseModel):
+    breakeven_at_r: float = Field(default=1.0, ge=0)
+    trail_after_r: float = Field(default=2.0, ge=0)
+    trail_sma: int = Field(default=20, gt=0)
+    sma_buffer_pct: float = Field(default=0.005, ge=0)
+    max_holding_days: int = Field(default=20, gt=0)
+
+
+class StopSuggestionComputeRequest(BaseModel):
+    position: Position
+    manage: Optional[StopSuggestionManageConfig] = None
+
+
 OrderStatus = Literal["pending", "filled", "cancelled"]
 OrderKind = Literal["entry", "stop", "take_profit"]
 

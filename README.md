@@ -58,6 +58,36 @@ Then open [http://localhost:5173](http://localhost:5173)
 
 ---
 
+### ☁️ Heroku (Single App: API + UI)
+
+Deploy one Heroku app that serves both:
+- FastAPI under `/api/*`
+- built React app from the same origin (mobile-friendly, no CORS setup needed)
+
+**Files included for this flow:**
+- `Procfile` (web dyno command)
+- `package.json` (runs `heroku-postbuild` to build `web-ui`)
+- `scripts/heroku_build_ui.sh`
+- `scripts/heroku_start.sh`
+- `app.json` (buildpack order + defaults)
+
+**Required buildpack order:**
+1. Node.js
+2. Python
+
+**Minimal setup:**
+
+```bash
+heroku buildpacks:clear -a <app-name>
+heroku buildpacks:add --index 1 heroku/nodejs -a <app-name>
+heroku buildpacks:add --index 2 heroku/python -a <app-name>
+git push heroku <branch>:main
+```
+
+After deploy, the app is available on one URL and frontend API calls can stay relative (`/api/...`).
+
+---
+
 ### 💻 CLI (Advanced)
 
 Command-line interface for automation, scripting, and headless environments.

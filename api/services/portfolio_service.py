@@ -614,10 +614,22 @@ class PortfolioService:
 
         return {"status": "ok", "position_id": position_id, "exit_price": request.exit_price}
 
-    def suggest_position_stop(self, position_id: str) -> PositionUpdate:
-        position = self._positions_repo.get_position(position_id)
-        if position is None:
-            raise HTTPException(status_code=404, detail=f"Position not found: {position_id}")
+    def _resolve_manage_cfg(self, payload: Optional[dict] = None) -> ManageStateConfig:
+        if payload is None:
+            return _manage_cfg_from_app()
+        return ManageStateConfig(
+            breakeven_at_R=float(payload.get("breakeven_at_r", 1.0)),
+            trail_sma=int(payload.get("trail_sma", 20)),
+            trail_after_R=float(payload.get("trail_after_r", 2.0)),
+            sma_buffer_pct=float(payload.get("sma_buffer_pct", 0.005)),
+            max_holding_days=int(payload.get("max_holding_days", 20)),
+        )
+
+    def _suggest_position_stop_from_dict(
+        self,
+        position: dict,
+        manage_payload: Optional[dict] = None,
+    ) -> PositionUpdate:
         if position.get("status") != "open":
             raise HTTPException(status_code=400, detail="Stop suggestions require an open position")
 
@@ -625,10 +637,10 @@ class PortfolioService:
         if not ticker:
             raise HTTPException(status_code=400, detail="Position ticker is missing")
 
-        manage_cfg = _manage_cfg_from_app()
+        manage_cfg = self._resolve_manage_cfg(manage_payload)
         start_date = _calc_start_date(position.get("entry_date"), manage_cfg.trail_sma)
         end_date = get_today_str()
-        
+
         try:
             ohlcv = self._provider.fetch_ohlcv([ticker], start_date=start_date, end_date=end_date)
         except Exception as exc:
@@ -663,6 +675,19 @@ class PortfolioService:
             action=update.action,
             reason=update.reason,
         )
+
+    def compute_position_stop_suggestion(
+        self,
+        position_payload: dict,
+        manage_payload: Optional[dict] = None,
+    ) -> PositionUpdate:
+        return self._suggest_position_stop_from_dict(position_payload, manage_payload)
+
+    def suggest_position_stop(self, position_id: str) -> PositionUpdate:
+        position = self._positions_repo.get_position(position_id)
+        if position is None:
+            raise HTTPException(status_code=404, detail=f"Position not found: {position_id}")
+        return self._suggest_position_stop_from_dict(position)
 
     def list_orders(self, status: Optional[str] = None, ticker: Optional[str] = None) -> OrdersResponse:
         orders, asof = self._orders_repo.list_orders(status=status, ticker=ticker)

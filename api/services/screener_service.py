@@ -318,7 +318,9 @@ class ScreenerService:
         self._strategy_repo = strategy_repo
         self._provider = provider or get_default_provider()
 
-    def _resolve_strategy(self, strategy_id: Optional[str]) -> dict:
+    def _resolve_strategy(self, strategy_id: Optional[str], strategy_override: Optional[dict] = None) -> dict:
+        if strategy_override is not None:
+            return strategy_override
         if strategy_id:
             strategy = self._strategy_repo.get_strategy(strategy_id)
             if strategy is None:
@@ -337,7 +339,7 @@ class ScreenerService:
             logger.exception("Unexpected error listing universes")
             raise HTTPException(status_code=500, detail="Failed to list universes")
 
-    def run_screener(self, request: ScreenerRequest) -> ScreenerResponse:
+    def run_screener(self, request: ScreenerRequest, strategy_override: Optional[dict] = None) -> ScreenerResponse:
         try:
             requested_top = request.top or 20
             if requested_top <= 0:
@@ -345,7 +347,7 @@ class ScreenerService:
             warnings: list[str] = []
 
             fields_set = request.model_fields_set
-            strategy = self._resolve_strategy(request.strategy_id)
+            strategy = self._resolve_strategy(request.strategy_id, strategy_override)
             universe_cfg = build_universe_config(strategy)
             active_currencies = _infer_active_currencies(request, universe_cfg.filt.currencies)
             now_utc = dt.datetime.now(dt.timezone.utc)

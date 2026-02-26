@@ -3,6 +3,8 @@ from datetime import date
 from typing import Optional
 from pydantic import BaseModel, Field
 from api.models.recommendation import Recommendation
+from api.models.portfolio import Position, Order
+from api.models.strategy import Strategy
 
 
 class DailyReviewCandidate(BaseModel):
@@ -70,3 +72,11 @@ class DailyReview(BaseModel):
     positions_update_stop: list[DailyReviewPositionUpdate]
     positions_close: list[DailyReviewPositionClose]
     summary: DailyReviewSummary
+
+
+class DailyReviewComputeRequest(BaseModel):
+    strategy: Strategy
+    positions: list[Position] = Field(default_factory=list)
+    orders: list[Order] = Field(default_factory=list)
+    top_n: int = Field(default=10, ge=1, le=50)
+    universe: Optional[str] = None
