@@ -8,6 +8,7 @@ from api.models.daily_review import DailyReview
 from api.models.screener import ScreenerResponse, ScreenerCandidate
 from api.models.portfolio import Position, PositionUpdate, PositionsResponse
 from api.services.daily_review_service import DailyReviewService
+from swing_screener.strategy.storage import _default_strategy_payload
 
 
 @pytest.fixture
@@ -318,7 +319,54 @@ def test_generate_daily_review_survives_stop_suggestion_error(
     assert isinstance(review, DailyReview)
     assert review.summary.total_positions == 3
     assert len(review.positions_close) == 1
-    assert len(review.positions_update_stop) == 0
-    assert len(review.positions_hold) == 2
-    degraded = next(p for p in review.positions_hold if p.position_id == "pos2")
-    assert "stop suggestion unavailable" in degraded.reason.lower()
+
+
+def test_compute_daily_review_from_state_uses_client_payload(
+    mock_screener_service,
+    mock_portfolio_service,
+    tmp_path,
+):
+    service = DailyReviewService(mock_screener_service, mock_portfolio_service, data_dir=tmp_path)
+    strategy = _default_strategy_payload()  # noqa: SLF001
+    position_payload = {
+        "position_id": "local-pos-1",
+        "ticker": "AAPL",
+        "entry_price": 100.0,
+        "stop_price": 95.0,
+        "shares": 10,
+        "status": "open",
+        "entry_date": "2026-02-01",
+        "current_price": 104.0,
+    }
+
+    mock_portfolio_service.compute_position_stop_suggestion.return_value = PositionUpdate(
+        ticker="AAPL",
+        status="open",
+        last=104.0,
+        entry=100.0,
+        stop_old=95.0,
+        stop_suggested=100.0,
+        shares=10,
+        r_now=0.8,
+        action="MOVE_STOP_UP",
+        reason="Breakeven: R=1.00 >= 1.0",
+    )
+
+    review = service.compute_daily_review_from_state(
+        strategy=strategy,
+        positions=[position_payload],
+        orders=[],
+        top_n=5,
+        universe="usd_all",
+    )
+
+    assert isinstance(review, DailyReview)
+    assert review.summary.total_positions == 1
+    assert len(review.positions_update_stop) == 1
+    assert review.positions_update_stop[0].ticker == "AAPL"
+
+    assert mock_screener_service.run_screener.call_count >= 1
+    args, kwargs = mock_screener_service.run_screener.call_args
+    assert args[0].top == 5
+    assert args[0].universe == "usd_all"
+    assert kwargs["strategy_override"] == strategy

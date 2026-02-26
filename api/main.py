@@ -2,10 +2,13 @@
 from __future__ import annotations
 
 import logging
+import os
 import sys
-from fastapi import FastAPI, Request
+from pathlib import Path
+
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from contextlib import asynccontextmanager
 
 # Import routers
@@ -23,6 +26,43 @@ LOG_FORMAT = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
 logging.basicConfig(level=logging.INFO, format=LOG_FORMAT, stream=sys.stdout)
 logger = logging.getLogger("swing_screener.api")
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+WEB_UI_DIST_DIR = Path(os.getenv("WEB_UI_DIST_DIR", str(PROJECT_ROOT / "web-ui" / "dist"))).resolve()
+WEB_UI_INDEX_FILE = WEB_UI_DIST_DIR / "index.html"
+
+
+def _is_truthy(value: str | None) -> bool:
+    """Parse common truthy env var values."""
+    if value is None:
+        return False
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def should_serve_web_ui() -> bool:
+    """Enable SPA serving only when explicitly requested and build is present."""
+    return _is_truthy(os.getenv("SERVE_WEB_UI")) and WEB_UI_INDEX_FILE.exists()
+
+
+def _resolve_spa_file(path: str) -> Path | None:
+    """
+    Resolve requested SPA file under dist safely.
+
+    Returns index.html for client-side routes.
+    """
+    normalized = path.strip("/")
+    if not normalized:
+        return WEB_UI_INDEX_FILE
+
+    candidate = (WEB_UI_DIST_DIR / normalized).resolve()
+    try:
+        candidate.relative_to(WEB_UI_DIST_DIR)
+    except ValueError:
+        return None
+
+    if candidate.is_file():
+        return candidate
+    return WEB_UI_INDEX_FILE
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -30,6 +70,13 @@ async def lifespan(app: FastAPI):
     logger.info("Swing Screener API starting up...")
     logger.info("API docs available at: http://localhost:8000/docs")
     logger.info("OpenAPI schema: http://localhost:8000/openapi.json")
+    if should_serve_web_ui():
+        logger.info("Serving web UI from %s", WEB_UI_DIST_DIR)
+    elif _is_truthy(os.getenv("SERVE_WEB_UI")):
+        logger.warning(
+            "SERVE_WEB_UI is enabled but %s is missing; API-only mode is active.",
+            WEB_UI_INDEX_FILE,
+        )
     yield
     logger.info("Shutting down...")
 
@@ -100,13 +147,29 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 @app.get("/")
 async def root():
-    """Root endpoint - API health check."""
+    """Root endpoint: serve SPA when enabled, otherwise API health check."""
+    if should_serve_web_ui():
+        return FileResponse(WEB_UI_INDEX_FILE)
+
     return {
         "status": "ok",
         "service": "swing-screener-api",
         "version": "0.1.0",
-        "docs": "/docs",
+        "api": "/api",
         "health": "/health",
+        "docs": "/docs",
+    }
+
+
+@app.get("/api")
+async def api_root():
+    """API root endpoint for same-origin deployments."""
+    return {
+        "status": "ok",
+        "service": "swing-screener-api",
+        "version": "0.1.0",
+        "health": "/health",
+        "docs": "/docs",
     }
 
 
@@ -175,6 +238,22 @@ app.include_router(portfolio.router, prefix="/api/portfolio", tags=["portfolio"]
 app.include_router(social.router, prefix="/api/social", tags=["social"])
 app.include_router(intelligence.router, prefix="/api/intelligence", tags=["intelligence"])
 app.include_router(daily_review.router, prefix="/api", tags=["daily-review"])
+
+
+@app.get("/{full_path:path}", include_in_schema=False)
+async def spa_fallback(full_path: str):
+    """Serve SPA routes from the built web UI in single-app deployments."""
+    if full_path == "api" or full_path.startswith("api/"):
+        raise HTTPException(status_code=404, detail="Not Found")
+
+    if not should_serve_web_ui():
+        raise HTTPException(status_code=404, detail="Not Found")
+
+    target = _resolve_spa_file(full_path)
+    if target is None or not target.exists():
+        raise HTTPException(status_code=404, detail="Not Found")
+
+    return FileResponse(target)
 
 
 if __name__ == "__main__":

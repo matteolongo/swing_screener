@@ -19,6 +19,7 @@ export const API_ENDPOINTS = {
   positionMetrics: (id: string) => `/api/portfolio/positions/${id}/metrics`,
   positionStop: (id: string) => `/api/portfolio/positions/${id}/stop`,
   positionStopSuggestion: (id: string) => `/api/portfolio/positions/${id}/stop-suggestion`,
+  positionStopSuggestionCompute: '/api/portfolio/stop-suggestion/compute',
   positionClose: (id: string) => `/api/portfolio/positions/${id}/close`,
   portfolioSummary: '/api/portfolio/summary',
   
@@ -43,6 +44,7 @@ export const API_ENDPOINTS = {
 
   // Daily Review
   dailyReview: '/api/daily-review',
+  dailyReviewCompute: '/api/daily-review/compute',
 } as const;
 
 // Helper to build full URL

@@ -17,6 +17,7 @@ from api.models.daily_review import (
 from api.models.screener import ScreenerRequest
 from api.services.screener_service import ScreenerService
 from api.services.portfolio_service import PortfolioService
+from swing_screener.portfolio.state import ManageConfig as ManageStateConfig
 
 logger = logging.getLogger(__name__)
 
@@ -189,6 +190,169 @@ class DailyReviewService:
         self._save_review(review, "default")
         
         return review
+
+    @staticmethod
+    def _manage_cfg_payload_from_strategy(strategy: dict) -> dict:
+        manage = strategy.get("manage", {}) if isinstance(strategy, dict) else {}
+        cfg = ManageStateConfig(
+            breakeven_at_R=float(manage.get("breakeven_at_r", 1.0)),
+            trail_sma=int(manage.get("trail_sma", 20)),
+            trail_after_R=float(manage.get("trail_after_r", 2.0)),
+            sma_buffer_pct=float(manage.get("sma_buffer_pct", 0.005)),
+            max_holding_days=int(manage.get("max_holding_days", 20)),
+        )
+        return {
+            "breakeven_at_r": cfg.breakeven_at_R,
+            "trail_after_r": cfg.trail_after_R,
+            "trail_sma": cfg.trail_sma,
+            "sma_buffer_pct": cfg.sma_buffer_pct,
+            "max_holding_days": cfg.max_holding_days,
+        }
+
+    def compute_daily_review_from_state(
+        self,
+        strategy: dict,
+        positions: list[dict],
+        orders: list[dict],
+        top_n: int = 10,
+        universe: str | None = None,
+    ) -> DailyReview:
+        """Compute daily review from client-provided strategy/portfolio state."""
+        _ = orders  # Reserved for future order-aware categorization logic.
+
+        selected_universe = universe.strip() if isinstance(universe, str) else None
+        signals = strategy.get("signals", {}) if isinstance(strategy, dict) else {}
+        universe_cfg = strategy.get("universe", {}) if isinstance(strategy, dict) else {}
+        filt_cfg = universe_cfg.get("filt", {}) if isinstance(universe_cfg, dict) else {}
+
+        screener_request = ScreenerRequest(
+            top=top_n,
+            universe=selected_universe or None,
+            breakout_lookback=signals.get("breakout_lookback"),
+            pullback_ma=signals.get("pullback_ma"),
+            min_history=signals.get("min_history"),
+            currencies=filt_cfg.get("currencies"),
+        )
+        screener_result = self.screener.run_screener(screener_request, strategy_override=strategy)
+        candidates = screener_result.candidates[:top_n]
+
+        new_candidates = [
+            DailyReviewCandidate(
+                ticker=c.ticker,
+                confidence=c.confidence,
+                signal=c.signal or "UNKNOWN",
+                entry=c.entry or 0.0,
+                stop=c.stop or 0.0,
+                shares=c.shares or 0,
+                r_reward=c.rr or 0.0,
+                name=c.name,
+                sector=c.sector,
+                recommendation=c.recommendation,
+            )
+            for c in candidates
+        ]
+
+        positions_hold: list[DailyReviewPositionHold] = []
+        positions_update: list[DailyReviewPositionUpdate] = []
+        positions_close: list[DailyReviewPositionClose] = []
+        manage_payload = self._manage_cfg_payload_from_strategy(strategy)
+
+        for pos in positions:
+            if pos.get("status") != "open":
+                continue
+
+            position_id = str(pos.get("position_id") or f"LOCAL-{pos.get('ticker', 'UNKNOWN')}")
+            try:
+                suggestion = self.portfolio.compute_position_stop_suggestion(pos, manage_payload)
+            except HTTPException as exc:
+                reason = exc.detail if isinstance(exc.detail, str) else str(exc.detail)
+                logger.warning(
+                    "Stateless daily review stop suggestion unavailable for %s: %s",
+                    pos.get("ticker"),
+                    reason,
+                )
+                positions_hold.append(
+                    DailyReviewPositionHold(
+                        position_id=position_id,
+                        ticker=str(pos.get("ticker", "")),
+                        entry_price=float(pos.get("entry_price", 0.0)),
+                        stop_price=float(pos.get("stop_price", 0.0)),
+                        current_price=float(pos.get("current_price") or pos.get("entry_price") or 0.0),
+                        r_now=0.0,
+                        reason=f"Stop suggestion unavailable: {reason}",
+                    )
+                )
+                continue
+            except Exception as exc:
+                logger.exception(
+                    "Unexpected stateless stop suggestion error for %s",
+                    pos.get("ticker"),
+                )
+                positions_hold.append(
+                    DailyReviewPositionHold(
+                        position_id=position_id,
+                        ticker=str(pos.get("ticker", "")),
+                        entry_price=float(pos.get("entry_price", 0.0)),
+                        stop_price=float(pos.get("stop_price", 0.0)),
+                        current_price=float(pos.get("current_price") or pos.get("entry_price") or 0.0),
+                        r_now=0.0,
+                        reason=f"Stop suggestion unavailable: {exc}",
+                    )
+                )
+                continue
+
+            if suggestion.action == "NO_ACTION":
+                positions_hold.append(
+                    DailyReviewPositionHold(
+                        position_id=position_id,
+                        ticker=suggestion.ticker,
+                        entry_price=suggestion.entry,
+                        stop_price=suggestion.stop_old,
+                        current_price=suggestion.last,
+                        r_now=suggestion.r_now,
+                        reason=suggestion.reason,
+                    )
+                )
+            elif suggestion.action == "MOVE_STOP_UP":
+                positions_update.append(
+                    DailyReviewPositionUpdate(
+                        position_id=position_id,
+                        ticker=suggestion.ticker,
+                        entry_price=suggestion.entry,
+                        stop_current=suggestion.stop_old,
+                        stop_suggested=suggestion.stop_suggested,
+                        current_price=suggestion.last,
+                        r_now=suggestion.r_now,
+                        reason=suggestion.reason,
+                    )
+                )
+            elif suggestion.action in ["CLOSE_STOP_HIT", "CLOSE_TIME_EXIT"]:
+                positions_close.append(
+                    DailyReviewPositionClose(
+                        position_id=position_id,
+                        ticker=suggestion.ticker,
+                        entry_price=suggestion.entry,
+                        stop_price=suggestion.stop_old,
+                        current_price=suggestion.last,
+                        r_now=suggestion.r_now,
+                        reason=suggestion.reason,
+                    )
+                )
+
+        return DailyReview(
+            new_candidates=new_candidates,
+            positions_hold=positions_hold,
+            positions_update_stop=positions_update,
+            positions_close=positions_close,
+            summary=DailyReviewSummary(
+                total_positions=len([position for position in positions if position.get("status") == "open"]),
+                no_action=len(positions_hold),
+                update_stop=len(positions_update),
+                close_positions=len(positions_close),
+                new_candidates=len(new_candidates),
+                review_date=date.today(),
+            ),
+        )
     
     def _save_review(self, review: DailyReview, strategy_name: str) -> None:
         """

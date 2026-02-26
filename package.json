@@ -1,0 +1,10 @@
+{
+  "name": "swing-screener-heroku-build",
+  "private": true,
+  "engines": {
+    "node": "20.x"
+  },
+  "scripts": {
+    "heroku-postbuild": "./scripts/heroku_build_ui.sh"
+  }
+}

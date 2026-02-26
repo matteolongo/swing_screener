@@ -1,7 +1,8 @@
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import MainLayout from './components/layout/MainLayout';
+import { registerTradingStoreSync } from '@/features/persistence';
 
 const Workspace = lazy(() => import('./pages/Workspace'));
 const DailyReview = lazy(() => import('./pages/DailyReview'));
@@ -17,9 +18,16 @@ const queryClient = new QueryClient({
   },
 });
 
+function TradingStoreSyncBridge() {
+  const activeQueryClient = useQueryClient();
+  useEffect(() => registerTradingStoreSync(activeQueryClient), [activeQueryClient]);
+  return null;
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <TradingStoreSyncBridge />
       <BrowserRouter>
         <Suspense fallback={<div className="p-6 text-sm text-gray-500">Loading page...</div>}>
           <Routes>

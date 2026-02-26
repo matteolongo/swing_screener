@@ -18,6 +18,7 @@ from api.models.portfolio import (
     FillOrderRequest,
     UpdateStopRequest,
     ClosePositionRequest,
+    StopSuggestionComputeRequest,
 )
 from api.dependencies import get_config_repo, get_portfolio_service
 from api.dependencies import get_strategy_repo
@@ -74,6 +75,18 @@ async def get_position_stop_suggestion(
 ):
     """Get suggested stop price for a position based on manage rules."""
     return service.suggest_position_stop(position_id)
+
+
+@router.post("/stop-suggestion/compute", response_model=PositionUpdate)
+async def compute_position_stop_suggestion(
+    request: StopSuggestionComputeRequest,
+    service: PortfolioService = Depends(get_portfolio_service),
+):
+    """Compute stop suggestion from client-provided state without repository persistence."""
+    return service.compute_position_stop_suggestion(
+        request.position.model_dump(),
+        request.manage.model_dump() if request.manage else None,
+    )
 
 
 @router.post("/positions/{position_id}/close")
