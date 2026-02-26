@@ -38,9 +38,22 @@ def _is_truthy(value: str | None) -> bool:
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _get_web_ui_mode() -> str:
+    """Return configured web UI serving mode: auto, enabled, disabled."""
+    raw = os.getenv("SERVE_WEB_UI")
+    if raw is None or raw.strip() == "" or raw.strip().lower() == "auto":
+        return "auto"
+    if _is_truthy(raw):
+        return "enabled"
+    return "disabled"
+
+
 def should_serve_web_ui() -> bool:
-    """Enable SPA serving only when explicitly requested and build is present."""
-    return _is_truthy(os.getenv("SERVE_WEB_UI")) and WEB_UI_INDEX_FILE.exists()
+    """Serve SPA when enabled/auto and build artifacts are present."""
+    mode = _get_web_ui_mode()
+    if mode == "disabled":
+        return False
+    return WEB_UI_INDEX_FILE.exists()
 
 
 def _resolve_spa_file(path: str) -> Path | None:
@@ -70,9 +83,17 @@ async def lifespan(app: FastAPI):
     logger.info("Swing Screener API starting up...")
     logger.info("API docs available at: http://localhost:8000/docs")
     logger.info("OpenAPI schema: http://localhost:8000/openapi.json")
+    mode = _get_web_ui_mode()
+    index_exists = WEB_UI_INDEX_FILE.exists()
+    logger.info(
+        "Web UI mode=%s, index_exists=%s, path=%s",
+        mode,
+        index_exists,
+        WEB_UI_INDEX_FILE,
+    )
     if should_serve_web_ui():
         logger.info("Serving web UI from %s", WEB_UI_DIST_DIR)
-    elif _is_truthy(os.getenv("SERVE_WEB_UI")):
+    elif mode == "enabled":
         logger.warning(
             "SERVE_WEB_UI is enabled but %s is missing; API-only mode is active.",
             WEB_UI_INDEX_FILE,
