@@ -73,20 +73,58 @@ Deploy one Heroku app that serves both:
 - `.python-version` (pins Python runtime)
 - `pyproject.toml` + `uv.lock` (Python dependency source of truth)
 
-**Required buildpack order:**
-1. Node.js
-2. Python
-
-**Minimal setup:**
+**One-time app setup:**
 
 ```bash
+# Create app (skip if already created)
+heroku create <app-name>
+
+# Buildpacks must be in this exact order:
 heroku buildpacks:clear -a <app-name>
 heroku buildpacks:add --index 1 heroku/nodejs -a <app-name>
 heroku buildpacks:add --index 2 heroku/python -a <app-name>
+
+# Runtime configuration
+heroku config:set SERVE_WEB_UI=auto -a <app-name>
+```
+
+**Deploy:**
+
+```bash
 git push heroku <branch>:main
 ```
 
-After deploy, the app is available on one URL and frontend API calls can stay relative (`/api/...`).
+**Verify build + runtime:**
+
+```bash
+# Ensure buildpacks are correct
+heroku buildpacks -a <app-name>
+
+# Check build/runtime logs
+heroku logs --tail -a <app-name>
+```
+
+Look for these lines:
+- `Node.js app detected`
+- `Building web-ui for Heroku slug...`
+- `Web UI mode=auto, index_exists=True`
+
+When those appear, `/` serves the web UI and `/api/*` serves backend endpoints.
+
+**Troubleshooting:**
+
+If `/` returns API JSON and logs show:
+- `Web UI mode=enabled, index_exists=False`
+
+then the frontend build artifacts are missing from the slug. Fix by:
+1. Re-check buildpack order (`nodejs` first, `python` second).
+2. Redeploy (`git push heroku <branch>:main`).
+3. Re-check logs for `Building web-ui for Heroku slug...`.
+
+If startup fails with missing modules, ensure:
+1. `.python-version` exists at repo root.
+2. `uv.lock` is committed and matches `pyproject.toml`.
+3. You redeploy after dependency changes.
 
 ---
 
