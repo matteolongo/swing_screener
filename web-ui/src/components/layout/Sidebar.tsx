@@ -41,7 +41,12 @@ const navigation = [
   },
 ] as const;
 
-export default function Sidebar() {
+interface SidebarProps {
+  className?: string;
+  onNavigate?: () => void;
+}
+
+export default function Sidebar({ className, onNavigate }: SidebarProps) {
   const strategiesQuery = useStrategiesQuery();
   const activeStrategyQuery = useActiveStrategyQuery();
   const setActiveMutation = useSetActiveStrategyMutation();
@@ -58,7 +63,7 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-64 border-r border-border bg-white dark:bg-gray-800 flex flex-col">
+    <aside className={cn('h-full border-r border-border bg-white dark:bg-gray-800 flex flex-col', className)}>
       <div className="p-4 border-b border-border">
         <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">
           {t('sidebar.activeStrategy')}
@@ -104,7 +109,9 @@ export default function Sidebar() {
                 onClick={(e) => {
                   if (isDisabled) {
                     e.preventDefault();
+                    return;
                   }
+                  onNavigate?.();
                 }}
                 className={({ isActive }) =>
                   cn(

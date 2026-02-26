@@ -42,7 +42,7 @@ export default function ModalShell({
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-4"
       onClick={closeOnBackdrop ? onClose : undefined}
       role="presentation"
     >
@@ -50,13 +50,13 @@ export default function ModalShell({
         role="dialog"
         aria-modal="true"
         className={cn(
-          'w-full max-h-[90vh] overflow-y-auto rounded-lg bg-white shadow-xl dark:bg-gray-800',
+          'w-full max-h-[92dvh] overflow-y-auto rounded-t-xl bg-white shadow-xl dark:bg-gray-800 sm:max-h-[90vh] sm:rounded-lg',
           className,
         )}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-          <h2 className="text-2xl font-bold">{title}</h2>
+        <div className="flex items-center justify-between border-b border-border px-4 py-3 sm:px-6 sm:py-4">
+          <h2 className="text-lg font-bold sm:text-2xl">{title}</h2>
           <div className="flex items-center gap-2">
             {headerActions}
             <Button
@@ -71,7 +71,7 @@ export default function ModalShell({
             </Button>
           </div>
         </div>
-        <div className={cn('p-6', contentClassName)}>{children}</div>
+        <div className={cn('p-4 sm:p-6', contentClassName)}>{children}</div>
       </div>
     </div>
   );

@@ -115,7 +115,7 @@ export default function CandidateOrderModal({
       <div className="space-y-4">
         <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded">
           <h3 className="font-semibold mb-2">{t('order.candidateModal.candidateDetails')}</h3>
-          <div className="grid grid-cols-2 gap-2 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
             <div>
               <span className="text-gray-600 dark:text-gray-400">{t('recommendation.labels.entry')}:</span>{' '}
               <strong>{formatCurrency(suggestedEntry, currency)}</strong>
@@ -163,7 +163,7 @@ export default function CandidateOrderModal({
         </div>
 
         <form onSubmit={onSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">{t('order.candidateModal.orderType')}</label>
               <select
@@ -189,7 +189,7 @@ export default function CandidateOrderModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">{t('order.candidateModal.limitPrice')}</label>
               <input
@@ -221,7 +221,7 @@ export default function CandidateOrderModal({
 
           <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded">
             <h3 className="font-semibold mb-2">{t('order.candidateModal.positionSummary')}</h3>
-            <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
               <div>
                 <span className="text-gray-600 dark:text-gray-400">{t('order.candidateModal.positionSize')}:</span>{' '}
                 <strong>{formatCurrency(positionSize, currency)}</strong>
@@ -263,7 +263,7 @@ export default function CandidateOrderModal({
             </div>
           ) : null}
 
-          <div className="flex gap-3 justify-end">
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">
             <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>
               {t('common.actions.cancel')}
             </Button>

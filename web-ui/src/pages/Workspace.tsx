@@ -34,13 +34,13 @@ export default function Workspace() {
       ) : null}
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 items-stretch">
-        <div className="min-h-[520px] xl:col-span-7 xl:max-h-[calc(100vh-190px)]">
+        <div className="xl:min-h-[520px] xl:col-span-7 xl:max-h-[calc(100vh-190px)]">
           <ScreenerInboxPanel />
         </div>
-        <div className="min-h-[520px] xl:col-span-5 xl:max-h-[calc(100vh-190px)]">
+        <div className="xl:min-h-[520px] xl:col-span-5 xl:max-h-[calc(100vh-190px)]">
           <AnalysisCanvasPanel />
         </div>
-        <div className="xl:col-span-12 min-h-[340px]">
+        <div className="xl:col-span-12 xl:min-h-[340px]">
           <PortfolioPanel />
         </div>
       </div>

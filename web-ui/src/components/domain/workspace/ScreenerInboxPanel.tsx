@@ -144,7 +144,7 @@ export default function ScreenerInboxPanel() {
   }, [handleSelectCandidate]);
 
   return (
-    <Card variant="bordered" className="h-full p-4 md:p-5 flex flex-col gap-3 overflow-hidden">
+    <Card variant="bordered" className="p-4 md:p-5 flex flex-col gap-3 xl:h-full xl:overflow-hidden">
       <div>
         <h2 className="text-lg font-semibold">{t('workspacePage.panels.screener.title')}</h2>
         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">

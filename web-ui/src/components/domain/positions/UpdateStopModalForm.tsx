@@ -160,7 +160,7 @@ export default function UpdateStopModalForm({
           </div>
         ) : null}
 
-        <div className="flex gap-3 justify-end">
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">
           <Button type="button" variant="secondary" onClick={onClose} disabled={isLoading}>
             {t('common.actions.cancel')}
           </Button>
