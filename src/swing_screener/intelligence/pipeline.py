@@ -147,14 +147,21 @@ def _enrich_events_with_llm(
                 metadata=metadata,
             )
         except Exception as exc:  # pragma: no cover - defensive degradation
+            headline_preview = " ".join(str(event.headline or "").split())
+            if len(headline_preview) > 120:
+                headline_preview = f"{headline_preview[:117]}..."
             logger.warning(
-                "LLM enrichment failed for event_id=%s symbol=%s: %s",
+                "LLM enrichment failed for event_id=%s symbol=%s source=%s error_type=%s headline=%r error=%s",
                 event.event_id,
                 event.symbol,
+                event.source,
+                type(exc).__name__,
+                headline_preview,
                 exc,
             )
             metadata = dict(event.metadata)
             metadata["llm_error"] = str(exc)
+            metadata["llm_error_type"] = type(exc).__name__
             return Event(
                 event_id=event.event_id,
                 symbol=event.symbol,

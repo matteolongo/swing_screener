@@ -9,7 +9,7 @@ import hashlib
 from .schemas import EventType, EventSeverity
 
 # Prompt version identifier - increment when making breaking changes
-PROMPT_VERSION = "v1.1.0"
+PROMPT_VERSION = "v1.2.0"
 
 SYSTEM_PROMPT = """You are a financial event classifier.
 
@@ -110,20 +110,48 @@ CRITICAL RULES:
 EXAMPLES OF CORRECT CLASSIFICATION:
 
 Headline: "NVIDIA beats Q4 earnings expectations, revenue up 20%"
-→ event_type: EARNINGS, severity: HIGH, primary_symbol: "NVDA", is_material: true
-→ summary: "NVIDIA reported Q4 earnings exceeding expectations with 20% revenue growth."
+{
+  "event_type": "EARNINGS",
+  "severity": "HIGH",
+  "primary_symbol": "NVDA",
+  "secondary_symbols": [],
+  "is_material": true,
+  "confidence": 0.95,
+  "summary": "NVIDIA reported Q4 earnings exceeding expectations with 20% revenue growth."
+}
 
 Headline: "Apple announces Vision Pro launch date"
-→ event_type: PRODUCT, severity: MEDIUM, primary_symbol: "AAPL", is_material: true
-→ summary: "Apple announced the launch date for its Vision Pro mixed-reality headset."
+{
+  "event_type": "PRODUCT",
+  "severity": "MEDIUM",
+  "primary_symbol": "AAPL",
+  "secondary_symbols": [],
+  "is_material": true,
+  "confidence": 0.88,
+  "summary": "Apple announced the launch date for its Vision Pro mixed-reality headset."
+}
 
 Headline: "Semiconductors rally on AI demand optimism"
-→ event_type: SECTOR, severity: MEDIUM, primary_symbol: null, is_material: false
-→ summary: "Semiconductor stocks rose broadly on expectations for AI-related demand."
+{
+  "event_type": "SECTOR",
+  "severity": "MEDIUM",
+  "primary_symbol": null,
+  "secondary_symbols": [],
+  "is_material": false,
+  "confidence": 0.55,
+  "summary": "Semiconductor stocks rose broadly on expectations for AI-related demand."
+}
 
 Headline: "Morgan Stanley upgrades Tesla to Overweight"
-→ event_type: ANALYST, severity: LOW, primary_symbol: "TSLA", is_material: false
-→ summary: "Morgan Stanley upgraded Tesla to Overweight rating."
+{
+  "event_type": "ANALYST",
+  "severity": "LOW",
+  "primary_symbol": "TSLA",
+  "secondary_symbols": [],
+  "is_material": false,
+  "confidence": 0.72,
+  "summary": "Morgan Stanley upgraded Tesla to Overweight rating."
+}
 """
 
 

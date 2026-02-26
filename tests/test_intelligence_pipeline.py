@@ -133,3 +133,45 @@ def test_run_intelligence_pipeline_enriches_event_credibility_with_llm(tmp_path,
     assert enriched.credibility > 0.65
     assert enriched.metadata.get("llm_event_type") == "EARNINGS"
     assert enriched.metadata.get("llm_severity") == "HIGH"
+
+
+def test_run_intelligence_pipeline_records_llm_error_details(tmp_path, monkeypatch):
+    symbols = ["AAPL"]
+    events = [
+        Event(
+            event_id="evt-aapl",
+            symbol="AAPL",
+            source="yahoo_finance",
+            occurred_at="2026-02-02T00:00:00",
+            headline="AAPL issues strategic update",
+            event_type="news",
+            credibility=0.65,
+        )
+    ]
+    monkeypatch.setattr(
+        "swing_screener.intelligence.pipeline.collect_events",
+        lambda **kwargs: events,
+    )
+
+    class FailingClassifier:
+        def classify(self, **kwargs):
+            raise ValueError(
+                "LLM returned invalid JSON: Expecting value: line 1 column 1 (char 0). "
+                "content_type=str content_length=0 finish_reason=stop content_preview=<empty>"
+            )
+
+    storage = IntelligenceStorage(tmp_path / "intel")
+    snapshot = run_intelligence_pipeline(
+        symbols=symbols,
+        cfg=IntelligenceConfig(enabled=True, llm=LLMConfig(enabled=True, provider="mock")),
+        technical_readiness={"AAPL": 0.8},
+        asof_dt=datetime.fromisoformat("2026-02-15T00:00:00"),
+        storage=storage,
+        ohlcv=_ohlcv(symbols),
+        llm_classifier=FailingClassifier(),
+    )
+
+    assert len(snapshot.events) == 1
+    enriched = snapshot.events[0]
+    assert enriched.metadata.get("llm_error_type") == "ValueError"
+    assert "LLM returned invalid JSON" in str(enriched.metadata.get("llm_error", ""))
