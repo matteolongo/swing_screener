@@ -77,6 +77,7 @@ yarn-error.log*
 web-ui/dist/
 web-ui/.vite/
 web-ui/coverage/
+web-ui/.audit/
 
 # =========================
 # Test artifacts

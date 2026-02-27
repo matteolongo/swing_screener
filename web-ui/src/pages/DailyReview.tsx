@@ -77,8 +77,19 @@ export default function DailyReview() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold">{t('dailyReview.header.title')}</h1>
-        <p className="text-gray-600 dark:text-gray-400">{t('dailyReview.header.loading')}</p>
+        <div className="space-y-2">
+          <h1 className="text-2xl font-bold">{t('dailyReview.header.title')}</h1>
+          <p className="text-gray-600 dark:text-gray-400">{t('dailyReview.header.loading')}</p>
+        </div>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="h-24 animate-pulse rounded-xl border border-gray-200 bg-white/70 dark:border-gray-700 dark:bg-gray-800/60" />
+          ))}
+        </div>
+        <div className="space-y-3">
+          <div className="h-11 animate-pulse rounded-xl border border-gray-200 bg-white/70 dark:border-gray-700 dark:bg-gray-800/60" />
+          <div className="h-36 animate-pulse rounded-xl border border-gray-200 bg-white/70 dark:border-gray-700 dark:bg-gray-800/60" />
+        </div>
       </div>
     );
   }
@@ -372,6 +383,7 @@ function CollapsibleSection({
             size="sm"
             onClick={onToggle}
             title={isExpanded ? t('dailyReview.sections.collapse') : t('dailyReview.sections.expand')}
+            aria-label={isExpanded ? t('dailyReview.sections.collapse') : t('dailyReview.sections.expand')}
           >
             {isExpanded ? '▼' : '▶'}
           </Button>
@@ -450,7 +462,7 @@ function CandidatesTable({
             {candidate.recommendation ? (
               <button
                 onClick={() => onShowRecommendation(candidate)}
-                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
+                className="min-h-11 min-w-11 p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
                 title={t('dailyReview.table.candidates.recommendationTitle')}
                 aria-label={t('dailyReview.table.candidates.recommendationAria', { ticker: candidate.ticker })}
               >
@@ -535,9 +547,9 @@ function UpdateStopTable({
           <td className="p-2 text-right">{formatCurrency(pos.entryPrice)}</td>
           <td className="p-2 text-right">{formatCurrency(pos.currentPrice)}</td>
           <td className="p-2 text-right text-gray-600 dark:text-gray-400">{formatCurrency(pos.stopCurrent)}</td>
-          <td className="p-2 text-right font-bold text-green-600 dark:text-green-400">{formatCurrency(pos.stopSuggested)}</td>
+          <td className="p-2 text-right font-bold text-green-700 dark:text-green-300">{formatCurrency(pos.stopSuggested)}</td>
           <td className="p-2 text-right">
-            <span className={pos.rNow >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+            <span className={pos.rNow >= 0 ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}>
               {t('common.units.rValue', { value: formatNumber(pos.rNow, 2) })}
             </span>
           </td>
@@ -602,7 +614,7 @@ function CloseTable({
           <td className="p-2 text-right">{formatCurrency(pos.currentPrice)}</td>
           <td className="p-2 text-right">{formatCurrency(pos.stopPrice)}</td>
           <td className="p-2 text-right">
-            <span className="text-red-600 dark:text-red-400 font-bold">
+            <span className="text-red-700 dark:text-red-300 font-bold">
               {t('common.units.rValue', { value: formatNumber(pos.rNow, 2) })}
             </span>
           </td>
@@ -660,7 +672,7 @@ function HoldTable({ positions }: { positions: DailyReviewPositionHold[] }) {
           <td className="p-2 text-right">{formatCurrency(pos.currentPrice)}</td>
           <td className="p-2 text-right">{formatCurrency(pos.stopPrice)}</td>
           <td className="p-2 text-right">
-            <span className={pos.rNow >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+            <span className={pos.rNow >= 0 ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}>
               {t('common.units.rValue', { value: formatNumber(pos.rNow, 2) })}
             </span>
           </td>

@@ -75,7 +75,7 @@ export default function ScreenerCandidateIdentityCell({
         <div className="flex items-center gap-2 mt-0.5">
           <span>{candidate.sector}</span>
           <span className="text-gray-400">•</span>
-          <span className={candidate.currency === 'USD' ? 'text-green-600' : 'text-blue-600'}>
+          <span className={candidate.currency === 'USD' ? 'text-green-700' : 'text-blue-700'}>
             {candidate.currency}
           </span>
         </div>

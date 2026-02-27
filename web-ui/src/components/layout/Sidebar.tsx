@@ -65,12 +65,17 @@ export default function Sidebar({ className, onNavigate }: SidebarProps) {
   return (
     <aside className={cn('h-full border-r border-border bg-white dark:bg-gray-800 flex flex-col', className)}>
       <div className="p-4 border-b border-border">
-        <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">
+        <label
+          htmlFor="sidebar-active-strategy-select"
+          className="block text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2"
+        >
           {t('sidebar.activeStrategy')}
-        </div>
+        </label>
         <select
+          id="sidebar-active-strategy-select"
           value={selectValue}
           onChange={(e) => handleStrategyChange(e.target.value)}
+          aria-label={t('sidebar.activeStrategy')}
           className="w-full px-3 py-2 border border-border rounded-lg bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
           disabled={isLoading || setActiveMutation.isPending}
         >
@@ -147,7 +152,7 @@ export default function Sidebar({ className, onNavigate }: SidebarProps) {
           <button
             onClick={toggleBeginnerMode}
             className={cn(
-              'relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
+              'relative inline-flex h-11 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
               isBeginnerMode ? 'bg-gray-300' : 'bg-primary'
             )}
             aria-label={t('sidebar.mode.toggle')}
@@ -156,7 +161,7 @@ export default function Sidebar({ className, onNavigate }: SidebarProps) {
             <span
               className={cn(
                 'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
-                isBeginnerMode ? 'translate-x-1' : 'translate-x-6'
+                isBeginnerMode ? 'translate-x-1' : 'translate-x-9'
               )}
             />
           </button>

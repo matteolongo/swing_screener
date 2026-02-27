@@ -65,12 +65,22 @@ export default function IntelligencePage() {
   const [selectedSymbolSetId, setSelectedSymbolSetId] = useState('');
   const [symbolSetName, setSymbolSetName] = useState('');
   const [symbolSetSymbolsInput, setSymbolSetSymbolsInput] = useState('');
+  const [showAdvancedConfig, setShowAdvancedConfig] = useState(() => {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+    return window.localStorage.getItem('intelligence.showAdvancedConfig') === 'true';
+  });
 
   useEffect(() => {
     if (configQuery.data) {
       setDraftConfig(configQuery.data);
     }
   }, [configQuery.data]);
+
+  useEffect(() => {
+    window.localStorage.setItem('intelligence.showAdvancedConfig', String(showAdvancedConfig));
+  }, [showAdvancedConfig]);
 
   const symbolSets = symbolSetsQuery.data?.items ?? [];
   const selectedSymbolSet = symbolSets.find((item) => item.id === selectedSymbolSetId);
@@ -190,220 +200,26 @@ export default function IntelligencePage() {
         <p className="text-sm text-gray-600 dark:text-gray-400">{t('intelligencePage.subtitle')}</p>
       </div>
 
-      <Card variant="bordered">
-        <CardHeader>
-          <CardTitle>{t('intelligencePage.config.title')}</CardTitle>
+      <Card variant="bordered" className="border-emerald-200 bg-emerald-50/70 dark:border-emerald-900 dark:bg-emerald-950/20">
+        <CardHeader className="mb-3">
+          <CardTitle>{t('intelligencePage.quickStart.title')}</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <label className="text-sm">
-              <span className="block text-xs text-gray-500 mb-1">{t('intelligencePage.config.enabled')}</span>
-              <input
-                type="checkbox"
-                checked={draftConfig.enabled}
-                onChange={(event) =>
-                  setDraftConfig({ ...draftConfig, enabled: event.target.checked })
-                }
-              />
-            </label>
-            <label className="text-sm">
-              <span className="block text-xs text-gray-500 mb-1">{t('intelligencePage.config.providers')}</span>
-              <input
-                value={draftConfig.providers.join(', ')}
-                onChange={(event) =>
-                  setDraftConfig({
-                    ...draftConfig,
-                    providers: event.target.value
-                      .split(',')
-                      .map((value) => value.trim().toLowerCase())
-                      .filter((value, index, list) => value && list.indexOf(value) === index),
-                  })
-                }
-                className="w-full rounded border border-gray-300 px-2 py-1"
-              />
-            </label>
-            <label className="text-sm">
-              <span className="block text-xs text-gray-500 mb-1">{t('intelligencePage.config.llmProvider')}</span>
-              <select
-                value={draftConfig.llm.provider}
-                onChange={(event) => {
-                  const nextProvider = event.target.value as IntelligenceLlmProvider;
-                  const defaults = PROVIDER_DEFAULTS[nextProvider];
-                  const nextModel = PROVIDER_MODELS[nextProvider].includes(draftConfig.llm.model)
-                    ? draftConfig.llm.model
-                    : defaults.model;
-                  setDraftConfig({
-                    ...draftConfig,
-                    llm: {
-                      ...draftConfig.llm,
-                      provider: nextProvider,
-                      model: nextModel,
-                      baseUrl: defaults.baseUrl,
-                    },
-                  });
-                }}
-                className="w-full rounded border border-gray-300 px-2 py-1"
-              >
-                <option value="ollama">ollama</option>
-                <option value="openai">openai</option>
-                <option value="mock">mock</option>
-              </select>
-            </label>
-            <label className="text-sm">
-              <span className="block text-xs text-gray-500 mb-1">{t('intelligencePage.config.llmModel')}</span>
-              <select
-                value={draftConfig.llm.model}
-                onChange={(event) =>
-                  setDraftConfig({ ...draftConfig, llm: { ...draftConfig.llm, model: event.target.value } })
-                }
-                className="w-full rounded border border-gray-300 px-2 py-1"
-              >
-                {llmModelOptions.map((modelName) => (
-                  <option key={modelName} value={modelName}>
-                    {modelName}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="text-sm">
-              <span className="block text-xs text-gray-500 mb-1">{t('intelligencePage.config.llmBaseUrl')}</span>
-              <input
-                value={draftConfig.llm.baseUrl}
-                onChange={(event) =>
-                  setDraftConfig({ ...draftConfig, llm: { ...draftConfig.llm, baseUrl: event.target.value } })
-                }
-                className="w-full rounded border border-gray-300 px-2 py-1"
-              />
-            </label>
-            <label className="text-sm">
-              <span className="block text-xs text-gray-500 mb-1">{t('intelligencePage.config.llmApiKey')}</span>
-              <input
-                type="password"
-                autoComplete="off"
-                value={draftConfig.llm.apiKey}
-                onChange={(event) =>
-                  setDraftConfig({ ...draftConfig, llm: { ...draftConfig.llm, apiKey: event.target.value } })
-                }
-                className="w-full rounded border border-gray-300 px-2 py-1"
-              />
-            </label>
-            <label className="text-sm md:col-span-2">
-              <span className="block text-xs text-gray-500 mb-1">{t('intelligencePage.config.llmSystemPrompt')}</span>
-              <textarea
-                value={draftConfig.llm.systemPrompt}
-                onChange={(event) =>
-                  setDraftConfig({ ...draftConfig, llm: { ...draftConfig.llm, systemPrompt: event.target.value } })
-                }
-                rows={4}
-                placeholder={t('intelligencePage.config.llmSystemPromptPlaceholder')}
-                className="w-full rounded border border-gray-300 px-2 py-1 font-mono text-xs"
-              />
-            </label>
-            <label className="text-sm md:col-span-2">
-              <span className="block text-xs text-gray-500 mb-1">
-                {t('intelligencePage.config.llmUserPromptTemplate')}
-              </span>
-              <textarea
-                value={draftConfig.llm.userPromptTemplate}
-                onChange={(event) =>
-                  setDraftConfig({
-                    ...draftConfig,
-                    llm: { ...draftConfig.llm, userPromptTemplate: event.target.value },
-                  })
-                }
-                rows={8}
-                placeholder={t('intelligencePage.config.llmUserPromptTemplatePlaceholder')}
-                className="w-full rounded border border-gray-300 px-2 py-1 font-mono text-xs"
-              />
-              <p className="mt-1 text-xs text-gray-500">{t('intelligencePage.config.llmPromptTemplateHint')}</p>
-            </label>
-            <label className="text-sm">
-              <span className="block text-xs text-gray-500 mb-1">{t('intelligencePage.config.maxConcurrency')}</span>
-              <input
-                type="number"
-                min={1}
-                max={16}
-                value={draftConfig.llm.maxConcurrency}
-                onChange={(event) =>
-                  setDraftConfig({
-                    ...draftConfig,
-                    llm: {
-                      ...draftConfig.llm,
-                      maxConcurrency: Math.max(1, Math.min(16, Number(event.target.value) || 1)),
-                    },
-                  })
-                }
-                className="w-full rounded border border-gray-300 px-2 py-1"
-              />
-            </label>
-            <label className="text-sm">
-              <span className="block text-xs text-gray-500 mb-1">{t('intelligencePage.config.lookbackHours')}</span>
-              <input
-                type="number"
-                min={1}
-                value={draftConfig.catalyst.lookbackHours}
-                onChange={(event) =>
-                  setDraftConfig({
-                    ...draftConfig,
-                    catalyst: {
-                      ...draftConfig.catalyst,
-                      lookbackHours: Math.max(1, Number(event.target.value) || 1),
-                    },
-                  })
-                }
-                className="w-full rounded border border-gray-300 px-2 py-1"
-              />
-            </label>
-            <label className="text-sm">
-              <span className="block text-xs text-gray-500 mb-1">{t('intelligencePage.config.minScore')}</span>
-              <input
-                type="number"
-                step={0.01}
-                min={0}
-                max={1}
-                value={draftConfig.opportunity.minOpportunityScore}
-                onChange={(event) =>
-                  setDraftConfig({
-                    ...draftConfig,
-                    opportunity: {
-                      ...draftConfig.opportunity,
-                      minOpportunityScore: Math.max(0, Math.min(1, Number(event.target.value) || 0)),
-                    },
-                  })
-                }
-                className="w-full rounded border border-gray-300 px-2 py-1"
-              />
-            </label>
-          </div>
-
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Button onClick={saveConfig} disabled={updateConfigMutation.isPending}>
-              {updateConfigMutation.isPending ? t('intelligencePage.config.saving') : t('intelligencePage.config.save')}
-            </Button>
-            <Button variant="secondary" onClick={testProvider}>
-              {t('intelligencePage.config.testProvider')}
-            </Button>
-          </div>
-
-          {testProviderMutation.data && (
-            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-              {t('intelligencePage.config.providerResult', {
-                provider: testProviderMutation.data.provider,
-                status: testProviderMutation.data.available ? 'OK' : 'UNAVAILABLE',
-              })}
-            </p>
-          )}
-
-          {providersQuery.data && (
-            <div className="mt-3 text-xs text-gray-500 space-y-1">
-              {providersQuery.data.map((provider) => (
-                <p key={provider.provider}>
-                  {provider.provider}: {provider.available ? 'OK' : 'UNAVAILABLE'}
-                  {provider.detail ? ` (${provider.detail})` : ''}
-                </p>
-              ))}
-            </div>
-          )}
+        <CardContent className="space-y-3">
+          <ol className="space-y-1 text-sm text-gray-700 dark:text-gray-200">
+            <li>{t('intelligencePage.quickStart.step1')}</li>
+            <li>{t('intelligencePage.quickStart.step2')}</li>
+            <li>{t('intelligencePage.quickStart.step3')}</li>
+          </ol>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => setShowAdvancedConfig((current) => !current)}
+          >
+            {showAdvancedConfig
+              ? t('intelligencePage.config.hideAdvanced')
+              : t('intelligencePage.config.showAdvanced')}
+          </Button>
         </CardContent>
       </Card>
 
@@ -418,16 +234,17 @@ export default function IntelligencePage() {
               value={manualSymbolsInput}
               onChange={(event) => setManualSymbolsInput(event.target.value)}
               placeholder="AAPL, MSFT, NVDA"
-              className="w-full rounded border border-gray-300 px-2 py-1"
+              className="w-full rounded border border-gray-300 px-3 py-2"
             />
           </label>
 
-          <div className="mt-3">
+          <label className="mt-3 block text-sm">
             <span className="block text-xs text-gray-500 mb-1">{t('intelligencePage.symbols.saved')}</span>
             <select
               value={selectedSymbolSetId}
               onChange={(event) => setSelectedSymbolSetId(event.target.value)}
-              className="w-full rounded border border-gray-300 px-2 py-1"
+              aria-label={t('intelligencePage.symbols.saved')}
+              className="w-full rounded border border-gray-300 px-3 py-2"
             >
               <option value="">{t('intelligencePage.symbols.noneSelected')}</option>
               {symbolSets.map((item) => (
@@ -436,20 +253,20 @@ export default function IntelligencePage() {
                 </option>
               ))}
             </select>
-          </div>
+          </label>
 
           <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
             <input
               value={symbolSetName}
               onChange={(event) => setSymbolSetName(event.target.value)}
               placeholder={t('intelligencePage.symbols.setName')}
-              className="rounded border border-gray-300 px-2 py-1"
+              className="w-full rounded border border-gray-300 px-3 py-2"
             />
             <input
               value={symbolSetSymbolsInput}
               onChange={(event) => setSymbolSetSymbolsInput(event.target.value)}
               placeholder={t('intelligencePage.symbols.setSymbols')}
-              className="rounded border border-gray-300 px-2 py-1"
+              className="w-full rounded border border-gray-300 px-3 py-2"
             />
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
@@ -542,6 +359,229 @@ export default function IntelligencePage() {
           )}
         </CardContent>
       </Card>
+
+      {showAdvancedConfig ? (
+        <Card variant="bordered">
+          <CardHeader>
+            <CardTitle>{t('intelligencePage.config.title')}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <label className="text-sm">
+                <span className="mb-1 block text-xs text-gray-500">{t('intelligencePage.config.enabled')}</span>
+                <input
+                  type="checkbox"
+                  checked={draftConfig.enabled}
+                  onChange={(event) =>
+                    setDraftConfig({ ...draftConfig, enabled: event.target.checked })
+                  }
+                  aria-label={t('intelligencePage.config.enabled')}
+                  className="h-5 w-5 rounded border border-gray-300"
+                />
+              </label>
+              <label className="text-sm">
+                <span className="mb-1 block text-xs text-gray-500">{t('intelligencePage.config.providers')}</span>
+                <input
+                  value={draftConfig.providers.join(', ')}
+                  onChange={(event) =>
+                    setDraftConfig({
+                      ...draftConfig,
+                      providers: event.target.value
+                        .split(',')
+                        .map((value) => value.trim().toLowerCase())
+                        .filter((value, index, list) => value && list.indexOf(value) === index),
+                    })
+                  }
+                  className="w-full rounded border border-gray-300 px-3 py-2"
+                />
+              </label>
+              <label className="text-sm">
+                <span className="mb-1 block text-xs text-gray-500">{t('intelligencePage.config.llmProvider')}</span>
+                <select
+                  value={draftConfig.llm.provider}
+                  onChange={(event) => {
+                    const nextProvider = event.target.value as IntelligenceLlmProvider;
+                    const defaults = PROVIDER_DEFAULTS[nextProvider];
+                    const nextModel = PROVIDER_MODELS[nextProvider].includes(draftConfig.llm.model)
+                      ? draftConfig.llm.model
+                      : defaults.model;
+                    setDraftConfig({
+                      ...draftConfig,
+                      llm: {
+                        ...draftConfig.llm,
+                        provider: nextProvider,
+                        model: nextModel,
+                        baseUrl: defaults.baseUrl,
+                      },
+                    });
+                  }}
+                  aria-label={t('intelligencePage.config.llmProvider')}
+                  className="w-full rounded border border-gray-300 px-3 py-2"
+                >
+                  <option value="ollama">ollama</option>
+                  <option value="openai">openai</option>
+                  <option value="mock">mock</option>
+                </select>
+              </label>
+              <label className="text-sm">
+                <span className="mb-1 block text-xs text-gray-500">{t('intelligencePage.config.llmModel')}</span>
+                <select
+                  value={draftConfig.llm.model}
+                  onChange={(event) =>
+                    setDraftConfig({ ...draftConfig, llm: { ...draftConfig.llm, model: event.target.value } })
+                  }
+                  aria-label={t('intelligencePage.config.llmModel')}
+                  className="w-full rounded border border-gray-300 px-3 py-2"
+                >
+                  {llmModelOptions.map((modelName) => (
+                    <option key={modelName} value={modelName}>
+                      {modelName}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-sm">
+                <span className="mb-1 block text-xs text-gray-500">{t('intelligencePage.config.llmBaseUrl')}</span>
+                <input
+                  value={draftConfig.llm.baseUrl}
+                  onChange={(event) =>
+                    setDraftConfig({ ...draftConfig, llm: { ...draftConfig.llm, baseUrl: event.target.value } })
+                  }
+                  className="w-full rounded border border-gray-300 px-3 py-2"
+                />
+              </label>
+              <label className="text-sm">
+                <span className="mb-1 block text-xs text-gray-500">{t('intelligencePage.config.llmApiKey')}</span>
+                <input
+                  type="password"
+                  autoComplete="off"
+                  value={draftConfig.llm.apiKey}
+                  onChange={(event) =>
+                    setDraftConfig({ ...draftConfig, llm: { ...draftConfig.llm, apiKey: event.target.value } })
+                  }
+                  className="w-full rounded border border-gray-300 px-3 py-2"
+                />
+              </label>
+              <label className="text-sm md:col-span-2">
+                <span className="mb-1 block text-xs text-gray-500">{t('intelligencePage.config.llmSystemPrompt')}</span>
+                <textarea
+                  value={draftConfig.llm.systemPrompt}
+                  onChange={(event) =>
+                    setDraftConfig({ ...draftConfig, llm: { ...draftConfig.llm, systemPrompt: event.target.value } })
+                  }
+                  rows={4}
+                  placeholder={t('intelligencePage.config.llmSystemPromptPlaceholder')}
+                  className="w-full rounded border border-gray-300 px-3 py-2 font-mono text-xs"
+                />
+              </label>
+              <label className="text-sm md:col-span-2">
+                <span className="mb-1 block text-xs text-gray-500">
+                  {t('intelligencePage.config.llmUserPromptTemplate')}
+                </span>
+                <textarea
+                  value={draftConfig.llm.userPromptTemplate}
+                  onChange={(event) =>
+                    setDraftConfig({
+                      ...draftConfig,
+                      llm: { ...draftConfig.llm, userPromptTemplate: event.target.value },
+                    })
+                  }
+                  rows={8}
+                  placeholder={t('intelligencePage.config.llmUserPromptTemplatePlaceholder')}
+                  className="w-full rounded border border-gray-300 px-3 py-2 font-mono text-xs"
+                />
+                <p className="mt-1 text-xs text-gray-500">{t('intelligencePage.config.llmPromptTemplateHint')}</p>
+              </label>
+              <label className="text-sm">
+                <span className="mb-1 block text-xs text-gray-500">{t('intelligencePage.config.maxConcurrency')}</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={16}
+                  value={draftConfig.llm.maxConcurrency}
+                  onChange={(event) =>
+                    setDraftConfig({
+                      ...draftConfig,
+                      llm: {
+                        ...draftConfig.llm,
+                        maxConcurrency: Math.max(1, Math.min(16, Number(event.target.value) || 1)),
+                      },
+                    })
+                  }
+                  className="w-full rounded border border-gray-300 px-3 py-2"
+                />
+              </label>
+              <label className="text-sm">
+                <span className="mb-1 block text-xs text-gray-500">{t('intelligencePage.config.lookbackHours')}</span>
+                <input
+                  type="number"
+                  min={1}
+                  value={draftConfig.catalyst.lookbackHours}
+                  onChange={(event) =>
+                    setDraftConfig({
+                      ...draftConfig,
+                      catalyst: {
+                        ...draftConfig.catalyst,
+                        lookbackHours: Math.max(1, Number(event.target.value) || 1),
+                      },
+                    })
+                  }
+                  className="w-full rounded border border-gray-300 px-3 py-2"
+                />
+              </label>
+              <label className="text-sm">
+                <span className="mb-1 block text-xs text-gray-500">{t('intelligencePage.config.minScore')}</span>
+                <input
+                  type="number"
+                  step={0.01}
+                  min={0}
+                  max={1}
+                  value={draftConfig.opportunity.minOpportunityScore}
+                  onChange={(event) =>
+                    setDraftConfig({
+                      ...draftConfig,
+                      opportunity: {
+                        ...draftConfig.opportunity,
+                        minOpportunityScore: Math.max(0, Math.min(1, Number(event.target.value) || 0)),
+                      },
+                    })
+                  }
+                  className="w-full rounded border border-gray-300 px-3 py-2"
+                />
+              </label>
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button onClick={saveConfig} disabled={updateConfigMutation.isPending}>
+                {updateConfigMutation.isPending ? t('intelligencePage.config.saving') : t('intelligencePage.config.save')}
+              </Button>
+              <Button variant="secondary" onClick={testProvider}>
+                {t('intelligencePage.config.testProvider')}
+              </Button>
+            </div>
+
+            {testProviderMutation.data && (
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                {t('intelligencePage.config.providerResult', {
+                  provider: testProviderMutation.data.provider,
+                  status: testProviderMutation.data.available ? 'OK' : 'UNAVAILABLE',
+                })}
+              </p>
+            )}
+
+            {providersQuery.data && (
+              <div className="mt-3 space-y-1 text-xs text-gray-500">
+                {providersQuery.data.map((provider) => (
+                  <p key={provider.provider}>
+                    {provider.provider}: {provider.available ? 'OK' : 'UNAVAILABLE'}
+                    {provider.detail ? ` (${provider.detail})` : ''}
+                  </p>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Outlet } from 'react-router-dom';
 import Header from './Header';
+import MobileBottomNav from './MobileBottomNav';
 import Sidebar from './Sidebar';
 import { cn } from '@/utils/cn';
 
@@ -84,7 +85,7 @@ export default function MainLayout() {
   const closeMobileSidebar = () => setIsMobileSidebarOpen(false);
 
   return (
-    <div className="min-h-dvh flex flex-col">
+    <div className="min-h-dvh flex flex-col bg-gray-50">
       <Header
         isSidebarCollapsed={isSidebarCollapsed}
         onToggleSidebar={handleSidebarToggle}
@@ -108,13 +109,14 @@ export default function MainLayout() {
         />
         <main
           className={cn(
-            'flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900',
+            'flex-1 overflow-y-auto bg-gray-50 pb-[calc(env(safe-area-inset-bottom)+5.75rem)] dark:bg-gray-900 lg:pb-0',
             isWorkspaceRoute ? 'p-3 sm:p-4 lg:p-5' : 'p-3 sm:p-4 md:p-6'
           )}
         >
           <Outlet />
         </main>
       </div>
+      <MobileBottomNav />
     </div>
   );
 }

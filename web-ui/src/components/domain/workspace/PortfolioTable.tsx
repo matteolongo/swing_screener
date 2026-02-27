@@ -221,7 +221,7 @@ export default function PortfolioTable() {
         if (row.pnl == null || row.pnlPercent == null) return t('common.placeholders.dash');
         const isPositive = row.pnl >= 0;
         return (
-          <span className={isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+          <span className={isPositive ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}>
             {isPositive ? '+' : ''}
             {formatCurrency(row.pnl)} ({formatPercent(row.pnlPercent)})
           </span>

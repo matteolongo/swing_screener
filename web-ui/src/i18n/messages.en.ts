@@ -1029,6 +1029,8 @@ export const messagesEn = {
       title: 'Configuration',
       enabled: 'Enable intelligence',
       providers: 'Event providers (comma-separated)',
+      showAdvanced: 'Show advanced configuration',
+      hideAdvanced: 'Hide advanced configuration',
       llmProvider: 'LLM provider',
       llmModel: 'LLM model',
       llmBaseUrl: 'LLM base URL',
@@ -1046,6 +1048,12 @@ export const messagesEn = {
       saving: 'Saving...',
       testProvider: 'Test provider',
       providerResult: '{{provider}} status: {{status}}',
+    },
+    quickStart: {
+      title: 'Beginner Quick Start',
+      step1: '1. Add manual symbols or choose a saved symbol set.',
+      step2: '2. Tap Run to fetch market events and score opportunities.',
+      step3: '3. Open the top opportunities and continue in Workspace.',
     },
     symbols: {
       title: 'Symbols',
