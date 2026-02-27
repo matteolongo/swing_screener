@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { renderWithProviders, screen, within, waitForQueriesToSettle } from '@/test/utils';
 import { act } from '@testing-library/react';
 import StrategyPage from './Strategy';
+import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 
 describe('Strategy Page', () => {
   it('renders strategy editor and loads options', async () => {
@@ -77,5 +78,35 @@ describe('Strategy Page', () => {
 
     expect(await screen.findByRole('combobox', { name: /currencies/i })).toBeInTheDocument();
     await waitForQueriesToSettle(queryClient);
+  });
+
+  it('shows strategy management toggle in beginner mobile layout', async () => {
+    const originalMatchMedia = window.matchMedia;
+    useBeginnerModeStore.setState({ isBeginnerMode: true });
+    window.matchMedia = ((query: string) => ({
+      matches: query === '(max-width: 767px)',
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    })) as typeof window.matchMedia;
+
+    try {
+      const { user } = renderWithProviders(<StrategyPage />);
+      const showManagementButton = await screen.findByRole('button', { name: /show management/i });
+      expect(showManagementButton).toBeInTheDocument();
+
+      await act(async () => {
+        await user.click(showManagementButton);
+      });
+
+      expect(await screen.findByLabelText(/choose strategy/i)).toBeInTheDocument();
+    } finally {
+      window.matchMedia = originalMatchMedia;
+      useBeginnerModeStore.setState({ isBeginnerMode: false });
+    }
   });
 });

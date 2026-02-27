@@ -519,6 +519,64 @@ const mockIntelligenceLaunch = {
   updated_at: '2026-02-15T20:00:00',
 }
 
+const mockIntelligenceConfig = {
+  enabled: true,
+  providers: ['yahoo_finance'],
+  universe_scope: 'screener_universe',
+  market_context_symbols: ['SPY'],
+  llm: {
+    enabled: false,
+    provider: 'openai',
+    model: 'gpt-4o-mini',
+    base_url: 'https://api.openai.com/v1',
+    api_key: '',
+    system_prompt: '',
+    user_prompt_template: '',
+    enable_cache: true,
+    enable_audit: false,
+    cache_path: 'data/intelligence_cache.json',
+    audit_path: 'data/intelligence_audit.json',
+    max_concurrency: 4,
+  },
+  catalyst: {
+    lookback_hours: 72,
+    recency_half_life_hours: 24,
+    false_catalyst_return_z: -0.5,
+    min_price_reaction_atr: 0.5,
+    require_price_confirmation: true,
+  },
+  theme: {
+    enabled: false,
+    min_cluster_size: 2,
+    min_peer_confirmation: 2,
+    curated_peer_map_path: 'config/peer_map.json',
+  },
+  opportunity: {
+    technical_weight: 0.6,
+    catalyst_weight: 0.4,
+    max_daily_opportunities: 10,
+    min_opportunity_score: 0.6,
+  },
+}
+
+const mockIntelligenceProviders = [
+  { provider: 'openai', available: true, detail: null },
+  { provider: 'ollama', available: false, detail: 'not running' },
+]
+
+const defaultIntelligenceSymbolSets = [
+  {
+    id: 'core-us',
+    name: 'Core US',
+    symbols: ['AAPL', 'MSFT', 'NVDA'],
+    created_at: '2026-02-15T09:00:00',
+    updated_at: '2026-02-15T09:00:00',
+  },
+]
+
+let intelligenceConfig = structuredClone(mockIntelligenceConfig)
+let intelligenceSymbolSets = [...defaultIntelligenceSymbolSets]
+
 const mockIntelligenceStatus = {
   job_id: 'intel-job-123',
   status: 'completed',
@@ -642,6 +700,100 @@ export const handlers = [
     }
     strategies = strategies.map((s) => (s.id === id ? updated : s))
     return HttpResponse.json(updated)
+  }),
+
+  // Intelligence config endpoints
+  http.get(`${API_BASE_URL}/api/intelligence/config`, () => {
+    return HttpResponse.json(intelligenceConfig)
+  }),
+
+  http.put(`${API_BASE_URL}/api/intelligence/config`, async ({ request }) => {
+    const body = asObject(await request.json())
+    intelligenceConfig = {
+      ...intelligenceConfig,
+      ...body,
+      llm: {
+        ...intelligenceConfig.llm,
+        ...asObject(body.llm),
+      },
+      catalyst: {
+        ...intelligenceConfig.catalyst,
+        ...asObject(body.catalyst),
+      },
+      theme: {
+        ...intelligenceConfig.theme,
+        ...asObject(body.theme),
+      },
+      opportunity: {
+        ...intelligenceConfig.opportunity,
+        ...asObject(body.opportunity),
+      },
+    }
+    return HttpResponse.json(intelligenceConfig)
+  }),
+
+  http.get(`${API_BASE_URL}/api/intelligence/providers`, () => {
+    return HttpResponse.json(mockIntelligenceProviders)
+  }),
+
+  http.post(`${API_BASE_URL}/api/intelligence/providers/test`, async ({ request }) => {
+    const body = asObject(await request.json())
+    return HttpResponse.json({
+      provider: body.provider || 'openai',
+      model: body.model || 'gpt-4o-mini',
+      available: true,
+      detail: null,
+    })
+  }),
+
+  // Intelligence symbol set endpoints
+  http.get(`${API_BASE_URL}/api/intelligence/symbol-sets`, () => {
+    return HttpResponse.json({ items: intelligenceSymbolSets })
+  }),
+
+  http.post(`${API_BASE_URL}/api/intelligence/symbol-sets`, async ({ request }) => {
+    const body = asObject(await request.json())
+    const name = String(body.name || '').trim()
+    const symbols = Array.isArray(body.symbols)
+      ? body.symbols.map((value: unknown) => String(value).trim().toUpperCase()).filter(Boolean)
+      : []
+    if (!name || symbols.length === 0) {
+      return HttpResponse.json({ detail: 'name and symbols are required' }, { status: 422 })
+    }
+    const created = {
+      id: `set-${Date.now()}`,
+      name,
+      symbols,
+      created_at: '2026-02-15T10:00:00',
+      updated_at: '2026-02-15T10:00:00',
+    }
+    intelligenceSymbolSets = [created, ...intelligenceSymbolSets]
+    return HttpResponse.json(created, { status: 201 })
+  }),
+
+  http.put(`${API_BASE_URL}/api/intelligence/symbol-sets/:id`, async ({ request, params }) => {
+    const id = params.id as string
+    const body = asObject(await request.json())
+    const index = intelligenceSymbolSets.findIndex((item) => item.id === id)
+    if (index === -1) {
+      return HttpResponse.json({ detail: 'Symbol set not found' }, { status: 404 })
+    }
+    const updated = {
+      ...intelligenceSymbolSets[index],
+      ...body,
+      symbols: Array.isArray(body.symbols)
+        ? body.symbols.map((value: unknown) => String(value).trim().toUpperCase()).filter(Boolean)
+        : intelligenceSymbolSets[index].symbols,
+      updated_at: '2026-02-15T10:05:00',
+    }
+    intelligenceSymbolSets = intelligenceSymbolSets.map((item) => (item.id === id ? updated : item))
+    return HttpResponse.json(updated)
+  }),
+
+  http.delete(`${API_BASE_URL}/api/intelligence/symbol-sets/:id`, ({ params }) => {
+    const id = params.id as string
+    intelligenceSymbolSets = intelligenceSymbolSets.filter((item) => item.id !== id)
+    return HttpResponse.json({ status: 'deleted', id })
   }),
 
   // Positions endpoints

@@ -143,9 +143,22 @@ async function runWorkspaceFlowChecks(page, deviceOutputDir) {
   checks.runScreenerClicked = true;
   await page.waitForTimeout(2500);
 
-  const symbolButton = page.locator('table button').filter({ hasText: /^[A-Z]{1,6}(\.[A-Z]+)?$/ }).first();
-  if (!(await symbolButton.isVisible().catch(() => false))) {
-    checks.notes.push('No symbol button found in screener table');
+  const symbolButtonCandidates = [
+    page.locator('button[title^="Open details for"]').first(),
+    page.locator('table button').filter({ hasText: /^[A-Z]{1,6}(\.[A-Z]+)?$/ }).first(),
+    page.getByRole('button', { name: /^[A-Z]{1,6}(\.[A-Z]+)?$/ }).first(),
+  ];
+
+  let symbolButton = null;
+  for (const candidate of symbolButtonCandidates) {
+    if (await candidate.isVisible().catch(() => false)) {
+      symbolButton = candidate;
+      break;
+    }
+  }
+
+  if (!symbolButton) {
+    checks.notes.push('No symbol button found in screener results (table or card layout)');
     return checks;
   }
 
