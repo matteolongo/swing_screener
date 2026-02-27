@@ -23,19 +23,23 @@ export default function ActionPanel({ ticker }: ActionPanelProps) {
     state.lastResult?.candidates.find((item) => item.ticker.toUpperCase() === normalizedTicker)
   );
 
+  const hasScreenerCandidate = Boolean(candidate);
   const recRisk = candidate?.recommendation?.risk;
-  const suggestedEntry = recRisk?.entry ?? candidate?.entry ?? candidate?.close ?? 0;
-  const suggestedStop = recRisk?.stop ?? candidate?.stop ?? 0;
-  const suggestedShares = recRisk?.shares ?? candidate?.shares ?? risk.minShares;
-  const verdict = candidate?.recommendation?.verdict ?? 'NOT_RECOMMENDED';
-  const isRecommended = verdict === 'RECOMMENDED';
+  const fallbackEntry = 100;
+  const initialEntry = recRisk?.entry ?? candidate?.entry ?? candidate?.close ?? fallbackEntry;
+  const suggestedEntry = Number.isFinite(initialEntry) && initialEntry > 0 ? initialEntry : fallbackEntry;
+  const initialStop = recRisk?.stop ?? candidate?.stop ?? suggestedEntry * 0.95;
+  const suggestedStop = Math.max(0.01, Math.min(initialStop, suggestedEntry - 0.01));
+  const suggestedShares = recRisk?.shares ?? candidate?.shares ?? Math.max(1, risk.minShares);
+  const verdict = candidate?.recommendation?.verdict;
+  const showRecommendationWarning = verdict === 'NOT_RECOMMENDED';
   const currency = candidate?.currency ?? 'USD';
   const defaultNotes = candidate
     ? t('screener.defaultNotes', {
         score: (candidate.score * 100).toFixed(1),
         rank: candidate.rank,
       })
-    : '';
+    : t('workspacePage.panels.analysis.manualOrderNotes', { ticker: normalizedTicker });
 
   const form = useForm<CandidateOrderFormValues>({
     resolver: zodResolver(candidateOrderSchema),
@@ -72,8 +76,6 @@ export default function ActionPanel({ ticker }: ActionPanelProps) {
   const createOrderMutation = useCreateOrderMutation();
 
   const handleSubmit = form.handleSubmit((values) => {
-    if (!candidate) return;
-
     createOrderMutation.mutate({
       ticker: normalizedTicker,
       orderType: values.orderType,
@@ -84,16 +86,6 @@ export default function ActionPanel({ ticker }: ActionPanelProps) {
       notes: values.notes?.trim() ?? '',
     });
   });
-
-  if (!candidate) {
-    return (
-      <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
-        <p className="text-sm text-gray-600 dark:text-gray-400">
-          {t('workspacePage.panels.analysis.noActionCandidate')}
-        </p>
-      </div>
-    );
-  }
 
   return (
     <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-3">
@@ -106,7 +98,13 @@ export default function ActionPanel({ ticker }: ActionPanelProps) {
         </p>
       </div>
 
-      {!isRecommended ? (
+      {!hasScreenerCandidate ? (
+        <div className="rounded border border-blue-300 bg-blue-50 p-2 text-xs text-blue-800 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
+          {t('workspacePage.panels.analysis.manualOrderHint')}
+        </div>
+      ) : null}
+
+      {showRecommendationWarning ? (
         <div className="rounded border border-yellow-300 bg-yellow-50 p-2 text-xs text-yellow-800 dark:border-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-200">
           {t('order.candidateModal.notRecommended')}
         </div>
@@ -212,7 +210,7 @@ export default function ActionPanel({ ticker }: ActionPanelProps) {
           </div>
         ) : null}
 
-        <Button type="submit" disabled={createOrderMutation.isPending || !isRecommended}>
+        <Button type="submit" disabled={createOrderMutation.isPending}>
           {createOrderMutation.isPending ? t('order.candidateModal.creating') : t('order.candidateModal.createAction')}
         </Button>
       </form>

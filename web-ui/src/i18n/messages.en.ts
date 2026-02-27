@@ -302,6 +302,7 @@ export const messagesEn = {
       description: 'Review all setup context and place a buy order from this symbol view.',
       tabsAria: 'Symbol detail tabs',
       openTitle: 'Open details for {{ticker}}',
+      placeBuyAction: 'Place Buy Order',
     },
     panels: {
       screener: {
@@ -335,6 +336,8 @@ export const messagesEn = {
         actionTitle: 'Action Panel',
         actionDescription: 'Create an entry order using the selected screener setup.',
         noActionCandidate: 'No screener setup is available for this ticker, so order defaults cannot be generated.',
+        manualOrderHint: 'No fresh screener setup is loaded for this symbol. You can still place a manual buy order below.',
+        manualOrderNotes: 'Manual entry prepared from symbol details for {{ticker}}.',
         thesisWillBeAttached: 'Your trade thesis will be appended to the order notes.',
         createOrderSuccess: 'Order created successfully.',
         placeholder: 'Select a ticker to review chart, metrics, and trade inputs.',

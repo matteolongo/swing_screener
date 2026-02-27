@@ -85,6 +85,10 @@ describe('Workspace Page', () => {
 
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText('AAPL Details')).toBeInTheDocument();
+    const placeBuyButtons = within(dialog).getAllByRole('button', { name: 'Place Buy Order' });
+    await user.click(placeBuyButtons[0]);
+    expect(within(dialog).getByRole('tab', { name: 'Order' })).toHaveAttribute('aria-selected', 'true');
+    expect(within(dialog).getByText('Action Panel')).toBeInTheDocument();
 
     await user.click(within(dialog).getByRole('button', { name: 'Back' }));
 
