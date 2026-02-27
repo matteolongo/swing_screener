@@ -912,6 +912,11 @@ export const messagesEn = {
       closePositions: 'Close Positions',
       holdPositions: 'Hold Positions',
     },
+    quickAction: {
+      label: 'Next Best Action',
+      description: 'Top recommended setup is {{ticker}}. Review and place the order now.',
+      cta: 'Open Top Setup: {{ticker}}',
+    },
     intelligence: {
       title: 'Market Intelligence',
       subtitle:
@@ -961,10 +966,12 @@ export const messagesEn = {
         empty: 'No candidates found',
         headers: {
           ticker: 'Ticker',
+          confidence: 'Confidence',
           signal: 'Signal',
           entry: 'Entry',
           stop: 'Stop',
           shares: 'Shares',
+          riskReward: 'R:R',
           sector: 'Sector',
           info: 'Info',
           action: 'Action',
@@ -1007,6 +1014,7 @@ export const messagesEn = {
       },
       hold: {
         empty: 'No hold positions.',
+        holdBadge: 'Hold',
         headers: {
           ticker: 'Ticker',
           entry: 'Entry',
