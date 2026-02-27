@@ -34,6 +34,34 @@
   - advanced Intelligence configuration hidden behind explicit reveal action
   - Daily Review loading skeletons to avoid blank-screen wait state
 
+## Current Status (Latest)
+- Date: 2026-02-27
+- Latest validation run:
+  - iPhone 13: `workspace/daily-review/strategy/intelligence` => `tap 0 undersized`, `axe 0 violations`, `overflow false`
+  - iPhone SE: `workspace/daily-review/strategy/intelligence` => `tap 0 undersized`, `axe 0 violations`, `overflow false`
+- Workspace symbol-detail flow:
+  - run screener triggered
+  - symbol modal opened
+  - full-screen mobile modal confirmed
+  - background scroll lock confirmed
+  - `Place Buy Order` action visible
+  - `Order` tab selected after CTA
+  - `Create Order` button visible
+  - back closes modal and returns to workspace
+
+## Phase 3 Progress (In Progress)
+- Implemented:
+  - Workspace screener candidate cards for mobile (reduced table density)
+  - Daily Review section card layouts on mobile
+  - Daily Review `Next Best Action` card
+  - Strategy beginner quick-start and mobile sticky save/reset actions
+  - Intelligence post-run workspace handoff (`Open Workspace`) and mobile sticky run action
+- Quality guardrails added:
+  - mobile audit selector logic updated to support both table and card candidate layouts
+  - targeted regression tests added for:
+    - Strategy beginner mobile management-toggle flow
+    - Intelligence sticky run guidance and post-run workspace action
+
 ## Audit Method
 - Live navigation with Playwright mobile contexts.
 - Automated checks per page:
@@ -45,7 +73,7 @@
   - per-page screenshots
   - symbol-detail modal screenshots
 
-## Key Findings (Prioritized)
+## Baseline Findings (Historical)
 
 ### P0: Tap targets are below mobile minimum in critical controls
 Observed on both devices and all primary pages.
@@ -161,12 +189,13 @@ Impact:
 
 ## Evidence
 - Audit report JSON:
-  - `/Users/matteo.longo/projects/randomness/trading/swing_screener/web-ui/.audit/mobile-ux-audit-2026-02-27T10-59-30-875Z/report.json`
+  - `/Users/matteo.longo/projects/randomness/trading/swing_screener/web-ui/.audit/mobile-ux-audit-2026-02-27T12-37-59-773Z/report.json`
 - Representative screenshots:
-  - Workspace: `/Users/matteo.longo/projects/randomness/trading/swing_screener/web-ui/.audit/mobile-ux-audit-2026-02-27T10-59-30-875Z/iphone-13/workspace.png`
-  - Workspace symbol modal: `/Users/matteo.longo/projects/randomness/trading/swing_screener/web-ui/.audit/mobile-ux-audit-2026-02-27T10-59-30-875Z/iphone-13/workspace-symbol-modal.png`
-  - Daily Review: `/Users/matteo.longo/projects/randomness/trading/swing_screener/web-ui/.audit/mobile-ux-audit-2026-02-27T10-59-30-875Z/iphone-13/daily-review.png`
-  - Intelligence: `/Users/matteo.longo/projects/randomness/trading/swing_screener/web-ui/.audit/mobile-ux-audit-2026-02-27T10-59-30-875Z/iphone-13/intelligence.png`
+  - Workspace: `/Users/matteo.longo/projects/randomness/trading/swing_screener/web-ui/.audit/mobile-ux-audit-2026-02-27T12-37-59-773Z/iphone-13/workspace.png`
+  - Workspace symbol modal: `/Users/matteo.longo/projects/randomness/trading/swing_screener/web-ui/.audit/mobile-ux-audit-2026-02-27T12-37-59-773Z/iphone-13/workspace-symbol-modal.png`
+  - Daily Review: `/Users/matteo.longo/projects/randomness/trading/swing_screener/web-ui/.audit/mobile-ux-audit-2026-02-27T12-37-59-773Z/iphone-13/daily-review.png`
+  - Strategy: `/Users/matteo.longo/projects/randomness/trading/swing_screener/web-ui/.audit/mobile-ux-audit-2026-02-27T12-37-59-773Z/iphone-13/strategy.png`
+  - Intelligence: `/Users/matteo.longo/projects/randomness/trading/swing_screener/web-ui/.audit/mobile-ux-audit-2026-02-27T12-37-59-773Z/iphone-13/intelligence.png`
 
 ## Re-run Command
 From `web-ui/`:
