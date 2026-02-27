@@ -13,6 +13,7 @@ import {
 describe('portfolio local persistence service', () => {
   beforeEach(() => {
     vi.stubEnv('VITE_PERSISTENCE_MODE', 'local');
+    vi.stubEnv('VITE_ENABLE_LOCAL_PERSISTENCE', 'true');
     resetTradingStore();
   });
 
