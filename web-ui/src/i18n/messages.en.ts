@@ -1079,6 +1079,8 @@ export const messagesEn = {
       run: 'Run',
       running: 'Running...',
       scopeHint: 'Provide manual symbols or select a symbol set.',
+      mobileStickyHint: 'Add symbols to enable run',
+      mobileStickyReady: 'Ready to run intelligence',
       statusLine:
         'Status: {{status}} ({{completed}}/{{total}} symbols, {{opportunities}} opportunities)',
       llmWarningsLine: 'LLM completed with {{count}} warning(s). Some events used fallback metadata.',
@@ -1088,6 +1090,8 @@ export const messagesEn = {
       opportunitiesTitle: 'Opportunities ({{date}})',
       loadingOpportunities: 'Loading opportunities...',
       emptyOpportunities: 'No opportunities for this run.',
+      openWorkspaceHint: '{{count}} opportunities are ready. Continue from Workspace to act on candidates.',
+      openWorkspace: 'Open Workspace',
     },
   },
   ordersPage: {
@@ -1177,6 +1181,13 @@ export const messagesEn = {
       saving: 'Saving…',
       saveChanges: 'Save Changes',
     },
+    quickStart: {
+      title: 'Beginner Quick Start',
+      step1: '1. Pick a preset that matches your risk style.',
+      step2: '2. Review Safety Score and adjust only highlighted fields.',
+      step3: '3. Save changes before running the screener.',
+      primaryAction: 'Save Strategy',
+    },
     selection: {
       title: 'Strategy Selection',
       chooseStrategy: 'Choose strategy',
@@ -1188,6 +1199,9 @@ export const messagesEn = {
       default: 'Default',
       selectToEdit: 'Select a strategy to edit.',
       confirmDelete: 'Delete strategy "{{name}}"? This cannot be undone.',
+      showManagement: 'Show management',
+      hideManagement: 'Hide management',
+      managementHiddenHint: 'Strategy management is hidden to keep focus on setup and risk controls.',
     },
     create: {
       title: 'Save as new strategy',

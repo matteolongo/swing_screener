@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import Card, { CardContent, CardHeader, CardTitle } from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import IntelligenceOpportunityCard from '@/components/domain/intelligence/IntelligenceOpportunityCard';
@@ -48,6 +49,7 @@ const PROVIDER_DEFAULTS: Record<IntelligenceLlmProvider, { model: string; baseUr
 };
 
 export default function IntelligencePage() {
+  const navigate = useNavigate();
   const configQuery = useIntelligenceConfigQuery();
   const providersQuery = useIntelligenceProvidersQuery();
   const symbolSetsQuery = useIntelligenceSymbolSetsQuery();
@@ -125,6 +127,7 @@ export default function IntelligencePage() {
     Boolean(asofDate)
   );
   const opportunities = opportunitiesQuery.data?.opportunities ?? [];
+  const hasOpportunities = opportunities.length > 0;
 
   const canRun = manualSymbols.length > 0 || Boolean(selectedSymbolSetId);
 
@@ -194,7 +197,7 @@ export default function IntelligencePage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-28 md:pb-0">
       <div>
         <h1 className="text-2xl font-bold">{t('intelligencePage.title')}</h1>
         <p className="text-sm text-gray-600 dark:text-gray-400">{t('intelligencePage.subtitle')}</p>
@@ -291,7 +294,7 @@ export default function IntelligencePage() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-2 items-center">
-            <Button onClick={runIntelligence} disabled={!canRun || runMutation.isPending}>
+            <Button onClick={runIntelligence} disabled={!canRun || runMutation.isPending} className="w-full sm:w-auto">
               {runMutation.isPending ? t('intelligencePage.run.running') : t('intelligencePage.run.run')}
             </Button>
             <span className="text-xs text-gray-500">{t('intelligencePage.run.scopeHint')}</span>
@@ -307,6 +310,23 @@ export default function IntelligencePage() {
               })}
             </div>
           )}
+
+          {status?.status === 'completed' && hasOpportunities ? (
+            <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-900 dark:bg-emerald-950/20">
+              <p className="text-sm text-emerald-900 dark:text-emerald-200">
+                {t('intelligencePage.run.openWorkspaceHint', { count: opportunities.length })}
+              </p>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="mt-2 w-full sm:w-auto"
+                onClick={() => navigate('/workspace')}
+              >
+                {t('intelligencePage.run.openWorkspace')}
+              </Button>
+            </div>
+          ) : null}
 
           {status && status.llmWarningsCount > 0 && (
             <div className="mt-2 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
@@ -582,6 +602,24 @@ export default function IntelligencePage() {
           </CardContent>
         </Card>
       ) : null}
+
+      <div
+        className="fixed inset-x-0 z-30 border-t border-gray-200 bg-white/95 px-3 py-3 shadow-[0_-8px_20px_rgba(0,0,0,0.08)] md:hidden dark:border-gray-700 dark:bg-gray-900/95"
+        style={{ bottom: 'calc(env(safe-area-inset-bottom) + 5.2rem)' }}
+      >
+        <div className="mx-auto max-w-5xl">
+          <Button
+            onClick={runIntelligence}
+            disabled={!canRun || runMutation.isPending}
+            className="w-full"
+          >
+            {runMutation.isPending ? t('intelligencePage.run.running') : t('intelligencePage.run.run')}
+          </Button>
+          <p className="mt-1 text-center text-[11px] text-gray-500">
+            {canRun ? t('intelligencePage.run.mobileStickyReady') : t('intelligencePage.run.mobileStickyHint')}
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
