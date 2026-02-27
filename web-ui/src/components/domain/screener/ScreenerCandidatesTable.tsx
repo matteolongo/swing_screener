@@ -16,6 +16,7 @@ interface ScreenerCandidatesTableProps {
   onRecommendationDetails: (candidate: ScreenerCandidate) => void;
   onSocialAnalysis: (ticker: string) => void;
   onTradeThesis: (candidate: ScreenerCandidate) => void;
+  onSymbolClick?: (ticker: string) => void;
   selectedTicker?: string | null;
   onRowClick?: (candidate: ScreenerCandidate) => void;
 }
@@ -29,6 +30,7 @@ export default function ScreenerCandidatesTable({
   onRecommendationDetails,
   onSocialAnalysis,
   onTradeThesis,
+  onSymbolClick,
   selectedTicker,
   onRowClick,
 }: ScreenerCandidatesTableProps) {
@@ -103,7 +105,7 @@ export default function ScreenerCandidatesTable({
 
               {/* Symbol (Identity Cell) */}
               <td className="py-3 px-4">
-                <ScreenerCandidateIdentityCell candidate={vm} />
+                <ScreenerCandidateIdentityCell candidate={vm} onSymbolClick={onSymbolClick} />
               </td>
 
               {/* Last Bar */}

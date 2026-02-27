@@ -1,6 +1,7 @@
 export const messagesEn = {
   common: {
     actions: {
+      back: 'Back',
       close: 'Close',
       cancel: 'Cancel',
       createOrder: 'Create Order',
@@ -296,6 +297,12 @@ export const messagesEn = {
   workspacePage: {
     title: 'Workspace',
     subtitle: 'Screen, analyze, act, and manage from one unified view.',
+    symbolDetails: {
+      title: '{{ticker}} Details',
+      description: 'Review all setup context and place a buy order from this symbol view.',
+      tabsAria: 'Symbol detail tabs',
+      openTitle: 'Open details for {{ticker}}',
+    },
     panels: {
       screener: {
         title: 'Screener Inbox',
