@@ -60,4 +60,46 @@ describe('CandidateOrderModal', () => {
     const button = screen.getByRole('button', { name: 'Create Order' })
     expect(button).toBeDisabled()
   })
+
+  it('renders setup guidance when signal is provided', () => {
+    render(
+      <CandidateOrderModal
+        candidate={{
+          ticker: 'AAPL',
+          signal: 'breakout',
+          entry: 175.5,
+          stop: 170.0,
+          shares: 2,
+        }}
+        risk={risk}
+        defaultNotes="From daily review"
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText('Setup Execution (Degiro)')).toBeInTheDocument()
+    expect(screen.getByText('Breakout setup')).toBeInTheDocument()
+    expect(screen.getByText(/BUY STOP/i)).toBeInTheDocument()
+  })
+
+  it('renders fallback guidance when signal is missing', () => {
+    render(
+      <CandidateOrderModal
+        candidate={{
+          ticker: 'AAPL',
+          entry: 175.5,
+          stop: 170.0,
+          shares: 2,
+        }}
+        risk={risk}
+        defaultNotes="From daily review"
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText('Manual setup')).toBeInTheDocument()
+    expect(screen.getByText(/Choose BUY LIMIT for pullback logic or BUY STOP for breakout logic intentionally./i)).toBeInTheDocument()
+  })
 })

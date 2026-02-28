@@ -17,6 +17,7 @@ export const buildHelp = (
   what: string,
   why: string,
   how: string,
+  execution?: string,
 ): HelpInfo => ({
   title,
   short,
@@ -31,6 +32,11 @@ export const buildHelp = (
       <p>
         <strong>{t('strategyPage.help.howToInterpret')}</strong> {how}
       </p>
+      {execution ? (
+        <p>
+          <strong>{t('strategyPage.help.executionInDegiro')}</strong> {execution}
+        </p>
+      ) : null}
     </div>
   ),
 });

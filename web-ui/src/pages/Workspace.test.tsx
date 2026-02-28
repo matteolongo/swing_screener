@@ -251,4 +251,149 @@ describe('Workspace Page', () => {
     });
     expect(screen.queryByPlaceholderText('Write your thesis for AAPL...')).not.toBeInTheDocument();
   });
+
+  it('shows breakout setup execution guidance in the action panel', async () => {
+    server.use(
+      http.post('*/api/screener/run', () =>
+        HttpResponse.json({
+          candidates: [
+            {
+              ticker: 'AAPL',
+              currency: 'USD',
+              rank: 1,
+              score: 0.95,
+              close: 175.5,
+              last_bar: '2026-02-18T16:00:00',
+              sma_20: 170,
+              sma_50: 165,
+              sma_200: 160,
+              atr: 3.25,
+              momentum_6m: 25,
+              momentum_12m: 45,
+              rel_strength: 85.2,
+              confidence: 72.5,
+              signal: 'breakout',
+              recommendation: {
+                verdict: 'RECOMMENDED',
+                reasons_short: ['Trend aligned'],
+                reasons_detailed: [],
+                risk: {
+                  entry: 175.5,
+                  stop: 170.0,
+                  target: 186.0,
+                  rr: 2.0,
+                  risk_amount: 20,
+                  risk_pct: 0.01,
+                  position_size: 500,
+                  shares: 2,
+                },
+                costs: {
+                  commission_estimate: 1,
+                  fx_estimate: 0,
+                  slippage_estimate: 0.5,
+                  total_cost: 1.5,
+                  fee_to_risk_pct: 0.075,
+                },
+                checklist: [],
+                education: {
+                  common_bias_warning: 'Avoid overtrading',
+                  what_to_learn: 'Breakout confirmation',
+                  what_would_make_valid: ['Close above resistance'],
+                },
+              },
+            },
+          ],
+          asof_date: '2026-02-18',
+          total_screened: 1,
+          data_freshness: 'final_close',
+          warnings: [],
+        })
+      ),
+    );
+
+    const { user } = renderWithProviders(<Workspace />);
+    const runButtons = screen.getAllByRole('button', { name: /Run Screener/i });
+    await user.click(runButtons[0]);
+    await screen.findByRole('heading', { name: 'AAPL' });
+
+    await user.click(screen.getByRole('tab', { name: 'Order' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Setup Execution (Degiro)')).toBeInTheDocument();
+      expect(screen.getByText('Breakout setup')).toBeInTheDocument();
+      expect(screen.getByText(/BUY STOP/i)).toBeInTheDocument();
+    });
+  });
+
+  it('shows pullback setup execution guidance in the action panel', async () => {
+    server.use(
+      http.post('*/api/screener/run', () =>
+        HttpResponse.json({
+          candidates: [
+            {
+              ticker: 'AAPL',
+              currency: 'USD',
+              rank: 1,
+              score: 0.95,
+              close: 175.5,
+              last_bar: '2026-02-18T16:00:00',
+              sma_20: 170,
+              sma_50: 165,
+              sma_200: 160,
+              atr: 3.25,
+              momentum_6m: 25,
+              momentum_12m: 45,
+              rel_strength: 85.2,
+              confidence: 72.5,
+              signal: 'pullback',
+              recommendation: {
+                verdict: 'RECOMMENDED',
+                reasons_short: ['Trend aligned'],
+                reasons_detailed: [],
+                risk: {
+                  entry: 175.5,
+                  stop: 170.0,
+                  target: 186.0,
+                  rr: 2.0,
+                  risk_amount: 20,
+                  risk_pct: 0.01,
+                  position_size: 500,
+                  shares: 2,
+                },
+                costs: {
+                  commission_estimate: 1,
+                  fx_estimate: 0,
+                  slippage_estimate: 0.5,
+                  total_cost: 1.5,
+                  fee_to_risk_pct: 0.075,
+                },
+                checklist: [],
+                education: {
+                  common_bias_warning: 'Avoid overtrading',
+                  what_to_learn: 'Pullback confirmation',
+                  what_would_make_valid: ['Reclaim support'],
+                },
+              },
+            },
+          ],
+          asof_date: '2026-02-18',
+          total_screened: 1,
+          data_freshness: 'final_close',
+          warnings: [],
+        })
+      ),
+    );
+
+    const { user } = renderWithProviders(<Workspace />);
+    const runButtons = screen.getAllByRole('button', { name: /Run Screener/i });
+    await user.click(runButtons[0]);
+    await screen.findByRole('heading', { name: 'AAPL' });
+
+    await user.click(screen.getByRole('tab', { name: 'Order' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Setup Execution (Degiro)')).toBeInTheDocument();
+      expect(screen.getByText('Pullback setup')).toBeInTheDocument();
+    });
+  });
 });
