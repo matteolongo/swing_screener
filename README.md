@@ -88,9 +88,17 @@ heroku buildpacks:add --index 2 heroku/python -a <app-name>
 
 # Runtime configuration
 heroku config:set SERVE_WEB_UI=auto -a <app-name>
+```
 
-# UI persistence mode (baked into the Vite build)
-heroku config:set VITE_PERSISTENCE_MODE=local VITE_ENABLE_LOCAL_PERSISTENCE=true -a <app-name>
+UI persistence defaults to browser localStorage for Heroku builds:
+- `VITE_PERSISTENCE_MODE=local`
+- `VITE_ENABLE_LOCAL_PERSISTENCE=true`
+
+These defaults come from `app.json` and `scripts/heroku_build_ui.sh`.
+If you want API/file mode instead, override before deploy:
+
+```bash
+heroku config:set VITE_PERSISTENCE_MODE=api VITE_ENABLE_LOCAL_PERSISTENCE=false -a <app-name>
 ```
 
 By default, Heroku startup script also sets:
