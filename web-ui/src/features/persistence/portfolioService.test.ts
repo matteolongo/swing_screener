@@ -5,6 +5,7 @@ import {
   fillOrderLocal,
   listOrdersLocal,
   listPositionsLocal,
+  mutateTradingStore,
   portfolioSummaryLocal,
   resetTradingStore,
   updatePositionStopLocal,
@@ -76,5 +77,74 @@ describe('portfolio local persistence service', () => {
 
     const summary = portfolioSummaryLocal();
     expect(summary.totalPositions).toBe(0);
+  });
+
+  it('allows moving stop above entry when current price is unavailable', () => {
+    createOrderLocal({
+      ticker: 'NVDA',
+      orderType: 'BUY_LIMIT',
+      quantity: 3,
+      limitPrice: 120,
+      stopPrice: 110,
+      orderKind: 'entry',
+    });
+
+    const entryOrder = listOrdersLocal('pending')[0];
+    fillOrderLocal(entryOrder.orderId, {
+      filledPrice: 121,
+      filledDate: '2026-02-26',
+      stopPrice: 110,
+    });
+
+    const position = listPositionsLocal('open')[0];
+    mutateTradingStore((store) => {
+      const index = store.positions.findIndex((candidate) => candidate.positionId === position.positionId);
+      store.positions[index] = {
+        ...store.positions[index],
+        currentPrice: undefined,
+      };
+    });
+
+    updatePositionStopLocal(position.positionId!, {
+      newStop: 122,
+      reason: 'lock gain',
+    });
+
+    const updatedPosition = listPositionsLocal('open')[0];
+    expect(updatedPosition.stopPrice).toBe(122);
+  });
+
+  it('rejects moving stop above current price when available', () => {
+    createOrderLocal({
+      ticker: 'META',
+      orderType: 'BUY_LIMIT',
+      quantity: 4,
+      limitPrice: 200,
+      stopPrice: 190,
+      orderKind: 'entry',
+    });
+
+    const entryOrder = listOrdersLocal('pending')[0];
+    fillOrderLocal(entryOrder.orderId, {
+      filledPrice: 201,
+      filledDate: '2026-02-26',
+      stopPrice: 190,
+    });
+
+    const position = listPositionsLocal('open')[0];
+    mutateTradingStore((store) => {
+      const index = store.positions.findIndex((candidate) => candidate.positionId === position.positionId);
+      store.positions[index] = {
+        ...store.positions[index],
+        currentPrice: 209,
+      };
+    });
+
+    expect(() =>
+      updatePositionStopLocal(position.positionId!, {
+        newStop: 210,
+        reason: 'invalid',
+      }),
+    ).toThrow('must be at or below current price');
   });
 });
