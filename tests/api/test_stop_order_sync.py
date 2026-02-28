@@ -190,7 +190,7 @@ def test_update_stop_validation_still_works(
     temp_positions_file,
     temp_orders_file
 ):
-    """Test that validation (can't move down, can't exceed entry) still works."""
+    """Test that validation still enforces move-up and current-price bounds."""
     from api.repositories.positions_repo import PositionsRepository
     from api.repositories.orders_repo import OrdersRepository
     from pathlib import Path
@@ -210,12 +210,18 @@ def test_update_stop_validation_still_works(
     with pytest.raises(HTTPException) as exc:
         service.update_position_stop("POS-001", request_down)
     assert "Cannot move stop down" in str(exc.value.detail)
-    
-    # Try to move stop above entry - should fail
+
+    # Above entry but still below current price (150) is valid.
     request_above = UpdateStopRequest(new_stop=146.0, reason="Too high")
+    result = service.update_position_stop("POS-001", request_above)
+    assert result["status"] == "ok"
+    assert result["new_stop"] == 146.0
+
+    # Above current price should fail when market data is available.
+    request_above_current = UpdateStopRequest(new_stop=151.0, reason="Invalid stop")
     with pytest.raises(HTTPException) as exc:
-        service.update_position_stop("POS-001", request_above)
-    assert "must be at or below entry price" in str(exc.value.detail)
+        service.update_position_stop("POS-001", request_above_current)
+    assert "must be at or below current price" in str(exc.value.detail)
 
 
 def test_update_stop_to_breakeven_entry_is_allowed(
@@ -243,6 +249,34 @@ def test_update_stop_to_breakeven_entry_is_allowed(
 
     assert result["status"] == "ok"
     assert result["new_stop"] == 145.0
+
+
+def test_update_stop_allows_when_current_price_unavailable(
+    mock_provider,
+    temp_positions_file,
+    temp_orders_file
+):
+    """If quotes are unavailable, validation remains non-blocking."""
+    from api.repositories.positions_repo import PositionsRepository
+    from api.repositories.orders_repo import OrdersRepository
+    from pathlib import Path
+
+    mock_provider.fetch_ohlcv.side_effect = RuntimeError("quote feed unavailable")
+
+    positions_repo = PositionsRepository(Path(temp_positions_file))
+    orders_repo = OrdersRepository(Path(temp_orders_file))
+
+    service = PortfolioService(
+        orders_repo=orders_repo,
+        positions_repo=positions_repo,
+        provider=mock_provider
+    )
+
+    request = UpdateStopRequest(new_stop=146.0, reason="Trail while quotes unavailable")
+    result = service.update_position_stop("POS-001", request)
+
+    assert result["status"] == "ok"
+    assert result["new_stop"] == 146.0
 
 
 def test_update_stop_only_cancels_pending_orders(

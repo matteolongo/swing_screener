@@ -34,23 +34,24 @@ export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: 
       <header
         className={cn(
           'border-b border-border bg-white dark:bg-gray-800 flex items-center justify-between',
-          isWorkspaceRoute ? 'h-14 px-4 md:px-5' : 'h-16 px-6'
+          isWorkspaceRoute ? 'h-14 px-3 sm:px-4 md:px-5' : 'h-14 sm:h-16 px-3 sm:px-4 md:px-6'
         )}
       >
-        <div className="flex items-center gap-3">
-          {isWorkspaceRoute && onToggleSidebar && (
+        <div className="flex items-center gap-2 sm:gap-3">
+          {onToggleSidebar && (
             <Button
               variant="ghost"
               size="sm"
               onClick={onToggleSidebar}
-              className="gap-2"
+              className="gap-2 px-2 sm:px-3"
               title={isSidebarCollapsed ? t('header.showNavigation') : t('header.hideNavigation')}
+              aria-label={isSidebarCollapsed ? t('header.showNavigation') : t('header.hideNavigation')}
             >
               {isSidebarCollapsed ? <PanelLeft className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
             </Button>
           )}
-          <TrendingUp className="w-8 h-8 text-primary" />
-          <h1 className={cn('font-bold', isWorkspaceRoute ? 'text-xl md:text-2xl' : 'text-2xl')}>
+          <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
+          <h1 className={cn('font-bold leading-tight', isWorkspaceRoute ? 'text-lg sm:text-xl md:text-2xl' : 'text-lg sm:text-2xl')}>
             {t('header.brand')}
           </h1>
           {isWorkspaceRoute ? (
@@ -60,7 +61,7 @@ export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: 
           ) : null}
         </div>
         
-        <div className="flex items-center gap-3 md:gap-4">
+        <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
           <UserModeToggle />
           {!isWorkspaceRoute && (
             <Button
@@ -68,14 +69,15 @@ export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: 
               size="sm"
               onClick={() => setShowGettingStarted(true)}
               className="gap-2"
+              aria-label={t('header.gettingStarted')}
             >
               <BookOpen className="w-4 h-4" />
-              {t('header.gettingStarted')}
+              <span className="hidden sm:inline">{t('header.gettingStarted')}</span>
             </Button>
           )}
           
           {!isWorkspaceRoute && (
-            <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+            <div className="hidden lg:flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
               <span>{dateStr}</span>
               <span className="font-mono">{timeStr}</span>
             </div>

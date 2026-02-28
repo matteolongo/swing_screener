@@ -68,8 +68,32 @@ describe('Workspace Page', () => {
     const sentimentAction = await screen.findByRole('button', { name: /Sentiment/i });
     await user.click(sentimentAction);
 
+    const dialog = await screen.findByRole('dialog');
     await waitFor(() => {
-      expect(screen.getByText('Sentiment lookback override (hours)')).toBeInTheDocument();
+      expect(within(dialog).getByText('Sentiment lookback override (hours)')).toBeInTheDocument();
+    });
+  });
+
+  it('opens symbol details modal from the workspace list and closes back to the list', async () => {
+    const { user } = renderWithProviders(<Workspace />);
+
+    const runButtons = screen.getAllByRole('button', { name: /Run Screener/i });
+    await user.click(runButtons[0]);
+    await screen.findByRole('heading', { name: 'AAPL' });
+
+    await user.click(screen.getByRole('button', { name: 'AAPL' }));
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('AAPL Details')).toBeInTheDocument();
+    const placeBuyButtons = within(dialog).getAllByRole('button', { name: 'Place Buy Order' });
+    await user.click(placeBuyButtons[0]);
+    expect(within(dialog).getByRole('tab', { name: 'Order' })).toHaveAttribute('aria-selected', 'true');
+    expect(within(dialog).getByText('Action Panel')).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole('button', { name: 'Back' }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
   });
 

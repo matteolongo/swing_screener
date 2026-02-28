@@ -471,7 +471,6 @@ class PortfolioService:
                     raise HTTPException(status_code=400, detail="Cannot update stop on closed position")
 
                 old_stop = pos.get("stop_price")
-                entry_price = pos.get("entry_price")
                 ticker = pos.get("ticker")
                 shares = pos.get("shares")
                 
@@ -482,29 +481,28 @@ class PortfolioService:
                         detail=f"Cannot move stop down. Current: {old_stop}, Requested: {new_stop}",
                     )
                 
-                # Validation: stop must not exceed entry (for long positions).
-                # Breakeven stop at entry is valid and expected by manage rules.
-                if entry_price and new_stop > entry_price:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"Stop price ({new_stop}) must be at or below entry price ({entry_price}) for long positions"
-                    )
-                
-                # Optional: fetch current price and validate stop is reasonable
+                # Validation: for long positions, updated stop must stay at or below current price
+                # when market data is available.
+                current_price = None
                 try:
                     end_date = get_today_str()
                     start_date = (pd.Timestamp(end_date) - pd.Timedelta(days=5)).strftime("%Y-%m-%d")
                     ohlcv = self._provider.fetch_ohlcv([ticker], start_date=start_date, end_date=end_date)
                     if not ohlcv.empty and ticker in ohlcv.columns.get_level_values(1):
-                        current_price = ohlcv[("Close", ticker)].iloc[-1]
-                        if not pd.isna(current_price):
-                            # Warn if stop is way above current price
-                            if new_stop > current_price * 1.1:
-                                logger.warning(
-                                    f"Stop price {new_stop} is >10% above current price {current_price} for {ticker}"
-                                )
+                        latest_close = ohlcv[("Close", ticker)].iloc[-1]
+                        if not pd.isna(latest_close):
+                            current_price = float(latest_close)
                 except Exception as exc:
                     logger.warning(f"Could not fetch current price for validation: {exc}")
+                
+                if current_price is not None and new_stop > current_price:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=(
+                            f"Stop price ({new_stop}) must be at or below current price "
+                            f"({current_price}) for long positions"
+                        ),
+                    )
 
                 # Update position stop
                 pos["stop_price"] = new_stop

@@ -88,6 +88,7 @@ export default function ScreenerForm({
               <select
                 value={selectedUniverse}
                 onChange={(e) => setSelectedUniverse(e.target.value)}
+                aria-label={t('screener.controls.universe')}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 disabled={isLoading}
               >
@@ -100,13 +101,14 @@ export default function ScreenerForm({
             </div>
 
             {/* Recommended Only Filter */}
-            <div className="h-10 flex items-center">
-              <label className="flex items-center space-x-2 cursor-pointer">
+            <div className="min-h-11 flex items-center">
+              <label className="flex min-h-11 items-center space-x-2 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={recommendedOnly}
                   onChange={(e) => setRecommendedOnly(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  aria-label={t('screener.controls.recommendedOnly')}
+                  className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                   disabled={isLoading}
                 />
                 <span className="text-sm font-medium text-gray-700">
@@ -142,7 +144,8 @@ export default function ScreenerForm({
             <button
               type="button"
               onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-              className="flex items-center text-sm text-blue-600 hover:text-blue-800"
+              aria-expanded={showAdvancedFilters}
+              className="inline-flex min-h-11 items-center px-1 text-sm text-blue-600 hover:text-blue-800"
             >
               {showAdvancedFilters ? (
                 <>
@@ -169,6 +172,7 @@ export default function ScreenerForm({
                     type="number"
                     value={topN}
                     onChange={handleTopNChange}
+                    aria-label={t('screener.controls.topN')}
                     min="1"
                     max={TOP_N_MAX}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -183,6 +187,7 @@ export default function ScreenerForm({
                     type="number"
                     value={minPrice}
                     onChange={handleMinPriceChange}
+                    aria-label={t('screener.controls.minPrice')}
                     min="0"
                     step="0.1"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -197,6 +202,7 @@ export default function ScreenerForm({
                     type="number"
                     value={maxPrice}
                     onChange={handleMaxPriceChange}
+                    aria-label={t('screener.controls.maxPrice')}
                     min="0"
                     step="1"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -210,6 +216,7 @@ export default function ScreenerForm({
                   <select
                     value={currencyFilter}
                     onChange={(e) => setCurrencyFilter(e.target.value as CurrencyFilter)}
+                    aria-label={t('screener.controls.currency')}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     disabled={isLoading}
                   >
@@ -249,6 +256,7 @@ export default function ScreenerForm({
             <select
               value={selectedUniverse}
               onChange={(e) => setSelectedUniverse(e.target.value)}
+              aria-label={t('screener.controls.universe')}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               disabled={isLoading}
             >
@@ -267,6 +275,7 @@ export default function ScreenerForm({
               type="number"
               value={topN}
               onChange={handleTopNChange}
+              aria-label={t('screener.controls.topN')}
               min="1"
               max={TOP_N_MAX}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -281,6 +290,7 @@ export default function ScreenerForm({
               type="number"
               value={minPrice}
               onChange={handleMinPriceChange}
+              aria-label={t('screener.controls.minPrice')}
               min="0"
               step="0.1"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -295,6 +305,7 @@ export default function ScreenerForm({
               type="number"
               value={maxPrice}
               onChange={handleMaxPriceChange}
+              aria-label={t('screener.controls.maxPrice')}
               min="0"
               step="1"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -308,6 +319,7 @@ export default function ScreenerForm({
             <select
               value={currencyFilter}
               onChange={(e) => setCurrencyFilter(e.target.value as CurrencyFilter)}
+              aria-label={t('screener.controls.currency')}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               disabled={isLoading}
             >

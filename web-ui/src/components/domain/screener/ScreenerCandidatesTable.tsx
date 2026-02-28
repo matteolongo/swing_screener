@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ChevronDown, ChevronUp, ListChecks } from 'lucide-react';
 import Button from '@/components/common/Button';
+import Badge from '@/components/common/Badge';
 import TableShell from '@/components/common/TableShell';
 import { ScreenerCandidate } from '@/features/screener/types';
 import { toCandidateViewModel } from '@/features/screener/viewModel';
@@ -10,12 +11,22 @@ import ScreenerCandidateDetailsRow from './ScreenerCandidateDetailsRow';
 import { formatCurrency, formatDate } from '@/utils/formatters';
 import { t } from '@/i18n/t';
 
+const MOBILE_LAYOUT_MEDIA_QUERY = '(max-width: 767px)';
+
+function getMobileLayoutMatch() {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+    return false;
+  }
+  return window.matchMedia(MOBILE_LAYOUT_MEDIA_QUERY).matches;
+}
+
 interface ScreenerCandidatesTableProps {
   candidates: ScreenerCandidate[];
   onCreateOrder: (candidate: ScreenerCandidate) => void;
   onRecommendationDetails: (candidate: ScreenerCandidate) => void;
   onSocialAnalysis: (ticker: string) => void;
   onTradeThesis: (candidate: ScreenerCandidate) => void;
+  onSymbolClick?: (ticker: string) => void;
   selectedTicker?: string | null;
   onRowClick?: (candidate: ScreenerCandidate) => void;
 }
@@ -29,11 +40,13 @@ export default function ScreenerCandidatesTable({
   onRecommendationDetails,
   onSocialAnalysis,
   onTradeThesis,
+  onSymbolClick,
   selectedTicker,
   onRowClick,
 }: ScreenerCandidatesTableProps) {
   // Track expanded rows by ticker
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [isCompactMobileLayout, setIsCompactMobileLayout] = useState(getMobileLayoutMatch);
 
   const toggleRow = (ticker: string) => {
     setExpandedRows((prev) => {
@@ -47,10 +60,172 @@ export default function ScreenerCandidatesTable({
     });
   };
 
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return;
+    }
+
+    const mediaQueryList = window.matchMedia(MOBILE_LAYOUT_MEDIA_QUERY);
+    const handleChange = (event: MediaQueryListEvent) => {
+      setIsCompactMobileLayout(event.matches);
+    };
+
+    setIsCompactMobileLayout(mediaQueryList.matches);
+    mediaQueryList.addEventListener('change', handleChange);
+    return () => mediaQueryList.removeEventListener('change', handleChange);
+  }, []);
+
   if (candidates.length === 0) {
     return (
       <div className="text-center py-8 text-gray-500">
         {t('screener.table.empty')}
+      </div>
+    );
+  }
+
+  if (isCompactMobileLayout) {
+    return (
+      <div className="space-y-3 p-2">
+        {candidates.map((candidate) => {
+          const vm = toCandidateViewModel(candidate);
+          const isExpanded = expandedRows.has(candidate.ticker);
+          const isSelected = selectedTicker != null && selectedTicker.toUpperCase() === candidate.ticker.toUpperCase();
+
+          return (
+            <div
+              key={candidate.ticker}
+              onClick={onRowClick ? () => onRowClick(candidate) : undefined}
+              className={`rounded-xl border p-3 ${
+                isSelected
+                  ? 'border-blue-300 bg-blue-50 dark:border-blue-700 dark:bg-blue-900/20'
+                  : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800'
+              } ${onRowClick ? 'cursor-pointer' : ''}`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs text-gray-500">#{candidate.rank}</p>
+                  {onSymbolClick ? (
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onSymbolClick(candidate.ticker);
+                      }}
+                      className="font-mono text-base font-semibold text-blue-700 hover:text-blue-800 hover:underline"
+                      title={t('workspacePage.symbolDetails.openTitle', { ticker: candidate.ticker })}
+                    >
+                      {candidate.ticker}
+                    </button>
+                  ) : (
+                    <p className="font-mono text-base font-semibold text-gray-900 dark:text-gray-100">
+                      {candidate.ticker}
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-500">
+                    {candidate.lastBar ? formatDate(candidate.lastBar) : '—'}
+                  </p>
+                </div>
+
+                <div className="text-right">
+                  <p className="font-mono text-sm font-semibold text-gray-900 dark:text-gray-100">
+                    {formatCurrency(candidate.close, candidate.currency)}
+                  </p>
+                  <Badge variant={vm.verdict === 'RECOMMENDED' ? 'success' : 'warning'} className="mt-1">
+                    {vm.verdict === 'RECOMMENDED' ? t('recommendation.verdict.recommended') : t('recommendation.verdict.notRecommended')}
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-900/40">
+                <ScreenerCandidateSetupCell candidate={vm} />
+              </div>
+
+              <div className="mt-3 flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="shrink-0"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onRecommendationDetails(candidate);
+                  }}
+                  title={t('screener.table.recommendationDetailsTitle')}
+                  aria-label={t('screener.table.recommendationDetailsAria', { ticker: candidate.ticker })}
+                >
+                  <ListChecks className="w-4 h-4" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="primary"
+                  className="flex-1"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onCreateOrder(candidate);
+                  }}
+                  title={
+                    vm.verdict === 'NOT_RECOMMENDED'
+                      ? t('screener.table.createOrderNotRecommendedTitle')
+                      : t('screener.table.createOrderTitle')
+                  }
+                >
+                  {t('screener.table.createOrderAction')}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="shrink-0"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    toggleRow(candidate.ticker);
+                  }}
+                  aria-label={
+                    isExpanded
+                      ? t('screener.table.collapseRowAria', { ticker: candidate.ticker })
+                      : t('screener.table.expandRowAria', { ticker: candidate.ticker })
+                  }
+                  title={
+                    isExpanded
+                      ? t('screener.table.collapseRowAria', { ticker: candidate.ticker })
+                      : t('screener.table.expandRowAria', { ticker: candidate.ticker })
+                  }
+                >
+                  {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </Button>
+              </div>
+
+              {isExpanded ? (
+                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onSocialAnalysis(candidate.ticker);
+                    }}
+                    title={t('screener.table.sentimentTitle')}
+                    aria-label={t('screener.table.sentimentAria', { ticker: candidate.ticker })}
+                  >
+                    {t('screener.table.sentimentTitle')}
+                  </Button>
+                  {candidate.recommendation?.thesis ? (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onTradeThesis(candidate);
+                      }}
+                      title={t('screener.table.tradeThesisTitle')}
+                      aria-label={t('screener.table.tradeThesisAria', { ticker: candidate.ticker })}
+                    >
+                      {t('screener.table.tradeThesisTitle')}
+                    </Button>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
       </div>
     );
   }
@@ -103,7 +278,7 @@ export default function ScreenerCandidatesTable({
 
               {/* Symbol (Identity Cell) */}
               <td className="py-3 px-4">
-                <ScreenerCandidateIdentityCell candidate={vm} />
+                <ScreenerCandidateIdentityCell candidate={vm} onSymbolClick={onSymbolClick} />
               </td>
 
               {/* Last Bar */}

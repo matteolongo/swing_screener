@@ -1,6 +1,7 @@
 export const messagesEn = {
   common: {
     actions: {
+      back: 'Back',
       close: 'Close',
       cancel: 'Cancel',
       createOrder: 'Create Order',
@@ -296,6 +297,13 @@ export const messagesEn = {
   workspacePage: {
     title: 'Workspace',
     subtitle: 'Screen, analyze, act, and manage from one unified view.',
+    symbolDetails: {
+      title: '{{ticker}} Details',
+      description: 'Review all setup context and place a buy order from this symbol view.',
+      tabsAria: 'Symbol detail tabs',
+      openTitle: 'Open details for {{ticker}}',
+      placeBuyAction: 'Place Buy Order',
+    },
     panels: {
       screener: {
         title: 'Screener Inbox',
@@ -328,6 +336,8 @@ export const messagesEn = {
         actionTitle: 'Action Panel',
         actionDescription: 'Create an entry order using the selected screener setup.',
         noActionCandidate: 'No screener setup is available for this ticker, so order defaults cannot be generated.',
+        manualOrderHint: 'No fresh screener setup is loaded for this symbol. You can still place a manual buy order below.',
+        manualOrderNotes: 'Manual entry prepared from symbol details for {{ticker}}.',
         thesisWillBeAttached: 'Your trade thesis will be appended to the order notes.',
         createOrderSuccess: 'Order created successfully.',
         placeholder: 'Select a ticker to review chart, metrics, and trade inputs.',
@@ -902,6 +912,11 @@ export const messagesEn = {
       closePositions: 'Close Positions',
       holdPositions: 'Hold Positions',
     },
+    quickAction: {
+      label: 'Next Best Action',
+      description: 'Top recommended setup is {{ticker}}. Review and place the order now.',
+      cta: 'Open Top Setup: {{ticker}}',
+    },
     intelligence: {
       title: 'Market Intelligence',
       subtitle:
@@ -951,10 +966,12 @@ export const messagesEn = {
         empty: 'No candidates found',
         headers: {
           ticker: 'Ticker',
+          confidence: 'Confidence',
           signal: 'Signal',
           entry: 'Entry',
           stop: 'Stop',
           shares: 'Shares',
+          riskReward: 'R:R',
           sector: 'Sector',
           info: 'Info',
           action: 'Action',
@@ -997,6 +1014,7 @@ export const messagesEn = {
       },
       hold: {
         empty: 'No hold positions.',
+        holdBadge: 'Hold',
         headers: {
           ticker: 'Ticker',
           entry: 'Entry',
@@ -1019,6 +1037,8 @@ export const messagesEn = {
       title: 'Configuration',
       enabled: 'Enable intelligence',
       providers: 'Event providers (comma-separated)',
+      showAdvanced: 'Show advanced configuration',
+      hideAdvanced: 'Hide advanced configuration',
       llmProvider: 'LLM provider',
       llmModel: 'LLM model',
       llmBaseUrl: 'LLM base URL',
@@ -1037,6 +1057,12 @@ export const messagesEn = {
       testProvider: 'Test provider',
       providerResult: '{{provider}} status: {{status}}',
     },
+    quickStart: {
+      title: 'Beginner Quick Start',
+      step1: '1. Add manual symbols or choose a saved symbol set.',
+      step2: '2. Tap Run to fetch market events and score opportunities.',
+      step3: '3. Open the top opportunities and continue in Workspace.',
+    },
     symbols: {
       title: 'Symbols',
       manual: 'Manual symbols (comma-separated)',
@@ -1053,6 +1079,8 @@ export const messagesEn = {
       run: 'Run',
       running: 'Running...',
       scopeHint: 'Provide manual symbols or select a symbol set.',
+      mobileStickyHint: 'Add symbols to enable run',
+      mobileStickyReady: 'Ready to run intelligence',
       statusLine:
         'Status: {{status}} ({{completed}}/{{total}} symbols, {{opportunities}} opportunities)',
       llmWarningsLine: 'LLM completed with {{count}} warning(s). Some events used fallback metadata.',
@@ -1062,6 +1090,8 @@ export const messagesEn = {
       opportunitiesTitle: 'Opportunities ({{date}})',
       loadingOpportunities: 'Loading opportunities...',
       emptyOpportunities: 'No opportunities for this run.',
+      openWorkspaceHint: '{{count}} opportunities are ready. Continue from Workspace to act on candidates.',
+      openWorkspace: 'Open Workspace',
     },
   },
   ordersPage: {
@@ -1151,6 +1181,13 @@ export const messagesEn = {
       saving: 'Saving…',
       saveChanges: 'Save Changes',
     },
+    quickStart: {
+      title: 'Beginner Quick Start',
+      step1: '1. Pick a preset that matches your risk style.',
+      step2: '2. Review Safety Score and adjust only highlighted fields.',
+      step3: '3. Save changes before running the screener.',
+      primaryAction: 'Save Strategy',
+    },
     selection: {
       title: 'Strategy Selection',
       chooseStrategy: 'Choose strategy',
@@ -1162,6 +1199,9 @@ export const messagesEn = {
       default: 'Default',
       selectToEdit: 'Select a strategy to edit.',
       confirmDelete: 'Delete strategy "{{name}}"? This cannot be undone.',
+      showManagement: 'Show management',
+      hideManagement: 'Hide management',
+      managementHiddenHint: 'Strategy management is hidden to keep focus on setup and risk controls.',
     },
     create: {
       title: 'Save as new strategy',

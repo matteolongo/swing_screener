@@ -56,6 +56,8 @@ docker compose up --build
 
 Then open [http://localhost:5173](http://localhost:5173)
 
+`docker-compose.yml` pins `VITE_PERSISTENCE_MODE=api`, so local Docker uses backend JSON files (`data/orders.json`, `data/positions.json`) instead of browser localStorage.
+
 ---
 
 ### ☁️ Heroku (Single App: API + UI)
@@ -86,11 +88,16 @@ heroku buildpacks:add --index 2 heroku/python -a <app-name>
 
 # Runtime configuration
 heroku config:set SERVE_WEB_UI=auto -a <app-name>
+
+# UI persistence mode (baked into the Vite build)
+heroku config:set VITE_PERSISTENCE_MODE=local VITE_ENABLE_LOCAL_PERSISTENCE=true -a <app-name>
 ```
 
 By default, Heroku startup script also sets:
 - `SCREENER_RUN_MODE=async` (avoids Heroku 30s request timeout on `/api/screener/run`)
 - `WEB_CONCURRENCY=1` (single-worker consistency for background jobs)
+
+After changing any `VITE_*` variable, redeploy so the web bundle is rebuilt with the new values.
 
 **Deploy:**
 

@@ -10,6 +10,7 @@ import type { ScreenerCandidate } from '@/features/screener/types';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
+import type { WorkspaceAnalysisTab } from '@/stores/workspaceStore';
 import { t } from '@/i18n/t';
 import { useLocalStorage } from '@/hooks';
 import { formatDate } from '@/utils/formatters';
@@ -37,7 +38,11 @@ const currencyFilterToRequest = (value: CurrencyFilter): string[] => {
   return ['USD', 'EUR'];
 };
 
-export default function ScreenerInboxPanel() {
+interface ScreenerInboxPanelProps {
+  onOpenSymbolDetails?: (ticker: string, tab: WorkspaceAnalysisTab) => void;
+}
+
+export default function ScreenerInboxPanel({ onOpenSymbolDetails }: ScreenerInboxPanelProps) {
   const { isBeginnerMode } = useBeginnerModeStore();
   const { lastResult, setLastResult } = useScreenerStore();
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
@@ -134,17 +139,21 @@ export default function ScreenerInboxPanel() {
     }
   }, [handleRunScreener, runScreenerTrigger]);
 
-  const handleSelectCandidate = useCallback((ticker: string, tab: 'overview' | 'sentiment' | 'order') => {
-    setSelectedTicker(ticker);
-    setAnalysisTab(tab);
-  }, [setAnalysisTab, setSelectedTicker]);
+  const handleSelectCandidate = useCallback(
+    (ticker: string, tab: WorkspaceAnalysisTab) => {
+      setSelectedTicker(ticker);
+      setAnalysisTab(tab);
+      onOpenSymbolDetails?.(ticker, tab);
+    },
+    [onOpenSymbolDetails, setAnalysisTab, setSelectedTicker]
+  );
 
   const handleTradeThesisAction = useCallback((candidate: ScreenerCandidate) => {
     handleSelectCandidate(candidate.ticker, 'order');
   }, [handleSelectCandidate]);
 
   return (
-    <Card variant="bordered" className="h-full p-4 md:p-5 flex flex-col gap-3 overflow-hidden">
+    <Card variant="bordered" className="p-4 md:p-5 flex flex-col gap-3 xl:h-full xl:overflow-hidden">
       <div>
         <h2 className="text-lg font-semibold">{t('workspacePage.panels.screener.title')}</h2>
         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
@@ -223,6 +232,7 @@ export default function ScreenerInboxPanel() {
             <ScreenerCandidatesTable
               candidates={candidates}
               selectedTicker={selectedTicker}
+              onSymbolClick={(ticker) => handleSelectCandidate(ticker, 'overview')}
               onRowClick={(candidate) =>
                 handleSelectCandidate(candidate.ticker, analysisTab === 'sentiment' ? 'sentiment' : 'overview')
               }

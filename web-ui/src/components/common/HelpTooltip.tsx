@@ -54,10 +54,12 @@ export default function HelpTooltip({ short, title, content, className }: HelpTo
       <div className="relative inline-block">
         <button
           type="button"
-          className={cn('text-gray-400 hover:text-primary transition-colors', className)}
+          className={cn('min-h-11 min-w-11 text-gray-400 hover:text-primary transition-colors', className)}
           onClick={() => setIsOpen(true)}
           onMouseEnter={() => setShowTooltip(true)}
           onMouseLeave={() => setShowTooltip(false)}
+          aria-label={short || title}
+          title={title}
         >
           <HelpCircle className="w-4 h-4" />
         </button>

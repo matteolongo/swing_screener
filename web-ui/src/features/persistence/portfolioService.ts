@@ -465,9 +465,10 @@ export function updatePositionStopLocal(positionId: string, request: UpdateStopR
       throw new Error(`Cannot move stop down. Current: ${oldStop}, Requested: ${newStop}`);
     }
 
-    if (newStop > position.entryPrice) {
+    const currentPrice = position.currentPrice;
+    if (currentPrice != null && Number.isFinite(currentPrice) && newStop > currentPrice) {
       throw new Error(
-        `Stop price (${newStop}) must be at or below entry price (${position.entryPrice}) for long positions`,
+        `Stop price (${newStop}) must be at or below current price (${currentPrice}) for long positions`,
       );
     }
 

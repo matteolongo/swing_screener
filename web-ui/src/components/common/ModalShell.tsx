@@ -4,6 +4,55 @@ import { cn } from '@/utils/cn';
 import Button from '@/components/common/Button';
 import { t } from '@/i18n/t';
 
+let activeScrollLocks = 0;
+let previousDocumentStyles:
+  | {
+      bodyOverflow: string;
+      htmlOverflow: string;
+      bodyOverscrollBehavior: string;
+      htmlOverscrollBehavior: string;
+    }
+  | null = null;
+
+function acquireScrollLock() {
+  if (typeof document === 'undefined') {
+    return;
+  }
+
+  if (activeScrollLocks === 0) {
+    previousDocumentStyles = {
+      bodyOverflow: document.body.style.overflow,
+      htmlOverflow: document.documentElement.style.overflow,
+      bodyOverscrollBehavior: document.body.style.overscrollBehavior,
+      htmlOverscrollBehavior: document.documentElement.style.overscrollBehavior,
+    };
+
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overscrollBehavior = 'contain';
+    document.documentElement.style.overscrollBehavior = 'contain';
+  }
+
+  activeScrollLocks += 1;
+}
+
+function releaseScrollLock() {
+  if (typeof document === 'undefined' || activeScrollLocks === 0) {
+    return;
+  }
+
+  activeScrollLocks -= 1;
+  if (activeScrollLocks > 0 || !previousDocumentStyles) {
+    return;
+  }
+
+  document.body.style.overflow = previousDocumentStyles.bodyOverflow;
+  document.documentElement.style.overflow = previousDocumentStyles.htmlOverflow;
+  document.body.style.overscrollBehavior = previousDocumentStyles.bodyOverscrollBehavior;
+  document.documentElement.style.overscrollBehavior = previousDocumentStyles.htmlOverscrollBehavior;
+  previousDocumentStyles = null;
+}
+
 interface ModalShellProps {
   title: ReactNode;
   onClose: () => void;
@@ -14,6 +63,9 @@ interface ModalShellProps {
   closeOnBackdrop?: boolean;
   closeOnEscape?: boolean;
   headerActions?: ReactNode;
+  lockScroll?: boolean;
+  fullScreen?: boolean;
+  fullScreenOnMobile?: boolean;
 }
 
 export default function ModalShell({
@@ -26,7 +78,12 @@ export default function ModalShell({
   closeOnBackdrop = true,
   closeOnEscape = true,
   headerActions,
+  lockScroll = true,
+  fullScreen = false,
+  fullScreenOnMobile = false,
 }: ModalShellProps) {
+  const immersive = fullScreen || fullScreenOnMobile;
+
   useEffect(() => {
     if (!closeOnEscape) return;
 
@@ -40,9 +97,22 @@ export default function ModalShell({
     return () => window.removeEventListener('keydown', handleEscape);
   }, [closeOnEscape, onClose]);
 
+  useEffect(() => {
+    if (!lockScroll) return;
+    acquireScrollLock();
+    return () => releaseScrollLock();
+  }, [lockScroll]);
+
   return (
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      className={cn(
+        'fixed inset-0 z-50 flex justify-center bg-black/55',
+        fullScreen
+          ? 'items-stretch'
+          : fullScreenOnMobile
+          ? 'items-stretch sm:items-center sm:p-4'
+          : 'items-end sm:items-center sm:p-4',
+      )}
       onClick={closeOnBackdrop ? onClose : undefined}
       role="presentation"
     >
@@ -50,13 +120,23 @@ export default function ModalShell({
         role="dialog"
         aria-modal="true"
         className={cn(
-          'w-full max-h-[90vh] overflow-y-auto rounded-lg bg-white shadow-xl dark:bg-gray-800',
+          'w-full bg-white shadow-xl dark:bg-gray-800',
+          fullScreen
+            ? 'h-dvh max-h-dvh overflow-hidden rounded-none flex flex-col'
+            : fullScreenOnMobile
+            ? 'h-dvh max-h-dvh overflow-hidden rounded-none flex flex-col sm:h-auto sm:max-h-[90vh] sm:rounded-lg'
+            : 'max-h-[92dvh] overflow-y-auto rounded-t-xl sm:max-h-[90vh] sm:rounded-lg',
           className,
         )}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-          <h2 className="text-2xl font-bold">{title}</h2>
+        <div
+          className={cn(
+            'flex items-center justify-between border-b border-border px-4 py-3 sm:px-6 sm:py-4',
+            immersive ? 'shrink-0 bg-white/95 dark:bg-gray-800/95' : null,
+          )}
+        >
+          <h2 className="text-lg font-bold sm:text-2xl">{title}</h2>
           <div className="flex items-center gap-2">
             {headerActions}
             <Button
@@ -71,7 +151,14 @@ export default function ModalShell({
             </Button>
           </div>
         </div>
-        <div className={cn('p-6', contentClassName)}>{children}</div>
+        <div
+          className={cn(
+            immersive ? 'min-h-0 flex-1 overflow-y-auto p-4 sm:p-6' : 'p-4 sm:p-6',
+            contentClassName,
+          )}
+        >
+          {children}
+        </div>
       </div>
     </div>
   );

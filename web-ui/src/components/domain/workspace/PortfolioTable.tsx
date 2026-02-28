@@ -221,7 +221,7 @@ export default function PortfolioTable() {
         if (row.pnl == null || row.pnlPercent == null) return t('common.placeholders.dash');
         const isPositive = row.pnl >= 0;
         return (
-          <span className={isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+          <span className={isPositive ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}>
             {isPositive ? '+' : ''}
             {formatCurrency(row.pnl)} ({formatPercent(row.pnlPercent)})
           </span>
@@ -323,7 +323,7 @@ export default function PortfolioTable() {
         empty={!isLoading && rows.length === 0}
         emptyMessage={t('workspacePage.panels.portfolio.empty')}
         error={isError ? t('workspacePage.panels.portfolio.loadError') : undefined}
-        wrapperClassName="max-h-[420px] overflow-auto rounded-md bg-white"
+        wrapperClassName="xl:max-h-[420px] overflow-auto rounded-md bg-white"
         tableClassName="text-sm"
         rowClassName={(row) => {
           const isSelected = selectedTicker?.toUpperCase() === row.ticker.toUpperCase();

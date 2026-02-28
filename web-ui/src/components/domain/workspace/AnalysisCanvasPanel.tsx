@@ -22,7 +22,7 @@ export default function AnalysisCanvasPanel() {
   ];
 
   return (
-    <Card variant="bordered" className="h-full p-4 md:p-5 flex flex-col gap-3 overflow-hidden">
+    <Card variant="bordered" className="p-4 md:p-5 flex flex-col gap-3 xl:h-full xl:overflow-hidden">
       <div>
         <h2 className="text-lg font-semibold">{t('workspacePage.panels.analysis.title')}</h2>
         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
@@ -37,8 +37,12 @@ export default function AnalysisCanvasPanel() {
           </p>
         </div>
       ) : (
-        <div className="flex-1 min-h-0 overflow-hidden flex flex-col gap-3">
-          <div className="inline-flex w-fit rounded-lg border border-gray-200 bg-gray-50 p-1" role="tablist" aria-label={t('workspacePage.panels.analysis.title')}>
+        <div className="flex flex-col gap-3 xl:flex-1 xl:min-h-0 xl:overflow-hidden">
+          <div
+            className="flex w-full items-center gap-1 overflow-x-auto rounded-lg border border-gray-200 bg-gray-50 p-1"
+            role="tablist"
+            aria-label={t('workspacePage.panels.analysis.title')}
+          >
             {tabs.map((tab) => {
               const isActive = activeTab === tab.id;
               return (
@@ -49,7 +53,7 @@ export default function AnalysisCanvasPanel() {
                   aria-selected={isActive}
                   onClick={() => setAnalysisTab(tab.id)}
                   className={cn(
-                    'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+                    'whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
                     isActive ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
                   )}
                 >
@@ -59,7 +63,7 @@ export default function AnalysisCanvasPanel() {
             })}
           </div>
 
-          <div className="flex-1 min-h-0 overflow-auto space-y-3 pr-1">
+          <div className="space-y-3 xl:flex-1 xl:min-h-0 xl:overflow-auto xl:pr-1">
             {activeTab === 'overview' && (
               <>
                 <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white p-3">

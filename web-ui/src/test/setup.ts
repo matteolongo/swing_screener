@@ -40,6 +40,7 @@ Object.defineProperty(window, 'localStorage', {
 // Start MSW server before all tests
 beforeAll(async () => {
   vi.stubEnv('VITE_PERSISTENCE_MODE', 'api')
+  vi.stubEnv('VITE_ENABLE_LOCAL_PERSISTENCE', 'false')
   const mod = await import('./mocks/server')
   server = mod.server
   server.listen({ onUnhandledRequest: 'warn' })
@@ -62,6 +63,7 @@ beforeAll(async () => {
 // Reset handlers after each test (important for test isolation)
 afterEach(() => {
   vi.stubEnv('VITE_PERSISTENCE_MODE', 'api')
+  vi.stubEnv('VITE_ENABLE_LOCAL_PERSISTENCE', 'false')
   server?.resetHandlers()
   cleanup()
   // Reset localStorage and set mode to advanced for tests (to preserve existing test expectations)
