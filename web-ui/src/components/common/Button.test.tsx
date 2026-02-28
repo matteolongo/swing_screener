@@ -64,10 +64,10 @@ describe('Button Component', () => {
   it('renders different sizes correctly', () => {
     const { rerender } = render(<Button size="sm">Small</Button>)
     const button = screen.getByRole('button')
-    expect(button).toHaveClass('h-8', 'px-3', 'text-sm')
+    expect(button).toHaveClass('h-11', 'px-3', 'text-sm')
     
     rerender(<Button size="md">Medium</Button>)
-    expect(screen.getByRole('button')).toHaveClass('h-10', 'px-4')
+    expect(screen.getByRole('button')).toHaveClass('h-11', 'px-4')
     
     rerender(<Button size="lg">Large</Button>)
     expect(screen.getByRole('button')).toHaveClass('h-12', 'px-6', 'text-lg')
