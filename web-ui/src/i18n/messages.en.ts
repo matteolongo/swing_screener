@@ -346,6 +346,7 @@ export const messagesEn = {
   workspacePage: {
     title: 'Workspace',
     subtitle: 'Screen, analyze, act, and manage from one unified view.',
+    openOnboarding: 'Open Onboarding Guide',
     symbolDetails: {
       title: '{{ticker}} Details',
       description: 'Review all setup context and place a buy order from this symbol view.',
@@ -412,7 +413,7 @@ export const messagesEn = {
   },
   header: {
     brand: 'Swing Screener',
-    gettingStarted: 'Getting Started',
+    gettingStarted: 'Onboarding',
     focusView: 'Focus view',
     showNavigation: 'Show navigation',
     hideNavigation: 'Hide navigation',
@@ -1656,6 +1657,100 @@ export const messagesEn = {
       hint: 'Beginner hides advanced surfaces, Advanced unlocks all navigation.',
     },
   },
+  onboardingPage: {
+    header: {
+      title: 'Getting Started',
+      subtitle: 'Set up your workflow without leaving onboarding.',
+    },
+    progress: 'Step {{step}} of {{total}}',
+    mode: {
+      title: 'Choose your mode',
+      beginner: 'Beginner',
+      advanced: 'Advanced',
+      hint: 'Beginner keeps the flow simple, Advanced unlocks all surfaces.',
+    },
+    actions: {
+      skip: 'Skip for now',
+      back: 'Back',
+      next: 'Next',
+      complete: 'Complete',
+    },
+    steps: {
+      welcome: {
+        title: 'Welcome to Swing Screener',
+        description: "Let's get your daily routine in place.",
+        body: 'This onboarding will guide your full flow:',
+        items: {
+          configure: 'Configure strategy and risk',
+          review: 'Review daily opportunities',
+          act: 'Place orders or acknowledge no action',
+          verify: 'Verify orders and positions',
+        },
+      },
+      strategy: {
+        title: 'Step 1: Configure Strategy & Risk',
+        description: 'Choose a setup and save your strategy directly here.',
+      },
+      dailyReview: {
+        title: 'Step 2: Open Daily Review',
+        description: 'Use Daily Review for the final trading decisions.',
+        body: 'Daily Review combines opportunities and position management:',
+        items: {
+          candidates: 'New candidates ranked by quality',
+          updateStop: 'Open positions that need stop updates',
+          close: 'Positions suggested to close',
+          hold: 'Positions that need no action',
+        },
+      },
+      action: {
+        title: 'Step 3: Act or Acknowledge No Action',
+        description: 'Follow recommendations with discipline.',
+        body: 'At this point you either take action or record no action:',
+        items: {
+          createOrder: 'Create an order for a recommended candidate',
+          updatePosition: 'Update stop or close when suggested',
+          noAction: 'Acknowledge no action on quiet days',
+        },
+      },
+      verify: {
+        title: 'Step 4: Verify Orders & Positions',
+        description: 'Track execution and risk status after decisions.',
+        body: 'Always confirm broker execution and app records:',
+        items: {
+          orders: 'Review pending/filled orders',
+          positions: 'Monitor open positions and stop levels',
+        },
+      },
+    },
+    strategyStep: {
+      title: 'Setup your strategy profile',
+      description: 'Pick a profile, tweak custom values if needed, then save.',
+      loading: 'Loading active strategy...',
+      loadError: 'Failed to load active strategy. Try opening Strategy page.',
+      save: 'Save strategy',
+      saving: 'Saving...',
+      saved: 'Strategy saved. You can continue.',
+      saveError: 'Failed to save strategy',
+      blockingHint: 'Save a valid strategy before moving to the next onboarding step.',
+      modes: {
+        conservative: 'Conservative',
+        balanced: 'Balanced',
+        aggressive: 'Aggressive',
+        custom: 'Custom',
+      },
+      fields: {
+        accountSize: 'Account Size',
+        riskPct: 'Risk % per trade (decimal)',
+        maxPositionPct: 'Max position % (decimal)',
+        minRr: 'Minimum R:R',
+      },
+      preview: {
+        riskPct: 'Risk: {{value}}%',
+        maxPositionPct: 'Max Position: {{value}}%',
+        minRr: 'Min R:R {{value}}',
+      },
+    },
+  },
   todaysNextActionCard: {
     cardTitle: "Today's Next Action",
     actionRequired: 'Action Required',
@@ -1663,7 +1758,7 @@ export const messagesEn = {
     configureStrategy: {
       title: 'Configure Your Strategy',
       description: 'Set up your risk parameters and trading strategy before reviewing opportunities.',
-      buttonLabel: 'Go to Strategy',
+      buttonLabel: 'Complete Setup in Onboarding',
     },
     runScreener: {
       title: 'Run the Screener',

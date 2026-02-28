@@ -174,7 +174,10 @@ export default function DailyReview() {
 
       {/* Strategy Readiness Blocker - Beginner Mode */}
       {isBeginnerMode && !strategyReady && !dismissedReadinessBlocker && (
-        <StrategyReadinessBlocker onDismiss={() => setDismissedReadinessBlocker(true)} />
+        <StrategyReadinessBlocker
+          onDismiss={() => setDismissedReadinessBlocker(true)}
+          onConfigureStrategy={() => navigate('/onboarding?step=2')}
+        />
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
