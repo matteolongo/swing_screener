@@ -1,5 +1,5 @@
 {
-  "asof": "2026-02-26",
+  "asof": "2026-02-28",
   "orders": [
     {
       "order_id": "ORD-INTC-20260115-ENTRY",
@@ -707,7 +707,7 @@
     {
       "order_id": "ORD-AADC0305",
       "ticker": "REP.MC",
-      "status": "pending",
+      "status": "cancelled",
       "order_type": "STOP",
       "limit_price": null,
       "quantity": 5,
@@ -715,7 +715,7 @@
       "order_date": "2026-02-23",
       "filled_date": "",
       "entry_price": null,
-      "notes": "Auto-created from position stop update (was 16.48)",
+      "notes": "Auto-created from position stop update (was 16.48)\nReplaced with new stop at 17.36 (was 17.32)",
       "order_kind": "stop",
       "parent_order_id": null,
       "position_id": "POS-REP.MC-20260218-01",
@@ -772,6 +772,38 @@
       "notes": "Auto-created from position stop update (was 25.98)",
       "order_kind": "stop",
       "position_id": "POS-ENGI.PA-20260225-01",
+      "tif": "GTC"
+    },
+    {
+      "order_id": "RWE.DE-20260227185428",
+      "ticker": "RWE.DE",
+      "status": "pending",
+      "order_type": "BUY_LIMIT",
+      "quantity": 1,
+      "limit_price": 54.54,
+      "stop_price": 51.77,
+      "order_date": "2026-02-27",
+      "filled_date": "",
+      "entry_price": null,
+      "notes": "From screener: Score 91.6, Rank #2",
+      "order_kind": "entry",
+      "parent_order_id": null,
+      "position_id": null,
+      "tif": "GTC",
+      "fee_eur": null,
+      "fill_fx_rate": null
+    },
+    {
+      "order_id": "ORD-B1DCD7CF",
+      "ticker": "REP.MC",
+      "status": "pending",
+      "order_type": "STOP",
+      "quantity": 5,
+      "stop_price": 17.36,
+      "order_date": "2026-02-28",
+      "notes": "Auto-created from position stop update (was 17.32)",
+      "order_kind": "stop",
+      "position_id": "POS-REP.MC-20260218-01",
       "tif": "GTC"
     }
   ]
