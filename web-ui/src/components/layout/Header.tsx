@@ -1,10 +1,8 @@
-import { useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { TrendingUp, BookOpen, PanelLeft, PanelLeftClose } from 'lucide-react';
 import { useI18n } from '@/i18n/I18nProvider';
 import UserModeToggle from '@/components/common/UserModeToggle';
 import Button from '@/components/common/Button';
-import GettingStartedModal from '@/components/modals/GettingStartedModal';
 import { cn } from '@/utils/cn';
 
 interface HeaderProps {
@@ -14,9 +12,9 @@ interface HeaderProps {
 
 export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: HeaderProps) {
   const location = useLocation();
+  const navigate = useNavigate();
   const now = new Date();
   const { locale, t } = useI18n();
-  const [showGettingStarted, setShowGettingStarted] = useState(false);
   const isWorkspaceRoute = location.pathname === '/workspace' || location.pathname.startsWith('/workspace/');
   
   const dateStr = now.toLocaleDateString(locale, {
@@ -63,18 +61,16 @@ export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: 
         
         <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
           <UserModeToggle />
-          {!isWorkspaceRoute && (
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setShowGettingStarted(true)}
-              className="gap-2"
-              aria-label={t('header.gettingStarted')}
-            >
-              <BookOpen className="w-4 h-4" />
-              <span className="hidden sm:inline">{t('header.gettingStarted')}</span>
-            </Button>
-          )}
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate('/onboarding')}
+            className="gap-2"
+            aria-label={t('header.gettingStarted')}
+          >
+            <BookOpen className="w-4 h-4" />
+            <span className="hidden sm:inline">{t('header.gettingStarted')}</span>
+          </Button>
           
           {!isWorkspaceRoute && (
             <div className="hidden lg:flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
@@ -84,9 +80,6 @@ export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: 
           )}
         </div>
       </header>
-      {showGettingStarted && (
-        <GettingStartedModal onClose={() => setShowGettingStarted(false)} />
-      )}
     </>
   );
 }

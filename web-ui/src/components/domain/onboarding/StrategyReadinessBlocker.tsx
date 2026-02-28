@@ -6,9 +6,13 @@ import Badge from '@/components/common/Badge';
 
 interface StrategyReadinessBlockerProps {
   onDismiss?: () => void;
+  onConfigureStrategy?: () => void;
 }
 
-export default function StrategyReadinessBlocker({ onDismiss }: StrategyReadinessBlockerProps) {
+export default function StrategyReadinessBlocker({
+  onDismiss,
+  onConfigureStrategy,
+}: StrategyReadinessBlockerProps) {
   const navigate = useNavigate();
   
   return (
@@ -48,10 +52,16 @@ export default function StrategyReadinessBlocker({ onDismiss }: StrategyReadines
           
           <div className="flex gap-3">
             <Button
-              onClick={() => navigate('/strategy')}
+              onClick={() => {
+                if (onConfigureStrategy) {
+                  onConfigureStrategy();
+                  return;
+                }
+                navigate('/onboarding?step=2');
+              }}
               className="flex items-center gap-2"
             >
-              Go to Strategy Configuration
+              Complete Setup in Onboarding
               <ArrowRight className="w-4 h-4" />
             </Button>
             

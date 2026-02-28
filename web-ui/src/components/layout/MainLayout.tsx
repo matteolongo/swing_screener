@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Outlet } from 'react-router-dom';
 import Header from './Header';
 import MobileBottomNav from './MobileBottomNav';
 import Sidebar from './Sidebar';
 import { cn } from '@/utils/cn';
+import { useOrders, usePositions } from '@/features/portfolio/hooks';
+import { useOnboardingStore } from '@/stores/onboardingStore';
 
 const DESKTOP_MEDIA_QUERY = '(min-width: 1024px)';
 
@@ -17,8 +19,16 @@ function getDesktopViewportMatch() {
 
 export default function MainLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { status: onboardingStatus } = useOnboardingStore();
+  const ordersQuery = useOrders('all');
+  const positionsQuery = usePositions('all');
   const isWorkspaceRoute = useMemo(
     () => location.pathname === '/workspace' || location.pathname.startsWith('/workspace/'),
+    [location.pathname]
+  );
+  const isOnboardingRoute = useMemo(
+    () => location.pathname === '/onboarding' || location.pathname.startsWith('/onboarding/'),
     [location.pathname]
   );
   const [isDesktopViewport, setIsDesktopViewport] = useState(getDesktopViewportMatch);
@@ -29,6 +39,35 @@ export default function MainLayout() {
     setIsDesktopSidebarCollapsed(isWorkspaceRoute);
     setIsMobileSidebarOpen(false);
   }, [isWorkspaceRoute]);
+
+  useEffect(() => {
+    if (onboardingStatus !== 'new' || isOnboardingRoute) {
+      return;
+    }
+    if (!ordersQuery.isFetched || !positionsQuery.isFetched) {
+      return;
+    }
+    if (ordersQuery.isError || positionsQuery.isError) {
+      return;
+    }
+
+    const hasNoOrders = (ordersQuery.data ?? []).length === 0;
+    const hasNoPositions = (positionsQuery.data ?? []).length === 0;
+
+    if (hasNoOrders && hasNoPositions) {
+      navigate('/onboarding', { replace: true });
+    }
+  }, [
+    isOnboardingRoute,
+    navigate,
+    onboardingStatus,
+    ordersQuery.data,
+    ordersQuery.isError,
+    ordersQuery.isFetched,
+    positionsQuery.data,
+    positionsQuery.isError,
+    positionsQuery.isFetched,
+  ]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {

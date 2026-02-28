@@ -31,7 +31,7 @@ export default function TodaysNextActionCard({ onRunScreener }: TodaysNextAction
         description: t('todaysNextActionCard.configureStrategy.description'),
         icon: CheckCircle,
         buttonLabel: t('todaysNextActionCard.configureStrategy.buttonLabel'),
-        buttonAction: () => navigate('/strategy'),
+        buttonAction: () => navigate('/onboarding?step=2'),
         priority: 'high' as const,
       };
     }
