@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import Button from '@/components/common/Button';
+import SetupExecutionGuide from '@/components/domain/orders/SetupExecutionGuide';
 import { useOrderRiskMetrics } from '@/components/domain/orders/useOrderRiskMetrics';
 import { candidateOrderSchema, type CandidateOrderFormValues } from '@/components/domain/orders/schemas';
 import { useCreateOrderMutation } from '@/features/portfolio/hooks';
@@ -109,6 +110,8 @@ export default function ActionPanel({ ticker }: ActionPanelProps) {
           {t('order.candidateModal.notRecommended')}
         </div>
       ) : null}
+
+      <SetupExecutionGuide signal={candidate?.signal} />
 
       <form onSubmit={handleSubmit} className="space-y-3">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

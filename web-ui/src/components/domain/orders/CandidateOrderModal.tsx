@@ -3,6 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import ModalShell from '@/components/common/ModalShell';
 import RecommendationSummary from '@/components/domain/recommendation/RecommendationSummary';
+import SetupExecutionGuide from '@/components/domain/orders/SetupExecutionGuide';
 import { createOrder } from '@/features/portfolio/api';
 import type { CreateOrderRequest } from '@/features/portfolio/types';
 import type { Recommendation } from '@/types/recommendation';
@@ -15,6 +16,7 @@ import { t } from '@/i18n/t';
 
 export interface CandidateOrderInput {
   ticker: string;
+  signal?: string;
   entry?: number;
   stop?: number;
   close?: number;
@@ -161,6 +163,8 @@ export default function CandidateOrderModal({
           <h3 className="font-semibold mb-2">{t('order.candidateModal.recommendation')}</h3>
           <RecommendationSummary recommendation={candidate.recommendation} />
         </div>
+
+        <SetupExecutionGuide signal={candidate.signal} />
 
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

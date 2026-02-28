@@ -393,7 +393,7 @@ export ALPACA_API_KEY=your_key
 export ALPACA_SECRET_KEY=your_secret
 ```
 
-See [src/swing_screener/data/docs/BROKER_INTEGRATION.md](src/swing_screener/data/docs/BROKER_INTEGRATION.md) for complete setup guide.
+See [web-ui/docs/ux/DEGIRO_ORDER_SETUP_BREAKOUT_PULLBACK.md](web-ui/docs/ux/DEGIRO_ORDER_SETUP_BREAKOUT_PULLBACK.md) for breakout vs pullback Degiro order setup.
 
 ## Testing
 
@@ -432,7 +432,7 @@ npm run test:coverage # Run with coverage report
 - **[MCP Server Documentation](mcp_server/README.md)** — Model Context Protocol server (22 tools for AI assistants) ⭐ **NEW**
 - **[Sentiment Analysis Plugin Guide](src/swing_screener/social/docs/SENTIMENT_PLUGIN_GUIDE.md)** — Pluggable sentiment analysis system (Reddit, Yahoo Finance, VADER) ⭐ **NEW**
 - **[Web UI README](web-ui/README.md)** — React/TypeScript architecture
-- **[Broker Integration](src/swing_screener/data/docs/BROKER_INTEGRATION.md)** — Market data providers (yfinance, Alpaca) ⭐ **NEW**
+- **[Degiro Order Setup](web-ui/docs/ux/DEGIRO_ORDER_SETUP_BREAKOUT_PULLBACK.md)** — Manual order workflow for breakout vs pullback setups
 - **[Indicator Validation](src/swing_screener/data/docs/INDICATOR_VALIDATION.md)** — TA-Lib validation approach ⭐ **NEW**
 - **[Intelligence Module README](src/swing_screener/intelligence/README.md)** — Architecture, flow, scoring, and configuration
 - **[docs/overview/AGENTS.md](docs/overview/AGENTS.md)** — Guide for AI coding assistants

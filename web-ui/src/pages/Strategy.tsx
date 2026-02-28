@@ -46,14 +46,16 @@ export default function StrategyPage() {
         t('strategyPage.help.items.breakoutLookback.short'),
         t('strategyPage.help.items.breakoutLookback.what'),
         t('strategyPage.help.items.breakoutLookback.why'),
-        t('strategyPage.help.items.breakoutLookback.how')
+        t('strategyPage.help.items.breakoutLookback.how'),
+        t('strategyPage.help.items.breakoutLookback.execution')
       ),
       pullbackMa: buildHelp(
         t('strategyPage.help.items.pullbackMa.title'),
         t('strategyPage.help.items.pullbackMa.short'),
         t('strategyPage.help.items.pullbackMa.what'),
         t('strategyPage.help.items.pullbackMa.why'),
-        t('strategyPage.help.items.pullbackMa.how')
+        t('strategyPage.help.items.pullbackMa.how'),
+        t('strategyPage.help.items.pullbackMa.execution')
       ),
       minHistory: buildHelp(
         t('strategyPage.help.items.minHistory.title'),

@@ -157,6 +157,55 @@ export const messagesEn = {
     transparencyNote: 'This is transparent, rule-based reasoning. No AI hallucination.',
   },
   order: {
+    setupGuidance: {
+      title: 'Setup Execution (Degiro)',
+      setupLabel: 'Setup:',
+      whatItMeans: 'What this means:',
+      stepsLabel: 'Degiro steps',
+      cautionLabel: 'Caution:',
+      signals: {
+        breakout: {
+          label: 'Breakout setup',
+          whatItMeans: 'Entry is planned only if price confirms strength by breaking above the trigger area.',
+          steps: {
+            step1: 'In Degiro, prepare a conditional BUY STOP slightly above the breakout trigger.',
+            step2: 'Use the strategy stop from this app as your initial risk line after entry.',
+            step3: 'If price never triggers and instead weakens, skip the order instead of chasing.',
+          },
+          caution: 'Do not convert this to a market chase after a large spike.',
+        },
+        pullback: {
+          label: 'Pullback setup',
+          whatItMeans: 'Entry is planned on a controlled dip/reclaim inside an existing uptrend.',
+          steps: {
+            step1: 'In Degiro, place a BUY LIMIT near the pullback/reclaim level shown by the setup.',
+            step2: 'Keep the stop below the invalidation level to preserve the planned R-risk.',
+            step3: 'If price runs away without filling, let it go and wait for the next structured pullback.',
+          },
+          caution: 'Do not move the limit higher just to force a fill.',
+        },
+        both: {
+          label: 'Mixed setup (breakout + pullback)',
+          whatItMeans: 'Both signal families are active; execution should stay conservative and rule-based.',
+          steps: {
+            step1: 'Prefer pullback execution (BUY LIMIT) when a clean pullback level is available.',
+            step2: 'Use breakout execution (BUY STOP) only if price is still below trigger and has not broken out yet.',
+            step3: 'Choose one entry path before sending the order in Degiro to avoid conflicting instructions.',
+          },
+          caution: 'Do not place multiple entry orders that can over-size the same trade.',
+        },
+        unknown: {
+          label: 'Manual setup',
+          whatItMeans: 'No explicit setup type is available from the screener for this symbol.',
+          steps: {
+            step1: 'Confirm the intended setup in your notes before placing any order in Degiro.',
+            step2: 'Choose BUY LIMIT for pullback logic or BUY STOP for breakout logic intentionally.',
+            step3: 'Verify stop placement and position size still match your risk plan.',
+          },
+          caution: 'Skip execution if setup logic is unclear.',
+        },
+      },
+    },
     candidateModal: {
       title: 'Create Order - {{ticker}}',
       closeAria: 'Close create order modal',
@@ -1229,6 +1278,7 @@ export const messagesEn = {
       whatItIs: 'What it is:',
       whyItMatters: 'Why it matters:',
       howToInterpret: 'How to interpret:',
+      executionInDegiro: 'Execution in Degiro:',
       items: {
         module: {
           title: 'Strategy Module',
@@ -1243,6 +1293,7 @@ export const messagesEn = {
           what: 'The lookback window used to define recent highs or lows for breakout signals.',
           why: 'Controls how strict the breakout condition is and filters out noise.',
           how: 'Shorter windows react faster; longer windows require stronger, longer-term breakouts.',
+          execution: 'For breakout setups, execution is typically a BUY STOP above trigger, not a BUY LIMIT.',
         },
         pullbackMa: {
           title: 'Pullback Moving Average',
@@ -1250,6 +1301,7 @@ export const messagesEn = {
           what: 'A moving average used as a reference line for pullback signals.',
           why: 'Keeps pullbacks aligned with the prevailing trend before re-entry.',
           how: 'Lower values track price closely; higher values require deeper pullbacks before entry.',
+          execution: 'For pullback setups, execution is typically a BUY LIMIT near reclaim/support, not a chase order.',
         },
         minHistory: {
           title: 'Minimum History',

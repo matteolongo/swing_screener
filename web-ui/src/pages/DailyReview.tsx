@@ -340,6 +340,7 @@ export default function DailyReview() {
         <CandidateOrderModal
           candidate={{
             ticker: selectedCandidate.ticker,
+            signal: selectedCandidate.signal,
             entry: selectedCandidate.entry,
             stop: selectedCandidate.stop,
             shares: selectedCandidate.shares,
