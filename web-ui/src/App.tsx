@@ -9,6 +9,7 @@ const DailyReview = lazy(() => import('./pages/DailyReview'));
 const Strategy = lazy(() => import('./pages/Strategy'));
 const Intelligence = lazy(() => import('./pages/Intelligence'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
+const Learn = lazy(() => import('./pages/Learn'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -39,6 +40,7 @@ function App() {
               <Route path="daily-review" element={<DailyReview />} />
               <Route path="intelligence" element={<Intelligence />} />
               <Route path="onboarding" element={<Onboarding />} />
+              <Route path="learn" element={<Learn />} />
               <Route path="screener" element={<Navigate to="/workspace" replace />} />
               <Route path="orders" element={<Navigate to="/workspace" replace />} />
               <Route path="positions" element={<Navigate to="/workspace" replace />} />

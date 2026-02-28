@@ -11,6 +11,7 @@ describe('Strategy Page', () => {
     expect(
       await screen.findByRole('heading', { name: /^Strategy$/ })
     ).toBeInTheDocument();
+    expect(await screen.findByText('Indicator Preview (Educational)')).toBeInTheDocument();
 
     const select = await screen.findByLabelText(/choose strategy/i);
     expect(select).toBeInTheDocument();
@@ -37,7 +38,7 @@ describe('Strategy Page', () => {
       await user.click(advancedToggle);
     });
 
-    expect(await screen.findByText('SMA Fast')).toBeInTheDocument();
+    expect((await screen.findAllByText('SMA Fast')).length).toBeGreaterThan(0);
     await waitForQueriesToSettle(queryClient);
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 0));

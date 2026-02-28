@@ -4,6 +4,7 @@ import {
   SlidersHorizontal,
   ClipboardCheck,
   Brain,
+  BookOpen,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import {
@@ -37,6 +38,12 @@ const navigation = [
     labelKey: 'sidebar.nav.intelligence',
     href: '/intelligence',
     icon: Brain,
+    advanced: false,
+  },
+  {
+    labelKey: 'sidebar.nav.learn',
+    href: '/learn',
+    icon: BookOpen,
     advanced: false,
   },
 ] as const;

@@ -8,7 +8,7 @@ import { t } from '@/i18n/t';
 interface ScreenerCandidateDetailsRowProps {
   candidate: CandidateViewModel;
   onSocialClick: () => void;
-  onThesisClick: () => void;
+  onWhyMatchedClick: () => void;
 }
 
 /**
@@ -17,7 +17,7 @@ interface ScreenerCandidateDetailsRowProps {
 export default function ScreenerCandidateDetailsRow({
   candidate,
   onSocialClick,
-  onThesisClick,
+  onWhyMatchedClick,
 }: ScreenerCandidateDetailsRowProps) {
   const overlayClassByStatus: Record<string, string> = {
     OFF: 'bg-gray-50 border-gray-200',
@@ -38,23 +38,23 @@ export default function ScreenerCandidateDetailsRow({
               </h4>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 text-sm">
                 <div className="rounded-md border border-gray-200 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-800">
-                  <MetricHelpLabel metricKey="SCORE" className="text-gray-600 dark:text-gray-400" />
+                  <MetricHelpLabel metricKey="SCORE" className="text-gray-600 dark:text-gray-400" showLearnLink />
                   <div className="font-mono mt-1 text-base">{candidate.score.toFixed(1)}</div>
                 </div>
                 <div className="rounded-md border border-gray-200 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-800">
-                  <MetricHelpLabel metricKey="ATR" className="text-gray-600 dark:text-gray-400" />
+                  <MetricHelpLabel metricKey="ATR" className="text-gray-600 dark:text-gray-400" showLearnLink />
                   <div className="font-mono mt-1 text-base">{candidate.atr.toFixed(2)}</div>
                 </div>
                 <div className="rounded-md border border-gray-200 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-800">
-                  <MetricHelpLabel metricKey="MOM_6M" className="text-gray-600 dark:text-gray-400" />
+                  <MetricHelpLabel metricKey="MOM_6M" className="text-gray-600 dark:text-gray-400" showLearnLink />
                   <div className="font-mono mt-1 text-base">{formatPercent(candidate.momentum6m * 100)}</div>
                 </div>
                 <div className="rounded-md border border-gray-200 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-800">
-                  <MetricHelpLabel metricKey="MOM_12M" className="text-gray-600 dark:text-gray-400" />
+                  <MetricHelpLabel metricKey="MOM_12M" className="text-gray-600 dark:text-gray-400" showLearnLink />
                   <div className="font-mono mt-1 text-base">{formatPercent(candidate.momentum12m * 100)}</div>
                 </div>
                 <div className="rounded-md border border-gray-200 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-800">
-                  <MetricHelpLabel metricKey="RS" className="text-gray-600 dark:text-gray-400" />
+                  <MetricHelpLabel metricKey="RS" className="text-gray-600 dark:text-gray-400" showLearnLink />
                   <div className="font-mono mt-1 text-base">{formatPercent(candidate.relStrength * 100)}</div>
                 </div>
               </div>
@@ -77,16 +77,16 @@ export default function ScreenerCandidateDetailsRow({
                   {t('screener.table.sentimentTitle')}
                 </button>
 
-                {candidate.original.recommendation?.thesis && (
+                {candidate.original.recommendation && (
                   <button
                     type="button"
-                    onClick={onThesisClick}
+                    onClick={onWhyMatchedClick}
                     className="inline-flex items-center justify-center gap-2 rounded-md border border-amber-300 bg-white px-3 py-2 text-sm text-amber-800 hover:bg-amber-50 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200 dark:hover:bg-amber-900/30"
-                    title={t('screener.table.tradeThesisTitle')}
-                    aria-label={t('screener.table.tradeThesisAria', { ticker: candidate.ticker })}
+                    title={t('screener.table.whyMatchedTitle')}
+                    aria-label={t('screener.table.whyMatchedAria', { ticker: candidate.ticker })}
                   >
                     <Sparkles className="h-4 w-4" />
-                    {t('screener.table.tradeThesisTitle')}
+                    {t('screener.table.whyMatchedAction')}
                   </button>
                 )}
 

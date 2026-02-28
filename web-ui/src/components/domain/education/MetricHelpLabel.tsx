@@ -1,14 +1,22 @@
 import HelpTooltip from '@/components/common/HelpTooltip';
 import { EducationMetricKey, getGlossaryEntry } from '@/content/educationGlossary';
 import { cn } from '@/utils/cn';
+import { Link } from 'react-router-dom';
+import { t } from '@/i18n/t';
 
 interface MetricHelpLabelProps {
   metricKey: EducationMetricKey;
   labelOverride?: string;
   className?: string;
+  showLearnLink?: boolean;
 }
 
-export default function MetricHelpLabel({ metricKey, labelOverride, className }: MetricHelpLabelProps) {
+export default function MetricHelpLabel({
+  metricKey,
+  labelOverride,
+  className,
+  showLearnLink = false,
+}: MetricHelpLabelProps) {
   const entry = getGlossaryEntry(metricKey);
 
   return (
@@ -29,6 +37,16 @@ export default function MetricHelpLabel({ metricKey, labelOverride, className }:
           </div>
         )}
       />
+      {showLearnLink ? (
+        <Link
+          to={`/learn?q=${encodeURIComponent(entry.label)}`}
+          className="text-[11px] text-blue-600 hover:underline dark:text-blue-400"
+          aria-label={t('learnPage.openForMetricAria', { metric: entry.label })}
+          title={t('learnPage.openForMetricTitle', { metric: entry.label })}
+        >
+          {t('common.actions.learn')}
+        </Link>
+      ) : null}
     </span>
   );
 }

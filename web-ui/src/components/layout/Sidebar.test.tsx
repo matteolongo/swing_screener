@@ -41,6 +41,7 @@ describe('Sidebar', () => {
     expect(screen.getByText('Daily Review')).toBeInTheDocument();
     expect(screen.getByText('Strategy')).toBeInTheDocument();
     expect(screen.getByText('Intelligence')).toBeInTheDocument();
+    expect(screen.getByText('Learn')).toBeInTheDocument();
   });
 
   it('should show mode toggle with beginner mode enabled by default', () => {
