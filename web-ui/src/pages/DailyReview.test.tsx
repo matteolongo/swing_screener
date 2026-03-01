@@ -139,6 +139,18 @@ describe('DailyReview Page', () => {
       expect(screen.getByText('Confidence')).toBeInTheDocument()
       expect(screen.getByText('R:R')).toBeInTheDocument()
       expect(screen.getByText('91.6')).toBeInTheDocument()
+      expect(screen.getByText('Trade Rationale')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Why is this suggested?' })).toBeInTheDocument()
+      expect(screen.queryByText('• Trend conditions met')).not.toBeInTheDocument()
+    })
+
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Why is this suggested?' }))
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('• Trend conditions met')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Hide explanation' })).toBeInTheDocument()
     })
 
     await act(async () => {
@@ -150,6 +162,8 @@ describe('DailyReview Page', () => {
       expect(screen.getByText('Stop Management Glossary')).toBeInTheDocument()
       expect(screen.queryByText('Daily Review Glossary')).not.toBeInTheDocument()
       expect(screen.getAllByText('R Now').length).toBeGreaterThan(0)
+      expect(screen.getByText('Stop Adjustment Logic')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Why is this suggested?' })).toBeInTheDocument()
     })
   })
 
@@ -253,6 +267,7 @@ describe('DailyReview Page', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Step 3 of 3')).toBeInTheDocument()
+      expect(screen.getByText('Exit Logic')).toBeInTheDocument()
       expect(
         screen.getByText(
           'Held for 20 bars (max 20). Close to free capital for stronger setups.'
@@ -343,6 +358,7 @@ describe('DailyReview Page', () => {
       expect(screen.getByText('Discipline maintained.')).toBeInTheDocument()
       expect(screen.queryByText('Attention Required')).not.toBeInTheDocument()
       expect(screen.queryByText(/Step 1 of/i)).not.toBeInTheDocument()
+      expect(screen.queryByText('Trade Rationale')).not.toBeInTheDocument()
     })
   })
 })
