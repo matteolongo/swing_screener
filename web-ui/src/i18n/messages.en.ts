@@ -1045,6 +1045,38 @@ export const messagesEn = {
       continue: 'Continue',
       finish: 'Finish',
     },
+    insight: {
+      showExplanation: 'Why is this suggested?',
+      hideExplanation: 'Hide explanation',
+      new: {
+        title: 'Trade Rationale',
+        summary: 'These candidates align with your selected strategy profile.',
+        points: {
+          trend: '• Trend conditions met',
+          rr: '• Risk-reward above threshold',
+          volatility: '• Volatility within acceptable range',
+        },
+        note: 'Your preset enforces disciplined entry.',
+      },
+      update: {
+        title: 'Stop Adjustment Logic',
+        summary: 'Stops are adjusted to protect profits while preserving structure.',
+        points: {
+          trailing: '• Trailing stop rule applied',
+          volatility: '• Volatility compression detected',
+          trend: '• Position remains trend-aligned',
+        },
+      },
+      close: {
+        title: 'Exit Logic',
+        summary: 'Positions are closed when structural conditions fail.',
+        points: {
+          stop: '• Stop breached',
+          trend: '• Trend reversal detected',
+          risk: '• Risk containment enforced',
+        },
+      },
+    },
     table: {
       candidates: {
         empty: 'No candidates found',
@@ -1066,6 +1098,7 @@ export const messagesEn = {
         createOrderTitle: 'Create Order',
         createOrderNotRecommendedTitle: 'Not recommended — open details to fix',
         yahooFinanceTooltip: 'Open {{ticker}} on Yahoo Finance',
+        rrBadgeTitle: 'Risk-reward multiple',
       },
       update: {
         empty: 'No stop updates.',
@@ -1081,6 +1114,7 @@ export const messagesEn = {
         actionTitle: 'Apply this stop update',
         actionLabel: 'Update Stop',
         yahooFinanceTooltip: 'Open {{ticker}} on Yahoo Finance',
+        rNowBadgeTitle: 'Current R multiple',
       },
       close: {
         empty: 'No close candidates.',
@@ -1095,6 +1129,7 @@ export const messagesEn = {
         actionTitle: 'Close this position',
         actionLabel: 'Close Position',
         yahooFinanceTooltip: 'Open {{ticker}} on Yahoo Finance',
+        rNowBadgeTitle: 'Current R multiple',
       },
       hold: {
         empty: 'No hold positions.',
