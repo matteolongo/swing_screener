@@ -9,12 +9,6 @@ export const API_ENDPOINTS = {
   strategyValidate: '/api/strategy/validate',
   strategyById: (id: string) => `/api/strategy/${id}`,
   
-  // Screener
-  screenerRun: '/api/screener/run',
-  screenerRunStatus: (jobId: string) => `/api/screener/run/${jobId}`,
-  screenerUniverses: '/api/screener/universes',
-  screenerPreview: '/api/screener/preview-order',
-  
   // Portfolio - Positions
   positions: '/api/portfolio/positions',
   positionMetrics: (id: string) => `/api/portfolio/positions/${id}/metrics`,
@@ -28,20 +22,6 @@ export const API_ENDPOINTS = {
   orders: '/api/portfolio/orders',
   order: (id: string) => `/api/portfolio/orders/${id}`,
   orderFill: (id: string) => `/api/portfolio/orders/${id}/fill`,
-
-  // Social
-  socialAnalyze: '/api/social/analyze',
-  socialWarmupStatus: (jobId: string) => `/api/social/warmup/${jobId}`,
-
-  // Intelligence
-  intelligenceConfig: '/api/intelligence/config',
-  intelligenceProviders: '/api/intelligence/providers',
-  intelligenceProviderTest: '/api/intelligence/providers/test',
-  intelligenceSymbolSets: '/api/intelligence/symbol-sets',
-  intelligenceSymbolSetById: (id: string) => `/api/intelligence/symbol-sets/${id}`,
-  intelligenceRun: '/api/intelligence/run',
-  intelligenceRunStatus: (jobId: string) => `/api/intelligence/run/${jobId}`,
-  intelligenceOpportunities: '/api/intelligence/opportunities',
 
   // Daily Review
   dailyReview: '/api/daily-review',
