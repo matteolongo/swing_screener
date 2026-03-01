@@ -322,8 +322,10 @@ export const messagesEn = {
   sidebar: {
     nav: {
       workspace: 'Workspace',
+      decide: 'Decide',
       dailyReview: 'Daily Review',
       strategy: 'Strategy',
+      learn: 'Learn',
       intelligence: 'Intelligence',
     },
     activeStrategy: 'Active Strategy',
@@ -947,6 +949,10 @@ export const messagesEn = {
     defaultNotes: 'From screener: Score {{score}}, Rank #{{rank}}',
   },
   dailyReview: {
+    strategySelection: {
+      title: 'Select a Strategy to Begin',
+      subtitle: 'Choose which strategy context to use for today\'s review.',
+    },
     header: {
       title: 'Daily Review',
       loading: 'Loading daily review...',

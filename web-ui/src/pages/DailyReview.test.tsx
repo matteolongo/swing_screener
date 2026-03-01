@@ -4,6 +4,7 @@ import { http, HttpResponse } from 'msw'
 import { renderWithProviders } from '@/test/utils'
 import { server } from '@/test/mocks/server'
 import DailyReview from './DailyReview'
+import { useActiveStrategyStore } from '@/stores/activeStrategyStore'
 
 const mockDailyReview = {
   new_candidates: [
@@ -91,9 +92,21 @@ const mockDailyReview = {
 
 describe('DailyReview Page', () => {
   beforeEach(() => {
+    useActiveStrategyStore.setState({ activeStrategyId: 'default' })
     server.use(
       http.get('*/api/daily-review', () => HttpResponse.json(mockDailyReview))
     )
+  })
+
+  it('shows strategy selection gate when no strategy is selected', async () => {
+    useActiveStrategyStore.setState({ activeStrategyId: null })
+
+    renderWithProviders(<DailyReview />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Select a Strategy to Begin')).toBeInTheDocument()
+      expect(screen.getByLabelText('Active Strategy')).toBeInTheDocument()
+    })
   })
 
   it('renders glossary blocks and help-labeled table columns', async () => {

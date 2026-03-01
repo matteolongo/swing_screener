@@ -1,21 +1,11 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, SlidersHorizontal, ClipboardCheck } from 'lucide-react';
+import { BookOpen, ClipboardCheck, SlidersHorizontal } from 'lucide-react';
 import { cn } from '@/utils/cn';
-import {
-  useActiveStrategyQuery,
-  useSetActiveStrategyMutation,
-  useStrategiesQuery,
-} from '@/features/strategy/hooks';
 import { t } from '@/i18n/t';
 
 const navigation = [
   {
-    labelKey: 'sidebar.nav.workspace',
-    href: '/workspace',
-    icon: LayoutDashboard,
-  },
-  {
-    labelKey: 'sidebar.nav.dailyReview',
+    labelKey: 'sidebar.nav.decide',
     href: '/daily-review',
     icon: ClipboardCheck,
   },
@@ -23,6 +13,11 @@ const navigation = [
     labelKey: 'sidebar.nav.strategy',
     href: '/strategy',
     icon: SlidersHorizontal,
+  },
+  {
+    labelKey: 'sidebar.nav.learn',
+    href: '/onboarding',
+    icon: BookOpen,
   },
 ] as const;
 
@@ -32,61 +27,8 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ className, onNavigate }: SidebarProps) {
-  const strategiesQuery = useStrategiesQuery();
-  const activeStrategyQuery = useActiveStrategyQuery();
-  const setActiveMutation = useSetActiveStrategyMutation();
-
-  const activeId = activeStrategyQuery.data?.id ?? '';
-  const strategies = strategiesQuery.data ?? [];
-  const isLoading = strategiesQuery.isLoading || activeStrategyQuery.isLoading;
-  const selectValue = activeId || '';
-
-  const handleStrategyChange = (value: string) => {
-    if (!value || value === activeId) return;
-    setActiveMutation.mutate(value);
-  };
-
   return (
     <aside className={cn('h-full border-r border-border bg-white dark:bg-gray-800 flex flex-col', className)}>
-      <div className="p-4 border-b border-border">
-        <label
-          htmlFor="sidebar-active-strategy-select"
-          className="block text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2"
-        >
-          {t('sidebar.activeStrategy')}
-        </label>
-        <select
-          id="sidebar-active-strategy-select"
-          value={selectValue}
-          onChange={(e) => handleStrategyChange(e.target.value)}
-          aria-label={t('sidebar.activeStrategy')}
-          className="w-full px-3 py-2 border border-border rounded-lg bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
-          disabled={isLoading || setActiveMutation.isPending}
-        >
-          {isLoading && <option value="">{t('sidebar.loadingStrategies')}</option>}
-          {!isLoading && !strategies.length && <option value="">{t('sidebar.noStrategies')}</option>}
-          {!isLoading && !activeId && <option value="">{t('sidebar.selectStrategy')}</option>}
-          {!isLoading &&
-            strategies.map((strategy) => (
-              <option key={strategy.id} value={strategy.id}>
-                {strategy.name}
-              </option>
-            ))}
-        </select>
-        {activeStrategyQuery.data && (
-          <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-            {activeStrategyQuery.data.isDefault
-              ? t('sidebar.defaultStrategy')
-              : t('sidebar.customStrategy')}
-          </div>
-        )}
-        {strategiesQuery.isError && (
-          <div className="mt-2 text-xs text-red-600">{t('sidebar.loadError')}</div>
-        )}
-        {setActiveMutation.isError && (
-          <div className="mt-2 text-xs text-red-600">{t('sidebar.updateError')}</div>
-        )}
-      </div>
       <nav className="flex-1 p-4 space-y-1">
         {navigation.map((item) => (
           <NavLink

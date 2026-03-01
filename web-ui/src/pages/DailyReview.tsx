@@ -8,7 +8,7 @@ import Button from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
 import TableShell from '@/components/common/TableShell';
 import { formatCurrency, formatNumber } from '@/utils/formatters';
-import { useActiveStrategyQuery } from '@/features/strategy/hooks';
+import { useSetActiveStrategyMutation, useStrategiesQuery } from '@/features/strategy/hooks';
 import { DEFAULT_CONFIG, type RiskConfig } from '@/types/config';
 import GlossaryLegend from '@/components/domain/education/GlossaryLegend';
 import MetricHelpLabel from '@/components/domain/education/MetricHelpLabel';
@@ -28,8 +28,9 @@ import type {
   DailyReviewPositionUpdate,
   DailyReviewPositionClose,
 } from '@/features/dailyReview/types';
-import { useStrategyReadiness } from '@/features/strategy/useStrategyReadiness';
+import { getStrategyReadiness } from '@/features/strategy/useStrategyReadiness';
 import StrategyReadinessBlocker from '@/components/domain/onboarding/StrategyReadinessBlocker';
+import { useActiveStrategyStore } from '@/stores/activeStrategyStore';
 
 export default function DailyReview() {
   const [expandedSections, setExpandedSections] = useState({
@@ -48,16 +49,35 @@ export default function DailyReview() {
 
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const strategiesQuery = useStrategiesQuery();
+  const setActiveStrategyMutation = useSetActiveStrategyMutation();
+  const { activeStrategyId, setActiveStrategyId } = useActiveStrategyStore();
   const selectedUniverse = parseUniverseFromStorage(localStorage.getItem(SCREENER_UNIVERSE_STORAGE_KEY));
-  const { data: review, isLoading, error, refetch, isFetching } = useDailyReview(10, selectedUniverse);
-  const activeStrategyQuery = useActiveStrategyQuery();
-  const { isReady: strategyReady } = useStrategyReadiness();
+  const strategies = strategiesQuery.data ?? [];
+  const selectedStrategy = strategies.find((strategy) => strategy.id === activeStrategyId) ?? null;
+  const activeReviewStrategyId = selectedStrategy?.id ?? null;
+  const { data: review, isLoading, error, refetch, isFetching } = useDailyReview(activeReviewStrategyId, 10, selectedUniverse);
+  const strategyReadiness = getStrategyReadiness(selectedStrategy, strategiesQuery.isLoading);
   
   // Persist dismissal to localStorage
   useEffect(() => {
     localStorage.setItem('dailyReview.dismissedReadinessBlocker', String(dismissedReadinessBlocker));
   }, [dismissedReadinessBlocker]);
-  const riskConfig: RiskConfig = activeStrategyQuery.data?.risk ?? DEFAULT_CONFIG.risk;
+  const riskConfig: RiskConfig = selectedStrategy?.risk ?? DEFAULT_CONFIG.risk;
+
+  const handleSelectStrategy = useCallback(
+    async (strategyId: string) => {
+      if (!strategyId) return;
+      try {
+        await setActiveStrategyMutation.mutateAsync(strategyId);
+        setActiveStrategyId(strategyId);
+        setDismissedReadinessBlocker(false);
+      } catch {
+        // Mutation state surfaces the error to the user.
+      }
+    },
+    [setActiveStrategyId, setActiveStrategyMutation]
+  );
   const openWorkspacePortfolioAction = useCallback(
     (params: { action: 'update-stop' | 'close-position'; ticker: string; positionId: string }) => {
       const searchParams = new URLSearchParams();
@@ -71,6 +91,70 @@ export default function DailyReview() {
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
   };
+
+  if (strategiesQuery.isLoading) {
+    return (
+      <div className="mx-auto flex min-h-[calc(100dvh-12rem)] max-w-2xl items-center justify-center">
+        <p className="text-sm text-gray-600 dark:text-gray-400">{t('sidebar.loadingStrategies')}</p>
+      </div>
+    );
+  }
+
+  if (strategiesQuery.isError) {
+    return (
+      <div className="mx-auto flex min-h-[calc(100dvh-12rem)] w-full max-w-2xl items-center justify-center">
+        <Card>
+          <CardContent>
+            <p className="text-sm text-red-600 dark:text-red-400">{t('sidebar.loadError')}</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!activeStrategyId || !selectedStrategy) {
+    return (
+      <div className="mx-auto flex min-h-[calc(100dvh-12rem)] w-full max-w-2xl flex-col items-center justify-center gap-5">
+        <div className="space-y-2 text-center">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            {t('dailyReview.strategySelection.title')}
+          </h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {t('dailyReview.strategySelection.subtitle')}
+          </p>
+        </div>
+        <Card variant="bordered" className="w-full">
+          <CardContent className="space-y-3">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300" htmlFor="daily-review-strategy-select">
+              {t('sidebar.activeStrategy')}
+            </label>
+            <select
+              id="daily-review-strategy-select"
+              defaultValue=""
+              className="w-full px-3 py-2 border border-border rounded-lg bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+              onChange={(event) => {
+                const next = event.target.value;
+                if (next) {
+                  void handleSelectStrategy(next);
+                }
+              }}
+              disabled={setActiveStrategyMutation.isPending}
+            >
+              <option value="">{t('sidebar.selectStrategy')}</option>
+              {strategies.map((strategy) => (
+                <option key={strategy.id} value={strategy.id}>
+                  {strategy.name}
+                </option>
+              ))}
+            </select>
+            {setActiveStrategyMutation.isError ? (
+              <p className="text-xs text-red-600">{t('sidebar.updateError')}</p>
+            ) : null}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -134,19 +218,41 @@ export default function DailyReview() {
             })}
           </p>
         </div>
-        <Button
-          variant="secondary"
-          onClick={() => refetch()}
-          disabled={isFetching}
-          title={t('dailyReview.header.refreshTitle')}
-        >
-          <RefreshCw className={`w-4 h-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
-          {isFetching ? t('dailyReview.header.refreshing') : t('dailyReview.header.refresh')}
-        </Button>
+        <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center">
+          <label htmlFor="daily-review-active-strategy" className="text-xs text-gray-500 dark:text-gray-400">
+            {t('sidebar.activeStrategy')}
+          </label>
+          <select
+            id="daily-review-active-strategy"
+            value={selectedStrategy.id}
+            onChange={(event) => void handleSelectStrategy(event.target.value)}
+            className="w-44 px-3 py-2 border border-border rounded-lg bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+            disabled={setActiveStrategyMutation.isPending}
+          >
+            {strategies.map((strategy) => (
+              <option key={strategy.id} value={strategy.id}>
+                {strategy.name}
+              </option>
+            ))}
+          </select>
+          <Button
+            variant="secondary"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            title={t('dailyReview.header.refreshTitle')}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
+            {isFetching ? t('dailyReview.header.refreshing') : t('dailyReview.header.refresh')}
+          </Button>
+        </div>
       </div>
 
+      {setActiveStrategyMutation.isError ? (
+        <p className="text-sm text-red-600 dark:text-red-400">{t('sidebar.updateError')}</p>
+      ) : null}
+
       {/* Strategy Readiness Blocker */}
-      {!strategyReady && !dismissedReadinessBlocker && (
+      {!strategyReadiness.isReady && !dismissedReadinessBlocker && (
         <StrategyReadinessBlocker
           onDismiss={() => setDismissedReadinessBlocker(true)}
           onConfigureStrategy={() => navigate('/onboarding?step=2')}
