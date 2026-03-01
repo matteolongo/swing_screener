@@ -6,7 +6,7 @@ import { useDailyReview } from '@/features/dailyReview/api';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
-import TableShell from '@/components/common/TableShell';
+import { DataTable, type ColumnDef } from '@/components/ui/DataTable';
 import { formatCurrency, formatNumber } from '@/utils/formatters';
 import { useSetActiveStrategyMutation, useStrategiesQuery } from '@/features/strategy/hooks';
 import { DEFAULT_CONFIG, type RiskConfig } from '@/types/config';
@@ -538,90 +538,113 @@ function CandidatesTable({
   onShowRecommendation: (candidate: DailyReviewCandidate) => void;
   onCreateOrder: (candidate: DailyReviewCandidate) => void;
 }) {
+  const columns: ColumnDef<DailyReviewCandidate>[] = [
+    {
+      key: 'ticker',
+      header: t('dailyReview.table.candidates.headers.ticker'),
+      renderCell: (candidate) => (
+        <TickerWithChart
+          ticker={candidate.ticker}
+          title={t('dailyReview.table.candidates.yahooFinanceTooltip', { ticker: candidate.ticker })}
+        />
+      ),
+    },
+    {
+      key: 'confidence',
+      header: <MetricHelpLabel metricKey="CONFIDENCE" className="justify-end w-full" />,
+      renderCell: (candidate) => (
+        <div className="text-right">
+          <span className="font-semibold text-purple-600">
+            {candidate.confidence != null ? formatNumber(candidate.confidence, 1) : '-'}
+          </span>
+        </div>
+      ),
+    },
+    {
+      key: 'signal',
+      header: t('dailyReview.table.candidates.headers.signal'),
+      renderCell: (candidate) => <Badge variant="primary">{candidate.signal}</Badge>,
+    },
+    {
+      key: 'entry',
+      header: <div className="text-right">{t('dailyReview.table.candidates.headers.entry')}</div>,
+      renderCell: (candidate) => <div className="text-right">{formatCurrency(candidate.entry)}</div>,
+    },
+    {
+      key: 'stop',
+      header: <div className="text-right">{t('dailyReview.table.candidates.headers.stop')}</div>,
+      renderCell: (candidate) => <div className="text-right">{formatCurrency(candidate.stop)}</div>,
+    },
+    {
+      key: 'shares',
+      header: <div className="text-right">{t('dailyReview.table.candidates.headers.shares')}</div>,
+      renderCell: (candidate) => <div className="text-right">{candidate.shares}</div>,
+    },
+    {
+      key: 'rr',
+      header: <MetricHelpLabel metricKey="RR" labelOverride="R:R" className="justify-end w-full" />,
+      renderCell: (candidate) => (
+        <div className="text-right font-bold">
+          {t('common.units.rValue', { value: formatNumber(candidate.rReward, 1) })}
+        </div>
+      ),
+    },
+    {
+      key: 'sector',
+      header: t('dailyReview.table.candidates.headers.sector'),
+      renderCell: (candidate) => (
+        <div className="text-sm text-gray-600 dark:text-gray-400">
+          {candidate.sector || t('common.placeholders.dash')}
+        </div>
+      ),
+    },
+    {
+      key: 'info',
+      header: <div className="text-center">{t('dailyReview.table.candidates.headers.info')}</div>,
+      renderCell: (candidate) =>
+        candidate.recommendation ? (
+          <div className="flex justify-center">
+            <button
+              type="button"
+              onClick={() => onShowRecommendation(candidate)}
+              className="min-h-11 min-w-11 rounded p-1 hover:bg-gray-200 dark:hover:bg-gray-700"
+              title={t('dailyReview.table.candidates.recommendationTitle')}
+              aria-label={t('dailyReview.table.candidates.recommendationAria', { ticker: candidate.ticker })}
+            >
+              <Info className="w-4 h-4" />
+            </button>
+          </div>
+        ) : null,
+    },
+    {
+      key: 'action',
+      header: <div className="text-right">{t('dailyReview.table.candidates.headers.action')}</div>,
+      renderCell: (candidate) => (
+        <div className="flex justify-end">
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => onCreateOrder(candidate)}
+            title={
+              candidate.recommendation?.verdict === 'NOT_RECOMMENDED'
+                ? t('dailyReview.table.candidates.createOrderNotRecommendedTitle')
+                : t('dailyReview.table.candidates.createOrderTitle')
+            }
+          >
+            {t('dailyReview.table.candidates.createOrder')}
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
   return (
-    <TableShell
-      empty={candidates.length === 0}
-      emptyMessage={t('dailyReview.table.candidates.empty')}
-      tableClassName="text-sm"
-      headers={(
-        <tr>
-          <th className="text-left p-2">{t('dailyReview.table.candidates.headers.ticker')}</th>
-          <th className="text-right p-2">
-            <MetricHelpLabel metricKey="CONFIDENCE" className="justify-end w-full" />
-          </th>
-          <th className="text-left p-2">{t('dailyReview.table.candidates.headers.signal')}</th>
-          <th className="text-right p-2">{t('dailyReview.table.candidates.headers.entry')}</th>
-          <th className="text-right p-2">{t('dailyReview.table.candidates.headers.stop')}</th>
-          <th className="text-right p-2">{t('dailyReview.table.candidates.headers.shares')}</th>
-          <th className="text-right p-2">
-            <MetricHelpLabel metricKey="RR" labelOverride="R:R" className="justify-end w-full" />
-          </th>
-          <th className="text-left p-2">{t('dailyReview.table.candidates.headers.sector')}</th>
-          <th className="text-center p-2">{t('dailyReview.table.candidates.headers.info')}</th>
-          <th className="text-right p-2">{t('dailyReview.table.candidates.headers.action')}</th>
-        </tr>
-      )}
-    >
-      {candidates.map((candidate) => (
-        <tr key={candidate.ticker} className="border-b dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
-          <td className="p-2 font-mono font-bold">
-            <a
-              href={`https://finance.yahoo.com/quote/${candidate.ticker}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:text-blue-800 hover:underline"
-              title={t('dailyReview.table.candidates.yahooFinanceTooltip', { ticker: candidate.ticker })}
-            >
-              {candidate.ticker}
-            </a>
-            <CachedSymbolPriceChart ticker={candidate.ticker} className="mt-1" />
-          </td>
-          <td className="p-2 text-right">
-            <span className="font-semibold text-purple-600">
-              {candidate.confidence != null ? formatNumber(candidate.confidence, 1) : '-'}
-            </span>
-          </td>
-          <td className="p-2">
-            <Badge variant="primary">{candidate.signal}</Badge>
-          </td>
-          <td className="p-2 text-right">{formatCurrency(candidate.entry)}</td>
-          <td className="p-2 text-right">{formatCurrency(candidate.stop)}</td>
-          <td className="p-2 text-right">{candidate.shares}</td>
-          <td className="p-2 text-right font-bold">
-            {t('common.units.rValue', { value: formatNumber(candidate.rReward, 1) })}
-          </td>
-          <td className="p-2 text-sm text-gray-600 dark:text-gray-400">
-            {candidate.sector || t('common.placeholders.dash')}
-          </td>
-          <td className="p-2 text-center">
-            {candidate.recommendation ? (
-              <button
-                onClick={() => onShowRecommendation(candidate)}
-                className="min-h-11 min-w-11 p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
-                title={t('dailyReview.table.candidates.recommendationTitle')}
-                aria-label={t('dailyReview.table.candidates.recommendationAria', { ticker: candidate.ticker })}
-              >
-                <Info className="w-4 h-4" />
-              </button>
-            ) : null}
-          </td>
-          <td className="p-2 text-right">
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => onCreateOrder(candidate)}
-              title={
-                candidate.recommendation?.verdict === 'NOT_RECOMMENDED'
-                  ? t('dailyReview.table.candidates.createOrderNotRecommendedTitle')
-                  : t('dailyReview.table.candidates.createOrderTitle')
-              }
-            >
-              {t('dailyReview.table.candidates.createOrder')}
-            </Button>
-          </td>
-        </tr>
-      ))}
-    </TableShell>
+    <DataTable
+      data={candidates}
+      columns={columns}
+      emptyState={t('dailyReview.table.candidates.empty')}
+      className="rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900/40"
+    />
   );
 }
 
@@ -645,63 +668,84 @@ function UpdateStopTable({
   positions: DailyReviewPositionUpdate[];
   onAction: (position: DailyReviewPositionUpdate) => void;
 }) {
+  const columns: ColumnDef<DailyReviewPositionUpdate>[] = [
+    {
+      key: 'ticker',
+      header: t('dailyReview.table.update.headers.ticker'),
+      renderCell: (pos) => (
+        <TickerWithChart
+          ticker={pos.ticker}
+          title={t('dailyReview.table.update.yahooFinanceTooltip', { ticker: pos.ticker })}
+        />
+      ),
+    },
+    {
+      key: 'entry',
+      header: <div className="text-right">{t('dailyReview.table.update.headers.entry')}</div>,
+      renderCell: (pos) => <div className="text-right">{formatCurrency(pos.entryPrice)}</div>,
+    },
+    {
+      key: 'current',
+      header: <div className="text-right">{t('dailyReview.table.update.headers.current')}</div>,
+      renderCell: (pos) => <div className="text-right">{formatCurrency(pos.currentPrice)}</div>,
+    },
+    {
+      key: 'stopOld',
+      header: <div className="text-right">{t('dailyReview.table.update.headers.stopOld')}</div>,
+      renderCell: (pos) => (
+        <div className="text-right text-gray-600 dark:text-gray-400">{formatCurrency(pos.stopCurrent)}</div>
+      ),
+    },
+    {
+      key: 'stopNew',
+      header: <div className="text-right">{t('dailyReview.table.update.headers.stopNew')}</div>,
+      renderCell: (pos) => (
+        <div className="text-right font-bold text-green-700 dark:text-green-300">
+          {formatCurrency(pos.stopSuggested)}
+        </div>
+      ),
+    },
+    {
+      key: 'rNow',
+      header: <MetricHelpLabel metricKey="R_NOW" className="justify-end w-full" />,
+      renderCell: (pos) => (
+        <div className="text-right">
+          <span className={pos.rNow >= 0 ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}>
+            {t('common.units.rValue', { value: formatNumber(pos.rNow, 2) })}
+          </span>
+        </div>
+      ),
+    },
+    {
+      key: 'reason',
+      header: t('dailyReview.table.update.headers.reason'),
+      renderCell: (pos) => <div className="text-sm">{formatDailyReviewReason(pos.reason)}</div>,
+    },
+    {
+      key: 'action',
+      header: <div className="text-right">{t('dailyReview.table.update.headers.action')}</div>,
+      renderCell: (pos) => (
+        <div className="flex justify-end">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => onAction(pos)}
+            title={t('dailyReview.table.update.actionTitle')}
+          >
+            {t('dailyReview.table.update.actionLabel')}
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
   return (
-    <TableShell
-      empty={positions.length === 0}
-      emptyMessage={t('dailyReview.table.update.empty')}
-      tableClassName="text-sm"
-      headers={(
-        <tr>
-          <th className="text-left p-2">{t('dailyReview.table.update.headers.ticker')}</th>
-          <th className="text-right p-2">{t('dailyReview.table.update.headers.entry')}</th>
-          <th className="text-right p-2">{t('dailyReview.table.update.headers.current')}</th>
-          <th className="text-right p-2">{t('dailyReview.table.update.headers.stopOld')}</th>
-          <th className="text-right p-2">{t('dailyReview.table.update.headers.stopNew')}</th>
-          <th className="text-right p-2">
-            <MetricHelpLabel metricKey="R_NOW" className="justify-end w-full" />
-          </th>
-          <th className="text-left p-2">{t('dailyReview.table.update.headers.reason')}</th>
-          <th className="text-right p-2">{t('dailyReview.table.update.headers.action')}</th>
-        </tr>
-      )}
-    >
-      {positions.map((pos) => (
-        <tr key={pos.positionId} className="border-b dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
-          <td className="p-2 font-mono font-bold">
-            <a
-              href={`https://finance.yahoo.com/quote/${pos.ticker}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:text-blue-800 hover:underline"
-              title={t('dailyReview.table.update.yahooFinanceTooltip', { ticker: pos.ticker })}
-            >
-              {pos.ticker}
-            </a>
-            <CachedSymbolPriceChart ticker={pos.ticker} className="mt-1" />
-          </td>
-          <td className="p-2 text-right">{formatCurrency(pos.entryPrice)}</td>
-          <td className="p-2 text-right">{formatCurrency(pos.currentPrice)}</td>
-          <td className="p-2 text-right text-gray-600 dark:text-gray-400">{formatCurrency(pos.stopCurrent)}</td>
-          <td className="p-2 text-right font-bold text-green-700 dark:text-green-300">{formatCurrency(pos.stopSuggested)}</td>
-          <td className="p-2 text-right">
-            <span className={pos.rNow >= 0 ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}>
-              {t('common.units.rValue', { value: formatNumber(pos.rNow, 2) })}
-            </span>
-          </td>
-          <td className="p-2 text-sm">{formatDailyReviewReason(pos.reason)}</td>
-          <td className="p-2 text-right">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => onAction(pos)}
-              title={t('dailyReview.table.update.actionTitle')}
-            >
-              {t('dailyReview.table.update.actionLabel')}
-            </Button>
-          </td>
-        </tr>
-      ))}
-    </TableShell>
+    <DataTable
+      data={positions}
+      columns={columns}
+      emptyState={t('dailyReview.table.update.empty')}
+      className="rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900/40"
+    />
   );
 }
 
@@ -712,61 +756,73 @@ function CloseTable({
   positions: DailyReviewPositionClose[];
   onAction: (position: DailyReviewPositionClose) => void;
 }) {
+  const columns: ColumnDef<DailyReviewPositionClose>[] = [
+    {
+      key: 'ticker',
+      header: t('dailyReview.table.close.headers.ticker'),
+      renderCell: (pos) => (
+        <TickerWithChart
+          ticker={pos.ticker}
+          title={t('dailyReview.table.close.yahooFinanceTooltip', { ticker: pos.ticker })}
+        />
+      ),
+    },
+    {
+      key: 'entry',
+      header: <div className="text-right">{t('dailyReview.table.close.headers.entry')}</div>,
+      renderCell: (pos) => <div className="text-right">{formatCurrency(pos.entryPrice)}</div>,
+    },
+    {
+      key: 'current',
+      header: <div className="text-right">{t('dailyReview.table.close.headers.current')}</div>,
+      renderCell: (pos) => <div className="text-right">{formatCurrency(pos.currentPrice)}</div>,
+    },
+    {
+      key: 'stop',
+      header: <div className="text-right">{t('dailyReview.table.close.headers.stop')}</div>,
+      renderCell: (pos) => <div className="text-right">{formatCurrency(pos.stopPrice)}</div>,
+    },
+    {
+      key: 'rNow',
+      header: <MetricHelpLabel metricKey="R_NOW" className="justify-end w-full" />,
+      renderCell: (pos) => (
+        <div className="text-right">
+          <span className="font-bold text-red-700 dark:text-red-300">
+            {t('common.units.rValue', { value: formatNumber(pos.rNow, 2) })}
+          </span>
+        </div>
+      ),
+    },
+    {
+      key: 'reason',
+      header: t('dailyReview.table.close.headers.reason'),
+      renderCell: (pos) => <div className="text-sm">{formatDailyReviewReason(pos.reason)}</div>,
+    },
+    {
+      key: 'action',
+      header: <div className="text-right">{t('dailyReview.table.close.headers.action')}</div>,
+      renderCell: (pos) => (
+        <div className="flex justify-end">
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={() => onAction(pos)}
+            title={t('dailyReview.table.close.actionTitle')}
+          >
+            {t('dailyReview.table.close.actionLabel')}
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
   return (
-    <TableShell
-      empty={positions.length === 0}
-      emptyMessage={t('dailyReview.table.close.empty')}
-      tableClassName="text-sm"
-      headers={(
-        <tr>
-          <th className="text-left p-2">{t('dailyReview.table.close.headers.ticker')}</th>
-          <th className="text-right p-2">{t('dailyReview.table.close.headers.entry')}</th>
-          <th className="text-right p-2">{t('dailyReview.table.close.headers.current')}</th>
-          <th className="text-right p-2">{t('dailyReview.table.close.headers.stop')}</th>
-          <th className="text-right p-2">
-            <MetricHelpLabel metricKey="R_NOW" className="justify-end w-full" />
-          </th>
-          <th className="text-left p-2">{t('dailyReview.table.close.headers.reason')}</th>
-          <th className="text-right p-2">{t('dailyReview.table.close.headers.action')}</th>
-        </tr>
-      )}
-    >
-      {positions.map((pos) => (
-        <tr key={pos.positionId} className="border-b dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
-          <td className="p-2 font-mono font-bold">
-            <a
-              href={`https://finance.yahoo.com/quote/${pos.ticker}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:text-blue-800 hover:underline"
-              title={t('dailyReview.table.close.yahooFinanceTooltip', { ticker: pos.ticker })}
-            >
-              {pos.ticker}
-            </a>
-            <CachedSymbolPriceChart ticker={pos.ticker} className="mt-1" />
-          </td>
-          <td className="p-2 text-right">{formatCurrency(pos.entryPrice)}</td>
-          <td className="p-2 text-right">{formatCurrency(pos.currentPrice)}</td>
-          <td className="p-2 text-right">{formatCurrency(pos.stopPrice)}</td>
-          <td className="p-2 text-right">
-            <span className="text-red-700 dark:text-red-300 font-bold">
-              {t('common.units.rValue', { value: formatNumber(pos.rNow, 2) })}
-            </span>
-          </td>
-          <td className="p-2 text-sm">{formatDailyReviewReason(pos.reason)}</td>
-          <td className="p-2 text-right">
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={() => onAction(pos)}
-              title={t('dailyReview.table.close.actionTitle')}
-            >
-              {t('dailyReview.table.close.actionLabel')}
-            </Button>
-          </td>
-        </tr>
-      ))}
-    </TableShell>
+    <DataTable
+      data={positions}
+      columns={columns}
+      emptyState={t('dailyReview.table.close.empty')}
+      className="rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900/40"
+    />
   );
 }
 
@@ -775,49 +831,75 @@ function HoldTable({
 }: {
   positions: DailyReviewPositionHold[];
 }) {
+  const columns: ColumnDef<DailyReviewPositionHold>[] = [
+    {
+      key: 'ticker',
+      header: t('dailyReview.table.hold.headers.ticker'),
+      renderCell: (pos) => (
+        <TickerWithChart
+          ticker={pos.ticker}
+          title={t('dailyReview.table.hold.yahooFinanceTooltip', { ticker: pos.ticker })}
+        />
+      ),
+    },
+    {
+      key: 'entry',
+      header: <div className="text-right">{t('dailyReview.table.hold.headers.entry')}</div>,
+      renderCell: (pos) => <div className="text-right">{formatCurrency(pos.entryPrice)}</div>,
+    },
+    {
+      key: 'current',
+      header: <div className="text-right">{t('dailyReview.table.hold.headers.current')}</div>,
+      renderCell: (pos) => <div className="text-right">{formatCurrency(pos.currentPrice)}</div>,
+    },
+    {
+      key: 'stop',
+      header: <div className="text-right">{t('dailyReview.table.hold.headers.stop')}</div>,
+      renderCell: (pos) => <div className="text-right">{formatCurrency(pos.stopPrice)}</div>,
+    },
+    {
+      key: 'rNow',
+      header: <MetricHelpLabel metricKey="R_NOW" className="justify-end w-full" />,
+      renderCell: (pos) => (
+        <div className="text-right">
+          <span className={pos.rNow >= 0 ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}>
+            {t('common.units.rValue', { value: formatNumber(pos.rNow, 2) })}
+          </span>
+        </div>
+      ),
+    },
+    {
+      key: 'reason',
+      header: t('dailyReview.table.hold.headers.reason'),
+      renderCell: (pos) => (
+        <div className="text-sm text-gray-600 dark:text-gray-400">{formatDailyReviewReason(pos.reason)}</div>
+      ),
+    },
+  ];
+
   return (
-    <TableShell
-      empty={positions.length === 0}
-      emptyMessage={t('dailyReview.table.hold.empty')}
-      tableClassName="text-sm"
-      headers={(
-        <tr>
-          <th className="text-left p-2">{t('dailyReview.table.hold.headers.ticker')}</th>
-          <th className="text-right p-2">{t('dailyReview.table.hold.headers.entry')}</th>
-          <th className="text-right p-2">{t('dailyReview.table.hold.headers.current')}</th>
-          <th className="text-right p-2">{t('dailyReview.table.hold.headers.stop')}</th>
-          <th className="text-right p-2">
-            <MetricHelpLabel metricKey="R_NOW" className="justify-end w-full" />
-          </th>
-          <th className="text-left p-2">{t('dailyReview.table.hold.headers.reason')}</th>
-        </tr>
-      )}
-    >
-      {positions.map((pos) => (
-        <tr key={pos.positionId} className="border-b dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
-          <td className="p-2 font-mono font-bold">
-            <a
-              href={`https://finance.yahoo.com/quote/${pos.ticker}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:text-blue-800 hover:underline"
-              title={t('dailyReview.table.hold.yahooFinanceTooltip', { ticker: pos.ticker })}
-            >
-              {pos.ticker}
-            </a>
-            <CachedSymbolPriceChart ticker={pos.ticker} className="mt-1" />
-          </td>
-          <td className="p-2 text-right">{formatCurrency(pos.entryPrice)}</td>
-          <td className="p-2 text-right">{formatCurrency(pos.currentPrice)}</td>
-          <td className="p-2 text-right">{formatCurrency(pos.stopPrice)}</td>
-          <td className="p-2 text-right">
-            <span className={pos.rNow >= 0 ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}>
-              {t('common.units.rValue', { value: formatNumber(pos.rNow, 2) })}
-            </span>
-          </td>
-          <td className="p-2 text-sm text-gray-600 dark:text-gray-400">{formatDailyReviewReason(pos.reason)}</td>
-        </tr>
-      ))}
-    </TableShell>
+    <DataTable
+      data={positions}
+      columns={columns}
+      emptyState={t('dailyReview.table.hold.empty')}
+      className="rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900/40"
+    />
+  );
+}
+
+function TickerWithChart({ ticker, title }: { ticker: string; title: string }) {
+  return (
+    <div className="font-mono font-bold">
+      <a
+        href={`https://finance.yahoo.com/quote/${ticker}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-blue-600 hover:text-blue-800 hover:underline"
+        title={title}
+      >
+        {ticker}
+      </a>
+      <CachedSymbolPriceChart ticker={ticker} className="mt-1" />
+    </div>
   );
 }
