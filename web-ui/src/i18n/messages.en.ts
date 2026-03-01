@@ -1309,6 +1309,35 @@ export const messagesEn = {
       createFailed: 'Failed to create strategy',
       deleteFailed: 'Failed to delete strategy',
     },
+    guardrails: {
+      beginnerBlocked: 'This configuration violates beginner safety rules.',
+    },
+    advancedUnlock: {
+      title: 'Advanced Editing',
+      description:
+        'Advanced configuration allows direct parameter editing. This may increase risk and reduce strategy stability.',
+      action: 'I understand the risks → Unlock Advanced',
+    },
+    simplified: {
+      sections: {
+        riskProfile: 'Risk Profile',
+        entryLogic: 'Entry Logic',
+        exitLogic: 'Exit Logic',
+      },
+      fields: {
+        targetRr: 'Target R:R',
+        maxOpenPositions: 'Max Open Positions',
+        presetSelection: 'Preset Selection',
+        selectPresetPlaceholder: 'Select a preset to apply',
+        breakevenAtR: 'Breakeven At R',
+        trailAfterR: 'Trail After R',
+        maxHoldingDays: 'Max Holding Days',
+      },
+      hints: {
+        presetDerived: 'Presets tune entry thresholds and filters to a tested baseline.',
+        exitDerived: 'Exit behavior is derived from your selected preset. Unlock advanced to edit details.',
+      },
+    },
     help: {
       whatItIs: 'What it is:',
       whyItMatters: 'Why it matters:',

@@ -1,6 +1,4 @@
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
-import Button from '@/components/common/Button';
-import type { Dispatch, SetStateAction } from 'react';
 import { t } from '@/i18n/t';
 import {
   CheckboxInput,
@@ -13,8 +11,6 @@ import { Strategy } from '@/features/strategy/types';
 interface StrategyAdvancedSettingsCardProps {
   draft: Strategy;
   setDraft: (value: Strategy) => void;
-  showAdvanced: boolean;
-  setShowAdvanced: Dispatch<SetStateAction<boolean>>;
   lowRrWarning: boolean;
   highFeeWarning: boolean;
   help: Record<string, HelpInfo>;
@@ -23,8 +19,6 @@ interface StrategyAdvancedSettingsCardProps {
 export default function StrategyAdvancedSettingsCard({
   draft,
   setDraft,
-  showAdvanced,
-  setShowAdvanced,
   lowRrWarning,
   highFeeWarning,
   help,
@@ -32,18 +26,10 @@ export default function StrategyAdvancedSettingsCard({
   return (
     <Card variant="bordered">
       <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <span>{t('strategyPage.advanced.title')}</span>
-          <Button variant="secondary" onClick={() => setShowAdvanced((prev) => !prev)}>
-            {showAdvanced
-              ? t('strategyPage.advanced.actions.hide')
-              : t('strategyPage.advanced.actions.show')}
-          </Button>
-        </CardTitle>
+        <CardTitle>{t('strategyPage.advanced.title')}</CardTitle>
       </CardHeader>
-      {showAdvanced && (
-        <CardContent>
-          <div className="space-y-6">
+      <CardContent>
+        <div className="space-y-6">
             <div>
               <div className="text-sm font-semibold mb-3">{t('strategyPage.advanced.sections.trend')}</div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -513,9 +499,8 @@ export default function StrategyAdvancedSettingsCard({
                 />
               </div>
             </div>
-          </div>
-        </CardContent>
-      )}
+        </div>
+      </CardContent>
     </Card>
   );
 }

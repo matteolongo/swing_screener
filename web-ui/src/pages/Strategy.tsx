@@ -1,27 +1,31 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import { useStrategyEditor } from '@/features/strategy/useStrategyEditor';
 import { useStrategyValidationQuery } from '@/features/strategy/hooks';
 import { toStrategyUpdateRequest } from '@/features/strategy/types';
 import StrategyAdvancedSettingsCard from '@/components/domain/strategy/StrategyAdvancedSettingsCard';
-import StrategyCoreSettingsCards from '@/components/domain/strategy/StrategyCoreSettingsCards';
 import StrategyPhilosophyCard from '@/components/domain/strategy/StrategyPhilosophyCard';
 import StrategySafetyScore from '@/components/domain/strategy/StrategySafetyScore';
-import BeginnerModeToggle from '@/components/domain/strategy/BeginnerModeToggle';
-import StrategyPresets, { applyPresetToStrategy } from '@/components/domain/strategy/StrategyPresets';
+import { applyPresetToStrategy, momentumPresets } from '@/components/domain/strategy/StrategyPresets';
 import { useI18n } from '@/i18n/I18nProvider';
 import {
   buildHelp,
+  NumberInput,
+  SelectInput,
   strategyFieldClass,
   TextInput,
 } from '@/components/domain/strategy/StrategyFieldControls';
 import { getStrategyInfo } from '@/content/strategy_docs/loader';
+import { Section } from '@/components/ui/Section';
+
+const MIN_SAFE_SCORE = 90;
 
 export default function StrategyPage() {
   const { locale, t } = useI18n();
-  const [viewMode, setViewMode] = useState<'simple' | 'advanced'>('simple');
-  const isSimpleView = viewMode === 'simple';
+  const [advancedUnlocked, setAdvancedUnlocked] = useState(false);
+  const [selectedPresetId, setSelectedPresetId] = useState('');
+  const [saveGuardrailError, setSaveGuardrailError] = useState<string | null>(null);
 
   const help = useMemo(
     () => ({
@@ -307,8 +311,6 @@ export default function StrategyPage() {
     setCreateName,
     setDraft,
     setSelectedId,
-    setShowAdvanced,
-    showAdvanced,
     statusMessage,
     strategies,
     strategiesQuery,
@@ -321,7 +323,29 @@ export default function StrategyPage() {
   );
   const strategyValidationQuery = useStrategyValidationQuery(validationPayload);
   const validationResult = strategyValidationQuery.data;
-  const validationWarnings = validationResult?.warnings ?? [];
+  const safetyScore = validationResult?.safetyScore ?? 100;
+
+  useEffect(() => {
+    if (saveGuardrailError && (advancedUnlocked || safetyScore >= MIN_SAFE_SCORE)) {
+      setSaveGuardrailError(null);
+    }
+  }, [advancedUnlocked, safetyScore, saveGuardrailError]);
+
+  useEffect(() => {
+    setAdvancedUnlocked(false);
+    setSelectedPresetId('');
+    setSaveGuardrailError(null);
+  }, [selectedId]);
+
+  const handleSaveWithGuardrails = () => {
+    if (!draft) return;
+    if (!advancedUnlocked && safetyScore < MIN_SAFE_SCORE) {
+      setSaveGuardrailError(t('strategyPage.guardrails.beginnerBlocked'));
+      return;
+    }
+    setSaveGuardrailError(null);
+    handleSave();
+  };
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -340,7 +364,7 @@ export default function StrategyPage() {
             {t('strategyPage.actions.resetChanges')}
           </Button>
           <Button
-            onClick={handleSave}
+            onClick={handleSaveWithGuardrails}
             disabled={!draft || updateMutation.isPending}
             className="flex-1 sm:flex-none"
           >
@@ -348,24 +372,6 @@ export default function StrategyPage() {
           </Button>
         </div>
       </div>
-
-      {draft && isSimpleView ? (
-        <Card variant="bordered" className="border-emerald-200 bg-emerald-50/70 dark:border-emerald-900 dark:bg-emerald-950/20">
-          <CardHeader>
-            <CardTitle>{t('strategyPage.quickStart.title')}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <ol className="space-y-1 text-sm text-gray-700 dark:text-gray-200">
-              <li>{t('strategyPage.quickStart.step1')}</li>
-              <li>{t('strategyPage.quickStart.step2')}</li>
-              <li>{t('strategyPage.quickStart.step3')}</li>
-            </ol>
-            <Button onClick={handleSave} disabled={!draft || updateMutation.isPending} className="w-full sm:w-auto">
-              {updateMutation.isPending ? t('strategyPage.actions.saving') : t('strategyPage.quickStart.primaryAction')}
-            </Button>
-          </CardContent>
-        </Card>
-      ) : null}
 
       <Card variant="bordered">
         <CardHeader>
@@ -445,6 +451,11 @@ export default function StrategyPage() {
               </div>
             </div>
           </div>
+          {saveGuardrailError ? (
+            <div className="mt-3 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/20 dark:text-red-300">
+              {saveGuardrailError}
+            </div>
+          ) : null}
           {statusMessage && <div className="mt-3 text-sm text-green-600">{statusMessage}</div>}
           {updateMutation.isError && (
             <div className="mt-3 text-sm text-red-600">{t('strategyPage.errors.saveFailed')}</div>
@@ -472,51 +483,132 @@ export default function StrategyPage() {
 
       {draft && (
         <>
-          {/* Strategy Philosophy Card - Shows the "Why" before the "What" */}
           {(() => {
             const strategyInfo = getStrategyInfo(draft.module ?? 'momentum');
             return strategyInfo ? <StrategyPhilosophyCard strategyInfo={strategyInfo} /> : null;
           })()}
 
-          {/* Beginner Mode Toggle */}
-          <BeginnerModeToggle
-            isBeginnerMode={isSimpleView}
-            onToggle={(enabled) => setViewMode(enabled ? 'simple' : 'advanced')}
-          />
-
-          {/* Presets - Only show in beginner mode */}
-          {isSimpleView && (
-            <StrategyPresets
-              currentStrategy={draft}
-              onApplyPreset={(preset) => {
-                const updated = applyPresetToStrategy(draft, preset);
-                setDraft(updated);
-              }}
-            />
-          )}
-
-          {/* Safety Score - Provides feedback on configuration quality */}
           <StrategySafetyScore
             validation={validationResult}
             isLoading={strategyValidationQuery.isLoading || strategyValidationQuery.isFetching}
             isError={strategyValidationQuery.isError}
           />
 
-          <StrategyCoreSettingsCards
-            draft={draft}
-            setDraft={setDraft}
-            help={help}
-            validationWarnings={validationWarnings}
-            useEnhancedEducation={isSimpleView}
-          />
+          <Section title={t('strategyPage.simplified.sections.riskProfile')}>
+            <Card variant="bordered">
+              <CardContent>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                  <NumberInput
+                    label={t('strategyPage.core.fields.riskPerTrade')}
+                    value={draft.risk.riskPct * 100}
+                    onChange={(value) =>
+                      setDraft({
+                        ...draft,
+                        risk: { ...draft.risk, riskPct: value / 100 },
+                      })
+                    }
+                    step={0.1}
+                    min={0}
+                    suffix="%"
+                  />
+                  <NumberInput
+                    label={t('strategyPage.simplified.fields.targetRr')}
+                    value={draft.risk.rrTarget}
+                    onChange={(value) =>
+                      setDraft({
+                        ...draft,
+                        risk: { ...draft.risk, rrTarget: value },
+                      })
+                    }
+                    step={0.1}
+                    min={0.1}
+                  />
+                  <NumberInput
+                    label={t('strategyPage.simplified.fields.maxOpenPositions')}
+                    value={draft.ranking.topN}
+                    onChange={(value) =>
+                      setDraft({
+                        ...draft,
+                        ranking: { ...draft.ranking, topN: value },
+                      })
+                    }
+                    step={1}
+                    min={1}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </Section>
 
-          {/* Advanced Settings - Hidden in beginner mode */}
-          {!isSimpleView && (
+          <Section title={t('strategyPage.simplified.sections.entryLogic')}>
+            <Card variant="bordered">
+              <CardContent>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <SelectInput
+                    label={t('strategyPage.simplified.fields.presetSelection')}
+                    value={selectedPresetId}
+                    onChange={(value) => {
+                      setSelectedPresetId(value);
+                      const preset = momentumPresets.find((item) => item.id === value);
+                      if (!preset) return;
+                      setDraft(applyPresetToStrategy(draft, preset));
+                    }}
+                    options={[
+                      {
+                        value: '',
+                        label: t('strategyPage.simplified.fields.selectPresetPlaceholder'),
+                      },
+                      ...momentumPresets.map((preset) => ({
+                        value: preset.id,
+                        label: `${preset.icon} ${preset.name}`,
+                      })),
+                    ]}
+                  />
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-800/40 dark:text-gray-300">
+                    {t('strategyPage.simplified.hints.presetDerived')}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </Section>
+
+          <Section title={t('strategyPage.simplified.sections.exitLogic')}>
+            <Card variant="bordered">
+              <CardContent>
+                <div className="grid grid-cols-1 gap-3 text-sm text-gray-700 dark:text-gray-300 md:grid-cols-3">
+                  <div>
+                    <div className="text-xs text-gray-500">{t('strategyPage.simplified.fields.breakevenAtR')}</div>
+                    <div className="font-medium">{draft.manage.breakevenAtR.toFixed(1)}R</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500">{t('strategyPage.simplified.fields.trailAfterR')}</div>
+                    <div className="font-medium">{draft.manage.trailAfterR.toFixed(1)}R</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500">{t('strategyPage.simplified.fields.maxHoldingDays')}</div>
+                    <div className="font-medium">{draft.manage.maxHoldingDays}</div>
+                  </div>
+                </div>
+                <p className="mt-4 text-xs text-gray-500 dark:text-gray-400">
+                  {t('strategyPage.simplified.hints.exitDerived')}
+                </p>
+              </CardContent>
+            </Card>
+          </Section>
+
+          {!advancedUnlocked ? (
+            <Section title={t('strategyPage.advancedUnlock.title')}>
+              <p className="mb-4 text-gray-500 dark:text-gray-400">
+                {t('strategyPage.advancedUnlock.description')}
+              </p>
+              <Button variant="secondary" onClick={() => setAdvancedUnlocked(true)}>
+                {t('strategyPage.advancedUnlock.action')}
+              </Button>
+            </Section>
+          ) : (
             <StrategyAdvancedSettingsCard
               draft={draft}
               setDraft={setDraft}
-              showAdvanced={showAdvanced}
-              setShowAdvanced={setShowAdvanced}
               lowRrWarning={lowRrWarning}
               highFeeWarning={highFeeWarning}
               help={help}
