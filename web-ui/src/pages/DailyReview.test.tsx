@@ -91,6 +91,16 @@ const mockDailyReview = {
 }
 
 describe('DailyReview Page', () => {
+  const enterDecisionMode = async (user: ReturnType<typeof renderWithProviders>['user']) => {
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Enter Decision Mode/i })).toBeInTheDocument()
+    })
+
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: /Enter Decision Mode/i }))
+    })
+  }
+
   beforeEach(() => {
     useActiveStrategyStore.setState({ activeStrategyId: 'default' })
     server.use(
@@ -111,6 +121,16 @@ describe('DailyReview Page', () => {
 
   it('renders one step at a time and advances through the decision flow', async () => {
     const { user } = renderWithProviders(<DailyReview />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Attention Required')).toBeInTheDocument()
+      expect(screen.getByText('1 new trade candidate')).toBeInTheDocument()
+      expect(screen.getByText('1 stop adjustment')).toBeInTheDocument()
+      expect(screen.getByText('0 positions require review')).toBeInTheDocument()
+      expect(screen.queryByText('Step 1 of 2')).not.toBeInTheDocument()
+    })
+
+    await enterDecisionMode(user)
 
     await waitFor(() => {
       expect(screen.getByText('Step 1 of 2')).toBeInTheDocument()
@@ -135,6 +155,8 @@ describe('DailyReview Page', () => {
 
   it('shows non-zero ratio percentages in recommendation risk panel', async () => {
     const { user } = renderWithProviders(<DailyReview />)
+
+    await enterDecisionMode(user)
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Recommendation details for VALE/i })).toBeInTheDocument()
@@ -184,7 +206,9 @@ describe('DailyReview Page', () => {
       }))
     )
 
-    renderWithProviders(<DailyReview />)
+    const { user } = renderWithProviders(<DailyReview />)
+
+    await enterDecisionMode(user)
 
     await waitFor(() => {
       expect(screen.getByText('VALE')).toBeInTheDocument()
@@ -217,9 +241,7 @@ describe('DailyReview Page', () => {
 
     const { user } = renderWithProviders(<DailyReview />)
 
-    await waitFor(() => {
-      expect(screen.getByText('Step 1 of 3')).toBeInTheDocument()
-    })
+    await enterDecisionMode(user)
 
     await act(async () => {
       await user.click(screen.getByRole('button', { name: 'Continue' }))
@@ -241,6 +263,8 @@ describe('DailyReview Page', () => {
 
   it('closes Create Order modal with Escape and with close button', async () => {
     const { user } = renderWithProviders(<DailyReview />)
+
+    await enterDecisionMode(user)
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Create Order/i })).toBeInTheDocument()
@@ -281,7 +305,9 @@ describe('DailyReview Page', () => {
   })
 
   it('keeps candidate actions available without embedded intelligence controls', async () => {
-    renderWithProviders(<DailyReview />)
+    const { user } = renderWithProviders(<DailyReview />)
+
+    await enterDecisionMode(user)
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Create Order/i })).toBeInTheDocument()
@@ -313,7 +339,9 @@ describe('DailyReview Page', () => {
 
     await waitFor(() => {
       expect(screen.getByText('No action required.')).toBeInTheDocument()
+      expect(screen.getByText('Your strategy remains aligned.')).toBeInTheDocument()
       expect(screen.getByText('Discipline maintained.')).toBeInTheDocument()
+      expect(screen.queryByText('Attention Required')).not.toBeInTheDocument()
       expect(screen.queryByText(/Step 1 of/i)).not.toBeInTheDocument()
     })
   })

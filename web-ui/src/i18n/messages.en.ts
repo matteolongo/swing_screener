@@ -1033,7 +1033,13 @@ export const messagesEn = {
     sequential: {
       todayTitle: 'Today',
       noActionRequired: 'No action required.',
+      strategyAligned: 'Your strategy remains aligned.',
       disciplineMaintained: 'Discipline maintained.',
+      attentionTitle: 'Attention Required',
+      attentionNewCandidates: '{{count}} new trade candidate{{suffix}}',
+      attentionStopUpdates: '{{count}} stop adjustment{{suffix}}',
+      attentionCloses: '{{count}} position{{suffix}} require review',
+      enterDecisionMode: 'Enter Decision Mode →',
       progress: 'Step {{step}} of {{total}}',
       back: 'Back',
       continue: 'Continue',

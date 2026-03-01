@@ -44,6 +44,7 @@ const DECISION_STEPS: Step[] = ['new', 'update', 'close'];
 
 export default function DailyReview() {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [hasEnteredDecision, setHasEnteredDecision] = useState(false);
   const [insightCandidate, setInsightCandidate] = useState<DailyReviewCandidate | null>(null);
   const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<DailyReviewCandidate | null>(null);
@@ -109,6 +110,8 @@ export default function DailyReview() {
         await setActiveStrategyMutation.mutateAsync(strategyId);
         setActiveStrategyId(strategyId);
         setDismissedReadinessBlocker(false);
+        setCurrentStepIndex(0);
+        setHasEnteredDecision(false);
       } catch {
         // Mutation state surfaces the error to the user.
       }
@@ -127,6 +130,10 @@ export default function DailyReview() {
       if (step === 'update') return review.positionsUpdateStop.length > 0;
       return review.positionsClose.length > 0;
     });
+  }, [recommendedCandidates.length, review]);
+  const totalActions = useMemo(() => {
+    if (!review) return 0;
+    return recommendedCandidates.length + review.positionsUpdateStop.length + review.positionsClose.length;
   }, [recommendedCandidates.length, review]);
   const safeStepIndex = filteredSteps.length === 0 ? 0 : Math.min(currentStepIndex, filteredSteps.length - 1);
   const currentStep = filteredSteps[safeStepIndex] ?? null;
@@ -284,7 +291,11 @@ export default function DailyReview() {
           </select>
           <Button
             variant="secondary"
-            onClick={() => refetch()}
+            onClick={() => {
+              setCurrentStepIndex(0);
+              setHasEnteredDecision(false);
+              void refetch();
+            }}
             disabled={isFetching}
             title={t('dailyReview.header.refreshTitle')}
           >
@@ -306,10 +317,44 @@ export default function DailyReview() {
         />
       )}
 
-      {filteredSteps.length === 0 ? (
+      {totalActions === 0 ? (
         <Section title={t('dailyReview.sequential.todayTitle')}>
-          <p>{t('dailyReview.sequential.noActionRequired')}</p>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{t('dailyReview.sequential.disciplineMaintained')}</p>
+          <div className="py-12 text-center">
+            <h2 className="mb-2 text-xl font-medium">{t('dailyReview.sequential.noActionRequired')}</h2>
+            <p className="text-gray-500 dark:text-gray-400">{t('dailyReview.sequential.strategyAligned')}</p>
+            <p className="mt-4 text-gray-400 dark:text-gray-500">{t('dailyReview.sequential.disciplineMaintained')}</p>
+          </div>
+        </Section>
+      ) : !hasEnteredDecision ? (
+        <Section title={t('dailyReview.sequential.attentionTitle')}>
+          <div className="space-y-4 py-8">
+            <p>
+              {t('dailyReview.sequential.attentionNewCandidates', {
+                count: recommendedCandidates.length,
+                suffix: recommendedCandidates.length === 1 ? '' : 's',
+              })}
+            </p>
+            <p>
+              {t('dailyReview.sequential.attentionStopUpdates', {
+                count: review.positionsUpdateStop.length,
+                suffix: review.positionsUpdateStop.length === 1 ? '' : 's',
+              })}
+            </p>
+            <p>
+              {t('dailyReview.sequential.attentionCloses', {
+                count: review.positionsClose.length,
+                suffix: review.positionsClose.length === 1 ? '' : 's',
+              })}
+            </p>
+            <Button
+              onClick={() => {
+                setCurrentStepIndex(0);
+                setHasEnteredDecision(true);
+              }}
+            >
+              {t('dailyReview.sequential.enterDecisionMode')}
+            </Button>
+          </div>
         </Section>
       ) : (
         <div className="space-y-6">
