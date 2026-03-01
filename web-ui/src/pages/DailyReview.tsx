@@ -3,10 +3,11 @@ import { Info, RefreshCw } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useDailyReview } from '@/features/dailyReview/api';
-import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
+import Card, { CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
 import { DataTable, type ColumnDef } from '@/components/ui/DataTable';
+import { Section } from '@/components/ui/Section';
 import { formatCurrency, formatNumber } from '@/utils/formatters';
 import { useSetActiveStrategyMutation, useStrategiesQuery } from '@/features/strategy/hooks';
 import { DEFAULT_CONFIG, type RiskConfig } from '@/types/config';
@@ -24,7 +25,6 @@ import {
 } from '@/features/screener/universeStorage';
 import type {
   DailyReviewCandidate,
-  DailyReviewPositionHold,
   DailyReviewPositionUpdate,
   DailyReviewPositionClose,
 } from '@/features/dailyReview/types';
@@ -39,13 +39,11 @@ import {
 import UpdateStopModalForm from '@/components/domain/positions/UpdateStopModalForm';
 import ClosePositionModalForm from '@/components/domain/positions/ClosePositionModalForm';
 
+type Step = 'new' | 'update' | 'close';
+const DECISION_STEPS: Step[] = ['new', 'update', 'close'];
+
 export default function DailyReview() {
-  const [expandedSections, setExpandedSections] = useState({
-    candidates: true,
-    hold: false,
-    update: true,
-    close: true,
-  });
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [insightCandidate, setInsightCandidate] = useState<DailyReviewCandidate | null>(null);
   const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<DailyReviewCandidate | null>(null);
@@ -117,9 +115,34 @@ export default function DailyReview() {
     },
     [setActiveStrategyId, setActiveStrategyMutation]
   );
-  const toggleSection = (section: keyof typeof expandedSections) => {
-    setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
-  };
+  const recommendedCandidates = useMemo(
+    () => review?.newCandidates.filter((candidate) => candidate.recommendation?.verdict === 'RECOMMENDED') ?? [],
+    [review],
+  );
+  const hiddenCandidates = (review?.newCandidates.length ?? 0) - recommendedCandidates.length;
+  const filteredSteps = useMemo(() => {
+    if (!review) return [];
+    return DECISION_STEPS.filter((step) => {
+      if (step === 'new') return recommendedCandidates.length > 0;
+      if (step === 'update') return review.positionsUpdateStop.length > 0;
+      return review.positionsClose.length > 0;
+    });
+  }, [recommendedCandidates.length, review]);
+  const safeStepIndex = filteredSteps.length === 0 ? 0 : Math.min(currentStepIndex, filteredSteps.length - 1);
+  const currentStep = filteredSteps[safeStepIndex] ?? null;
+  const isLastStep = filteredSteps.length > 0 && safeStepIndex === filteredSteps.length - 1;
+
+  useEffect(() => {
+    if (filteredSteps.length === 0) {
+      if (currentStepIndex !== 0) {
+        setCurrentStepIndex(0);
+      }
+      return;
+    }
+    if (currentStepIndex >= filteredSteps.length) {
+      setCurrentStepIndex(filteredSteps.length - 1);
+    }
+  }, [currentStepIndex, filteredSteps.length]);
 
   if (strategiesQuery.isLoading) {
     return (
@@ -227,11 +250,6 @@ export default function DailyReview() {
   }
 
   const { summary } = review;
-  const recommendedCandidates = review.newCandidates.filter(
-    (candidate) => candidate.recommendation?.verdict === 'RECOMMENDED',
-  );
-  const hiddenCandidates = review.newCandidates.length - recommendedCandidates.length;
-  const quickActionCandidate = recommendedCandidates[0] ?? null;
 
   return (
     <div className="space-y-6">
@@ -288,145 +306,93 @@ export default function DailyReview() {
         />
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <SummaryCard title={t('dailyReview.summary.newCandidates')} value={summary.newCandidates} variant="blue" icon="📈" />
-        <SummaryCard
-          title={t('dailyReview.summary.updateStop')}
-          value={summary.updateStop}
-          variant={summary.updateStop > 0 ? 'yellow' : 'gray'}
-          icon="🔄"
-        />
-        <SummaryCard
-          title={t('dailyReview.summary.closePositions')}
-          value={summary.closePositions}
-          variant={summary.closePositions > 0 ? 'red' : 'gray'}
-          icon="❌"
-        />
-        <SummaryCard title={t('dailyReview.summary.holdPositions')} value={summary.noAction} variant="green" icon="✅" />
-      </div>
+      {filteredSteps.length === 0 ? (
+        <Section title={t('dailyReview.sequential.todayTitle')}>
+          <p>{t('dailyReview.sequential.noActionRequired')}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t('dailyReview.sequential.disciplineMaintained')}</p>
+        </Section>
+      ) : (
+        <div className="space-y-6">
+          <div className="text-sm text-gray-500 dark:text-gray-400">
+            {t('dailyReview.sequential.progress', {
+              step: safeStepIndex + 1,
+              total: filteredSteps.length,
+            })}
+          </div>
 
-      {quickActionCandidate ? (
-        <Card className="border border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950/20">
-          <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800 dark:text-emerald-300">
-                {t('dailyReview.quickAction.label')}
-              </p>
-              <p className="mt-1 text-sm text-gray-700 dark:text-gray-200">
-                {t('dailyReview.quickAction.description', { ticker: quickActionCandidate.ticker })}
-              </p>
-            </div>
+          {currentStep === 'new' ? (
+            <Section title={t('dailyReview.sections.newTradeCandidates', { count: recommendedCandidates.length })}>
+              <div className="space-y-3">
+                <GlossaryLegend metricKeys={DAILY_REVIEW_GLOSSARY_KEYS} title={t('dailyReview.sections.dailyGlossary')} />
+                {hiddenCandidates > 0 ? (
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {t('dailyReview.sections.showingRecommendedOnly', {
+                      count: hiddenCandidates,
+                      suffix: hiddenCandidates === 1 ? '' : 's',
+                    })}
+                  </p>
+                ) : null}
+                <CandidatesTable
+                  candidates={recommendedCandidates}
+                  onShowRecommendation={setInsightCandidate}
+                  onCreateOrder={(candidate) => {
+                    setSelectedCandidate(candidate);
+                    setShowCreateOrderModal(true);
+                  }}
+                />
+              </div>
+            </Section>
+          ) : null}
+
+          {currentStep === 'update' ? (
+            <Section title={t('dailyReview.sections.updateStop', { count: review.positionsUpdateStop.length })}>
+              <div className="space-y-3">
+                <GlossaryLegend metricKeys={DAILY_REVIEW_GLOSSARY_KEYS} title={t('dailyReview.sections.stopGlossary')} />
+                <UpdateStopTable
+                  positions={review.positionsUpdateStop}
+                  onAction={(position) => {
+                    setClosePositionId(null);
+                    setUpdateStopPositionId(position.positionId);
+                  }}
+                />
+              </div>
+            </Section>
+          ) : null}
+
+          {currentStep === 'close' ? (
+            <Section title={t('dailyReview.sections.closeSuggested', { count: review.positionsClose.length })}>
+              <CloseTable
+                positions={review.positionsClose}
+                onAction={(position) => {
+                  setUpdateStopPositionId(null);
+                  setClosePositionId(position.positionId);
+                }}
+              />
+            </Section>
+          ) : null}
+
+          <div className="flex justify-between">
             <Button
-              variant="primary"
-              size="sm"
-              className="w-full sm:w-auto"
+              variant="secondary"
+              disabled={safeStepIndex === 0}
+              onClick={() => setCurrentStepIndex((index) => Math.max(index - 1, 0))}
+            >
+              {t('dailyReview.sequential.back')}
+            </Button>
+            <Button
               onClick={() => {
-                setSelectedCandidate(quickActionCandidate);
-                setShowCreateOrderModal(true);
+                if (isLastStep) {
+                  setCurrentStepIndex(0);
+                  return;
+                }
+                setCurrentStepIndex((index) => Math.min(index + 1, filteredSteps.length - 1));
               }}
             >
-              {t('dailyReview.quickAction.cta', { ticker: quickActionCandidate.ticker })}
+              {isLastStep ? t('dailyReview.sequential.finish') : t('dailyReview.sequential.continue')}
             </Button>
-          </CardContent>
-        </Card>
-      ) : null}
-
-      <CollapsibleSection
-        title={t('dailyReview.sections.newTradeCandidates', { count: recommendedCandidates.length })}
-        isExpanded={expandedSections.candidates}
-        onToggle={() => toggleSection('candidates')}
-        count={recommendedCandidates.length}
-      >
-        {recommendedCandidates.length === 0 ? (
-          <div className="space-y-2">
-            <p className="text-gray-600 dark:text-gray-400">{t('dailyReview.sections.noRecommended')}</p>
-            {hiddenCandidates > 0 ? (
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                {t('dailyReview.sections.hiddenByVerdict', {
-                  count: hiddenCandidates,
-                  suffix: hiddenCandidates === 1 ? '' : 's',
-                })}
-              </p>
-            ) : null}
           </div>
-        ) : (
-          <div className="space-y-3">
-            <GlossaryLegend metricKeys={DAILY_REVIEW_GLOSSARY_KEYS} title={t('dailyReview.sections.dailyGlossary')} />
-            {hiddenCandidates > 0 ? (
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                {t('dailyReview.sections.showingRecommendedOnly', {
-                  count: hiddenCandidates,
-                  suffix: hiddenCandidates === 1 ? '' : 's',
-                })}
-              </p>
-            ) : null}
-            <CandidatesTable
-              candidates={recommendedCandidates}
-              onShowRecommendation={setInsightCandidate}
-              onCreateOrder={(candidate) => {
-                setSelectedCandidate(candidate);
-                setShowCreateOrderModal(true);
-              }}
-            />
-          </div>
-        )}
-      </CollapsibleSection>
-
-      <CollapsibleSection
-        title={t('dailyReview.sections.updateStop', { count: review.positionsUpdateStop.length })}
-        isExpanded={expandedSections.update}
-        onToggle={() => toggleSection('update')}
-        count={review.positionsUpdateStop.length}
-        variant="warning"
-      >
-        {review.positionsUpdateStop.length === 0 ? (
-          <p className="text-gray-600 dark:text-gray-400">{t('dailyReview.sections.noStopUpdates')}</p>
-        ) : (
-          <div className="space-y-3">
-            <GlossaryLegend metricKeys={DAILY_REVIEW_GLOSSARY_KEYS} title={t('dailyReview.sections.stopGlossary')} />
-            <UpdateStopTable
-              positions={review.positionsUpdateStop}
-              onAction={(position) => {
-                setClosePositionId(null);
-                setUpdateStopPositionId(position.positionId);
-              }}
-            />
-          </div>
-        )}
-      </CollapsibleSection>
-
-      <CollapsibleSection
-        title={t('dailyReview.sections.closeSuggested', { count: review.positionsClose.length })}
-        isExpanded={expandedSections.close}
-        onToggle={() => toggleSection('close')}
-        count={review.positionsClose.length}
-        variant="danger"
-      >
-        {review.positionsClose.length === 0 ? (
-          <p className="text-gray-600 dark:text-gray-400">{t('dailyReview.sections.noClose')}</p>
-        ) : (
-            <CloseTable
-              positions={review.positionsClose}
-              onAction={(position) => {
-                setUpdateStopPositionId(null);
-                setClosePositionId(position.positionId);
-              }}
-            />
-        )}
-      </CollapsibleSection>
-
-      <CollapsibleSection
-        title={t('dailyReview.sections.noActionNeeded', { count: review.positionsHold.length })}
-        isExpanded={expandedSections.hold}
-        onToggle={() => toggleSection('hold')}
-        count={review.positionsHold.length}
-      >
-        {review.positionsHold.length === 0 ? (
-          <p className="text-gray-600 dark:text-gray-400">{t('dailyReview.sections.noHold')}</p>
-        ) : (
-          <HoldTable positions={review.positionsHold} />
-        )}
-      </CollapsibleSection>
+        </div>
+      )}
 
       {updateStopPosition ? (
         <UpdateStopModalForm
@@ -499,88 +465,6 @@ export default function DailyReview() {
         />
       ) : null}
     </div>
-  );
-}
-
-function SummaryCard({
-  title,
-  value,
-  variant,
-  icon,
-}: {
-  title: string;
-  value: number;
-  variant: 'blue' | 'yellow' | 'red' | 'green' | 'gray';
-  icon: string;
-}) {
-  const variantClasses = {
-    blue: 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800',
-    yellow: 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800',
-    red: 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800',
-    green: 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800',
-    gray: 'bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-800',
-  };
-
-  return (
-    <Card className={variantClasses[variant]}>
-      <CardContent>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">{title}</p>
-            <p className="text-3xl font-bold mt-1">{value}</p>
-          </div>
-          <span className="text-4xl">{icon}</span>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function CollapsibleSection({
-  title,
-  isExpanded,
-  onToggle,
-  count,
-  variant,
-  children,
-}: {
-  title: string;
-  isExpanded: boolean;
-  onToggle: () => void;
-  count: number;
-  variant?: 'warning' | 'danger';
-  children: React.ReactNode;
-}) {
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <CardTitle>{title}</CardTitle>
-            {count > 0 && variant === 'warning' ? (
-              <Badge variant="warning">
-                {t('dailyReview.sections.actionsBadge', { count, suffix: count !== 1 ? 's' : '' })}
-              </Badge>
-            ) : null}
-            {count > 0 && variant === 'danger' ? (
-              <Badge variant="error">
-                {t('dailyReview.sections.actionsBadge', { count, suffix: count !== 1 ? 's' : '' })}
-              </Badge>
-            ) : null}
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onToggle}
-            title={isExpanded ? t('dailyReview.sections.collapse') : t('dailyReview.sections.expand')}
-            aria-label={isExpanded ? t('dailyReview.sections.collapse') : t('dailyReview.sections.expand')}
-          >
-            {isExpanded ? '▼' : '▶'}
-          </Button>
-        </div>
-      </CardHeader>
-      {isExpanded ? <CardContent>{children}</CardContent> : null}
-    </Card>
   );
 }
 
@@ -876,67 +760,6 @@ function CloseTable({
       data={positions}
       columns={columns}
       emptyState={t('dailyReview.table.close.empty')}
-      className="rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900/40"
-    />
-  );
-}
-
-function HoldTable({
-  positions,
-}: {
-  positions: DailyReviewPositionHold[];
-}) {
-  const columns: ColumnDef<DailyReviewPositionHold>[] = [
-    {
-      key: 'ticker',
-      header: t('dailyReview.table.hold.headers.ticker'),
-      renderCell: (pos) => (
-        <TickerWithChart
-          ticker={pos.ticker}
-          title={t('dailyReview.table.hold.yahooFinanceTooltip', { ticker: pos.ticker })}
-        />
-      ),
-    },
-    {
-      key: 'entry',
-      header: <div className="text-right">{t('dailyReview.table.hold.headers.entry')}</div>,
-      renderCell: (pos) => <div className="text-right">{formatCurrency(pos.entryPrice)}</div>,
-    },
-    {
-      key: 'current',
-      header: <div className="text-right">{t('dailyReview.table.hold.headers.current')}</div>,
-      renderCell: (pos) => <div className="text-right">{formatCurrency(pos.currentPrice)}</div>,
-    },
-    {
-      key: 'stop',
-      header: <div className="text-right">{t('dailyReview.table.hold.headers.stop')}</div>,
-      renderCell: (pos) => <div className="text-right">{formatCurrency(pos.stopPrice)}</div>,
-    },
-    {
-      key: 'rNow',
-      header: <MetricHelpLabel metricKey="R_NOW" className="justify-end w-full" />,
-      renderCell: (pos) => (
-        <div className="text-right">
-          <span className={pos.rNow >= 0 ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}>
-            {t('common.units.rValue', { value: formatNumber(pos.rNow, 2) })}
-          </span>
-        </div>
-      ),
-    },
-    {
-      key: 'reason',
-      header: t('dailyReview.table.hold.headers.reason'),
-      renderCell: (pos) => (
-        <div className="text-sm text-gray-600 dark:text-gray-400">{formatDailyReviewReason(pos.reason)}</div>
-      ),
-    },
-  ];
-
-  return (
-    <DataTable
-      data={positions}
-      columns={columns}
-      emptyState={t('dailyReview.table.hold.empty')}
       className="rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900/40"
     />
   );

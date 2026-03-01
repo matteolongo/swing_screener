@@ -109,16 +109,27 @@ describe('DailyReview Page', () => {
     })
   })
 
-  it('renders glossary blocks and help-labeled table columns', async () => {
-    renderWithProviders(<DailyReview />)
+  it('renders one step at a time and advances through the decision flow', async () => {
+    const { user } = renderWithProviders(<DailyReview />)
 
     await waitFor(() => {
+      expect(screen.getByText('Step 1 of 2')).toBeInTheDocument()
       expect(screen.getByText('Daily Review Glossary')).toBeInTheDocument()
-      expect(screen.getByText('Stop Management Glossary')).toBeInTheDocument()
+      expect(screen.queryByText('Stop Management Glossary')).not.toBeInTheDocument()
       expect(screen.getByText('Confidence')).toBeInTheDocument()
       expect(screen.getByText('R:R')).toBeInTheDocument()
-      expect(screen.getAllByText('R Now').length).toBeGreaterThan(0)
       expect(screen.getByText('91.6')).toBeInTheDocument()
+    })
+
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Continue' }))
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('Step 2 of 2')).toBeInTheDocument()
+      expect(screen.getByText('Stop Management Glossary')).toBeInTheDocument()
+      expect(screen.queryByText('Daily Review Glossary')).not.toBeInTheDocument()
+      expect(screen.getAllByText('R Now').length).toBeGreaterThan(0)
     })
   })
 
@@ -204,9 +215,22 @@ describe('DailyReview Page', () => {
       }))
     )
 
-    renderWithProviders(<DailyReview />)
+    const { user } = renderWithProviders(<DailyReview />)
 
     await waitFor(() => {
+      expect(screen.getByText('Step 1 of 3')).toBeInTheDocument()
+    })
+
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Continue' }))
+    })
+
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Continue' }))
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('Step 3 of 3')).toBeInTheDocument()
       expect(
         screen.getByText(
           'Held for 20 bars (max 20). Close to free capital for stronger setups.'
@@ -262,6 +286,35 @@ describe('DailyReview Page', () => {
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Create Order/i })).toBeInTheDocument()
       expect(screen.queryByRole('button', { name: /Run Intelligence/i })).not.toBeInTheDocument()
+    })
+  })
+
+  it('shows discipline state when there are no sequential steps', async () => {
+    server.use(
+      http.get('*/api/daily-review', () =>
+        HttpResponse.json({
+          ...mockDailyReview,
+          new_candidates: [],
+          positions_update_stop: [],
+          positions_close: [],
+          positions_hold: [],
+          summary: {
+            ...mockDailyReview.summary,
+            no_action: 0,
+            update_stop: 0,
+            close_positions: 0,
+            new_candidates: 0,
+          },
+        })
+      )
+    )
+
+    renderWithProviders(<DailyReview />)
+
+    await waitFor(() => {
+      expect(screen.getByText('No action required.')).toBeInTheDocument()
+      expect(screen.getByText('Discipline maintained.')).toBeInTheDocument()
+      expect(screen.queryByText(/Step 1 of/i)).not.toBeInTheDocument()
     })
   })
 })

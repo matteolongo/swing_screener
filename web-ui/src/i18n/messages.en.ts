@@ -1030,6 +1030,15 @@ export const messagesEn = {
       expand: 'Expand section',
       collapse: 'Collapse section',
     },
+    sequential: {
+      todayTitle: 'Today',
+      noActionRequired: 'No action required.',
+      disciplineMaintained: 'Discipline maintained.',
+      progress: 'Step {{step}} of {{total}}',
+      back: 'Back',
+      continue: 'Continue',
+      finish: 'Finish',
+    },
     table: {
       candidates: {
         empty: 'No candidates found',
