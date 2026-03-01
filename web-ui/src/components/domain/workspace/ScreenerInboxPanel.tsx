@@ -8,7 +8,6 @@ import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 import { useUniverses, useRunScreenerMutation } from '@/features/screener/hooks';
 import type { ScreenerCandidate } from '@/features/screener/types';
 import { useScreenerStore } from '@/stores/screenerStore';
-import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import type { WorkspaceAnalysisTab } from '@/stores/workspaceStore';
 import { t } from '@/i18n/t';
@@ -43,7 +42,7 @@ interface ScreenerInboxPanelProps {
 }
 
 export default function ScreenerInboxPanel({ onOpenSymbolDetails }: ScreenerInboxPanelProps) {
-  const { isBeginnerMode } = useBeginnerModeStore();
+  const isSimpleView = true;
   const { lastResult, setLastResult } = useScreenerStore();
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
   const analysisTab = useWorkspaceStore((state) => state.analysisTab);
@@ -83,7 +82,7 @@ export default function ScreenerInboxPanel({ onOpenSymbolDetails }: ScreenerInbo
   const [recommendedOnly, setRecommendedOnly] = useLocalStorage('screener.recommendedOnly', false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useLocalStorage(
     'screener.showAdvancedFilters',
-    !isBeginnerMode
+    false
   );
 
   const universesQuery = useUniverses();
@@ -162,7 +161,7 @@ export default function ScreenerInboxPanel({ onOpenSymbolDetails }: ScreenerInbo
       </div>
 
       <ScreenerForm
-        isBeginnerMode={isBeginnerMode}
+        isBeginnerMode={isSimpleView}
         selectedUniverse={selectedUniverse}
         setSelectedUniverse={setSelectedUniverse}
         topN={topN}

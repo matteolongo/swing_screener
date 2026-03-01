@@ -1,10 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  SlidersHorizontal,
-  ClipboardCheck,
-  Brain,
-} from 'lucide-react';
+import { LayoutDashboard, SlidersHorizontal, ClipboardCheck } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import {
   useActiveStrategyQuery,
@@ -12,32 +7,22 @@ import {
   useStrategiesQuery,
 } from '@/features/strategy/hooks';
 import { t } from '@/i18n/t';
-import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 
 const navigation = [
-  { 
-    labelKey: 'sidebar.nav.workspace', 
-    href: '/workspace', 
+  {
+    labelKey: 'sidebar.nav.workspace',
+    href: '/workspace',
     icon: LayoutDashboard,
-    advanced: false, // Always enabled
-  },
-  { 
-    labelKey: 'sidebar.nav.dailyReview', 
-    href: '/daily-review', 
-    icon: ClipboardCheck,
-    advanced: false, // Always enabled
-  },
-  { 
-    labelKey: 'sidebar.nav.strategy', 
-    href: '/strategy', 
-    icon: SlidersHorizontal,
-    advanced: false, // Always enabled
   },
   {
-    labelKey: 'sidebar.nav.intelligence',
-    href: '/intelligence',
-    icon: Brain,
-    advanced: false,
+    labelKey: 'sidebar.nav.dailyReview',
+    href: '/daily-review',
+    icon: ClipboardCheck,
+  },
+  {
+    labelKey: 'sidebar.nav.strategy',
+    href: '/strategy',
+    icon: SlidersHorizontal,
   },
 ] as const;
 
@@ -50,7 +35,6 @@ export default function Sidebar({ className, onNavigate }: SidebarProps) {
   const strategiesQuery = useStrategiesQuery();
   const activeStrategyQuery = useActiveStrategyQuery();
   const setActiveMutation = useSetActiveStrategyMutation();
-  const { isBeginnerMode, toggleBeginnerMode } = useBeginnerModeStore();
 
   const activeId = activeStrategyQuery.data?.id ?? '';
   const strategies = strategiesQuery.data ?? [];
@@ -104,75 +88,29 @@ export default function Sidebar({ className, onNavigate }: SidebarProps) {
         )}
       </div>
       <nav className="flex-1 p-4 space-y-1">
-        {navigation.map((item) => {
-          const isDisabled = isBeginnerMode && item.advanced;
-          
-          return (
-            <div key={item.labelKey} className="relative group">
-              <NavLink
-                to={item.href}
-                onClick={(e) => {
-                  if (isDisabled) {
-                    e.preventDefault();
-                    return;
-                  }
-                  onNavigate?.();
-                }}
-                className={({ isActive }) =>
-                  cn(
-                    'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors',
-                    isDisabled
-                      ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed'
-                      : isActive
-                      ? 'bg-primary/10 text-primary'
-                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                  )
-                }
-              >
-                <item.icon className="w-5 h-5" />
-                {t(item.labelKey)}
-              </NavLink>
-              {isDisabled && (
-                <div className="hidden group-hover:block absolute left-full ml-2 top-1/2 -translate-y-1/2 z-50">
-                  <div className="bg-gray-900 text-white text-xs px-3 py-2 rounded shadow-lg whitespace-nowrap">
-                    {t('sidebar.disabledHint')}
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </nav>
-      
-      <div className="p-4 border-t border-border space-y-3">
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-gray-500 dark:text-gray-400">
-            {t('sidebar.mode.label')}
-          </span>
-          <button
-            onClick={toggleBeginnerMode}
-            className={cn(
-              'relative inline-flex h-11 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
-              isBeginnerMode ? 'bg-gray-300' : 'bg-primary'
-            )}
-            aria-label={t('sidebar.mode.toggle')}
-            title={t('sidebar.mode.toggle')}
+        {navigation.map((item) => (
+          <NavLink
+            key={item.labelKey}
+            to={item.href}
+            onClick={onNavigate}
+            className={({ isActive }) =>
+              cn(
+                'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors',
+                isActive
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+              )
+            }
           >
-            <span
-              className={cn(
-                'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
-                isBeginnerMode ? 'translate-x-1' : 'translate-x-9'
-              )}
-            />
-          </button>
-        </div>
-        <div className="text-xs text-gray-600 dark:text-gray-400">
-          {isBeginnerMode ? t('sidebar.mode.beginner') : t('sidebar.mode.advanced')}
-        </div>
-        <div className="pt-2 border-t border-border">
-          <p className="text-xs text-gray-500">v0.1.0</p>
-          <p className="mt-1 text-xs text-gray-500">{t('sidebar.versionLabel')}</p>
-        </div>
+            <item.icon className="w-5 h-5" />
+            {t(item.labelKey)}
+          </NavLink>
+        ))}
+      </nav>
+
+      <div className="p-4 border-t border-border">
+        <p className="text-xs text-gray-500">v0.1.0</p>
+        <p className="mt-1 text-xs text-gray-500">{t('sidebar.versionLabel')}</p>
       </div>
     </aside>
   );

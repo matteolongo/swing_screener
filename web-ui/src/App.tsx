@@ -7,8 +7,8 @@ import { registerTradingStoreSync } from '@/features/persistence';
 const Workspace = lazy(() => import('./pages/Workspace'));
 const DailyReview = lazy(() => import('./pages/DailyReview'));
 const Strategy = lazy(() => import('./pages/Strategy'));
-const Intelligence = lazy(() => import('./pages/Intelligence'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -37,14 +37,13 @@ function App() {
               <Route path="workspace" element={<Workspace />} />
               <Route path="dashboard" element={<Navigate to="/workspace" replace />} />
               <Route path="daily-review" element={<DailyReview />} />
-              <Route path="intelligence" element={<Intelligence />} />
               <Route path="onboarding" element={<Onboarding />} />
               <Route path="screener" element={<Navigate to="/workspace" replace />} />
               <Route path="orders" element={<Navigate to="/workspace" replace />} />
               <Route path="positions" element={<Navigate to="/workspace" replace />} />
               <Route path="strategy" element={<Strategy />} />
               <Route path="settings" element={<Navigate to="/strategy" replace />} />
-              <Route path="*" element={<Navigate to="/workspace" replace />} />
+              <Route path="*" element={<NotFound />} />
             </Route>
           </Routes>
         </Suspense>

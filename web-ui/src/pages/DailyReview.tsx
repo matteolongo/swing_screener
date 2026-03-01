@@ -28,18 +28,8 @@ import type {
   DailyReviewPositionUpdate,
   DailyReviewPositionClose,
 } from '@/features/dailyReview/types';
-import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 import { useStrategyReadiness } from '@/features/strategy/useStrategyReadiness';
 import StrategyReadinessBlocker from '@/components/domain/onboarding/StrategyReadinessBlocker';
-
-const MOBILE_LAYOUT_MEDIA_QUERY = '(max-width: 767px)';
-
-function getMobileLayoutMatch() {
-  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-    return false;
-  }
-  return window.matchMedia(MOBILE_LAYOUT_MEDIA_QUERY).matches;
-}
 
 export default function DailyReview() {
   const [expandedSections, setExpandedSections] = useState({
@@ -55,35 +45,18 @@ export default function DailyReview() {
     // Persist dismissal state in localStorage
     return localStorage.getItem('dailyReview.dismissedReadinessBlocker') === 'true';
   });
-  const [isCompactMobileLayout, setIsCompactMobileLayout] = useState(getMobileLayoutMatch);
 
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const selectedUniverse = parseUniverseFromStorage(localStorage.getItem(SCREENER_UNIVERSE_STORAGE_KEY));
   const { data: review, isLoading, error, refetch, isFetching } = useDailyReview(10, selectedUniverse);
   const activeStrategyQuery = useActiveStrategyQuery();
-  const { isBeginnerMode } = useBeginnerModeStore();
   const { isReady: strategyReady } = useStrategyReadiness();
   
   // Persist dismissal to localStorage
   useEffect(() => {
     localStorage.setItem('dailyReview.dismissedReadinessBlocker', String(dismissedReadinessBlocker));
   }, [dismissedReadinessBlocker]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-      return;
-    }
-
-    const mediaQueryList = window.matchMedia(MOBILE_LAYOUT_MEDIA_QUERY);
-    const handleChange = (event: MediaQueryListEvent) => {
-      setIsCompactMobileLayout(event.matches);
-    };
-
-    setIsCompactMobileLayout(mediaQueryList.matches);
-    mediaQueryList.addEventListener('change', handleChange);
-    return () => mediaQueryList.removeEventListener('change', handleChange);
-  }, []);
   const riskConfig: RiskConfig = activeStrategyQuery.data?.risk ?? DEFAULT_CONFIG.risk;
   const openWorkspacePortfolioAction = useCallback(
     (params: { action: 'update-stop' | 'close-position'; ticker: string; positionId: string }) => {
@@ -172,8 +145,8 @@ export default function DailyReview() {
         </Button>
       </div>
 
-      {/* Strategy Readiness Blocker - Beginner Mode */}
-      {isBeginnerMode && !strategyReady && !dismissedReadinessBlocker && (
+      {/* Strategy Readiness Blocker */}
+      {!strategyReady && !dismissedReadinessBlocker && (
         <StrategyReadinessBlocker
           onDismiss={() => setDismissedReadinessBlocker(true)}
           onConfigureStrategy={() => navigate('/onboarding?step=2')}
@@ -259,7 +232,6 @@ export default function DailyReview() {
                 setSelectedCandidate(candidate);
                 setShowCreateOrderModal(true);
               }}
-              isCompactMobileLayout={isCompactMobileLayout}
             />
           </div>
         )}
@@ -286,7 +258,6 @@ export default function DailyReview() {
                   positionId: position.positionId,
                 })
               }
-              isCompactMobileLayout={isCompactMobileLayout}
             />
           </div>
         )}
@@ -302,17 +273,16 @@ export default function DailyReview() {
         {review.positionsClose.length === 0 ? (
           <p className="text-gray-600 dark:text-gray-400">{t('dailyReview.sections.noClose')}</p>
         ) : (
-          <CloseTable
-            positions={review.positionsClose}
-            onAction={(position) =>
-              openWorkspacePortfolioAction({
-                action: 'close-position',
-                ticker: position.ticker,
-                positionId: position.positionId,
-              })
-            }
-            isCompactMobileLayout={isCompactMobileLayout}
-          />
+            <CloseTable
+              positions={review.positionsClose}
+              onAction={(position) =>
+                openWorkspacePortfolioAction({
+                  action: 'close-position',
+                  ticker: position.ticker,
+                  positionId: position.positionId,
+                })
+              }
+            />
         )}
       </CollapsibleSection>
 
@@ -325,7 +295,7 @@ export default function DailyReview() {
         {review.positionsHold.length === 0 ? (
           <p className="text-gray-600 dark:text-gray-400">{t('dailyReview.sections.noHold')}</p>
         ) : (
-          <HoldTable positions={review.positionsHold} isCompactMobileLayout={isCompactMobileLayout} />
+          <HoldTable positions={review.positionsHold} />
         )}
       </CollapsibleSection>
 
@@ -457,102 +427,11 @@ function CandidatesTable({
   candidates,
   onShowRecommendation,
   onCreateOrder,
-  isCompactMobileLayout,
 }: {
   candidates: DailyReviewCandidate[];
   onShowRecommendation: (candidate: DailyReviewCandidate) => void;
   onCreateOrder: (candidate: DailyReviewCandidate) => void;
-  isCompactMobileLayout: boolean;
 }) {
-  if (isCompactMobileLayout) {
-    return (
-      <div className="space-y-3">
-        {candidates.map((candidate) => (
-          <div
-            key={candidate.ticker}
-            className="rounded-xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <a
-                  href={`https://finance.yahoo.com/quote/${candidate.ticker}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-mono text-base font-bold text-blue-700 hover:underline"
-                  title={t('dailyReview.table.candidates.yahooFinanceTooltip', { ticker: candidate.ticker })}
-                >
-                  {candidate.ticker}
-                </a>
-                <p className="mt-0.5 text-xs text-gray-500">
-                  {candidate.sector || t('common.placeholders.dash')}
-                </p>
-              </div>
-              <Badge variant="primary">{candidate.signal}</Badge>
-            </div>
-
-            <CachedSymbolPriceChart ticker={candidate.ticker} className="mt-2" />
-
-            <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-              <div className="rounded-md bg-gray-50 px-2 py-1 dark:bg-gray-700/70">
-                <p className="text-gray-500">{t('dailyReview.table.candidates.headers.entry')}</p>
-                <p className="font-semibold">{formatCurrency(candidate.entry)}</p>
-              </div>
-              <div className="rounded-md bg-gray-50 px-2 py-1 dark:bg-gray-700/70">
-                <p className="text-gray-500">{t('dailyReview.table.candidates.headers.stop')}</p>
-                <p className="font-semibold">{formatCurrency(candidate.stop)}</p>
-              </div>
-              <div className="rounded-md bg-gray-50 px-2 py-1 dark:bg-gray-700/70">
-                <p className="text-gray-500">{t('dailyReview.table.candidates.headers.shares')}</p>
-                <p className="font-semibold">{candidate.shares}</p>
-              </div>
-              <div className="rounded-md bg-gray-50 px-2 py-1 dark:bg-gray-700/70">
-                <p className="text-gray-500">{t('dailyReview.table.candidates.headers.riskReward')}</p>
-                <p className="font-semibold">
-                  {t('common.units.rValue', { value: formatNumber(candidate.rReward, 1) })}
-                </p>
-              </div>
-              <div className="col-span-2 rounded-md bg-gray-50 px-2 py-1 dark:bg-gray-700/70">
-                <p className="text-gray-500">{t('dailyReview.table.candidates.headers.confidence')}</p>
-                <p className="font-semibold text-purple-700 dark:text-purple-300">
-                  {candidate.confidence != null ? formatNumber(candidate.confidence, 1) : '-'}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-3 flex items-center gap-2">
-              {candidate.recommendation ? (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  className="shrink-0"
-                  onClick={() => onShowRecommendation(candidate)}
-                  title={t('dailyReview.table.candidates.recommendationTitle')}
-                  aria-label={t('dailyReview.table.candidates.recommendationAria', { ticker: candidate.ticker })}
-                >
-                  <Info className="h-4 w-4" />
-                </Button>
-              ) : null}
-              <Button
-                variant="primary"
-                size="sm"
-                className="flex-1"
-                onClick={() => onCreateOrder(candidate)}
-                title={
-                  candidate.recommendation?.verdict === 'NOT_RECOMMENDED'
-                    ? t('dailyReview.table.candidates.createOrderNotRecommendedTitle')
-                    : t('dailyReview.table.candidates.createOrderTitle')
-                }
-              >
-                {t('dailyReview.table.candidates.createOrder')}
-              </Button>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
   return (
     <TableShell
       empty={candidates.length === 0}
@@ -656,75 +535,10 @@ function formatDailyReviewReason(reason: string): string {
 function UpdateStopTable({
   positions,
   onAction,
-  isCompactMobileLayout,
 }: {
   positions: DailyReviewPositionUpdate[];
   onAction: (position: DailyReviewPositionUpdate) => void;
-  isCompactMobileLayout: boolean;
 }) {
-  if (isCompactMobileLayout) {
-    return (
-      <div className="space-y-3">
-        {positions.map((pos) => (
-          <div
-            key={pos.positionId}
-            className="rounded-xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <a
-                href={`https://finance.yahoo.com/quote/${pos.ticker}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-mono text-base font-bold text-blue-700 hover:underline"
-                title={t('dailyReview.table.update.yahooFinanceTooltip', { ticker: pos.ticker })}
-              >
-                {pos.ticker}
-              </a>
-              <Badge variant="warning">{t('dailyReview.table.update.actionLabel')}</Badge>
-            </div>
-
-            <CachedSymbolPriceChart ticker={pos.ticker} className="mt-2" />
-
-            <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-              <div className="rounded-md bg-gray-50 px-2 py-1 dark:bg-gray-700/70">
-                <p className="text-gray-500">{t('dailyReview.table.update.headers.entry')}</p>
-                <p className="font-semibold">{formatCurrency(pos.entryPrice)}</p>
-              </div>
-              <div className="rounded-md bg-gray-50 px-2 py-1 dark:bg-gray-700/70">
-                <p className="text-gray-500">{t('dailyReview.table.update.headers.current')}</p>
-                <p className="font-semibold">{formatCurrency(pos.currentPrice)}</p>
-              </div>
-              <div className="rounded-md bg-gray-50 px-2 py-1 dark:bg-gray-700/70">
-                <p className="text-gray-500">{t('dailyReview.table.update.headers.stopOld')}</p>
-                <p>{formatCurrency(pos.stopCurrent)}</p>
-              </div>
-              <div className="rounded-md bg-gray-50 px-2 py-1 dark:bg-gray-700/70">
-                <p className="text-gray-500">{t('dailyReview.table.update.headers.stopNew')}</p>
-                <p className="font-semibold text-green-700 dark:text-green-300">{formatCurrency(pos.stopSuggested)}</p>
-              </div>
-            </div>
-
-            <p className="mt-3 text-xs text-gray-600 dark:text-gray-300">{formatDailyReviewReason(pos.reason)}</p>
-
-            <div className="mt-3 flex items-center justify-between gap-3">
-              <span className={pos.rNow >= 0 ? 'text-sm font-semibold text-green-700 dark:text-green-300' : 'text-sm font-semibold text-red-700 dark:text-red-300'}>
-                {t('common.units.rValue', { value: formatNumber(pos.rNow, 2) })}
-              </span>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => onAction(pos)}
-                title={t('dailyReview.table.update.actionTitle')}
-              >
-                {t('dailyReview.table.update.actionLabel')}
-              </Button>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
   return (
     <TableShell
       empty={positions.length === 0}
@@ -788,71 +602,10 @@ function UpdateStopTable({
 function CloseTable({
   positions,
   onAction,
-  isCompactMobileLayout,
 }: {
   positions: DailyReviewPositionClose[];
   onAction: (position: DailyReviewPositionClose) => void;
-  isCompactMobileLayout: boolean;
 }) {
-  if (isCompactMobileLayout) {
-    return (
-      <div className="space-y-3">
-        {positions.map((pos) => (
-          <div
-            key={pos.positionId}
-            className="rounded-xl border border-red-200 bg-red-50/60 p-3 dark:border-red-900 dark:bg-red-950/20"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <a
-                href={`https://finance.yahoo.com/quote/${pos.ticker}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-mono text-base font-bold text-blue-700 hover:underline"
-                title={t('dailyReview.table.close.yahooFinanceTooltip', { ticker: pos.ticker })}
-              >
-                {pos.ticker}
-              </a>
-              <Badge variant="error">{t('dailyReview.table.close.actionLabel')}</Badge>
-            </div>
-
-            <CachedSymbolPriceChart ticker={pos.ticker} className="mt-2" />
-
-            <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
-              <div className="rounded-md bg-white px-2 py-1 dark:bg-gray-800/70">
-                <p className="text-gray-500">{t('dailyReview.table.close.headers.entry')}</p>
-                <p className="font-semibold">{formatCurrency(pos.entryPrice)}</p>
-              </div>
-              <div className="rounded-md bg-white px-2 py-1 dark:bg-gray-800/70">
-                <p className="text-gray-500">{t('dailyReview.table.close.headers.current')}</p>
-                <p className="font-semibold">{formatCurrency(pos.currentPrice)}</p>
-              </div>
-              <div className="rounded-md bg-white px-2 py-1 dark:bg-gray-800/70">
-                <p className="text-gray-500">{t('dailyReview.table.close.headers.stop')}</p>
-                <p>{formatCurrency(pos.stopPrice)}</p>
-              </div>
-            </div>
-
-            <p className="mt-3 text-xs text-gray-600 dark:text-gray-300">{formatDailyReviewReason(pos.reason)}</p>
-
-            <div className="mt-3 flex items-center justify-between gap-3">
-              <span className="text-sm font-semibold text-red-700 dark:text-red-300">
-                {t('common.units.rValue', { value: formatNumber(pos.rNow, 2) })}
-              </span>
-              <Button
-                variant="danger"
-                size="sm"
-                onClick={() => onAction(pos)}
-                title={t('dailyReview.table.close.actionTitle')}
-              >
-                {t('dailyReview.table.close.actionLabel')}
-              </Button>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
   return (
     <TableShell
       empty={positions.length === 0}
@@ -913,61 +666,9 @@ function CloseTable({
 
 function HoldTable({
   positions,
-  isCompactMobileLayout,
 }: {
   positions: DailyReviewPositionHold[];
-  isCompactMobileLayout: boolean;
 }) {
-  if (isCompactMobileLayout) {
-    return (
-      <div className="space-y-3">
-        {positions.map((pos) => (
-          <div
-            key={pos.positionId}
-            className="rounded-xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <a
-                href={`https://finance.yahoo.com/quote/${pos.ticker}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-mono text-base font-bold text-blue-700 hover:underline"
-                title={t('dailyReview.table.hold.yahooFinanceTooltip', { ticker: pos.ticker })}
-              >
-                {pos.ticker}
-              </a>
-              <Badge variant="success">{t('dailyReview.table.hold.holdBadge')}</Badge>
-            </div>
-
-            <CachedSymbolPriceChart ticker={pos.ticker} className="mt-2" />
-
-            <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
-              <div className="rounded-md bg-gray-50 px-2 py-1 dark:bg-gray-700/70">
-                <p className="text-gray-500">{t('dailyReview.table.hold.headers.entry')}</p>
-                <p className="font-semibold">{formatCurrency(pos.entryPrice)}</p>
-              </div>
-              <div className="rounded-md bg-gray-50 px-2 py-1 dark:bg-gray-700/70">
-                <p className="text-gray-500">{t('dailyReview.table.hold.headers.current')}</p>
-                <p className="font-semibold">{formatCurrency(pos.currentPrice)}</p>
-              </div>
-              <div className="rounded-md bg-gray-50 px-2 py-1 dark:bg-gray-700/70">
-                <p className="text-gray-500">{t('dailyReview.table.hold.headers.stop')}</p>
-                <p>{formatCurrency(pos.stopPrice)}</p>
-              </div>
-            </div>
-
-            <div className="mt-3 flex items-center justify-between gap-3">
-              <p className="text-xs text-gray-600 dark:text-gray-300">{formatDailyReviewReason(pos.reason)}</p>
-              <span className={pos.rNow >= 0 ? 'text-sm font-semibold text-green-700 dark:text-green-300' : 'text-sm font-semibold text-red-700 dark:text-red-300'}>
-                {t('common.units.rValue', { value: formatNumber(pos.rNow, 2) })}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
   return (
     <TableShell
       empty={positions.length === 0}

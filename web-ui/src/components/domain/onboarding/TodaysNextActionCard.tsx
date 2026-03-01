@@ -4,7 +4,6 @@ import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Ca
 import Button from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
 import { useOnboardingStore } from '@/stores/onboardingStore';
-import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 import { useStrategyReadiness } from '@/features/strategy/useStrategyReadiness';
 import { t } from '@/i18n/t';
 
@@ -15,13 +14,7 @@ interface TodaysNextActionCardProps {
 export default function TodaysNextActionCard({ onRunScreener }: TodaysNextActionCardProps = {}) {
   const navigate = useNavigate();
   const { status: onboardingStatus } = useOnboardingStore();
-  const { isBeginnerMode } = useBeginnerModeStore();
   const { isReady: strategyReady } = useStrategyReadiness();
-  
-  // Don't show this card in advanced mode
-  if (!isBeginnerMode) {
-    return null;
-  }
   
   // Determine the next action based on state
   const getNextAction = () => {

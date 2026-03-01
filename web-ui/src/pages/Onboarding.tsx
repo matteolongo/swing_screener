@@ -6,7 +6,6 @@ import Card, { CardContent } from '@/components/common/Card';
 import OnboardingStrategySetupStep from '@/components/domain/onboarding/OnboardingStrategySetupStep';
 import { useStrategyReadiness } from '@/features/strategy/useStrategyReadiness';
 import { t } from '@/i18n/t';
-import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 import { useOnboardingStore } from '@/stores/onboardingStore';
 
 type OnboardingStep = {
@@ -99,7 +98,6 @@ export default function OnboardingPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { currentStep, setCurrentStep, completeOnboarding, dismissOnboarding } = useOnboardingStore();
-  const { isBeginnerMode, setBeginnerMode } = useBeginnerModeStore();
   const { isReady: strategyReady } = useStrategyReadiness();
 
   useEffect(() => {
@@ -175,29 +173,6 @@ export default function OnboardingPage() {
           <p className="text-xs text-gray-500">
             {t('onboardingPage.progress', { step: stepIndex + 1, total: STEPS.length })}
           </p>
-
-          {stepIndex === 0 ? (
-            <div className="rounded-lg border border-gray-200 p-3">
-              <p className="mb-2 text-sm font-medium text-gray-900">{t('onboardingPage.mode.title')}</p>
-              <div className="flex gap-2">
-                <Button
-                  variant={isBeginnerMode ? 'primary' : 'secondary'}
-                  onClick={() => setBeginnerMode(true)}
-                  size="sm"
-                >
-                  {t('onboardingPage.mode.beginner')}
-                </Button>
-                <Button
-                  variant={!isBeginnerMode ? 'primary' : 'secondary'}
-                  onClick={() => setBeginnerMode(false)}
-                  size="sm"
-                >
-                  {t('onboardingPage.mode.advanced')}
-                </Button>
-              </div>
-              <p className="mt-2 text-xs text-gray-600">{t('onboardingPage.mode.hint')}</p>
-            </div>
-          ) : null}
 
           <div>{step.content}</div>
 

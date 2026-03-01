@@ -1,7 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { TrendingUp, BookOpen, PanelLeft, PanelLeftClose } from 'lucide-react';
 import { useI18n } from '@/i18n/I18nProvider';
-import UserModeToggle from '@/components/common/UserModeToggle';
 import Button from '@/components/common/Button';
 import { cn } from '@/utils/cn';
 
@@ -60,7 +59,6 @@ export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: 
         </div>
         
         <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
-          <UserModeToggle />
           <Button
             variant="secondary"
             size="sm"
