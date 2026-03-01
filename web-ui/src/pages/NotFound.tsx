@@ -10,13 +10,13 @@ export default function NotFoundPage() {
         The page you requested does not exist.
       </p>
       <Link
-        to="/workspace"
+        to="/daily-review"
         className={cn(
           'inline-flex min-h-11 min-w-11 items-center justify-center rounded-md px-4 font-medium transition-colors',
           'bg-primary text-primary-foreground hover:bg-primary/90'
         )}
       >
-        Go to Workspace
+        Go to Decide
       </Link>
     </div>
   );

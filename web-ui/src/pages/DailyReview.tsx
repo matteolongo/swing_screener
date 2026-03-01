@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Info, RefreshCw } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -31,6 +31,13 @@ import type {
 import { getStrategyReadiness } from '@/features/strategy/useStrategyReadiness';
 import StrategyReadinessBlocker from '@/components/domain/onboarding/StrategyReadinessBlocker';
 import { useActiveStrategyStore } from '@/stores/activeStrategyStore';
+import {
+  useClosePositionMutation,
+  usePositions,
+  useUpdateStopMutation,
+} from '@/features/portfolio/hooks';
+import UpdateStopModalForm from '@/components/domain/positions/UpdateStopModalForm';
+import ClosePositionModalForm from '@/components/domain/positions/ClosePositionModalForm';
 
 export default function DailyReview() {
   const [expandedSections, setExpandedSections] = useState({
@@ -42,6 +49,8 @@ export default function DailyReview() {
   const [insightCandidate, setInsightCandidate] = useState<DailyReviewCandidate | null>(null);
   const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<DailyReviewCandidate | null>(null);
+  const [updateStopPositionId, setUpdateStopPositionId] = useState<string | null>(null);
+  const [closePositionId, setClosePositionId] = useState<string | null>(null);
   const [dismissedReadinessBlocker, setDismissedReadinessBlocker] = useState(() => {
     // Persist dismissal state in localStorage
     return localStorage.getItem('dailyReview.dismissedReadinessBlocker') === 'true';
@@ -58,6 +67,36 @@ export default function DailyReview() {
   const activeReviewStrategyId = selectedStrategy?.id ?? null;
   const { data: review, isLoading, error, refetch, isFetching } = useDailyReview(activeReviewStrategyId, 10, selectedUniverse);
   const strategyReadiness = getStrategyReadiness(selectedStrategy, strategiesQuery.isLoading);
+  const openPositionsQuery = usePositions('open');
+  const refreshDailyReviewAfterPositionAction = useCallback(() => {
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.dailyReview(activeReviewStrategyId, 10, selectedUniverse),
+    });
+  }, [activeReviewStrategyId, queryClient, selectedUniverse]);
+  const updateStopMutation = useUpdateStopMutation(() => {
+    setUpdateStopPositionId(null);
+    setClosePositionId(null);
+    refreshDailyReviewAfterPositionAction();
+  });
+  const closePositionMutation = useClosePositionMutation(() => {
+    setUpdateStopPositionId(null);
+    setClosePositionId(null);
+    refreshDailyReviewAfterPositionAction();
+  });
+  const updateStopPosition = useMemo(
+    () =>
+      updateStopPositionId
+        ? (openPositionsQuery.data ?? []).find((position) => position.positionId === updateStopPositionId) ?? null
+        : null,
+    [openPositionsQuery.data, updateStopPositionId],
+  );
+  const closePosition = useMemo(
+    () =>
+      closePositionId
+        ? (openPositionsQuery.data ?? []).find((position) => position.positionId === closePositionId) ?? null
+        : null,
+    [closePositionId, openPositionsQuery.data],
+  );
   
   // Persist dismissal to localStorage
   useEffect(() => {
@@ -77,16 +116,6 @@ export default function DailyReview() {
       }
     },
     [setActiveStrategyId, setActiveStrategyMutation]
-  );
-  const openWorkspacePortfolioAction = useCallback(
-    (params: { action: 'update-stop' | 'close-position'; ticker: string; positionId: string }) => {
-      const searchParams = new URLSearchParams();
-      searchParams.set('portfolioAction', params.action);
-      searchParams.set('ticker', params.ticker);
-      searchParams.set('positionId', params.positionId);
-      navigate(`/workspace?${searchParams.toString()}`);
-    },
-    [navigate],
   );
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
@@ -255,7 +284,7 @@ export default function DailyReview() {
       {!strategyReadiness.isReady && !dismissedReadinessBlocker && (
         <StrategyReadinessBlocker
           onDismiss={() => setDismissedReadinessBlocker(true)}
-          onConfigureStrategy={() => navigate('/onboarding?step=2')}
+          onConfigureStrategy={() => navigate('/onboarding')}
         />
       )}
 
@@ -357,13 +386,10 @@ export default function DailyReview() {
             <GlossaryLegend metricKeys={DAILY_REVIEW_GLOSSARY_KEYS} title={t('dailyReview.sections.stopGlossary')} />
             <UpdateStopTable
               positions={review.positionsUpdateStop}
-              onAction={(position) =>
-                openWorkspacePortfolioAction({
-                  action: 'update-stop',
-                  ticker: position.ticker,
-                  positionId: position.positionId,
-                })
-              }
+              onAction={(position) => {
+                setClosePositionId(null);
+                setUpdateStopPositionId(position.positionId);
+              }}
             />
           </div>
         )}
@@ -381,13 +407,10 @@ export default function DailyReview() {
         ) : (
             <CloseTable
               positions={review.positionsClose}
-              onAction={(position) =>
-                openWorkspacePortfolioAction({
-                  action: 'close-position',
-                  ticker: position.ticker,
-                  positionId: position.positionId,
-                })
-              }
+              onAction={(position) => {
+                setUpdateStopPositionId(null);
+                setClosePositionId(position.positionId);
+              }}
             />
         )}
       </CollapsibleSection>
@@ -404,6 +427,38 @@ export default function DailyReview() {
           <HoldTable positions={review.positionsHold} />
         )}
       </CollapsibleSection>
+
+      {updateStopPosition ? (
+        <UpdateStopModalForm
+          position={updateStopPosition}
+          onClose={() => setUpdateStopPositionId(null)}
+          onSubmit={(request) => {
+            if (!updateStopPosition.positionId) return;
+            updateStopMutation.mutate({
+              positionId: updateStopPosition.positionId,
+              request,
+            });
+          }}
+          isLoading={updateStopMutation.isPending}
+          error={updateStopMutation.error?.message}
+        />
+      ) : null}
+
+      {closePosition ? (
+        <ClosePositionModalForm
+          position={closePosition}
+          onClose={() => setClosePositionId(null)}
+          onSubmit={(request) => {
+            if (!closePosition.positionId) return;
+            closePositionMutation.mutate({
+              positionId: closePosition.positionId,
+              request,
+            });
+          }}
+          isLoading={closePositionMutation.isPending}
+          error={closePositionMutation.error?.message}
+        />
+      ) : null}
 
       {insightCandidate ? (
         <TradeInsightModal
