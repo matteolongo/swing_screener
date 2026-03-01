@@ -16,7 +16,6 @@ import MetricHelpLabel from '@/components/domain/education/MetricHelpLabel';
 import { DAILY_REVIEW_GLOSSARY_KEYS } from '@/content/educationGlossary';
 import TradeInsightModal from '@/components/domain/recommendation/TradeInsightModal';
 import CandidateOrderModal from '@/components/domain/orders/CandidateOrderModal';
-import CachedSymbolPriceChart from '@/components/domain/market/CachedSymbolPriceChart';
 import { queryKeys } from '@/lib/queryKeys';
 import { t } from '@/i18n/t';
 import {
@@ -880,7 +879,6 @@ function TickerWithChart({ ticker, title }: { ticker: string; title: string }) {
       >
         {ticker}
       </a>
-      <CachedSymbolPriceChart ticker={ticker} className="mt-1" />
     </div>
   );
 }
