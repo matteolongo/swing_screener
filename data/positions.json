@@ -1,5 +1,5 @@
 {
-  "asof": "2026-02-28",
+  "asof": "2026-03-02",
   "positions": [
     {
       "ticker": "INTC",
@@ -207,17 +207,18 @@
       "source_order_id": "REP.MC-20260219172724",
       "entry_date": "2026-02-18",
       "entry_price": 17.32,
-      "stop_price": 17.36,
+      "stop_price": 17.54,
       "shares": 5,
       "initial_risk": 0.8399999999999999,
       "max_favorable_price": 17.32,
       "exit_date": null,
       "exit_price": null,
-      "notes": "From daily review: Entry $17.64, R:R 2.0\nStop updated to 17.32: Breakeven: R=1.43 >= 1.0\nStop updated to 17.36: Trail: R=2.02 >= 2.0 and SMA20 trail",
+      "notes": "From daily review: Entry $17.64, R:R 2.0\nStop updated to 17.32: Breakeven: R=1.43 >= 1.0\nStop updated to 17.36: Trail: R=2.02 >= 2.0 and SMA20 trail\nStop updated to 17.53: Trail: R=2.98 >= 2.0 and SMA20 trail\nStop updated to 17.54: Trail: R=3.29 >= 2.0 and SMA20 trail",
       "exit_order_ids": [
         "ORD-STOP-POS-REP.MC-20260218-01",
         "ORD-AADC0305",
-        "ORD-B1DCD7CF"
+        "ORD-B1DCD7CF",
+        "ORD-BCD6F7B7"
       ]
     },
     {
