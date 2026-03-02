@@ -26,7 +26,6 @@ export function useStrategyEditor() {
 
   const [selectedId, setSelectedId] = useState('');
   const [draft, setDraft] = useState<Strategy | null>(null);
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [createId, setCreateId] = useState('');
   const [createName, setCreateName] = useState('');
@@ -166,8 +165,6 @@ export function useStrategyEditor() {
     setCreateName,
     setDraft,
     setSelectedId,
-    setShowAdvanced,
-    showAdvanced,
     statusMessage,
     strategies,
     strategiesQuery,

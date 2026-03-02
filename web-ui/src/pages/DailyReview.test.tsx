@@ -4,6 +4,7 @@ import { http, HttpResponse } from 'msw'
 import { renderWithProviders } from '@/test/utils'
 import { server } from '@/test/mocks/server'
 import DailyReview from './DailyReview'
+import { useActiveStrategyStore } from '@/stores/activeStrategyStore'
 
 const mockDailyReview = {
   new_candidates: [
@@ -90,27 +91,87 @@ const mockDailyReview = {
 }
 
 describe('DailyReview Page', () => {
+  const enterDecisionMode = async (user: ReturnType<typeof renderWithProviders>['user']) => {
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Enter Decision Mode/i })).toBeInTheDocument()
+    })
+
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: /Enter Decision Mode/i }))
+    })
+  }
+
   beforeEach(() => {
+    useActiveStrategyStore.setState({ activeStrategyId: 'default' })
     server.use(
       http.get('*/api/daily-review', () => HttpResponse.json(mockDailyReview))
     )
   })
 
-  it('renders glossary blocks and help-labeled table columns', async () => {
+  it('shows strategy selection gate when no strategy is selected', async () => {
+    useActiveStrategyStore.setState({ activeStrategyId: null })
+
     renderWithProviders(<DailyReview />)
 
     await waitFor(() => {
+      expect(screen.getByText('Select a Strategy to Begin')).toBeInTheDocument()
+      expect(screen.getByLabelText('Active Strategy')).toBeInTheDocument()
+    })
+  })
+
+  it('renders one step at a time and advances through the decision flow', async () => {
+    const { user } = renderWithProviders(<DailyReview />)
+
+    await waitFor(() => {
+      expect(screen.getByRole('combobox', { name: /review universe/i })).toBeInTheDocument()
+      expect(screen.getByText('Attention Required')).toBeInTheDocument()
+      expect(screen.getByText('1 new trade candidate')).toBeInTheDocument()
+      expect(screen.getByText('1 stop adjustment')).toBeInTheDocument()
+      expect(screen.getByText('0 positions require review')).toBeInTheDocument()
+      expect(screen.queryByText('Step 1 of 2')).not.toBeInTheDocument()
+    })
+
+    await enterDecisionMode(user)
+
+    await waitFor(() => {
+      expect(screen.getByText('Step 1 of 2')).toBeInTheDocument()
       expect(screen.getByText('Daily Review Glossary')).toBeInTheDocument()
-      expect(screen.getByText('Stop Management Glossary')).toBeInTheDocument()
+      expect(screen.queryByText('Stop Management Glossary')).not.toBeInTheDocument()
       expect(screen.getByText('Confidence')).toBeInTheDocument()
       expect(screen.getByText('R:R')).toBeInTheDocument()
-      expect(screen.getAllByText('R Now').length).toBeGreaterThan(0)
       expect(screen.getByText('91.6')).toBeInTheDocument()
+      expect(screen.getByText('Trade Rationale')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Why is this suggested?' })).toBeInTheDocument()
+      expect(screen.queryByText('• Trend conditions met')).not.toBeInTheDocument()
+    })
+
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Why is this suggested?' }))
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('• Trend conditions met')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Hide explanation' })).toBeInTheDocument()
+    })
+
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Continue' }))
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('Step 2 of 2')).toBeInTheDocument()
+      expect(screen.getByText('Stop Management Glossary')).toBeInTheDocument()
+      expect(screen.queryByText('Daily Review Glossary')).not.toBeInTheDocument()
+      expect(screen.getAllByText('R Now').length).toBeGreaterThan(0)
+      expect(screen.getByText('Stop Adjustment Logic')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Why is this suggested?' })).toBeInTheDocument()
     })
   })
 
   it('shows non-zero ratio percentages in recommendation risk panel', async () => {
     const { user } = renderWithProviders(<DailyReview />)
+
+    await enterDecisionMode(user)
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Recommendation details for VALE/i })).toBeInTheDocument()
@@ -160,7 +221,9 @@ describe('DailyReview Page', () => {
       }))
     )
 
-    renderWithProviders(<DailyReview />)
+    const { user } = renderWithProviders(<DailyReview />)
+
+    await enterDecisionMode(user)
 
     await waitFor(() => {
       expect(screen.getByText('VALE')).toBeInTheDocument()
@@ -191,9 +254,21 @@ describe('DailyReview Page', () => {
       }))
     )
 
-    renderWithProviders(<DailyReview />)
+    const { user } = renderWithProviders(<DailyReview />)
+
+    await enterDecisionMode(user)
+
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Continue' }))
+    })
+
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Continue' }))
+    })
 
     await waitFor(() => {
+      expect(screen.getByText('Step 3 of 3')).toBeInTheDocument()
+      expect(screen.getByText('Exit Logic')).toBeInTheDocument()
       expect(
         screen.getByText(
           'Held for 20 bars (max 20). Close to free capital for stronger setups.'
@@ -204,6 +279,8 @@ describe('DailyReview Page', () => {
 
   it('closes Create Order modal with Escape and with close button', async () => {
     const { user } = renderWithProviders(<DailyReview />)
+
+    await enterDecisionMode(user)
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Create Order/i })).toBeInTheDocument()
@@ -244,11 +321,45 @@ describe('DailyReview Page', () => {
   })
 
   it('keeps candidate actions available without embedded intelligence controls', async () => {
-    renderWithProviders(<DailyReview />)
+    const { user } = renderWithProviders(<DailyReview />)
+
+    await enterDecisionMode(user)
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Create Order/i })).toBeInTheDocument()
       expect(screen.queryByRole('button', { name: /Run Intelligence/i })).not.toBeInTheDocument()
+    })
+  })
+
+  it('shows discipline state when there are no sequential steps', async () => {
+    server.use(
+      http.get('*/api/daily-review', () =>
+        HttpResponse.json({
+          ...mockDailyReview,
+          new_candidates: [],
+          positions_update_stop: [],
+          positions_close: [],
+          positions_hold: [],
+          summary: {
+            ...mockDailyReview.summary,
+            no_action: 0,
+            update_stop: 0,
+            close_positions: 0,
+            new_candidates: 0,
+          },
+        })
+      )
+    )
+
+    renderWithProviders(<DailyReview />)
+
+    await waitFor(() => {
+      expect(screen.getByText('No action required.')).toBeInTheDocument()
+      expect(screen.getByText('Your strategy remains aligned.')).toBeInTheDocument()
+      expect(screen.getByText('Discipline maintained.')).toBeInTheDocument()
+      expect(screen.queryByText('Attention Required')).not.toBeInTheDocument()
+      expect(screen.queryByText(/Step 1 of/i)).not.toBeInTheDocument()
+      expect(screen.queryByText('Trade Rationale')).not.toBeInTheDocument()
     })
   })
 })

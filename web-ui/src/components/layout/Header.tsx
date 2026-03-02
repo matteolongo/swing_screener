@@ -14,7 +14,7 @@ export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: 
   const navigate = useNavigate();
   const now = new Date();
   const { locale, t } = useI18n();
-  const isWorkspaceRoute = location.pathname === '/workspace' || location.pathname.startsWith('/workspace/');
+  const isDecisionRoute = location.pathname === '/daily-review' || location.pathname.startsWith('/daily-review/');
   
   const dateStr = now.toLocaleDateString(locale, {
     month: 'short',
@@ -31,7 +31,7 @@ export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: 
       <header
         className={cn(
           'border-b border-border bg-white dark:bg-gray-800 flex items-center justify-between',
-          isWorkspaceRoute ? 'h-14 px-3 sm:px-4 md:px-5' : 'h-14 sm:h-16 px-3 sm:px-4 md:px-6'
+          isDecisionRoute ? 'h-14 px-3 sm:px-4 md:px-5' : 'h-14 sm:h-16 px-3 sm:px-4 md:px-6'
         )}
       >
         <div className="flex items-center gap-2 sm:gap-3">
@@ -48,10 +48,10 @@ export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: 
             </Button>
           )}
           <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
-          <h1 className={cn('font-bold leading-tight', isWorkspaceRoute ? 'text-lg sm:text-xl md:text-2xl' : 'text-lg sm:text-2xl')}>
+          <h1 className={cn('font-bold leading-tight', isDecisionRoute ? 'text-lg sm:text-xl md:text-2xl' : 'text-lg sm:text-2xl')}>
             {t('header.brand')}
           </h1>
-          {isWorkspaceRoute ? (
+          {isDecisionRoute ? (
             <span className="hidden lg:inline-flex rounded-full border border-gray-200 bg-gray-50 px-2 py-1 text-xs text-gray-600">
               {t('header.focusView')}
             </span>
@@ -70,7 +70,7 @@ export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: 
             <span className="hidden sm:inline">{t('header.gettingStarted')}</span>
           </Button>
           
-          {!isWorkspaceRoute && (
+          {!isDecisionRoute && (
             <div className="hidden lg:flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
               <span>{dateStr}</span>
               <span className="font-mono">{timeStr}</span>

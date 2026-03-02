@@ -9,6 +9,7 @@ import {
   getAllOrdersLocal,
   getAllPositionsLocal,
   isLocalPersistenceMode,
+  listStrategiesLocal,
 } from '@/features/persistence';
 import {
   DailyReview,
@@ -72,9 +73,14 @@ function toOrderApi(order: ReturnType<typeof getAllOrdersLocal>[number]) {
 /**
  * Fetch daily review from API
  */
-export async function getDailyReview(topN: number = 10, universe?: string | null): Promise<DailyReview> {
+export async function getDailyReview(
+  strategyId: string,
+  topN: number = 10,
+  universe?: string | null,
+): Promise<DailyReview> {
   if (isLocalPersistenceMode()) {
-    const strategy = getActiveStrategyLocal();
+    const strategy =
+      listStrategiesLocal().find((item) => item.id === strategyId) ?? getActiveStrategyLocal();
     const positions = getAllPositionsLocal();
     const orders = getAllOrdersLocal();
 
@@ -101,6 +107,7 @@ export async function getDailyReview(topN: number = 10, universe?: string | null
 
   const params = new URLSearchParams();
   params.set('top_n', String(topN));
+  params.set('strategy_id', strategyId);
   if (universe && universe.trim().length > 0) {
     params.set('universe', universe.trim());
   }
@@ -119,10 +126,11 @@ export async function getDailyReview(topN: number = 10, universe?: string | null
 /**
  * React Query hook for daily review
  */
-export function useDailyReview(topN: number = 10, universe?: string | null) {
+export function useDailyReview(strategyId: string | null, topN: number = 10, universe?: string | null) {
   return useQuery({
-    queryKey: queryKeys.dailyReview(topN, universe),
-    queryFn: () => getDailyReview(topN, universe),
+    queryKey: queryKeys.dailyReview(strategyId, topN, universe),
+    queryFn: () => getDailyReview(strategyId as string, topN, universe),
+    enabled: Boolean(strategyId),
     staleTime: 1000 * 60 * 5, // 5 minutes - review data is relatively stable
     refetchOnWindowFocus: false, // Don't refetch on window focus - user is reviewing
   });
