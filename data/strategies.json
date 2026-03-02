@@ -20,8 +20,8 @@
       "filt": {
         "min_price": 5.0,
         "max_price": 500.0,
-        "max_atr_pct": 15.0,
-        "require_trend_ok": true,
+        "max_atr_pct": 18.0,
+        "require_trend_ok": false,
         "require_rs_positive": false,
         "currencies": [
           "USD",
@@ -33,33 +33,33 @@
       "w_mom_6m": 0.45,
       "w_mom_12m": 0.35,
       "w_rs_6m": 0.2,
-      "top_n": 50
+      "top_n": 70
     },
     "signals": {
       "breakout_lookback": 50,
       "pullback_ma": 20,
-      "min_history": 252
+      "min_history": 2052
     },
     "risk": {
       "account_size": 500.0,
-      "risk_pct": 0.015,
-      "max_position_pct": 0.2,
+      "risk_pct": 0.02,
+      "max_position_pct": 0.6,
       "min_shares": 1,
-      "k_atr": 2.0,
+      "k_atr": 1.1,
       "min_rr": 2.0,
-      "max_fee_risk_pct": 0.2,
+      "rr_target": 2.0,
+      "commission_pct": 0.0,
+      "max_fee_risk_pct": 0.25,
       "regime_enabled": false,
       "regime_trend_sma": 200,
       "regime_trend_multiplier": 0.5,
       "regime_vol_atr_window": 14,
       "regime_vol_atr_pct_threshold": 6.0,
-      "regime_vol_multiplier": 0.5,
-      "rr_target": 2.0,
-      "commission_pct": 0.0
+      "regime_vol_multiplier": 0.5
     },
     "manage": {
       "breakeven_at_r": 1.0,
-      "trail_after_r": 2.0,
+      "trail_after_r": 2.5,
       "trail_sma": 20,
       "sma_buffer_pct": 0.005,
       "max_holding_days": 20,
@@ -97,12 +97,12 @@
         "provider": "ollama",
         "model": "mistral:7b-instruct",
         "base_url": "http://localhost:11434",
+        "api_key": "",
         "enable_cache": true,
         "enable_audit": true,
         "cache_path": "data/intelligence/llm_cache.json",
         "audit_path": "data/intelligence/llm_audit",
-        "max_concurrency": 4,
-        "api_key": ""
+        "max_concurrency": 4
       },
       "catalyst": {
         "lookback_hours": 72,
@@ -127,7 +127,7 @@
     "id": "default",
     "is_default": true,
     "created_at": "2026-02-08T00:00:00",
-    "updated_at": "2026-02-23T21:20:11"
+    "updated_at": "2026-03-02T09:53:26"
   },
   {
     "name": "1000",
