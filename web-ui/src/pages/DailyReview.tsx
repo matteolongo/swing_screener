@@ -16,7 +16,6 @@ import MetricHelpLabel from '@/components/domain/education/MetricHelpLabel';
 import { DAILY_REVIEW_GLOSSARY_KEYS } from '@/content/educationGlossary';
 import TradeInsightModal from '@/components/domain/recommendation/TradeInsightModal';
 import CandidateOrderModal from '@/components/domain/orders/CandidateOrderModal';
-import CachedSymbolPriceChart from '@/components/domain/market/CachedSymbolPriceChart';
 import { queryKeys } from '@/lib/queryKeys';
 import { t } from '@/i18n/t';
 import {
@@ -38,6 +37,7 @@ import {
 } from '@/features/portfolio/hooks';
 import UpdateStopModalForm from '@/components/domain/positions/UpdateStopModalForm';
 import ClosePositionModalForm from '@/components/domain/positions/ClosePositionModalForm';
+import { InsightPanel } from '@/components/coach/InsightPanel';
 
 type Step = 'new' | 'update' | 'close';
 const DECISION_STEPS: Step[] = ['new', 'update', 'close'];
@@ -47,6 +47,8 @@ export default function DailyReview() {
   const [selectedUniverse, setSelectedUniverse] = useState(
     () => parseUniverseFromStorage(localStorage.getItem(SCREENER_UNIVERSE_STORAGE_KEY)) ?? 'usd_all'
   );
+  const [hasEnteredDecision, setHasEnteredDecision] = useState(false);
+  const [expandedInsight, setExpandedInsight] = useState<Step | null>(null);
   const [insightCandidate, setInsightCandidate] = useState<DailyReviewCandidate | null>(null);
   const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<DailyReviewCandidate | null>(null);
@@ -122,6 +124,9 @@ export default function DailyReview() {
         await setActiveStrategyMutation.mutateAsync(strategyId);
         setActiveStrategyId(strategyId);
         setDismissedReadinessBlocker(false);
+        setCurrentStepIndex(0);
+        setHasEnteredDecision(false);
+        setExpandedInsight(null);
       } catch {
         // Mutation state surfaces the error to the user.
       }
@@ -140,6 +145,10 @@ export default function DailyReview() {
       if (step === 'update') return review.positionsUpdateStop.length > 0;
       return review.positionsClose.length > 0;
     });
+  }, [recommendedCandidates.length, review]);
+  const totalActions = useMemo(() => {
+    if (!review) return 0;
+    return recommendedCandidates.length + review.positionsUpdateStop.length + review.positionsClose.length;
   }, [recommendedCandidates.length, review]);
   const safeStepIndex = filteredSteps.length === 0 ? 0 : Math.min(currentStepIndex, filteredSteps.length - 1);
   const currentStep = filteredSteps[safeStepIndex] ?? null;
@@ -321,7 +330,12 @@ export default function DailyReview() {
           </div>
           <Button
             variant="secondary"
-            onClick={() => refetch()}
+            onClick={() => {
+              setCurrentStepIndex(0);
+              setHasEnteredDecision(false);
+              setExpandedInsight(null);
+              void refetch();
+            }}
             disabled={isFetching}
             title={t('dailyReview.header.refreshTitle')}
           >
@@ -343,10 +357,45 @@ export default function DailyReview() {
         />
       )}
 
-      {filteredSteps.length === 0 ? (
+      {totalActions === 0 ? (
         <Section title={t('dailyReview.sequential.todayTitle')}>
-          <p>{t('dailyReview.sequential.noActionRequired')}</p>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{t('dailyReview.sequential.disciplineMaintained')}</p>
+          <div className="py-12 text-center">
+            <h2 className="mb-2 text-xl font-medium">{t('dailyReview.sequential.noActionRequired')}</h2>
+            <p className="text-gray-500 dark:text-gray-400">{t('dailyReview.sequential.strategyAligned')}</p>
+            <p className="mt-4 text-gray-400 dark:text-gray-500">{t('dailyReview.sequential.disciplineMaintained')}</p>
+          </div>
+        </Section>
+      ) : !hasEnteredDecision ? (
+        <Section title={t('dailyReview.sequential.attentionTitle')}>
+          <div className="space-y-4 py-8">
+            <p>
+              {t('dailyReview.sequential.attentionNewCandidates', {
+                count: recommendedCandidates.length,
+                suffix: recommendedCandidates.length === 1 ? '' : 's',
+              })}
+            </p>
+            <p>
+              {t('dailyReview.sequential.attentionStopUpdates', {
+                count: review.positionsUpdateStop.length,
+                suffix: review.positionsUpdateStop.length === 1 ? '' : 's',
+              })}
+            </p>
+            <p>
+              {t('dailyReview.sequential.attentionCloses', {
+                count: review.positionsClose.length,
+                suffix: review.positionsClose.length === 1 ? '' : 's',
+              })}
+            </p>
+            <Button
+              onClick={() => {
+                setCurrentStepIndex(0);
+                setHasEnteredDecision(true);
+                setExpandedInsight(null);
+              }}
+            >
+              {t('dailyReview.sequential.enterDecisionMode')}
+            </Button>
+          </div>
         </Section>
       ) : (
         <div className="space-y-6">
@@ -377,6 +426,20 @@ export default function DailyReview() {
                     setShowCreateOrderModal(true);
                   }}
                 />
+                <InsightPanel
+                  title={t('dailyReview.insight.new.title')}
+                  summary={t('dailyReview.insight.new.summary')}
+                  isExpanded={expandedInsight === 'new'}
+                  onToggle={() => setExpandedInsight((current) => (current === 'new' ? null : 'new'))}
+                  details={
+                    <div className="space-y-1">
+                      <p>{t('dailyReview.insight.new.points.trend')}</p>
+                      <p>{t('dailyReview.insight.new.points.rr')}</p>
+                      <p>{t('dailyReview.insight.new.points.volatility')}</p>
+                      <p className="mt-2 italic">{t('dailyReview.insight.new.note')}</p>
+                    </div>
+                  }
+                />
               </div>
             </Section>
           ) : null}
@@ -392,19 +455,47 @@ export default function DailyReview() {
                     setUpdateStopPositionId(position.positionId);
                   }}
                 />
+                <InsightPanel
+                  title={t('dailyReview.insight.update.title')}
+                  summary={t('dailyReview.insight.update.summary')}
+                  isExpanded={expandedInsight === 'update'}
+                  onToggle={() => setExpandedInsight((current) => (current === 'update' ? null : 'update'))}
+                  details={
+                    <div className="space-y-1">
+                      <p>{t('dailyReview.insight.update.points.trailing')}</p>
+                      <p>{t('dailyReview.insight.update.points.volatility')}</p>
+                      <p>{t('dailyReview.insight.update.points.trend')}</p>
+                    </div>
+                  }
+                />
               </div>
             </Section>
           ) : null}
 
           {currentStep === 'close' ? (
             <Section title={t('dailyReview.sections.closeSuggested', { count: review.positionsClose.length })}>
-              <CloseTable
-                positions={review.positionsClose}
-                onAction={(position) => {
-                  setUpdateStopPositionId(null);
-                  setClosePositionId(position.positionId);
-                }}
-              />
+              <div className="space-y-3">
+                <CloseTable
+                  positions={review.positionsClose}
+                  onAction={(position) => {
+                    setUpdateStopPositionId(null);
+                    setClosePositionId(position.positionId);
+                  }}
+                />
+                <InsightPanel
+                  title={t('dailyReview.insight.close.title')}
+                  summary={t('dailyReview.insight.close.summary')}
+                  isExpanded={expandedInsight === 'close'}
+                  onToggle={() => setExpandedInsight((current) => (current === 'close' ? null : 'close'))}
+                  details={
+                    <div className="space-y-1">
+                      <p>{t('dailyReview.insight.close.points.stop')}</p>
+                      <p>{t('dailyReview.insight.close.points.trend')}</p>
+                      <p>{t('dailyReview.insight.close.points.risk')}</p>
+                    </div>
+                  }
+                />
+              </div>
             </Section>
           ) : null}
 
@@ -560,8 +651,13 @@ function CandidatesTable({
       key: 'rr',
       header: <MetricHelpLabel metricKey="RR" labelOverride="R:R" className="justify-end w-full" />,
       renderCell: (candidate) => (
-        <div className="text-right font-bold">
-          {t('common.units.rValue', { value: formatNumber(candidate.rReward, 1) })}
+        <div className="flex justify-end">
+          <Badge
+            variant={candidate.rReward >= 2 ? 'success' : 'warning'}
+            title={t('dailyReview.table.candidates.rrBadgeTitle')}
+          >
+            {t('common.units.rValue', { value: formatNumber(candidate.rReward, 1) })}
+          </Badge>
         </div>
       ),
     },
@@ -685,10 +781,13 @@ function UpdateStopTable({
       key: 'rNow',
       header: <MetricHelpLabel metricKey="R_NOW" className="justify-end w-full" />,
       renderCell: (pos) => (
-        <div className="text-right">
-          <span className={pos.rNow >= 0 ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}>
+        <div className="flex justify-end">
+          <Badge
+            variant={pos.rNow >= 1 ? 'success' : pos.rNow >= 0 ? 'warning' : 'error'}
+            title={t('dailyReview.table.update.rNowBadgeTitle')}
+          >
             {t('common.units.rValue', { value: formatNumber(pos.rNow, 2) })}
-          </span>
+          </Badge>
         </div>
       ),
     },
@@ -762,10 +861,13 @@ function CloseTable({
       key: 'rNow',
       header: <MetricHelpLabel metricKey="R_NOW" className="justify-end w-full" />,
       renderCell: (pos) => (
-        <div className="text-right">
-          <span className="font-bold text-red-700 dark:text-red-300">
+        <div className="flex justify-end">
+          <Badge
+            variant={pos.rNow > 0 ? 'warning' : 'error'}
+            title={t('dailyReview.table.close.rNowBadgeTitle')}
+          >
             {t('common.units.rValue', { value: formatNumber(pos.rNow, 2) })}
-          </span>
+          </Badge>
         </div>
       ),
     },
@@ -814,7 +916,6 @@ function TickerWithChart({ ticker, title }: { ticker: string; title: string }) {
       >
         {ticker}
       </a>
-      <CachedSymbolPriceChart ticker={ticker} className="mt-1" />
     </div>
   );
 }
