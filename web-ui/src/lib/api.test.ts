@@ -18,13 +18,6 @@ describe('API Client', () => {
       expect(API_ENDPOINTS.strategyById('strat-1')).toBe('/api/strategy/strat-1')
     })
 
-    it('has all screener endpoints', () => {
-      expect(API_ENDPOINTS.screenerRun).toBe('/api/screener/run')
-      expect(API_ENDPOINTS.screenerRunStatus('job-1')).toBe('/api/screener/run/job-1')
-      expect(API_ENDPOINTS.screenerUniverses).toBe('/api/screener/universes')
-      expect(API_ENDPOINTS.screenerPreview).toBe('/api/screener/preview-order')
-    })
-
     it('has all portfolio endpoints', () => {
       expect(API_ENDPOINTS.positions).toBe('/api/portfolio/positions')
       expect(API_ENDPOINTS.orders).toBe('/api/portfolio/orders')
@@ -57,7 +50,7 @@ describe('API Client', () => {
     })
 
     it('handles absolute paths', () => {
-      expect(apiUrl('/api/screener/run')).toBe(expectedUrl('/api/screener/run'))
+      expect(apiUrl('/api/daily-review')).toBe(expectedUrl('/api/daily-review'))
     })
   })
 })

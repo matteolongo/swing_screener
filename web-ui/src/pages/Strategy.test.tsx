@@ -18,29 +18,51 @@ describe('Strategy Page', () => {
     await waitForQueriesToSettle(queryClient);
   });
 
-  it('toggles advanced settings via beginner mode', async () => {
+  it('unlocks advanced settings only after explicit confirmation', async () => {
     const { user, queryClient } = renderWithProviders(<StrategyPage />);
 
-    // In beginner mode, advanced settings are hidden
+    expect(await screen.findByRole('button', { name: /unlock advanced/i })).toBeInTheDocument();
     expect(screen.queryByText('SMA Fast')).not.toBeInTheDocument();
 
-    // Find and toggle beginner mode off to access advanced settings
-    const beginnerModeCheckbox = await screen.findByRole('checkbox');
     await act(async () => {
-      await user.click(beginnerModeCheckbox);
-    });
-
-    // Now advanced settings card should be visible, need to expand it
-    const advancedToggle = await screen.findByRole('button', { name: /show advanced/i });
-    await act(async () => {
-      await user.click(advancedToggle);
+      await user.click(screen.getByRole('button', { name: /unlock advanced/i }));
     });
 
     expect(await screen.findByText('SMA Fast')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /show advanced/i })).not.toBeInTheDocument();
     await waitForQueriesToSettle(queryClient);
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
+  });
+
+  it('blocks unsafe save in simple mode and allows save after unlocking advanced', async () => {
+    const { user, queryClient } = renderWithProviders(<StrategyPage />);
+
+    const riskInput = await screen.findByLabelText(/risk per trade/i);
+    await act(async () => {
+      await user.clear(riskInput);
+      await user.type(riskInput, '4');
+    });
+    await waitForQueriesToSettle(queryClient);
+
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: /save changes/i }));
+    });
+
+    expect(
+      await screen.findByText('This configuration violates beginner safety rules.')
+    ).toBeInTheDocument();
+
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: /unlock advanced/i }));
+    });
+
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: /save changes/i }));
+    });
+
+    expect(await screen.findByText('Saved')).toBeInTheDocument();
   });
 
   it('disables delete for default strategy', async () => {
@@ -72,11 +94,25 @@ describe('Strategy Page', () => {
     await waitForQueriesToSettle(queryClient);
   });
 
-  it('renders currency filter selector', async () => {
+  it('renders review universe selector', async () => {
     const { queryClient } = renderWithProviders(<StrategyPage />);
 
-    expect(await screen.findByRole('combobox', { name: /currencies/i })).toBeInTheDocument();
+    expect(await screen.findByRole('combobox', { name: /review universe/i })).toBeInTheDocument();
     await waitForQueriesToSettle(queryClient);
+  });
+
+  it('keeps low-level filters hidden until advanced is unlocked', async () => {
+    const { user } = renderWithProviders(<StrategyPage />);
+
+    await screen.findByLabelText(/risk per trade/i);
+
+    expect(screen.queryByText('SMA Fast')).not.toBeInTheDocument();
+
+    await act(async () => {
+      await user.click(await screen.findByRole('button', { name: /unlock advanced/i }));
+    });
+
+    expect(await screen.findByText('SMA Fast')).toBeInTheDocument();
   });
 
   it('keeps strategy management visible without mobile toggle', async () => {

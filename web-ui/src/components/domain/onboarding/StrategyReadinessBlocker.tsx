@@ -57,7 +57,7 @@ export default function StrategyReadinessBlocker({
                   onConfigureStrategy();
                   return;
                 }
-                navigate('/onboarding?step=2');
+                navigate('/onboarding');
               }}
               className="flex items-center gap-2"
             >
