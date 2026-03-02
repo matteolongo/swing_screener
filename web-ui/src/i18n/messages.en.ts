@@ -905,6 +905,7 @@ export const messagesEn = {
       todayTitle: 'Today',
       noActionRequired: 'No action required.',
       strategyAligned: 'Your strategy remains aligned.',
+      filteredCandidates: '{{count}} candidate{{suffix}} screened, but none met recommendation thresholds.',
       disciplineMaintained: 'Discipline maintained.',
       attentionTitle: 'Attention Required',
       attentionNewCandidates: '{{count}} new trade candidate{{suffix}}',

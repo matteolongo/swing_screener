@@ -533,7 +533,19 @@ export default function StrategyPage() {
           <Section title={t('strategyPage.simplified.sections.riskProfile')}>
             <Card variant="bordered">
               <CardContent>
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+                  <NumberInput
+                    label={t('strategyPage.core.fields.accountSize')}
+                    value={draft.risk.accountSize}
+                    onChange={(value) =>
+                      setDraft({
+                        ...draft,
+                        risk: { ...draft.risk, accountSize: value },
+                      })
+                    }
+                    step={1000}
+                    min={0}
+                  />
                   <NumberInput
                     label={t('strategyPage.core.fields.riskPerTrade')}
                     value={draft.risk.riskPct * 100}

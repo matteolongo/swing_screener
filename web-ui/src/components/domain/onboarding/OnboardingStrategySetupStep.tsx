@@ -62,7 +62,20 @@ export default function OnboardingStrategySetupStep({ onSaved }: OnboardingStrat
     setDraft(applyPresetToStrategy(draft, preset));
   };
 
-  const updateRiskField = (key: 'accountSize' | 'riskPct' | 'maxPositionPct' | 'minRr', rawValue: string) => {
+  const updateAccountSize = (rawValue: string) => {
+    if (!draft) return;
+    const nextValue = Number.parseFloat(rawValue);
+    setStatusMessage(null);
+    setDraft({
+      ...draft,
+      risk: {
+        ...draft.risk,
+        accountSize: Number.isFinite(nextValue) ? nextValue : 0,
+      },
+    });
+  };
+
+  const updateRiskField = (key: 'riskPct' | 'maxPositionPct' | 'minRr', rawValue: string) => {
     if (!draft) return;
     const nextValue = Number.parseFloat(rawValue);
     setStatusMessage(null);
@@ -110,6 +123,18 @@ export default function OnboardingStrategySetupStep({ onSaved }: OnboardingStrat
       <CardContent className="space-y-4">
         <p className="text-sm text-gray-600">{t('onboardingPage.strategyStep.description')}</p>
 
+        <label className="block text-sm font-medium">
+          <div className="mb-1">{t('onboardingPage.strategyStep.fields.accountSize')}</div>
+          <input
+            type="number"
+            value={Number.isFinite(draft.risk.accountSize) ? draft.risk.accountSize : 0}
+            onChange={(event) => updateAccountSize(event.target.value)}
+            className={strategyFieldClass}
+            min={0}
+            step={100}
+          />
+        </label>
+
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {(['conservative', 'balanced', 'aggressive', 'custom'] as const).map((mode) => (
             <Button
@@ -150,18 +175,6 @@ export default function OnboardingStrategySetupStep({ onSaved }: OnboardingStrat
 
         {setupMode === 'custom' ? (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="text-sm font-medium">
-              <div className="mb-1">{t('onboardingPage.strategyStep.fields.accountSize')}</div>
-              <input
-                type="number"
-                value={Number.isFinite(draft.risk.accountSize) ? draft.risk.accountSize : 0}
-                onChange={(event) => updateRiskField('accountSize', event.target.value)}
-                className={strategyFieldClass}
-                min={0}
-                step={100}
-              />
-            </label>
-
             <label className="text-sm font-medium">
               <div className="mb-1">{t('onboardingPage.strategyStep.fields.riskPct')}</div>
               <input

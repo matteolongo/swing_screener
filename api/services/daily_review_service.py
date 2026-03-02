@@ -74,6 +74,7 @@ class DailyReviewService:
                 name=c.name,
                 sector=c.sector,
                 recommendation=c.recommendation,
+                price_history=c.price_history or [],
             )
             for c in candidates
         ]
@@ -248,6 +249,7 @@ class DailyReviewService:
                 name=c.name,
                 sector=c.sector,
                 recommendation=c.recommendation,
+                price_history=c.price_history or [],
             )
             for c in candidates
         ]

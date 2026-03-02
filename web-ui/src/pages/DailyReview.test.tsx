@@ -362,4 +362,44 @@ describe('DailyReview Page', () => {
       expect(screen.queryByText('Trade Rationale')).not.toBeInTheDocument()
     })
   })
+
+  it('explains when candidates exist but none are recommended', async () => {
+    server.use(
+      http.get('*/api/daily-review', () =>
+        HttpResponse.json({
+          ...mockDailyReview,
+          new_candidates: [
+            {
+              ...mockDailyReview.new_candidates[0],
+              ticker: 'FILTERED',
+              recommendation: {
+                ...mockDailyReview.new_candidates[0].recommendation,
+                verdict: 'NOT_RECOMMENDED',
+              },
+            },
+          ],
+          positions_update_stop: [],
+          positions_close: [],
+          positions_hold: [],
+          summary: {
+            ...mockDailyReview.summary,
+            no_action: 0,
+            update_stop: 0,
+            close_positions: 0,
+            new_candidates: 1,
+          },
+        })
+      )
+    )
+
+    renderWithProviders(<DailyReview />)
+
+    await waitFor(() => {
+      expect(screen.getByText('No action required.')).toBeInTheDocument()
+      expect(
+        screen.getByText('1 candidate screened, but none met recommendation thresholds.')
+      ).toBeInTheDocument()
+      expect(screen.queryByText('Attention Required')).not.toBeInTheDocument()
+    })
+  })
 })

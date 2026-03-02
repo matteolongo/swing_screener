@@ -25,6 +25,13 @@ def _pick_feature_column(df: pd.DataFrame, pattern: str, fallback: str) -> str |
     return None
 
 
+def _numeric_series(df: pd.DataFrame, column: str | None) -> pd.Series:
+    if not column or column not in df.columns:
+        return pd.Series(index=df.index, dtype=float)
+    # Some providers/merges can surface non-scalar objects (e.g. []): coerce them to NaN.
+    return pd.to_numeric(df[column], errors="coerce")
+
+
 def add_execution_guidance(
     report_df: pd.DataFrame, cfg: ExecutionConfig = ExecutionConfig()
 ) -> pd.DataFrame:
@@ -46,14 +53,10 @@ def add_execution_guidance(
     ma_col = _pick_feature_column(out, r"^ma\d+_level$", "ma20_level")
     atr_col = _pick_feature_column(out, r"^atr\d+$", "atr14")
 
-    last = out["last"] if "last" in out.columns else pd.Series(index=out.index, dtype=float)
-    breakout_level = (
-        out["breakout_level"]
-        if "breakout_level" in out.columns
-        else pd.Series(index=out.index, dtype=float)
-    )
-    ma_level = out[ma_col] if ma_col else pd.Series(index=out.index, dtype=float)
-    atr_val = out[atr_col] if atr_col else pd.Series(index=out.index, dtype=float)
+    last = _numeric_series(out, "last")
+    breakout_level = _numeric_series(out, "breakout_level")
+    ma_level = _numeric_series(out, ma_col)
+    atr_val = _numeric_series(out, atr_col)
 
     mask_both = out["signal"] == "both"
     mask_breakout = out["signal"] == "breakout"

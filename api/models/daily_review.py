@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 from api.models.recommendation import Recommendation
 from api.models.portfolio import Position, Order
 from api.models.strategy import Strategy
+from api.models.screener import PriceHistoryPoint
 
 
 class DailyReviewCandidate(BaseModel):
@@ -19,6 +20,7 @@ class DailyReviewCandidate(BaseModel):
     name: str | None = None
     sector: str | None = None
     recommendation: Optional[Recommendation] = None
+    price_history: list[PriceHistoryPoint] = Field(default_factory=list)
 
 
 class DailyReviewPositionHold(BaseModel):

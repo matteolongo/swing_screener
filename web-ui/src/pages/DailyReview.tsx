@@ -362,6 +362,14 @@ export default function DailyReview() {
           <div className="py-12 text-center">
             <h2 className="mb-2 text-xl font-medium">{t('dailyReview.sequential.noActionRequired')}</h2>
             <p className="text-gray-500 dark:text-gray-400">{t('dailyReview.sequential.strategyAligned')}</p>
+            {hiddenCandidates > 0 ? (
+              <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
+                {t('dailyReview.sequential.filteredCandidates', {
+                  count: hiddenCandidates,
+                  suffix: hiddenCandidates === 1 ? '' : 's',
+                })}
+              </p>
+            ) : null}
             <p className="mt-4 text-gray-400 dark:text-gray-500">{t('dailyReview.sequential.disciplineMaintained')}</p>
           </div>
         </Section>
@@ -613,6 +621,7 @@ function CandidatesTable({
         <TickerWithChart
           ticker={candidate.ticker}
           title={t('dailyReview.table.candidates.yahooFinanceTooltip', { ticker: candidate.ticker })}
+          priceHistory={candidate.priceHistory}
         />
       ),
     },
@@ -904,18 +913,68 @@ function CloseTable({
   );
 }
 
-function TickerWithChart({ ticker, title }: { ticker: string; title: string }) {
+function buildSparklinePoints(history: { date: string; close: number }[], width: number, height: number): string {
+  if (history.length < 2) {
+    return '';
+  }
+  const minValue = Math.min(...history.map((point) => point.close));
+  const maxValue = Math.max(...history.map((point) => point.close));
+  const valueRange = maxValue - minValue;
+  return history
+    .map((point, index) => {
+      const x = history.length > 1 ? (index / (history.length - 1)) * width : 0;
+      const normalizedY = valueRange > 0 ? (point.close - minValue) / valueRange : 0.5;
+      const y = (1 - normalizedY) * height;
+      return `${x.toFixed(2)},${y.toFixed(2)}`;
+    })
+    .join(' ');
+}
+
+function TickerWithChart({
+  ticker,
+  title,
+  priceHistory,
+}: {
+  ticker: string;
+  title: string;
+  priceHistory?: { date: string; close: number }[];
+}) {
+  const history = (priceHistory ?? []).filter(
+    (point) => Number.isFinite(point.close) && point.close > 0
+  );
+  const sparklinePoints = buildSparklinePoints(history, 84, 22);
+  const first = history[0]?.close;
+  const last = history[history.length - 1]?.close;
+  const isUp = first != null && last != null ? last >= first : true;
+
   return (
-    <div className="font-mono font-bold">
+    <div className="space-y-1">
       <a
         href={`https://finance.yahoo.com/quote/${ticker}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-blue-600 hover:text-blue-800 hover:underline"
+        className="font-mono font-bold text-blue-600 hover:text-blue-800 hover:underline"
         title={title}
       >
         {ticker}
       </a>
+      {history.length >= 2 ? (
+        <svg
+          viewBox="0 0 84 22"
+          className="h-[22px] w-[84px]"
+          role="img"
+          aria-label={`Price trend for ${ticker}`}
+        >
+          <polyline
+            points={sparklinePoints}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            vectorEffect="non-scaling-stroke"
+            className={isUp ? 'text-emerald-500' : 'text-rose-500'}
+          />
+        </svg>
+      ) : null}
     </div>
   );
 }

@@ -142,3 +142,23 @@ def test_guidance_supports_dynamic_ma_and_atr_columns():
     assert row["suggested_order_type"] == "BUY_LIMIT"
     assert row["suggested_order_price"] == approx(102.0, rel=1e-9)
     assert row["order_price_band_high"] == approx(102.0 + 0.1 * 5.0, rel=1e-9)
+
+
+def test_guidance_coerces_non_numeric_breakout_values_to_nan():
+    df = pd.DataFrame(
+        {
+            "signal": ["breakout"],
+            "last": [100.0],
+            "breakout_level": [[]],
+            "atr14": [2.0],
+            "ma20_level": [np.nan],
+        },
+        index=["AAA"],
+    )
+
+    out = add_execution_guidance(df)
+    row = out.loc["AAA"]
+
+    # Non-numeric breakout_level should not crash and should produce no actionable guidance.
+    assert row["suggested_order_type"] == "SKIP"
+    assert np.isnan(row["suggested_order_price"])

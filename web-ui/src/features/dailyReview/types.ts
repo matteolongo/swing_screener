@@ -4,6 +4,11 @@
 
 import { Recommendation, RecommendationAPI, transformRecommendation } from '@/types/recommendation';
 
+export interface PriceHistoryPointAPI {
+  date: string;
+  close: number;
+}
+
 // API response types (snake_case from backend)
 export interface DailyReviewCandidateAPI {
   ticker: string;
@@ -16,6 +21,7 @@ export interface DailyReviewCandidateAPI {
   name: string | null;
   sector: string | null;
   recommendation?: RecommendationAPI | null;
+  price_history?: PriceHistoryPointAPI[] | null;
 }
 
 export interface DailyReviewPositionHoldAPI {
@@ -78,6 +84,7 @@ export interface DailyReviewCandidate {
   name: string | null;
   sector: string | null;
   recommendation?: Recommendation;
+  priceHistory: PriceHistoryPointAPI[];
 }
 
 export interface DailyReviewPositionHold {
@@ -141,6 +148,7 @@ export function transformCandidate(api: DailyReviewCandidateAPI): DailyReviewCan
     name: api.name,
     sector: api.sector,
     recommendation: api.recommendation ? transformRecommendation(api.recommendation) : undefined,
+    priceHistory: api.price_history ?? [],
   };
 }
 
