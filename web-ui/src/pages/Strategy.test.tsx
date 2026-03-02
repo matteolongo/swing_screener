@@ -72,10 +72,11 @@ describe('Strategy Page', () => {
     await waitForQueriesToSettle(queryClient);
   });
 
-  it('renders currency filter selector', async () => {
+  it('renders universe selectors', async () => {
     const { queryClient } = renderWithProviders(<StrategyPage />);
 
     expect(await screen.findByRole('combobox', { name: /currencies/i })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: /review universe/i })).toBeInTheDocument();
     await waitForQueriesToSettle(queryClient);
   });
 

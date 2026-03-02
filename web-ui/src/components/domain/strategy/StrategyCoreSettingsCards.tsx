@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import Card, { CardContent, CardHeader, CardTitle } from '@/components/common/Card';
 import { t } from '@/i18n/t';
 import {
@@ -9,6 +10,10 @@ import {
 } from '@/components/domain/strategy/StrategyFieldControls';
 import { Strategy, StrategyCurrency } from '@/features/strategy/types';
 import type { ValidationWarning } from '@/features/strategy/api';
+import {
+  parseUniverseFromStorage,
+  SCREENER_UNIVERSE_STORAGE_KEY,
+} from '@/features/screener/universeStorage';
 import EnhancedSignalsCard from './EnhancedSignalsCard';
 import EnhancedRiskCard from './EnhancedRiskCard';
 
@@ -52,6 +57,24 @@ export default function StrategyCoreSettingsCards({
     { value: 'usd', label: t('strategyPage.core.options.currencyUsd') },
     { value: 'eur', label: t('strategyPage.core.options.currencyEur') },
   ];
+  const reviewUniverseOptions = [
+    { value: 'usd_all', label: t('strategyPage.core.options.reviewUniverseUsdAll') },
+    { value: 'usd_mega_stocks', label: t('strategyPage.core.options.reviewUniverseUsdMegaStocks') },
+    { value: 'usd_core_etfs', label: t('strategyPage.core.options.reviewUniverseUsdCoreEtfs') },
+    { value: 'usd_defense_all', label: t('strategyPage.core.options.reviewUniverseUsdDefenseAll') },
+    { value: 'usd_healthcare_all', label: t('strategyPage.core.options.reviewUniverseUsdHealthcareAll') },
+    { value: 'eur_europe_large', label: t('strategyPage.core.options.reviewUniverseEurEuropeLarge') },
+    { value: 'eur_amsterdam_all', label: t('strategyPage.core.options.reviewUniverseEurAmsterdamAll') },
+    { value: 'eur_amsterdam_aex', label: t('strategyPage.core.options.reviewUniverseEurAmsterdamAex') },
+    { value: 'eur_amsterdam_amx', label: t('strategyPage.core.options.reviewUniverseEurAmsterdamAmx') },
+  ];
+  const [selectedReviewUniverse, setSelectedReviewUniverse] = useState(() =>
+    parseUniverseFromStorage(localStorage.getItem(SCREENER_UNIVERSE_STORAGE_KEY)) ?? 'usd_all'
+  );
+
+  useEffect(() => {
+    localStorage.setItem(SCREENER_UNIVERSE_STORAGE_KEY, JSON.stringify(selectedReviewUniverse));
+  }, [selectedReviewUniverse]);
 
   return (
     <>
@@ -318,6 +341,12 @@ export default function StrategyCoreSettingsCards({
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <SelectInput
+              label={t('strategyPage.core.fields.reviewUniverse')}
+              value={selectedReviewUniverse}
+              onChange={(value) => setSelectedReviewUniverse(value)}
+              options={reviewUniverseOptions}
+            />
             <NumberInput
               label={t('strategyPage.core.fields.minPrice')}
               value={draft.universe.filt.minPrice}
@@ -367,6 +396,7 @@ export default function StrategyCoreSettingsCards({
               help={help.currencies}
             />
           </div>
+          <p className="mt-3 text-xs text-gray-500">{t('strategyPage.core.fields.reviewUniverseHint')}</p>
         </CardContent>
       </Card>
 

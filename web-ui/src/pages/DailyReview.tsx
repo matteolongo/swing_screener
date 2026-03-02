@@ -44,6 +44,9 @@ const DECISION_STEPS: Step[] = ['new', 'update', 'close'];
 
 export default function DailyReview() {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [selectedUniverse, setSelectedUniverse] = useState(
+    () => parseUniverseFromStorage(localStorage.getItem(SCREENER_UNIVERSE_STORAGE_KEY)) ?? 'usd_all'
+  );
   const [insightCandidate, setInsightCandidate] = useState<DailyReviewCandidate | null>(null);
   const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<DailyReviewCandidate | null>(null);
@@ -59,7 +62,17 @@ export default function DailyReview() {
   const strategiesQuery = useStrategiesQuery();
   const setActiveStrategyMutation = useSetActiveStrategyMutation();
   const { activeStrategyId, setActiveStrategyId } = useActiveStrategyStore();
-  const selectedUniverse = parseUniverseFromStorage(localStorage.getItem(SCREENER_UNIVERSE_STORAGE_KEY));
+  const reviewUniverseOptions = [
+    { value: 'usd_all', label: t('strategyPage.core.options.reviewUniverseUsdAll') },
+    { value: 'usd_mega_stocks', label: t('strategyPage.core.options.reviewUniverseUsdMegaStocks') },
+    { value: 'usd_core_etfs', label: t('strategyPage.core.options.reviewUniverseUsdCoreEtfs') },
+    { value: 'usd_defense_all', label: t('strategyPage.core.options.reviewUniverseUsdDefenseAll') },
+    { value: 'usd_healthcare_all', label: t('strategyPage.core.options.reviewUniverseUsdHealthcareAll') },
+    { value: 'eur_europe_large', label: t('strategyPage.core.options.reviewUniverseEurEuropeLarge') },
+    { value: 'eur_amsterdam_all', label: t('strategyPage.core.options.reviewUniverseEurAmsterdamAll') },
+    { value: 'eur_amsterdam_aex', label: t('strategyPage.core.options.reviewUniverseEurAmsterdamAex') },
+    { value: 'eur_amsterdam_amx', label: t('strategyPage.core.options.reviewUniverseEurAmsterdamAmx') },
+  ];
   const strategies = strategiesQuery.data ?? [];
   const selectedStrategy = strategies.find((strategy) => strategy.id === activeStrategyId) ?? null;
   const activeReviewStrategyId = selectedStrategy?.id ?? null;
@@ -266,22 +279,46 @@ export default function DailyReview() {
           </p>
         </div>
         <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center">
-          <label htmlFor="daily-review-active-strategy" className="text-xs text-gray-500 dark:text-gray-400">
-            {t('sidebar.activeStrategy')}
-          </label>
-          <select
-            id="daily-review-active-strategy"
-            value={selectedStrategy.id}
-            onChange={(event) => void handleSelectStrategy(event.target.value)}
-            className="w-44 px-3 py-2 border border-border rounded-lg bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
-            disabled={setActiveStrategyMutation.isPending}
-          >
-            {strategies.map((strategy) => (
-              <option key={strategy.id} value={strategy.id}>
-                {strategy.name}
-              </option>
-            ))}
-          </select>
+          <div className="flex items-center gap-2">
+            <label htmlFor="daily-review-active-strategy" className="text-xs text-gray-500 dark:text-gray-400">
+              {t('sidebar.activeStrategy')}
+            </label>
+            <select
+              id="daily-review-active-strategy"
+              value={selectedStrategy.id}
+              onChange={(event) => void handleSelectStrategy(event.target.value)}
+              className="w-44 px-3 py-2 border border-border rounded-lg bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+              disabled={setActiveStrategyMutation.isPending}
+            >
+              {strategies.map((strategy) => (
+                <option key={strategy.id} value={strategy.id}>
+                  {strategy.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <label htmlFor="daily-review-universe" className="text-xs text-gray-500 dark:text-gray-400">
+              {t('strategyPage.core.fields.reviewUniverse')}
+            </label>
+            <select
+              id="daily-review-universe"
+              value={selectedUniverse}
+              onChange={(event) => {
+                const nextUniverse = event.target.value;
+                setSelectedUniverse(nextUniverse);
+                localStorage.setItem(SCREENER_UNIVERSE_STORAGE_KEY, JSON.stringify(nextUniverse));
+                setCurrentStepIndex(0);
+              }}
+              className="w-52 px-3 py-2 border border-border rounded-lg bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+            >
+              {reviewUniverseOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
           <Button
             variant="secondary"
             onClick={() => refetch()}

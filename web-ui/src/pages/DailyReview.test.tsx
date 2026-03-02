@@ -113,6 +113,7 @@ describe('DailyReview Page', () => {
     const { user } = renderWithProviders(<DailyReview />)
 
     await waitFor(() => {
+      expect(screen.getByRole('combobox', { name: /review universe/i })).toBeInTheDocument()
       expect(screen.getByText('Step 1 of 2')).toBeInTheDocument()
       expect(screen.getByText('Daily Review Glossary')).toBeInTheDocument()
       expect(screen.queryByText('Stop Management Glossary')).not.toBeInTheDocument()
