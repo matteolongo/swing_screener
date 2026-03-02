@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { BookOpen, ClipboardCheck, SlidersHorizontal } from 'lucide-react';
+import { Archive, BookOpen, ClipboardCheck, SlidersHorizontal } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { t } from '@/i18n/t';
 
@@ -13,6 +13,11 @@ const navigation = [
     labelKey: 'sidebar.nav.strategy',
     href: '/strategy',
     icon: SlidersHorizontal,
+  },
+  {
+    labelKey: 'sidebar.nav.archive',
+    href: '/archive',
+    icon: Archive,
   },
   {
     labelKey: 'sidebar.nav.learn',

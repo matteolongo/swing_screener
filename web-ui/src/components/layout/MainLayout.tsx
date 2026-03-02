@@ -13,19 +13,19 @@ export default function MainLayout() {
   const { status: onboardingStatus } = useOnboardingStore();
   const ordersQuery = useOrders('all');
   const positionsQuery = usePositions('all');
-  const isWorkspaceRoute = useMemo(
-    () => location.pathname === '/workspace' || location.pathname.startsWith('/workspace/'),
+  const isDecisionRoute = useMemo(
+    () => location.pathname === '/daily-review' || location.pathname.startsWith('/daily-review/'),
     [location.pathname]
   );
   const isOnboardingRoute = useMemo(
     () => location.pathname === '/onboarding' || location.pathname.startsWith('/onboarding/'),
     [location.pathname]
   );
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(isWorkspaceRoute);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(isDecisionRoute);
 
   useEffect(() => {
-    setIsSidebarCollapsed(isWorkspaceRoute);
-  }, [isWorkspaceRoute]);
+    setIsSidebarCollapsed(isDecisionRoute);
+  }, [isDecisionRoute]);
 
   useEffect(() => {
     if (onboardingStatus !== 'new' || isOnboardingRoute) {
@@ -67,7 +67,7 @@ export default function MainLayout() {
           <Sidebar
             className="w-64 shrink-0"
             onNavigate={() => {
-              if (!isWorkspaceRoute) {
+              if (!isDecisionRoute) {
                 setIsSidebarCollapsed(true);
               }
             }}
@@ -76,7 +76,7 @@ export default function MainLayout() {
         <main
           className={cn(
             'flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900',
-            isWorkspaceRoute ? 'p-3 sm:p-4 lg:p-5' : 'p-3 sm:p-4 md:p-6'
+            isDecisionRoute ? 'p-3 sm:p-4 lg:p-5' : 'p-3 sm:p-4 md:p-6'
           )}
         >
           <Outlet />

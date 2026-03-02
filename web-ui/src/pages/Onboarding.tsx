@@ -1,5 +1,5 @@
-import { useEffect, useMemo, type ReactNode } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useMemo, type ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { CheckCircle, Calendar, Search, ShoppingCart } from 'lucide-react';
 import Button from '@/components/common/Button';
 import Card, { CardContent } from '@/components/common/Card';
@@ -85,28 +85,10 @@ const STEPS: OnboardingStep[] = [
   },
 ];
 
-function parseStep(searchParams: URLSearchParams): number | null {
-  const raw = searchParams.get('step');
-  if (!raw) return null;
-  const parsed = Number.parseInt(raw, 10);
-  if (!Number.isFinite(parsed)) return null;
-  if (parsed < 1 || parsed > STEPS.length) return null;
-  return parsed - 1;
-}
-
 export default function OnboardingPage() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const { currentStep, setCurrentStep, completeOnboarding, dismissOnboarding } = useOnboardingStore();
   const { isReady: strategyReady } = useStrategyReadiness();
-
-  useEffect(() => {
-    const requestedStep = parseStep(searchParams);
-    if (requestedStep == null || requestedStep === currentStep) {
-      return;
-    }
-    setCurrentStep(requestedStep);
-  }, [currentStep, searchParams, setCurrentStep]);
 
   const stepIndex = Math.min(Math.max(currentStep, 0), STEPS.length - 1);
   const step = STEPS[stepIndex];
@@ -123,7 +105,7 @@ export default function OnboardingPage() {
   const handleNext = () => {
     if (stepIndex >= STEPS.length - 1) {
       completeOnboarding();
-      navigate('/workspace');
+      navigate('/daily-review');
       return;
     }
 
@@ -141,7 +123,7 @@ export default function OnboardingPage() {
 
   const handleSkip = () => {
     dismissOnboarding();
-    navigate('/workspace');
+    navigate('/daily-review');
   };
 
   return (
