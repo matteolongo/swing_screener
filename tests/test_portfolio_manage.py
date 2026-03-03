@@ -82,3 +82,27 @@ def test_trailing_stop_above_entry_without_initial_risk_errors():
     )
     with pytest.raises(ValueError):
         evaluate_positions(ohlcv, [pos], ManageConfig())
+
+
+def test_trailing_suggestion_below_one_cent_does_not_trigger_move():
+    # trailing stop raw value: 17.84325 * (1 - 0.005) = 17.75403375 -> rounds to 17.75
+    closes = [17.84325] * 20
+    ohlcv = _make_ohlcv({"AAA": closes})
+    pos = Position(
+        ticker="AAA",
+        status="open",
+        entry_date="2026-01-01",
+        entry_price=10.0,
+        stop_price=17.75,
+        shares=1,
+        initial_risk=1.0,
+    )
+    updates, _ = evaluate_positions(
+        ohlcv,
+        [pos],
+        ManageConfig(breakeven_at_R=999.0, trail_after_R=2.0, trail_sma=20, sma_buffer_pct=0.005, max_holding_days=999),
+    )
+
+    update = updates[0]
+    assert update.stop_suggested == pytest.approx(17.75)
+    assert update.action == "NO_ACTION"

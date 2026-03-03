@@ -65,13 +65,13 @@ describe('portfolio local persistence service', () => {
 
     const position = listPositionsLocal('open')[0];
     updatePositionStopLocal(position.positionId!, {
-      newStop: 195,
+      newStop: 195.126,
       reason: 'trail',
     });
 
     const pendingStopOrders = listOrdersLocal('pending').filter((order) => order.orderKind === 'stop');
     expect(pendingStopOrders).toHaveLength(1);
-    expect(pendingStopOrders[0].stopPrice).toBe(195);
+    expect(pendingStopOrders[0].stopPrice).toBe(195.13);
 
     closePositionLocal(position.positionId!, { exitPrice: 210, reason: 'target hit' });
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 import datetime as dt
+from decimal import Decimal, ROUND_HALF_UP
 import logging
 from typing import Optional
 
@@ -95,6 +96,10 @@ def _pct_to_target(target: Optional[float], last_price: Optional[float]) -> Opti
     if target is None or last_price is None or last_price == 0:
         return None
     return (target - last_price) / last_price * 100.0
+
+
+def _round_price(value: float) -> float:
+    return float(Decimal(str(value)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
 
 
 def _manage_cfg_from_app() -> ManageStateConfig:
@@ -463,14 +468,14 @@ class PortfolioService:
         ticker = None
         shares = None
         old_stop = None
-        new_stop = request.new_stop
+        new_stop = _round_price(request.new_stop)
 
         for pos in positions:
             if pos.get("position_id") == position_id:
                 if pos.get("status") != "open":
                     raise HTTPException(status_code=400, detail="Cannot update stop on closed position")
 
-                old_stop = pos.get("stop_price")
+                old_stop = _round_price(float(pos.get("stop_price")))
                 ticker = pos.get("ticker")
                 shares = pos.get("shares")
                 
