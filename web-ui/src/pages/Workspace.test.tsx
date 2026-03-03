@@ -321,7 +321,7 @@ describe('Workspace Page', () => {
     await waitFor(() => {
       expect(screen.getByText('Setup Execution (Degiro)')).toBeInTheDocument();
       expect(screen.getByText('Breakout setup')).toBeInTheDocument();
-      expect(screen.getByText(/BUY STOP/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/BUY STOP/i).length).toBeGreaterThan(0);
     });
   });
 

@@ -9,12 +9,16 @@ export interface DailyReviewCandidateAPI {
   ticker: string;
   confidence?: number | null;
   signal: string;
+  close: number;
   entry: number;
   stop: number;
   shares: number;
   r_reward: number;
   name: string | null;
   sector: string | null;
+  suggested_order_type?: string | null;
+  suggested_order_price?: number | null;
+  execution_note?: string | null;
   recommendation?: RecommendationAPI | null;
 }
 
@@ -71,12 +75,16 @@ export interface DailyReviewCandidate {
   ticker: string;
   confidence?: number;
   signal: string;
+  close: number;
   entry: number;
   stop: number;
   shares: number;
   rReward: number;
   name: string | null;
   sector: string | null;
+  suggestedOrderType?: string;
+  suggestedOrderPrice?: number;
+  executionNote?: string;
   recommendation?: Recommendation;
 }
 
@@ -134,12 +142,16 @@ export function transformCandidate(api: DailyReviewCandidateAPI): DailyReviewCan
     ticker: api.ticker,
     confidence: api.confidence ?? undefined,
     signal: api.signal,
+    close: api.close,
     entry: api.entry,
     stop: api.stop,
     shares: api.shares,
     rReward: api.r_reward,
     name: api.name,
     sector: api.sector,
+    suggestedOrderType: api.suggested_order_type ?? undefined,
+    suggestedOrderPrice: api.suggested_order_price ?? undefined,
+    executionNote: api.execution_note ?? undefined,
     recommendation: api.recommendation ? transformRecommendation(api.recommendation) : undefined,
   };
 }

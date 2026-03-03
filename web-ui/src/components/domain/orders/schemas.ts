@@ -3,7 +3,7 @@ import { t } from '@/i18n/t';
 
 export const candidateOrderSchema = z
   .object({
-    orderType: z.enum(['BUY_LIMIT', 'BUY_MARKET']),
+    orderType: z.enum(['BUY_LIMIT', 'BUY_STOP', 'BUY_MARKET']),
     quantity: z.number().int().min(1, t('order.candidateModal.quantityError')),
     limitPrice: z.number().positive(t('order.candidateModal.limitError')),
     stopPrice: z.number().positive(t('order.candidateModal.stopPositiveError')),
@@ -24,7 +24,7 @@ export type CandidateOrderFormValues = z.infer<typeof candidateOrderSchema>;
 export const createOrderSchema = z
   .object({
     ticker: z.string().min(1),
-    orderType: z.enum(['BUY_LIMIT', 'SELL_LIMIT', 'BUY_MARKET', 'SELL_MARKET']),
+    orderType: z.enum(['BUY_LIMIT', 'BUY_STOP', 'SELL_LIMIT', 'SELL_STOP', 'BUY_MARKET', 'SELL_MARKET']),
     orderKind: z.enum(['entry', 'stop', 'take_profit']),
     quantity: z.number().int().min(1),
     limitPrice: z.number().nonnegative(),

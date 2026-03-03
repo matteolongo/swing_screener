@@ -44,6 +44,9 @@ export interface ScreenerCandidate {
   riskPct?: number;
   recommendation?: Recommendation;
   priceHistory?: PriceHistoryPoint[];
+  suggestedOrderType?: string;
+  suggestedOrderPrice?: number;
+  executionNote?: string;
 }
 
 // API response format (snake_case)
@@ -84,6 +87,9 @@ export interface ScreenerCandidateAPI {
   risk_pct?: number;
   recommendation?: RecommendationAPI;
   price_history?: PriceHistoryPoint[];
+  suggested_order_type?: string;
+  suggested_order_price?: number;
+  execution_note?: string;
 }
 
 export interface ScreenerRequest {
@@ -189,6 +195,9 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
       riskPct: c.risk_pct,
       recommendation: c.recommendation ? transformRecommendation(c.recommendation) : undefined,
       priceHistory: c.price_history ?? [],
+      suggestedOrderType: c.suggested_order_type,
+      suggestedOrderPrice: c.suggested_order_price,
+      executionNote: c.execution_note,
     })),
     asofDate: apiResponse.asof_date,
     totalScreened: apiResponse.total_screened,
