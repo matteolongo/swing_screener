@@ -73,7 +73,11 @@ describe('portfolio local persistence service', () => {
     expect(pendingStopOrders).toHaveLength(1);
     expect(pendingStopOrders[0].stopPrice).toBe(195.13);
 
-    closePositionLocal(position.positionId!, { exitPrice: 210, reason: 'target hit' });
+    closePositionLocal(position.positionId!, { exitPrice: 210, feeEur: 4.9, reason: 'target hit' });
+
+    const closedPositions = listPositionsLocal('all').filter((item) => item.positionId === position.positionId);
+    expect(closedPositions).toHaveLength(1);
+    expect(closedPositions[0].exitFeeEur).toBe(4.9);
 
     const summary = portfolioSummaryLocal();
     expect(summary.totalPositions).toBe(0);

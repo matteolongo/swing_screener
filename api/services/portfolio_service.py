@@ -602,6 +602,7 @@ class PortfolioService:
                 pos["status"] = "closed"
                 pos["exit_price"] = request.exit_price
                 pos["exit_date"] = get_today_str()
+                pos["exit_fee_eur"] = request.fee_eur
                 if request.reason:
                     current_notes = pos.get("notes", "")
                     pos["notes"] = f"{current_notes}\nClosed: {request.reason}".strip()
@@ -615,7 +616,12 @@ class PortfolioService:
         data["asof"] = get_today_str()
         self._positions_repo.write(data)
 
-        return {"status": "ok", "position_id": position_id, "exit_price": request.exit_price}
+        return {
+            "status": "ok",
+            "position_id": position_id,
+            "exit_price": request.exit_price,
+            "fee_eur": request.fee_eur,
+        }
 
     def _resolve_manage_cfg(self, payload: Optional[dict] = None) -> ManageStateConfig:
         if payload is None:

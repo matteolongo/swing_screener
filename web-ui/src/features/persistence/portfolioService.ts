@@ -555,6 +555,7 @@ export function closePositionLocal(positionId: string, request: ClosePositionReq
       ...current,
       status: 'closed',
       exitPrice: request.exitPrice,
+      exitFeeEur: request.feeEur,
       exitDate: currentDateIso(),
       notes: request.reason
         ? `${current.notes ? `${current.notes}\n` : ''}Closed: ${request.reason}`

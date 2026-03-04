@@ -24,6 +24,7 @@ class Position(BaseModel):
     max_favorable_price: Optional[float] = None
     exit_date: Optional[str] = None
     exit_price: Optional[float] = None
+    exit_fee_eur: Optional[float] = None
     current_price: Optional[float] = None
     notes: str = ""
     exit_order_ids: Optional[list[str]] = None
@@ -60,6 +61,11 @@ class UpdateStopRequest(BaseModel):
 
 class ClosePositionRequest(BaseModel):
     exit_price: float = Field(gt=0, description="Exit price")
+    fee_eur: Optional[float] = Field(
+        default=None,
+        ge=0,
+        description="Execution fee in EUR (optional)",
+    )
     reason: str = Field(default="", description="Reason for closing")
 
     @field_validator("exit_price")
@@ -71,6 +77,19 @@ class ClosePositionRequest(BaseModel):
             raise ValueError("Exit price must be positive")
         if v > 100000:
             raise ValueError("Exit price exceeds reasonable maximum (100,000)")
+        return v
+
+    @field_validator("fee_eur")
+    @classmethod
+    def validate_fee_eur(cls, v: Optional[float]) -> Optional[float]:
+        if v is None:
+            return None
+        if not math.isfinite(v):
+            raise ValueError("Fee must be a finite number (not NaN or Inf)")
+        if v < 0:
+            raise ValueError("Fee cannot be negative")
+        if v > 100000:
+            raise ValueError("Fee exceeds reasonable maximum (100,000)")
         return v
 
 
