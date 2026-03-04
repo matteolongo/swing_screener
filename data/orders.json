@@ -1,5 +1,5 @@
 {
-  "asof": "2026-03-03",
+  "asof": "2026-03-04",
   "orders": [
     {
       "order_id": "ORD-INTC-20260115-ENTRY",
@@ -859,15 +859,47 @@
     {
       "order_id": "ORD-F1DD1B40",
       "ticker": "REP.MC",
-      "status": "pending",
+      "status": "cancelled",
       "order_type": "STOP",
       "quantity": 5,
       "stop_price": 17.75,
       "order_date": "2026-03-03",
-      "notes": "Auto-created from position stop update (was 17.55)",
+      "notes": "Auto-created from position stop update (was 17.55)\nReplaced with new stop at 17.93 (was 17.75)",
       "order_kind": "stop",
       "position_id": "POS-REP.MC-20260218-01",
       "tif": "GTC"
+    },
+    {
+      "order_id": "ORD-2F9C3ED2",
+      "ticker": "REP.MC",
+      "status": "pending",
+      "order_type": "STOP",
+      "quantity": 5,
+      "stop_price": 17.93,
+      "order_date": "2026-03-04",
+      "notes": "Auto-created from position stop update (was 17.75)",
+      "order_kind": "stop",
+      "position_id": "POS-REP.MC-20260218-01",
+      "tif": "GTC"
+    },
+    {
+      "order_id": "ALLFG.AS-20260304180433",
+      "ticker": "ALLFG.AS",
+      "status": "pending",
+      "order_type": "BUY_LIMIT",
+      "quantity": 28,
+      "limit_price": 8.5,
+      "stop_price": 8.3,
+      "order_date": "2026-03-04",
+      "filled_date": "",
+      "entry_price": null,
+      "notes": "From daily review: Entry $8.52, R:R 2.0",
+      "order_kind": "entry",
+      "parent_order_id": null,
+      "position_id": null,
+      "tif": "GTC",
+      "fee_eur": null,
+      "fill_fx_rate": null
     }
   ]
 }
