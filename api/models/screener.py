@@ -50,6 +50,9 @@ class ScreenerCandidate(BaseModel):
     risk_pct: Optional[float] = None
     recommendation: Optional[Recommendation] = None
     price_history: list[PriceHistoryPoint] = Field(default_factory=list)
+    suggested_order_type: Optional[str] = None
+    suggested_order_price: Optional[float] = None
+    execution_note: Optional[str] = None
 
 
 class ScreenerRequest(BaseModel):

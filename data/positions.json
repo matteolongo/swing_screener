@@ -1,5 +1,5 @@
 {
-  "asof": "2026-03-02",
+  "asof": "2026-03-04",
   "positions": [
     {
       "ticker": "INTC",
@@ -207,23 +207,26 @@
       "source_order_id": "REP.MC-20260219172724",
       "entry_date": "2026-02-18",
       "entry_price": 17.32,
-      "stop_price": 17.54,
+      "stop_price": 17.93,
       "shares": 5,
       "initial_risk": 0.8399999999999999,
       "max_favorable_price": 17.32,
       "exit_date": null,
       "exit_price": null,
-      "notes": "From daily review: Entry $17.64, R:R 2.0\nStop updated to 17.32: Breakeven: R=1.43 >= 1.0\nStop updated to 17.36: Trail: R=2.02 >= 2.0 and SMA20 trail\nStop updated to 17.53: Trail: R=2.98 >= 2.0 and SMA20 trail\nStop updated to 17.54: Trail: R=3.29 >= 2.0 and SMA20 trail",
+      "notes": "From daily review: Entry $17.64, R:R 2.0\nStop updated to 17.32: Breakeven: R=1.43 >= 1.0\nStop updated to 17.36: Trail: R=2.02 >= 2.0 and SMA20 trail\nStop updated to 17.53: Trail: R=2.98 >= 2.0 and SMA20 trail\nStop updated to 17.54: Trail: R=3.29 >= 2.0 and SMA20 trail\nStop updated to 17.55: Trail: R=3.29 >= 2.0 and SMA20 trail\nStop updated to 17.75: Trail: R=4.02 >= 2.0 and SMA20 trail\nStop updated to 17.93: Trail: R=3.32 >= 2.0 and SMA20 trail",
       "exit_order_ids": [
         "ORD-STOP-POS-REP.MC-20260218-01",
         "ORD-AADC0305",
         "ORD-B1DCD7CF",
-        "ORD-BCD6F7B7"
+        "ORD-BCD6F7B7",
+        "ORD-595C0157",
+        "ORD-F1DD1B40",
+        "ORD-2F9C3ED2"
       ]
     },
     {
       "ticker": "ENGI.PA",
-      "status": "open",
+      "status": "closed",
       "position_id": "POS-ENGI.PA-20260225-01",
       "source_order_id": "ENGI.PA-20260224203641",
       "entry_date": "2026-02-25",
@@ -232,12 +235,30 @@
       "shares": 3,
       "initial_risk": 0.9400000000000013,
       "max_favorable_price": 26.92,
-      "exit_date": null,
-      "exit_price": null,
+      "exit_date": "2026-03-03",
+      "exit_price": 26.92,
       "notes": "From screener: Score 90.3, Rank #3",
       "exit_order_ids": [
         "ORD-STOP-POS-ENGI.PA-20260225-01",
         "ORD-FA641E8F"
+      ]
+    },
+    {
+      "ticker": "RWE.DE",
+      "status": "closed",
+      "position_id": "POS-RWE.DE-20260302-01",
+      "source_order_id": "RWE.DE-20260227185428",
+      "entry_date": "2026-03-02",
+      "entry_price": 54.54,
+      "stop_price": 51.77,
+      "shares": 1,
+      "initial_risk": 2.769999999999996,
+      "max_favorable_price": 54.54,
+      "exit_date": "2026-03-02",
+      "exit_price": 54.54,
+      "notes": "From screener: Score 91.6, Rank #2",
+      "exit_order_ids": [
+        "ORD-STOP-POS-RWE.DE-20260302-01"
       ]
     }
   ]

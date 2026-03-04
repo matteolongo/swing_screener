@@ -13,6 +13,22 @@ interface ClosePositionModalFormProps {
   onSubmit: (request: ClosePositionRequest) => void;
 }
 
+function parsePositiveNumber(value: string): number | null {
+  const parsed = Number.parseFloat(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return null;
+  }
+  return parsed;
+}
+
+function parseNonNegativeNumber(value: string): number | null {
+  const parsed = Number.parseFloat(value);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return null;
+  }
+  return parsed;
+}
+
 export default function ClosePositionModalForm({
   position,
   isLoading,
@@ -20,18 +36,45 @@ export default function ClosePositionModalForm({
   onClose,
   onSubmit,
 }: ClosePositionModalFormProps) {
-  const [formData, setFormData] = useState<ClosePositionRequest>({
-    exitPrice: position.entryPrice,
-    reason: '',
-  });
+  const [exitPriceValue, setExitPriceValue] = useState(() => position.entryPrice.toFixed(2));
+  const [feeEurValue, setFeeEurValue] = useState('');
+  const [reasonValue, setReasonValue] = useState('');
+  const [formError, setFormError] = useState<string | null>(null);
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    onSubmit(formData);
+    setFormError(null);
+
+    const exitPrice = parsePositiveNumber(exitPriceValue);
+    if (exitPrice == null) {
+      setFormError(t('order.fillModal.invalidNumber'));
+      return;
+    }
+
+    let feeEur: number | undefined;
+    if (feeEurValue.trim().length > 0) {
+      const parsedFee = parseNonNegativeNumber(feeEurValue);
+      if (parsedFee == null) {
+        setFormError(t('order.fillModal.invalidNumber'));
+        return;
+      }
+      feeEur = parsedFee;
+    }
+
+    onSubmit({
+      exitPrice,
+      feeEur,
+      reason: reasonValue,
+    });
   };
 
-  const pnl = (formData.exitPrice - position.entryPrice) * position.shares;
-  const pnlPercent = ((formData.exitPrice - position.entryPrice) / position.entryPrice) * 100;
+  const parsedExitPrice = Number.parseFloat(exitPriceValue);
+  const previewExitPrice = Number.isFinite(parsedExitPrice) ? parsedExitPrice : 0;
+  const parsedFee = Number.parseFloat(feeEurValue);
+  const previewFee = Number.isFinite(parsedFee) && parsedFee >= 0 ? parsedFee : 0;
+  const entryValue = position.entryPrice * position.shares;
+  const pnl = (previewExitPrice - position.entryPrice) * position.shares - previewFee;
+  const pnlPercent = entryValue > 0 ? (pnl / entryValue) * 100 : 0;
 
   return (
     <ModalShell title={t('positions.closeModal.title', { ticker: position.ticker })} onClose={onClose} className="max-w-md">
@@ -50,24 +93,40 @@ export default function ClosePositionModalForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">{t('positions.closeModal.exitPrice')}</label>
+          <label htmlFor="close-position-exit-price" className="block text-sm font-medium mb-1">
+            {t('positions.closeModal.exitPrice')}
+          </label>
           <input
+            id="close-position-exit-price"
             type="number"
             step="0.01"
             min="0.01"
-            value={formData.exitPrice}
-            onChange={(event) =>
-              setFormData((prev) => ({ ...prev, exitPrice: parseFloat(event.target.value) || 0 }))
-            }
+            value={exitPriceValue}
+            onChange={(event) => setExitPriceValue(event.target.value)}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
             required
+          />
+        </div>
+
+        <div>
+          <label htmlFor="close-position-fee-eur" className="block text-sm font-medium mb-1">
+            {t('positions.closeModal.feeEurOptional')}
+          </label>
+          <input
+            id="close-position-fee-eur"
+            type="number"
+            step="0.01"
+            min="0"
+            value={feeEurValue}
+            onChange={(event) => setFeeEurValue(event.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
           />
         </div>
 
         <div
           className={`p-3 rounded ${pnl >= 0 ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20'}`}
         >
-          <p className="text-sm font-medium">{t('positions.closeModal.projectedPnl')}</p>
+          <p className="text-sm font-medium">{t('positions.closeModal.projectedPnlNet')}</p>
           <p
             className={`text-lg font-bold ${
               pnl >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
@@ -80,15 +139,24 @@ export default function ClosePositionModalForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">{t('positions.closeModal.reason')}</label>
+          <label htmlFor="close-position-reason" className="block text-sm font-medium mb-1">
+            {t('positions.closeModal.reason')}
+          </label>
           <textarea
+            id="close-position-reason"
             rows={2}
-            value={formData.reason}
-            onChange={(event) => setFormData((prev) => ({ ...prev, reason: event.target.value }))}
+            value={reasonValue}
+            onChange={(event) => setReasonValue(event.target.value)}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
             placeholder={t('positions.closeModal.reasonPlaceholder')}
           />
         </div>
+
+        {formError ? (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3">
+            <p className="text-sm text-red-800 dark:text-red-200">{formError}</p>
+          </div>
+        ) : null}
 
         {error ? (
           <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3">

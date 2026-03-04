@@ -20,6 +20,9 @@ def mock_screener_service():
             ScreenerCandidate(
                 ticker="AAPL",
                 signal="MOMENTUM",
+                suggested_order_type="BUY_LIMIT",
+                suggested_order_price=149.5,
+                execution_note="Pullback setup. Place BUY LIMIT near moving-average reclaim level.",
                 entry=150.0,
                 stop=145.0,
                 shares=10,
@@ -41,6 +44,9 @@ def mock_screener_service():
             ScreenerCandidate(
                 ticker="MSFT",
                 signal="BREAKOUT",
+                suggested_order_type="BUY_STOP",
+                suggested_order_price=301.5,
+                execution_note="Breakout not triggered yet. Place BUY STOP slightly above breakout_level.",
                 entry=300.0,
                 stop=290.0,
                 shares=5,
@@ -210,12 +216,16 @@ def test_generate_daily_review_candidates_fields(mock_screener_service, mock_por
     assert candidate.ticker == "AAPL"
     assert candidate.confidence == 0.9
     assert candidate.signal == "MOMENTUM"
+    assert candidate.close == 150.0
     assert candidate.entry == 150.0
     assert candidate.stop == 145.0
     assert candidate.shares == 10
     assert candidate.r_reward == 3.0
     assert candidate.name == "Apple Inc"
     assert candidate.sector == "Technology"
+    assert candidate.suggested_order_type == "BUY_LIMIT"
+    assert candidate.suggested_order_price == 149.5
+    assert "BUY LIMIT" in candidate.execution_note
 
 
 def test_generate_daily_review_position_hold(mock_screener_service, mock_portfolio_service, tmp_path):

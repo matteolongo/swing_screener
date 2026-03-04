@@ -21,6 +21,10 @@ from swing_screener.data.providers.factory import get_market_data_provider
 logger = logging.getLogger(__name__)
 
 
+def _format_provider_errors(provider_errors: dict[str, str]) -> str:
+    return "; ".join(f"{name}: {message}" for name, message in provider_errors.items())
+
+
 def _provider_for(name: str, cache: SocialCache):
     """Get social provider instance by name.
     
@@ -106,14 +110,58 @@ def analyze_social_symbol(
     try:
         # Get sentiment analyzer
         sentiment_analyzer = get_sentiment_analyzer(sentiment_analyzer_name)
-        
-        # Fetch events from all providers
+
+        # Fetch events from all providers.
         all_events = []
+        provider_errors: dict[str, str] = {}
+        successful_providers: set[str] = set()
         for provider_name in provider_names:
-            provider = _provider_for(provider_name, cache)
-            events = provider.fetch_events(start_dt, now, [symbol])
-            all_events.extend(events)
-        
+            try:
+                provider = _provider_for(provider_name, cache)
+                events = provider.fetch_events(start_dt, now, [symbol])
+                all_events.extend(events)
+                successful_providers.add(provider_name)
+            except Exception as exc:
+                provider_errors[provider_name] = str(exc)
+                logger.warning(
+                    "Social provider '%s' failed for %s: %s",
+                    provider_name,
+                    symbol,
+                    exc,
+                )
+
+        if not successful_providers:
+            combined_error = _format_provider_errors(provider_errors) or "No social providers succeeded."
+            for provider_name in provider_names:
+                cache.update_symbol_run(
+                    provider_name,
+                    symbol,
+                    {
+                        "last_execution_at": now.isoformat(),
+                        "status": "error",
+                        "error": provider_errors.get(provider_name, combined_error),
+                        "lookback_hours": lookback_hours,
+                    },
+                )
+            return {
+                "status": "error",
+                "symbol": symbol,
+                "providers": provider_names,
+                "sentiment_analyzer": sentiment_analyzer_name,
+                "lookback_hours": lookback_hours,
+                "last_execution_at": now.isoformat(),
+                "sample_size": 0,
+                "sentiment_score": None,
+                "sentiment_confidence": None,
+                "attention_score": 0.0,
+                "attention_z": None,
+                "hype_score": None,
+                "source_breakdown": {},
+                "reasons": [],
+                "raw_events": [],
+                "error": combined_error,
+            }
+
         events_sorted = sorted(all_events, key=lambda e: e.timestamp, reverse=True)
         raw_events = events_sorted[:max_events]
 
@@ -158,11 +206,16 @@ def analyze_social_symbol(
                 symbol,
                 {
                     "last_execution_at": now.isoformat(),
-                    "status": status,
-                    "sample_size": metric.sample_size,
+                    "status": "error" if provider_name in provider_errors else status,
+                    "sample_size": metric.sample_size if provider_name not in provider_errors else 0,
+                    "error": provider_errors.get(provider_name),
                     "lookback_hours": lookback_hours,
                 },
             )
+
+        partial_error = None
+        if provider_errors:
+            partial_error = f"Provider warnings: {_format_provider_errors(provider_errors)}"
 
         return {
             "status": status,
@@ -180,8 +233,10 @@ def analyze_social_symbol(
             "source_breakdown": metric.source_breakdown,
             "reasons": reasons,
             "raw_events": raw_events,
+            "error": partial_error,
         }
     except Exception as exc:
+        logger.warning("Social analysis failed for %s: %s", symbol, exc)
         for provider_name in provider_names:
             cache.update_symbol_run(
                 provider_name,

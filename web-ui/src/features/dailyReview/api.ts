@@ -72,7 +72,7 @@ function toOrderApi(order: ReturnType<typeof getAllOrdersLocal>[number]) {
 /**
  * Fetch daily review from API
  */
-export async function getDailyReview(topN: number = 10, universe?: string | null): Promise<DailyReview> {
+export async function getDailyReview(topN: number = 200, universe?: string | null): Promise<DailyReview> {
   if (isLocalPersistenceMode()) {
     const strategy = getActiveStrategyLocal();
     const positions = getAllPositionsLocal();
@@ -119,7 +119,7 @@ export async function getDailyReview(topN: number = 10, universe?: string | null
 /**
  * React Query hook for daily review
  */
-export function useDailyReview(topN: number = 10, universe?: string | null) {
+export function useDailyReview(topN: number = 200, universe?: string | null) {
   return useQuery({
     queryKey: queryKeys.dailyReview(topN, universe),
     queryFn: () => getDailyReview(topN, universe),

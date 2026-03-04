@@ -119,6 +119,9 @@ def test_screener_recommendation_payload_shape(monkeypatch):
             "shares": [10],
             "position_value": [500.0],
             "realized_risk": [20.0],
+            "suggested_order_type": ["BUY_STOP"],
+            "suggested_order_price": [50.1],
+            "execution_note": ["Breakout not triggered yet. Place BUY STOP slightly above breakout_level."],
             "overlay_status": ["OK"],
             "overlay_reasons": [[]],
         }
@@ -146,6 +149,9 @@ def test_screener_recommendation_payload_shape(monkeypatch):
     assert rec["risk"]["entry"] == 50.0
     assert rec["risk"]["stop"] == 48.0
     assert rec["risk"]["shares"] == 10
+    assert candidate["suggested_order_type"] == "BUY_STOP"
+    assert candidate["suggested_order_price"] == 50.1
+    assert "BUY STOP" in candidate["execution_note"]
     assert isinstance(rec["checklist"][0]["gate_name"], str)
     assert isinstance(rec["education"]["what_would_make_valid"], list)
 

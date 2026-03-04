@@ -39,14 +39,14 @@ class DailyReviewService:
 
     def generate_daily_review(
         self,
-        top_n: int = 10,
+        top_n: int = 200,
         universe: str | None = None,
     ) -> DailyReview:
         """
         Generate comprehensive daily review.
         
         Args:
-            top_n: Number of top screener candidates to include (default: 10)
+            top_n: Number of top screener candidates to include (default: 200)
             universe: Optional named universe to screen (e.g., "amsterdam_all")
         
         Returns:
@@ -67,12 +67,16 @@ class DailyReviewService:
                 ticker=c.ticker,
                 confidence=c.confidence,
                 signal=c.signal or "UNKNOWN",
+                close=c.close,
                 entry=c.entry or 0.0,
                 stop=c.stop or 0.0,
                 shares=c.shares or 0,
                 r_reward=c.rr or 0.0,
                 name=c.name,
                 sector=c.sector,
+                suggested_order_type=c.suggested_order_type,
+                suggested_order_price=c.suggested_order_price,
+                execution_note=c.execution_note,
                 recommendation=c.recommendation,
             )
             for c in candidates
@@ -214,7 +218,7 @@ class DailyReviewService:
         strategy: dict,
         positions: list[dict],
         orders: list[dict],
-        top_n: int = 10,
+        top_n: int = 200,
         universe: str | None = None,
     ) -> DailyReview:
         """Compute daily review from client-provided strategy/portfolio state."""
@@ -241,12 +245,16 @@ class DailyReviewService:
                 ticker=c.ticker,
                 confidence=c.confidence,
                 signal=c.signal or "UNKNOWN",
+                close=c.close,
                 entry=c.entry or 0.0,
                 stop=c.stop or 0.0,
                 shares=c.shares or 0,
                 r_reward=c.rr or 0.0,
                 name=c.name,
                 sector=c.sector,
+                suggested_order_type=c.suggested_order_type,
+                suggested_order_price=c.suggested_order_price,
+                execution_note=c.execution_note,
                 recommendation=c.recommendation,
             )
             for c in candidates

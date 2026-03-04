@@ -317,6 +317,7 @@ export async function closePosition(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       exit_price: request.exitPrice,
+      fee_eur: request.feeEur,
       reason: request.reason || '',
     }),
   });
