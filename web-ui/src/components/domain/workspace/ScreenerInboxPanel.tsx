@@ -37,12 +37,10 @@ const currencyFilterToRequest = (value: CurrencyFilter): string[] => {
   if (value === 'eur') return ['EUR'];
   return ['USD', 'EUR'];
 };
+const ANALYSIS_CANVAS_ID = 'workspace-analysis-canvas';
+const MOBILE_LAYOUT_MEDIA_QUERY = '(max-width: 1279px)';
 
-interface ScreenerInboxPanelProps {
-  onOpenSymbolDetails?: (ticker: string, tab: WorkspaceAnalysisTab) => void;
-}
-
-export default function ScreenerInboxPanel({ onOpenSymbolDetails }: ScreenerInboxPanelProps) {
+export default function ScreenerInboxPanel() {
   const { isBeginnerMode } = useBeginnerModeStore();
   const { lastResult, setLastResult } = useScreenerStore();
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
@@ -139,13 +137,23 @@ export default function ScreenerInboxPanel({ onOpenSymbolDetails }: ScreenerInbo
     }
   }, [handleRunScreener, runScreenerTrigger]);
 
+  const scrollAnalysisCanvasIntoView = useCallback(() => {
+    if (typeof window === 'undefined' || typeof document === 'undefined' || typeof window.matchMedia !== 'function') {
+      return;
+    }
+    if (!window.matchMedia(MOBILE_LAYOUT_MEDIA_QUERY).matches) {
+      return;
+    }
+    document.getElementById(ANALYSIS_CANVAS_ID)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
+
   const handleSelectCandidate = useCallback(
     (ticker: string, tab: WorkspaceAnalysisTab) => {
       setSelectedTicker(ticker);
       setAnalysisTab(tab);
-      onOpenSymbolDetails?.(ticker, tab);
+      scrollAnalysisCanvasIntoView();
     },
-    [onOpenSymbolDetails, setAnalysisTab, setSelectedTicker]
+    [scrollAnalysisCanvasIntoView, setAnalysisTab, setSelectedTicker]
   );
 
   const handleTradeThesisAction = useCallback((candidate: ScreenerCandidate) => {
