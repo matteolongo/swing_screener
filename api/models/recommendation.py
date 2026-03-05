@@ -50,6 +50,13 @@ class RecommendationEducation(BaseModel):
     what_would_make_valid: list[str] = Field(default_factory=list)
 
 
+class RecommendationBeginnerExplanation(BaseModel):
+    text: str
+    source: Literal["llm", "deterministic_fallback"]
+    model: Optional[str] = None
+    generated_at: Optional[str] = None
+
+
 class Recommendation(BaseModel):
     verdict: RecommendationVerdict
     reasons_short: list[str]
@@ -58,4 +65,4 @@ class Recommendation(BaseModel):
     costs: RecommendationCosts
     checklist: list[ChecklistGate]
     education: RecommendationEducation
-    thesis: Optional[dict] = None  # Trade Thesis (structured explanation)
+    thesis: Optional[dict] = None  # Trade Thesis (structured explanation, includes beginner_explanation)

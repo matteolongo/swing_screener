@@ -8,6 +8,91 @@ import { useOnboardingStore } from '@/stores/onboardingStore';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 
+function buildCandidateWithThesis(ticker = 'AAPL') {
+  return {
+    ticker,
+    currency: 'USD',
+    rank: 1,
+    score: 0.95,
+    close: 175.5,
+    last_bar: '2026-02-18T16:00:00',
+    sma_20: 170,
+    sma_50: 165,
+    sma_200: 160,
+    atr: 3.25,
+    momentum_6m: 25,
+    momentum_12m: 45,
+    rel_strength: 85.2,
+    confidence: 72.5,
+    signal: 'breakout',
+    recommendation: {
+      verdict: 'RECOMMENDED',
+      reasons_short: ['Trend aligned'],
+      reasons_detailed: [],
+      risk: {
+        entry: 175.5,
+        stop: 170.0,
+        target: 186.0,
+        rr: 2.0,
+        risk_amount: 20,
+        risk_pct: 0.01,
+        position_size: 500,
+        shares: 2,
+        invalidation_level: 170.0,
+      },
+      costs: {
+        commission_estimate: 1,
+        fx_estimate: 0,
+        slippage_estimate: 0.5,
+        total_cost: 1.5,
+        fee_to_risk_pct: 0.075,
+      },
+      checklist: [],
+      education: {
+        common_bias_warning: 'Avoid overtrading',
+        what_to_learn: 'Breakout confirmation',
+        what_would_make_valid: ['Close above resistance'],
+      },
+      thesis: {
+        ticker,
+        strategy: 'Momentum',
+        entry_type: 'Breakout',
+        trend_status: 'Uptrend',
+        relative_strength: 'Strong',
+        regime_alignment: true,
+        volatility_state: 'Normal',
+        risk_reward: 2.2,
+        setup_quality_score: 88,
+        setup_quality_tier: 'HIGH_QUALITY',
+        institutional_signal: true,
+        price_action_quality: 'Clean',
+        safety_label: 'BEGINNER_FRIENDLY',
+        personality: {
+          trend_strength: 4,
+          volatility_rating: 3,
+          conviction: 4,
+          complexity: 'Simple trend-following setup',
+        },
+        explanation: {
+          why_qualified: ['Strong momentum continuation'],
+          what_could_go_wrong: ['Failed breakout'],
+          setup_type: 'Momentum breakout',
+          key_insight: 'Trend remains valid while above stop.',
+        },
+        invalidation_rules: [
+          {
+            rule_id: 'stop_break',
+            condition: 'Close below stop price',
+            metric: 'close',
+            threshold: 170.0,
+          },
+        ],
+        professional_insight: 'Wait for a calm pullback before scaling in.',
+      },
+    },
+  };
+}
+
 describe('Workspace Page', () => {
   beforeEach(() => {
     localStorage.clear();
@@ -480,5 +565,149 @@ describe('Workspace Page', () => {
       expect(screen.getByText('Setup Execution (Degiro)')).toBeInTheDocument();
       expect(screen.getByText('Pullback setup')).toBeInTheDocument();
     });
+  });
+
+  it('runs per-symbol intelligence from expanded row details and patches beginner explanation', async () => {
+    let runCallCount = 0;
+    server.use(
+      http.post('*/api/screener/run', () =>
+        HttpResponse.json({
+          candidates: [buildCandidateWithThesis('AAPL')],
+          asof_date: '2026-02-18',
+          total_screened: 1,
+          data_freshness: 'final_close',
+          warnings: [],
+        })
+      ),
+      http.post('*/api/intelligence/run', async ({ request }) => {
+        runCallCount += 1;
+        const body = await request.json();
+        const symbols = Array.isArray((body as Record<string, unknown>)?.symbols)
+          ? ((body as Record<string, unknown>).symbols as string[])
+          : [];
+        return HttpResponse.json({
+          job_id: 'intel-row-1',
+          status: 'queued',
+          total_symbols: symbols.length || 1,
+          created_at: '2026-02-18T20:00:00',
+          updated_at: '2026-02-18T20:00:00',
+        });
+      }),
+      http.get('*/api/intelligence/run/:jobId', ({ params }) =>
+        HttpResponse.json({
+          job_id: params.jobId as string,
+          status: 'completed',
+          total_symbols: 1,
+          completed_symbols: 1,
+          asof_date: '2026-02-18',
+          opportunities_count: 1,
+          llm_warnings_count: 0,
+          llm_warning_sample: null,
+          created_at: '2026-02-18T20:00:00',
+          updated_at: '2026-02-18T20:00:04',
+        })
+      ),
+      http.get('*/api/intelligence/opportunities', () =>
+        HttpResponse.json({
+          asof_date: '2026-02-18',
+          opportunities: [
+            {
+              symbol: 'AAPL',
+              technical_readiness: 0.8,
+              catalyst_strength: 0.7,
+              opportunity_score: 0.76,
+              state: 'TRENDING',
+              explanations: ['Catalyst + follow-through confirmed.'],
+            },
+          ],
+        })
+      ),
+      http.post('*/api/intelligence/explain-symbol', async ({ request }) => {
+        const body = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({
+          symbol: body.symbol ?? 'AAPL',
+          asof_date: body.asof_date ?? '2026-02-18',
+          explanation: 'AAPL is validated by trend quality, catalyst strength, and clear stop-based risk.',
+          source: 'llm',
+          model: 'gpt-4o-mini',
+          generated_at: '2026-02-18T20:00:05',
+        });
+      })
+    );
+
+    const { user } = renderWithProviders(<Workspace />);
+    await user.click(screen.getAllByRole('button', { name: /Run Screener/i })[0]);
+    await screen.findByRole('heading', { name: 'AAPL' });
+
+    await user.click(screen.getByRole('button', { name: /Expand details for AAPL/i }));
+    await user.click(screen.getByRole('button', { name: /Run intelligence for AAPL/i }));
+
+    expect(
+      await screen.findAllByText('Intelligence complete. Explanation source: LLM.')
+    ).not.toHaveLength(0);
+    expect(runCallCount).toBe(1);
+
+    await user.click(screen.getByRole('tab', { name: 'Order' }));
+    await screen.findByText('Explain It Like I Am New');
+    expect(
+      screen.getByText('AAPL is validated by trend quality, catalyst strength, and clear stop-based risk.')
+    ).toBeInTheDocument();
+  });
+
+  it('runs per-symbol intelligence from analysis canvas action', async () => {
+    let runBodySymbols: string[] = [];
+    server.use(
+      http.post('*/api/screener/run', () =>
+        HttpResponse.json({
+          candidates: [buildCandidateWithThesis('AAPL')],
+          asof_date: '2026-02-18',
+          total_screened: 1,
+          data_freshness: 'final_close',
+          warnings: [],
+        })
+      ),
+      http.post('*/api/intelligence/run', async ({ request }) => {
+        const body = (await request.json()) as Record<string, unknown>;
+        runBodySymbols = Array.isArray(body.symbols)
+          ? (body.symbols as unknown[]).map((value) => String(value).toUpperCase())
+          : [];
+        return HttpResponse.json({
+          job_id: 'intel-canvas-1',
+          status: 'queued',
+          total_symbols: runBodySymbols.length || 1,
+          created_at: '2026-02-18T20:00:00',
+          updated_at: '2026-02-18T20:00:00',
+        });
+      }),
+      http.get('*/api/intelligence/run/:jobId', ({ params }) =>
+        HttpResponse.json({
+          job_id: params.jobId as string,
+          status: 'completed',
+          total_symbols: 1,
+          completed_symbols: 1,
+          asof_date: '2026-02-18',
+          opportunities_count: 1,
+          llm_warnings_count: 0,
+          llm_warning_sample: null,
+          created_at: '2026-02-18T20:00:00',
+          updated_at: '2026-02-18T20:00:04',
+        })
+      )
+    );
+
+    const { user } = renderWithProviders(<Workspace />);
+    await user.click(screen.getAllByRole('button', { name: /Run Screener/i })[0]);
+    await screen.findByRole('heading', { name: 'AAPL' });
+
+    const canvasRunButton = screen
+      .getAllByRole('button', { name: 'Run Intelligence' })
+      .find((button) => button.getAttribute('aria-label') !== 'Run intelligence for AAPL');
+    expect(canvasRunButton).toBeDefined();
+    await user.click(canvasRunButton!);
+
+    expect(
+      await screen.findAllByText('Intelligence complete. Explanation source: LLM.')
+    ).not.toHaveLength(0);
+    expect(runBodySymbols).toEqual(['AAPL']);
   });
 });

@@ -175,3 +175,58 @@ def test_run_intelligence_pipeline_records_llm_error_details(tmp_path, monkeypat
     enriched = snapshot.events[0]
     assert enriched.metadata.get("llm_error_type") == "ValueError"
     assert "LLM returned invalid JSON" in str(enriched.metadata.get("llm_error", ""))
+
+
+def test_run_intelligence_pipeline_applies_event_quality_filters(tmp_path, monkeypatch):
+    symbols = ["AAPL"]
+    events = [
+        Event(
+            event_id="evt-aapl-1",
+            symbol="AAPL",
+            source="yahoo_finance",
+            occurred_at="2026-02-02T00:00:00",
+            headline="AAPL beats earnings expectations",
+            event_type="news",
+            credibility=0.8,
+            url="https://news.example.com/aapl-earnings",
+        ),
+        Event(
+            event_id="evt-aapl-dup",
+            symbol="AAPL",
+            source="yahoo_finance",
+            occurred_at="2026-02-02T00:01:00",
+            headline="AAPL beats earnings expectations",
+            event_type="news",
+            credibility=0.7,
+            url="https://news.example.com/aapl-earnings",
+        ),
+        Event(
+            event_id="evt-aapl-irrelevant",
+            symbol="AAPL",
+            source="yahoo_finance",
+            occurred_at="2026-02-02T00:02:00",
+            headline="Global macro discussion without ticker mention",
+            event_type="news",
+            credibility=0.9,
+        ),
+    ]
+    monkeypatch.setattr(
+        "swing_screener.intelligence.pipeline.collect_events",
+        lambda **kwargs: events,
+    )
+
+    storage = IntelligenceStorage(tmp_path / "intel")
+    snapshot = run_intelligence_pipeline(
+        symbols=symbols,
+        cfg=IntelligenceConfig(enabled=True),
+        technical_readiness={"AAPL": 0.8},
+        asof_dt=datetime.fromisoformat("2026-02-15T00:00:00"),
+        storage=storage,
+        ohlcv=_ohlcv(symbols),
+    )
+
+    assert snapshot.events_kept_count == 1
+    assert snapshot.duplicate_suppressed_count == 1
+    assert snapshot.events_dropped_count == 2
+    assert len(snapshot.events) == 1
+    assert snapshot.events[0].event_id == "evt-aapl-1"

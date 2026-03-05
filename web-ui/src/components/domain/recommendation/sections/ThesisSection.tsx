@@ -167,6 +167,16 @@ export default function ThesisSection({ thesis }: ThesisSectionProps) {
             {thesis.professionalInsight}
           </p>
         )}
+        {thesis.beginnerExplanation?.text && (
+          <div className="mt-3 pt-3 border-t border-blue-200 dark:border-blue-800">
+            <p className="text-sm font-medium text-blue-700 dark:text-blue-300">
+              {t('tradeThesis.beginnerExplanation')}
+            </p>
+            <p className="mt-1 text-gray-700 dark:text-gray-300 leading-relaxed">
+              {thesis.beginnerExplanation.text}
+            </p>
+          </div>
+        )}
       </Card>
 
       {/* Invalidation Rules */}

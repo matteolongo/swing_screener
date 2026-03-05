@@ -3,6 +3,7 @@ import { ChevronDown, ChevronUp, ListChecks } from 'lucide-react';
 import Button from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
 import TableShell from '@/components/common/TableShell';
+import type { SymbolIntelligenceStatus } from '@/features/intelligence/useSymbolIntelligenceRunner';
 import { ScreenerCandidate } from '@/features/screener/types';
 import { toCandidateViewModel } from '@/features/screener/viewModel';
 import ScreenerCandidateIdentityCell from './ScreenerCandidateIdentityCell';
@@ -26,6 +27,8 @@ interface ScreenerCandidatesTableProps {
   onRecommendationDetails: (candidate: ScreenerCandidate) => void;
   onSocialAnalysis: (ticker: string) => void;
   onTradeThesis: (candidate: ScreenerCandidate) => void;
+  onRunIntelligence: (ticker: string) => void;
+  getSymbolIntelligenceStatus?: (ticker: string) => SymbolIntelligenceStatus | undefined;
   onSymbolClick?: (ticker: string) => void;
   selectedTicker?: string | null;
   onRowClick?: (candidate: ScreenerCandidate) => void;
@@ -40,6 +43,8 @@ export default function ScreenerCandidatesTable({
   onRecommendationDetails,
   onSocialAnalysis,
   onTradeThesis,
+  onRunIntelligence,
+  getSymbolIntelligenceStatus,
   onSymbolClick,
   selectedTicker,
   onRowClick,
@@ -90,6 +95,7 @@ export default function ScreenerCandidatesTable({
           const vm = toCandidateViewModel(candidate);
           const isExpanded = expandedRows.has(candidate.ticker);
           const isSelected = selectedTicker != null && selectedTicker.toUpperCase() === candidate.ticker.toUpperCase();
+          const symbolIntelStatus = getSymbolIntelligenceStatus?.(candidate.ticker);
 
           return (
             <div
@@ -200,6 +206,21 @@ export default function ScreenerCandidatesTable({
                     variant="secondary"
                     onClick={(event) => {
                       event.stopPropagation();
+                      onRunIntelligence(candidate.ticker);
+                    }}
+                    disabled={symbolIntelStatus?.stage === 'queued' || symbolIntelStatus?.stage === 'running'}
+                    title={t('screener.symbolIntelligence.runAction')}
+                    aria-label={t('screener.symbolIntelligence.runAria', { ticker: candidate.ticker })}
+                  >
+                    {symbolIntelStatus?.stage === 'queued' || symbolIntelStatus?.stage === 'running'
+                      ? t('screener.symbolIntelligence.running')
+                      : t('screener.symbolIntelligence.runAction')}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={(event) => {
+                      event.stopPropagation();
                       onSocialAnalysis(candidate.ticker);
                     }}
                     title={t('screener.table.sentimentTitle')}
@@ -259,6 +280,7 @@ export default function ScreenerCandidatesTable({
         const vm = toCandidateViewModel(candidate);
         const isExpanded = expandedRows.has(candidate.ticker);
         const isSelected = selectedTicker != null && selectedTicker.toUpperCase() === candidate.ticker.toUpperCase();
+        const symbolIntelStatus = getSymbolIntelligenceStatus?.(candidate.ticker);
 
         return (
           <React.Fragment key={candidate.ticker}>
@@ -361,6 +383,8 @@ export default function ScreenerCandidatesTable({
                 candidate={vm}
                 onSocialClick={() => onSocialAnalysis(candidate.ticker)}
                 onThesisClick={() => onTradeThesis(candidate)}
+                onRunIntelligence={() => onRunIntelligence(candidate.ticker)}
+                intelligenceStatus={symbolIntelStatus}
               />
             )}
           </React.Fragment>

@@ -82,6 +82,9 @@ class IntelligenceRunStatusResponse(BaseModel):
     opportunities_count: int = 0
     llm_warnings_count: int = 0
     llm_warning_sample: Optional[str] = None
+    events_kept_count: int = 0
+    events_dropped_count: int = 0
+    duplicate_suppressed_count: int = 0
     analysis_summary: Optional[str] = None
     error: Optional[str] = None
     created_at: str
@@ -100,6 +103,46 @@ class IntelligenceOpportunityResponse(BaseModel):
 class IntelligenceOpportunitiesResponse(BaseModel):
     asof_date: str
     opportunities: list[IntelligenceOpportunityResponse] = Field(default_factory=list)
+
+
+class IntelligenceExplainCandidateContext(BaseModel):
+    signal: Optional[str] = None
+    entry: Optional[float] = None
+    stop: Optional[float] = None
+    target: Optional[float] = None
+    rr: Optional[float] = None
+    confidence: Optional[float] = None
+    close: Optional[float] = None
+    atr: Optional[float] = None
+    sma_20: Optional[float] = None
+    sma_50: Optional[float] = None
+    sma_200: Optional[float] = None
+    momentum_6m: Optional[float] = None
+    momentum_12m: Optional[float] = None
+    rel_strength: Optional[float] = None
+
+
+class IntelligenceExplainSymbolRequest(BaseModel):
+    symbol: str = Field(min_length=1, max_length=16)
+    asof_date: Optional[str] = None
+    candidate_context: Optional[IntelligenceExplainCandidateContext] = None
+
+    @field_validator("symbol")
+    @classmethod
+    def _normalize_symbol(cls, value: str) -> str:
+        cleaned = str(value).strip().upper()
+        if not cleaned:
+            raise ValueError("symbol is required")
+        return cleaned
+
+
+class IntelligenceExplainSymbolResponse(BaseModel):
+    symbol: str
+    asof_date: str
+    explanation: str
+    source: Literal["llm", "deterministic_fallback"]
+    model: Optional[str] = None
+    generated_at: str
 
 
 # LLM Classification Models

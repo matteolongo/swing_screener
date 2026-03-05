@@ -76,6 +76,106 @@ class IntelligenceStorage:
         locked_write_json_cli(path, payload)
         return path
 
+    def load_events(
+        self,
+        asof_date: date | str,
+        *,
+        symbols: list[str] | tuple[str, ...] | None = None,
+        limit: int | None = None,
+    ) -> list[Event]:
+        path = self.events_path(asof_date)
+        if not path.exists():
+            return []
+        symbol_set = {
+            str(symbol).strip().upper()
+            for symbol in (symbols or [])
+            if str(symbol).strip()
+        }
+        out: list[Event] = []
+        try:
+            raw = path.read_text(encoding="utf-8")
+        except Exception:
+            return []
+        for line in raw.splitlines():
+            text = line.strip()
+            if not text:
+                continue
+            try:
+                item = json.loads(text)
+            except Exception:
+                continue
+            if not isinstance(item, dict):
+                continue
+            symbol = str(item.get("symbol", "")).strip().upper()
+            if symbol_set and symbol not in symbol_set:
+                continue
+            metadata_raw = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
+            metadata: dict[str, str | float | int | bool] = {}
+            if isinstance(metadata_raw, dict):
+                for key, value in metadata_raw.items():
+                    if isinstance(value, (str, float, int, bool)):
+                        metadata[str(key)] = value
+            out.append(
+                Event(
+                    event_id=str(item.get("event_id", "")),
+                    symbol=symbol,
+                    source=str(item.get("source", "")),
+                    occurred_at=str(item.get("occurred_at", "")),
+                    headline=str(item.get("headline", "")),
+                    event_type=str(item.get("event_type", "news")),
+                    credibility=float(item.get("credibility", 0.0)),
+                    url=str(item.get("url")) if item.get("url") else None,
+                    metadata=metadata,
+                )
+            )
+            if limit is not None and len(out) >= max(1, int(limit)):
+                break
+        return out
+
+    def load_signals(
+        self,
+        asof_date: date | str,
+        *,
+        symbols: list[str] | tuple[str, ...] | None = None,
+    ) -> list[CatalystSignal]:
+        path = self.signals_path(asof_date)
+        if not path.exists():
+            return []
+        symbol_set = {
+            str(symbol).strip().upper()
+            for symbol in (symbols or [])
+            if str(symbol).strip()
+        }
+        try:
+            payload = locked_read_json_cli(path)
+        except Exception:
+            return []
+        if not isinstance(payload, list):
+            return []
+        out: list[CatalystSignal] = []
+        for item in payload:
+            if not isinstance(item, dict):
+                continue
+            symbol = str(item.get("symbol", "")).strip().upper()
+            if not symbol:
+                continue
+            if symbol_set and symbol not in symbol_set:
+                continue
+            out.append(
+                CatalystSignal(
+                    symbol=symbol,
+                    event_id=str(item.get("event_id", "")),
+                    return_z=float(item.get("return_z", 0.0)),
+                    atr_shock=float(item.get("atr_shock", 0.0)),
+                    peer_confirmation_count=int(item.get("peer_confirmation_count", 0)),
+                    recency_hours=float(item.get("recency_hours", 0.0)),
+                    is_false_catalyst=bool(item.get("is_false_catalyst", False)),
+                    reasons=[str(value) for value in item.get("reasons", []) if str(value)],
+                )
+            )
+        out.sort(key=lambda signal: signal.recency_hours)
+        return out
+
     def load_opportunities(self, asof: date | str) -> list[Opportunity]:
         path = self.opportunities_path(asof)
         if not path.exists():

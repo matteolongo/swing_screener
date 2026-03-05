@@ -4,6 +4,7 @@ import PortfolioPanel from '@/components/domain/workspace/PortfolioPanel';
 import ScreenerInboxPanel from '@/components/domain/workspace/ScreenerInboxPanel';
 import TodaysNextActionCard from '@/components/domain/onboarding/TodaysNextActionCard';
 import Button from '@/components/common/Button';
+import { useSymbolIntelligenceRunner } from '@/features/intelligence/useSymbolIntelligenceRunner';
 import { t } from '@/i18n/t';
 import { useOnboardingStore } from '@/stores/onboardingStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
@@ -12,7 +13,10 @@ export default function Workspace() {
   const navigate = useNavigate();
   const { status: onboardingStatus } = useOnboardingStore();
   const requestRunScreener = useWorkspaceStore((state) => state.requestRunScreener);
+  const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
   const showNextActionCard = onboardingStatus !== 'completed';
+  const { runForTicker, getStatusForTicker } = useSymbolIntelligenceRunner();
+  const selectedTickerIntelligenceStatus = selectedTicker ? getStatusForTicker(selectedTicker) : undefined;
 
   return (
     <div className="mx-auto max-w-[1600px] space-y-4">
@@ -34,10 +38,16 @@ export default function Workspace() {
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 items-stretch">
         <div className="xl:min-h-[520px] xl:col-span-7 xl:max-h-[calc(100vh-190px)]">
-          <ScreenerInboxPanel />
+          <ScreenerInboxPanel
+            onRunSymbolIntelligence={runForTicker}
+            getSymbolIntelligenceStatus={getStatusForTicker}
+          />
         </div>
         <div className="xl:min-h-[520px] xl:col-span-5 xl:max-h-[calc(100vh-190px)]">
-          <AnalysisCanvasPanel />
+          <AnalysisCanvasPanel
+            onRunSymbolIntelligence={runForTicker}
+            symbolIntelligenceStatus={selectedTickerIntelligenceStatus}
+          />
         </div>
         <div className="xl:col-span-12 xl:min-h-[340px]">
           <PortfolioPanel />

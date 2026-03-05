@@ -119,10 +119,10 @@ class YahooFinanceEventProvider:
                         metadata={
                             "publisher": publisher,
                             "content_type": str(item.get("type", "news")),
+                            "summary": summary[:500],
                         },
                     )
                 )
 
         events.sort(key=lambda ev: (ev.occurred_at, ev.event_id), reverse=True)
         return events
-
