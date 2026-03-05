@@ -72,6 +72,10 @@ function normalizeTicker(value: string): string {
   return value.trim().toUpperCase();
 }
 
+function roundToCents(value: number): number {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
 function inferOrderKind(order: Pick<Order, 'orderKind' | 'orderType'>): LocalOrderKind | null {
   if (order.orderKind) {
     return order.orderKind;
@@ -458,8 +462,8 @@ export function updatePositionStopLocal(positionId: string, request: UpdateStopR
       throw new Error('Cannot update stop on closed position');
     }
 
-    const newStop = request.newStop;
-    const oldStop = position.stopPrice;
+    const newStop = roundToCents(request.newStop);
+    const oldStop = roundToCents(position.stopPrice);
 
     if (newStop <= oldStop) {
       throw new Error(`Cannot move stop down. Current: ${oldStop}, Requested: ${newStop}`);
@@ -551,6 +555,7 @@ export function closePositionLocal(positionId: string, request: ClosePositionReq
       ...current,
       status: 'closed',
       exitPrice: request.exitPrice,
+      exitFeeEur: request.feeEur,
       exitDate: currentDateIso(),
       notes: request.reason
         ? `${current.notes ? `${current.notes}\n` : ''}Closed: ${request.reason}`

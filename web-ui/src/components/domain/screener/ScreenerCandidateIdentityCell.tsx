@@ -20,7 +20,7 @@ export default function ScreenerCandidateIdentityCell({
   const confidenceValue = Number.isFinite(candidate.confidence)
     ? Math.max(0, Math.min(100, candidate.confidence <= 1 ? candidate.confidence * 100 : candidate.confidence))
     : null;
-  
+
   return (
     <div className="flex flex-col gap-1">
       {/* Ticker link and verdict badge */}
@@ -28,7 +28,10 @@ export default function ScreenerCandidateIdentityCell({
         {onSymbolClick ? (
           <button
             type="button"
-            onClick={() => onSymbolClick(candidate.ticker)}
+            onClick={(event) => {
+              event.stopPropagation();
+              onSymbolClick(candidate.ticker);
+            }}
             className="font-semibold text-blue-600 hover:text-blue-800 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
             title={t('workspacePage.symbolDetails.openTitle', { ticker: candidate.ticker })}
           >

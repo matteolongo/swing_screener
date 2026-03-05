@@ -142,3 +142,63 @@ def test_guidance_supports_dynamic_ma_and_atr_columns():
     assert row["suggested_order_type"] == "BUY_LIMIT"
     assert row["suggested_order_price"] == approx(102.0, rel=1e-9)
     assert row["order_price_band_high"] == approx(102.0 + 0.1 * 5.0, rel=1e-9)
+
+
+def test_breakout_level_with_invalid_object_value_is_ignored():
+    df = pd.DataFrame(
+        {
+            "signal": ["breakout"],
+            "last": [100.0],
+            "breakout_level": [[]],
+            "atr14": [2.0],
+            "ma20_level": [np.nan],
+        },
+        index=["AAA"],
+    )
+
+    out = add_execution_guidance(df)
+    row = out.loc["AAA"]
+
+    assert row["suggested_order_type"] == "SKIP"
+    assert np.isnan(row["suggested_order_price"])
+
+
+def test_prefers_numeric_breakout_level_sig_when_primary_column_is_invalid():
+    df = pd.DataFrame(
+        {
+            "signal": ["breakout"],
+            "last": [100.0],
+            "breakout_level": [[]],
+            "breakout_level_sig": [105.0],
+            "atr14": [2.0],
+            "ma20_level": [np.nan],
+        },
+        index=["AAA"],
+    )
+
+    out = add_execution_guidance(df)
+    row = out.loc["AAA"]
+
+    assert row["suggested_order_type"] == "BUY_STOP"
+    assert row["suggested_order_price"] == approx(105.0 * 1.002, rel=1e-9)
+
+
+def test_breakout_level_fallback_is_row_wise_and_prefers_primary_values():
+    df = pd.DataFrame(
+        {
+            "signal": ["breakout", "breakout"],
+            "last": [100.0, 100.0],
+            "breakout_level": [106.0, []],
+            "breakout_level_sig": [104.0, 105.0],
+            "atr14": [2.0, 2.0],
+            "ma20_level": [np.nan, np.nan],
+        },
+        index=["AAA", "BBB"],
+    )
+
+    out = add_execution_guidance(df)
+
+    assert out.loc["AAA", "suggested_order_type"] == "BUY_STOP"
+    assert out.loc["AAA", "suggested_order_price"] == approx(106.0 * 1.002, rel=1e-9)
+    assert out.loc["BBB", "suggested_order_type"] == "BUY_STOP"
+    assert out.loc["BBB", "suggested_order_price"] == approx(105.0 * 1.002, rel=1e-9)

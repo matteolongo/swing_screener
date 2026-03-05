@@ -616,6 +616,17 @@ class ScreenerService:
                         risk_pct=risk_pct if risk_pct is not None else rec_risk.risk_pct,
                         recommendation=recommendation,
                         price_history=price_history_map.get(ticker_str, []),
+                        suggested_order_type=(
+                            str(row.get("suggested_order_type"))
+                            if not _is_na_scalar(row.get("suggested_order_type"))
+                            else None
+                        ),
+                        suggested_order_price=_safe_optional_float(row.get("suggested_order_price")),
+                        execution_note=(
+                            str(row.get("execution_note"))
+                            if not _is_na_scalar(row.get("execution_note"))
+                            else None
+                        ),
                     )
                 )
 

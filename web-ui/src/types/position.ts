@@ -15,6 +15,7 @@ export interface Position {
   maxFavorablePrice?: number;
   exitDate?: string;
   exitPrice?: number;
+  exitFeeEur?: number;
   currentPrice?: number;  // Live price for open positions
   notes?: string;
   exitOrderIds?: string[];
@@ -55,6 +56,7 @@ export interface UpdateStopRequest {
 
 export interface ClosePositionRequest {
   exitPrice: number;
+  feeEur?: number;
   reason?: string;
 }
 
@@ -72,6 +74,7 @@ export interface PositionApiResponse {
   max_favorable_price: number | null;
   exit_date: string | null;
   exit_price: number | null;
+  exit_fee_eur?: number | null;
   current_price: number | null;  // Live price for open positions
   notes: string;
   exit_order_ids: string[] | null;
@@ -91,6 +94,7 @@ export function transformPosition(apiPosition: PositionApiResponse): Position {
     maxFavorablePrice: apiPosition.max_favorable_price ?? undefined,
     exitDate: apiPosition.exit_date ?? undefined,
     exitPrice: apiPosition.exit_price ?? undefined,
+    exitFeeEur: apiPosition.exit_fee_eur ?? undefined,
     currentPrice: apiPosition.current_price ?? undefined,
     notes: apiPosition.notes || '',
     exitOrderIds: apiPosition.exit_order_ids ?? undefined,

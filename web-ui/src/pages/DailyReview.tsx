@@ -60,7 +60,7 @@ export default function DailyReview() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const selectedUniverse = parseUniverseFromStorage(localStorage.getItem(SCREENER_UNIVERSE_STORAGE_KEY));
-  const { data: review, isLoading, error, refetch, isFetching } = useDailyReview(10, selectedUniverse);
+  const { data: review, isLoading, error, refetch, isFetching } = useDailyReview(200, selectedUniverse);
   const activeStrategyQuery = useActiveStrategyQuery();
   const { isBeginnerMode } = useBeginnerModeStore();
   const { isReady: strategyReady } = useStrategyReadiness();
@@ -352,12 +352,16 @@ export default function DailyReview() {
           candidate={{
             ticker: selectedCandidate.ticker,
             signal: selectedCandidate.signal,
+            close: selectedCandidate.close,
             entry: selectedCandidate.entry,
             stop: selectedCandidate.stop,
             shares: selectedCandidate.shares,
             recommendation: selectedCandidate.recommendation,
             sector: selectedCandidate.sector,
             rReward: selectedCandidate.rReward,
+            suggestedOrderType: selectedCandidate.suggestedOrderType,
+            suggestedOrderPrice: selectedCandidate.suggestedOrderPrice,
+            executionNote: selectedCandidate.executionNote,
           }}
           risk={riskConfig}
           defaultNotes={t('dailyReview.defaultNotes', {

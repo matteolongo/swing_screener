@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HttpResponse, http } from 'msw';
 import { screen, waitFor, within } from '@testing-library/react';
 import { renderWithProviders } from '@/test/utils';
@@ -68,9 +68,9 @@ describe('Workspace Page', () => {
     const sentimentAction = await screen.findByRole('button', { name: /Sentiment/i });
     await user.click(sentimentAction);
 
-    const dialog = await screen.findByRole('dialog');
     await waitFor(() => {
-      expect(within(dialog).getByText('Sentiment lookback override (hours)')).toBeInTheDocument();
+      expect(screen.getByText('Sentiment lookback override (hours)')).toBeInTheDocument();
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
   });
 
@@ -152,7 +152,7 @@ describe('Workspace Page', () => {
     expect(within(dialog).getByText('Checklist reasoning')).toBeInTheDocument();
   });
 
-  it('opens symbol details modal from the workspace list and closes back to the list', async () => {
+  it('loads ticker from workspace list into analysis canvas without opening a dialog', async () => {
     const { user } = renderWithProviders(<Workspace />);
 
     const runButtons = screen.getAllByRole('button', { name: /Run Screener/i });
@@ -161,18 +161,103 @@ describe('Workspace Page', () => {
 
     await user.click(screen.getByRole('button', { name: 'AAPL' }));
 
-    const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText('AAPL Details')).toBeInTheDocument();
-    const placeBuyButtons = within(dialog).getAllByRole('button', { name: 'Place Buy Order' });
-    await user.click(placeBuyButtons[0]);
-    expect(within(dialog).getByRole('tab', { name: 'Order' })).toHaveAttribute('aria-selected', 'true');
-    expect(within(dialog).getByText('Action Panel')).toBeInTheDocument();
-
-    await user.click(within(dialog).getByRole('button', { name: 'Back' }));
-
     await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'AAPL' })).toBeInTheDocument();
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
+  });
+
+  it('auto-scrolls to analysis canvas on mobile when selecting a screener ticker', async () => {
+    const originalMatchMedia = window.matchMedia;
+    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+    const scrollIntoViewMock = vi.fn();
+    window.matchMedia = ((query: string) => ({
+      matches: query === '(max-width: 1279px)',
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    })) as typeof window.matchMedia;
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+      configurable: true,
+      writable: true,
+      value: scrollIntoViewMock,
+    });
+
+    try {
+      const { user } = renderWithProviders(<Workspace />);
+
+      const runButtons = screen.getAllByRole('button', { name: /Run Screener/i });
+      await user.click(runButtons[0]);
+      await screen.findByRole('heading', { name: 'AAPL' });
+
+      await user.click(screen.getByRole('button', { name: 'AAPL' }));
+
+      await waitFor(() => {
+        expect(scrollIntoViewMock).toHaveBeenCalled();
+      });
+    } finally {
+      if (originalScrollIntoView) {
+        Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+          configurable: true,
+          writable: true,
+          value: originalScrollIntoView,
+        });
+      } else {
+        Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView');
+      }
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
+  it('does not auto-scroll to analysis canvas on non-mobile screener selection', async () => {
+    const originalMatchMedia = window.matchMedia;
+    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+    const scrollIntoViewMock = vi.fn();
+    window.matchMedia = ((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    })) as typeof window.matchMedia;
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+      configurable: true,
+      writable: true,
+      value: scrollIntoViewMock,
+    });
+
+    try {
+      const { user } = renderWithProviders(<Workspace />);
+
+      const runButtons = screen.getAllByRole('button', { name: /Run Screener/i });
+      await user.click(runButtons[0]);
+      await screen.findByRole('heading', { name: 'AAPL' });
+
+      await user.click(screen.getByRole('button', { name: 'AAPL' }));
+
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'AAPL' })).toBeInTheDocument();
+      });
+      expect(scrollIntoViewMock).not.toHaveBeenCalled();
+    } finally {
+      if (originalScrollIntoView) {
+        Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+          configurable: true,
+          writable: true,
+          value: originalScrollIntoView,
+        });
+      } else {
+        Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView');
+      }
+      window.matchMedia = originalMatchMedia;
+    }
   });
 
   it('opens fill-order modal for pending entry orders in the portfolio panel', async () => {
@@ -399,7 +484,7 @@ describe('Workspace Page', () => {
     await waitFor(() => {
       expect(screen.getByText('Setup Execution (Degiro)')).toBeInTheDocument();
       expect(screen.getByText('Breakout setup')).toBeInTheDocument();
-      expect(screen.getByText(/BUY STOP/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/BUY STOP/i).length).toBeGreaterThan(0);
     });
   });
 

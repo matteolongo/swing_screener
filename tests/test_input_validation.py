@@ -276,9 +276,11 @@ class TestClosePositionValidation:
         """Test that valid close request passes."""
         request = ClosePositionRequest(
             exit_price=155.25,
+            fee_eur=1.95,
             reason="Target hit"
         )
         assert request.exit_price == 155.25
+        assert request.fee_eur == 1.95
 
     def test_exit_price_zero_fails(self):
         """Test that zero exit price fails."""
@@ -291,6 +293,12 @@ class TestClosePositionValidation:
         with pytest.raises(ValidationError) as exc_info:
             ClosePositionRequest(exit_price=float('nan'))
         assert "ClosePositionRequest" in str(exc_info.value)
+
+    def test_fee_negative_fails(self):
+        """Test that negative fee fails."""
+        with pytest.raises(ValidationError) as exc_info:
+            ClosePositionRequest(exit_price=155.25, fee_eur=-0.01)
+        assert "greater than or equal to 0" in str(exc_info.value)
 
 
 class TestOrderPreviewValidation:

@@ -14,6 +14,10 @@ interface UpdateStopModalFormProps {
   onSubmit: (request: UpdateStopRequest) => void;
 }
 
+function roundToCents(value: number): number {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
 export default function UpdateStopModalForm({
   position,
   isLoading,
@@ -25,12 +29,14 @@ export default function UpdateStopModalForm({
   const suggestion = suggestionQuery.data;
   const suggestionError = suggestionQuery.error instanceof Error ? suggestionQuery.error.message : '';
   const suggestedStop = suggestion?.stopSuggested;
+  const suggestedStopRounded = suggestedStop != null ? roundToCents(suggestedStop) : null;
+  const currentStopRounded = roundToCents(position.stopPrice);
   const canApplySuggested =
     suggestion?.action === 'MOVE_STOP_UP' &&
-    suggestedStop != null &&
-    suggestedStop > position.stopPrice;
+    suggestedStopRounded != null &&
+    suggestedStopRounded > currentStopRounded;
 
-  const initialStop = canApplySuggested && suggestedStop != null ? suggestedStop : position.stopPrice;
+  const initialStop = canApplySuggested && suggestedStopRounded != null ? suggestedStopRounded : currentStopRounded;
   const initialReason = canApplySuggested && suggestion?.reason ? suggestion.reason : '';
 
   const [formData, setFormData] = useState<UpdateStopRequest>({
@@ -39,33 +45,36 @@ export default function UpdateStopModalForm({
   });
 
   useEffect(() => {
-    if (!canApplySuggested || suggestedStop == null) return;
+    if (!canApplySuggested || suggestedStopRounded == null) return;
 
     setFormData((prev) => {
       const isPristine = prev.newStop === initialStop && prev.reason === initialReason;
       if (!isPristine) return prev;
       return {
-        newStop: suggestedStop,
+        newStop: suggestedStopRounded,
         reason: suggestion?.reason || '',
       };
     });
-  }, [canApplySuggested, suggestedStop, suggestion?.reason, initialStop, initialReason]);
+  }, [canApplySuggested, suggestedStopRounded, suggestion?.reason, initialStop, initialReason]);
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    onSubmit(formData);
+    onSubmit({
+      ...formData,
+      newStop: roundToCents(formData.newStop),
+    });
   };
 
   const handleUseSuggested = () => {
-    if (!canApplySuggested || suggestedStop == null) return;
+    if (!canApplySuggested || suggestedStopRounded == null) return;
     setFormData((prev) => ({
       ...prev,
-      newStop: suggestedStop,
+      newStop: suggestedStopRounded,
       reason: prev.reason || suggestion?.reason || '',
     }));
   };
 
-  const canMoveUp = formData.newStop > position.stopPrice;
+  const canMoveUp = roundToCents(formData.newStop) > currentStopRounded;
 
   return (
     <ModalShell title={t('positions.updateStopModal.title', { ticker: position.ticker })} onClose={onClose} className="max-w-md">
@@ -97,7 +106,7 @@ export default function UpdateStopModalForm({
             <div className="text-sm text-blue-800 dark:text-blue-100 mt-2 space-y-1">
               <p>
                 <strong>{t('positions.updateStopModal.suggested')}:</strong>{' '}
-                {formatCurrency(suggestedStop ?? position.stopPrice)}
+                {formatCurrency(suggestedStopRounded ?? currentStopRounded)}
               </p>
               <p>
                 <strong>{t('positions.updateStopModal.action')}:</strong> {suggestion.action}
@@ -130,15 +139,18 @@ export default function UpdateStopModalForm({
           <input
             type="number"
             step="0.01"
-            min={position.stopPrice}
+            min={currentStopRounded}
             value={formData.newStop}
             onChange={(event) =>
               setFormData((prev) => ({ ...prev, newStop: parseFloat(event.target.value) || 0 }))
             }
+            onBlur={() =>
+              setFormData((prev) => ({ ...prev, newStop: roundToCents(prev.newStop) }))
+            }
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
             required
           />
-          {!canMoveUp && formData.newStop !== position.stopPrice ? (
+          {!canMoveUp && roundToCents(formData.newStop) !== currentStopRounded ? (
             <p className="text-sm text-red-600 mt-1">{t('positions.updateStopModal.canOnlyMoveUp')}</p>
           ) : null}
         </div>

@@ -12,12 +12,16 @@ class DailyReviewCandidate(BaseModel):
     ticker: str
     confidence: float | None = None
     signal: str
+    close: float
     entry: float
     stop: float
     shares: int
     r_reward: float = Field(..., description="Potential reward in R-multiples")
     name: str | None = None
     sector: str | None = None
+    suggested_order_type: Optional[str] = None
+    suggested_order_price: Optional[float] = None
+    execution_note: Optional[str] = None
     recommendation: Optional[Recommendation] = None
 
 
@@ -78,5 +82,5 @@ class DailyReviewComputeRequest(BaseModel):
     strategy: Strategy
     positions: list[Position] = Field(default_factory=list)
     orders: list[Order] = Field(default_factory=list)
-    top_n: int = Field(default=10, ge=1, le=50)
+    top_n: int = Field(default=200, ge=1, le=200)
     universe: Optional[str] = None

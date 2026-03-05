@@ -5,6 +5,7 @@ from typing import Literal, Optional
 from pathlib import Path
 import json
 import math
+from decimal import Decimal, ROUND_HALF_UP
 from dataclasses import replace
 
 import pandas as pd
@@ -197,6 +198,11 @@ def _sma(s: pd.Series, window: int) -> float:
     return float(s.rolling(window).mean().iloc[-1])
 
 
+def _round_price(value: float) -> float:
+    # Keep stop logic aligned with tradable broker/UI precision (2 decimals).
+    return float(Decimal(str(value)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+
+
 def evaluate_positions(
     ohlcv: pd.DataFrame,
     positions: list[Position],
@@ -313,7 +319,10 @@ def evaluate_positions(
                 stop_suggested = max(stop_suggested, trail_stop)
                 reason = f"Trail: R={r_now:.2f} >= {cfg.trail_after_R} and SMA{cfg.trail_sma} trail"
 
-        if stop_suggested > pos.stop_price + 1e-9:
+        stop_old_rounded = _round_price(pos.stop_price)
+        stop_suggested_rounded = _round_price(stop_suggested)
+
+        if stop_suggested_rounded > stop_old_rounded + 1e-9:
             action = "MOVE_STOP_UP"
         else:
             action = "NO_ACTION"
@@ -324,8 +333,8 @@ def evaluate_positions(
                 status=pos.status,
                 last=last,
                 entry=pos.entry_price,
-                stop_old=pos.stop_price,
-                stop_suggested=float(stop_suggested),
+                stop_old=stop_old_rounded,
+                stop_suggested=stop_suggested_rounded,
                 shares=pos.shares,
                 r_now=float(r_now),
                 action=action,

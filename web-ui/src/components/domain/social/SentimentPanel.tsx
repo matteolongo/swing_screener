@@ -143,6 +143,8 @@ export default function SentimentPanel({ data, loading, error }: SentimentPanelP
     return null;
   }
 
+  const hasProviderError = typeof data.error === 'string' && data.error.trim().length > 0;
+
   return (
     <Card variant="bordered">
       <CardHeader>
@@ -223,6 +225,36 @@ export default function SentimentPanel({ data, loading, error }: SentimentPanelP
                   <li key={idx}>{reason}</li>
                 ))}
               </ul>
+            </div>
+          )}
+
+          {/* Provider/API error surfaced in payload */}
+          {hasProviderError && (
+            <div
+              className={
+                data.status === 'error'
+                  ? 'p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg'
+                  : 'p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg'
+              }
+            >
+              <div
+                className={
+                  data.status === 'error'
+                    ? 'text-sm font-medium text-red-900 dark:text-red-100 mb-1'
+                    : 'text-sm font-medium text-yellow-900 dark:text-yellow-100 mb-1'
+                }
+              >
+                {data.status === 'error' ? 'Provider Error' : 'Provider Warning'}
+              </div>
+              <p
+                className={
+                  data.status === 'error'
+                    ? 'text-sm text-red-800 dark:text-red-200'
+                    : 'text-sm text-yellow-800 dark:text-yellow-200'
+                }
+              >
+                {data.error}
+              </p>
             </div>
           )}
 
