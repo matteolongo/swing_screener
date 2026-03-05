@@ -74,6 +74,84 @@ describe('Workspace Page', () => {
     });
   });
 
+  it('opens why-matched action and shows fallback rationale when thesis is missing', async () => {
+    server.use(
+      http.post('*/api/screener/run', () =>
+        HttpResponse.json({
+          candidates: [
+            {
+              ticker: 'AAPL',
+              currency: 'USD',
+              rank: 1,
+              score: 0.92,
+              close: 178.2,
+              last_bar: '2026-02-18T16:00:00',
+              sma_20: 172,
+              sma_50: 166,
+              sma_200: 158,
+              atr: 3.1,
+              momentum_6m: 22.4,
+              momentum_12m: 41.6,
+              rel_strength: 82.3,
+              confidence: 74.1,
+              recommendation: {
+                verdict: 'RECOMMENDED',
+                reasons_short: ['Trend and momentum are aligned'],
+                reasons_detailed: [
+                  {
+                    code: 'RR_OK',
+                    message: 'Risk/reward meets threshold',
+                    severity: 'info',
+                    metrics: {},
+                  },
+                ],
+                risk: {
+                  entry: 178.2,
+                  stop: 172.0,
+                  target: 190.0,
+                  rr: 2.1,
+                  risk_amount: 20,
+                  risk_pct: 0.01,
+                  position_size: 500,
+                  shares: 2,
+                },
+                costs: {
+                  commission_estimate: 1,
+                  fx_estimate: 0,
+                  slippage_estimate: 0.5,
+                  total_cost: 1.5,
+                  fee_to_risk_pct: 0.075,
+                },
+                checklist: [],
+                education: {
+                  common_bias_warning: 'Avoid overtrading',
+                  what_to_learn: 'Confirm momentum continuation',
+                  what_would_make_valid: ['Hold above short-term support'],
+                },
+              },
+            },
+          ],
+          asof_date: '2026-02-18',
+          total_screened: 1,
+          data_freshness: 'final_close',
+          warnings: [],
+        })
+      ),
+    );
+
+    const { user } = renderWithProviders(<Workspace />);
+    const runButtons = screen.getAllByRole('button', { name: /Run Screener/i });
+    await user.click(runButtons[0]);
+    await screen.findByRole('heading', { name: 'AAPL' });
+
+    const whyButton = await screen.findByRole('button', { name: /Explain why AAPL matched/i });
+    await user.click(whyButton);
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Why this setup matched')).toBeInTheDocument();
+    expect(within(dialog).getByText('Checklist reasoning')).toBeInTheDocument();
+  });
+
   it('loads ticker from workspace list into analysis canvas without opening a dialog', async () => {
     const { user } = renderWithProviders(<Workspace />);
 

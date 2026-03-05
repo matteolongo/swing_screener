@@ -8,6 +8,7 @@ import StrategyAdvancedSettingsCard from '@/components/domain/strategy/StrategyA
 import StrategyCoreSettingsCards from '@/components/domain/strategy/StrategyCoreSettingsCards';
 import StrategyPhilosophyCard from '@/components/domain/strategy/StrategyPhilosophyCard';
 import StrategySafetyScore from '@/components/domain/strategy/StrategySafetyScore';
+import IndicatorPreviewCard from '@/components/domain/strategy/IndicatorPreviewCard';
 import BeginnerModeToggle from '@/components/domain/strategy/BeginnerModeToggle';
 import StrategyPresets, { applyPresetToStrategy } from '@/components/domain/strategy/StrategyPresets';
 import { useI18n } from '@/i18n/I18nProvider';
@@ -571,6 +572,16 @@ export default function StrategyPage() {
             help={help}
             validationWarnings={validationWarnings}
             useEnhancedEducation={isBeginnerMode}
+          />
+
+          <IndicatorPreviewCard
+            input={{
+              breakoutLookback: draft.signals.breakoutLookback,
+              pullbackMa: draft.signals.pullbackMa,
+              smaFast: draft.universe.trend.smaFast,
+              smaMid: draft.universe.trend.smaMid,
+              smaLong: draft.universe.trend.smaLong,
+            }}
           />
 
           {/* Advanced Settings - Hidden in beginner mode */}

@@ -14,6 +14,8 @@ export type EducationMetricKey =
   | 'OVERLAY'
   | 'R_NOW';
 
+export type EducationGlossarySection = 'setup' | 'risk' | 'overlay' | 'review';
+
 export interface EducationGlossaryEntry {
   key: EducationMetricKey;
   label: string;
@@ -121,6 +123,24 @@ const EDUCATION_GLOSSARY_MESSAGE_KEYS: Record<EducationMetricKey, EducationGloss
   },
 };
 
+const EDUCATION_GLOSSARY_SECTIONS: Record<EducationMetricKey, EducationGlossarySection> = {
+  RR: 'setup',
+  RS: 'setup',
+  ATR: 'setup',
+  SCORE: 'setup',
+  CONFIDENCE: 'setup',
+  MOM_6M: 'setup',
+  MOM_12M: 'setup',
+  RISK_PCT: 'risk',
+  FEE_TO_RISK: 'risk',
+  OVERLAY: 'overlay',
+  R_NOW: 'review',
+};
+
+export const ALL_GLOSSARY_KEYS: EducationMetricKey[] = Object.keys(
+  EDUCATION_GLOSSARY_MESSAGE_KEYS
+) as EducationMetricKey[];
+
 export const SCREENER_GLOSSARY_KEYS: EducationMetricKey[] = [
   'CONFIDENCE',
   'SCORE',
@@ -141,6 +161,10 @@ export const DAILY_REVIEW_GLOSSARY_KEYS: EducationMetricKey[] = [
   'RISK_PCT',
   'FEE_TO_RISK',
 ];
+
+export function getGlossarySection(metricKey: EducationMetricKey): EducationGlossarySection {
+  return EDUCATION_GLOSSARY_SECTIONS[metricKey];
+}
 
 export function getGlossaryEntry(metricKey: EducationMetricKey): EducationGlossaryEntry {
   const keys = EDUCATION_GLOSSARY_MESSAGE_KEYS[metricKey];

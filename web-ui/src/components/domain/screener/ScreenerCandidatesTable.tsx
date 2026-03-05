@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ChevronDown, ChevronUp, ListChecks } from 'lucide-react';
+import { ChevronDown, ChevronUp, HelpCircle, ListChecks } from 'lucide-react';
 import Button from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
 import TableShell from '@/components/common/TableShell';
@@ -25,7 +25,7 @@ interface ScreenerCandidatesTableProps {
   onCreateOrder: (candidate: ScreenerCandidate) => void;
   onRecommendationDetails: (candidate: ScreenerCandidate) => void;
   onSocialAnalysis: (ticker: string) => void;
-  onTradeThesis: (candidate: ScreenerCandidate) => void;
+  onWhyMatched: (candidate: ScreenerCandidate) => void;
   onSymbolClick?: (ticker: string) => void;
   selectedTicker?: string | null;
   onRowClick?: (candidate: ScreenerCandidate) => void;
@@ -39,7 +39,7 @@ export default function ScreenerCandidatesTable({
   onCreateOrder,
   onRecommendationDetails,
   onSocialAnalysis,
-  onTradeThesis,
+  onWhyMatched,
   onSymbolClick,
   selectedTicker,
   onRowClick,
@@ -207,18 +207,18 @@ export default function ScreenerCandidatesTable({
                   >
                     {t('screener.table.sentimentTitle')}
                   </Button>
-                  {candidate.recommendation?.thesis ? (
+                  {candidate.recommendation ? (
                     <Button
                       size="sm"
                       variant="secondary"
                       onClick={(event) => {
                         event.stopPropagation();
-                        onTradeThesis(candidate);
+                        onWhyMatched(candidate);
                       }}
-                      title={t('screener.table.tradeThesisTitle')}
-                      aria-label={t('screener.table.tradeThesisAria', { ticker: candidate.ticker })}
+                      title={t('screener.table.whyMatchedTitle')}
+                      aria-label={t('screener.table.whyMatchedAria', { ticker: candidate.ticker })}
                     >
-                      {t('screener.table.tradeThesisTitle')}
+                      {t('screener.table.whyMatchedAction')}
                     </Button>
                   ) : null}
                 </div>
@@ -335,6 +335,21 @@ export default function ScreenerCandidatesTable({
                     <ListChecks className="w-4 h-4" />
                   </Button>
 
+                  {candidate.recommendation ? (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onWhyMatched(candidate);
+                      }}
+                      title={t('screener.table.whyMatchedTitle')}
+                      aria-label={t('screener.table.whyMatchedAria', { ticker: candidate.ticker })}
+                    >
+                      <HelpCircle className="w-4 h-4" />
+                    </Button>
+                  ) : null}
+
                   {/* Create Order */}
                   <Button
                     size="sm"
@@ -360,7 +375,7 @@ export default function ScreenerCandidatesTable({
               <ScreenerCandidateDetailsRow
                 candidate={vm}
                 onSocialClick={() => onSocialAnalysis(candidate.ticker)}
-                onThesisClick={() => onTradeThesis(candidate)}
+                onWhyMatchedClick={() => onWhyMatched(candidate)}
               />
             )}
           </React.Fragment>

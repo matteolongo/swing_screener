@@ -243,7 +243,11 @@ export default function DailyReview() {
           </div>
         ) : (
           <div className="space-y-3">
-            <GlossaryLegend metricKeys={DAILY_REVIEW_GLOSSARY_KEYS} title={t('dailyReview.sections.dailyGlossary')} />
+            <GlossaryLegend
+              metricKeys={DAILY_REVIEW_GLOSSARY_KEYS}
+              title={t('dailyReview.sections.dailyGlossary')}
+              showLearnLink
+            />
             {hiddenCandidates > 0 ? (
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 {t('dailyReview.sections.showingRecommendedOnly', {
@@ -276,7 +280,11 @@ export default function DailyReview() {
           <p className="text-gray-600 dark:text-gray-400">{t('dailyReview.sections.noStopUpdates')}</p>
         ) : (
           <div className="space-y-3">
-            <GlossaryLegend metricKeys={DAILY_REVIEW_GLOSSARY_KEYS} title={t('dailyReview.sections.stopGlossary')} />
+            <GlossaryLegend
+              metricKeys={DAILY_REVIEW_GLOSSARY_KEYS}
+              title={t('dailyReview.sections.stopGlossary')}
+              showLearnLink
+            />
             <UpdateStopTable
               positions={review.positionsUpdateStop}
               onAction={(position) =>

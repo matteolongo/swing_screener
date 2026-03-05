@@ -12,6 +12,7 @@ export const messagesEn = {
       load: 'Load',
       delete: 'Delete',
       save: 'Save',
+      learn: 'Learn',
     },
     table: {
       loading: 'Loading...',
@@ -357,6 +358,7 @@ export const messagesEn = {
       dailyReview: 'Daily Review',
       strategy: 'Strategy',
       intelligence: 'Intelligence',
+      learn: 'Learn',
     },
     activeStrategy: 'Active Strategy',
     loadingStrategies: 'Loading strategies...',
@@ -415,6 +417,10 @@ export const messagesEn = {
         tradeThesisDescription: 'Structured system rationale for this setup.',
         tradeThesisPlaceholder: 'Write your thesis for {{ticker}}...',
         noThesis: 'No structured thesis is available for this ticker yet.',
+        whyMatchedFallbackTitle: 'Why this setup matched',
+        whyMatchedFallbackDescription:
+          'Structured thesis is unavailable, so this fallback shows recommendation reasons.',
+        whyMatchedChecks: 'Checklist reasoning',
         actionTitle: 'Action Panel',
         actionDescription: 'Create an entry order using the selected screener setup.',
         noActionCandidate: 'No screener setup is available for this ticker, so order defaults cannot be generated.',
@@ -441,6 +447,29 @@ export const messagesEn = {
         loadError: 'Failed to load portfolio data.',
         placeholder: 'Open positions and pending orders will be consolidated here.',
       },
+    },
+  },
+  learnPage: {
+    title: 'Learn & Glossary',
+    subtitle:
+      'Reference key trading concepts used across Workspace, Daily Review, and Strategy.',
+    backToWorkspace: 'Back to Workspace',
+    openAction: 'Open Learn',
+    openTitle: 'Open Learn glossary page',
+    openAria: 'Open Learn glossary page',
+    openForMetricTitle: 'Open Learn page for {{metric}}',
+    openForMetricAria: 'Open Learn page for {{metric}}',
+    search: {
+      label: 'Search glossary by label',
+      placeholder: 'Try RR, ATR, MOM 6M...',
+      summary: '{{count}} terms shown',
+      empty: 'No glossary terms match your current search.',
+    },
+    sections: {
+      setup: 'Setup Fundamentals',
+      risk: 'Risk Controls',
+      overlay: 'Overlay & Sentiment',
+      review: 'Daily Review Metrics',
     },
   },
   header: {
@@ -949,6 +978,9 @@ export const messagesEn = {
       recommendationDetailsAria: 'Recommendation details for {{ticker}}',
       tradeThesisTitle: 'View Trade Thesis',
       tradeThesisAria: 'View trade thesis for {{ticker}}',
+      whyMatchedTitle: 'Why this matched',
+      whyMatchedAction: 'Why this matched',
+      whyMatchedAria: 'Explain why {{ticker}} matched',
       createOrderTitle: 'Create Order',
       createOrderNotRecommendedTitle: 'Not recommended — open details to fix',
       createOrderAction: 'Create Order',
@@ -1262,6 +1294,28 @@ export const messagesEn = {
       resetChanges: 'Reset Changes',
       saving: 'Saving…',
       saveChanges: 'Save Changes',
+    },
+    indicatorPreview: {
+      title: 'Indicator Preview (Educational)',
+      description:
+        'This deterministic sample chart helps you see how your indicator windows change structure. It is not live market data.',
+      aria: 'Educational indicator preview chart',
+      invalid: 'Preview unavailable.',
+      latest: {
+        close: 'Latest sample close: {{value}}',
+        breakout: 'Latest breakout channel high: {{value}}',
+        pullback: 'Latest pullback MA: {{value}}',
+      },
+      legend: {
+        close: 'Close (sample)',
+        smaFast: 'SMA Fast',
+        smaMid: 'SMA Mid',
+        smaLong: 'SMA Long',
+        pullback: 'Pullback MA (dashed)',
+        breakout: 'Breakout high (dashed)',
+      },
+      disclaimer:
+        'Educational preview only. Actual screener signals use full backend calculations and market data.',
     },
     quickStart: {
       title: 'Beginner Quick Start',

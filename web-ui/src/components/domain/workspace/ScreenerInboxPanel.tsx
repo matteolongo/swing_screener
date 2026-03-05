@@ -156,7 +156,7 @@ export default function ScreenerInboxPanel() {
     [scrollAnalysisCanvasIntoView, setAnalysisTab, setSelectedTicker]
   );
 
-  const handleTradeThesisAction = useCallback((candidate: ScreenerCandidate) => {
+  const handleWhyMatchedAction = useCallback((candidate: ScreenerCandidate) => {
     handleSelectCandidate(candidate.ticker, 'order');
   }, [handleSelectCandidate]);
 
@@ -247,7 +247,7 @@ export default function ScreenerInboxPanel() {
               onCreateOrder={(candidate) => handleSelectCandidate(candidate.ticker, 'order')}
               onRecommendationDetails={(candidate) => handleSelectCandidate(candidate.ticker, 'overview')}
               onSocialAnalysis={(ticker) => handleSelectCandidate(ticker, 'sentiment')}
-              onTradeThesis={handleTradeThesisAction}
+              onWhyMatched={handleWhyMatchedAction}
             />
           </div>
         </div>

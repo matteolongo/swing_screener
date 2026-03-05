@@ -1,25 +1,29 @@
 # Web UI Guide
 
-> Status: needs review against current UI.  
-> Last reviewed: 2026-02-17.
+> Status: updated to match current UI architecture.
+> Last reviewed: 2026-02-28.
 
 ## Purpose
 Daily trading workflow through the Swing Screener web interface.
 
 ## Pages
-- Dashboard: portfolio summary and action items
-- Screener: run screens, review candidates, create orders
-- Orders: list, create, fill, cancel
-- Positions: open/closed positions, stop updates
-- Strategy: list and activate strategies
-- Daily Review: consolidated daily workflow
-- Settings: app configuration and preferences
+- Workspace: unified screener inbox, analysis canvas, and portfolio actions
+- Daily Review: consolidated daily workflow and actionable review tables
+- Strategy: strategy configuration, safety score, and educational controls
+- Intelligence: market-intelligence run and opportunity review
+- Onboarding: beginner workflow and setup guidance
+- Learn: centralized glossary and educational references
+
+## Notes on Legacy Routes
+The following legacy routes redirect to current surfaces:
+- `/dashboard`, `/screener`, `/orders`, `/positions` -> `/workspace`
+- `/settings` -> `/strategy`
 
 ## Typical Workflow
 1. Start API and web UI.
-2. Review Dashboard.
-3. Run Screener and review candidates.
-4. Create orders and confirm risk.
-5. Next trading day: fill orders and update positions.
+2. Open Workspace and run Screener Inbox.
+3. Review selected ticker in Analysis Canvas.
+4. Open Order tab and place orders from validated setups.
+5. Use Daily Review for next-session decisions.
 
 Timing guidance lives in `docs/product/DAILY_USAGE_GUIDE.md`.

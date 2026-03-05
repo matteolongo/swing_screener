@@ -11,6 +11,7 @@ export default function TradeThesisPanel({ ticker }: TradeThesisPanelProps) {
   const candidate = useScreenerStore((state) =>
     state.lastResult?.candidates.find((item) => item.ticker.toUpperCase() === normalizedTicker)
   );
+  const recommendation = candidate?.recommendation;
   const thesis = candidate?.recommendation?.thesis;
 
   return (
@@ -25,6 +26,40 @@ export default function TradeThesisPanel({ ticker }: TradeThesisPanelProps) {
       </div>
       {thesis ? (
         <ThesisSection thesis={thesis} />
+      ) : recommendation ? (
+        <div className="space-y-3 rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-900/20">
+          <div>
+            <h4 className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+              {t('workspacePage.panels.analysis.whyMatchedFallbackTitle')}
+            </h4>
+            <p className="text-xs text-amber-800 dark:text-amber-300">
+              {t('workspacePage.panels.analysis.whyMatchedFallbackDescription')}
+            </p>
+          </div>
+
+          {recommendation.reasonsShort.length > 0 ? (
+            <ul className="list-disc pl-5 text-sm text-amber-900 dark:text-amber-200">
+              {recommendation.reasonsShort.map((reason) => (
+                <li key={reason}>{reason}</li>
+              ))}
+            </ul>
+          ) : null}
+
+          {recommendation.reasonsDetailed.length > 0 ? (
+            <div className="space-y-2 rounded-md border border-amber-200 bg-white/70 p-2 dark:border-amber-800 dark:bg-gray-900/50">
+              <p className="text-xs font-semibold text-amber-900 dark:text-amber-200">
+                {t('workspacePage.panels.analysis.whyMatchedChecks')}
+              </p>
+              <ul className="space-y-1 text-xs text-gray-700 dark:text-gray-200">
+                {recommendation.reasonsDetailed.map((reason) => (
+                  <li key={`${reason.code}-${reason.message}`}>
+                    <span className="font-semibold">{reason.code}:</span> {reason.message}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
       ) : (
         <p className="text-sm text-gray-600 dark:text-gray-400">
           {t('workspacePage.panels.analysis.noThesis')}
