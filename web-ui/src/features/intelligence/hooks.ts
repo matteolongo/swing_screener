@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  fetchIntelligenceEducation,
+  generateIntelligenceEducation,
   explainIntelligenceSymbol,
   createIntelligenceSymbolSet,
   deleteIntelligenceSymbolSet,
@@ -14,6 +16,8 @@ import {
   updateIntelligenceSymbolSet,
 } from '@/features/intelligence/api';
 import {
+  IntelligenceEducationGenerateRequest,
+  IntelligenceEducationGenerateResponse,
   IntelligenceExplainSymbolRequest,
   IntelligenceExplainSymbolResponse,
   IntelligenceConfig,
@@ -149,5 +153,28 @@ export function useIntelligenceOpportunitiesScoped(
 export function useExplainIntelligenceSymbolMutation() {
   return useMutation<IntelligenceExplainSymbolResponse, Error, IntelligenceExplainSymbolRequest>({
     mutationFn: (request) => explainIntelligenceSymbol(request),
+  });
+}
+
+export function useIntelligenceEducationQuery(symbol?: string, asofDate?: string, enabled: boolean = true) {
+  const normalizedSymbol = symbol?.trim().toUpperCase();
+  return useQuery<IntelligenceEducationGenerateResponse>({
+    queryKey: queryKeys.intelligenceEducation(normalizedSymbol, asofDate),
+    queryFn: () => fetchIntelligenceEducation(normalizedSymbol as string, asofDate),
+    enabled: Boolean(normalizedSymbol) && enabled,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+}
+
+export function useGenerateIntelligenceEducationMutation() {
+  const queryClient = useQueryClient();
+  return useMutation<IntelligenceEducationGenerateResponse, Error, IntelligenceEducationGenerateRequest>({
+    mutationFn: (request) => generateIntelligenceEducation(request),
+    onSuccess: async (response, request) => {
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.intelligenceEducation(request.symbol.trim().toUpperCase(), response.asofDate),
+      });
+    },
   });
 }

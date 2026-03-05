@@ -284,73 +284,42 @@ def test_intelligence_opportunities_filters_by_symbols_query(monkeypatch):
 
 
 def test_intelligence_explain_symbol_returns_llm_response(monkeypatch):
-    from swing_screener.intelligence.models import CatalystSignal, Event, Opportunity, SymbolState
-
-    class FakeStorage:
-        def latest_opportunities_date(self):
-            return "2026-02-15"
-
-        def load_opportunities(self, asof_date):
-            assert asof_date == "2026-02-15"
-            return [
-                Opportunity(
-                    symbol="AAPL",
-                    technical_readiness=0.81,
-                    catalyst_strength=0.73,
-                    opportunity_score=0.77,
-                    state="TRENDING",
-                    explanations=["technical=0.81", "catalyst=0.73"],
-                )
-            ]
-
-        def load_events(self, asof_date, *, symbols=None, limit=None):
-            return [
-                Event(
-                    event_id="evt-1",
-                    symbol="AAPL",
-                    source="yahoo_finance",
-                    occurred_at="2026-02-15T20:00:00",
-                    headline="AAPL beats earnings expectations",
-                    event_type="earnings",
-                    credibility=0.9,
-                    metadata={"llm_event_type": "earnings"},
-                )
-            ]
-
-        def load_signals(self, asof_date, *, symbols=None):
-            return [
-                CatalystSignal(
-                    symbol="AAPL",
-                    event_id="evt-1",
-                    return_z=2.4,
-                    atr_shock=1.2,
-                    peer_confirmation_count=2,
-                    recency_hours=1.0,
-                    is_false_catalyst=False,
-                    reasons=["return_z>=1.5"],
-                )
-            ]
-
-        def load_symbol_state(self):
-            return {
-                "AAPL": SymbolState(
-                    symbol="AAPL",
-                    state="TRENDING",
-                    last_transition_at="2026-02-15T20:10:00",
-                    state_score=0.76,
-                    last_event_id="evt-1",
-                )
-            }
+    from api.models.intelligence import (
+        IntelligenceEducationGenerateResponse,
+        IntelligenceEducationViewOutput,
+    )
 
     service = intelligence_service.IntelligenceService(
         strategy_repo=SimpleNamespace(get_active_strategy=lambda: {}),
         config_service=_FakeConfigService(),
     )
-    monkeypatch.setattr(service, "_storage", FakeStorage())
     monkeypatch.setattr(
-        intelligence_service,
-        "_invoke_llm_explanation",
-        lambda **kwargs: ("LLM beginner explanation", "llm", "gpt-4o-mini", None),
+        service,
+        "generate_symbol_education",
+        lambda request: IntelligenceEducationGenerateResponse(
+            symbol=request.symbol,
+            asof_date=request.asof_date or "2026-02-15",
+            generated_at="2026-02-15T20:00:05",
+            outputs={
+                "thesis": IntelligenceEducationViewOutput(
+                    title="Why this trade idea exists (AAPL)",
+                    summary="LLM beginner explanation",
+                    bullets=["Trend and risk are aligned."],
+                    watchouts=[],
+                    next_steps=[],
+                    glossary_links=[],
+                    facts_used=["state"],
+                    source="llm",
+                    template_version="v1",
+                    generated_at="2026-02-15T20:00:05",
+                )
+            },
+            status="ok",
+            source="llm",
+            template_version="v1",
+            deterministic_facts={"state": "TRENDING"},
+            errors=[],
+        ),
     )
 
     app.dependency_overrides = {}
@@ -371,7 +340,7 @@ def test_intelligence_explain_symbol_returns_llm_response(monkeypatch):
         payload = res.json()
         assert payload["symbol"] == "AAPL"
         assert payload["source"] == "llm"
-        assert payload["model"] == "gpt-4o-mini"
+        assert payload["model"] is None
         assert "LLM beginner explanation" in payload["explanation"]
         assert payload["generated_at"]
     finally:
@@ -379,42 +348,50 @@ def test_intelligence_explain_symbol_returns_llm_response(monkeypatch):
 
 
 def test_intelligence_explain_symbol_falls_back_when_llm_unavailable(monkeypatch):
-    from swing_screener.intelligence.models import Opportunity
-
-    class FakeStorage:
-        def latest_opportunities_date(self):
-            return "2026-02-15"
-
-        def load_opportunities(self, asof_date):
-            return [
-                Opportunity(
-                    symbol="AAPL",
-                    technical_readiness=0.81,
-                    catalyst_strength=0.73,
-                    opportunity_score=0.77,
-                    state="TRENDING",
-                    explanations=["technical=0.81", "catalyst=0.73"],
-                )
-            ]
-
-        def load_events(self, asof_date, *, symbols=None, limit=None):
-            return []
-
-        def load_signals(self, asof_date, *, symbols=None):
-            return []
-
-        def load_symbol_state(self):
-            return {}
+    from api.models.intelligence import (
+        IntelligenceEducationError,
+        IntelligenceEducationGenerateResponse,
+        IntelligenceEducationViewOutput,
+    )
 
     service = intelligence_service.IntelligenceService(
         strategy_repo=SimpleNamespace(get_active_strategy=lambda: {}),
         config_service=_FakeConfigService(),
     )
-    monkeypatch.setattr(service, "_storage", FakeStorage())
     monkeypatch.setattr(
-        intelligence_service,
-        "_invoke_llm_explanation",
-        lambda **kwargs: ("Deterministic fallback explanation", "deterministic_fallback", None, "Upstream error"),
+        service,
+        "generate_symbol_education",
+        lambda request: IntelligenceEducationGenerateResponse(
+            symbol=request.symbol,
+            asof_date=request.asof_date or "2026-02-15",
+            generated_at="2026-02-15T20:00:05",
+            outputs={
+                "thesis": IntelligenceEducationViewOutput(
+                    title="Why this trade idea exists (AAPL)",
+                    summary="Deterministic fallback explanation",
+                    bullets=["Trade has deterministic fallback output."],
+                    watchouts=[],
+                    next_steps=[],
+                    glossary_links=[],
+                    facts_used=["state"],
+                    source="deterministic_fallback",
+                    template_version="v1",
+                    generated_at="2026-02-15T20:00:05",
+                )
+            },
+            status="ok",
+            source="deterministic_fallback",
+            template_version="v1",
+            deterministic_facts={"state": "QUIET"},
+            errors=[
+                IntelligenceEducationError(
+                    view="thesis",
+                    code="llm_generation_failed",
+                    message="Upstream error",
+                    retryable=True,
+                )
+            ],
+        ),
     )
 
     app.dependency_overrides = {}
@@ -434,10 +411,179 @@ def test_intelligence_explain_symbol_falls_back_when_llm_unavailable(monkeypatch
         app.dependency_overrides.clear()
 
 
-def test_intelligence_explain_symbol_returns_404_without_context(monkeypatch):
-    class EmptyStorage:
+def test_intelligence_education_generate_returns_llm_and_persists(monkeypatch):
+    from swing_screener.intelligence.models import Opportunity
+
+    class FakeStorage:
+        def __init__(self):
+            self.records: dict[str, dict[str, dict]] = {}
+
+        def latest_education_date(self):
+            return "2026-02-15"
+
         def latest_opportunities_date(self):
             return "2026-02-15"
+
+        def load_symbol_education(self, asof_date, symbol):
+            return self.records.get(asof_date, {}).get(symbol)
+
+        def write_symbol_education(self, asof_date, symbol, record):
+            self.records.setdefault(asof_date, {})[symbol] = record
+            return None
+
+        def load_opportunities(self, asof_date):
+            return [
+                Opportunity(
+                    symbol="AAPL",
+                    technical_readiness=0.81,
+                    catalyst_strength=0.73,
+                    opportunity_score=0.77,
+                    state="TRENDING",
+                    explanations=[],
+                )
+            ]
+
+        def load_events(self, asof_date, *, symbols=None, limit=None):
+            return []
+
+        def load_signals(self, asof_date, *, symbols=None):
+            return []
+
+        def load_symbol_state(self):
+            return {}
+
+    service = intelligence_service.IntelligenceService(
+        strategy_repo=SimpleNamespace(get_active_strategy=lambda: {}),
+        config_service=_FakeConfigService(),
+    )
+    fake_storage = FakeStorage()
+    monkeypatch.setattr(service, "_storage", fake_storage)
+    monkeypatch.setattr(intelligence_service, "_llm_enabled", lambda cfg: True)
+    monkeypatch.setattr(
+        intelligence_service,
+        "_invoke_llm_education_view",
+        lambda **kwargs: (
+            kwargs["fallback"].model_copy(
+                update={
+                    "summary": "LLM educational summary",
+                    "source": "llm",
+                }
+            ),
+            None,
+        ),
+    )
+
+    app.dependency_overrides = {}
+    from api.routers.intelligence import get_intelligence_service as dep
+
+    app.dependency_overrides[dep] = lambda: service
+    try:
+        client = TestClient(app)
+        res = client.post(
+            "/api/intelligence/education/generate",
+            json={"symbol": "AAPL", "asof_date": "2026-02-15", "views": ["thesis"]},
+        )
+        assert res.status_code == 200
+        payload = res.json()
+        assert payload["source"] == "llm"
+        assert payload["status"] == "ok"
+        assert payload["outputs"]["thesis"]["source"] == "llm"
+        assert payload["outputs"]["thesis"]["summary"] == "LLM educational summary"
+        assert fake_storage.records["2026-02-15"]["AAPL"]["outputs"]["thesis"]["summary"] == "LLM educational summary"
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_intelligence_education_generate_fallback_and_cached_read(monkeypatch):
+    from swing_screener.intelligence.models import Opportunity
+
+    class FakeStorage:
+        def __init__(self):
+            self.records: dict[str, dict[str, dict]] = {}
+
+        def latest_education_date(self):
+            return "2026-02-15"
+
+        def latest_opportunities_date(self):
+            return "2026-02-15"
+
+        def load_symbol_education(self, asof_date, symbol):
+            return self.records.get(asof_date, {}).get(symbol)
+
+        def write_symbol_education(self, asof_date, symbol, record):
+            self.records.setdefault(asof_date, {})[symbol] = record
+            return None
+
+        def load_opportunities(self, asof_date):
+            return [
+                Opportunity(
+                    symbol="AAPL",
+                    technical_readiness=0.6,
+                    catalyst_strength=0.5,
+                    opportunity_score=0.55,
+                    state="WATCH",
+                    explanations=[],
+                )
+            ]
+
+        def load_events(self, asof_date, *, symbols=None, limit=None):
+            return []
+
+        def load_signals(self, asof_date, *, symbols=None):
+            return []
+
+        def load_symbol_state(self):
+            return {}
+
+    service = intelligence_service.IntelligenceService(
+        strategy_repo=SimpleNamespace(get_active_strategy=lambda: {}),
+        config_service=_FakeConfigService(),
+    )
+    fake_storage = FakeStorage()
+    monkeypatch.setattr(service, "_storage", fake_storage)
+    monkeypatch.setattr(intelligence_service, "_llm_enabled", lambda cfg: True)
+    monkeypatch.setattr(
+        intelligence_service,
+        "_invoke_llm_education_view",
+        lambda **kwargs: (kwargs["fallback"], "Provider 500"),
+    )
+
+    app.dependency_overrides = {}
+    from api.routers.intelligence import get_intelligence_service as dep
+
+    app.dependency_overrides[dep] = lambda: service
+    try:
+        client = TestClient(app)
+        generate_res = client.post(
+            "/api/intelligence/education/generate",
+            json={"symbol": "AAPL", "asof_date": "2026-02-15", "views": ["thesis"]},
+        )
+        assert generate_res.status_code == 200
+        generated = generate_res.json()
+        assert generated["source"] == "deterministic_fallback"
+        assert generated["status"] == "ok"
+        assert generated["outputs"]["thesis"]["source"] == "deterministic_fallback"
+        assert generated["errors"][0]["message"] == "Provider 500"
+
+        get_res = client.get("/api/intelligence/education/AAPL?asof_date=2026-02-15")
+        assert get_res.status_code == 200
+        cached = get_res.json()
+        assert cached["source"] == "cache"
+        assert cached["outputs"]["thesis"]["source"] == "deterministic_fallback"
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_intelligence_explain_symbol_returns_404_without_context(monkeypatch):
+    class EmptyStorage:
+        def latest_education_date(self):
+            return None
+
+        def latest_opportunities_date(self):
+            return "2026-02-15"
+
+        def load_symbol_education(self, asof_date, symbol):
+            return None
 
         def load_opportunities(self, asof_date):
             return []

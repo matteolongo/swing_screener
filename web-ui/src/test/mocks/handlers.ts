@@ -969,4 +969,136 @@ export const handlers = [
     })
   }),
 
+  http.get(`${API_BASE_URL}/api/intelligence/education/:symbol`, ({ params, request }) => {
+    const symbol = String(params.symbol || '').trim().toUpperCase()
+    if (!symbol) {
+      return HttpResponse.json({ detail: 'symbol is required' }, { status: 422 })
+    }
+    const asofDate = new URL(request.url).searchParams.get('asof_date') || mockIntelligenceOpportunities.asof_date
+    return HttpResponse.json({
+      symbol,
+      asof_date: asofDate,
+      generated_at: '2026-02-15T20:00:05',
+      status: 'ok',
+      source: 'cache',
+      template_version: 'v1',
+      deterministic_facts: {
+        state: 'TRENDING',
+        opportunity_score: '0.76',
+        rr: '2.00',
+      },
+      outputs: {
+        recommendation: {
+          title: `Beginner view for ${symbol}`,
+          summary: `${symbol} appears because setup and risk checks are aligned.`,
+          bullets: ['Setup quality passed deterministic rules.'],
+          watchouts: ['Exit if invalidation triggers.'],
+          next_steps: ['Verify entry, stop, and size before execution.'],
+          glossary_links: ['rr', 'stop', 'position_size'],
+          facts_used: ['state', 'opportunity_score', 'rr'],
+          source: 'llm',
+          template_version: 'v1',
+          generated_at: '2026-02-15T20:00:05',
+          debug_ref: `${symbol}:recommendation:mock`,
+        },
+        thesis: {
+          title: `Why this trade idea exists (${symbol})`,
+          summary: `${symbol} is scored by technical quality, catalyst evidence, and defined risk.`,
+          bullets: ['Trend and risk structure remain valid.'],
+          watchouts: ['Do not widen stop levels after entry.'],
+          next_steps: ['Trade only if the setup remains valid at execution time.'],
+          glossary_links: ['trade_thesis', 'invalidation'],
+          facts_used: ['state', 'opportunity_score'],
+          source: 'llm',
+          template_version: 'v1',
+          generated_at: '2026-02-15T20:00:05',
+          debug_ref: `${symbol}:thesis:mock`,
+        },
+        learn: {
+          title: `Learn from ${symbol}`,
+          summary: 'Concepts are selected from current deterministic trade facts.',
+          bullets: [
+            'Risk/Reward compares potential upside and downside.',
+            'Stop loss defines when your thesis is wrong.',
+          ],
+          watchouts: ['No stop plan means no valid trade plan.'],
+          next_steps: ['Review one concept and match it to this setup.'],
+          glossary_links: ['rr', 'stop'],
+          facts_used: ['rr', 'stop'],
+          source: 'llm',
+          template_version: 'v1',
+          generated_at: '2026-02-15T20:00:05',
+          debug_ref: `${symbol}:learn:mock`,
+        },
+      },
+      errors: [],
+    })
+  }),
+
+  http.post(`${API_BASE_URL}/api/intelligence/education/generate`, async ({ request }) => {
+    const body = asObject(await request.json())
+    const symbol = String(body.symbol || '').trim().toUpperCase()
+    if (!symbol) {
+      return HttpResponse.json({ detail: 'symbol is required' }, { status: 422 })
+    }
+    return HttpResponse.json({
+      symbol,
+      asof_date: body.asof_date || mockIntelligenceOpportunities.asof_date,
+      generated_at: '2026-02-15T20:00:06',
+      status: 'ok',
+      source: 'llm',
+      template_version: 'v1',
+      deterministic_facts: {
+        state: 'TRENDING',
+        opportunity_score: '0.76',
+        rr: '2.00',
+      },
+      outputs: {
+        recommendation: {
+          title: `Beginner view for ${symbol}`,
+          summary: `${symbol} appears because setup and risk checks are aligned.`,
+          bullets: ['Setup quality passed deterministic rules.'],
+          watchouts: ['Exit if invalidation triggers.'],
+          next_steps: ['Verify entry, stop, and size before execution.'],
+          glossary_links: ['rr', 'stop', 'position_size'],
+          facts_used: ['state', 'opportunity_score', 'rr'],
+          source: 'llm',
+          template_version: 'v1',
+          generated_at: '2026-02-15T20:00:06',
+          debug_ref: `${symbol}:recommendation:mock`,
+        },
+        thesis: {
+          title: `Why this trade idea exists (${symbol})`,
+          summary: `${symbol} is scored by technical quality, catalyst evidence, and defined risk.`,
+          bullets: ['Trend and risk structure remain valid.'],
+          watchouts: ['Do not widen stop levels after entry.'],
+          next_steps: ['Trade only if the setup remains valid at execution time.'],
+          glossary_links: ['trade_thesis', 'invalidation'],
+          facts_used: ['state', 'opportunity_score'],
+          source: 'llm',
+          template_version: 'v1',
+          generated_at: '2026-02-15T20:00:06',
+          debug_ref: `${symbol}:thesis:mock`,
+        },
+        learn: {
+          title: `Learn from ${symbol}`,
+          summary: 'Concepts are selected from current deterministic trade facts.',
+          bullets: [
+            'Risk/Reward compares potential upside and downside.',
+            'Stop loss defines when your thesis is wrong.',
+          ],
+          watchouts: ['No stop plan means no valid trade plan.'],
+          next_steps: ['Review one concept and match it to this setup.'],
+          glossary_links: ['rr', 'stop'],
+          facts_used: ['rr', 'stop'],
+          source: 'llm',
+          template_version: 'v1',
+          generated_at: '2026-02-15T20:00:06',
+          debug_ref: `${symbol}:learn:mock`,
+        },
+      },
+      errors: [],
+    })
+  }),
+
 ]

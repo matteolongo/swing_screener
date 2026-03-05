@@ -567,7 +567,7 @@ describe('Workspace Page', () => {
     });
   });
 
-  it('runs per-symbol intelligence from expanded row details and patches beginner explanation', async () => {
+  it('runs per-symbol intelligence from expanded row details and patches generated educational thesis', async () => {
     let runCallCount = 0;
     server.use(
       http.post('*/api/screener/run', () =>
@@ -622,15 +622,35 @@ describe('Workspace Page', () => {
           ],
         })
       ),
-      http.post('*/api/intelligence/explain-symbol', async ({ request }) => {
+      http.post('*/api/intelligence/education/generate', async ({ request }) => {
         const body = (await request.json()) as Record<string, unknown>;
         return HttpResponse.json({
           symbol: body.symbol ?? 'AAPL',
           asof_date: body.asof_date ?? '2026-02-18',
-          explanation: 'AAPL is validated by trend quality, catalyst strength, and clear stop-based risk.',
-          source: 'llm',
-          model: 'gpt-4o-mini',
           generated_at: '2026-02-18T20:00:05',
+          status: 'ok',
+          source: 'llm',
+          template_version: 'v1',
+          deterministic_facts: {
+            state: 'TRENDING',
+            rr: '2.00',
+          },
+          outputs: {
+            thesis: {
+              title: 'Why this trade idea exists (AAPL)',
+              summary: 'AAPL is validated by trend quality, catalyst strength, and clear stop-based risk.',
+              bullets: ['Trend structure is intact.'],
+              watchouts: ['Exit if stop is violated.'],
+              next_steps: ['Verify risk before execution.'],
+              glossary_links: ['trade_thesis', 'rr'],
+              facts_used: ['state', 'rr'],
+              source: 'llm',
+              template_version: 'v1',
+              generated_at: '2026-02-18T20:00:05',
+              debug_ref: 'AAPL:thesis:test',
+            },
+          },
+          errors: [],
         });
       })
     );

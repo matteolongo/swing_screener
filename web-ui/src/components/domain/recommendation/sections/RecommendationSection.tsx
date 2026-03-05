@@ -1,5 +1,6 @@
 import MetricHelpLabel from '@/components/domain/education/MetricHelpLabel';
 import RecommendationSummary from '@/components/domain/recommendation/RecommendationSummary';
+import type { RecommendationEducationVM } from '@/features/recommendation/educationViewModel';
 import { formatCurrency, formatRatioAsPercent } from '@/utils/formatters';
 import type { Recommendation } from '@/types/recommendation';
 import { t } from '@/i18n/t';
@@ -7,11 +8,15 @@ import { t } from '@/i18n/t';
 interface RecommendationSectionProps {
   recommendation?: Recommendation;
   currency?: 'USD' | 'EUR';
+  educationView?: RecommendationEducationVM;
+  deterministicFacts?: Record<string, string>;
 }
 
 export default function RecommendationSection({
   recommendation,
   currency = 'USD',
+  educationView,
+  deterministicFacts,
 }: RecommendationSectionProps) {
   if (!recommendation) {
     return (
@@ -147,25 +152,45 @@ export default function RecommendationSection({
           {t('recommendation.sections.education')}
         </summary>
         <div className="mt-3 text-sm space-y-2">
-          <div>
-            <div className="text-gray-500 dark:text-gray-400">
-              {t('recommendation.labels.biasWarning')}
-            </div>
-            <div className="font-medium">{recommendation.education?.commonBiasWarning ?? t('common.placeholders.emDash')}</div>
+          <div className="rounded-md border border-blue-200 bg-blue-50 p-3">
+            <p className="text-sm font-semibold text-blue-900">{educationView?.title ?? t('recommendation.summary')}</p>
+            <p className="mt-1 text-sm text-blue-900">{educationView?.summary ?? t('common.placeholders.emDash')}</p>
+            {educationView?.source ? (
+              <p className="mt-1 text-xs text-blue-700">
+                {educationView.source === 'llm'
+                  ? t('tradeInsight.education.sourceLlm')
+                  : t('tradeInsight.education.sourceFallback')}
+              </p>
+            ) : null}
           </div>
-          <div>
-            <div className="text-gray-500 dark:text-gray-400">
-              {t('recommendation.labels.whatToLearn')}
-            </div>
-            <div className="font-medium">{recommendation.education?.whatToLearn ?? t('common.placeholders.emDash')}</div>
-          </div>
-          {recommendation.education?.whatWouldMakeValid?.length ? (
+
+          {educationView?.bullets?.length ? (
             <div>
-              <div className="text-gray-500 dark:text-gray-400">
-                {t('recommendation.labels.whatWouldMakeValid')}
-              </div>
+              <div className="text-gray-500 dark:text-gray-400">{t('tradeInsight.education.whyNow')}</div>
               <ul className="list-disc ml-5 mt-1 space-y-1">
-                {recommendation.education.whatWouldMakeValid.map((item) => (
+                {educationView.bullets.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {educationView?.watchouts?.length ? (
+            <div>
+              <div className="text-gray-500 dark:text-gray-400">{t('tradeInsight.education.watchouts')}</div>
+              <ul className="list-disc ml-5 mt-1 space-y-1">
+                {educationView.watchouts.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {educationView?.nextSteps?.length ? (
+            <div>
+              <div className="text-gray-500 dark:text-gray-400">{t('tradeInsight.education.nextSteps')}</div>
+              <ul className="list-disc ml-5 mt-1 space-y-1">
+                {educationView.nextSteps.map((item) => (
                   <li key={item}>{item}</li>
                 ))}
               </ul>
@@ -173,6 +198,22 @@ export default function RecommendationSection({
           ) : null}
         </div>
       </details>
+
+      {deterministicFacts && Object.keys(deterministicFacts).length > 0 ? (
+        <details className="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-4">
+          <summary className="cursor-pointer font-semibold">
+            {t('tradeInsight.education.deterministicFacts')}
+          </summary>
+          <div className="mt-3 text-xs space-y-1">
+            {Object.entries(deterministicFacts).map(([key, value]) => (
+              <div key={key} className="flex items-start gap-2">
+                <span className="font-mono text-gray-500 dark:text-gray-400">{key}</span>
+                <span className="text-gray-700 dark:text-gray-300">{value}</span>
+              </div>
+            ))}
+          </div>
+        </details>
+      ) : null}
     </div>
   );
 }

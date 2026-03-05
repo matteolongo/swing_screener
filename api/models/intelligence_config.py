@@ -22,13 +22,58 @@ class IntelligenceLLMConfigModel(BaseModel):
     cache_path: str = "data/intelligence/llm_cache.json"
     audit_path: str = "data/intelligence/llm_audit"
     max_concurrency: int = Field(default=4, ge=1, le=16)
+    education_template_version: str = Field(default="v1", max_length=64)
+    education_style_level: str = Field(default="beginner", max_length=64)
+    education_max_tokens: int = Field(default=450, ge=64, le=4000)
+    education_forbidden_claim_categories: list[str] = Field(
+        default_factory=lambda: ["prediction", "guarantee", "financial_advice"]
+    )
+    education_recommendation_system_prompt: str = Field(default="", max_length=20000)
+    education_recommendation_user_prompt_template: str = Field(default="", max_length=40000)
+    education_thesis_system_prompt: str = Field(default="", max_length=20000)
+    education_thesis_user_prompt_template: str = Field(default="", max_length=40000)
+    education_learn_system_prompt: str = Field(default="", max_length=20000)
+    education_learn_user_prompt_template: str = Field(default="", max_length=40000)
 
-    @field_validator("system_prompt", "user_prompt_template", mode="before")
+    @field_validator(
+        "system_prompt",
+        "user_prompt_template",
+        "education_recommendation_system_prompt",
+        "education_recommendation_user_prompt_template",
+        "education_thesis_system_prompt",
+        "education_thesis_user_prompt_template",
+        "education_learn_system_prompt",
+        "education_learn_user_prompt_template",
+        mode="before",
+    )
     @classmethod
     def _normalize_prompt_text(cls, value: object) -> str:
         if value is None:
             return ""
         return str(value).replace("\r\n", "\n").strip()
+
+    @field_validator("education_forbidden_claim_categories", mode="before")
+    @classmethod
+    def _normalize_forbidden_categories(cls, value: object) -> list[str]:
+        if value is None:
+            return ["prediction", "guarantee", "financial_advice"]
+        if isinstance(value, str):
+            raw_items = [part.strip() for part in value.split(",")]
+        elif isinstance(value, (list, tuple, set)):
+            raw_items = [str(part).strip() for part in value]
+        else:
+            raw_items = []
+        normalized: list[str] = []
+        seen: set[str] = set()
+        for item in raw_items:
+            if not item:
+                continue
+            key = item.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            normalized.append(key)
+        return normalized or ["prediction", "guarantee", "financial_advice"]
 
 
 class IntelligenceCatalystConfigModel(BaseModel):

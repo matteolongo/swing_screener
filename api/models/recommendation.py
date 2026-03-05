@@ -57,6 +57,40 @@ class RecommendationBeginnerExplanation(BaseModel):
     generated_at: Optional[str] = None
 
 
+class RecommendationGeneratedEducationError(BaseModel):
+    view: Literal["recommendation", "thesis", "learn"]
+    code: str
+    message: str
+    retryable: bool = False
+    provider_error_id: Optional[str] = None
+
+
+class RecommendationGeneratedEducationView(BaseModel):
+    title: str
+    summary: str
+    bullets: list[str] = Field(default_factory=list)
+    watchouts: list[str] = Field(default_factory=list)
+    next_steps: list[str] = Field(default_factory=list)
+    glossary_links: list[str] = Field(default_factory=list)
+    facts_used: list[str] = Field(default_factory=list)
+    source: Literal["llm", "deterministic_fallback"]
+    template_version: str = "v1"
+    generated_at: str
+    debug_ref: Optional[str] = None
+
+
+class RecommendationGeneratedEducationPayload(BaseModel):
+    recommendation: Optional[RecommendationGeneratedEducationView] = None
+    thesis: Optional[RecommendationGeneratedEducationView] = None
+    learn: Optional[RecommendationGeneratedEducationView] = None
+    generated_at: Optional[str] = None
+    status: Optional[Literal["ok", "partial", "error"]] = None
+    source: Optional[Literal["llm", "deterministic_fallback", "cache"]] = None
+    template_version: Optional[str] = None
+    deterministic_facts: dict[str, str] = Field(default_factory=dict)
+    errors: list[RecommendationGeneratedEducationError] = Field(default_factory=list)
+
+
 class Recommendation(BaseModel):
     verdict: RecommendationVerdict
     reasons_short: list[str]
@@ -65,4 +99,4 @@ class Recommendation(BaseModel):
     costs: RecommendationCosts
     checklist: list[ChecklistGate]
     education: RecommendationEducation
-    thesis: Optional[dict] = None  # Trade Thesis (structured explanation, includes beginner_explanation)
+    thesis: Optional[dict] = None  # Trade Thesis (structured explanation, includes beginner_explanation + education_generated)

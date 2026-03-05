@@ -43,6 +43,8 @@ export const API_ENDPOINTS = {
   intelligenceRunStatus: (jobId: string) => `/api/intelligence/run/${jobId}`,
   intelligenceOpportunities: '/api/intelligence/opportunities',
   intelligenceExplainSymbol: '/api/intelligence/explain-symbol',
+  intelligenceEducationGenerate: '/api/intelligence/education/generate',
+  intelligenceEducationBySymbol: (symbol: string) => `/api/intelligence/education/${encodeURIComponent(symbol)}`,
 
   // Daily Review
   dailyReview: '/api/daily-review',

@@ -143,7 +143,7 @@ describe('TradeInsightModal', () => {
       />
     );
 
-    expect(screen.getByText(/Checklist Gates/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Checklist Gates/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/Momentum Gate/i)).toBeInTheDocument();
   });
 
@@ -193,5 +193,20 @@ describe('TradeInsightModal', () => {
     await user.click(closeButton);
 
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('loads educational intelligence state and shows refresh action', async () => {
+    const onClose = vi.fn();
+    renderWithProviders(
+      <TradeInsightModal
+        ticker="TEST"
+        recommendation={mockRecommendationWithThesis}
+        currency="USD"
+        onClose={onClose}
+      />
+    );
+
+    expect(screen.getByRole('button', { name: /Refresh Education/i })).toBeInTheDocument();
+    expect(await screen.findByText(/Based on deterministic facts/i)).toBeInTheDocument();
   });
 });
