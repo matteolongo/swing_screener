@@ -32,6 +32,9 @@ class IntelligenceRunJob:
     opportunities_count: int
     llm_warnings_count: int
     llm_warning_sample: str | None
+    events_kept_count: int
+    events_dropped_count: int
+    duplicate_suppressed_count: int
     analysis_summary: str | None
     error: str | None
     created_at: str
@@ -85,6 +88,9 @@ class IntelligenceRunManager:
                         if item.get("llm_warning_sample")
                         else None
                     ),
+                    events_kept_count=int(item.get("events_kept_count", 0)),
+                    events_dropped_count=int(item.get("events_dropped_count", 0)),
+                    duplicate_suppressed_count=int(item.get("duplicate_suppressed_count", 0)),
                     analysis_summary=(
                         str(item.get("analysis_summary"))
                         if item.get("analysis_summary")
@@ -158,6 +164,9 @@ class IntelligenceRunManager:
             opportunities_count=0,
             llm_warnings_count=0,
             llm_warning_sample=None,
+            events_kept_count=0,
+            events_dropped_count=0,
+            duplicate_suppressed_count=0,
             analysis_summary=None,
             error=None,
             created_at=now,
@@ -219,6 +228,9 @@ class IntelligenceRunManager:
                 opportunities_count=len(snapshot.opportunities),
                 llm_warnings_count=len(llm_warnings),
                 llm_warning_sample=(llm_warnings[0][:300] if llm_warnings else None),
+                events_kept_count=int(getattr(snapshot, "events_kept_count", len(events))),
+                events_dropped_count=int(getattr(snapshot, "events_dropped_count", 0)),
+                duplicate_suppressed_count=int(getattr(snapshot, "duplicate_suppressed_count", 0)),
                 analysis_summary=build_intelligence_run_summary(
                     cfg=cfg,
                     snapshot=snapshot,
@@ -234,6 +246,9 @@ class IntelligenceRunManager:
                 opportunities_count=0,
                 llm_warnings_count=0,
                 llm_warning_sample=None,
+                events_kept_count=0,
+                events_dropped_count=0,
+                duplicate_suppressed_count=0,
                 analysis_summary=None,
                 error=str(exc),
             )
@@ -248,6 +263,9 @@ class IntelligenceRunManager:
         opportunities_count: int | None = None,
         llm_warnings_count: int | None = None,
         llm_warning_sample: str | None = None,
+        events_kept_count: int | None = None,
+        events_dropped_count: int | None = None,
+        duplicate_suppressed_count: int | None = None,
         analysis_summary: str | None = None,
         error: str | None = None,
     ) -> None:
@@ -267,6 +285,12 @@ class IntelligenceRunManager:
             if llm_warnings_count is not None:
                 job.llm_warnings_count = llm_warnings_count
             job.llm_warning_sample = llm_warning_sample
+            if events_kept_count is not None:
+                job.events_kept_count = events_kept_count
+            if events_dropped_count is not None:
+                job.events_dropped_count = events_dropped_count
+            if duplicate_suppressed_count is not None:
+                job.duplicate_suppressed_count = duplicate_suppressed_count
             job.analysis_summary = analysis_summary
             job.error = error
             job.updated_at = _now_iso()

@@ -8,6 +8,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from api.dependencies import get_intelligence_config_service, get_intelligence_service
 from api.models.intelligence import (
+    IntelligenceExplainSymbolRequest,
+    IntelligenceExplainSymbolResponse,
     IntelligenceOpportunitiesResponse,
     IntelligenceRunLaunchResponse,
     IntelligenceRunRequest,
@@ -176,6 +178,14 @@ def get_opportunities(
     service: IntelligenceService = Depends(get_intelligence_service),
 ):
     return service.get_opportunities(asof_date=asof_date, symbols=symbols)
+
+
+@router.post("/explain-symbol", response_model=IntelligenceExplainSymbolResponse)
+def explain_symbol(
+    request: IntelligenceExplainSymbolRequest,
+    service: IntelligenceService = Depends(get_intelligence_service),
+):
+    return service.explain_symbol(request)
 
 
 @router.post("/classify", response_model=LLMClassifyNewsResponse)

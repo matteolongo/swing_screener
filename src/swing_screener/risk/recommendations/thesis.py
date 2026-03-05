@@ -92,6 +92,7 @@ class TradeThesis:
     
     # Optional LLM-enhanced insight (added later if available)
     professional_insight: Optional[str] = None
+    beginner_explanation: Optional[dict] = None
 
 
 def calculate_setup_score(
@@ -566,6 +567,7 @@ def thesis_to_dict(thesis: TradeThesis) -> dict:
             for rule in thesis.invalidation_rules
         ],
         "professional_insight": thesis.professional_insight,
+        "beginner_explanation": thesis.beginner_explanation,
     }
 
 
@@ -693,4 +695,5 @@ def build_trade_thesis(
         explanation=explanation,
         invalidation_rules=invalidation_rules,
         professional_insight=None,  # Will be filled by LLM if available
+        beginner_explanation=None,
     )

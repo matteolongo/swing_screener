@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  explainIntelligenceSymbol,
   createIntelligenceSymbolSet,
   deleteIntelligenceSymbolSet,
   fetchIntelligenceConfig,
@@ -13,6 +14,8 @@ import {
   updateIntelligenceSymbolSet,
 } from '@/features/intelligence/api';
 import {
+  IntelligenceExplainSymbolRequest,
+  IntelligenceExplainSymbolResponse,
   IntelligenceConfig,
   IntelligenceOpportunitiesResponse,
   IntelligenceProviderInfo,
@@ -140,5 +143,11 @@ export function useIntelligenceOpportunitiesScoped(
     enabled,
     retry: false,
     refetchOnWindowFocus: false,
+  });
+}
+
+export function useExplainIntelligenceSymbolMutation() {
+  return useMutation<IntelligenceExplainSymbolResponse, Error, IntelligenceExplainSymbolRequest>({
+    mutationFn: (request) => explainIntelligenceSymbol(request),
   });
 }

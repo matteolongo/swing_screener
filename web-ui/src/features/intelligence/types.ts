@@ -43,6 +43,9 @@ export interface IntelligenceRunStatus {
   opportunitiesCount: number;
   llmWarningsCount: number;
   llmWarningSample?: string;
+  eventsKeptCount: number;
+  eventsDroppedCount: number;
+  duplicateSuppressedCount: number;
   analysisSummary?: string;
   error?: string;
   createdAt: string;
@@ -58,6 +61,9 @@ export interface IntelligenceRunStatusAPI {
   opportunities_count: number;
   llm_warnings_count?: number;
   llm_warning_sample?: string | null;
+  events_kept_count?: number;
+  events_dropped_count?: number;
+  duplicate_suppressed_count?: number;
   analysis_summary?: string | null;
   error?: string | null;
   created_at: string;
@@ -257,6 +263,72 @@ export interface IntelligenceSymbolSetUpsertRequest {
   symbols: string[];
 }
 
+export interface IntelligenceExplainCandidateContext {
+  signal?: string;
+  entry?: number;
+  stop?: number;
+  target?: number;
+  rr?: number;
+  confidence?: number;
+  close?: number;
+  atr?: number;
+  sma20?: number;
+  sma50?: number;
+  sma200?: number;
+  momentum6m?: number;
+  momentum12m?: number;
+  relStrength?: number;
+}
+
+export interface IntelligenceExplainCandidateContextAPI {
+  signal?: string;
+  entry?: number;
+  stop?: number;
+  target?: number;
+  rr?: number;
+  confidence?: number;
+  close?: number;
+  atr?: number;
+  sma_20?: number;
+  sma_50?: number;
+  sma_200?: number;
+  momentum_6m?: number;
+  momentum_12m?: number;
+  rel_strength?: number;
+}
+
+export interface IntelligenceExplainSymbolRequest {
+  symbol: string;
+  asofDate?: string;
+  candidateContext?: IntelligenceExplainCandidateContext;
+}
+
+export interface IntelligenceExplainSymbolRequestAPI {
+  symbol: string;
+  asof_date?: string;
+  candidate_context?: IntelligenceExplainCandidateContextAPI;
+}
+
+export interface IntelligenceExplainSymbolResponse {
+  symbol: string;
+  asofDate: string;
+  explanation: string;
+  source: 'llm' | 'deterministic_fallback';
+  model?: string;
+  warning?: string;
+  generatedAt: string;
+}
+
+export interface IntelligenceExplainSymbolResponseAPI {
+  symbol: string;
+  asof_date: string;
+  explanation: string;
+  source: 'llm' | 'deterministic_fallback';
+  model?: string | null;
+  warning?: string | null;
+  generated_at: string;
+}
+
 export function transformIntelligenceRunLaunchResponse(
   api: IntelligenceRunLaunchResponseAPI
 ): IntelligenceRunLaunchResponse {
@@ -279,6 +351,9 @@ export function transformIntelligenceRunStatus(api: IntelligenceRunStatusAPI): I
     opportunitiesCount: api.opportunities_count,
     llmWarningsCount: api.llm_warnings_count ?? 0,
     llmWarningSample: api.llm_warning_sample ?? undefined,
+    eventsKeptCount: api.events_kept_count ?? 0,
+    eventsDroppedCount: api.events_dropped_count ?? 0,
+    duplicateSuppressedCount: api.duplicate_suppressed_count ?? 0,
     analysisSummary: api.analysis_summary ?? undefined,
     error: api.error ?? undefined,
     createdAt: api.created_at,
@@ -431,5 +506,53 @@ export function transformSymbolSetsResponse(
 ): IntelligenceSymbolSetsResponse {
   return {
     items: (api.items ?? []).map(transformSymbolSet),
+  };
+}
+
+export function toExplainCandidateContextAPI(
+  context?: IntelligenceExplainCandidateContext
+): IntelligenceExplainCandidateContextAPI | undefined {
+  if (!context) {
+    return undefined;
+  }
+  return {
+    signal: context.signal,
+    entry: context.entry,
+    stop: context.stop,
+    target: context.target,
+    rr: context.rr,
+    confidence: context.confidence,
+    close: context.close,
+    atr: context.atr,
+    sma_20: context.sma20,
+    sma_50: context.sma50,
+    sma_200: context.sma200,
+    momentum_6m: context.momentum6m,
+    momentum_12m: context.momentum12m,
+    rel_strength: context.relStrength,
+  };
+}
+
+export function toExplainSymbolRequestAPI(
+  request: IntelligenceExplainSymbolRequest
+): IntelligenceExplainSymbolRequestAPI {
+  return {
+    symbol: request.symbol.trim().toUpperCase(),
+    asof_date: request.asofDate,
+    candidate_context: toExplainCandidateContextAPI(request.candidateContext),
+  };
+}
+
+export function transformExplainSymbolResponse(
+  api: IntelligenceExplainSymbolResponseAPI
+): IntelligenceExplainSymbolResponse {
+  return {
+    symbol: api.symbol,
+    asofDate: api.asof_date,
+    explanation: api.explanation,
+    source: api.source,
+    model: api.model ?? undefined,
+    warning: api.warning ?? undefined,
+    generatedAt: api.generated_at,
   };
 }

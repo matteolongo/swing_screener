@@ -20,6 +20,7 @@ import {
   parseUniverseValue,
   SCREENER_UNIVERSE_STORAGE_KEY,
 } from '@/features/screener/universeStorage';
+import type { SymbolIntelligenceStatus } from '@/features/intelligence/useSymbolIntelligenceRunner';
 
 const TOP_N_MAX = 200;
 
@@ -40,7 +41,15 @@ const currencyFilterToRequest = (value: CurrencyFilter): string[] => {
 const ANALYSIS_CANVAS_ID = 'workspace-analysis-canvas';
 const MOBILE_LAYOUT_MEDIA_QUERY = '(max-width: 1279px)';
 
-export default function ScreenerInboxPanel() {
+interface ScreenerInboxPanelProps {
+  onRunSymbolIntelligence?: (ticker: string) => void;
+  getSymbolIntelligenceStatus?: (ticker: string) => SymbolIntelligenceStatus | undefined;
+}
+
+export default function ScreenerInboxPanel({
+  onRunSymbolIntelligence,
+  getSymbolIntelligenceStatus,
+}: ScreenerInboxPanelProps) {
   const { isBeginnerMode } = useBeginnerModeStore();
   const { lastResult, setLastResult } = useScreenerStore();
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
@@ -248,6 +257,8 @@ export default function ScreenerInboxPanel() {
               onRecommendationDetails={(candidate) => handleSelectCandidate(candidate.ticker, 'overview')}
               onSocialAnalysis={(ticker) => handleSelectCandidate(ticker, 'sentiment')}
               onTradeThesis={handleTradeThesisAction}
+              onRunIntelligence={(ticker) => onRunSymbolIntelligence?.(ticker)}
+              getSymbolIntelligenceStatus={getSymbolIntelligenceStatus}
             />
           </div>
         </div>

@@ -2,13 +2,16 @@ import { CandidateViewModel, hasOverlayData } from '@/features/screener/viewMode
 import { FlaskConical, MessageCircle, Sparkles } from 'lucide-react';
 import MetricHelpLabel from '@/components/domain/education/MetricHelpLabel';
 import OverlayBadge from '@/components/domain/recommendation/OverlayBadge';
-import { formatPercent } from '@/utils/formatters';
+import { formatDateTime, formatPercent } from '@/utils/formatters';
 import { t } from '@/i18n/t';
+import type { SymbolIntelligenceStatus } from '@/features/intelligence/useSymbolIntelligenceRunner';
 
 interface ScreenerCandidateDetailsRowProps {
   candidate: CandidateViewModel;
   onSocialClick: () => void;
   onThesisClick: () => void;
+  onRunIntelligence: () => void;
+  intelligenceStatus?: SymbolIntelligenceStatus;
 }
 
 /**
@@ -18,6 +21,8 @@ export default function ScreenerCandidateDetailsRow({
   candidate,
   onSocialClick,
   onThesisClick,
+  onRunIntelligence,
+  intelligenceStatus,
 }: ScreenerCandidateDetailsRowProps) {
   const overlayClassByStatus: Record<string, string> = {
     OFF: 'bg-gray-50 border-gray-200',
@@ -68,6 +73,19 @@ export default function ScreenerCandidateDetailsRow({
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 gap-2">
                 <button
                   type="button"
+                  onClick={onRunIntelligence}
+                  disabled={intelligenceStatus?.stage === 'queued' || intelligenceStatus?.stage === 'running'}
+                  className="inline-flex items-center justify-center gap-2 rounded-md border border-emerald-300 bg-white px-3 py-2 text-sm text-emerald-800 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-200 dark:hover:bg-emerald-900/30"
+                  title={t('screener.symbolIntelligence.runAction')}
+                  aria-label={t('screener.symbolIntelligence.runAria', { ticker: candidate.ticker })}
+                >
+                  <Sparkles className="h-4 w-4" />
+                  {intelligenceStatus?.stage === 'queued' || intelligenceStatus?.stage === 'running'
+                    ? t('screener.symbolIntelligence.running')
+                    : t('screener.symbolIntelligence.runAction')}
+                </button>
+                <button
+                  type="button"
                   onClick={onSocialClick}
                   className="inline-flex items-center justify-center gap-2 rounded-md border border-blue-300 bg-white px-3 py-2 text-sm text-blue-800 hover:bg-blue-100 dark:border-blue-700 dark:bg-blue-950/30 dark:text-blue-200 dark:hover:bg-blue-900/30"
                   title={t('screener.table.sentimentTitle')}
@@ -91,6 +109,45 @@ export default function ScreenerCandidateDetailsRow({
                 )}
 
               </div>
+              {intelligenceStatus ? (
+                <div className="mt-2">
+                  <p className="text-xs text-emerald-900 dark:text-emerald-200">
+                    {intelligenceStatus.stage === 'completed'
+                      ? t('screener.symbolIntelligence.completed', {
+                          source:
+                            intelligenceStatus.explanationSource === 'llm'
+                              ? t('screener.symbolIntelligence.sourceLlm')
+                              : t('screener.symbolIntelligence.sourceFallback'),
+                        })
+                      : intelligenceStatus.stage === 'error'
+                        ? t('screener.symbolIntelligence.error', {
+                            error: intelligenceStatus.error || t('screener.error.unknown'),
+                          })
+                        : intelligenceStatus.stage === 'queued'
+                          ? t('screener.symbolIntelligence.queued')
+                          : intelligenceStatus.stage === 'running'
+                            ? t('screener.symbolIntelligence.running')
+                            : t('screener.symbolIntelligence.idle')}
+                  </p>
+                  {intelligenceStatus.stage === 'completed' &&
+                  (intelligenceStatus.explanationGeneratedAt || intelligenceStatus.updatedAt) ? (
+                    <p className="mt-1 text-xs text-emerald-800 dark:text-emerald-300">
+                      {t('screener.symbolIntelligence.updatedAt', {
+                        at: formatDateTime(
+                          intelligenceStatus.explanationGeneratedAt || intelligenceStatus.updatedAt
+                        ),
+                      })}
+                    </p>
+                  ) : null}
+                  {intelligenceStatus.stage === 'completed' && intelligenceStatus.warning ? (
+                    <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
+                      {t('screener.symbolIntelligence.warning', {
+                        warning: intelligenceStatus.warning,
+                      })}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           </div>
 

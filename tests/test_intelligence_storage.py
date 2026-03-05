@@ -103,3 +103,83 @@ def test_load_symbol_state_handles_missing_or_empty_file(tmp_path):
     storage.symbol_state_path.write_text("", encoding="utf-8")
     assert storage.load_symbol_state() == {}
 
+
+def test_load_events_supports_symbol_filter_and_limit(tmp_path):
+    storage = IntelligenceStorage(tmp_path)
+    asof = date(2026, 2, 15)
+    storage.write_events(
+        [
+            Event(
+                event_id="evt-1",
+                symbol="AAPL",
+                source="yahoo_finance",
+                occurred_at="2026-02-15T20:00:00",
+                headline="AAPL raises guidance",
+                event_type="news",
+                credibility=0.8,
+                metadata={"summary": "Guidance increased"},
+            ),
+            Event(
+                event_id="evt-2",
+                symbol="MSFT",
+                source="yahoo_finance",
+                occurred_at="2026-02-15T20:10:00",
+                headline="MSFT cloud demand remains strong",
+                event_type="news",
+                credibility=0.75,
+            ),
+        ],
+        asof,
+    )
+
+    filtered = storage.load_events(asof, symbols=["AAPL"])
+    assert len(filtered) == 1
+    assert filtered[0].symbol == "AAPL"
+    assert filtered[0].metadata.get("summary") == "Guidance increased"
+
+    limited = storage.load_events(asof, limit=1)
+    assert len(limited) == 1
+
+
+def test_load_signals_supports_symbol_filter_and_ordering(tmp_path):
+    storage = IntelligenceStorage(tmp_path)
+    asof = date(2026, 2, 15)
+    storage.write_signals(
+        [
+            CatalystSignal(
+                symbol="AAPL",
+                event_id="evt-aapl",
+                return_z=2.1,
+                atr_shock=1.1,
+                peer_confirmation_count=2,
+                recency_hours=5.0,
+                is_false_catalyst=False,
+                reasons=["return_z>=1.5"],
+            ),
+            CatalystSignal(
+                symbol="AAPL",
+                event_id="evt-aapl-2",
+                return_z=1.7,
+                atr_shock=0.9,
+                peer_confirmation_count=1,
+                recency_hours=1.0,
+                is_false_catalyst=False,
+                reasons=["return_z>=1.5"],
+            ),
+            CatalystSignal(
+                symbol="MSFT",
+                event_id="evt-msft",
+                return_z=1.8,
+                atr_shock=1.0,
+                peer_confirmation_count=2,
+                recency_hours=3.0,
+                is_false_catalyst=False,
+                reasons=["return_z>=1.5"],
+            ),
+        ],
+        asof,
+    )
+
+    aapl_only = storage.load_signals(asof, symbols=["AAPL"])
+    assert len(aapl_only) == 2
+    assert [signal.event_id for signal in aapl_only] == ["evt-aapl-2", "evt-aapl"]

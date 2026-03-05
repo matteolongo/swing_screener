@@ -507,6 +507,7 @@ class LangChainOpenAIProvider(LLMProvider):
                 temperature=0,
                 api_key=self._api_key,
                 base_url=self._base_url,
+                max_retries=0,
             )
         return self._llm
 

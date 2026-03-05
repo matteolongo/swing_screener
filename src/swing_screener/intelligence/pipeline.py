@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
 import logging
+import re
+import threading
 from typing import Any, Optional
 
 import pandas as pd
@@ -35,6 +37,16 @@ class IntelligenceSnapshot:
     themes: list[ThemeCluster]
     opportunities: list[Opportunity]
     states: dict[str, SymbolState]
+    events_kept_count: int = 0
+    events_dropped_count: int = 0
+    duplicate_suppressed_count: int = 0
+
+
+@dataclass(frozen=True)
+class EventQualityDiagnostics:
+    kept_count: int
+    dropped_count: int
+    duplicate_suppressed_count: int
 
 
 def _normalize_symbols(symbols: list[str] | tuple[str, ...]) -> list[str]:
@@ -47,6 +59,130 @@ def _normalize_symbols(symbols: list[str] | tuple[str, ...]) -> list[str]:
         seen.add(text)
         out.append(text)
     return out
+
+
+def _symbol_aliases(symbol: str) -> tuple[str, ...]:
+    text = str(symbol).strip().upper()
+    if not text:
+        return tuple()
+    aliases = [text]
+    base = text.split(".", 1)[0]
+    if base and base not in aliases:
+        aliases.append(base)
+    return tuple(aliases)
+
+
+def _contains_symbol_token(text: str, symbol_token: str) -> bool:
+    token = str(symbol_token).strip().upper()
+    if not token:
+        return False
+    if "." in token:
+        return token in text
+    return bool(re.search(rf"(?<![A-Z0-9]){re.escape(token)}(?![A-Z0-9])", text))
+
+
+def _parse_secondary_symbols(raw: Any) -> set[str]:
+    if raw is None:
+        return set()
+    if isinstance(raw, str):
+        values = [part.strip().upper() for part in raw.split(",")]
+    elif isinstance(raw, (list, tuple, set)):
+        values = [str(item).strip().upper() for item in raw]
+    else:
+        values = [str(raw).strip().upper()]
+    return {value for value in values if value}
+
+
+def _event_relevance_score(event: Event) -> float:
+    if str(event.source).strip().lower() == "earnings_calendar":
+        return 10.0
+
+    aliases = set(_symbol_aliases(event.symbol))
+    if not aliases:
+        return 0.0
+
+    metadata = event.metadata or {}
+    headline = str(event.headline or "")
+    summary = str(metadata.get("summary", "") or "")
+    llm_summary = str(metadata.get("llm_summary", "") or "")
+    text = f"{headline} {summary} {llm_summary}".upper()
+    url_text = str(event.url or "").upper()
+
+    score = 0.0
+    if any(_contains_symbol_token(text, alias) for alias in aliases):
+        score += 2.0
+    if any(alias and alias in url_text for alias in aliases):
+        score += 1.0
+
+    llm_primary = str(metadata.get("llm_primary_symbol", "")).strip().upper()
+    llm_secondary = _parse_secondary_symbols(metadata.get("llm_secondary_symbols"))
+    if llm_primary:
+        if llm_primary in aliases:
+            score += 3.0
+        elif llm_primary not in aliases and llm_primary not in llm_secondary:
+            score -= 2.5
+    if aliases.intersection(llm_secondary):
+        score += 1.0
+
+    return score
+
+
+def _canonical_event_key(event: Event) -> str:
+    url = str(event.url or "").strip().lower()
+    if url:
+        return f"url::{url}"
+    headline = " ".join(str(event.headline or "").split()).strip().lower()
+    return f"headline::{headline}"
+
+
+def _looks_transient_provider_error(exc: Exception) -> bool:
+    text = str(exc or "").lower()
+    markers = (
+        "error code: 500",
+        "server_error",
+        "internal server error",
+        "error code: 502",
+        "error code: 503",
+        "error code: 504",
+    )
+    return any(marker in text for marker in markers)
+
+
+def _apply_event_quality_filters(events: list[Event]) -> tuple[list[Event], EventQualityDiagnostics]:
+    if not events:
+        return [], EventQualityDiagnostics(kept_count=0, dropped_count=0, duplicate_suppressed_count=0)
+
+    relevance_threshold = 1.0
+    candidates: list[tuple[Event, float]] = []
+    for event in events:
+        score = _event_relevance_score(event)
+        if score >= relevance_threshold:
+            candidates.append((event, score))
+
+    deduped: dict[str, tuple[Event, float]] = {}
+    for event, score in candidates:
+        key = _canonical_event_key(event)
+        current = deduped.get(key)
+        if current is None:
+            deduped[key] = (event, score)
+            continue
+        prev_event, prev_score = current
+        prev_cred = float(prev_event.credibility)
+        next_cred = float(event.credibility)
+        if (score, next_cred) > (prev_score, prev_cred):
+            deduped[key] = (event, score)
+
+    filtered = [event for event, _score in deduped.values()]
+    filtered.sort(key=lambda item: (item.occurred_at, item.event_id), reverse=True)
+
+    duplicate_suppressed = max(0, len(candidates) - len(filtered))
+    dropped = max(0, len(events) - len(filtered))
+    diagnostics = EventQualityDiagnostics(
+        kept_count=len(filtered),
+        dropped_count=dropped,
+        duplicate_suppressed_count=duplicate_suppressed,
+    )
+    return filtered, diagnostics
 
 
 def _clamp01(value: float) -> float:
@@ -99,7 +235,29 @@ def _enrich_events_with_llm(
     if classifier is None:
         return events
 
+    state_lock = threading.Lock()
+    transient_error_count = 0
+    llm_disabled = False
+
     def classify_single_event(event: Event) -> Event:
+        nonlocal transient_error_count, llm_disabled
+        with state_lock:
+            skip_llm = llm_disabled
+        if skip_llm:
+            metadata = dict(event.metadata)
+            metadata["llm_skipped"] = "provider_temporarily_unavailable"
+            return Event(
+                event_id=event.event_id,
+                symbol=event.symbol,
+                source=event.source,
+                occurred_at=event.occurred_at,
+                headline=event.headline,
+                event_type=event.event_type,
+                credibility=event.credibility,
+                url=event.url,
+                metadata=metadata,
+            )
+
         snippet = str(event.metadata.get("summary", "")).strip()
         try:
             result = classifier.classify(
@@ -159,6 +317,17 @@ def _enrich_events_with_llm(
                 headline_preview,
                 exc,
             )
+            if _looks_transient_provider_error(exc):
+                disable_message = None
+                with state_lock:
+                    transient_error_count += 1
+                    if transient_error_count >= 2 and not llm_disabled:
+                        llm_disabled = True
+                        disable_message = (
+                            "Disabling LLM enrichment for remaining events in this run after repeated provider errors."
+                        )
+                if disable_message:
+                    logger.warning(disable_message)
             metadata = dict(event.metadata)
             metadata["llm_error"] = str(exc)
             metadata["llm_error_type"] = type(exc).__name__
@@ -246,6 +415,9 @@ def run_intelligence_pipeline(
             themes=[],
             opportunities=[],
             states=storage.load_symbol_state(),
+            events_kept_count=0,
+            events_dropped_count=0,
+            duplicate_suppressed_count=0,
         )
 
     start_dt = now - timedelta(hours=cfg.catalyst.lookback_hours)
@@ -255,7 +427,18 @@ def run_intelligence_pipeline(
         end_dt=now,
         provider_names=list(cfg.providers),
     )
-    events = _enrich_events_with_llm(events=events, cfg=cfg, llm_classifier=llm_classifier)
+    raw_events = list(events)
+    pre_llm_events, pre_llm_quality = _apply_event_quality_filters(raw_events)
+    enriched_events = _enrich_events_with_llm(events=pre_llm_events, cfg=cfg, llm_classifier=llm_classifier)
+    events, post_llm_quality = _apply_event_quality_filters(enriched_events)
+    event_quality = EventQualityDiagnostics(
+        kept_count=len(events),
+        dropped_count=max(0, len(raw_events) - len(events)),
+        duplicate_suppressed_count=(
+            int(pre_llm_quality.duplicate_suppressed_count)
+            + int(post_llm_quality.duplicate_suppressed_count)
+        ),
+    )
 
     ohlcv_data = _fetch_ohlcv(symbols_clean, start_dt=start_dt, end_dt=now, ohlcv=ohlcv)
     raw_signals = build_catalyst_signals(events=events, ohlcv=ohlcv_data, cfg=cfg.catalyst, asof_dt=now)
@@ -300,4 +483,7 @@ def run_intelligence_pipeline(
         themes=themes,
         opportunities=opportunities,
         states=states,
+        events_kept_count=event_quality.kept_count,
+        events_dropped_count=event_quality.dropped_count,
+        duplicate_suppressed_count=event_quality.duplicate_suppressed_count,
     )

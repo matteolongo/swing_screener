@@ -168,6 +168,9 @@ def test_intelligence_status_includes_llm_warnings(monkeypatch):
         opportunities_count=2,
         llm_warnings_count=1,
         llm_warning_sample="Invalid symbol format: KEYSIGHT",
+        events_kept_count=12,
+        events_dropped_count=3,
+        duplicate_suppressed_count=2,
         analysis_summary="Scanned 3 symbols and found 2 opportunities.",
         error=None,
         created_at="2026-02-24T23:00:00",
@@ -185,6 +188,9 @@ def test_intelligence_status_includes_llm_warnings(monkeypatch):
     payload = res.json()
     assert payload["llm_warnings_count"] == 1
     assert "KEYSIGHT" in payload["llm_warning_sample"]
+    assert payload["events_kept_count"] == 12
+    assert payload["events_dropped_count"] == 3
+    assert payload["duplicate_suppressed_count"] == 2
     assert "Scanned 3 symbols" in payload["analysis_summary"]
 
 
@@ -273,6 +279,193 @@ def test_intelligence_opportunities_filters_by_symbols_query(monkeypatch):
         assert payload["asof_date"] == "2026-02-15"
         assert len(payload["opportunities"]) == 1
         assert payload["opportunities"][0]["symbol"] == "MSFT"
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_intelligence_explain_symbol_returns_llm_response(monkeypatch):
+    from swing_screener.intelligence.models import CatalystSignal, Event, Opportunity, SymbolState
+
+    class FakeStorage:
+        def latest_opportunities_date(self):
+            return "2026-02-15"
+
+        def load_opportunities(self, asof_date):
+            assert asof_date == "2026-02-15"
+            return [
+                Opportunity(
+                    symbol="AAPL",
+                    technical_readiness=0.81,
+                    catalyst_strength=0.73,
+                    opportunity_score=0.77,
+                    state="TRENDING",
+                    explanations=["technical=0.81", "catalyst=0.73"],
+                )
+            ]
+
+        def load_events(self, asof_date, *, symbols=None, limit=None):
+            return [
+                Event(
+                    event_id="evt-1",
+                    symbol="AAPL",
+                    source="yahoo_finance",
+                    occurred_at="2026-02-15T20:00:00",
+                    headline="AAPL beats earnings expectations",
+                    event_type="earnings",
+                    credibility=0.9,
+                    metadata={"llm_event_type": "earnings"},
+                )
+            ]
+
+        def load_signals(self, asof_date, *, symbols=None):
+            return [
+                CatalystSignal(
+                    symbol="AAPL",
+                    event_id="evt-1",
+                    return_z=2.4,
+                    atr_shock=1.2,
+                    peer_confirmation_count=2,
+                    recency_hours=1.0,
+                    is_false_catalyst=False,
+                    reasons=["return_z>=1.5"],
+                )
+            ]
+
+        def load_symbol_state(self):
+            return {
+                "AAPL": SymbolState(
+                    symbol="AAPL",
+                    state="TRENDING",
+                    last_transition_at="2026-02-15T20:10:00",
+                    state_score=0.76,
+                    last_event_id="evt-1",
+                )
+            }
+
+    service = intelligence_service.IntelligenceService(
+        strategy_repo=SimpleNamespace(get_active_strategy=lambda: {}),
+        config_service=_FakeConfigService(),
+    )
+    monkeypatch.setattr(service, "_storage", FakeStorage())
+    monkeypatch.setattr(
+        intelligence_service,
+        "_invoke_llm_explanation",
+        lambda **kwargs: ("LLM beginner explanation", "llm", "gpt-4o-mini", None),
+    )
+
+    app.dependency_overrides = {}
+    from api.routers.intelligence import get_intelligence_service as dep
+
+    app.dependency_overrides[dep] = lambda: service
+    try:
+        client = TestClient(app)
+        res = client.post(
+            "/api/intelligence/explain-symbol",
+            json={
+                "symbol": "AAPL",
+                "asof_date": "2026-02-15",
+                "candidate_context": {"signal": "breakout", "entry": 175.5, "stop": 170.0, "rr": 2.0},
+            },
+        )
+        assert res.status_code == 200
+        payload = res.json()
+        assert payload["symbol"] == "AAPL"
+        assert payload["source"] == "llm"
+        assert payload["model"] == "gpt-4o-mini"
+        assert "LLM beginner explanation" in payload["explanation"]
+        assert payload["generated_at"]
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_intelligence_explain_symbol_falls_back_when_llm_unavailable(monkeypatch):
+    from swing_screener.intelligence.models import Opportunity
+
+    class FakeStorage:
+        def latest_opportunities_date(self):
+            return "2026-02-15"
+
+        def load_opportunities(self, asof_date):
+            return [
+                Opportunity(
+                    symbol="AAPL",
+                    technical_readiness=0.81,
+                    catalyst_strength=0.73,
+                    opportunity_score=0.77,
+                    state="TRENDING",
+                    explanations=["technical=0.81", "catalyst=0.73"],
+                )
+            ]
+
+        def load_events(self, asof_date, *, symbols=None, limit=None):
+            return []
+
+        def load_signals(self, asof_date, *, symbols=None):
+            return []
+
+        def load_symbol_state(self):
+            return {}
+
+    service = intelligence_service.IntelligenceService(
+        strategy_repo=SimpleNamespace(get_active_strategy=lambda: {}),
+        config_service=_FakeConfigService(),
+    )
+    monkeypatch.setattr(service, "_storage", FakeStorage())
+    monkeypatch.setattr(
+        intelligence_service,
+        "_invoke_llm_explanation",
+        lambda **kwargs: ("Deterministic fallback explanation", "deterministic_fallback", None, "Upstream error"),
+    )
+
+    app.dependency_overrides = {}
+    from api.routers.intelligence import get_intelligence_service as dep
+
+    app.dependency_overrides[dep] = lambda: service
+    try:
+        client = TestClient(app)
+        res = client.post("/api/intelligence/explain-symbol", json={"symbol": "AAPL"})
+        assert res.status_code == 200
+        payload = res.json()
+        assert payload["source"] == "deterministic_fallback"
+        assert payload["model"] is None
+        assert payload["warning"] == "Upstream error"
+        assert "Deterministic fallback explanation" in payload["explanation"]
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_intelligence_explain_symbol_returns_404_without_context(monkeypatch):
+    class EmptyStorage:
+        def latest_opportunities_date(self):
+            return "2026-02-15"
+
+        def load_opportunities(self, asof_date):
+            return []
+
+        def load_events(self, asof_date, *, symbols=None, limit=None):
+            return []
+
+        def load_signals(self, asof_date, *, symbols=None):
+            return []
+
+        def load_symbol_state(self):
+            return {}
+
+    service = intelligence_service.IntelligenceService(
+        strategy_repo=SimpleNamespace(get_active_strategy=lambda: {}),
+        config_service=_FakeConfigService(),
+    )
+    monkeypatch.setattr(service, "_storage", EmptyStorage())
+
+    app.dependency_overrides = {}
+    from api.routers.intelligence import get_intelligence_service as dep
+
+    app.dependency_overrides[dep] = lambda: service
+    try:
+        client = TestClient(app)
+        res = client.post("/api/intelligence/explain-symbol", json={"symbol": "AAPL", "asof_date": "2026-02-15"})
+        assert res.status_code == 404
+        assert "no context available" in res.json()["detail"].lower()
     finally:
         app.dependency_overrides.clear()
 
