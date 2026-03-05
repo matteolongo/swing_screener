@@ -142,6 +142,7 @@ class IntelligenceExplainSymbolResponse(BaseModel):
     explanation: str
     source: Literal["llm", "deterministic_fallback"]
     model: Optional[str] = None
+    warning: Optional[str] = None
     generated_at: str
 
 

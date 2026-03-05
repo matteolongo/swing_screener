@@ -315,6 +315,7 @@ export interface IntelligenceExplainSymbolResponse {
   explanation: string;
   source: 'llm' | 'deterministic_fallback';
   model?: string;
+  warning?: string;
   generatedAt: string;
 }
 
@@ -324,6 +325,7 @@ export interface IntelligenceExplainSymbolResponseAPI {
   explanation: string;
   source: 'llm' | 'deterministic_fallback';
   model?: string | null;
+  warning?: string | null;
   generated_at: string;
 }
 
@@ -550,6 +552,7 @@ export function transformExplainSymbolResponse(
     explanation: api.explanation,
     source: api.source,
     model: api.model ?? undefined,
+    warning: api.warning ?? undefined,
     generatedAt: api.generated_at,
   };
 }

@@ -1,5 +1,5 @@
 {
-  "asof": "2026-03-04",
+  "asof": "2026-03-05",
   "positions": [
     {
       "ticker": "INTC",
@@ -207,13 +207,13 @@
       "source_order_id": "REP.MC-20260219172724",
       "entry_date": "2026-02-18",
       "entry_price": 17.32,
-      "stop_price": 17.93,
+      "stop_price": 18.13,
       "shares": 5,
       "initial_risk": 0.8399999999999999,
       "max_favorable_price": 17.32,
       "exit_date": null,
       "exit_price": null,
-      "notes": "From daily review: Entry $17.64, R:R 2.0\nStop updated to 17.32: Breakeven: R=1.43 >= 1.0\nStop updated to 17.36: Trail: R=2.02 >= 2.0 and SMA20 trail\nStop updated to 17.53: Trail: R=2.98 >= 2.0 and SMA20 trail\nStop updated to 17.54: Trail: R=3.29 >= 2.0 and SMA20 trail\nStop updated to 17.55: Trail: R=3.29 >= 2.0 and SMA20 trail\nStop updated to 17.75: Trail: R=4.02 >= 2.0 and SMA20 trail\nStop updated to 17.93: Trail: R=3.32 >= 2.0 and SMA20 trail",
+      "notes": "From daily review: Entry $17.64, R:R 2.0\nStop updated to 17.32: Breakeven: R=1.43 >= 1.0\nStop updated to 17.36: Trail: R=2.02 >= 2.0 and SMA20 trail\nStop updated to 17.53: Trail: R=2.98 >= 2.0 and SMA20 trail\nStop updated to 17.54: Trail: R=3.29 >= 2.0 and SMA20 trail\nStop updated to 17.55: Trail: R=3.29 >= 2.0 and SMA20 trail\nStop updated to 17.75: Trail: R=4.02 >= 2.0 and SMA20 trail\nStop updated to 17.93: Trail: R=3.32 >= 2.0 and SMA20 trail\nStop updated to 18.13: Trail: R=3.37 >= 2.0 and SMA20 trail",
       "exit_order_ids": [
         "ORD-STOP-POS-REP.MC-20260218-01",
         "ORD-AADC0305",
@@ -221,7 +221,8 @@
         "ORD-BCD6F7B7",
         "ORD-595C0157",
         "ORD-F1DD1B40",
-        "ORD-2F9C3ED2"
+        "ORD-2F9C3ED2",
+        "ORD-5A8349DF"
       ]
     },
     {
@@ -259,6 +260,24 @@
       "notes": "From screener: Score 91.6, Rank #2",
       "exit_order_ids": [
         "ORD-STOP-POS-RWE.DE-20260302-01"
+      ]
+    },
+    {
+      "ticker": "ALLFG.AS",
+      "status": "open",
+      "position_id": "POS-ALLFG.AS-20260305-01",
+      "source_order_id": "ALLFG.AS-20260304180433",
+      "entry_date": "2026-03-05",
+      "entry_price": 8.49,
+      "stop_price": 8.3,
+      "shares": 28,
+      "initial_risk": 0.1899999999999995,
+      "max_favorable_price": 8.49,
+      "exit_date": null,
+      "exit_price": null,
+      "notes": "From daily review: Entry $8.52, R:R 2.0",
+      "exit_order_ids": [
+        "ORD-STOP-POS-ALLFG.AS-20260305-01"
       ]
     }
   ]

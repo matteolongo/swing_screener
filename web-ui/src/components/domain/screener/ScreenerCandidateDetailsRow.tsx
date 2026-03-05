@@ -139,6 +139,13 @@ export default function ScreenerCandidateDetailsRow({
                       })}
                     </p>
                   ) : null}
+                  {intelligenceStatus.stage === 'completed' && intelligenceStatus.warning ? (
+                    <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
+                      {t('screener.symbolIntelligence.warning', {
+                        warning: intelligenceStatus.warning,
+                      })}
+                    </p>
+                  ) : null}
                 </div>
               ) : null}
             </div>

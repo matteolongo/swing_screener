@@ -128,6 +128,7 @@ def _invoke_llm_summary(cfg: IntelligenceConfig, context: dict[str, Any]) -> str
             temperature=0,
             base_url=base_url or "https://api.openai.com/v1",
             api_key=api_key,
+            max_retries=0,
         )
     elif provider == "ollama":
         try:
@@ -174,4 +175,3 @@ def build_intelligence_run_summary(
     except Exception as exc:
         logger.warning("Failed to generate LLM intelligence summary: %s", exc)
         return fallback
-

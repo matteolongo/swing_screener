@@ -350,7 +350,7 @@ def test_intelligence_explain_symbol_returns_llm_response(monkeypatch):
     monkeypatch.setattr(
         intelligence_service,
         "_invoke_llm_explanation",
-        lambda **kwargs: ("LLM beginner explanation", "llm", "gpt-4o-mini"),
+        lambda **kwargs: ("LLM beginner explanation", "llm", "gpt-4o-mini", None),
     )
 
     app.dependency_overrides = {}
@@ -414,7 +414,7 @@ def test_intelligence_explain_symbol_falls_back_when_llm_unavailable(monkeypatch
     monkeypatch.setattr(
         intelligence_service,
         "_invoke_llm_explanation",
-        lambda **kwargs: ("Deterministic fallback explanation", "deterministic_fallback", None),
+        lambda **kwargs: ("Deterministic fallback explanation", "deterministic_fallback", None, "Upstream error"),
     )
 
     app.dependency_overrides = {}
@@ -428,6 +428,7 @@ def test_intelligence_explain_symbol_falls_back_when_llm_unavailable(monkeypatch
         payload = res.json()
         assert payload["source"] == "deterministic_fallback"
         assert payload["model"] is None
+        assert payload["warning"] == "Upstream error"
         assert "Deterministic fallback explanation" in payload["explanation"]
     finally:
         app.dependency_overrides.clear()

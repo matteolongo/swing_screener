@@ -985,6 +985,7 @@ export const messagesEn = {
       running: 'Running intelligence...',
       completed: 'Intelligence complete. Explanation source: {{source}}.',
       updatedAt: 'Updated: {{at}}',
+      warning: 'LLM warning: {{warning}}',
       error: 'Intelligence failed: {{error}}',
       sourceLlm: 'LLM',
       sourceFallback: 'Deterministic fallback',

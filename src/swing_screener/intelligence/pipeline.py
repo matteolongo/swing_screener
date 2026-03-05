@@ -5,6 +5,7 @@ from datetime import UTC, datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
 import logging
 import re
+import threading
 from typing import Any, Optional
 
 import pandas as pd
@@ -134,6 +135,19 @@ def _canonical_event_key(event: Event) -> str:
     return f"headline::{headline}"
 
 
+def _looks_transient_provider_error(exc: Exception) -> bool:
+    text = str(exc or "").lower()
+    markers = (
+        "error code: 500",
+        "server_error",
+        "internal server error",
+        "error code: 502",
+        "error code: 503",
+        "error code: 504",
+    )
+    return any(marker in text for marker in markers)
+
+
 def _apply_event_quality_filters(events: list[Event]) -> tuple[list[Event], EventQualityDiagnostics]:
     if not events:
         return [], EventQualityDiagnostics(kept_count=0, dropped_count=0, duplicate_suppressed_count=0)
@@ -221,7 +235,29 @@ def _enrich_events_with_llm(
     if classifier is None:
         return events
 
+    state_lock = threading.Lock()
+    transient_error_count = 0
+    llm_disabled = False
+
     def classify_single_event(event: Event) -> Event:
+        nonlocal transient_error_count, llm_disabled
+        with state_lock:
+            skip_llm = llm_disabled
+        if skip_llm:
+            metadata = dict(event.metadata)
+            metadata["llm_skipped"] = "provider_temporarily_unavailable"
+            return Event(
+                event_id=event.event_id,
+                symbol=event.symbol,
+                source=event.source,
+                occurred_at=event.occurred_at,
+                headline=event.headline,
+                event_type=event.event_type,
+                credibility=event.credibility,
+                url=event.url,
+                metadata=metadata,
+            )
+
         snippet = str(event.metadata.get("summary", "")).strip()
         try:
             result = classifier.classify(
@@ -281,6 +317,17 @@ def _enrich_events_with_llm(
                 headline_preview,
                 exc,
             )
+            if _looks_transient_provider_error(exc):
+                disable_message = None
+                with state_lock:
+                    transient_error_count += 1
+                    if transient_error_count >= 2 and not llm_disabled:
+                        llm_disabled = True
+                        disable_message = (
+                            "Disabling LLM enrichment for remaining events in this run after repeated provider errors."
+                        )
+                if disable_message:
+                    logger.warning(disable_message)
             metadata = dict(event.metadata)
             metadata["llm_error"] = str(exc)
             metadata["llm_error_type"] = type(exc).__name__
@@ -380,8 +427,18 @@ def run_intelligence_pipeline(
         end_dt=now,
         provider_names=list(cfg.providers),
     )
-    events = _enrich_events_with_llm(events=events, cfg=cfg, llm_classifier=llm_classifier)
-    events, event_quality = _apply_event_quality_filters(events)
+    raw_events = list(events)
+    pre_llm_events, pre_llm_quality = _apply_event_quality_filters(raw_events)
+    enriched_events = _enrich_events_with_llm(events=pre_llm_events, cfg=cfg, llm_classifier=llm_classifier)
+    events, post_llm_quality = _apply_event_quality_filters(enriched_events)
+    event_quality = EventQualityDiagnostics(
+        kept_count=len(events),
+        dropped_count=max(0, len(raw_events) - len(events)),
+        duplicate_suppressed_count=(
+            int(pre_llm_quality.duplicate_suppressed_count)
+            + int(post_llm_quality.duplicate_suppressed_count)
+        ),
+    )
 
     ohlcv_data = _fetch_ohlcv(symbols_clean, start_dt=start_dt, end_dt=now, ohlcv=ohlcv)
     raw_signals = build_catalyst_signals(events=events, ohlcv=ohlcv_data, cfg=cfg.catalyst, asof_dt=now)

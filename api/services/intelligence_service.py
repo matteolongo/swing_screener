@@ -123,15 +123,15 @@ def _invoke_llm_explanation(
     cfg,
     context: dict[str, Any],
     fallback_text: str,
-) -> tuple[str, str, str | None]:
+) -> tuple[str, str, str | None, str | None]:
     llm_cfg = getattr(cfg, "llm", None)
     if llm_cfg is None or not bool(getattr(llm_cfg, "enabled", False)):
-        return fallback_text, "deterministic_fallback", None
+        return fallback_text, "deterministic_fallback", None, "LLM disabled in intelligence configuration."
 
     provider = str(getattr(llm_cfg, "provider", "")).strip().lower()
     model = str(getattr(llm_cfg, "model", "")).strip() or None
     if provider in {"", "mock"}:
-        return fallback_text, "deterministic_fallback", model
+        return fallback_text, "deterministic_fallback", model, "LLM provider is mock; deterministic fallback used."
 
     base_url = str(getattr(llm_cfg, "base_url", "")).strip() or None
     api_key = str(getattr(llm_cfg, "api_key", "")).strip() or str(os.environ.get("OPENAI_API_KEY", "")).strip()
@@ -140,7 +140,7 @@ def _invoke_llm_explanation(
         from langchain_core.messages import HumanMessage, SystemMessage
     except Exception as exc:  # pragma: no cover - import depends on runtime
         logger.warning("langchain-core unavailable for beginner explanation: %s", exc)
-        return fallback_text, "deterministic_fallback", model
+        return fallback_text, "deterministic_fallback", model, f"langchain-core unavailable: {exc}"
 
     try:
         if provider == "openai":
@@ -153,6 +153,7 @@ def _invoke_llm_explanation(
                 temperature=0,
                 base_url=base_url or "https://api.openai.com/v1",
                 api_key=api_key,
+                max_retries=0,
             )
         elif provider == "ollama":
             from langchain_ollama import ChatOllama
@@ -184,10 +185,10 @@ def _invoke_llm_explanation(
         text_norm = f" {text.lower()} "
         if any(marker in text_norm for marker in speculative_markers):
             raise RuntimeError("LLM explanation used speculative language.")
-        return text, "llm", model
+        return text, "llm", model, None
     except Exception as exc:  # pragma: no cover - defensive fallback
         logger.warning("Beginner explanation LLM call failed, using fallback: %s", exc)
-        return fallback_text, "deterministic_fallback", model
+        return fallback_text, "deterministic_fallback", model, _sanitize_text(str(exc), max_len=240)
 
 
 class IntelligenceService:
@@ -355,7 +356,7 @@ class IntelligenceService:
         deterministic = _build_deterministic_explanation(symbol, context_payload)
         config_payload = self._config_service.get_config().model_dump()
         cfg = build_intelligence_config({"market_intelligence": config_payload})
-        explanation, source, model = _invoke_llm_explanation(
+        explanation, source, model, warning = _invoke_llm_explanation(
             cfg=cfg,
             context=context_payload,
             fallback_text=deterministic,
@@ -366,5 +367,6 @@ class IntelligenceService:
             explanation=explanation,
             source=source,  # type: ignore[arg-type]
             model=model,
+            warning=warning,
             generated_at=_now_iso(),
         )

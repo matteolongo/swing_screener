@@ -132,6 +132,13 @@ export default function AnalysisCanvasPanel({
                           })}
                         </p>
                       ) : null}
+                      {symbolIntelligenceStatus.stage === 'completed' && symbolIntelligenceStatus.warning ? (
+                        <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
+                          {t('screener.symbolIntelligence.warning', {
+                            warning: symbolIntelligenceStatus.warning,
+                          })}
+                        </p>
+                      ) : null}
                     </div>
                   ) : null}
                   <CachedSymbolPriceChart ticker={selectedTicker} className="mt-2" />

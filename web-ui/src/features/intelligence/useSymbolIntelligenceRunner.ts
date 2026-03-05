@@ -20,8 +20,11 @@ export interface SymbolIntelligenceStatus {
   jobId?: string;
   asofDate?: string;
   opportunitiesCount?: number;
+  llmWarningsCount?: number;
+  llmWarningSample?: string;
   explanationSource?: 'llm' | 'deterministic_fallback';
   explanationGeneratedAt?: string;
+  warning?: string;
   error?: string;
   updatedAt: string;
 }
@@ -124,6 +127,8 @@ export function useSymbolIntelligenceRunner() {
               jobId: status.jobId,
               asofDate: status.asofDate,
               opportunitiesCount: status.opportunitiesCount,
+              llmWarningsCount: status.llmWarningsCount,
+              llmWarningSample: status.llmWarningSample,
               updatedAt: nowIso(),
             },
           }));
@@ -168,8 +173,11 @@ export function useSymbolIntelligenceRunner() {
             jobId: finalStatus.jobId,
             asofDate: explanation.asofDate,
             opportunitiesCount: finalStatus.opportunitiesCount,
+            llmWarningsCount: finalStatus.llmWarningsCount,
+            llmWarningSample: finalStatus.llmWarningSample,
             explanationSource: explanation.source,
             explanationGeneratedAt: explanation.generatedAt,
+            warning: explanation.warning || finalStatus.llmWarningSample,
             updatedAt: nowIso(),
           },
         }));
