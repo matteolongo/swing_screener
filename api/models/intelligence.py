@@ -193,17 +193,29 @@ class IntelligenceEducationGenerateRequest(BaseModel):
     def _normalize_views(cls, values: Optional[list[EducationViewName]]) -> Optional[list[EducationViewName]]:
         if values is None:
             return None
+        allowed_views = {"recommendation", "thesis", "learn"}
         seen: set[str] = set()
         normalized: list[EducationViewName] = []
+        invalid: list[str] = []
         for raw in values:
             view = str(raw).strip().lower()
-            if view not in {"recommendation", "thesis", "learn"}:
+            if not view:
+                continue
+            if view not in allowed_views:
+                invalid.append(view)
                 continue
             if view in seen:
                 continue
             seen.add(view)
             normalized.append(view)  # type: ignore[arg-type]
-        return normalized or None
+        if invalid:
+            invalid_str = ", ".join(sorted(set(invalid)))
+            allowed_str = ", ".join(sorted(allowed_views))
+            raise ValueError(f"Unsupported education view(s): {invalid_str}. Allowed values: {allowed_str}")
+        if not normalized:
+            allowed_str = ", ".join(sorted(allowed_views))
+            raise ValueError(f"No valid education views requested. Allowed values: {allowed_str}")
+        return normalized
 
 
 class IntelligenceEducationGenerateResponse(BaseModel):

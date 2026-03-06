@@ -17,6 +17,8 @@ class WatchlistRepository:
         if not self.path.exists():
             return []
         payload = locked_read_json(self.path)
+        if not isinstance(payload, dict):
+            return []
         raw_items = payload.get("items", [])
         if not isinstance(raw_items, list):
             return []

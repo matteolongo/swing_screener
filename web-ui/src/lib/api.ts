@@ -31,7 +31,7 @@ export const API_ENDPOINTS = {
 
   // Watchlist
   watchlist: '/api/watchlist',
-  watchlistItem: (ticker: string) => `/api/watchlist/${ticker}`,
+  watchlistItem: (ticker: string) => `/api/watchlist/${encodeURIComponent(ticker)}`,
 
   // Social
   socialAnalyze: '/api/social/analyze',
