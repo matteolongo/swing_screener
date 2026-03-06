@@ -1,5 +1,8 @@
 import { API_ENDPOINTS, apiUrl } from '@/lib/api';
 import {
+  IntelligenceEducationGenerateRequest,
+  IntelligenceEducationGenerateResponse,
+  IntelligenceEducationGenerateResponseAPI,
   IntelligenceExplainSymbolRequest,
   IntelligenceExplainSymbolResponse,
   IntelligenceExplainSymbolResponseAPI,
@@ -24,8 +27,10 @@ import {
   IntelligenceSymbolSetsResponseAPI,
   IntelligenceSymbolSetUpsertRequest,
   toIntelligenceConfigAPI,
+  toEducationGenerateRequestAPI,
   toExplainSymbolRequestAPI,
   toProviderTestRequestAPI,
+  transformEducationGenerateResponse,
   transformExplainSymbolResponse,
   transformIntelligenceConfig,
   transformIntelligenceOpportunitiesResponse,
@@ -215,4 +220,40 @@ export async function explainIntelligenceSymbol(
   }
   const payload: IntelligenceExplainSymbolResponseAPI = await response.json();
   return transformExplainSymbolResponse(payload);
+}
+
+export async function generateIntelligenceEducation(
+  request: IntelligenceEducationGenerateRequest
+): Promise<IntelligenceEducationGenerateResponse> {
+  const response = await fetch(apiUrl(API_ENDPOINTS.intelligenceEducationGenerate), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(toEducationGenerateRequestAPI(request)),
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.detail || 'Failed to generate educational intelligence');
+  }
+  const payload: IntelligenceEducationGenerateResponseAPI = await response.json();
+  return transformEducationGenerateResponse(payload);
+}
+
+export async function fetchIntelligenceEducation(
+  symbol: string,
+  asofDate?: string
+): Promise<IntelligenceEducationGenerateResponse> {
+  const endpoint = new URL(
+    apiUrl(API_ENDPOINTS.intelligenceEducationBySymbol(symbol.trim().toUpperCase())),
+    window.location.origin
+  );
+  if (asofDate) {
+    endpoint.searchParams.set('asof_date', asofDate);
+  }
+  const response = await fetch(endpoint.toString());
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.detail || 'Failed to fetch educational intelligence');
+  }
+  const payload: IntelligenceEducationGenerateResponseAPI = await response.json();
+  return transformEducationGenerateResponse(payload);
 }

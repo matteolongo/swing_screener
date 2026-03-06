@@ -59,6 +59,20 @@ class LLMConfig:
     cache_path: str = "data/intelligence/llm_cache.json"
     audit_path: str = "data/intelligence/llm_audit"
     max_concurrency: int = 4
+    education_template_version: str = "v1"
+    education_style_level: str = "beginner"
+    education_max_tokens: int = 450
+    education_forbidden_claim_categories: tuple[str, ...] = (
+        "prediction",
+        "guarantee",
+        "financial_advice",
+    )
+    education_recommendation_system_prompt: str = ""
+    education_recommendation_user_prompt_template: str = ""
+    education_thesis_system_prompt: str = ""
+    education_thesis_user_prompt_template: str = ""
+    education_learn_system_prompt: str = ""
+    education_learn_user_prompt_template: str = ""
 
 
 @dataclass(frozen=True)
@@ -175,6 +189,19 @@ def _clean_prompt_override(raw: Any) -> str:
     return str(raw).replace("\r\n", "\n").strip()
 
 
+def _clean_csv_list(raw: Any, *, fallback: tuple[str, ...]) -> tuple[str, ...]:
+    if raw is None:
+        return fallback
+    if isinstance(raw, str):
+        values = [part.strip() for part in raw.split(",")]
+    elif isinstance(raw, (list, tuple, set)):
+        values = [str(part).strip() for part in raw]
+    else:
+        return fallback
+    cleaned = tuple(value for value in values if value)
+    return cleaned or fallback
+
+
 def build_intelligence_config(strategy: dict) -> IntelligenceConfig:
     raw = get_nested_dict(strategy, "market_intelligence")
     catalyst_raw = get_nested_dict(raw, "catalyst")
@@ -227,6 +254,31 @@ def build_intelligence_config(strategy: dict) -> IntelligenceConfig:
             cache_path=str(llm_raw.get("cache_path", "data/intelligence/llm_cache.json")).strip(),
             audit_path=str(llm_raw.get("audit_path", "data/intelligence/llm_audit")).strip(),
             max_concurrency=_clean_positive_int(llm_raw.get("max_concurrency"), 4),
+            education_template_version=str(llm_raw.get("education_template_version", "v1")).strip() or "v1",
+            education_style_level=str(llm_raw.get("education_style_level", "beginner")).strip() or "beginner",
+            education_max_tokens=_clean_positive_int(llm_raw.get("education_max_tokens"), 450, min_value=64),
+            education_forbidden_claim_categories=_clean_csv_list(
+                llm_raw.get("education_forbidden_claim_categories"),
+                fallback=("prediction", "guarantee", "financial_advice"),
+            ),
+            education_recommendation_system_prompt=_clean_prompt_override(
+                llm_raw.get("education_recommendation_system_prompt", "")
+            ),
+            education_recommendation_user_prompt_template=_clean_prompt_override(
+                llm_raw.get("education_recommendation_user_prompt_template", "")
+            ),
+            education_thesis_system_prompt=_clean_prompt_override(
+                llm_raw.get("education_thesis_system_prompt", "")
+            ),
+            education_thesis_user_prompt_template=_clean_prompt_override(
+                llm_raw.get("education_thesis_user_prompt_template", "")
+            ),
+            education_learn_system_prompt=_clean_prompt_override(
+                llm_raw.get("education_learn_system_prompt", "")
+            ),
+            education_learn_user_prompt_template=_clean_prompt_override(
+                llm_raw.get("education_learn_user_prompt_template", "")
+            ),
         ),
         catalyst=CatalystConfig(
             lookback_hours=_clean_positive_int(catalyst_raw.get("lookback_hours"), 72),

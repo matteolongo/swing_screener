@@ -15,6 +15,10 @@ import {
   usePositions,
   useUpdateStopMutation,
 } from '@/features/portfolio/hooks';
+import type { WatchItem } from '@/features/watchlist/types';
+import { useUnwatchSymbolMutation, useWatchSymbolMutation, useWatchlist } from '@/features/watchlist/hooks';
+import WatchMetaInline from '@/components/domain/watchlist/WatchMetaInline';
+import WatchToggleButton from '@/components/domain/watchlist/WatchToggleButton';
 import { type Order } from '@/features/portfolio/types';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { formatCurrency, formatPercent } from '@/utils/formatters';
@@ -24,8 +28,10 @@ interface PortfolioRow {
   id: string;
   ticker: string;
   status: 'open' | 'pending';
-  pnl: number | null;
-  pnlPercent: number | null;
+  netPnl: number | null;
+  netPnlPercent: number | null;
+  grossPnl: number | null;
+  grossPnlPercent: number | null;
   entryPrice: number | null;
   currentPrice: number | null;
   stopLoss: number | null;
@@ -37,6 +43,12 @@ interface PortfolioRow {
 
 function formatOptionalCurrency(value: number | null): string {
   return value == null ? t('common.placeholders.dash') : formatCurrency(value);
+}
+
+function formatPnlValue(pnl: number | null, pnlPercent: number | null): string {
+  if (pnl == null || pnlPercent == null) return t('common.placeholders.dash');
+  const sign = pnl >= 0 ? '+' : '';
+  return `${sign}${formatCurrency(pnl)} (${formatPercent(pnlPercent)})`;
 }
 
 export default function PortfolioTable() {
@@ -66,6 +78,39 @@ export default function PortfolioTable() {
     setShowCloseModal(false);
     setSelectedPosition(null);
   });
+  const watchlistQuery = useWatchlist();
+  const watchSymbolMutation = useWatchSymbolMutation();
+  const unwatchSymbolMutation = useUnwatchSymbolMutation();
+
+  const watchItemsByTicker = useMemo(() => {
+    const map = new Map<string, WatchItem>();
+    for (const item of watchlistQuery.data ?? []) {
+      map.set(item.ticker.toUpperCase(), item);
+    }
+    return map;
+  }, [watchlistQuery.data]);
+
+  const handleWatch = (ticker: string, currentPrice: number | null | undefined, source: string) => {
+    const normalizedTicker = ticker.trim().toUpperCase();
+    if (!normalizedTicker || watchItemsByTicker.has(normalizedTicker)) {
+      return;
+    }
+    watchSymbolMutation.mutate({
+      ticker: normalizedTicker,
+      watchPrice: currentPrice ?? null,
+      currency: null,
+      source,
+    });
+  };
+
+  const handleUnwatch = (ticker: string) => {
+    const normalizedTicker = ticker.trim().toUpperCase();
+    if (!normalizedTicker || !watchItemsByTicker.has(normalizedTicker)) {
+      return;
+    }
+    unwatchSymbolMutation.mutate(normalizedTicker);
+  };
+
   const fillOrderMutation = useFillOrderMutation(() => {
     setShowFillOrderModal(false);
     setSelectedPendingOrder(null);
@@ -93,14 +138,20 @@ export default function PortfolioTable() {
 
     const positionRows: PortfolioRow[] = positions.map((position) => {
       const linked = position.positionId ? byPositionId.get(position.positionId) : undefined;
+      const entryValue = position.entryPrice * position.shares;
+      const effectiveCurrentPrice = position.currentPrice ?? position.entryPrice;
+      const grossPnl = (effectiveCurrentPrice - position.entryPrice) * position.shares;
+      const grossPnlPercent = entryValue > 0 ? (grossPnl / entryValue) * 100 : 0;
       return {
         id: position.positionId ?? `open-${position.ticker}`,
         ticker: position.ticker,
         status: 'open',
-        pnl: position.pnl,
-        pnlPercent: position.pnlPercent,
+        netPnl: position.pnl,
+        netPnlPercent: position.pnlPercent,
+        grossPnl,
+        grossPnlPercent,
         entryPrice: position.entryPrice,
-        currentPrice: position.currentPrice ?? position.entryPrice,
+        currentPrice: effectiveCurrentPrice,
         stopLoss: linked?.stopOrder?.stopPrice ?? position.stopPrice,
         target: linked?.targetOrder?.limitPrice ?? null,
         shares: position.shares,
@@ -113,8 +164,10 @@ export default function PortfolioTable() {
       id: `pending-${order.orderId}`,
       ticker: order.ticker,
       status: 'pending',
-      pnl: null,
-      pnlPercent: null,
+      netPnl: null,
+      netPnlPercent: null,
+      grossPnl: null,
+      grossPnlPercent: null,
       entryPrice: order.limitPrice ?? order.entryPrice ?? null,
       currentPrice: null,
       stopLoss: order.stopPrice ?? null,
@@ -206,24 +259,57 @@ export default function PortfolioTable() {
     {
       key: 'ticker',
       header: t('workspacePage.panels.portfolio.columns.symbol'),
-      render: (row) => (
-        <div className="flex items-center gap-2">
-          <span className="font-semibold">{row.ticker}</span>
-          <Badge variant={row.status === 'open' ? 'success' : 'warning'}>{row.status}</Badge>
-        </div>
-      ),
+      render: (row) => {
+        const watchItem = watchItemsByTicker.get(row.ticker.toUpperCase());
+        return (
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold">{row.ticker}</span>
+              <Badge variant={row.status === 'open' ? 'success' : 'warning'}>{row.status}</Badge>
+            </div>
+            <div className="flex flex-col gap-1">
+              <WatchToggleButton
+                ticker={row.ticker}
+                isWatched={Boolean(watchItem)}
+                isPending={watchSymbolMutation.isPending || unwatchSymbolMutation.isPending}
+                onWatch={(ticker) => handleWatch(ticker, row.currentPrice, 'workspace_portfolio')}
+                onUnwatch={handleUnwatch}
+              />
+              {watchItem ? (
+                <WatchMetaInline
+                  watchedAt={watchItem.watchedAt}
+                  watchPrice={watchItem.watchPrice}
+                  currentPrice={row.currentPrice}
+                  currency={null}
+                />
+              ) : null}
+            </div>
+          </div>
+        );
+      },
     },
     {
-      key: 'pnl',
-      header: t('workspacePage.panels.portfolio.columns.pnl'),
+      key: 'grossPnl',
+      header: t('workspacePage.panels.portfolio.columns.pnlGross'),
       align: 'right',
       render: (row) => {
-        if (row.pnl == null || row.pnlPercent == null) return t('common.placeholders.dash');
-        const isPositive = row.pnl >= 0;
+        const isPositive = (row.grossPnl ?? 0) >= 0;
         return (
           <span className={isPositive ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}>
-            {isPositive ? '+' : ''}
-            {formatCurrency(row.pnl)} ({formatPercent(row.pnlPercent)})
+            {formatPnlValue(row.grossPnl, row.grossPnlPercent)}
+          </span>
+        );
+      },
+    },
+    {
+      key: 'netPnl',
+      header: t('workspacePage.panels.portfolio.columns.pnlNet'),
+      align: 'right',
+      render: (row) => {
+        const isPositive = (row.netPnl ?? 0) >= 0;
+        return (
+          <span className={isPositive ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}>
+            {formatPnlValue(row.netPnl, row.netPnlPercent)}
           </span>
         );
       },

@@ -1,14 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, ChevronUp, ListChecks } from 'lucide-react';
 import Button from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
 import TableShell from '@/components/common/TableShell';
 import type { SymbolIntelligenceStatus } from '@/features/intelligence/useSymbolIntelligenceRunner';
+import type { WatchItem } from '@/features/watchlist/types';
 import { ScreenerCandidate } from '@/features/screener/types';
 import { toCandidateViewModel } from '@/features/screener/viewModel';
 import ScreenerCandidateIdentityCell from './ScreenerCandidateIdentityCell';
 import ScreenerCandidateSetupCell from './ScreenerCandidateSetupCell';
 import ScreenerCandidateDetailsRow from './ScreenerCandidateDetailsRow';
+import WatchMetaInline from '@/components/domain/watchlist/WatchMetaInline';
+import WatchToggleButton from '@/components/domain/watchlist/WatchToggleButton';
+import { useUnwatchSymbolMutation, useWatchSymbolMutation, useWatchlist } from '@/features/watchlist/hooks';
 import { formatCurrency, formatDate } from '@/utils/formatters';
 import { t } from '@/i18n/t';
 
@@ -52,6 +56,62 @@ export default function ScreenerCandidatesTable({
   // Track expanded rows by ticker
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [isCompactMobileLayout, setIsCompactMobileLayout] = useState(getMobileLayoutMatch);
+  const watchlistQuery = useWatchlist();
+  const watchSymbolMutation = useWatchSymbolMutation();
+  const unwatchSymbolMutation = useUnwatchSymbolMutation();
+
+  const watchItemsByTicker = useMemo(() => {
+    const map = new Map<string, WatchItem>();
+    for (const item of watchlistQuery.data ?? []) {
+      map.set(item.ticker.toUpperCase(), item);
+    }
+    return map;
+  }, [watchlistQuery.data]);
+
+  const handleWatch = (ticker: string, currentPrice: number | undefined, currency: string | undefined, source: string) => {
+    const normalizedTicker = ticker.trim().toUpperCase();
+    if (!normalizedTicker || watchItemsByTicker.has(normalizedTicker)) {
+      return;
+    }
+    watchSymbolMutation.mutate({
+      ticker: normalizedTicker,
+      watchPrice: currentPrice ?? null,
+      currency: currency ?? null,
+      source,
+    });
+  };
+
+  const handleUnwatch = (ticker: string) => {
+    const normalizedTicker = ticker.trim().toUpperCase();
+    if (!normalizedTicker || !watchItemsByTicker.has(normalizedTicker)) {
+      return;
+    }
+    unwatchSymbolMutation.mutate(normalizedTicker);
+  };
+
+  const renderWatchMeta = (ticker: string, currentPrice: number | undefined, currency: string | undefined, source: string) => {
+    const watchItem = watchItemsByTicker.get(ticker.trim().toUpperCase());
+    const isPending = watchSymbolMutation.isPending || unwatchSymbolMutation.isPending;
+    return (
+      <div className="mt-1 flex flex-col gap-1">
+        <WatchToggleButton
+          ticker={ticker}
+          isWatched={Boolean(watchItem)}
+          isPending={isPending}
+          onWatch={(nextTicker) => handleWatch(nextTicker, currentPrice, currency, source)}
+          onUnwatch={handleUnwatch}
+        />
+        {watchItem ? (
+          <WatchMetaInline
+            watchedAt={watchItem.watchedAt}
+            watchPrice={watchItem.watchPrice}
+            currentPrice={currentPrice}
+            currency={currency}
+          />
+        ) : null}
+      </div>
+    );
+  };
 
   const toggleRow = (ticker: string) => {
     setExpandedRows((prev) => {
@@ -130,6 +190,7 @@ export default function ScreenerCandidatesTable({
                   <p className="text-xs text-gray-500">
                     {candidate.lastBar ? formatDate(candidate.lastBar) : '—'}
                   </p>
+                  {renderWatchMeta(candidate.ticker, candidate.close, candidate.currency, 'screener')}
                 </div>
 
                 <div className="text-right">
@@ -300,7 +361,11 @@ export default function ScreenerCandidatesTable({
 
               {/* Symbol (Identity Cell) */}
               <td className="py-3 px-4">
-                <ScreenerCandidateIdentityCell candidate={vm} onSymbolClick={onSymbolClick} />
+                <ScreenerCandidateIdentityCell
+                  candidate={vm}
+                  onSymbolClick={onSymbolClick}
+                  watchContent={renderWatchMeta(candidate.ticker, candidate.close, candidate.currency, 'screener')}
+                />
               </td>
 
               {/* Last Bar */}

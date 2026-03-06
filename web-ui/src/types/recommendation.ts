@@ -45,12 +45,50 @@ export interface TradeThesis {
   invalidationRules: InvalidationRule[];
   professionalInsight?: string;
   beginnerExplanation?: BeginnerExplanation;
+  educationGenerated?: GeneratedEducationPayload;
 }
 
 export interface BeginnerExplanation {
   text: string;
   source: 'llm' | 'deterministic_fallback';
   model?: string;
+  generatedAt?: string;
+}
+
+export type GeneratedEducationViewName = 'recommendation' | 'thesis' | 'learn';
+export type GeneratedEducationRequestSource = 'llm' | 'deterministic_fallback' | 'cache';
+
+export interface GeneratedEducationError {
+  view: GeneratedEducationViewName;
+  code: string;
+  message: string;
+  retryable: boolean;
+  providerErrorId?: string;
+}
+
+export interface GeneratedEducationView {
+  title: string;
+  summary: string;
+  bullets: string[];
+  watchouts: string[];
+  nextSteps: string[];
+  glossaryLinks: string[];
+  factsUsed: string[];
+  source: 'llm' | 'deterministic_fallback';
+  templateVersion: string;
+  generatedAt: string;
+  debugRef?: string;
+}
+
+export interface GeneratedEducationPayload {
+  recommendation?: GeneratedEducationView;
+  thesis?: GeneratedEducationView;
+  learn?: GeneratedEducationView;
+  status?: 'ok' | 'partial' | 'error';
+  source?: GeneratedEducationRequestSource;
+  templateVersion?: string;
+  deterministicFacts: Record<string, string>;
+  errors: GeneratedEducationError[];
   generatedAt?: string;
 }
 
@@ -204,6 +242,7 @@ export function transformRecommendation(api: RecommendationAPI): Recommendation 
 }
 
 function transformThesis(apiThesis: any): TradeThesis {
+  const apiEducation = apiThesis.education_generated;
   return {
     ticker: apiThesis.ticker,
     strategy: apiThesis.strategy,
@@ -245,5 +284,49 @@ function transformThesis(apiThesis: any): TradeThesis {
           generatedAt: apiThesis.beginner_explanation.generated_at ?? undefined,
         }
       : undefined,
+    educationGenerated: apiEducation
+      ? {
+          recommendation: transformGeneratedEducationView(apiEducation.recommendation),
+          thesis: transformGeneratedEducationView(apiEducation.thesis),
+          learn: transformGeneratedEducationView(apiEducation.learn),
+          status: apiEducation.status ?? undefined,
+          source: apiEducation.source ?? undefined,
+          templateVersion: apiEducation.template_version ?? undefined,
+          deterministicFacts: apiEducation.deterministic_facts ?? {},
+          errors: (apiEducation.errors ?? []).map((error: any) => ({
+            view: error.view,
+            code: error.code,
+            message: error.message,
+            retryable: Boolean(error.retryable),
+            providerErrorId: error.provider_error_id ?? undefined,
+          })),
+          generatedAt: apiEducation.generated_at ?? undefined,
+        }
+      : undefined,
+  };
+}
+
+function transformGeneratedEducationView(apiView: any): GeneratedEducationView | undefined {
+  if (!apiView || typeof apiView !== 'object') {
+    return undefined;
+  }
+  return {
+    title: String(apiView.title ?? ''),
+    summary: String(apiView.summary ?? ''),
+    bullets: Array.isArray(apiView.bullets) ? apiView.bullets.map((value: unknown) => String(value)) : [],
+    watchouts: Array.isArray(apiView.watchouts) ? apiView.watchouts.map((value: unknown) => String(value)) : [],
+    nextSteps: Array.isArray(apiView.next_steps ?? apiView.nextSteps)
+      ? (apiView.next_steps ?? apiView.nextSteps).map((value: unknown) => String(value))
+      : [],
+    glossaryLinks: Array.isArray(apiView.glossary_links ?? apiView.glossaryLinks)
+      ? (apiView.glossary_links ?? apiView.glossaryLinks).map((value: unknown) => String(value))
+      : [],
+    factsUsed: Array.isArray(apiView.facts_used ?? apiView.factsUsed)
+      ? (apiView.facts_used ?? apiView.factsUsed).map((value: unknown) => String(value))
+      : [],
+    source: apiView.source === 'llm' ? 'llm' : 'deterministic_fallback',
+    templateVersion: String(apiView.template_version ?? apiView.templateVersion ?? 'v1'),
+    generatedAt: String(apiView.generated_at ?? apiView.generatedAt ?? ''),
+    debugRef: apiView.debug_ref ?? apiView.debugRef ?? undefined,
   };
 }

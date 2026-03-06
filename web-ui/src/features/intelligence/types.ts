@@ -319,6 +319,52 @@ export interface IntelligenceExplainSymbolResponse {
   generatedAt: string;
 }
 
+export type IntelligenceEducationView = 'recommendation' | 'thesis' | 'learn';
+export type IntelligenceEducationSource = 'llm' | 'deterministic_fallback';
+export type IntelligenceEducationRequestSource = 'llm' | 'deterministic_fallback' | 'cache';
+
+export interface IntelligenceEducationError {
+  view: IntelligenceEducationView;
+  code: string;
+  message: string;
+  retryable: boolean;
+  providerErrorId?: string;
+}
+
+export interface IntelligenceEducationViewOutput {
+  title: string;
+  summary: string;
+  bullets: string[];
+  watchouts: string[];
+  nextSteps: string[];
+  glossaryLinks: string[];
+  factsUsed: string[];
+  source: IntelligenceEducationSource;
+  templateVersion: string;
+  generatedAt: string;
+  debugRef?: string;
+}
+
+export interface IntelligenceEducationGenerateRequest {
+  symbol: string;
+  asofDate?: string;
+  views?: IntelligenceEducationView[];
+  forceRefresh?: boolean;
+  candidateContext?: IntelligenceExplainCandidateContext;
+}
+
+export interface IntelligenceEducationGenerateResponse {
+  symbol: string;
+  asofDate: string;
+  generatedAt: string;
+  outputs: Partial<Record<IntelligenceEducationView, IntelligenceEducationViewOutput>>;
+  status: 'ok' | 'partial' | 'error';
+  source: IntelligenceEducationRequestSource;
+  templateVersion: string;
+  deterministicFacts: Record<string, string>;
+  errors: IntelligenceEducationError[];
+}
+
 export interface IntelligenceExplainSymbolResponseAPI {
   symbol: string;
   asof_date: string;
@@ -327,6 +373,48 @@ export interface IntelligenceExplainSymbolResponseAPI {
   model?: string | null;
   warning?: string | null;
   generated_at: string;
+}
+
+export interface IntelligenceEducationErrorAPI {
+  view: IntelligenceEducationView;
+  code: string;
+  message: string;
+  retryable: boolean;
+  provider_error_id?: string | null;
+}
+
+export interface IntelligenceEducationViewOutputAPI {
+  title: string;
+  summary: string;
+  bullets: string[];
+  watchouts: string[];
+  next_steps: string[];
+  glossary_links: string[];
+  facts_used: string[];
+  source: IntelligenceEducationSource;
+  template_version: string;
+  generated_at: string;
+  debug_ref?: string | null;
+}
+
+export interface IntelligenceEducationGenerateRequestAPI {
+  symbol: string;
+  asof_date?: string;
+  views?: IntelligenceEducationView[];
+  force_refresh?: boolean;
+  candidate_context?: IntelligenceExplainCandidateContextAPI;
+}
+
+export interface IntelligenceEducationGenerateResponseAPI {
+  symbol: string;
+  asof_date: string;
+  generated_at: string;
+  outputs: Partial<Record<IntelligenceEducationView, IntelligenceEducationViewOutputAPI>>;
+  status: 'ok' | 'partial' | 'error';
+  source: IntelligenceEducationRequestSource;
+  template_version: string;
+  deterministic_facts: Record<string, string>;
+  errors?: IntelligenceEducationErrorAPI[] | null;
 }
 
 export function transformIntelligenceRunLaunchResponse(
@@ -554,5 +642,64 @@ export function transformExplainSymbolResponse(
     model: api.model ?? undefined,
     warning: api.warning ?? undefined,
     generatedAt: api.generated_at,
+  };
+}
+
+export function toEducationGenerateRequestAPI(
+  request: IntelligenceEducationGenerateRequest
+): IntelligenceEducationGenerateRequestAPI {
+  return {
+    symbol: request.symbol.trim().toUpperCase(),
+    asof_date: request.asofDate,
+    views: request.views,
+    force_refresh: request.forceRefresh,
+    candidate_context: toExplainCandidateContextAPI(request.candidateContext),
+  };
+}
+
+function transformEducationViewOutput(
+  api?: IntelligenceEducationViewOutputAPI
+): IntelligenceEducationViewOutput | undefined {
+  if (!api) {
+    return undefined;
+  }
+  return {
+    title: api.title,
+    summary: api.summary,
+    bullets: api.bullets ?? [],
+    watchouts: api.watchouts ?? [],
+    nextSteps: api.next_steps ?? [],
+    glossaryLinks: api.glossary_links ?? [],
+    factsUsed: api.facts_used ?? [],
+    source: api.source,
+    templateVersion: api.template_version,
+    generatedAt: api.generated_at,
+    debugRef: api.debug_ref ?? undefined,
+  };
+}
+
+export function transformEducationGenerateResponse(
+  api: IntelligenceEducationGenerateResponseAPI
+): IntelligenceEducationGenerateResponse {
+  return {
+    symbol: api.symbol,
+    asofDate: api.asof_date,
+    generatedAt: api.generated_at,
+    outputs: {
+      recommendation: transformEducationViewOutput(api.outputs?.recommendation),
+      thesis: transformEducationViewOutput(api.outputs?.thesis),
+      learn: transformEducationViewOutput(api.outputs?.learn),
+    },
+    status: api.status,
+    source: api.source,
+    templateVersion: api.template_version,
+    deterministicFacts: api.deterministic_facts ?? {},
+    errors: (api.errors ?? []).map((error) => ({
+      view: error.view,
+      code: error.code,
+      message: error.message,
+      retryable: error.retryable,
+      providerErrorId: error.provider_error_id ?? undefined,
+    })),
   };
 }

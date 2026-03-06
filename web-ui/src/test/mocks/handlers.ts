@@ -576,6 +576,22 @@ const defaultIntelligenceSymbolSets = [
 
 let intelligenceConfig = structuredClone(mockIntelligenceConfig)
 let intelligenceSymbolSets = [...defaultIntelligenceSymbolSets]
+type WatchlistItemPayload = {
+  ticker: string
+  watched_at: string
+  watch_price: number | null
+  currency: string | null
+  source: string
+}
+let watchlistItems: WatchlistItemPayload[] = []
+
+export function resetMockApiState(): void {
+  activeStrategyId = mockStrategies[0].id
+  strategies = [...mockStrategies]
+  intelligenceConfig = structuredClone(mockIntelligenceConfig)
+  intelligenceSymbolSets = [...defaultIntelligenceSymbolSets]
+  watchlistItems = []
+}
 
 const mockIntelligenceStatus = {
   job_id: 'intel-job-123',
@@ -888,6 +904,42 @@ export const handlers = [
     return HttpResponse.json(mockOrderSnapshots)
   }),
 
+  // Watchlist endpoints
+  http.get(`${API_BASE_URL}/api/watchlist`, () => {
+    return HttpResponse.json({ items: watchlistItems })
+  }),
+
+  http.put(`${API_BASE_URL}/api/watchlist/:ticker`, async ({ params, request }) => {
+    const ticker = String(params.ticker || '').trim().toUpperCase()
+    if (!ticker) {
+      return HttpResponse.json({ detail: 'ticker is required' }, { status: 422 })
+    }
+    const existing = watchlistItems.find((item) => item.ticker === ticker)
+    if (existing) {
+      return HttpResponse.json(existing)
+    }
+    const body = asObject(await request.json())
+    const created: WatchlistItemPayload = {
+      ticker,
+      watched_at: new Date().toISOString(),
+      watch_price: typeof body.watch_price === 'number' ? body.watch_price : null,
+      currency: body.currency ? String(body.currency).trim().toUpperCase() : null,
+      source: String(body.source || '').trim().toLowerCase() || 'unknown',
+    }
+    watchlistItems = [...watchlistItems, created]
+    return HttpResponse.json(created)
+  }),
+
+  http.delete(`${API_BASE_URL}/api/watchlist/:ticker`, ({ params }) => {
+    const ticker = String(params.ticker || '').trim().toUpperCase()
+    const beforeCount = watchlistItems.length
+    watchlistItems = watchlistItems.filter((item) => item.ticker !== ticker)
+    if (watchlistItems.length === beforeCount) {
+      return HttpResponse.json({ detail: `Watch item not found: ${ticker}` }, { status: 404 })
+    }
+    return HttpResponse.json({ deleted: true })
+  }),
+
   // Screener endpoints
   http.get(`${API_BASE_URL}/api/screener/universes`, () => {
     return HttpResponse.json(mockUniverses)
@@ -966,6 +1018,138 @@ export const handlers = [
       source: 'llm',
       model: 'gpt-4o-mini',
       generated_at: '2026-02-15T20:00:04',
+    })
+  }),
+
+  http.get(`${API_BASE_URL}/api/intelligence/education/:symbol`, ({ params, request }) => {
+    const symbol = String(params.symbol || '').trim().toUpperCase()
+    if (!symbol) {
+      return HttpResponse.json({ detail: 'symbol is required' }, { status: 422 })
+    }
+    const asofDate = new URL(request.url).searchParams.get('asof_date') || mockIntelligenceOpportunities.asof_date
+    return HttpResponse.json({
+      symbol,
+      asof_date: asofDate,
+      generated_at: '2026-02-15T20:00:05',
+      status: 'ok',
+      source: 'cache',
+      template_version: 'v1',
+      deterministic_facts: {
+        state: 'TRENDING',
+        opportunity_score: '0.76',
+        rr: '2.00',
+      },
+      outputs: {
+        recommendation: {
+          title: `Beginner view for ${symbol}`,
+          summary: `${symbol} appears because setup and risk checks are aligned.`,
+          bullets: ['Setup quality passed deterministic rules.'],
+          watchouts: ['Exit if invalidation triggers.'],
+          next_steps: ['Verify entry, stop, and size before execution.'],
+          glossary_links: ['rr', 'stop', 'position_size'],
+          facts_used: ['state', 'opportunity_score', 'rr'],
+          source: 'llm',
+          template_version: 'v1',
+          generated_at: '2026-02-15T20:00:05',
+          debug_ref: `${symbol}:recommendation:mock`,
+        },
+        thesis: {
+          title: `Why this trade idea exists (${symbol})`,
+          summary: `${symbol} is scored by technical quality, catalyst evidence, and defined risk.`,
+          bullets: ['Trend and risk structure remain valid.'],
+          watchouts: ['Do not widen stop levels after entry.'],
+          next_steps: ['Trade only if the setup remains valid at execution time.'],
+          glossary_links: ['trade_thesis', 'invalidation'],
+          facts_used: ['state', 'opportunity_score'],
+          source: 'llm',
+          template_version: 'v1',
+          generated_at: '2026-02-15T20:00:05',
+          debug_ref: `${symbol}:thesis:mock`,
+        },
+        learn: {
+          title: `Learn from ${symbol}`,
+          summary: 'Concepts are selected from current deterministic trade facts.',
+          bullets: [
+            'Risk/Reward compares potential upside and downside.',
+            'Stop loss defines when your thesis is wrong.',
+          ],
+          watchouts: ['No stop plan means no valid trade plan.'],
+          next_steps: ['Review one concept and match it to this setup.'],
+          glossary_links: ['rr', 'stop'],
+          facts_used: ['rr', 'stop'],
+          source: 'llm',
+          template_version: 'v1',
+          generated_at: '2026-02-15T20:00:05',
+          debug_ref: `${symbol}:learn:mock`,
+        },
+      },
+      errors: [],
+    })
+  }),
+
+  http.post(`${API_BASE_URL}/api/intelligence/education/generate`, async ({ request }) => {
+    const body = asObject(await request.json())
+    const symbol = String(body.symbol || '').trim().toUpperCase()
+    if (!symbol) {
+      return HttpResponse.json({ detail: 'symbol is required' }, { status: 422 })
+    }
+    return HttpResponse.json({
+      symbol,
+      asof_date: body.asof_date || mockIntelligenceOpportunities.asof_date,
+      generated_at: '2026-02-15T20:00:06',
+      status: 'ok',
+      source: 'llm',
+      template_version: 'v1',
+      deterministic_facts: {
+        state: 'TRENDING',
+        opportunity_score: '0.76',
+        rr: '2.00',
+      },
+      outputs: {
+        recommendation: {
+          title: `Beginner view for ${symbol}`,
+          summary: `${symbol} appears because setup and risk checks are aligned.`,
+          bullets: ['Setup quality passed deterministic rules.'],
+          watchouts: ['Exit if invalidation triggers.'],
+          next_steps: ['Verify entry, stop, and size before execution.'],
+          glossary_links: ['rr', 'stop', 'position_size'],
+          facts_used: ['state', 'opportunity_score', 'rr'],
+          source: 'llm',
+          template_version: 'v1',
+          generated_at: '2026-02-15T20:00:06',
+          debug_ref: `${symbol}:recommendation:mock`,
+        },
+        thesis: {
+          title: `Why this trade idea exists (${symbol})`,
+          summary: `${symbol} is scored by technical quality, catalyst evidence, and defined risk.`,
+          bullets: ['Trend and risk structure remain valid.'],
+          watchouts: ['Do not widen stop levels after entry.'],
+          next_steps: ['Trade only if the setup remains valid at execution time.'],
+          glossary_links: ['trade_thesis', 'invalidation'],
+          facts_used: ['state', 'opportunity_score'],
+          source: 'llm',
+          template_version: 'v1',
+          generated_at: '2026-02-15T20:00:06',
+          debug_ref: `${symbol}:thesis:mock`,
+        },
+        learn: {
+          title: `Learn from ${symbol}`,
+          summary: 'Concepts are selected from current deterministic trade facts.',
+          bullets: [
+            'Risk/Reward compares potential upside and downside.',
+            'Stop loss defines when your thesis is wrong.',
+          ],
+          watchouts: ['No stop plan means no valid trade plan.'],
+          next_steps: ['Review one concept and match it to this setup.'],
+          glossary_links: ['rr', 'stop'],
+          facts_used: ['rr', 'stop'],
+          source: 'llm',
+          template_version: 'v1',
+          generated_at: '2026-02-15T20:00:06',
+          debug_ref: `${symbol}:learn:mock`,
+        },
+      },
+      errors: [],
     })
   }),
 

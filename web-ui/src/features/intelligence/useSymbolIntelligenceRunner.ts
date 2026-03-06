@@ -1,8 +1,8 @@
 import { useCallback, useState } from 'react';
 import {
-  explainIntelligenceSymbol,
   fetchIntelligenceOpportunities,
   fetchIntelligenceRunStatus,
+  generateIntelligenceEducation,
   runIntelligence,
 } from '@/features/intelligence/api';
 import type { IntelligenceRunStatus } from '@/features/intelligence/types';
@@ -23,7 +23,10 @@ export interface SymbolIntelligenceStatus {
   llmWarningsCount?: number;
   llmWarningSample?: string;
   explanationSource?: 'llm' | 'deterministic_fallback';
+  educationSource?: 'llm' | 'deterministic_fallback' | 'cache';
+  educationStatus?: 'ok' | 'partial' | 'error';
   explanationGeneratedAt?: string;
+  educationGeneratedAt?: string;
   warning?: string;
   error?: string;
   updatedAt: string;
@@ -138,11 +141,18 @@ export function useSymbolIntelligenceRunner() {
           await fetchIntelligenceOpportunities(finalStatus.asofDate, [symbol]);
         }
 
-        const explanation = await explainIntelligenceSymbol({
+        const education = await generateIntelligenceEducation({
           symbol,
           asofDate: finalStatus.asofDate,
+          views: ['recommendation', 'thesis', 'learn'],
+          forceRefresh: true,
           candidateContext: buildCandidateContext(candidate),
         });
+
+        const thesisEducation = education.outputs.thesis;
+        const explanationText =
+          thesisEducation?.summary ||
+          'Educational explanation unavailable. Review deterministic thesis fields.';
 
         patchCandidate(symbol, (existing) => {
           if (!existing.recommendation || !existing.recommendation.thesis) {
@@ -155,15 +165,27 @@ export function useSymbolIntelligenceRunner() {
               thesis: {
                 ...existing.recommendation.thesis,
                 beginnerExplanation: {
-                  text: explanation.explanation,
-                  source: explanation.source,
-                  model: explanation.model,
-                  generatedAt: explanation.generatedAt,
+                  text: explanationText,
+                  source: thesisEducation?.source ?? 'deterministic_fallback',
+                  generatedAt: thesisEducation?.generatedAt ?? education.generatedAt,
+                },
+                educationGenerated: {
+                  recommendation: education.outputs.recommendation,
+                  thesis: education.outputs.thesis,
+                  learn: education.outputs.learn,
+                  status: education.status,
+                  source: education.source,
+                  templateVersion: education.templateVersion,
+                  deterministicFacts: education.deterministicFacts,
+                  errors: education.errors,
+                  generatedAt: education.generatedAt,
                 },
               },
             },
           };
         });
+
+        const thesisError = education.errors.find((error) => error.view === 'thesis');
 
         setStatusByTicker((prev) => ({
           ...prev,
@@ -171,13 +193,16 @@ export function useSymbolIntelligenceRunner() {
             ticker: symbol,
             stage: 'completed',
             jobId: finalStatus.jobId,
-            asofDate: explanation.asofDate,
+            asofDate: education.asofDate,
             opportunitiesCount: finalStatus.opportunitiesCount,
             llmWarningsCount: finalStatus.llmWarningsCount,
             llmWarningSample: finalStatus.llmWarningSample,
-            explanationSource: explanation.source,
-            explanationGeneratedAt: explanation.generatedAt,
-            warning: explanation.warning || finalStatus.llmWarningSample,
+            explanationSource: thesisEducation?.source ?? 'deterministic_fallback',
+            educationSource: education.source,
+            educationStatus: education.status,
+            explanationGeneratedAt: thesisEducation?.generatedAt ?? education.generatedAt,
+            educationGeneratedAt: education.generatedAt,
+            warning: thesisError?.message || finalStatus.llmWarningSample,
             updatedAt: nowIso(),
           },
         }));

@@ -6,3 +6,4 @@ export * from '@/features/persistence/storage';
 export * from '@/features/persistence/strategyService';
 export * from '@/features/persistence/strategyValidation';
 export * from '@/features/persistence/sync';
+export * from '@/features/persistence/watchlistService';

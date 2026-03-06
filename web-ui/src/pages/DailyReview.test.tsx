@@ -253,4 +253,30 @@ describe('DailyReview Page', () => {
       expect(screen.queryByRole('button', { name: /Run Intelligence/i })).not.toBeInTheDocument()
     })
   })
+
+  it('allows watching and unwatching symbols inline in daily review tables', async () => {
+    const { user } = renderWithProviders(<DailyReview />)
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Watch VALE/i })).toBeInTheDocument()
+    })
+
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: /Watch VALE/i }))
+    })
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Unwatch VALE/i })).toBeInTheDocument()
+      expect(screen.getAllByText(/Watched:/i).length).toBeGreaterThan(0)
+      expect(screen.getAllByText(/Since watched:/i).length).toBeGreaterThan(0)
+    })
+
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: /Unwatch VALE/i }))
+    })
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Watch VALE/i })).toBeInTheDocument()
+    })
+  })
 })

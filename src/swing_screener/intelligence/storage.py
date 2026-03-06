@@ -45,6 +45,9 @@ class IntelligenceStorage:
     def opportunities_path(self, asof: date | str) -> Path:
         return self._daily_path("opportunities", asof)
 
+    def education_path(self, asof: date | str) -> Path:
+        return self._daily_path("education", asof)
+
     @property
     def symbol_state_path(self) -> Path:
         return self.root_dir / "symbol_state.json"
@@ -212,6 +215,49 @@ class IntelligenceStorage:
             return None
         latest = files[-1].stem.replace("opportunities_", "", 1)
         return latest or None
+
+    def latest_education_date(self) -> str | None:
+        files = sorted(self.root_dir.glob("education_*.json"))
+        if not files:
+            return None
+        latest = files[-1].stem.replace("education_", "", 1)
+        return latest or None
+
+    def load_education(self, asof_date: date | str) -> dict[str, dict]:
+        path = self.education_path(asof_date)
+        if not path.exists():
+            return {}
+        try:
+            payload = locked_read_json_cli(path)
+        except Exception:
+            return {}
+        if not isinstance(payload, dict):
+            return {}
+        out: dict[str, dict] = {}
+        for key, value in payload.items():
+            symbol = str(key).strip().upper()
+            if not symbol or not isinstance(value, dict):
+                continue
+            out[symbol] = value
+        return out
+
+    def load_symbol_education(self, asof_date: date | str, symbol: str) -> dict | None:
+        symbol_norm = str(symbol).strip().upper()
+        if not symbol_norm:
+            return None
+        payload = self.load_education(asof_date)
+        record = payload.get(symbol_norm)
+        return record if isinstance(record, dict) else None
+
+    def write_symbol_education(self, asof_date: date | str, symbol: str, record: dict) -> Path:
+        path = self.education_path(asof_date)
+        symbol_norm = str(symbol).strip().upper()
+        if not symbol_norm:
+            return path
+        current = self.load_education(asof_date)
+        current[symbol_norm] = record
+        locked_write_json_cli(path, current)
+        return path
 
     def load_symbol_state(self) -> dict[str, SymbolState]:
         """Load symbol state with file locking to prevent race conditions during concurrent reads/writes."""

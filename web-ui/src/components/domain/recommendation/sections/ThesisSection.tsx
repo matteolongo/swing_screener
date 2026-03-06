@@ -1,10 +1,12 @@
 import { TrendingUp, AlertTriangle, Shield, Target, Star } from 'lucide-react';
 import Card from '@/components/common/Card';
+import type { ThesisEducationVM } from '@/features/recommendation/educationViewModel';
 import { TradeThesis, SafetyLabel, SetupQuality } from '@/types/recommendation';
 import { t } from '@/i18n/t';
 
 interface ThesisSectionProps {
   thesis: TradeThesis;
+  educationView?: ThesisEducationVM;
 }
 
 function getSafetyLabelColor(label: SafetyLabel): string {
@@ -45,7 +47,7 @@ function StarRating({ rating }: { rating: number }) {
   );
 }
 
-export default function ThesisSection({ thesis }: ThesisSectionProps) {
+export default function ThesisSection({ thesis, educationView }: ThesisSectionProps) {
   return (
     <div className="space-y-6">
       {/* Strategy Header */}
@@ -158,10 +160,40 @@ export default function ThesisSection({ thesis }: ThesisSectionProps) {
 
       {/* Key Insight */}
       <Card className="p-4 bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800">
-        <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">{t('tradeThesis.keyInsight')}</h3>
+        <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">
+          {educationView?.title || t('tradeThesis.keyInsight')}
+        </h3>
         <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-          {thesis.explanation.keyInsight}
+          {educationView?.summary || thesis.explanation.keyInsight}
         </p>
+        {educationView?.source ? (
+          <p className="mt-2 text-xs text-blue-700 dark:text-blue-300">
+            {educationView.source === 'llm'
+              ? t('tradeInsight.education.sourceLlm')
+              : t('tradeInsight.education.sourceFallback')}
+          </p>
+        ) : null}
+        {educationView?.bullets?.length ? (
+          <ul className="mt-3 list-disc ml-5 space-y-1 text-gray-700 dark:text-gray-300">
+            {educationView.bullets.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        ) : null}
+        {educationView?.watchouts?.length ? (
+          <ul className="mt-3 list-disc ml-5 space-y-1 text-amber-800 dark:text-amber-300">
+            {educationView.watchouts.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        ) : null}
+        {educationView?.nextSteps?.length ? (
+          <ul className="mt-3 list-disc ml-5 space-y-1 text-blue-900 dark:text-blue-200">
+            {educationView.nextSteps.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        ) : null}
         {thesis.professionalInsight && (
           <p className="text-gray-700 dark:text-gray-300 leading-relaxed mt-3 pt-3 border-t border-blue-200 dark:border-blue-800">
             {thesis.professionalInsight}

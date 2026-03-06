@@ -29,6 +29,10 @@ export const API_ENDPOINTS = {
   order: (id: string) => `/api/portfolio/orders/${id}`,
   orderFill: (id: string) => `/api/portfolio/orders/${id}/fill`,
 
+  // Watchlist
+  watchlist: '/api/watchlist',
+  watchlistItem: (ticker: string) => `/api/watchlist/${encodeURIComponent(ticker)}`,
+
   // Social
   socialAnalyze: '/api/social/analyze',
   socialWarmupStatus: (jobId: string) => `/api/social/warmup/${jobId}`,
@@ -43,6 +47,8 @@ export const API_ENDPOINTS = {
   intelligenceRunStatus: (jobId: string) => `/api/intelligence/run/${jobId}`,
   intelligenceOpportunities: '/api/intelligence/opportunities',
   intelligenceExplainSymbol: '/api/intelligence/explain-symbol',
+  intelligenceEducationGenerate: '/api/intelligence/education/generate',
+  intelligenceEducationBySymbol: (symbol: string) => `/api/intelligence/education/${encodeURIComponent(symbol)}`,
 
   // Daily Review
   dailyReview: '/api/daily-review',

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Info, RefreshCw } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -16,8 +16,12 @@ import { DAILY_REVIEW_GLOSSARY_KEYS } from '@/content/educationGlossary';
 import TradeInsightModal from '@/components/domain/recommendation/TradeInsightModal';
 import CandidateOrderModal from '@/components/domain/orders/CandidateOrderModal';
 import CachedSymbolPriceChart from '@/components/domain/market/CachedSymbolPriceChart';
+import WatchMetaInline from '@/components/domain/watchlist/WatchMetaInline';
+import WatchToggleButton from '@/components/domain/watchlist/WatchToggleButton';
 import { queryKeys } from '@/lib/queryKeys';
 import { t } from '@/i18n/t';
+import { useUnwatchSymbolMutation, useWatchSymbolMutation, useWatchlist } from '@/features/watchlist/hooks';
+import type { WatchItem } from '@/features/watchlist/types';
 import {
   parseUniverseFromStorage,
   SCREENER_UNIVERSE_STORAGE_KEY,
@@ -64,6 +68,45 @@ export default function DailyReview() {
   const activeStrategyQuery = useActiveStrategyQuery();
   const { isBeginnerMode } = useBeginnerModeStore();
   const { isReady: strategyReady } = useStrategyReadiness();
+  const watchlistQuery = useWatchlist();
+  const watchSymbolMutation = useWatchSymbolMutation();
+  const unwatchSymbolMutation = useUnwatchSymbolMutation();
+
+  const watchItemsByTicker = useMemo(() => {
+    const map = new Map<string, WatchItem>();
+    for (const item of watchlistQuery.data ?? []) {
+      map.set(item.ticker.toUpperCase(), item);
+    }
+    return map;
+  }, [watchlistQuery.data]);
+
+  const handleWatch = useCallback(
+    (ticker: string, currentPrice: number | null | undefined, source: string) => {
+      const normalizedTicker = ticker.trim().toUpperCase();
+      if (!normalizedTicker || watchItemsByTicker.has(normalizedTicker)) {
+        return;
+      }
+      watchSymbolMutation.mutate({
+        ticker: normalizedTicker,
+        watchPrice: currentPrice ?? null,
+        currency: null,
+        source,
+      });
+    },
+    [watchItemsByTicker, watchSymbolMutation],
+  );
+
+  const handleUnwatch = useCallback(
+    (ticker: string) => {
+      const normalizedTicker = ticker.trim().toUpperCase();
+      if (!normalizedTicker || !watchItemsByTicker.has(normalizedTicker)) {
+        return;
+      }
+      unwatchSymbolMutation.mutate(normalizedTicker);
+    },
+    [watchItemsByTicker, unwatchSymbolMutation],
+  );
+  const watchPending = watchSymbolMutation.isPending || unwatchSymbolMutation.isPending;
   
   // Persist dismissal to localStorage
   useEffect(() => {
@@ -260,6 +303,10 @@ export default function DailyReview() {
                 setShowCreateOrderModal(true);
               }}
               isCompactMobileLayout={isCompactMobileLayout}
+              watchItemsByTicker={watchItemsByTicker}
+              watchPending={watchPending}
+              onWatch={handleWatch}
+              onUnwatch={handleUnwatch}
             />
           </div>
         )}
@@ -287,6 +334,10 @@ export default function DailyReview() {
                 })
               }
               isCompactMobileLayout={isCompactMobileLayout}
+              watchItemsByTicker={watchItemsByTicker}
+              watchPending={watchPending}
+              onWatch={handleWatch}
+              onUnwatch={handleUnwatch}
             />
           </div>
         )}
@@ -312,6 +363,10 @@ export default function DailyReview() {
               })
             }
             isCompactMobileLayout={isCompactMobileLayout}
+            watchItemsByTicker={watchItemsByTicker}
+            watchPending={watchPending}
+            onWatch={handleWatch}
+            onUnwatch={handleUnwatch}
           />
         )}
       </CollapsibleSection>
@@ -325,7 +380,14 @@ export default function DailyReview() {
         {review.positionsHold.length === 0 ? (
           <p className="text-gray-600 dark:text-gray-400">{t('dailyReview.sections.noHold')}</p>
         ) : (
-          <HoldTable positions={review.positionsHold} isCompactMobileLayout={isCompactMobileLayout} />
+          <HoldTable
+            positions={review.positionsHold}
+            isCompactMobileLayout={isCompactMobileLayout}
+            watchItemsByTicker={watchItemsByTicker}
+            watchPending={watchPending}
+            onWatch={handleWatch}
+            onUnwatch={handleUnwatch}
+          />
         )}
       </CollapsibleSection>
 
@@ -457,17 +519,63 @@ function CollapsibleSection({
   );
 }
 
+interface DailyReviewWatchProps {
+  watchItemsByTicker: Map<string, WatchItem>;
+  watchPending: boolean;
+  onWatch: (ticker: string, currentPrice: number | null | undefined, source: string) => void;
+  onUnwatch: (ticker: string) => void;
+}
+
+function WatchInlineBlock({
+  ticker,
+  currentPrice,
+  source,
+  watchItemsByTicker,
+  watchPending,
+  onWatch,
+  onUnwatch,
+}: {
+  ticker: string;
+  currentPrice: number | null | undefined;
+  source: string;
+} & DailyReviewWatchProps) {
+  const watchItem = watchItemsByTicker.get(ticker.trim().toUpperCase());
+  return (
+    <div className="mt-1 flex flex-col gap-1">
+      <WatchToggleButton
+        ticker={ticker}
+        isWatched={Boolean(watchItem)}
+        isPending={watchPending}
+        onWatch={(nextTicker) => onWatch(nextTicker, currentPrice, source)}
+        onUnwatch={onUnwatch}
+      />
+      {watchItem ? (
+        <WatchMetaInline
+          watchedAt={watchItem.watchedAt}
+          watchPrice={watchItem.watchPrice}
+          currentPrice={currentPrice}
+          currency={null}
+        />
+      ) : null}
+    </div>
+  );
+}
+
 function CandidatesTable({
   candidates,
   onShowRecommendation,
   onCreateOrder,
   isCompactMobileLayout,
+  watchItemsByTicker,
+  watchPending,
+  onWatch,
+  onUnwatch,
 }: {
   candidates: DailyReviewCandidate[];
   onShowRecommendation: (candidate: DailyReviewCandidate) => void;
   onCreateOrder: (candidate: DailyReviewCandidate) => void;
   isCompactMobileLayout: boolean;
-}) {
+} & DailyReviewWatchProps) {
   if (isCompactMobileLayout) {
     return (
       <div className="space-y-3">
@@ -490,6 +598,15 @@ function CandidatesTable({
                 <p className="mt-0.5 text-xs text-gray-500">
                   {candidate.sector || t('common.placeholders.dash')}
                 </p>
+                <WatchInlineBlock
+                  ticker={candidate.ticker}
+                  currentPrice={candidate.close}
+                  source="daily_review_candidates"
+                  watchItemsByTicker={watchItemsByTicker}
+                  watchPending={watchPending}
+                  onWatch={onWatch}
+                  onUnwatch={onUnwatch}
+                />
               </div>
               <Badge variant="primary">{candidate.signal}</Badge>
             </div>
@@ -593,6 +710,15 @@ function CandidatesTable({
             >
               {candidate.ticker}
             </a>
+            <WatchInlineBlock
+              ticker={candidate.ticker}
+              currentPrice={candidate.close}
+              source="daily_review_candidates"
+              watchItemsByTicker={watchItemsByTicker}
+              watchPending={watchPending}
+              onWatch={onWatch}
+              onUnwatch={onUnwatch}
+            />
             <CachedSymbolPriceChart ticker={candidate.ticker} className="mt-1" />
           </td>
           <td className="p-2 text-right">
@@ -661,11 +787,15 @@ function UpdateStopTable({
   positions,
   onAction,
   isCompactMobileLayout,
+  watchItemsByTicker,
+  watchPending,
+  onWatch,
+  onUnwatch,
 }: {
   positions: DailyReviewPositionUpdate[];
   onAction: (position: DailyReviewPositionUpdate) => void;
   isCompactMobileLayout: boolean;
-}) {
+} & DailyReviewWatchProps) {
   if (isCompactMobileLayout) {
     return (
       <div className="space-y-3">
@@ -684,6 +814,15 @@ function UpdateStopTable({
               >
                 {pos.ticker}
               </a>
+              <WatchInlineBlock
+                ticker={pos.ticker}
+                currentPrice={pos.currentPrice}
+                source="daily_review_update_stop"
+                watchItemsByTicker={watchItemsByTicker}
+                watchPending={watchPending}
+                onWatch={onWatch}
+                onUnwatch={onUnwatch}
+              />
               <Badge variant="warning">{t('dailyReview.table.update.actionLabel')}</Badge>
             </div>
 
@@ -761,6 +900,15 @@ function UpdateStopTable({
             >
               {pos.ticker}
             </a>
+            <WatchInlineBlock
+              ticker={pos.ticker}
+              currentPrice={pos.currentPrice}
+              source="daily_review_update_stop"
+              watchItemsByTicker={watchItemsByTicker}
+              watchPending={watchPending}
+              onWatch={onWatch}
+              onUnwatch={onUnwatch}
+            />
             <CachedSymbolPriceChart ticker={pos.ticker} className="mt-1" />
           </td>
           <td className="p-2 text-right">{formatCurrency(pos.entryPrice)}</td>
@@ -793,11 +941,15 @@ function CloseTable({
   positions,
   onAction,
   isCompactMobileLayout,
+  watchItemsByTicker,
+  watchPending,
+  onWatch,
+  onUnwatch,
 }: {
   positions: DailyReviewPositionClose[];
   onAction: (position: DailyReviewPositionClose) => void;
   isCompactMobileLayout: boolean;
-}) {
+} & DailyReviewWatchProps) {
   if (isCompactMobileLayout) {
     return (
       <div className="space-y-3">
@@ -816,6 +968,15 @@ function CloseTable({
               >
                 {pos.ticker}
               </a>
+              <WatchInlineBlock
+                ticker={pos.ticker}
+                currentPrice={pos.currentPrice}
+                source="daily_review_close"
+                watchItemsByTicker={watchItemsByTicker}
+                watchPending={watchPending}
+                onWatch={onWatch}
+                onUnwatch={onUnwatch}
+              />
               <Badge variant="error">{t('dailyReview.table.close.actionLabel')}</Badge>
             </div>
 
@@ -888,6 +1049,15 @@ function CloseTable({
             >
               {pos.ticker}
             </a>
+            <WatchInlineBlock
+              ticker={pos.ticker}
+              currentPrice={pos.currentPrice}
+              source="daily_review_close"
+              watchItemsByTicker={watchItemsByTicker}
+              watchPending={watchPending}
+              onWatch={onWatch}
+              onUnwatch={onUnwatch}
+            />
             <CachedSymbolPriceChart ticker={pos.ticker} className="mt-1" />
           </td>
           <td className="p-2 text-right">{formatCurrency(pos.entryPrice)}</td>
@@ -918,10 +1088,14 @@ function CloseTable({
 function HoldTable({
   positions,
   isCompactMobileLayout,
+  watchItemsByTicker,
+  watchPending,
+  onWatch,
+  onUnwatch,
 }: {
   positions: DailyReviewPositionHold[];
   isCompactMobileLayout: boolean;
-}) {
+} & DailyReviewWatchProps) {
   if (isCompactMobileLayout) {
     return (
       <div className="space-y-3">
@@ -940,6 +1114,15 @@ function HoldTable({
               >
                 {pos.ticker}
               </a>
+              <WatchInlineBlock
+                ticker={pos.ticker}
+                currentPrice={pos.currentPrice}
+                source="daily_review_hold"
+                watchItemsByTicker={watchItemsByTicker}
+                watchPending={watchPending}
+                onWatch={onWatch}
+                onUnwatch={onUnwatch}
+              />
               <Badge variant="success">{t('dailyReview.table.hold.holdBadge')}</Badge>
             </div>
 
@@ -1002,6 +1185,15 @@ function HoldTable({
             >
               {pos.ticker}
             </a>
+            <WatchInlineBlock
+              ticker={pos.ticker}
+              currentPrice={pos.currentPrice}
+              source="daily_review_hold"
+              watchItemsByTicker={watchItemsByTicker}
+              watchPending={watchPending}
+              onWatch={onWatch}
+              onUnwatch={onUnwatch}
+            />
             <CachedSymbolPriceChart ticker={pos.ticker} className="mt-1" />
           </td>
           <td className="p-2 text-right">{formatCurrency(pos.entryPrice)}</td>

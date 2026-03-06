@@ -42,6 +42,11 @@ describe('API Client', () => {
       expect(API_ENDPOINTS.order('ORD-123')).toBe('/api/portfolio/orders/ORD-123')
       expect(API_ENDPOINTS.orderFill('ORD-123')).toBe('/api/portfolio/orders/ORD-123/fill')
     })
+
+    it('has watchlist endpoints', () => {
+      expect(API_ENDPOINTS.watchlist).toBe('/api/watchlist')
+      expect(API_ENDPOINTS.watchlistItem('AAPL')).toBe('/api/watchlist/AAPL')
+    })
   })
 
   describe('apiUrl', () => {

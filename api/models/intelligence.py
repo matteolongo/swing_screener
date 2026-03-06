@@ -146,6 +146,90 @@ class IntelligenceExplainSymbolResponse(BaseModel):
     generated_at: str
 
 
+EducationViewName = Literal["recommendation", "thesis", "learn"]
+EducationSource = Literal["llm", "deterministic_fallback"]
+EducationRequestSource = Literal["llm", "deterministic_fallback", "cache"]
+
+
+class IntelligenceEducationError(BaseModel):
+    view: EducationViewName
+    code: str
+    message: str
+    retryable: bool = False
+    provider_error_id: Optional[str] = None
+
+
+class IntelligenceEducationViewOutput(BaseModel):
+    title: str
+    summary: str
+    bullets: list[str] = Field(default_factory=list, max_length=5)
+    watchouts: list[str] = Field(default_factory=list, max_length=5)
+    next_steps: list[str] = Field(default_factory=list, max_length=5)
+    glossary_links: list[str] = Field(default_factory=list, max_length=8)
+    facts_used: list[str] = Field(default_factory=list, max_length=16)
+    source: EducationSource
+    template_version: str = "v1"
+    generated_at: str
+    debug_ref: Optional[str] = None
+
+
+class IntelligenceEducationGenerateRequest(BaseModel):
+    symbol: str = Field(min_length=1, max_length=16)
+    asof_date: Optional[str] = None
+    views: Optional[list[EducationViewName]] = None
+    force_refresh: bool = False
+    candidate_context: Optional[IntelligenceExplainCandidateContext] = None
+
+    @field_validator("symbol")
+    @classmethod
+    def _normalize_symbol_for_education(cls, value: str) -> str:
+        cleaned = str(value).strip().upper()
+        if not cleaned:
+            raise ValueError("symbol is required")
+        return cleaned
+
+    @field_validator("views")
+    @classmethod
+    def _normalize_views(cls, values: Optional[list[EducationViewName]]) -> Optional[list[EducationViewName]]:
+        if values is None:
+            return None
+        allowed_views = {"recommendation", "thesis", "learn"}
+        seen: set[str] = set()
+        normalized: list[EducationViewName] = []
+        invalid: list[str] = []
+        for raw in values:
+            view = str(raw).strip().lower()
+            if not view:
+                continue
+            if view not in allowed_views:
+                invalid.append(view)
+                continue
+            if view in seen:
+                continue
+            seen.add(view)
+            normalized.append(view)  # type: ignore[arg-type]
+        if invalid:
+            invalid_str = ", ".join(sorted(set(invalid)))
+            allowed_str = ", ".join(sorted(allowed_views))
+            raise ValueError(f"Unsupported education view(s): {invalid_str}. Allowed values: {allowed_str}")
+        if not normalized:
+            allowed_str = ", ".join(sorted(allowed_views))
+            raise ValueError(f"No valid education views requested. Allowed values: {allowed_str}")
+        return normalized
+
+
+class IntelligenceEducationGenerateResponse(BaseModel):
+    symbol: str
+    asof_date: str
+    generated_at: str
+    outputs: dict[EducationViewName, IntelligenceEducationViewOutput] = Field(default_factory=dict)
+    status: Literal["ok", "partial", "error"]
+    source: EducationRequestSource
+    template_version: str = "v1"
+    deterministic_facts: dict[str, str] = Field(default_factory=dict)
+    errors: list[IntelligenceEducationError] = Field(default_factory=list)
+
+
 # LLM Classification Models
 
 class LLMClassifyNewsRequest(BaseModel):
