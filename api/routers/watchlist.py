@@ -45,7 +45,13 @@ async def delete_watchlist_item(
     ticker: str,
     repo: WatchlistRepository = Depends(get_watchlist_repo),
 ):
-    deleted = repo.delete_item(ticker)
+    normalized_ticker = ticker.strip().upper()
+    if not normalized_ticker:
+        raise HTTPException(status_code=422, detail="Invalid ticker")
+    deleted = repo.delete_item(normalized_ticker)
     if not deleted:
-        raise HTTPException(status_code=404, detail=f"Watch item not found: {ticker.strip().upper()}")
+        raise HTTPException(
+            status_code=404,
+            detail=f"Watch item not found: {normalized_ticker}",
+        )
     return WatchlistDeleteResponse(deleted=True)

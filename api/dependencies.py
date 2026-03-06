@@ -50,11 +50,19 @@ def get_watchlist_path() -> Path:
 
 
 def get_orders_repo() -> OrdersRepository:
-    return OrdersRepository(get_orders_path())
+    path = get_orders_path()
+    if not path.exists():
+        from api.utils.file_lock import locked_write_json
+        locked_write_json(path, {"asof": get_today_str(), "orders": []})
+    return OrdersRepository(path)
 
 
 def get_positions_repo() -> PositionsRepository:
-    return PositionsRepository(get_positions_path())
+    path = get_positions_path()
+    if not path.exists():
+        from api.utils.file_lock import locked_write_json
+        locked_write_json(path, {"asof": get_today_str(), "positions": []})
+    return PositionsRepository(path)
 
 
 def get_watchlist_repo() -> WatchlistRepository:
