@@ -557,6 +557,26 @@ const mockIntelligenceConfig = {
     max_daily_opportunities: 10,
     min_opportunity_score: 0.6,
   },
+  sources: {
+    enabled: ['yahoo_finance', 'earnings_calendar', 'sec_edgar', 'company_ir_rss'],
+    scraping_enabled: false,
+    allowed_domains: [],
+    rate_limits: {
+      requests_per_minute: 90,
+      max_concurrency: 4,
+    },
+    timeouts: {
+      connect_seconds: 5,
+      read_seconds: 20,
+    },
+    scrape_policy: {
+      require_robots_allow: true,
+      deny_if_robots_unreachable: true,
+      require_tos_allow_flag: true,
+      user_agent: 'swing-screener-intelligence-bot/1.0',
+      max_robots_cache_hours: 24,
+    },
+  },
 }
 
 const mockIntelligenceProviders = [
@@ -574,7 +594,7 @@ const defaultIntelligenceSymbolSets = [
   },
 ]
 
-let intelligenceConfig = structuredClone(mockIntelligenceConfig)
+let intelligenceConfig: any = structuredClone(mockIntelligenceConfig)
 let intelligenceSymbolSets = [...defaultIntelligenceSymbolSets]
 type WatchlistItemPayload = {
   ticker: string
@@ -743,6 +763,22 @@ export const handlers = [
       opportunity: {
         ...intelligenceConfig.opportunity,
         ...asObject(body.opportunity),
+      },
+      sources: {
+        ...asObject(intelligenceConfig.sources),
+        ...asObject(body.sources),
+        rate_limits: {
+          ...asObject(asObject(intelligenceConfig.sources).rate_limits),
+          ...asObject(asObject(body.sources).rate_limits),
+        },
+        timeouts: {
+          ...asObject(asObject(intelligenceConfig.sources).timeouts),
+          ...asObject(asObject(body.sources).timeouts),
+        },
+        scrape_policy: {
+          ...asObject(asObject(intelligenceConfig.sources).scrape_policy),
+          ...asObject(asObject(body.sources).scrape_policy),
+        },
       },
     }
     return HttpResponse.json(intelligenceConfig)
@@ -1003,6 +1039,133 @@ export const handlers = [
       })
     }
     return HttpResponse.json(mockIntelligenceOpportunities)
+  }),
+
+  http.get(`${API_BASE_URL}/api/intelligence/events`, ({ request }) => {
+    const url = new URL(request.url)
+    const asofDate = url.searchParams.get('asof_date') || mockIntelligenceOpportunities.asof_date
+    const symbols = url.searchParams
+      .getAll('symbols')
+      .map((value) => value.trim().toUpperCase())
+      .filter((value) => value.length > 0)
+    const symbolSet = new Set(symbols)
+    const events = [
+      {
+        event_id: 'evt-aapl-earnings',
+        symbol: 'AAPL',
+        event_type: 'earnings',
+        event_subtype: 'earnings',
+        timing_type: 'scheduled',
+        materiality: 0.84,
+        confidence: 0.81,
+        primary_source_reliability: 0.75,
+        confirmation_count: 2,
+        published_at: `${asofDate}T08:00:00`,
+        event_at: `${asofDate}T21:00:00`,
+        source_name: 'yahoo_finance',
+        raw_url: 'https://finance.yahoo.com',
+        llm_fields: { headline: 'AAPL earnings scheduled' },
+      },
+      {
+        event_id: 'evt-msft-guidance',
+        symbol: 'MSFT',
+        event_type: 'guidance',
+        event_subtype: 'guidance_update',
+        timing_type: 'unscheduled',
+        materiality: 0.68,
+        confidence: 0.72,
+        primary_source_reliability: 0.66,
+        confirmation_count: 1,
+        published_at: `${asofDate}T09:00:00`,
+        event_at: `${asofDate}T09:00:00`,
+        source_name: 'financial_news_rss',
+        raw_url: 'https://example.com/msft-guidance',
+        llm_fields: { headline: 'MSFT provides guidance update' },
+      },
+    ]
+    return HttpResponse.json({
+      asof_date: asofDate,
+      events: symbols.length > 0 ? events.filter((event) => symbolSet.has(event.symbol)) : events,
+    })
+  }),
+
+  http.get(`${API_BASE_URL}/api/intelligence/upcoming-catalysts`, ({ request }) => {
+    const url = new URL(request.url)
+    const asofDate = url.searchParams.get('asof_date') || mockIntelligenceOpportunities.asof_date
+    const symbols = url.searchParams
+      .getAll('symbols')
+      .map((value) => value.trim().toUpperCase())
+      .filter((value) => value.length > 0)
+    const symbolSet = new Set(symbols)
+    const items = [
+      {
+        symbol: 'AAPL',
+        event_type: 'earnings',
+        event_subtype: 'earnings',
+        event_at: `${asofDate}T21:00:00`,
+        published_at: `${asofDate}T08:00:00`,
+        materiality: 0.84,
+        confidence: 0.81,
+        source_name: 'yahoo_finance',
+        confirmation_count: 2,
+        raw_url: 'https://finance.yahoo.com',
+      },
+    ]
+    return HttpResponse.json({
+      asof_date: asofDate,
+      days_ahead: Number(url.searchParams.get('days_ahead') || 14),
+      items: symbols.length > 0 ? items.filter((item) => symbolSet.has(item.symbol)) : items,
+    })
+  }),
+
+  http.get(`${API_BASE_URL}/api/intelligence/sources/health`, () => {
+    return HttpResponse.json({
+      sources: [
+        {
+          source_name: 'yahoo_finance',
+          enabled: true,
+          status: 'ok',
+          latency_ms: 12.4,
+          error_count: 0,
+          event_count: 16,
+          error_rate: 0,
+          blocked_count: 0,
+          blocked_reasons: [],
+          coverage_ratio: 0.66,
+          mean_confidence: 0.72,
+          last_ingest: '2026-02-15T20:00:03',
+        },
+        {
+          source_name: 'sec_edgar',
+          enabled: false,
+          status: 'disabled',
+          latency_ms: 0,
+          error_count: 0,
+          event_count: 0,
+          error_rate: 0,
+          blocked_count: 0,
+          blocked_reasons: [],
+          coverage_ratio: 0,
+          mean_confidence: 0,
+          last_ingest: null,
+        },
+      ],
+    })
+  }),
+
+  http.get(`${API_BASE_URL}/api/intelligence/metrics`, ({ request }) => {
+    const url = new URL(request.url)
+    const asofDate = url.searchParams.get('asof_date') || mockIntelligenceOpportunities.asof_date
+    return HttpResponse.json({
+      asof_date: asofDate,
+      coverage_global: 0.67,
+      mean_confidence_global: 0.71,
+      dedupe_ratio: 0.28,
+      events_per_source: {
+        yahoo_finance: 16,
+        sec_edgar: 2,
+      },
+    })
   }),
 
   http.post(`${API_BASE_URL}/api/intelligence/explain-symbol`, async ({ request }) => {

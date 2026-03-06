@@ -98,11 +98,85 @@ class IntelligenceOpportunityResponse(BaseModel):
     opportunity_score: float
     state: str
     explanations: list[str] = Field(default_factory=list)
+    score_breakdown_v2: dict[str, float] = Field(default_factory=dict)
+    top_catalysts: list[dict[str, str | float | int | bool]] = Field(default_factory=list)
+    evidence_quality_flag: Literal["high", "medium", "low"] = "medium"
 
 
 class IntelligenceOpportunitiesResponse(BaseModel):
     asof_date: str
     opportunities: list[IntelligenceOpportunityResponse] = Field(default_factory=list)
+
+
+class IntelligenceEventResponse(BaseModel):
+    event_id: str
+    symbol: str
+    event_type: str
+    event_subtype: str
+    timing_type: Literal["scheduled", "unscheduled"]
+    materiality: float = Field(ge=0, le=1)
+    confidence: float = Field(ge=0, le=1)
+    primary_source_reliability: float = Field(ge=0, le=1)
+    confirmation_count: int = Field(ge=0)
+    published_at: str
+    event_at: Optional[str] = None
+    source_name: str
+    raw_url: Optional[str] = None
+    llm_fields: dict[str, str | float | int | bool] = Field(default_factory=dict)
+    dynamic_source_quality: Optional[float] = Field(default=None, ge=0, le=1)
+    resolution_source: Optional[str] = None
+    dedupe_method: Optional[str] = None
+
+
+class IntelligenceEventsResponse(BaseModel):
+    asof_date: str
+    events: list[IntelligenceEventResponse] = Field(default_factory=list)
+
+
+class IntelligenceUpcomingCatalystResponse(BaseModel):
+    symbol: str
+    event_type: str
+    event_subtype: str
+    event_at: str
+    published_at: str
+    materiality: float = Field(ge=0, le=1)
+    confidence: float = Field(ge=0, le=1)
+    source_name: str
+    confirmation_count: int = Field(ge=0)
+    raw_url: Optional[str] = None
+
+
+class IntelligenceUpcomingCatalystsResponse(BaseModel):
+    asof_date: str
+    days_ahead: int = Field(ge=1, le=60)
+    items: list[IntelligenceUpcomingCatalystResponse] = Field(default_factory=list)
+
+
+class IntelligenceSourceHealthResponse(BaseModel):
+    source_name: str
+    enabled: bool
+    status: str
+    latency_ms: float
+    error_count: int
+    event_count: int
+    error_rate: float
+    blocked_count: int = 0
+    blocked_reasons: list[str] = Field(default_factory=list)
+    coverage_ratio: float = 0.0
+    mean_confidence: float = 0.0
+    last_ingest: Optional[str] = None
+
+
+class IntelligenceSourcesHealthResponse(BaseModel):
+    sources: list[IntelligenceSourceHealthResponse] = Field(default_factory=list)
+
+
+class IntelligenceMetricsResponse(BaseModel):
+    asof_date: str
+    coverage_global: float = 0.0
+    mean_confidence_global: float = 0.0
+    dedupe_ratio: float = 0.0
+    events_per_source: dict[str, int] = Field(default_factory=dict)
 
 
 class IntelligenceExplainCandidateContext(BaseModel):

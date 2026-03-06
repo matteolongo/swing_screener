@@ -7,6 +7,7 @@
 Post-close market intelligence pipeline that enriches technical screening with:
 - event ingestion and catalyst validation
 - optional LLM event classification
+- evidence-agent normalization across multiple free sources
 - theme/peer confirmation
 - ranked daily opportunities
 
@@ -26,8 +27,9 @@ This layer is advisory only. It does not place orders.
 6. Event reaction metrics are computed against OHLCV (`reaction.py`).
 7. Peer confirmation and theme clusters are built (`relations.py`).
 8. Symbol lifecycle state is updated (`state.py`).
-9. Catalyst scores and final opportunities are computed (`scoring.py`).
-10. Snapshot is persisted to `data/intelligence/*` (`storage.py`).
+9. Evidence records are normalized into catalyst features (`evidence.py`).
+10. Catalyst scores and final opportunities are computed (`scoring.py`).
+11. Snapshot is persisted to `data/intelligence/*` (`storage.py`).
 
 ## Scoring
 
@@ -86,10 +88,16 @@ Default root:
 Artifacts:
 - `events_YYYY-MM-DD.jsonl`
 - `signals_YYYY-MM-DD.json`
+- `evidence_YYYY-MM-DD.jsonl`
+- `normalized_events_YYYY-MM-DD.json`
 - `themes_YYYY-MM-DD.json`
 - `opportunities_YYYY-MM-DD.json`
 - `symbol_state.json`
 - `run_jobs.json`
+- `sources_health.json`
+- `source_quality_stats.json`
+- `intelligence_metrics.json`
+- `discovered_feeds_cache.json`
 
 ## API Endpoints
 - `GET /api/intelligence/config`
@@ -103,4 +111,8 @@ Artifacts:
 - `POST /api/intelligence/run`
 - `GET /api/intelligence/run/{job_id}`
 - `GET /api/intelligence/opportunities`
+- `GET /api/intelligence/events`
+- `GET /api/intelligence/upcoming-catalysts`
+- `GET /api/intelligence/sources/health`
+- `GET /api/intelligence/metrics`
 - `POST /api/intelligence/classify`

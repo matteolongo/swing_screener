@@ -24,6 +24,12 @@ export const queryKeys = {
   intelligenceRunStatus: (jobId?: string) => ['intelligence-run-status', jobId] as const,
   intelligenceOpportunities: (asofDate?: string, symbolScope?: string) =>
     ['intelligence-opportunities', asofDate, symbolScope] as const,
+  intelligenceEvents: (asofDate?: string, symbolScope?: string, eventScope?: string, minMateriality?: number) =>
+    ['intelligence-events', asofDate, symbolScope, eventScope, minMateriality ?? null] as const,
+  intelligenceUpcomingCatalysts: (asofDate?: string, symbolScope?: string, daysAhead?: number) =>
+    ['intelligence-upcoming-catalysts', asofDate, symbolScope, daysAhead ?? 14] as const,
+  intelligenceSourcesHealth: () => ['intelligence-sources-health'] as const,
+  intelligenceMetrics: (asofDate?: string) => ['intelligence-metrics', asofDate] as const,
   intelligenceEducation: (symbol?: string, asofDate?: string) =>
     ['intelligence-education', symbol, asofDate] as const,
 };

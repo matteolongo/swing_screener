@@ -8,10 +8,14 @@ import {
   useCreateIntelligenceSymbolSetMutation,
   useDeleteIntelligenceSymbolSetMutation,
   useIntelligenceConfigQuery,
+  useIntelligenceEventsQuery,
+  useIntelligenceMetricsQuery,
   useIntelligenceOpportunitiesScoped,
   useIntelligenceProvidersQuery,
   useIntelligenceRunStatus,
+  useIntelligenceSourcesHealthQuery,
   useIntelligenceSymbolSetsQuery,
+  useIntelligenceUpcomingCatalystsQuery,
   useRunIntelligenceMutation,
   useTestIntelligenceProviderMutation,
   useUpdateIntelligenceConfigMutation,
@@ -127,6 +131,24 @@ export default function IntelligencePage() {
     Boolean(asofDate)
   );
   const opportunities = opportunitiesQuery.data?.opportunities ?? [];
+  const upcomingQuery = useIntelligenceUpcomingCatalystsQuery(
+    asofDate,
+    opportunityScope,
+    14,
+    Boolean(asofDate)
+  );
+  const eventsQuery = useIntelligenceEventsQuery(
+    asofDate,
+    opportunityScope,
+    undefined,
+    0.5,
+    Boolean(asofDate)
+  );
+  const sourcesHealthQuery = useIntelligenceSourcesHealthQuery(true);
+  const metricsQuery = useIntelligenceMetricsQuery(asofDate, Boolean(asofDate));
+  const upcomingCatalysts = upcomingQuery.data?.items ?? [];
+  const sourceHealthItems = sourcesHealthQuery.data?.sources ?? [];
+  const intelligenceMetrics = metricsQuery.data;
   const hasOpportunities = opportunities.length > 0;
 
   const canRun = manualSymbols.length > 0 || Boolean(selectedSymbolSetId);
@@ -375,6 +397,83 @@ export default function IntelligencePage() {
                   <IntelligenceOpportunityCard key={opportunity.symbol} opportunity={opportunity} />
                 ))}
               </div>
+
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                <div className="rounded-lg border border-indigo-200 bg-indigo-50/70 p-3 dark:border-indigo-900 dark:bg-indigo-950/20">
+                  <p className="text-sm font-semibold text-indigo-900 dark:text-indigo-100">Upcoming Catalysts (14d)</p>
+                  {upcomingQuery.isFetching ? (
+                    <p className="mt-2 text-xs text-indigo-700/80 dark:text-indigo-200/80">Loading upcoming events...</p>
+                  ) : upcomingCatalysts.length === 0 ? (
+                    <p className="mt-2 text-xs text-indigo-700/80 dark:text-indigo-200/80">No scheduled catalysts in window.</p>
+                  ) : (
+                    <ul className="mt-2 space-y-1 text-xs text-indigo-900 dark:text-indigo-100">
+                      {upcomingCatalysts.slice(0, 6).map((item, index) => (
+                        <li key={`${item.symbol}-${item.eventAt}-${index}`}>
+                          {item.symbol} • {item.eventType} • {new Date(item.eventAt).toLocaleDateString()} • m=
+                          {item.materiality.toFixed(2)}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+                <div className="rounded-lg border border-cyan-200 bg-cyan-50/70 p-3 dark:border-cyan-900 dark:bg-cyan-950/20">
+                  <p className="text-sm font-semibold text-cyan-900 dark:text-cyan-100">Source Health</p>
+                  {sourcesHealthQuery.isFetching ? (
+                    <p className="mt-2 text-xs text-cyan-800/80 dark:text-cyan-200/80">Loading sources...</p>
+                  ) : sourceHealthItems.length === 0 ? (
+                    <p className="mt-2 text-xs text-cyan-800/80 dark:text-cyan-200/80">No source health available yet.</p>
+                  ) : (
+                    <ul className="mt-2 space-y-1 text-xs text-cyan-900 dark:text-cyan-100">
+                      {sourceHealthItems.slice(0, 8).map((source) => (
+                        <li key={source.sourceName}>
+                          {source.sourceName}: {source.status} • events {source.eventCount} • err {source.errorCount}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50/70 p-3 dark:border-amber-900 dark:bg-amber-950/20">
+                <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">Evidence Quality Metrics</p>
+                {metricsQuery.isFetching ? (
+                  <p className="mt-2 text-xs text-amber-800/80 dark:text-amber-200/80">Loading metrics...</p>
+                ) : !intelligenceMetrics ? (
+                  <p className="mt-2 text-xs text-amber-800/80 dark:text-amber-200/80">No metrics available yet.</p>
+                ) : (
+                  <div className="mt-2 space-y-1 text-xs text-amber-900 dark:text-amber-100">
+                    <p>Coverage: {intelligenceMetrics.coverageGlobal.toFixed(2)}</p>
+                    <p>Mean confidence: {intelligenceMetrics.meanConfidenceGlobal.toFixed(2)}</p>
+                    <p>Dedupe ratio: {intelligenceMetrics.dedupeRatio.toFixed(2)}</p>
+                    {(
+                      intelligenceMetrics.coverageGlobal < 0.2 ||
+                      intelligenceMetrics.meanConfidenceGlobal < 0.45
+                    ) && (
+                      <p className="font-semibold text-red-700 dark:text-red-300">
+                        Warning: low evidence quality, treat ranking with caution.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50/80 p-3 dark:border-gray-700 dark:bg-gray-900/30">
+                <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">Recent Events (materiality ≥ 0.5)</p>
+                {eventsQuery.isFetching ? (
+                  <p className="mt-2 text-xs text-gray-600 dark:text-gray-300">Loading events...</p>
+                ) : (eventsQuery.data?.events ?? []).length === 0 ? (
+                  <p className="mt-2 text-xs text-gray-600 dark:text-gray-300">No normalized events for this scope.</p>
+                ) : (
+                  <ul className="mt-2 space-y-1 text-xs text-gray-700 dark:text-gray-200">
+                    {(eventsQuery.data?.events ?? []).slice(0, 8).map((event) => (
+                      <li key={event.eventId}>
+                        {event.symbol} • {event.eventType}/{event.eventSubtype} • conf {event.confidence.toFixed(2)} • src {event.sourceName}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
           )}
         </CardContent>
@@ -563,6 +662,61 @@ export default function IntelligencePage() {
                       opportunity: {
                         ...draftConfig.opportunity,
                         minOpportunityScore: Math.max(0, Math.min(1, Number(event.target.value) || 0)),
+                      },
+                    })
+                  }
+                  className="w-full rounded border border-gray-300 px-3 py-2"
+                />
+              </label>
+              <label className="text-sm">
+                <span className="mb-1 block text-xs text-gray-500">Enable fallback scraping</span>
+                <input
+                  type="checkbox"
+                  checked={draftConfig.sources.scrapingEnabled}
+                  onChange={(event) =>
+                    setDraftConfig({
+                      ...draftConfig,
+                      sources: {
+                        ...draftConfig.sources,
+                        scrapingEnabled: event.target.checked,
+                      },
+                    })
+                  }
+                  className="h-5 w-5 rounded border border-gray-300"
+                />
+              </label>
+              <label className="text-sm">
+                <span className="mb-1 block text-xs text-gray-500">Allowed domains (comma-separated)</span>
+                <input
+                  value={draftConfig.sources.allowedDomains.join(', ')}
+                  onChange={(event) =>
+                    setDraftConfig({
+                      ...draftConfig,
+                      sources: {
+                        ...draftConfig.sources,
+                        allowedDomains: event.target.value
+                          .split(',')
+                          .map((value) => value.trim().toLowerCase())
+                          .filter((value, index, list) => value && list.indexOf(value) === index),
+                      },
+                    })
+                  }
+                  className="w-full rounded border border-gray-300 px-3 py-2"
+                />
+              </label>
+              <label className="text-sm">
+                <span className="mb-1 block text-xs text-gray-500">Binary event window (days)</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={30}
+                  value={draftConfig.calendar.binaryEventWindowDays}
+                  onChange={(event) =>
+                    setDraftConfig({
+                      ...draftConfig,
+                      calendar: {
+                        ...draftConfig.calendar,
+                        binaryEventWindowDays: Math.max(1, Math.min(30, Number(event.target.value) || 1)),
                       },
                     })
                   }

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import replace
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 import logging
 import os
@@ -17,13 +17,20 @@ from api.models.intelligence import (
     IntelligenceEducationGenerateRequest,
     IntelligenceEducationGenerateResponse,
     IntelligenceEducationViewOutput,
+    IntelligenceEventResponse,
+    IntelligenceEventsResponse,
     IntelligenceExplainSymbolRequest,
     IntelligenceExplainSymbolResponse,
     IntelligenceOpportunityResponse,
     IntelligenceOpportunitiesResponse,
+    IntelligenceMetricsResponse,
     IntelligenceRunLaunchResponse,
     IntelligenceRunRequest,
     IntelligenceRunStatusResponse,
+    IntelligenceSourceHealthResponse,
+    IntelligenceSourcesHealthResponse,
+    IntelligenceUpcomingCatalystResponse,
+    IntelligenceUpcomingCatalystsResponse,
 )
 from api.services.intelligence_config_service import IntelligenceConfigService
 from api.repositories.strategy_repo import StrategyRepository
@@ -54,6 +61,18 @@ def _safe_float(value: Any) -> float | None:
     try:
         return float(value)
     except (TypeError, ValueError):
+        return None
+
+
+def _coerce_datetime(value: Any) -> datetime | None:
+    if isinstance(value, datetime):
+        return value
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        return datetime.fromisoformat(text.replace("Z", "+00:00")).replace(tzinfo=None)
+    except Exception:
         return None
 
 
@@ -824,10 +843,147 @@ class IntelligenceService:
                 opportunity_score=opportunity.opportunity_score,
                 state=opportunity.state,
                 explanations=opportunity.explanations,
+                score_breakdown_v2=getattr(opportunity, "score_breakdown_v2", {}) or {},
+                top_catalysts=getattr(opportunity, "top_catalysts", []) or [],
+                evidence_quality_flag=(
+                    getattr(opportunity, "evidence_quality_flag", "medium")
+                    if getattr(opportunity, "evidence_quality_flag", "medium") in {"high", "medium", "low"}
+                    else "medium"
+                ),
             )
             for opportunity in opportunities
         ]
         return IntelligenceOpportunitiesResponse(asof_date=target_date, opportunities=payload)
+
+    def get_events(
+        self,
+        *,
+        asof_date: str | None = None,
+        symbols: list[str] | None = None,
+        event_types: list[str] | None = None,
+        min_materiality: float | None = None,
+    ) -> IntelligenceEventsResponse:
+        target_date = asof_date or self._storage.latest_normalized_events_date() or self._storage.latest_opportunities_date()
+        if target_date is None:
+            raise HTTPException(status_code=404, detail="No intelligence events available.")
+        normalized = self._storage.load_normalized_events(
+            target_date,
+            symbols=symbols,
+            event_types=event_types,
+            min_materiality=min_materiality,
+        )
+        payload = [
+            IntelligenceEventResponse(
+                event_id=event.event_id,
+                symbol=event.symbol,
+                event_type=event.event_type,
+                event_subtype=event.event_subtype,
+                timing_type=event.timing_type,
+                materiality=event.materiality,
+                confidence=event.confidence,
+                primary_source_reliability=event.primary_source_reliability,
+                confirmation_count=event.confirmation_count,
+                published_at=event.published_at,
+                event_at=event.event_at,
+                source_name=event.source_name,
+                raw_url=event.raw_url,
+                llm_fields=event.llm_fields,
+                dynamic_source_quality=getattr(event, "dynamic_source_quality", None),
+                resolution_source=getattr(event, "resolution_source", None),
+                dedupe_method=getattr(event, "dedupe_method", None),
+            )
+            for event in normalized
+        ]
+        return IntelligenceEventsResponse(asof_date=target_date, events=payload)
+
+    def get_upcoming_catalysts(
+        self,
+        *,
+        asof_date: str | None = None,
+        symbols: list[str] | None = None,
+        days_ahead: int = 14,
+    ) -> IntelligenceUpcomingCatalystsResponse:
+        target_date = asof_date or self._storage.latest_normalized_events_date() or self._storage.latest_opportunities_date()
+        if target_date is None:
+            raise HTTPException(status_code=404, detail="No upcoming catalysts available.")
+        normalized = self._storage.load_normalized_events(target_date, symbols=symbols)
+        now = _coerce_datetime(f"{target_date}T00:00:00") or datetime.utcnow()
+        upper = now + timedelta(days=max(1, int(days_ahead)))
+        items: list[IntelligenceUpcomingCatalystResponse] = []
+        for event in normalized:
+            if event.timing_type != "scheduled":
+                continue
+            event_dt = _coerce_datetime(event.event_at) or _coerce_datetime(event.published_at)
+            if event_dt is None:
+                continue
+            if not (now <= event_dt <= upper):
+                continue
+            items.append(
+                IntelligenceUpcomingCatalystResponse(
+                    symbol=event.symbol,
+                    event_type=event.event_type,
+                    event_subtype=event.event_subtype,
+                    event_at=event.event_at or event.published_at,
+                    published_at=event.published_at,
+                    materiality=event.materiality,
+                    confidence=event.confidence,
+                    source_name=event.source_name,
+                    confirmation_count=event.confirmation_count,
+                    raw_url=event.raw_url,
+                )
+            )
+        items.sort(key=lambda item: (item.event_at, -item.materiality, -item.confidence))
+        return IntelligenceUpcomingCatalystsResponse(
+            asof_date=target_date,
+            days_ahead=max(1, int(days_ahead)),
+            items=items,
+        )
+
+    def get_sources_health(self) -> IntelligenceSourcesHealthResponse:
+        payload = self._storage.load_source_health()
+        items = [
+            IntelligenceSourceHealthResponse(
+                source_name=str(source),
+                enabled=bool(item.get("enabled", False)),
+                status=str(item.get("status", "unknown")),
+                latency_ms=float(item.get("latency_ms", 0.0)),
+                error_count=int(item.get("error_count", 0)),
+                event_count=int(item.get("event_count", 0)),
+                error_rate=float(item.get("error_rate", 0.0)),
+                blocked_count=int(item.get("blocked_count", 0)),
+                blocked_reasons=[str(value) for value in item.get("blocked_reasons", []) if str(value)],
+                coverage_ratio=float(item.get("coverage_ratio", 0.0)),
+                mean_confidence=float(item.get("mean_confidence", 0.0)),
+                last_ingest=(str(item.get("last_ingest")) if item.get("last_ingest") else None),
+            )
+            for source, item in payload.items()
+            if isinstance(item, dict)
+        ]
+        items.sort(key=lambda item: item.source_name)
+        return IntelligenceSourcesHealthResponse(sources=items)
+
+    def get_metrics(self, *, asof_date: str | None = None) -> IntelligenceMetricsResponse:
+        payload = self._storage.load_intelligence_metrics()
+        target_date = asof_date or str(payload.get("asof_date") or self._storage.latest_opportunities_date() or "")
+        if not target_date:
+            raise HTTPException(status_code=404, detail="No intelligence metrics available.")
+        if asof_date and str(payload.get("asof_date") or "") != asof_date:
+            raise HTTPException(status_code=404, detail=f"No intelligence metrics available for {asof_date}.")
+        events_raw = payload.get("events_per_source", {})
+        events_per_source: dict[str, int] = {}
+        if isinstance(events_raw, dict):
+            for source, value in events_raw.items():
+                try:
+                    events_per_source[str(source)] = int(value)
+                except (TypeError, ValueError):
+                    continue
+        return IntelligenceMetricsResponse(
+            asof_date=target_date,
+            coverage_global=float(payload.get("coverage_global", 0.0)),
+            mean_confidence_global=float(payload.get("mean_confidence_global", 0.0)),
+            dedupe_ratio=float(payload.get("dedupe_ratio", 0.0)),
+            events_per_source=events_per_source,
+        )
 
     def get_cached_symbol_education(
         self,

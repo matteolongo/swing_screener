@@ -122,6 +122,52 @@
         "catalyst_weight": 0.45,
         "max_daily_opportunities": 8,
         "min_opportunity_score": 0.55
+      },
+      "sources": {
+        "enabled": [
+          "yahoo_finance",
+          "earnings_calendar"
+        ],
+        "scraping_enabled": false,
+        "allowed_domains": [],
+        "rate_limits": {
+          "requests_per_minute": 90,
+          "max_concurrency": 4
+        },
+        "timeouts": {
+          "connect_seconds": 5.0,
+          "read_seconds": 20.0
+        },
+        "scrape_policy": {
+          "require_robots_allow": true,
+          "deny_if_robots_unreachable": true,
+          "require_tos_allow_flag": true,
+          "user_agent": "swing-screener-intelligence-bot/1.0",
+          "max_robots_cache_hours": 24
+        }
+      },
+      "scoring_v2": {
+        "enabled": true,
+        "weights": {
+          "reaction_z_component": 0.22,
+          "atr_shock_component": 0.12,
+          "recency_component": 0.14,
+          "proximity_component": 0.14,
+          "materiality_component": 0.14,
+          "source_quality_component": 0.1,
+          "confirmation_component": 0.08,
+          "filing_impact_component": 0.06,
+          "uncertainty_penalty_component": 0.1
+        },
+        "low_evidence_confirmation_threshold": 0.25,
+        "low_evidence_source_quality_threshold": 0.45,
+        "stale_event_decay_hours": 120
+      },
+      "calendar": {
+        "binary_event_window_days": 3,
+        "binary_event_min_materiality": 0.75,
+        "binary_event_min_threshold_boost": 0.08,
+        "low_evidence_min_threshold_boost": 0.06
       }
     },
     "id": "default",
@@ -233,6 +279,52 @@
         "catalyst_weight": 0.45,
         "max_daily_opportunities": 8,
         "min_opportunity_score": 0.55
+      },
+      "sources": {
+        "enabled": [
+          "yahoo_finance",
+          "earnings_calendar"
+        ],
+        "scraping_enabled": false,
+        "allowed_domains": [],
+        "rate_limits": {
+          "requests_per_minute": 90,
+          "max_concurrency": 4
+        },
+        "timeouts": {
+          "connect_seconds": 5.0,
+          "read_seconds": 20.0
+        },
+        "scrape_policy": {
+          "require_robots_allow": true,
+          "deny_if_robots_unreachable": true,
+          "require_tos_allow_flag": true,
+          "user_agent": "swing-screener-intelligence-bot/1.0",
+          "max_robots_cache_hours": 24
+        }
+      },
+      "scoring_v2": {
+        "enabled": true,
+        "weights": {
+          "reaction_z_component": 0.22,
+          "atr_shock_component": 0.12,
+          "recency_component": 0.14,
+          "proximity_component": 0.14,
+          "materiality_component": 0.14,
+          "source_quality_component": 0.1,
+          "confirmation_component": 0.08,
+          "filing_impact_component": 0.06,
+          "uncertainty_penalty_component": 0.1
+        },
+        "low_evidence_confirmation_threshold": 0.25,
+        "low_evidence_source_quality_threshold": 0.45,
+        "stale_event_decay_hours": 120
+      },
+      "calendar": {
+        "binary_event_window_days": 3,
+        "binary_event_min_materiality": 0.75,
+        "binary_event_min_threshold_boost": 0.08,
+        "low_evidence_min_threshold_boost": 0.06
       }
     }
   },
@@ -361,6 +453,52 @@
         "catalyst_weight": 0.45,
         "max_daily_opportunities": 8,
         "min_opportunity_score": 0.55
+      },
+      "sources": {
+        "enabled": [
+          "yahoo_finance",
+          "earnings_calendar"
+        ],
+        "scraping_enabled": false,
+        "allowed_domains": [],
+        "rate_limits": {
+          "requests_per_minute": 90,
+          "max_concurrency": 4
+        },
+        "timeouts": {
+          "connect_seconds": 5.0,
+          "read_seconds": 20.0
+        },
+        "scrape_policy": {
+          "require_robots_allow": true,
+          "deny_if_robots_unreachable": true,
+          "require_tos_allow_flag": true,
+          "user_agent": "swing-screener-intelligence-bot/1.0",
+          "max_robots_cache_hours": 24
+        }
+      },
+      "scoring_v2": {
+        "enabled": true,
+        "weights": {
+          "reaction_z_component": 0.22,
+          "atr_shock_component": 0.12,
+          "recency_component": 0.14,
+          "proximity_component": 0.14,
+          "materiality_component": 0.14,
+          "source_quality_component": 0.1,
+          "confirmation_component": 0.08,
+          "filing_impact_component": 0.06,
+          "uncertainty_penalty_component": 0.1
+        },
+        "low_evidence_confirmation_threshold": 0.25,
+        "low_evidence_source_quality_threshold": 0.45,
+        "stale_event_decay_hours": 120
+      },
+      "calendar": {
+        "binary_event_window_days": 3,
+        "binary_event_min_materiality": 0.75,
+        "binary_event_min_threshold_boost": 0.08,
+        "low_evidence_min_threshold_boost": 0.06
       }
     }
   },
@@ -487,6 +625,52 @@
         "catalyst_weight": 0.45,
         "max_daily_opportunities": 8,
         "min_opportunity_score": 0.55
+      },
+      "sources": {
+        "enabled": [
+          "yahoo_finance",
+          "earnings_calendar"
+        ],
+        "scraping_enabled": false,
+        "allowed_domains": [],
+        "rate_limits": {
+          "requests_per_minute": 90,
+          "max_concurrency": 4
+        },
+        "timeouts": {
+          "connect_seconds": 5.0,
+          "read_seconds": 20.0
+        },
+        "scrape_policy": {
+          "require_robots_allow": true,
+          "deny_if_robots_unreachable": true,
+          "require_tos_allow_flag": true,
+          "user_agent": "swing-screener-intelligence-bot/1.0",
+          "max_robots_cache_hours": 24
+        }
+      },
+      "scoring_v2": {
+        "enabled": true,
+        "weights": {
+          "reaction_z_component": 0.22,
+          "atr_shock_component": 0.12,
+          "recency_component": 0.14,
+          "proximity_component": 0.14,
+          "materiality_component": 0.14,
+          "source_quality_component": 0.1,
+          "confirmation_component": 0.08,
+          "filing_impact_component": 0.06,
+          "uncertainty_penalty_component": 0.1
+        },
+        "low_evidence_confirmation_threshold": 0.25,
+        "low_evidence_source_quality_threshold": 0.45,
+        "stale_event_decay_hours": 120
+      },
+      "calendar": {
+        "binary_event_window_days": 3,
+        "binary_event_min_materiality": 0.75,
+        "binary_event_min_threshold_boost": 0.08,
+        "low_evidence_min_threshold_boost": 0.06
       }
     },
     "id": "test-fabio",

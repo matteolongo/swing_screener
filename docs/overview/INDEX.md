@@ -27,6 +27,9 @@
 
 ## Education
 - `/docs/education/EDUCATIONAL_TRANSFORMATION_SUMMARY.md`
+- `/docs/education/RECOMMENDED_LOGIC_BEGINNER_GUIDE.md`
+- `/docs/education/RECOMMENDED_LOGIC_BEGINNER_GUIDE_EN.md`
+- `/docs/education/RECOMMENDED_LOGIC_UI_COPY.md`
 
 ## Module Docs
 API:

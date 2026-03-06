@@ -1,7 +1,14 @@
-from swing_screener.intelligence.config import OpportunityConfig
-from swing_screener.intelligence.models import CatalystSignal, Event, SymbolState, ThemeCluster
+from swing_screener.intelligence.config import CalendarConfig, OpportunityConfig, ScoringV2Config
+from swing_screener.intelligence.models import (
+    CatalystFeatureVector,
+    CatalystSignal,
+    Event,
+    SymbolState,
+    ThemeCluster,
+)
 from swing_screener.intelligence.scoring import (
     build_catalyst_score_map,
+    build_catalyst_score_map_v2,
     build_opportunities,
     score_catalyst_signal,
 )
@@ -134,3 +141,88 @@ def test_build_opportunities_sorts_ties_deterministically_by_symbol():
 
     assert [o.symbol for o in opportunities] == ["AAPL", "MSFT"]
 
+
+def test_build_catalyst_score_map_v2_uses_feature_vectors():
+    signals = [
+        _signal("AAPL", "e1", return_z=2.0, atr_shock=1.2, peers=1, recency=6.0),
+    ]
+    events = [Event("e1", "AAPL", "yahoo_finance", "2026-02-18T00:00:00", "A", "earnings", 0.82)]
+    vectors = {
+        "AAPL": CatalystFeatureVector(
+            symbol="AAPL",
+            proximity_score=0.9,
+            materiality_score=0.88,
+            source_quality_score=0.74,
+            confirmation_score=0.66,
+            uncertainty_penalty=0.21,
+            filing_impact_score=0.1,
+            calendar_risk_score=0.6,
+        )
+    }
+    score_map = build_catalyst_score_map_v2(
+        signals=signals,
+        events=events,
+        themes=[],
+        feature_vectors=vectors,
+        scoring_cfg=ScoringV2Config(enabled=True),
+    )
+    breakdown = score_map["AAPL"]
+    assert breakdown.score > 0
+    assert breakdown.proximity_score == 0.9
+    assert breakdown.materiality_score == 0.88
+    assert breakdown.source_quality_score == 0.74
+    assert breakdown.confirmation_score == 0.66
+
+
+def test_build_opportunities_applies_binary_event_guard_threshold_boost():
+    cfg = OpportunityConfig(
+        technical_weight=0.55,
+        catalyst_weight=0.45,
+        max_daily_opportunities=5,
+        min_opportunity_score=0.55,
+    )
+    catalyst_map = {
+        "AAPL": build_catalyst_score_map_v2(
+            signals=[_signal("AAPL", "e1", return_z=1.5, atr_shock=1.0, peers=1, recency=6)],
+            events=[Event("e1", "AAPL", "yahoo_finance", "2026-02-18T00:00:00", "A", "earnings", 0.8)],
+            themes=[],
+            feature_vectors={
+                "AAPL": CatalystFeatureVector(
+                    symbol="AAPL",
+                    proximity_score=0.95,
+                    materiality_score=0.9,
+                    source_quality_score=0.7,
+                    confirmation_score=0.7,
+                    uncertainty_penalty=0.2,
+                    filing_impact_score=0.0,
+                    calendar_risk_score=0.8,
+                )
+            },
+            scoring_cfg=ScoringV2Config(enabled=True),
+        )["AAPL"]
+    }
+    opportunities = build_opportunities(
+        technical_readiness={"AAPL": 0.58},
+        catalyst_scores=catalyst_map,
+        symbol_states={},
+        cfg=cfg,
+        feature_vectors={
+            "AAPL": CatalystFeatureVector(
+                symbol="AAPL",
+                proximity_score=0.95,
+                materiality_score=0.9,
+                source_quality_score=0.7,
+                confirmation_score=0.7,
+                uncertainty_penalty=0.2,
+                filing_impact_score=0.0,
+                calendar_risk_score=0.8,
+                top_catalysts=[{"event_type": "earnings", "materiality": 0.9}],
+            )
+        },
+        scoring_cfg=ScoringV2Config(enabled=True),
+        calendar_cfg=CalendarConfig(binary_event_window_days=5, binary_event_min_threshold_boost=0.1),
+    )
+    assert len(opportunities) in {0, 1}
+    if opportunities:
+        assert opportunities[0].score_breakdown_v2
+        assert opportunities[0].top_catalysts

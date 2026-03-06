@@ -104,6 +104,12 @@ class MetricsCollector:
     def __init__(self):
         self._lock_contention_count = 0
         self._validation_failure_count = 0
+        self._intelligence_deduped_events_total = 0
+        self._intelligence_ingested_events_total: Dict[str, int] = {}
+        self._intelligence_source_errors_total: Dict[str, int] = {}
+        self._intelligence_source_blocked_total: Dict[str, int] = {}
+        self._intelligence_mean_confidence: Dict[str, float] = {}
+        self._intelligence_coverage_ratio: Dict[str, float] = {}
         self._start_time = time.time()
         self._lock = threading.Lock()
     
@@ -116,6 +122,40 @@ class MetricsCollector:
         """Record a validation failure."""
         with self._lock:
             self._validation_failure_count += 1
+
+    def record_intelligence_metrics(self, *, source_health: Dict[str, Dict[str, Any]], deduped_count: int) -> None:
+        with self._lock:
+            self._intelligence_deduped_events_total += max(0, int(deduped_count))
+            for source, payload in source_health.items():
+                key = str(source).strip().lower()
+                if not key or not isinstance(payload, dict):
+                    continue
+                self._intelligence_ingested_events_total[key] = (
+                    self._intelligence_ingested_events_total.get(key, 0)
+                    + max(0, int(payload.get("event_count", 0)))
+                )
+                self._intelligence_source_errors_total[key] = (
+                    self._intelligence_source_errors_total.get(key, 0)
+                    + max(0, int(payload.get("error_count", 0)))
+                )
+                blocked_reasons = payload.get("blocked_reasons", [])
+                blocked_count = int(payload.get("blocked_count", 0))
+                if isinstance(blocked_reasons, list) and blocked_reasons:
+                    for reason in blocked_reasons:
+                        reason_key = str(reason).strip().lower()
+                        if not reason_key:
+                            continue
+                        metrics_key = f"{key}:{reason_key}"
+                        self._intelligence_source_blocked_total[metrics_key] = (
+                            self._intelligence_source_blocked_total.get(metrics_key, 0) + max(1, blocked_count)
+                        )
+                elif blocked_count > 0:
+                    metrics_key = f"{key}:unknown"
+                    self._intelligence_source_blocked_total[metrics_key] = (
+                        self._intelligence_source_blocked_total.get(metrics_key, 0) + blocked_count
+                    )
+                self._intelligence_mean_confidence[key] = float(payload.get("mean_confidence", 0.0))
+                self._intelligence_coverage_ratio[key] = float(payload.get("coverage_ratio", 0.0))
     
     def get_metrics(self) -> Dict[str, Any]:
         """Get current metrics."""
@@ -125,12 +165,24 @@ class MetricsCollector:
             "uptime_seconds": round(uptime_seconds, 2),
             "lock_contention_total": self._lock_contention_count,
             "validation_failures_total": self._validation_failure_count,
+            "intelligence_ingested_events_total": dict(self._intelligence_ingested_events_total),
+            "intelligence_deduped_events_total": self._intelligence_deduped_events_total,
+            "intelligence_source_errors_total": dict(self._intelligence_source_errors_total),
+            "intelligence_source_blocked_total": dict(self._intelligence_source_blocked_total),
+            "intelligence_mean_confidence": dict(self._intelligence_mean_confidence),
+            "intelligence_coverage_ratio": dict(self._intelligence_coverage_ratio),
         }
     
     def reset(self):
         """Reset all metrics (for testing)."""
         self._lock_contention_count = 0
         self._validation_failure_count = 0
+        self._intelligence_deduped_events_total = 0
+        self._intelligence_ingested_events_total = {}
+        self._intelligence_source_errors_total = {}
+        self._intelligence_source_blocked_total = {}
+        self._intelligence_mean_confidence = {}
+        self._intelligence_coverage_ratio = {}
         self._start_time = time.time()
 
 

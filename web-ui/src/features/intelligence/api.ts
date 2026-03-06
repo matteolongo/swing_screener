@@ -3,6 +3,8 @@ import {
   IntelligenceEducationGenerateRequest,
   IntelligenceEducationGenerateResponse,
   IntelligenceEducationGenerateResponseAPI,
+  IntelligenceEventsResponse,
+  IntelligenceEventsResponseAPI,
   IntelligenceExplainSymbolRequest,
   IntelligenceExplainSymbolResponse,
   IntelligenceExplainSymbolResponseAPI,
@@ -12,6 +14,8 @@ import {
   IntelligenceOpportunitiesResponseAPI,
   IntelligenceProviderInfo,
   IntelligenceProviderInfoAPI,
+  IntelligenceMetricsResponse,
+  IntelligenceMetricsResponseAPI,
   IntelligenceProviderTestRequest,
   IntelligenceProviderTestResponse,
   IntelligenceProviderTestResponseAPI,
@@ -21,16 +25,24 @@ import {
   IntelligenceRunRequestAPI,
   IntelligenceRunStatus,
   IntelligenceRunStatusAPI,
+  IntelligenceSourcesHealthResponse,
+  IntelligenceSourcesHealthResponseAPI,
   IntelligenceSymbolSet,
   IntelligenceSymbolSetAPI,
   IntelligenceSymbolSetsResponse,
   IntelligenceSymbolSetsResponseAPI,
   IntelligenceSymbolSetUpsertRequest,
+  IntelligenceUpcomingCatalystsResponse,
+  IntelligenceUpcomingCatalystsResponseAPI,
   toIntelligenceConfigAPI,
   toEducationGenerateRequestAPI,
   toExplainSymbolRequestAPI,
   toProviderTestRequestAPI,
   transformEducationGenerateResponse,
+  transformIntelligenceEventsResponse,
+  transformIntelligenceMetricsResponse,
+  transformIntelligenceSourcesHealthResponse,
+  transformIntelligenceUpcomingCatalystsResponse,
   transformExplainSymbolResponse,
   transformIntelligenceConfig,
   transformIntelligenceOpportunitiesResponse,
@@ -204,6 +216,90 @@ export async function fetchIntelligenceOpportunities(
   }
   const payload: IntelligenceOpportunitiesResponseAPI = await response.json();
   return transformIntelligenceOpportunitiesResponse(payload);
+}
+
+export async function fetchIntelligenceEvents(
+  asofDate?: string,
+  symbols?: string[],
+  eventTypes?: string[],
+  minMateriality?: number
+): Promise<IntelligenceEventsResponse> {
+  const endpoint = new URL(apiUrl(API_ENDPOINTS.intelligenceEvents), window.location.origin);
+  if (asofDate) {
+    endpoint.searchParams.set('asof_date', asofDate);
+  }
+  if (symbols && symbols.length > 0) {
+    symbols
+      .map((symbol) => symbol.trim().toUpperCase())
+      .filter((symbol) => symbol.length > 0)
+      .forEach((symbol) => endpoint.searchParams.append('symbols', symbol));
+  }
+  if (eventTypes && eventTypes.length > 0) {
+    eventTypes
+      .map((eventType) => eventType.trim().toLowerCase())
+      .filter((eventType) => eventType.length > 0)
+      .forEach((eventType) => endpoint.searchParams.append('event_types', eventType));
+  }
+  if (minMateriality != null) {
+    endpoint.searchParams.set('min_materiality', String(minMateriality));
+  }
+  const response = await fetch(endpoint.toString());
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.detail || 'Failed to fetch intelligence events');
+  }
+  const payload: IntelligenceEventsResponseAPI = await response.json();
+  return transformIntelligenceEventsResponse(payload);
+}
+
+export async function fetchIntelligenceUpcomingCatalysts(
+  asofDate?: string,
+  symbols?: string[],
+  daysAhead: number = 14
+): Promise<IntelligenceUpcomingCatalystsResponse> {
+  const endpoint = new URL(apiUrl(API_ENDPOINTS.intelligenceUpcomingCatalysts), window.location.origin);
+  if (asofDate) {
+    endpoint.searchParams.set('asof_date', asofDate);
+  }
+  if (symbols && symbols.length > 0) {
+    symbols
+      .map((symbol) => symbol.trim().toUpperCase())
+      .filter((symbol) => symbol.length > 0)
+      .forEach((symbol) => endpoint.searchParams.append('symbols', symbol));
+  }
+  endpoint.searchParams.set('days_ahead', String(daysAhead));
+
+  const response = await fetch(endpoint.toString());
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.detail || 'Failed to fetch upcoming catalysts');
+  }
+  const payload: IntelligenceUpcomingCatalystsResponseAPI = await response.json();
+  return transformIntelligenceUpcomingCatalystsResponse(payload);
+}
+
+export async function fetchIntelligenceSourcesHealth(): Promise<IntelligenceSourcesHealthResponse> {
+  const response = await fetch(apiUrl(API_ENDPOINTS.intelligenceSourcesHealth));
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.detail || 'Failed to fetch intelligence sources health');
+  }
+  const payload: IntelligenceSourcesHealthResponseAPI = await response.json();
+  return transformIntelligenceSourcesHealthResponse(payload);
+}
+
+export async function fetchIntelligenceMetrics(asofDate?: string): Promise<IntelligenceMetricsResponse> {
+  const endpoint = new URL(apiUrl(API_ENDPOINTS.intelligenceMetrics), window.location.origin);
+  if (asofDate) {
+    endpoint.searchParams.set('asof_date', asofDate);
+  }
+  const response = await fetch(endpoint.toString());
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.detail || 'Failed to fetch intelligence metrics');
+  }
+  const payload: IntelligenceMetricsResponseAPI = await response.json();
+  return transformIntelligenceMetricsResponse(payload);
 }
 
 export async function explainIntelligenceSymbol(

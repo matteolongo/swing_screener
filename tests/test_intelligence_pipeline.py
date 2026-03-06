@@ -63,11 +63,17 @@ def test_run_intelligence_pipeline_persists_outputs(tmp_path, monkeypatch):
     assert len(snapshot.events) == 3
     assert len(snapshot.signals) == 3
     assert len(snapshot.opportunities) > 0
+    assert isinstance(snapshot.evidence_records, list)
+    assert isinstance(snapshot.normalized_events, list)
+    assert isinstance(snapshot.source_health, dict)
     assert storage.events_path("2026-02-15").exists()
+    assert storage.evidence_path("2026-02-15").exists()
+    assert storage.normalized_events_path("2026-02-15").exists()
     assert storage.signals_path("2026-02-15").exists()
     assert storage.themes_path("2026-02-15").exists()
     assert storage.opportunities_path("2026-02-15").exists()
     assert storage.symbol_state_path.exists()
+    assert storage.source_health_path.exists()
 
 
 def test_run_intelligence_pipeline_handles_empty_symbols(tmp_path):

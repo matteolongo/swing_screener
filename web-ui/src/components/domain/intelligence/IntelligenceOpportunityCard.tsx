@@ -19,6 +19,7 @@ export default function IntelligenceOpportunityCard({ opportunity }: Intelligenc
   const education = buildOpportunityEducation(opportunity);
   const state = opportunity.state.trim().toUpperCase();
   const stateBadge = STATE_BADGE_VARIANT[state] ?? 'default';
+  const breakdown = opportunity.scoreBreakdownV2 ?? {};
 
   return (
     <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800">
@@ -58,6 +59,36 @@ export default function IntelligenceOpportunityCard({ opportunity }: Intelligenc
         </div>
       </div>
 
+      {Object.keys(breakdown).length > 0 ? (
+        <div className="mt-3 rounded-md border border-violet-200 bg-violet-50/70 p-3 dark:border-violet-800 dark:bg-violet-950/20">
+          <p className="text-xs font-semibold uppercase tracking-wide text-violet-700 dark:text-violet-300">
+            Catalyst Drivers ({opportunity.evidenceQualityFlag})
+          </p>
+          <p className="mt-1 text-xs text-violet-900 dark:text-violet-100">
+            proximity {Number(breakdown.proximity_component ?? 0).toFixed(2)} • materiality{' '}
+            {Number(breakdown.materiality_component ?? 0).toFixed(2)} • source quality{' '}
+            {Number(breakdown.source_quality_component ?? 0).toFixed(2)} • uncertainty penalty{' '}
+            {Number(breakdown.uncertainty_penalty_component ?? 0).toFixed(2)}
+          </p>
+        </div>
+      ) : null}
+
+      {(opportunity.topCatalysts ?? []).length > 0 ? (
+        <details className="mt-3">
+          <summary className="cursor-pointer text-xs font-semibold text-gray-600 dark:text-gray-300">
+            Top Catalysts
+          </summary>
+          <ul className="mt-2 ml-5 list-disc space-y-1 text-sm text-gray-600 dark:text-gray-400">
+            {(opportunity.topCatalysts ?? []).map((item, idx) => (
+              <li key={`${opportunity.symbol}-catalyst-${idx}`}>
+                {String(item.event_type || item.event_subtype || 'event')} • m=
+                {Number(item.materiality ?? 0).toFixed(2)} • conf={Number(item.confidence ?? 0).toFixed(2)}
+              </li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
+
       <details className="mt-3">
         <summary className="cursor-pointer text-xs font-semibold text-gray-600 dark:text-gray-300">
           {t('intelligenceEducation.sections.evidence')}
@@ -71,4 +102,3 @@ export default function IntelligenceOpportunityCard({ opportunity }: Intelligenc
     </div>
   );
 }
-

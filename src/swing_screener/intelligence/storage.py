@@ -8,7 +8,9 @@ from typing import Iterable
 
 from swing_screener.intelligence.models import (
     CatalystSignal,
+    EvidenceRecord,
     Event,
+    NormalizedEvent,
     Opportunity,
     SymbolState,
     ThemeCluster,
@@ -36,6 +38,12 @@ class IntelligenceStorage:
     def events_path(self, asof: date | str) -> Path:
         return self._daily_path("events", asof, "jsonl")
 
+    def evidence_path(self, asof: date | str) -> Path:
+        return self._daily_path("evidence", asof, "jsonl")
+
+    def normalized_events_path(self, asof: date | str) -> Path:
+        return self._daily_path("normalized_events", asof)
+
     def signals_path(self, asof: date | str) -> Path:
         return self._daily_path("signals", asof)
 
@@ -52,6 +60,18 @@ class IntelligenceStorage:
     def symbol_state_path(self) -> Path:
         return self.root_dir / "symbol_state.json"
 
+    @property
+    def source_health_path(self) -> Path:
+        return self.root_dir / "sources_health.json"
+
+    @property
+    def source_quality_stats_path(self) -> Path:
+        return self.root_dir / "source_quality_stats.json"
+
+    @property
+    def intelligence_metrics_path(self) -> Path:
+        return self.root_dir / "intelligence_metrics.json"
+
     def write_events(self, events: Iterable[Event], asof: date | str) -> Path:
         path = self.events_path(asof)
         lines = [json.dumps(asdict(event), sort_keys=True) for event in events]
@@ -64,6 +84,21 @@ class IntelligenceStorage:
     def write_signals(self, signals: Iterable[CatalystSignal], asof: date | str) -> Path:
         path = self.signals_path(asof)
         payload = [asdict(signal) for signal in signals]
+        locked_write_json_cli(path, payload)
+        return path
+
+    def write_evidence(self, records: Iterable[EvidenceRecord], asof: date | str) -> Path:
+        path = self.evidence_path(asof)
+        lines = [json.dumps(asdict(record), sort_keys=True) for record in records]
+        payload = "\n".join(lines)
+        if payload:
+            payload += "\n"
+        locked_write_text_cli(path, payload)
+        return path
+
+    def write_normalized_events(self, events: Iterable[NormalizedEvent], asof: date | str) -> Path:
+        path = self.normalized_events_path(asof)
+        payload = [asdict(event) for event in events]
         locked_write_json_cli(path, payload)
         return path
 
@@ -135,6 +170,143 @@ class IntelligenceStorage:
                 break
         return out
 
+    def load_normalized_events(
+        self,
+        asof_date: date | str,
+        *,
+        symbols: list[str] | tuple[str, ...] | None = None,
+        event_types: list[str] | tuple[str, ...] | None = None,
+        min_materiality: float | None = None,
+    ) -> list[NormalizedEvent]:
+        path = self.normalized_events_path(asof_date)
+        if not path.exists():
+            return []
+        symbol_set = {
+            str(symbol).strip().upper()
+            for symbol in (symbols or [])
+            if str(symbol).strip()
+        }
+        type_set = {
+            str(event_type).strip().lower()
+            for event_type in (event_types or [])
+            if str(event_type).strip()
+        }
+        materiality_floor = float(min_materiality) if min_materiality is not None else None
+        try:
+            payload = locked_read_json_cli(path)
+        except Exception:
+            return []
+        if not isinstance(payload, list):
+            return []
+        out: list[NormalizedEvent] = []
+        for item in payload:
+            if not isinstance(item, dict):
+                continue
+            symbol = str(item.get("symbol", "")).strip().upper()
+            event_type = str(item.get("event_type", "")).strip().lower()
+            if not symbol:
+                continue
+            if symbol_set and symbol not in symbol_set:
+                continue
+            if type_set and event_type not in type_set:
+                continue
+            materiality = float(item.get("materiality", 0.0))
+            if materiality_floor is not None and materiality < materiality_floor:
+                continue
+            llm_fields_raw = item.get("llm_fields") if isinstance(item.get("llm_fields"), dict) else {}
+            llm_fields: dict[str, str | float | int | bool] = {}
+            if isinstance(llm_fields_raw, dict):
+                for key, value in llm_fields_raw.items():
+                    if isinstance(value, (str, float, int, bool)):
+                        llm_fields[str(key)] = value
+            out.append(
+                NormalizedEvent(
+                    event_id=str(item.get("event_id", "")),
+                    symbol=symbol,
+                    event_type=event_type or "other",
+                    event_subtype=str(item.get("event_subtype", "")),
+                    timing_type=(
+                        "scheduled"
+                        if str(item.get("timing_type", "unscheduled")).strip().lower() == "scheduled"
+                        else "unscheduled"
+                    ),
+                    materiality=materiality,
+                    confidence=float(item.get("confidence", 0.0)),
+                    primary_source_reliability=float(item.get("primary_source_reliability", 0.0)),
+                    confirmation_count=int(item.get("confirmation_count", 1)),
+                    published_at=str(item.get("published_at", "")),
+                    event_at=(str(item.get("event_at")) if item.get("event_at") else None),
+                    source_name=str(item.get("source_name", "")),
+                    raw_url=(str(item.get("raw_url")) if item.get("raw_url") else None),
+                    llm_fields=llm_fields,
+                    dynamic_source_quality=float(item.get("dynamic_source_quality", 0.0)),
+                    resolution_source=str(item.get("resolution_source", "heuristic")),
+                    dedupe_method=str(item.get("dedupe_method", "url_exact")),
+                )
+            )
+        out.sort(key=lambda event: (event.event_at or event.published_at, event.event_id), reverse=True)
+        return out
+
+    def load_evidence(
+        self,
+        asof_date: date | str,
+        *,
+        symbols: list[str] | tuple[str, ...] | None = None,
+    ) -> list[EvidenceRecord]:
+        path = self.evidence_path(asof_date)
+        if not path.exists():
+            return []
+        symbol_set = {
+            str(symbol).strip().upper()
+            for symbol in (symbols or [])
+            if str(symbol).strip()
+        }
+        out: list[EvidenceRecord] = []
+        try:
+            raw = path.read_text(encoding="utf-8")
+        except Exception:
+            return out
+        for line in raw.splitlines():
+            text = line.strip()
+            if not text:
+                continue
+            try:
+                item = json.loads(text)
+            except Exception:
+                continue
+            if not isinstance(item, dict):
+                continue
+            symbol = str(item.get("symbol", "")).strip().upper()
+            if not symbol:
+                continue
+            if symbol_set and symbol not in symbol_set:
+                continue
+            source_type = str(item.get("source_type", "news")).strip().lower()
+            if source_type not in {"official", "company", "news", "scrape", "api"}:
+                source_type = "news"
+            out.append(
+                EvidenceRecord(
+                    evidence_id=str(item.get("evidence_id", "")),
+                    symbol=symbol,
+                    source_name=str(item.get("source_name", "")),
+                    source_type=source_type,  # type: ignore[arg-type]
+                    url=(str(item.get("url")) if item.get("url") else None),
+                    headline=str(item.get("headline", "")),
+                    body_snippet=str(item.get("body_snippet", "")),
+                    published_at=str(item.get("published_at", "")),
+                    event_at=(str(item.get("event_at")) if item.get("event_at") else None),
+                    language=str(item.get("language", "en") or "en"),
+                    raw_payload_ref=(str(item.get("raw_payload_ref")) if item.get("raw_payload_ref") else None),
+                    feed_origin=(
+                        str(item.get("feed_origin", "manual")).strip().lower()
+                        if str(item.get("feed_origin", "manual")).strip().lower() in {"discovered", "catalog", "manual"}
+                        else "manual"
+                    ),  # type: ignore[arg-type]
+                    blocked_reason=(str(item.get("blocked_reason")) if item.get("blocked_reason") else None),
+                )
+            )
+        return out
+
     def load_signals(
         self,
         asof_date: date | str,
@@ -197,6 +369,29 @@ class IntelligenceStorage:
             state = str(item.get("state", "QUIET")).strip().upper()
             if not symbol:
                 continue
+            score_breakdown_raw = item.get("score_breakdown_v2")
+            score_breakdown: dict[str, float] = {}
+            if isinstance(score_breakdown_raw, dict):
+                for key, value in score_breakdown_raw.items():
+                    try:
+                        score_breakdown[str(key)] = float(value)
+                    except (TypeError, ValueError):
+                        continue
+            top_catalysts_raw = item.get("top_catalysts")
+            top_catalysts: list[dict[str, str | float | int | bool]] = []
+            if isinstance(top_catalysts_raw, list):
+                for raw_event in top_catalysts_raw:
+                    if not isinstance(raw_event, dict):
+                        continue
+                    event_payload: dict[str, str | float | int | bool] = {}
+                    for key, value in raw_event.items():
+                        if isinstance(value, (str, float, int, bool)):
+                            event_payload[str(key)] = value
+                    if event_payload:
+                        top_catalysts.append(event_payload)
+            evidence_quality_flag = str(item.get("evidence_quality_flag", "medium")).strip().lower()
+            if evidence_quality_flag not in {"high", "medium", "low"}:
+                evidence_quality_flag = "medium"
             out.append(
                 Opportunity(
                     symbol=symbol,
@@ -205,6 +400,9 @@ class IntelligenceStorage:
                     opportunity_score=float(item.get("opportunity_score", 0.0)),
                     state=state if state in {"QUIET", "WATCH", "CATALYST_ACTIVE", "TRENDING", "COOLING_OFF"} else "QUIET",
                     explanations=[str(v) for v in item.get("explanations", [])],
+                    score_breakdown_v2=score_breakdown,
+                    top_catalysts=top_catalysts,
+                    evidence_quality_flag=evidence_quality_flag,  # type: ignore[arg-type]
                 )
             )
         return out
@@ -214,6 +412,13 @@ class IntelligenceStorage:
         if not files:
             return None
         latest = files[-1].stem.replace("opportunities_", "", 1)
+        return latest or None
+
+    def latest_normalized_events_date(self) -> str | None:
+        files = sorted(self.root_dir.glob("normalized_events_*.json"))
+        if not files:
+            return None
+        latest = files[-1].stem.replace("normalized_events_", "", 1)
         return latest or None
 
     def latest_education_date(self) -> str | None:
@@ -309,3 +514,65 @@ class IntelligenceStorage:
         # Use locked write to prevent concurrent access issues
         locked_write_json_cli(path, payload)
         return path
+
+    def write_source_health(self, payload: dict[str, dict]) -> Path:
+        path = self.source_health_path
+        locked_write_json_cli(path, payload)
+        return path
+
+    def load_source_health(self) -> dict[str, dict]:
+        path = self.source_health_path
+        if not path.exists():
+            return {}
+        try:
+            payload = locked_read_json_cli(path)
+        except Exception:
+            return {}
+        if not isinstance(payload, dict):
+            return {}
+        out: dict[str, dict] = {}
+        for key, value in payload.items():
+            source = str(key).strip().lower()
+            if not source or not isinstance(value, dict):
+                continue
+            out[source] = value
+        return out
+
+    def write_source_quality_stats(self, payload: dict[str, dict]) -> Path:
+        path = self.source_quality_stats_path
+        locked_write_json_cli(path, payload)
+        return path
+
+    def load_source_quality_stats(self) -> dict[str, dict]:
+        path = self.source_quality_stats_path
+        if not path.exists():
+            return {}
+        try:
+            payload = locked_read_json_cli(path)
+        except Exception:
+            return {}
+        if not isinstance(payload, dict):
+            return {}
+        out: dict[str, dict] = {}
+        for source, value in payload.items():
+            key = str(source).strip().lower()
+            if key and isinstance(value, dict):
+                out[key] = value
+        return out
+
+    def write_intelligence_metrics(self, payload: dict[str, object]) -> Path:
+        path = self.intelligence_metrics_path
+        locked_write_json_cli(path, payload)
+        return path
+
+    def load_intelligence_metrics(self) -> dict[str, object]:
+        path = self.intelligence_metrics_path
+        if not path.exists():
+            return {}
+        try:
+            payload = locked_read_json_cli(path)
+        except Exception:
+            return {}
+        if not isinstance(payload, dict):
+            return {}
+        return payload

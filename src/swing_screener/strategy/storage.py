@@ -68,6 +68,54 @@ def _default_market_intelligence_payload() -> dict:
             "max_daily_opportunities": 8,
             "min_opportunity_score": 0.55,
         },
+        "sources": {
+            "enabled": [
+                "yahoo_finance",
+                "earnings_calendar",
+                "sec_edgar",
+                "company_ir_rss",
+            ],
+            "scraping_enabled": False,
+            "allowed_domains": [],
+            "rate_limits": {
+                "requests_per_minute": 90,
+                "max_concurrency": 4,
+            },
+            "timeouts": {
+                "connect_seconds": 5.0,
+                "read_seconds": 20.0,
+            },
+            "scrape_policy": {
+                "require_robots_allow": True,
+                "deny_if_robots_unreachable": True,
+                "require_tos_allow_flag": True,
+                "user_agent": "swing-screener-intelligence-bot/1.0",
+                "max_robots_cache_hours": 24,
+            },
+        },
+        "scoring_v2": {
+            "enabled": True,
+            "weights": {
+                "reaction_z_component": 0.22,
+                "atr_shock_component": 0.12,
+                "recency_component": 0.14,
+                "proximity_component": 0.14,
+                "materiality_component": 0.14,
+                "source_quality_component": 0.10,
+                "confirmation_component": 0.08,
+                "filing_impact_component": 0.06,
+                "uncertainty_penalty_component": 0.10,
+            },
+            "low_evidence_confirmation_threshold": 0.25,
+            "low_evidence_source_quality_threshold": 0.45,
+            "stale_event_decay_hours": 120,
+        },
+        "calendar": {
+            "binary_event_window_days": 3,
+            "binary_event_min_materiality": 0.75,
+            "binary_event_min_threshold_boost": 0.08,
+            "low_evidence_min_threshold_boost": 0.06,
+        },
     }
 
 
@@ -225,7 +273,7 @@ def load_strategies() -> list[dict]:
                 market_intelligence["market_context_symbols"] = market_intelligence_default["market_context_symbols"]
                 dirty = True
 
-            for section in ("llm", "catalyst", "theme", "opportunity"):
+            for section in ("llm", "catalyst", "theme", "opportunity", "sources", "scoring_v2", "calendar"):
                 current_section = market_intelligence.get(section)
                 default_section = market_intelligence_default[section]
                 if not isinstance(current_section, dict):
@@ -233,9 +281,16 @@ def load_strategies() -> list[dict]:
                     dirty = True
                     continue
                 for key, value in default_section.items():
-                    if current_section.get(key) is None:
+                    current_value = current_section.get(key)
+                    if current_value is None:
                         current_section[key] = value
                         dirty = True
+                        continue
+                    if isinstance(value, dict) and isinstance(current_value, dict):
+                        for nested_key, nested_value in value.items():
+                            if current_value.get(nested_key) is None:
+                                current_value[nested_key] = nested_value
+                                dirty = True
 
     if not any(s.get("id") == DEFAULT_STRATEGY_ID for s in data):
         data.append(_default_strategy_payload())

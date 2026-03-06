@@ -3,29 +3,70 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
+import io
 import logging
 import re
 import threading
 from typing import Any, Optional
 
 import pandas as pd
+import httpx
 
 from swing_screener.data.providers.factory import get_default_provider
 from swing_screener.intelligence.config import IntelligenceConfig
+from swing_screener.intelligence.evidence import (
+    build_catalyst_feature_vectors,
+    collect_additional_evidence,
+    enrich_normalized_events_with_llm,
+    events_to_evidence,
+    historical_precision_map_from_stats,
+    normalize_evidence_records_with_diagnostics,
+    resolve_instrument_profiles,
+    update_source_quality_stats,
+)
 from swing_screener.intelligence.ingestion.service import collect_events
-from swing_screener.intelligence.models import CatalystSignal, Event, Opportunity, SymbolState, ThemeCluster
+from swing_screener.intelligence.models import (
+    CatalystSignal,
+    EvidenceRecord,
+    Event,
+    NormalizedEvent,
+    Opportunity,
+    SymbolState,
+    ThemeCluster,
+)
 from swing_screener.intelligence.reaction import build_catalyst_signals
 from swing_screener.intelligence.relations import (
     apply_peer_confirmation,
     detect_theme_clusters,
     load_curated_peer_map,
 )
-from swing_screener.intelligence.scoring import build_catalyst_score_map, build_opportunities
+from swing_screener.intelligence.scoring import (
+    build_catalyst_score_map_v2,
+    build_opportunities,
+)
 from swing_screener.intelligence.state import update_symbol_states
 from swing_screener.intelligence.storage import IntelligenceStorage
 from swing_screener.intelligence.llm.factory import build_event_classifier
 
 logger = logging.getLogger(__name__)
+
+
+def _publish_intelligence_metrics_to_collector(
+    *,
+    source_health: dict[str, dict[str, Any]],
+    deduped_count: int,
+) -> None:
+    try:
+        from api.monitoring import get_metrics_collector
+
+        collector = get_metrics_collector()
+        if hasattr(collector, "record_intelligence_metrics"):
+            collector.record_intelligence_metrics(
+                source_health=source_health,
+                deduped_count=deduped_count,
+            )
+    except Exception:
+        return
 
 
 @dataclass(frozen=True)
@@ -37,6 +78,12 @@ class IntelligenceSnapshot:
     themes: list[ThemeCluster]
     opportunities: list[Opportunity]
     states: dict[str, SymbolState]
+    evidence_records: list[EvidenceRecord]
+    normalized_events: list[NormalizedEvent]
+    source_health: dict[str, dict[str, Any]]
+    dedupe_pre_count: int = 0
+    dedupe_post_count: int = 0
+    dedupe_ratio: float = 0.0
     events_kept_count: int = 0
     events_dropped_count: int = 0
     duplicate_suppressed_count: int = 0
@@ -50,10 +97,43 @@ class EventQualityDiagnostics:
 
 
 def _normalize_symbols(symbols: list[str] | tuple[str, ...]) -> list[str]:
+    mic_to_suffix = {
+        "XPAR": ".PA",
+        "XAMS": ".AS",
+        "XMIL": ".MI",
+        "XETR": ".DE",
+        "XLON": ".L",
+        "XSWX": ".SW",
+        "XSTO": ".ST",
+        "XMAD": ".MC",
+        "XHEL": ".HE",
+        "XBRU": ".BR",
+    }
+
+    def _canonicalize(raw: str) -> str:
+        text = str(raw).strip().upper()
+        if not text:
+            return ""
+        if ":" in text:
+            ticker, mic = [part.strip() for part in text.split(":", 1)]
+            suffix = mic_to_suffix.get(mic)
+            if ticker and suffix:
+                return f"{ticker}{suffix}"
+            return ticker
+        match = re.match(r"^([A-Z0-9\.\-]{1,16})\s+([A-Z0-9]{4})$", text)
+        if match:
+            ticker = str(match.group(1)).strip().upper()
+            mic = str(match.group(2)).strip().upper()
+            suffix = mic_to_suffix.get(mic)
+            if ticker and suffix and "." not in ticker:
+                return f"{ticker}{suffix}"
+            return ticker
+        return text
+
     out: list[str] = []
     seen: set[str] = set()
     for symbol in symbols:
-        text = str(symbol).strip().upper()
+        text = _canonicalize(symbol)
         if not text or text in seen:
             continue
         seen.add(text)
@@ -379,10 +459,68 @@ def _fetch_ohlcv(
 ):
     if ohlcv is not None:
         return ohlcv
-    provider = get_default_provider()
     start_date = (start_dt - timedelta(days=45)).date().isoformat()
     end_date = (end_dt + timedelta(days=1)).date().isoformat()
-    return provider.fetch_ohlcv(symbols, start_date=start_date, end_date=end_date)
+    provider = get_default_provider()
+    try:
+        return provider.fetch_ohlcv(symbols, start_date=start_date, end_date=end_date)
+    except Exception as exc:
+        logger.warning("Primary OHLCV provider failed, trying Stooq fallback: %s", exc)
+        return _fetch_stooq_ohlcv(symbols=symbols, start_date=start_date, end_date=end_date)
+
+
+def _fetch_stooq_ohlcv(*, symbols: list[str], start_date: str, end_date: str) -> pd.DataFrame:
+    start_dt = datetime.fromisoformat(start_date)
+    end_dt = datetime.fromisoformat(end_date)
+    series_by_col: dict[tuple[str, str], pd.Series] = {}
+    index_union: pd.DatetimeIndex | None = None
+
+    with httpx.Client(timeout=10.0) as client:
+        for symbol in symbols:
+            query_symbol = str(symbol).strip().lower()
+            if not query_symbol:
+                continue
+            try:
+                response = client.get(
+                    "https://stooq.com/q/d/l/",
+                    params={"s": query_symbol, "i": "d"},
+                )
+                response.raise_for_status()
+                frame = pd.read_csv(
+                    io.StringIO(response.text),
+                    parse_dates=["Date"],
+                )
+            except Exception:
+                continue
+
+            if frame.empty or "Date" not in frame.columns:
+                continue
+            frame = frame.rename(columns={c: str(c).strip() for c in frame.columns})
+            frame = frame.set_index("Date").sort_index()
+            frame = frame[(frame.index >= pd.Timestamp(start_dt)) & (frame.index <= pd.Timestamp(end_dt))]
+            if frame.empty:
+                continue
+
+            ticker = str(symbol).strip().upper()
+            for src, dst in (
+                ("Open", "Open"),
+                ("High", "High"),
+                ("Low", "Low"),
+                ("Close", "Close"),
+                ("Volume", "Volume"),
+            ):
+                if src in frame.columns:
+                    series_by_col[(dst, ticker)] = frame[src].astype(float)
+            index_union = frame.index if index_union is None else index_union.union(frame.index)
+
+    if not series_by_col:
+        return pd.DataFrame()
+    assert index_union is not None
+    out = pd.DataFrame(index=index_union.sort_values())
+    for col_key, series in series_by_col.items():
+        out[col_key] = series.reindex(out.index)
+    out.columns = pd.MultiIndex.from_tuples(list(series_by_col.keys()))
+    return out
 
 
 def run_intelligence_pipeline(
@@ -415,6 +553,9 @@ def run_intelligence_pipeline(
             themes=[],
             opportunities=[],
             states=storage.load_symbol_state(),
+            evidence_records=[],
+            normalized_events=[],
+            source_health={},
             events_kept_count=0,
             events_dropped_count=0,
             duplicate_suppressed_count=0,
@@ -440,6 +581,119 @@ def run_intelligence_pipeline(
         ),
     )
 
+    profiles = resolve_instrument_profiles(symbols_clean)
+    additional_records, additional_health = collect_additional_evidence(
+        symbols=symbols_clean,
+        profiles=profiles,
+        start_dt=start_dt,
+        end_dt=now,
+        cfg=cfg.sources,
+    )
+    evidence_records = events_to_evidence(events) + additional_records
+    previous_quality_stats = storage.load_source_quality_stats()
+    historical_precision = historical_precision_map_from_stats(previous_quality_stats)
+    normalized_events, normalize_diag = normalize_evidence_records_with_diagnostics(
+        evidence_records,
+        asof_dt=now,
+        historical_precision_by_source=historical_precision,
+    )
+    profile_index: dict[str, Any] = {}
+    for profile in profiles.values():
+        profile_index[str(profile.symbol).strip().upper()] = profile
+        for alias in profile.aliases:
+            key = str(alias).strip().upper()
+            if key and key not in profile_index:
+                profile_index[key] = profile
+    normalized_events = [
+        NormalizedEvent(
+            event_id=event.event_id,
+            symbol=event.symbol,
+            event_type=event.event_type,
+            event_subtype=event.event_subtype,
+            timing_type=event.timing_type,
+            materiality=event.materiality,
+            confidence=event.confidence,
+            primary_source_reliability=event.primary_source_reliability,
+            confirmation_count=event.confirmation_count,
+            published_at=event.published_at,
+            event_at=event.event_at,
+            source_name=event.source_name,
+            raw_url=event.raw_url,
+            llm_fields=event.llm_fields,
+            dynamic_source_quality=event.dynamic_source_quality,
+            resolution_source=(
+                getattr(profile_index.get(event.symbol), "resolution_source", None)
+                or event.resolution_source
+                or "heuristic"
+            ),
+            dedupe_method=event.dedupe_method,
+        )
+        for event in normalized_events
+    ]
+    normalized_events = enrich_normalized_events_with_llm(
+        events=normalized_events,
+        cfg=cfg,
+        llm_classifier=llm_classifier,
+    )
+    source_quality_stats = update_source_quality_stats(
+        previous_stats=previous_quality_stats,
+        normalized_events=normalized_events,
+        asof_dt=now,
+    )
+    source_health: dict[str, dict[str, Any]] = {}
+    source_event_counts: dict[str, int] = {}
+    source_symbol_coverage: dict[str, set[str]] = {}
+    source_confidence_sums: dict[str, float] = {}
+    for record in evidence_records:
+        source_name = str(record.source_name).strip().lower()
+        source_event_counts[source_name] = source_event_counts.get(source_name, 0) + 1
+        source_symbol_coverage.setdefault(source_name, set()).add(str(record.symbol).strip().upper())
+    for event in normalized_events:
+        source_name = str(event.source_name).strip().lower()
+        source_confidence_sums[source_name] = source_confidence_sums.get(source_name, 0.0) + float(event.confidence)
+    for source_name, count in source_event_counts.items():
+        symbols_count = len(source_symbol_coverage.get(source_name, set()))
+        coverage_ratio = 0.0 if not symbols_clean else float(symbols_count) / float(len(symbols_clean))
+        mean_confidence = 0.0 if count <= 0 else float(source_confidence_sums.get(source_name, 0.0)) / float(count)
+        source_health[source_name] = {
+            "source_name": source_name,
+            "enabled": True,
+            "status": "ok",
+            "latency_ms": 0.0,
+            "error_count": 0,
+            "event_count": int(count),
+            "error_rate": 0.0,
+            "blocked_count": 0,
+            "blocked_reasons": [],
+            "coverage_ratio": round(coverage_ratio, 6),
+            "mean_confidence": round(max(0.0, min(1.0, mean_confidence)), 6),
+            "last_ingest": now.replace(microsecond=0).isoformat(),
+        }
+    for source_name, health_obj in additional_health.items():
+        current = source_health.get(source_name, {})
+        payload = health_obj.to_dict()
+        payload["event_count"] = int(payload.get("event_count", 0)) + int(current.get("event_count", 0))
+        total = int(payload.get("event_count", 0)) + int(payload.get("error_count", 0))
+        payload["error_rate"] = 0.0 if total <= 0 else round(float(payload["error_count"]) / float(total), 6)
+        payload["coverage_ratio"] = current.get("coverage_ratio", payload.get("coverage_ratio", 0.0))
+        payload["mean_confidence"] = current.get("mean_confidence", payload.get("mean_confidence", 0.0))
+        source_health[source_name] = payload
+
+    coverage_global = 0.0
+    if symbols_clean:
+        symbols_with_events = {str(event.symbol).strip().upper() for event in normalized_events if str(event.symbol).strip()}
+        coverage_global = float(len(symbols_with_events)) / float(len(symbols_clean))
+    mean_conf_global = 0.0
+    if normalized_events:
+        mean_conf_global = sum(float(event.confidence) for event in normalized_events) / float(len(normalized_events))
+    intelligence_metrics = {
+        "asof_date": asof_date,
+        "coverage_global": round(max(0.0, min(1.0, coverage_global)), 6),
+        "mean_confidence_global": round(max(0.0, min(1.0, mean_conf_global)), 6),
+        "dedupe_ratio": round(float(normalize_diag.dedupe_ratio), 6),
+        "events_per_source": {source: int(count) for source, count in sorted(source_event_counts.items())},
+    }
+
     ohlcv_data = _fetch_ohlcv(symbols_clean, start_dt=start_dt, end_dt=now, ohlcv=ohlcv)
     raw_signals = build_catalyst_signals(events=events, ohlcv=ohlcv_data, cfg=cfg.catalyst, asof_dt=now)
 
@@ -455,10 +709,17 @@ def run_intelligence_pipeline(
 
     previous_states = storage.load_symbol_state()
     states = update_symbol_states(previous_states=previous_states, signals=signals, themes=themes, asof_dt=now)
-    catalyst_scores = build_catalyst_score_map(
+    feature_vectors = build_catalyst_feature_vectors(
+        symbols=symbols_clean,
+        normalized_events=normalized_events,
+        asof_dt=now,
+    )
+    catalyst_scores = build_catalyst_score_map_v2(
         signals=signals,
         events=events,
         themes=themes,
+        feature_vectors=feature_vectors,
+        scoring_cfg=cfg.scoring_v2,
         recency_half_life_hours=cfg.catalyst.recency_half_life_hours,
     )
     technical = _normalize_technical(symbols_clean, technical_readiness)
@@ -467,13 +728,25 @@ def run_intelligence_pipeline(
         catalyst_scores=catalyst_scores,
         symbol_states=states,
         cfg=cfg.opportunity,
+        feature_vectors=feature_vectors,
+        scoring_cfg=cfg.scoring_v2,
+        calendar_cfg=cfg.calendar,
     )
 
     storage.write_events(events, asof_date)
+    storage.write_evidence(evidence_records, asof_date)
+    storage.write_normalized_events(normalized_events, asof_date)
     storage.write_signals(signals, asof_date)
     storage.write_themes(themes, asof_date)
     storage.write_opportunities(opportunities, asof_date)
     storage.write_symbol_state(states.values())
+    storage.write_source_health(source_health)
+    storage.write_source_quality_stats(source_quality_stats)
+    storage.write_intelligence_metrics(intelligence_metrics)
+    _publish_intelligence_metrics_to_collector(
+        source_health=source_health,
+        deduped_count=max(0, normalize_diag.pre_dedupe_count - normalize_diag.post_dedupe_count),
+    )
 
     return IntelligenceSnapshot(
         asof_date=asof_date,
@@ -483,6 +756,12 @@ def run_intelligence_pipeline(
         themes=themes,
         opportunities=opportunities,
         states=states,
+        evidence_records=evidence_records,
+        normalized_events=normalized_events,
+        source_health=source_health,
+        dedupe_pre_count=normalize_diag.pre_dedupe_count,
+        dedupe_post_count=normalize_diag.post_dedupe_count,
+        dedupe_ratio=normalize_diag.dedupe_ratio,
         events_kept_count=event_quality.kept_count,
         events_dropped_count=event_quality.dropped_count,
         duplicate_suppressed_count=event_quality.duplicate_suppressed_count,
