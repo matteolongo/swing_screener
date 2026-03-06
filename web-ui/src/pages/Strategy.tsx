@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Card, { CardContent, CardHeader, CardTitle } from '@/components/common/Card';
 import Badge from '@/components/common/Badge';
 import StrategyPluginCard from '@/components/domain/strategy/StrategyPluginCard';
@@ -38,6 +38,7 @@ export default function StrategyPage() {
   const configQuery = useStrategyConfigQuery();
   const pluginsQuery = useStrategyPluginsQuery();
   const validationQuery = useResolvedStrategyValidationQuery();
+  const [openPluginId, setOpenPluginId] = useState<string | null>(null);
 
   const definitionsById = useMemo(() => {
     const map = new Map<string, StrategyPluginDefinition>();
@@ -57,6 +58,12 @@ export default function StrategyPage() {
     }
     return Array.from(groups.entries()).sort(([a], [b]) => categoryLabel(a).localeCompare(categoryLabel(b)));
   }, [configQuery.data?.plugins]);
+
+  useEffect(() => {
+    if (!configQuery.data?.plugins?.length) return;
+    if (openPluginId && configQuery.data.plugins.some((plugin) => plugin.id === openPluginId)) return;
+    setOpenPluginId(configQuery.data.plugins[0].id);
+  }, [configQuery.data?.plugins, openPluginId]);
 
   if (configQuery.isLoading || pluginsQuery.isLoading || validationQuery.isLoading) {
     return (
@@ -199,12 +206,14 @@ export default function StrategyPage() {
             <h2 className="text-xl font-semibold">{categoryLabel(category)}</h2>
             <Badge variant="default">{plugins.length}</Badge>
           </div>
-          <div className="grid gap-4 xl:grid-cols-2">
+          <div className="space-y-4">
             {plugins.map((plugin) => (
               <StrategyPluginCard
                 key={plugin.id}
                 plugin={plugin}
                 definition={definitionsById.get(plugin.id)}
+                isOpen={openPluginId === plugin.id}
+                onToggle={() => setOpenPluginId((current) => (current === plugin.id ? null : plugin.id))}
               />
             ))}
           </div>
