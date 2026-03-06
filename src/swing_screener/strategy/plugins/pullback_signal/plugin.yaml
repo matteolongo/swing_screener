@@ -1,0 +1,22 @@
+id: pullback_signal
+category: Signals
+phase: signals
+display_name: Pullback Signal
+description: Identify reclaim entries after price regains the selected moving average.
+defaults_file: defaults.yaml
+read_only_sections: ["Configuration", "Docs"]
+provides: [pullback_signal, signal_candidates]
+requires: [trend_features]
+modifies: [signal_candidates]
+conflicts: []
+runtime_hooks: [augment_signal_board]
+config_schema:
+  pullback_ma: {type: integer, min: 1, label: "Pullback MA", description: "Moving average used for pullback reclaim entries."}
+docs:
+  what_it_is: Pullback reclaim trigger using a moving average.
+  why_it_matters: Helps avoid chasing extended price spikes.
+  how_it_affects_trades: Offers better entry structure in healthy trends.
+  tradeoffs: Tighter averages improve price but can miss fast trends.
+  default_guidance: 20-day MA is a standard swing baseline.
+  danger_zone: Very small windows react to noise more than structure.
+  pro_tip: Pullbacks can complement breakouts without changing the strategy philosophy.

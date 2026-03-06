@@ -1,0 +1,33 @@
+enabled: true
+config:
+  enabled: false
+  providers: [yahoo_finance]
+  universe_scope: screener_universe
+  market_context_symbols: [SPY, QQQ, XLK, SMH, XBI]
+  llm:
+    enabled: false
+    provider: ollama
+    model: mistral:7b-instruct
+    base_url: http://localhost:11434
+    api_key: ""
+    enable_cache: true
+    enable_audit: true
+    cache_path: data/intelligence/llm_cache.json
+    audit_path: data/intelligence/llm_audit
+    max_concurrency: 4
+  catalyst:
+    lookback_hours: 72
+    recency_half_life_hours: 36
+    false_catalyst_return_z: 1.5
+    min_price_reaction_atr: 0.8
+    require_price_confirmation: true
+  theme:
+    enabled: true
+    min_cluster_size: 3
+    min_peer_confirmation: 2
+    curated_peer_map_path: data/intelligence/peer_map.yaml
+  opportunity:
+    technical_weight: 0.55
+    catalyst_weight: 0.45
+    max_daily_opportunities: 8
+    min_opportunity_score: 0.55

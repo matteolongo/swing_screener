@@ -18,6 +18,7 @@ dependencies = [
   "pandas>=2.0",
   "numpy>=1.24",
   "yfinance>=0.2",
+  "pyyaml>=6.0",
   "pyarrow>=14.0",
   "fastapi>=0.104",
   "uvicorn[standard]>=0.24",
@@ -73,3 +74,4 @@ markers = [
 
 [tool.setuptools.package-data]
 "swing_screener.data" = ["universes/*.csv", "universes/*.json"]
+"swing_screener.strategy" = ["plugins/*/*.yaml", "plugins/*/*.yml"]

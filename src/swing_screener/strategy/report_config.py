@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from swing_screener.selection.universe import UniverseConfig
 from swing_screener.selection.ranking import RankingConfig
@@ -18,4 +18,4 @@ class ReportConfig:
     social_overlay: SocialOverlayConfig = SocialOverlayConfig()
     only_active_signals: bool = False
     strategy_module: str = "momentum"
-
+    plugin_settings: dict[str, dict] = field(default_factory=dict)

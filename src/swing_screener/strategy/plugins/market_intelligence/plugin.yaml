@@ -1,0 +1,25 @@
+id: market_intelligence
+category: Intelligence
+phase: intelligence
+display_name: Market Intelligence
+description: Add catalyst and thematic context to the strategy stack.
+defaults_file: defaults.yaml
+read_only_sections: ["Configuration", "Docs"]
+provides: [market_intelligence]
+requires: []
+modifies: [candidate_score]
+conflicts: []
+runtime_hooks: [augment_education]
+config_schema:
+  enabled: {type: boolean, label: "Enabled", description: "Enable intelligence features."}
+  providers: {type: array, label: "Providers", description: "Enabled intelligence providers."}
+  universe_scope: {type: string, label: "Universe Scope", description: "Universe scope used by intelligence."}
+  market_context_symbols: {type: array, label: "Market Context", description: "Symbols used for market context."}
+docs:
+  what_it_is: Catalyst and thematic context layer.
+  why_it_matters: Adds narrative and event context around technically valid names.
+  how_it_affects_trades: Helps explain setups and identify event-driven opportunities.
+  tradeoffs: Richer context comes with more complexity and more data dependencies.
+  default_guidance: Keep optional and separate from the core mechanical rules.
+  danger_zone: Do not let narrative override the hard risk gates.
+  pro_tip: Use intelligence to prioritize attention, not to bypass discipline.

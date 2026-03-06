@@ -1,0 +1,4 @@
+enabled: true
+config:
+  max_holding_days: 20
+  benchmark: SPY

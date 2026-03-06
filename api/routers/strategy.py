@@ -13,6 +13,10 @@ from api.models.strategy import (
     StrategyValidationResult,
     ValidationWarningModel,
 )
+from api.models.strategy_runtime import (
+    StrategyPluginDefinition,
+    StrategyResolvedConfig,
+)
 from api.dependencies import get_strategy_service
 from api.services.strategy_service import StrategyService
 from swing_screener.strategy.validation import validate_strategy_full
@@ -49,6 +53,24 @@ def _build_validation_result(strategy_payload: dict) -> StrategyValidationResult
 async def list_strategies(service: StrategyService = Depends(get_strategy_service)):
     """List all strategies."""
     return service.list_strategies()
+
+
+@router.get("/config", response_model=StrategyResolvedConfig)
+async def get_strategy_config(service: StrategyService = Depends(get_strategy_service)):
+    """Get resolved plugin-based strategy config from YAML."""
+    return service.get_resolved_config()
+
+
+@router.get("/plugins", response_model=list[StrategyPluginDefinition])
+async def list_strategy_plugins(service: StrategyService = Depends(get_strategy_service)):
+    """List plugin definitions discovered from YAML plugin manifests."""
+    return service.list_plugins()
+
+
+@router.get("/validation", response_model=StrategyValidationResult)
+async def get_strategy_validation(service: StrategyService = Depends(get_strategy_service)):
+    """Validate current strategy config and capability graph."""
+    return service.get_validation()
 
 
 @router.get("/active", response_model=Strategy)

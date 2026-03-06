@@ -1,0 +1,24 @@
+id: trailing_management
+category: Management
+phase: management
+display_name: Trailing Management
+description: Trail stops once a trade reaches the configured profit threshold.
+defaults_file: defaults.yaml
+read_only_sections: ["Configuration", "Docs"]
+provides: [trailing_rules]
+requires: [position_size]
+modifies: [risk_plan]
+conflicts: []
+runtime_hooks: [augment_education]
+config_schema:
+  trail_after_r: {type: number, min: 0, label: "Trail After R", description: "Start trailing after this R multiple."}
+  trail_sma: {type: integer, min: 1, label: "Trail SMA", description: "Moving average used for trailing."}
+  sma_buffer_pct: {type: number, min: 0, label: "SMA Buffer %", description: "Buffer applied around the trailing SMA."}
+docs:
+  what_it_is: Profit-protection rule for open winners.
+  why_it_matters: Lets the strategy keep upside while managing giveback.
+  how_it_affects_trades: Controls how quickly profits get locked in.
+  tradeoffs: Faster trailing protects gains but can end trends too early.
+  default_guidance: Keep simple and repeatable rather than overly reactive.
+  danger_zone: Overactive trailing often turns good trends into small trades.
+  pro_tip: Trailing rules should protect edge, not satisfy impatience.

@@ -155,6 +155,227 @@ type StrategyPayload = (typeof mockStrategies)[number]
 let activeStrategyId = mockStrategies[0].id
 let strategies: StrategyPayload[] = [...mockStrategies]
 
+export const mockStrategyPlugins = [
+  {
+    id: 'price_filter',
+    category: 'filters',
+    display_name: 'Price Filter',
+    description: 'Limits the universe to tradable price ranges.',
+    enabled_by_default: true,
+    phase: 'universe',
+    provides: ['price_filtered_universe'],
+    requires: [],
+    modifies: ['eligible_universe'],
+    conflicts: [],
+    config_fields: [
+      { key: 'min_price', label: 'Min Price', description: 'Minimum allowed price.' },
+      { key: 'max_price', label: 'Max Price', description: 'Maximum allowed price.' },
+    ],
+    read_only_sections: [
+      { title: 'Why it matters', body: 'Avoids names outside the intended price envelope.' },
+    ],
+  },
+  {
+    id: 'breakout_signal',
+    category: 'signals',
+    display_name: 'Breakout Signal',
+    description: 'Detects strength when price clears prior highs.',
+    enabled_by_default: true,
+    phase: 'signals',
+    provides: ['breakout_signal', 'signal_candidates'],
+    requires: [],
+    modifies: ['signal_candidates'],
+    conflicts: [],
+    config_fields: [
+      { key: 'breakout_lookback', label: 'Breakout Lookback' },
+      { key: 'min_history', label: 'Minimum History' },
+    ],
+    read_only_sections: [
+      { title: 'How it affects trades', body: 'Longer lookbacks reduce noise but generate fewer entries.' },
+    ],
+  },
+  {
+    id: 'atr_position_sizing',
+    category: 'risk',
+    display_name: 'ATR Position Sizing',
+    description: 'Uses ATR and account constraints to size trades.',
+    enabled_by_default: true,
+    phase: 'risk',
+    provides: ['position_size'],
+    requires: ['signal_candidates'],
+    modifies: ['risk_budget'],
+    conflicts: [],
+    config_fields: [
+      { key: 'risk_pct', label: 'Risk %' },
+      { key: 'k_atr', label: 'ATR Multiplier' },
+    ],
+    read_only_sections: [
+      { title: 'Default guidance', body: 'Position size should stay systematic as volatility changes.' },
+    ],
+  },
+  {
+    id: 'social_overlay',
+    category: 'qualification',
+    display_name: 'Social Overlay',
+    description: 'Adds contextual awareness from attention and sentiment.',
+    enabled_by_default: false,
+    phase: 'qualification',
+    provides: ['social_signal_boost'],
+    requires: ['signal_candidates'],
+    modifies: ['candidate_score'],
+    conflicts: [],
+    config_fields: [
+      { key: 'lookback_hours', label: 'Lookback Hours' },
+      { key: 'attention_z_threshold', label: 'Attention Z Threshold' },
+    ],
+    read_only_sections: [
+      { title: 'Tradeoffs', body: 'Useful as context, but not as the main reason to enter.' },
+    ],
+  },
+  {
+    id: 'volume_confirmation',
+    category: 'qualification',
+    display_name: 'Volume Confirmation',
+    description: 'Validates breakouts only when volume exceeds the configured threshold.',
+    enabled_by_default: false,
+    phase: 'qualification',
+    provides: ['volume_breakout_confirmation'],
+    requires: ['breakout_signal'],
+    modifies: ['signal_validation'],
+    conflicts: [],
+    config_fields: [
+      { key: 'volume_ma_window', label: 'Volume MA Window' },
+      { key: 'min_breakout_volume_ratio', label: 'Min Breakout Volume Ratio' },
+      { key: 'apply_to_breakout', label: 'Apply to Breakout' },
+      { key: 'apply_to_pullback', label: 'Apply to Pullback' },
+    ],
+    read_only_sections: [
+      { title: 'Why it matters', body: 'A breakout with weak volume is easier to fade.' },
+    ],
+  },
+]
+
+export const mockStrategyConfig = {
+  name: 'Default',
+  description: 'Read-only strategy config resolved from YAML plugin defaults and root overrides.',
+  module: 'momentum',
+  config_path: 'config/strategy.yaml',
+  execution_order: ['price_filter', 'breakout_signal', 'social_overlay', 'atr_position_sizing'],
+  graph_edges: {
+    price_filter: ['breakout_signal', 'social_overlay', 'atr_position_sizing'],
+    breakout_signal: ['social_overlay', 'atr_position_sizing'],
+    social_overlay: ['atr_position_sizing'],
+    atr_position_sizing: [],
+  },
+  plugins: [
+    {
+      id: 'price_filter',
+      category: 'filters',
+      display_name: 'Price Filter',
+      description: 'Limits the universe to tradable price ranges.',
+      enabled: true,
+      default_enabled: true,
+      phase: 'universe',
+      provides: ['price_filtered_universe'],
+      requires: [],
+      modifies: ['eligible_universe'],
+      conflicts: [],
+      depends_on: [],
+      read_only_sections: [
+        { title: 'Why it matters', body: 'Keeps the universe inside the intended price envelope.' },
+      ],
+      values: [
+        { key: 'min_price', label: 'Min Price', default_value: 5.0, effective_value: 5.0, overridden: false, source: 'plugin_default' },
+        { key: 'max_price', label: 'Max Price', default_value: 500.0, effective_value: 500.0, overridden: false, source: 'plugin_default' },
+      ],
+    },
+    {
+      id: 'breakout_signal',
+      category: 'signals',
+      display_name: 'Breakout Signal',
+      description: 'Detects strength when price clears prior highs.',
+      enabled: true,
+      default_enabled: true,
+      phase: 'signals',
+      provides: ['breakout_signal', 'signal_candidates'],
+      requires: [],
+      modifies: ['signal_candidates'],
+      conflicts: [],
+      depends_on: ['price_filter'],
+      read_only_sections: [
+        { title: 'How it affects trades', body: 'Higher lookbacks make the signal stricter.' },
+      ],
+      values: [
+        { key: 'breakout_lookback', label: 'Breakout Lookback', default_value: 50, effective_value: 50, overridden: false, source: 'plugin_default' },
+        { key: 'min_history', label: 'Minimum History', default_value: 260, effective_value: 260, overridden: false, source: 'plugin_default' },
+      ],
+    },
+    {
+      id: 'atr_position_sizing',
+      category: 'risk',
+      display_name: 'ATR Position Sizing',
+      description: 'Uses ATR and account constraints to size trades.',
+      enabled: true,
+      default_enabled: true,
+      phase: 'risk',
+      provides: ['position_size'],
+      requires: ['signal_candidates'],
+      modifies: ['risk_budget'],
+      conflicts: [],
+      depends_on: ['breakout_signal', 'social_overlay'],
+      read_only_sections: [
+        { title: 'Default guidance', body: 'The strategy sizes risk first, not conviction first.' },
+      ],
+      values: [
+        { key: 'risk_pct', label: 'Risk %', default_value: 0.01, effective_value: 0.01, overridden: false, source: 'plugin_default' },
+        { key: 'k_atr', label: 'ATR Multiplier', default_value: 2.0, effective_value: 2.0, overridden: false, source: 'plugin_default' },
+      ],
+    },
+    {
+      id: 'social_overlay',
+      category: 'qualification',
+      display_name: 'Social Overlay',
+      description: 'Adds contextual awareness from attention and sentiment.',
+      enabled: true,
+      default_enabled: false,
+      phase: 'qualification',
+      provides: ['social_signal_boost'],
+      requires: ['signal_candidates'],
+      modifies: ['candidate_score'],
+      conflicts: [],
+      depends_on: ['breakout_signal'],
+      read_only_sections: [
+        { title: 'Tradeoffs', body: 'Context can help, but hype should not become the thesis.' },
+      ],
+      values: [
+        { key: 'lookback_hours', label: 'Lookback Hours', default_value: 24, effective_value: 24, overridden: false, source: 'plugin_default' },
+        { key: 'attention_z_threshold', label: 'Attention Z Threshold', default_value: 3.0, effective_value: 3.5, overridden: true, source: 'root_override' },
+      ],
+    },
+    {
+      id: 'volume_confirmation',
+      category: 'qualification',
+      display_name: 'Volume Confirmation',
+      description: 'Validates breakouts only when volume exceeds the configured threshold.',
+      enabled: false,
+      default_enabled: false,
+      phase: 'qualification',
+      provides: ['volume_breakout_confirmation'],
+      requires: ['breakout_signal'],
+      modifies: ['signal_validation'],
+      conflicts: [],
+      depends_on: ['breakout_signal'],
+      read_only_sections: [
+        { title: 'Why it matters', body: 'Volume helps distinguish strong breakouts from thin ones.' },
+      ],
+      values: [
+        { key: 'volume_ma_window', label: 'Volume MA Window', default_value: 20, effective_value: 20, overridden: false, source: 'plugin_default' },
+        { key: 'min_breakout_volume_ratio', label: 'Min Breakout Volume Ratio', default_value: 1.5, effective_value: 1.5, overridden: false, source: 'plugin_default' },
+      ],
+    },
+  ],
+}
+
 const asObject = (value: unknown): Record<string, any> => (
   value && typeof value === 'object' ? (value as Record<string, any>) : {}
 )
@@ -655,6 +876,33 @@ export const handlers = [
   }),
 
   // Strategy endpoints
+  http.get(`${API_BASE_URL}/api/strategy/config`, () => {
+    return HttpResponse.json(mockStrategyConfig)
+  }),
+
+  http.get(`${API_BASE_URL}/api/strategy/plugins`, () => {
+    return HttpResponse.json(mockStrategyPlugins)
+  }),
+
+  http.get(`${API_BASE_URL}/api/strategy/validation`, () => {
+    return HttpResponse.json({
+      is_valid: false,
+      warnings: [
+        {
+          parameter: 'breakoutLookback',
+          level: 'warning',
+          message: 'Breakout Lookback below 40 increases the chance of false breakouts.',
+        },
+      ],
+      safety_score: 92,
+      safety_level: 'beginner-safe',
+      total_warnings: 1,
+      danger_count: 0,
+      warning_count: 1,
+      info_count: 0,
+    })
+  }),
+
   http.get(`${API_BASE_URL}/api/strategy`, () => {
     return HttpResponse.json(strategies)
   }),

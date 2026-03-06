@@ -1,0 +1,4 @@
+enabled: true
+config:
+  commission_pct: 0.0
+  max_fee_risk_pct: 0.2

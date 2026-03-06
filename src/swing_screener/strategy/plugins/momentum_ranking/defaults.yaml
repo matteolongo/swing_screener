@@ -1,0 +1,9 @@
+enabled: true
+config:
+  lookback_6m: 126
+  lookback_12m: 252
+  benchmark: SPY
+  w_mom_6m: 0.45
+  w_mom_12m: 0.35
+  w_rs_6m: 0.2
+  top_n: 100

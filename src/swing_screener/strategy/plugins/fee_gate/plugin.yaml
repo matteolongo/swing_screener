@@ -1,0 +1,23 @@
+id: fee_gate
+category: Risk
+phase: risk
+display_name: Fee Gate
+description: Block setups where estimated fees are too large relative to planned risk.
+defaults_file: defaults.yaml
+read_only_sections: ["Configuration", "Docs"]
+provides: [fee_validation]
+requires: [position_size]
+modifies: [signal_validation]
+conflicts: []
+runtime_hooks: [augment_recommendation]
+config_schema:
+  commission_pct: {type: number, min: 0, label: "Commission %", description: "Per-side commission estimate."}
+  max_fee_risk_pct: {type: number, min: 0, max: 1, label: "Max Fee / Risk %", description: "Maximum fee burden relative to planned risk."}
+docs:
+  what_it_is: Trade cost sanity check.
+  why_it_matters: Stops small trades from being dominated by friction.
+  how_it_affects_trades: Mostly blocks micro-setups with poor cost efficiency.
+  tradeoffs: Stricter settings avoid churn but can remove small-cap opportunities.
+  default_guidance: Keep costs small relative to risk, not just relative to notional size.
+  danger_zone: Ignoring fee drag silently erodes expectancy.
+  pro_tip: A good setup can still be a bad trade once costs are included.

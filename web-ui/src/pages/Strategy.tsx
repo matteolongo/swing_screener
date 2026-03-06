@@ -1,614 +1,215 @@
-import { useEffect, useMemo, useState } from 'react';
-import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
-import Button from '@/components/common/Button';
-import { useStrategyEditor } from '@/features/strategy/useStrategyEditor';
-import { useStrategyValidationQuery } from '@/features/strategy/hooks';
-import { toStrategyUpdateRequest } from '@/features/strategy/types';
-import StrategyAdvancedSettingsCard from '@/components/domain/strategy/StrategyAdvancedSettingsCard';
-import StrategyCoreSettingsCards from '@/components/domain/strategy/StrategyCoreSettingsCards';
-import StrategyPhilosophyCard from '@/components/domain/strategy/StrategyPhilosophyCard';
-import StrategySafetyScore from '@/components/domain/strategy/StrategySafetyScore';
-import BeginnerModeToggle from '@/components/domain/strategy/BeginnerModeToggle';
-import StrategyPresets, { applyPresetToStrategy } from '@/components/domain/strategy/StrategyPresets';
-import { useI18n } from '@/i18n/I18nProvider';
+import { useMemo } from 'react';
+import Card, { CardContent, CardHeader, CardTitle } from '@/components/common/Card';
+import Badge from '@/components/common/Badge';
+import StrategyPluginCard from '@/components/domain/strategy/StrategyPluginCard';
 import {
-  buildHelp,
-  strategyFieldClass,
-  TextInput,
-} from '@/components/domain/strategy/StrategyFieldControls';
-import { getStrategyInfo } from '@/content/strategy_docs/loader';
-import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
+  useResolvedStrategyValidationQuery,
+  useStrategyConfigQuery,
+  useStrategyPluginsQuery,
+} from '@/features/strategy/hooks';
+import type {
+  StrategyPluginCategory,
+  StrategyPluginDefinition,
+  StrategyPluginResolvedState,
+} from '@/features/strategy/types';
 
-const MOBILE_LAYOUT_MEDIA_QUERY = '(max-width: 767px)';
+const CATEGORY_LABELS: Record<string, string> = {
+  filters: 'Filters',
+  ranking: 'Ranking',
+  signals: 'Signals',
+  risk: 'Risk',
+  qualification: 'Qualification',
+  management: 'Management',
+  intelligence: 'Intelligence',
+  education: 'Education',
+};
 
-function getMobileLayoutMatch() {
-  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-    return false;
-  }
-  return window.matchMedia(MOBILE_LAYOUT_MEDIA_QUERY).matches;
+function categoryLabel(category: StrategyPluginCategory): string {
+  return CATEGORY_LABELS[category] ?? category.charAt(0).toUpperCase() + category.slice(1);
+}
+
+function warningVariant(level: 'danger' | 'warning' | 'info') {
+  if (level === 'danger') return 'error' as const;
+  if (level === 'warning') return 'warning' as const;
+  return 'default' as const;
 }
 
 export default function StrategyPage() {
-  const { locale, t } = useI18n();
-  const { isBeginnerMode, setBeginnerMode } = useBeginnerModeStore();
+  const configQuery = useStrategyConfigQuery();
+  const pluginsQuery = useStrategyPluginsQuery();
+  const validationQuery = useResolvedStrategyValidationQuery();
 
-  const help = useMemo(
-    () => ({
-      module: buildHelp(
-        t('strategyPage.help.items.module.title'),
-        t('strategyPage.help.items.module.short'),
-        t('strategyPage.help.items.module.what'),
-        t('strategyPage.help.items.module.why'),
-        t('strategyPage.help.items.module.how')
-      ),
-      breakoutLookback: buildHelp(
-        t('strategyPage.help.items.breakoutLookback.title'),
-        t('strategyPage.help.items.breakoutLookback.short'),
-        t('strategyPage.help.items.breakoutLookback.what'),
-        t('strategyPage.help.items.breakoutLookback.why'),
-        t('strategyPage.help.items.breakoutLookback.how'),
-        t('strategyPage.help.items.breakoutLookback.execution')
-      ),
-      pullbackMa: buildHelp(
-        t('strategyPage.help.items.pullbackMa.title'),
-        t('strategyPage.help.items.pullbackMa.short'),
-        t('strategyPage.help.items.pullbackMa.what'),
-        t('strategyPage.help.items.pullbackMa.why'),
-        t('strategyPage.help.items.pullbackMa.how'),
-        t('strategyPage.help.items.pullbackMa.execution')
-      ),
-      minHistory: buildHelp(
-        t('strategyPage.help.items.minHistory.title'),
-        t('strategyPage.help.items.minHistory.short'),
-        t('strategyPage.help.items.minHistory.what'),
-        t('strategyPage.help.items.minHistory.why'),
-        t('strategyPage.help.items.minHistory.how')
-      ),
-      smaFast: buildHelp(
-        t('strategyPage.help.items.smaFast.title'),
-        t('strategyPage.help.items.smaFast.short'),
-        t('strategyPage.help.items.smaFast.what'),
-        t('strategyPage.help.items.smaFast.why'),
-        t('strategyPage.help.items.smaFast.how')
-      ),
-      smaMid: buildHelp(
-        t('strategyPage.help.items.smaMid.title'),
-        t('strategyPage.help.items.smaMid.short'),
-        t('strategyPage.help.items.smaMid.what'),
-        t('strategyPage.help.items.smaMid.why'),
-        t('strategyPage.help.items.smaMid.how')
-      ),
-      smaLong: buildHelp(
-        t('strategyPage.help.items.smaLong.title'),
-        t('strategyPage.help.items.smaLong.short'),
-        t('strategyPage.help.items.smaLong.what'),
-        t('strategyPage.help.items.smaLong.why'),
-        t('strategyPage.help.items.smaLong.how')
-      ),
-      atrWindow: buildHelp(
-        t('strategyPage.help.items.atrWindow.title'),
-        t('strategyPage.help.items.atrWindow.short'),
-        t('strategyPage.help.items.atrWindow.what'),
-        t('strategyPage.help.items.atrWindow.why'),
-        t('strategyPage.help.items.atrWindow.how')
-      ),
-      atrMultiplier: buildHelp(
-        t('strategyPage.help.items.atrMultiplier.title'),
-        t('strategyPage.help.items.atrMultiplier.short'),
-        t('strategyPage.help.items.atrMultiplier.what'),
-        t('strategyPage.help.items.atrMultiplier.why'),
-        t('strategyPage.help.items.atrMultiplier.how')
-      ),
-      minRr: buildHelp(
-        t('strategyPage.help.items.minRr.title'),
-        t('strategyPage.help.items.minRr.short'),
-        t('strategyPage.help.items.minRr.what'),
-        t('strategyPage.help.items.minRr.why'),
-        t('strategyPage.help.items.minRr.how')
-      ),
-      maxFeeRiskPct: buildHelp(
-        t('strategyPage.help.items.maxFeeRiskPct.title'),
-        t('strategyPage.help.items.maxFeeRiskPct.short'),
-        t('strategyPage.help.items.maxFeeRiskPct.what'),
-        t('strategyPage.help.items.maxFeeRiskPct.why'),
-        t('strategyPage.help.items.maxFeeRiskPct.how')
-      ),
-      maxAtrPct: buildHelp(
-        t('strategyPage.help.items.maxAtrPct.title'),
-        t('strategyPage.help.items.maxAtrPct.short'),
-        t('strategyPage.help.items.maxAtrPct.what'),
-        t('strategyPage.help.items.maxAtrPct.why'),
-        t('strategyPage.help.items.maxAtrPct.how')
-      ),
-      requireTrendOk: buildHelp(
-        t('strategyPage.help.items.requireTrendOk.title'),
-        t('strategyPage.help.items.requireTrendOk.short'),
-        t('strategyPage.help.items.requireTrendOk.what'),
-        t('strategyPage.help.items.requireTrendOk.why'),
-        t('strategyPage.help.items.requireTrendOk.how')
-      ),
-      requireRsPositive: buildHelp(
-        t('strategyPage.help.items.requireRsPositive.title'),
-        t('strategyPage.help.items.requireRsPositive.short'),
-        t('strategyPage.help.items.requireRsPositive.what'),
-        t('strategyPage.help.items.requireRsPositive.why'),
-        t('strategyPage.help.items.requireRsPositive.how')
-      ),
-      currencies: buildHelp(
-        t('strategyPage.help.items.currencies.title'),
-        t('strategyPage.help.items.currencies.short'),
-        t('strategyPage.help.items.currencies.what'),
-        t('strategyPage.help.items.currencies.why'),
-        t('strategyPage.help.items.currencies.how')
-      ),
-      momentum6m: buildHelp(
-        t('strategyPage.help.items.momentum6m.title'),
-        t('strategyPage.help.items.momentum6m.short'),
-        t('strategyPage.help.items.momentum6m.what'),
-        t('strategyPage.help.items.momentum6m.why'),
-        t('strategyPage.help.items.momentum6m.how')
-      ),
-      momentum12m: buildHelp(
-        t('strategyPage.help.items.momentum12m.title'),
-        t('strategyPage.help.items.momentum12m.short'),
-        t('strategyPage.help.items.momentum12m.what'),
-        t('strategyPage.help.items.momentum12m.why'),
-        t('strategyPage.help.items.momentum12m.how')
-      ),
-      benchmark: buildHelp(
-        t('strategyPage.help.items.benchmark.title'),
-        t('strategyPage.help.items.benchmark.short'),
-        t('strategyPage.help.items.benchmark.what'),
-        t('strategyPage.help.items.benchmark.why'),
-        t('strategyPage.help.items.benchmark.how')
-      ),
-      weightMom6m: buildHelp(
-        t('strategyPage.help.items.weightMom6m.title'),
-        t('strategyPage.help.items.weightMom6m.short'),
-        t('strategyPage.help.items.weightMom6m.what'),
-        t('strategyPage.help.items.weightMom6m.why'),
-        t('strategyPage.help.items.weightMom6m.how')
-      ),
-      weightMom12m: buildHelp(
-        t('strategyPage.help.items.weightMom12m.title'),
-        t('strategyPage.help.items.weightMom12m.short'),
-        t('strategyPage.help.items.weightMom12m.what'),
-        t('strategyPage.help.items.weightMom12m.why'),
-        t('strategyPage.help.items.weightMom12m.how')
-      ),
-      weightRs: buildHelp(
-        t('strategyPage.help.items.weightRs.title'),
-        t('strategyPage.help.items.weightRs.short'),
-        t('strategyPage.help.items.weightRs.what'),
-        t('strategyPage.help.items.weightRs.why'),
-        t('strategyPage.help.items.weightRs.how')
-      ),
-      trailSma: buildHelp(
-        t('strategyPage.help.items.trailSma.title'),
-        t('strategyPage.help.items.trailSma.short'),
-        t('strategyPage.help.items.trailSma.what'),
-        t('strategyPage.help.items.trailSma.why'),
-        t('strategyPage.help.items.trailSma.how')
-      ),
-      smaBuffer: buildHelp(
-        t('strategyPage.help.items.smaBuffer.title'),
-        t('strategyPage.help.items.smaBuffer.short'),
-        t('strategyPage.help.items.smaBuffer.what'),
-        t('strategyPage.help.items.smaBuffer.why'),
-        t('strategyPage.help.items.smaBuffer.how')
-      ),
-      regimeEnabled: buildHelp(
-        t('strategyPage.help.items.regimeEnabled.title'),
-        t('strategyPage.help.items.regimeEnabled.short'),
-        t('strategyPage.help.items.regimeEnabled.what'),
-        t('strategyPage.help.items.regimeEnabled.why'),
-        t('strategyPage.help.items.regimeEnabled.how')
-      ),
-      regimeTrendSma: buildHelp(
-        t('strategyPage.help.items.regimeTrendSma.title'),
-        t('strategyPage.help.items.regimeTrendSma.short'),
-        t('strategyPage.help.items.regimeTrendSma.what'),
-        t('strategyPage.help.items.regimeTrendSma.why'),
-        t('strategyPage.help.items.regimeTrendSma.how')
-      ),
-      regimeTrendMultiplier: buildHelp(
-        t('strategyPage.help.items.regimeTrendMultiplier.title'),
-        t('strategyPage.help.items.regimeTrendMultiplier.short'),
-        t('strategyPage.help.items.regimeTrendMultiplier.what'),
-        t('strategyPage.help.items.regimeTrendMultiplier.why'),
-        t('strategyPage.help.items.regimeTrendMultiplier.how')
-      ),
-      regimeVolAtrWindow: buildHelp(
-        t('strategyPage.help.items.regimeVolAtrWindow.title'),
-        t('strategyPage.help.items.regimeVolAtrWindow.short'),
-        t('strategyPage.help.items.regimeVolAtrWindow.what'),
-        t('strategyPage.help.items.regimeVolAtrWindow.why'),
-        t('strategyPage.help.items.regimeVolAtrWindow.how')
-      ),
-      regimeVolAtrPctThreshold: buildHelp(
-        t('strategyPage.help.items.regimeVolAtrPctThreshold.title'),
-        t('strategyPage.help.items.regimeVolAtrPctThreshold.short'),
-        t('strategyPage.help.items.regimeVolAtrPctThreshold.what'),
-        t('strategyPage.help.items.regimeVolAtrPctThreshold.why'),
-        t('strategyPage.help.items.regimeVolAtrPctThreshold.how')
-      ),
-      regimeVolMultiplier: buildHelp(
-        t('strategyPage.help.items.regimeVolMultiplier.title'),
-        t('strategyPage.help.items.regimeVolMultiplier.short'),
-        t('strategyPage.help.items.regimeVolMultiplier.what'),
-        t('strategyPage.help.items.regimeVolMultiplier.why'),
-        t('strategyPage.help.items.regimeVolMultiplier.how')
-      ),
-      socialOverlayEnabled: buildHelp(
-        t('strategyPage.help.items.socialOverlayEnabled.title'),
-        t('strategyPage.help.items.socialOverlayEnabled.short'),
-        t('strategyPage.help.items.socialOverlayEnabled.what'),
-        t('strategyPage.help.items.socialOverlayEnabled.why'),
-        t('strategyPage.help.items.socialOverlayEnabled.how')
-      ),
-      lookbackHours: buildHelp(
-        t('strategyPage.help.items.lookbackHours.title'),
-        t('strategyPage.help.items.lookbackHours.short'),
-        t('strategyPage.help.items.lookbackHours.what'),
-        t('strategyPage.help.items.lookbackHours.why'),
-        t('strategyPage.help.items.lookbackHours.how')
-      ),
-      attentionZThreshold: buildHelp(
-        t('strategyPage.help.items.attentionZThreshold.title'),
-        t('strategyPage.help.items.attentionZThreshold.short'),
-        t('strategyPage.help.items.attentionZThreshold.what'),
-        t('strategyPage.help.items.attentionZThreshold.why'),
-        t('strategyPage.help.items.attentionZThreshold.how')
-      ),
-      minSampleSize: buildHelp(
-        t('strategyPage.help.items.minSampleSize.title'),
-        t('strategyPage.help.items.minSampleSize.short'),
-        t('strategyPage.help.items.minSampleSize.what'),
-        t('strategyPage.help.items.minSampleSize.why'),
-        t('strategyPage.help.items.minSampleSize.how')
-      ),
-      negativeSentThreshold: buildHelp(
-        t('strategyPage.help.items.negativeSentThreshold.title'),
-        t('strategyPage.help.items.negativeSentThreshold.short'),
-        t('strategyPage.help.items.negativeSentThreshold.what'),
-        t('strategyPage.help.items.negativeSentThreshold.why'),
-        t('strategyPage.help.items.negativeSentThreshold.how')
-      ),
-      sentimentConfThreshold: buildHelp(
-        t('strategyPage.help.items.sentimentConfThreshold.title'),
-        t('strategyPage.help.items.sentimentConfThreshold.short'),
-        t('strategyPage.help.items.sentimentConfThreshold.what'),
-        t('strategyPage.help.items.sentimentConfThreshold.why'),
-        t('strategyPage.help.items.sentimentConfThreshold.how')
-      ),
-      hypePercentileThreshold: buildHelp(
-        t('strategyPage.help.items.hypePercentileThreshold.title'),
-        t('strategyPage.help.items.hypePercentileThreshold.short'),
-        t('strategyPage.help.items.hypePercentileThreshold.what'),
-        t('strategyPage.help.items.hypePercentileThreshold.why'),
-        t('strategyPage.help.items.hypePercentileThreshold.how')
-      ),
-    }),
-    [locale, t]
-  );
-
-  const {
-    canCreate,
-    createDescription,
-    createId,
-    createMutation,
-    createName,
-    deleteMutation,
-    draft,
-    handleCreate,
-    handleDelete,
-    handleReset,
-    handleSave,
-    handleSetActive,
-    highFeeWarning,
-    idAlreadyExists,
-    isActive,
-    lowRrWarning,
-    selectedId,
-    selectedStrategy,
-    setCreateDescription,
-    setCreateId,
-    setCreateName,
-    setDraft,
-    setSelectedId,
-    setShowAdvanced,
-    showAdvanced,
-    statusMessage,
-    strategies,
-    strategiesQuery,
-    updateMutation,
-  } = useStrategyEditor();
-
-  const validationPayload = useMemo(
-    () => (draft ? toStrategyUpdateRequest(draft) : null),
-    [draft],
-  );
-  const strategyValidationQuery = useStrategyValidationQuery(validationPayload);
-  const validationResult = strategyValidationQuery.data;
-  const validationWarnings = validationResult?.warnings ?? [];
-  const [isCompactMobileLayout, setIsCompactMobileLayout] = useState(getMobileLayoutMatch);
-  const [showStrategyManagement, setShowStrategyManagement] = useState(() => {
-    if (typeof window === 'undefined') {
-      return true;
+  const definitionsById = useMemo(() => {
+    const map = new Map<string, StrategyPluginDefinition>();
+    for (const plugin of pluginsQuery.data ?? []) {
+      map.set(plugin.id, plugin);
     }
-    const stored = window.localStorage.getItem('strategy.showManagement');
-    if (stored == null) {
-      return !(isBeginnerMode && getMobileLayoutMatch());
+    return map;
+  }, [pluginsQuery.data]);
+
+  const groupedPlugins = useMemo(() => {
+    const groups = new Map<string, StrategyPluginResolvedState[]>();
+    for (const plugin of configQuery.data?.plugins ?? []) {
+      const category = plugin.category ?? 'education';
+      const existing = groups.get(category) ?? [];
+      existing.push(plugin);
+      groups.set(category, existing);
     }
-    return stored === 'true';
-  });
+    return Array.from(groups.entries()).sort(([a], [b]) => categoryLabel(a).localeCompare(categoryLabel(b)));
+  }, [configQuery.data?.plugins]);
 
-  useEffect(() => {
-    window.localStorage.setItem('strategy.showManagement', String(showStrategyManagement));
-  }, [showStrategyManagement]);
-
-  useEffect(() => {
-    if (!isBeginnerMode || !isCompactMobileLayout) {
-      setShowStrategyManagement(true);
-    }
-  }, [isBeginnerMode, isCompactMobileLayout]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-      return;
-    }
-
-    const mediaQueryList = window.matchMedia(MOBILE_LAYOUT_MEDIA_QUERY);
-    const handleChange = (event: MediaQueryListEvent) => {
-      setIsCompactMobileLayout(event.matches);
-    };
-
-    setIsCompactMobileLayout(mediaQueryList.matches);
-    mediaQueryList.addEventListener('change', handleChange);
-    return () => mediaQueryList.removeEventListener('change', handleChange);
-  }, []);
-
-  return (
-    <div className={`mx-auto max-w-5xl space-y-6 ${draft ? 'pb-28 md:pb-0' : ''}`}>
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">{t('strategyPage.header.title')}</h1>
-          <p className="text-sm text-gray-500 mt-1">{t('strategyPage.header.subtitle')}</p>
-        </div>
-        <div className="flex w-full flex-wrap gap-2 sm:w-auto">
-          <Button
-            variant="secondary"
-            onClick={handleReset}
-            disabled={!draft || updateMutation.isPending}
-            className="flex-1 sm:flex-none"
-          >
-            {t('strategyPage.actions.resetChanges')}
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={!draft || updateMutation.isPending}
-            className="flex-1 sm:flex-none"
-          >
-            {updateMutation.isPending ? t('strategyPage.actions.saving') : t('strategyPage.actions.saveChanges')}
-          </Button>
-        </div>
+  if (configQuery.isLoading || pluginsQuery.isLoading || validationQuery.isLoading) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold">Strategy</h1>
+        <Card variant="bordered">
+          <CardContent className="text-sm text-gray-600 dark:text-gray-300">Loading strategy configuration…</CardContent>
+        </Card>
       </div>
+    );
+  }
 
-      {draft && isBeginnerMode ? (
-        <Card variant="bordered" className="border-emerald-200 bg-emerald-50/70 dark:border-emerald-900 dark:bg-emerald-950/20">
-          <CardHeader>
-            <CardTitle>{t('strategyPage.quickStart.title')}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <ol className="space-y-1 text-sm text-gray-700 dark:text-gray-200">
-              <li>{t('strategyPage.quickStart.step1')}</li>
-              <li>{t('strategyPage.quickStart.step2')}</li>
-              <li>{t('strategyPage.quickStart.step3')}</li>
-            </ol>
-            <Button onClick={handleSave} disabled={!draft || updateMutation.isPending} className="w-full sm:w-auto">
-              {updateMutation.isPending ? t('strategyPage.actions.saving') : t('strategyPage.quickStart.primaryAction')}
-            </Button>
+  const error = configQuery.error ?? pluginsQuery.error ?? validationQuery.error;
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold">Strategy</h1>
+        <Card variant="bordered">
+          <CardContent className="text-sm text-red-600 dark:text-red-300">
+            {error instanceof Error ? error.message : 'Failed to load strategy configuration.'}
           </CardContent>
         </Card>
-      ) : null}
+      </div>
+    );
+  }
+
+  const config = configQuery.data;
+  const validation = validationQuery.data;
+
+  if (!config || !validation) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <h1 className="text-2xl font-bold">Strategy</h1>
+        <p className="text-sm text-gray-600 dark:text-gray-300">
+          Read-only strategy dashboard backed by YAML plugin configuration.
+        </p>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr),minmax(320px,1fr)]">
+        <Card variant="bordered">
+          <CardHeader>
+            <CardTitle>{config.name}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            {config.description ? (
+              <p className="text-gray-700 dark:text-gray-300">{config.description}</p>
+            ) : null}
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="primary">{config.module}</Badge>
+              {config.configPath ? <Badge variant="default">{config.configPath}</Badge> : null}
+              <Badge variant="default">{config.plugins.length} plugins</Badge>
+            </div>
+            <p className="text-gray-600 dark:text-gray-400">
+              Values shown here are resolved from plugin defaults plus root YAML overrides.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card variant="bordered">
+          <CardHeader>
+            <CardTitle>Validation</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              <Badge variant={validation.isValid ? 'success' : 'error'}>
+                {validation.isValid ? 'Valid' : 'Needs attention'}
+              </Badge>
+              <Badge variant="default">Safety score {validation.safetyScore}</Badge>
+              <Badge variant="default">{validation.safetyLevel}</Badge>
+            </div>
+            {validation.warnings.length ? (
+              <div className="space-y-2">
+                {validation.warnings.map((warning) => (
+                  <div
+                    key={`${warning.parameter}-${warning.message}`}
+                    className="rounded-lg border border-gray-200 p-3 dark:border-gray-700"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant={warningVariant(warning.level)}>{warning.level}</Badge>
+                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        {warning.parameter}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">{warning.message}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-600 dark:text-gray-300">No validation warnings.</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       <Card variant="bordered">
-        <CardHeader className="flex flex-row items-center justify-between gap-2">
-          <CardTitle>{t('strategyPage.selection.title')}</CardTitle>
-          {isBeginnerMode && isCompactMobileLayout ? (
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              onClick={() => setShowStrategyManagement((current) => !current)}
-            >
-              {showStrategyManagement
-                ? t('strategyPage.selection.hideManagement')
-                : t('strategyPage.selection.showManagement')}
-            </Button>
-          ) : null}
+        <CardHeader>
+          <CardTitle>Execution Graph</CardTitle>
         </CardHeader>
-        <CardContent>
-          {showStrategyManagement ? (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                <label className="text-sm font-medium md:col-span-2">
-                  <div className="mb-2">{t('strategyPage.selection.chooseStrategy')}</div>
-                  <select
-                    value={selectedId}
-                    onChange={(e) => setSelectedId(e.target.value)}
-                    className={strategyFieldClass}
-                    disabled={strategiesQuery.isLoading}
+        <CardContent className="space-y-3 text-sm">
+          <p className="text-gray-600 dark:text-gray-300">
+            Execution order is resolved from plugin phases plus declared capabilities and dependencies.
+          </p>
+          {config.executionOrder.length ? (
+            <ol className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+              {config.executionOrder.map((pluginId, index) => {
+                const plugin = config.plugins.find((entry) => entry.id === pluginId);
+                return (
+                  <li
+                    key={pluginId}
+                    className="rounded-lg border border-gray-200 p-3 dark:border-gray-700"
                   >
-                    {!strategies.length && (
-                      <option value="">
-                        {strategiesQuery.isLoading
-                          ? t('strategyPage.selection.loadingStrategies')
-                          : t('strategyPage.selection.noStrategies')}
-                      </option>
-                    )}
-                    {strategies.map((strategy) => (
-                      <option key={strategy.id} value={strategy.id}>
-                        {strategy.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <div className="flex items-center gap-2">
-                  <Button variant="secondary" onClick={handleSetActive} disabled={!selectedStrategy || isActive}>
-                    {isActive ? t('strategyPage.selection.active') : t('strategyPage.selection.setActive')}
-                  </Button>
-                  <Button
-                    variant="danger"
-                    onClick={handleDelete}
-                    disabled={!selectedStrategy || selectedStrategy?.isDefault || deleteMutation.isPending}
-                  >
-                    {deleteMutation.isPending ? t('strategyPage.selection.deleting') : t('common.actions.delete')}
-                  </Button>
-                  {selectedStrategy?.isDefault && (
-                    <span className="text-xs text-gray-500">{t('strategyPage.selection.default')}</span>
-                  )}
-                </div>
-              </div>
-              <div className="mt-5 border-t border-border pt-4 space-y-3">
-                <div className="text-sm font-semibold">{t('strategyPage.create.title')}</div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <TextInput
-                    label={t('strategyPage.create.newId')}
-                    value={createId}
-                    onChange={(value) => setCreateId(value)}
-                    placeholder={t('strategyPage.create.newIdPlaceholder')}
-                  />
-                  <TextInput
-                    label={t('strategyPage.create.newName')}
-                    value={createName}
-                    onChange={(value) => setCreateName(value)}
-                    placeholder={t('strategyPage.create.newNamePlaceholder')}
-                  />
-                  <TextInput
-                    label={t('strategyPage.create.newDescription')}
-                    value={createDescription}
-                    onChange={(value) => setCreateDescription(value)}
-                    placeholder={t('strategyPage.create.newDescriptionPlaceholder')}
-                  />
-                </div>
-                {idAlreadyExists && (
-                  <div className="text-xs text-red-600">{t('strategyPage.create.idAlreadyExists')}</div>
-                )}
-                <div className="flex items-center gap-2">
-                  <Button onClick={handleCreate} disabled={!canCreate}>
-                    {createMutation.isPending ? t('strategyPage.actions.saving') : t('strategyPage.create.saveAsNew')}
-                  </Button>
-                  <div className="text-xs text-gray-500">
-                    {t('strategyPage.create.idHint')}
-                  </div>
-                </div>
-              </div>
-              {statusMessage && <div className="mt-3 text-sm text-green-600">{statusMessage}</div>}
-              {updateMutation.isError && (
-                <div className="mt-3 text-sm text-red-600">{t('strategyPage.errors.saveFailed')}</div>
-              )}
-              {createMutation.isError && (
-                <div className="mt-3 text-sm text-red-600">
-                  {(createMutation.error as Error)?.message || t('strategyPage.errors.createFailed')}
-                </div>
-              )}
-              {deleteMutation.isError && (
-                <div className="mt-3 text-sm text-red-600">
-                  {(deleteMutation.error as Error)?.message || t('strategyPage.errors.deleteFailed')}
-                </div>
-              )}
-            </>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                        {index + 1}. {plugin?.displayName ?? pluginId}
+                      </span>
+                      <Badge variant="default">{plugin?.phase ?? 'qualification'}</Badge>
+                    </div>
+                    {plugin?.dependsOn.length ? (
+                      <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                        Depends on: {plugin.dependsOn.join(', ')}
+                      </p>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ol>
           ) : (
-            <div className="text-sm text-gray-500">{t('strategyPage.selection.managementHiddenHint')}</div>
+            <p className="text-gray-600 dark:text-gray-300">No enabled plugins found.</p>
           )}
         </CardContent>
       </Card>
 
-      {!draft && (
-        <Card variant="bordered">
-          <CardContent>
-            <div className="text-sm text-gray-500">{t('strategyPage.selection.selectToEdit')}</div>
-          </CardContent>
-        </Card>
-      )}
-
-      {draft && (
-        <>
-          {/* Strategy Philosophy Card - Shows the "Why" before the "What" */}
-          {(() => {
-            const strategyInfo = getStrategyInfo(draft.module ?? 'momentum');
-            return strategyInfo ? <StrategyPhilosophyCard strategyInfo={strategyInfo} /> : null;
-          })()}
-
-          {/* Beginner Mode Toggle */}
-          <BeginnerModeToggle
-            isBeginnerMode={isBeginnerMode}
-            onToggle={setBeginnerMode}
-          />
-
-          {/* Presets - Only show in beginner mode */}
-          {isBeginnerMode && (
-            <StrategyPresets
-              currentStrategy={draft}
-              onApplyPreset={(preset) => {
-                const updated = applyPresetToStrategy(draft, preset);
-                setDraft(updated);
-              }}
-            />
-          )}
-
-          {/* Safety Score - Provides feedback on configuration quality */}
-          <StrategySafetyScore
-            validation={validationResult}
-            isLoading={strategyValidationQuery.isLoading || strategyValidationQuery.isFetching}
-            isError={strategyValidationQuery.isError}
-          />
-
-          <StrategyCoreSettingsCards
-            draft={draft}
-            setDraft={setDraft}
-            help={help}
-            validationWarnings={validationWarnings}
-            useEnhancedEducation={isBeginnerMode}
-          />
-
-          {/* Advanced Settings - Hidden in beginner mode */}
-          {!isBeginnerMode && (
-            <StrategyAdvancedSettingsCard
-              draft={draft}
-              setDraft={setDraft}
-              showAdvanced={showAdvanced}
-              setShowAdvanced={setShowAdvanced}
-              lowRrWarning={lowRrWarning}
-              highFeeWarning={highFeeWarning}
-              help={help}
-            />
-          )}
-        </>
-      )}
-
-      {draft ? (
-        <div className="fixed inset-x-0 z-30 border-t border-gray-200 bg-white/95 px-3 py-3 shadow-[0_-8px_20px_rgba(0,0,0,0.08)] md:hidden dark:border-gray-700 dark:bg-gray-900/95" style={{ bottom: 'calc(env(safe-area-inset-bottom) + 5.2rem)' }}>
-          <div className="mx-auto flex max-w-5xl items-center gap-2">
-            <Button
-              variant="secondary"
-              onClick={handleReset}
-              disabled={!draft || updateMutation.isPending}
-              className="flex-1"
-            >
-              {t('strategyPage.actions.resetChanges')}
-            </Button>
-            <Button
-              onClick={handleSave}
-              disabled={!draft || updateMutation.isPending}
-              className="flex-[1.35]"
-            >
-              {updateMutation.isPending ? t('strategyPage.actions.saving') : t('strategyPage.actions.saveChanges')}
-            </Button>
+      {groupedPlugins.map(([category, plugins]) => (
+        <section key={category} className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">{categoryLabel(category)}</h2>
+            <Badge variant="default">{plugins.length}</Badge>
           </div>
-        </div>
-      ) : null}
+          <div className="grid gap-4 xl:grid-cols-2">
+            {plugins.map((plugin) => (
+              <StrategyPluginCard
+                key={plugin.id}
+                plugin={plugin}
+                definition={definitionsById.get(plugin.id)}
+              />
+            ))}
+          </div>
+        </section>
+      ))}
     </div>
   );
 }

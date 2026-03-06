@@ -1,0 +1,54 @@
+strategy:
+  id: default
+  name: Default
+  description: Plugin-based momentum strategy loaded from YAML.
+  module: momentum
+  plugins:
+    price_filter:
+      enabled: true
+    atr_filter:
+      enabled: true
+    trend_filter:
+      enabled: true
+    currency_filter:
+      enabled: true
+    rs_filter:
+      enabled: true
+      config:
+        require_rs_positive: false
+    momentum_ranking:
+      enabled: true
+    breakout_signal:
+      enabled: true
+    pullback_signal:
+      enabled: true
+    min_history_gate:
+      enabled: true
+    atr_position_sizing:
+      enabled: true
+    rr_gate:
+      enabled: true
+    fee_gate:
+      enabled: true
+    regime_risk:
+      enabled: true
+      config:
+        enabled: false
+    social_overlay:
+      enabled: true
+      config:
+        enabled: false
+    market_intelligence:
+      enabled: true
+      config:
+        enabled: false
+    breakeven_management:
+      enabled: true
+    trailing_management:
+      enabled: true
+    time_exit_management:
+      enabled: true
+    volume_confirmation:
+      enabled: true
+      config:
+        enabled: false
