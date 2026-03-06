@@ -283,6 +283,164 @@ def test_intelligence_opportunities_filters_by_symbols_query(monkeypatch):
         app.dependency_overrides.clear()
 
 
+def test_intelligence_events_returns_payload(monkeypatch):
+    class FakeStorage:
+        def latest_normalized_events_date(self):
+            return "2026-02-15"
+
+        def latest_opportunities_date(self):
+            return "2026-02-15"
+
+        def load_normalized_events(self, asof_date, **kwargs):
+            assert asof_date == "2026-02-15"
+            from swing_screener.intelligence.models import NormalizedEvent
+
+            return [
+                NormalizedEvent(
+                    event_id="nev-1",
+                    symbol="AAPL",
+                    event_type="earnings",
+                    event_subtype="earnings",
+                    timing_type="scheduled",
+                    materiality=0.84,
+                    confidence=0.8,
+                    primary_source_reliability=0.72,
+                    confirmation_count=2,
+                    published_at="2026-02-15T08:00:00",
+                    event_at="2026-02-15T21:00:00",
+                    source_name="yahoo_finance",
+                    raw_url="https://finance.yahoo.com",
+                    llm_fields={"headline": "AAPL earnings scheduled"},
+                )
+            ]
+
+    service = intelligence_service.IntelligenceService(
+        strategy_repo=SimpleNamespace(get_active_strategy=lambda: {}),
+        config_service=_FakeConfigService(),
+    )
+    monkeypatch.setattr(service, "_storage", FakeStorage())
+    app.dependency_overrides = {}
+    from api.routers.intelligence import get_intelligence_service as dep
+
+    app.dependency_overrides[dep] = lambda: service
+    try:
+        client = TestClient(app)
+        res = client.get("/api/intelligence/events?asof_date=2026-02-15&symbols=AAPL&event_types=earnings")
+        assert res.status_code == 200
+        payload = res.json()
+        assert payload["asof_date"] == "2026-02-15"
+        assert len(payload["events"]) == 1
+        assert payload["events"][0]["symbol"] == "AAPL"
+        assert payload["events"][0]["event_type"] == "earnings"
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_intelligence_upcoming_catalysts_returns_payload(monkeypatch):
+    class FakeStorage:
+        def latest_normalized_events_date(self):
+            return "2026-02-15"
+
+        def latest_opportunities_date(self):
+            return "2026-02-15"
+
+        def load_normalized_events(self, asof_date, **kwargs):
+            from swing_screener.intelligence.models import NormalizedEvent
+
+            return [
+                NormalizedEvent(
+                    event_id="nev-1",
+                    symbol="AAPL",
+                    event_type="earnings",
+                    event_subtype="earnings",
+                    timing_type="scheduled",
+                    materiality=0.84,
+                    confidence=0.8,
+                    primary_source_reliability=0.72,
+                    confirmation_count=2,
+                    published_at="2026-02-15T08:00:00",
+                    event_at="2026-02-16T21:00:00",
+                    source_name="yahoo_finance",
+                    raw_url="https://finance.yahoo.com",
+                    llm_fields={},
+                ),
+                NormalizedEvent(
+                    event_id="nev-2",
+                    symbol="MSFT",
+                    event_type="guidance",
+                    event_subtype="guidance_update",
+                    timing_type="unscheduled",
+                    materiality=0.6,
+                    confidence=0.7,
+                    primary_source_reliability=0.6,
+                    confirmation_count=1,
+                    published_at="2026-02-15T10:00:00",
+                    event_at="2026-02-15T10:00:00",
+                    source_name="financial_news_rss",
+                    raw_url=None,
+                    llm_fields={},
+                ),
+            ]
+
+    service = intelligence_service.IntelligenceService(
+        strategy_repo=SimpleNamespace(get_active_strategy=lambda: {}),
+        config_service=_FakeConfigService(),
+    )
+    monkeypatch.setattr(service, "_storage", FakeStorage())
+    app.dependency_overrides = {}
+    from api.routers.intelligence import get_intelligence_service as dep
+
+    app.dependency_overrides[dep] = lambda: service
+    try:
+        client = TestClient(app)
+        res = client.get("/api/intelligence/upcoming-catalysts?asof_date=2026-02-15&days_ahead=14")
+        assert res.status_code == 200
+        payload = res.json()
+        assert payload["asof_date"] == "2026-02-15"
+        assert payload["days_ahead"] == 14
+        assert len(payload["items"]) == 1
+        assert payload["items"][0]["symbol"] == "AAPL"
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_intelligence_sources_health_returns_payload(monkeypatch):
+    class FakeStorage:
+        def load_source_health(self):
+            return {
+                "yahoo_finance": {
+                    "source_name": "yahoo_finance",
+                    "enabled": True,
+                    "status": "ok",
+                    "latency_ms": 12.0,
+                    "error_count": 0,
+                    "event_count": 12,
+                    "error_rate": 0.0,
+                    "last_ingest": "2026-02-15T20:00:00",
+                }
+            }
+
+    service = intelligence_service.IntelligenceService(
+        strategy_repo=SimpleNamespace(get_active_strategy=lambda: {}),
+        config_service=_FakeConfigService(),
+    )
+    monkeypatch.setattr(service, "_storage", FakeStorage())
+    app.dependency_overrides = {}
+    from api.routers.intelligence import get_intelligence_service as dep
+
+    app.dependency_overrides[dep] = lambda: service
+    try:
+        client = TestClient(app)
+        res = client.get("/api/intelligence/sources/health")
+        assert res.status_code == 200
+        payload = res.json()
+        assert len(payload["sources"]) == 1
+        assert payload["sources"][0]["source_name"] == "yahoo_finance"
+        assert payload["sources"][0]["status"] == "ok"
+    finally:
+        app.dependency_overrides.clear()
+
+
 def test_intelligence_explain_symbol_returns_llm_response(monkeypatch):
     from api.models.intelligence import (
         IntelligenceEducationGenerateResponse,

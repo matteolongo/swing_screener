@@ -8,6 +8,21 @@ from swing_screener.utils import get_nested_dict
 
 DEFAULT_INTEL_PROVIDERS = ("yahoo_finance",)
 SUPPORTED_INTEL_PROVIDERS = {"yahoo_finance", "earnings_calendar"}
+DEFAULT_EVIDENCE_SOURCES = (
+    "yahoo_finance",
+    "earnings_calendar",
+    "sec_edgar",
+    "company_ir_rss",
+)
+SUPPORTED_EVIDENCE_SOURCES = {
+    "yahoo_finance",
+    "earnings_calendar",
+    "sec_edgar",
+    "company_ir_rss",
+    "exchange_announcements",
+    "financial_news_rss",
+    "calendar_fallback_scrape",
+}
 SUPPORTED_UNIVERSE_SCOPES = {"screener_universe", "strategy_universe"}
 DEFAULT_MARKET_CONTEXT_SYMBOLS = ("SPY", "QQQ", "XLK", "SMH", "XBI")
 DEFAULT_SYMBOL_STATES = (
@@ -42,6 +57,57 @@ class OpportunityConfig:
     catalyst_weight: float = 0.45
     max_daily_opportunities: int = 8
     min_opportunity_score: float = 0.55
+
+
+@dataclass(frozen=True)
+class SourceRateLimitConfig:
+    requests_per_minute: int = 90
+    max_concurrency: int = 4
+
+
+@dataclass(frozen=True)
+class SourceTimeoutConfig:
+    connect_seconds: float = 5.0
+    read_seconds: float = 20.0
+
+
+@dataclass(frozen=True)
+class SourcesConfig:
+    enabled: tuple[str, ...] = DEFAULT_EVIDENCE_SOURCES
+    scraping_enabled: bool = False
+    allowed_domains: tuple[str, ...] = tuple()
+    rate_limits: SourceRateLimitConfig = field(default_factory=SourceRateLimitConfig)
+    timeouts: SourceTimeoutConfig = field(default_factory=SourceTimeoutConfig)
+
+
+@dataclass(frozen=True)
+class ScoringV2Weights:
+    reaction_z_component: float = 0.22
+    atr_shock_component: float = 0.12
+    recency_component: float = 0.14
+    proximity_component: float = 0.14
+    materiality_component: float = 0.14
+    source_quality_component: float = 0.10
+    confirmation_component: float = 0.08
+    filing_impact_component: float = 0.06
+    uncertainty_penalty_component: float = 0.10
+
+
+@dataclass(frozen=True)
+class ScoringV2Config:
+    enabled: bool = True
+    weights: ScoringV2Weights = field(default_factory=ScoringV2Weights)
+    low_evidence_confirmation_threshold: float = 0.25
+    low_evidence_source_quality_threshold: float = 0.45
+    stale_event_decay_hours: int = 120
+
+
+@dataclass(frozen=True)
+class CalendarConfig:
+    binary_event_window_days: int = 3
+    binary_event_min_materiality: float = 0.75
+    binary_event_min_threshold_boost: float = 0.08
+    low_evidence_min_threshold_boost: float = 0.06
 
 
 @dataclass(frozen=True)
@@ -86,6 +152,9 @@ class IntelligenceConfig:
     catalyst: CatalystConfig = field(default_factory=CatalystConfig)
     theme: ThemeConfig = field(default_factory=ThemeConfig)
     opportunity: OpportunityConfig = field(default_factory=OpportunityConfig)
+    sources: SourcesConfig = field(default_factory=SourcesConfig)
+    scoring_v2: ScoringV2Config = field(default_factory=ScoringV2Config)
+    calendar: CalendarConfig = field(default_factory=CalendarConfig)
 
 
 def _clean_positive_int(raw: Any, fallback: int, *, min_value: int = 1) -> int:
@@ -120,6 +189,49 @@ def _normalize_weights(technical_weight: Any, catalyst_weight: Any) -> tuple[flo
     if total <= 0:
         return (0.55, 0.45)
     return (technical / total, catalyst / total)
+
+
+def _normalize_v2_weights(raw: dict[str, Any]) -> ScoringV2Weights:
+    defaults = ScoringV2Weights()
+    weights = ScoringV2Weights(
+        reaction_z_component=_clean_ratio(raw.get("reaction_z_component"), defaults.reaction_z_component),
+        atr_shock_component=_clean_ratio(raw.get("atr_shock_component"), defaults.atr_shock_component),
+        recency_component=_clean_ratio(raw.get("recency_component"), defaults.recency_component),
+        proximity_component=_clean_ratio(raw.get("proximity_component"), defaults.proximity_component),
+        materiality_component=_clean_ratio(raw.get("materiality_component"), defaults.materiality_component),
+        source_quality_component=_clean_ratio(raw.get("source_quality_component"), defaults.source_quality_component),
+        confirmation_component=_clean_ratio(raw.get("confirmation_component"), defaults.confirmation_component),
+        filing_impact_component=_clean_ratio(raw.get("filing_impact_component"), defaults.filing_impact_component),
+        uncertainty_penalty_component=_clean_ratio(
+            raw.get("uncertainty_penalty_component"),
+            defaults.uncertainty_penalty_component,
+        ),
+    )
+
+    positive_sum = (
+        weights.reaction_z_component
+        + weights.atr_shock_component
+        + weights.recency_component
+        + weights.proximity_component
+        + weights.materiality_component
+        + weights.source_quality_component
+        + weights.confirmation_component
+        + weights.filing_impact_component
+    )
+    if positive_sum <= 0:
+        return defaults
+    scale = 1.0 / positive_sum
+    return ScoringV2Weights(
+        reaction_z_component=round(weights.reaction_z_component * scale, 6),
+        atr_shock_component=round(weights.atr_shock_component * scale, 6),
+        recency_component=round(weights.recency_component * scale, 6),
+        proximity_component=round(weights.proximity_component * scale, 6),
+        materiality_component=round(weights.materiality_component * scale, 6),
+        source_quality_component=round(weights.source_quality_component * scale, 6),
+        confirmation_component=round(weights.confirmation_component * scale, 6),
+        filing_impact_component=round(weights.filing_impact_component * scale, 6),
+        uncertainty_penalty_component=round(weights.uncertainty_penalty_component, 6),
+    )
 
 
 def _clean_string_list(
@@ -208,6 +320,10 @@ def build_intelligence_config(strategy: dict) -> IntelligenceConfig:
     theme_raw = get_nested_dict(raw, "theme")
     opportunity_raw = get_nested_dict(raw, "opportunity")
     llm_raw = get_nested_dict(raw, "llm")
+    sources_raw = get_nested_dict(raw, "sources")
+    scoring_v2_raw = get_nested_dict(raw, "scoring_v2")
+    scoring_v2_weights_raw = get_nested_dict(scoring_v2_raw, "weights")
+    calendar_raw = get_nested_dict(raw, "calendar")
 
     providers = _clean_string_list(
         raw.get("providers"),
@@ -313,6 +429,73 @@ def build_intelligence_config(strategy: dict) -> IntelligenceConfig:
             ),
             min_opportunity_score=_clean_ratio(
                 opportunity_raw.get("min_opportunity_score"), 0.55
+            ),
+        ),
+        sources=SourcesConfig(
+            enabled=_clean_string_list(
+                sources_raw.get("enabled"),
+                fallback=DEFAULT_EVIDENCE_SOURCES,
+                allowed=SUPPORTED_EVIDENCE_SOURCES,
+                normalize_upper=False,
+            ),
+            scraping_enabled=bool(sources_raw.get("scraping_enabled", False)),
+            allowed_domains=_clean_csv_list(
+                sources_raw.get("allowed_domains"),
+                fallback=tuple(),
+            ),
+            rate_limits=SourceRateLimitConfig(
+                requests_per_minute=_clean_positive_int(
+                    get_nested_dict(sources_raw, "rate_limits").get("requests_per_minute"),
+                    90,
+                ),
+                max_concurrency=_clean_positive_int(
+                    get_nested_dict(sources_raw, "rate_limits").get("max_concurrency"),
+                    4,
+                ),
+            ),
+            timeouts=SourceTimeoutConfig(
+                connect_seconds=_clean_non_negative_float(
+                    get_nested_dict(sources_raw, "timeouts").get("connect_seconds"),
+                    5.0,
+                ),
+                read_seconds=_clean_non_negative_float(
+                    get_nested_dict(sources_raw, "timeouts").get("read_seconds"),
+                    20.0,
+                ),
+            ),
+        ),
+        scoring_v2=ScoringV2Config(
+            enabled=bool(scoring_v2_raw.get("enabled", True)),
+            weights=_normalize_v2_weights(scoring_v2_weights_raw),
+            low_evidence_confirmation_threshold=_clean_ratio(
+                scoring_v2_raw.get("low_evidence_confirmation_threshold"),
+                0.25,
+            ),
+            low_evidence_source_quality_threshold=_clean_ratio(
+                scoring_v2_raw.get("low_evidence_source_quality_threshold"),
+                0.45,
+            ),
+            stale_event_decay_hours=_clean_positive_int(
+                scoring_v2_raw.get("stale_event_decay_hours"),
+                120,
+            ),
+        ),
+        calendar=CalendarConfig(
+            binary_event_window_days=_clean_positive_int(
+                calendar_raw.get("binary_event_window_days"),
+                3,
+            ),
+            binary_event_min_materiality=_clean_ratio(
+                calendar_raw.get("binary_event_min_materiality"),
+                0.75,
+            ),
+            binary_event_min_threshold_boost=_clean_ratio(
+                calendar_raw.get("binary_event_min_threshold_boost"),
+                0.08,
+            ),
+            low_evidence_min_threshold_boost=_clean_ratio(
+                calendar_raw.get("low_evidence_min_threshold_boost"),
+                0.06,
             ),
         ),
     )

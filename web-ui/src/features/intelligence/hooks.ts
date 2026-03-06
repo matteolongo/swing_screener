@@ -1,6 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   fetchIntelligenceEducation,
+  fetchIntelligenceEvents,
+  fetchIntelligenceSourcesHealth,
+  fetchIntelligenceUpcomingCatalysts,
   generateIntelligenceEducation,
   explainIntelligenceSymbol,
   createIntelligenceSymbolSet,
@@ -18,9 +21,11 @@ import {
 import {
   IntelligenceEducationGenerateRequest,
   IntelligenceEducationGenerateResponse,
+  IntelligenceEventsResponse,
   IntelligenceExplainSymbolRequest,
   IntelligenceExplainSymbolResponse,
   IntelligenceConfig,
+  IntelligenceSourcesHealthResponse,
   IntelligenceOpportunitiesResponse,
   IntelligenceProviderInfo,
   IntelligenceProviderTestRequest,
@@ -28,6 +33,7 @@ import {
   IntelligenceRunLaunchResponse,
   IntelligenceRunRequest,
   IntelligenceRunStatus,
+  IntelligenceUpcomingCatalystsResponse,
   IntelligenceSymbolSet,
   IntelligenceSymbolSetUpsertRequest,
 } from '@/features/intelligence/types';
@@ -144,6 +150,71 @@ export function useIntelligenceOpportunitiesScoped(
   return useQuery<IntelligenceOpportunitiesResponse>({
     queryKey: queryKeys.intelligenceOpportunities(asofDate, symbolScope || undefined),
     queryFn: () => fetchIntelligenceOpportunities(asofDate, normalizedSymbols),
+    enabled,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+}
+
+export function useIntelligenceEventsQuery(
+  asofDate?: string,
+  symbols?: string[],
+  eventTypes?: string[],
+  minMateriality?: number,
+  enabled: boolean = true
+) {
+  const normalizedSymbols = (symbols ?? [])
+    .map((symbol) => symbol.trim().toUpperCase())
+    .filter((symbol) => symbol.length > 0);
+  const normalizedEventTypes = (eventTypes ?? [])
+    .map((eventType) => eventType.trim().toLowerCase())
+    .filter((eventType) => eventType.length > 0);
+  return useQuery<IntelligenceEventsResponse>({
+    queryKey: queryKeys.intelligenceEvents(
+      asofDate,
+      normalizedSymbols.join(',') || undefined,
+      normalizedEventTypes.join(',') || undefined,
+      minMateriality
+    ),
+    queryFn: () =>
+      fetchIntelligenceEvents(
+        asofDate,
+        normalizedSymbols,
+        normalizedEventTypes.length > 0 ? normalizedEventTypes : undefined,
+        minMateriality
+      ),
+    enabled,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+}
+
+export function useIntelligenceUpcomingCatalystsQuery(
+  asofDate?: string,
+  symbols?: string[],
+  daysAhead: number = 14,
+  enabled: boolean = true
+) {
+  const normalizedSymbols = (symbols ?? [])
+    .map((symbol) => symbol.trim().toUpperCase())
+    .filter((symbol) => symbol.length > 0);
+  return useQuery<IntelligenceUpcomingCatalystsResponse>({
+    queryKey: queryKeys.intelligenceUpcomingCatalysts(
+      asofDate,
+      normalizedSymbols.join(',') || undefined,
+      daysAhead
+    ),
+    queryFn: () => fetchIntelligenceUpcomingCatalysts(asofDate, normalizedSymbols, daysAhead),
+    enabled,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+}
+
+export function useIntelligenceSourcesHealthQuery(enabled: boolean = true) {
+  return useQuery<IntelligenceSourcesHealthResponse>({
+    queryKey: queryKeys.intelligenceSourcesHealth(),
+    queryFn: fetchIntelligenceSourcesHealth,
     enabled,
     retry: false,
     refetchOnWindowFocus: false,

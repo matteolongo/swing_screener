@@ -30,6 +30,75 @@ class Event:
 
 
 @dataclass(frozen=True)
+class InstrumentProfile:
+    symbol: str
+    exchange_mic: str
+    country_code: str
+    currency: str
+    timezone: str
+    aliases: list[str] = field(default_factory=list)
+    provider_symbol_map: dict[str, str] = field(default_factory=dict)
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class EvidenceRecord:
+    evidence_id: str
+    symbol: str
+    source_name: str
+    source_type: Literal["official", "company", "news", "scrape", "api"]
+    url: str | None
+    headline: str
+    body_snippet: str
+    published_at: str
+    event_at: str | None
+    language: str = "en"
+    raw_payload_ref: str | None = None
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class NormalizedEvent:
+    event_id: str
+    symbol: str
+    event_type: str
+    event_subtype: str
+    timing_type: Literal["scheduled", "unscheduled"]
+    materiality: float
+    confidence: float
+    primary_source_reliability: float
+    confirmation_count: int
+    published_at: str
+    event_at: str | None = None
+    source_name: str = ""
+    raw_url: str | None = None
+    llm_fields: dict[str, str | float | int | bool] = field(default_factory=dict)
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class CatalystFeatureVector:
+    symbol: str
+    proximity_score: float
+    materiality_score: float
+    source_quality_score: float
+    confirmation_score: float
+    uncertainty_penalty: float
+    filing_impact_score: float
+    calendar_risk_score: float
+    top_catalysts: list[dict[str, str | float | int | bool]] = field(default_factory=list)
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
 class CatalystSignal:
     symbol: str
     event_id: str
@@ -64,6 +133,9 @@ class Opportunity:
     opportunity_score: float
     state: SymbolLifecycleState
     explanations: list[str] = field(default_factory=list)
+    score_breakdown_v2: dict[str, float] = field(default_factory=dict)
+    top_catalysts: list[dict[str, str | float | int | bool]] = field(default_factory=list)
+    evidence_quality_flag: Literal["high", "medium", "low"] = "medium"
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -89,4 +161,3 @@ class SymbolState:
             state_score=0.0,
             last_event_id=None,
         )
-

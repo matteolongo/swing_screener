@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from api.dependencies import get_intelligence_config_service, get_intelligence_service
 from api.models.intelligence import (
+    IntelligenceEventsResponse,
     IntelligenceEducationGenerateRequest,
     IntelligenceEducationGenerateResponse,
     IntelligenceExplainSymbolRequest,
@@ -16,6 +17,8 @@ from api.models.intelligence import (
     IntelligenceRunLaunchResponse,
     IntelligenceRunRequest,
     IntelligenceRunStatusResponse,
+    IntelligenceSourcesHealthResponse,
+    IntelligenceUpcomingCatalystsResponse,
     LLMClassifyNewsRequest,
     LLMClassifyNewsResponse,
     LLMEventClassificationResponse,
@@ -180,6 +183,43 @@ def get_opportunities(
     service: IntelligenceService = Depends(get_intelligence_service),
 ):
     return service.get_opportunities(asof_date=asof_date, symbols=symbols)
+
+
+@router.get("/events", response_model=IntelligenceEventsResponse)
+def get_events(
+    asof_date: str | None = Query(default=None),
+    symbols: list[str] | None = Query(default=None),
+    event_types: list[str] | None = Query(default=None),
+    min_materiality: float | None = Query(default=None),
+    service: IntelligenceService = Depends(get_intelligence_service),
+):
+    return service.get_events(
+        asof_date=asof_date,
+        symbols=symbols,
+        event_types=event_types,
+        min_materiality=min_materiality,
+    )
+
+
+@router.get("/upcoming-catalysts", response_model=IntelligenceUpcomingCatalystsResponse)
+def get_upcoming_catalysts(
+    asof_date: str | None = Query(default=None),
+    symbols: list[str] | None = Query(default=None),
+    days_ahead: int = Query(default=14, ge=1, le=60),
+    service: IntelligenceService = Depends(get_intelligence_service),
+):
+    return service.get_upcoming_catalysts(
+        asof_date=asof_date,
+        symbols=symbols,
+        days_ahead=days_ahead,
+    )
+
+
+@router.get("/sources/health", response_model=IntelligenceSourcesHealthResponse)
+def get_sources_health(
+    service: IntelligenceService = Depends(get_intelligence_service),
+):
+    return service.get_sources_health()
 
 
 @router.post("/explain-symbol", response_model=IntelligenceExplainSymbolResponse)

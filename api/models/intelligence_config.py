@@ -98,6 +98,93 @@ class IntelligenceOpportunityConfigModel(BaseModel):
     min_opportunity_score: float = Field(default=0.55, ge=0, le=1)
 
 
+class IntelligenceSourcesRateLimitModel(BaseModel):
+    requests_per_minute: int = Field(default=90, ge=1, le=5000)
+    max_concurrency: int = Field(default=4, ge=1, le=64)
+
+
+class IntelligenceSourcesTimeoutModel(BaseModel):
+    connect_seconds: float = Field(default=5.0, ge=0.1, le=120.0)
+    read_seconds: float = Field(default=20.0, ge=0.1, le=300.0)
+
+
+class IntelligenceSourcesConfigModel(BaseModel):
+    enabled: list[str] = Field(
+        default_factory=lambda: [
+            "yahoo_finance",
+            "earnings_calendar",
+            "sec_edgar",
+            "company_ir_rss",
+        ]
+    )
+    scraping_enabled: bool = False
+    allowed_domains: list[str] = Field(default_factory=list)
+    rate_limits: IntelligenceSourcesRateLimitModel = Field(default_factory=IntelligenceSourcesRateLimitModel)
+    timeouts: IntelligenceSourcesTimeoutModel = Field(default_factory=IntelligenceSourcesTimeoutModel)
+
+    @field_validator("enabled")
+    @classmethod
+    def _normalize_enabled_sources(cls, values: list[str]) -> list[str]:
+        allowed = {
+            "yahoo_finance",
+            "earnings_calendar",
+            "sec_edgar",
+            "company_ir_rss",
+            "exchange_announcements",
+            "financial_news_rss",
+            "calendar_fallback_scrape",
+        }
+        normalized: list[str] = []
+        seen: set[str] = set()
+        for value in values:
+            source = str(value).strip().lower()
+            if not source or source in seen or source not in allowed:
+                continue
+            seen.add(source)
+            normalized.append(source)
+        return normalized or ["yahoo_finance", "earnings_calendar", "sec_edgar", "company_ir_rss"]
+
+    @field_validator("allowed_domains")
+    @classmethod
+    def _normalize_allowed_domains(cls, values: list[str]) -> list[str]:
+        normalized: list[str] = []
+        seen: set[str] = set()
+        for value in values:
+            domain = str(value).strip().lower()
+            if not domain or domain in seen:
+                continue
+            seen.add(domain)
+            normalized.append(domain)
+        return normalized
+
+
+class IntelligenceScoringV2WeightsModel(BaseModel):
+    reaction_z_component: float = Field(default=0.22, ge=0, le=1)
+    atr_shock_component: float = Field(default=0.12, ge=0, le=1)
+    recency_component: float = Field(default=0.14, ge=0, le=1)
+    proximity_component: float = Field(default=0.14, ge=0, le=1)
+    materiality_component: float = Field(default=0.14, ge=0, le=1)
+    source_quality_component: float = Field(default=0.10, ge=0, le=1)
+    confirmation_component: float = Field(default=0.08, ge=0, le=1)
+    filing_impact_component: float = Field(default=0.06, ge=0, le=1)
+    uncertainty_penalty_component: float = Field(default=0.10, ge=0, le=1)
+
+
+class IntelligenceScoringV2ConfigModel(BaseModel):
+    enabled: bool = True
+    weights: IntelligenceScoringV2WeightsModel = Field(default_factory=IntelligenceScoringV2WeightsModel)
+    low_evidence_confirmation_threshold: float = Field(default=0.25, ge=0, le=1)
+    low_evidence_source_quality_threshold: float = Field(default=0.45, ge=0, le=1)
+    stale_event_decay_hours: int = Field(default=120, ge=1, le=1000)
+
+
+class IntelligenceCalendarConfigModel(BaseModel):
+    binary_event_window_days: int = Field(default=3, ge=1, le=30)
+    binary_event_min_materiality: float = Field(default=0.75, ge=0, le=1)
+    binary_event_min_threshold_boost: float = Field(default=0.08, ge=0, le=1)
+    low_evidence_min_threshold_boost: float = Field(default=0.06, ge=0, le=1)
+
+
 class IntelligenceConfigModel(BaseModel):
     enabled: bool = False
     providers: list[str] = Field(default_factory=lambda: ["yahoo_finance"])
@@ -109,6 +196,9 @@ class IntelligenceConfigModel(BaseModel):
     catalyst: IntelligenceCatalystConfigModel = Field(default_factory=IntelligenceCatalystConfigModel)
     theme: IntelligenceThemeConfigModel = Field(default_factory=IntelligenceThemeConfigModel)
     opportunity: IntelligenceOpportunityConfigModel = Field(default_factory=IntelligenceOpportunityConfigModel)
+    sources: IntelligenceSourcesConfigModel = Field(default_factory=IntelligenceSourcesConfigModel)
+    scoring_v2: IntelligenceScoringV2ConfigModel = Field(default_factory=IntelligenceScoringV2ConfigModel)
+    calendar: IntelligenceCalendarConfigModel = Field(default_factory=IntelligenceCalendarConfigModel)
 
     @field_validator("providers")
     @classmethod

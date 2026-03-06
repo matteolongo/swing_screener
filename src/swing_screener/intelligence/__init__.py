@@ -1,15 +1,31 @@
 """Market intelligence configuration and domain helpers."""
 
 from .config import (
+    CalendarConfig,
     CatalystConfig,
     IntelligenceConfig,
     LLMConfig,
     OpportunityConfig,
+    ScoringV2Config,
+    ScoringV2Weights,
+    SourceRateLimitConfig,
+    SourceTimeoutConfig,
+    SourcesConfig,
     ThemeConfig,
     build_intelligence_config,
 )
 from .ingestion import collect_events
-from .models import CatalystSignal, Event, Opportunity, SymbolState, ThemeCluster
+from .models import (
+    CatalystFeatureVector,
+    CatalystSignal,
+    EvidenceRecord,
+    Event,
+    InstrumentProfile,
+    NormalizedEvent,
+    Opportunity,
+    SymbolState,
+    ThemeCluster,
+)
 from .pipeline import IntelligenceSnapshot, run_intelligence_pipeline
 from .reaction import ReactionMetrics, build_catalyst_signals, evaluate_event_reaction
 from .relations import (
@@ -20,6 +36,7 @@ from .relations import (
 from .scoring import (
     CatalystScoreBreakdown,
     build_catalyst_score_map,
+    build_catalyst_score_map_v2,
     build_opportunities,
     score_catalyst_signal,
 )
@@ -28,13 +45,23 @@ from .storage import IntelligenceStorage
 
 __all__ = [
     "CatalystConfig",
+    "CalendarConfig",
+    "CatalystFeatureVector",
     "CatalystSignal",
+    "EvidenceRecord",
     "Event",
     "IntelligenceConfig",
     "IntelligenceStorage",
+    "InstrumentProfile",
     "LLMConfig",
+    "NormalizedEvent",
     "Opportunity",
     "OpportunityConfig",
+    "ScoringV2Config",
+    "ScoringV2Weights",
+    "SourceRateLimitConfig",
+    "SourceTimeoutConfig",
+    "SourcesConfig",
     "SymbolState",
     "ThemeConfig",
     "ThemeCluster",
@@ -51,6 +78,7 @@ __all__ = [
     "update_symbol_states",
     "CatalystScoreBreakdown",
     "build_catalyst_score_map",
+    "build_catalyst_score_map_v2",
     "build_opportunities",
     "score_catalyst_signal",
     "IntelligenceSnapshot",
