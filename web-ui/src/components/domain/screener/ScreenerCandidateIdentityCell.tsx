@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { CandidateViewModel } from '@/features/screener/viewModel';
 import RecommendationBadge from '@/components/domain/recommendation/RecommendationBadge';
 import CachedSymbolPriceChart from '@/components/domain/market/CachedSymbolPriceChart';
@@ -7,6 +8,7 @@ import { t } from '@/i18n/t';
 interface ScreenerCandidateIdentityCellProps {
   candidate: CandidateViewModel;
   onSymbolClick?: (ticker: string) => void;
+  watchContent?: ReactNode;
 }
 
 /**
@@ -15,6 +17,7 @@ interface ScreenerCandidateIdentityCellProps {
 export default function ScreenerCandidateIdentityCell({
   candidate,
   onSymbolClick,
+  watchContent,
 }: ScreenerCandidateIdentityCellProps) {
   const yahooUrl = `https://finance.yahoo.com/quote/${candidate.ticker}`;
   const confidenceValue = Number.isFinite(candidate.confidence)
@@ -62,6 +65,7 @@ export default function ScreenerCandidateIdentityCell({
         ) : null}
         <RecommendationBadge verdict={candidate.verdict} />
       </div>
+      {watchContent}
       <CachedSymbolPriceChart ticker={candidate.ticker} />
 
       {/* Confidence */}

@@ -576,6 +576,22 @@ const defaultIntelligenceSymbolSets = [
 
 let intelligenceConfig = structuredClone(mockIntelligenceConfig)
 let intelligenceSymbolSets = [...defaultIntelligenceSymbolSets]
+type WatchlistItemPayload = {
+  ticker: string
+  watched_at: string
+  watch_price: number | null
+  currency: string | null
+  source: string
+}
+let watchlistItems: WatchlistItemPayload[] = []
+
+export function resetMockApiState(): void {
+  activeStrategyId = mockStrategies[0].id
+  strategies = [...mockStrategies]
+  intelligenceConfig = structuredClone(mockIntelligenceConfig)
+  intelligenceSymbolSets = [...defaultIntelligenceSymbolSets]
+  watchlistItems = []
+}
 
 const mockIntelligenceStatus = {
   job_id: 'intel-job-123',
@@ -886,6 +902,42 @@ export const handlers = [
 
   http.get(`${API_BASE_URL}/api/portfolio/orders/snapshot`, () => {
     return HttpResponse.json(mockOrderSnapshots)
+  }),
+
+  // Watchlist endpoints
+  http.get(`${API_BASE_URL}/api/watchlist`, () => {
+    return HttpResponse.json({ items: watchlistItems })
+  }),
+
+  http.put(`${API_BASE_URL}/api/watchlist/:ticker`, async ({ params, request }) => {
+    const ticker = String(params.ticker || '').trim().toUpperCase()
+    if (!ticker) {
+      return HttpResponse.json({ detail: 'ticker is required' }, { status: 422 })
+    }
+    const existing = watchlistItems.find((item) => item.ticker === ticker)
+    if (existing) {
+      return HttpResponse.json(existing)
+    }
+    const body = asObject(await request.json())
+    const created: WatchlistItemPayload = {
+      ticker,
+      watched_at: new Date().toISOString(),
+      watch_price: typeof body.watch_price === 'number' ? body.watch_price : null,
+      currency: body.currency ? String(body.currency).trim().toUpperCase() : null,
+      source: String(body.source || '').trim().toLowerCase() || 'unknown',
+    }
+    watchlistItems = [...watchlistItems, created]
+    return HttpResponse.json(created)
+  }),
+
+  http.delete(`${API_BASE_URL}/api/watchlist/:ticker`, ({ params }) => {
+    const ticker = String(params.ticker || '').trim().toUpperCase()
+    const beforeCount = watchlistItems.length
+    watchlistItems = watchlistItems.filter((item) => item.ticker !== ticker)
+    if (watchlistItems.length === beforeCount) {
+      return HttpResponse.json({ detail: `Watch item not found: ${ticker}` }, { status: 404 })
+    }
+    return HttpResponse.json({ deleted: true })
   }),
 
   // Screener endpoints

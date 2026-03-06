@@ -32,6 +32,28 @@ export const messagesEn = {
     yes: 'Yes',
     no: 'No',
   },
+  watchlist: {
+    actions: {
+      watch: 'Watch',
+      unwatch: 'Unwatch',
+      working: 'Saving...',
+      watchAria: 'Watch {{ticker}}',
+      unwatchAria: 'Unwatch {{ticker}}',
+    },
+    since: {
+      label: 'Watched: {{value}}',
+      unknown: 'unknown',
+      justNow: 'just now',
+      minutesAgo: '{{value}}m ago',
+      hoursAgo: '{{value}}h ago',
+      daysAgo: '{{value}}d ago',
+    },
+    delta: {
+      label: 'Since watched: {{value}}',
+      unavailable: '—',
+      value: '{{abs}} ({{pct}})',
+    },
+  },
   modal: {
     closeAria: 'Close modal',
   },
@@ -445,7 +467,8 @@ export const messagesEn = {
         description: 'Review open positions and pending orders in one table.',
         columns: {
           symbol: 'Symbol',
-          pnl: 'P/L',
+          pnlGross: 'P/L Gross',
+          pnlNet: 'P/L Net',
           entry: 'Entry',
           current: 'Current',
           stop: 'Stop Loss',

@@ -20,6 +20,7 @@ export const queryKeys = {
   intelligenceConfig: () => ['intelligence-config'] as const,
   intelligenceProviders: () => ['intelligence-providers'] as const,
   intelligenceSymbolSets: () => ['intelligence-symbol-sets'] as const,
+  watchlist: () => ['watchlist'] as const,
   intelligenceRunStatus: (jobId?: string) => ['intelligence-run-status', jobId] as const,
   intelligenceOpportunities: (asofDate?: string, symbolScope?: string) =>
     ['intelligence-opportunities', asofDate, symbolScope] as const,

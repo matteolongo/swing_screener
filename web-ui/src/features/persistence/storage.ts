@@ -1,9 +1,10 @@
 import {
   createDefaultTradingStore,
+  isPersistedTradingStoreV2,
   isPersistedTradingStoreV1,
   TRADING_STORE_SCHEMA_VERSION,
   type PersistedTradingStore,
-  type PersistedTradingStoreV1,
+  type PersistedTradingStoreV2,
 } from '@/features/persistence/schema';
 
 export const TRADING_STORE_STORAGE_KEY = 'swing-screener.trading-store.v1';
@@ -24,17 +25,48 @@ function persistStore(store: PersistedTradingStore): void {
   window.localStorage.setItem(TRADING_STORE_STORAGE_KEY, JSON.stringify(store));
 }
 
-function ensureDefaultStore(): PersistedTradingStoreV1 {
+function ensureDefaultStore(): PersistedTradingStoreV2 {
   const store = createDefaultTradingStore();
   persistStore(store);
   return store;
 }
 
 function migrateStore(raw: unknown): PersistedTradingStore {
-  if (isPersistedTradingStoreV1(raw)) {
+  if (isPersistedTradingStoreV2(raw)) {
     return raw;
   }
+  if (isPersistedTradingStoreV1(raw)) {
+    return {
+      ...raw,
+      version: TRADING_STORE_SCHEMA_VERSION,
+      watchlist: [],
+    };
+  }
+  if (raw && typeof raw === 'object') {
+    const candidate = raw as Record<string, unknown>;
+    if (
+      typeof candidate.updatedAt === 'string' &&
+      Array.isArray(candidate.strategies) &&
+      typeof candidate.activeStrategyId === 'string' &&
+      Array.isArray(candidate.orders) &&
+      Array.isArray(candidate.positions)
+    ) {
+      return {
+        version: TRADING_STORE_SCHEMA_VERSION,
+        updatedAt: candidate.updatedAt,
+        strategies: candidate.strategies as PersistedTradingStore['strategies'],
+        activeStrategyId: candidate.activeStrategyId,
+        orders: candidate.orders as PersistedTradingStore['orders'],
+        positions: candidate.positions as PersistedTradingStore['positions'],
+        watchlist: [],
+      };
+    }
+  }
   return createDefaultTradingStore();
+}
+
+function isCurrentStore(value: unknown): value is PersistedTradingStore {
+  return isPersistedTradingStoreV2(value);
 }
 
 export function readTradingStore(): PersistedTradingStore {
@@ -55,7 +87,7 @@ export function readTradingStore(): PersistedTradingStore {
       persistStore(fallback);
       return fallback;
     }
-    if (!isPersistedTradingStoreV1(parsed)) {
+    if (!isCurrentStore(parsed)) {
       persistStore(migrated);
     }
     return cloneStore(migrated);

@@ -128,6 +128,31 @@ describe('Workspace Page', () => {
     });
   });
 
+  it('shows watch controls for screener and portfolio symbols', async () => {
+    const { user } = renderWithProviders(<Workspace />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Watch VALE/i })).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('button', { name: /Watch VALE/i }));
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Unwatch VALE/i })).toBeInTheDocument();
+    });
+
+    const runButtons = screen.getAllByRole('button', { name: /Run Screener/i });
+    await user.click(runButtons[0]);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Watch AAPL/i })).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('button', { name: /Watch AAPL/i }));
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Unwatch AAPL/i })).toBeInTheDocument();
+    });
+  });
+
   it('loads a portfolio ticker into analysis when clicking the portfolio table', async () => {
     const { user } = renderWithProviders(<Workspace />);
 

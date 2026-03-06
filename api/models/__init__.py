@@ -68,6 +68,12 @@ from api.models.intelligence_config import (
     IntelligenceSymbolSetsResponse,
     IntelligenceSymbolSetDeleteResponse,
 )
+from api.models.watchlist import (
+    WatchItem,
+    WatchItemUpsertRequest,
+    WatchlistResponse,
+    WatchlistDeleteResponse,
+)
 
 __all__ = [
     "AppConfig",
@@ -137,4 +143,8 @@ __all__ = [
     "IntelligenceSymbolSetResponse",
     "IntelligenceSymbolSetsResponse",
     "IntelligenceSymbolSetDeleteResponse",
+    "WatchItem",
+    "WatchItemUpsertRequest",
+    "WatchlistResponse",
+    "WatchlistDeleteResponse",
 ]
