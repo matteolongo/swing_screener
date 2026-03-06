@@ -29,6 +29,10 @@ export const API_ENDPOINTS = {
   order: (id: string) => `/api/portfolio/orders/${id}`,
   orderFill: (id: string) => `/api/portfolio/orders/${id}/fill`,
 
+  // Watchlist
+  watchlist: '/api/watchlist',
+  watchlistItem: (ticker: string) => `/api/watchlist/${encodeURIComponent(ticker)}`,
+
   // Social
   socialAnalyze: '/api/social/analyze',
   socialWarmupStatus: (jobId: string) => `/api/social/warmup/${jobId}`,

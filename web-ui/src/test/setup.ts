@@ -6,6 +6,7 @@ import { notifyManager } from '@tanstack/react-query'
 import type { SetupServerApi } from 'msw/node'
 
 let server: SetupServerApi | null = null
+let resetMockApiState: (() => void) | null = null
 const originalConsoleError = console.error
 
 // Extend Vitest's expect with jest-dom matchers
@@ -43,6 +44,8 @@ beforeAll(async () => {
   vi.stubEnv('VITE_ENABLE_LOCAL_PERSISTENCE', 'false')
   const mod = await import('./mocks/server')
   server = mod.server
+  resetMockApiState = mod.resetMockApiState
+  resetMockApiState?.()
   server.listen({ onUnhandledRequest: 'warn' })
   console.error = (...args) => {
     if (typeof args[0] === 'string' && args[0].includes('not wrapped in act')) {
@@ -64,6 +67,7 @@ beforeAll(async () => {
 afterEach(() => {
   vi.stubEnv('VITE_PERSISTENCE_MODE', 'api')
   vi.stubEnv('VITE_ENABLE_LOCAL_PERSISTENCE', 'false')
+  resetMockApiState?.()
   server?.resetHandlers()
   cleanup()
   // Reset localStorage and set mode to advanced for tests (to preserve existing test expectations)

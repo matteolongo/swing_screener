@@ -13,6 +13,7 @@ from api.repositories.positions_repo import PositionsRepository
 from api.repositories.strategy_repo import StrategyRepository
 from api.repositories.intelligence_config_repo import IntelligenceConfigRepository
 from api.repositories.intelligence_symbol_sets_repo import IntelligenceSymbolSetsRepository
+from api.repositories.watchlist_repo import WatchlistRepository
 from api.services.intelligence_config_service import IntelligenceConfigService
 from api.services.intelligence_service import IntelligenceService
 from api.services.portfolio_service import PortfolioService
@@ -26,6 +27,7 @@ ROOT_DIR = Path(__file__).parent.parent.resolve()
 DATA_DIR = ROOT_DIR / "data"
 POSITIONS_FILE = DATA_DIR / "positions.json"
 ORDERS_FILE = DATA_DIR / "orders.json"
+WATCHLIST_FILE = DATA_DIR / "watchlist.json"
 
 # Global singleton config repository (thread-safe)
 _config_repository: Optional[ConfigRepository] = None
@@ -42,12 +44,29 @@ def get_orders_path() -> Path:
     return ORDERS_FILE
 
 
+def get_watchlist_path() -> Path:
+    """Get path to watchlist.json."""
+    return WATCHLIST_FILE
+
+
 def get_orders_repo() -> OrdersRepository:
-    return OrdersRepository(get_orders_path())
+    path = get_orders_path()
+    if not path.exists():
+        from api.utils.file_lock import locked_write_json
+        locked_write_json(path, {"asof": get_today_str(), "orders": []})
+    return OrdersRepository(path)
 
 
 def get_positions_repo() -> PositionsRepository:
-    return PositionsRepository(get_positions_path())
+    path = get_positions_path()
+    if not path.exists():
+        from api.utils.file_lock import locked_write_json
+        locked_write_json(path, {"asof": get_today_str(), "positions": []})
+    return PositionsRepository(path)
+
+
+def get_watchlist_repo() -> WatchlistRepository:
+    return WatchlistRepository(get_watchlist_path())
 
 
 def get_strategy_repo() -> StrategyRepository:
