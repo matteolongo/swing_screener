@@ -1,2 +1,7 @@
 *
 !.gitignore
+!domain_policies.json
+!issuer_registry.json
+!instrument_master.json
+!source_catalog.json
+!discovered_feeds_cache.json

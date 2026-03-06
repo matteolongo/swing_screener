@@ -13,6 +13,7 @@ from api.models.intelligence import (
     IntelligenceEducationGenerateResponse,
     IntelligenceExplainSymbolRequest,
     IntelligenceExplainSymbolResponse,
+    IntelligenceMetricsResponse,
     IntelligenceOpportunitiesResponse,
     IntelligenceRunLaunchResponse,
     IntelligenceRunRequest,
@@ -220,6 +221,14 @@ def get_sources_health(
     service: IntelligenceService = Depends(get_intelligence_service),
 ):
     return service.get_sources_health()
+
+
+@router.get("/metrics", response_model=IntelligenceMetricsResponse)
+def get_metrics(
+    asof_date: str | None = Query(default=None),
+    service: IntelligenceService = Depends(get_intelligence_service),
+):
+    return service.get_metrics(asof_date=asof_date)
 
 
 @router.post("/explain-symbol", response_model=IntelligenceExplainSymbolResponse)

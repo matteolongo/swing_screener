@@ -14,6 +14,8 @@ import {
   IntelligenceOpportunitiesResponseAPI,
   IntelligenceProviderInfo,
   IntelligenceProviderInfoAPI,
+  IntelligenceMetricsResponse,
+  IntelligenceMetricsResponseAPI,
   IntelligenceProviderTestRequest,
   IntelligenceProviderTestResponse,
   IntelligenceProviderTestResponseAPI,
@@ -38,6 +40,7 @@ import {
   toProviderTestRequestAPI,
   transformEducationGenerateResponse,
   transformIntelligenceEventsResponse,
+  transformIntelligenceMetricsResponse,
   transformIntelligenceSourcesHealthResponse,
   transformIntelligenceUpcomingCatalystsResponse,
   transformExplainSymbolResponse,
@@ -283,6 +286,20 @@ export async function fetchIntelligenceSourcesHealth(): Promise<IntelligenceSour
   }
   const payload: IntelligenceSourcesHealthResponseAPI = await response.json();
   return transformIntelligenceSourcesHealthResponse(payload);
+}
+
+export async function fetchIntelligenceMetrics(asofDate?: string): Promise<IntelligenceMetricsResponse> {
+  const endpoint = new URL(apiUrl(API_ENDPOINTS.intelligenceMetrics), window.location.origin);
+  if (asofDate) {
+    endpoint.searchParams.set('asof_date', asofDate);
+  }
+  const response = await fetch(endpoint.toString());
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.detail || 'Failed to fetch intelligence metrics');
+  }
+  const payload: IntelligenceMetricsResponseAPI = await response.json();
+  return transformIntelligenceMetricsResponse(payload);
 }
 
 export async function explainIntelligenceSymbol(

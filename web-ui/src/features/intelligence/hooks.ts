@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   fetchIntelligenceEducation,
   fetchIntelligenceEvents,
+  fetchIntelligenceMetrics,
   fetchIntelligenceSourcesHealth,
   fetchIntelligenceUpcomingCatalysts,
   generateIntelligenceEducation,
@@ -25,6 +26,7 @@ import {
   IntelligenceExplainSymbolRequest,
   IntelligenceExplainSymbolResponse,
   IntelligenceConfig,
+  IntelligenceMetricsResponse,
   IntelligenceSourcesHealthResponse,
   IntelligenceOpportunitiesResponse,
   IntelligenceProviderInfo,
@@ -215,6 +217,16 @@ export function useIntelligenceSourcesHealthQuery(enabled: boolean = true) {
   return useQuery<IntelligenceSourcesHealthResponse>({
     queryKey: queryKeys.intelligenceSourcesHealth(),
     queryFn: fetchIntelligenceSourcesHealth,
+    enabled,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+}
+
+export function useIntelligenceMetricsQuery(asofDate?: string, enabled: boolean = true) {
+  return useQuery<IntelligenceMetricsResponse>({
+    queryKey: queryKeys.intelligenceMetrics(asofDate),
+    queryFn: () => fetchIntelligenceMetrics(asofDate),
     enabled,
     retry: false,
     refetchOnWindowFocus: false,

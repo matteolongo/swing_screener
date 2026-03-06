@@ -38,6 +38,9 @@ class InstrumentProfile:
     timezone: str
     aliases: list[str] = field(default_factory=list)
     provider_symbol_map: dict[str, str] = field(default_factory=dict)
+    resolution_source: Literal["override", "master", "heuristic"] = "heuristic"
+    resolution_confidence: float = 0.5
+    resolution_reason_code: str | None = None
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -56,6 +59,8 @@ class EvidenceRecord:
     event_at: str | None
     language: str = "en"
     raw_payload_ref: str | None = None
+    feed_origin: Literal["discovered", "catalog", "manual"] = "manual"
+    blocked_reason: str | None = None
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -77,6 +82,9 @@ class NormalizedEvent:
     source_name: str = ""
     raw_url: str | None = None
     llm_fields: dict[str, str | float | int | bool] = field(default_factory=dict)
+    dynamic_source_quality: float = 0.0
+    resolution_source: str = "heuristic"
+    dedupe_method: str = "url_exact"
 
     def to_dict(self) -> dict:
         return asdict(self)

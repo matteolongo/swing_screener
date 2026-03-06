@@ -64,6 +64,14 @@ class IntelligenceStorage:
     def source_health_path(self) -> Path:
         return self.root_dir / "sources_health.json"
 
+    @property
+    def source_quality_stats_path(self) -> Path:
+        return self.root_dir / "source_quality_stats.json"
+
+    @property
+    def intelligence_metrics_path(self) -> Path:
+        return self.root_dir / "intelligence_metrics.json"
+
     def write_events(self, events: Iterable[Event], asof: date | str) -> Path:
         path = self.events_path(asof)
         lines = [json.dumps(asdict(event), sort_keys=True) for event in events]
@@ -231,6 +239,9 @@ class IntelligenceStorage:
                     source_name=str(item.get("source_name", "")),
                     raw_url=(str(item.get("raw_url")) if item.get("raw_url") else None),
                     llm_fields=llm_fields,
+                    dynamic_source_quality=float(item.get("dynamic_source_quality", 0.0)),
+                    resolution_source=str(item.get("resolution_source", "heuristic")),
+                    dedupe_method=str(item.get("dedupe_method", "url_exact")),
                 )
             )
         out.sort(key=lambda event: (event.event_at or event.published_at, event.event_id), reverse=True)
@@ -286,6 +297,12 @@ class IntelligenceStorage:
                     event_at=(str(item.get("event_at")) if item.get("event_at") else None),
                     language=str(item.get("language", "en") or "en"),
                     raw_payload_ref=(str(item.get("raw_payload_ref")) if item.get("raw_payload_ref") else None),
+                    feed_origin=(
+                        str(item.get("feed_origin", "manual")).strip().lower()
+                        if str(item.get("feed_origin", "manual")).strip().lower() in {"discovered", "catalog", "manual"}
+                        else "manual"
+                    ),  # type: ignore[arg-type]
+                    blocked_reason=(str(item.get("blocked_reason")) if item.get("blocked_reason") else None),
                 )
             )
         return out
@@ -520,3 +537,42 @@ class IntelligenceStorage:
                 continue
             out[source] = value
         return out
+
+    def write_source_quality_stats(self, payload: dict[str, dict]) -> Path:
+        path = self.source_quality_stats_path
+        locked_write_json_cli(path, payload)
+        return path
+
+    def load_source_quality_stats(self) -> dict[str, dict]:
+        path = self.source_quality_stats_path
+        if not path.exists():
+            return {}
+        try:
+            payload = locked_read_json_cli(path)
+        except Exception:
+            return {}
+        if not isinstance(payload, dict):
+            return {}
+        out: dict[str, dict] = {}
+        for source, value in payload.items():
+            key = str(source).strip().lower()
+            if key and isinstance(value, dict):
+                out[key] = value
+        return out
+
+    def write_intelligence_metrics(self, payload: dict[str, object]) -> Path:
+        path = self.intelligence_metrics_path
+        locked_write_json_cli(path, payload)
+        return path
+
+    def load_intelligence_metrics(self) -> dict[str, object]:
+        path = self.intelligence_metrics_path
+        if not path.exists():
+            return {}
+        try:
+            payload = locked_read_json_cli(path)
+        except Exception:
+            return {}
+        if not isinstance(payload, dict):
+            return {}
+        return payload

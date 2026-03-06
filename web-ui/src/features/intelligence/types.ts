@@ -119,6 +119,9 @@ export interface IntelligenceEvent {
   sourceName: string;
   rawUrl?: string;
   llmFields: Record<string, string | number | boolean>;
+  dynamicSourceQuality?: number;
+  resolutionSource?: string;
+  dedupeMethod?: string;
 }
 
 export interface IntelligenceEventAPI {
@@ -136,6 +139,9 @@ export interface IntelligenceEventAPI {
   source_name: string;
   raw_url?: string | null;
   llm_fields?: Record<string, string | number | boolean>;
+  dynamic_source_quality?: number;
+  resolution_source?: string;
+  dedupe_method?: string;
 }
 
 export interface IntelligenceEventsResponse {
@@ -194,6 +200,10 @@ export interface IntelligenceSourceHealth {
   errorCount: number;
   eventCount: number;
   errorRate: number;
+  blockedCount: number;
+  blockedReasons: string[];
+  coverageRatio: number;
+  meanConfidence: number;
   lastIngest?: string;
 }
 
@@ -205,6 +215,10 @@ export interface IntelligenceSourceHealthAPI {
   error_count: number;
   event_count: number;
   error_rate: number;
+  blocked_count?: number;
+  blocked_reasons?: string[];
+  coverage_ratio?: number;
+  mean_confidence?: number;
   last_ingest?: string | null;
 }
 
@@ -214,6 +228,22 @@ export interface IntelligenceSourcesHealthResponse {
 
 export interface IntelligenceSourcesHealthResponseAPI {
   sources: IntelligenceSourceHealthAPI[];
+}
+
+export interface IntelligenceMetricsResponse {
+  asofDate: string;
+  coverageGlobal: number;
+  meanConfidenceGlobal: number;
+  dedupeRatio: number;
+  eventsPerSource: Record<string, number>;
+}
+
+export interface IntelligenceMetricsResponseAPI {
+  asof_date: string;
+  coverage_global: number;
+  mean_confidence_global: number;
+  dedupe_ratio: number;
+  events_per_source: Record<string, number>;
 }
 
 export interface IntelligenceLLMConfig {
@@ -263,12 +293,21 @@ export interface IntelligenceSourcesTimeoutsConfig {
   readSeconds: number;
 }
 
+export interface IntelligenceScrapePolicyConfig {
+  requireRobotsAllow: boolean;
+  denyIfRobotsUnreachable: boolean;
+  requireTosAllowFlag: boolean;
+  userAgent: string;
+  maxRobotsCacheHours: number;
+}
+
 export interface IntelligenceSourcesConfig {
   enabled: string[];
   scrapingEnabled: boolean;
   allowedDomains: string[];
   rateLimits: IntelligenceSourcesRateLimitsConfig;
   timeouts: IntelligenceSourcesTimeoutsConfig;
+  scrapePolicy: IntelligenceScrapePolicyConfig;
 }
 
 export interface IntelligenceScoringV2Weights {
@@ -359,12 +398,21 @@ export interface IntelligenceSourcesTimeoutsConfigAPI {
   read_seconds: number;
 }
 
+export interface IntelligenceScrapePolicyConfigAPI {
+  require_robots_allow: boolean;
+  deny_if_robots_unreachable: boolean;
+  require_tos_allow_flag: boolean;
+  user_agent: string;
+  max_robots_cache_hours: number;
+}
+
 export interface IntelligenceSourcesConfigAPI {
   enabled: string[];
   scraping_enabled: boolean;
   allowed_domains: string[];
   rate_limits: IntelligenceSourcesRateLimitsConfigAPI;
   timeouts: IntelligenceSourcesTimeoutsConfigAPI;
+  scrape_policy?: IntelligenceScrapePolicyConfigAPI;
 }
 
 export interface IntelligenceScoringV2WeightsAPI {
@@ -722,7 +770,9 @@ export function transformIntelligenceConfig(api: IntelligenceConfigAPI): Intelli
       minOpportunityScore: api.opportunity.min_opportunity_score,
     },
     sources: {
-      enabled: api.sources?.enabled ?? ['yahoo_finance', 'earnings_calendar'],
+      enabled:
+        api.sources?.enabled ??
+        ['yahoo_finance', 'earnings_calendar', 'sec_edgar', 'company_ir_rss'],
       scrapingEnabled: api.sources?.scraping_enabled ?? false,
       allowedDomains: api.sources?.allowed_domains ?? [],
       rateLimits: {
@@ -732,6 +782,14 @@ export function transformIntelligenceConfig(api: IntelligenceConfigAPI): Intelli
       timeouts: {
         connectSeconds: api.sources?.timeouts?.connect_seconds ?? 5,
         readSeconds: api.sources?.timeouts?.read_seconds ?? 20,
+      },
+      scrapePolicy: {
+        requireRobotsAllow: api.sources?.scrape_policy?.require_robots_allow ?? true,
+        denyIfRobotsUnreachable: api.sources?.scrape_policy?.deny_if_robots_unreachable ?? true,
+        requireTosAllowFlag: api.sources?.scrape_policy?.require_tos_allow_flag ?? true,
+        userAgent:
+          api.sources?.scrape_policy?.user_agent ?? 'swing-screener-intelligence-bot/1.0',
+        maxRobotsCacheHours: api.sources?.scrape_policy?.max_robots_cache_hours ?? 24,
       },
     },
     scoringV2: {
@@ -812,6 +870,13 @@ export function toIntelligenceConfigAPI(config: IntelligenceConfig): Intelligenc
       timeouts: {
         connect_seconds: config.sources.timeouts.connectSeconds,
         read_seconds: config.sources.timeouts.readSeconds,
+      },
+      scrape_policy: {
+        require_robots_allow: config.sources.scrapePolicy.requireRobotsAllow,
+        deny_if_robots_unreachable: config.sources.scrapePolicy.denyIfRobotsUnreachable,
+        require_tos_allow_flag: config.sources.scrapePolicy.requireTosAllowFlag,
+        user_agent: config.sources.scrapePolicy.userAgent,
+        max_robots_cache_hours: config.sources.scrapePolicy.maxRobotsCacheHours,
       },
     },
     scoring_v2: {
@@ -1015,6 +1080,9 @@ export function transformIntelligenceEventsResponse(
       sourceName: event.source_name,
       rawUrl: event.raw_url ?? undefined,
       llmFields: event.llm_fields ?? {},
+      dynamicSourceQuality: event.dynamic_source_quality ?? undefined,
+      resolutionSource: event.resolution_source ?? undefined,
+      dedupeMethod: event.dedupe_method ?? undefined,
     })),
   };
 }
@@ -1052,7 +1120,23 @@ export function transformIntelligenceSourcesHealthResponse(
       errorCount: source.error_count,
       eventCount: source.event_count,
       errorRate: source.error_rate,
+      blockedCount: source.blocked_count ?? 0,
+      blockedReasons: source.blocked_reasons ?? [],
+      coverageRatio: source.coverage_ratio ?? 0,
+      meanConfidence: source.mean_confidence ?? 0,
       lastIngest: source.last_ingest ?? undefined,
     })),
+  };
+}
+
+export function transformIntelligenceMetricsResponse(
+  api: IntelligenceMetricsResponseAPI
+): IntelligenceMetricsResponse {
+  return {
+    asofDate: api.asof_date,
+    coverageGlobal: api.coverage_global,
+    meanConfidenceGlobal: api.mean_confidence_global,
+    dedupeRatio: api.dedupe_ratio,
+    eventsPerSource: api.events_per_source ?? {},
   };
 }

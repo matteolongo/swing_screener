@@ -72,6 +72,8 @@ def _default_market_intelligence_payload() -> dict:
             "enabled": [
                 "yahoo_finance",
                 "earnings_calendar",
+                "sec_edgar",
+                "company_ir_rss",
             ],
             "scraping_enabled": False,
             "allowed_domains": [],
@@ -82,6 +84,13 @@ def _default_market_intelligence_payload() -> dict:
             "timeouts": {
                 "connect_seconds": 5.0,
                 "read_seconds": 20.0,
+            },
+            "scrape_policy": {
+                "require_robots_allow": True,
+                "deny_if_robots_unreachable": True,
+                "require_tos_allow_flag": True,
+                "user_agent": "swing-screener-intelligence-bot/1.0",
+                "max_robots_cache_hours": 24,
             },
         },
         "scoring_v2": {

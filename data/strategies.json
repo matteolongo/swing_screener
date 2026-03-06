@@ -137,6 +137,13 @@
         "timeouts": {
           "connect_seconds": 5.0,
           "read_seconds": 20.0
+        },
+        "scrape_policy": {
+          "require_robots_allow": true,
+          "deny_if_robots_unreachable": true,
+          "require_tos_allow_flag": true,
+          "user_agent": "swing-screener-intelligence-bot/1.0",
+          "max_robots_cache_hours": 24
         }
       },
       "scoring_v2": {
@@ -287,6 +294,13 @@
         "timeouts": {
           "connect_seconds": 5.0,
           "read_seconds": 20.0
+        },
+        "scrape_policy": {
+          "require_robots_allow": true,
+          "deny_if_robots_unreachable": true,
+          "require_tos_allow_flag": true,
+          "user_agent": "swing-screener-intelligence-bot/1.0",
+          "max_robots_cache_hours": 24
         }
       },
       "scoring_v2": {
@@ -454,6 +468,13 @@
         "timeouts": {
           "connect_seconds": 5.0,
           "read_seconds": 20.0
+        },
+        "scrape_policy": {
+          "require_robots_allow": true,
+          "deny_if_robots_unreachable": true,
+          "require_tos_allow_flag": true,
+          "user_agent": "swing-screener-intelligence-bot/1.0",
+          "max_robots_cache_hours": 24
         }
       },
       "scoring_v2": {
@@ -619,6 +640,13 @@
         "timeouts": {
           "connect_seconds": 5.0,
           "read_seconds": 20.0
+        },
+        "scrape_policy": {
+          "require_robots_allow": true,
+          "deny_if_robots_unreachable": true,
+          "require_tos_allow_flag": true,
+          "user_agent": "swing-screener-intelligence-bot/1.0",
+          "max_robots_cache_hours": 24
         }
       },
       "scoring_v2": {

@@ -9,6 +9,7 @@ import {
   useDeleteIntelligenceSymbolSetMutation,
   useIntelligenceConfigQuery,
   useIntelligenceEventsQuery,
+  useIntelligenceMetricsQuery,
   useIntelligenceOpportunitiesScoped,
   useIntelligenceProvidersQuery,
   useIntelligenceRunStatus,
@@ -144,8 +145,10 @@ export default function IntelligencePage() {
     Boolean(asofDate)
   );
   const sourcesHealthQuery = useIntelligenceSourcesHealthQuery(true);
+  const metricsQuery = useIntelligenceMetricsQuery(asofDate, Boolean(asofDate));
   const upcomingCatalysts = upcomingQuery.data?.items ?? [];
   const sourceHealthItems = sourcesHealthQuery.data?.sources ?? [];
+  const intelligenceMetrics = metricsQuery.data;
   const hasOpportunities = opportunities.length > 0;
 
   const canRun = manualSymbols.length > 0 || Boolean(selectedSymbolSetId);
@@ -430,6 +433,29 @@ export default function IntelligencePage() {
                     </ul>
                   )}
                 </div>
+              </div>
+
+              <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50/70 p-3 dark:border-amber-900 dark:bg-amber-950/20">
+                <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">Evidence Quality Metrics</p>
+                {metricsQuery.isFetching ? (
+                  <p className="mt-2 text-xs text-amber-800/80 dark:text-amber-200/80">Loading metrics...</p>
+                ) : !intelligenceMetrics ? (
+                  <p className="mt-2 text-xs text-amber-800/80 dark:text-amber-200/80">No metrics available yet.</p>
+                ) : (
+                  <div className="mt-2 space-y-1 text-xs text-amber-900 dark:text-amber-100">
+                    <p>Coverage: {intelligenceMetrics.coverageGlobal.toFixed(2)}</p>
+                    <p>Mean confidence: {intelligenceMetrics.meanConfidenceGlobal.toFixed(2)}</p>
+                    <p>Dedupe ratio: {intelligenceMetrics.dedupeRatio.toFixed(2)}</p>
+                    {(
+                      intelligenceMetrics.coverageGlobal < 0.2 ||
+                      intelligenceMetrics.meanConfidenceGlobal < 0.45
+                    ) && (
+                      <p className="font-semibold text-red-700 dark:text-red-300">
+                        Warning: low evidence quality, treat ranking with caution.
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50/80 p-3 dark:border-gray-700 dark:bg-gray-900/30">

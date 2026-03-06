@@ -413,10 +413,14 @@ def test_intelligence_sources_health_returns_payload(monkeypatch):
                     "enabled": True,
                     "status": "ok",
                     "latency_ms": 12.0,
-                    "error_count": 0,
-                    "event_count": 12,
-                    "error_rate": 0.0,
-                    "last_ingest": "2026-02-15T20:00:00",
+                "error_count": 0,
+                "event_count": 12,
+                "error_rate": 0.0,
+                "blocked_count": 2,
+                "blocked_reasons": ["robots_disallow"],
+                "coverage_ratio": 0.5,
+                "mean_confidence": 0.72,
+                "last_ingest": "2026-02-15T20:00:00",
                 }
             }
 
@@ -437,6 +441,43 @@ def test_intelligence_sources_health_returns_payload(monkeypatch):
         assert len(payload["sources"]) == 1
         assert payload["sources"][0]["source_name"] == "yahoo_finance"
         assert payload["sources"][0]["status"] == "ok"
+        assert payload["sources"][0]["blocked_count"] == 2
+        assert payload["sources"][0]["coverage_ratio"] == 0.5
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_intelligence_metrics_returns_payload(monkeypatch):
+    class FakeStorage:
+        def latest_opportunities_date(self):
+            return "2026-02-15"
+
+        def load_intelligence_metrics(self):
+            return {
+                "asof_date": "2026-02-15",
+                "coverage_global": 0.66,
+                "mean_confidence_global": 0.71,
+                "dedupe_ratio": 0.28,
+                "events_per_source": {"yahoo_finance": 12, "sec_edgar": 2},
+            }
+
+    service = intelligence_service.IntelligenceService(
+        strategy_repo=SimpleNamespace(get_active_strategy=lambda: {}),
+        config_service=_FakeConfigService(),
+    )
+    monkeypatch.setattr(service, "_storage", FakeStorage())
+    app.dependency_overrides = {}
+    from api.routers.intelligence import get_intelligence_service as dep
+
+    app.dependency_overrides[dep] = lambda: service
+    try:
+        client = TestClient(app)
+        res = client.get("/api/intelligence/metrics")
+        assert res.status_code == 200
+        payload = res.json()
+        assert payload["asof_date"] == "2026-02-15"
+        assert payload["coverage_global"] == 0.66
+        assert payload["events_per_source"]["yahoo_finance"] == 12
     finally:
         app.dependency_overrides.clear()
 

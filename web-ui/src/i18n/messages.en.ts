@@ -77,6 +77,14 @@ export const messagesEn = {
     },
     summary: 'Summary',
     noDetails: 'No recommendation details available.',
+    verdictHelp: {
+      short: 'How verdict works',
+      title: 'How Recommended Works',
+      intro: 'Recommended does not mean best-looking stock. It means the setup passed two layers.',
+      pass1: 'The stock looks technically strong.',
+      pass2: 'The trade also passes risk rules such as stop quality, position sizing, and reward/risk.',
+      outro: 'A stock can rank well and still be Not Recommended if the trade structure is weak.',
+    },
     sections: {
       checklist: 'Checklist Gates',
       riskCosts: 'Risk & Costs',
@@ -1084,6 +1092,12 @@ export const messagesEn = {
       closeSuggested: '❌ Positions - Close Suggested ({{count}})',
       noActionNeeded: '✅ Positions - No Action Needed ({{count}})',
       noRecommended: 'No recommended candidates today.',
+      noRecommendedExplainTitle: 'No trade passed the full checklist.',
+      noRecommendedExplainBody:
+        'That does not mean the screener found nothing useful. It means none of the current setups were strong enough and well-structured enough to act on today.',
+      noRecommendedReasonSignal: 'Some candidates may still be missing an active signal.',
+      noRecommendedReasonRisk: 'Some may fail the risk budget or stop-quality checks.',
+      noRecommendedReasonReward: 'Some may not offer enough reward relative to the risk.',
       hiddenByVerdict: '{{count}} candidate{{suffix}} hidden because verdict is Not Recommended.',
       showingRecommendedOnly: 'Showing recommended setups only. {{count}} candidate{{suffix}} hidden.',
       noStopUpdates: 'No stop updates needed.',

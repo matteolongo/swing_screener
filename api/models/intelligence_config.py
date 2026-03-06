@@ -108,6 +108,14 @@ class IntelligenceSourcesTimeoutModel(BaseModel):
     read_seconds: float = Field(default=20.0, ge=0.1, le=300.0)
 
 
+class IntelligenceScrapePolicyModel(BaseModel):
+    require_robots_allow: bool = True
+    deny_if_robots_unreachable: bool = True
+    require_tos_allow_flag: bool = True
+    user_agent: str = Field(default="swing-screener-intelligence-bot/1.0", min_length=1, max_length=256)
+    max_robots_cache_hours: int = Field(default=24, ge=1, le=168)
+
+
 class IntelligenceSourcesConfigModel(BaseModel):
     enabled: list[str] = Field(
         default_factory=lambda: [
@@ -121,6 +129,7 @@ class IntelligenceSourcesConfigModel(BaseModel):
     allowed_domains: list[str] = Field(default_factory=list)
     rate_limits: IntelligenceSourcesRateLimitModel = Field(default_factory=IntelligenceSourcesRateLimitModel)
     timeouts: IntelligenceSourcesTimeoutModel = Field(default_factory=IntelligenceSourcesTimeoutModel)
+    scrape_policy: IntelligenceScrapePolicyModel = Field(default_factory=IntelligenceScrapePolicyModel)
 
     @field_validator("enabled")
     @classmethod

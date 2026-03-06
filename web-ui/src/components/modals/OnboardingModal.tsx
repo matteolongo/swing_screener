@@ -80,6 +80,17 @@ const STEPS = [
             ⚠️ Daily Review requires a configured strategy. Complete Step 1 first.
           </p>
         </div>
+        <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mt-4">
+          <p className="text-sm font-semibold text-slate-900">
+            What "Recommended" really means
+          </p>
+          <p className="mt-2 text-sm text-slate-700">
+            A high-scoring stock is not automatically a trade. The app first finds strong stocks, then checks whether the setup is tradable with a clear stop, acceptable risk, and enough upside.
+          </p>
+          <p className="mt-2 text-sm text-slate-700">
+            Only setups that pass both layers are marked as <strong>Recommended</strong>.
+          </p>
+        </div>
       </div>
     ),
     action: {

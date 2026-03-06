@@ -273,7 +273,7 @@ export default function DailyReview() {
         count={recommendedCandidates.length}
       >
         {recommendedCandidates.length === 0 ? (
-          <div className="space-y-2">
+          <div className="space-y-3">
             <p className="text-gray-600 dark:text-gray-400">{t('dailyReview.sections.noRecommended')}</p>
             {hiddenCandidates > 0 ? (
               <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -283,6 +283,19 @@ export default function DailyReview() {
                 })}
               </p>
             ) : null}
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/20">
+              <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
+                {t('dailyReview.sections.noRecommendedExplainTitle')}
+              </p>
+              <p className="mt-1 text-sm text-amber-800 dark:text-amber-300">
+                {t('dailyReview.sections.noRecommendedExplainBody')}
+              </p>
+              <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-amber-800 dark:text-amber-300">
+                <li>{t('dailyReview.sections.noRecommendedReasonSignal')}</li>
+                <li>{t('dailyReview.sections.noRecommendedReasonRisk')}</li>
+                <li>{t('dailyReview.sections.noRecommendedReasonReward')}</li>
+              </ul>
+            </div>
           </div>
         ) : (
           <div className="space-y-3">

@@ -285,6 +285,10 @@ def build_opportunities(
         breakdown = catalyst_scores.get(symbol, _empty_breakdown(symbol))
         catalyst = _clamp01(breakdown.score)
         vector = vectors.get(symbol)
+        has_evidence = bool(vector is not None and float(vector.confirmation_score) > 0.0)
+
+        if not has_evidence and catalyst <= 0.0:
+            continue
 
         score = _clamp01(cfg.technical_weight * technical + cfg.catalyst_weight * catalyst)
         min_threshold = float(cfg.min_opportunity_score)

@@ -23,6 +23,7 @@ from api.models.intelligence import (
     IntelligenceExplainSymbolResponse,
     IntelligenceOpportunityResponse,
     IntelligenceOpportunitiesResponse,
+    IntelligenceMetricsResponse,
     IntelligenceRunLaunchResponse,
     IntelligenceRunRequest,
     IntelligenceRunStatusResponse,
@@ -887,6 +888,9 @@ class IntelligenceService:
                 source_name=event.source_name,
                 raw_url=event.raw_url,
                 llm_fields=event.llm_fields,
+                dynamic_source_quality=getattr(event, "dynamic_source_quality", None),
+                resolution_source=getattr(event, "resolution_source", None),
+                dedupe_method=getattr(event, "dedupe_method", None),
             )
             for event in normalized
         ]
@@ -946,6 +950,10 @@ class IntelligenceService:
                 error_count=int(item.get("error_count", 0)),
                 event_count=int(item.get("event_count", 0)),
                 error_rate=float(item.get("error_rate", 0.0)),
+                blocked_count=int(item.get("blocked_count", 0)),
+                blocked_reasons=[str(value) for value in item.get("blocked_reasons", []) if str(value)],
+                coverage_ratio=float(item.get("coverage_ratio", 0.0)),
+                mean_confidence=float(item.get("mean_confidence", 0.0)),
                 last_ingest=(str(item.get("last_ingest")) if item.get("last_ingest") else None),
             )
             for source, item in payload.items()
@@ -953,6 +961,29 @@ class IntelligenceService:
         ]
         items.sort(key=lambda item: item.source_name)
         return IntelligenceSourcesHealthResponse(sources=items)
+
+    def get_metrics(self, *, asof_date: str | None = None) -> IntelligenceMetricsResponse:
+        payload = self._storage.load_intelligence_metrics()
+        target_date = asof_date or str(payload.get("asof_date") or self._storage.latest_opportunities_date() or "")
+        if not target_date:
+            raise HTTPException(status_code=404, detail="No intelligence metrics available.")
+        if asof_date and str(payload.get("asof_date") or "") != asof_date:
+            raise HTTPException(status_code=404, detail=f"No intelligence metrics available for {asof_date}.")
+        events_raw = payload.get("events_per_source", {})
+        events_per_source: dict[str, int] = {}
+        if isinstance(events_raw, dict):
+            for source, value in events_raw.items():
+                try:
+                    events_per_source[str(source)] = int(value)
+                except (TypeError, ValueError):
+                    continue
+        return IntelligenceMetricsResponse(
+            asof_date=target_date,
+            coverage_global=float(payload.get("coverage_global", 0.0)),
+            mean_confidence_global=float(payload.get("mean_confidence_global", 0.0)),
+            dedupe_ratio=float(payload.get("dedupe_ratio", 0.0)),
+            events_per_source=events_per_source,
+        )
 
     def get_cached_symbol_education(
         self,

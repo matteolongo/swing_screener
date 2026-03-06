@@ -95,6 +95,9 @@ Artifacts:
 - `symbol_state.json`
 - `run_jobs.json`
 - `sources_health.json`
+- `source_quality_stats.json`
+- `intelligence_metrics.json`
+- `discovered_feeds_cache.json`
 
 ## API Endpoints
 - `GET /api/intelligence/config`
@@ -111,4 +114,5 @@ Artifacts:
 - `GET /api/intelligence/events`
 - `GET /api/intelligence/upcoming-catalysts`
 - `GET /api/intelligence/sources/health`
+- `GET /api/intelligence/metrics`
 - `POST /api/intelligence/classify`

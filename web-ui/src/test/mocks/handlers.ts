@@ -557,6 +557,26 @@ const mockIntelligenceConfig = {
     max_daily_opportunities: 10,
     min_opportunity_score: 0.6,
   },
+  sources: {
+    enabled: ['yahoo_finance', 'earnings_calendar', 'sec_edgar', 'company_ir_rss'],
+    scraping_enabled: false,
+    allowed_domains: [],
+    rate_limits: {
+      requests_per_minute: 90,
+      max_concurrency: 4,
+    },
+    timeouts: {
+      connect_seconds: 5,
+      read_seconds: 20,
+    },
+    scrape_policy: {
+      require_robots_allow: true,
+      deny_if_robots_unreachable: true,
+      require_tos_allow_flag: true,
+      user_agent: 'swing-screener-intelligence-bot/1.0',
+      max_robots_cache_hours: 24,
+    },
+  },
 }
 
 const mockIntelligenceProviders = [
@@ -574,7 +594,7 @@ const defaultIntelligenceSymbolSets = [
   },
 ]
 
-let intelligenceConfig = structuredClone(mockIntelligenceConfig)
+let intelligenceConfig: any = structuredClone(mockIntelligenceConfig)
 let intelligenceSymbolSets = [...defaultIntelligenceSymbolSets]
 type WatchlistItemPayload = {
   ticker: string
@@ -743,6 +763,22 @@ export const handlers = [
       opportunity: {
         ...intelligenceConfig.opportunity,
         ...asObject(body.opportunity),
+      },
+      sources: {
+        ...asObject(intelligenceConfig.sources),
+        ...asObject(body.sources),
+        rate_limits: {
+          ...asObject(asObject(intelligenceConfig.sources).rate_limits),
+          ...asObject(asObject(body.sources).rate_limits),
+        },
+        timeouts: {
+          ...asObject(asObject(intelligenceConfig.sources).timeouts),
+          ...asObject(asObject(body.sources).timeouts),
+        },
+        scrape_policy: {
+          ...asObject(asObject(intelligenceConfig.sources).scrape_policy),
+          ...asObject(asObject(body.sources).scrape_policy),
+        },
       },
     }
     return HttpResponse.json(intelligenceConfig)
@@ -1093,6 +1129,10 @@ export const handlers = [
           error_count: 0,
           event_count: 16,
           error_rate: 0,
+          blocked_count: 0,
+          blocked_reasons: [],
+          coverage_ratio: 0.66,
+          mean_confidence: 0.72,
           last_ingest: '2026-02-15T20:00:03',
         },
         {
@@ -1103,9 +1143,28 @@ export const handlers = [
           error_count: 0,
           event_count: 0,
           error_rate: 0,
+          blocked_count: 0,
+          blocked_reasons: [],
+          coverage_ratio: 0,
+          mean_confidence: 0,
           last_ingest: null,
         },
       ],
+    })
+  }),
+
+  http.get(`${API_BASE_URL}/api/intelligence/metrics`, ({ request }) => {
+    const url = new URL(request.url)
+    const asofDate = url.searchParams.get('asof_date') || mockIntelligenceOpportunities.asof_date
+    return HttpResponse.json({
+      asof_date: asofDate,
+      coverage_global: 0.67,
+      mean_confidence_global: 0.71,
+      dedupe_ratio: 0.28,
+      events_per_source: {
+        yahoo_finance: 16,
+        sec_edgar: 2,
+      },
     })
   }),
 

@@ -72,12 +72,22 @@ class SourceTimeoutConfig:
 
 
 @dataclass(frozen=True)
+class ScrapePolicyConfig:
+    require_robots_allow: bool = True
+    deny_if_robots_unreachable: bool = True
+    require_tos_allow_flag: bool = True
+    user_agent: str = "swing-screener-intelligence-bot/1.0"
+    max_robots_cache_hours: int = 24
+
+
+@dataclass(frozen=True)
 class SourcesConfig:
     enabled: tuple[str, ...] = DEFAULT_EVIDENCE_SOURCES
     scraping_enabled: bool = False
     allowed_domains: tuple[str, ...] = tuple()
     rate_limits: SourceRateLimitConfig = field(default_factory=SourceRateLimitConfig)
     timeouts: SourceTimeoutConfig = field(default_factory=SourceTimeoutConfig)
+    scrape_policy: ScrapePolicyConfig = field(default_factory=ScrapePolicyConfig)
 
 
 @dataclass(frozen=True)
@@ -321,6 +331,7 @@ def build_intelligence_config(strategy: dict) -> IntelligenceConfig:
     opportunity_raw = get_nested_dict(raw, "opportunity")
     llm_raw = get_nested_dict(raw, "llm")
     sources_raw = get_nested_dict(raw, "sources")
+    scrape_policy_raw = get_nested_dict(sources_raw, "scrape_policy")
     scoring_v2_raw = get_nested_dict(raw, "scoring_v2")
     scoring_v2_weights_raw = get_nested_dict(scoring_v2_raw, "weights")
     calendar_raw = get_nested_dict(raw, "calendar")
@@ -461,6 +472,24 @@ def build_intelligence_config(strategy: dict) -> IntelligenceConfig:
                 read_seconds=_clean_non_negative_float(
                     get_nested_dict(sources_raw, "timeouts").get("read_seconds"),
                     20.0,
+                ),
+            ),
+            scrape_policy=ScrapePolicyConfig(
+                require_robots_allow=bool(scrape_policy_raw.get("require_robots_allow", True)),
+                deny_if_robots_unreachable=bool(
+                    scrape_policy_raw.get("deny_if_robots_unreachable", True)
+                ),
+                require_tos_allow_flag=bool(scrape_policy_raw.get("require_tos_allow_flag", True)),
+                user_agent=str(
+                    scrape_policy_raw.get(
+                        "user_agent",
+                        "swing-screener-intelligence-bot/1.0",
+                    )
+                ).strip()
+                or "swing-screener-intelligence-bot/1.0",
+                max_robots_cache_hours=_clean_positive_int(
+                    scrape_policy_raw.get("max_robots_cache_hours"),
+                    24,
                 ),
             ),
         ),

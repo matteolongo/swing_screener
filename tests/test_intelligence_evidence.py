@@ -2,17 +2,20 @@ from __future__ import annotations
 
 import json
 from datetime import datetime
+from types import SimpleNamespace
 
 import httpx
 
-from swing_screener.intelligence.config import SourcesConfig
+from swing_screener.intelligence.config import ScrapePolicyConfig, SourcesConfig
 from swing_screener.intelligence.evidence import (
     CalendarFallbackScrapeEvidenceAdapter,
     ExchangeAnnouncementsEvidenceAdapter,
     FinancialNewsRssEvidenceAdapter,
     collect_additional_evidence,
+    normalize_evidence_records_with_diagnostics,
     resolve_instrument_profiles,
 )
+from swing_screener.intelligence.models import EvidenceRecord
 
 
 def test_resolve_instrument_profiles_maps_european_suffixes():
@@ -161,6 +164,11 @@ def test_calendar_fallback_scrape_respects_whitelist_and_flag(tmp_path, monkeypa
             enabled=("calendar_fallback_scrape",),
             scraping_enabled=False,
             allowed_domains=("calendar.example.com",),
+            scrape_policy=ScrapePolicyConfig(
+                require_robots_allow=False,
+                deny_if_robots_unreachable=False,
+                require_tos_allow_flag=False,
+            ),
         ),
     )
     assert records_disabled == []
@@ -174,6 +182,11 @@ def test_calendar_fallback_scrape_respects_whitelist_and_flag(tmp_path, monkeypa
             enabled=("calendar_fallback_scrape",),
             scraping_enabled=True,
             allowed_domains=("calendar.example.com",),
+            scrape_policy=ScrapePolicyConfig(
+                require_robots_allow=False,
+                deny_if_robots_unreachable=False,
+                require_tos_allow_flag=False,
+            ),
         ),
     )
     assert len(records_enabled) == 1
@@ -214,7 +227,16 @@ def test_collect_additional_evidence_reports_adapter_health_when_enabled(tmp_pat
     monkeypatch.setattr("swing_screener.intelligence.evidence.httpx.Client", _Client)
     monkeypatch.setattr(
         "swing_screener.intelligence.evidence.FinancialNewsRssEvidenceAdapter.__init__",
-        lambda self, **kwargs: setattr(self, "_feeds_path", feed_path) or setattr(self, "_timeout_sec", 12.0),
+        lambda self, **kwargs: (
+            setattr(self, "_feeds_path", feed_path)
+            or setattr(self, "_timeout_sec", 12.0)
+            or setattr(
+                self,
+                "_discovery",
+                kwargs.get("discovery")
+                or SimpleNamespace(catalog_news_feeds=lambda **_kwargs: []),
+            )
+        ),
     )
 
     records, health = collect_additional_evidence(
@@ -228,3 +250,81 @@ def test_collect_additional_evidence_reports_adapter_health_when_enabled(tmp_pat
     assert any(record.source_name == "financial_news_rss" for record in records)
     assert "financial_news_rss" in health
     assert health["financial_news_rss"].enabled is True
+
+
+def test_resolve_instrument_profiles_prefers_override_over_master(tmp_path, monkeypatch):
+    master_path = tmp_path / "instrument_master.json"
+    override_path = tmp_path / "instrument_profiles_overrides.json"
+    master_path.write_text(
+        json.dumps(
+            [
+                {
+                    "symbol": "AIR.PA",
+                    "exchange_mic": "XPAR",
+                    "country_code": "FR",
+                    "currency": "EUR",
+                    "timezone": "Europe/Paris",
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+    override_path.write_text(
+        json.dumps(
+            {
+                "AIR.PA": {
+                    "symbol": "AIR.PA",
+                    "exchange_mic": "XPAR",
+                    "country_code": "FR",
+                    "currency": "EUR",
+                    "timezone": "Europe/Paris",
+                    "provider_symbol_map": {"yahoo_finance": "AIR.PA"},
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr("swing_screener.intelligence.evidence._INSTRUMENT_MASTER_PATH", master_path)
+    monkeypatch.setattr("swing_screener.intelligence.evidence._INSTRUMENT_OVERRIDE_PATH", override_path)
+    profiles = resolve_instrument_profiles(["AIR.PA"])
+    assert profiles["AIR.PA"].resolution_source == "override"
+    assert profiles["AIR.PA"].resolution_confidence == 1.0
+
+
+def test_normalize_evidence_records_fuzzy_dedupe_and_dynamic_quality():
+    records = [
+        EvidenceRecord(
+            evidence_id="a1",
+            symbol="AAPL",
+            source_name="yahoo_finance",
+            source_type="news",
+            url="https://example.com/aapl/earnings",
+            headline="AAPL beats earnings expectations",
+            body_snippet="",
+            published_at="2026-02-10T10:00:00",
+            event_at="2026-02-10T10:00:00",
+            feed_origin="manual",
+        ),
+        EvidenceRecord(
+            evidence_id="a2",
+            symbol="AAPL",
+            source_name="financial_news_rss",
+            source_type="news",
+            url="https://news.example.com/apple-earnings",
+            headline="AAPL beats earnings expectation",
+            body_snippet="",
+            published_at="2026-02-10T11:00:00",
+            event_at="2026-02-10T11:00:00",
+            feed_origin="catalog",
+        ),
+    ]
+    normalized, diag = normalize_evidence_records_with_diagnostics(
+        records,
+        asof_dt=datetime.fromisoformat("2026-02-11T00:00:00"),
+        historical_precision_by_source={"yahoo_finance": 0.62, "financial_news_rss": 0.58},
+    )
+    assert len(normalized) == 1
+    assert diag.pre_dedupe_count == 2
+    assert diag.post_dedupe_count == 1
+    assert normalized[0].dedupe_method in {"title_fuzzy", "hybrid"}
+    assert 0.0 <= normalized[0].dynamic_source_quality <= 1.0

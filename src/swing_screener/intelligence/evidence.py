@@ -2,21 +2,23 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 import hashlib
 import json
 import logging
+import math
 from pathlib import Path
 import re
 import threading
 import time
-from typing import Any, Protocol
+from typing import Any, Literal, Protocol
 from urllib.parse import urlparse
+from urllib.robotparser import RobotFileParser
 import xml.etree.ElementTree as ET
 
 import httpx
 
-from swing_screener.intelligence.config import IntelligenceConfig, SourcesConfig
+from swing_screener.intelligence.config import IntelligenceConfig, ScrapePolicyConfig, SourcesConfig
 from swing_screener.intelligence.llm.factory import build_event_classifier
 from swing_screener.intelligence.models import (
     CatalystFeatureVector,
@@ -28,6 +30,21 @@ from swing_screener.intelligence.models import (
 from swing_screener.utils import get_nested_dict
 
 logger = logging.getLogger(__name__)
+
+_INSTRUMENT_MASTER_PATH = Path("data/intelligence/instrument_master.json")
+_INSTRUMENT_OVERRIDE_PATH = Path("data/intelligence/instrument_profiles_overrides.json")
+_DOMAIN_POLICIES_PATH = Path("data/intelligence/domain_policies.json")
+_ROBOTS_CACHE_PATH = Path("data/intelligence/robots_cache.json")
+_ISSUER_REGISTRY_PATH = Path("data/intelligence/issuer_registry.json")
+_SOURCE_CATALOG_PATH = Path("data/intelligence/source_catalog.json")
+_DISCOVERED_FEEDS_CACHE_PATH = Path("data/intelligence/discovered_feeds_cache.json")
+
+
+@dataclass(frozen=True)
+class NormalizeDiagnostics:
+    pre_dedupe_count: int
+    post_dedupe_count: int
+    dedupe_ratio: float
 
 
 def _clamp01(value: float) -> float:
@@ -100,7 +117,11 @@ class SourceHealth:
     latency_ms: float
     error_count: int
     event_count: int
-    last_ingest: str | None
+    last_ingest: str | None = None
+    blocked_count: int = 0
+    blocked_reasons: tuple[str, ...] = tuple()
+    coverage_ratio: float = 0.0
+    mean_confidence: float = 0.0
 
     def to_dict(self) -> dict[str, Any]:
         total = self.event_count + self.error_count
@@ -113,6 +134,10 @@ class SourceHealth:
             "error_count": int(self.error_count),
             "event_count": int(self.event_count),
             "error_rate": error_rate,
+            "blocked_count": int(self.blocked_count),
+            "blocked_reasons": list(self.blocked_reasons),
+            "coverage_ratio": round(_clamp01(self.coverage_ratio), 6),
+            "mean_confidence": round(_clamp01(self.mean_confidence), 6),
             "last_ingest": self.last_ingest,
         }
 
@@ -226,74 +251,548 @@ def _parse_feed_items(xml_text: str) -> list[dict[str, str]]:
     return items
 
 
-def resolve_instrument_profiles(symbols: list[str] | tuple[str, ...]) -> dict[str, InstrumentProfile]:
-    suffix_map: dict[str, tuple[str, str, str, str]] = {
-        ".PA": ("XPAR", "FR", "EUR", "Europe/Paris"),
-        ".AS": ("XAMS", "NL", "EUR", "Europe/Amsterdam"),
-        ".MI": ("XMIL", "IT", "EUR", "Europe/Rome"),
-        ".DE": ("XETR", "DE", "EUR", "Europe/Berlin"),
-        ".L": ("XLON", "GB", "GBP", "Europe/London"),
-        ".SW": ("XSWX", "CH", "CHF", "Europe/Zurich"),
-        ".ST": ("XSTO", "SE", "SEK", "Europe/Stockholm"),
-        ".MC": ("XMAD", "ES", "EUR", "Europe/Madrid"),
-        ".HE": ("XHEL", "FI", "EUR", "Europe/Helsinki"),
-        ".BR": ("XBRU", "BE", "EUR", "Europe/Brussels"),
-    }
-    overrides_path = Path("data/intelligence/instrument_profiles_overrides.json")
-    overrides: dict[str, dict[str, Any]] = {}
-    if overrides_path.exists():
+def _safe_read_json(path: Path) -> Any:
+    if not path.exists():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+
+def _safe_write_json(path: Path, payload: Any) -> None:
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    except Exception:
+        return
+
+
+_SYMBOL_SUFFIX_MAP: dict[str, tuple[str, str, str, str]] = {
+    ".PA": ("XPAR", "FR", "EUR", "Europe/Paris"),
+    ".AS": ("XAMS", "NL", "EUR", "Europe/Amsterdam"),
+    ".MI": ("XMIL", "IT", "EUR", "Europe/Rome"),
+    ".DE": ("XETR", "DE", "EUR", "Europe/Berlin"),
+    ".L": ("XLON", "GB", "GBP", "Europe/London"),
+    ".SW": ("XSWX", "CH", "CHF", "Europe/Zurich"),
+    ".ST": ("XSTO", "SE", "SEK", "Europe/Stockholm"),
+    ".MC": ("XMAD", "ES", "EUR", "Europe/Madrid"),
+    ".HE": ("XHEL", "FI", "EUR", "Europe/Helsinki"),
+    ".BR": ("XBRU", "BE", "EUR", "Europe/Brussels"),
+}
+_MIC_TO_SUFFIX: dict[str, str] = {payload[0]: suffix for suffix, payload in _SYMBOL_SUFFIX_MAP.items()}
+
+
+def _normalize_symbol_input(raw_symbol: str) -> str:
+    raw = str(raw_symbol or "").strip().upper()
+    if not raw:
+        return ""
+    if ":" in raw:
+        ticker, mic = [part.strip() for part in raw.split(":", 1)]
+        suffix = _MIC_TO_SUFFIX.get(mic)
+        if ticker and suffix:
+            return f"{ticker}{suffix}"
+        return ticker or raw
+    match = re.match(r"^([A-Z0-9\.\-]{1,16})\s+([A-Z0-9]{4})$", raw)
+    if match:
+        ticker = str(match.group(1)).strip().upper()
+        mic = str(match.group(2)).strip().upper()
+        suffix = _MIC_TO_SUFFIX.get(mic)
+        if suffix and "." not in ticker:
+            return f"{ticker}{suffix}"
+        return ticker
+    return raw
+
+
+def _domain_root_url(domain_or_url: str) -> str:
+    text = str(domain_or_url or "").strip()
+    if not text:
+        return ""
+    if text.startswith("http://") or text.startswith("https://"):
+        return text.rstrip("/")
+    return f"https://{text.strip('/').lower()}"
+
+
+def _extract_feed_links_from_html(html_text: str, page_url: str) -> list[str]:
+    out: list[str] = []
+    if not html_text:
+        return out
+    link_pattern = re.compile(
+        r"<link[^>]+(?:type=['\"]application/(?:rss\+xml|atom\+xml)['\"][^>]*href=['\"]([^'\"]+)['\"][^>]*|href=['\"]([^'\"]+)['\"][^>]*type=['\"]application/(?:rss\+xml|atom\+xml)['\"][^>]*)>",
+        re.IGNORECASE,
+    )
+    for match in link_pattern.finditer(html_text):
+        href = (match.group(1) or match.group(2) or "").strip()
+        if not href:
+            continue
+        if href.startswith("//"):
+            parsed = urlparse(page_url)
+            href = f"{parsed.scheme}:{href}"
+        elif href.startswith("/"):
+            parsed = urlparse(page_url)
+            href = f"{parsed.scheme}://{parsed.netloc}{href}"
+        if href.startswith("http://") or href.startswith("https://"):
+            if href not in out:
+                out.append(href)
+    return out
+
+
+class FeedDiscoveryService:
+    def __init__(
+        self,
+        *,
+        cache_path: Path = _DISCOVERED_FEEDS_CACHE_PATH,
+        issuer_registry_path: Path = _ISSUER_REGISTRY_PATH,
+        source_catalog_path: Path = _SOURCE_CATALOG_PATH,
+        cache_ttl: timedelta = timedelta(days=7),
+    ) -> None:
+        self._cache_path = cache_path
+        self._issuer_registry_path = issuer_registry_path
+        self._source_catalog_path = source_catalog_path
+        self._cache_ttl = cache_ttl
+        self._lock = threading.Lock()
+
+    def _load_cache(self) -> dict[str, dict[str, Any]]:
+        payload = _safe_read_json(self._cache_path)
+        if not isinstance(payload, dict):
+            return {}
+        out: dict[str, dict[str, Any]] = {}
+        for key, value in payload.items():
+            cache_key = str(key).strip()
+            if cache_key and isinstance(value, dict):
+                out[cache_key] = value
+        return out
+
+    def _save_cache(self, payload: dict[str, dict[str, Any]]) -> None:
+        _safe_write_json(self._cache_path, payload)
+
+    def _cache_get(self, key: str, now: datetime) -> list[str] | None:
+        cache = self._load_cache()
+        item = cache.get(key)
+        if not isinstance(item, dict):
+            return None
+        updated = _coerce_dt(item.get("updated_at"))
+        if updated is None or now - updated > self._cache_ttl:
+            return None
+        feeds = item.get("feeds")
+        if not isinstance(feeds, list):
+            return None
+        return [str(url).strip() for url in feeds if str(url).strip()]
+
+    def _cache_put(self, key: str, feeds: list[str], now: datetime) -> None:
+        cache = self._load_cache()
+        cache[key] = {
+            "updated_at": now.isoformat(),
+            "feeds": feeds,
+        }
+        self._save_cache(cache)
+
+    def _load_issuer_registry(self) -> dict[str, list[str]]:
+        payload = _safe_read_json(self._issuer_registry_path)
+        if not isinstance(payload, dict):
+            return {}
+        out: dict[str, list[str]] = {}
+        for key, value in payload.items():
+            symbol = str(key).strip().upper()
+            if not symbol:
+                continue
+            if isinstance(value, str):
+                values = [value]
+            elif isinstance(value, list):
+                values = [str(item) for item in value]
+            else:
+                values = []
+            domains = [_domain_root_url(item) for item in values if _domain_root_url(item)]
+            if domains:
+                out[symbol] = list(dict.fromkeys(domains))
+        return out
+
+    def _load_source_catalog(self) -> dict[str, Any]:
+        payload = _safe_read_json(self._source_catalog_path)
+        return payload if isinstance(payload, dict) else {}
+
+    def _validate_feed_url(
+        self,
+        *,
+        url: str,
+        cfg: SourcesConfig,
+    ) -> bool:
+        timeout = max(1.0, min(60.0, float(cfg.timeouts.read_seconds)))
+        rate_limiter = _RateLimiter(cfg.rate_limits.requests_per_minute)
+        with httpx.Client(timeout=timeout) as client:
+            try:
+                response = _http_get_with_retries(
+                    client=client,
+                    url=url,
+                    rate_limiter=rate_limiter,
+                    max_retries=1,
+                )
+            except Exception:
+                return False
+        return len(_parse_feed_items(response.text)) > 0
+
+    def discover_ir_feeds(
+        self,
+        *,
+        symbol: str,
+        profile: InstrumentProfile | None,
+        cfg: SourcesConfig,
+    ) -> list[str]:
+        now = datetime.utcnow()
+        cache_key = f"ir:{symbol}"
+        cached = self._cache_get(cache_key, now)
+        if cached is not None:
+            return cached
+
+        registry = self._load_issuer_registry()
+        aliases = [symbol]
+        if profile is not None:
+            aliases.extend(profile.aliases)
+        candidate_domains: list[str] = []
+        for alias in aliases:
+            candidate_domains.extend(registry.get(str(alias).strip().upper(), []))
+        candidate_domains = list(dict.fromkeys(candidate_domains))
+        if not candidate_domains:
+            self._cache_put(cache_key, [], now)
+            return []
+
+        page_paths = ("/", "/investors", "/investor-relations", "/newsroom", "/press-releases")
+        feed_paths = ("/rss", "/feed", "/investors/rss", "/newsroom/rss", "/press-releases/rss")
+        timeout = max(1.0, min(60.0, float(cfg.timeouts.read_seconds)))
+        rate_limiter = _RateLimiter(cfg.rate_limits.requests_per_minute)
+        discovered: list[str] = []
+        with httpx.Client(timeout=timeout) as client:
+            for domain_root in candidate_domains:
+                for path in page_paths:
+                    page_url = f"{domain_root}{path}"
+                    try:
+                        response = _http_get_with_retries(
+                            client=client,
+                            url=page_url,
+                            rate_limiter=rate_limiter,
+                            max_retries=1,
+                        )
+                    except Exception:
+                        continue
+                    for url in _extract_feed_links_from_html(response.text, page_url):
+                        if url not in discovered and self._validate_feed_url(url=url, cfg=cfg):
+                            discovered.append(url)
+                for suffix in feed_paths:
+                    feed_url = f"{domain_root}{suffix}"
+                    if feed_url in discovered:
+                        continue
+                    if self._validate_feed_url(url=feed_url, cfg=cfg):
+                        discovered.append(feed_url)
+
+        self._cache_put(cache_key, discovered, now)
+        return discovered
+
+    def catalog_exchange_feeds(
+        self,
+        *,
+        keys: list[str],
+        cfg: SourcesConfig,
+    ) -> list[str]:
+        now = datetime.utcnow()
+        cache_key = f"exchange:{'|'.join(sorted(keys))}"
+        cached = self._cache_get(cache_key, now)
+        if cached is not None:
+            return cached
+        catalog = self._load_source_catalog()
+        raw_map = get_nested_dict(catalog, "exchange")
+        urls: list[str] = []
+        for key in keys:
+            raw_urls = raw_map.get(str(key).strip().upper())
+            if isinstance(raw_urls, str):
+                candidates = [raw_urls]
+            elif isinstance(raw_urls, list):
+                candidates = [str(item) for item in raw_urls]
+            else:
+                candidates = []
+            for url in candidates:
+                feed_url = str(url).strip()
+                if not feed_url or feed_url in urls:
+                    continue
+                if self._validate_feed_url(url=feed_url, cfg=cfg):
+                    urls.append(feed_url)
+        self._cache_put(cache_key, urls, now)
+        return urls
+
+    def catalog_news_feeds(self, *, cfg: SourcesConfig) -> list[str]:
+        now = datetime.utcnow()
+        cache_key = "news:all"
+        cached = self._cache_get(cache_key, now)
+        if cached is not None:
+            return cached
+        catalog = self._load_source_catalog()
+        raw_categories = get_nested_dict(catalog, "news_categories")
+        urls: list[str] = []
+        if isinstance(raw_categories, dict):
+            for raw_urls in raw_categories.values():
+                if isinstance(raw_urls, str):
+                    candidates = [raw_urls]
+                elif isinstance(raw_urls, list):
+                    candidates = [str(item) for item in raw_urls]
+                else:
+                    candidates = []
+                for url in candidates:
+                    feed_url = str(url).strip()
+                    if not feed_url or feed_url in urls:
+                        continue
+                    if self._validate_feed_url(url=feed_url, cfg=cfg):
+                        urls.append(feed_url)
+        self._cache_put(cache_key, urls, now)
+        return urls
+
+
+class ScrapeComplianceEngine:
+    def __init__(
+        self,
+        *,
+        policies_path: Path = _DOMAIN_POLICIES_PATH,
+        robots_cache_path: Path = _ROBOTS_CACHE_PATH,
+    ) -> None:
+        self._policies_path = policies_path
+        self._robots_cache_path = robots_cache_path
+        self._lock = threading.Lock()
+
+    def _load_domain_policies(self) -> list[dict[str, Any]]:
+        payload = _safe_read_json(self._policies_path)
+        if not isinstance(payload, list):
+            return []
+        out: list[dict[str, Any]] = []
+        for item in payload:
+            if isinstance(item, dict):
+                out.append(item)
+        return out
+
+    def _match_policy(self, host: str) -> dict[str, Any] | None:
+        host_norm = str(host).strip().lower()
+        if not host_norm:
+            return None
+        best: dict[str, Any] | None = None
+        best_len = -1
+        for policy in self._load_domain_policies():
+            domain = str(policy.get("domain", "")).strip().lower()
+            if not domain:
+                continue
+            if host_norm == domain or host_norm.endswith(f".{domain}"):
+                if len(domain) > best_len:
+                    best = policy
+                    best_len = len(domain)
+        return best
+
+    def _load_robots_cache(self) -> dict[str, dict[str, Any]]:
+        payload = _safe_read_json(self._robots_cache_path)
+        if not isinstance(payload, dict):
+            return {}
+        out: dict[str, dict[str, Any]] = {}
+        for key, value in payload.items():
+            cache_key = str(key).strip()
+            if cache_key and isinstance(value, dict):
+                out[cache_key] = value
+        return out
+
+    def _save_robots_cache(self, payload: dict[str, dict[str, Any]]) -> None:
+        _safe_write_json(self._robots_cache_path, payload)
+
+    def _robots_cache_key(self, host: str, user_agent: str) -> str:
+        return f"{host}|{user_agent}"
+
+    def _robots_allow(
+        self,
+        *,
+        url: str,
+        policy: ScrapePolicyConfig,
+        cfg: SourcesConfig,
+    ) -> tuple[bool, str | None]:
+        parsed = urlparse(url)
+        host = (parsed.hostname or "").strip().lower()
+        path = parsed.path or "/"
+        if not host:
+            return False, "invalid_host"
+        now = datetime.utcnow()
+        cache_key = self._robots_cache_key(host, policy.user_agent)
+
+        with self._lock:
+            cache = self._load_robots_cache()
+            cached = cache.get(cache_key)
+            if isinstance(cached, dict):
+                updated = _coerce_dt(cached.get("updated_at"))
+                if updated is not None and now - updated <= timedelta(hours=policy.max_robots_cache_hours):
+                    allowed = bool(cached.get("allowed", False))
+                    reason = str(cached.get("reason", "")) or None
+                    return allowed, reason
+
+        robots_url = f"{parsed.scheme or 'https'}://{host}/robots.txt"
+        timeout = max(1.0, min(60.0, float(cfg.timeouts.read_seconds)))
+        allowed = False
+        reason: str | None = None
         try:
-            payload = json.loads(overrides_path.read_text(encoding="utf-8"))
-            if isinstance(payload, dict):
-                overrides = {
-                    str(key).strip().upper(): value
-                    for key, value in payload.items()
-                    if isinstance(value, dict)
-                }
+            with httpx.Client(timeout=timeout) as client:
+                response = client.get(robots_url, headers={"User-Agent": policy.user_agent})
+                response.raise_for_status()
+            parser = RobotFileParser()
+            parser.parse(response.text.splitlines())
+            allowed = bool(parser.can_fetch(policy.user_agent, url))
+            reason = None if allowed else "robots_disallow"
         except Exception:
-            overrides = {}
+            if policy.deny_if_robots_unreachable:
+                allowed = False
+                reason = "robots_unreachable"
+            else:
+                allowed = True
+                reason = None
+
+        with self._lock:
+            cache = self._load_robots_cache()
+            cache[cache_key] = {
+                "updated_at": now.isoformat(),
+                "allowed": bool(allowed),
+                "reason": reason,
+            }
+            self._save_robots_cache(cache)
+        return allowed, reason
+
+    def is_allowed(
+        self,
+        *,
+        url: str,
+        cfg: SourcesConfig,
+    ) -> tuple[bool, str | None]:
+        if not _is_allowed_domain(url, allowed_domains=cfg.allowed_domains):
+            return False, "domain_not_allowed"
+
+        parsed = urlparse(url)
+        host = (parsed.hostname or "").strip().lower()
+        path = parsed.path or "/"
+        policy_cfg = cfg.scrape_policy
+        domain_policy = self._match_policy(host)
+        if policy_cfg.require_tos_allow_flag:
+            if not isinstance(domain_policy, dict) or not bool(domain_policy.get("tos_allowed", False)):
+                return False, "tos_not_allowed"
+        if isinstance(domain_policy, dict):
+            blocked_paths = [
+                str(item).strip()
+                for item in domain_policy.get("blocked_paths", [])
+                if str(item).strip()
+            ]
+            if any(path.startswith(prefix) for prefix in blocked_paths):
+                return False, "path_blocked"
+            allowed_paths = [
+                str(item).strip()
+                for item in domain_policy.get("allowed_paths", [])
+                if str(item).strip()
+            ]
+            if allowed_paths and not any(path.startswith(prefix) for prefix in allowed_paths):
+                return False, "path_not_allowed"
+
+        if policy_cfg.require_robots_allow:
+            allowed, reason = self._robots_allow(url=url, policy=policy_cfg, cfg=cfg)
+            if not allowed:
+                return False, reason or "robots_disallow"
+        return True, None
+
+
+def resolve_instrument_profiles(symbols: list[str] | tuple[str, ...]) -> dict[str, InstrumentProfile]:
+    raw_overrides = _safe_read_json(_INSTRUMENT_OVERRIDE_PATH)
+    overrides: dict[str, dict[str, Any]] = {}
+    if isinstance(raw_overrides, dict):
+        for key, value in raw_overrides.items():
+            symbol = _normalize_symbol_input(str(key))
+            if symbol and isinstance(value, dict):
+                overrides[symbol] = value
+
+    raw_master = _safe_read_json(_INSTRUMENT_MASTER_PATH)
+    master_records: list[dict[str, Any]] = []
+    if isinstance(raw_master, list):
+        master_records = [item for item in raw_master if isinstance(item, dict)]
+    elif isinstance(raw_master, dict):
+        for value in raw_master.values():
+            if isinstance(value, dict):
+                master_records.append(value)
+    master_by_symbol: dict[str, dict[str, Any]] = {}
+    for record in master_records:
+        symbol = _normalize_symbol_input(str(record.get("symbol", "")))
+        if not symbol:
+            continue
+        master_by_symbol[symbol] = record
+        for alias in record.get("aliases", []) if isinstance(record.get("aliases"), list) else []:
+            alias_norm = _normalize_symbol_input(str(alias))
+            if alias_norm and alias_norm not in master_by_symbol:
+                master_by_symbol[alias_norm] = record
 
     out: dict[str, InstrumentProfile] = {}
     for raw_symbol in symbols:
-        symbol = str(raw_symbol).strip().upper()
-        if not symbol:
+        input_symbol = str(raw_symbol or "").strip().upper()
+        normalized_symbol = _normalize_symbol_input(input_symbol)
+        if not normalized_symbol:
             continue
+
+        override = overrides.get(normalized_symbol, {})
+        master = master_by_symbol.get(normalized_symbol, {})
+
+        source: Literal["override", "master", "heuristic"] = "heuristic"
+        confidence = 0.5
+        reason_code = "no_master_match"
+        payload: dict[str, Any] = {}
+        if override:
+            source = "override"
+            confidence = 1.0
+            reason_code = None
+            payload = override
+        elif master:
+            source = "master"
+            confidence = 0.9
+            reason_code = None
+            payload = master
+
+        symbol = _normalize_symbol_input(str(payload.get("symbol", normalized_symbol)))
         exchange = "XNAS"
         country = "US"
         currency = "USD"
         timezone = "America/New_York"
-        for suffix, payload in suffix_map.items():
+        for suffix, heuristic_payload in _SYMBOL_SUFFIX_MAP.items():
             if symbol.endswith(suffix):
-                exchange, country, currency, timezone = payload
+                exchange, country, currency, timezone = heuristic_payload
                 break
+
         base_alias = symbol.split(".", 1)[0]
         aliases = [symbol]
         if base_alias and base_alias not in aliases:
             aliases.append(base_alias)
-        override = overrides.get(symbol, {})
-        if isinstance(override.get("aliases"), list):
-            for raw_alias in override.get("aliases", []):
-                alias = str(raw_alias).strip().upper()
-                if alias and alias not in aliases:
-                    aliases.append(alias)
-        out[symbol] = InstrumentProfile(
+        for raw_alias in payload.get("aliases", []) if isinstance(payload.get("aliases"), list) else []:
+            alias = _normalize_symbol_input(str(raw_alias))
+            if alias and alias not in aliases:
+                aliases.append(alias)
+        if input_symbol not in aliases:
+            aliases.append(input_symbol)
+
+        provider_map_raw = get_nested_dict(payload, "provider_symbol_map")
+        if not isinstance(provider_map_raw, dict):
+            provider_map_raw = {}
+        provider_symbol_map = {
+            "yahoo_finance": str(provider_map_raw.get("yahoo_finance", symbol)).strip() or symbol,
+            "stooq": str(provider_map_raw.get("stooq", base_alias.lower())).strip() or base_alias.lower(),
+            "sec_edgar": str(provider_map_raw.get("sec_edgar", base_alias)).strip() or base_alias,
+        }
+
+        profile = InstrumentProfile(
             symbol=symbol,
-            exchange_mic=str(override.get("exchange_mic", exchange)).strip() or exchange,
-            country_code=str(override.get("country_code", country)).strip() or country,
-            currency=str(override.get("currency", currency)).strip() or currency,
-            timezone=str(override.get("timezone", timezone)).strip() or timezone,
+            exchange_mic=str(payload.get("exchange_mic", exchange)).strip() or exchange,
+            country_code=str(payload.get("country_code", country)).strip() or country,
+            currency=str(payload.get("currency", currency)).strip() or currency,
+            timezone=str(payload.get("timezone", timezone)).strip() or timezone,
             aliases=aliases,
-            provider_symbol_map={
-                "yahoo_finance": str(
-                    get_nested_dict(override, "provider_symbol_map").get("yahoo_finance", symbol)
-                ).strip()
-                or symbol,
-                "stooq": str(get_nested_dict(override, "provider_symbol_map").get("stooq", base_alias.lower())).strip()
-                or base_alias.lower(),
-                "sec_edgar": str(get_nested_dict(override, "provider_symbol_map").get("sec_edgar", base_alias)).strip()
-                or base_alias,
-            },
+            provider_symbol_map=provider_symbol_map,
+            resolution_source=source,
+            resolution_confidence=round(_clamp01(confidence), 6),
+            resolution_reason_code=reason_code,
         )
+
+        out[input_symbol] = profile
+        out[normalized_symbol] = profile
+        out[profile.symbol] = profile
     return out
 
 
@@ -434,6 +933,9 @@ def _enrich_event_with_llm(event: NormalizedEvent, classifier: Any) -> Normalize
         source_name=event.source_name,
         raw_url=event.raw_url,
         llm_fields=llm_fields,
+        dynamic_source_quality=event.dynamic_source_quality,
+        resolution_source=event.resolution_source,
+        dedupe_method=event.dedupe_method,
     )
 
 
@@ -459,6 +961,7 @@ def events_to_evidence(events: list[Event]) -> list[EvidenceRecord]:
                 event_at=str(event.occurred_at),
                 language="en",
                 raw_payload_ref=None,
+                feed_origin="manual",
             )
         )
     return records
@@ -588,6 +1091,7 @@ class SecEdgarEvidenceAdapter:
                             event_at=filed_dt.isoformat(),
                             language="en",
                             raw_payload_ref=f"CIK{cik}",
+                            feed_origin="manual",
                         )
                     )
         return records
@@ -605,9 +1109,11 @@ class CompanyIrRssEvidenceAdapter:
         *,
         feeds_path: str | Path = "data/intelligence/ir_feeds.json",
         timeout_sec: float = 12.0,
+        discovery: FeedDiscoveryService | None = None,
     ) -> None:
         self._feeds_path = Path(feeds_path)
         self._timeout_sec = float(timeout_sec)
+        self._discovery = discovery or FeedDiscoveryService()
 
     def _load_feed_map(self) -> dict[str, list[str]]:
         if not self._feeds_path.exists():
@@ -649,7 +1155,7 @@ class CompanyIrRssEvidenceAdapter:
         _ = profiles
         feed_map = self._load_feed_map()
         records: list[EvidenceRecord] = []
-        if not feed_map:
+        if not feed_map and not symbols:
             return records
 
         start_utc = _to_utc_naive(start_dt)
@@ -661,7 +1167,19 @@ class CompanyIrRssEvidenceAdapter:
         with httpx.Client(timeout=timeout) as client:
             for symbol in symbols:
                 symbol_norm = str(symbol).strip().upper()
-                for feed_url in feed_map.get(symbol_norm, []):
+                profile = profiles.get(symbol_norm)
+                feeds: list[tuple[str, Literal["discovered", "catalog", "manual"]]] = []
+                discovered = self._discovery.discover_ir_feeds(symbol=symbol_norm, profile=profile, cfg=cfg)
+                feeds.extend((url, "discovered") for url in discovered)
+                feeds.extend((url, "manual") for url in feed_map.get(symbol_norm, []))
+                deduped_feeds: list[tuple[str, Literal["discovered", "catalog", "manual"]]] = []
+                seen_feed_urls: set[str] = set()
+                for feed_url, feed_origin in feeds:
+                    if feed_url in seen_feed_urls:
+                        continue
+                    seen_feed_urls.add(feed_url)
+                    deduped_feeds.append((feed_url, feed_origin))
+                for feed_url, feed_origin in deduped_feeds:
                     try:
                         response = _http_get_with_retries(
                             client=client,
@@ -695,6 +1213,7 @@ class CompanyIrRssEvidenceAdapter:
                                 event_at=published.isoformat(),
                                 language="en",
                                 raw_payload_ref=feed_url,
+                                feed_origin=feed_origin,
                             )
                         )
         return records
@@ -712,9 +1231,11 @@ class ExchangeAnnouncementsEvidenceAdapter:
         *,
         feeds_path: str | Path = "data/intelligence/exchange_feeds.json",
         timeout_sec: float = 12.0,
+        discovery: FeedDiscoveryService | None = None,
     ) -> None:
         self._feeds_path = Path(feeds_path)
         self._timeout_sec = float(timeout_sec)
+        self._discovery = discovery or FeedDiscoveryService()
 
     def _load_feeds(self) -> dict[str, list[str]]:
         if not self._feeds_path.exists():
@@ -767,56 +1288,63 @@ class ExchangeAnnouncementsEvidenceAdapter:
                 if profile is not None:
                     keys.insert(0, profile.exchange_mic)
                 keys.append("*")
-                seen_urls: set[str] = set()
+                runtime_feeds: list[tuple[str, Literal["discovered", "catalog", "manual"]]] = []
+                catalog_feeds = self._discovery.catalog_exchange_feeds(keys=keys, cfg=cfg)
+                runtime_feeds.extend((url, "catalog") for url in catalog_feeds)
                 for key in keys:
-                    for feed_url in feeds.get(key, []):
-                        if feed_url in seen_urls:
+                    runtime_feeds.extend((feed_url, "manual") for feed_url in feeds.get(key, []))
+                seen_urls: set[str] = set()
+                for feed_url, feed_origin in runtime_feeds:
+                    if feed_url in seen_urls:
+                        continue
+                    seen_urls.add(feed_url)
+                    if not feed_url:
+                        continue
+                    try:
+                        response = _http_get_with_retries(
+                            client=client,
+                            url=feed_url,
+                            rate_limiter=rate_limiter,
+                            max_retries=max_retries,
+                        )
+                    except Exception as exc:
+                        logger.debug("Exchange feed fetch failed (%s): %s", feed_url, exc)
+                        continue
+                    for item in _parse_feed_items(response.text):
+                        title = item.get("title", "")
+                        summary = item.get("summary", "")
+                        text = f"{title} {summary}".upper()
+                        aliases = [symbol_norm]
+                        if profile is not None:
+                            aliases.extend(profile.aliases)
+                        if aliases and not any(alias and alias.upper() in text for alias in aliases):
                             continue
-                        seen_urls.add(feed_url)
-                        try:
-                            response = _http_get_with_retries(
-                                client=client,
-                                url=feed_url,
-                                rate_limiter=rate_limiter,
-                                max_retries=max_retries,
-                            )
-                        except Exception as exc:
-                            logger.debug("Exchange feed fetch failed (%s %s): %s", key, feed_url, exc)
+                        published = _coerce_rfc822(item.get("published", "")) or end_utc
+                        if not (start_utc <= published <= end_utc):
                             continue
-                        for item in _parse_feed_items(response.text):
-                            title = item.get("title", "")
-                            summary = item.get("summary", "")
-                            text = f"{title} {summary}".upper()
-                            aliases = [symbol_norm]
-                            if profile is not None:
-                                aliases.extend(profile.aliases)
-                            if aliases and not any(alias and alias.upper() in text for alias in aliases):
-                                continue
-                            published = _coerce_rfc822(item.get("published", "")) or end_utc
-                            if not (start_utc <= published <= end_utc):
-                                continue
-                            records.append(
-                                EvidenceRecord(
-                                    evidence_id=_build_id(
-                                        "exch",
-                                        symbol_norm,
-                                        key,
-                                        item.get("title", ""),
-                                        item.get("link", ""),
-                                        published.isoformat(),
-                                    ),
-                                    symbol=symbol_norm,
-                                    source_name=self.name,
-                                    source_type="official",
-                                    url=item.get("link") or None,
-                                    headline=item.get("title", ""),
-                                    body_snippet=item.get("summary", "")[:500],
-                                    published_at=published.isoformat(),
-                                    event_at=published.isoformat(),
-                                    language="en",
-                                    raw_payload_ref=feed_url,
-                                )
+                        records.append(
+                            EvidenceRecord(
+                                evidence_id=_build_id(
+                                    "exch",
+                                    symbol_norm,
+                                    ",".join(keys),
+                                    item.get("title", ""),
+                                    item.get("link", ""),
+                                    published.isoformat(),
+                                ),
+                                symbol=symbol_norm,
+                                source_name=self.name,
+                                source_type="official",
+                                url=item.get("link") or None,
+                                headline=item.get("title", ""),
+                                body_snippet=item.get("summary", "")[:500],
+                                published_at=published.isoformat(),
+                                event_at=published.isoformat(),
+                                language="en",
+                                raw_payload_ref=feed_url,
+                                feed_origin=feed_origin,
                             )
+                        )
         return records
 
 
@@ -832,9 +1360,11 @@ class FinancialNewsRssEvidenceAdapter:
         *,
         feeds_path: str | Path = "data/intelligence/financial_news_feeds.json",
         timeout_sec: float = 12.0,
+        discovery: FeedDiscoveryService | None = None,
     ) -> None:
         self._feeds_path = Path(feeds_path)
         self._timeout_sec = float(timeout_sec)
+        self._discovery = discovery or FeedDiscoveryService()
 
     def _load_feeds(self) -> list[str]:
         if not self._feeds_path.exists():
@@ -880,7 +1410,18 @@ class FinancialNewsRssEvidenceAdapter:
         cfg: SourcesConfig,
     ) -> list[EvidenceRecord]:
         feeds = self._load_feeds()
-        if not feeds:
+        catalog_feeds = self._discovery.catalog_news_feeds(cfg=cfg)
+        runtime_feeds: list[tuple[str, Literal["discovered", "catalog", "manual"]]] = []
+        runtime_feeds.extend((url, "catalog") for url in catalog_feeds)
+        runtime_feeds.extend((url, "manual") for url in feeds)
+        deduped_runtime_feeds: list[tuple[str, Literal["discovered", "catalog", "manual"]]] = []
+        seen_feeds: set[str] = set()
+        for feed_url, origin in runtime_feeds:
+            if not feed_url or feed_url in seen_feeds:
+                continue
+            seen_feeds.add(feed_url)
+            deduped_runtime_feeds.append((feed_url, origin))
+        if not deduped_runtime_feeds:
             return []
         start_utc = _to_utc_naive(start_dt)
         end_utc = _to_utc_naive(end_dt)
@@ -889,7 +1430,7 @@ class FinancialNewsRssEvidenceAdapter:
         max_retries = 2
         records: list[EvidenceRecord] = []
         with httpx.Client(timeout=timeout) as client:
-            for feed_url in feeds:
+            for feed_url, feed_origin in deduped_runtime_feeds:
                 try:
                     response = _http_get_with_retries(
                         client=client,
@@ -932,6 +1473,7 @@ class FinancialNewsRssEvidenceAdapter:
                             event_at=published.isoformat(),
                             language="en",
                             raw_payload_ref=feed_url,
+                            feed_origin=feed_origin,
                         )
                     )
         return records
@@ -949,9 +1491,31 @@ class CalendarFallbackScrapeEvidenceAdapter:
         *,
         config_path: str | Path = "data/intelligence/calendar_fallback_urls.json",
         timeout_sec: float = 12.0,
+        compliance: ScrapeComplianceEngine | None = None,
     ) -> None:
         self._config_path = Path(config_path)
         self._timeout_sec = float(timeout_sec)
+        self._compliance = compliance or ScrapeComplianceEngine()
+        self._blocked_reasons: list[str] = []
+
+    def _mark_blocked(self, reason: str) -> None:
+        text = str(reason or "").strip().lower()
+        if text:
+            self._blocked_reasons.append(text)
+
+    def drain_runtime_stats(self) -> dict[str, Any]:
+        reasons = list(self._blocked_reasons)
+        self._blocked_reasons = []
+        counts: dict[str, int] = {}
+        for reason in reasons:
+            counts[reason] = counts.get(reason, 0) + 1
+        top_reasons = [
+            key for key, _value in sorted(counts.items(), key=lambda item: (-item[1], item[0]))[:3]
+        ]
+        return {
+            "blocked_count": len(reasons),
+            "blocked_reasons": top_reasons,
+        }
 
     def _load_urls(self) -> list[str]:
         if not self._config_path.exists():
@@ -1023,7 +1587,9 @@ class CalendarFallbackScrapeEvidenceAdapter:
         records: list[EvidenceRecord] = []
         with httpx.Client(timeout=timeout) as client:
             for url in urls:
-                if not _is_allowed_domain(url, allowed_domains=cfg.allowed_domains):
+                allowed, blocked_reason = self._compliance.is_allowed(url=url, cfg=cfg)
+                if not allowed:
+                    self._mark_blocked(blocked_reason or "scrape_blocked")
                     continue
                 try:
                     response = _http_get_with_retries(
@@ -1056,6 +1622,7 @@ class CalendarFallbackScrapeEvidenceAdapter:
                             event_at=event_dt.isoformat(),
                             language="en",
                             raw_payload_ref=url,
+                            feed_origin="manual",
                         )
                     )
         return records
@@ -1084,6 +1651,8 @@ def collect_additional_evidence(
     def _run_adapter(adapter: EvidenceSourceAdapter) -> tuple[str, list[EvidenceRecord], SourceHealth]:
         source_name = str(adapter.name).strip().lower()
         started = datetime.utcnow()
+        blocked_count = 0
+        blocked_reasons: tuple[str, ...] = tuple()
         try:
             records = adapter.fetch_records(
                 symbols=symbols,
@@ -1099,6 +1668,20 @@ def collect_additional_evidence(
             records = []
             errors = 1
             status = "error"
+        stats = {}
+        drain = getattr(adapter, "drain_runtime_stats", None)
+        if callable(drain):
+            try:
+                stats = drain() or {}
+            except Exception:
+                stats = {}
+        blocked_count = int(stats.get("blocked_count", 0) or 0) if isinstance(stats, dict) else 0
+        blocked_reasons_raw = stats.get("blocked_reasons", []) if isinstance(stats, dict) else []
+        blocked_reasons = tuple(
+            str(item).strip().lower()
+            for item in blocked_reasons_raw
+            if str(item).strip()
+        )
         latency = max(0.0, (datetime.utcnow() - started).total_seconds() * 1000.0)
         source_health = SourceHealth(
             source_name=source_name,
@@ -1107,6 +1690,8 @@ def collect_additional_evidence(
             latency_ms=latency,
             error_count=errors,
             event_count=len(records),
+            blocked_count=blocked_count,
+            blocked_reasons=blocked_reasons,
             last_ingest=datetime.utcnow().replace(microsecond=0).isoformat(),
         )
         return source_name, records, source_health
@@ -1122,6 +1707,8 @@ def collect_additional_evidence(
                 latency_ms=0.0,
                 error_count=0,
                 event_count=0,
+                blocked_count=0,
+                blocked_reasons=tuple(),
                 last_ingest=None,
             )
             continue
@@ -1152,6 +1739,8 @@ def collect_additional_evidence(
                         latency_ms=0.0,
                         error_count=1,
                         event_count=0,
+                        blocked_count=0,
+                        blocked_reasons=tuple(),
                         last_ingest=datetime.utcnow().replace(microsecond=0).isoformat(),
                     )
 
@@ -1163,23 +1752,95 @@ def collect_additional_evidence(
             latency_ms=0.0,
             error_count=0,
             event_count=0,
+            blocked_count=0,
+            blocked_reasons=tuple(),
             last_ingest=datetime.utcnow().replace(microsecond=0).isoformat(),
         )
 
     return all_records, health
 
 
-def _canonical_event_key(event: NormalizedEvent) -> str:
-    dt = _coerce_dt(event.event_at) or _coerce_dt(event.published_at)
-    day = dt.date().isoformat() if dt is not None else ""
-    headline = str(event.llm_fields.get("headline") or "").strip().lower()
-    if not headline:
-        headline = f"{event.event_subtype}:{event.source_name}".lower()
-    return f"{event.symbol}|{event.event_type}|{day}|{headline}"
+def _coarse_event_type(event_type: str) -> str:
+    event_norm = str(event_type).strip().lower()
+    if event_norm in {"earnings", "guidance", "investor_day"}:
+        return "earnings_family"
+    if event_norm in {"regulatory", "m_and_a"}:
+        return "corporate_action"
+    if event_norm in {"product", "analyst"}:
+        return "product_analyst"
+    return event_norm or "other"
 
 
-def normalize_evidence_records(records: list[EvidenceRecord]) -> list[NormalizedEvent]:
+def _title_key(event: NormalizedEvent) -> str:
+    text = str(event.llm_fields.get("headline") or "").strip().lower()
+    return re.sub(r"\s+", " ", text)
+
+
+def _url_hash(url: str | None) -> str:
+    text = str(url or "").strip().lower()
+    if not text:
+        return ""
+    return hashlib.sha1(text.encode("utf-8")).hexdigest()[:16]
+
+
+def _trigram_set(text: str) -> set[str]:
+    cleaned = re.sub(r"[^a-z0-9]+", " ", str(text).lower()).strip()
+    if len(cleaned) < 3:
+        return {cleaned} if cleaned else set()
+    return {cleaned[idx : idx + 3] for idx in range(len(cleaned) - 2)}
+
+
+def _jaccard_similarity(left: str, right: str) -> float:
+    lhs = _trigram_set(left)
+    rhs = _trigram_set(right)
+    if not lhs and not rhs:
+        return 1.0
+    if not lhs or not rhs:
+        return 0.0
+    return float(len(lhs.intersection(rhs))) / float(len(lhs.union(rhs)))
+
+
+def _cluster_conflict_penalty(cluster: list[NormalizedEvent]) -> float:
+    event_types = {str(item.event_type).strip().lower() for item in cluster}
+    timing_types = {str(item.timing_type).strip().lower() for item in cluster}
+    if len(event_types) > 2 or (len(event_types) > 1 and len(timing_types) > 1):
+        return 1.0
+    if len(event_types) > 1 or len(timing_types) > 1:
+        return 0.5
+    return 0.0
+
+
+def _dynamic_source_quality(
+    *,
+    prior: float,
+    confirmation_count: int,
+    published_at: str,
+    historical_precision: float,
+    conflict_penalty: float,
+    asof_dt: datetime,
+) -> float:
+    published_dt = _coerce_dt(published_at) or asof_dt
+    hours_since_publish = max(0.0, (asof_dt - published_dt).total_seconds() / 3600.0)
+    confirmation = min(1.0, float(max(0, confirmation_count)) / 4.0)
+    freshness = math.exp(-hours_since_publish / 72.0)
+    score = (
+        0.45 * _clamp01(prior)
+        + 0.20 * _clamp01(confirmation)
+        + 0.15 * _clamp01(freshness)
+        + 0.20 * _clamp01(historical_precision)
+        - 0.15 * _clamp01(conflict_penalty)
+    )
+    return round(_clamp01(score), 6)
+
+
+def normalize_evidence_records_with_diagnostics(
+    records: list[EvidenceRecord],
+    *,
+    asof_dt: datetime | None = None,
+    historical_precision_by_source: dict[str, float] | None = None,
+) -> tuple[list[NormalizedEvent], NormalizeDiagnostics]:
     normalized: list[NormalizedEvent] = []
+    historical_map = {str(k).strip().lower(): _clamp01(v) for k, v in (historical_precision_by_source or {}).items()}
     for record in records:
         event_type, subtype, timing_type = _infer_event_type(
             record.headline,
@@ -1206,25 +1867,90 @@ def normalize_evidence_records(records: list[EvidenceRecord]) -> list[Normalized
                 llm_fields={
                     "headline": record.headline,
                     "source_type": record.source_type,
+                    "feed_origin": record.feed_origin,
                 },
             )
         )
-
-    grouped: dict[str, list[NormalizedEvent]] = {}
-    for event in normalized:
-        grouped.setdefault(_canonical_event_key(event), []).append(event)
+    pre_dedupe_count = len(normalized)
+    now = _to_utc_naive(asof_dt or datetime.utcnow())
+    clusters: list[list[NormalizedEvent]] = []
+    cluster_methods: list[set[str]] = []
+    for event in sorted(
+        normalized,
+        key=lambda item: (
+            _coerce_dt(item.event_at) or _coerce_dt(item.published_at) or datetime.min,
+            item.event_id,
+        ),
+    ):
+        event_dt = _coerce_dt(event.event_at) or _coerce_dt(event.published_at) or now
+        event_coarse = _coarse_event_type(event.event_type)
+        event_hash = _url_hash(event.raw_url)
+        event_title = _title_key(event)
+        matched_idx: int | None = None
+        matched_method: str | None = None
+        for idx, cluster in enumerate(clusters):
+            anchor = cluster[0]
+            if anchor.symbol != event.symbol:
+                continue
+            anchor_coarse = _coarse_event_type(anchor.event_type)
+            if anchor_coarse != event_coarse:
+                continue
+            anchor_dt = _coerce_dt(anchor.event_at) or _coerce_dt(anchor.published_at) or now
+            if abs((event_dt - anchor_dt).total_seconds()) > 72 * 3600:
+                continue
+            anchor_hashes = {_url_hash(item.raw_url) for item in cluster if _url_hash(item.raw_url)}
+            url_match = bool(event_hash and event_hash in anchor_hashes)
+            title_match = any(_jaccard_similarity(event_title, _title_key(item)) >= 0.82 for item in cluster)
+            if url_match or title_match:
+                matched_idx = idx
+                matched_method = "hybrid" if (url_match and title_match) else ("url_exact" if url_match else "title_fuzzy")
+                break
+        if matched_idx is None:
+            clusters.append([event])
+            cluster_methods.append(set())
+            continue
+        clusters[matched_idx].append(event)
+        if matched_method:
+            cluster_methods[matched_idx].add(matched_method)
 
     deduped: list[NormalizedEvent] = []
-    for events in grouped.values():
+    for idx, events in enumerate(clusters):
         best = max(
             events,
             key=lambda item: (
                 float(item.primary_source_reliability),
                 float(item.confidence),
-                float(item.materiality),
+                (_coerce_dt(item.published_at) or datetime.min),
             ),
         )
         confirmation = len(events)
+        merged_sources = sorted({str(item.source_name).strip().lower() for item in events if str(item.source_name).strip()})
+        merged_urls = sorted({str(item.raw_url).strip() for item in events if str(item.raw_url).strip()})
+        methods = cluster_methods[idx]
+        if "url_exact" in methods and "title_fuzzy" in methods:
+            dedupe_method = "hybrid"
+        elif "url_exact" in methods:
+            dedupe_method = "url_exact"
+        elif "title_fuzzy" in methods:
+            dedupe_method = "title_fuzzy"
+        else:
+            dedupe_method = "url_exact"
+        conflict_penalty = _cluster_conflict_penalty(events)
+        source_key = str(best.source_name).strip().lower()
+        historical_precision = historical_map.get(source_key, 0.55)
+        dynamic_quality = _dynamic_source_quality(
+            prior=float(best.primary_source_reliability),
+            confirmation_count=confirmation,
+            published_at=best.published_at,
+            historical_precision=historical_precision,
+            conflict_penalty=conflict_penalty,
+            asof_dt=now,
+        )
+        llm_fields = dict(best.llm_fields)
+        llm_fields["merged_sources"] = ",".join(merged_sources)
+        llm_fields["merged_urls"] = ",".join(merged_urls)
+        llm_fields["conflict_penalty"] = round(conflict_penalty, 6)
+        llm_fields["dedupe_method"] = dedupe_method
         deduped.append(
             NormalizedEvent(
                 event_id=best.event_id,
@@ -1240,7 +1966,10 @@ def normalize_evidence_records(records: list[EvidenceRecord]) -> list[Normalized
                 event_at=best.event_at,
                 source_name=best.source_name,
                 raw_url=best.raw_url,
-                llm_fields=best.llm_fields,
+                llm_fields=llm_fields,
+                dynamic_source_quality=dynamic_quality,
+                resolution_source=str(best.llm_fields.get("resolution_source", "heuristic")),
+                dedupe_method=dedupe_method,
             )
         )
 
@@ -1251,7 +1980,29 @@ def normalize_evidence_records(records: list[EvidenceRecord]) -> list[Normalized
         ),
         reverse=True,
     )
-    return deduped
+    post_dedupe_count = len(deduped)
+    dedupe_ratio = 0.0
+    if pre_dedupe_count > 0:
+        dedupe_ratio = max(0.0, min(1.0, float(pre_dedupe_count - post_dedupe_count) / float(pre_dedupe_count)))
+    return deduped, NormalizeDiagnostics(
+        pre_dedupe_count=pre_dedupe_count,
+        post_dedupe_count=post_dedupe_count,
+        dedupe_ratio=round(dedupe_ratio, 6),
+    )
+
+
+def normalize_evidence_records(
+    records: list[EvidenceRecord],
+    *,
+    asof_dt: datetime | None = None,
+    historical_precision_by_source: dict[str, float] | None = None,
+) -> list[NormalizedEvent]:
+    events, _diagnostics = normalize_evidence_records_with_diagnostics(
+        records,
+        asof_dt=asof_dt,
+        historical_precision_by_source=historical_precision_by_source,
+    )
+    return events
 
 
 def enrich_normalized_events_with_llm(
@@ -1290,6 +2041,9 @@ def enrich_normalized_events_with_llm(
                     source_name=event.source_name,
                     raw_url=event.raw_url,
                     llm_fields=llm_fields,
+                    dynamic_source_quality=event.dynamic_source_quality,
+                    resolution_source=event.resolution_source,
+                    dedupe_method=event.dedupe_method,
                 )
             )
     return enriched
@@ -1353,7 +2107,17 @@ def build_catalyst_feature_vectors(
                     proximity = max(0.0, 1.0 - (delta_days / 30.0))
 
             materiality = max(0.0, min(1.0, float(event.materiality)))
-            source_quality = max(0.0, min(1.0, float(event.primary_source_reliability)))
+            source_quality = max(
+                0.0,
+                min(
+                    1.0,
+                    float(
+                        event.dynamic_source_quality
+                        if float(event.dynamic_source_quality or 0.0) > 0
+                        else event.primary_source_reliability
+                    ),
+                ),
+            )
             confirmation = max(0.0, min(1.0, float(event.confirmation_count) / 3.0))
             uncertainty = max(0.0, min(1.0, 1.0 - (0.5 * event.confidence + 0.5 * source_quality)))
             filing_impact = materiality if event.event_type == "regulatory" else 0.0
@@ -1377,6 +2141,9 @@ def build_catalyst_feature_vectors(
                         "materiality": round(materiality, 6),
                         "confidence": round(float(event.confidence), 6),
                         "source": event.source_name,
+                        "dynamic_source_quality": round(float(event.dynamic_source_quality), 6),
+                        "dedupe_method": str(event.dedupe_method),
+                        "resolution_source": str(event.resolution_source),
                         "published_at": event.published_at,
                         "event_at": event.event_at or event.published_at,
                         "recency_hours": round(recency_hours, 3),
@@ -1418,3 +2185,79 @@ def evidence_quality_flag(vector: CatalystFeatureVector) -> str:
     if vector.source_quality_score >= 0.45 and vector.uncertainty_penalty <= 0.65:
         return "medium"
     return "low"
+
+
+def historical_precision_map_from_stats(stats: dict[str, dict[str, Any]]) -> dict[str, float]:
+    out: dict[str, float] = {}
+    for source, payload in (stats or {}).items():
+        key = str(source).strip().lower()
+        if not key or not isinstance(payload, dict):
+            continue
+        try:
+            out[key] = _clamp01(float(payload.get("historical_precision", 0.55)))
+        except (TypeError, ValueError):
+            out[key] = 0.55
+    return out
+
+
+def update_source_quality_stats(
+    *,
+    previous_stats: dict[str, dict[str, Any]],
+    normalized_events: list[NormalizedEvent],
+    asof_dt: datetime,
+) -> dict[str, dict[str, Any]]:
+    horizon_start = _to_utc_naive(asof_dt) - timedelta(days=30)
+    out: dict[str, dict[str, Any]] = {}
+    for source, payload in (previous_stats or {}).items():
+        source_key = str(source).strip().lower()
+        if source_key and isinstance(payload, dict):
+            out[source_key] = dict(payload)
+    by_source_values: dict[str, list[float]] = {}
+    for event in normalized_events:
+        source = str(event.source_name).strip().lower()
+        if not source:
+            continue
+        quality = float(event.dynamic_source_quality or 0.0)
+        proxy_precision = _clamp01(0.7 * quality + 0.3 * float(event.confidence))
+        by_source_values.setdefault(source, []).append(proxy_precision)
+
+    asof_date = _to_utc_naive(asof_dt).date().isoformat()
+    for source, values in by_source_values.items():
+        if not values:
+            continue
+        avg_precision = round(sum(values) / float(len(values)), 6)
+        item = out.get(source, {})
+        history_raw = item.get("history", [])
+        history: list[dict[str, Any]] = []
+        if isinstance(history_raw, list):
+            for entry in history_raw:
+                if isinstance(entry, dict):
+                    history.append(dict(entry))
+        history = [entry for entry in history if _coerce_dt(f"{entry.get('date')}T00:00:00") is not None]
+        history = [entry for entry in history if (_coerce_dt(f"{entry.get('date')}T00:00:00") or asof_dt) >= horizon_start]
+        history = [entry for entry in history if str(entry.get("date")) != asof_date]
+        history.append(
+            {
+                "date": asof_date,
+                "precision": avg_precision,
+                "samples": len(values),
+            }
+        )
+        weighted_sum = 0.0
+        sample_sum = 0
+        for entry in history:
+            try:
+                precision = _clamp01(float(entry.get("precision", 0.55)))
+                samples = max(1, int(entry.get("samples", 1)))
+            except (TypeError, ValueError):
+                continue
+            weighted_sum += precision * float(samples)
+            sample_sum += samples
+        historical_precision = round(weighted_sum / float(sample_sum), 6) if sample_sum > 0 else 0.55
+        out[source] = {
+            "historical_precision": historical_precision,
+            "samples_30d": sample_sum,
+            "history": history,
+            "updated_at": _to_utc_naive(asof_dt).replace(microsecond=0).isoformat(),
+        }
+    return out
