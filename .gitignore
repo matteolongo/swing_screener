@@ -60,6 +60,7 @@ data/*.db-journal
 # Execution files
 data/orders.json
 data/positions.json
+data/watchlist.json
 orders.json
 positions.json
 # =========================
