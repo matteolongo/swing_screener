@@ -4,6 +4,24 @@ This directory contains configuration files for the Swing Screener application.
 
 ## Files
 
+### `strategy.yaml`
+
+Root strategy configuration for the plugin-based strategy runtime.
+
+**Purpose:** Enables or disables strategy plugins and overrides plugin defaults in a single YAML source of truth.
+
+**Structure:**
+- `strategy.id`, `strategy.name`, `strategy.description`, `strategy.module`
+- `strategy.plugins.<plugin_id>.enabled`
+- `strategy.plugins.<plugin_id>.config`
+
+**Notes:**
+- Plugin defaults live under `/src/swing_screener/strategy/plugins/<plugin_id>/defaults.yaml`
+- Plugin contracts and capability declarations live under `/src/swing_screener/strategy/plugins/<plugin_id>/plugin.yaml`
+- The Strategy UI is read-only and reflects the resolved result of this file plus plugin defaults
+
+**Documentation:** See `/docs/engineering/STRATEGY_PLUGIN_ARCHITECTURE.md`
+
 ### `mcp_features.yaml`
 
 Configuration file for the MCP (Model Context Protocol) server.

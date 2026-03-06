@@ -12,6 +12,7 @@
 ## Engineering
 - `/docs/engineering/ROADMAP.md`
 - `/docs/engineering/MODULE_ARCHITECTURE.md`
+- `/docs/engineering/STRATEGY_PLUGIN_ARCHITECTURE.md`
 - `/docs/engineering/MODULE_ARCHITECTURE_MIGRATION_PLAN.md` (archived)
 - `/docs/engineering/REFACTOR_PLAN.md`
 - `/docs/engineering/REFACTOR_PLAN_UI_API.md`
