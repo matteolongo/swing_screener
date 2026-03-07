@@ -105,6 +105,9 @@ def build_recommendation(
     fx_estimate_pct: float = 0.0,
     overlay_status: Optional[str] = None,
     min_shares: int = 1,
+    extra_checklist: Optional[list[ChecklistGate]] = None,
+    extra_reasons: Optional[list[Reason]] = None,
+    extra_suggestions: Optional[list[str]] = None,
     thesis: Optional[dict] = None,  # Trade Thesis dictionary
 ) -> RecommendationPayload:
     if entry is None or not math.isfinite(entry) or entry <= 0:
@@ -207,6 +210,8 @@ def build_recommendation(
             rule="R5",
         ),
     ]
+    if extra_checklist:
+        checklist.extend(extra_checklist)
 
     reasons_detailed: list[Reason] = []
     suggestions: list[str] = []
@@ -301,6 +306,11 @@ def build_recommendation(
                 rule="R5",
             )
         )
+
+    if extra_reasons:
+        reasons_detailed.extend(extra_reasons)
+    if extra_suggestions:
+        suggestions.extend(extra_suggestions)
 
     verdict: Verdict = "RECOMMENDED" if all(g.passed for g in checklist) else "NOT_RECOMMENDED"
 

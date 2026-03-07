@@ -1,0 +1,4 @@
+enabled: true
+config:
+  min_rr: 2.0
+  rr_target: 2.0

@@ -1,0 +1,25 @@
+id: trend_filter
+category: Filters
+phase: universe
+display_name: Trend Filter
+description: Require stocks to align with the configured moving-average trend structure.
+defaults_file: defaults.yaml
+read_only_sections: ["Configuration", "Docs"]
+provides: [trend_filter, trend_features]
+requires: []
+modifies: [candidate_eligibility]
+conflicts: []
+runtime_hooks: [augment_universe]
+config_schema:
+  sma_fast: {type: integer, min: 1, label: "Fast SMA", description: "Short-term trend average."}
+  sma_mid: {type: integer, min: 1, label: "Mid SMA", description: "Intermediate trend average."}
+  sma_long: {type: integer, min: 1, label: "Long SMA", description: "Long-term trend average."}
+  require_trend_ok: {type: boolean, label: "Require Trend", description: "Require stock to pass the trend stack filter."}
+docs:
+  what_it_is: Multi-SMA trend alignment filter.
+  why_it_matters: Helps keep trades aligned with the broader move.
+  how_it_affects_trades: Stricter trend requirements reduce countertrend setups.
+  tradeoffs: More trend discipline means fewer but cleaner candidates.
+  default_guidance: 20/50/200 is the standard momentum stack.
+  danger_zone: Disabling trend checks makes the strategy less robust.
+  pro_tip: Strong trends reduce the number of decisions you need to make manually.

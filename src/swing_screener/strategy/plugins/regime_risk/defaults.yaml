@@ -1,0 +1,8 @@
+enabled: true
+config:
+  enabled: false
+  regime_trend_sma: 200
+  regime_trend_multiplier: 0.5
+  regime_vol_atr_window: 14
+  regime_vol_atr_pct_threshold: 6.0
+  regime_vol_multiplier: 0.5

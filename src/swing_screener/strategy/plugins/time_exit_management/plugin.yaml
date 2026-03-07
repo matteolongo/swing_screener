@@ -1,0 +1,23 @@
+id: time_exit_management
+category: Management
+phase: management
+display_name: Time Exit Management
+description: Exit slow trades after the configured maximum holding period.
+defaults_file: defaults.yaml
+read_only_sections: ["Configuration", "Docs"]
+provides: [time_exit_rules]
+requires: [position_size]
+modifies: [risk_plan]
+conflicts: []
+runtime_hooks: [augment_education]
+config_schema:
+  max_holding_days: {type: integer, min: 1, label: "Max Holding Days", description: "Maximum holding period allowed."}
+  benchmark: {type: string, label: "Benchmark", description: "Benchmark context for management decisions."}
+docs:
+  what_it_is: Time-based exit discipline.
+  why_it_matters: Prevents dead capital from remaining stuck in slow setups.
+  how_it_affects_trades: Forces turnover when momentum does not materialize.
+  tradeoffs: Shorter windows rotate faster; longer windows allow slower trends.
+  default_guidance: Use time as a risk management tool, not as a prediction tool.
+  danger_zone: Holding forever because the setup once looked good is a classic trap.
+  pro_tip: Capital efficiency is part of strategy quality.

@@ -5,6 +5,7 @@ from swing_screener.indicators.momentum import (
     MomentumConfig,
     compute_returns,
 )
+from swing_screener.strategy.modules.momentum import _volume_confirmation_rows
 
 
 def _make_synthetic_ohlcv_for_momentum():
@@ -139,3 +140,47 @@ def test_momentum_features_handles_sparse_calendar_gaps():
     # Both AAA and SPY should have features despite gaps
     assert "AAA" in feats.index
     assert pd.notna(feats.loc["AAA", "mom_6m"])
+
+
+def test_volume_confirmation_blocks_weak_breakout_and_keeps_pullback():
+    idx = pd.bdate_range("2024-01-02", periods=25)
+    volume = pd.Series([100.0] * 24 + [120.0], index=idx)
+    ohlcv = pd.concat({"Volume": pd.DataFrame({"AAA": volume})}, axis=1)
+    board = pd.DataFrame({"signal": ["both"]}, index=pd.Index(["AAA"], name="ticker"))
+
+    result = _volume_confirmation_rows(
+        ohlcv,
+        board,
+        {
+            "volume_ma_window": 20,
+            "min_breakout_volume_ratio": 1.5,
+            "apply_to_breakout": True,
+            "apply_to_pullback": False,
+        },
+    )
+
+    assert result.loc["AAA", "volume_confirmation_passed"] == False
+    assert result.loc["AAA", "signal"] == "pullback"
+    assert float(result.loc["AAA", "volume_ratio"]) == 1.2
+
+
+def test_volume_confirmation_passes_strong_breakout():
+    idx = pd.bdate_range("2024-01-02", periods=25)
+    volume = pd.Series([100.0] * 24 + [200.0], index=idx)
+    ohlcv = pd.concat({"Volume": pd.DataFrame({"AAA": volume})}, axis=1)
+    board = pd.DataFrame({"signal": ["breakout"]}, index=pd.Index(["AAA"], name="ticker"))
+
+    result = _volume_confirmation_rows(
+        ohlcv,
+        board,
+        {
+            "volume_ma_window": 20,
+            "min_breakout_volume_ratio": 1.5,
+            "apply_to_breakout": True,
+            "apply_to_pullback": False,
+        },
+    )
+
+    assert result.loc["AAA", "volume_confirmation_passed"] == True
+    assert result.loc["AAA", "signal"] == "breakout"
+    assert float(result.loc["AAA", "volume_ratio"]) == 2.0

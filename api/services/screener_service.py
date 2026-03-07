@@ -21,6 +21,7 @@ from api.models.screener import (
 )
 from api.models.recommendation import Recommendation
 from swing_screener.risk.engine import RiskEngineConfig, evaluate_recommendation
+from swing_screener.risk.recommendations.engine import ChecklistGate, Reason
 from api.repositories.strategy_repo import StrategyRepository
 from swing_screener.data.universe import (
     load_universe_from_package,
@@ -546,8 +547,46 @@ class ScreenerService:
                 if social_overlay_cfg.enabled and not overlay_reasons:
                     overlay_reasons = ["BACKGROUND_WARMUP"]
 
+                volume_ratio = _safe_optional_float(row.get("volume_ratio"))
+                volume_confirmation_passed = (
+                    None
+                    if _is_na_scalar(row.get("volume_confirmation_passed"))
+                    else bool(row.get("volume_confirmation_passed"))
+                )
+                today_volume = _safe_optional_float(row.get("today_volume"))
+                average_volume = _safe_optional_float(row.get("average_volume"))
+
                 rr_target = _safe_float(getattr(risk_cfg, "rr_target", 2.0), default=2.0)
                 commission_pct = _safe_float(getattr(risk_cfg, "commission_pct", 0.0), default=0.0)
+                extra_checklist: list[ChecklistGate] = []
+                extra_reasons: list[Reason] = []
+                extra_suggestions: list[str] = []
+                if volume_confirmation_passed is not None:
+                    extra_checklist.append(
+                        ChecklistGate(
+                            gate_name="volume_confirmation",
+                            passed=volume_confirmation_passed,
+                            explanation="Breakout volume confirmation passed."
+                            if volume_confirmation_passed
+                            else "Breakout volume confirmation failed.",
+                            rule="Q1",
+                        )
+                    )
+                    if not volume_confirmation_passed:
+                        extra_reasons.append(
+                            Reason(
+                                code="VOLUME_CONFIRMATION_FAILED",
+                                message="Breakout does not have enough volume confirmation.",
+                                severity="block",
+                                rule="Q1",
+                                metrics={
+                                    "volume_ratio": round(volume_ratio, 4) if volume_ratio is not None else 0.0,
+                                },
+                            )
+                        )
+                        extra_suggestions.append(
+                            "Wait for stronger participation or keep the setup on watchlist."
+                        )
 
                 rec_payload = evaluate_recommendation(
                     signal=str(signal) if not _is_na_scalar(signal) else None,
@@ -574,6 +613,9 @@ class ScreenerService:
                     momentum_12m=_safe_float(row.get("mom_12m")),
                     rel_strength=_safe_float(row.get("rs_6m")),
                     confidence=_safe_float(row.get("confidence")),
+                    extra_checklist=extra_checklist,
+                    extra_reasons=extra_reasons,
+                    extra_suggestions=extra_suggestions,
                 )
                 recommendation = Recommendation.model_validate(asdict(rec_payload))
                 rec_risk = recommendation.risk
@@ -605,6 +647,10 @@ class ScreenerService:
                         overlay_sentiment_confidence=_safe_optional_float(row.get("overlay_sentiment_confidence")),
                         overlay_hype_score=_safe_optional_float(row.get("overlay_hype_score")),
                         overlay_sample_size=_safe_optional_int(row.get("overlay_sample_size")),
+                        today_volume=today_volume,
+                        average_volume=average_volume,
+                        volume_ratio=volume_ratio,
+                        volume_confirmation_passed=volume_confirmation_passed,
                         signal=str(signal) if not _is_na_scalar(signal) else None,
                         entry=rec_risk.entry,
                         stop=rec_risk.stop if stop_val is not None else None,

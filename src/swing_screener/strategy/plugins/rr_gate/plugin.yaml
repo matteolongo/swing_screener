@@ -1,0 +1,23 @@
+id: rr_gate
+category: Risk
+phase: risk
+display_name: Reward/Risk Gate
+description: Require a minimum reward-to-risk before a trade can be recommended.
+defaults_file: defaults.yaml
+read_only_sections: ["Configuration", "Docs"]
+provides: [rr_validation]
+requires: [position_size]
+modifies: [signal_validation]
+conflicts: []
+runtime_hooks: [augment_recommendation]
+config_schema:
+  min_rr: {type: number, min: 0, label: "Min R/R", description: "Minimum required reward-to-risk."}
+  rr_target: {type: number, min: 0, label: "R/R Target", description: "Target reward-to-risk used for projected target price."}
+docs:
+  what_it_is: Asymmetric payoff gate.
+  why_it_matters: Prevents taking trades with too little upside relative to downside.
+  how_it_affects_trades: Higher thresholds mean fewer but cleaner setups.
+  tradeoffs: Lower thresholds increase signal count but weaken expectancy.
+  default_guidance: 2R remains a strong default for swing trading.
+  danger_zone: Low R/R can produce activity without long-term edge.
+  pro_tip: The best trades give you room to be wrong often and still progress.

@@ -1,0 +1,4 @@
+enabled: true
+config:
+  min_price: 5.0
+  max_price: 500.0

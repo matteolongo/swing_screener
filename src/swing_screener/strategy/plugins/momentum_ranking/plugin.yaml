@@ -1,0 +1,28 @@
+id: momentum_ranking
+category: Ranking
+phase: ranking
+display_name: Momentum Ranking
+description: Rank candidates using 6m momentum, 12m momentum, and relative strength.
+defaults_file: defaults.yaml
+read_only_sections: ["Configuration", "Docs"]
+provides: [ranking_score]
+requires: []
+modifies: [candidate_score]
+conflicts: []
+runtime_hooks: [augment_ranking]
+config_schema:
+  lookback_6m: {type: integer, min: 1, label: "6M Lookback", description: "Momentum lookback for 6-month calculation."}
+  lookback_12m: {type: integer, min: 1, label: "12M Lookback", description: "Momentum lookback for 12-month calculation."}
+  benchmark: {type: string, label: "Benchmark", description: "Benchmark symbol used for relative strength."}
+  w_mom_6m: {type: number, min: 0, label: "Weight 6M", description: "Weight for 6-month momentum."}
+  w_mom_12m: {type: number, min: 0, label: "Weight 12M", description: "Weight for 12-month momentum."}
+  w_rs_6m: {type: number, min: 0, label: "Weight RS", description: "Weight for relative strength."}
+  top_n: {type: integer, min: 1, label: "Top N", description: "Number of ranked candidates to keep."}
+docs:
+  what_it_is: Main ranking engine for the momentum strategy.
+  why_it_matters: Defines which candidates rise to the top before signal and risk checks.
+  how_it_affects_trades: Small weight changes alter the personality of the shortlist.
+  tradeoffs: More recent momentum reacts faster; longer lookbacks are steadier.
+  default_guidance: Use balanced weights until you have enough live observations.
+  danger_zone: Over-optimizing weights on small samples creates fragile rules.
+  pro_tip: Ranking should shape candidate quality, not predict certainty.

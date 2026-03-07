@@ -1,0 +1,27 @@
+id: volume_confirmation
+category: Qualification
+phase: qualification
+display_name: Volume Confirmation
+description: Confirm breakouts using relative volume before they become valid setups.
+defaults_file: defaults.yaml
+read_only_sections: ["Configuration", "Docs"]
+provides: [volume_breakout_confirmation]
+requires: [breakout_signal]
+modifies: [signal_validation]
+conflicts: []
+dependencies: [breakout_signal]
+runtime_hooks: [qualify_candidate, augment_recommendation]
+config_schema:
+  enabled: {type: boolean, label: "Enabled", description: "Enable volume confirmation for breakouts."}
+  volume_ma_window: {type: integer, min: 1, label: "Volume MA Window", description: "Lookback used for average volume."}
+  min_breakout_volume_ratio: {type: number, min: 0, label: "Min Breakout Volume Ratio", description: "Required ratio between today's volume and average volume."}
+  apply_to_breakout: {type: boolean, label: "Apply To Breakout", description: "Apply confirmation to breakout and both signals."}
+  apply_to_pullback: {type: boolean, label: "Apply To Pullback", description: "Reserved for future pullback confirmation logic."}
+docs:
+  what_it_is: A hard confirmation layer for breakout participation.
+  why_it_matters: Breakouts with weak participation are more likely to fail.
+  how_it_affects_trades: Invalidates breakout setups that do not show enough volume support.
+  tradeoffs: Higher thresholds reduce false breakouts but also remove some valid names.
+  default_guidance: Start with a simple 20-day average and 1.5x threshold.
+  danger_zone: Using volume everywhere before testing it can add noise instead of edge.
+  pro_tip: Volume is most useful as a confirmation layer, not as a standalone strategy.

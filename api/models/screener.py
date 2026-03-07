@@ -38,6 +38,10 @@ class ScreenerCandidate(BaseModel):
     overlay_sentiment_confidence: Optional[float] = None
     overlay_hype_score: Optional[float] = None
     overlay_sample_size: Optional[int] = None
+    today_volume: Optional[float] = None
+    average_volume: Optional[float] = None
+    volume_ratio: Optional[float] = None
+    volume_confirmation_passed: Optional[bool] = None
     # Plan + recommendation fields (education-first)
     signal: Optional[str] = None
     entry: Optional[float] = None

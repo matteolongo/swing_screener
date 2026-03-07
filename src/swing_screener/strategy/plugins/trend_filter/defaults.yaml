@@ -1,0 +1,6 @@
+enabled: true
+config:
+  sma_fast: 20
+  sma_mid: 50
+  sma_long: 200
+  require_trend_ok: true

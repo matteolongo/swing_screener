@@ -23,7 +23,7 @@ export default [
     },
     rules: {
       'react-hooks/rules-of-hooks': 'error',
-      'react-hooks/exhaustive-deps': 'off',
+      'react-hooks/exhaustive-deps': 'error',
       'react-refresh/only-export-components': 'off',
       'no-restricted-imports': [
         'error',

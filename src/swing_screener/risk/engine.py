@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from swing_screener.risk.recommendations.engine import RecommendationPayload, build_recommendation
+from swing_screener.risk.recommendations.engine import ChecklistGate, Reason
 from swing_screener.risk.recommendations.thesis import build_trade_thesis, thesis_to_dict
 from swing_screener.risk.position_sizing import RiskConfig
 
@@ -40,6 +41,9 @@ def evaluate_recommendation(
     momentum_12m: Optional[float] = None,
     rel_strength: Optional[float] = None,
     confidence: Optional[float] = None,
+    extra_checklist: Optional[list[ChecklistGate]] = None,
+    extra_reasons: Optional[list[Reason]] = None,
+    extra_suggestions: Optional[list[str]] = None,
 ) -> RecommendationPayload:
     """
     Evaluate recommendation with optional Trade Thesis generation.
@@ -109,5 +113,8 @@ def evaluate_recommendation(
         fx_estimate_pct=costs.fx_estimate_pct,
         overlay_status=overlay_status,
         min_shares=risk_cfg.min_shares,
+        extra_checklist=extra_checklist,
+        extra_reasons=extra_reasons,
+        extra_suggestions=extra_suggestions,
         thesis=thesis_dict,
     )

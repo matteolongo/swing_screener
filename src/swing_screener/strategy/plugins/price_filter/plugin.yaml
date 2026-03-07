@@ -1,0 +1,23 @@
+id: price_filter
+category: Filters
+phase: universe
+display_name: Price Filter
+description: Restrict the universe to stocks within a target price range.
+defaults_file: defaults.yaml
+read_only_sections: ["Configuration", "Docs"]
+provides: [price_filter]
+requires: []
+modifies: [candidate_eligibility]
+conflicts: []
+runtime_hooks: [augment_universe]
+config_schema:
+  min_price: {type: number, min: 0, label: "Min Price", description: "Minimum allowed stock price."}
+  max_price: {type: number, min: 0, label: "Max Price", description: "Maximum allowed stock price."}
+docs:
+  what_it_is: Price range filter for the candidate universe.
+  why_it_matters: Helps avoid penny stocks or names too expensive for your sizing model.
+  how_it_affects_trades: Changes which stocks are eligible before ranking.
+  tradeoffs: Narrower ranges improve consistency but reduce opportunity count.
+  default_guidance: Keep it broad enough to avoid overfitting.
+  danger_zone: Very low prices often behave erratically.
+  pro_tip: Use price filters to match your position sizing and broker constraints.

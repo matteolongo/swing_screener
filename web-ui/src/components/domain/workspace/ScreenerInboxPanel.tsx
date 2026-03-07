@@ -113,7 +113,7 @@ export default function ScreenerInboxPanel({
       minHistory: strategySignals?.minHistory ?? DEFAULT_CONFIG.indicators.minHistory,
     });
   }, [
-    screenerMutation.mutate,
+    screenerMutation,
     selectedUniverse,
     topN,
     minPrice,

@@ -1,0 +1,22 @@
+id: min_history_gate
+category: Signals
+phase: signals
+display_name: Minimum History Gate
+description: Require a minimum amount of history before indicators and signals are trusted.
+defaults_file: defaults.yaml
+read_only_sections: ["Configuration", "Docs"]
+provides: [history_gate]
+requires: []
+modifies: [signal_candidates]
+conflicts: []
+runtime_hooks: [augment_signal_board]
+config_schema:
+  min_history: {type: integer, min: 1, label: "Min History", description: "Minimum history bars required."}
+docs:
+  what_it_is: Data sufficiency gate for signal generation.
+  why_it_matters: Avoids acting on incomplete indicator history.
+  how_it_affects_trades: Excludes newly listed symbols without enough context.
+  tradeoffs: Higher values improve stability but reduce coverage.
+  default_guidance: Around one trading year is a robust default.
+  danger_zone: Low history thresholds distort momentum and trend features.
+  pro_tip: Data quality is part of signal quality.
