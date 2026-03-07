@@ -71,9 +71,9 @@ export default function StrategyPage() {
   if (configQuery.isLoading || pluginsQuery.isLoading || validationQuery.isLoading) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold">Strategy</h1>
+        <h1 className="text-2xl font-bold">{t('strategyPage.header.title')}</h1>
         <Card variant="bordered">
-          <CardContent className="text-sm text-gray-600 dark:text-gray-300">Loading strategy configuration…</CardContent>
+          <CardContent className="text-sm text-gray-600 dark:text-gray-300">{t('strategyPage.pluginDashboard.loading')}</CardContent>
         </Card>
       </div>
     );
@@ -83,10 +83,10 @@ export default function StrategyPage() {
   if (error) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold">Strategy</h1>
+        <h1 className="text-2xl font-bold">{t('strategyPage.header.title')}</h1>
         <Card variant="bordered">
           <CardContent className="text-sm text-red-600 dark:text-red-300">
-            {error instanceof Error ? error.message : 'Failed to load strategy configuration.'}
+            {error instanceof Error ? error.message : t('strategyPage.pluginDashboard.loadFailed')}
           </CardContent>
         </Card>
       </div>
@@ -103,9 +103,9 @@ export default function StrategyPage() {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h1 className="text-2xl font-bold">Strategy</h1>
+        <h1 className="text-2xl font-bold">{t('strategyPage.header.title')}</h1>
         <p className="text-sm text-gray-600 dark:text-gray-300">
-          Read-only strategy dashboard backed by YAML plugin configuration.
+          {t('strategyPage.pluginDashboard.subtitle')}
         </p>
       </div>
 
@@ -121,24 +121,24 @@ export default function StrategyPage() {
             <div className="flex flex-wrap gap-2">
               <Badge variant="primary">{config.module}</Badge>
               {config.configPath ? <Badge variant="default">{config.configPath}</Badge> : null}
-              <Badge variant="default">{config.plugins.length} plugins</Badge>
+              <Badge variant="default">{t('strategyPage.pluginDashboard.pluginsCount', { count: config.plugins.length })}</Badge>
             </div>
             <p className="text-gray-600 dark:text-gray-400">
-              Values shown here are resolved from plugin defaults plus root YAML overrides.
+              {t('strategyPage.pluginDashboard.resolvedValuesNote')}
             </p>
           </CardContent>
         </Card>
 
         <Card variant="bordered">
           <CardHeader>
-            <CardTitle>Validation</CardTitle>
+            <CardTitle>{t('strategyPage.pluginDashboard.validation.title')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex flex-wrap gap-2">
               <Badge variant={validation.isValid ? 'success' : 'error'}>
-                {validation.isValid ? 'Valid' : 'Needs attention'}
+                {validation.isValid ? t('strategyPage.pluginDashboard.validation.valid') : t('strategyPage.pluginDashboard.validation.needsAttention')}
               </Badge>
-              <Badge variant="default">Safety score {validation.safetyScore}</Badge>
+              <Badge variant="default">{t('strategyPage.pluginDashboard.validation.safetyScore', { score: validation.safetyScore })}</Badge>
               <Badge variant="default">{validation.safetyLevel}</Badge>
             </div>
             {validation.warnings.length ? (
@@ -159,7 +159,7 @@ export default function StrategyPage() {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-600 dark:text-gray-300">No validation warnings.</p>
+              <p className="text-sm text-gray-600 dark:text-gray-300">{t('strategyPage.pluginDashboard.validation.noWarnings')}</p>
             )}
           </CardContent>
         </Card>
@@ -167,11 +167,11 @@ export default function StrategyPage() {
 
       <Card variant="bordered">
         <CardHeader>
-          <CardTitle>Execution Graph</CardTitle>
+          <CardTitle>{t('strategyPage.pluginDashboard.executionGraph.title')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           <p className="text-gray-600 dark:text-gray-300">
-            Execution order is resolved from plugin phases plus declared capabilities and dependencies.
+            {t('strategyPage.pluginDashboard.executionGraph.description')}
           </p>
           {config.executionOrder.length ? (
             <ol className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
@@ -190,7 +190,7 @@ export default function StrategyPage() {
                     </div>
                     {plugin?.dependsOn.length ? (
                       <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                        Depends on: {plugin.dependsOn.join(', ')}
+                        {t('strategyPage.pluginDashboard.executionGraph.dependsOn', { items: plugin.dependsOn.join(', ') })}
                       </p>
                     ) : null}
                   </li>
@@ -198,7 +198,7 @@ export default function StrategyPage() {
               })}
             </ol>
           ) : (
-            <p className="text-gray-600 dark:text-gray-300">No enabled plugins found.</p>
+            <p className="text-gray-600 dark:text-gray-300">{t('strategyPage.pluginDashboard.executionGraph.noPlugins')}</p>
           )}
         </CardContent>
       </Card>
