@@ -133,6 +133,7 @@ def resolve_strategy_config(
                 "display_name": plugin.get("display_name", plugin_id),
                 "description": plugin.get("description", ""),
                 "enabled": enabled,
+                "default_enabled": base_enabled,
                 "defaults": base_config,
                 "overrides": override_config,
                 "effective_config": effective_config,

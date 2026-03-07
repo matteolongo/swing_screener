@@ -1,1 +1,22 @@
-{}
+{
+  "exchange:*|AIR.PA|XPAR": {
+    "updated_at": "2026-03-07T11:29:32.412779",
+    "feeds": []
+  },
+  "news:all": {
+    "updated_at": "2026-03-07T11:29:32.416655",
+    "feeds": []
+  },
+  "ir:AAPL": {
+    "updated_at": "2026-03-07T11:29:32.506399",
+    "feeds": []
+  },
+  "ir:MSFT": {
+    "updated_at": "2026-03-07T11:29:42.006678",
+    "feeds": []
+  },
+  "ir:NVDA": {
+    "updated_at": "2026-03-07T11:29:45.616158",
+    "feeds": []
+  }
+}

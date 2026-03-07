@@ -46,7 +46,7 @@ export default function CollapsibleSection({
             title={isExpanded ? collapseLabel : expandLabel}
             aria-label={isExpanded ? collapseLabel : expandLabel}
           >
-            {isExpanded ? '▼' : '▶'}
+            {isExpanded ? collapseLabel : expandLabel}
           </Button>
         </div>
       </CardHeader>

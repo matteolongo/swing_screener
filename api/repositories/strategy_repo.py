@@ -139,7 +139,7 @@ class StrategyRepository:
                     "display_name": plugin.get("display_name", plugin["plugin_id"]),
                     "description": plugin.get("description", ""),
                     "enabled": plugin.get("enabled", False),
-                    "default_enabled": bool(plugin.get("defaults", {}).get("enabled", False)),
+                    "default_enabled": bool(plugin.get("default_enabled", False)),
                     "phase": plugin.get("phase", "qualification"),
                     "provides": [str(item) for item in plugin.get("provides", [])],
                     "requires": [str(item) for item in plugin.get("requires", [])],
