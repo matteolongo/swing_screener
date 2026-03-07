@@ -1741,6 +1741,16 @@ export const messagesEn = {
         highFee: 'Max fee/risk above 30% increases fee drag risk.',
       },
     },
+    categories: {
+      filters: 'Filters',
+      ranking: 'Ranking',
+      signals: 'Signals',
+      risk: 'Risk',
+      qualification: 'Qualification',
+      management: 'Management',
+      intelligence: 'Intelligence',
+      education: 'Education',
+    },
   },
   tableState: {
     loadingFallback: 'Loading data...',

@@ -12,20 +12,23 @@ import type {
   StrategyPluginDefinition,
   StrategyPluginResolvedState,
 } from '@/features/strategy/types';
+import { t } from '@/i18n/t';
 
-const CATEGORY_LABELS: Record<string, string> = {
-  filters: 'Filters',
-  ranking: 'Ranking',
-  signals: 'Signals',
-  risk: 'Risk',
-  qualification: 'Qualification',
-  management: 'Management',
-  intelligence: 'Intelligence',
-  education: 'Education',
+const CATEGORY_I18N_KEYS: Partial<Record<StrategyPluginCategory, string>> = {
+  filters: 'strategyPage.categories.filters',
+  ranking: 'strategyPage.categories.ranking',
+  signals: 'strategyPage.categories.signals',
+  risk: 'strategyPage.categories.risk',
+  qualification: 'strategyPage.categories.qualification',
+  management: 'strategyPage.categories.management',
+  intelligence: 'strategyPage.categories.intelligence',
+  education: 'strategyPage.categories.education',
 };
 
 function categoryLabel(category: StrategyPluginCategory): string {
-  return CATEGORY_LABELS[category] ?? category.charAt(0).toUpperCase() + category.slice(1);
+  const key = CATEGORY_I18N_KEYS[category];
+  if (key) return t(key as Parameters<typeof t>[0]);
+  return category.charAt(0).toUpperCase() + category.slice(1);
 }
 
 function warningVariant(level: 'danger' | 'warning' | 'info') {

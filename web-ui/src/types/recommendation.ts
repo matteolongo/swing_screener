@@ -194,7 +194,74 @@ export interface RecommendationAPI {
   costs: RecommendationCostsAPI;
   checklist: ChecklistGateAPI[];
   education: RecommendationEducationAPI;
-  thesis?: any;  // Thesis comes as dict from backend
+  thesis?: TradeThesisAPI;
+}
+
+// Internal API types for thesis transformation
+interface InvalidationRuleAPI {
+  rule_id: string;
+  condition: string;
+  metric?: string;
+  threshold?: number;
+}
+
+interface GeneratedEducationErrorAPI {
+  view: string;
+  code: string;
+  message: string;
+  retryable: boolean;
+  provider_error_id?: string;
+}
+
+interface TradePersonalityAPI {
+  trend_strength: 1 | 2 | 3 | 4 | 5;
+  volatility_rating: 1 | 2 | 3 | 4 | 5;
+  conviction: 1 | 2 | 3 | 4 | 5;
+  complexity: string;
+}
+
+interface StructuredExplanationAPI {
+  why_qualified: string[];
+  what_could_go_wrong: string[];
+  setup_type: string;
+  key_insight: string;
+}
+
+interface TradeThesisAPI {
+  ticker: string;
+  strategy: string;
+  entry_type: string;
+  trend_status: string;
+  relative_strength: string;
+  regime_alignment: boolean;
+  volatility_state: string;
+  risk_reward: number;
+  setup_quality_score: number;
+  setup_quality_tier: string;
+  institutional_signal: boolean;
+  price_action_quality: string;
+  safety_label: string;
+  personality: TradePersonalityAPI;
+  explanation: StructuredExplanationAPI;
+  invalidation_rules: InvalidationRuleAPI[];
+  professional_insight?: string;
+  beginner_explanation?: {
+    text: string;
+    source: 'llm' | 'deterministic_fallback';
+    model?: string | null;
+    generated_at?: string | null;
+  };
+  education_generated?: {
+    recommendation?: unknown;
+    thesis?: unknown;
+    learn?: unknown;
+    status?: string | null;
+    source?: string | null;
+    template_version?: string | null;
+    deterministic_facts?: Record<string, string>;
+    errors?: GeneratedEducationErrorAPI[];
+    generated_at?: string | null;
+  };
 }
 
 export function transformRecommendation(api: RecommendationAPI): Recommendation {
@@ -241,7 +308,7 @@ export function transformRecommendation(api: RecommendationAPI): Recommendation 
   };
 }
 
-function transformThesis(apiThesis: any): TradeThesis {
+function transformThesis(apiThesis: TradeThesisAPI): TradeThesis {
   const apiEducation = apiThesis.education_generated;
   return {
     ticker: apiThesis.ticker,
@@ -269,7 +336,7 @@ function transformThesis(apiThesis: any): TradeThesis {
       setupType: apiThesis.explanation.setup_type,
       keyInsight: apiThesis.explanation.key_insight,
     },
-    invalidationRules: apiThesis.invalidation_rules.map((rule: any) => ({
+    invalidationRules: apiThesis.invalidation_rules.map((rule: InvalidationRuleAPI) => ({
       ruleId: rule.rule_id,
       condition: rule.condition,
       metric: rule.metric,
@@ -289,12 +356,12 @@ function transformThesis(apiThesis: any): TradeThesis {
           recommendation: transformGeneratedEducationView(apiEducation.recommendation),
           thesis: transformGeneratedEducationView(apiEducation.thesis),
           learn: transformGeneratedEducationView(apiEducation.learn),
-          status: apiEducation.status ?? undefined,
-          source: apiEducation.source ?? undefined,
+          status: (apiEducation.status ?? undefined) as GeneratedEducationPayload['status'],
+          source: (apiEducation.source ?? undefined) as GeneratedEducationPayload['source'],
           templateVersion: apiEducation.template_version ?? undefined,
           deterministicFacts: apiEducation.deterministic_facts ?? {},
-          errors: (apiEducation.errors ?? []).map((error: any) => ({
-            view: error.view,
+          errors: (apiEducation.errors ?? []).map((error: GeneratedEducationErrorAPI) => ({
+            view: error.view as GeneratedEducationViewName,
             code: error.code,
             message: error.message,
             retryable: Boolean(error.retryable),
@@ -306,27 +373,31 @@ function transformThesis(apiThesis: any): TradeThesis {
   };
 }
 
-function transformGeneratedEducationView(apiView: any): GeneratedEducationView | undefined {
+function transformGeneratedEducationView(apiView: unknown): GeneratedEducationView | undefined {
   if (!apiView || typeof apiView !== 'object') {
     return undefined;
   }
+  const view = apiView as Record<string, unknown>;
   return {
-    title: String(apiView.title ?? ''),
-    summary: String(apiView.summary ?? ''),
-    bullets: Array.isArray(apiView.bullets) ? apiView.bullets.map((value: unknown) => String(value)) : [],
-    watchouts: Array.isArray(apiView.watchouts) ? apiView.watchouts.map((value: unknown) => String(value)) : [],
-    nextSteps: Array.isArray(apiView.next_steps ?? apiView.nextSteps)
-      ? (apiView.next_steps ?? apiView.nextSteps).map((value: unknown) => String(value))
-      : [],
-    glossaryLinks: Array.isArray(apiView.glossary_links ?? apiView.glossaryLinks)
-      ? (apiView.glossary_links ?? apiView.glossaryLinks).map((value: unknown) => String(value))
-      : [],
-    factsUsed: Array.isArray(apiView.facts_used ?? apiView.factsUsed)
-      ? (apiView.facts_used ?? apiView.factsUsed).map((value: unknown) => String(value))
-      : [],
-    source: apiView.source === 'llm' ? 'llm' : 'deterministic_fallback',
-    templateVersion: String(apiView.template_version ?? apiView.templateVersion ?? 'v1'),
-    generatedAt: String(apiView.generated_at ?? apiView.generatedAt ?? ''),
-    debugRef: apiView.debug_ref ?? apiView.debugRef ?? undefined,
+    title: String(view.title ?? ''),
+    summary: String(view.summary ?? ''),
+    bullets: Array.isArray(view.bullets) ? (view.bullets as unknown[]).map((value: unknown) => String(value)) : [],
+    watchouts: Array.isArray(view.watchouts) ? (view.watchouts as unknown[]).map((value: unknown) => String(value)) : [],
+    nextSteps: (() => {
+      const raw = view.next_steps ?? view.nextSteps;
+      return Array.isArray(raw) ? (raw as unknown[]).map((value: unknown) => String(value)) : [];
+    })(),
+    glossaryLinks: (() => {
+      const raw = view.glossary_links ?? view.glossaryLinks;
+      return Array.isArray(raw) ? (raw as unknown[]).map((value: unknown) => String(value)) : [];
+    })(),
+    factsUsed: (() => {
+      const raw = view.facts_used ?? view.factsUsed;
+      return Array.isArray(raw) ? (raw as unknown[]).map((value: unknown) => String(value)) : [];
+    })(),
+    source: view.source === 'llm' ? 'llm' : 'deterministic_fallback',
+    templateVersion: String(view.template_version ?? view.templateVersion ?? 'v1'),
+    generatedAt: String(view.generated_at ?? view.generatedAt ?? ''),
+    debugRef: (view.debug_ref ?? view.debugRef) as string | undefined,
   };
 }
