@@ -105,6 +105,11 @@ export default function DailyReview() {
   const hiddenCandidates = review.newCandidates.length - recommendedCandidates.length;
   const quickActionCandidate = recommendedCandidates[0] ?? null;
 
+  const sectionExpandLabel = t('dailyReview.sections.expand');
+  const sectionCollapseLabel = t('dailyReview.sections.collapse');
+  const actionsBadgeLabel = (count: number) =>
+    t('dailyReview.sections.actionsBadge', { count, suffix: count !== 1 ? 's' : '' });
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-start">
@@ -186,6 +191,8 @@ export default function DailyReview() {
         isExpanded={expandedSections.candidates}
         onToggle={() => toggleSection('candidates')}
         count={recommendedCandidates.length}
+        expandLabel={sectionExpandLabel}
+        collapseLabel={sectionCollapseLabel}
       >
         {recommendedCandidates.length === 0 ? (
           <div className="space-y-3">
@@ -246,6 +253,9 @@ export default function DailyReview() {
         onToggle={() => toggleSection('update')}
         count={review.positionsUpdateStop.length}
         variant="warning"
+        badgeLabel={actionsBadgeLabel(review.positionsUpdateStop.length)}
+        expandLabel={sectionExpandLabel}
+        collapseLabel={sectionCollapseLabel}
       >
         {review.positionsUpdateStop.length === 0 ? (
           <p className="text-gray-600 dark:text-gray-400">{t('dailyReview.sections.noStopUpdates')}</p>
@@ -277,6 +287,9 @@ export default function DailyReview() {
         onToggle={() => toggleSection('close')}
         count={review.positionsClose.length}
         variant="danger"
+        badgeLabel={actionsBadgeLabel(review.positionsClose.length)}
+        expandLabel={sectionExpandLabel}
+        collapseLabel={sectionCollapseLabel}
       >
         {review.positionsClose.length === 0 ? (
           <p className="text-gray-600 dark:text-gray-400">{t('dailyReview.sections.noClose')}</p>
@@ -304,6 +317,8 @@ export default function DailyReview() {
         isExpanded={expandedSections.hold}
         onToggle={() => toggleSection('hold')}
         count={review.positionsHold.length}
+        expandLabel={sectionExpandLabel}
+        collapseLabel={sectionCollapseLabel}
       >
         {review.positionsHold.length === 0 ? (
           <p className="text-gray-600 dark:text-gray-400">{t('dailyReview.sections.noHold')}</p>
