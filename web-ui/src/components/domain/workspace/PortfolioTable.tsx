@@ -58,8 +58,6 @@ export default function PortfolioTable() {
 
   const positionsQuery = usePositions('open');
   const ordersQuery = useOrders('pending');
-  const positions = positionsQuery.data ?? [];
-  const orders = ordersQuery.data ?? [];
   const isLoading = positionsQuery.isLoading || ordersQuery.isLoading;
   const isReady = positionsQuery.isFetched && ordersQuery.isFetched;
   const isError = positionsQuery.isError || ordersQuery.isError;
@@ -118,6 +116,8 @@ export default function PortfolioTable() {
   const cancelOrderMutation = useCancelOrderMutation();
 
   const rows = useMemo<PortfolioRow[]>(() => {
+    const positions = positionsQuery.data ?? [];
+    const orders = ordersQuery.data ?? [];
     const byPositionId = new Map<string, { stopOrder?: Order; targetOrder?: Order }>();
     const standaloneOrders: Order[] = [];
 
@@ -178,7 +178,7 @@ export default function PortfolioTable() {
     }));
 
     return [...positionRows, ...standaloneRows];
-  }, [orders, positions]);
+  }, [positionsQuery.data, ordersQuery.data]);
 
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);

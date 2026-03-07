@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 import Card, { CardContent, CardHeader, CardTitle } from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import IntelligenceOpportunityCard from '@/components/domain/intelligence/IntelligenceOpportunityCard';
@@ -71,22 +72,18 @@ export default function IntelligencePage() {
   const [selectedSymbolSetId, setSelectedSymbolSetId] = useState('');
   const [symbolSetName, setSymbolSetName] = useState('');
   const [symbolSetSymbolsInput, setSymbolSetSymbolsInput] = useState('');
-  const [showAdvancedConfig, setShowAdvancedConfig] = useState(() => {
-    if (typeof window === 'undefined') {
-      return false;
-    }
-    return window.localStorage.getItem('intelligence.showAdvancedConfig') === 'true';
-  });
+  const [showAdvancedConfig, setShowAdvancedConfig] = useLocalStorage(
+    'intelligence.showAdvancedConfig',
+    false,
+    // Handle both legacy raw-string ("true") and new JSON (true) formats
+    (val) => val === true || val === 'true',
+  );
 
   useEffect(() => {
     if (configQuery.data) {
       setDraftConfig(configQuery.data);
     }
   }, [configQuery.data]);
-
-  useEffect(() => {
-    window.localStorage.setItem('intelligence.showAdvancedConfig', String(showAdvancedConfig));
-  }, [showAdvancedConfig]);
 
   const symbolSets = symbolSetsQuery.data?.items ?? [];
   const selectedSymbolSet = symbolSets.find((item) => item.id === selectedSymbolSetId);
