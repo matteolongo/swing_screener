@@ -51,12 +51,50 @@ cfg = ExecutionConfig(
 report = add_execution_guidance(screener_df, cfg)
 ```
 
-## Submodules
+## Files
 
-| Module | Description |
-|--------|-------------|
-| `orders` | Order model, load/save from JSON |
-| `order_workflows` | Fill entry/exit orders, scale-in logic |
-| `orders_service` | Dict-to-model conversions for API |
-| `guidance` | Generate execution instructions from signals |
-| `degiro_fees` | DeGiro broker fee calculations |
+| File | Purpose |
+|------|---------|
+| `orders.py` | `Order` dataclass, `load_orders()`, `save_orders()` |
+| `order_workflows.py` | `fill_entry_order()`, `scale_in_fill()`, `normalize_orders()` |
+| `orders_service.py` | Dict ↔ model conversions for API layer |
+| `guidance.py` | `add_execution_guidance()`, `ExecutionConfig` |
+| `degiro_fees.py` | Import DeGiro broker fees from CSV export |
+| `providers/` | Fee calculators per broker |
+| `__init__.py` | Package exports |
+
+## DeGiro Fee Import
+
+```python
+from swing_screener.execution.degiro_fees import import_degiro_fees
+
+updated_orders = import_degiro_fees(
+    orders=orders,
+    degiro_csv_path="degiro_export.csv",
+    fx_rate=1.08,          # EUR/USD if orders are in USD
+)
+```
+
+DeGiro fee records are matched to filled orders by ticker and date, then stored in `order.fee_eur`.
+
+## Order Lifecycle
+
+```
+pending → filled     (fill_entry_order / fill_exit_order)
+pending → cancelled  (cancel_order)
+```
+
+Orders are persisted to `data/orders.json`. Use `load_orders()` / `save_orders()` for all reads and writes — never edit the JSON directly while the CLI is running (file locking is active).
+
+## Notes
+
+- `fill_entry_order()` automatically creates linked stop and take-profit orders.
+- `scale_in_fill()` adds shares to an existing open position without creating a new position record.
+- `normalize_orders()` deduplicates and cleans order lists after import operations.
+- `orders_service.py` provides dict-based wrappers consumed by the FastAPI endpoints.
+
+## See Also
+
+- `portfolio/state.py` — `Position` created from a filled entry order
+- `risk/position_sizing.py` — determines `stop_price` and `quantity` before order creation
+- `cli.py` `orders` command — drives the order lifecycle from the terminal
