@@ -26,6 +26,8 @@ strategy:
       enabled: true
     atr_position_sizing:
       enabled: true
+      config:
+        account_size: 500.0
     rr_gate:
       enabled: true
     fee_gate:
