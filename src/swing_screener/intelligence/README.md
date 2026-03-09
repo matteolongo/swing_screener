@@ -81,6 +81,31 @@ There is no separate env toggle required for normal intelligence configuration.
 
 For Ollama, `OLLAMA_HOST` can be used as a fallback host in the LLM client when `base_url` is not explicitly passed.
 
+## Supported LLM Providers
+
+The `intelligence/llm/` layer supports:
+
+| Provider | `provider` value | Notes |
+|----------|-----------------|-------|
+| Ollama | `"ollama"` | Default. Local inference. Default model: `mistral:7b-instruct`. Uses `OLLAMA_HOST` env var as fallback host. |
+| OpenAI | `"openai"` | Requires `OPENAI_API_KEY` |
+| Anthropic | `"anthropic"` | Requires `ANTHROPIC_API_KEY` |
+| LM Studio | `"lm_studio"` | Local OpenAI-compatible endpoint |
+
+LLM is **disabled by default** (`llm.enabled: false`). When disabled, all events are processed with heuristic credibility scores only.
+
+## Event Ingestion Sources
+
+Available providers in `intelligence/ingestion/`:
+
+| Source | Description |
+|--------|-------------|
+| Yahoo Finance | News articles and press releases |
+| Earnings Calendar | Upcoming and recent earnings events |
+| SEC Edgar | 8-K and other material filings |
+| RSS Feeds | Configurable RSS/Atom news feeds |
+| (extensible) | Custom providers via the `IngestionProvider` protocol |
+
 ## Storage
 Default root:
 - `data/intelligence`

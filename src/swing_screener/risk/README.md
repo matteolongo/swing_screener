@@ -54,10 +54,43 @@ plans = build_trade_plans(ranked_universe, signal_board, cfg)
 print(plans.head())
 ```
 
-## Submodules
+## `RiskConfig` Reference
 
-| Module | Description |
-|--------|-------------|
-| `position_sizing` | Position sizing, stop calculation, trade plans |
-| `regime` | Market regime detection for risk scaling |
-| `engine` | Risk evaluation with Trade Thesis generation |
+```python
+@dataclass(frozen=True)
+class RiskConfig:
+    account_size:          float = 500.0    # ⚠ default is small; always override
+    risk_pct:              float = 0.01     # fraction of account risked per trade (1%)
+    k_atr:                 float = 2.0      # stop = entry - k_atr * ATR14
+    max_position_pct:      float = 0.60     # max position size as fraction of account
+    min_shares:            int   = 1        # minimum shares (below this = no trade)
+    min_rr:                float = 2.0      # minimum reward-to-risk ratio
+    rr_target:             float = 2.0      # take-profit = entry + rr_target * 1R
+    commission_pct:        float = 0.0      # broker commission (fraction of trade value)
+    max_fee_risk_pct:      float = 0.20     # veto trade if fee > 20% of risk budget
+    # Regime-aware scaling (applied before sizing)
+    regime_enabled:        bool  = False
+    regime_trend_sma:      int   = 200
+    regime_trend_multiplier: float = 0.5   # scale risk by 0.5× in downtrend
+    regime_vol_atr_window: int   = 14
+    regime_vol_atr_pct_threshold: float = 6.0  # ATR% above this = high-vol regime
+    regime_vol_multiplier: float = 0.5     # scale risk by 0.5× in high-vol regime
+```
+
+> **Note**: `account_size=500.0` is intentionally a minimal default (€500 for a micro account). Always set this to your actual account size in `RiskConfig` or via the strategy config.
+
+## Files
+
+| File | Purpose |
+|------|---------|
+| `position_sizing.py` | `RiskConfig`, `compute_stop()`, `position_plan()`, `build_trade_plans()` |
+| `regime.py` | `compute_regime_risk_multiplier()` — market regime detection |
+| `engine.py` | `RiskEngineConfig`, `evaluate_recommendation()` — trade thesis generation |
+| `__init__.py` | Package exports |
+
+## See Also
+
+- `selection/pipeline.py` — produces `ranked` and `board` consumed by `build_trade_plans()`
+- `portfolio/state.py` — `ManageConfig` for post-entry stop management
+- `strategy/plugins/regime_risk/` — strategy plugin for regime-aware scaling
+- `strategy/plugins/atr_position_sizing/` — strategy plugin wrapping position sizing
