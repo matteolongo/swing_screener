@@ -1,0 +1,22 @@
+id: breakeven_management
+category: Management
+phase: management
+display_name: Breakeven Management
+description: Move stops to breakeven once a trade has earned enough R.
+defaults_file: defaults.yaml
+read_only_sections: ["Configuration", "Docs"]
+provides: [breakeven_rules]
+requires: [position_size]
+modifies: [risk_plan]
+conflicts: []
+runtime_hooks: [augment_education]
+config_schema:
+  breakeven_at_r: {type: number, min: 0, label: "Breakeven At R", description: "Move stop to entry after this R multiple."}
+docs:
+  what_it_is: Stop management rule that removes downside after a trade proves itself.
+  why_it_matters: Helps protect capital on trades that start working.
+  how_it_affects_trades: Can reduce drawdown but also cut some winners early.
+  tradeoffs: Earlier breakeven means more safety and more premature exits.
+  default_guidance: 1R is a balanced beginner baseline.
+  danger_zone: Manual stop moves defeat the purpose of a systematic rule.
+  pro_tip: Breakeven rules are for consistency, not comfort.

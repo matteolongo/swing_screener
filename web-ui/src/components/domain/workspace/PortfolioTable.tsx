@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
+import { useModal } from '@/hooks/useModal';
 import { useLocation } from 'react-router-dom';
 import DataTable, { type DataTableColumn } from '@/components/common/DataTable';
 import Button from '@/components/common/Button';
@@ -58,26 +59,20 @@ export default function PortfolioTable() {
 
   const positionsQuery = usePositions('open');
   const ordersQuery = useOrders('pending');
-  const positions = positionsQuery.data ?? [];
-  const orders = ordersQuery.data ?? [];
   const isLoading = positionsQuery.isLoading || ordersQuery.isLoading;
   const isReady = positionsQuery.isFetched && ordersQuery.isFetched;
   const isError = positionsQuery.isError || ordersQuery.isError;
 
-  const [selectedPosition, setSelectedPosition] = useState<PositionWithMetrics | null>(null);
-  const [selectedPendingOrder, setSelectedPendingOrder] = useState<Order | null>(null);
-  const [showUpdateStopModal, setShowUpdateStopModal] = useState(false);
-  const [showCloseModal, setShowCloseModal] = useState(false);
-  const [showFillOrderModal, setShowFillOrderModal] = useState(false);
+  const updateStopModal = useModal<PositionWithMetrics>();
+  const closeModal = useModal<PositionWithMetrics>();
+  const fillOrderModal = useModal<Order>();
 
-  const updateStopMutation = useUpdateStopMutation(() => {
-    setShowUpdateStopModal(false);
-    setSelectedPosition(null);
-  });
-  const closePositionMutation = useClosePositionMutation(() => {
-    setShowCloseModal(false);
-    setSelectedPosition(null);
-  });
+  const { open: openUpdateStop, close: closeUpdateStop } = updateStopModal;
+  const { open: openClosePosition, close: closeClosePosition } = closeModal;
+  const { open: openFillOrder, close: closeFillOrder } = fillOrderModal;
+
+  const updateStopMutation = useUpdateStopMutation(() => updateStopModal.close());
+  const closePositionMutation = useClosePositionMutation(() => closeModal.close());
   const watchlistQuery = useWatchlist();
   const watchSymbolMutation = useWatchSymbolMutation();
   const unwatchSymbolMutation = useUnwatchSymbolMutation();
@@ -111,13 +106,12 @@ export default function PortfolioTable() {
     unwatchSymbolMutation.mutate(normalizedTicker);
   };
 
-  const fillOrderMutation = useFillOrderMutation(() => {
-    setShowFillOrderModal(false);
-    setSelectedPendingOrder(null);
-  });
+  const fillOrderMutation = useFillOrderMutation(() => fillOrderModal.close());
   const cancelOrderMutation = useCancelOrderMutation();
 
   const rows = useMemo<PortfolioRow[]>(() => {
+    const positions = positionsQuery.data ?? [];
+    const orders = ordersQuery.data ?? [];
     const byPositionId = new Map<string, { stopOrder?: Order; targetOrder?: Order }>();
     const standaloneOrders: Order[] = [];
 
@@ -178,7 +172,7 @@ export default function PortfolioTable() {
     }));
 
     return [...positionRows, ...standaloneRows];
-  }, [orders, positions]);
+  }, [positionsQuery.data, ordersQuery.data]);
 
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
@@ -217,15 +211,13 @@ export default function PortfolioTable() {
         return;
       }
 
-      setSelectedPosition(matchedPosition);
-      setSelectedPendingOrder(null);
-      setShowFillOrderModal(false);
+      closeFillOrder();
       if (action === 'update-stop') {
-        setShowCloseModal(false);
-        setShowUpdateStopModal(true);
+        closeClosePosition();
+        openUpdateStop(matchedPosition);
       } else {
-        setShowUpdateStopModal(false);
-        setShowCloseModal(true);
+        closeUpdateStop();
+        openClosePosition(matchedPosition);
       }
       clearPortfolioIntent();
       return;
@@ -243,17 +235,15 @@ export default function PortfolioTable() {
         return;
       }
 
-      setSelectedPendingOrder(matchedOrder);
-      setSelectedPosition(null);
-      setShowUpdateStopModal(false);
-      setShowCloseModal(false);
-      setShowFillOrderModal(true);
+      closeUpdateStop();
+      closeClosePosition();
+      openFillOrder(matchedOrder);
       clearPortfolioIntent();
       return;
     }
 
     clearPortfolioIntent();
-  }, [isReady, location, rows, setSelectedTicker]);
+  }, [isReady, location, rows, setSelectedTicker, openUpdateStop, closeUpdateStop, openClosePosition, closeClosePosition, openFillOrder, closeFillOrder]);
 
   const columns: DataTableColumn<PortfolioRow>[] = [
     {
@@ -349,8 +339,7 @@ export default function PortfolioTable() {
               size="sm"
               variant="primary"
               onClick={() => {
-                setSelectedPosition(row.position);
-                setShowUpdateStopModal(true);
+                updateStopModal.open(row.position ?? undefined);
               }}
             >
               {t('positionsPage.updateStop')}
@@ -359,8 +348,7 @@ export default function PortfolioTable() {
               size="sm"
               variant="secondary"
               onClick={() => {
-                setSelectedPosition(row.position);
-                setShowCloseModal(true);
+                closeModal.open(row.position ?? undefined);
               }}
             >
               {t('positionsPage.closePosition')}
@@ -374,8 +362,7 @@ export default function PortfolioTable() {
               disabled={!row.order || cancelOrderMutation.isPending || fillOrderMutation.isPending}
               onClick={() => {
                 if (!row.order) return;
-                setSelectedPendingOrder(row.order);
-                setShowFillOrderModal(true);
+                fillOrderModal.open(row.order);
               }}
             >
               {t('common.actions.fillOrder')}
@@ -423,16 +410,13 @@ export default function PortfolioTable() {
         onRowClick={(row) => setSelectedTicker(row.ticker)}
       />
 
-      {showUpdateStopModal && selectedPosition ? (
+      {updateStopModal.isOpen && updateStopModal.data ? (
         <UpdateStopModalForm
-          position={selectedPosition}
-          onClose={() => {
-            setShowUpdateStopModal(false);
-            setSelectedPosition(null);
-          }}
+          position={updateStopModal.data}
+          onClose={updateStopModal.close}
           onSubmit={(request) =>
             updateStopMutation.mutate({
-              positionId: selectedPosition.positionId!,
+              positionId: updateStopModal.data!.positionId!,
               request,
             })
           }
@@ -441,16 +425,13 @@ export default function PortfolioTable() {
         />
       ) : null}
 
-      {showCloseModal && selectedPosition ? (
+      {closeModal.isOpen && closeModal.data ? (
         <ClosePositionModalForm
-          position={selectedPosition}
-          onClose={() => {
-            setShowCloseModal(false);
-            setSelectedPosition(null);
-          }}
+          position={closeModal.data}
+          onClose={closeModal.close}
           onSubmit={(request) =>
             closePositionMutation.mutate({
-              positionId: selectedPosition.positionId!,
+              positionId: closeModal.data!.positionId!,
               request,
             })
           }
@@ -459,16 +440,13 @@ export default function PortfolioTable() {
         />
       ) : null}
 
-      {showFillOrderModal && selectedPendingOrder ? (
+      {fillOrderModal.isOpen && fillOrderModal.data ? (
         <FillOrderModalForm
-          order={selectedPendingOrder}
-          onClose={() => {
-            setShowFillOrderModal(false);
-            setSelectedPendingOrder(null);
-          }}
+          order={fillOrderModal.data}
+          onClose={fillOrderModal.close}
           onSubmit={(request) =>
             fillOrderMutation.mutate({
-              orderId: selectedPendingOrder.orderId,
+              orderId: fillOrderModal.data!.orderId,
               request,
             })
           }

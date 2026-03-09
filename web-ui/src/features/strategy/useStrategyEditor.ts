@@ -41,7 +41,7 @@ export function useStrategyEditor() {
     clearStatusLater(setStatusMessage, import.meta.env.MODE, 2000);
   });
 
-  const strategies = strategiesQuery.data ?? [];
+  const strategies = useMemo(() => strategiesQuery.data ?? [], [strategiesQuery.data]);
   const activeStrategy = activeStrategyQuery.data;
 
   const createMutation = useCreateStrategyMutation(

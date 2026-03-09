@@ -12,9 +12,15 @@ import {
 import {
   Strategy,
   StrategyAPI,
+  StrategyPluginDefinition,
+  StrategyPluginDefinitionAPI,
+  StrategyResolvedConfig,
+  StrategyResolvedConfigAPI,
   ActiveStrategyRequestAPI,
   StrategyUpdateRequestAPI,
   transformStrategy,
+  transformStrategyPluginDefinition,
+  transformStrategyResolvedConfig,
   toStrategyCreateRequest,
   toStrategyUpdateRequest,
 } from '@/features/strategy/types';
@@ -63,6 +69,20 @@ export async function fetchStrategies(): Promise<Strategy[]> {
   return data.map(transformStrategy);
 }
 
+export async function fetchStrategyConfig(): Promise<StrategyResolvedConfig> {
+  const res = await fetch(apiUrl(API_ENDPOINTS.strategyConfig));
+  if (!res.ok) throw new Error('Failed to load strategy config');
+  const data: StrategyResolvedConfigAPI = await res.json();
+  return transformStrategyResolvedConfig(data);
+}
+
+export async function fetchStrategyPlugins(): Promise<StrategyPluginDefinition[]> {
+  const res = await fetch(apiUrl(API_ENDPOINTS.strategyPlugins));
+  if (!res.ok) throw new Error('Failed to load strategy plugins');
+  const data: StrategyPluginDefinitionAPI[] = await res.json();
+  return data.map(transformStrategyPluginDefinition);
+}
+
 export async function fetchActiveStrategy(): Promise<Strategy> {
   if (isLocalPersistenceMode()) {
     return getActiveStrategyLocal();
@@ -71,6 +91,16 @@ export async function fetchActiveStrategy(): Promise<Strategy> {
   if (!res.ok) throw new Error('Failed to load active strategy');
   const data: StrategyAPI = await res.json();
   return transformStrategy(data);
+}
+
+export async function fetchResolvedStrategyValidation(): Promise<StrategyValidationResult> {
+  const res = await fetch(apiUrl(API_ENDPOINTS.strategyValidationReadOnly));
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    throw new Error(error.detail || 'Failed to load strategy validation');
+  }
+  const data: StrategyValidationResultApi = await res.json();
+  return transformValidationResult(data);
 }
 
 export async function setActiveStrategy(strategyId: string): Promise<Strategy> {

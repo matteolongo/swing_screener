@@ -1,0 +1,26 @@
+id: atr_position_sizing
+category: Risk
+phase: risk
+display_name: ATR Position Sizing
+description: Build trade plans using ATR-defined stop distance and account risk constraints.
+defaults_file: defaults.yaml
+read_only_sections: ["Configuration", "Docs"]
+provides: [position_size, risk_plan]
+requires: [signal_candidates, atr_window]
+modifies: [risk_plan]
+conflicts: []
+runtime_hooks: [adjust_risk_plan]
+config_schema:
+  account_size: {type: number, min: 0, label: "Account Size", description: "Account capital used for sizing."}
+  risk_pct: {type: number, min: 0, max: 1, label: "Risk %", description: "Risk per trade as a fraction of capital."}
+  max_position_pct: {type: number, min: 0, max: 1, label: "Max Position %", description: "Maximum position allocation."}
+  min_shares: {type: integer, min: 1, label: "Min Shares", description: "Minimum tradable share count."}
+  k_atr: {type: number, min: 0, label: "ATR Multiplier", description: "Stop distance in ATR units."}
+docs:
+  what_it_is: Core risk and sizing engine.
+  why_it_matters: Converts setup quality into position size and stop levels.
+  how_it_affects_trades: Changes risk per trade, stop width and tradability.
+  tradeoffs: Tighter stops allow bigger size but are easier to shake out.
+  default_guidance: Keep risk small and repeatable.
+  danger_zone: Oversizing usually comes from changing risk rules after seeing a setup.
+  pro_tip: Position sizing is where strategy discipline becomes real.

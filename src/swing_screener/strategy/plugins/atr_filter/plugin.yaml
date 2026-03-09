@@ -1,0 +1,23 @@
+id: atr_filter
+category: Filters
+phase: universe
+display_name: ATR Filter
+description: Filters high-volatility stocks and defines the ATR window used elsewhere.
+defaults_file: defaults.yaml
+read_only_sections: ["Configuration", "Docs"]
+provides: [atr_filter, atr_window]
+requires: []
+modifies: [candidate_eligibility]
+conflicts: []
+runtime_hooks: [augment_universe]
+config_schema:
+  atr_window: {type: integer, min: 1, label: "ATR Window", description: "ATR lookback window."}
+  max_atr_pct: {type: number, min: 0, label: "Max ATR %", description: "Maximum ATR percentage allowed."}
+docs:
+  what_it_is: Volatility safety filter based on ATR percent.
+  why_it_matters: Avoids names that swing too violently for the risk model.
+  how_it_affects_trades: Higher thresholds increase opportunity count and emotional pressure.
+  tradeoffs: Lower values are safer but exclude faster movers.
+  default_guidance: 14 ATR and 15% max ATR are broad default settings.
+  danger_zone: Very high ATR names can break sizing assumptions.
+  pro_tip: Volatility should inform both filtering and stop placement.

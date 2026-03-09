@@ -2,9 +2,23 @@
  * Strategy Presets Component
  * Provides beginner-friendly preset configurations
  */
-import { Strategy } from '@/features/strategy/types';
+import {
+  Strategy,
+  StrategyFilt,
+  StrategyManage,
+  StrategyRisk,
+  StrategySignals,
+} from '@/features/strategy/types';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
+
+/** Partial overrides a preset can apply. Only top-level sections and their partial fields are covered. */
+export interface StrategyPresetValues {
+  risk?: Partial<StrategyRisk>;
+  signals?: Partial<StrategySignals>;
+  universe?: { filt?: Partial<StrategyFilt> };
+  manage?: Partial<StrategyManage>;
+}
 
 export interface StrategyPreset {
   id: string;
@@ -12,7 +26,7 @@ export interface StrategyPreset {
   description: string;
   icon: string;
   level: 'conservative' | 'balanced' | 'aggressive';
-  values: Partial<Strategy>;
+  values: StrategyPresetValues;
 }
 
 export const momentumPresets: StrategyPreset[] = [
@@ -29,7 +43,7 @@ export const momentumPresets: StrategyPreset[] = [
         kAtr: 2.5,
         minRr: 2.5,
         maxFeeRiskPct: 0.15,
-      } as any,
+      },
       signals: {
         breakoutLookback: 60,
         pullbackMa: 20,
@@ -40,13 +54,13 @@ export const momentumPresets: StrategyPreset[] = [
           maxAtrPct: 12.0, // 12%
           requireTrendOk: true,
           requireRsPositive: true,
-        } as any,
-      } as any,
+        },
+      },
       manage: {
         breakevenAtR: 1,
         trailAfterR: 2,
         maxHoldingDays: 20,
-      } as any,
+      },
     },
   },
   {
@@ -62,7 +76,7 @@ export const momentumPresets: StrategyPreset[] = [
         kAtr: 2.0,
         minRr: 2.0,
         maxFeeRiskPct: 0.20,
-      } as any,
+      },
       signals: {
         breakoutLookback: 50,
         pullbackMa: 20,
@@ -73,13 +87,13 @@ export const momentumPresets: StrategyPreset[] = [
           maxAtrPct: 15.0, // 15%
           requireTrendOk: true,
           requireRsPositive: false,
-        } as any,
-      } as any,
+        },
+      },
       manage: {
         breakevenAtR: 1,
         trailAfterR: 2,
         maxHoldingDays: 20,
-      } as any,
+      },
     },
   },
   {
@@ -95,7 +109,7 @@ export const momentumPresets: StrategyPreset[] = [
         kAtr: 1.5,
         minRr: 1.5,
         maxFeeRiskPct: 0.25,
-      } as any,
+      },
       signals: {
         breakoutLookback: 40,
         pullbackMa: 20,
@@ -106,13 +120,13 @@ export const momentumPresets: StrategyPreset[] = [
           maxAtrPct: 18.0, // 18%
           requireTrendOk: false,
           requireRsPositive: false,
-        } as any,
-      } as any,
+        },
+      },
       manage: {
         breakevenAtR: 1,
         trailAfterR: 2.5,
         maxHoldingDays: 25,
-      } as any,
+      },
     },
   },
 ];

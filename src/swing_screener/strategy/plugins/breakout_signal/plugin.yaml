@@ -1,0 +1,22 @@
+id: breakout_signal
+category: Signals
+phase: signals
+display_name: Breakout Signal
+description: Identify breakouts above the highest close of the configured lookback.
+defaults_file: defaults.yaml
+read_only_sections: ["Configuration", "Docs"]
+provides: [breakout_signal, signal_candidates]
+requires: []
+modifies: [signal_candidates]
+conflicts: []
+runtime_hooks: [augment_signal_board]
+config_schema:
+  breakout_lookback: {type: integer, min: 1, label: "Breakout Lookback", description: "Lookback window used to validate a breakout."}
+docs:
+  what_it_is: A breakout trigger based on recent highs.
+  why_it_matters: Captures names showing fresh strength.
+  how_it_affects_trades: Shorter windows create more signals, longer windows are stricter.
+  tradeoffs: Faster signals are noisier; slower signals are cleaner but fewer.
+  default_guidance: 50 is a solid swing-trading baseline.
+  danger_zone: Very low values drift toward short-term noise.
+  pro_tip: Breakouts work best when combined with trend and risk discipline.

@@ -1,0 +1,22 @@
+id: currency_filter
+category: Filters
+phase: universe
+display_name: Currency Filter
+description: Restrict the universe to the currencies you want to trade.
+defaults_file: defaults.yaml
+read_only_sections: ["Configuration", "Docs"]
+provides: [currency_filter]
+requires: []
+modifies: [candidate_eligibility]
+conflicts: []
+runtime_hooks: [augment_universe]
+config_schema:
+  currencies: {type: array, label: "Currencies", description: "Allowed trading currencies."}
+docs:
+  what_it_is: Currency gate for the tradable universe.
+  why_it_matters: Keeps screening aligned with your broker, account and FX constraints.
+  how_it_affects_trades: Excludes unsupported markets before ranking.
+  tradeoffs: More currencies mean more opportunities but more complexity.
+  default_guidance: USD and EUR cover the current app defaults.
+  danger_zone: Unsupported currencies often fail later in execution workflows.
+  pro_tip: Keep the universe close to the currencies you can actually execute in.

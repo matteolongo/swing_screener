@@ -68,6 +68,64 @@ def _compute_confidence(report: pd.DataFrame, max_atr_pct: float) -> pd.Series:
     return conf
 
 
+def _volume_confirmation_rows(
+    ohlcv: pd.DataFrame,
+    board: pd.DataFrame,
+    volume_cfg: dict,
+) -> pd.DataFrame:
+    if (
+        ohlcv is None
+        or ohlcv.empty
+        or board is None
+        or board.empty
+        or "Volume" not in ohlcv.columns.get_level_values(0)
+    ):
+        return pd.DataFrame(index=board.index if board is not None else pd.Index([], name="ticker"))
+
+    volume = ohlcv["Volume"]
+    window = max(1, int(volume_cfg.get("volume_ma_window", 20)))
+    min_ratio = float(volume_cfg.get("min_breakout_volume_ratio", 1.5))
+    apply_to_breakout = bool(volume_cfg.get("apply_to_breakout", True))
+    apply_to_pullback = bool(volume_cfg.get("apply_to_pullback", False))
+
+    rows: list[dict] = []
+    for ticker in board.index:
+        signal = str(board.loc[ticker, "signal"])
+        series = volume[ticker].dropna() if ticker in volume.columns else pd.Series(dtype=float)
+        today_volume = float(series.iloc[-1]) if not series.empty else None
+        avg_volume = None
+        if len(series) > window:
+            avg_volume = float(series.iloc[-(window + 1):-1].mean())
+        volume_ratio = (today_volume / avg_volume) if today_volume is not None and avg_volume not in (None, 0) else None
+
+        must_confirm = (
+            (signal in {"breakout", "both"} and apply_to_breakout)
+            or (signal == "pullback" and apply_to_pullback)
+        )
+        passed = True
+        adjusted_signal = signal
+        if must_confirm:
+            passed = volume_ratio is not None and volume_ratio >= min_ratio
+            if not passed:
+                if signal == "both" and not apply_to_pullback:
+                    adjusted_signal = "pullback"
+                else:
+                    adjusted_signal = "none"
+
+        rows.append(
+            {
+                "ticker": ticker,
+                "today_volume": today_volume,
+                "average_volume": avg_volume,
+                "volume_ratio": volume_ratio,
+                "volume_confirmation_passed": passed,
+                "signal": adjusted_signal,
+            }
+        )
+
+    return pd.DataFrame(rows).set_index("ticker")
+
+
 def build_momentum_report(
     ohlcv: pd.DataFrame,
     cfg: ReportConfig,
@@ -93,6 +151,16 @@ def build_momentum_report(
 
     tickers = ranked.index.tolist()
     board = build_signal_board(ohlcv, tickers, cfg.signals)
+
+    volume_plugin = cfg.plugin_settings.get("volume_confirmation", {})
+    volume_cfg = volume_plugin.get("effective_config", {}) if isinstance(volume_plugin, dict) else {}
+    volume_enabled = bool(volume_plugin.get("enabled")) and bool(volume_cfg.get("enabled", False))
+    volume_df: pd.DataFrame | None = None
+    if volume_enabled and not board.empty:
+        volume_df = _volume_confirmation_rows(ohlcv, board, volume_cfg)
+        if not volume_df.empty:
+            board["signal"] = volume_df["signal"].reindex(board.index).fillna(board["signal"])
+            volume_df = volume_df.drop(columns=["signal"], errors="ignore")
 
     atr_col = f"atr{cfg.universe.vol.atr_window}"
 
@@ -213,6 +281,9 @@ def build_momentum_report(
     # merge: ranked features + signal board (left) + plans (left)
     report = ranked.join(board, how="left", rsuffix="_sig")
 
+    if volume_df is not None and not volume_df.empty:
+        report = report.join(volume_df, how="left")
+
     if overlay_rows:
         overlay_df = pd.DataFrame(overlay_rows).set_index("ticker")
         report = report.join(overlay_df, how="left")
@@ -245,6 +316,7 @@ def build_momentum_report(
         "overlay_risk_multiplier", "overlay_max_pos_multiplier",
         "overlay_attention_z", "overlay_sentiment_score", "overlay_sentiment_confidence",
         "overlay_hype_score", "overlay_sample_size",
+        "today_volume", "average_volume", "volume_ratio", "volume_confirmation_passed",
     ]
     keep = [c for c in keep if c in report.columns]
     report = report[keep]

@@ -1,0 +1,4 @@
+enabled: true
+config:
+  atr_window: 14
+  max_atr_pct: 15.0

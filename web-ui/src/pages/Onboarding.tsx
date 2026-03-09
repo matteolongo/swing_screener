@@ -1,97 +1,20 @@
-import { useEffect, useMemo, type ReactNode } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CheckCircle, Calendar, Search, ShoppingCart } from 'lucide-react';
 import Button from '@/components/common/Button';
 import Card, { CardContent } from '@/components/common/Card';
-import OnboardingStrategySetupStep from '@/components/domain/onboarding/OnboardingStrategySetupStep';
 import { useStrategyReadiness } from '@/features/strategy/useStrategyReadiness';
 import { t } from '@/i18n/t';
 import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 import { useOnboardingStore } from '@/stores/onboardingStore';
+import { ONBOARDING_STEPS } from '@/content/onboardingSteps';
 
-type OnboardingStep = {
-  title: string;
-  description: string;
-  icon: typeof CheckCircle;
-  content: ReactNode;
-};
-
-const STEPS: OnboardingStep[] = [
-  {
-    title: t('onboardingPage.steps.welcome.title'),
-    description: t('onboardingPage.steps.welcome.description'),
-    icon: CheckCircle,
-    content: (
-      <div className="space-y-4 text-sm text-gray-700">
-        <p>{t('onboardingPage.steps.welcome.body')}</p>
-        <ol className="list-decimal space-y-2 pl-5">
-          <li>{t('onboardingPage.steps.welcome.items.configure')}</li>
-          <li>{t('onboardingPage.steps.welcome.items.review')}</li>
-          <li>{t('onboardingPage.steps.welcome.items.act')}</li>
-          <li>{t('onboardingPage.steps.welcome.items.verify')}</li>
-        </ol>
-      </div>
-    ),
-  },
-  {
-    title: t('onboardingPage.steps.strategy.title'),
-    description: t('onboardingPage.steps.strategy.description'),
-    icon: CheckCircle,
-    content: <OnboardingStrategySetupStep />,
-  },
-  {
-    title: t('onboardingPage.steps.dailyReview.title'),
-    description: t('onboardingPage.steps.dailyReview.description'),
-    icon: Calendar,
-    content: (
-      <div className="space-y-3 text-sm text-gray-700">
-        <p>{t('onboardingPage.steps.dailyReview.body')}</p>
-        <ul className="list-disc space-y-1 pl-5">
-          <li>{t('onboardingPage.steps.dailyReview.items.candidates')}</li>
-          <li>{t('onboardingPage.steps.dailyReview.items.updateStop')}</li>
-          <li>{t('onboardingPage.steps.dailyReview.items.close')}</li>
-          <li>{t('onboardingPage.steps.dailyReview.items.hold')}</li>
-        </ul>
-      </div>
-    ),
-  },
-  {
-    title: t('onboardingPage.steps.action.title'),
-    description: t('onboardingPage.steps.action.description'),
-    icon: ShoppingCart,
-    content: (
-      <div className="space-y-3 text-sm text-gray-700">
-        <p>{t('onboardingPage.steps.action.body')}</p>
-        <ul className="list-disc space-y-1 pl-5">
-          <li>{t('onboardingPage.steps.action.items.createOrder')}</li>
-          <li>{t('onboardingPage.steps.action.items.updatePosition')}</li>
-          <li>{t('onboardingPage.steps.action.items.noAction')}</li>
-        </ul>
-      </div>
-    ),
-  },
-  {
-    title: t('onboardingPage.steps.verify.title'),
-    description: t('onboardingPage.steps.verify.description'),
-    icon: Search,
-    content: (
-      <div className="space-y-3 text-sm text-gray-700">
-        <p>{t('onboardingPage.steps.verify.body')}</p>
-        <ul className="list-disc space-y-1 pl-5">
-          <li>{t('onboardingPage.steps.verify.items.orders')}</li>
-          <li>{t('onboardingPage.steps.verify.items.positions')}</li>
-        </ul>
-      </div>
-    ),
-  },
-];
 
 function parseStep(searchParams: URLSearchParams): number | null {
   const raw = searchParams.get('step');
   if (!raw) return null;
   const parsed = Number.parseInt(raw, 10);
   if (!Number.isFinite(parsed)) return null;
-  if (parsed < 1 || parsed > STEPS.length) return null;
+  if (parsed < 1 || parsed > ONBOARDING_STEPS.length) return null;
   return parsed - 1;
 }
 
@@ -110,8 +33,8 @@ export default function OnboardingPage() {
     setCurrentStep(requestedStep);
   }, [currentStep, searchParams, setCurrentStep]);
 
-  const stepIndex = Math.min(Math.max(currentStep, 0), STEPS.length - 1);
-  const step = STEPS[stepIndex];
+  const stepIndex = Math.min(Math.max(currentStep, 0), ONBOARDING_STEPS.length - 1);
+  const step = ONBOARDING_STEPS[stepIndex];
   const Icon = step.icon;
   const isStrategyStep = stepIndex === 1;
 
@@ -123,7 +46,7 @@ export default function OnboardingPage() {
   }, [isStrategyStep, strategyReady]);
 
   const handleNext = () => {
-    if (stepIndex >= STEPS.length - 1) {
+    if (stepIndex >= ONBOARDING_STEPS.length - 1) {
       completeOnboarding();
       navigate('/workspace');
       return;
@@ -165,7 +88,7 @@ export default function OnboardingPage() {
           </div>
 
           <div className="flex gap-2">
-            {STEPS.map((_, index) => (
+            {ONBOARDING_STEPS.map((_, index) => (
               <div
                 key={index}
                 className={`h-2 flex-1 rounded-full ${index <= stepIndex ? 'bg-blue-600' : 'bg-gray-200'}`}
@@ -173,7 +96,7 @@ export default function OnboardingPage() {
             ))}
           </div>
           <p className="text-xs text-gray-500">
-            {t('onboardingPage.progress', { step: stepIndex + 1, total: STEPS.length })}
+            {t('onboardingPage.progress', { step: stepIndex + 1, total: ONBOARDING_STEPS.length })}
           </p>
 
           {stepIndex === 0 ? (
@@ -220,7 +143,7 @@ export default function OnboardingPage() {
             </div>
 
             <Button onClick={handleNext} disabled={!canContinue}>
-              {stepIndex === STEPS.length - 1
+              {stepIndex === ONBOARDING_STEPS.length - 1
                 ? t('onboardingPage.actions.complete')
                 : t('onboardingPage.actions.next')}
             </Button>

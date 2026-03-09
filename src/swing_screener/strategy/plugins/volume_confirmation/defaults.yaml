@@ -1,0 +1,7 @@
+enabled: true
+config:
+  enabled: false
+  volume_ma_window: 20
+  min_breakout_volume_ratio: 1.5
+  apply_to_breakout: true
+  apply_to_pullback: false

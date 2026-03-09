@@ -1,0 +1,5 @@
+enabled: true
+config:
+  trail_after_r: 2.0
+  trail_sma: 20
+  sma_buffer_pct: 0.005

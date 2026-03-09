@@ -585,3 +585,254 @@ export function toStrategyCreateRequest(
     ...toStrategyUpdateRequest(base),
   };
 }
+
+export type StrategyPluginCategory =
+  | 'filters'
+  | 'ranking'
+  | 'signals'
+  | 'risk'
+  | 'qualification'
+  | 'management'
+  | 'intelligence'
+  | 'education'
+  | string;
+
+export interface StrategyPluginDocSection {
+  title: string;
+  body: string;
+}
+
+export interface StrategyPluginConfigFieldDefinition {
+  key: string;
+  label: string;
+  description?: string;
+  type?: string;
+}
+
+export interface StrategyPluginDefinition {
+  id: string;
+  category: StrategyPluginCategory;
+  displayName: string;
+  description: string;
+  enabledByDefault: boolean;
+  phase: string;
+  provides: string[];
+  requires: string[];
+  modifies: string[];
+  conflicts: string[];
+  configFields: StrategyPluginConfigFieldDefinition[];
+  readOnlySections: StrategyPluginDocSection[];
+}
+
+export type StrategyConfigValue = string | number | boolean | null | Array<string | number>;
+
+export interface StrategyPluginResolvedValue {
+  key: string;
+  label: string;
+  description?: string;
+  type?: string;
+  defaultValue: StrategyConfigValue;
+  effectiveValue: StrategyConfigValue;
+  overridden: boolean;
+  source: 'plugin_default' | 'root_override';
+}
+
+export interface StrategyPluginResolvedState {
+  id: string;
+  category: StrategyPluginCategory;
+  displayName: string;
+  description: string;
+  enabled: boolean;
+  defaultEnabled: boolean;
+  phase: string;
+  provides: string[];
+  requires: string[];
+  modifies: string[];
+  conflicts: string[];
+  dependsOn: string[];
+  readOnlySections: StrategyPluginDocSection[];
+  values: StrategyPluginResolvedValue[];
+}
+
+export interface StrategyResolvedConfig {
+  name: string;
+  description?: string;
+  module: string;
+  configPath?: string;
+  executionOrder: string[];
+  graphEdges: Record<string, string[]>;
+  plugins: StrategyPluginResolvedState[];
+}
+
+export interface StrategyPluginConfigFieldDefinitionAPI {
+  key: string;
+  label?: string;
+  description?: string;
+  type?: string;
+}
+
+export interface StrategyPluginDocSectionAPI {
+  title?: string;
+  body?: string;
+}
+
+export interface StrategyPluginDefinitionAPI {
+  id: string;
+  category?: string;
+  display_name?: string;
+  displayName?: string;
+  description?: string;
+  enabled_by_default?: boolean;
+  enabledByDefault?: boolean;
+  phase?: string;
+  provides?: string[];
+  requires?: string[];
+  modifies?: string[];
+  conflicts?: string[];
+  config_fields?: StrategyPluginConfigFieldDefinitionAPI[];
+  configFields?: StrategyPluginConfigFieldDefinitionAPI[];
+  read_only_sections?: StrategyPluginDocSectionAPI[];
+  readOnlySections?: StrategyPluginDocSectionAPI[];
+}
+
+export interface StrategyPluginResolvedValueAPI {
+  key: string;
+  label?: string;
+  description?: string;
+  type?: string;
+  default_value?: unknown;
+  defaultValue?: unknown;
+  effective_value?: unknown;
+  effectiveValue?: unknown;
+  overridden?: boolean;
+  source?: 'plugin_default' | 'root_override' | string;
+}
+
+export interface StrategyPluginResolvedStateAPI {
+  id: string;
+  category?: string;
+  display_name?: string;
+  displayName?: string;
+  description?: string;
+  enabled?: boolean;
+  default_enabled?: boolean;
+  defaultEnabled?: boolean;
+  phase?: string;
+  provides?: string[];
+  requires?: string[];
+  modifies?: string[];
+  conflicts?: string[];
+  depends_on?: string[];
+  dependsOn?: string[];
+  read_only_sections?: StrategyPluginDocSectionAPI[];
+  readOnlySections?: StrategyPluginDocSectionAPI[];
+  values?: StrategyPluginResolvedValueAPI[];
+}
+
+export interface StrategyResolvedConfigAPI {
+  name?: string;
+  description?: string | null;
+  module?: string;
+  config_path?: string;
+  configPath?: string;
+  execution_order?: string[];
+  executionOrder?: string[];
+  graph_edges?: Record<string, string[]>;
+  graphEdges?: Record<string, string[]>;
+  plugins?: StrategyPluginResolvedStateAPI[] | Record<string, StrategyPluginResolvedStateAPI>;
+}
+
+function toConfigValue(value: unknown): StrategyConfigValue {
+  if (value == null) return null;
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    const normalized = value.filter(
+      (item): item is string | number => typeof item === 'string' || typeof item === 'number'
+    );
+    return normalized;
+  }
+  return JSON.stringify(value);
+}
+
+function normalizeDocSections(
+  sections?: StrategyPluginDocSectionAPI[] | null,
+): StrategyPluginDocSection[] {
+  return (sections ?? [])
+    .map((section) => ({
+      title: section.title ?? 'Notes',
+      body: section.body ?? '',
+    }))
+    .filter((section) => section.body.trim().length > 0);
+}
+
+export function transformStrategyPluginDefinition(
+  api: StrategyPluginDefinitionAPI,
+): StrategyPluginDefinition {
+  return {
+    id: api.id,
+    category: api.category ?? 'education',
+    displayName: api.display_name ?? api.displayName ?? api.id,
+    description: api.description ?? '',
+    enabledByDefault: api.enabled_by_default ?? api.enabledByDefault ?? false,
+    phase: api.phase ?? 'qualification',
+    provides: api.provides ?? [],
+    requires: api.requires ?? [],
+    modifies: api.modifies ?? [],
+    conflicts: api.conflicts ?? [],
+    configFields: (api.config_fields ?? api.configFields ?? []).map((field) => ({
+      key: field.key,
+      label: field.label ?? field.key,
+      description: field.description,
+      type: field.type,
+    })),
+    readOnlySections: normalizeDocSections(api.read_only_sections ?? api.readOnlySections),
+  };
+}
+
+export function transformStrategyPluginResolvedState(
+  api: StrategyPluginResolvedStateAPI,
+): StrategyPluginResolvedState {
+  return {
+    id: api.id,
+    category: api.category ?? 'education',
+    displayName: api.display_name ?? api.displayName ?? api.id,
+    description: api.description ?? '',
+    enabled: api.enabled ?? false,
+    defaultEnabled: api.default_enabled ?? api.defaultEnabled ?? false,
+    phase: api.phase ?? 'qualification',
+    provides: api.provides ?? [],
+    requires: api.requires ?? [],
+    modifies: api.modifies ?? [],
+    conflicts: api.conflicts ?? [],
+    dependsOn: api.depends_on ?? api.dependsOn ?? [],
+    readOnlySections: normalizeDocSections(api.read_only_sections ?? api.readOnlySections),
+    values: (api.values ?? []).map((value) => ({
+      key: value.key,
+      label: value.label ?? value.key,
+      description: value.description,
+      type: value.type,
+      defaultValue: toConfigValue(value.default_value ?? value.defaultValue),
+      effectiveValue: toConfigValue(value.effective_value ?? value.effectiveValue),
+      overridden: value.overridden ?? false,
+      source: value.source === 'root_override' ? 'root_override' : 'plugin_default',
+    })),
+  };
+}
+
+export function transformStrategyResolvedConfig(api: StrategyResolvedConfigAPI): StrategyResolvedConfig {
+  const pluginsArray = Array.isArray(api.plugins)
+    ? api.plugins
+    : Object.values(api.plugins ?? {});
+
+  return {
+    name: api.name ?? 'Strategy Config',
+    description: api.description ?? undefined,
+    module: api.module ?? 'momentum',
+    configPath: api.config_path ?? api.configPath,
+    executionOrder: api.execution_order ?? api.executionOrder ?? [],
+    graphEdges: api.graph_edges ?? api.graphEdges ?? {},
+    plugins: pluginsArray.map(transformStrategyPluginResolvedState),
+  };
+}

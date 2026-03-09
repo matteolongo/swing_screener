@@ -1,0 +1,27 @@
+id: regime_risk
+category: Risk
+phase: risk
+display_name: Regime Risk
+description: Scale risk down when the broader market regime is unfavorable.
+defaults_file: defaults.yaml
+read_only_sections: ["Configuration", "Docs"]
+provides: [risk_multiplier]
+requires: [position_size]
+modifies: [risk_plan]
+conflicts: []
+runtime_hooks: [adjust_risk_plan]
+config_schema:
+  enabled: {type: boolean, label: "Enabled", description: "Enable regime-based risk scaling."}
+  regime_trend_sma: {type: integer, min: 1, label: "Trend SMA", description: "Market trend SMA for regime filter."}
+  regime_trend_multiplier: {type: number, min: 0, max: 1, label: "Trend Multiplier", description: "Risk multiplier when trend is weak."}
+  regime_vol_atr_window: {type: integer, min: 1, label: "ATR Window", description: "ATR window for regime volatility checks."}
+  regime_vol_atr_pct_threshold: {type: number, min: 0, label: "ATR % Threshold", description: "ATR percent threshold that triggers scaling."}
+  regime_vol_multiplier: {type: number, min: 0, max: 1, label: "Vol Multiplier", description: "Risk multiplier when volatility regime is elevated."}
+docs:
+  what_it_is: Market regime aware risk scaling.
+  why_it_matters: Bad tape often deserves smaller bets even if single-name setups look good.
+  how_it_affects_trades: Leaves candidate quality unchanged but shrinks exposure.
+  tradeoffs: Safer during weak markets, but can underexpose strong rebounds.
+  default_guidance: Keep disabled until you want market-level risk adaptation.
+  danger_zone: Regime logic should scale risk, not replace the core strategy.
+  pro_tip: Regime filters are most useful as exposure throttles, not prediction tools.

@@ -1,0 +1,7 @@
+enabled: true
+config:
+  account_size: 50000.0
+  risk_pct: 0.01
+  max_position_pct: 0.6
+  min_shares: 1
+  k_atr: 2.0

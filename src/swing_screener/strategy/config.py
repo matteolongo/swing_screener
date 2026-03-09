@@ -94,6 +94,7 @@ def build_report_config(strategy: dict, *, top_override: Optional[int] = None) -
     risk = build_risk_config(strategy)
     social_overlay = build_social_overlay_config(strategy)
     strategy_module = strategy.get("module", "momentum") if isinstance(strategy, dict) else "momentum"
+    plugin_settings = strategy.get("plugins_runtime", {}) if isinstance(strategy, dict) else {}
 
     if top_override is not None:
         ranking = RankingConfig(
@@ -111,4 +112,5 @@ def build_report_config(strategy: dict, *, top_override: Optional[int] = None) -
         social_overlay=social_overlay,
         only_active_signals=False,
         strategy_module=strategy_module,
+        plugin_settings=plugin_settings,
     )

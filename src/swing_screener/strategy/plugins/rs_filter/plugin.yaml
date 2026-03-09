@@ -1,0 +1,22 @@
+id: rs_filter
+category: Filters
+phase: universe
+display_name: Relative Strength Filter
+description: Optionally require positive relative strength before a stock is eligible.
+defaults_file: defaults.yaml
+read_only_sections: ["Configuration", "Docs"]
+provides: [rs_filter]
+requires: [ranking_score]
+modifies: [candidate_eligibility]
+conflicts: []
+runtime_hooks: [augment_universe]
+config_schema:
+  require_rs_positive: {type: boolean, label: "Require Positive RS", description: "Only keep stocks with positive relative strength."}
+docs:
+  what_it_is: Relative strength eligibility gate.
+  why_it_matters: Removes stocks that lag the benchmark even if other features look acceptable.
+  how_it_affects_trades: Tightens the universe around stronger names.
+  tradeoffs: Helps quality but can reduce opportunity count during mixed markets.
+  default_guidance: Keep optional unless you want a stricter momentum personality.
+  danger_zone: Forcing RS positive can over-filter smaller universes.
+  pro_tip: Use this when you want fewer but more benchmark-leading names.

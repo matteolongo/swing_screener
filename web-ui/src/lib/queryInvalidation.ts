@@ -5,7 +5,10 @@ export async function invalidateStrategyQueries(queryClient: QueryClient): Promi
   await Promise.all([
     queryClient.invalidateQueries({ queryKey: queryKeys.strategies() }),
     queryClient.invalidateQueries({ queryKey: queryKeys.strategyActive() }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.strategyConfig() }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.strategyPlugins() }),
     queryClient.invalidateQueries({ queryKey: queryKeys.strategyValidation() }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.strategyValidationReadOnly() }),
   ]);
 }
 

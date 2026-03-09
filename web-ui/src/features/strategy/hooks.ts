@@ -3,12 +3,20 @@ import {
   createStrategy,
   deleteStrategy,
   fetchActiveStrategy,
+  fetchResolvedStrategyValidation,
+  fetchStrategyConfig,
+  fetchStrategyPlugins,
   fetchStrategies,
   setActiveStrategy,
   updateStrategy,
   validateStrategy,
 } from '@/features/strategy/api';
-import type { Strategy, StrategyUpdateRequestAPI } from '@/features/strategy/types';
+import type {
+  Strategy,
+  StrategyPluginDefinition,
+  StrategyResolvedConfig,
+  StrategyUpdateRequestAPI,
+} from '@/features/strategy/types';
 import { queryKeys } from '@/lib/queryKeys';
 import { invalidateStrategyQueries } from '@/lib/queryInvalidation';
 
@@ -19,10 +27,31 @@ export function useStrategiesQuery() {
   });
 }
 
+export function useStrategyConfigQuery() {
+  return useQuery<StrategyResolvedConfig>({
+    queryKey: queryKeys.strategyConfig(),
+    queryFn: fetchStrategyConfig,
+  });
+}
+
+export function useStrategyPluginsQuery() {
+  return useQuery<StrategyPluginDefinition[]>({
+    queryKey: queryKeys.strategyPlugins(),
+    queryFn: fetchStrategyPlugins,
+  });
+}
+
 export function useActiveStrategyQuery() {
   return useQuery({
     queryKey: queryKeys.strategyActive(),
     queryFn: fetchActiveStrategy,
+  });
+}
+
+export function useResolvedStrategyValidationQuery() {
+  return useQuery({
+    queryKey: queryKeys.strategyValidationReadOnly(),
+    queryFn: fetchResolvedStrategyValidation,
   });
 }
 

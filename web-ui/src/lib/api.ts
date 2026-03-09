@@ -7,6 +7,9 @@ export const API_ENDPOINTS = {
   strategy: '/api/strategy',
   strategyActive: '/api/strategy/active',
   strategyValidate: '/api/strategy/validate',
+  strategyConfig: '/api/strategy/config',
+  strategyPlugins: '/api/strategy/plugins',
+  strategyValidationReadOnly: '/api/strategy/validation',
   strategyById: (id: string) => `/api/strategy/${id}`,
   
   // Screener
