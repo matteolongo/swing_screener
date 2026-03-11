@@ -462,6 +462,7 @@ export default function PortfolioTable() {
       {showFillOrderModal && selectedPendingOrder ? (
         <FillOrderModalForm
           order={selectedPendingOrder}
+          hasOpenPositionForTicker={positions.some((position) => position.ticker === selectedPendingOrder.ticker)}
           onClose={() => {
             setShowFillOrderModal(false);
             setSelectedPendingOrder(null);

@@ -7,6 +7,7 @@ import { t } from '@/i18n/t';
 
 interface FillOrderModalFormProps {
   order: Order;
+  hasOpenPositionForTicker?: boolean;
   isLoading: boolean;
   error?: string;
   onClose: () => void;
@@ -30,6 +31,7 @@ function parsePositiveNumber(value: string): number | null {
 
 export default function FillOrderModalForm({
   order,
+  hasOpenPositionForTicker = false,
   isLoading,
   error,
   onClose,
@@ -37,7 +39,7 @@ export default function FillOrderModalForm({
 }: FillOrderModalFormProps) {
   const isEntryOrder = (order.orderKind ?? 'entry') === 'entry';
   const defaultStopPrice = order.stopPrice;
-  const requiresStopPrice = isEntryOrder && (defaultStopPrice == null || defaultStopPrice <= 0);
+  const requiresStopPrice = isEntryOrder && !hasOpenPositionForTicker && (defaultStopPrice == null || defaultStopPrice <= 0);
 
   const [filledPriceValue, setFilledPriceValue] = useState(() => {
     const initialPrice = order.limitPrice ?? order.entryPrice ?? defaultStopPrice ?? 0;
@@ -169,7 +171,9 @@ export default function FillOrderModalForm({
 
         <div>
           <label htmlFor="fill-order-stop-price" className="block text-sm font-medium mb-1">
-            {t('order.fillModal.linkedStopPrice')}
+            {hasOpenPositionForTicker
+              ? t('order.fillModal.linkedStopPriceScaleIn')
+              : t('order.fillModal.linkedStopPrice')}
           </label>
           <input
             id="fill-order-stop-price"
@@ -181,6 +185,11 @@ export default function FillOrderModalForm({
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
             required={requiresStopPrice}
           />
+          {isEntryOrder && hasOpenPositionForTicker ? (
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+              {t('order.fillModal.scaleInStopHint')}
+            </p>
+          ) : null}
         </div>
 
         <div>

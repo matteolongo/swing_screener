@@ -76,6 +76,10 @@ function roundToCents(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
+function roundToFourDecimals(value: number): number {
+  return Math.round((value + Number.EPSILON) * 10000) / 10000;
+}
+
 function inferOrderKind(order: Pick<Order, 'orderKind' | 'orderType'>): LocalOrderKind | null {
   if (order.orderKind) {
     return order.orderKind;
@@ -212,21 +216,112 @@ export function fillOrderLocal(orderId: string, request: FillOrderRequest): void
     const kind = inferOrderKind(currentOrder);
 
     if (kind === 'entry') {
+      if (currentOrder.quantity <= 0) {
+        throw new Error('Order quantity must be > 0');
+      }
+      const openPositionIndex = store.positions.findIndex(
+        (position) =>
+          position.status === 'open' && normalizeTicker(position.ticker) === normalizeTicker(currentOrder.ticker),
+      );
+      const openPosition = openPositionIndex >= 0 ? store.positions[openPositionIndex] : undefined;
+
+      if (openPosition) {
+        const positionId = openPosition.positionId ?? nextPositionId(openPosition.ticker, openPosition.entryDate, store.positions);
+        const totalShares = openPosition.shares + currentOrder.quantity;
+        const blendedEntryPrice = (
+          (openPosition.entryPrice * openPosition.shares) + (request.filledPrice * currentOrder.quantity)
+        ) / totalShares;
+        const stopPrice = openPosition.stopPrice;
+
+        if (blendedEntryPrice <= stopPrice) {
+          throw new Error('Blended entry must be above stop price.');
+        }
+
+        const filledOrder: Order = {
+          ...currentOrder,
+          status: 'filled',
+          filledDate: request.filledDate,
+          entryPrice: request.filledPrice,
+          quantity: currentOrder.quantity,
+          stopPrice,
+          orderKind: 'entry',
+          positionId,
+          tif: currentOrder.tif ?? 'GTC',
+          feeEur: request.feeEur ?? null,
+          fillFxRate: request.fillFxRate ?? null,
+        };
+        store.orders[orderIndex] = filledOrder;
+
+        let stopOrderId: string | undefined;
+        for (let index = 0; index < store.orders.length; index += 1) {
+          if (index === orderIndex) continue;
+          const existingOrder = store.orders[index];
+          if (existingOrder.positionId !== positionId) continue;
+
+          const existingKind = inferOrderKind(existingOrder);
+          if (existingKind === 'stop') {
+            stopOrderId = existingOrder.orderId;
+            store.orders[index] = {
+              ...existingOrder,
+              quantity: totalShares,
+              stopPrice,
+            };
+            continue;
+          }
+          if (existingKind === 'take_profit') {
+            store.orders[index] = {
+              ...existingOrder,
+              quantity: totalShares,
+            };
+          }
+        }
+
+        if (!stopOrderId) {
+          stopOrderId = `ORD-STOP-${positionId}`;
+          store.orders.push({
+            orderId: stopOrderId,
+            ticker: currentOrder.ticker,
+            status: 'pending',
+            orderType: 'SELL_STOP',
+            quantity: totalShares,
+            limitPrice: null,
+            stopPrice,
+            orderDate: request.filledDate,
+            filledDate: '',
+            entryPrice: null,
+            notes: 'auto-linked stop (scale-in)',
+            orderKind: 'stop',
+            parentOrderId: openPosition.sourceOrderId ?? currentOrder.orderId,
+            positionId,
+            tif: 'GTC',
+            feeEur: null,
+            fillFxRate: null,
+          });
+        }
+
+        const exitOrderIds = new Set(openPosition.exitOrderIds ?? []);
+        exitOrderIds.add(stopOrderId);
+        const currentMaxFavorablePrice = openPosition.maxFavorablePrice ?? openPosition.entryPrice;
+
+        store.positions[openPositionIndex] = {
+          ...openPosition,
+          positionId,
+          entryPrice: blendedEntryPrice,
+          stopPrice,
+          shares: totalShares,
+          initialRisk: roundToFourDecimals(blendedEntryPrice - stopPrice),
+          maxFavorablePrice: Math.max(currentMaxFavorablePrice, request.filledPrice),
+          exitOrderIds: Array.from(exitOrderIds),
+        };
+        return;
+      }
+
       const stopPrice = request.stopPrice ?? currentOrder.stopPrice ?? undefined;
       if (stopPrice == null) {
         throw new Error('stop_price is required for entry fills');
       }
       if (stopPrice >= request.filledPrice) {
         throw new Error('stop_price must be below fill_price.');
-      }
-      if (currentOrder.quantity <= 0) {
-        throw new Error('Order quantity must be > 0');
-      }
-      const hasOpenPosition = store.positions.some(
-        (position) => position.status === 'open' && normalizeTicker(position.ticker) === normalizeTicker(currentOrder.ticker),
-      );
-      if (hasOpenPosition) {
-        throw new Error(`${currentOrder.ticker}: open position already exists.`);
       }
 
       const positionId = nextPositionId(currentOrder.ticker, request.filledDate, store.positions);
