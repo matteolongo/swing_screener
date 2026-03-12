@@ -171,7 +171,7 @@ export default function FillOrderModalForm({
 
         <div>
           <label htmlFor="fill-order-stop-price" className="block text-sm font-medium mb-1">
-            {hasOpenPositionForTicker
+            {isEntryOrder && hasOpenPositionForTicker
               ? t('order.fillModal.linkedStopPriceScaleIn')
               : t('order.fillModal.linkedStopPrice')}
           </label>
