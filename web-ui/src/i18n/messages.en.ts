@@ -347,6 +347,8 @@ export const messagesEn = {
       filledPrice: 'Filled Price',
       filledDate: 'Filled Date',
       linkedStopPrice: 'Stop Price (for linked stop)',
+      linkedStopPriceScaleIn: 'Stop Price (ignored when merging into an open position)',
+      scaleInStopHint: 'This ticker already has an open position. Filling this buy will merge into it and keep the current stop.',
       feeEurOptional: 'Fee (EUR, optional)',
       fxRateOptional: 'FX Rate (optional)',
       filling: 'Filling...',

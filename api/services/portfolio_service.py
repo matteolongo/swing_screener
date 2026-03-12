@@ -41,6 +41,7 @@ from swing_screener.execution.order_workflows import (
     fill_entry_order,
     infer_order_kind,
     normalize_orders,
+    scale_in_fill,
 )
 from swing_screener.data.providers import MarketDataProvider, get_default_provider
 from swing_screener.data.currency import detect_currency
@@ -812,30 +813,49 @@ class PortfolioService:
 
         kind = infer_order_kind(order)
         if kind == "entry":
+            has_open_position = any(
+                position.status == "open" and position.ticker == order.ticker for position in positions
+            )
             stop_price = request.stop_price if request.stop_price is not None else order.stop_price
-            if stop_price is None:
-                raise HTTPException(status_code=400, detail="stop_price is required for entry fills")
             if order.quantity <= 0:
                 raise HTTPException(status_code=400, detail="Order quantity must be > 0")
 
-            new_orders, new_positions = fill_entry_order(
-                orders,
-                positions,
-                order_id=order_id,
-                fill_price=request.filled_price,
-                fill_date=request.filled_date,
-                quantity=order.quantity,
-                stop_price=stop_price,
-                tp_price=None,
-                fee_eur=request.fee_eur,
-                fill_fx_rate=request.fill_fx_rate,
-            )
+            try:
+                if has_open_position:
+                    new_orders, new_positions = scale_in_fill(
+                        orders,
+                        positions,
+                        order_id=order_id,
+                        fill_price=request.filled_price,
+                        fill_date=request.filled_date,
+                        quantity=order.quantity,
+                        fee_eur=request.fee_eur,
+                        fill_fx_rate=request.fill_fx_rate,
+                    )
+                else:
+                    if stop_price is None:
+                        raise HTTPException(
+                            status_code=400,
+                            detail="stop_price is required for entry fills",
+                        )
+                    new_orders, new_positions = fill_entry_order(
+                        orders,
+                        positions,
+                        order_id=order_id,
+                        fill_price=request.filled_price,
+                        fill_date=request.filled_date,
+                        quantity=order.quantity,
+                        stop_price=stop_price,
+                        tp_price=None,
+                        fee_eur=request.fee_eur,
+                        fill_fx_rate=request.fill_fx_rate,
+                    )
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
             save_orders(orders_path, new_orders, asof=get_today_str())
             save_positions(positions_path, new_positions, asof=get_today_str())
-            position_id = next(
-                (p.position_id for p in new_positions if p.source_order_id == order_id),
-                None,
-            )
+            filled_order = next((o for o in new_orders if o.order_id == order_id), None)
+            position_id = filled_order.position_id if filled_order is not None else None
             return {
                 "status": "ok",
                 "order_id": order_id,

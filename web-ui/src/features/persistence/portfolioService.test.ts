@@ -83,6 +83,64 @@ describe('portfolio local persistence service', () => {
     expect(summary.totalPositions).toBe(0);
   });
 
+  it('auto-merges repeated entry fills into the existing open position', () => {
+    createOrderLocal({
+      ticker: 'REP.MC',
+      orderType: 'BUY_LIMIT',
+      quantity: 10,
+      limitPrice: 12,
+      stopPrice: 11,
+      orderKind: 'entry',
+    });
+
+    const firstEntry = listOrdersLocal('pending')[0];
+    fillOrderLocal(firstEntry.orderId, {
+      filledPrice: 12,
+      filledDate: '2026-03-10',
+      stopPrice: 11,
+    });
+
+    createOrderLocal({
+      ticker: 'REP.MC',
+      orderType: 'BUY_LIMIT',
+      quantity: 5,
+      limitPrice: 13,
+      stopPrice: 12.2,
+      orderKind: 'entry',
+    });
+
+    const secondEntry = listOrdersLocal('pending').find(
+      (order) => order.ticker === 'REP.MC' && order.orderKind === 'entry',
+    );
+    expect(secondEntry).toBeDefined();
+
+    fillOrderLocal(secondEntry!.orderId, {
+      filledPrice: 13,
+      filledDate: '2026-03-11',
+      stopPrice: 12.2,
+      feeEur: 4.9,
+    });
+
+    const openPositions = listPositionsLocal('open');
+    expect(openPositions).toHaveLength(1);
+    expect(openPositions[0].shares).toBe(15);
+    expect(openPositions[0].stopPrice).toBe(11);
+    expect(openPositions[0].entryPrice).toBeCloseTo((12 * 10 + 13 * 5) / 15, 10);
+
+    const allOrders = listOrdersLocal('all');
+    const filledSecondEntry = allOrders.find((order) => order.orderId === secondEntry!.orderId);
+    expect(filledSecondEntry?.status).toBe('filled');
+    expect(filledSecondEntry?.positionId).toBe(openPositions[0].positionId);
+    expect(filledSecondEntry?.stopPrice).toBe(11);
+    expect(filledSecondEntry?.feeEur).toBe(4.9);
+
+    const linkedStop = allOrders.find(
+      (order) => order.orderKind === 'stop' && order.positionId === openPositions[0].positionId,
+    );
+    expect(linkedStop?.quantity).toBe(15);
+    expect(linkedStop?.stopPrice).toBe(11);
+  });
+
   it('allows moving stop above entry when current price is unavailable', () => {
     createOrderLocal({
       ticker: 'NVDA',

@@ -119,6 +119,24 @@ export interface PortfolioSummary {
 export type OrderFilterStatus = OrderStatus | 'all';
 export type PositionFilterStatus = PositionStatus | 'all';
 
+async function buildApiError(response: Response, fallbackMessage: string): Promise<Error> {
+  let message = fallbackMessage;
+  try {
+    const error = await response.json();
+    if (typeof error?.detail === 'string') {
+      message = error.detail;
+    } else if (Array.isArray(error?.detail) && error.detail.length > 0) {
+      const first = error.detail[0];
+      if (typeof first?.msg === 'string') {
+        message = first.msg;
+      }
+    }
+  } catch {
+    // Keep default error message if response body is not JSON.
+  }
+  return new Error(message);
+}
+
 export async function fetchOrders(status: OrderFilterStatus): Promise<Order[]> {
   if (isLocalPersistenceMode()) {
     return listOrdersLocal(status);
@@ -141,21 +159,7 @@ export async function createOrder(request: CreateOrderRequest): Promise<void> {
     body: JSON.stringify(transformCreateOrderRequest(request)),
   });
   if (!response.ok) {
-    let message = 'Failed to create order';
-    try {
-      const error = await response.json();
-      if (typeof error?.detail === 'string') {
-        message = error.detail;
-      } else if (Array.isArray(error?.detail) && error.detail.length > 0) {
-        const first = error.detail[0];
-        if (typeof first?.msg === 'string') {
-          message = first.msg;
-        }
-      }
-    } catch {
-      // Keep default error message if response body is not JSON.
-    }
-    throw new Error(message);
+    throw await buildApiError(response, 'Failed to create order');
   }
 }
 
@@ -183,7 +187,7 @@ export async function fillOrder(orderId: string, request: FillOrderRequest): Pro
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  if (!response.ok) throw new Error('Failed to fill order');
+  if (!response.ok) throw await buildApiError(response, 'Failed to fill order');
 }
 
 export async function cancelOrder(orderId: string): Promise<void> {
