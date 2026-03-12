@@ -110,7 +110,7 @@ describe('DailyReview Page', () => {
     })
   })
 
-  it('shows non-zero ratio percentages in recommendation risk panel', async () => {
+  it('opens the combined order review modal from the info action', async () => {
     const { user } = renderWithProviders(<DailyReview />)
 
     await waitFor(() => {
@@ -122,16 +122,9 @@ describe('DailyReview Page', () => {
     })
 
     await waitFor(() => {
-      expect(screen.getByText(/Trade Insight — VALE/i)).toBeInTheDocument()
-    })
-
-    await act(async () => {
-      await user.click(screen.getByText('Risk & Costs'))
-    })
-
-    await waitFor(() => {
-      expect(screen.getByText('+0.8%')).toBeInTheDocument()
-      expect(screen.getByText('+2.0%')).toBeInTheDocument()
+      expect(screen.getByText(/Create Order - VALE/i)).toBeInTheDocument()
+      expect(screen.getByRole('tab', { name: 'Decision' })).toHaveAttribute('aria-selected', 'true')
+      expect(screen.getByText('Place Order')).toBeInTheDocument()
     })
   })
 

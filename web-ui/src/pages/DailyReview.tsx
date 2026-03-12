@@ -13,7 +13,6 @@ import { DEFAULT_CONFIG, type RiskConfig } from '@/types/config';
 import GlossaryLegend from '@/components/domain/education/GlossaryLegend';
 import MetricHelpLabel from '@/components/domain/education/MetricHelpLabel';
 import { DAILY_REVIEW_GLOSSARY_KEYS } from '@/content/educationGlossary';
-import TradeInsightModal from '@/components/domain/recommendation/TradeInsightModal';
 import CandidateOrderModal from '@/components/domain/orders/CandidateOrderModal';
 import CachedSymbolPriceChart from '@/components/domain/market/CachedSymbolPriceChart';
 import WatchMetaInline from '@/components/domain/watchlist/WatchMetaInline';
@@ -52,8 +51,6 @@ export default function DailyReview() {
     update: true,
     close: true,
   });
-  const [insightCandidate, setInsightCandidate] = useState<DailyReviewCandidate | null>(null);
-  const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<DailyReviewCandidate | null>(null);
   const [dismissedReadinessBlocker, setDismissedReadinessBlocker] = useState(() => {
     // Persist dismissal state in localStorage
@@ -257,7 +254,6 @@ export default function DailyReview() {
               className="w-full sm:w-auto"
               onClick={() => {
                 setSelectedCandidate(quickActionCandidate);
-                setShowCreateOrderModal(true);
               }}
             >
               {t('dailyReview.quickAction.cta', { ticker: quickActionCandidate.ticker })}
@@ -310,11 +306,8 @@ export default function DailyReview() {
             ) : null}
             <CandidatesTable
               candidates={recommendedCandidates}
-              onShowRecommendation={setInsightCandidate}
-              onCreateOrder={(candidate) => {
-                setSelectedCandidate(candidate);
-                setShowCreateOrderModal(true);
-              }}
+              onShowRecommendation={setSelectedCandidate}
+              onCreateOrder={setSelectedCandidate}
               isCompactMobileLayout={isCompactMobileLayout}
               watchItemsByTicker={watchItemsByTicker}
               watchPending={watchPending}
@@ -404,17 +397,7 @@ export default function DailyReview() {
         )}
       </CollapsibleSection>
 
-      {insightCandidate ? (
-        <TradeInsightModal
-          ticker={insightCandidate.ticker}
-          recommendation={insightCandidate.recommendation}
-          currency="USD"
-          defaultTab="recommendation"
-          onClose={() => setInsightCandidate(null)}
-        />
-      ) : null}
-
-      {showCreateOrderModal && selectedCandidate ? (
+      {selectedCandidate ? (
         <CandidateOrderModal
           candidate={{
             ticker: selectedCandidate.ticker,
@@ -436,12 +419,10 @@ export default function DailyReview() {
             rr: formatNumber(selectedCandidate.rReward, 1),
           })}
           onClose={() => {
-            setShowCreateOrderModal(false);
             setSelectedCandidate(null);
           }}
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: queryKeys.orders() });
-            setShowCreateOrderModal(false);
             setSelectedCandidate(null);
           }}
         />

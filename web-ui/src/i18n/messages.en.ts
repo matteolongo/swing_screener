@@ -252,6 +252,22 @@ export const messagesEn = {
         },
       },
     },
+    review: {
+      kicker: 'Order Review',
+      carouselLabel: 'Order review sections',
+      previous: 'Previous section',
+      next: 'Next section',
+      position: 'Section {{current}} of {{total}}',
+      cautionTitle: 'Main watchout',
+      riskFallback: 'No structured risk or invalidation notes are available for this setup yet.',
+      formTitle: 'Place Order',
+      formDescription: 'Review the setup above, then enter the order details and broker setup below.',
+      sections: {
+        decision: 'Decision',
+        setup: 'Setup Case',
+        risk: 'Risk / Invalidation',
+      },
+    },
     candidateModal: {
       title: 'Create Order - {{ticker}}',
       closeAria: 'Close create order modal',
