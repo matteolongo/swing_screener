@@ -306,8 +306,7 @@ export default function DailyReview() {
             ) : null}
             <CandidatesTable
               candidates={recommendedCandidates}
-              onShowRecommendation={setSelectedCandidate}
-              onCreateOrder={setSelectedCandidate}
+              onOpenOrderReview={setSelectedCandidate}
               isCompactMobileLayout={isCompactMobileLayout}
               watchItemsByTicker={watchItemsByTicker}
               watchPending={watchPending}
@@ -557,8 +556,7 @@ function WatchInlineBlock({
 
 function CandidatesTable({
   candidates,
-  onShowRecommendation,
-  onCreateOrder,
+  onOpenOrderReview,
   isCompactMobileLayout,
   watchItemsByTicker,
   watchPending,
@@ -566,8 +564,7 @@ function CandidatesTable({
   onUnwatch,
 }: {
   candidates: DailyReviewCandidate[];
-  onShowRecommendation: (candidate: DailyReviewCandidate) => void;
-  onCreateOrder: (candidate: DailyReviewCandidate) => void;
+  onOpenOrderReview: (candidate: DailyReviewCandidate) => void;
   isCompactMobileLayout: boolean;
 } & DailyReviewWatchProps) {
   if (isCompactMobileLayout) {
@@ -641,7 +638,7 @@ function CandidatesTable({
                   variant="secondary"
                   size="sm"
                   className="shrink-0"
-                  onClick={() => onShowRecommendation(candidate)}
+                  onClick={() => onOpenOrderReview(candidate)}
                   title={t('dailyReview.table.candidates.recommendationTitle')}
                   aria-label={t('dailyReview.table.candidates.recommendationAria', { ticker: candidate.ticker })}
                 >
@@ -652,7 +649,7 @@ function CandidatesTable({
                 variant="primary"
                 size="sm"
                 className="flex-1"
-                onClick={() => onCreateOrder(candidate)}
+                onClick={() => onOpenOrderReview(candidate)}
                 title={
                   candidate.recommendation?.verdict === 'NOT_RECOMMENDED'
                     ? t('dailyReview.table.candidates.createOrderNotRecommendedTitle')
@@ -735,7 +732,7 @@ function CandidatesTable({
           <td className="p-2 text-center">
             {candidate.recommendation ? (
               <button
-                onClick={() => onShowRecommendation(candidate)}
+                onClick={() => onOpenOrderReview(candidate)}
                 className="min-h-11 min-w-11 p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
                 title={t('dailyReview.table.candidates.recommendationTitle')}
                 aria-label={t('dailyReview.table.candidates.recommendationAria', { ticker: candidate.ticker })}
@@ -748,7 +745,7 @@ function CandidatesTable({
             <Button
               variant="primary"
               size="sm"
-              onClick={() => onCreateOrder(candidate)}
+              onClick={() => onOpenOrderReview(candidate)}
               title={
                 candidate.recommendation?.verdict === 'NOT_RECOMMENDED'
                   ? t('dailyReview.table.candidates.createOrderNotRecommendedTitle')
