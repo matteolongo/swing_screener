@@ -199,6 +199,7 @@ export const messagesEn = {
       priceAction: 'Price Action',
       regimeAligned: 'Regime Aligned',
       institutionalSignal: 'Institutional Signal',
+      setupQualityTier: 'Setup Quality Tier',
     },
     transparencyNote: 'This is transparent, rule-based reasoning. No AI hallucination.',
   },

@@ -300,6 +300,7 @@ export default function OrderReviewExperience({
               return (
                 <button
                   key={section.id}
+                  id={`order-review-tab-${section.id}`}
                   type="button"
                   role="tab"
                   aria-selected={isActive}
@@ -318,12 +319,14 @@ export default function OrderReviewExperience({
             })}
           </div>
 
-          <div
-            id={`order-review-panel-${activeSection}`}
-            role="tabpanel"
-            className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-950"
-          >
-            {activeSection === 'decision' ? (
+          <div className="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-950">
+            <div
+              id="order-review-panel-decision"
+              role="tabpanel"
+              aria-labelledby="order-review-tab-decision"
+              hidden={activeSection !== 'decision'}
+              className="p-4"
+            >
               <div className="space-y-4">
                 {context.recommendation ? (
                   <div className={cn(
@@ -345,7 +348,9 @@ export default function OrderReviewExperience({
                     ) : null}
                   </div>
                 ) : (
-                  <EmptySection body={t('workspacePage.panels.analysis.manualOrderHint')} />
+                  !showManualOrderHint ? (
+                    <EmptySection body={t('workspacePage.panels.analysis.manualOrderHint')} />
+                  ) : null
                 )}
 
                 <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -406,10 +411,16 @@ export default function OrderReviewExperience({
                   </div>
                 ) : null}
               </div>
-            ) : null}
+            </div>
 
-            {activeSection === 'setup' ? (
-              thesis ? (
+            <div
+              id="order-review-panel-setup"
+              role="tabpanel"
+              aria-labelledby="order-review-tab-setup"
+              hidden={activeSection !== 'setup'}
+              className="p-4"
+            >
+              {thesis ? (
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                     <MetricTile
@@ -418,7 +429,7 @@ export default function OrderReviewExperience({
                       emphasize
                     />
                     <MetricTile
-                      label={t('tradeThesis.setupQuality')}
+                      label={t('tradeThesis.fields.setupQualityTier')}
                       value={t(`tradeThesis.setupQualityTier.${thesis.setupQualityTier}`)}
                     />
                     <MetricTile
@@ -451,10 +462,16 @@ export default function OrderReviewExperience({
                 </div>
               ) : (
                 <EmptySection body={t('workspacePage.panels.analysis.noThesis')} />
-              )
-            ) : null}
+              )}
+            </div>
 
-            {activeSection === 'risk' ? (
+            <div
+              id="order-review-panel-risk"
+              role="tabpanel"
+              aria-labelledby="order-review-tab-risk"
+              hidden={activeSection !== 'risk'}
+              className="p-4"
+            >
               <div className="space-y-4">
                 {context.recommendation?.thesis?.explanation.whatCouldGoWrong.length ? (
                   <div>
@@ -511,7 +528,7 @@ export default function OrderReviewExperience({
                   <EmptySection body={t('order.review.riskFallback')} />
                 ) : null}
               </div>
-            ) : null}
+            </div>
           </div>
         </div>
       </section>
