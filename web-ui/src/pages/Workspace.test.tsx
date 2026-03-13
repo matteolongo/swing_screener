@@ -338,7 +338,7 @@ describe('Workspace Page', () => {
     expect(within(dialog).getByLabelText('Stop Price (for linked stop)')).toBeInTheDocument();
   });
 
-  it('shows the structured thesis panel in the order tab', async () => {
+  it('shows the shared order review layout in the order tab', async () => {
     server.use(
       http.post('*/api/screener/run', () =>
         HttpResponse.json({
@@ -441,10 +441,12 @@ describe('Workspace Page', () => {
     await user.click(screen.getByRole('tab', { name: 'Order' }));
 
     await waitFor(() => {
-      expect(screen.getByText('Trade Thesis')).toBeInTheDocument();
-      expect(screen.getByText('Setup Quality Score')).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: 'Decision' })).toHaveAttribute('aria-selected', 'true');
+      expect(screen.getByRole('tab', { name: 'Setup Case' })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: 'Risk / Invalidation' })).toBeInTheDocument();
+      expect(screen.getByText('Place Order')).toBeInTheDocument();
     });
-    expect(screen.queryByPlaceholderText('Write your thesis for AAPL...')).not.toBeInTheDocument();
+    expect(screen.queryByText('Trade Thesis')).not.toBeInTheDocument();
   });
 
   it('shows breakout setup execution guidance in the action panel', async () => {
@@ -515,7 +517,7 @@ describe('Workspace Page', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Setup Execution (Degiro)')).toBeInTheDocument();
-      expect(screen.getByText('Breakout setup')).toBeInTheDocument();
+      expect(screen.getAllByText('Breakout setup').length).toBeGreaterThan(0);
       expect(screen.getAllByText(/BUY STOP/i).length).toBeGreaterThan(0);
     });
   });
@@ -588,7 +590,7 @@ describe('Workspace Page', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Setup Execution (Degiro)')).toBeInTheDocument();
-      expect(screen.getByText('Pullback setup')).toBeInTheDocument();
+      expect(screen.getAllByText('Pullback setup').length).toBeGreaterThan(0);
     });
   });
 
@@ -693,9 +695,9 @@ describe('Workspace Page', () => {
     expect(runCallCount).toBe(1);
 
     await user.click(screen.getByRole('tab', { name: 'Order' }));
-    await screen.findByText('Explain It Like I Am New');
+    await user.click(screen.getByRole('tab', { name: 'Setup Case' }));
     expect(
-      screen.getByText('AAPL is validated by trend quality, catalyst strength, and clear stop-based risk.')
+      await screen.findByText('AAPL is validated by trend quality, catalyst strength, and clear stop-based risk.')
     ).toBeInTheDocument();
   });
 

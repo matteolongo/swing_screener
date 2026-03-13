@@ -3,7 +3,6 @@ import Button from '@/components/common/Button';
 import ModalShell from '@/components/common/ModalShell';
 import CachedSymbolPriceChart from '@/components/domain/market/CachedSymbolPriceChart';
 import KeyMetrics from '@/components/domain/workspace/KeyMetrics';
-import TradeThesisPanel from '@/components/domain/workspace/TradeThesisPanel';
 import WorkspaceSentimentPanel from '@/components/domain/workspace/WorkspaceSentimentPanel';
 import ActionPanel from '@/components/domain/workspace/ActionPanel';
 import { t } from '@/i18n/t';
@@ -108,12 +107,7 @@ export default function WorkspaceSymbolModal({ ticker, onBack }: WorkspaceSymbol
 
           {activeTab === 'sentiment' ? <WorkspaceSentimentPanel ticker={ticker} /> : null}
 
-          {activeTab === 'order' ? (
-            <>
-              <TradeThesisPanel ticker={ticker} />
-              <ActionPanel ticker={ticker} />
-            </>
-          ) : null}
+          {activeTab === 'order' ? <ActionPanel ticker={ticker} /> : null}
         </div>
 
         <div className="sticky bottom-0 z-10 -mx-4 border-t border-gray-200 bg-white/95 p-4 sm:hidden">

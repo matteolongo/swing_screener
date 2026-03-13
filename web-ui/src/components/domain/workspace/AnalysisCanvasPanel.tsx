@@ -2,7 +2,6 @@ import Card from '@/components/common/Card';
 import CachedSymbolPriceChart from '@/components/domain/market/CachedSymbolPriceChart';
 import ActionPanel from '@/components/domain/workspace/ActionPanel';
 import KeyMetrics from '@/components/domain/workspace/KeyMetrics';
-import TradeThesisPanel from '@/components/domain/workspace/TradeThesisPanel';
 import WorkspaceSentimentPanel from '@/components/domain/workspace/WorkspaceSentimentPanel';
 import type { SymbolIntelligenceStatus } from '@/features/intelligence/useSymbolIntelligenceRunner';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
@@ -149,12 +148,7 @@ export default function AnalysisCanvasPanel({
 
             {activeTab === 'sentiment' && <WorkspaceSentimentPanel ticker={selectedTicker} />}
 
-            {activeTab === 'order' && (
-              <>
-                <TradeThesisPanel ticker={selectedTicker} />
-                <ActionPanel ticker={selectedTicker} />
-              </>
-            )}
+            {activeTab === 'order' && <ActionPanel ticker={selectedTicker} />}
           </div>
         </div>
       )}

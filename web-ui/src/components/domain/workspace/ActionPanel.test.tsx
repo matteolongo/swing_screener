@@ -27,11 +27,7 @@ vi.mock('@/features/strategy/hooks', () => ({
 
 vi.mock('@/features/portfolio/hooks', () => ({
   useCreateOrderMutation: () => ({
-    mutate: mutateMock,
-    isPending: false,
-    isError: false,
-    isSuccess: false,
-    error: null,
+    mutateAsync: mutateMock,
   }),
 }));
 
@@ -108,6 +104,8 @@ describe('ActionPanel', () => {
     });
     renderWithProviders(<ActionPanel ticker="AAPL" />);
 
+    expect(screen.getByRole('tab', { name: 'Decision' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByText('Place Order')).toBeInTheDocument();
     expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('BUY_STOP');
     expect(screen.getByText('Trigger Price (Buy Stop entry in Degiro)')).toBeInTheDocument();
     expect(screen.getByText('Exact Degiro setup for this order')).toBeInTheDocument();
@@ -124,8 +122,8 @@ describe('ActionPanel', () => {
     renderWithProviders(<ActionPanel ticker="AAPL" />);
 
     expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('BUY_LIMIT');
-    expect(screen.getByText('Pullback setup')).toBeInTheDocument();
-    expect(screen.queryByText('Breakout setup')).not.toBeInTheDocument();
+    expect(screen.getAllByText('Pullback setup').length).toBeGreaterThan(0);
+    expect(screen.queryAllByText('Breakout setup')).toHaveLength(0);
     expect(screen.getByText(/Tipo di Ordine: Limite/i)).toBeInTheDocument();
   });
 
@@ -138,13 +136,37 @@ describe('ActionPanel', () => {
     renderWithProviders(<ActionPanel ticker="AAPL" />);
 
     await user.selectOptions(screen.getByRole('combobox'), 'BUY_LIMIT');
-    expect(screen.getByText(/Selected order type does not match strategy guidance/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Selected order type does not match strategy guidance/i).length).toBeGreaterThan(0);
 
     const submit = screen.getByRole('button', { name: 'Create Order' });
     expect(submit).toBeDisabled();
 
     await user.click(screen.getByRole('checkbox'));
     expect(submit).toBeEnabled();
+  });
+
+  it('keeps form values while switching review sections', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<ActionPanel ticker="AAPL" />);
+
+    const quantityInput = screen.getByLabelText('Quantity');
+    await user.clear(quantityInput);
+    await user.type(quantityInput, '12');
+
+    await user.click(screen.getByRole('tab', { name: 'Risk / Invalidation' }));
+    expect(screen.getByText(/No structured risk or invalidation notes are available/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: 'Decision' }));
+    expect((screen.getByLabelText('Quantity') as HTMLInputElement).value).toBe('12');
+  });
+
+  it('keeps the action block below the review carousel', () => {
+    renderWithProviders(<ActionPanel ticker="AAPL" />);
+
+    const tablist = screen.getByRole('tablist', { name: 'Order review sections' });
+    const formTitle = screen.getByText('Place Order');
+
+    expect(Boolean(tablist.compareDocumentPosition(formTitle) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
   });
 
   it('blocks BUY_STOP entries when trigger is at or below current price', () => {

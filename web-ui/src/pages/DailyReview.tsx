@@ -13,7 +13,6 @@ import { DEFAULT_CONFIG, type RiskConfig } from '@/types/config';
 import GlossaryLegend from '@/components/domain/education/GlossaryLegend';
 import MetricHelpLabel from '@/components/domain/education/MetricHelpLabel';
 import { DAILY_REVIEW_GLOSSARY_KEYS } from '@/content/educationGlossary';
-import TradeInsightModal from '@/components/domain/recommendation/TradeInsightModal';
 import CandidateOrderModal from '@/components/domain/orders/CandidateOrderModal';
 import CachedSymbolPriceChart from '@/components/domain/market/CachedSymbolPriceChart';
 import WatchMetaInline from '@/components/domain/watchlist/WatchMetaInline';
@@ -52,8 +51,6 @@ export default function DailyReview() {
     update: true,
     close: true,
   });
-  const [insightCandidate, setInsightCandidate] = useState<DailyReviewCandidate | null>(null);
-  const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<DailyReviewCandidate | null>(null);
   const [dismissedReadinessBlocker, setDismissedReadinessBlocker] = useState(() => {
     // Persist dismissal state in localStorage
@@ -257,7 +254,6 @@ export default function DailyReview() {
               className="w-full sm:w-auto"
               onClick={() => {
                 setSelectedCandidate(quickActionCandidate);
-                setShowCreateOrderModal(true);
               }}
             >
               {t('dailyReview.quickAction.cta', { ticker: quickActionCandidate.ticker })}
@@ -310,11 +306,7 @@ export default function DailyReview() {
             ) : null}
             <CandidatesTable
               candidates={recommendedCandidates}
-              onShowRecommendation={setInsightCandidate}
-              onCreateOrder={(candidate) => {
-                setSelectedCandidate(candidate);
-                setShowCreateOrderModal(true);
-              }}
+              onOpenOrderReview={setSelectedCandidate}
               isCompactMobileLayout={isCompactMobileLayout}
               watchItemsByTicker={watchItemsByTicker}
               watchPending={watchPending}
@@ -404,17 +396,7 @@ export default function DailyReview() {
         )}
       </CollapsibleSection>
 
-      {insightCandidate ? (
-        <TradeInsightModal
-          ticker={insightCandidate.ticker}
-          recommendation={insightCandidate.recommendation}
-          currency="USD"
-          defaultTab="recommendation"
-          onClose={() => setInsightCandidate(null)}
-        />
-      ) : null}
-
-      {showCreateOrderModal && selectedCandidate ? (
+      {selectedCandidate ? (
         <CandidateOrderModal
           candidate={{
             ticker: selectedCandidate.ticker,
@@ -436,12 +418,10 @@ export default function DailyReview() {
             rr: formatNumber(selectedCandidate.rReward, 1),
           })}
           onClose={() => {
-            setShowCreateOrderModal(false);
             setSelectedCandidate(null);
           }}
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: queryKeys.orders() });
-            setShowCreateOrderModal(false);
             setSelectedCandidate(null);
           }}
         />
@@ -576,8 +556,7 @@ function WatchInlineBlock({
 
 function CandidatesTable({
   candidates,
-  onShowRecommendation,
-  onCreateOrder,
+  onOpenOrderReview,
   isCompactMobileLayout,
   watchItemsByTicker,
   watchPending,
@@ -585,8 +564,7 @@ function CandidatesTable({
   onUnwatch,
 }: {
   candidates: DailyReviewCandidate[];
-  onShowRecommendation: (candidate: DailyReviewCandidate) => void;
-  onCreateOrder: (candidate: DailyReviewCandidate) => void;
+  onOpenOrderReview: (candidate: DailyReviewCandidate) => void;
   isCompactMobileLayout: boolean;
 } & DailyReviewWatchProps) {
   if (isCompactMobileLayout) {
@@ -660,7 +638,7 @@ function CandidatesTable({
                   variant="secondary"
                   size="sm"
                   className="shrink-0"
-                  onClick={() => onShowRecommendation(candidate)}
+                  onClick={() => onOpenOrderReview(candidate)}
                   title={t('dailyReview.table.candidates.recommendationTitle')}
                   aria-label={t('dailyReview.table.candidates.recommendationAria', { ticker: candidate.ticker })}
                 >
@@ -671,7 +649,7 @@ function CandidatesTable({
                 variant="primary"
                 size="sm"
                 className="flex-1"
-                onClick={() => onCreateOrder(candidate)}
+                onClick={() => onOpenOrderReview(candidate)}
                 title={
                   candidate.recommendation?.verdict === 'NOT_RECOMMENDED'
                     ? t('dailyReview.table.candidates.createOrderNotRecommendedTitle')
@@ -754,7 +732,7 @@ function CandidatesTable({
           <td className="p-2 text-center">
             {candidate.recommendation ? (
               <button
-                onClick={() => onShowRecommendation(candidate)}
+                onClick={() => onOpenOrderReview(candidate)}
                 className="min-h-11 min-w-11 p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
                 title={t('dailyReview.table.candidates.recommendationTitle')}
                 aria-label={t('dailyReview.table.candidates.recommendationAria', { ticker: candidate.ticker })}
@@ -767,7 +745,7 @@ function CandidatesTable({
             <Button
               variant="primary"
               size="sm"
-              onClick={() => onCreateOrder(candidate)}
+              onClick={() => onOpenOrderReview(candidate)}
               title={
                 candidate.recommendation?.verdict === 'NOT_RECOMMENDED'
                   ? t('dailyReview.table.candidates.createOrderNotRecommendedTitle')

@@ -102,6 +102,8 @@ describe('CandidateOrderModal', () => {
 
     const button = screen.getByRole('button', { name: 'Create Order' });
     expect(button).toBeDisabled();
+    expect(screen.getByRole('tab', { name: 'Decision' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByText('Place Order')).toBeInTheDocument();
   });
 
   it('defaults to BUY_STOP when backend guidance suggests breakout stop entry', () => {
@@ -127,7 +129,7 @@ describe('CandidateOrderModal', () => {
     );
 
     expect(screen.getByText('Setup Execution (Degiro)')).toBeInTheDocument();
-    expect(screen.getByText('Breakout setup')).toBeInTheDocument();
+    expect(screen.getAllByText('Breakout setup').length).toBeGreaterThan(0);
     expect(screen.getAllByText(/BUY STOP/i).length).toBeGreaterThan(0);
     expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('BUY_STOP');
     expect(screen.getByText('Exact Degiro setup for this order')).toBeInTheDocument();
@@ -157,8 +159,8 @@ describe('CandidateOrderModal', () => {
       />,
     );
 
-    expect(screen.getByText('Pullback setup')).toBeInTheDocument();
-    expect(screen.queryByText('Breakout setup')).not.toBeInTheDocument();
+    expect(screen.getAllByText('Pullback setup').length).toBeGreaterThan(0);
+    expect(screen.queryAllByText('Breakout setup')).toHaveLength(0);
     expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('BUY_LIMIT');
     expect(screen.getByText(/Tipo di Ordine: Limite/i)).toBeInTheDocument();
   });
@@ -186,7 +188,7 @@ describe('CandidateOrderModal', () => {
     );
 
     await user.selectOptions(screen.getByRole('combobox'), 'BUY_LIMIT');
-    expect(screen.getByText(/Selected order type does not match strategy guidance/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Selected order type does not match strategy guidance/i).length).toBeGreaterThan(0);
 
     const submit = screen.getByRole('button', { name: 'Create Order' });
     expect(submit).toBeDisabled();
@@ -237,7 +239,38 @@ describe('CandidateOrderModal', () => {
       />,
     );
 
-    expect(screen.getByText('Manual setup')).toBeInTheDocument();
+    expect(screen.getAllByText('Manual setup').length).toBeGreaterThan(0);
     expect(screen.getByText(/Choose BUY LIMIT for pullback or BUY STOP/i)).toBeInTheDocument();
+  });
+
+  it('preserves entered values while moving between review sections', async () => {
+    const user = userEvent.setup();
+    render(
+      <CandidateOrderModal
+        candidate={{
+          ticker: 'AAPL',
+          signal: 'breakout',
+          close: 175.0,
+          entry: 175.5,
+          stop: 170.0,
+          shares: 2,
+          recommendation: recommendedRecommendation,
+        }}
+        risk={risk}
+        defaultNotes="From daily review"
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+    );
+
+    const notes = screen.getByLabelText('Notes');
+    await user.clear(notes);
+    await user.type(notes, 'Adjusted note');
+
+    await user.click(screen.getByRole('tab', { name: 'Risk / Invalidation' }));
+    expect(screen.getByText(/No structured risk or invalidation notes are available/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: 'Decision' }));
+    expect((screen.getByLabelText('Notes') as HTMLTextAreaElement).value).toBe('Adjusted note');
   });
 });
