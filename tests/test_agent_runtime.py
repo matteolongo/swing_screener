@@ -1,13 +1,13 @@
 from __future__ import annotations
 
+import argparse
 import asyncio
-from pathlib import Path
-import subprocess
-import sys
 
 import agent.client as agent_client_module
 from agent.agent import SwingScreenerAgent
+from agent.cli import cmd_orders_list
 from api.models.chat import ChatAnswerResponse, ChatTurn, WorkspaceContextMeta, WorkspaceContextSourceMeta
+from api.models.portfolio import OrdersResponse
 
 
 class FakeChatService:
@@ -36,6 +36,11 @@ class FakeChatService:
         )
 
 
+class FakePortfolioService:
+    def list_orders(self, status=None, ticker=None):
+        return OrdersResponse(orders=[], asof="2026-03-15")
+
+
 async def _ask_agent_question() -> dict:
     agent = SwingScreenerAgent()
     await agent.start()
@@ -55,15 +60,12 @@ def test_agent_chat_graph_returns_shared_chat_shape(monkeypatch):
     assert result["facts_used"] == ["portfolio.orders.pending_count"]
 
 
-def test_agent_cli_orders_list_command_succeeds():
-    repo_root = Path(__file__).resolve().parents[1]
-    result = subprocess.run(
-        [sys.executable, "-m", "agent.cli", "orders", "list", "--status", "pending"],
-        cwd=repo_root,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+def test_agent_cli_orders_list_command_succeeds(monkeypatch, capsys):
+    monkeypatch.setattr(agent_client_module, "get_portfolio_service", lambda: FakePortfolioService())
 
-    assert result.returncode == 0
-    assert "Orders (status: pending)" in result.stdout
+    args = argparse.Namespace(status="pending")
+    returncode = asyncio.run(cmd_orders_list(args))
+
+    captured = capsys.readouterr()
+    assert returncode == 0
+    assert "Orders (status: pending)" in captured.out
