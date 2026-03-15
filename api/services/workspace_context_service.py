@@ -99,7 +99,8 @@ class WorkspaceContextService:
                 facts["portfolio.selected_position.ticker"] = selected_position.ticker
                 facts["portfolio.selected_position.pnl"] = f"{selected_position.pnl:.2f}"
                 facts["portfolio.selected_position.r_now"] = f"{selected_position.r_now:.2f}"
-                facts["portfolio.selected_position.current_price"] = f"{selected_position.current_price or 0.0:.2f}"
+                if selected_position.current_price is not None:
+                    facts["portfolio.selected_position.current_price"] = f"{selected_position.current_price:.2f}"
                 facts["portfolio.selected_position.stop_price"] = f"{selected_position.stop_price:.2f}"
 
             matching_orders = [

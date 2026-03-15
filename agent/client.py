@@ -191,16 +191,20 @@ class ToolClient:
     async def _preview_order(self, arguments: dict[str, Any]) -> dict[str, Any]:
         entry_price = float(arguments["entry_price"])
         stop_price = float(arguments["stop_price"])
+        if stop_price >= entry_price:
+            raise ValueError(f"stop_price ({stop_price}) must be below entry_price ({entry_price})")
         ticker = str(arguments.get("ticker", "UNKNOWN")).strip().upper() or "UNKNOWN"
         strategy = get_strategy_service().get_active_strategy()
         risk_cfg = strategy["risk"] if isinstance(strategy, dict) else strategy.risk
-        per_share_risk = max(entry_price - stop_price, 0.01)
+        per_share_risk = entry_price - stop_price
         account_size = float(risk_cfg["account_size"] if isinstance(risk_cfg, dict) else risk_cfg.account_size)
         risk_pct = float(risk_cfg["risk_pct"] if isinstance(risk_cfg, dict) else risk_cfg.risk_pct)
         min_shares = int(risk_cfg["min_shares"] if isinstance(risk_cfg, dict) else risk_cfg.min_shares)
-        risk_amount = account_size * risk_pct
-        shares = max(int(risk_amount // per_share_risk), min_shares)
+        target_risk_amount = account_size * risk_pct
+        shares = max(int(target_risk_amount // per_share_risk), min_shares)
         position_value = shares * entry_price
+        actual_risk = shares * per_share_risk
+        actual_risk_pct = actual_risk / account_size
         return {
             "ticker": ticker,
             "entry_price": entry_price,
@@ -209,9 +213,9 @@ class ToolClient:
             "shares": shares,
             "position_value": position_value,
             "position_size_usd": position_value,
-            "risk_amount": risk_amount,
-            "risk_usd": risk_amount,
-            "risk_pct": risk_pct,
+            "risk_amount": actual_risk,
+            "risk_usd": actual_risk,
+            "risk_pct": actual_risk_pct,
         }
 
     async def _list_orders(self, arguments: dict[str, Any]) -> dict[str, Any]:

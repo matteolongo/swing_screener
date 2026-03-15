@@ -186,8 +186,8 @@ async def cmd_orders_list(args: argparse.Namespace) -> int:
         result = await agent.list_orders(status=args.status)
         
         # Print orders
+        print(f"\n📋 Orders (status: {args.status or 'all'}):")
         if result["orders"]:
-            print(f"\n📋 Orders (status: {args.status or 'all'}):")
             for order in result["orders"]:
                 order_id = order.get("order_id", "Unknown")
                 ticker = order.get("ticker", "Unknown")
@@ -208,6 +208,8 @@ async def cmd_orders_list(args: argparse.Namespace) -> int:
                 limit_price = order.get("limit_price")
                 if isinstance(limit_price, (int, float)):
                     print(f"   Limit: ${limit_price:.2f}")
+        else:
+            print("  No orders found.")
         
         await agent.stop()
         return 0
