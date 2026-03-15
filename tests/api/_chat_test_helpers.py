@@ -14,6 +14,7 @@ from api.models.intelligence import (
     IntelligenceEventResponse,
     IntelligenceOpportunityResponse,
 )
+from api.models.screener import SameSymbolCandidateContext
 from api.models.intelligence_config import IntelligenceConfigModel
 from api.models.portfolio import Order, PortfolioSummary, PositionWithMetrics
 
@@ -112,7 +113,11 @@ def make_portfolio_summary() -> PortfolioSummary:
     )
 
 
-def make_workspace_snapshot(*tickers: str) -> WorkspaceSnapshot:
+def make_workspace_snapshot(
+    *tickers: str,
+    same_symbol_by_ticker: dict[str, SameSymbolCandidateContext] | None = None,
+) -> WorkspaceSnapshot:
+    same_symbol_by_ticker = same_symbol_by_ticker or {}
     candidates = [
         WorkspaceScreenerCandidateSnapshot(
             ticker=ticker,
@@ -133,6 +138,7 @@ def make_workspace_snapshot(*tickers: str) -> WorkspaceSnapshot:
             recommendation_verdict="RECOMMENDED",
             reasons_short=["Trend aligned", "Risk acceptable"],
             beginner_explanation=f"{ticker} remains valid while it stays above the stop.",
+            same_symbol=same_symbol_by_ticker.get(ticker),
         )
         for index, ticker in enumerate(tickers or ("AAPL",))
     ]
@@ -278,6 +284,22 @@ def make_context(
         fact_map["screener.selected_candidate.stop"] = f"{selected_candidate.stop:.2f}"
     if selected_candidate is not None and selected_candidate.target is not None:
         fact_map["screener.selected_candidate.target"] = f"{selected_candidate.target:.2f}"
+    if selected_candidate is not None and selected_candidate.same_symbol is not None:
+        fact_map["screener.selected_candidate.same_symbol.mode"] = selected_candidate.same_symbol.mode
+        if selected_candidate.same_symbol.reason:
+            fact_map["screener.selected_candidate.same_symbol.reason"] = selected_candidate.same_symbol.reason
+        if selected_candidate.same_symbol.current_position_stop is not None:
+            fact_map["screener.selected_candidate.same_symbol.current_position_stop"] = (
+                f"{selected_candidate.same_symbol.current_position_stop:.2f}"
+            )
+        if selected_candidate.same_symbol.fresh_setup_stop is not None:
+            fact_map["screener.selected_candidate.same_symbol.fresh_setup_stop"] = (
+                f"{selected_candidate.same_symbol.fresh_setup_stop:.2f}"
+            )
+        if selected_candidate.same_symbol.execution_stop is not None:
+            fact_map["screener.selected_candidate.same_symbol.execution_stop"] = (
+                f"{selected_candidate.same_symbol.execution_stop:.2f}"
+            )
     if intelligence is not None:
         if intelligence.asof_date:
             fact_map["intelligence.asof"] = intelligence.asof_date

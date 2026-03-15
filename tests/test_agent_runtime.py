@@ -35,7 +35,6 @@ class FakeChatService:
             ],
         )
 
-
 class FakePortfolioService:
     def list_orders(self, status=None, ticker=None):
         return OrdersResponse(orders=[], asof="2026-03-15")

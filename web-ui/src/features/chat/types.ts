@@ -1,4 +1,4 @@
-import type { ScreenerCandidate, ScreenerResponse } from '@/features/screener/types';
+import type { SameSymbolCandidateContext, ScreenerCandidate, ScreenerResponse } from '@/features/screener/types';
 
 export type ChatRole = 'user' | 'assistant';
 export type WorkspaceFreshnessSource = 'portfolio' | 'screener' | 'intelligence' | 'education';
@@ -30,6 +30,7 @@ export interface WorkspaceSnapshotCandidate {
   recommendationVerdict?: string;
   reasonsShort: string[];
   beginnerExplanation?: string;
+  sameSymbol?: SameSymbolCandidateContext;
 }
 
 export interface WorkspaceSnapshot {
@@ -95,6 +96,18 @@ interface WorkspaceSnapshotCandidateAPI {
   recommendation_verdict?: string;
   reasons_short?: string[];
   beginner_explanation?: string;
+  same_symbol?: {
+    mode: SameSymbolCandidateContext['mode'];
+    position_id?: string | null;
+    current_position_entry?: number | null;
+    current_position_stop?: number | null;
+    fresh_setup_stop?: number | null;
+    execution_stop?: number | null;
+    pending_entry_exists?: boolean;
+    add_on_count?: number;
+    max_add_ons?: number;
+    reason?: string;
+  };
 }
 
 interface WorkspaceSnapshotAPI {
@@ -157,6 +170,7 @@ function buildSnapshotCandidate(candidate: ScreenerCandidate): WorkspaceSnapshot
     beginnerExplanation:
       candidate.recommendation?.thesis?.beginnerExplanation?.text ??
       candidate.recommendation?.thesis?.explanation?.keyInsight,
+    sameSymbol: candidate.sameSymbol,
   };
 }
 
@@ -207,6 +221,20 @@ export function toChatAnswerRequestAPI(request: ChatAnswerRequest): ChatAnswerRe
             recommendation_verdict: candidate.recommendationVerdict,
             reasons_short: candidate.reasonsShort,
             beginner_explanation: candidate.beginnerExplanation,
+            same_symbol: candidate.sameSymbol
+              ? {
+                  mode: candidate.sameSymbol.mode,
+                  position_id: candidate.sameSymbol.positionId,
+                  current_position_entry: candidate.sameSymbol.currentPositionEntry,
+                  current_position_stop: candidate.sameSymbol.currentPositionStop,
+                  fresh_setup_stop: candidate.sameSymbol.freshSetupStop,
+                  execution_stop: candidate.sameSymbol.executionStop,
+                  pending_entry_exists: candidate.sameSymbol.pendingEntryExists,
+                  add_on_count: candidate.sameSymbol.addOnCount,
+                  max_add_ons: candidate.sameSymbol.maxAddOns,
+                  reason: candidate.sameSymbol.reason,
+                }
+              : undefined,
           })),
         }
       : undefined,

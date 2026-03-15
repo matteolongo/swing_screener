@@ -12,6 +12,7 @@ from tests.api._chat_test_helpers import (
     make_position,
     make_workspace_snapshot,
 )
+from api.models.screener import SameSymbolCandidateContext
 
 
 class FakePortfolioService:
@@ -150,3 +151,40 @@ def test_build_context_warns_when_cached_education_is_missing():
 
     assert context.intelligence is not None
     assert "No cached education is available for AAPL." in context.warnings
+
+
+def test_build_context_includes_same_symbol_fact_map_keys():
+    service = WorkspaceContextService(
+        portfolio_service=FakePortfolioService(
+            orders=[make_order()],
+            positions=[make_position()],
+            summary=make_portfolio_summary(),
+        ),
+        strategy_service=FakeStrategyService(),
+        intelligence_service=FakeIntelligenceService(),
+        storage=FakeStorage(),
+    )
+
+    context = service.build_context(
+        selected_ticker="AAPL",
+        workspace_snapshot=make_workspace_snapshot(
+            "AAPL",
+            same_symbol_by_ticker={
+                "AAPL": SameSymbolCandidateContext(
+                    mode="ADD_ON",
+                    position_id="POS-AAPL-1",
+                    current_position_stop=96.0,
+                    fresh_setup_stop=97.0,
+                    execution_stop=96.0,
+                    reason="One portfolio-aware add-on is allowed using the current live stop.",
+                )
+            },
+        ),
+    )
+
+    assert context.fact_map["screener.selected_candidate.same_symbol.mode"] == "ADD_ON"
+    assert context.fact_map["screener.selected_candidate.same_symbol.reason"] == (
+        "One portfolio-aware add-on is allowed using the current live stop."
+    )
+    assert context.fact_map["screener.selected_candidate.same_symbol.current_position_stop"] == "96.00"
+    assert context.fact_map["screener.selected_candidate.same_symbol.fresh_setup_stop"] == "97.00"

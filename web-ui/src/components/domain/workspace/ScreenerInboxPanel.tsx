@@ -245,6 +245,26 @@ export default function ScreenerInboxPanel({
               </Badge>
             </div>
           </div>
+          {result.sameSymbolSuppressedCount || result.sameSymbolAddOnCount ? (
+            <div className="flex flex-wrap gap-2 text-xs">
+              {result.sameSymbolSuppressedCount ? (
+                <div className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+                  {t('screener.summary.sameSymbolSuppressed', {
+                    count: result.sameSymbolSuppressedCount,
+                    suffix: result.sameSymbolSuppressedCount === 1 ? '' : 's',
+                  })}
+                </div>
+              ) : null}
+              {result.sameSymbolAddOnCount ? (
+                <div className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-blue-800 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-200">
+                  {t('screener.summary.sameSymbolAddOns', {
+                    count: result.sameSymbolAddOnCount,
+                    suffix: result.sameSymbolAddOnCount === 1 ? '' : 's',
+                  })}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
           <div className="flex-1 min-h-0 overflow-auto rounded-md border border-gray-200 dark:border-gray-700">
             <ScreenerCandidatesTable
               candidates={candidates}

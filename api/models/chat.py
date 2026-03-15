@@ -11,6 +11,7 @@ from api.models.intelligence import (
     IntelligenceOpportunityResponse,
 )
 from api.models.portfolio import Order, PortfolioSummary, PositionWithMetrics
+from api.models.screener import SameSymbolCandidateContext
 
 
 ChatRole = Literal["user", "assistant"]
@@ -57,6 +58,7 @@ class WorkspaceScreenerCandidateSnapshot(BaseModel):
     recommendation_verdict: Optional[str] = Field(default=None, max_length=64)
     reasons_short: list[str] = Field(default_factory=list, max_length=8)
     beginner_explanation: Optional[str] = Field(default=None, max_length=1600)
+    same_symbol: Optional[SameSymbolCandidateContext] = None
 
     @field_validator("ticker")
     @classmethod

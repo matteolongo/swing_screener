@@ -1,7 +1,7 @@
 // View model helpers for Screener candidates
 // Centralizes fallback logic for recommendation vs candidate data
 
-import { ScreenerCandidate } from './types';
+import { SameSymbolCandidateContext, ScreenerCandidate } from './types';
 
 export interface CandidateViewModel {
   ticker: string;
@@ -40,6 +40,8 @@ export interface CandidateViewModel {
   
   // Fix recommendations
   fixes: string[];
+
+  sameSymbol: SameSymbolCandidateContext | null;
   
   // Original candidate (for modals)
   original: ScreenerCandidate;
@@ -102,6 +104,8 @@ export function toCandidateViewModel(candidate: ScreenerCandidate): CandidateVie
     
     // Fix list
     fixes,
+
+    sameSymbol: candidate.sameSymbol ?? null,
     
     // Original for modals
     original: candidate,
