@@ -125,8 +125,9 @@ def get_strategy_service(
 
 def get_screener_service(
     strategy_repo: StrategyRepository = Depends(get_strategy_repo),
+    portfolio_service: PortfolioService = Depends(get_portfolio_service),
 ) -> ScreenerService:
-    return ScreenerService(strategy_repo=strategy_repo)
+    return ScreenerService(strategy_repo=strategy_repo, portfolio_service=portfolio_service)
 
 
 def get_social_service(

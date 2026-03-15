@@ -145,6 +145,21 @@ class WorkspaceContextService:
                     candidate.beginner_explanation,
                     max_len=320,
                 )
+            if candidate.same_symbol is not None:
+                facts["screener.selected_candidate.same_symbol.mode"] = candidate.same_symbol.mode
+                facts["screener.selected_candidate.same_symbol.reason"] = _clean_text(candidate.same_symbol.reason)
+                if candidate.same_symbol.current_position_stop is not None:
+                    facts["screener.selected_candidate.same_symbol.current_position_stop"] = (
+                        f"{candidate.same_symbol.current_position_stop:.2f}"
+                    )
+                if candidate.same_symbol.fresh_setup_stop is not None:
+                    facts["screener.selected_candidate.same_symbol.fresh_setup_stop"] = (
+                        f"{candidate.same_symbol.fresh_setup_stop:.2f}"
+                    )
+                if candidate.same_symbol.execution_stop is not None:
+                    facts["screener.selected_candidate.same_symbol.execution_stop"] = (
+                        f"{candidate.same_symbol.execution_stop:.2f}"
+                    )
 
         if context.intelligence is not None:
             if context.intelligence.asof_date:

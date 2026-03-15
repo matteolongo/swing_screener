@@ -60,10 +60,9 @@ class DailyReviewService:
         )
         screener_result = self.screener.run_screener(screener_request)
         candidates = screener_result.candidates[:top_n]
-        
-        # Convert to daily review format
-        new_candidates = [
-            DailyReviewCandidate(
+
+        def _to_daily_candidate(c) -> DailyReviewCandidate:
+            return DailyReviewCandidate(
                 ticker=c.ticker,
                 confidence=c.confidence,
                 signal=c.signal or "UNKNOWN",
@@ -78,9 +77,10 @@ class DailyReviewService:
                 suggested_order_price=c.suggested_order_price,
                 execution_note=c.execution_note,
                 recommendation=c.recommendation,
+                same_symbol=c.same_symbol,
             )
-            for c in candidates
-        ]
+        new_candidates = [_to_daily_candidate(c) for c in candidates if c.same_symbol is None or c.same_symbol.mode == "NEW_ENTRY"]
+        add_on_candidates = [_to_daily_candidate(c) for c in candidates if c.same_symbol is not None and c.same_symbol.mode == "ADD_ON"]
         
         # 2. Analyze all open positions
         positions_response = self.portfolio.list_positions(status="open")
@@ -179,11 +179,13 @@ class DailyReviewService:
             update_stop=len(positions_update),
             close_positions=len(positions_close),
             new_candidates=len(new_candidates),
+            add_on_candidates=len(add_on_candidates),
             review_date=date.today(),
         )
         
         review = DailyReview(
             new_candidates=new_candidates,
+            positions_add_on_candidates=add_on_candidates,
             positions_hold=positions_hold,
             positions_update_stop=positions_update,
             positions_close=positions_close,
@@ -240,8 +242,8 @@ class DailyReviewService:
         screener_result = self.screener.run_screener(screener_request, strategy_override=strategy)
         candidates = screener_result.candidates[:top_n]
 
-        new_candidates = [
-            DailyReviewCandidate(
+        def _to_daily_candidate(c) -> DailyReviewCandidate:
+            return DailyReviewCandidate(
                 ticker=c.ticker,
                 confidence=c.confidence,
                 signal=c.signal or "UNKNOWN",
@@ -256,9 +258,10 @@ class DailyReviewService:
                 suggested_order_price=c.suggested_order_price,
                 execution_note=c.execution_note,
                 recommendation=c.recommendation,
+                same_symbol=c.same_symbol,
             )
-            for c in candidates
-        ]
+        new_candidates = [_to_daily_candidate(c) for c in candidates if c.same_symbol is None or c.same_symbol.mode == "NEW_ENTRY"]
+        add_on_candidates = [_to_daily_candidate(c) for c in candidates if c.same_symbol is not None and c.same_symbol.mode == "ADD_ON"]
 
         positions_hold: list[DailyReviewPositionHold] = []
         positions_update: list[DailyReviewPositionUpdate] = []
@@ -349,6 +352,7 @@ class DailyReviewService:
 
         return DailyReview(
             new_candidates=new_candidates,
+            positions_add_on_candidates=add_on_candidates,
             positions_hold=positions_hold,
             positions_update_stop=positions_update,
             positions_close=positions_close,
@@ -358,6 +362,7 @@ class DailyReviewService:
                 update_stop=len(positions_update),
                 close_positions=len(positions_close),
                 new_candidates=len(new_candidates),
+                add_on_candidates=len(add_on_candidates),
                 review_date=date.today(),
             ),
         )

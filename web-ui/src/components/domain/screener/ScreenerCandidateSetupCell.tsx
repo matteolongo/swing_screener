@@ -12,6 +12,10 @@ interface ScreenerCandidateSetupCellProps {
 export default function ScreenerCandidateSetupCell({
   candidate,
 }: ScreenerCandidateSetupCellProps) {
+  const showAddOnStops = candidate.sameSymbol?.mode === 'ADD_ON';
+  const liveStop = candidate.sameSymbol?.currentPositionStop ?? candidate.stop;
+  const freshSetupStop = candidate.sameSymbol?.freshSetupStop ?? candidate.stop;
+
   return (
     <div className="text-xs space-y-0.5">
       {/* Entry */}
@@ -28,11 +32,22 @@ export default function ScreenerCandidateSetupCell({
       <div className="flex justify-between gap-4">
         <span className="text-gray-600 dark:text-gray-400">{t('screener.setup.stop')}:</span>
         <span className="font-mono">
-          {candidate.stop != null && candidate.stop > 0
-            ? formatCurrency(candidate.stop, candidate.currency)
+          {liveStop != null && liveStop > 0
+            ? formatCurrency(liveStop, candidate.currency)
             : '—'}
         </span>
       </div>
+
+      {showAddOnStops ? (
+        <div className="flex justify-between gap-4">
+          <span className="text-gray-600 dark:text-gray-400">{t('screener.setup.freshSetupStop')}:</span>
+          <span className="font-mono">
+            {freshSetupStop != null && freshSetupStop > 0
+              ? formatCurrency(freshSetupStop, candidate.currency)
+              : '—'}
+          </span>
+        </div>
+      ) : null}
 
       {/* R/R */}
       <div className="flex justify-between gap-4">

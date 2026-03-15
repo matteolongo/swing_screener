@@ -176,6 +176,46 @@ export function createOrderLocal(request: CreateOrderRequest): void {
     const existingIds = new Set(store.orders.map((order) => order.orderId));
     const orderId = nextOrderId(ticker, existingIds);
     const normalizedOrderType = request.orderType.trim().toUpperCase();
+    const orderKind = request.orderKind ?? inferOrderKind({ orderKind: null, orderType: normalizedOrderType });
+    const openPosition = store.positions.find(
+      (position) => position.status === 'open' && normalizeTicker(position.ticker) === ticker,
+    );
+
+    if (orderKind === 'entry') {
+      const pendingSameSymbolEntry = store.orders.some(
+        (order) =>
+          order.status === 'pending' &&
+          normalizeTicker(order.ticker) === ticker &&
+          inferOrderKind(order) === 'entry',
+      );
+      if (pendingSameSymbolEntry) {
+        throw new Error(`${ticker}: pending entry order already exists.`);
+      }
+
+      if (request.entryMode === 'ADD_ON') {
+        if (!openPosition) {
+          throw new Error(`${ticker}: no open position found for add-on order.`);
+        }
+        const linkedPositionId = request.positionId ?? openPosition.positionId ?? null;
+        const filledAddOns =
+          linkedPositionId == null
+            ? 0
+            : Math.max(
+                0,
+                store.orders.filter(
+                  (order) =>
+                    order.status === 'filled' &&
+                    order.positionId === linkedPositionId &&
+                    inferOrderKind(order) === 'entry',
+                ).length - 1,
+              );
+        if (filledAddOns >= 1) {
+          throw new Error(`${ticker}: add-on limit reached for this position.`);
+        }
+      } else if (openPosition) {
+        throw new Error(`${ticker}: open position already exists. Create this as an ADD_ON order instead.`);
+      }
+    }
 
     const order: Order = {
       orderId,
@@ -189,9 +229,9 @@ export function createOrderLocal(request: CreateOrderRequest): void {
       filledDate: '',
       entryPrice: null,
       notes: request.notes?.trim() ?? '',
-      orderKind: request.orderKind ?? inferOrderKind({ orderKind: null, orderType: normalizedOrderType }),
+      orderKind,
       parentOrderId: null,
-      positionId: null,
+      positionId: request.entryMode === 'ADD_ON' ? (request.positionId ?? openPosition?.positionId ?? null) : null,
       tif: 'GTC',
       feeEur: null,
       fillFxRate: null,
