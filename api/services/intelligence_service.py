@@ -36,6 +36,7 @@ from api.services.intelligence_config_service import IntelligenceConfigService
 from api.repositories.strategy_repo import StrategyRepository
 from api.services.intelligence_warmup import get_intelligence_run_manager
 from swing_screener.intelligence.config import build_intelligence_config
+from swing_screener.intelligence.llm.factory import build_langchain_chat_model
 from swing_screener.intelligence.storage import IntelligenceStorage
 
 logger = logging.getLogger(__name__)
@@ -210,28 +211,14 @@ def _invoke_llm_explanation(
         return fallback_text, "deterministic_fallback", model, f"langchain-core unavailable: {exc}"
 
     try:
-        if provider == "openai":
-            from langchain_openai import ChatOpenAI
-
-            if not api_key:
-                raise RuntimeError("OPENAI_API_KEY missing for beginner explanation.")
-            llm = ChatOpenAI(
-                model=model or "gpt-4o-mini",
-                temperature=0,
-                base_url=base_url or "https://api.openai.com/v1",
-                api_key=api_key,
-                max_retries=0,
-            )
-        elif provider == "ollama":
-            from langchain_ollama import ChatOllama
-
-            llm = ChatOllama(
-                model=model or "mistral:7b-instruct",
-                temperature=0,
-                base_url=base_url or "http://localhost:11434",
-            )
-        else:
-            raise RuntimeError(f"Unsupported LLM provider for explanation: {provider}")
+        llm = build_langchain_chat_model(
+            provider_name=provider,
+            model=model or ("gpt-4o-mini" if provider == "openai" else "mistral:7b-instruct"),
+            base_url=base_url,
+            api_key=api_key,
+            temperature=0,
+            max_retries=0,
+        )
 
         system_prompt = (
             "You explain trading diagnostics to beginners. "
@@ -504,28 +491,14 @@ def _invoke_llm_education_view(
         return fallback, f"langchain-core unavailable: {exc}"
 
     try:
-        if provider == "openai":
-            from langchain_openai import ChatOpenAI
-
-            if not api_key:
-                raise RuntimeError("OPENAI_API_KEY missing for educational generation.")
-            llm = ChatOpenAI(
-                model=model or "gpt-4o-mini",
-                temperature=0,
-                base_url=base_url or "https://api.openai.com/v1",
-                api_key=api_key,
-                max_retries=0,
-            )
-        elif provider == "ollama":
-            from langchain_ollama import ChatOllama
-
-            llm = ChatOllama(
-                model=model or "mistral:7b-instruct",
-                temperature=0,
-                base_url=base_url or "http://localhost:11434",
-            )
-        else:
-            raise RuntimeError(f"Unsupported LLM provider for educational generation: {provider}")
+        llm = build_langchain_chat_model(
+            provider_name=provider,
+            model=model or ("gpt-4o-mini" if provider == "openai" else "mistral:7b-instruct"),
+            base_url=base_url,
+            api_key=api_key,
+            temperature=0,
+            max_retries=0,
+        )
 
         response = llm.invoke(
             [

@@ -10,6 +10,8 @@ from typing import Any, Optional
 from datetime import datetime
 
 from agent.client import MCPClient
+from agent.chat_graph import AgentChatGraph
+from api.models.chat import ChatTurn, WorkspaceSnapshot
 from agent.workflows import (
     ScreeningWorkflow,
     OrderManagementWorkflow,
@@ -49,13 +51,13 @@ class SwingScreenerAgent:
         """Initialize the agent.
         
         Args:
-            server_command: Custom command to start MCP server.
-                           Defaults to ["python", "-m", "mcp_server.main"]
+            server_command: Reserved for backward compatibility.
         """
         self.client = MCPClient(server_command)
         self.screening_workflow = None
         self.order_workflow = None
         self.position_workflow = None
+        self.chat_graph = None
         self.is_running = False
     
     async def start(self) -> None:
@@ -68,6 +70,7 @@ class SwingScreenerAgent:
         self.screening_workflow = ScreeningWorkflow(self.client)
         self.order_workflow = OrderManagementWorkflow(self.client)
         self.position_workflow = PositionManagementWorkflow(self.client)
+        self.chat_graph = AgentChatGraph(self.client)
         
         self.is_running = True
         logger.info("Agent started successfully")
@@ -137,6 +140,26 @@ class SwingScreenerAgent:
         print("=" * 60 + "\n")
         
         return result
+
+    async def ask(
+        self,
+        question: str,
+        *,
+        conversation: Optional[list[ChatTurn]] = None,
+        selected_ticker: Optional[str] = None,
+        workspace_snapshot: Optional[WorkspaceSnapshot] = None,
+    ) -> dict[str, Any]:
+        """Answer a read-only workspace question through the shared chat graph."""
+        self._check_running()
+        if self.chat_graph is None:
+            raise RuntimeError("Chat graph not initialized. Call agent.start() first.")
+        logger.info("Answering read-only agent chat question")
+        return await self.chat_graph.ask(
+            question=question,
+            conversation=conversation,
+            selected_ticker=selected_ticker,
+            workspace_snapshot=workspace_snapshot,
+        )
     
     async def create_order_from_candidate(
         self,

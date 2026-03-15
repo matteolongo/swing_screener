@@ -14,12 +14,14 @@ from api.repositories.strategy_repo import StrategyRepository
 from api.repositories.intelligence_config_repo import IntelligenceConfigRepository
 from api.repositories.intelligence_symbol_sets_repo import IntelligenceSymbolSetsRepository
 from api.repositories.watchlist_repo import WatchlistRepository
+from api.services.chat_service import ChatService
 from api.services.intelligence_config_service import IntelligenceConfigService
 from api.services.intelligence_service import IntelligenceService
 from api.services.portfolio_service import PortfolioService
 from api.services.screener_service import ScreenerService
 from api.services.social_service import SocialService
 from api.services.strategy_service import StrategyService
+from api.services.workspace_context_service import WorkspaceContextService
 from api.utils.files import read_json_file, write_json_file, get_today_str
 
 # Repository root
@@ -138,3 +140,25 @@ def get_intelligence_service(
     config_service: IntelligenceConfigService = Depends(get_intelligence_config_service),
 ) -> IntelligenceService:
     return IntelligenceService(strategy_repo=strategy_repo, config_service=config_service)
+
+
+def get_workspace_context_service(
+    portfolio_service: PortfolioService = Depends(get_portfolio_service),
+    strategy_service: StrategyService = Depends(get_strategy_service),
+    intelligence_service: IntelligenceService = Depends(get_intelligence_service),
+) -> WorkspaceContextService:
+    return WorkspaceContextService(
+        portfolio_service=portfolio_service,
+        strategy_service=strategy_service,
+        intelligence_service=intelligence_service,
+    )
+
+
+def get_chat_service(
+    workspace_context_service: WorkspaceContextService = Depends(get_workspace_context_service),
+    config_service: IntelligenceConfigService = Depends(get_intelligence_config_service),
+) -> ChatService:
+    return ChatService(
+        workspace_context_service=workspace_context_service,
+        config_service=config_service,
+    )

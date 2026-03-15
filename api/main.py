@@ -13,6 +13,7 @@ from contextlib import asynccontextmanager
 
 # Import routers
 from api.routers import (
+    chat,
     config,
     daily_review,
     intelligence,
@@ -260,6 +261,7 @@ app.include_router(portfolio.router, prefix="/api/portfolio", tags=["portfolio"]
 app.include_router(watchlist.router, prefix="/api/watchlist", tags=["watchlist"])
 app.include_router(social.router, prefix="/api/social", tags=["social"])
 app.include_router(intelligence.router, prefix="/api/intelligence", tags=["intelligence"])
+app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
 app.include_router(daily_review.router, prefix="/api", tags=["daily-review"])
 
 

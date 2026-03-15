@@ -56,7 +56,17 @@ features:
     tools:
       - get_social_sentiment
       - analyze_ticker_sentiment
-  
+
+  # Intelligence and chat context
+  intelligence:
+    enabled: true
+    tools:
+      - get_workspace_context
+      - get_intelligence_opportunities
+      - get_intelligence_events
+      - explain_symbol
+      - chat_answer
+
   # Daily Review (combines screener + portfolio management)
   daily_review:
     enabled: true

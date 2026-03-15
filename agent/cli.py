@@ -19,6 +19,9 @@ Example usage:
     
     # Get stop suggestions
     python -m agent.cli positions suggest-stops
+
+    # Ask a read-only workspace question
+    python -m agent.cli chat "What orders are pending right now?"
 """
 import asyncio
 import argparse
@@ -183,8 +186,8 @@ async def cmd_orders_list(args: argparse.Namespace) -> int:
         result = await agent.list_orders(status=args.status)
         
         # Print orders
+        print(f"\n📋 Orders (status: {args.status or 'all'}):")
         if result["orders"]:
-            print(f"\n📋 Orders (status: {args.status or 'all'}):")
             for order in result["orders"]:
                 order_id = order.get("order_id", "Unknown")
                 ticker = order.get("ticker", "Unknown")
@@ -202,8 +205,11 @@ async def cmd_orders_list(args: argparse.Namespace) -> int:
                 print(f"   ID: {order_id}")
                 print(f"   Status: {status}")
                 
-                if "limit_price" in order:
-                    print(f"   Limit: ${order['limit_price']:.2f}")
+                limit_price = order.get("limit_price")
+                if isinstance(limit_price, (int, float)):
+                    print(f"   Limit: ${limit_price:.2f}")
+        else:
+            print("  No orders found.")
         
         await agent.stop()
         return 0
@@ -262,7 +268,7 @@ async def cmd_daily_review(args: argparse.Namespace) -> int:
 
 
 async def cmd_tools_list(args: argparse.Namespace) -> int:
-    """List available MCP tools."""
+    """List available backend tool adapters."""
     agent = SwingScreenerAgent()
     
     try:
@@ -270,7 +276,7 @@ async def cmd_tools_list(args: argparse.Namespace) -> int:
         
         tools = agent.get_available_tools()
         
-        print(f"\n🔧 Available MCP Tools ({len(tools)}):")
+        print(f"\n🔧 Available Tools ({len(tools)}):")
         for tool in sorted(tools):
             info = agent.client.get_tool_info(tool)
             desc = info.get("description", "No description") if info else "No description"
@@ -286,10 +292,38 @@ async def cmd_tools_list(args: argparse.Namespace) -> int:
         return 1
 
 
+async def cmd_chat(args: argparse.Namespace) -> int:
+    """Answer a read-only workspace chat question."""
+    agent = SwingScreenerAgent()
+
+    try:
+        await agent.start()
+        result = await agent.ask(
+            args.question,
+            selected_ticker=args.ticker,
+        )
+        print("\n" + "=" * 60)
+        print("WORKSPACE CHAT")
+        print("=" * 60)
+        print(result.get("answer", "No answer returned."))
+        warnings = result.get("warnings") or []
+        if warnings:
+            print("\nWarnings:")
+            for warning in warnings:
+                print(f"  - {warning}")
+        print("=" * 60 + "\n")
+        await agent.stop()
+        return 0
+    except Exception as e:
+        logging.error(f"Chat failed: {e}", exc_info=True)
+        await agent.stop()
+        return 1
+
+
 def main() -> int:
     """Main entry point for the CLI."""
     parser = argparse.ArgumentParser(
-        description="Swing Screener Agent - AI-driven trading workflow automation",
+        description="Swing Screener Agent - workflow automation and read-only workspace chat",
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
     
@@ -339,6 +373,11 @@ def main() -> int:
     # Daily review command
     subparsers.add_parser("daily-review", help="Run comprehensive daily review")
     
+    # Chat command
+    chat_parser = subparsers.add_parser("chat", help="Ask a read-only workspace question")
+    chat_parser.add_argument("question", help="Question to ask")
+    chat_parser.add_argument("--ticker", help="Optional focused ticker")
+
     # Tools command
     subparsers.add_parser("tools", help="List available MCP tools")
     
@@ -373,6 +412,8 @@ def main() -> int:
             return asyncio.run(cmd_orders_fill(args))
     elif args.command == "daily-review":
         return asyncio.run(cmd_daily_review(args))
+    elif args.command == "chat":
+        return asyncio.run(cmd_chat(args))
     elif args.command == "tools":
         return asyncio.run(cmd_tools_list(args))
     

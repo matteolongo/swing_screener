@@ -93,6 +93,55 @@ function buildCandidateWithThesis(ticker = 'AAPL') {
   };
 }
 
+function buildWorkspaceChatResponse(answer = 'AAPL has one pending order in the current workspace.') {
+  return {
+    answer,
+    warnings: ['Using cached intelligence context.'],
+    facts_used: ['selected_ticker', 'portfolio.orders.pending_count'],
+    context_meta: {
+      selected_ticker: 'AAPL',
+      sources: [
+        {
+          source: 'portfolio',
+          label: 'Portfolio',
+          loaded: true,
+          origin: 'stored_state',
+          asof: '2026-03-13',
+          count: 3,
+        },
+        {
+          source: 'screener',
+          label: 'Screener',
+          loaded: true,
+          origin: 'workspace_snapshot',
+          asof: '2026-03-13',
+          count: 1,
+        },
+        {
+          source: 'intelligence',
+          label: 'Intelligence',
+          loaded: true,
+          origin: 'cached_snapshot',
+          asof: '2026-03-13',
+          count: 2,
+        },
+        {
+          source: 'education',
+          label: 'Education',
+          loaded: false,
+          origin: 'cached_snapshot',
+          asof: '2026-03-13',
+          count: 0,
+        },
+      ],
+    },
+    conversation_state: [
+      { role: 'user', content: 'What should I know about AAPL?' },
+      { role: 'assistant', content: answer },
+    ],
+  };
+}
+
 describe('Workspace Page', () => {
   beforeEach(() => {
     localStorage.clear();
@@ -111,6 +160,7 @@ describe('Workspace Page', () => {
     expect(screen.getByRole('heading', { name: 'Workspace' })).toBeInTheDocument();
     expect(screen.getByText('Screener Inbox')).toBeInTheDocument();
     expect(screen.getByText('Analysis Canvas')).toBeInTheDocument();
+    expect(screen.getByText('Workspace Chat')).toBeInTheDocument();
     expect(screen.getByText('Portfolio')).toBeInTheDocument();
   });
 
@@ -126,6 +176,21 @@ describe('Workspace Page', () => {
     await waitFor(() => {
       expect(screen.queryByText('Select a candidate from the screener to begin analysis.')).not.toBeInTheDocument();
     });
+  });
+
+  it('shows both screener score and confidence in the candidate row and order notes', async () => {
+    const { user } = renderWithProviders(<Workspace />);
+
+    await user.click(screen.getAllByRole('button', { name: /Run Screener/i })[0]);
+    await screen.findByRole('heading', { name: 'AAPL' });
+
+    expect(screen.getByText('Score 95.0')).toBeInTheDocument();
+    expect(screen.getByText('72.5% confidence')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: 'Order' }));
+    expect(screen.getByLabelText('Notes')).toHaveValue(
+      'From screener: Score 95.0, Confidence 72.5%, Rank #1'
+    );
   });
 
   it('shows watch controls for screener and portfolio symbols', async () => {
@@ -756,5 +821,79 @@ describe('Workspace Page', () => {
       await screen.findAllByText('Intelligence complete. Explanation source: LLM.')
     ).not.toHaveLength(0);
     expect(runBodySymbols).toEqual(['AAPL']);
+  });
+
+  it('sends the selected ticker and current screener snapshot to workspace chat', async () => {
+    let capturedBody: any = null;
+
+    server.use(
+      http.post('*/api/screener/run', () =>
+        HttpResponse.json({
+          candidates: [buildCandidateWithThesis('AAPL')],
+          asof_date: '2026-03-13',
+          total_screened: 1,
+          data_freshness: 'final_close',
+          warnings: [],
+        })
+      ),
+      http.post('*/api/chat/answer', async ({ request }) => {
+        capturedBody = await request.json();
+        return HttpResponse.json(buildWorkspaceChatResponse('AAPL remains a valid focus ticker.'));
+      })
+    );
+
+    const { user } = renderWithProviders(<Workspace />);
+    await user.click(screen.getAllByRole('button', { name: /Run Screener/i })[0]);
+    await screen.findByRole('heading', { name: 'AAPL' });
+
+    await user.type(screen.getByLabelText('Ask the workspace agent'), 'What should I know about AAPL?');
+    await user.click(screen.getByRole('button', { name: 'Ask' }));
+
+    await screen.findByText('AAPL remains a valid focus ticker.');
+
+    expect(capturedBody).toMatchObject({
+      question: 'What should I know about AAPL?',
+      selected_ticker: 'AAPL',
+    });
+    expect(capturedBody.workspace_snapshot.asof_date).toBe('2026-03-13');
+    expect(capturedBody.workspace_snapshot.total_screened).toBe(1);
+    expect(capturedBody.workspace_snapshot.candidates[0]).toMatchObject({
+      ticker: 'AAPL',
+      recommendation_verdict: 'RECOMMENDED',
+    });
+  });
+
+  it('renders workspace chat answers, warnings, and context badges', async () => {
+    server.use(http.post('*/api/chat/answer', () => HttpResponse.json(buildWorkspaceChatResponse())));
+
+    const { user } = renderWithProviders(<Workspace />);
+
+    await user.type(screen.getByLabelText('Ask the workspace agent'), 'What should I know about AAPL?');
+    await user.click(screen.getByRole('button', { name: 'Ask' }));
+
+    await screen.findByText('AAPL has one pending order in the current workspace.');
+
+    expect(screen.getByText('Using cached intelligence context.')).toBeInTheDocument();
+    expect(screen.getByText('Portfolio ready')).toBeInTheDocument();
+    expect(screen.getByText('Screener ready')).toBeInTheDocument();
+    expect(screen.getByText('Intelligence ready')).toBeInTheDocument();
+    expect(screen.getByText('Education missing')).toBeInTheDocument();
+    expect(screen.getByText(/Facts used: selected_ticker, portfolio.orders.pending_count/i)).toBeInTheDocument();
+  });
+
+  it('renders workspace chat backend errors cleanly', async () => {
+    server.use(
+      http.post('*/api/chat/answer', () =>
+        HttpResponse.json({ detail: 'Workspace chat timed out.' }, { status: 500 })
+      )
+    );
+
+    const { user } = renderWithProviders(<Workspace />);
+
+    await user.type(screen.getByLabelText('Ask the workspace agent'), 'What is my risk?');
+    await user.click(screen.getByRole('button', { name: 'Ask' }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Workspace chat timed out.');
   });
 });

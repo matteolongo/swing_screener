@@ -36,14 +36,14 @@ export default function Workspace() {
         </div>
       ) : null}
 
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 items-stretch">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 items-start">
         <div className="xl:min-h-[520px] xl:col-span-7 xl:max-h-[calc(100vh-190px)]">
           <ScreenerInboxPanel
             onRunSymbolIntelligence={runForTicker}
             getSymbolIntelligenceStatus={getStatusForTicker}
           />
         </div>
-        <div className="xl:min-h-[520px] xl:col-span-5 xl:max-h-[calc(100vh-190px)]">
+        <div className="xl:min-h-[520px] xl:col-span-5">
           <AnalysisCanvasPanel
             onRunSymbolIntelligence={runForTicker}
             symbolIntelligenceStatus={selectedTickerIntelligenceStatus}

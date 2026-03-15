@@ -4,6 +4,7 @@ import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { DEFAULT_CONFIG } from '@/types/config';
 import { t } from '@/i18n/t';
+import { formatConfidencePercent, formatScreenerScore } from '@/utils/formatters';
 
 interface ActionPanelProps {
   ticker: string;
@@ -20,7 +21,8 @@ export default function ActionPanel({ ticker }: ActionPanelProps) {
 
   const defaultNotes = candidate
     ? t('screener.defaultNotes', {
-        score: ((candidate.score ?? 0) * 100).toFixed(1),
+        score: formatScreenerScore(candidate.score ?? 0),
+        confidence: formatConfidencePercent(candidate.confidence ?? 0),
         rank: candidate.rank,
       })
     : t('workspacePage.panels.analysis.manualOrderNotes', { ticker: normalizedTicker });
