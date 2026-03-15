@@ -178,6 +178,8 @@ describe('Order Type Transformations', () => {
         stop_price: 145.00,
         notes: 'From screener',
         order_kind: 'entry',
+        entry_mode: 'NEW_ENTRY',
+        position_id: undefined,
       })
     })
 
