@@ -4,7 +4,7 @@ import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { DEFAULT_CONFIG } from '@/types/config';
 import { t } from '@/i18n/t';
-import { formatConfidencePercent, formatScreenerScore } from '@/utils/formatters';
+import { formatConfidencePercent, formatCurrency, formatScreenerScore } from '@/utils/formatters';
 
 interface ActionPanelProps {
   ticker: string;
@@ -20,11 +20,23 @@ export default function ActionPanel({ ticker }: ActionPanelProps) {
   const createOrderMutation = useCreateOrderMutation();
 
   const defaultNotes = candidate
-    ? t('screener.defaultNotes', {
-        score: formatScreenerScore(candidate.score ?? 0),
-        confidence: formatConfidencePercent(candidate.confidence ?? 0),
-        rank: candidate.rank,
-      })
+    ? candidate.sameSymbol?.mode === 'ADD_ON'
+      ? t('screener.addOnNotes', {
+          score: formatScreenerScore(candidate.score ?? 0),
+          confidence: formatConfidencePercent(candidate.confidence ?? 0),
+          rank: candidate.rank,
+          liveStop: candidate.sameSymbol.currentPositionStop != null
+            ? formatCurrency(candidate.sameSymbol.currentPositionStop, candidate.currency)
+            : '—',
+          freshStop: candidate.sameSymbol.freshSetupStop != null
+            ? formatCurrency(candidate.sameSymbol.freshSetupStop, candidate.currency)
+            : '—',
+        })
+      : t('screener.defaultNotes', {
+          score: formatScreenerScore(candidate.score ?? 0),
+          confidence: formatConfidencePercent(candidate.confidence ?? 0),
+          rank: candidate.rank,
+        })
     : t('workspacePage.panels.analysis.manualOrderNotes', { ticker: normalizedTicker });
 
   return (
@@ -56,6 +68,8 @@ export default function ActionPanel({ ticker }: ActionPanelProps) {
           suggestedOrderType: candidate?.suggestedOrderType,
           suggestedOrderPrice: candidate?.suggestedOrderPrice,
           executionNote: candidate?.executionNote,
+          positionId: candidate?.sameSymbol?.positionId,
+          sameSymbol: candidate?.sameSymbol,
         }}
         risk={risk}
         defaultNotes={defaultNotes}

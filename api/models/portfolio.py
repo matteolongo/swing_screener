@@ -108,6 +108,7 @@ class StopSuggestionComputeRequest(BaseModel):
 
 OrderStatus = Literal["pending", "filled", "cancelled"]
 OrderKind = Literal["entry", "stop", "take_profit"]
+EntryMode = Literal["NEW_ENTRY", "ADD_ON"]
 
 BASE_ORDER_TYPES = {"MARKET", "LIMIT", "STOP", "STOP_LIMIT"}
 DIRECTIONAL_ORDER_TYPES = {
@@ -155,6 +156,8 @@ class CreateOrderRequest(BaseModel):
     stop_price: Optional[float] = None
     notes: str = ""
     order_kind: OrderKind = "entry"
+    position_id: Optional[str] = None
+    entry_mode: EntryMode = "NEW_ENTRY"
 
     @field_validator("ticker")
     @classmethod
@@ -199,6 +202,14 @@ class CreateOrderRequest(BaseModel):
                 f"Invalid order type: {v}. Must be one of {', '.join(sorted(SUPPORTED_ORDER_TYPES))}"
             )
         return v
+
+    @field_validator("entry_mode")
+    @classmethod
+    def validate_entry_mode(cls, value: str) -> str:
+        normalized = value.strip().upper()
+        if normalized not in {"NEW_ENTRY", "ADD_ON"}:
+            raise ValueError("entry_mode must be NEW_ENTRY or ADD_ON")
+        return normalized
 
     @model_validator(mode="after")
     def validate_order_consistency(self):

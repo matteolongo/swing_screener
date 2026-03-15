@@ -12,6 +12,22 @@ class PriceHistoryPoint(BaseModel):
     close: float
 
 
+SameSymbolMode = Literal["NEW_ENTRY", "ADD_ON", "MANAGE_ONLY"]
+
+
+class SameSymbolCandidateContext(BaseModel):
+    mode: SameSymbolMode
+    position_id: Optional[str] = None
+    current_position_entry: Optional[float] = None
+    current_position_stop: Optional[float] = None
+    fresh_setup_stop: Optional[float] = None
+    execution_stop: Optional[float] = None
+    pending_entry_exists: bool = False
+    add_on_count: int = 0
+    max_add_ons: int = 1
+    reason: str = ""
+
+
 class ScreenerCandidate(BaseModel):
     ticker: str
     currency: str = "USD"
@@ -53,6 +69,7 @@ class ScreenerCandidate(BaseModel):
     suggested_order_type: Optional[str] = None
     suggested_order_price: Optional[float] = None
     execution_note: Optional[str] = None
+    same_symbol: Optional[SameSymbolCandidateContext] = None
 
 
 class ScreenerRequest(BaseModel):
@@ -92,6 +109,8 @@ class ScreenerResponse(BaseModel):
     data_freshness: str = "final_close"
     warnings: list[str] = Field(default_factory=list)
     social_warmup_job_id: Optional[str] = None
+    same_symbol_suppressed_count: int = 0
+    same_symbol_add_on_count: int = 0
 
 
 class ScreenerRunLaunchResponse(BaseModel):

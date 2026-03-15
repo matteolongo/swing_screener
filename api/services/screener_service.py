@@ -20,6 +20,8 @@ from api.models.screener import (
     OrderPreview,
 )
 from api.models.recommendation import Recommendation
+from api.services.portfolio_service import PortfolioService
+from api.services.same_symbol_reentry import SameSymbolReentryEvaluator
 from swing_screener.risk.engine import RiskEngineConfig, evaluate_recommendation
 from api.repositories.strategy_repo import StrategyRepository
 from swing_screener.data.universe import (
@@ -316,9 +318,11 @@ class ScreenerService:
     def __init__(
         self, 
         strategy_repo: StrategyRepository,
+        portfolio_service: PortfolioService,
         provider: Optional[MarketDataProvider] = None
     ) -> None:
         self._strategy_repo = strategy_repo
+        self._portfolio_service = portfolio_service
         self._provider = provider or get_default_provider()
 
     def _resolve_strategy(self, strategy_id: Optional[str], strategy_override: Optional[dict] = None) -> dict:
@@ -483,6 +487,8 @@ class ScreenerService:
                     total_screened=len(tickers),
                     data_freshness=data_freshness,
                     warnings=warnings,
+                    same_symbol_suppressed_count=0,
+                    same_symbol_add_on_count=0,
                 )
 
             if not results.empty and "confidence" in results.columns:
@@ -630,13 +636,45 @@ class ScreenerService:
                     )
                 )
 
+            portfolio_positions = self._portfolio_service.list_positions(status="open").positions
+            portfolio_orders = self._portfolio_service.list_orders().orders
+            same_symbol_evaluator = SameSymbolReentryEvaluator(self._portfolio_service)
+            same_symbol_suppressed_count = 0
+            same_symbol_add_on_count = 0
+            filtered_candidates: list[ScreenerCandidate] = []
+            for candidate in candidates:
+                enriched_candidate, same_symbol = same_symbol_evaluator.evaluate(
+                    candidate,
+                    positions=portfolio_positions,
+                    orders=portfolio_orders,
+                    account_size=float(risk_cfg.account_size),
+                    risk_pct_target=float(risk_cfg.risk_pct),
+                    max_position_pct=float(risk_cfg.max_position_pct),
+                    min_shares=int(risk_cfg.min_shares),
+                )
+                if same_symbol.mode == "ADD_ON":
+                    same_symbol_add_on_count += 1
+                if same_symbol.mode == "MANAGE_ONLY":
+                    same_symbol_suppressed_count += 1
+                    continue
+                if enriched_candidate is not None:
+                    filtered_candidates.append(enriched_candidate)
+
+            candidates = filtered_candidates
+            if same_symbol_suppressed_count > 0:
+                warnings.append(
+                    f"{same_symbol_suppressed_count} same-symbol candidate"
+                    f"{'' if same_symbol_suppressed_count == 1 else 's'} suppressed because they are manage-only."
+                )
+
+            visible_ticker_list = [candidate.ticker for candidate in candidates]
             sector_map = {t: info.get("sector") for t, info in ticker_info.items()}
-            warnings.extend(sector_concentration_warnings(ticker_list, sector_map))
+            warnings.extend(sector_concentration_warnings(visible_ticker_list, sector_map))
             social_warmup_job_id: Optional[str] = None
-            if social_overlay_cfg.enabled and ticker_list:
+            if social_overlay_cfg.enabled and visible_ticker_list:
                 try:
                     social_warmup_job_id = get_social_warmup_manager().start_job(
-                        symbols=ticker_list,
+                        symbols=visible_ticker_list,
                         lookback_hours=social_overlay_cfg.lookback_hours,
                         min_sample_size=social_overlay_cfg.min_sample_size,
                         providers=list(social_overlay_cfg.providers),
@@ -652,6 +690,8 @@ class ScreenerService:
                 data_freshness=data_freshness,
                 warnings=warnings,
                 social_warmup_job_id=social_warmup_job_id,
+                same_symbol_suppressed_count=same_symbol_suppressed_count,
+                same_symbol_add_on_count=same_symbol_add_on_count,
             )
             logger.info("Screener completed: candidates=%s", len(candidates))
             return response

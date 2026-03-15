@@ -239,6 +239,8 @@ class ToolClient:
             stop_price=arguments.get("stop_price"),
             notes=arguments.get("notes", ""),
             order_kind=arguments.get("order_kind", "entry"),
+            position_id=arguments.get("position_id"),
+            entry_mode=arguments.get("entry_mode", "NEW_ENTRY"),
         )
         result = get_portfolio_service().create_order(request)
         return result.model_dump(mode="json")

@@ -5,7 +5,7 @@ import pytest
 from fastapi import HTTPException
 
 from api.models.daily_review import DailyReview
-from api.models.screener import ScreenerResponse, ScreenerCandidate
+from api.models.screener import ScreenerResponse, ScreenerCandidate, SameSymbolCandidateContext
 from api.models.portfolio import Position, PositionUpdate, PositionsResponse
 from api.services.daily_review_service import DailyReviewService
 from swing_screener.strategy.storage import _default_strategy_payload
@@ -257,6 +257,88 @@ def test_generate_daily_review_position_update(mock_screener_service, mock_portf
     assert update_pos.stop_suggested == 142.0
     assert update_pos.current_price == 155.0
     assert "breakeven" in update_pos.reason.lower()
+
+
+def test_generate_daily_review_separates_add_on_candidates(mock_portfolio_service, tmp_path):
+    screener_service = Mock()
+    screener_service.run_screener.return_value = ScreenerResponse(
+        candidates=[
+            ScreenerCandidate(
+                ticker="REP.MC",
+                signal="BREAKOUT",
+                suggested_order_type="BUY_LIMIT",
+                suggested_order_price=22.83,
+                execution_note="Add-on using live stop.",
+                entry=22.83,
+                stop=21.62,
+                shares=5,
+                rr=2.0,
+                name="Repsol",
+                sector="Energy",
+                close=23.0,
+                sma_20=22.0,
+                sma_50=21.0,
+                sma_200=18.0,
+                atr=0.8,
+                momentum_6m=0.15,
+                momentum_12m=0.25,
+                rel_strength=1.2,
+                score=99.4,
+                confidence=92.7,
+                rank=1,
+                same_symbol=SameSymbolCandidateContext(
+                    mode="ADD_ON",
+                    position_id="pos-rep",
+                    current_position_entry=19.63,
+                    current_position_stop=19.63,
+                    fresh_setup_stop=21.62,
+                    execution_stop=19.63,
+                    reason="One portfolio-aware add-on is allowed using the current live stop.",
+                ),
+            ),
+            ScreenerCandidate(
+                ticker="AAPL",
+                signal="MOMENTUM",
+                suggested_order_type="BUY_LIMIT",
+                suggested_order_price=149.5,
+                execution_note="Pullback setup.",
+                entry=150.0,
+                stop=145.0,
+                shares=10,
+                rr=3.0,
+                name="Apple Inc",
+                sector="Technology",
+                close=150.0,
+                sma_20=148.0,
+                sma_50=145.0,
+                sma_200=140.0,
+                atr=2.5,
+                momentum_6m=0.15,
+                momentum_12m=0.25,
+                rel_strength=1.2,
+                score=85.0,
+                confidence=0.9,
+                rank=2,
+                same_symbol=SameSymbolCandidateContext(
+                    mode="NEW_ENTRY",
+                    fresh_setup_stop=145.0,
+                    execution_stop=145.0,
+                    reason="No open position exists for this ticker.",
+                ),
+            ),
+        ],
+        asof_date=str(date.today()),
+        total_screened=100,
+    )
+
+    service = DailyReviewService(screener_service, mock_portfolio_service, data_dir=tmp_path)
+
+    review = service.generate_daily_review(top_n=10)
+
+    assert [candidate.ticker for candidate in review.new_candidates] == ["AAPL"]
+    assert [candidate.ticker for candidate in review.positions_add_on_candidates] == ["REP.MC"]
+    assert review.summary.new_candidates == 1
+    assert review.summary.add_on_candidates == 1
 
 
 def test_generate_daily_review_position_close(mock_screener_service, mock_portfolio_service, tmp_path):

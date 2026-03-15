@@ -68,6 +68,11 @@ export default function ScreenerCandidateIdentityCell({
           </a>
         ) : null}
         <RecommendationBadge verdict={candidate.verdict} />
+        {candidate.sameSymbol?.mode === 'ADD_ON' ? (
+          <span className="rounded bg-amber-100 px-2 py-1 text-xs text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+            {t('screener.identity.addOnLabel')}
+          </span>
+        ) : null}
       </div>
       {watchContent}
       <CachedSymbolPriceChart ticker={candidate.ticker} />

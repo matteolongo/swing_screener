@@ -2,6 +2,7 @@
 
 export type OrderStatus = 'pending' | 'filled' | 'cancelled';
 export type OrderKind = 'entry' | 'stop' | 'take_profit';
+export type EntryMode = 'NEW_ENTRY' | 'ADD_ON';
 
 export interface Order {
   orderId: string;
@@ -31,6 +32,8 @@ export interface CreateOrderRequest {
   stopPrice?: number;
   notes?: string;
   orderKind?: OrderKind;
+  positionId?: string;
+  entryMode?: EntryMode;
 }
 
 export interface FillOrderRequest {
@@ -145,5 +148,7 @@ export function transformCreateOrderRequest(req: CreateOrderRequest): any {
     stop_price: req.stopPrice,
     notes: req.notes || '',
     order_kind: req.orderKind || 'entry',
+    position_id: req.positionId,
+    entry_mode: req.entryMode || 'NEW_ENTRY',
   };
 }

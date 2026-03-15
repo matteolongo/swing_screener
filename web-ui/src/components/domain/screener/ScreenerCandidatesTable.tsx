@@ -125,6 +125,20 @@ export default function ScreenerCandidatesTable({
     });
   };
 
+  const orderActionLabel = (candidate: ScreenerCandidate) =>
+    candidate.sameSymbol?.mode === 'ADD_ON'
+      ? t('screener.table.addOnAction')
+      : t('screener.table.createOrderAction');
+
+  const orderActionTitle = (candidate: ScreenerCandidate, verdict: string) => {
+    if (verdict === 'NOT_RECOMMENDED') {
+      return t('screener.table.createOrderNotRecommendedTitle');
+    }
+    return candidate.sameSymbol?.mode === 'ADD_ON'
+      ? t('screener.table.addOnTitle')
+      : t('screener.table.createOrderTitle');
+  };
+
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
       return;
@@ -230,12 +244,10 @@ export default function ScreenerCandidatesTable({
                     onCreateOrder(candidate);
                   }}
                   title={
-                    vm.verdict === 'NOT_RECOMMENDED'
-                      ? t('screener.table.createOrderNotRecommendedTitle')
-                      : t('screener.table.createOrderTitle')
+                    orderActionTitle(candidate, vm.verdict)
                   }
                 >
-                  {t('screener.table.createOrderAction')}
+                  {orderActionLabel(candidate)}
                 </Button>
                 <Button
                   size="sm"
@@ -431,12 +443,10 @@ export default function ScreenerCandidatesTable({
                       onCreateOrder(candidate);
                     }}
                     title={
-                      vm.verdict === 'NOT_RECOMMENDED'
-                        ? t('screener.table.createOrderNotRecommendedTitle')
-                        : t('screener.table.createOrderTitle')
+                      orderActionTitle(candidate, vm.verdict)
                     }
                   >
-                    {t('screener.table.createOrderAction')}
+                    {orderActionLabel(candidate)}
                   </Button>
                 </div>
               </td>

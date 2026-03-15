@@ -2,6 +2,21 @@
 
 import { Recommendation, RecommendationAPI, transformRecommendation } from '@/types/recommendation';
 
+export type SameSymbolMode = 'NEW_ENTRY' | 'ADD_ON' | 'MANAGE_ONLY';
+
+export interface SameSymbolCandidateContext {
+  mode: SameSymbolMode;
+  positionId?: string;
+  currentPositionEntry?: number;
+  currentPositionStop?: number;
+  freshSetupStop?: number;
+  executionStop?: number;
+  pendingEntryExists: boolean;
+  addOnCount: number;
+  maxAddOns: number;
+  reason: string;
+}
+
 export interface PriceHistoryPoint {
   date: string;
   close: number;
@@ -47,6 +62,7 @@ export interface ScreenerCandidate {
   suggestedOrderType?: string;
   suggestedOrderPrice?: number;
   executionNote?: string;
+  sameSymbol?: SameSymbolCandidateContext;
 }
 
 // API response format (snake_case)
@@ -90,6 +106,18 @@ export interface ScreenerCandidateAPI {
   suggested_order_type?: string;
   suggested_order_price?: number;
   execution_note?: string;
+  same_symbol?: {
+    mode: SameSymbolMode;
+    position_id?: string | null;
+    current_position_entry?: number | null;
+    current_position_stop?: number | null;
+    fresh_setup_stop?: number | null;
+    execution_stop?: number | null;
+    pending_entry_exists?: boolean;
+    add_on_count?: number;
+    max_add_ons?: number;
+    reason?: string;
+  };
 }
 
 export interface ScreenerRequest {
@@ -112,6 +140,8 @@ export interface ScreenerResponse {
   dataFreshness: 'final_close' | 'intraday';
   warnings?: string[];
   socialWarmupJobId?: string;
+  sameSymbolSuppressedCount?: number;
+  sameSymbolAddOnCount?: number;
 }
 
 // API response format (snake_case)
@@ -122,6 +152,8 @@ export interface ScreenerResponseAPI {
   data_freshness?: 'final_close' | 'intraday';
   warnings?: string[];
   social_warmup_job_id?: string;
+  same_symbol_suppressed_count?: number;
+  same_symbol_add_on_count?: number;
 }
 
 export interface ScreenerRunLaunchResponseAPI {
@@ -198,11 +230,27 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
       suggestedOrderType: c.suggested_order_type,
       suggestedOrderPrice: c.suggested_order_price,
       executionNote: c.execution_note,
+      sameSymbol: c.same_symbol
+        ? {
+            mode: c.same_symbol.mode,
+            positionId: c.same_symbol.position_id ?? undefined,
+            currentPositionEntry: c.same_symbol.current_position_entry ?? undefined,
+            currentPositionStop: c.same_symbol.current_position_stop ?? undefined,
+            freshSetupStop: c.same_symbol.fresh_setup_stop ?? undefined,
+            executionStop: c.same_symbol.execution_stop ?? undefined,
+            pendingEntryExists: c.same_symbol.pending_entry_exists ?? false,
+            addOnCount: c.same_symbol.add_on_count ?? 0,
+            maxAddOns: c.same_symbol.max_add_ons ?? 1,
+            reason: c.same_symbol.reason ?? '',
+          }
+        : undefined,
     })),
     asofDate: apiResponse.asof_date,
     totalScreened: apiResponse.total_screened,
     dataFreshness: apiResponse.data_freshness ?? 'final_close',
     warnings: apiResponse.warnings ?? [],
     socialWarmupJobId: apiResponse.social_warmup_job_id ?? undefined,
+    sameSymbolSuppressedCount: apiResponse.same_symbol_suppressed_count ?? 0,
+    sameSymbolAddOnCount: apiResponse.same_symbol_add_on_count ?? 0,
   };
 }

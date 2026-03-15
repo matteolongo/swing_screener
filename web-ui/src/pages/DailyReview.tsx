@@ -47,6 +47,7 @@ function getMobileLayoutMatch() {
 export default function DailyReview() {
   const [expandedSections, setExpandedSections] = useState({
     candidates: true,
+    addOns: true,
     hold: false,
     update: true,
     close: true,
@@ -184,8 +185,12 @@ export default function DailyReview() {
   const recommendedCandidates = review.newCandidates.filter(
     (candidate) => candidate.recommendation?.verdict === 'RECOMMENDED',
   );
+  const recommendedAddOnCandidates = review.positionsAddOnCandidates.filter(
+    (candidate) => candidate.recommendation?.verdict === 'RECOMMENDED',
+  );
   const hiddenCandidates = review.newCandidates.length - recommendedCandidates.length;
-  const quickActionCandidate = recommendedCandidates[0] ?? null;
+  const quickActionCandidate = recommendedCandidates[0] ?? recommendedAddOnCandidates[0] ?? null;
+  const quickActionIsAddOn = quickActionCandidate?.sameSymbol?.mode === 'ADD_ON';
 
   return (
     <div className="space-y-6">
@@ -220,8 +225,14 @@ export default function DailyReview() {
         />
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
         <SummaryCard title={t('dailyReview.summary.newCandidates')} value={summary.newCandidates} variant="blue" icon="📈" />
+        <SummaryCard
+          title={t('dailyReview.summary.addOnCandidates')}
+          value={summary.addOnCandidates}
+          variant={summary.addOnCandidates > 0 ? 'blue' : 'gray'}
+          icon="➕"
+        />
         <SummaryCard
           title={t('dailyReview.summary.updateStop')}
           value={summary.updateStop}
@@ -245,7 +256,9 @@ export default function DailyReview() {
                 {t('dailyReview.quickAction.label')}
               </p>
               <p className="mt-1 text-sm text-gray-700 dark:text-gray-200">
-                {t('dailyReview.quickAction.description', { ticker: quickActionCandidate.ticker })}
+                {quickActionIsAddOn
+                  ? t('dailyReview.quickAction.addOnDescription', { ticker: quickActionCandidate.ticker })
+                  : t('dailyReview.quickAction.description', { ticker: quickActionCandidate.ticker })}
               </p>
             </div>
             <Button
@@ -256,7 +269,9 @@ export default function DailyReview() {
                 setSelectedCandidate(quickActionCandidate);
               }}
             >
-              {t('dailyReview.quickAction.cta', { ticker: quickActionCandidate.ticker })}
+              {quickActionIsAddOn
+                ? t('dailyReview.quickAction.addOnCta', { ticker: quickActionCandidate.ticker })
+                : t('dailyReview.quickAction.cta', { ticker: quickActionCandidate.ticker })}
             </Button>
           </CardContent>
         </Card>
@@ -314,6 +329,27 @@ export default function DailyReview() {
               onUnwatch={handleUnwatch}
             />
           </div>
+        )}
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        title={t('dailyReview.sections.addOnCandidates', { count: recommendedAddOnCandidates.length })}
+        isExpanded={expandedSections.addOns}
+        onToggle={() => toggleSection('addOns')}
+        count={recommendedAddOnCandidates.length}
+      >
+        {recommendedAddOnCandidates.length === 0 ? (
+          <p className="text-gray-600 dark:text-gray-400">{t('dailyReview.sections.noAddOns')}</p>
+        ) : (
+          <CandidatesTable
+            candidates={recommendedAddOnCandidates}
+            onOpenOrderReview={setSelectedCandidate}
+            isCompactMobileLayout={isCompactMobileLayout}
+            watchItemsByTicker={watchItemsByTicker}
+            watchPending={watchPending}
+            onWatch={handleWatch}
+            onUnwatch={handleUnwatch}
+          />
         )}
       </CollapsibleSection>
 
@@ -411,12 +447,28 @@ export default function DailyReview() {
             suggestedOrderType: selectedCandidate.suggestedOrderType,
             suggestedOrderPrice: selectedCandidate.suggestedOrderPrice,
             executionNote: selectedCandidate.executionNote,
+            positionId: selectedCandidate.sameSymbol?.positionId,
+            sameSymbol: selectedCandidate.sameSymbol,
           }}
           risk={riskConfig}
-          defaultNotes={t('dailyReview.defaultNotes', {
-            entry: formatCurrency(selectedCandidate.entry),
-            rr: formatNumber(selectedCandidate.rReward, 1),
-          })}
+          defaultNotes={
+            selectedCandidate.sameSymbol?.mode === 'ADD_ON'
+              ? t('dailyReview.defaultAddOnNotes', {
+                  liveStop:
+                    selectedCandidate.sameSymbol.currentPositionStop != null
+                      ? formatCurrency(selectedCandidate.sameSymbol.currentPositionStop)
+                      : t('common.placeholders.emDash'),
+                  freshStop:
+                    selectedCandidate.sameSymbol.freshSetupStop != null
+                      ? formatCurrency(selectedCandidate.sameSymbol.freshSetupStop)
+                      : t('common.placeholders.emDash'),
+                  rr: formatNumber(selectedCandidate.rReward, 1),
+                })
+              : t('dailyReview.defaultNotes', {
+                  entry: formatCurrency(selectedCandidate.entry),
+                  rr: formatNumber(selectedCandidate.rReward, 1),
+                })
+          }
           onClose={() => {
             setSelectedCandidate(null);
           }}
@@ -567,6 +619,17 @@ function CandidatesTable({
   onOpenOrderReview: (candidate: DailyReviewCandidate) => void;
   isCompactMobileLayout: boolean;
 } & DailyReviewWatchProps) {
+  const actionLabel = (candidate: DailyReviewCandidate) =>
+    candidate.sameSymbol?.mode === 'ADD_ON'
+      ? t('dailyReview.table.candidates.addOnAction')
+      : t('dailyReview.table.candidates.createOrder');
+  const actionTitle = (candidate: DailyReviewCandidate) =>
+    candidate.recommendation?.verdict === 'NOT_RECOMMENDED'
+      ? t('dailyReview.table.candidates.createOrderNotRecommendedTitle')
+      : candidate.sameSymbol?.mode === 'ADD_ON'
+        ? t('dailyReview.table.candidates.addOnTitle')
+        : t('dailyReview.table.candidates.createOrderTitle');
+
   if (isCompactMobileLayout) {
     return (
       <div className="space-y-3">
@@ -589,6 +652,20 @@ function CandidatesTable({
                 <p className="mt-0.5 text-xs text-gray-500">
                   {candidate.sector || t('common.placeholders.dash')}
                 </p>
+                {candidate.sameSymbol?.mode === 'ADD_ON' ? (
+                  <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
+                    {t('dailyReview.table.candidates.addOnReason', {
+                      liveStop:
+                        candidate.sameSymbol.currentPositionStop != null
+                          ? formatCurrency(candidate.sameSymbol.currentPositionStop)
+                          : t('common.placeholders.emDash'),
+                      freshStop:
+                        candidate.sameSymbol.freshSetupStop != null
+                          ? formatCurrency(candidate.sameSymbol.freshSetupStop)
+                          : t('common.placeholders.emDash'),
+                    })}
+                  </p>
+                ) : null}
                 <WatchInlineBlock
                   ticker={candidate.ticker}
                   currentPrice={candidate.close}
@@ -599,7 +676,12 @@ function CandidatesTable({
                   onUnwatch={onUnwatch}
                 />
               </div>
-              <Badge variant="primary">{candidate.signal}</Badge>
+              <div className="flex flex-col items-end gap-2">
+                <Badge variant="primary">{candidate.signal}</Badge>
+                {candidate.sameSymbol?.mode === 'ADD_ON' ? (
+                  <Badge variant="warning">{t('dailyReview.table.candidates.addOnBadge')}</Badge>
+                ) : null}
+              </div>
             </div>
 
             <CachedSymbolPriceChart ticker={candidate.ticker} className="mt-2" />
@@ -651,12 +733,10 @@ function CandidatesTable({
                 className="flex-1"
                 onClick={() => onOpenOrderReview(candidate)}
                 title={
-                  candidate.recommendation?.verdict === 'NOT_RECOMMENDED'
-                    ? t('dailyReview.table.candidates.createOrderNotRecommendedTitle')
-                    : t('dailyReview.table.candidates.createOrderTitle')
+                  actionTitle(candidate)
                 }
               >
-                {t('dailyReview.table.candidates.createOrder')}
+                {actionLabel(candidate)}
               </Button>
             </div>
           </div>
@@ -718,7 +798,12 @@ function CandidatesTable({
             </span>
           </td>
           <td className="p-2">
-            <Badge variant="primary">{candidate.signal}</Badge>
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="primary">{candidate.signal}</Badge>
+              {candidate.sameSymbol?.mode === 'ADD_ON' ? (
+                <Badge variant="warning">{t('dailyReview.table.candidates.addOnBadge')}</Badge>
+              ) : null}
+            </div>
           </td>
           <td className="p-2 text-right">{formatCurrency(candidate.entry)}</td>
           <td className="p-2 text-right">{formatCurrency(candidate.stop)}</td>
@@ -727,7 +812,21 @@ function CandidatesTable({
             {t('common.units.rValue', { value: formatNumber(candidate.rReward, 1) })}
           </td>
           <td className="p-2 text-sm text-gray-600 dark:text-gray-400">
-            {candidate.sector || t('common.placeholders.dash')}
+            <div>{candidate.sector || t('common.placeholders.dash')}</div>
+            {candidate.sameSymbol?.mode === 'ADD_ON' ? (
+              <div className="mt-1 text-xs text-amber-700 dark:text-amber-300">
+                {t('dailyReview.table.candidates.addOnReason', {
+                  liveStop:
+                    candidate.sameSymbol.currentPositionStop != null
+                      ? formatCurrency(candidate.sameSymbol.currentPositionStop)
+                      : t('common.placeholders.emDash'),
+                  freshStop:
+                    candidate.sameSymbol.freshSetupStop != null
+                      ? formatCurrency(candidate.sameSymbol.freshSetupStop)
+                      : t('common.placeholders.emDash'),
+                })}
+              </div>
+            ) : null}
           </td>
           <td className="p-2 text-center">
             {candidate.recommendation ? (
@@ -747,12 +846,10 @@ function CandidatesTable({
               size="sm"
               onClick={() => onOpenOrderReview(candidate)}
               title={
-                candidate.recommendation?.verdict === 'NOT_RECOMMENDED'
-                  ? t('dailyReview.table.candidates.createOrderNotRecommendedTitle')
-                  : t('dailyReview.table.candidates.createOrderTitle')
+                actionTitle(candidate)
               }
             >
-              {t('dailyReview.table.candidates.createOrder')}
+              {actionLabel(candidate)}
             </Button>
           </td>
         </tr>

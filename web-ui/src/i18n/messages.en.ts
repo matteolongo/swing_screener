@@ -1037,8 +1037,10 @@ export const messagesEn = {
       tradeThesisTitle: 'View Trade Thesis',
       tradeThesisAria: 'View trade thesis for {{ticker}}',
       createOrderTitle: 'Create Order',
+      addOnTitle: 'Create Add-On Order',
       createOrderNotRecommendedTitle: 'Not recommended — open details to fix',
       createOrderAction: 'Create Order',
+      addOnAction: 'Add On',
       expandRow: 'Expand details',
       collapseRow: 'Collapse details',
       expandRowAria: 'Expand details for {{ticker}}',
@@ -1048,12 +1050,14 @@ export const messagesEn = {
       companyUnknown: 'Unknown',
       sectorUnknown: 'Unknown',
       scoreLabel: 'Score {{value}}',
+      addOnLabel: 'Add-On',
       confidenceLabel: '{{value}}% confidence',
       confidenceUnknown: 'Confidence N/A',
     },
     setup: {
       entry: 'Entry',
       stop: 'Stop',
+      freshSetupStop: 'Fresh Stop',
       rr: 'R/R',
       riskDollar: 'Risk $',
     },
@@ -1078,6 +1082,12 @@ export const messagesEn = {
       sourceFallback: 'Deterministic fallback',
     },
     defaultNotes: 'From screener: Score {{score}}, Confidence {{confidence}}%, Rank #{{rank}}',
+    addOnNotes:
+      'Same-symbol add-on: Score {{score}}, Confidence {{confidence}}%, Rank #{{rank}}, Live stop {{liveStop}}, Fresh setup stop {{freshStop}}',
+    summary: {
+      sameSymbolSuppressed: '{{count}} same-symbol manage-only idea{{suffix}} suppressed.',
+      sameSymbolAddOns: '{{count}} same-symbol add-on candidate{{suffix}} available.',
+    },
   },
   dailyReview: {
     header: {
@@ -1091,6 +1101,7 @@ export const messagesEn = {
     },
     summary: {
       newCandidates: 'New Candidates',
+      addOnCandidates: 'Add-On Candidates',
       updateStop: 'Update Stop',
       closePositions: 'Close Positions',
       holdPositions: 'Hold Positions',
@@ -1098,7 +1109,9 @@ export const messagesEn = {
     quickAction: {
       label: 'Next Best Action',
       description: 'Top recommended setup is {{ticker}}. Review and place the order now.',
+      addOnDescription: 'Top same-symbol add-on is {{ticker}}. Review the add-on size and live stop before entering again.',
       cta: 'Open Top Setup: {{ticker}}',
+      addOnCta: 'Open Add-On: {{ticker}}',
     },
     intelligence: {
       title: 'Market Intelligence',
@@ -1129,10 +1142,12 @@ export const messagesEn = {
     },
     sections: {
       newTradeCandidates: '📈 New Trade Candidates ({{count}})',
+      addOnCandidates: '➕ Positions - Add-On Candidates ({{count}})',
       updateStop: '🔄 Positions - Update Stop ({{count}})',
       closeSuggested: '❌ Positions - Close Suggested ({{count}})',
       noActionNeeded: '✅ Positions - No Action Needed ({{count}})',
       noRecommended: 'No recommended candidates today.',
+      noAddOns: 'No add-on candidates today.',
       noRecommendedExplainTitle: 'No trade passed the full checklist.',
       noRecommendedExplainBody:
         'That does not mean the screener found nothing useful. It means none of the current setups were strong enough and well-structured enough to act on today.',
@@ -1168,8 +1183,12 @@ export const messagesEn = {
         recommendationTitle: 'Recommendation details',
         recommendationAria: 'Recommendation details for {{ticker}}',
         createOrder: 'Create Order',
+        addOnAction: 'Add On',
+        addOnBadge: 'Add-On',
         createOrderTitle: 'Create Order',
+        addOnTitle: 'Review add-on order',
         createOrderNotRecommendedTitle: 'Not recommended — open details to fix',
+        addOnReason: 'Live stop {{liveStop}} is used for execution. Fresh setup stop {{freshStop}} is reference only.',
         yahooFinanceTooltip: 'Open {{ticker}} on Yahoo Finance',
       },
       update: {
@@ -1215,6 +1234,8 @@ export const messagesEn = {
       },
     },
     defaultNotes: 'From daily review: Entry {{entry}}, R:R {{rr}}',
+    defaultAddOnNotes:
+      'From daily review add-on: Live stop {{liveStop}}, Fresh setup stop {{freshStop}}, R:R {{rr}}',
   },
   intelligencePage: {
     title: 'Intelligence',
