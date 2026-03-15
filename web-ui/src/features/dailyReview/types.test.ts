@@ -21,6 +21,7 @@ describe('transformDailyReview', () => {
           execution_note: 'Breakout not triggered yet. Place BUY STOP slightly above breakout_level.',
         },
       ],
+      positions_add_on_candidates: [],
       positions_hold: [],
       positions_update_stop: [],
       positions_close: [],
@@ -30,6 +31,7 @@ describe('transformDailyReview', () => {
         update_stop: 0,
         close_positions: 0,
         new_candidates: 1,
+        add_on_candidates: 0,
         review_date: '2026-03-02',
       },
     };
