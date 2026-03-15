@@ -1,11 +1,61 @@
-"""Factory helpers for intelligence LLM providers and classifiers."""
+"""Factory helpers for intelligence LLM providers, chat models, and classifiers."""
 from __future__ import annotations
 
+import os
 from typing import Optional
 
 from .classifier import EventClassifier
 from .client import MockLLMProvider
 from .langchain_provider import LangChainOllamaProvider, LangChainOpenAIProvider
+
+
+def build_langchain_chat_model(
+    *,
+    provider_name: str,
+    model: str,
+    base_url: Optional[str],
+    api_key: Optional[str] = None,
+    temperature: float = 0,
+    max_retries: int = 0,
+):
+    """Build a LangChain chat model for shared API/agent orchestration."""
+    normalized = str(provider_name).strip().lower()
+
+    if normalized == "openai":
+        resolved_api_key = str(api_key or os.environ.get("OPENAI_API_KEY", "")).strip()
+        if not resolved_api_key:
+            raise RuntimeError("OPENAI API key is required for provider 'openai'.")
+        try:
+            from langchain_openai import ChatOpenAI
+        except ImportError as exc:
+            raise RuntimeError(
+                "langchain-openai is not installed. Install dependencies for OpenAI integration."
+            ) from exc
+        return ChatOpenAI(
+            model=str(model).strip() or "gpt-4o-mini",
+            temperature=temperature,
+            api_key=resolved_api_key,
+            base_url=base_url or os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1"),
+            max_retries=max_retries,
+        )
+
+    if normalized == "ollama":
+        try:
+            from langchain_ollama import ChatOllama
+        except ImportError as exc:
+            raise RuntimeError(
+                "langchain-ollama is not installed. Install dependencies for LangChain integration."
+            ) from exc
+        return ChatOllama(
+            model=str(model).strip() or "mistral:7b-instruct",
+            base_url=base_url or os.environ.get("OLLAMA_HOST", "http://localhost:11434"),
+            temperature=temperature,
+        )
+
+    if normalized == "mock":
+        raise RuntimeError("Provider 'mock' does not expose a LangChain chat model.")
+
+    raise RuntimeError(f"Unsupported LangChain chat model provider: {provider_name}")
 
 
 def build_llm_provider(

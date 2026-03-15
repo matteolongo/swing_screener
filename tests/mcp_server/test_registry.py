@@ -78,6 +78,25 @@ def mixed_config() -> MCPConfig:
     )
 
 
+@pytest.fixture
+def enabled_intelligence_config() -> MCPConfig:
+    """Configuration with intelligence feature enabled."""
+    return MCPConfig(
+        features={
+            "intelligence": FeatureConfig(
+                enabled=True,
+                tools=[
+                    "get_workspace_context",
+                    "get_intelligence_opportunities",
+                    "get_intelligence_events",
+                    "explain_symbol",
+                    "chat_answer",
+                ],
+            )
+        }
+    )
+
+
 class TestBaseTool:
     """Tests for BaseTool interface."""
     
@@ -255,3 +274,14 @@ class TestCreateRegistry:
         assert registry.is_registered("list_positions")
         assert registry.is_registered("get_position")
         assert "portfolio" in registry.get_enabled_features()
+
+    def test_create_registry_with_intelligence_tools(self, enabled_intelligence_config: MCPConfig):
+        """Test creating registry with intelligence/chat configuration."""
+        registry = create_registry(enabled_intelligence_config)
+
+        assert registry.is_registered("get_workspace_context")
+        assert registry.is_registered("get_intelligence_opportunities")
+        assert registry.is_registered("get_intelligence_events")
+        assert registry.is_registered("explain_symbol")
+        assert registry.is_registered("chat_answer")
+        assert "intelligence" in registry.get_enabled_features()

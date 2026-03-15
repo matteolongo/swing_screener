@@ -2,8 +2,9 @@ import type { ReactNode } from 'react';
 import { CandidateViewModel } from '@/features/screener/viewModel';
 import RecommendationBadge from '@/components/domain/recommendation/RecommendationBadge';
 import CachedSymbolPriceChart from '@/components/domain/market/CachedSymbolPriceChart';
-import { ExternalLink, Gauge } from 'lucide-react';
+import { BarChart3, ExternalLink, Gauge } from 'lucide-react';
 import { t } from '@/i18n/t';
+import { formatConfidencePercent, formatScreenerScore } from '@/utils/formatters';
 
 interface ScreenerCandidateIdentityCellProps {
   candidate: CandidateViewModel;
@@ -21,7 +22,10 @@ export default function ScreenerCandidateIdentityCell({
 }: ScreenerCandidateIdentityCellProps) {
   const yahooUrl = `https://finance.yahoo.com/quote/${candidate.ticker}`;
   const confidenceValue = Number.isFinite(candidate.confidence)
-    ? Math.max(0, Math.min(100, candidate.confidence <= 1 ? candidate.confidence * 100 : candidate.confidence))
+    ? formatConfidencePercent(candidate.confidence)
+    : null;
+  const scoreValue = Number.isFinite(candidate.score)
+    ? formatScreenerScore(candidate.score)
     : null;
 
   return (
@@ -68,12 +72,19 @@ export default function ScreenerCandidateIdentityCell({
       {watchContent}
       <CachedSymbolPriceChart ticker={candidate.ticker} />
 
-      {/* Confidence */}
-      <div className="inline-flex w-fit items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-xs text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
-        <Gauge className="h-3 w-3" />
-        {confidenceValue == null
-          ? t('screener.identity.confidenceUnknown')
-          : t('screener.identity.confidenceLabel', { value: confidenceValue.toFixed(1) })}
+      <div className="flex flex-wrap items-center gap-2">
+        {scoreValue != null ? (
+          <div className="inline-flex w-fit items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+            <BarChart3 className="h-3 w-3" />
+            {t('screener.identity.scoreLabel', { value: scoreValue })}
+          </div>
+        ) : null}
+        <div className="inline-flex w-fit items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-xs text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
+          <Gauge className="h-3 w-3" />
+          {confidenceValue == null
+            ? t('screener.identity.confidenceUnknown')
+            : t('screener.identity.confidenceLabel', { value: confidenceValue })}
+        </div>
       </div>
 
       {/* Company and metadata */}

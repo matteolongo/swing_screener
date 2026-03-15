@@ -54,6 +54,9 @@ export const API_ENDPOINTS = {
   intelligenceEducationGenerate: '/api/intelligence/education/generate',
   intelligenceEducationBySymbol: (symbol: string) => `/api/intelligence/education/${encodeURIComponent(symbol)}`,
 
+  // Chat
+  chatAnswer: '/api/chat/answer',
+
   // Daily Review
   dailyReview: '/api/daily-review',
   dailyReviewCompute: '/api/daily-review/compute',

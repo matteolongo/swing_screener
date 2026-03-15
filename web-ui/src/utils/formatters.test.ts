@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest'
-import { formatCurrency, formatDate, formatPercent, formatNumber, formatRatioAsPercent } from './formatters'
+import {
+  formatConfidencePercent,
+  formatCurrency,
+  formatDate,
+  formatPercent,
+  formatNumber,
+  formatRatioAsPercent,
+  formatScreenerScore,
+} from './formatters'
 
 describe('Formatter Utilities', () => {
   describe('formatCurrency', () => {
@@ -94,6 +102,30 @@ describe('Formatter Utilities', () => {
 
     it('supports custom decimal places', () => {
       expect(formatRatioAsPercent(0.00821, 2)).toBe('+0.82%')
+    })
+  })
+
+  describe('formatScreenerScore', () => {
+    it('converts raw ranking ratios to a 0..100 display scale', () => {
+      expect(formatScreenerScore(0.994)).toBe('99.4')
+      expect(formatScreenerScore(0.8)).toBe('80.0')
+    })
+
+    it('keeps already-normalized scores unchanged', () => {
+      expect(formatScreenerScore(99.4)).toBe('99.4')
+      expect(formatScreenerScore(85.5)).toBe('85.5')
+    })
+  })
+
+  describe('formatConfidencePercent', () => {
+    it('converts ratio confidence values to a percentage scale', () => {
+      expect(formatConfidencePercent(0.927)).toBe('92.7')
+      expect(formatConfidencePercent(0.8)).toBe('80.0')
+    })
+
+    it('keeps already-normalized confidence unchanged', () => {
+      expect(formatConfidencePercent(92.7)).toBe('92.7')
+      expect(formatConfidencePercent(72.5)).toBe('72.5')
     })
   })
 

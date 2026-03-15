@@ -29,6 +29,23 @@ export function formatRatioAsPercent(value: number, decimals: number = 1): strin
 }
 
 /**
+ * Format screener score on a consistent human-readable 0..100 scale.
+ * Backend ranking emits 0..1 percentile scores, but some test/mocked paths still provide 0..100.
+ */
+export function formatScreenerScore(value: number, decimals: number = 1): string {
+  const normalized = Math.abs(value) <= 1 ? value * 100 : value;
+  return normalized.toFixed(decimals);
+}
+
+/**
+ * Format confidence on a consistent 0..100 percentage scale.
+ */
+export function formatConfidencePercent(value: number, decimals: number = 1): string {
+  const normalized = Math.abs(value) <= 1 ? value * 100 : value;
+  return normalized.toFixed(decimals);
+}
+
+/**
  * Format number as currency (e.g., $1,234.56 / €1,234.56)
  */
 export function formatCurrency(value: number, currency: 'USD' | 'EUR' = 'USD'): string {

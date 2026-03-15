@@ -2,7 +2,7 @@ import { CandidateViewModel, hasOverlayData } from '@/features/screener/viewMode
 import { FlaskConical, MessageCircle, Sparkles } from 'lucide-react';
 import MetricHelpLabel from '@/components/domain/education/MetricHelpLabel';
 import OverlayBadge from '@/components/domain/recommendation/OverlayBadge';
-import { formatDateTime, formatPercent } from '@/utils/formatters';
+import { formatDateTime, formatPercent, formatScreenerScore } from '@/utils/formatters';
 import { t } from '@/i18n/t';
 import type { SymbolIntelligenceStatus } from '@/features/intelligence/useSymbolIntelligenceRunner';
 
@@ -44,7 +44,7 @@ export default function ScreenerCandidateDetailsRow({
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 text-sm">
                 <div className="rounded-md border border-gray-200 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-800">
                   <MetricHelpLabel metricKey="SCORE" className="text-gray-600 dark:text-gray-400" />
-                  <div className="font-mono mt-1 text-base">{candidate.score.toFixed(1)}</div>
+                  <div className="font-mono mt-1 text-base">{formatScreenerScore(candidate.score)}</div>
                 </div>
                 <div className="rounded-md border border-gray-200 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-800">
                   <MetricHelpLabel metricKey="ATR" className="text-gray-600 dark:text-gray-400" />

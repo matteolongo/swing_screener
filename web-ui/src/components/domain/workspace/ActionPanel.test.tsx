@@ -169,6 +169,14 @@ describe('ActionPanel', () => {
     expect(Boolean(tablist.compareDocumentPosition(formTitle) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
   });
 
+  it('includes screener score and confidence in the default notes', () => {
+    renderWithProviders(<ActionPanel ticker="AAPL" />);
+
+    expect(screen.getByLabelText('Notes')).toHaveValue(
+      'From screener: Score 80.0, Confidence 88.0%, Rank #1'
+    );
+  });
+
   it('blocks BUY_STOP entries when trigger is at or below current price', () => {
     setCandidate({
       suggestedOrderType: 'BUY_STOP',

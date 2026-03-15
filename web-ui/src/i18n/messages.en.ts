@@ -489,6 +489,27 @@ export const messagesEn = {
         createOrderSuccess: 'Order created successfully.',
         placeholder: 'Select a ticker to review chart, metrics, and trade inputs.',
       },
+      chat: {
+        title: 'Workspace Chat',
+        description: 'Ask read-only questions using the current orders, screener snapshot, and cached intelligence context.',
+        empty: 'Ask about pending orders, portfolio state, or the selected ticker. The reply will use the current workspace context.',
+        loading: 'Thinking with the latest workspace context...',
+        inputLabel: 'Ask the workspace agent',
+        placeholder: 'What should I know about the selected ticker or current orders?',
+        submit: 'Ask',
+        submitLoading: 'Thinking...',
+        error: 'The workspace chat request failed.',
+        readOnlyNote: 'Chat is read-only in v1. Future-looking answers are scenario-based.',
+        focusTicker: 'Focus: {{ticker}}',
+        noneSelected: 'none',
+        snapshotStatus: 'Screener snapshot: {{count}} candidates',
+        contextBadgesAria: 'Context sources used by workspace chat',
+        factsUsed: 'Facts used: {{facts}}',
+        badges: {
+          ready: 'ready',
+          missing: 'missing',
+        },
+      },
       portfolio: {
         title: 'Portfolio',
         description: 'Review open positions and pending orders in one table.',
@@ -1026,6 +1047,7 @@ export const messagesEn = {
     identity: {
       companyUnknown: 'Unknown',
       sectorUnknown: 'Unknown',
+      scoreLabel: 'Score {{value}}',
       confidenceLabel: '{{value}}% confidence',
       confidenceUnknown: 'Confidence N/A',
     },
@@ -1055,7 +1077,7 @@ export const messagesEn = {
       sourceLlm: 'LLM',
       sourceFallback: 'Deterministic fallback',
     },
-    defaultNotes: 'From screener: Score {{score}}, Rank #{{rank}}',
+    defaultNotes: 'From screener: Score {{score}}, Confidence {{confidence}}%, Rank #{{rank}}',
   },
   dailyReview: {
     header: {
