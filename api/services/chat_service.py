@@ -357,6 +357,10 @@ class ChatService:
             return "action_request"
         if any(marker in lower for marker in _FORECAST_MARKERS):
             return "forecast"
+        if selected_ticker and selected_ticker.lower() in lower and any(
+            token in lower for token in (" add-on", " same symbol", " setup", " stop", " entry", " target", " signal")
+        ):
+            return "selected_ticker"
         if any(token in lower for token in (" pnl ", " profit", " loss", "portfolio", "positions", "orders", "stop ")):
             return "portfolio"
         if any(token in lower for token in (" intelligence", "catalyst", "news", "event", "why", "explain")):
@@ -378,6 +382,7 @@ class ChatService:
                 "screener.snapshot.asof",
                 "screener.snapshot.top_candidates",
                 "screener.selected_candidate.signal",
+                "screener.selected_candidate.same_symbol.mode",
             ],
             "intelligence": [
                 "intelligence.asof",
@@ -386,6 +391,7 @@ class ChatService:
             ],
             "selected_ticker": [
                 "selected_ticker",
+                "screener.selected_candidate.same_symbol.mode",
                 "screener.selected_candidate.signal",
                 "intelligence.selected_opportunity.state",
             ],
@@ -394,6 +400,7 @@ class ChatService:
                 "screener.selected_candidate.entry",
                 "screener.selected_candidate.stop",
                 "screener.selected_candidate.target",
+                "screener.selected_candidate.same_symbol.execution_stop",
                 "intelligence.selected_opportunity.state",
             ],
             "general": [
@@ -536,6 +543,22 @@ class ChatService:
                 )
             if candidate.target is not None and candidate.rr is not None:
                 fragments.append(f"Target is {candidate.target:.2f} with reward/risk {candidate.rr:.2f}.")
+            if candidate.same_symbol is not None:
+                if candidate.same_symbol.mode == "ADD_ON":
+                    fragments.append("This is classified as an add-on to an existing open position, not a fresh entry.")
+                elif candidate.same_symbol.mode == "NEW_ENTRY":
+                    fragments.append("This is classified as a fresh entry because there is no open position in the current portfolio for this ticker.")
+                if (
+                    candidate.same_symbol.current_position_stop is not None
+                    and candidate.same_symbol.fresh_setup_stop is not None
+                    and candidate.same_symbol.current_position_stop != candidate.same_symbol.fresh_setup_stop
+                ):
+                    fragments.append(
+                        f"Live stop is {candidate.same_symbol.current_position_stop:.2f} while the fresh setup stop is "
+                        f"{candidate.same_symbol.fresh_setup_stop:.2f}; the live stop is the execution stop until you explicitly update the position."
+                    )
+                if candidate.same_symbol.reason:
+                    fragments.append(candidate.same_symbol.reason)
             if candidate.recommendation_verdict:
                 fragments.append(f"Verdict: {candidate.recommendation_verdict}.")
             if candidate.beginner_explanation:

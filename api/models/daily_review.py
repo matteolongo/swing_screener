@@ -4,6 +4,7 @@ from typing import Optional
 from pydantic import BaseModel, Field
 from api.models.recommendation import Recommendation
 from api.models.portfolio import Position, Order
+from api.models.screener import SameSymbolCandidateContext
 from api.models.strategy import Strategy
 
 
@@ -23,6 +24,7 @@ class DailyReviewCandidate(BaseModel):
     suggested_order_price: Optional[float] = None
     execution_note: Optional[str] = None
     recommendation: Optional[Recommendation] = None
+    same_symbol: Optional[SameSymbolCandidateContext] = None
 
 
 class DailyReviewPositionHold(BaseModel):
@@ -66,12 +68,14 @@ class DailyReviewSummary(BaseModel):
     update_stop: int
     close_positions: int
     new_candidates: int
+    add_on_candidates: int = 0
     review_date: date
 
 
 class DailyReview(BaseModel):
     """Complete daily review with action items."""
     new_candidates: list[DailyReviewCandidate]
+    positions_add_on_candidates: list[DailyReviewCandidate] = Field(default_factory=list)
     positions_hold: list[DailyReviewPositionHold]
     positions_update_stop: list[DailyReviewPositionUpdate]
     positions_close: list[DailyReviewPositionClose]

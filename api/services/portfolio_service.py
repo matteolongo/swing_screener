@@ -759,10 +759,61 @@ class PortfolioService:
             raise HTTPException(status_code=404, detail=f"Order not found: {order_id}")
         return Order(**order)
 
+    @staticmethod
+    def _count_filled_add_ons(orders: list[dict], position_id: str | None) -> int:
+        if not position_id:
+            return 0
+        filled_entries = [
+            order for order in orders
+            if order.get("status") == "filled"
+            and order.get("position_id") == position_id
+            and infer_order_kind(Order(**order)) == "entry"
+        ]
+        return max(0, len(filled_entries) - 1)
+
     def create_order(self, request: CreateOrderRequest) -> Order:
         data = self._orders_repo.read()
+        open_positions, _ = self._positions_repo.list_positions(status="open")
 
         ticker = request.ticker.upper()
+        orders = data.get("orders", [])
+        order_kind = request.order_kind
+        linked_position_id = request.position_id
+
+        if order_kind == "entry":
+            pending_same_symbol_entry = any(
+                order.get("status") == "pending"
+                and order.get("ticker", "").upper() == ticker
+                and infer_order_kind(Order(**order)) == "entry"
+                for order in orders
+            )
+            if pending_same_symbol_entry:
+                raise HTTPException(status_code=400, detail=f"{ticker}: pending entry order already exists.")
+
+            matching_positions = [
+                position for position in open_positions if str(position.get("ticker", "")).upper() == ticker
+            ]
+            if request.entry_mode == "ADD_ON":
+                if not matching_positions:
+                    raise HTTPException(status_code=400, detail=f"{ticker}: no open position found for add-on order.")
+                matching_position = next(
+                    (
+                        position for position in matching_positions
+                        if request.position_id and position.get("position_id") == request.position_id
+                    ),
+                    None,
+                ) if request.position_id else matching_positions[0]
+                if matching_position is None:
+                    raise HTTPException(status_code=400, detail=f"{ticker}: linked open position not found.")
+                linked_position_id = matching_position.get("position_id")
+                if self._count_filled_add_ons(orders, linked_position_id) >= 1:
+                    raise HTTPException(status_code=400, detail=f"{ticker}: add-on limit reached for this position.")
+            elif matching_positions:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"{ticker}: open position already exists. Create this as an ADD_ON order instead.",
+                )
+
         timestamp = dt.datetime.now().strftime("%Y%m%d%H%M%S")
         order_id = f"{ticker}-{timestamp}"
 
@@ -778,15 +829,14 @@ class PortfolioService:
             "filled_date": "",
             "entry_price": None,
             "notes": request.notes,
-            "order_kind": request.order_kind,
+            "order_kind": order_kind,
             "parent_order_id": None,
-            "position_id": None,
+            "position_id": linked_position_id,
             "tif": "GTC",
             "fee_eur": None,
             "fill_fx_rate": None,
         }
 
-        orders = data.get("orders", [])
         orders.append(new_order)
         data["orders"] = orders
         data["asof"] = get_today_str()

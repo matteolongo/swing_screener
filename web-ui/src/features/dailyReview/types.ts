@@ -3,6 +3,7 @@
  */
 
 import { Recommendation, RecommendationAPI, transformRecommendation } from '@/types/recommendation';
+import type { SameSymbolCandidateContext } from '@/features/screener/types';
 
 // API response types (snake_case from backend)
 export interface DailyReviewCandidateAPI {
@@ -20,6 +21,18 @@ export interface DailyReviewCandidateAPI {
   suggested_order_price?: number | null;
   execution_note?: string | null;
   recommendation?: RecommendationAPI | null;
+  same_symbol?: {
+    mode: SameSymbolCandidateContext['mode'];
+    position_id?: string | null;
+    current_position_entry?: number | null;
+    current_position_stop?: number | null;
+    fresh_setup_stop?: number | null;
+    execution_stop?: number | null;
+    pending_entry_exists?: boolean;
+    add_on_count?: number;
+    max_add_ons?: number;
+    reason?: string;
+  } | null;
 }
 
 export interface DailyReviewPositionHoldAPI {
@@ -59,11 +72,13 @@ export interface DailyReviewSummaryAPI {
   update_stop: number;
   close_positions: number;
   new_candidates: number;
+  add_on_candidates: number;
   review_date: string;
 }
 
 export interface DailyReviewAPI {
   new_candidates: DailyReviewCandidateAPI[];
+  positions_add_on_candidates: DailyReviewCandidateAPI[];
   positions_hold: DailyReviewPositionHoldAPI[];
   positions_update_stop: DailyReviewPositionUpdateAPI[];
   positions_close: DailyReviewPositionCloseAPI[];
@@ -86,6 +101,7 @@ export interface DailyReviewCandidate {
   suggestedOrderPrice?: number;
   executionNote?: string;
   recommendation?: Recommendation;
+  sameSymbol?: SameSymbolCandidateContext;
 }
 
 export interface DailyReviewPositionHold {
@@ -125,11 +141,13 @@ export interface DailyReviewSummary {
   updateStop: number;
   closePositions: number;
   newCandidates: number;
+  addOnCandidates: number;
   reviewDate: string;
 }
 
 export interface DailyReview {
   newCandidates: DailyReviewCandidate[];
+  positionsAddOnCandidates: DailyReviewCandidate[];
   positionsHold: DailyReviewPositionHold[];
   positionsUpdateStop: DailyReviewPositionUpdate[];
   positionsClose: DailyReviewPositionClose[];
@@ -153,6 +171,20 @@ export function transformCandidate(api: DailyReviewCandidateAPI): DailyReviewCan
     suggestedOrderPrice: api.suggested_order_price ?? undefined,
     executionNote: api.execution_note ?? undefined,
     recommendation: api.recommendation ? transformRecommendation(api.recommendation) : undefined,
+    sameSymbol: api.same_symbol
+      ? {
+          mode: api.same_symbol.mode,
+          positionId: api.same_symbol.position_id ?? undefined,
+          currentPositionEntry: api.same_symbol.current_position_entry ?? undefined,
+          currentPositionStop: api.same_symbol.current_position_stop ?? undefined,
+          freshSetupStop: api.same_symbol.fresh_setup_stop ?? undefined,
+          executionStop: api.same_symbol.execution_stop ?? undefined,
+          pendingEntryExists: api.same_symbol.pending_entry_exists ?? false,
+          addOnCount: api.same_symbol.add_on_count ?? 0,
+          maxAddOns: api.same_symbol.max_add_ons ?? 1,
+          reason: api.same_symbol.reason ?? '',
+        }
+      : undefined,
   };
 }
 
@@ -200,6 +232,7 @@ export function transformSummary(api: DailyReviewSummaryAPI): DailyReviewSummary
     updateStop: api.update_stop,
     closePositions: api.close_positions,
     newCandidates: api.new_candidates,
+    addOnCandidates: api.add_on_candidates,
     reviewDate: api.review_date,
   };
 }
@@ -207,6 +240,7 @@ export function transformSummary(api: DailyReviewSummaryAPI): DailyReviewSummary
 export function transformDailyReview(api: DailyReviewAPI): DailyReview {
   return {
     newCandidates: api.new_candidates.map(transformCandidate),
+    positionsAddOnCandidates: (api.positions_add_on_candidates ?? []).map(transformCandidate),
     positionsHold: api.positions_hold.map(transformPositionHold),
     positionsUpdateStop: api.positions_update_stop.map(transformPositionUpdate),
     positionsClose: api.positions_close.map(transformPositionClose),

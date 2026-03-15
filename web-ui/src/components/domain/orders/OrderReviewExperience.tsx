@@ -11,6 +11,7 @@ import { candidateOrderSchema, type CandidateOrderFormValues } from '@/component
 import { getSetupExecutionGuidance, normalizeSetupSignal } from '@/features/orders/setupGuidance';
 import { normalizeSuggestedOrderType, resolveDefaultOrderType } from '@/features/orders/executionDefaults';
 import type { CreateOrderRequest } from '@/features/portfolio/types';
+import type { SameSymbolCandidateContext } from '@/features/screener/types';
 import type { RiskConfig } from '@/types/config';
 import type { Recommendation } from '@/types/recommendation';
 import { t } from '@/i18n/t';
@@ -34,6 +35,8 @@ export interface OrderReviewContext {
   suggestedOrderType?: string | null;
   suggestedOrderPrice?: number | null;
   executionNote?: string | null;
+  positionId?: string | null;
+  sameSymbol?: SameSymbolCandidateContext;
 }
 
 interface OrderReviewExperienceProps {
@@ -231,6 +234,8 @@ export default function OrderReviewExperience({
         limitPrice: values.limitPrice,
         stopPrice: values.stopPrice,
         orderKind: 'entry',
+        positionId: context.sameSymbol?.mode === 'ADD_ON' ? (context.positionId ?? context.sameSymbol.positionId) : undefined,
+        entryMode: context.sameSymbol?.mode === 'ADD_ON' ? 'ADD_ON' : 'NEW_ENTRY',
         notes: values.notes?.trim() ?? '',
       });
       setSubmitSucceeded(true);
