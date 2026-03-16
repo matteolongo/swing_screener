@@ -99,7 +99,7 @@ def get_intelligence_config_service() -> IntelligenceConfigService:
 
 def get_screener_service() -> ScreenerService:
     """Get screener service instance with injected dependencies."""
-    return ScreenerService(strategy_repo=get_strategy_repo())
+    return ScreenerService(strategy_repo=get_strategy_repo(), portfolio_service=get_portfolio_service())
 
 
 def get_social_service() -> SocialService:
