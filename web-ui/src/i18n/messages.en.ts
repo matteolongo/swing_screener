@@ -973,6 +973,8 @@ export const messagesEn = {
         'Social sentiment warmup complete: {{completed}}/{{total}} (ok {{ok}}, no data {{noData}}, errors {{errors}}).',
       socialWarmupUnavailable:
         'Social sentiment warmup status unavailable (job not found). Run Screener again to start a new warmup job.',
+      sameSymbolSuppressed: '{{count}} same-symbol manage-only idea{{suffix}} suppressed.',
+      sameSymbolAddOns: '{{count}} same-symbol add-on candidate{{suffix}} available.',
     },
     glossary: {
       title: 'Screener Glossary',
@@ -1084,10 +1086,6 @@ export const messagesEn = {
     defaultNotes: 'From screener: Score {{score}}, Confidence {{confidence}}%, Rank #{{rank}}',
     addOnNotes:
       'Same-symbol add-on: Score {{score}}, Confidence {{confidence}}%, Rank #{{rank}}, Live stop {{liveStop}}, Fresh setup stop {{freshStop}}',
-    summary: {
-      sameSymbolSuppressed: '{{count}} same-symbol manage-only idea{{suffix}} suppressed.',
-      sameSymbolAddOns: '{{count}} same-symbol add-on candidate{{suffix}} available.',
-    },
   },
   dailyReview: {
     header: {
