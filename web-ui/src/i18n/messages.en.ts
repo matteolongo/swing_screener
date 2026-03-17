@@ -1272,7 +1272,8 @@ export const messagesEn = {
       llmProvider: 'LLM provider',
       llmModel: 'LLM model',
       llmBaseUrl: 'LLM base URL',
-      llmApiKey: 'LLM API key',
+      llmApiKeyEnvNotice:
+        'OpenAI API key is read from the server environment (.env) and is not stored in intelligence config.',
       llmSystemPrompt: 'Classifier system prompt override',
       llmSystemPromptPlaceholder: 'Leave blank to use the built-in classification system prompt',
       llmUserPromptTemplate: 'Classifier user prompt template override',

@@ -10,6 +10,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from contextlib import asynccontextmanager
+from swing_screener.runtime_env import ensure_runtime_env_loaded
 
 # Import routers
 from api.routers import (
@@ -27,6 +28,8 @@ from api.routers import (
 LOG_FORMAT = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
 logging.basicConfig(level=logging.INFO, format=LOG_FORMAT, stream=sys.stdout)
 logger = logging.getLogger("swing_screener.api")
+
+ensure_runtime_env_loaded()
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 WEB_UI_DIST_DIR = Path(os.getenv("WEB_UI_DIST_DIR", str(PROJECT_ROOT / "web-ui" / "dist"))).resolve()

@@ -4,7 +4,6 @@ from __future__ import annotations
 from collections import Counter
 import json
 import logging
-import os
 from typing import Any
 
 from swing_screener.intelligence.config import IntelligenceConfig
@@ -107,8 +106,6 @@ def _invoke_llm_summary(cfg: IntelligenceConfig, context: dict[str, Any]) -> str
     provider = str(cfg.llm.provider).strip().lower()
     model = str(cfg.llm.model).strip()
     base_url = str(cfg.llm.base_url).strip() or None
-    api_key = str(cfg.llm.api_key).strip() or str(os.environ.get("OPENAI_API_KEY", "")).strip()
-
     if provider == "mock":
         return _deterministic_summary(context)
 
@@ -121,7 +118,7 @@ def _invoke_llm_summary(cfg: IntelligenceConfig, context: dict[str, Any]) -> str
         provider_name=provider,
         model=model or ("gpt-4.1-mini" if provider == "openai" else "mistral:7b-instruct"),
         base_url=base_url,
-        api_key=api_key,
+        api_key=None,
         temperature=0,
         max_retries=0,
     )

@@ -171,7 +171,6 @@ export default function IntelligencePage() {
       provider: draftConfig.llm.provider,
       model: draftConfig.llm.model,
       baseUrl: draftConfig.llm.baseUrl,
-      apiKey: draftConfig.llm.apiKey,
     });
   };
 
@@ -569,18 +568,9 @@ export default function IntelligencePage() {
                   className="w-full rounded border border-gray-300 px-3 py-2"
                 />
               </label>
-              <label className="text-sm">
-                <span className="mb-1 block text-xs text-gray-500">{t('intelligencePage.config.llmApiKey')}</span>
-                <input
-                  type="password"
-                  autoComplete="off"
-                  value={draftConfig.llm.apiKey}
-                  onChange={(event) =>
-                    setDraftConfig({ ...draftConfig, llm: { ...draftConfig.llm, apiKey: event.target.value } })
-                  }
-                  className="w-full rounded border border-gray-300 px-3 py-2"
-                />
-              </label>
+              {draftConfig.llm.provider === 'openai' ? (
+                <p className="text-xs text-gray-500">{t('intelligencePage.config.llmApiKeyEnvNotice')}</p>
+              ) : null}
               <label className="text-sm md:col-span-2">
                 <span className="mb-1 block text-xs text-gray-500">{t('intelligencePage.config.llmSystemPrompt')}</span>
                 <textarea

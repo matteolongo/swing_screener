@@ -14,7 +14,6 @@ class IntelligenceLLMConfigModel(BaseModel):
     provider: Literal["ollama", "mock", "openai"] = "openai"
     model: str = "gpt-4.1-mini"
     base_url: str = "https://api.openai.com/v1"
-    api_key: str = ""
     system_prompt: str = Field(default="", max_length=20000)
     user_prompt_template: str = Field(default="", max_length=40000)
     enable_cache: bool = True
@@ -248,7 +247,6 @@ class IntelligenceProviderTestRequest(BaseModel):
     provider: Literal["ollama", "mock", "openai"] = "openai"
     model: str = "gpt-4.1-mini"
     base_url: Optional[str] = None
-    api_key: Optional[str] = None
 
 
 class IntelligenceProviderTestResponse(BaseModel):

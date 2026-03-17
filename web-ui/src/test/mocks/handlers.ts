@@ -529,7 +529,6 @@ const mockIntelligenceConfig = {
     provider: 'openai',
     model: 'gpt-4.1-mini',
     base_url: 'https://api.openai.com/v1',
-    api_key: '',
     system_prompt: '',
     user_prompt_template: '',
     enable_cache: true,

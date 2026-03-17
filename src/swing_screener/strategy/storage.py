@@ -42,7 +42,6 @@ def _default_market_intelligence_payload() -> dict:
             "provider": "openai",
             "model": "gpt-4.1-mini",
             "base_url": "https://api.openai.com/v1",
-            "api_key": "",
             "enable_cache": True,
             "enable_audit": True,
             "cache_path": "data/intelligence/llm_cache.json",

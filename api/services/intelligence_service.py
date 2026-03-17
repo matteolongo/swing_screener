@@ -6,7 +6,6 @@ from dataclasses import replace
 from datetime import datetime, timedelta
 import json
 import logging
-import os
 from typing import Any
 
 from fastapi import HTTPException
@@ -200,8 +199,6 @@ def _invoke_llm_explanation(
         return fallback_text, "deterministic_fallback", model, "LLM provider is mock; deterministic fallback used."
 
     base_url = str(getattr(llm_cfg, "base_url", "")).strip() or None
-    api_key = str(getattr(llm_cfg, "api_key", "")).strip() or str(os.environ.get("OPENAI_API_KEY", "")).strip()
-
     try:
         from langchain_core.messages import HumanMessage, SystemMessage
     except Exception as exc:  # pragma: no cover - import depends on runtime
@@ -213,7 +210,7 @@ def _invoke_llm_explanation(
             provider_name=provider,
             model=model or ("gpt-4.1-mini" if provider == "openai" else "mistral:7b-instruct"),
             base_url=base_url,
-            api_key=api_key,
+            api_key=None,
             temperature=0,
             max_retries=0,
         )
@@ -475,8 +472,6 @@ def _invoke_llm_education_view(
     provider = str(getattr(llm_cfg, "provider", "")).strip().lower()
     model = str(getattr(llm_cfg, "model", "")).strip() or ""
     base_url = str(getattr(llm_cfg, "base_url", "")).strip() or None
-    api_key = str(getattr(llm_cfg, "api_key", "")).strip() or str(os.environ.get("OPENAI_API_KEY", "")).strip()
-
     system_prompt_default = (
         "You are a beginner-first trading educator. "
         "Use only provided deterministic facts. "
@@ -529,7 +524,7 @@ def _invoke_llm_education_view(
             provider_name=provider,
             model=model or ("gpt-4.1-mini" if provider == "openai" else "mistral:7b-instruct"),
             base_url=base_url,
-            api_key=api_key,
+            api_key=None,
             temperature=0,
             max_retries=0,
         )

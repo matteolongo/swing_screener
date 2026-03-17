@@ -105,7 +105,6 @@ class StrategyIntelligenceLLM(BaseModel):
     provider: Literal["ollama", "mock", "openai"] = "openai"
     model: str = "gpt-4.1-mini"
     base_url: str = "https://api.openai.com/v1"
-    api_key: str = ""
     enable_cache: bool = True
     enable_audit: bool = True
     cache_path: str = "data/intelligence/llm_cache.json"

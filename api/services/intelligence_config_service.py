@@ -70,6 +70,9 @@ class IntelligenceConfigService:
         if isinstance(raw, dict):
             try:
                 envelope = IntelligenceConfigStorageEnvelope.model_validate(raw)
+                sanitized_payload = envelope.model_dump()
+                if raw != sanitized_payload:
+                    self._config_repo.save_raw(sanitized_payload)
                 return envelope.config
             except Exception:
                 pass
@@ -99,7 +102,6 @@ class IntelligenceConfigService:
         for provider_name in ("openai", "ollama", "mock"):
             model = config.llm.model
             base_url = config.llm.base_url
-            api_key = config.llm.api_key
             if provider_name == "openai" and config.llm.provider != "openai":
                 model = "gpt-4.1-mini"
                 base_url = "https://api.openai.com/v1"
@@ -114,7 +116,7 @@ class IntelligenceConfigService:
                     provider_name=provider_name,
                     model=model,
                     base_url=base_url,
-                    api_key=api_key,
+                    api_key=None,
                 )
                 available = provider.is_available()
                 if not available:
@@ -137,7 +139,7 @@ class IntelligenceConfigService:
                 provider_name=request.provider,
                 model=request.model,
                 base_url=request.base_url,
-                api_key=request.api_key,
+                api_key=None,
             )
             available = provider.is_available()
             detail = None if available else "Provider initialized but model/service is unavailable."

@@ -83,7 +83,7 @@ In the Intelligence page, controls cover:
 ### Environment Variables
 There is no separate env toggle required for normal intelligence configuration.
 
-For OpenAI, `OPENAI_API_KEY` is resolved from the environment when not stored in config.
+For OpenAI, `OPENAI_API_KEY` is resolved from the server environment or local `.env` file and is not stored in intelligence config.
 
 For Ollama, `OLLAMA_HOST` can be used as a fallback host in the LLM client when `base_url` is not explicitly passed.
 

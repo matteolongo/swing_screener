@@ -401,7 +401,6 @@ For workspace chat, the service uses config for:
 - provider
 - model
 - base URL
-- API key
 - enabled flag
 
 But the actual chat prompt text is hardcoded in `ChatService`.
@@ -419,7 +418,7 @@ The shared chat model factory supports:
 For workspace chat:
 
 - `mock` is treated as not LLM-ready
-- `openai` requires an API key
+- `openai` requires `OPENAI_API_KEY` from the server environment or local `.env`
 - `ollama` uses the configured local host
 
 Chat inference is created with:

@@ -354,7 +354,6 @@ class FakeConfigService:
                     "provider": self.provider,
                     "model": model,
                     "base_url": base_url,
-                    "api_key": "",
                     "enable_cache": True,
                     "enable_audit": True,
                     "cache_path": "data/intelligence/llm_cache.json",

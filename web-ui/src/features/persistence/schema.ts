@@ -113,7 +113,6 @@ export function createDefaultStrategy(now: Date = new Date()): Strategy {
         provider: 'openai',
         model: 'gpt-4.1-mini',
         baseUrl: 'https://api.openai.com/v1',
-        apiKey: '',
         enableCache: true,
         enableAudit: true,
         cachePath: 'data/intelligence/llm_cache.json',
