@@ -13,7 +13,7 @@ export interface SameSymbolCandidateContext {
   executionStop?: number;
   pendingEntryExists: boolean;
   addOnCount: number;
-  maxAddOns: number;
+  maxAddOns?: number;
   reason: string;
 }
 
@@ -240,7 +240,7 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
             executionStop: c.same_symbol.execution_stop ?? undefined,
             pendingEntryExists: c.same_symbol.pending_entry_exists ?? false,
             addOnCount: c.same_symbol.add_on_count ?? 0,
-            maxAddOns: c.same_symbol.max_add_ons ?? 1,
+            maxAddOns: c.same_symbol.max_add_ons ?? undefined,
             reason: c.same_symbol.reason ?? '',
           }
         : undefined,

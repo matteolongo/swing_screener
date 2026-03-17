@@ -12,7 +12,7 @@ interface ScreenerCandidateSetupCellProps {
 export default function ScreenerCandidateSetupCell({
   candidate,
 }: ScreenerCandidateSetupCellProps) {
-  const showAddOnStops = candidate.sameSymbol?.mode === 'ADD_ON';
+  const showAddOnStops = candidate.sameSymbol?.mode === 'ADD_ON' || candidate.sameSymbol?.mode === 'MANAGE_ONLY';
   const liveStop = candidate.sameSymbol?.currentPositionStop ?? candidate.stop;
   const freshSetupStop = candidate.sameSymbol?.freshSetupStop ?? candidate.stop;
 

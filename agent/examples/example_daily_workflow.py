@@ -70,7 +70,7 @@ async def main():
     
     screening_result = await agent.daily_screening(
         universe="mega_all",
-        top_n=5
+        top=5
     )
     
     candidates = screening_result.get("candidates", [])
@@ -80,8 +80,8 @@ async def main():
         print("\nTop 3 Candidates:")
         for i, candidate in enumerate(candidates[:3], 1):
             ticker = candidate.get("ticker", "Unknown")
-            entry = candidate.get("entry_price", 0)
-            stop = candidate.get("stop_price", 0)
+            entry = candidate.get("entry", 0)
+            stop = candidate.get("stop", 0)
             risk_per_share = entry - stop
             
             print(f"\n{i}. {ticker}")
@@ -106,8 +106,8 @@ async def main():
         ticker = top_candidate.get("ticker", "Unknown")
         
         print(f"Selected: {ticker}")
-        print(f"Entry: ${top_candidate.get('entry_price', 0):.2f}")
-        print(f"Stop:  ${top_candidate.get('stop_price', 0):.2f}")
+        print(f"Entry: ${top_candidate.get('entry', 0):.2f}")
+        print(f"Stop:  ${top_candidate.get('stop', 0):.2f}")
         print()
         print("Code to create order:")
         print("```python")

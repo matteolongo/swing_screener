@@ -51,7 +51,8 @@ class SwingScreenerAgent:
         """Initialize the agent.
         
         Args:
-            server_command: Reserved for backward compatibility.
+            server_command: Optional MCP server launch command. Defaults to
+                `python -m mcp_server.main` in the current Python environment.
         """
         self.client = MCPClient(server_command)
         self.screening_workflow = None
@@ -97,8 +98,8 @@ class SwingScreenerAgent:
     async def daily_screening(
         self,
         universe: str = "mega_all",
-        strategy: Optional[str] = None,
-        top_n: int = 10
+        strategy_id: Optional[str] = None,
+        top: int = 10
     ) -> dict[str, Any]:
         """Execute the daily screening workflow.
         
@@ -111,20 +112,20 @@ class SwingScreenerAgent:
         
         Args:
             universe: Stock universe to screen (default: mega_all)
-            strategy: Strategy to use (default: active strategy)
-            top_n: Number of top candidates to return
+            strategy_id: Strategy to use (default: active strategy)
+            top: Number of top candidates to return
             
         Returns:
             Screening results with candidates and insights
         """
         self._check_running()
         
-        logger.info(f"Running daily screening: universe={universe}, top_n={top_n}")
+        logger.info(f"Running daily screening: universe={universe}, top={top}")
         
         result = await self.screening_workflow.execute(
             universe=universe,
-            strategy=strategy,
-            top_n=top_n
+            strategy_id=strategy_id,
+            top=top
         )
         
         # Print insights to console
@@ -132,7 +133,7 @@ class SwingScreenerAgent:
         print("DAILY SCREENING RESULTS")
         print("=" * 60)
         print(f"Universe: {result['universe']}")
-        print(f"Strategy: {result['strategy']}")
+        print(f"Strategy ID: {result['strategy_id']}")
         print(f"Candidates found: {len(result['candidates'])}")
         print("\nInsights:")
         for insight in result['insights']:
@@ -176,11 +177,11 @@ class SwingScreenerAgent:
         self._check_running()
         
         ticker = candidate.get("ticker")
-        entry_price = candidate.get("entry_price")
-        stop_price = candidate.get("stop_price")
+        entry_price = candidate.get("entry")
+        stop_price = candidate.get("stop")
         
         if not all([ticker, entry_price, stop_price]):
-            raise ValueError("Candidate must have ticker, entry_price, and stop_price")
+            raise ValueError("Candidate must have ticker, entry, and stop")
         
         logger.info(f"Creating order for candidate: {ticker}")
         
@@ -238,13 +239,13 @@ class SwingScreenerAgent:
     async def update_position_stop(
         self,
         position_id: str,
-        new_stop_price: float
+        new_stop: float
     ) -> dict[str, Any]:
         """Update trailing stop for a position.
         
         Args:
             position_id: Position identifier
-            new_stop_price: New stop price (must be higher than current)
+            new_stop: New stop price (must be higher than current)
             
         Returns:
             Update result with insights
@@ -256,7 +257,7 @@ class SwingScreenerAgent:
         result = await self.position_workflow.execute(
             action="update_stop",
             position_id=position_id,
-            new_stop_price=new_stop_price
+            new_stop=new_stop
         )
         
         return result
@@ -287,31 +288,31 @@ class SwingScreenerAgent:
     async def fill_order(
         self,
         order_id: str,
-        fill_price: float,
-        fill_date: Optional[str] = None
+        filled_price: float,
+        filled_date: Optional[str] = None
     ) -> dict[str, Any]:
         """Mark an order as filled after broker execution.
         
         Args:
             order_id: Order identifier
-            fill_price: Actual fill price from broker
-            fill_date: Fill date (default: today)
+            filled_price: Actual fill price from broker
+            filled_date: Fill date (default: today)
             
         Returns:
             Fill result with insights
         """
         self._check_running()
         
-        if fill_date is None:
-            fill_date = datetime.now().strftime("%Y-%m-%d")
+        if filled_date is None:
+            filled_date = datetime.now().strftime("%Y-%m-%d")
         
-        logger.info(f"Filling order {order_id} at ${fill_price}")
+        logger.info(f"Filling order {order_id} at ${filled_price}")
         
         result = await self.order_workflow.execute(
             action="fill",
             order_id=order_id,
-            fill_price=fill_price,
-            fill_date=fill_date
+            filled_price=filled_price,
+            filled_date=filled_date
         )
         
         return result

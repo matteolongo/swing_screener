@@ -93,7 +93,7 @@ async def main():
         print("   ```")
         print("   await agent.update_position_stop(")
         print("       position_id='pos_abc123',")
-        print("       new_stop_price=185.00")
+        print("       new_stop=185.00")
         print("   )")
         print("   ```\n")
     

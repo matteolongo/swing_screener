@@ -8,7 +8,8 @@ The migration in this plan has been completed.
 Canonical reference:
 
 - `/docs/engineering/MODULE_ARCHITECTURE.md`
-- `/docs/engineering/INTELLIGENCE_LANGCHAIN_UI_MIGRATION_PLAN.md`
+- `/docs/engineering/AI_RUNTIME_ARCHITECTURE.md`
+- `/src/swing_screener/intelligence/README.md`
 
 Implemented via branch `cleanup/remove-backtest` in the architecture commits:
 

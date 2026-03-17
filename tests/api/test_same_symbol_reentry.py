@@ -171,10 +171,50 @@ def test_same_symbol_reentry_suppresses_when_pending_entry_exists():
         min_shares=1,
     )
 
-    assert enriched is None
+    assert enriched is not None
+    assert enriched.same_symbol is context
     assert context.mode == "MANAGE_ONLY"
     assert context.pending_entry_exists is True
     assert context.reason == "A pending same-symbol entry already exists."
+
+
+def test_same_symbol_reentry_allows_add_on_after_prior_filled_add_on():
+    evaluator = SameSymbolReentryEvaluator(_FakePortfolioService(action="NO_ACTION"))
+    candidate = _make_candidate()
+    position = make_position(
+        ticker="REP.MC",
+        position_id="POS-REP-1",
+        entry_price=19.63,
+        current_price=23.0,
+        stop_price=19.63,
+        shares=10,
+    )
+    original_entry = make_order(
+        ticker="REP.MC",
+        order_id="ORD-REP-ENTRY-1",
+        status="filled",
+    )
+    original_entry.position_id = "POS-REP-1"
+    prior_add_on = make_order(
+        ticker="REP.MC",
+        order_id="ORD-REP-ADD-1",
+        status="filled",
+    )
+    prior_add_on.position_id = "POS-REP-1"
+
+    enriched, context = evaluator.evaluate(
+        candidate,
+        positions=[position],
+        orders=[original_entry, prior_add_on],
+        account_size=1000.0,
+        risk_pct_target=0.03,
+        max_position_pct=0.6,
+        min_shares=1,
+    )
+
+    assert enriched is not None
+    assert context.mode == "ADD_ON"
+    assert context.add_on_count == 1
 
 
 def test_same_symbol_reentry_suppresses_close_state_positions():
@@ -199,6 +239,7 @@ def test_same_symbol_reentry_suppresses_close_state_positions():
         min_shares=1,
     )
 
-    assert enriched is None
+    assert enriched is not None
+    assert enriched.same_symbol is context
     assert context.mode == "MANAGE_ONLY"
     assert context.reason == "Position is in a close state, so add-on is not allowed."

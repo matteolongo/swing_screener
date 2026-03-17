@@ -49,6 +49,7 @@ interface PositionWithMetricsApiResponse extends PositionApiResponse {
   current_value: number;
   per_share_risk: number;
   total_risk: number;
+  fees_eur: number;
 }
 
 interface PortfolioSummaryApiResponse {
@@ -92,6 +93,7 @@ export interface PositionWithMetrics extends Position {
   currentValue: number;
   perShareRisk: number;
   totalRisk: number;
+  feesEur: number;
 }
 
 export interface PortfolioSummary {
@@ -354,6 +356,7 @@ function transformPositionWithMetrics(data: PositionWithMetricsApiResponse): Pos
     currentValue: data.current_value,
     perShareRisk: data.per_share_risk,
     totalRisk: data.total_risk,
+    feesEur: data.fees_eur ?? 0,
   };
 }
 

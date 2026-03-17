@@ -172,7 +172,7 @@ describe('portfolio local persistence service', () => {
     ).toThrow('REP.MC: open position already exists. Create this as an ADD_ON order instead.');
   });
 
-  it('rejects a second add-on after the add-on limit is reached', () => {
+  it('allows repeated add-ons after prior add-ons are filled', () => {
     createOrderLocal({
       ticker: 'REP.MC',
       orderType: 'BUY_LIMIT',
@@ -212,18 +212,21 @@ describe('portfolio local persistence service', () => {
       stopPrice: 12.2,
     });
 
-    expect(() =>
-      createOrderLocal({
-        ticker: 'REP.MC',
-        orderType: 'BUY_LIMIT',
-        quantity: 3,
-        limitPrice: 13.4,
-        stopPrice: 12.4,
-        orderKind: 'entry',
-        entryMode: 'ADD_ON',
-        positionId,
-      }),
-    ).toThrow('REP.MC: add-on limit reached for this position.');
+    createOrderLocal({
+      ticker: 'REP.MC',
+      orderType: 'BUY_LIMIT',
+      quantity: 3,
+      limitPrice: 13.4,
+      stopPrice: 12.4,
+      orderKind: 'entry',
+      entryMode: 'ADD_ON',
+      positionId,
+    });
+
+    const secondAddOn = listOrdersLocal('pending').find(
+      (order) => order.positionId === positionId && order.orderKind === 'entry' && order.quantity === 3,
+    );
+    expect(secondAddOn).toBeDefined();
   });
 
   it('allows moving stop above entry when current price is unavailable', () => {

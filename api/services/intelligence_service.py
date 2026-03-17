@@ -19,8 +19,6 @@ from api.models.intelligence import (
     IntelligenceEducationViewOutput,
     IntelligenceEventResponse,
     IntelligenceEventsResponse,
-    IntelligenceExplainSymbolRequest,
-    IntelligenceExplainSymbolResponse,
     IntelligenceOpportunityResponse,
     IntelligenceOpportunitiesResponse,
     IntelligenceMetricsResponse,
@@ -432,6 +430,35 @@ def _fallback_learn_view(
     )
 
 
+def _render_education_user_prompt(
+    *,
+    symbol: str,
+    view: EducationViewName,
+    payload: dict[str, Any],
+    template: str,
+) -> str:
+    default_template = (
+        "Return strict JSON only.\n"
+        "Symbol: {{symbol}}\n"
+        "View: {{view}}\n"
+        "Payload:\n{{payload_json}}"
+    )
+    resolved_template = template.replace("\r\n", "\n").strip() or default_template
+    replacements = {
+        "{{symbol}}": symbol,
+        "{{view}}": view,
+        "{{payload_json}}": json.dumps(payload, ensure_ascii=True, separators=(",", ":")),
+        "{{constraints_json}}": json.dumps(payload.get("constraints", {}), ensure_ascii=True, separators=(",", ":")),
+        "{{schema_json}}": json.dumps(payload.get("schema", {}), ensure_ascii=True, separators=(",", ":")),
+        "{{facts_json}}": json.dumps(payload.get("facts", {}), ensure_ascii=True, separators=(",", ":")),
+        "{{context_json}}": json.dumps(payload.get("context", {}), ensure_ascii=True, separators=(",", ":")),
+    }
+    rendered = resolved_template
+    for placeholder, value in replacements.items():
+        rendered = rendered.replace(placeholder, value)
+    return rendered
+
+
 def _invoke_llm_education_view(
     *,
     cfg,
@@ -484,6 +511,13 @@ def _invoke_llm_education_view(
         "facts": facts,
         "context": context,
     }
+    user_prompt_template = str(getattr(llm_cfg, f"education_{view}_user_prompt_template", "")).strip()
+    user_prompt = _render_education_user_prompt(
+        symbol=symbol,
+        view=view,
+        payload=user_payload,
+        template=user_prompt_template,
+    )
 
     try:
         from langchain_core.messages import HumanMessage, SystemMessage
@@ -503,7 +537,7 @@ def _invoke_llm_education_view(
         response = llm.invoke(
             [
                 SystemMessage(content=system_prompt),
-                HumanMessage(content=json.dumps(user_payload, ensure_ascii=True, separators=(",", ":"))),
+                HumanMessage(content=user_prompt),
             ]
         )
 
@@ -1035,40 +1069,3 @@ class IntelligenceService:
         )
 
         return generated
-
-    def explain_symbol(
-        self,
-        request: IntelligenceExplainSymbolRequest,
-    ) -> IntelligenceExplainSymbolResponse:
-        symbol = str(request.symbol).strip().upper()
-        asof_date = self._resolve_asof_date(request.asof_date)
-
-        education = self.generate_symbol_education(
-            IntelligenceEducationGenerateRequest(
-                symbol=symbol,
-                asof_date=asof_date,
-                views=["thesis"],
-                force_refresh=False,
-                candidate_context=request.candidate_context,
-            )
-        )
-
-        thesis_view = education.outputs.get("thesis")
-        if thesis_view is None:
-            raise HTTPException(status_code=500, detail="Failed to generate thesis explanation")
-
-        warning = None
-        for error in education.errors:
-            if error.view == "thesis":
-                warning = error.message
-                break
-
-        return IntelligenceExplainSymbolResponse(
-            symbol=symbol,
-            asof_date=asof_date,
-            explanation=thesis_view.summary,
-            source=thesis_view.source,
-            model=None,
-            warning=warning,
-            generated_at=thesis_view.generated_at,
-        )

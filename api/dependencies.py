@@ -14,6 +14,8 @@ from api.repositories.strategy_repo import StrategyRepository
 from api.repositories.intelligence_config_repo import IntelligenceConfigRepository
 from api.repositories.intelligence_symbol_sets_repo import IntelligenceSymbolSetsRepository
 from api.repositories.watchlist_repo import WatchlistRepository
+from api.services.agent_chat_service import AgentChatService
+from api.services.agent_runtime import AgentRuntime
 from api.services.chat_service import ChatService
 from api.services.intelligence_config_service import IntelligenceConfigService
 from api.services.intelligence_service import IntelligenceService
@@ -34,6 +36,8 @@ WATCHLIST_FILE = DATA_DIR / "watchlist.json"
 # Global singleton config repository (thread-safe)
 _config_repository: Optional[ConfigRepository] = None
 _config_repository_lock = threading.Lock()
+_agent_runtime: Optional[AgentRuntime] = None
+_agent_runtime_lock = threading.Lock()
 
 
 def get_positions_path() -> Path:
@@ -163,3 +167,24 @@ def get_chat_service(
         workspace_context_service=workspace_context_service,
         config_service=config_service,
     )
+
+
+def get_agent_chat_service() -> AgentChatService:
+    return AgentChatService(runtime=get_agent_runtime())
+
+
+def get_agent_runtime() -> AgentRuntime:
+    global _agent_runtime
+    if _agent_runtime is None:
+        with _agent_runtime_lock:
+            if _agent_runtime is None:
+                _agent_runtime = AgentRuntime()
+    return _agent_runtime
+
+
+async def shutdown_agent_runtime() -> None:
+    global _agent_runtime
+    runtime = _agent_runtime
+    _agent_runtime = None
+    if runtime is not None:
+        await runtime.shutdown()

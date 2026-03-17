@@ -1,9 +1,6 @@
 """Market intelligence router."""
 from __future__ import annotations
 
-import hashlib
-from typing import Any
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from api.dependencies import get_intelligence_config_service, get_intelligence_service
@@ -11,8 +8,6 @@ from api.models.intelligence import (
     IntelligenceEventsResponse,
     IntelligenceEducationGenerateRequest,
     IntelligenceEducationGenerateResponse,
-    IntelligenceExplainSymbolRequest,
-    IntelligenceExplainSymbolResponse,
     IntelligenceMetricsResponse,
     IntelligenceOpportunitiesResponse,
     IntelligenceRunLaunchResponse,
@@ -20,9 +15,6 @@ from api.models.intelligence import (
     IntelligenceRunStatusResponse,
     IntelligenceSourcesHealthResponse,
     IntelligenceUpcomingCatalystsResponse,
-    LLMClassifyNewsRequest,
-    LLMClassifyNewsResponse,
-    LLMEventClassificationResponse,
 )
 from api.models.intelligence_config import (
     IntelligenceConfigModel,
@@ -37,63 +29,8 @@ from api.models.intelligence_config import (
 )
 from api.services.intelligence_config_service import IntelligenceConfigService
 from api.services.intelligence_service import IntelligenceService
-from swing_screener.intelligence.llm.factory import build_event_classifier
 
 router = APIRouter()
-
-
-# Singleton classifier cache to reuse instances and avoid file handle leaks.
-_classifier_cache: dict[tuple[str, str, str, str], Any] = {}
-
-
-def _api_key_fingerprint(api_key: str | None) -> str:
-    if not api_key:
-        return ""
-    return hashlib.sha256(api_key.encode("utf-8")).hexdigest()
-
-
-def get_or_create_classifier(
-    provider_name: str,
-    model: str,
-    base_url: str | None = None,
-    api_key: str | None = None,
-) -> Any:
-    """Get or create a singleton EventClassifier for provider/model/base_url/api-key."""
-    normalized_provider = str(provider_name).strip().lower()
-    normalized_model = str(model).strip()
-    normalized_url = str(base_url or "").strip()
-    normalized_key = str(api_key or "").strip()
-    cache_key = (
-        normalized_provider,
-        normalized_model,
-        normalized_url,
-        _api_key_fingerprint(normalized_key),
-    )
-
-    if cache_key not in _classifier_cache:
-        try:
-            classifier = build_event_classifier(
-                provider_name=normalized_provider,
-                model=normalized_model,
-                base_url=normalized_url or None,
-                api_key=normalized_key or None,
-                cache_path="data/intelligence/llm_cache.json",
-                audit_path="data/intelligence/llm_audit",
-                enable_cache=True,
-                enable_audit=True,
-            )
-        except Exception as exc:
-            raise HTTPException(status_code=503, detail=str(exc)) from exc
-
-        if not classifier.provider.is_available():
-            raise HTTPException(
-                status_code=503,
-                detail=f"Provider '{normalized_provider}' model '{normalized_model}' is not available.",
-            )
-
-        _classifier_cache[cache_key] = classifier
-
-    return _classifier_cache[cache_key]
 
 
 @router.get("/config", response_model=IntelligenceConfigModel)
@@ -231,14 +168,6 @@ def get_metrics(
     return service.get_metrics(asof_date=asof_date)
 
 
-@router.post("/explain-symbol", response_model=IntelligenceExplainSymbolResponse)
-def explain_symbol(
-    request: IntelligenceExplainSymbolRequest,
-    service: IntelligenceService = Depends(get_intelligence_service),
-):
-    return service.explain_symbol(request)
-
-
 @router.post("/education/generate", response_model=IntelligenceEducationGenerateResponse)
 def generate_symbol_education(
     request: IntelligenceEducationGenerateRequest,
@@ -254,73 +183,3 @@ def get_symbol_education(
     service: IntelligenceService = Depends(get_intelligence_service),
 ):
     return service.get_cached_symbol_education(symbol=symbol, asof_date=asof_date)
-
-
-@router.post("/classify", response_model=LLMClassifyNewsResponse)
-def classify_news(request: LLMClassifyNewsRequest):
-    """Classify financial news headlines using the configured LLM provider."""
-    provider_name = str(request.provider or "ollama").strip().lower()
-    if provider_name not in LLMClassifyNewsRequest.SUPPORTED_LLM_PROVIDERS:
-        allowed = ", ".join(sorted(LLMClassifyNewsRequest.SUPPORTED_LLM_PROVIDERS))
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unknown provider: {provider_name}. Allowed providers: {allowed}",
-        )
-
-    model_default = "gpt-4o-mini" if provider_name == "openai" else "mistral:7b-instruct"
-    model = str(request.model or model_default).strip() or model_default
-    base_url = str(request.base_url or "").strip() or None
-    api_key = str(request.api_key or "").strip() or None
-
-    try:
-        classifier = get_or_create_classifier(provider_name, model, base_url=base_url, api_key=api_key)
-    except HTTPException:
-        raise
-    except Exception as exc:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to initialize LLM provider: {str(exc)}",
-        ) from exc
-
-    results = []
-    try:
-        for item in request.headlines:
-            result = classifier.classify(
-                headline=item["headline"],
-                snippet=item.get("snippet", ""),
-            )
-
-            classification = LLMEventClassificationResponse(
-                headline=result.news_item.headline,
-                snippet=result.news_item.snippet,
-                event_type=result.classification.event_type.value,
-                severity=result.classification.severity.value,
-                primary_symbol=result.classification.primary_symbol,
-                secondary_symbols=result.classification.secondary_symbols,
-                is_material=result.classification.is_material,
-                confidence=result.classification.confidence,
-                summary=result.classification.summary,
-                model=result.model_name,
-                processing_time_ms=result.processing_time_ms,
-                cached=result.cached,
-            )
-            results.append(classification)
-    except Exception as exc:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Classification failed: {str(exc)}",
-        ) from exc
-
-    total = len(results)
-    avg_time = sum(r.processing_time_ms for r in results) / total if total > 0 else 0
-    cached_count = sum(1 for r in results if r.cached)
-    material_count = sum(1 for r in results if r.is_material)
-
-    return LLMClassifyNewsResponse(
-        total=total,
-        classifications=results,
-        avg_processing_time_ms=avg_time,
-        cached_count=cached_count,
-        material_count=material_count,
-        provider_available=classifier.provider.is_available(),
-    )

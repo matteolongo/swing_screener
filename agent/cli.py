@@ -9,7 +9,7 @@ This CLI allows you to interact with the agent for common workflows:
 
 Example usage:
     # Run daily screening
-    python -m agent.cli screen --universe mega_all --top 10
+    python -m agent.cli screen --universe mega_all --strategy-id default --top 10
     
     # Review positions
     python -m agent.cli positions review
@@ -19,6 +19,9 @@ Example usage:
     
     # Get stop suggestions
     python -m agent.cli positions suggest-stops
+
+    # Fill an order
+    python -m agent.cli orders fill ORD-123 102.45 --filled-date 2026-03-17
 
     # Ask a read-only workspace question
     python -m agent.cli chat "What orders are pending right now?"
@@ -54,8 +57,8 @@ async def cmd_screen(args: argparse.Namespace) -> int:
         
         result = await agent.daily_screening(
             universe=args.universe,
-            strategy=args.strategy,
-            top_n=args.top
+            strategy_id=args.strategy_id,
+            top=args.top
         )
         
         # Print candidates
@@ -63,8 +66,8 @@ async def cmd_screen(args: argparse.Namespace) -> int:
             print("\n📊 Top Candidates:")
             for i, candidate in enumerate(result["candidates"], 1):
                 print(f"\n{i}. {candidate.get('ticker', 'Unknown')}")
-                print(f"   Entry: ${candidate.get('entry_price', 0):.2f}")
-                print(f"   Stop:  ${candidate.get('stop_price', 0):.2f}")
+                print(f"   Entry: ${candidate.get('entry', 0):.2f}")
+                print(f"   Stop:  ${candidate.get('stop', 0):.2f}")
                 if "momentum_6m" in candidate:
                     print(f"   Momentum: {candidate['momentum_6m']:.1%}")
                 if "rank_score" in candidate:
@@ -162,7 +165,7 @@ async def cmd_positions_update_stop(args: argparse.Namespace) -> int:
         
         result = await agent.update_position_stop(
             position_id=args.position_id,
-            new_stop_price=args.stop_price
+            new_stop=args.new_stop
         )
         
         print(f"\n✅ Stop updated for position {args.position_id}")
@@ -229,11 +232,11 @@ async def cmd_orders_fill(args: argparse.Namespace) -> int:
         
         result = await agent.fill_order(
             order_id=args.order_id,
-            fill_price=args.fill_price,
-            fill_date=args.fill_date
+            filled_price=args.filled_price,
+            filled_date=args.filled_date
         )
         
-        print(f"\n✅ Order {args.order_id} filled at ${args.fill_price}")
+        print(f"\n✅ Order {args.order_id} filled at ${args.filled_price}")
         
         if result.get("result", {}).get("position_created"):
             print(f"   Position created: {result['result'].get('position_id')}")
@@ -339,7 +342,7 @@ def main() -> int:
     # Screen command
     screen_parser = subparsers.add_parser("screen", help="Run screening workflow")
     screen_parser.add_argument("--universe", default="mega_all", help="Stock universe")
-    screen_parser.add_argument("--strategy", help="Strategy to use (default: active)")
+    screen_parser.add_argument("--strategy-id", help="Strategy ID to use (default: active)")
     screen_parser.add_argument("--top", type=int, default=10, help="Number of top candidates")
     screen_parser.add_argument("--output", help="Save results to JSON file")
     
@@ -352,7 +355,7 @@ def main() -> int:
     
     update_stop_parser = pos_subparsers.add_parser("update-stop", help="Update position stop")
     update_stop_parser.add_argument("position_id", help="Position ID")
-    update_stop_parser.add_argument("stop_price", type=float, help="New stop price")
+    update_stop_parser.add_argument("new_stop", type=float, help="New stop price")
     
     # Orders commands
     orders_parser = subparsers.add_parser("orders", help="Order management")
@@ -367,8 +370,8 @@ def main() -> int:
     
     fill_order_parser = ord_subparsers.add_parser("fill", help="Fill an order")
     fill_order_parser.add_argument("order_id", help="Order ID")
-    fill_order_parser.add_argument("fill_price", type=float, help="Fill price")
-    fill_order_parser.add_argument("--fill-date", help="Fill date (YYYY-MM-DD)")
+    fill_order_parser.add_argument("filled_price", type=float, help="Filled price")
+    fill_order_parser.add_argument("--filled-date", help="Filled date (YYYY-MM-DD)")
     
     # Daily review command
     subparsers.add_parser("daily-review", help="Run comprehensive daily review")

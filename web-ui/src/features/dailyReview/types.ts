@@ -181,7 +181,7 @@ export function transformCandidate(api: DailyReviewCandidateAPI): DailyReviewCan
           executionStop: api.same_symbol.execution_stop ?? undefined,
           pendingEntryExists: api.same_symbol.pending_entry_exists ?? false,
           addOnCount: api.same_symbol.add_on_count ?? 0,
-          maxAddOns: api.same_symbol.max_add_ons ?? 1,
+          maxAddOns: api.same_symbol.max_add_ons ?? undefined,
           reason: api.same_symbol.reason ?? '',
         }
       : undefined,

@@ -7,9 +7,6 @@ from typing import Optional
 from api.models.recommendation import Recommendation, RecommendationRisk
 from api.models.screener import SameSymbolCandidateContext, ScreenerCandidate
 
-MAX_ADD_ONS_PER_POSITION = 1
-
-
 def _safe_round(value: Optional[float], digits: int = 4) -> Optional[float]:
     if value is None or not math.isfinite(value):
         return None
@@ -149,7 +146,6 @@ class SameSymbolReentryEvaluator:
             execution_stop=_safe_round(current_stop),
             pending_entry_exists=pending_entry_exists,
             add_on_count=add_on_count,
-            max_add_ons=MAX_ADD_ONS_PER_POSITION,
             reason="Existing position requires management-only handling.",
         )
 
@@ -160,26 +156,28 @@ class SameSymbolReentryEvaluator:
             return None, context
         if entry_price is None or entry_price <= 0:
             context.reason = "Fresh setup entry is missing, so no add-on can be evaluated."
-            return None, context
+            candidate.same_symbol = context
+            return candidate, context
         if current_stop >= entry_price:
             context.reason = "Current live stop is not below the new entry, so add-on risk is invalid."
-            return None, context
+            candidate.same_symbol = context
+            return candidate, context
         if pending_entry_exists:
             context.reason = "A pending same-symbol entry already exists."
-            return None, context
-        if add_on_count >= MAX_ADD_ONS_PER_POSITION:
-            context.reason = "Maximum add-on count reached for this position."
-            return None, context
+            candidate.same_symbol = context
+            return candidate, context
 
         try:
             stop_action = self._stop_action_for_position(position_id)
         except Exception as exc:  # pragma: no cover - defensive service wrapper
             context.reason = f"Could not evaluate live stop action: {exc}"
-            return None, context
+            candidate.same_symbol = context
+            return candidate, context
 
         if stop_action not in {"NO_ACTION", "MOVE_STOP_UP", None}:
             context.reason = "Position is in a close state, so add-on is not allowed."
-            return None, context
+            candidate.same_symbol = context
+            return candidate, context
 
         risk_per_share = float(entry_price) - current_stop
         remaining_risk_budget = (account_size * risk_pct_target) - _current_position_risk(matching_position)
@@ -192,7 +190,8 @@ class SameSymbolReentryEvaluator:
 
         if add_on_shares < max(1, min_shares):
             context.reason = "Remaining risk or position capacity does not support a valid add-on size."
-            return None, context
+            candidate.same_symbol = context
+            return candidate, context
 
         adjusted_recommendation = _copy_recommendation_with_adjusted_risk(
             recommendation,

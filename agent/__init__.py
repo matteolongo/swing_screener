@@ -1,4 +1,4 @@
-"""Swing Screener Agent - AI-driven workflow automation via MCP.
+"""Swing Screener Agent - AI-driven workflow automation via stdio MCP.
 
 This package provides an intelligent agent that connects to the MCP server
 to automate trading workflows including:
@@ -7,7 +7,8 @@ to automate trading workflows including:
 - Position management and stop updates
 - Educational insights and analysis
 
-The agent acts as an MCP client, orchestrating tool calls to mimic
+The agent acts as an MCP client, launching the local MCP server and orchestrating
+tool calls to mimic
 the daily trading routine while providing explanations and feedback.
 """
 from __future__ import annotations

@@ -1,6 +1,6 @@
 # MCP Server - Swing Screener
 
-Model Context Protocol (MCP) server that exposes Swing Screener functionality as tools for AI clients.
+Model Context Protocol (MCP) server that exposes Swing Screener functionality as tools for AI clients. This is the canonical transport for the `agent/` package.
 
 ## Run
 ```bash
@@ -45,12 +45,23 @@ Social:
 - `get_social_sentiment`
 - `analyze_ticker_sentiment`
 
-Not implemented as MCP tools:
-- Intelligence
+Intelligence:
+- `get_workspace_context`
+- `get_intelligence_opportunities`
+- `get_intelligence_events`
+- `chat_answer`
 
 ## Architecture Notes
-- Tools reuse services in `api/services/`.
+- Tools reuse shared services in `api/services/`.
 - Feature toggles live in `config/mcp_features.yaml`.
+- The agent launches this server over stdio and discovers tools from the live registry instead of a hardcoded adapter table.
+- MCP tool schemas are canonical now. Legacy aliases such as `top_n`, `strategy`, `fill_price`, `fill_date`, and `new_stop_price` are not accepted.
+
+## Canonical Tool Arguments
+- `run_screener`: `universe`, `top`, `strategy_id`, optional filters
+- `preview_order`: `ticker`, `entry_price`, `stop_price`, optional risk inputs
+- `fill_order`: `order_id`, `filled_price`, `filled_date`, optional `stop_price`
+- `update_position_stop`: `position_id`, `new_stop`, optional `reason`
 
 ## Related Docs
 - `docs/overview/INDEX.md`

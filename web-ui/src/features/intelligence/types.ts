@@ -559,28 +559,6 @@ export interface IntelligenceExplainCandidateContextAPI {
   rel_strength?: number;
 }
 
-export interface IntelligenceExplainSymbolRequest {
-  symbol: string;
-  asofDate?: string;
-  candidateContext?: IntelligenceExplainCandidateContext;
-}
-
-export interface IntelligenceExplainSymbolRequestAPI {
-  symbol: string;
-  asof_date?: string;
-  candidate_context?: IntelligenceExplainCandidateContextAPI;
-}
-
-export interface IntelligenceExplainSymbolResponse {
-  symbol: string;
-  asofDate: string;
-  explanation: string;
-  source: 'llm' | 'deterministic_fallback';
-  model?: string;
-  warning?: string;
-  generatedAt: string;
-}
-
 export type IntelligenceEducationView = 'recommendation' | 'thesis' | 'learn';
 export type IntelligenceEducationSource = 'llm' | 'deterministic_fallback';
 export type IntelligenceEducationRequestSource = 'llm' | 'deterministic_fallback' | 'cache';
@@ -625,16 +603,6 @@ export interface IntelligenceEducationGenerateResponse {
   templateVersion: string;
   deterministicFacts: Record<string, string>;
   errors: IntelligenceEducationError[];
-}
-
-export interface IntelligenceExplainSymbolResponseAPI {
-  symbol: string;
-  asof_date: string;
-  explanation: string;
-  source: 'llm' | 'deterministic_fallback';
-  model?: string | null;
-  warning?: string | null;
-  generated_at: string;
 }
 
 export interface IntelligenceEducationErrorAPI {
@@ -974,30 +942,6 @@ export function toExplainCandidateContextAPI(
     momentum_6m: context.momentum6m,
     momentum_12m: context.momentum12m,
     rel_strength: context.relStrength,
-  };
-}
-
-export function toExplainSymbolRequestAPI(
-  request: IntelligenceExplainSymbolRequest
-): IntelligenceExplainSymbolRequestAPI {
-  return {
-    symbol: request.symbol.trim().toUpperCase(),
-    asof_date: request.asofDate,
-    candidate_context: toExplainCandidateContextAPI(request.candidateContext),
-  };
-}
-
-export function transformExplainSymbolResponse(
-  api: IntelligenceExplainSymbolResponseAPI
-): IntelligenceExplainSymbolResponse {
-  return {
-    symbol: api.symbol,
-    asofDate: api.asof_date,
-    explanation: api.explanation,
-    source: api.source,
-    model: api.model ?? undefined,
-    warning: api.warning ?? undefined,
-    generatedAt: api.generated_at,
   };
 }
 

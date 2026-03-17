@@ -43,4 +43,3 @@ describe('transformDailyReview', () => {
     expect(result.newCandidates[0].executionNote).toContain('BUY STOP');
   });
 });
-

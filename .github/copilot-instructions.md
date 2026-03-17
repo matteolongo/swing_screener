@@ -173,7 +173,7 @@ If a change:
 
 ## Additional Resources
 
-- **[WELCOME.md](../docs/overview/WELCOME.md)** - New contributor onboarding
+- **[WELCOME.md](../docs/overview/WELCOME.md)** - New contributor onboarding and system principles
 - **[ROADMAP.md](../docs/engineering/ROADMAP.md)** - Feature status and priorities
 - **[README.md](../README.md)** - Project setup and usage
 - **[docs/WEB_UI_GUIDE.md](../web-ui/docs/WEB_UI_GUIDE.md)** - Complete Web UI documentation

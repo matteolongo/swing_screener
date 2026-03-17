@@ -5,9 +5,6 @@ import {
   IntelligenceEducationGenerateResponseAPI,
   IntelligenceEventsResponse,
   IntelligenceEventsResponseAPI,
-  IntelligenceExplainSymbolRequest,
-  IntelligenceExplainSymbolResponse,
-  IntelligenceExplainSymbolResponseAPI,
   IntelligenceConfig,
   IntelligenceConfigAPI,
   IntelligenceOpportunitiesResponse,
@@ -36,14 +33,12 @@ import {
   IntelligenceUpcomingCatalystsResponseAPI,
   toIntelligenceConfigAPI,
   toEducationGenerateRequestAPI,
-  toExplainSymbolRequestAPI,
   toProviderTestRequestAPI,
   transformEducationGenerateResponse,
   transformIntelligenceEventsResponse,
   transformIntelligenceMetricsResponse,
   transformIntelligenceSourcesHealthResponse,
   transformIntelligenceUpcomingCatalystsResponse,
-  transformExplainSymbolResponse,
   transformIntelligenceConfig,
   transformIntelligenceOpportunitiesResponse,
   transformIntelligenceRunLaunchResponse,
@@ -300,22 +295,6 @@ export async function fetchIntelligenceMetrics(asofDate?: string): Promise<Intel
   }
   const payload: IntelligenceMetricsResponseAPI = await response.json();
   return transformIntelligenceMetricsResponse(payload);
-}
-
-export async function explainIntelligenceSymbol(
-  request: IntelligenceExplainSymbolRequest
-): Promise<IntelligenceExplainSymbolResponse> {
-  const response = await fetch(apiUrl(API_ENDPOINTS.intelligenceExplainSymbol), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(toExplainSymbolRequestAPI(request)),
-  });
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.detail || 'Failed to explain intelligence symbol');
-  }
-  const payload: IntelligenceExplainSymbolResponseAPI = await response.json();
-  return transformExplainSymbolResponse(payload);
 }
 
 export async function generateIntelligenceEducation(

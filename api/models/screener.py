@@ -24,7 +24,7 @@ class SameSymbolCandidateContext(BaseModel):
     execution_stop: Optional[float] = None
     pending_entry_exists: bool = False
     add_on_count: int = 0
-    max_add_ons: int = 1
+    max_add_ons: Optional[int] = None
     reason: str = ""
 
 

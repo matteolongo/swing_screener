@@ -1,32 +1,34 @@
 # Documentation Index
 
 > Status: current.  
-> Last reviewed: 2026-02-17.
+> Last reviewed: 2026-03-17.
 
 ## Overview
 - `/README.md`
 - `/docs/overview/WELCOME.md`
 - `/docs/overview/AGENTS.md`
-- `/docs/overview/SYSTEM_DESIGN_NOTES.md`
+
+## AI / LLM Canonical Docs
+- `/docs/engineering/AI_RUNTIME_ARCHITECTURE.md`
+- `/docs/engineering/WORKSPACE_CHAT_ANALYSIS.md`
+- `/src/swing_screener/intelligence/README.md`
 
 ## Engineering
 - `/docs/engineering/ROADMAP.md`
 - `/docs/engineering/MODULE_ARCHITECTURE.md`
-- `/docs/engineering/MODULE_ARCHITECTURE_MIGRATION_PLAN.md` (archived)
-- `/docs/engineering/REFACTOR_PLAN.md`
-- `/docs/engineering/REFACTOR_PLAN_UI_API.md`
-- `/docs/engineering/CODE_REVIEW.md`
 - `/docs/engineering/DATABASE_MIGRATION.md`
 - `/docs/engineering/OPERATIONAL_GUIDE.md`
 - `/docs/engineering/TROUBLESHOOTING.md`
 - `/docs/engineering/GITHUB_ACTIONS.md`
-- `/docs/engineering/PHASE2_IMPLEMENTATION_SUMMARY.md`
+
+## Archived Snapshots
+- `/docs/engineering/MODULE_ARCHITECTURE_MIGRATION_PLAN.md`
+- `/docs/engineering/CODE_REVIEW.md`
 
 ## Product
 - `/docs/product/DAILY_USAGE_GUIDE.md`
 
 ## Education
-- `/docs/education/EDUCATIONAL_TRANSFORMATION_SUMMARY.md`
 - `/docs/education/RECOMMENDED_LOGIC_BEGINNER_GUIDE.md`
 - `/docs/education/RECOMMENDED_LOGIC_BEGINNER_GUIDE_EN.md`
 - `/docs/education/RECOMMENDED_LOGIC_UI_COPY.md`
@@ -52,7 +54,6 @@ Data Providers:
 - `/src/swing_screener/data/docs/INDICATOR_VALIDATION.md`
 
 Intelligence and Social:
-- `/src/swing_screener/intelligence/README.md`
 - `/src/swing_screener/social/docs/SENTIMENT_PLUGIN_GUIDE.md`
 
 Config:

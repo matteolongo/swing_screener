@@ -2,7 +2,6 @@ import Card from '@/components/common/Card';
 import CachedSymbolPriceChart from '@/components/domain/market/CachedSymbolPriceChart';
 import ActionPanel from '@/components/domain/workspace/ActionPanel';
 import KeyMetrics from '@/components/domain/workspace/KeyMetrics';
-import WorkspaceChatPanel from '@/components/domain/workspace/WorkspaceChatPanel';
 import WorkspaceSentimentPanel from '@/components/domain/workspace/WorkspaceSentimentPanel';
 import type { SymbolIntelligenceStatus } from '@/features/intelligence/useSymbolIntelligenceRunner';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
@@ -36,7 +35,7 @@ export default function AnalysisCanvasPanel({
     <Card
       id="workspace-analysis-canvas"
       variant="bordered"
-      className="p-4 md:p-5 flex flex-col gap-4"
+      className="p-4 md:p-5 flex min-h-0 flex-col gap-4 xl:h-full"
     >
       <div>
         <h2 className="text-lg font-semibold">{t('workspacePage.panels.analysis.title')}</h2>
@@ -46,18 +45,15 @@ export default function AnalysisCanvasPanel({
       </div>
 
       {!selectedTicker ? (
-        <>
-          <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-700 p-6">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              {t('workspacePage.panels.analysis.empty')}
-            </p>
-          </div>
-          <WorkspaceChatPanel embedded />
-        </>
+        <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-700 p-6">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {t('workspacePage.panels.analysis.empty')}
+          </p>
+        </div>
       ) : (
         <>
           <div
-            className="flex w-full items-center gap-1 overflow-x-auto rounded-lg border border-gray-200 bg-gray-50 p-1"
+            className="flex-shrink-0 flex w-full items-center gap-1 overflow-x-auto rounded-lg border border-gray-200 bg-gray-50 p-1"
             role="tablist"
             aria-label={t('workspacePage.panels.analysis.title')}
           >
@@ -81,7 +77,7 @@ export default function AnalysisCanvasPanel({
             })}
           </div>
 
-          <div className="space-y-3">
+          <div className="flex-1 min-h-0 overflow-y-auto space-y-3">
             {activeTab === 'overview' && (
               <>
                 <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white p-3">
@@ -154,7 +150,6 @@ export default function AnalysisCanvasPanel({
 
             {activeTab === 'order' && <ActionPanel ticker={selectedTicker} />}
           </div>
-          <WorkspaceChatPanel embedded />
         </>
       )}
     </Card>

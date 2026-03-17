@@ -9,6 +9,7 @@ import logging
 from typing import Any
 
 from mcp.server import Server
+from mcp.server.lowlevel.server import NotificationOptions
 from mcp.server.models import InitializationOptions
 from mcp.server.stdio import stdio_server
 from mcp import types
@@ -127,7 +128,7 @@ class SwingScreenerMCP:
                 server_name=self.config.server.name,
                 server_version=self.config.server.version,
                 capabilities=self.server.get_capabilities(
-                    notification_options=None,
+                    notification_options=NotificationOptions(),
                     experimental_capabilities={}
                 )
             )

@@ -50,7 +50,6 @@ export const API_ENDPOINTS = {
   intelligenceUpcomingCatalysts: '/api/intelligence/upcoming-catalysts',
   intelligenceSourcesHealth: '/api/intelligence/sources/health',
   intelligenceMetrics: '/api/intelligence/metrics',
-  intelligenceExplainSymbol: '/api/intelligence/explain-symbol',
   intelligenceEducationGenerate: '/api/intelligence/education/generate',
   intelligenceEducationBySymbol: (symbol: string) => `/api/intelligence/education/${encodeURIComponent(symbol)}`,
 
