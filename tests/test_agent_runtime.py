@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import asyncio
 import sys
+
+import pytest
 from fastapi.testclient import TestClient
 
+import agent.client as agent_client_module
 from agent.agent import SwingScreenerAgent
 from api.dependencies import get_agent_chat_service
 from api.main import app
@@ -19,8 +22,13 @@ class FakeAgentChatService:
         return FakeChatService().answer(request)
 
 
+@pytest.fixture(autouse=True)
+def patch_default_server_command(monkeypatch):
+    monkeypatch.setattr(agent_client_module, "_default_server_command", lambda: list(SERVER_COMMAND))
+
+
 async def _ask_agent_question() -> dict:
-    agent = SwingScreenerAgent(server_command=SERVER_COMMAND)
+    agent = SwingScreenerAgent()
     await agent.start()
     try:
         return await agent.ask("What pending orders do I have?", selected_ticker="AAPL")
@@ -29,7 +37,7 @@ async def _ask_agent_question() -> dict:
 
 
 async def _load_agent_tools() -> list[str]:
-    agent = SwingScreenerAgent(server_command=SERVER_COMMAND)
+    agent = SwingScreenerAgent()
     await agent.start()
     try:
         return agent.get_available_tools()
@@ -38,7 +46,7 @@ async def _load_agent_tools() -> list[str]:
 
 
 async def _run_agent_flows() -> tuple[dict, dict, dict]:
-    agent = SwingScreenerAgent(server_command=SERVER_COMMAND)
+    agent = SwingScreenerAgent()
     await agent.start()
     try:
         screening = await agent.daily_screening(universe="mega_all", top=1)

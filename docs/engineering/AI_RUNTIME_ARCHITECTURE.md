@@ -28,9 +28,10 @@ flowchart TD
 
 ## Runtime Rules
 
-- Web UI remains API-first at the HTTP boundary, but workspace chat now routes through a lazy persistent agent MCP runtime behind `/api/chat/answer`.
+- Web UI remains API-first at the HTTP boundary, but workspace chat now routes through a persistent self-healing agent MCP runtime behind `/api/chat/answer`.
 - Agent tooling is MCP-first. `agent/client.py` launches the local MCP server over stdio and discovers tools from the live registry.
 - MCP tool contracts are single-source now. The server no longer accepts legacy alias parameters that only existed for the old direct adapter path.
+- The API-side runtime retries one read-only chat request once after an MCP/session failure by restarting the cached agent.
 - Shared business logic stays in services:
   - `api/services/chat_service.py`
   - `api/services/workspace_context_service.py`
@@ -52,6 +53,9 @@ flowchart TD
 - Workspace chat:
   - Web UI -> `/api/chat/answer` -> `AgentChatService` -> persistent agent runtime -> MCP `chat_answer`
   - Agent -> MCP `chat_answer`
+- Runtime observability:
+  - `/health` includes `checks.agent_runtime`
+  - `/metrics` includes `agent_runtime_running` and `agent_runtime_restart_total`
 - Intelligence pipeline:
   - `/api/intelligence/run`
   - `/api/intelligence/opportunities`

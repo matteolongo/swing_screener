@@ -21,7 +21,8 @@ The important implementation detail is that there is one real chat engine:
 
 - `ChatService`
 
-The API, agent, and MCP layers now forward requests into that service through the same agent+MCP path, and the API side keeps a lazy persistent backend agent runtime instead of starting a fresh one for each request.
+The API, agent, and MCP layers now forward requests into that service through the same agent+MCP path, and the API side keeps a persistent backend agent runtime instead of starting a fresh one for each request.
+That runtime is self-healing for the chat path: if one MCP-backed `ask()` call fails, it discards the cached agent, starts a fresh one, and retries the read-only request once.
 
 ## High-Level Flow
 
@@ -42,6 +43,12 @@ flowchart TD
     M --> N["Return response"]
     N --> O["UI renders answer, warnings, facts used, source badges"]
 ```
+
+The same runtime also exposes lightweight operational state through the API:
+
+- `/health` includes `checks.agent_runtime`
+- `/metrics` includes `agent_runtime_running`
+- `/metrics` includes `agent_runtime_restart_total`
 
 ## Request Data From The UI
 
