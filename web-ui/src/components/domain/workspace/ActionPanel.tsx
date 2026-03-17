@@ -1,5 +1,6 @@
 import OrderReviewExperience from '@/components/domain/orders/OrderReviewExperience';
-import { useCreateOrderMutation } from '@/features/portfolio/hooks';
+import { useCreateOrderMutation, useOpenPositions } from '@/features/portfolio/hooks';
+import type { SameSymbolCandidateContext } from '@/features/screener/types';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { DEFAULT_CONFIG } from '@/types/config';
@@ -14,22 +15,40 @@ export default function ActionPanel({ ticker }: ActionPanelProps) {
   const normalizedTicker = ticker.trim().toUpperCase();
   const activeStrategyQuery = useActiveStrategyQuery();
   const risk = activeStrategyQuery.data?.risk ?? DEFAULT_CONFIG.risk;
+  const openPositionsQuery = useOpenPositions();
+  const openPosition = openPositionsQuery.data?.find((position) => position.ticker.toUpperCase() === normalizedTicker);
   const candidate = useScreenerStore((state) =>
     state.lastResult?.candidates.find((item) => item.ticker.toUpperCase() === normalizedTicker)
   );
   const createOrderMutation = useCreateOrderMutation();
+  const effectiveSameSymbol: SameSymbolCandidateContext | undefined = candidate?.sameSymbol?.mode === 'ADD_ON'
+    ? candidate.sameSymbol
+    : openPosition
+      ? {
+          mode: 'ADD_ON',
+          positionId: openPosition.positionId,
+          currentPositionEntry: openPosition.entryPrice,
+          currentPositionStop: openPosition.stopPrice,
+          freshSetupStop: candidate?.sameSymbol?.freshSetupStop ?? candidate?.stop,
+          executionStop: openPosition.stopPrice,
+          pendingEntryExists: candidate?.sameSymbol?.pendingEntryExists ?? false,
+          addOnCount: candidate?.sameSymbol?.addOnCount ?? 0,
+          maxAddOns: candidate?.sameSymbol?.maxAddOns,
+          reason: 'Workspace inferred add-on mode from the current open position.',
+        }
+      : candidate?.sameSymbol;
 
   const defaultNotes = candidate
-    ? candidate.sameSymbol?.mode === 'ADD_ON'
+    ? effectiveSameSymbol?.mode === 'ADD_ON'
       ? t('screener.addOnNotes', {
           score: formatScreenerScore(candidate.score ?? 0),
           confidence: formatConfidencePercent(candidate.confidence ?? 0),
           rank: candidate.rank,
-          liveStop: candidate.sameSymbol.currentPositionStop != null
-            ? formatCurrency(candidate.sameSymbol.currentPositionStop, candidate.currency)
+          liveStop: effectiveSameSymbol.currentPositionStop != null
+            ? formatCurrency(effectiveSameSymbol.currentPositionStop, candidate.currency)
             : '—',
-          freshStop: candidate.sameSymbol.freshSetupStop != null
-            ? formatCurrency(candidate.sameSymbol.freshSetupStop, candidate.currency)
+          freshStop: effectiveSameSymbol.freshSetupStop != null
+            ? formatCurrency(effectiveSameSymbol.freshSetupStop, candidate.currency)
             : '—',
         })
       : t('screener.defaultNotes', {
@@ -56,7 +75,9 @@ export default function ActionPanel({ ticker }: ActionPanelProps) {
           signal: candidate?.signal,
           close: candidate?.close,
           entry: candidate?.entry,
-          stop: candidate?.stop,
+          stop: effectiveSameSymbol?.mode === 'ADD_ON' && effectiveSameSymbol.executionStop != null
+            ? effectiveSameSymbol.executionStop
+            : candidate?.stop,
           shares: candidate?.shares,
           recommendation: candidate?.recommendation,
           sector: candidate?.sector,
@@ -68,8 +89,8 @@ export default function ActionPanel({ ticker }: ActionPanelProps) {
           suggestedOrderType: candidate?.suggestedOrderType,
           suggestedOrderPrice: candidate?.suggestedOrderPrice,
           executionNote: candidate?.executionNote,
-          positionId: candidate?.sameSymbol?.positionId,
-          sameSymbol: candidate?.sameSymbol,
+          positionId: effectiveSameSymbol?.positionId,
+          sameSymbol: effectiveSameSymbol,
         }}
         risk={risk}
         defaultNotes={defaultNotes}

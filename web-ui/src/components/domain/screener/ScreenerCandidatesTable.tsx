@@ -126,7 +126,7 @@ export default function ScreenerCandidatesTable({
   };
 
   const orderActionLabel = (candidate: ScreenerCandidate) =>
-    candidate.sameSymbol?.mode === 'ADD_ON'
+    candidate.sameSymbol?.mode === 'ADD_ON' || candidate.sameSymbol?.mode === 'MANAGE_ONLY'
       ? t('screener.table.addOnAction')
       : t('screener.table.createOrderAction');
 
@@ -134,7 +134,7 @@ export default function ScreenerCandidatesTable({
     if (verdict === 'NOT_RECOMMENDED') {
       return t('screener.table.createOrderNotRecommendedTitle');
     }
-    return candidate.sameSymbol?.mode === 'ADD_ON'
+    return candidate.sameSymbol?.mode === 'ADD_ON' || candidate.sameSymbol?.mode === 'MANAGE_ONLY'
       ? t('screener.table.addOnTitle')
       : t('screener.table.createOrderTitle');
   };

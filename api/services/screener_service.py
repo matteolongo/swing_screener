@@ -655,8 +655,10 @@ class ScreenerService:
                 if same_symbol.mode == "ADD_ON":
                     same_symbol_add_on_count += 1
                 if same_symbol.mode == "MANAGE_ONLY":
-                    same_symbol_suppressed_count += 1
-                    continue
+                    if enriched_candidate is None:
+                        same_symbol_suppressed_count += 1
+                        continue
+                    # Recommended but add-on conditions not met: show with MANAGE_ONLY flag
                 if enriched_candidate is not None:
                     filtered_candidates.append(enriched_candidate)
 

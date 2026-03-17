@@ -73,6 +73,11 @@ export default function ScreenerCandidateIdentityCell({
             {t('screener.identity.addOnLabel')}
           </span>
         ) : null}
+        {candidate.sameSymbol?.mode === 'MANAGE_ONLY' ? (
+          <span className="rounded bg-violet-100 px-2 py-1 text-xs text-violet-800 dark:bg-violet-900/40 dark:text-violet-200">
+            {t('screener.identity.inPositionLabel')}
+          </span>
+        ) : null}
       </div>
       {watchContent}
       <CachedSymbolPriceChart ticker={candidate.ticker} />

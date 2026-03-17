@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { screen } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ActionPanel from '@/components/domain/workspace/ActionPanel';
 import { renderWithProviders } from '@/test/utils';
@@ -7,6 +7,10 @@ import { useScreenerStore } from '@/stores/screenerStore';
 
 const { mutateMock } = vi.hoisted(() => ({
   mutateMock: vi.fn(),
+}));
+
+const { openPositionsMock } = vi.hoisted(() => ({
+  openPositionsMock: vi.fn(),
 }));
 
 vi.mock('@/features/strategy/hooks', () => ({
@@ -28,6 +32,9 @@ vi.mock('@/features/strategy/hooks', () => ({
 vi.mock('@/features/portfolio/hooks', () => ({
   useCreateOrderMutation: () => ({
     mutateAsync: mutateMock,
+  }),
+  useOpenPositions: () => ({
+    data: openPositionsMock(),
   }),
 }));
 
@@ -94,6 +101,8 @@ function setCandidate(overrides: Record<string, unknown> = {}) {
 describe('ActionPanel', () => {
   beforeEach(() => {
     mutateMock.mockReset();
+    openPositionsMock.mockReset();
+    openPositionsMock.mockReturnValue([]);
     setCandidate();
   });
 
@@ -187,5 +196,50 @@ describe('ActionPanel', () => {
 
     expect(screen.getByText(/Buy Stop trigger must be above current price/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Create Order' })).toBeDisabled();
+  });
+
+  it('submits as ADD_ON when a live open position exists even if screener metadata is stale', async () => {
+    const user = userEvent.setup();
+    openPositionsMock.mockReturnValue([
+      {
+        ticker: 'AAPL',
+        status: 'open',
+        entryDate: '2026-03-10',
+        entryPrice: 95,
+        stopPrice: 90,
+        shares: 10,
+        positionId: 'POS-AAPL-1',
+      },
+    ]);
+    setCandidate({
+      sameSymbol: {
+        mode: 'NEW_ENTRY',
+        pendingEntryExists: false,
+        addOnCount: 0,
+        maxAddOns: 1,
+        reason: 'stale snapshot',
+      },
+    });
+    mutateMock.mockResolvedValue(undefined);
+
+    renderWithProviders(<ActionPanel ticker="AAPL" />);
+
+    expect(screen.getByLabelText('Notes')).toHaveValue(
+      'Same-symbol add-on: Score 80.0, Confidence 88.0%, Rank #1, Live stop $90.00, Fresh setup stop $97.00'
+    );
+
+    const submit = screen.getByRole('button', { name: 'Create Order' });
+    expect(submit).toBeEnabled();
+    fireEvent.submit(submit.closest('form')!);
+
+    await waitFor(() =>
+      expect(mutateMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ticker: 'AAPL',
+          entryMode: 'ADD_ON',
+          positionId: 'POS-AAPL-1',
+        }),
+      )
+    );
   });
 });

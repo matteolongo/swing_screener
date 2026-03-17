@@ -133,7 +133,7 @@ def test_create_order_rejects_second_pending_add_on(tmp_path, mock_provider):
     assert exc_info.value.detail == "REP.MC: pending entry order already exists."
 
 
-def test_create_order_rejects_add_on_after_limit_reached(tmp_path, mock_provider):
+def test_create_order_allows_multiple_filled_add_ons(tmp_path, mock_provider):
     service, orders_file = _build_service(tmp_path, mock_provider)
     _write_json(
         orders_file,
@@ -178,19 +178,17 @@ def test_create_order_rejects_add_on_after_limit_reached(tmp_path, mock_provider
         },
     )
 
-    with pytest.raises(HTTPException) as exc_info:
-        service.create_order(
-            CreateOrderRequest(
-                ticker="REP.MC",
-                order_type="BUY_LIMIT",
-                quantity=2,
-                limit_price=23.1,
-                stop_price=19.63,
-                order_kind="entry",
-                entry_mode="ADD_ON",
-                position_id="POS-REP-1",
-            )
+    order = service.create_order(
+        CreateOrderRequest(
+            ticker="REP.MC",
+            order_type="BUY_LIMIT",
+            quantity=2,
+            limit_price=23.1,
+            stop_price=19.63,
+            order_kind="entry",
+            entry_mode="ADD_ON",
+            position_id="POS-REP-1",
         )
+    )
 
-    assert exc_info.value.status_code == 400
-    assert exc_info.value.detail == "REP.MC: add-on limit reached for this position."
+    assert order.position_id == "POS-REP-1"

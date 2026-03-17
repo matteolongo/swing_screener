@@ -46,7 +46,10 @@ export function useFillOrderMutation(onSuccess?: () => void) {
     mutationFn: ({ orderId, request }: { orderId: string; request: FillOrderRequest }) =>
       fillOrder(orderId, request),
     onSuccess: async () => {
-      await invalidateOrderQueries(queryClient);
+      await Promise.all([
+        invalidateOrderQueries(queryClient),
+        invalidatePositionQueries(queryClient),
+      ]);
       onSuccess?.();
     },
   });

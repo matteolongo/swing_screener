@@ -53,6 +53,7 @@ export default function ScreenerInboxPanel({
   const { isBeginnerMode } = useBeginnerModeStore();
   const { lastResult, setLastResult } = useScreenerStore();
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
+  const selectedTickerSource = useWorkspaceStore((state) => state.selectedTickerSource);
   const analysisTab = useWorkspaceStore((state) => state.analysisTab);
   const setSelectedTicker = useWorkspaceStore((state) => state.setSelectedTicker);
   const setAnalysisTab = useWorkspaceStore((state) => state.setAnalysisTab);
@@ -97,7 +98,7 @@ export default function ScreenerInboxPanel({
   const screenerMutation = useRunScreenerMutation((data) => {
     setLastResult(data);
     if (data.candidates.length > 0) {
-      setSelectedTicker(data.candidates[0].ticker);
+      setSelectedTicker(data.candidates[0].ticker, 'screener');
     }
   });
 
@@ -131,14 +132,14 @@ export default function ScreenerInboxPanel({
     : allCandidates;
 
   useEffect(() => {
-    if (!candidates.length || !selectedTicker) {
+    if (!candidates.length || !selectedTicker || selectedTickerSource === 'portfolio') {
       return;
     }
     const stillPresent = candidates.some((candidate) => candidate.ticker.toUpperCase() === selectedTicker.toUpperCase());
     if (!stillPresent) {
-      setSelectedTicker(candidates[0].ticker);
+      setSelectedTicker(candidates[0].ticker, 'screener');
     }
-  }, [candidates, selectedTicker, setSelectedTicker]);
+  }, [candidates, selectedTicker, selectedTickerSource, setSelectedTicker]);
 
   useEffect(() => {
     if (runScreenerTrigger > 0) {
@@ -170,7 +171,7 @@ export default function ScreenerInboxPanel({
   }, [handleSelectCandidate]);
 
   return (
-    <Card variant="bordered" className="p-4 md:p-5 flex flex-col gap-3 xl:h-full xl:overflow-hidden">
+    <Card variant="bordered" className="p-4 md:p-5 flex min-h-0 flex-col gap-3 xl:h-full xl:overflow-hidden">
       <div>
         <h2 className="text-lg font-semibold">{t('workspacePage.panels.screener.title')}</h2>
         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">

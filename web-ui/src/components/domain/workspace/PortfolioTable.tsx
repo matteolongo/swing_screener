@@ -37,6 +37,8 @@ interface PortfolioRow {
   stopLoss: number | null;
   target: number | null;
   shares: number | null;
+  invested: number | null;
+  feesEur: number | null;
   position: PositionWithMetrics | null;
   order: Order | null;
 }
@@ -54,6 +56,7 @@ function formatPnlValue(pnl: number | null, pnlPercent: number | null): string {
 export default function PortfolioTable() {
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
   const setSelectedTicker = useWorkspaceStore((state) => state.setSelectedTicker);
+  const setAnalysisTab = useWorkspaceStore((state) => state.setAnalysisTab);
   const location = useLocation();
 
   const positionsQuery = usePositions('open');
@@ -129,9 +132,11 @@ export default function PortfolioTable() {
       const existing = byPositionId.get(order.positionId) ?? {};
       if (order.orderKind === 'stop') {
         existing.stopOrder = order;
-      }
-      if (order.orderKind === 'take_profit') {
+      } else if (order.orderKind === 'take_profit') {
         existing.targetOrder = order;
+      } else {
+        // entry add-ons and other order kinds linked to a position must be visible as their own row
+        standaloneOrders.push(order);
       }
       byPositionId.set(order.positionId, existing);
     }
@@ -155,6 +160,8 @@ export default function PortfolioTable() {
         stopLoss: linked?.stopOrder?.stopPrice ?? position.stopPrice,
         target: linked?.targetOrder?.limitPrice ?? null,
         shares: position.shares,
+        invested: position.entryValue ?? entryValue,
+        feesEur: position.feesEur > 0 ? position.feesEur : null,
         position,
         order: null,
       };
@@ -173,6 +180,8 @@ export default function PortfolioTable() {
       stopLoss: order.stopPrice ?? null,
       target: order.orderKind === 'take_profit' ? order.limitPrice ?? null : null,
       shares: order.quantity,
+      invested: null,
+      feesEur: null,
       position: null,
       order,
     }));
@@ -339,12 +348,37 @@ export default function PortfolioTable() {
       render: (row) => formatOptionalCurrency(row.target),
     },
     {
+      key: 'invested',
+      header: t('workspacePage.panels.portfolio.columns.invested'),
+      align: 'right',
+      render: (row) => formatOptionalCurrency(row.invested),
+    },
+    {
+      key: 'commissions',
+      header: t('workspacePage.panels.portfolio.columns.commissions'),
+      align: 'right',
+      render: (row) =>
+        row.feesEur != null
+          ? <span className="text-amber-700 dark:text-amber-300">€{row.feesEur.toFixed(2)}</span>
+          : <span className="text-gray-400">{t('common.placeholders.dash')}</span>,
+    },
+    {
       key: 'actions',
       header: t('workspacePage.panels.portfolio.columns.actions'),
       align: 'right',
       render: (row) =>
         row.position?.positionId ? (
           <div className="flex justify-end gap-2" onClick={(event) => event.stopPropagation()}>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                setSelectedTicker(row.ticker, 'portfolio');
+                setAnalysisTab('order');
+              }}
+            >
+              {t('workspacePage.panels.portfolio.addOnEntry')}
+            </Button>
             <Button
               size="sm"
               variant="primary"

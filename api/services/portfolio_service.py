@@ -781,14 +781,28 @@ class PortfolioService:
         linked_position_id = request.position_id
 
         if order_kind == "entry":
-            pending_same_symbol_entry = any(
-                order.get("status") == "pending"
-                and order.get("ticker", "").upper() == ticker
-                and infer_order_kind(Order(**order)) == "entry"
-                for order in orders
-            )
-            if pending_same_symbol_entry:
-                raise HTTPException(status_code=400, detail=f"{ticker}: pending entry order already exists.")
+            if request.entry_mode == "ADD_ON":
+                pending_add_on_for_position = any(
+                    order.get("status") == "pending"
+                    and order.get("ticker", "").upper() == ticker
+                    and infer_order_kind(Order(**order)) == "entry"
+                    and (
+                        not request.position_id
+                        or order.get("position_id") == request.position_id
+                    )
+                    for order in orders
+                )
+                if pending_add_on_for_position:
+                    raise HTTPException(status_code=400, detail=f"{ticker}: pending entry order already exists.")
+            else:
+                pending_same_symbol_entry = any(
+                    order.get("status") == "pending"
+                    and order.get("ticker", "").upper() == ticker
+                    and infer_order_kind(Order(**order)) == "entry"
+                    for order in orders
+                )
+                if pending_same_symbol_entry:
+                    raise HTTPException(status_code=400, detail=f"{ticker}: pending entry order already exists.")
 
             matching_positions = [
                 position for position in open_positions if str(position.get("ticker", "")).upper() == ticker
@@ -806,8 +820,6 @@ class PortfolioService:
                 if matching_position is None:
                     raise HTTPException(status_code=400, detail=f"{ticker}: linked open position not found.")
                 linked_position_id = matching_position.get("position_id")
-                if self._count_filled_add_ons(orders, linked_position_id) >= 1:
-                    raise HTTPException(status_code=400, detail=f"{ticker}: add-on limit reached for this position.")
             elif matching_positions:
                 raise HTTPException(
                     status_code=400,

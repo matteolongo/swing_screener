@@ -196,22 +196,6 @@ export function createOrderLocal(request: CreateOrderRequest): void {
         if (!openPosition) {
           throw new Error(`${ticker}: no open position found for add-on order.`);
         }
-        const linkedPositionId = request.positionId ?? openPosition.positionId ?? null;
-        const filledAddOns =
-          linkedPositionId == null
-            ? 0
-            : Math.max(
-                0,
-                store.orders.filter(
-                  (order) =>
-                    order.status === 'filled' &&
-                    order.positionId === linkedPositionId &&
-                    inferOrderKind(order) === 'entry',
-                ).length - 1,
-              );
-        if (filledAddOns >= 1) {
-          throw new Error(`${ticker}: add-on limit reached for this position.`);
-        }
       } else if (openPosition) {
         throw new Error(`${ticker}: open position already exists. Create this as an ADD_ON order instead.`);
       }
