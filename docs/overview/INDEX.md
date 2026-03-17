@@ -17,15 +17,14 @@
 ## Engineering
 - `/docs/engineering/ROADMAP.md`
 - `/docs/engineering/MODULE_ARCHITECTURE.md`
-- `/docs/engineering/MODULE_ARCHITECTURE_MIGRATION_PLAN.md` (archived)
-- `/docs/engineering/REFACTOR_PLAN.md`
-- `/docs/engineering/REFACTOR_PLAN_UI_API.md`
-- `/docs/engineering/CODE_REVIEW.md`
 - `/docs/engineering/DATABASE_MIGRATION.md`
 - `/docs/engineering/OPERATIONAL_GUIDE.md`
 - `/docs/engineering/TROUBLESHOOTING.md`
 - `/docs/engineering/GITHUB_ACTIONS.md`
-- `/docs/engineering/PHASE2_IMPLEMENTATION_SUMMARY.md`
+
+## Archived Snapshots
+- `/docs/engineering/MODULE_ARCHITECTURE_MIGRATION_PLAN.md`
+- `/docs/engineering/CODE_REVIEW.md`
 
 ## Product
 - `/docs/product/DAILY_USAGE_GUIDE.md`
