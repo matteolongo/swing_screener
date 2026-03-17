@@ -7,7 +7,6 @@
 - `/README.md`
 - `/docs/overview/WELCOME.md`
 - `/docs/overview/AGENTS.md`
-- `/docs/overview/SYSTEM_DESIGN_NOTES.md`
 
 ## AI / LLM Canonical Docs
 - `/docs/engineering/AI_RUNTIME_ARCHITECTURE.md`
