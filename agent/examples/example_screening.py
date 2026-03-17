@@ -25,7 +25,7 @@ async def main():
     print("2. Running screening on mega_all universe...")
     result = await agent.daily_screening(
         universe="mega_all",
-        top_n=5  # Get top 5 candidates
+        top=5  # Get top 5 candidates
     )
     print("   ✓ Screening complete\n")
     
@@ -36,8 +36,8 @@ async def main():
     if result["candidates"]:
         for i, candidate in enumerate(result["candidates"], 1):
             ticker = candidate.get("ticker", "Unknown")
-            entry = candidate.get("entry_price", 0)
-            stop = candidate.get("stop_price", 0)
+            entry = candidate.get("entry", 0)
+            stop = candidate.get("stop", 0)
             momentum = candidate.get("momentum_6m", 0)
             
             print(f"\n   {i}. {ticker}")

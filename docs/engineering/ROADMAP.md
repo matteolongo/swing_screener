@@ -1,16 +1,17 @@
 # Swing Screener - Roadmap
 
 > **Status: Current snapshot based on repo state.**  
-> **Last Reviewed:** February 17, 2026.
+> **Last Reviewed:** March 17, 2026.
 
 ## Current State (Observed in Code)
 
 - Core screening, portfolio, and order workflows exist in the API and CLI.
 - Web UI includes Workspace, Daily Review, and Strategy pages for the current workflow.
 - MCP server is implemented with tool domains for portfolio, screener, strategy, config, daily review, social, and intelligence.
-- Agent integration exists and wraps MCP workflows for automation.
+- Agent integration is MCP-first and is now the canonical AI/tooling runtime.
+- Workspace chat and agent chat now share the same MCP-backed backend path.
 - Market data providers include yfinance (default) and Alpaca.
-- Intelligence stack includes LLM classification and news ingestion modules. CLI classification currently uses mock news data and real ingestion is not wired into the CLI flow.
+- Intelligence stack includes event ingestion, optional LLM classification, education generation, and shared provider configuration.
 - Education and onboarding content is present in the Web UI docs and components.
 
 ## Near-Term Focus (High-Level)
@@ -22,7 +23,7 @@
 - Add authentication and authorization for non-local use
 
 2. Intelligence pipeline to production
-- Wire real news ingestion into the classification and daily review flows
+- Improve ingestion quality, coverage, and source attribution in the intelligence flows
 - Add deduplication, caching, and source attribution
 - Define what intelligence outputs are user-facing vs internal
 

@@ -35,6 +35,7 @@ export interface LocalPositionWithMetrics extends Position {
   currentValue: number;
   perShareRisk: number;
   totalRisk: number;
+  feesEur: number;
 }
 
 export interface LocalPortfolioSummary {
@@ -144,6 +145,7 @@ function toPositionWithMetrics(position: Position, feesByPosition: Map<string, n
     currentValue,
     perShareRisk: riskPerShare,
     totalRisk,
+    feesEur: fee,
   };
 }
 

@@ -219,7 +219,7 @@ The Swing Screener Agent connects to the MCP server as a client, orchestrating t
 
 ```bash
 # Run daily screening
-python -m agent.cli screen --universe mega_all --top 10
+python -m agent.cli screen --universe mega_all --strategy-id default --top 10
 
 # Review open positions
 python -m agent.cli positions review
@@ -239,7 +239,7 @@ async def main():
     await agent.start()
     
     # Run daily screening
-    result = await agent.daily_screening(universe="mega_all", top_n=10)
+    result = await agent.daily_screening(universe="mega_all", strategy_id="default", top=10)
     
     # Review positions
     positions = await agent.review_positions()
@@ -430,11 +430,13 @@ npm run test:coverage # Run with coverage report
 ### Technical References
 - **[API Documentation](api/README.md)** — FastAPI REST API reference (18 endpoints, health checks, monitoring)
 - **[MCP Server Documentation](mcp_server/README.md)** — Model Context Protocol server (22 tools for AI assistants) ⭐ **NEW**
+- **[AI Runtime Architecture](docs/engineering/AI_RUNTIME_ARCHITECTURE.md)** — Canonical AI/LLM runtime map
+- **[Workspace Chat Analysis](docs/engineering/WORKSPACE_CHAT_ANALYSIS.md)** — Detailed prompt/context flow for chat
 - **[Sentiment Analysis Plugin Guide](src/swing_screener/social/docs/SENTIMENT_PLUGIN_GUIDE.md)** — Pluggable sentiment analysis system (Reddit, Yahoo Finance, VADER) ⭐ **NEW**
 - **[Web UI README](web-ui/README.md)** — React/TypeScript architecture
 - **[Degiro Order Setup](web-ui/docs/ux/DEGIRO_ORDER_SETUP_BREAKOUT_PULLBACK.md)** — Manual order workflow for breakout vs pullback setups
 - **[Indicator Validation](src/swing_screener/data/docs/INDICATOR_VALIDATION.md)** — TA-Lib validation approach ⭐ **NEW**
-- **[Intelligence Module README](src/swing_screener/intelligence/README.md)** — Architecture, flow, scoring, and configuration
+- **[Intelligence Module README](src/swing_screener/intelligence/README.md)** — Intelligence pipeline, providers, scoring, and configuration
 - **[docs/overview/AGENTS.md](docs/overview/AGENTS.md)** — Guide for AI coding assistants
 
 ### Planning
@@ -442,6 +444,7 @@ npm run test:coverage # Run with coverage report
 
 ### Historical Notes
 - Some `*IMPLEMENTATION*` and `PHASE*` markdown files are historical snapshots.
+- Completed migration plans are not canonical references; prefer the AI/runtime/module docs above.
 - Use **[docs/overview/INDEX.md](docs/overview/INDEX.md)** to identify canonical, actively maintained docs.
 
 ## Technical Indicators

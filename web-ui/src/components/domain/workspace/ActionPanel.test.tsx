@@ -199,7 +199,6 @@ describe('ActionPanel', () => {
   });
 
   it('submits as ADD_ON when a live open position exists even if screener metadata is stale', async () => {
-    const user = userEvent.setup();
     openPositionsMock.mockReturnValue([
       {
         ticker: 'AAPL',

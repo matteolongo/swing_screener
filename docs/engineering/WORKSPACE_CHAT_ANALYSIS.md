@@ -12,8 +12,8 @@ This document explains how the read-only workspace chat works in Swing Screener:
 
 This covers the user-facing workspace chat and the shared MCP chat tool:
 
-- Web UI path: `web-ui/src/components/domain/workspace/WorkspaceChatPanel.tsx`
-- API path: `api/routers/chat.py` -> `api/services/chat_service.py`
+- Web UI path: `web-ui/src/components/domain/workspace/FloatingChatWidget.tsx`
+- API path: `api/routers/chat.py` -> `api/services/agent_chat_service.py`
 - MCP path: `mcp_server/tools/intelligence/chat_answer.py`
 - Agent wrapper: `agent/chat_graph.py`
 
@@ -21,7 +21,7 @@ The important implementation detail is that there is one real chat engine:
 
 - `ChatService`
 
-The agent and MCP layers only forward requests into that service.
+The API, agent, and MCP layers now forward requests into that service through the same agent+MCP path, and the API side keeps a lazy persistent backend agent runtime instead of starting a fresh one for each request.
 
 ## High-Level Flow
 
@@ -29,14 +29,18 @@ The agent and MCP layers only forward requests into that service.
 flowchart TD
     A["User enters question in Workspace Chat"] --> B["Web UI builds request"]
     B --> C["POST /api/chat/answer"]
-    C --> D["ChatService"]
-    D --> E["Normalize input"]
-    E --> F["Build workspace context"]
-    F --> G["Classify intent"]
-    G --> H["Generate answer"]
-    H --> I["Validate answer"]
-    I --> J["Return response"]
-    J --> K["UI renders answer, warnings, facts used, source badges"]
+    C --> D["AgentChatService"]
+    D --> E["Persistent AgentRuntime"]
+    E --> F["SwingScreenerAgent.ask()"]
+    F --> G["MCP chat_answer tool"]
+    G --> H["ChatService"]
+    H --> I["Normalize input"]
+    I --> J["Build workspace context"]
+    J --> K["Classify intent"]
+    K --> L["Generate answer"]
+    L --> M["Validate answer"]
+    M --> N["Return response"]
+    N --> O["UI renders answer, warnings, facts used, source badges"]
 ```
 
 ## Request Data From The UI
@@ -424,12 +428,13 @@ There is an `agent` package, but for chat it does not define a different reasoni
 
 The flow is:
 
+- persistent `AgentRuntime`
 - `SwingScreenerAgent.ask(...)`
 - `AgentChatGraph.ask(...)`
 - MCP tool `chat_answer`
 - shared `ChatService.answer(...)`
 
-So the agent wrapper is a transport layer around the same workspace chat engine.
+So the agent wrapper is a transport layer around the same workspace chat engine, and the API path now reuses that same transport instead of bypassing it.
 
 ## Practical Summary
 
@@ -445,10 +450,12 @@ It is not a free-form autonomous agent and it is not using a long hidden convers
 
 ## Primary Code References
 
-- `web-ui/src/components/domain/workspace/WorkspaceChatPanel.tsx`
+- `web-ui/src/components/domain/workspace/FloatingChatWidget.tsx`
 - `web-ui/src/features/chat/types.ts`
 - `api/models/chat.py`
 - `api/routers/chat.py`
+- `api/services/agent_chat_service.py`
+- `api/services/agent_runtime.py`
 - `api/services/chat_service.py`
 - `api/services/workspace_context_service.py`
 - `mcp_server/tools/intelligence/chat_answer.py`

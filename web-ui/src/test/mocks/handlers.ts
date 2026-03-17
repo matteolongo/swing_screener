@@ -1168,22 +1168,6 @@ export const handlers = [
     })
   }),
 
-  http.post(`${API_BASE_URL}/api/intelligence/explain-symbol`, async ({ request }) => {
-    const body = asObject(await request.json())
-    const symbol = String(body.symbol || '').trim().toUpperCase()
-    if (!symbol) {
-      return HttpResponse.json({ detail: 'symbol is required' }, { status: 422 })
-    }
-    return HttpResponse.json({
-      symbol,
-      asof_date: body.asof_date || mockIntelligenceOpportunities.asof_date,
-      explanation: `${symbol} is scored by setup quality, catalyst evidence, and risk structure. The setup is currently active based on the latest deterministic signals.`,
-      source: 'llm',
-      model: 'gpt-4o-mini',
-      generated_at: '2026-02-15T20:00:04',
-    })
-  }),
-
   http.get(`${API_BASE_URL}/api/intelligence/education/:symbol`, ({ params, request }) => {
     const symbol = String(params.symbol || '').trim().toUpperCase()
     if (!symbol) {

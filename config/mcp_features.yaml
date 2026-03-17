@@ -64,7 +64,6 @@ features:
       - get_workspace_context
       - get_intelligence_opportunities
       - get_intelligence_events
-      - explain_symbol
       - chat_answer
 
   # Daily Review (combines screener + portfolio management)

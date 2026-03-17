@@ -6,7 +6,6 @@ import {
   fetchIntelligenceSourcesHealth,
   fetchIntelligenceUpcomingCatalysts,
   generateIntelligenceEducation,
-  explainIntelligenceSymbol,
   createIntelligenceSymbolSet,
   deleteIntelligenceSymbolSet,
   fetchIntelligenceConfig,
@@ -23,8 +22,6 @@ import {
   IntelligenceEducationGenerateRequest,
   IntelligenceEducationGenerateResponse,
   IntelligenceEventsResponse,
-  IntelligenceExplainSymbolRequest,
-  IntelligenceExplainSymbolResponse,
   IntelligenceConfig,
   IntelligenceMetricsResponse,
   IntelligenceSourcesHealthResponse,
@@ -230,12 +227,6 @@ export function useIntelligenceMetricsQuery(asofDate?: string, enabled: boolean 
     enabled,
     retry: false,
     refetchOnWindowFocus: false,
-  });
-}
-
-export function useExplainIntelligenceSymbolMutation() {
-  return useMutation<IntelligenceExplainSymbolResponse, Error, IntelligenceExplainSymbolRequest>({
-    mutationFn: (request) => explainIntelligenceSymbol(request),
   });
 }
 

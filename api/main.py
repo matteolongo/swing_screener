@@ -101,6 +101,8 @@ async def lifespan(app: FastAPI):
             WEB_UI_INDEX_FILE,
         )
     yield
+    from api.dependencies import shutdown_agent_runtime
+    await shutdown_agent_runtime()
     logger.info("Shutting down...")
 
 

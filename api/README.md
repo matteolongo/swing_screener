@@ -63,10 +63,27 @@ Daily Review (`/api/daily-review`):
 - `GET /api/daily-review`
 
 Intelligence (`/api/intelligence`):
+- `GET /api/intelligence/config`
+- `PUT /api/intelligence/config`
+- `GET /api/intelligence/providers`
+- `POST /api/intelligence/providers/test`
+- `GET /api/intelligence/symbol-sets`
+- `POST /api/intelligence/symbol-sets`
+- `PUT /api/intelligence/symbol-sets/{symbol_set_id}`
+- `DELETE /api/intelligence/symbol-sets/{symbol_set_id}`
 - `POST /api/intelligence/run`
 - `GET /api/intelligence/run/{job_id}`
 - `GET /api/intelligence/opportunities`
-- `POST /api/intelligence/classify`
+- `GET /api/intelligence/events`
+- `GET /api/intelligence/upcoming-catalysts`
+- `GET /api/intelligence/sources/health`
+- `GET /api/intelligence/metrics`
+- `POST /api/intelligence/education/generate`
+- `GET /api/intelligence/education/{symbol}`
+
+Chat (`/api/chat`):
+- `POST /api/chat/answer`
+- `POST /api/chat/answer` routes through `AgentChatService` -> lazy persistent `AgentRuntime` -> `agent` -> MCP `chat_answer` -> `ChatService`
 
 Social (`/api/social`):
 - `GET /api/social/providers`

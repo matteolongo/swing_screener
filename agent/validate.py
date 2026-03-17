@@ -3,7 +3,7 @@
 Validation script for the Swing Screener Agent.
 
 This script performs basic validation tests to ensure the agent
-can connect to the MCP server and list available tools.
+can launch the MCP server over stdio and list the live tool catalog.
 """
 import asyncio
 import sys
@@ -39,14 +39,14 @@ async def validate_client():
         return False
     
     # Test 2: Connection to MCP server
-    print("Test 2: Connect to MCP Server...")
+    print("Test 2: Launch MCP Server Over stdio...")
     try:
         await client.connect()
         print("✓ Connected to MCP server\n")
     except Exception as e:
         print(f"✗ Failed to connect: {e}\n")
         print("Possible issues:")
-        print("- MCP server not installed: pip install -e '.[mcp]'")
+        print("- MCP dependency not installed: uv sync --extra mcp")
         print("- MCP configuration missing: check config/mcp_features.yaml")
         print("- Python path issue: ensure mcp_server is importable")
         return False
@@ -103,7 +103,7 @@ async def validate_client():
     print()
     print("Next steps:")
     print("- Run: python -m agent.cli tools")
-    print("- Try: python -m agent.cli screen --universe mega_all --top 5")
+    print("- Try: python -m agent.cli screen --universe mega_all --strategy-id default --top 5")
     print("- Read: agent/README.md")
     print()
     

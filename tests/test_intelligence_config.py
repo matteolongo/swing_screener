@@ -150,6 +150,8 @@ def test_build_intelligence_config_maps_prompt_overrides():
             "llm": {
                 "system_prompt": "  You are a strict classifier.  ",
                 "user_prompt_template": "Headline: {{headline}}\r\n{{taxonomy}}\r\n{{instructions}}",
+                "education_thesis_system_prompt": "  Thesis system prompt  ",
+                "education_thesis_user_prompt_template": "Symbol={{symbol}}\r\nFacts={{facts_json}}",
             }
         }
     }
@@ -159,3 +161,5 @@ def test_build_intelligence_config_maps_prompt_overrides():
     assert cfg.llm.system_prompt == "You are a strict classifier."
     assert "{{headline}}" in cfg.llm.user_prompt_template
     assert "\r" not in cfg.llm.user_prompt_template
+    assert cfg.llm.education_thesis_system_prompt == "Thesis system prompt"
+    assert cfg.llm.education_thesis_user_prompt_template == "Symbol={{symbol}}\nFacts={{facts_json}}"

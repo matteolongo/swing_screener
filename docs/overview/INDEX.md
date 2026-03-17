@@ -1,13 +1,18 @@
 # Documentation Index
 
 > Status: current.  
-> Last reviewed: 2026-02-17.
+> Last reviewed: 2026-03-17.
 
 ## Overview
 - `/README.md`
 - `/docs/overview/WELCOME.md`
 - `/docs/overview/AGENTS.md`
 - `/docs/overview/SYSTEM_DESIGN_NOTES.md`
+
+## AI / LLM Canonical Docs
+- `/docs/engineering/AI_RUNTIME_ARCHITECTURE.md`
+- `/docs/engineering/WORKSPACE_CHAT_ANALYSIS.md`
+- `/src/swing_screener/intelligence/README.md`
 
 ## Engineering
 - `/docs/engineering/ROADMAP.md`
@@ -52,7 +57,6 @@ Data Providers:
 - `/src/swing_screener/data/docs/INDICATOR_VALIDATION.md`
 
 Intelligence and Social:
-- `/src/swing_screener/intelligence/README.md`
 - `/src/swing_screener/social/docs/SENTIMENT_PLUGIN_GUIDE.md`
 
 Config:

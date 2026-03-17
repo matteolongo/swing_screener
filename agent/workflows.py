@@ -50,15 +50,15 @@ class ScreeningWorkflow(BaseWorkflow):
     async def execute(
         self,
         universe: str = "mega_all",
-        strategy: Optional[str] = None,
-        top_n: int = 10
+        strategy_id: Optional[str] = None,
+        top: int = 10
     ) -> dict[str, Any]:
         """Execute the screening workflow.
         
         Args:
             universe: Stock universe to screen (default: mega_all)
-            strategy: Strategy to use (default: active strategy)
-            top_n: Number of top candidates to return
+            strategy_id: Strategy to use (default: active strategy)
+            top: Number of top candidates to return
             
         Returns:
             Screening results with candidates and analysis
@@ -77,18 +77,18 @@ class ScreeningWorkflow(BaseWorkflow):
             )
         
         # Step 2: Get active strategy if not specified
-        if not strategy:
+        if not strategy_id:
             strategy_result = await self.client.call_tool("get_active_strategy", {})
-            strategy = strategy_result.get("id", "default")
-            self.add_insight(f"Using active strategy: {strategy}")
+            strategy_id = strategy_result.get("id", "default")
+            self.add_insight(f"Using active strategy: {strategy_id}")
         
         # Step 3: Run screener
-        self.add_insight(f"Running screener on {universe} with strategy {strategy}...")
+        self.add_insight(f"Running screener on {universe} with strategy {strategy_id}...")
         
         screener_result = await self.client.call_tool("run_screener", {
             "universe": universe,
-            "strategy": strategy,
-            "top_n": top_n
+            "strategy_id": strategy_id,
+            "top": top
         })
         
         candidates = screener_result.get("candidates", [])
@@ -106,7 +106,7 @@ class ScreeningWorkflow(BaseWorkflow):
         return {
             "candidates": candidates,
             "universe": universe,
-            "strategy": strategy,
+            "strategy_id": strategy_id,
             "timestamp": datetime.now().isoformat(),
             "insights": self.get_insights()
         }
@@ -234,13 +234,14 @@ class OrderManagementWorkflow(BaseWorkflow):
         # Preview position sizing for entry orders
         if order_kind == "entry" and "entry_price" in kwargs and "stop_price" in kwargs:
             preview = await self.client.call_tool("preview_order", {
+                "ticker": ticker,
                 "entry_price": kwargs["entry_price"],
                 "stop_price": kwargs["stop_price"]
             })
             
             shares = preview.get("shares", 0)
-            position_value = preview.get("position_value", 0)
-            risk_amount = preview.get("risk_amount", 0)
+            position_value = preview.get("position_size_usd", 0)
+            risk_amount = preview.get("risk_usd", 0)
             
             self.add_insight(f"Position preview: {shares} shares, ${position_value:.2f} value")
             self.add_insight(f"Risk (1R): ${risk_amount:.2f}")
@@ -270,16 +271,16 @@ class OrderManagementWorkflow(BaseWorkflow):
     async def _fill_order(
         self,
         order_id: str,
-        fill_price: float,
-        fill_date: str
+        filled_price: float,
+        filled_date: str
     ) -> dict[str, Any]:
         """Fill an order."""
-        self.add_insight(f"Filling order {order_id} at ${fill_price}")
+        self.add_insight(f"Filling order {order_id} at ${filled_price}")
         
         result = await self.client.call_tool("fill_order", {
             "order_id": order_id,
-            "fill_price": fill_price,
-            "fill_date": fill_date
+            "filled_price": filled_price,
+            "filled_date": filled_date
         })
         
         self.add_insight("Order filled successfully")
@@ -412,10 +413,10 @@ class PositionManagementWorkflow(BaseWorkflow):
     async def _update_stop(
         self,
         position_id: str,
-        new_stop_price: float
+        new_stop: float
     ) -> dict[str, Any]:
         """Update trailing stop for a position."""
-        self.add_insight(f"Updating stop for position {position_id} to ${new_stop_price}")
+        self.add_insight(f"Updating stop for position {position_id} to ${new_stop}")
         
         # Get current position details
         position = await self.client.call_tool("get_position", {
@@ -424,14 +425,14 @@ class PositionManagementWorkflow(BaseWorkflow):
         
         current_stop = position.get("stop_price", 0)
         
-        if new_stop_price <= current_stop:
+        if new_stop <= current_stop:
             self.add_insight(
-                f"Warning: New stop (${new_stop_price}) not higher than current (${current_stop})"
+                f"Warning: New stop (${new_stop}) not higher than current (${current_stop})"
             )
         
         result = await self.client.call_tool("update_position_stop", {
             "position_id": position_id,
-            "new_stop_price": new_stop_price
+            "new_stop": new_stop
         })
         
         self.add_insight("Stop updated successfully")

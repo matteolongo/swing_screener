@@ -89,7 +89,6 @@ def enabled_intelligence_config() -> MCPConfig:
                     "get_workspace_context",
                     "get_intelligence_opportunities",
                     "get_intelligence_events",
-                    "explain_symbol",
                     "chat_answer",
                 ],
             )
@@ -282,6 +281,5 @@ class TestCreateRegistry:
         assert registry.is_registered("get_workspace_context")
         assert registry.is_registered("get_intelligence_opportunities")
         assert registry.is_registered("get_intelligence_events")
-        assert registry.is_registered("explain_symbol")
         assert registry.is_registered("chat_answer")
         assert "intelligence" in registry.get_enabled_features()

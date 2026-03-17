@@ -5,10 +5,9 @@ with filters and momentum ranking.
 """
 from __future__ import annotations
 
-from typing import Any
-
 from mcp_server.tools.base import BaseTool
 from mcp_server.tools.screener._common import get_screener_service, logger
+from typing import Any
 
 
 class RunScreenerTool(BaseTool):
@@ -117,8 +116,7 @@ class RunScreenerTool(BaseTool):
                 pullback_ma=arguments.get("pullback_ma"),
                 min_history=arguments.get("min_history")
             )
-            result = service.run_screener(request)
-            return result.model_dump()
+            return service.run_screener(request).model_dump()
         except Exception as e:
             logger.error(f"Error running screener: {e}")
             return {"error": str(e), "candidates": [], "asof_date": None, "total_screened": 0, "warnings": []}

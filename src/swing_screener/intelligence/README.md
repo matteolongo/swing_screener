@@ -3,6 +3,10 @@
 > Status: current.  
 > Last reviewed: 2026-02-23.
 
+Canonical companion docs:
+- `docs/engineering/AI_RUNTIME_ARCHITECTURE.md` for cross-system AI/LLM paths
+- `docs/engineering/WORKSPACE_CHAT_ANALYSIS.md` for the chat-specific prompt/context path
+
 ## Purpose
 Post-close market intelligence pipeline that enriches technical screening with:
 - event ingestion and catalyst validation
@@ -140,4 +144,5 @@ Artifacts:
 - `GET /api/intelligence/upcoming-catalysts`
 - `GET /api/intelligence/sources/health`
 - `GET /api/intelligence/metrics`
-- `POST /api/intelligence/classify`
+- `POST /api/intelligence/education/generate`
+- `GET /api/intelligence/education/{symbol}`

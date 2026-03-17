@@ -1,7 +1,7 @@
 """Market intelligence API models."""
 from __future__ import annotations
 
-from typing import ClassVar, Literal, Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 from swing_screener.intelligence.config import SUPPORTED_INTEL_PROVIDERS
@@ -196,30 +196,6 @@ class IntelligenceExplainCandidateContext(BaseModel):
     rel_strength: Optional[float] = None
 
 
-class IntelligenceExplainSymbolRequest(BaseModel):
-    symbol: str = Field(min_length=1, max_length=16)
-    asof_date: Optional[str] = None
-    candidate_context: Optional[IntelligenceExplainCandidateContext] = None
-
-    @field_validator("symbol")
-    @classmethod
-    def _normalize_symbol(cls, value: str) -> str:
-        cleaned = str(value).strip().upper()
-        if not cleaned:
-            raise ValueError("symbol is required")
-        return cleaned
-
-
-class IntelligenceExplainSymbolResponse(BaseModel):
-    symbol: str
-    asof_date: str
-    explanation: str
-    source: Literal["llm", "deterministic_fallback"]
-    model: Optional[str] = None
-    warning: Optional[str] = None
-    generated_at: str
-
-
 EducationViewName = Literal["recommendation", "thesis", "learn"]
 EducationSource = Literal["llm", "deterministic_fallback"]
 EducationRequestSource = Literal["llm", "deterministic_fallback", "cache"]
@@ -302,83 +278,3 @@ class IntelligenceEducationGenerateResponse(BaseModel):
     template_version: str = "v1"
     deterministic_facts: dict[str, str] = Field(default_factory=dict)
     errors: list[IntelligenceEducationError] = Field(default_factory=list)
-
-
-# LLM Classification Models
-
-class LLMClassifyNewsRequest(BaseModel):
-    """Request to classify news headlines using LLM."""
-    SUPPORTED_LLM_PROVIDERS: ClassVar[set[str]] = {"ollama", "mock", "openai"}
-
-    headlines: list[dict[str, str]] = Field(
-        min_length=1,
-        max_length=100,
-        description="List of news items with 'headline' and optional 'snippet' fields"
-    )
-    provider: Optional[str] = Field(
-        default="ollama",
-        description="LLM provider (ollama, mock, openai)"
-    )
-    model: Optional[str] = Field(
-        default="mistral:7b-instruct",
-        description="Model name for the provider"
-    )
-    base_url: Optional[str] = Field(
-        default=None,
-        description="Optional base URL override for provider"
-    )
-    api_key: Optional[str] = Field(
-        default=None,
-        description="Optional API key override (required for openai unless env is set)"
-    )
-
-    @field_validator("headlines")
-    @classmethod
-    def _validate_headlines(cls, values: list[dict]) -> list[dict]:
-        validated = []
-        for item in values:
-            if not isinstance(item, dict):
-                raise ValueError("Each headline must be a dictionary")
-            if "headline" not in item:
-                raise ValueError("Each item must have a 'headline' field")
-            if not isinstance(item["headline"], str) or len(item["headline"]) < 10:
-                raise ValueError("Headline must be a string with at least 10 characters")
-            validated.append({
-                "headline": item["headline"],
-                "snippet": item.get("snippet", ""),
-            })
-        return validated
-
-    @field_validator("provider")
-    @classmethod
-    def _normalize_provider(cls, value: Optional[str]) -> str:
-        if value is None:
-            return "ollama"
-        normalized = str(value).strip().lower()
-        return normalized or "ollama"
-
-
-class LLMEventClassificationResponse(BaseModel):
-    """Single classified event response."""
-    headline: str
-    snippet: Optional[str]
-    event_type: str
-    severity: str
-    primary_symbol: Optional[str]
-    secondary_symbols: list[str]
-    is_material: bool
-    confidence: float
-    summary: str
-    model: str
-    processing_time_ms: float
-    cached: bool
-
-
-class LLMClassifyNewsResponse(BaseModel):
-    """Response with classified news events."""
-    total: int
-    classifications: list[LLMEventClassificationResponse]
-    avg_processing_time_ms: float
-    cached_count: int
-    material_count: int
-    provider_available: bool
