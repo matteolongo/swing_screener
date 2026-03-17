@@ -21,7 +21,8 @@ export const useWorkspaceStore = create<WorkspaceStore>()((set) => ({
   runScreenerTrigger: 0,
   setSelectedTicker: (ticker, source = 'screener') => {
     const normalized = ticker?.trim();
-    set({ selectedTicker: normalized ? normalized.toUpperCase() : null, selectedTickerSource: source });
+    const upper = normalized ? normalized.toUpperCase() : null;
+    set({ selectedTicker: upper, selectedTickerSource: upper ? source : null });
   },
   clearSelectedTicker: () => set({ selectedTicker: null, selectedTickerSource: null, analysisTab: 'overview' }),
   setAnalysisTab: (tab) => set({ analysisTab: tab }),
