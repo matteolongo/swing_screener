@@ -155,13 +155,16 @@ describe('Workspace Page', () => {
   });
 
   it('renders the workspace panel structure', async () => {
-    renderWithProviders(<Workspace />);
+    const { user } = renderWithProviders(<Workspace />);
 
     expect(screen.getByRole('heading', { name: 'Workspace' })).toBeInTheDocument();
     expect(screen.getByText('Screener Inbox')).toBeInTheDocument();
     expect(screen.getByText('Analysis Canvas')).toBeInTheDocument();
-    expect(screen.getByText('Workspace Chat')).toBeInTheDocument();
     expect(screen.getByText('Portfolio')).toBeInTheDocument();
+
+    // Chat is now a floating widget — open it to verify it renders
+    await user.click(screen.getByRole('button', { name: 'Open workspace chat' }));
+    expect(screen.getByText('Workspace Chat')).toBeInTheDocument();
   });
 
   it('loads a selected ticker into analysis after screener run', async () => {
@@ -846,6 +849,7 @@ describe('Workspace Page', () => {
     await user.click(screen.getAllByRole('button', { name: /Run Screener/i })[0]);
     await screen.findByRole('heading', { name: 'AAPL' });
 
+    await user.click(screen.getByRole('button', { name: 'Open workspace chat' }));
     await user.type(screen.getByLabelText('Ask the workspace agent'), 'What should I know about AAPL?');
     await user.click(screen.getByRole('button', { name: 'Ask' }));
 
@@ -868,6 +872,7 @@ describe('Workspace Page', () => {
 
     const { user } = renderWithProviders(<Workspace />);
 
+    await user.click(screen.getByRole('button', { name: 'Open workspace chat' }));
     await user.type(screen.getByLabelText('Ask the workspace agent'), 'What should I know about AAPL?');
     await user.click(screen.getByRole('button', { name: 'Ask' }));
 
@@ -890,6 +895,7 @@ describe('Workspace Page', () => {
 
     const { user } = renderWithProviders(<Workspace />);
 
+    await user.click(screen.getByRole('button', { name: 'Open workspace chat' }));
     await user.type(screen.getByLabelText('Ask the workspace agent'), 'What is my risk?');
     await user.click(screen.getByRole('button', { name: 'Ask' }));
 

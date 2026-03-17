@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import AnalysisCanvasPanel from '@/components/domain/workspace/AnalysisCanvasPanel';
+import FloatingChatWidget from '@/components/domain/workspace/FloatingChatWidget';
 import PortfolioPanel from '@/components/domain/workspace/PortfolioPanel';
 import ScreenerInboxPanel from '@/components/domain/workspace/ScreenerInboxPanel';
 import TodaysNextActionCard from '@/components/domain/onboarding/TodaysNextActionCard';
@@ -53,6 +54,8 @@ export default function Workspace() {
           <PortfolioPanel />
         </div>
       </div>
+
+      <FloatingChatWidget />
     </div>
   );
 }

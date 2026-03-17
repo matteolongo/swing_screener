@@ -2,7 +2,6 @@ import Card from '@/components/common/Card';
 import CachedSymbolPriceChart from '@/components/domain/market/CachedSymbolPriceChart';
 import ActionPanel from '@/components/domain/workspace/ActionPanel';
 import KeyMetrics from '@/components/domain/workspace/KeyMetrics';
-import WorkspaceChatPanel from '@/components/domain/workspace/WorkspaceChatPanel';
 import WorkspaceSentimentPanel from '@/components/domain/workspace/WorkspaceSentimentPanel';
 import type { SymbolIntelligenceStatus } from '@/features/intelligence/useSymbolIntelligenceRunner';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
@@ -46,14 +45,11 @@ export default function AnalysisCanvasPanel({
       </div>
 
       {!selectedTicker ? (
-        <>
-          <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-700 p-6">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              {t('workspacePage.panels.analysis.empty')}
-            </p>
-          </div>
-          <WorkspaceChatPanel embedded />
-        </>
+        <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-700 p-6">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {t('workspacePage.panels.analysis.empty')}
+          </p>
+        </div>
       ) : (
         <>
           <div
@@ -153,9 +149,6 @@ export default function AnalysisCanvasPanel({
             {activeTab === 'sentiment' && <WorkspaceSentimentPanel ticker={selectedTicker} />}
 
             {activeTab === 'order' && <ActionPanel ticker={selectedTicker} />}
-          </div>
-          <div className="flex-shrink-0">
-            <WorkspaceChatPanel embedded />
           </div>
         </>
       )}
