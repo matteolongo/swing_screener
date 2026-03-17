@@ -523,6 +523,9 @@ export const messagesEn = {
           contextCandidateSignal: 'Signal',
           contextCandidateRank: 'Rank',
           contextNoCandidate: 'Not in screener results',
+          contextCandidateVerdict: 'Verdict',
+          contextCandidateRecommended: 'Recommended',
+          contextCandidateNotRecommended: 'Not recommended',
         },
       },
       portfolio: {

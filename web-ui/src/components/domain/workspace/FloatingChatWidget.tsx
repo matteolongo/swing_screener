@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useRef, useState } from 'react';
+import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react';
 import { MessageCircle, X, ChevronDown, ChevronUp } from 'lucide-react';
 import Badge from '@/components/common/Badge';
 import Button from '@/components/common/Button';
@@ -78,7 +78,7 @@ export default function FloatingChatWidget() {
     }
   };
 
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       event.currentTarget.form?.requestSubmit();
@@ -126,6 +126,8 @@ export default function FloatingChatWidget() {
             <button
               type="button"
               onClick={() => setIsContextOpen((v) => !v)}
+              aria-expanded={isContextOpen}
+              aria-controls="workspace-chat-context-panel"
               className="w-full flex items-center justify-between px-4 py-2 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50"
             >
               <span>{t('workspacePage.panels.chat.floating.contextTitle')}</span>
@@ -134,7 +136,7 @@ export default function FloatingChatWidget() {
                 : <ChevronDown className="h-3.5 w-3.5" />}
             </button>
             {isContextOpen ? (
-              <div className="px-4 pb-3 space-y-2">
+              <div id="workspace-chat-context-panel" className="px-4 pb-3 space-y-2">
                 {/* Selected symbol */}
                 <div className="text-xs space-y-1">
                   <span className="font-medium text-gray-700 dark:text-gray-300">
@@ -171,14 +173,16 @@ export default function FloatingChatWidget() {
                       </div>
                       {candidate.recommendation?.verdict ? (
                         <div className="flex justify-between">
-                          <span className="text-gray-500">Verdict</span>
+                          <span className="text-gray-500">{t('workspacePage.panels.chat.floating.contextCandidateVerdict')}</span>
                           <span className={cn(
                             'font-medium',
                             candidate.recommendation.verdict === 'RECOMMENDED'
                               ? 'text-green-700 dark:text-green-400'
                               : 'text-amber-700 dark:text-amber-400'
                           )}>
-                            {candidate.recommendation.verdict === 'RECOMMENDED' ? 'Recommended' : 'Not recommended'}
+                            {candidate.recommendation.verdict === 'RECOMMENDED'
+                              ? t('workspacePage.panels.chat.floating.contextCandidateRecommended')
+                              : t('workspacePage.panels.chat.floating.contextCandidateNotRecommended')}
                           </span>
                         </div>
                       ) : null}
