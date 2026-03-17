@@ -119,7 +119,7 @@ def _invoke_llm_summary(cfg: IntelligenceConfig, context: dict[str, Any]) -> str
 
     llm = build_langchain_chat_model(
         provider_name=provider,
-        model=model or ("gpt-4o-mini" if provider == "openai" else "mistral:7b-instruct"),
+        model=model or ("gpt-4.1-mini" if provider == "openai" else "mistral:7b-instruct"),
         base_url=base_url,
         api_key=api_key,
         temperature=0,

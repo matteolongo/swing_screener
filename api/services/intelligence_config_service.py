@@ -96,12 +96,12 @@ class IntelligenceConfigService:
     def list_providers(self) -> list[IntelligenceProviderInfoResponse]:
         config = self.get_config()
         out: list[IntelligenceProviderInfoResponse] = []
-        for provider_name in sorted({"mock", "ollama", "openai"}):
+        for provider_name in ("openai", "ollama", "mock"):
             model = config.llm.model
             base_url = config.llm.base_url
             api_key = config.llm.api_key
             if provider_name == "openai" and config.llm.provider != "openai":
-                model = "gpt-4o-mini"
+                model = "gpt-4.1-mini"
                 base_url = "https://api.openai.com/v1"
             if provider_name == "ollama" and config.llm.provider != "ollama":
                 model = "mistral:7b-instruct"

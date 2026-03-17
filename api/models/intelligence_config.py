@@ -11,9 +11,9 @@ from swing_screener.intelligence.config import SUPPORTED_INTEL_PROVIDERS
 
 class IntelligenceLLMConfigModel(BaseModel):
     enabled: bool = False
-    provider: Literal["ollama", "mock", "openai"] = "ollama"
-    model: str = "mistral:7b-instruct"
-    base_url: str = "http://localhost:11434"
+    provider: Literal["ollama", "mock", "openai"] = "openai"
+    model: str = "gpt-4.1-mini"
+    base_url: str = "https://api.openai.com/v1"
     api_key: str = ""
     system_prompt: str = Field(default="", max_length=20000)
     user_prompt_template: str = Field(default="", max_length=40000)
@@ -245,8 +245,8 @@ class IntelligenceProviderInfoResponse(BaseModel):
 
 
 class IntelligenceProviderTestRequest(BaseModel):
-    provider: Literal["ollama", "mock", "openai"] = "ollama"
-    model: str = "mistral:7b-instruct"
+    provider: Literal["ollama", "mock", "openai"] = "openai"
+    model: str = "gpt-4.1-mini"
     base_url: Optional[str] = None
     api_key: Optional[str] = None
 

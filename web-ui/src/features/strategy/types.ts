@@ -413,9 +413,9 @@ export function transformStrategy(api: StrategyAPI): Strategy {
       marketContextSymbols: marketIntelligenceApi.market_context_symbols ?? ['SPY', 'QQQ', 'XLK', 'SMH', 'XBI'],
       llm: {
         enabled: marketIntelligenceLlmApi.enabled ?? false,
-        provider: marketIntelligenceLlmApi.provider ?? 'ollama',
-        model: marketIntelligenceLlmApi.model ?? 'mistral:7b-instruct',
-        baseUrl: marketIntelligenceLlmApi.base_url ?? 'http://localhost:11434',
+        provider: marketIntelligenceLlmApi.provider ?? 'openai',
+        model: marketIntelligenceLlmApi.model ?? 'gpt-4.1-mini',
+        baseUrl: marketIntelligenceLlmApi.base_url ?? 'https://api.openai.com/v1',
         apiKey: marketIntelligenceLlmApi.api_key ?? '',
         enableCache: marketIntelligenceLlmApi.enable_cache ?? true,
         enableAudit: marketIntelligenceLlmApi.enable_audit ?? true,

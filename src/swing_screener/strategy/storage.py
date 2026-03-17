@@ -39,9 +39,9 @@ def _default_market_intelligence_payload() -> dict:
         "market_context_symbols": ["SPY", "QQQ", "XLK", "SMH", "XBI"],
         "llm": {
             "enabled": False,
-            "provider": "ollama",
-            "model": "mistral:7b-instruct",
-            "base_url": "http://localhost:11434",
+            "provider": "openai",
+            "model": "gpt-4.1-mini",
+            "base_url": "https://api.openai.com/v1",
             "api_key": "",
             "enable_cache": True,
             "enable_audit": True,

@@ -124,9 +124,9 @@ class CalendarConfig:
 class LLMConfig:
     """LLM-based event classification configuration."""
     enabled: bool = False
-    provider: str = "ollama"
-    model: str = "mistral:7b-instruct"
-    base_url: str = "http://localhost:11434"
+    provider: str = "openai"
+    model: str = "gpt-4.1-mini"
+    base_url: str = "https://api.openai.com/v1"
     api_key: str = ""
     system_prompt: str = ""
     user_prompt_template: str = ""
@@ -359,8 +359,8 @@ def build_intelligence_config(strategy: dict) -> IntelligenceConfig:
         opportunity_raw.get("catalyst_weight"),
     )
 
-    llm_provider = str(llm_raw.get("provider", "ollama")).strip().lower()
-    default_model = "gpt-4o-mini" if llm_provider == "openai" else "mistral:7b-instruct"
+    llm_provider = str(llm_raw.get("provider", "openai")).strip().lower()
+    default_model = "gpt-4.1-mini" if llm_provider == "openai" else "mistral:7b-instruct"
 
     return IntelligenceConfig(
         enabled=bool(raw.get("enabled", False)),

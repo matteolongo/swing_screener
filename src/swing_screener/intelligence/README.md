@@ -83,6 +83,8 @@ In the Intelligence page, controls cover:
 ### Environment Variables
 There is no separate env toggle required for normal intelligence configuration.
 
+For OpenAI, `OPENAI_API_KEY` is resolved from the environment when not stored in config.
+
 For Ollama, `OLLAMA_HOST` can be used as a fallback host in the LLM client when `base_url` is not explicitly passed.
 
 ## Supported LLM Providers
@@ -91,8 +93,8 @@ The `intelligence/llm/` layer supports:
 
 | Provider | `provider` value | Notes |
 |----------|-----------------|-------|
-| Ollama | `"ollama"` | Default. Local inference. Default model: `mistral:7b-instruct`. Uses `OLLAMA_HOST` env var as fallback host. |
-| OpenAI | `"openai"` | Requires `OPENAI_API_KEY` |
+| OpenAI | `"openai"` | Default. Hosted inference. Default model: `gpt-4.1-mini`. Requires `OPENAI_API_KEY`. |
+| Ollama | `"ollama"` | Local inference. Default model: `mistral:7b-instruct`. Uses `OLLAMA_HOST` env var as fallback host. |
 | Anthropic | `"anthropic"` | Requires `ANTHROPIC_API_KEY` |
 | LM Studio | `"lm_studio"` | Local OpenAI-compatible endpoint |
 

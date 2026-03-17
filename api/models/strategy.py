@@ -102,9 +102,9 @@ class StrategySocialOverlay(BaseModel):
 
 class StrategyIntelligenceLLM(BaseModel):
     enabled: bool = False
-    provider: Literal["ollama", "mock", "openai"] = "ollama"
-    model: str = "mistral:7b-instruct"
-    base_url: str = "http://localhost:11434"
+    provider: Literal["ollama", "mock", "openai"] = "openai"
+    model: str = "gpt-4.1-mini"
+    base_url: str = "https://api.openai.com/v1"
     api_key: str = ""
     enable_cache: bool = True
     enable_audit: bool = True

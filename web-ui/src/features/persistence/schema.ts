@@ -110,9 +110,9 @@ export function createDefaultStrategy(now: Date = new Date()): Strategy {
       marketContextSymbols: ['SPY', 'QQQ', 'XLK', 'SMH', 'XBI'],
       llm: {
         enabled: false,
-        provider: 'ollama',
-        model: 'mistral:7b-instruct',
-        baseUrl: 'http://localhost:11434',
+        provider: 'openai',
+        model: 'gpt-4.1-mini',
+        baseUrl: 'https://api.openai.com/v1',
         apiKey: '',
         enableCache: true,
         enableAudit: true,

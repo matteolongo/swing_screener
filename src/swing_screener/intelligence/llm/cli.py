@@ -11,8 +11,8 @@ import pandas as pd
 def classify_news_command(
     symbols: list[str],
     mock: bool = False,
-    provider: str = "ollama",
-    model: str = "mistral:7b-instruct",
+    provider: str = "openai",
+    model: str = "gpt-4.1-mini",
     base_url: Optional[str] = None,
     output: Optional[str] = None,
 ) -> None:
@@ -21,25 +21,34 @@ def classify_news_command(
     Args:
         symbols: List of ticker symbols to fetch news for
         mock: Use mock news provider (no real API calls)
-        provider: LLM provider (ollama, mock)
+        provider: LLM provider (openai, ollama, mock)
         model: Model name for provider
-        base_url: Base URL for Ollama (default: http://localhost:11434)
+        base_url: Optional provider base URL override
         output: Optional output JSON file path
     """
-    from swing_screener.intelligence.llm import EventClassifier, OllamaProvider, MockLLMProvider
-    
-    # Initialize LLM provider
-    if provider == "mock":
-        llm_provider = MockLLMProvider()
-    elif provider == "ollama":
-        llm_provider = OllamaProvider(model=model, base_url=base_url)
-        if not llm_provider.is_available():
+    from swing_screener.intelligence.llm import EventClassifier, build_llm_provider
+
+    try:
+        llm_provider = build_llm_provider(
+            provider_name=provider,
+            model=model,
+            base_url=base_url,
+            api_key=None,
+        )
+    except Exception as exc:
+        print(f"ERROR: Failed to initialize provider '{provider}': {exc}", file=sys.stderr)
+        sys.exit(1)
+
+    if not llm_provider.is_available():
+        if provider == "openai":
+            print("ERROR: OpenAI provider is not available.", file=sys.stderr)
+            print("Set OPENAI_API_KEY in your environment or .env file.", file=sys.stderr)
+        elif provider == "ollama":
             print(f"ERROR: Ollama model '{model}' not available.", file=sys.stderr)
-            print(f"Ensure Ollama is running: docker compose up ollama", file=sys.stderr)
+            print("Ensure Ollama is running: docker compose up ollama", file=sys.stderr)
             print(f"And model is pulled: ollama pull {model}", file=sys.stderr)
-            sys.exit(1)
-    else:
-        print(f"ERROR: Unknown provider: {provider}", file=sys.stderr)
+        else:
+            print(f"ERROR: Provider '{provider}' is not available.", file=sys.stderr)
         sys.exit(1)
     
     # Initialize classifier

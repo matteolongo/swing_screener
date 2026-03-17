@@ -28,7 +28,7 @@ def test_education_user_prompt_template_is_consumed(monkeypatch):
                 "llm": {
                     "enabled": True,
                     "provider": "openai",
-                    "model": "gpt-4o-mini",
+                    "model": "gpt-4.1-mini",
                     "education_thesis_user_prompt_template": (
                         "Symbol={{symbol}}\n"
                         "View={{view}}\n"

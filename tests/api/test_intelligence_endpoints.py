@@ -15,9 +15,9 @@ class _FakeConfigService:
             "market_context_symbols": ["SPY"],
             "llm": {
                 "enabled": False,
-                "provider": "mock",
-                "model": "mistral:7b-instruct",
-                "base_url": "http://localhost:11434",
+                "provider": "openai",
+                "model": "gpt-4.1-mini",
+                "base_url": "https://api.openai.com/v1",
                 "enable_cache": True,
                 "enable_audit": True,
                 "cache_path": "data/intelligence/llm_cache.json",

@@ -32,7 +32,7 @@ def build_langchain_chat_model(
                 "langchain-openai is not installed. Install dependencies for OpenAI integration."
             ) from exc
         return ChatOpenAI(
-            model=str(model).strip() or "gpt-4o-mini",
+            model=str(model).strip() or "gpt-4.1-mini",
             temperature=temperature,
             api_key=resolved_api_key,
             base_url=base_url or os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1"),

@@ -491,19 +491,19 @@ def main() -> None:
     )
     classify.add_argument(
         "--provider",
-        choices=["ollama", "mock"],
-        default="ollama",
-        help="LLM provider to use (default: ollama)",
+        choices=["openai", "ollama", "mock"],
+        default="openai",
+        help="LLM provider to use (default: openai)",
     )
     classify.add_argument(
         "--model",
-        default="mistral:7b-instruct",
-        help="Model name for provider (default: mistral:7b-instruct)",
+        default="gpt-4.1-mini",
+        help="Model name for provider (default: gpt-4.1-mini)",
     )
     classify.add_argument(
         "--base-url",
         default=None,
-        help="Base URL for Ollama (default: http://localhost:11434)",
+        help="Optional provider base URL override",
     )
     classify.add_argument(
         "--output",

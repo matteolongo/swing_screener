@@ -474,13 +474,13 @@ class LangChainOpenAIProvider(LLMProvider):
 
     def __init__(
         self,
-        model: str = "gpt-4o-mini",
+        model: str = "gpt-4.1-mini",
         base_url: Optional[str] = None,
         api_key: Optional[str] = None,
         system_prompt: Optional[str] = None,
         user_prompt_template: Optional[str] = None,
     ) -> None:
-        self._model = str(model).strip() or "gpt-4o-mini"
+        self._model = str(model).strip() or "gpt-4.1-mini"
         self._base_url = base_url or os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
         self._api_key = str(api_key or os.environ.get("OPENAI_API_KEY", "")).strip()
         self._system_prompt = resolve_system_prompt(system_prompt)
