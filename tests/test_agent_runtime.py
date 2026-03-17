@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import sys
 from fastapi.testclient import TestClient
 
 from agent.agent import SwingScreenerAgent
@@ -10,7 +11,7 @@ from mcp_server.config import load_config
 from mcp_server.tools.registry import create_registry
 from tests.fixtures.fake_mcp_server import FakeChatService
 
-SERVER_COMMAND = ["uv", "run", "--extra", "mcp", "python", "-m", "tests.fixtures.fake_mcp_server"]
+SERVER_COMMAND = [sys.executable, "-m", "tests.fixtures.fake_mcp_server"]
 
 
 class FakeAgentChatService:
