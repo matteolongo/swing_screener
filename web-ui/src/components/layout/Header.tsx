@@ -32,34 +32,34 @@ export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: 
       <header
         className={cn(
           'border-b border-border bg-white dark:bg-gray-800 flex items-center justify-between',
-          isWorkspaceRoute ? 'h-14 px-3 sm:px-4 md:px-5' : 'h-14 sm:h-16 px-3 sm:px-4 md:px-6'
+          isWorkspaceRoute ? 'h-14 px-5' : 'h-16 px-6'
         )}
       >
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-3">
           {onToggleSidebar && (
             <Button
               variant="ghost"
               size="sm"
               onClick={onToggleSidebar}
-              className="gap-2 px-2 sm:px-3"
+              className="gap-2 px-3"
               title={isSidebarCollapsed ? t('header.showNavigation') : t('header.hideNavigation')}
               aria-label={isSidebarCollapsed ? t('header.showNavigation') : t('header.hideNavigation')}
             >
               {isSidebarCollapsed ? <PanelLeft className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
             </Button>
           )}
-          <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
-          <h1 className={cn('font-bold leading-tight', isWorkspaceRoute ? 'text-lg sm:text-xl md:text-2xl' : 'text-lg sm:text-2xl')}>
+          <TrendingUp className="w-8 h-8 text-primary" />
+          <h1 className={cn('font-bold leading-tight', isWorkspaceRoute ? 'text-xl' : 'text-2xl')}>
             {t('header.brand')}
           </h1>
           {isWorkspaceRoute ? (
-            <span className="hidden lg:inline-flex rounded-full border border-gray-200 bg-gray-50 px-2 py-1 text-xs text-gray-600">
+            <span className="inline-flex rounded-full border border-gray-200 bg-gray-50 px-2 py-1 text-xs text-gray-600">
               {t('header.focusView')}
             </span>
           ) : null}
         </div>
         
-        <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
+        <div className="flex items-center gap-4">
           <UserModeToggle />
           <Button
             variant="secondary"
@@ -69,11 +69,11 @@ export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: 
             aria-label={t('header.gettingStarted')}
           >
             <BookOpen className="w-4 h-4" />
-            <span className="hidden sm:inline">{t('header.gettingStarted')}</span>
+            <span>{t('header.gettingStarted')}</span>
           </Button>
           
           {!isWorkspaceRoute && (
-            <div className="hidden lg:flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+            <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
               <span>{dateStr}</span>
               <span className="font-mono">{timeStr}</span>
             </div>

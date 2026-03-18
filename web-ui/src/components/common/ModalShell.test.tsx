@@ -58,9 +58,9 @@ describe('ModalShell', () => {
     expect(document.documentElement.style.overflow).toBe(previousHtmlOverflow)
   })
 
-  it('renders full-screen on mobile when requested', () => {
+  it('renders full-screen when requested', () => {
     render(
-      <ModalShell title="Test Modal" onClose={() => {}} fullScreenOnMobile>
+      <ModalShell title="Test Modal" onClose={() => {}} fullScreen>
         <div>Body</div>
       </ModalShell>
     )

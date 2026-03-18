@@ -65,7 +65,6 @@ interface ModalShellProps {
   headerActions?: ReactNode;
   lockScroll?: boolean;
   fullScreen?: boolean;
-  fullScreenOnMobile?: boolean;
 }
 
 export default function ModalShell({
@@ -80,9 +79,8 @@ export default function ModalShell({
   headerActions,
   lockScroll = true,
   fullScreen = false,
-  fullScreenOnMobile = false,
 }: ModalShellProps) {
-  const immersive = fullScreen || fullScreenOnMobile;
+  const immersive = fullScreen;
 
   useEffect(() => {
     if (!closeOnEscape) return;
@@ -107,11 +105,7 @@ export default function ModalShell({
     <div
       className={cn(
         'fixed inset-0 z-50 flex justify-center bg-black/55',
-        fullScreen
-          ? 'items-stretch'
-          : fullScreenOnMobile
-          ? 'items-stretch sm:items-center sm:p-4'
-          : 'items-end sm:items-center sm:p-4',
+        fullScreen ? 'items-stretch' : 'items-center p-4',
       )}
       onClick={closeOnBackdrop ? onClose : undefined}
       role="presentation"
@@ -123,20 +117,18 @@ export default function ModalShell({
           'w-full bg-white shadow-xl dark:bg-gray-800',
           fullScreen
             ? 'h-dvh max-h-dvh overflow-hidden rounded-none flex flex-col'
-            : fullScreenOnMobile
-            ? 'h-dvh max-h-dvh overflow-hidden rounded-none flex flex-col sm:h-auto sm:max-h-[90vh] sm:rounded-lg'
-            : 'max-h-[92dvh] overflow-y-auto rounded-t-xl sm:max-h-[90vh] sm:rounded-lg',
+            : 'max-h-[90vh] overflow-y-auto rounded-lg',
           className,
         )}
         onClick={(event) => event.stopPropagation()}
       >
         <div
           className={cn(
-            'flex items-center justify-between border-b border-border px-4 py-3 sm:px-6 sm:py-4',
+            'flex items-center justify-between border-b border-border px-6 py-4',
             immersive ? 'shrink-0 bg-white/95 dark:bg-gray-800/95' : null,
           )}
         >
-          <h2 className="text-lg font-bold sm:text-2xl">{title}</h2>
+          <h2 className="text-2xl font-bold">{title}</h2>
           <div className="flex items-center gap-2">
             {headerActions}
             <Button
@@ -153,7 +145,7 @@ export default function ModalShell({
         </div>
         <div
           className={cn(
-            immersive ? 'min-h-0 flex-1 overflow-y-auto p-4 sm:p-6' : 'p-4 sm:p-6',
+            immersive ? 'min-h-0 flex-1 overflow-y-auto p-6' : 'p-6',
             contentClassName,
           )}
         >
