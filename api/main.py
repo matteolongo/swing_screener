@@ -129,11 +129,20 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+_DEFAULT_ALLOW_ORIGINS = ["http://localhost:5173", "http://localhost:5174"]
+_raw_allow_origins = _API_SETTINGS.get("allow_origins", _DEFAULT_ALLOW_ORIGINS)
+if isinstance(_raw_allow_origins, list):
+    _allow_origins: list[str] = [str(o) for o in _raw_allow_origins if o]
+    if not _allow_origins:
+        _allow_origins = _DEFAULT_ALLOW_ORIGINS
+else:
+    _allow_origins = _DEFAULT_ALLOW_ORIGINS
+
 # CORS middleware - allow web UI to connect
 # Security: Use explicit allowed methods and headers instead of wildcards
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_API_SETTINGS.get("allow_origins", ["http://localhost:5173", "http://localhost:5174"]),
+    allow_origins=_allow_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],  # Explicit instead of ["*"]
     allow_headers=[

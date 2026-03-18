@@ -536,11 +536,15 @@ export default function IntelligencePage() {
                   aria-label={t('intelligencePage.config.llmProvider')}
                   className="w-full rounded border border-gray-300 px-3 py-2"
                 >
-                  {providerCatalog.map((provider) => (
-                    <option key={provider.provider} value={provider.provider}>
-                      {provider.provider}
-                    </option>
-                  ))}
+                  {providerCatalog.length > 0 ? (
+                    providerCatalog.map((provider) => (
+                      <option key={provider.provider} value={provider.provider}>
+                        {provider.provider}
+                      </option>
+                    ))
+                  ) : (
+                    <option value={draftConfig.llm.provider}>{draftConfig.llm.provider}</option>
+                  )}
                 </select>
               </label>
               <label className="text-sm">

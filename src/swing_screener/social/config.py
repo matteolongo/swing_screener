@@ -1,13 +1,15 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from swing_screener.settings import get_settings_manager
 
-_SOCIAL_DEFAULTS = get_settings_manager().get_low_level_defaults_payload("social")
+
+def _get_social_defaults() -> dict:
+    return get_settings_manager().get_low_level_defaults_payload("social")
 
 
 def _social_tuple(key: str, fallback: tuple[str, ...]) -> tuple[str, ...]:
-    raw = _SOCIAL_DEFAULTS.get(key)
+    raw = _get_social_defaults().get(key)
     if isinstance(raw, list):
         values = tuple(str(item).strip() for item in raw if str(item).strip())
         if values:
@@ -16,20 +18,20 @@ def _social_tuple(key: str, fallback: tuple[str, ...]) -> tuple[str, ...]:
 
 
 def _social_str(key: str, fallback: str) -> str:
-    raw = str(_SOCIAL_DEFAULTS.get(key, fallback)).strip()
+    raw = str(_get_social_defaults().get(key, fallback)).strip()
     return raw or fallback
 
 
 def _social_float(key: str, fallback: float) -> float:
     try:
-        return float(_SOCIAL_DEFAULTS.get(key, fallback))
+        return float(_get_social_defaults().get(key, fallback))
     except (TypeError, ValueError):
         return fallback
 
 
 def _social_int(key: str, fallback: int) -> int:
     try:
-        return int(_SOCIAL_DEFAULTS.get(key, fallback))
+        return int(_get_social_defaults().get(key, fallback))
     except (TypeError, ValueError):
         return fallback
 
@@ -65,5 +67,5 @@ class SocialOverlayConfig:
     negative_sent_threshold: float = -0.4
     sentiment_conf_threshold: float = 0.7
     hype_percentile_threshold: float = 95.0
-    providers: tuple[str, ...] = tuple(DEFAULT_PROVIDERS)
-    sentiment_analyzer: str = DEFAULT_SENTIMENT_ANALYZER
+    providers: tuple[str, ...] = field(default_factory=lambda: tuple(_social_tuple("default_providers", ("reddit",))))
+    sentiment_analyzer: str = field(default_factory=lambda: _social_str("default_sentiment_analyzer", "keyword"))

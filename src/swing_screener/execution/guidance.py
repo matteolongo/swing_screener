@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 import pandas as pd
@@ -8,16 +8,17 @@ import re
 from swing_screener.settings import get_settings_manager
 
 
-_EXECUTION_DEFAULTS = get_settings_manager().get_low_level_defaults_payload("execution")
+def _execution_defaults() -> dict:
+    return get_settings_manager().get_low_level_defaults_payload("execution")
 
 
 @dataclass(frozen=True)
 class ExecutionConfig:
-    breakout_stop_buffer_pct: float = float(_EXECUTION_DEFAULTS.get("breakout_stop_buffer_pct", 0.002))
-    pullback_atr_fraction: float = float(_EXECUTION_DEFAULTS.get("pullback_atr_fraction", 0.25))
-    pullback_band_atr_low: float = float(_EXECUTION_DEFAULTS.get("pullback_band_atr_low", 0.50))
-    pullback_band_atr_high: float = float(_EXECUTION_DEFAULTS.get("pullback_band_atr_high", 0.00))
-    allow_second_chance_breakout: bool = bool(_EXECUTION_DEFAULTS.get("allow_second_chance_breakout", True))
+    breakout_stop_buffer_pct: float = field(default_factory=lambda: float(_execution_defaults().get("breakout_stop_buffer_pct", 0.002)))
+    pullback_atr_fraction: float = field(default_factory=lambda: float(_execution_defaults().get("pullback_atr_fraction", 0.25)))
+    pullback_band_atr_low: float = field(default_factory=lambda: float(_execution_defaults().get("pullback_band_atr_low", 0.50)))
+    pullback_band_atr_high: float = field(default_factory=lambda: float(_execution_defaults().get("pullback_band_atr_high", 0.00)))
+    allow_second_chance_breakout: bool = field(default_factory=lambda: bool(_execution_defaults().get("allow_second_chance_breakout", True)))
 
 
 def _pick_feature_column(df: pd.DataFrame, pattern: str, fallback: str) -> str | None:
