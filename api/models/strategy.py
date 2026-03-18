@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from typing import Optional, Literal
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class StrategyTrend(BaseModel):
@@ -102,7 +102,7 @@ class StrategySocialOverlay(BaseModel):
 
 class StrategyIntelligenceLLM(BaseModel):
     enabled: bool = False
-    provider: Literal["ollama", "mock", "openai"] = "openai"
+    provider: Literal["mock", "openai"] = "openai"
     model: str = "gpt-4.1-mini"
     base_url: str = "https://api.openai.com/v1"
     enable_cache: bool = True
@@ -110,6 +110,14 @@ class StrategyIntelligenceLLM(BaseModel):
     cache_path: str = "data/intelligence/llm_cache.json"
     audit_path: str = "data/intelligence/llm_audit"
     max_concurrency: int = Field(default=4, ge=1, le=16)
+
+    @model_validator(mode="after")
+    def coerce_mock_fields(self) -> "StrategyIntelligenceLLM":
+        if self.provider != "mock":
+            return self
+        self.model = "mock-classifier"
+        self.base_url = ""
+        return self
 
 
 class StrategyIntelligenceCatalyst(BaseModel):

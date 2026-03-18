@@ -341,8 +341,8 @@ class FakeConfigService:
         self.provider = provider
 
     def get_config(self):
-        model = "gpt-4.1-mini" if self.provider == "openai" else "test-model"
-        base_url = "https://api.openai.com/v1" if self.provider == "openai" else "http://localhost:11434"
+        model = "gpt-4.1-mini" if self.provider == "openai" else "mock-classifier"
+        base_url = "https://api.openai.com/v1" if self.provider == "openai" else ""
         return IntelligenceConfigModel.model_validate(
             {
                 "enabled": True,

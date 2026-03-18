@@ -6,7 +6,7 @@ import json
 import logging
 from typing import Any
 
-from swing_screener.intelligence.config import IntelligenceConfig
+from swing_screener.intelligence.config import IntelligenceConfig, resolve_llm_model
 from swing_screener.intelligence.llm.factory import build_langchain_chat_model
 
 logger = logging.getLogger(__name__)
@@ -116,7 +116,7 @@ def _invoke_llm_summary(cfg: IntelligenceConfig, context: dict[str, Any]) -> str
 
     llm = build_langchain_chat_model(
         provider_name=provider,
-        model=model or ("gpt-4.1-mini" if provider == "openai" else "mistral:7b-instruct"),
+        model=resolve_llm_model(model, provider),
         base_url=base_url,
         api_key=None,
         temperature=0,

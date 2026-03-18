@@ -5,10 +5,15 @@ from typing import Any
 
 from swing_screener.settings import deep_merge_dicts, get_settings_manager
 from swing_screener.utils import get_nested_dict
-from swing_screener.runtime_env import get_ollama_host, get_openai_base_url
+from swing_screener.runtime_env import get_openai_api_key, get_openai_base_url
 
 DEFAULT_INTEL_PROVIDERS = ("yahoo_finance",)
 SUPPORTED_INTEL_PROVIDERS = {"yahoo_finance", "earnings_calendar"}
+LLM_PROVIDER_ORDER = ("openai", "mock")
+SUPPORTED_LLM_PROVIDERS = frozenset(LLM_PROVIDER_ORDER)
+DEFAULT_LLM_PROVIDER = "openai"
+DEFAULT_OPENAI_MODEL = "gpt-4.1-mini"
+DEFAULT_MOCK_MODEL = "mock-classifier"
 DEFAULT_EVIDENCE_SOURCES = (
     "yahoo_finance",
     "earnings_calendar",
@@ -272,25 +277,47 @@ def _clean_string_list(
     return tuple(cleaned) if cleaned else fallback
 
 
+def _normalize_llm_provider(raw_provider: Any) -> tuple[str, bool]:
+    provider = str(raw_provider or "").strip().lower()
+    if not provider:
+        return DEFAULT_LLM_PROVIDER, False
+    if provider in SUPPORTED_LLM_PROVIDERS:
+        return provider, False
+    return ("openai" if get_openai_api_key() else "mock"), True
+
+
+def resolve_llm_provider(raw_provider: Any) -> str:
+    return _normalize_llm_provider(raw_provider)[0]
+
+
+def default_model_for_llm_provider(provider_name: str) -> str:
+    provider = str(provider_name or "").strip().lower()
+    if provider == "mock":
+        return DEFAULT_MOCK_MODEL
+    return DEFAULT_OPENAI_MODEL
+
+
+def default_base_url_for_llm_provider(provider_name: str) -> str:
+    provider = str(provider_name or "").strip().lower()
+    if provider == "mock":
+        return ""
+    return get_openai_base_url()
+
+
+def resolve_llm_model(raw_model: Any, provider_name: str) -> str:
+    provider = resolve_llm_provider(provider_name)
+    if provider == "mock":
+        return DEFAULT_MOCK_MODEL
+    configured = str(raw_model or "").strip()
+    return configured or default_model_for_llm_provider(provider)
+
+
 def _resolve_llm_base_url(llm_raw: dict[str, Any], provider_name: str) -> str:
+    provider = resolve_llm_provider(provider_name)
+    if provider == "mock":
+        return ""
     configured = str(llm_raw.get("base_url", "")).strip()
-    provider = str(provider_name).strip().lower()
-
-    if provider == "openai":
-        if configured:
-            return configured
-        return get_openai_base_url()
-
-    env_ollama_host = get_ollama_host()
-
-    if configured:
-        # If strategy persisted the generic localhost default, prefer container/runtime override.
-        if configured == "http://localhost:11434" and env_ollama_host and env_ollama_host != configured:
-            return env_ollama_host
-        return configured
-    if env_ollama_host:
-        return env_ollama_host
-    return "http://localhost:11434"
+    return configured or default_base_url_for_llm_provider(provider)
 
 
 def _clean_prompt_override(raw: Any) -> str:
@@ -353,8 +380,19 @@ def build_intelligence_config(strategy: dict) -> IntelligenceConfig:
         opportunity_raw.get("catalyst_weight"),
     )
 
-    llm_provider = str(llm_raw.get("provider", "openai")).strip().lower()
-    default_model = "gpt-4.1-mini" if llm_provider == "openai" else "mistral:7b-instruct"
+    llm_provider, migrated_provider = _normalize_llm_provider(
+        llm_raw.get("provider", DEFAULT_LLM_PROVIDER)
+    )
+    model = (
+        default_model_for_llm_provider(llm_provider)
+        if migrated_provider
+        else resolve_llm_model(llm_raw.get("model"), llm_provider)
+    )
+    base_url = (
+        default_base_url_for_llm_provider(llm_provider)
+        if migrated_provider
+        else _resolve_llm_base_url(llm_raw, llm_provider)
+    )
 
     return IntelligenceConfig(
         enabled=bool(raw.get("enabled", False)),
@@ -365,8 +403,8 @@ def build_intelligence_config(strategy: dict) -> IntelligenceConfig:
         llm=LLMConfig(
             enabled=bool(llm_raw.get("enabled", False)),
             provider=llm_provider,
-            model=str(llm_raw.get("model", default_model)).strip(),
-            base_url=_resolve_llm_base_url(llm_raw, llm_provider),
+            model=model,
+            base_url=base_url,
             system_prompt=_clean_prompt_override(llm_raw.get("system_prompt", "")),
             user_prompt_template=_clean_prompt_override(llm_raw.get("user_prompt_template", "")),
             enable_cache=bool(llm_raw.get("enable_cache", True)),

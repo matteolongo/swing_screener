@@ -32,7 +32,7 @@ from api.models.intelligence import (
 from api.services.intelligence_config_service import IntelligenceConfigService
 from api.repositories.strategy_repo import StrategyRepository
 from api.services.intelligence_warmup import get_intelligence_run_manager
-from swing_screener.intelligence.config import build_intelligence_config
+from swing_screener.intelligence.config import build_intelligence_config, resolve_llm_model
 from swing_screener.intelligence.llm.factory import build_langchain_chat_model
 from swing_screener.intelligence.storage import IntelligenceStorage
 
@@ -208,7 +208,7 @@ def _invoke_llm_explanation(
     try:
         llm = build_langchain_chat_model(
             provider_name=provider,
-            model=model or ("gpt-4.1-mini" if provider == "openai" else "mistral:7b-instruct"),
+            model=resolve_llm_model(model, provider),
             base_url=base_url,
             api_key=None,
             temperature=0,
@@ -522,7 +522,7 @@ def _invoke_llm_education_view(
     try:
         llm = build_langchain_chat_model(
             provider_name=provider,
-            model=model or ("gpt-4.1-mini" if provider == "openai" else "mistral:7b-instruct"),
+            model=resolve_llm_model(model, provider),
             base_url=base_url,
             api_key=None,
             temperature=0,

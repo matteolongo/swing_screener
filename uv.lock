@@ -952,19 +952,6 @@ wheels = [
 ]
 
 [[package]]
-name = "langchain-ollama"
-version = "1.0.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "langchain-core" },
-    { name = "ollama" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/73/51/72cd04d74278f3575f921084f34280e2f837211dc008c9671c268c578afe/langchain_ollama-1.0.1.tar.gz", hash = "sha256:e37880c2f41cdb0895e863b1cfd0c2c840a117868b3f32e44fef42569e367443", size = 153850 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/e3/46/f2907da16dc5a5a6c679f83b7de21176178afad8d2ca635a581429580ef6/langchain_ollama-1.0.1-py3-none-any.whl", hash = "sha256:37eb939a4718a0255fe31e19fbb0def044746c717b01b97d397606ebc3e9b440", size = 29207 },
-]
-
-[[package]]
 name = "langchain-openai"
 version = "1.1.10"
 source = { registry = "https://pypi.org/simple" }
@@ -1305,19 +1292,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/91/da/643aad274e29ccbdf42ecd94dafe524b81c87bcb56b83872d54827f10543/numpy-2.4.2-pp311-pypy311_pp73-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:e04ae107ac591763a47398bb45b568fc38f02dbc4aa44c063f67a131f99346cb", size = 15797142 },
     { url = "https://files.pythonhosted.org/packages/66/27/965b8525e9cb5dc16481b30a1b3c21e50c7ebf6e9dbd48d0c4d0d5089c7e/numpy-2.4.2-pp311-pypy311_pp73-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:602f65afdef699cda27ec0b9224ae5dc43e328f4c24c689deaf77133dbee74d0", size = 16727979 },
     { url = "https://files.pythonhosted.org/packages/de/e5/b7d20451657664b07986c2f6e3be564433f5dcaf3482d68eaecd79afaf03/numpy-2.4.2-pp311-pypy311_pp73-win_amd64.whl", hash = "sha256:be71bf1edb48ebbbf7f6337b5bfd2f895d1902f6335a5830b20141fc126ffba0", size = 12502577 },
-]
-
-[[package]]
-name = "ollama"
-version = "0.6.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "httpx" },
-    { name = "pydantic" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/9d/5a/652dac4b7affc2b37b95386f8ae78f22808af09d720689e3d7a86b6ed98e/ollama-0.6.1.tar.gz", hash = "sha256:478c67546836430034b415ed64fa890fd3d1ff91781a9d548b3325274e69d7c6", size = 51620 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/47/4f/4a617ee93d8208d2bcf26b2d8b9402ceaed03e3853c754940e2290fed063/ollama-0.6.1-py3-none-any.whl", hash = "sha256:fc4c984b345735c5486faeee67d8a265214a31cbb828167782dc642ce0a2bf8c", size = 14354 },
 ]
 
 [[package]]
@@ -2560,17 +2534,16 @@ dependencies = [
     { name = "fastapi" },
     { name = "httpx" },
     { name = "langchain-core" },
-    { name = "langchain-ollama" },
     { name = "langchain-openai" },
     { name = "langgraph" },
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "numpy", version = "2.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "ollama" },
     { name = "pandas", version = "2.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "pandas", version = "3.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "portalocker" },
     { name = "pyarrow" },
     { name = "pydantic" },
+    { name = "pyyaml" },
     { name = "sqlalchemy" },
     { name = "ta-lib" },
     { name = "uvicorn", extra = ["standard"] },
@@ -2588,10 +2561,8 @@ dev = [
 ]
 llm = [
     { name = "langchain-core" },
-    { name = "langchain-ollama" },
     { name = "langchain-openai" },
     { name = "langgraph" },
-    { name = "ollama" },
 ]
 mcp = [
     { name = "mcp" },
@@ -2606,22 +2577,19 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.28.1,<0.29.0" },
     { name = "langchain-core", specifier = ">=0.3.0" },
     { name = "langchain-core", marker = "extra == 'llm'", specifier = ">=0.3.0" },
-    { name = "langchain-ollama", specifier = ">=0.2.0" },
-    { name = "langchain-ollama", marker = "extra == 'llm'", specifier = ">=0.2.0" },
     { name = "langchain-openai", specifier = ">=0.3.0" },
     { name = "langchain-openai", marker = "extra == 'llm'", specifier = ">=0.3.0" },
     { name = "langgraph", specifier = ">=0.2.0" },
     { name = "langgraph", marker = "extra == 'llm'", specifier = ">=0.2.0" },
     { name = "mcp", marker = "extra == 'mcp'", specifier = ">=1.26.0" },
     { name = "numpy", specifier = ">=1.24" },
-    { name = "ollama", specifier = ">=0.6.1,<0.7.0" },
-    { name = "ollama", marker = "extra == 'llm'", specifier = ">=0.1.0" },
     { name = "pandas", specifier = ">=2.0" },
     { name = "portalocker", specifier = ">=2.8.0" },
     { name = "pyarrow", specifier = ">=14.0" },
     { name = "pydantic", specifier = ">=2.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
     { name = "pytest-cov", marker = "extra == 'dev'" },
+    { name = "pyyaml", specifier = ">=6.0" },
     { name = "pyyaml", marker = "extra == 'mcp'", specifier = ">=6.0" },
     { name = "ruff", marker = "extra == 'dev'" },
     { name = "sqlalchemy", specifier = ">=2.0" },

@@ -11,7 +11,7 @@ from swing_screener.intelligence.config import SUPPORTED_INTEL_PROVIDERS
 
 class IntelligenceLLMConfigModel(BaseModel):
     enabled: bool = False
-    provider: Literal["ollama", "mock", "openai"] = "openai"
+    provider: Literal["mock", "openai"] = "openai"
     model: str = "gpt-4.1-mini"
     base_url: str = "https://api.openai.com/v1"
     system_prompt: str = Field(default="", max_length=20000)
@@ -73,6 +73,14 @@ class IntelligenceLLMConfigModel(BaseModel):
             seen.add(key)
             normalized.append(key)
         return normalized or ["prediction", "guarantee", "financial_advice"]
+
+    @model_validator(mode="after")
+    def _coerce_mock_fields(self) -> "IntelligenceLLMConfigModel":
+        if self.provider != "mock":
+            return self
+        self.model = "mock-classifier"
+        self.base_url = ""
+        return self
 
 
 class IntelligenceCatalystConfigModel(BaseModel):
@@ -248,7 +256,7 @@ class IntelligenceProviderInfoResponse(BaseModel):
 
 
 class IntelligenceProviderTestRequest(BaseModel):
-    provider: Literal["ollama", "mock", "openai"] = "openai"
+    provider: Literal["mock", "openai"] = "openai"
     model: str = "gpt-4.1-mini"
     base_url: Optional[str] = None
 

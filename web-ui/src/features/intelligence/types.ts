@@ -16,7 +16,7 @@ export interface IntelligenceRunRequestAPI {
   max_opportunities?: number;
 }
 
-export type IntelligenceLlmProvider = 'ollama' | 'mock' | 'openai';
+export type IntelligenceLlmProvider = 'mock' | 'openai';
 
 export interface IntelligenceRunLaunchResponse {
   jobId: string;

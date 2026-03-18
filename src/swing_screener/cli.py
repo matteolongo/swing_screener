@@ -491,7 +491,7 @@ def main() -> None:
     )
     classify.add_argument(
         "--provider",
-        choices=["openai", "ollama", "mock"],
+        choices=["openai", "mock"],
         default="openai",
         help="LLM provider to use (default: openai)",
     )

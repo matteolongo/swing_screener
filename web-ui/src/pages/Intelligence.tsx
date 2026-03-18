@@ -519,7 +519,9 @@ export default function IntelligencePage() {
                     const providerEntry = getProviderCatalogEntry(providerCatalog, nextProvider);
                     const suggestedModels = providerEntry?.suggestedModels ?? [];
                     const defaultModel = providerEntry?.defaultModel ?? draftConfig.llm.model;
-                    const defaultBaseUrl = providerEntry?.defaultBaseUrl ?? draftConfig.llm.baseUrl;
+                    const defaultBaseUrl = providerEntry
+                      ? (providerEntry.defaultBaseUrl ?? '')
+                      : draftConfig.llm.baseUrl;
                     const nextModel = suggestedModels.includes(draftConfig.llm.model)
                       ? draftConfig.llm.model
                       : defaultModel;
@@ -571,7 +573,8 @@ export default function IntelligencePage() {
                   onChange={(event) =>
                     setDraftConfig({ ...draftConfig, llm: { ...draftConfig.llm, baseUrl: event.target.value } })
                   }
-                  className="w-full rounded border border-gray-300 px-3 py-2"
+                  disabled={draftConfig.llm.provider === 'mock'}
+                  className="w-full rounded border border-gray-300 px-3 py-2 disabled:bg-gray-100 disabled:text-gray-500"
                 />
               </label>
               {draftConfig.llm.provider === 'openai' ? (

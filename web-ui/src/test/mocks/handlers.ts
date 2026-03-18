@@ -597,8 +597,24 @@ const mockIntelligenceConfig = {
 }
 
 const mockIntelligenceProviders = [
-  { provider: 'openai', available: true, detail: null },
-  { provider: 'ollama', available: false, detail: 'not running' },
+  {
+    provider: 'openai',
+    available: true,
+    detail: null,
+    default_model: 'gpt-4.1-mini',
+    default_base_url: 'https://api.openai.com/v1',
+    suggested_models: ['gpt-4.1-mini', 'gpt-4o-mini', 'gpt-4.1', 'o4-mini'],
+    api_key_configured: true,
+  },
+  {
+    provider: 'mock',
+    available: true,
+    detail: null,
+    default_model: 'mock-classifier',
+    default_base_url: null,
+    suggested_models: ['mock-classifier'],
+    api_key_configured: true,
+  },
 ]
 
 const defaultIntelligenceSymbolSets = [
@@ -801,6 +817,10 @@ export const handlers = [
           ...asObject(asObject(body.sources).scrape_policy),
         },
       },
+    }
+    if (intelligenceConfig.llm?.provider === 'mock') {
+      intelligenceConfig.llm.model = 'mock-classifier'
+      intelligenceConfig.llm.base_url = ''
     }
     return HttpResponse.json(intelligenceConfig)
   }),

@@ -20,7 +20,13 @@ from api.models.intelligence_config import (
 from api.repositories.intelligence_config_repo import IntelligenceConfigRepository
 from api.repositories.intelligence_symbol_sets_repo import IntelligenceSymbolSetsRepository
 from api.repositories.strategy_repo import StrategyRepository
-from swing_screener.intelligence.config import SUPPORTED_INTEL_PROVIDERS, build_intelligence_config
+from swing_screener.intelligence.config import (
+    LLM_PROVIDER_ORDER,
+    SUPPORTED_INTEL_PROVIDERS,
+    build_intelligence_config,
+    default_base_url_for_llm_provider,
+    default_model_for_llm_provider,
+)
 from swing_screener.intelligence.llm.factory import build_llm_provider
 from swing_screener.settings import get_settings_manager
 from swing_screener.runtime_env import get_openai_api_key
@@ -60,6 +66,26 @@ class IntelligenceConfigService:
     def _default_config(self) -> IntelligenceConfigModel:
         return self._normalize_config_payload({})
 
+    def _sanitize_raw_envelope(self, raw: dict) -> tuple[dict, bool]:
+        if not isinstance(raw, dict):
+            return raw, False
+
+        raw_config = raw.get("config")
+        if not isinstance(raw_config, dict):
+            return raw, False
+
+        normalized_config = self._normalize_config_payload(raw_config)
+        normalized_payload = normalized_config.model_dump()
+        changed = normalized_payload != raw_config
+        return (
+            {
+                "config": normalized_payload,
+                "bootstrapped_from_strategy": bool(raw.get("bootstrapped_from_strategy", False)),
+                "updated_at": _now_iso() if changed else str(raw.get("updated_at") or _now_iso()),
+            },
+            changed,
+        )
+
     def _bootstrap_from_strategy_payload(self) -> IntelligenceConfigModel:
         strategy = self._strategy_repo.get_active_strategy()
         market_intelligence = strategy.get("market_intelligence") if isinstance(strategy, dict) else None
@@ -67,71 +93,12 @@ class IntelligenceConfigService:
             market_intelligence = {}
         return self._normalize_config_payload(market_intelligence)
 
-    def _should_migrate_legacy_mock_llm(
-        self,
-        *,
-        config: IntelligenceConfigModel,
-        strategy_config: IntelligenceConfigModel,
-    ) -> bool:
-        if config.llm.provider != "mock":
-            return False
-        if strategy_config.llm.provider != "openai":
-            return False
-        if not get_openai_api_key():
-            return False
-
-        model = str(config.llm.model or "").strip()
-        base_url = str(config.llm.base_url or "").strip()
-        strategy_model = str(strategy_config.llm.model or "").strip()
-        strategy_base_url = str(strategy_config.llm.base_url or "").strip()
-
-        if not base_url or base_url != strategy_base_url:
-            return False
-        if not model or model == "mock-classifier":
-            return False
-        if model != strategy_model:
-            return False
-        return True
-
-    def _sanitize_envelope(
-        self,
-        envelope: IntelligenceConfigStorageEnvelope,
-    ) -> tuple[IntelligenceConfigStorageEnvelope, bool]:
-        strategy_config = self._bootstrap_from_strategy_payload()
-        config = envelope.config
-        changed = False
-
-        if self._should_migrate_legacy_mock_llm(config=config, strategy_config=strategy_config):
-            migrated_llm = config.llm.model_copy(
-                update={
-                    "provider": strategy_config.llm.provider,
-                    "model": strategy_config.llm.model,
-                    "base_url": strategy_config.llm.base_url,
-                }
-            )
-            config = config.model_copy(update={"llm": migrated_llm})
-            changed = True
-
-        if not changed:
-            return envelope, False
-
-        return (
-            envelope.model_copy(
-                update={
-                    "config": config,
-                    "updated_at": _now_iso(),
-                }
-            ),
-            True,
-        )
-
     def get_config(self) -> IntelligenceConfigModel:
         raw = self._config_repo.load_raw()
         if isinstance(raw, dict):
             try:
-                envelope = IntelligenceConfigStorageEnvelope.model_validate(raw)
-                envelope, migrated = self._sanitize_envelope(envelope)
-                sanitized_payload = envelope.model_dump()
+                sanitized_payload, migrated = self._sanitize_raw_envelope(raw)
+                envelope = IntelligenceConfigStorageEnvelope.model_validate(sanitized_payload)
                 if migrated or raw != sanitized_payload:
                     self._config_repo.save_raw(sanitized_payload)
                 return envelope.config
@@ -149,17 +116,6 @@ class IntelligenceConfigService:
 
     def update_config(self, payload: IntelligenceConfigModel) -> IntelligenceConfigModel:
         config = self._normalize_config_payload(payload.model_dump())
-        if config.llm.provider == "mock":
-            config = config.model_copy(
-                update={
-                    "llm": config.llm.model_copy(
-                        update={
-                            "model": "mock-classifier",
-                            "base_url": "",
-                        }
-                    )
-                }
-            )
         envelope = IntelligenceConfigStorageEnvelope(
             config=config,
             bootstrapped_from_strategy=False,
@@ -172,11 +128,17 @@ class IntelligenceConfigService:
         config = self.get_config()
         provider_catalog = get_settings_manager().get_intelligence_provider_catalog()
         out: list[IntelligenceProviderInfoResponse] = []
-        provider_names = list(provider_catalog.keys()) or ["openai", "ollama", "mock"]
+        provider_names = [name for name in LLM_PROVIDER_ORDER if isinstance(provider_catalog.get(name, {}), dict)]
+        if not provider_names:
+            provider_names = list(LLM_PROVIDER_ORDER)
         for provider_name in provider_names:
             catalog_entry = provider_catalog.get(provider_name, {})
-            default_model = str(catalog_entry.get("default_model") or config.llm.model or "").strip()
+            default_model = str(
+                catalog_entry.get("default_model") or default_model_for_llm_provider(provider_name)
+            ).strip()
             default_base_url = catalog_entry.get("default_base_url")
+            if default_base_url in (None, ""):
+                default_base_url = default_base_url_for_llm_provider(provider_name) or None
             suggested_models = catalog_entry.get("suggested_models", [])
             if not isinstance(suggested_models, list):
                 suggested_models = []

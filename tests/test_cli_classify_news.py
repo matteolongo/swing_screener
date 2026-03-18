@@ -199,72 +199,53 @@ class TestClassifyNewsCLI:
         assert "Cache:" in output
         assert "entries" in output.lower()
     
-    def test_classify_news_with_ollama_unavailable(self, capsys, monkeypatch):
-        """Test classify-news with ollama provider when unavailable."""
-        # Force unavailability to keep this test deterministic and offline-safe.
-        from swing_screener.intelligence.llm.client import OllamaProvider
+    def test_classify_news_rejects_unsupported_provider(self, capsys):
+        """Test classify-news rejects unsupported providers at the parser layer."""
+        with pytest.raises(SystemExit):
+            _run_cli([
+                "classify-news",
+                "--symbols", "AAPL",
+                "--mock",
+                "--provider", "legacy-local",
+            ])
 
-        monkeypatch.setattr(OllamaProvider, "is_available", lambda self: False)
+        captured = capsys.readouterr()
+        output = captured.err + captured.out
+        assert "invalid choice" in output.lower()
+        assert "legacy-local" in output
+
+    def test_classify_news_help_lists_supported_providers(self, capsys):
+        """Test classify-news help advertises the current provider set."""
+        with pytest.raises(SystemExit):
+            _run_cli([
+                "classify-news",
+                "--help",
+            ])
+
+        captured = capsys.readouterr()
+        output = captured.out
+        assert "openai" in output
+        assert "mock" in output
+
+
+class TestClassifyNewsCLIIntegration:
+    """Integration tests for classify-news CLI."""
+
+    @pytest.mark.integration
+    def test_classify_news_with_openai_reports_missing_key(self, capsys, monkeypatch):
+        """Test classify-news surfaces the OpenAI credential requirement."""
+        from swing_screener.intelligence.llm.langchain_provider import LangChainOpenAIProvider
+
+        monkeypatch.setattr(LangChainOpenAIProvider, "is_available", lambda self: False)
 
         with pytest.raises(SystemExit):
             _run_cli([
                 "classify-news",
                 "--symbols", "AAPL",
                 "--mock",
-                "--provider", "ollama",
+                "--provider", "openai",
             ])
-        
+
         captured = capsys.readouterr()
         output = captured.err + captured.out
-        
-        # Should show error about Ollama not being available
-        assert "not available" in output.lower() or "ERROR" in output
-
-
-class TestClassifyNewsCLIIntegration:
-    """Integration tests for classify-news CLI with live Ollama."""
-    
-    @pytest.mark.integration
-    def test_classify_news_with_live_ollama(self, capsys):
-        """Test classify-news with live Ollama instance."""
-        try:
-            _run_cli([
-                "classify-news",
-                "--symbols", "AAPL",
-                "--mock",
-                "--provider", "ollama",
-                "--model", "mistral:7b-instruct",
-            ])
-            
-            captured = capsys.readouterr()
-            output = captured.out
-            
-            assert "mistral:7b-instruct" in output
-            assert "Classified" in output
-            
-        except SystemExit:
-            pytest.skip("Ollama not available")
-    
-    @pytest.mark.integration
-    def test_classify_news_with_ollama_output_file(self, tmp_path):
-        """Test classify-news with Ollama writing to file."""
-        output_file = tmp_path / "ollama_results.json"
-        
-        try:
-            _run_cli([
-                "classify-news",
-                "--symbols", "NVDA",
-                "--mock",
-                "--provider", "ollama",
-                "--output", str(output_file),
-            ])
-            
-            # If Ollama is available, file should be created
-            assert output_file.exists()
-            
-            with open(output_file) as f:
-                data = json.load(f)
-            assert len(data) > 0
-            
-        except SystemExit:
-            pytest.skip("Ollama not available")
+        assert "OPENAI_API_KEY" in output

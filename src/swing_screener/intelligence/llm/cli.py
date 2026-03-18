@@ -21,7 +21,7 @@ def classify_news_command(
     Args:
         symbols: List of ticker symbols to fetch news for
         mock: Use mock news provider (no real API calls)
-        provider: LLM provider (openai, ollama, mock)
+        provider: LLM provider (openai, mock)
         model: Model name for provider
         base_url: Optional provider base URL override
         output: Optional output JSON file path
@@ -43,10 +43,6 @@ def classify_news_command(
         if provider == "openai":
             print("ERROR: OpenAI provider is not available.", file=sys.stderr)
             print("Set OPENAI_API_KEY in your environment or .env file.", file=sys.stderr)
-        elif provider == "ollama":
-            print(f"ERROR: Ollama model '{model}' not available.", file=sys.stderr)
-            print("Ensure Ollama is running: docker compose up ollama", file=sys.stderr)
-            print(f"And model is pulled: ollama pull {model}", file=sys.stderr)
         else:
             print(f"ERROR: Provider '{provider}' is not available.", file=sys.stderr)
         sys.exit(1)

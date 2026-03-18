@@ -412,14 +412,12 @@ This is important because the UI may suggest prompt configurability that does no
 The shared chat model factory supports:
 
 - `openai`
-- `ollama`
 - `mock`
 
 For workspace chat:
 
 - `mock` is treated as not LLM-ready
 - `openai` requires `OPENAI_API_KEY` from the server environment or local `.env`
-- `ollama` uses the configured local host
 
 Chat inference is created with:
 

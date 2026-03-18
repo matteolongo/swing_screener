@@ -86,7 +86,7 @@ export interface StrategySocialOverlay {
 
 export interface StrategyIntelligenceLLM {
   enabled: boolean;
-  provider: 'ollama' | 'mock' | 'openai';
+  provider: 'mock' | 'openai';
   model: string;
   baseUrl: string;
   enableCache: boolean;
@@ -232,7 +232,7 @@ export interface StrategySocialOverlayAPI {
 
 export interface StrategyIntelligenceLLMAPI {
   enabled?: boolean;
-  provider?: 'ollama' | 'mock' | 'openai';
+  provider?: 'mock' | 'openai';
   model?: string;
   base_url?: string;
   enable_cache?: boolean;
