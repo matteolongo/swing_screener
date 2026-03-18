@@ -38,9 +38,6 @@ const currencyFilterToRequest = (value: CurrencyFilter): string[] => {
   if (value === 'eur') return ['EUR'];
   return ['USD', 'EUR'];
 };
-const ANALYSIS_CANVAS_ID = 'workspace-analysis-canvas';
-const MOBILE_LAYOUT_MEDIA_QUERY = '(max-width: 1279px)';
-
 interface ScreenerInboxPanelProps {
   onRunSymbolIntelligence?: (ticker: string) => void;
   getSymbolIntelligenceStatus?: (ticker: string) => SymbolIntelligenceStatus | undefined;
@@ -152,23 +149,12 @@ export default function ScreenerInboxPanel({
     }
   }, [handleRunScreener, runScreenerTrigger]);
 
-  const scrollAnalysisCanvasIntoView = useCallback(() => {
-    if (typeof window === 'undefined' || typeof document === 'undefined' || typeof window.matchMedia !== 'function') {
-      return;
-    }
-    if (!window.matchMedia(MOBILE_LAYOUT_MEDIA_QUERY).matches) {
-      return;
-    }
-    document.getElementById(ANALYSIS_CANVAS_ID)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, []);
-
   const handleSelectCandidate = useCallback(
     (ticker: string, tab: WorkspaceAnalysisTab) => {
       setSelectedTicker(ticker);
       setAnalysisTab(tab);
-      scrollAnalysisCanvasIntoView();
     },
-    [scrollAnalysisCanvasIntoView, setAnalysisTab, setSelectedTicker]
+    [setAnalysisTab, setSelectedTicker]
   );
 
   const handleTradeThesisAction = useCallback((candidate: ScreenerCandidate) => {

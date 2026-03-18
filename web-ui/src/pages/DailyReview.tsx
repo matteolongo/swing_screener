@@ -36,15 +36,6 @@ import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 import { useStrategyReadiness } from '@/features/strategy/useStrategyReadiness';
 import StrategyReadinessBlocker from '@/components/domain/onboarding/StrategyReadinessBlocker';
 
-const MOBILE_LAYOUT_MEDIA_QUERY = '(max-width: 767px)';
-
-function getMobileLayoutMatch() {
-  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-    return false;
-  }
-  return window.matchMedia(MOBILE_LAYOUT_MEDIA_QUERY).matches;
-}
-
 export default function DailyReview() {
   const [expandedSections, setExpandedSections] = useState({
     candidates: true,
@@ -58,7 +49,6 @@ export default function DailyReview() {
     // Persist dismissal state in localStorage
     return localStorage.getItem('dailyReview.dismissedReadinessBlocker') === 'true';
   });
-  const [isCompactMobileLayout, setIsCompactMobileLayout] = useState(getMobileLayoutMatch);
 
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -112,21 +102,6 @@ export default function DailyReview() {
   useEffect(() => {
     localStorage.setItem('dailyReview.dismissedReadinessBlocker', String(dismissedReadinessBlocker));
   }, [dismissedReadinessBlocker]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-      return;
-    }
-
-    const mediaQueryList = window.matchMedia(MOBILE_LAYOUT_MEDIA_QUERY);
-    const handleChange = (event: MediaQueryListEvent) => {
-      setIsCompactMobileLayout(event.matches);
-    };
-
-    setIsCompactMobileLayout(mediaQueryList.matches);
-    mediaQueryList.addEventListener('change', handleChange);
-    return () => mediaQueryList.removeEventListener('change', handleChange);
-  }, []);
   const riskConfig: RiskConfig | undefined = activeStrategyQuery.data?.risk ?? configDefaultsQuery.data?.risk;
   const openWorkspacePortfolioAction = useCallback(
     (params: { action: 'update-stop' | 'close-position'; ticker: string; positionId: string }) => {
@@ -345,7 +320,6 @@ export default function DailyReview() {
             <CandidatesTable
               candidates={recommendedCandidates}
               onOpenOrderReview={setSelectedCandidate}
-              isCompactMobileLayout={isCompactMobileLayout}
               watchItemsByTicker={watchItemsByTicker}
               watchPending={watchPending}
               onWatch={handleWatch}
@@ -367,7 +341,6 @@ export default function DailyReview() {
           <CandidatesTable
             candidates={recommendedAddOnCandidates}
             onOpenOrderReview={setSelectedCandidate}
-            isCompactMobileLayout={isCompactMobileLayout}
             watchItemsByTicker={watchItemsByTicker}
             watchPending={watchPending}
             onWatch={handleWatch}
@@ -397,7 +370,6 @@ export default function DailyReview() {
                   positionId: position.positionId,
                 })
               }
-              isCompactMobileLayout={isCompactMobileLayout}
               watchItemsByTicker={watchItemsByTicker}
               watchPending={watchPending}
               onWatch={handleWatch}
@@ -417,19 +389,18 @@ export default function DailyReview() {
         {review.positionsClose.length === 0 ? (
           <p className="text-gray-600 dark:text-gray-400">{t('dailyReview.sections.noClose')}</p>
         ) : (
-          <CloseTable
-            positions={review.positionsClose}
-            onAction={(position) =>
-              openWorkspacePortfolioAction({
-                action: 'close-position',
+            <CloseTable
+              positions={review.positionsClose}
+              onAction={(position) =>
+                openWorkspacePortfolioAction({
+                  action: 'close-position',
                 ticker: position.ticker,
-                positionId: position.positionId,
-              })
-            }
-            isCompactMobileLayout={isCompactMobileLayout}
-            watchItemsByTicker={watchItemsByTicker}
-            watchPending={watchPending}
-            onWatch={handleWatch}
+                  positionId: position.positionId,
+                })
+              }
+              watchItemsByTicker={watchItemsByTicker}
+              watchPending={watchPending}
+              onWatch={handleWatch}
             onUnwatch={handleUnwatch}
           />
         )}
@@ -446,7 +417,6 @@ export default function DailyReview() {
         ) : (
           <HoldTable
             positions={review.positionsHold}
-            isCompactMobileLayout={isCompactMobileLayout}
             watchItemsByTicker={watchItemsByTicker}
             watchPending={watchPending}
             onWatch={handleWatch}
@@ -632,7 +602,6 @@ function WatchInlineBlock({
 function CandidatesTable({
   candidates,
   onOpenOrderReview,
-  isCompactMobileLayout,
   watchItemsByTicker,
   watchPending,
   onWatch,
@@ -640,7 +609,6 @@ function CandidatesTable({
 }: {
   candidates: DailyReviewCandidate[];
   onOpenOrderReview: (candidate: DailyReviewCandidate) => void;
-  isCompactMobileLayout: boolean;
 } & DailyReviewWatchProps) {
   const actionLabel = (candidate: DailyReviewCandidate) =>
     candidate.sameSymbol?.mode === 'ADD_ON'
@@ -652,121 +620,6 @@ function CandidatesTable({
       : candidate.sameSymbol?.mode === 'ADD_ON'
         ? t('dailyReview.table.candidates.addOnTitle')
         : t('dailyReview.table.candidates.createOrderTitle');
-
-  if (isCompactMobileLayout) {
-    return (
-      <div className="space-y-3">
-        {candidates.map((candidate) => (
-          <div
-            key={candidate.ticker}
-            className="rounded-xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <a
-                  href={`https://finance.yahoo.com/quote/${candidate.ticker}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-mono text-base font-bold text-blue-700 hover:underline"
-                  title={t('dailyReview.table.candidates.yahooFinanceTooltip', { ticker: candidate.ticker })}
-                >
-                  {candidate.ticker}
-                </a>
-                <p className="mt-0.5 text-xs text-gray-500">
-                  {candidate.sector || t('common.placeholders.dash')}
-                </p>
-                {candidate.sameSymbol?.mode === 'ADD_ON' ? (
-                  <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
-                    {t('dailyReview.table.candidates.addOnReason', {
-                      liveStop:
-                        candidate.sameSymbol.currentPositionStop != null
-                          ? formatCurrency(candidate.sameSymbol.currentPositionStop)
-                          : t('common.placeholders.emDash'),
-                      freshStop:
-                        candidate.sameSymbol.freshSetupStop != null
-                          ? formatCurrency(candidate.sameSymbol.freshSetupStop)
-                          : t('common.placeholders.emDash'),
-                    })}
-                  </p>
-                ) : null}
-                <WatchInlineBlock
-                  ticker={candidate.ticker}
-                  currentPrice={candidate.close}
-                  source="daily_review_candidates"
-                  watchItemsByTicker={watchItemsByTicker}
-                  watchPending={watchPending}
-                  onWatch={onWatch}
-                  onUnwatch={onUnwatch}
-                />
-              </div>
-              <div className="flex flex-col items-end gap-2">
-                <Badge variant="primary">{candidate.signal}</Badge>
-                {candidate.sameSymbol?.mode === 'ADD_ON' ? (
-                  <Badge variant="warning">{t('dailyReview.table.candidates.addOnBadge')}</Badge>
-                ) : null}
-              </div>
-            </div>
-
-            <CachedSymbolPriceChart ticker={candidate.ticker} className="mt-2" />
-
-            <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-              <div className="rounded-md bg-gray-50 px-2 py-1 dark:bg-gray-700/70">
-                <p className="text-gray-500">{t('dailyReview.table.candidates.headers.entry')}</p>
-                <p className="font-semibold">{formatCurrency(candidate.entry)}</p>
-              </div>
-              <div className="rounded-md bg-gray-50 px-2 py-1 dark:bg-gray-700/70">
-                <p className="text-gray-500">{t('dailyReview.table.candidates.headers.stop')}</p>
-                <p className="font-semibold">{formatCurrency(candidate.stop)}</p>
-              </div>
-              <div className="rounded-md bg-gray-50 px-2 py-1 dark:bg-gray-700/70">
-                <p className="text-gray-500">{t('dailyReview.table.candidates.headers.shares')}</p>
-                <p className="font-semibold">{candidate.shares}</p>
-              </div>
-              <div className="rounded-md bg-gray-50 px-2 py-1 dark:bg-gray-700/70">
-                <p className="text-gray-500">{t('dailyReview.table.candidates.headers.riskReward')}</p>
-                <p className="font-semibold">
-                  {t('common.units.rValue', { value: formatNumber(candidate.rReward, 1) })}
-                </p>
-              </div>
-              <div className="col-span-2 rounded-md bg-gray-50 px-2 py-1 dark:bg-gray-700/70">
-                <p className="text-gray-500">{t('dailyReview.table.candidates.headers.confidence')}</p>
-                <p className="font-semibold text-purple-700 dark:text-purple-300">
-                  {candidate.confidence != null ? formatNumber(candidate.confidence, 1) : '-'}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-3 flex items-center gap-2">
-              {candidate.recommendation ? (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  className="shrink-0"
-                  onClick={() => onOpenOrderReview(candidate)}
-                  title={t('dailyReview.table.candidates.recommendationTitle')}
-                  aria-label={t('dailyReview.table.candidates.recommendationAria', { ticker: candidate.ticker })}
-                >
-                  <Info className="h-4 w-4" />
-                </Button>
-              ) : null}
-              <Button
-                variant="primary"
-                size="sm"
-                className="flex-1"
-                onClick={() => onOpenOrderReview(candidate)}
-                title={
-                  actionTitle(candidate)
-                }
-              >
-                {actionLabel(candidate)}
-              </Button>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
 
   return (
     <TableShell
@@ -897,7 +750,6 @@ function formatDailyReviewReason(reason: string): string {
 function UpdateStopTable({
   positions,
   onAction,
-  isCompactMobileLayout,
   watchItemsByTicker,
   watchPending,
   onWatch,
@@ -905,80 +757,7 @@ function UpdateStopTable({
 }: {
   positions: DailyReviewPositionUpdate[];
   onAction: (position: DailyReviewPositionUpdate) => void;
-  isCompactMobileLayout: boolean;
 } & DailyReviewWatchProps) {
-  if (isCompactMobileLayout) {
-    return (
-      <div className="space-y-3">
-        {positions.map((pos) => (
-          <div
-            key={pos.positionId}
-            className="rounded-xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <a
-                href={`https://finance.yahoo.com/quote/${pos.ticker}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-mono text-base font-bold text-blue-700 hover:underline"
-                title={t('dailyReview.table.update.yahooFinanceTooltip', { ticker: pos.ticker })}
-              >
-                {pos.ticker}
-              </a>
-              <WatchInlineBlock
-                ticker={pos.ticker}
-                currentPrice={pos.currentPrice}
-                source="daily_review_update_stop"
-                watchItemsByTicker={watchItemsByTicker}
-                watchPending={watchPending}
-                onWatch={onWatch}
-                onUnwatch={onUnwatch}
-              />
-              <Badge variant="warning">{t('dailyReview.table.update.actionLabel')}</Badge>
-            </div>
-
-            <CachedSymbolPriceChart ticker={pos.ticker} className="mt-2" />
-
-            <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-              <div className="rounded-md bg-gray-50 px-2 py-1 dark:bg-gray-700/70">
-                <p className="text-gray-500">{t('dailyReview.table.update.headers.entry')}</p>
-                <p className="font-semibold">{formatCurrency(pos.entryPrice)}</p>
-              </div>
-              <div className="rounded-md bg-gray-50 px-2 py-1 dark:bg-gray-700/70">
-                <p className="text-gray-500">{t('dailyReview.table.update.headers.current')}</p>
-                <p className="font-semibold">{formatCurrency(pos.currentPrice)}</p>
-              </div>
-              <div className="rounded-md bg-gray-50 px-2 py-1 dark:bg-gray-700/70">
-                <p className="text-gray-500">{t('dailyReview.table.update.headers.stopOld')}</p>
-                <p>{formatCurrency(pos.stopCurrent)}</p>
-              </div>
-              <div className="rounded-md bg-gray-50 px-2 py-1 dark:bg-gray-700/70">
-                <p className="text-gray-500">{t('dailyReview.table.update.headers.stopNew')}</p>
-                <p className="font-semibold text-green-700 dark:text-green-300">{formatCurrency(pos.stopSuggested)}</p>
-              </div>
-            </div>
-
-            <p className="mt-3 text-xs text-gray-600 dark:text-gray-300">{formatDailyReviewReason(pos.reason)}</p>
-
-            <div className="mt-3 flex items-center justify-between gap-3">
-              <span className={pos.rNow >= 0 ? 'text-sm font-semibold text-green-700 dark:text-green-300' : 'text-sm font-semibold text-red-700 dark:text-red-300'}>
-                {t('common.units.rValue', { value: formatNumber(pos.rNow, 2) })}
-              </span>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => onAction(pos)}
-                title={t('dailyReview.table.update.actionTitle')}
-              >
-                {t('dailyReview.table.update.actionLabel')}
-              </Button>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
   return (
     <TableShell
       empty={positions.length === 0}
@@ -1051,7 +830,6 @@ function UpdateStopTable({
 function CloseTable({
   positions,
   onAction,
-  isCompactMobileLayout,
   watchItemsByTicker,
   watchPending,
   onWatch,
@@ -1059,76 +837,7 @@ function CloseTable({
 }: {
   positions: DailyReviewPositionClose[];
   onAction: (position: DailyReviewPositionClose) => void;
-  isCompactMobileLayout: boolean;
 } & DailyReviewWatchProps) {
-  if (isCompactMobileLayout) {
-    return (
-      <div className="space-y-3">
-        {positions.map((pos) => (
-          <div
-            key={pos.positionId}
-            className="rounded-xl border border-red-200 bg-red-50/60 p-3 dark:border-red-900 dark:bg-red-950/20"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <a
-                href={`https://finance.yahoo.com/quote/${pos.ticker}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-mono text-base font-bold text-blue-700 hover:underline"
-                title={t('dailyReview.table.close.yahooFinanceTooltip', { ticker: pos.ticker })}
-              >
-                {pos.ticker}
-              </a>
-              <WatchInlineBlock
-                ticker={pos.ticker}
-                currentPrice={pos.currentPrice}
-                source="daily_review_close"
-                watchItemsByTicker={watchItemsByTicker}
-                watchPending={watchPending}
-                onWatch={onWatch}
-                onUnwatch={onUnwatch}
-              />
-              <Badge variant="error">{t('dailyReview.table.close.actionLabel')}</Badge>
-            </div>
-
-            <CachedSymbolPriceChart ticker={pos.ticker} className="mt-2" />
-
-            <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
-              <div className="rounded-md bg-white px-2 py-1 dark:bg-gray-800/70">
-                <p className="text-gray-500">{t('dailyReview.table.close.headers.entry')}</p>
-                <p className="font-semibold">{formatCurrency(pos.entryPrice)}</p>
-              </div>
-              <div className="rounded-md bg-white px-2 py-1 dark:bg-gray-800/70">
-                <p className="text-gray-500">{t('dailyReview.table.close.headers.current')}</p>
-                <p className="font-semibold">{formatCurrency(pos.currentPrice)}</p>
-              </div>
-              <div className="rounded-md bg-white px-2 py-1 dark:bg-gray-800/70">
-                <p className="text-gray-500">{t('dailyReview.table.close.headers.stop')}</p>
-                <p>{formatCurrency(pos.stopPrice)}</p>
-              </div>
-            </div>
-
-            <p className="mt-3 text-xs text-gray-600 dark:text-gray-300">{formatDailyReviewReason(pos.reason)}</p>
-
-            <div className="mt-3 flex items-center justify-between gap-3">
-              <span className="text-sm font-semibold text-red-700 dark:text-red-300">
-                {t('common.units.rValue', { value: formatNumber(pos.rNow, 2) })}
-              </span>
-              <Button
-                variant="danger"
-                size="sm"
-                onClick={() => onAction(pos)}
-                title={t('dailyReview.table.close.actionTitle')}
-              >
-                {t('dailyReview.table.close.actionLabel')}
-              </Button>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
   return (
     <TableShell
       empty={positions.length === 0}
@@ -1198,74 +907,13 @@ function CloseTable({
 
 function HoldTable({
   positions,
-  isCompactMobileLayout,
   watchItemsByTicker,
   watchPending,
   onWatch,
   onUnwatch,
 }: {
   positions: DailyReviewPositionHold[];
-  isCompactMobileLayout: boolean;
 } & DailyReviewWatchProps) {
-  if (isCompactMobileLayout) {
-    return (
-      <div className="space-y-3">
-        {positions.map((pos) => (
-          <div
-            key={pos.positionId}
-            className="rounded-xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <a
-                href={`https://finance.yahoo.com/quote/${pos.ticker}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-mono text-base font-bold text-blue-700 hover:underline"
-                title={t('dailyReview.table.hold.yahooFinanceTooltip', { ticker: pos.ticker })}
-              >
-                {pos.ticker}
-              </a>
-              <WatchInlineBlock
-                ticker={pos.ticker}
-                currentPrice={pos.currentPrice}
-                source="daily_review_hold"
-                watchItemsByTicker={watchItemsByTicker}
-                watchPending={watchPending}
-                onWatch={onWatch}
-                onUnwatch={onUnwatch}
-              />
-              <Badge variant="success">{t('dailyReview.table.hold.holdBadge')}</Badge>
-            </div>
-
-            <CachedSymbolPriceChart ticker={pos.ticker} className="mt-2" />
-
-            <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
-              <div className="rounded-md bg-gray-50 px-2 py-1 dark:bg-gray-700/70">
-                <p className="text-gray-500">{t('dailyReview.table.hold.headers.entry')}</p>
-                <p className="font-semibold">{formatCurrency(pos.entryPrice)}</p>
-              </div>
-              <div className="rounded-md bg-gray-50 px-2 py-1 dark:bg-gray-700/70">
-                <p className="text-gray-500">{t('dailyReview.table.hold.headers.current')}</p>
-                <p className="font-semibold">{formatCurrency(pos.currentPrice)}</p>
-              </div>
-              <div className="rounded-md bg-gray-50 px-2 py-1 dark:bg-gray-700/70">
-                <p className="text-gray-500">{t('dailyReview.table.hold.headers.stop')}</p>
-                <p>{formatCurrency(pos.stopPrice)}</p>
-              </div>
-            </div>
-
-            <div className="mt-3 flex items-center justify-between gap-3">
-              <p className="text-xs text-gray-600 dark:text-gray-300">{formatDailyReviewReason(pos.reason)}</p>
-              <span className={pos.rNow >= 0 ? 'text-sm font-semibold text-green-700 dark:text-green-300' : 'text-sm font-semibold text-red-700 dark:text-red-300'}>
-                {t('common.units.rValue', { value: formatNumber(pos.rNow, 2) })}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
   return (
     <TableShell
       empty={positions.length === 0}

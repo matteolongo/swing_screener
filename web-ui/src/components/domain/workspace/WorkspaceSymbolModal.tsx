@@ -30,7 +30,6 @@ export default function WorkspaceSymbolModal({ ticker, onBack }: WorkspaceSymbol
       title={t('workspacePage.symbolDetails.title', { ticker })}
       onClose={onBack}
       className="max-w-5xl"
-      fullScreenOnMobile
       closeOnBackdrop={false}
       headerActions={
         <Button type="button" variant="secondary" size="sm" onClick={onBack} className="gap-1.5">
@@ -40,7 +39,7 @@ export default function WorkspaceSymbolModal({ ticker, onBack }: WorkspaceSymbol
       }
     >
       <div className="space-y-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start justify-between gap-4">
           <p className="text-sm text-gray-600 dark:text-gray-400">{t('workspacePage.symbolDetails.description')}</p>
           <div className="flex flex-wrap items-center gap-2">
             <Button
@@ -104,18 +103,6 @@ export default function WorkspaceSymbolModal({ ticker, onBack }: WorkspaceSymbol
           ) : null}
 
           {activeTab === 'order' ? <ActionPanel ticker={ticker} /> : null}
-        </div>
-
-        <div className="sticky bottom-0 z-10 -mx-4 border-t border-gray-200 bg-white/95 p-4 sm:hidden">
-          <Button
-            type="button"
-            className="w-full gap-1.5"
-            variant={isOrderTab ? 'secondary' : 'primary'}
-            onClick={openOrderTab}
-          >
-            <ShoppingCart className="h-4 w-4" />
-            <span>{t('workspacePage.symbolDetails.placeBuyAction')}</span>
-          </Button>
         </div>
       </div>
     </ModalShell>
