@@ -464,10 +464,10 @@ def _invoke_llm_education_view(
     context: dict[str, Any],
     facts: dict[str, str],
     fallback: IntelligenceEducationViewOutput,
-) -> tuple[IntelligenceEducationViewOutput, str | None]:
+) -> tuple[IntelligenceEducationViewOutput, str | None, str | None]:
     llm_cfg = getattr(cfg, "llm", None)
     if llm_cfg is None or not _llm_enabled(cfg):
-        return fallback, "LLM disabled or unavailable; deterministic fallback used."
+        return fallback, "LLM disabled or unavailable; deterministic fallback used.", None
 
     provider = str(getattr(llm_cfg, "provider", "")).strip().lower()
     model = str(getattr(llm_cfg, "model", "")).strip() or ""
@@ -517,7 +517,7 @@ def _invoke_llm_education_view(
     try:
         from langchain_core.messages import HumanMessage, SystemMessage
     except Exception as exc:  # pragma: no cover
-        return fallback, f"langchain-core unavailable: {exc}"
+        return fallback, f"langchain-core unavailable: {exc}", None
 
     try:
         llm = build_langchain_chat_model(
@@ -544,6 +544,7 @@ def _invoke_llm_education_view(
         next_steps = _clean_list(parsed.get("next_steps") if isinstance(parsed.get("next_steps"), list) else [], max_items=5)
         glossary_links = _clean_list(parsed.get("glossary_links") if isinstance(parsed.get("glossary_links"), list) else [], max_items=4, max_len=32)
         facts_used = _clean_list(parsed.get("facts_used") if isinstance(parsed.get("facts_used"), list) else [], max_items=16, max_len=32)
+        warning_messages: list[str] = []
 
         if not title or not summary:
             raise RuntimeError("LLM output missing title/summary.")
@@ -551,11 +552,16 @@ def _invoke_llm_education_view(
             raise RuntimeError("LLM output missing facts_used references.")
         unknown_facts = [key for key in facts_used if key not in facts]
         if unknown_facts:
-            raise RuntimeError(f"LLM referenced unknown facts: {', '.join(unknown_facts[:3])}.")
+            valid_facts = [key for key in facts_used if key in facts]
+            facts_used = valid_facts or fallback.facts_used
+            warning_messages.append(
+                f"LLM referenced unknown facts: {', '.join(unknown_facts[:3])}. "
+                "Output kept and flagged for review."
+            )
 
         all_text = " ".join([title, summary, *bullets, *watchouts, *next_steps])
         if _contains_speculative_language(all_text):
-            raise RuntimeError("LLM output contained speculative wording.")
+            warning_messages.append("LLM output contained speculative wording. Output kept and flagged for review.")
 
         return (
             IntelligenceEducationViewOutput(
@@ -572,10 +578,11 @@ def _invoke_llm_education_view(
                 debug_ref=f"{symbol}:{view}:{fallback.generated_at}",
             ),
             None,
+            " ".join(warning_messages) if warning_messages else None,
         )
     except Exception as exc:  # pragma: no cover
         logger.warning("Educational generation failed for %s/%s: %s", symbol, view, exc)
-        return fallback, _sanitize_text(str(exc), max_len=280)
+        return fallback, _sanitize_text(str(exc), max_len=280), None
 
 
 class IntelligenceService:
@@ -710,8 +717,9 @@ class IntelligenceService:
             fallback = fallbacks[view]
             generated = fallback
             error_message: str | None = None
+            warning_message: str | None = None
             if _llm_enabled(cfg):
-                generated, error_message = _invoke_llm_education_view(
+                generated, error_message, warning_message = _invoke_llm_education_view(
                     cfg=cfg,
                     view=view,
                     symbol=symbol,
@@ -723,6 +731,15 @@ class IntelligenceService:
                 error_message = "LLM disabled or unavailable; deterministic fallback used."
 
             outputs[view] = generated
+            if warning_message:
+                errors.append(
+                    IntelligenceEducationError(
+                        view=view,
+                        code="llm_validation_warning",
+                        message=warning_message,
+                        retryable=False,
+                    )
+                )
             if error_message and generated.source != "llm":
                 errors.append(
                     IntelligenceEducationError(

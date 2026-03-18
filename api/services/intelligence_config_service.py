@@ -22,6 +22,7 @@ from api.repositories.intelligence_symbol_sets_repo import IntelligenceSymbolSet
 from api.repositories.strategy_repo import StrategyRepository
 from swing_screener.intelligence.config import SUPPORTED_INTEL_PROVIDERS, build_intelligence_config
 from swing_screener.intelligence.llm.factory import build_llm_provider
+from swing_screener.runtime_env import get_openai_api_key
 
 
 def _now_iso() -> str:
@@ -65,13 +66,72 @@ class IntelligenceConfigService:
             market_intelligence = {}
         return self._normalize_config_payload(market_intelligence)
 
+    def _should_migrate_legacy_mock_llm(
+        self,
+        *,
+        config: IntelligenceConfigModel,
+        strategy_config: IntelligenceConfigModel,
+    ) -> bool:
+        if config.llm.provider != "mock":
+            return False
+        if strategy_config.llm.provider != "openai":
+            return False
+        if not get_openai_api_key():
+            return False
+
+        model = str(config.llm.model or "").strip()
+        base_url = str(config.llm.base_url or "").strip()
+        strategy_model = str(strategy_config.llm.model or "").strip()
+        strategy_base_url = str(strategy_config.llm.base_url or "").strip()
+
+        if not base_url or base_url != strategy_base_url:
+            return False
+        if not model or model == "mock-classifier":
+            return False
+        if model != strategy_model:
+            return False
+        return True
+
+    def _sanitize_envelope(
+        self,
+        envelope: IntelligenceConfigStorageEnvelope,
+    ) -> tuple[IntelligenceConfigStorageEnvelope, bool]:
+        strategy_config = self._bootstrap_from_strategy_payload()
+        config = envelope.config
+        changed = False
+
+        if self._should_migrate_legacy_mock_llm(config=config, strategy_config=strategy_config):
+            migrated_llm = config.llm.model_copy(
+                update={
+                    "provider": strategy_config.llm.provider,
+                    "model": strategy_config.llm.model,
+                    "base_url": strategy_config.llm.base_url,
+                }
+            )
+            config = config.model_copy(update={"llm": migrated_llm})
+            changed = True
+
+        if not changed:
+            return envelope, False
+
+        return (
+            envelope.model_copy(
+                update={
+                    "config": config,
+                    "updated_at": _now_iso(),
+                }
+            ),
+            True,
+        )
+
     def get_config(self) -> IntelligenceConfigModel:
         raw = self._config_repo.load_raw()
         if isinstance(raw, dict):
             try:
                 envelope = IntelligenceConfigStorageEnvelope.model_validate(raw)
+                envelope, migrated = self._sanitize_envelope(envelope)
                 sanitized_payload = envelope.model_dump()
-                if raw != sanitized_payload:
+                if migrated or raw != sanitized_payload:
                     self._config_repo.save_raw(sanitized_payload)
                 return envelope.config
             except Exception:
@@ -88,6 +148,17 @@ class IntelligenceConfigService:
 
     def update_config(self, payload: IntelligenceConfigModel) -> IntelligenceConfigModel:
         config = self._normalize_config_payload(payload.model_dump())
+        if config.llm.provider == "mock":
+            config = config.model_copy(
+                update={
+                    "llm": config.llm.model_copy(
+                        update={
+                            "model": "mock-classifier",
+                            "base_url": "",
+                        }
+                    )
+                }
+            )
         envelope = IntelligenceConfigStorageEnvelope(
             config=config,
             bootstrapped_from_strategy=False,

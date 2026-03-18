@@ -56,7 +56,7 @@ def test_education_user_prompt_template_is_consumed(monkeypatch):
         generated_at="2026-03-17T12:00:00",
     )
 
-    result, error = intelligence_service._invoke_llm_education_view(
+    result, error, warning = intelligence_service._invoke_llm_education_view(
         cfg=cfg,
         view="thesis",
         symbol="AAPL",
@@ -66,6 +66,7 @@ def test_education_user_prompt_template_is_consumed(monkeypatch):
     )
 
     assert error is None
+    assert warning is None
     assert result.source == "llm"
     assert fake_llm.messages is not None
     user_prompt = fake_llm.messages[1].content
@@ -73,3 +74,104 @@ def test_education_user_prompt_template_is_consumed(monkeypatch):
     assert "View=thesis" in user_prompt
     assert '"state":"TRENDING"' in user_prompt
     assert "{{symbol}}" not in user_prompt
+
+
+def test_education_unknown_facts_are_flagged_but_output_is_kept(monkeypatch):
+    cfg = build_intelligence_config(
+        {
+            "market_intelligence": {
+                "llm": {
+                    "enabled": True,
+                    "provider": "openai",
+                    "model": "gpt-4.1-mini",
+                }
+            }
+        }
+    )
+
+    class _WarningLLM:
+        def invoke(self, _messages):
+            return _FakeResponse(
+                '{"title":"Why this trade idea exists (AAPL)","summary":"Fact-grounded thesis summary.","bullets":["Trend is active."],"watchouts":[],"next_steps":[],"glossary_links":[],"facts_used":["State: QUIET","Signal: breakout","Entry: 24.19"]}'
+            )
+
+    monkeypatch.setattr(intelligence_service, "build_langchain_chat_model", lambda **kwargs: _WarningLLM())
+
+    fallback = IntelligenceEducationViewOutput(
+        title="Fallback title",
+        summary="Fallback summary",
+        bullets=[],
+        watchouts=[],
+        next_steps=[],
+        glossary_links=[],
+        facts_used=["state"],
+        source="deterministic_fallback",
+        template_version="v1",
+        generated_at="2026-03-17T12:00:00",
+    )
+
+    result, error, warning = intelligence_service._invoke_llm_education_view(
+        cfg=cfg,
+        view="thesis",
+        symbol="AAPL",
+        context={"state": "QUIET"},
+        facts={"state": "QUIET"},
+        fallback=fallback,
+    )
+
+    assert error is None
+    assert warning is not None
+    assert "unknown facts" in warning.lower()
+    assert result.source == "llm"
+    assert result.summary == "Fact-grounded thesis summary."
+    assert result.facts_used == ["state"]
+
+
+def test_education_speculative_wording_is_flagged_but_output_is_kept(monkeypatch):
+    cfg = build_intelligence_config(
+        {
+            "market_intelligence": {
+                "llm": {
+                    "enabled": True,
+                    "provider": "openai",
+                    "model": "gpt-4.1-mini",
+                }
+            }
+        }
+    )
+
+    class _SpeculativeLLM:
+        def invoke(self, _messages):
+            return _FakeResponse(
+                '{"title":"Why this trade idea exists (AAPL)","summary":"This setup could keep working if trend strength holds.","bullets":["Trend is active."],"watchouts":[],"next_steps":[],"glossary_links":[],"facts_used":["state"]}'
+            )
+
+    monkeypatch.setattr(intelligence_service, "build_langchain_chat_model", lambda **kwargs: _SpeculativeLLM())
+
+    fallback = IntelligenceEducationViewOutput(
+        title="Fallback title",
+        summary="Fallback summary",
+        bullets=[],
+        watchouts=[],
+        next_steps=[],
+        glossary_links=[],
+        facts_used=["state"],
+        source="deterministic_fallback",
+        template_version="v1",
+        generated_at="2026-03-17T12:00:00",
+    )
+
+    result, error, warning = intelligence_service._invoke_llm_education_view(
+        cfg=cfg,
+        view="thesis",
+        symbol="AAPL",
+        context={"state": "QUIET"},
+        facts={"state": "QUIET"},
+        fallback=fallback,
+    )
+
+    assert error is None
+    assert warning is not None
+    assert "speculative wording" in warning.lower()
+    assert result.source == "llm"
+    assert result.summary == "This setup could keep working if trend strength holds."
