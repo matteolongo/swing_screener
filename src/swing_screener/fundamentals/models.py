@@ -12,6 +12,20 @@ class FundamentalPillarScore:
 
 
 @dataclass(frozen=True)
+class FundamentalSeriesPoint:
+    period_end: str
+    value: float
+
+
+@dataclass(frozen=True)
+class FundamentalMetricSeries:
+    label: str
+    unit: str = "number"
+    direction: str = "unknown"
+    points: list[FundamentalSeriesPoint] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
 class ProviderFundamentalsRecord:
     symbol: str
     asof_date: str
@@ -33,6 +47,7 @@ class ProviderFundamentalsRecord:
     return_on_equity: float | None = None
     trailing_pe: float | None = None
     price_to_sales: float | None = None
+    historical_series: dict[str, FundamentalMetricSeries] = field(default_factory=dict)
     metric_sources: dict[str, str] = field(default_factory=dict)
     provider_error: str | None = None
 
@@ -64,6 +79,7 @@ class FundamentalSnapshot:
     price_to_sales: float | None = None
     most_recent_quarter: str | None = None
     pillars: dict[str, FundamentalPillarScore] = field(default_factory=dict)
+    historical_series: dict[str, FundamentalMetricSeries] = field(default_factory=dict)
     red_flags: list[str] = field(default_factory=list)
     highlights: list[str] = field(default_factory=list)
     metric_sources: dict[str, str] = field(default_factory=dict)
@@ -85,6 +101,33 @@ class FundamentalSnapshot:
                 )
             else:
                 pillars[str(key)] = FundamentalPillarScore(summary=str(value))
+
+        historical_payload = (
+            payload.get("historical_series") if isinstance(payload.get("historical_series"), dict) else {}
+        )
+        historical_series: dict[str, FundamentalMetricSeries] = {}
+        for key, value in historical_payload.items():
+            if not isinstance(value, dict):
+                continue
+            points_payload = value.get("points") if isinstance(value.get("points"), list) else []
+            points: list[FundamentalSeriesPoint] = []
+            for item in points_payload:
+                if not isinstance(item, dict):
+                    continue
+                period_end = str(item.get("period_end", "")).strip()
+                if not period_end:
+                    continue
+                try:
+                    numeric_value = float(item.get("value"))
+                except (TypeError, ValueError):
+                    continue
+                points.append(FundamentalSeriesPoint(period_end=period_end, value=numeric_value))
+            historical_series[str(key)] = FundamentalMetricSeries(
+                label=str(value.get("label", key)).strip() or str(key),
+                unit=str(value.get("unit", "number")).strip() or "number",
+                direction=str(value.get("direction", "unknown")).strip() or "unknown",
+                points=points,
+            )
 
         return cls(
             symbol=str(payload.get("symbol", "")).strip().upper(),
@@ -112,6 +155,7 @@ class FundamentalSnapshot:
             price_to_sales=payload.get("price_to_sales"),
             most_recent_quarter=payload.get("most_recent_quarter"),
             pillars=pillars,
+            historical_series=historical_series,
             red_flags=[str(item) for item in payload.get("red_flags", []) if str(item).strip()],
             highlights=[str(item) for item in payload.get("highlights", []) if str(item).strip()],
             metric_sources={
