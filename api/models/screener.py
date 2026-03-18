@@ -45,6 +45,9 @@ class ScreenerCandidate(BaseModel):
     score: float
     confidence: float
     rank: int
+    fundamentals_coverage_status: Optional[str] = None
+    fundamentals_freshness_status: Optional[str] = None
+    fundamentals_summary: Optional[str] = None
     # Plan + recommendation fields (education-first)
     signal: Optional[str] = None
     entry: Optional[float] = None

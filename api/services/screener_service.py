@@ -36,6 +36,7 @@ from swing_screener.data.currency import detect_currency
 from swing_screener.data.ticker_info import get_multiple_ticker_info
 from swing_screener.reporting.report import ReportConfig, build_daily_report
 from swing_screener.reporting.concentration import sector_concentration_warnings
+from swing_screener.fundamentals.storage import FundamentalsStorage
 from swing_screener.strategy.config import (
     build_entry_config,
     build_ranking_config,
@@ -263,6 +264,49 @@ def _price_history_map(
         if points:
             out[str(ticker)] = points
     return out
+
+
+def _fundamentals_summary(snapshot) -> str | None:
+    for value in getattr(snapshot, "highlights", []) or []:
+        text = str(value).strip()
+        if text:
+            return text
+    for value in getattr(snapshot, "red_flags", []) or []:
+        text = str(value).strip()
+        if text:
+            return text
+    error = getattr(snapshot, "error", None)
+    if error:
+        text = str(error).strip()
+        if text:
+            return text
+    return None
+
+
+def _apply_cached_fundamentals_context(
+    candidates: list[ScreenerCandidate],
+    *,
+    storage: FundamentalsStorage | None = None,
+) -> list[ScreenerCandidate]:
+    if not candidates:
+        return candidates
+    fundamentals_storage = storage or FundamentalsStorage()
+    enriched: list[ScreenerCandidate] = []
+    for candidate in candidates:
+        snapshot = fundamentals_storage.load_snapshot(candidate.ticker)
+        if snapshot is None:
+            enriched.append(candidate)
+            continue
+        enriched.append(
+            candidate.model_copy(
+                update={
+                    "fundamentals_coverage_status": getattr(snapshot, "coverage_status", None),
+                    "fundamentals_freshness_status": getattr(snapshot, "freshness_status", None),
+                    "fundamentals_summary": _fundamentals_summary(snapshot),
+                }
+            )
+        )
+    return enriched
 
 
 def _is_na_scalar(val) -> bool:
@@ -631,6 +675,7 @@ class ScreenerService:
                     filtered_candidates.append(enriched_candidate)
 
             candidates = filtered_candidates
+            candidates = _apply_cached_fundamentals_context(candidates)
             if same_symbol_suppressed_count > 0:
                 warnings.append(
                     f"{same_symbol_suppressed_count} same-symbol candidate"

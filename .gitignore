@@ -48,6 +48,7 @@ dist/
 .cache/
 *.parquet
 data/social_cache/
+data/fundamentals/
 data/daily_reviews/
 data/screener/
 data/*.db

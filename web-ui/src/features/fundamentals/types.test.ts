@@ -25,6 +25,18 @@ describe('fundamentals transforms', () => {
           summary: 'Growth profile.',
         },
       },
+      historical_series: {
+        revenue: {
+          label: 'Revenue',
+          unit: 'currency',
+          direction: 'improving',
+          points: [
+            { period_end: '2025-08-01', value: 84_000_000_000 },
+            { period_end: '2025-11-01', value: 88_000_000_000 },
+            { period_end: '2026-02-01', value: 94_000_000_000 },
+          ],
+        },
+      },
       red_flags: [],
       highlights: ['Growth metrics are supportive.'],
       metric_sources: { revenue_growth_yoy: 'yfinance' },
@@ -33,6 +45,8 @@ describe('fundamentals transforms', () => {
     expect(snapshot.asofDate).toBe('2026-03-18');
     expect(snapshot.companyName).toBe('Apple Inc.');
     expect(snapshot.pillars.growth.status).toBe('strong');
+    expect(snapshot.historicalSeries.revenue.direction).toBe('improving');
+    expect(snapshot.historicalSeries.revenue.points).toHaveLength(3);
     expect(snapshot.metricSources.revenue_growth_yoy).toBe('yfinance');
   });
 });
