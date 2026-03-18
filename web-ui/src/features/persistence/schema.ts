@@ -87,7 +87,7 @@ export function isPersistedTradingStoreV1(value: unknown): value is PersistedTra
   );
 }
 
-function isPersistedWatchItem(value: unknown): value is PersistedWatchItem {
+export function isPersistedWatchItem(value: unknown): value is PersistedWatchItem {
   if (!value || typeof value !== 'object') return false;
   const candidate = value as Record<string, unknown>;
   return (

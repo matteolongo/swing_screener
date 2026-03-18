@@ -3,6 +3,7 @@ import {
   isPersistedTradingStoreV3,
   isPersistedTradingStoreV2,
   isPersistedTradingStoreV1,
+  isPersistedWatchItem,
   TRADING_STORE_SCHEMA_VERSION,
   type PersistedTradingStore,
   type PersistedTradingStoreV3,
@@ -36,13 +37,13 @@ function sanitizeStrategies(strategies: unknown): PersistedTradingStore['strateg
   if (!Array.isArray(strategies)) {
     return [];
   }
-  return strategies.map((strategy) => {
+  return strategies.flatMap((strategy) => {
     if (!strategy || typeof strategy !== 'object') {
-      return strategy as PersistedTradingStore['strategies'][number];
+      return [];
     }
     const sanitized = { ...(strategy as Record<string, unknown>) };
-    delete sanitized["soc" + "ial" + "Overlay"];
-    return sanitized as unknown as PersistedTradingStore['strategies'][number];
+    delete sanitized['socialOverlay'];
+    return [sanitized as unknown as PersistedTradingStore['strategies'][number]];
   });
 }
 
@@ -81,7 +82,9 @@ function migrateStore(raw: unknown): PersistedTradingStore {
         activeStrategyId: candidate.activeStrategyId,
         orders: candidate.orders as PersistedTradingStore['orders'],
         positions: candidate.positions as PersistedTradingStore['positions'],
-        watchlist: Array.isArray(candidate.watchlist) ? candidate.watchlist as PersistedTradingStore['watchlist'] : [],
+        watchlist: Array.isArray(candidate.watchlist)
+          ? (candidate.watchlist as unknown[]).filter(isPersistedWatchItem)
+          : [],
       };
     }
   }
