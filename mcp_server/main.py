@@ -131,7 +131,7 @@ def parse_args() -> argparse.Namespace:
         "--config",
         type=Path,
         default=None,
-        help="Path to configuration YAML file (default: config/mcp_features.yaml)",
+        help="Path to configuration YAML file (default: config/mcp.yaml)",
     )
     
     parser.add_argument(

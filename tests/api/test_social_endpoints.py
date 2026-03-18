@@ -10,10 +10,11 @@ from swing_screener.social.models import SocialRawEvent
 
 
 def _patch_strategy_storage(monkeypatch, tmp_path):
-    data_dir = tmp_path / "data"
-    monkeypatch.setattr(strategy_storage, "DATA_DIR", data_dir)
-    monkeypatch.setattr(strategy_storage, "STRATEGIES_FILE", data_dir / "strategies.json")
-    monkeypatch.setattr(strategy_storage, "ACTIVE_STRATEGY_FILE", data_dir / "active_strategy.json")
+    config_dir = tmp_path / "config"
+    monkeypatch.setattr(strategy_storage, "CONFIG_DIR", config_dir)
+    monkeypatch.setattr(strategy_storage, "DATA_DIR", config_dir)
+    monkeypatch.setattr(strategy_storage, "STRATEGIES_FILE", config_dir / "strategies.yaml")
+    monkeypatch.setattr(strategy_storage, "ACTIVE_STRATEGY_FILE", config_dir / "strategies.yaml")
 
 
 def test_social_analyze_returns_raw_events_when_no_data(monkeypatch, tmp_path):

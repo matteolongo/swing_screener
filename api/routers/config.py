@@ -1,17 +1,12 @@
 """Config router - Settings CRUD."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from api.models.config import AppConfig
 from api.repositories.config_repo import ConfigRepository
 from api.dependencies import get_config_repo
 
 router = APIRouter()
-
-# Backward compatibility for tests/helpers that still patch router-level config.
-# Runtime reads/writes use ConfigRepository via dependency injection.
-DEFAULT_CONFIG = ConfigRepository.get_defaults()
-current_config = DEFAULT_CONFIG.model_copy(deep=True)
 
 
 @router.get("", response_model=AppConfig)

@@ -22,6 +22,7 @@ from api.repositories.intelligence_symbol_sets_repo import IntelligenceSymbolSet
 from api.repositories.strategy_repo import StrategyRepository
 from swing_screener.intelligence.config import SUPPORTED_INTEL_PROVIDERS, build_intelligence_config
 from swing_screener.intelligence.llm.factory import build_llm_provider
+from swing_screener.settings import get_settings_manager
 from swing_screener.runtime_env import get_openai_api_key
 
 
@@ -169,16 +170,19 @@ class IntelligenceConfigService:
 
     def list_providers(self) -> list[IntelligenceProviderInfoResponse]:
         config = self.get_config()
+        provider_catalog = get_settings_manager().get_intelligence_provider_catalog()
         out: list[IntelligenceProviderInfoResponse] = []
-        for provider_name in ("openai", "ollama", "mock"):
-            model = config.llm.model
-            base_url = config.llm.base_url
-            if provider_name == "openai" and config.llm.provider != "openai":
-                model = "gpt-4.1-mini"
-                base_url = "https://api.openai.com/v1"
-            if provider_name == "ollama" and config.llm.provider != "ollama":
-                model = "mistral:7b-instruct"
-                base_url = "http://localhost:11434"
+        provider_names = list(provider_catalog.keys()) or ["openai", "ollama", "mock"]
+        for provider_name in provider_names:
+            catalog_entry = provider_catalog.get(provider_name, {})
+            default_model = str(catalog_entry.get("default_model") or config.llm.model or "").strip()
+            default_base_url = catalog_entry.get("default_base_url")
+            suggested_models = catalog_entry.get("suggested_models", [])
+            if not isinstance(suggested_models, list):
+                suggested_models = []
+
+            model = config.llm.model if config.llm.provider == provider_name else default_model
+            base_url = config.llm.base_url if config.llm.provider == provider_name else default_base_url
             if provider_name == "mock":
                 base_url = None
             detail: str | None = None
@@ -200,6 +204,10 @@ class IntelligenceConfigService:
                     provider=provider_name,
                     available=available,
                     detail=detail,
+                    default_model=default_model,
+                    default_base_url=None if default_base_url in (None, "") else str(default_base_url),
+                    suggested_models=[str(item) for item in suggested_models if str(item).strip()],
+                    api_key_configured=(provider_name != "openai") or bool(get_openai_api_key()),
                 )
             )
         return out

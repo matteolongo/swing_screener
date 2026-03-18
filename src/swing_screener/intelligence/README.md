@@ -23,7 +23,7 @@ This layer is advisory only. It does not place orders.
 - API entry point is `POST /api/intelligence/run`.
 
 ## Run Flow
-1. `IntelligenceService.start_run()` loads dedicated intelligence config from `data/intelligence/config.json`.
+1. `IntelligenceService.start_run()` loads dedicated intelligence config from `config/intelligence.yaml`.
 2. A background job is queued in `api/services/intelligence_warmup.py`.
 3. Worker executes `run_intelligence_pipeline()` in `src/swing_screener/intelligence/pipeline.py`.
 4. Providers ingest events (`ingestion/`).
@@ -66,7 +66,7 @@ Then:
 
 ## Configuration Source Of Truth
 Intelligence config is dedicated and persisted under:
-- `data/intelligence/config.json`
+- `config/intelligence.yaml`
 
 Strategy-scoped `market_intelligence` is only used as one-time bootstrap fallback when dedicated config is absent.
 

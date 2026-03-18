@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from typing import Optional
 import os
 
+from swing_screener.settings import get_settings_manager
+
 
 @dataclass
 class BrokerConfig:
@@ -36,7 +38,11 @@ class BrokerConfig:
         Returns:
             BrokerConfig instance
         """
-        provider = os.getenv("SWING_SCREENER_PROVIDER", "yfinance").lower()
+        broker_defaults = get_settings_manager().get_low_level_defaults_payload("broker")
+        provider = os.getenv(
+            "SWING_SCREENER_PROVIDER",
+            str(broker_defaults.get("provider", "yfinance")),
+        ).lower()
         
         # Validate provider
         if provider not in ("yfinance", "alpaca"):
@@ -45,7 +51,8 @@ class BrokerConfig:
         # Get Alpaca credentials
         alpaca_api_key = os.getenv("ALPACA_API_KEY")
         alpaca_secret_key = os.getenv("ALPACA_SECRET_KEY")
-        alpaca_paper = os.getenv("ALPACA_PAPER", "true").lower() in ("true", "1", "yes")
+        alpaca_paper_default = str(broker_defaults.get("alpaca_paper", True)).lower()
+        alpaca_paper = os.getenv("ALPACA_PAPER", alpaca_paper_default).lower() in ("true", "1", "yes")
         
         # Validate Alpaca credentials if provider is alpaca
         if provider == "alpaca":

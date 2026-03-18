@@ -1,6 +1,8 @@
 import type { OrderFilterStatus, PositionFilterStatus } from '@/features/portfolio/api';
 
 export const queryKeys = {
+  config: () => ['config'] as const,
+  configDefaults: () => ['config-defaults'] as const,
   strategies: () => ['strategies'] as const,
   strategyActive: () => ['strategy-active'] as const,
   strategyValidation: (payloadHash?: string | null) =>

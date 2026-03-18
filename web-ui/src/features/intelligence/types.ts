@@ -458,12 +458,20 @@ export interface IntelligenceProviderInfo {
   provider: string;
   available: boolean;
   detail?: string;
+  defaultModel: string;
+  defaultBaseUrl?: string;
+  suggestedModels: string[];
+  apiKeyConfigured: boolean;
 }
 
 export interface IntelligenceProviderInfoAPI {
   provider: string;
   available: boolean;
   detail?: string | null;
+  default_model: string;
+  default_base_url?: string | null;
+  suggested_models?: string[];
+  api_key_configured?: boolean;
 }
 
 export interface IntelligenceProviderTestRequest {
@@ -872,6 +880,10 @@ export function transformProviderInfo(api: IntelligenceProviderInfoAPI): Intelli
     provider: api.provider,
     available: api.available,
     detail: api.detail ?? undefined,
+    defaultModel: api.default_model,
+    defaultBaseUrl: api.default_base_url ?? undefined,
+    suggestedModels: api.suggested_models ?? [],
+    apiKeyConfigured: api.api_key_configured ?? false,
   };
 }
 

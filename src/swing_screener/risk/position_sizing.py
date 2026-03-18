@@ -1,31 +1,36 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from typing import Optional, Dict, Any
 import re
 
 import math
 import pandas as pd
+from swing_screener.settings import get_settings_manager
+
+
+def _risk_defaults() -> dict:
+    return get_settings_manager().get_low_level_defaults_payload("risk")
 
 
 @dataclass(frozen=True)
 class RiskConfig:
-    account_size: float = 500.0
-    risk_pct: float = 0.01  # 1% of account per trade
-    k_atr: float = 2.0  # stop = entry - k*ATR
-    max_position_pct: float = 0.60  # max capital allocated to a single position
-    min_shares: int = 1
-    min_rr: float = 2.0  # minimum reward-to-risk to recommend
-    rr_target: float = 2.0  # default RR used to compute target and projected RR
-    commission_pct: float = 0.0  # per-side commission as % of price (for recommendation costs)
-    max_fee_risk_pct: float = 0.20  # max fees as % of planned risk
+    account_size: float = field(default_factory=lambda: float(_risk_defaults().get("account_size", 500.0)))
+    risk_pct: float = field(default_factory=lambda: float(_risk_defaults().get("risk_pct", 0.01)))
+    k_atr: float = field(default_factory=lambda: float(_risk_defaults().get("k_atr", 2.0)))
+    max_position_pct: float = field(default_factory=lambda: float(_risk_defaults().get("max_position_pct", 0.60)))
+    min_shares: int = field(default_factory=lambda: int(_risk_defaults().get("min_shares", 1)))
+    min_rr: float = field(default_factory=lambda: float(_risk_defaults().get("min_rr", 2.0)))
+    rr_target: float = field(default_factory=lambda: float(_risk_defaults().get("rr_target", 2.0)))
+    commission_pct: float = field(default_factory=lambda: float(_risk_defaults().get("commission_pct", 0.0)))
+    max_fee_risk_pct: float = field(default_factory=lambda: float(_risk_defaults().get("max_fee_risk_pct", 0.20)))
     # Regime-aware risk scaling (optional)
-    regime_enabled: bool = False
-    regime_trend_sma: int = 200
-    regime_trend_multiplier: float = 0.5
-    regime_vol_atr_window: int = 14
-    regime_vol_atr_pct_threshold: float = 6.0
-    regime_vol_multiplier: float = 0.5
+    regime_enabled: bool = field(default_factory=lambda: bool(_risk_defaults().get("regime_enabled", False)))
+    regime_trend_sma: int = field(default_factory=lambda: int(_risk_defaults().get("regime_trend_sma", 200)))
+    regime_trend_multiplier: float = field(default_factory=lambda: float(_risk_defaults().get("regime_trend_multiplier", 0.5)))
+    regime_vol_atr_window: int = field(default_factory=lambda: int(_risk_defaults().get("regime_vol_atr_window", 14)))
+    regime_vol_atr_pct_threshold: float = field(default_factory=lambda: float(_risk_defaults().get("regime_vol_atr_pct_threshold", 6.0)))
+    regime_vol_multiplier: float = field(default_factory=lambda: float(_risk_defaults().get("regime_vol_multiplier", 0.5)))
 
 
 def compute_stop(entry: float, atr14: float, k_atr: float) -> float:

@@ -85,3 +85,4 @@ web-ui/.audit/
 # =========================
 test-results.xml
 coverage.xml
+config/intelligence.lock

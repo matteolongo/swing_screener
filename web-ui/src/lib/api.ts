@@ -3,6 +3,10 @@
 export const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 export const API_ENDPOINTS = {
+  // Config
+  config: '/api/config',
+  configDefaults: '/api/config/defaults',
+
   // Strategy
   strategy: '/api/strategy',
   strategyActive: '/api/strategy/active',

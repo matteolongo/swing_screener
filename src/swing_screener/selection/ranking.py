@@ -1,15 +1,22 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import pandas as pd
+from swing_screener.settings import get_settings_manager
+
+
+def _ranking_defaults() -> dict:
+    sel = get_settings_manager().get_low_level_defaults_payload("selection")
+    d = sel.get("ranking", {})
+    return d if isinstance(d, dict) else {}
 
 
 @dataclass(frozen=True)
 class RankingConfig:
-    w_mom_6m: float = 0.45
-    w_mom_12m: float = 0.35
-    w_rs_6m: float = 0.20
-    top_n: int = 15
+    w_mom_6m: float = field(default_factory=lambda: float(_ranking_defaults().get("w_mom_6m", 0.45)))
+    w_mom_12m: float = field(default_factory=lambda: float(_ranking_defaults().get("w_mom_12m", 0.35)))
+    w_rs_6m: float = field(default_factory=lambda: float(_ranking_defaults().get("w_rs_6m", 0.20)))
+    top_n: int = field(default_factory=lambda: int(_ranking_defaults().get("top_n", 15)))
 
 
 def _validate_weights(cfg: RankingConfig) -> None:

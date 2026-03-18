@@ -252,8 +252,8 @@ def load_config(config_path: Optional[Path] = None) -> MCPConfig:
         ValueError: If configuration is invalid
     """
     if config_path is None:
-        # Default to config/mcp_features.yaml relative to project root
-        default_path = Path(__file__).parent.parent / "config" / "mcp_features.yaml"
+        # Default to config/mcp.yaml relative to project root
+        default_path = Path(__file__).parent.parent / "config" / "mcp.yaml"
         config_path = default_path
     
     return MCPConfig.from_yaml(config_path)

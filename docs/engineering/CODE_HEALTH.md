@@ -61,7 +61,7 @@ The following directories were **removed** as they contained no code, no imports
 
 ### 🟡 Medium Impact — Sensible Defaults, Configurable Per Strategy
 
-All values below are `dataclass` defaults. They can be overridden via `RiskConfig`, `UniverseFilterConfig`, `RankingConfig`, etc. — either in code or through the strategy config stored in `data/strategies.json`.
+All values below are `dataclass` defaults. They can be overridden via `RiskConfig`, `UniverseFilterConfig`, `RankingConfig`, etc. — either in code or through the strategy config stored in `config/strategies.yaml`.
 
 | File | Symbol | Value | Context |
 |------|--------|-------|---------|

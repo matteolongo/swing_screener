@@ -24,6 +24,7 @@ import {
 import type {
   IntelligenceConfig,
   IntelligenceLlmProvider,
+  IntelligenceProviderInfo,
   IntelligenceRunRequest,
 } from '@/features/intelligence/types';
 import { t } from '@/i18n/t';
@@ -40,17 +41,12 @@ function normalizeSymbols(input: string): string[] {
     });
 }
 
-const PROVIDER_MODELS: Record<IntelligenceLlmProvider, string[]> = {
-  ollama: ['mistral:7b-instruct', 'llama3.1:8b-instruct', 'qwen2.5:7b-instruct'],
-  openai: ['gpt-4.1-mini', 'gpt-4o-mini', 'gpt-4.1', 'o4-mini'],
-  mock: ['mock-classifier'],
-};
-
-const PROVIDER_DEFAULTS: Record<IntelligenceLlmProvider, { model: string; baseUrl: string }> = {
-  ollama: { model: 'mistral:7b-instruct', baseUrl: 'http://localhost:11434' },
-  openai: { model: 'gpt-4.1-mini', baseUrl: 'https://api.openai.com/v1' },
-  mock: { model: 'mock-classifier', baseUrl: '' },
-};
+function getProviderCatalogEntry(
+  providers: IntelligenceProviderInfo[] | undefined,
+  provider: IntelligenceLlmProvider,
+): IntelligenceProviderInfo | undefined {
+  return providers?.find((item) => item.provider === provider);
+}
 
 export default function IntelligencePage() {
   const navigate = useNavigate();
@@ -89,17 +85,18 @@ export default function IntelligencePage() {
   }, [showAdvancedConfig]);
 
   const symbolSets = symbolSetsQuery.data?.items ?? [];
+  const providerCatalog = providersQuery.data ?? [];
   const selectedSymbolSet = symbolSets.find((item) => item.id === selectedSymbolSetId);
   const manualSymbols = useMemo(() => normalizeSymbols(manualSymbolsInput), [manualSymbolsInput]);
   const llmModelOptions = useMemo(() => {
     if (!draftConfig) return [];
-    const provider = draftConfig.llm.provider;
-    const options = PROVIDER_MODELS[provider] ?? [];
+    const provider = getProviderCatalogEntry(providerCatalog, draftConfig.llm.provider);
+    const options = provider?.suggestedModels ?? [];
     if (!draftConfig.llm.model) {
       return options;
     }
     return options.includes(draftConfig.llm.model) ? options : [draftConfig.llm.model, ...options];
-  }, [draftConfig]);
+  }, [draftConfig, providerCatalog]);
 
   useEffect(() => {
     if (selectedSymbolSet) {
@@ -519,26 +516,35 @@ export default function IntelligencePage() {
                   value={draftConfig.llm.provider}
                   onChange={(event) => {
                     const nextProvider = event.target.value as IntelligenceLlmProvider;
-                    const defaults = PROVIDER_DEFAULTS[nextProvider];
-                    const nextModel = PROVIDER_MODELS[nextProvider].includes(draftConfig.llm.model)
+                    const providerEntry = getProviderCatalogEntry(providerCatalog, nextProvider);
+                    const suggestedModels = providerEntry?.suggestedModels ?? [];
+                    const defaultModel = providerEntry?.defaultModel ?? draftConfig.llm.model;
+                    const defaultBaseUrl = providerEntry?.defaultBaseUrl ?? draftConfig.llm.baseUrl;
+                    const nextModel = suggestedModels.includes(draftConfig.llm.model)
                       ? draftConfig.llm.model
-                      : defaults.model;
+                      : defaultModel;
                     setDraftConfig({
                       ...draftConfig,
                       llm: {
                         ...draftConfig.llm,
                         provider: nextProvider,
                         model: nextModel,
-                        baseUrl: defaults.baseUrl,
+                        baseUrl: defaultBaseUrl,
                       },
                     });
                   }}
                   aria-label={t('intelligencePage.config.llmProvider')}
                   className="w-full rounded border border-gray-300 px-3 py-2"
                 >
-                  <option value="openai">openai</option>
-                  <option value="ollama">ollama</option>
-                  <option value="mock">mock</option>
+                  {providerCatalog.length > 0 ? (
+                    providerCatalog.map((provider) => (
+                      <option key={provider.provider} value={provider.provider}>
+                        {provider.provider}
+                      </option>
+                    ))
+                  ) : (
+                    <option value={draftConfig.llm.provider}>{draftConfig.llm.provider}</option>
+                  )}
                 </select>
               </label>
               <label className="text-sm">

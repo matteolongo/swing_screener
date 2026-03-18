@@ -26,6 +26,7 @@ from api.models.portfolio import (
     UpdateStopRequest,
     ClosePositionRequest,
 )
+from api.repositories.config_repo import ConfigRepository
 from api.repositories.orders_repo import OrdersRepository
 from api.repositories.positions_repo import PositionsRepository
 from api.utils.files import get_today_str
@@ -104,9 +105,7 @@ def _round_price(value: float) -> float:
 
 
 def _manage_cfg_from_app() -> ManageStateConfig:
-    from api.routers import config as config_router
-
-    manage = config_router.current_config.manage
+    manage = ConfigRepository().get().manage
     return ManageStateConfig(
         breakeven_at_R=manage.breakeven_at_r,
         trail_sma=manage.trail_sma,

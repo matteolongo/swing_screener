@@ -1,0 +1,14 @@
+app_config: {}
+
+api:
+  serve_web_ui: auto
+  allow_origins:
+    - http://localhost:5173
+    - http://localhost:5174
+
+web_ui:
+  beginner_mode_default: true
+  persistence_mode: api
+  enable_local_persistence: false
+
+runtime: {}

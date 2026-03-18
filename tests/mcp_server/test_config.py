@@ -286,7 +286,7 @@ class TestLoadConfig:
     
     def test_load_config_default_path(self):
         """Test loading config with default path."""
-        # This should try to load from config/mcp_features.yaml
+        # This should try to load from config/mcp.yaml
         # which should exist in the repo
         config = load_config()
         assert isinstance(config, MCPConfig)

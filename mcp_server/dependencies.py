@@ -26,12 +26,13 @@ from api.services.strategy_service import StrategyService
 from api.services.workspace_context_service import WorkspaceContextService
 from api.utils.file_lock import locked_write_json
 from api.utils.files import get_today_str
+from swing_screener.settings import data_dir, get_settings_manager, project_root
 
 # Repository root (same as api/dependencies.py)
-ROOT_DIR = Path(__file__).parent.parent.resolve()
-DATA_DIR = ROOT_DIR / "data"
-POSITIONS_FILE = DATA_DIR / "positions.json"
-ORDERS_FILE = DATA_DIR / "orders.json"
+ROOT_DIR = project_root()
+DATA_DIR = data_dir()
+POSITIONS_FILE = get_settings_manager().resolve_runtime_path("positions_file", DATA_DIR / "positions.json")
+ORDERS_FILE = get_settings_manager().resolve_runtime_path("orders_file", DATA_DIR / "orders.json")
 
 
 def get_positions_path() -> Path:
