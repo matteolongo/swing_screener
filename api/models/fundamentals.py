@@ -35,6 +35,18 @@ class FundamentalPillarScoreResponse(BaseModel):
     summary: str = ""
 
 
+class FundamentalSeriesPointResponse(BaseModel):
+    period_end: str
+    value: float
+
+
+class FundamentalMetricSeriesResponse(BaseModel):
+    label: str
+    unit: Literal["number", "currency", "percent", "ratio"] = "number"
+    direction: Literal["improving", "deteriorating", "stable", "unknown"] = "unknown"
+    points: list[FundamentalSeriesPointResponse] = Field(default_factory=list)
+
+
 class FundamentalSnapshotResponse(BaseModel):
     symbol: str
     asof_date: str
@@ -61,6 +73,7 @@ class FundamentalSnapshotResponse(BaseModel):
     price_to_sales: Optional[float] = None
     most_recent_quarter: Optional[str] = None
     pillars: dict[str, FundamentalPillarScoreResponse] = Field(default_factory=dict)
+    historical_series: dict[str, FundamentalMetricSeriesResponse] = Field(default_factory=dict)
     red_flags: list[str] = Field(default_factory=list)
     highlights: list[str] = Field(default_factory=list)
     metric_sources: dict[str, str] = Field(default_factory=dict)

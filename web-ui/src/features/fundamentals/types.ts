@@ -26,6 +26,30 @@ export interface FundamentalPillarScoreAPI {
   summary: string;
 }
 
+export interface FundamentalSeriesPoint {
+  periodEnd: string;
+  value: number;
+}
+
+export interface FundamentalSeriesPointAPI {
+  period_end: string;
+  value: number;
+}
+
+export interface FundamentalMetricSeries {
+  label: string;
+  unit: 'number' | 'currency' | 'percent' | 'ratio';
+  direction: 'improving' | 'deteriorating' | 'stable' | 'unknown';
+  points: FundamentalSeriesPoint[];
+}
+
+export interface FundamentalMetricSeriesAPI {
+  label: string;
+  unit: 'number' | 'currency' | 'percent' | 'ratio';
+  direction: 'improving' | 'deteriorating' | 'stable' | 'unknown';
+  points?: FundamentalSeriesPointAPI[];
+}
+
 export interface FundamentalSnapshot {
   symbol: string;
   asofDate: string;
@@ -52,6 +76,7 @@ export interface FundamentalSnapshot {
   priceToSales?: number;
   mostRecentQuarter?: string;
   pillars: Record<string, FundamentalPillarScore>;
+  historicalSeries: Record<string, FundamentalMetricSeries>;
   redFlags: string[];
   highlights: string[];
   metricSources: Record<string, string>;
@@ -84,6 +109,7 @@ export interface FundamentalSnapshotAPI {
   price_to_sales?: number | null;
   most_recent_quarter?: string | null;
   pillars?: Record<string, FundamentalPillarScoreAPI>;
+  historical_series?: Record<string, FundamentalMetricSeriesAPI>;
   red_flags?: string[];
   highlights?: string[];
   metric_sources?: Record<string, string>;
@@ -130,6 +156,21 @@ export function transformFundamentalSnapshot(api: FundamentalSnapshotAPI): Funda
     },
     {}
   );
+  const historicalSeries = Object.entries(api.historical_series ?? {}).reduce<Record<string, FundamentalMetricSeries>>(
+    (acc, [key, value]) => {
+      acc[key] = {
+        label: value.label,
+        unit: value.unit,
+        direction: value.direction,
+        points: (value.points ?? []).map((point) => ({
+          periodEnd: point.period_end,
+          value: point.value,
+        })),
+      };
+      return acc;
+    },
+    {}
+  );
 
   return {
     symbol: api.symbol,
@@ -157,6 +198,7 @@ export function transformFundamentalSnapshot(api: FundamentalSnapshotAPI): Funda
     priceToSales: api.price_to_sales ?? undefined,
     mostRecentQuarter: api.most_recent_quarter ?? undefined,
     pillars,
+    historicalSeries,
     redFlags: api.red_flags ?? [],
     highlights: api.highlights ?? [],
     metricSources: api.metric_sources ?? {},

@@ -48,6 +48,19 @@ class _FakeFundamentalsService:
             "pillars": {
                 "growth": {"score": 0.9, "status": "strong", "summary": "Growth profile."},
             },
+            "historical_series": {
+                "revenue": {
+                    "label": "Revenue",
+                    "unit": "currency",
+                    "direction": "improving",
+                    "points": [
+                        {"period_end": "2025-05-01", "value": 80_000_000_000.0},
+                        {"period_end": "2025-08-01", "value": 84_000_000_000.0},
+                        {"period_end": "2025-11-01", "value": 88_000_000_000.0},
+                        {"period_end": "2026-02-01", "value": 94_000_000_000.0},
+                    ],
+                }
+            },
             "red_flags": [],
             "highlights": ["Growth metrics are supportive."],
             "metric_sources": {"revenue_growth_yoy": "yfinance"},
@@ -74,6 +87,7 @@ def test_fundamentals_snapshot_endpoint():
     assert payload["symbol"] == "AAPL"
     assert payload["coverage_status"] == "supported"
     assert payload["pillars"]["growth"]["status"] == "strong"
+    assert payload["historical_series"]["revenue"]["direction"] == "improving"
 
     app.dependency_overrides.clear()
 

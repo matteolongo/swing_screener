@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import datetime
 
 from swing_screener.fundamentals.config import FundamentalsConfig
 from swing_screener.fundamentals.models import (
+    FundamentalMetricSeries,
     FundamentalPillarScore,
+    FundamentalSeriesPoint,
     FundamentalSnapshot,
     ProviderFundamentalsRecord,
 )
@@ -85,6 +88,139 @@ def _is_supported_equity(instrument_type: str) -> bool:
     return normalized in {"equity", "stock", "common stock"}
 
 
+def _sorted_points(series: FundamentalMetricSeries) -> list[FundamentalSeriesPoint]:
+    return sorted(
+        [point for point in series.points if point.period_end],
+        key=lambda point: point.period_end,
+    )
+
+
+def _latest_series_value(series_map: dict[str, FundamentalMetricSeries], key: str) -> float | None:
+    series = series_map.get(key)
+    if not series:
+        return None
+    points = _sorted_points(series)
+    if not points:
+        return None
+    return float(points[-1].value)
+
+
+def _latest_period_end(series_map: dict[str, FundamentalMetricSeries]) -> str | None:
+    latest: str | None = None
+    for series in series_map.values():
+        points = _sorted_points(series)
+        if not points:
+            continue
+        candidate = points[-1].period_end
+        if latest is None or candidate > latest:
+            latest = candidate
+    return latest
+
+
+def _year_ago_point(series: FundamentalMetricSeries) -> FundamentalSeriesPoint | None:
+    points = _sorted_points(series)
+    if len(points) < 2:
+        return None
+    latest = points[-1]
+    try:
+        latest_date = datetime.fromisoformat(latest.period_end).date()
+    except ValueError:
+        return None
+    candidates: list[tuple[int, FundamentalSeriesPoint]] = []
+    for point in points[:-1]:
+        try:
+            point_date = datetime.fromisoformat(point.period_end).date()
+        except ValueError:
+            continue
+        delta_days = (latest_date - point_date).days
+        if 280 <= delta_days <= 460:
+            candidates.append((abs(delta_days - 365), point))
+    if not candidates:
+        return None
+    candidates.sort(key=lambda item: item[0])
+    return candidates[0][1]
+
+
+def _growth_from_series(series_map: dict[str, FundamentalMetricSeries], key: str) -> float | None:
+    series = series_map.get(key)
+    if not series:
+        return None
+    points = _sorted_points(series)
+    if len(points) < 2:
+        return None
+    latest = points[-1]
+    prior = _year_ago_point(series)
+    if prior is None or prior.value == 0:
+        return None
+    return round((latest.value / prior.value) - 1.0, 4)
+
+
+def _series_direction(
+    series: FundamentalMetricSeries,
+    *,
+    favorable_when: str,
+    relative_threshold: float | None = None,
+    absolute_threshold: float | None = None,
+) -> str:
+    points = _sorted_points(series)
+    if len(points) < 2:
+        return "unknown"
+    previous = float(points[-2].value)
+    latest = float(points[-1].value)
+    delta = latest - previous
+
+    if absolute_threshold is not None and abs(delta) <= absolute_threshold:
+        return "stable"
+
+    if relative_threshold is not None:
+        denominator = max(abs(previous), 1e-9)
+        if abs(delta) / denominator <= relative_threshold:
+            return "stable"
+
+    if latest > previous:
+        return "improving" if favorable_when == "higher" else "deteriorating"
+    if latest < previous:
+        return "deteriorating" if favorable_when == "higher" else "improving"
+    return "stable"
+
+
+def _decorate_historical_series(
+    series_map: dict[str, FundamentalMetricSeries],
+) -> dict[str, FundamentalMetricSeries]:
+    decorated: dict[str, FundamentalMetricSeries] = {}
+    for key, series in series_map.items():
+        if key == "revenue":
+            direction = _series_direction(series, favorable_when="higher", relative_threshold=0.03)
+        elif key in {"operating_margin", "free_cash_flow_margin"}:
+            direction = _series_direction(series, favorable_when="higher", absolute_threshold=0.015)
+        elif key == "free_cash_flow":
+            direction = _series_direction(series, favorable_when="higher", relative_threshold=0.05)
+        else:
+            direction = "unknown"
+        decorated[key] = replace(series, points=_sorted_points(series), direction=direction)
+    return decorated
+
+
+def _resolved_record(record: ProviderFundamentalsRecord) -> ProviderFundamentalsRecord:
+    series_map = record.historical_series
+    updates: dict[str, float | str | None] = {}
+
+    if record.operating_margin is None:
+        updates["operating_margin"] = _latest_series_value(series_map, "operating_margin")
+    if record.free_cash_flow is None:
+        updates["free_cash_flow"] = _latest_series_value(series_map, "free_cash_flow")
+    if record.free_cash_flow_margin is None:
+        updates["free_cash_flow_margin"] = _latest_series_value(series_map, "free_cash_flow_margin")
+    if record.revenue_growth_yoy is None:
+        updates["revenue_growth_yoy"] = _growth_from_series(series_map, "revenue")
+    if record.most_recent_quarter is None:
+        updates["most_recent_quarter"] = _latest_period_end(series_map)
+
+    if not updates:
+        return record
+    return replace(record, **updates)
+
+
 def _build_pillars(record: ProviderFundamentalsRecord) -> dict[str, FundamentalPillarScore]:
     growth_score = _blend_scores(
         _score_higher(record.revenue_growth_yoy, weak=-0.05, strong=0.15),
@@ -137,7 +273,11 @@ def _build_pillars(record: ProviderFundamentalsRecord) -> dict[str, FundamentalP
     }
 
 
-def _build_red_flags(record: ProviderFundamentalsRecord, freshness_status: str) -> list[str]:
+def _build_red_flags(
+    record: ProviderFundamentalsRecord,
+    freshness_status: str,
+    historical_series: dict[str, FundamentalMetricSeries],
+) -> list[str]:
     flags: list[str] = []
     if record.earnings_growth_yoy is not None and record.earnings_growth_yoy < 0:
         flags.append("Earnings growth is negative.")
@@ -151,6 +291,20 @@ def _build_red_flags(record: ProviderFundamentalsRecord, freshness_status: str) 
         flags.append("Current ratio is below 1.0.")
     if freshness_status == "stale":
         flags.append("Latest reported quarter looks stale.")
+
+    if historical_series.get("revenue") and historical_series["revenue"].direction == "deteriorating":
+        flags.append("Revenue trend has weakened versus prior periods.")
+    if (
+        historical_series.get("operating_margin")
+        and historical_series["operating_margin"].direction == "deteriorating"
+    ):
+        flags.append("Operating margin is deteriorating.")
+    if (
+        historical_series.get("free_cash_flow_margin")
+        and historical_series["free_cash_flow_margin"].direction == "deteriorating"
+    ):
+        flags.append("Cash-flow conversion is deteriorating.")
+
     if record.provider_error:
         flags.append(record.provider_error)
     return flags
@@ -160,6 +314,7 @@ def _build_highlights(
     record: ProviderFundamentalsRecord,
     pillars: dict[str, FundamentalPillarScore],
     coverage_status: str,
+    historical_series: dict[str, FundamentalMetricSeries],
 ) -> list[str]:
     highlights: list[str] = []
     if coverage_status == "unsupported":
@@ -167,6 +322,14 @@ def _build_highlights(
         return highlights
     if coverage_status == "insufficient":
         highlights.append("Coverage is still thin; use the snapshot as a partial research aid.")
+
+    if historical_series.get("revenue") and historical_series["revenue"].direction == "improving":
+        highlights.append("Recent revenue trend is improving.")
+    if (
+        historical_series.get("operating_margin")
+        and historical_series["operating_margin"].direction == "improving"
+    ):
+        highlights.append("Margins are improving across recent periods.")
     if pillars["growth"].status == "strong":
         highlights.append("Growth metrics are supportive.")
     if pillars["profitability"].status == "strong":
@@ -175,49 +338,54 @@ def _build_highlights(
         highlights.append("Balance sheet quality needs caution.")
     if pillars["valuation"].status == "weak":
         highlights.append("Valuation looks demanding versus simple heuristics.")
+    if any(".quarterly_" in source or source.endswith(".financials") or source.endswith(".cashflow") for source in record.metric_sources.values()):
+        highlights.append("Snapshot was supplemented with statement history.")
     if not highlights:
         highlights.append("No strong fundamental edge is visible yet.")
     return highlights[:4]
 
 
 def build_snapshot(record: ProviderFundamentalsRecord, cfg: FundamentalsConfig) -> FundamentalSnapshot:
-    supported = _is_supported_equity(record.instrument_type)
-    coverage_status = _coverage_status(record, supported)
-    freshness_status = _freshness_status(record.most_recent_quarter, cfg.stale_after_days)
-    pillars = _build_pillars(record)
-    red_flags = _build_red_flags(record, freshness_status)
-    highlights = _build_highlights(record, pillars, coverage_status)
+    resolved_record = _resolved_record(record)
+    supported = _is_supported_equity(resolved_record.instrument_type)
+    coverage_status = _coverage_status(resolved_record, supported)
+    freshness_status = _freshness_status(resolved_record.most_recent_quarter, cfg.stale_after_days)
+    historical_series = _decorate_historical_series(resolved_record.historical_series)
+    pillars = _build_pillars(resolved_record)
+    red_flags = _build_red_flags(resolved_record, freshness_status, historical_series)
+    highlights = _build_highlights(resolved_record, pillars, coverage_status, historical_series)
 
     return FundamentalSnapshot(
-        symbol=record.symbol,
-        asof_date=record.asof_date,
-        provider=record.provider,
+        symbol=resolved_record.symbol,
+        asof_date=resolved_record.asof_date,
+        provider=resolved_record.provider,
         updated_at=datetime.utcnow().replace(microsecond=0).isoformat(),
-        instrument_type=record.instrument_type,
+        instrument_type=resolved_record.instrument_type,
         supported=supported,
         coverage_status=coverage_status,
         freshness_status=freshness_status,
-        company_name=record.company_name,
-        sector=record.sector,
-        currency=record.currency,
-        market_cap=record.market_cap,
-        revenue_growth_yoy=record.revenue_growth_yoy,
-        earnings_growth_yoy=record.earnings_growth_yoy,
-        gross_margin=record.gross_margin,
-        operating_margin=record.operating_margin,
-        free_cash_flow=record.free_cash_flow,
-        free_cash_flow_margin=record.free_cash_flow_margin,
-        debt_to_equity=record.debt_to_equity,
-        current_ratio=record.current_ratio,
-        return_on_equity=record.return_on_equity,
-        trailing_pe=record.trailing_pe,
-        price_to_sales=record.price_to_sales,
-        most_recent_quarter=record.most_recent_quarter,
+        company_name=resolved_record.company_name,
+        sector=resolved_record.sector,
+        currency=resolved_record.currency,
+        market_cap=resolved_record.market_cap,
+        revenue_growth_yoy=resolved_record.revenue_growth_yoy,
+        earnings_growth_yoy=resolved_record.earnings_growth_yoy,
+        gross_margin=resolved_record.gross_margin,
+        operating_margin=resolved_record.operating_margin,
+        free_cash_flow=resolved_record.free_cash_flow,
+        free_cash_flow_margin=resolved_record.free_cash_flow_margin,
+        debt_to_equity=resolved_record.debt_to_equity,
+        current_ratio=resolved_record.current_ratio,
+        return_on_equity=resolved_record.return_on_equity,
+        trailing_pe=resolved_record.trailing_pe,
+        price_to_sales=resolved_record.price_to_sales,
+        most_recent_quarter=resolved_record.most_recent_quarter,
         pillars=pillars,
+        historical_series=historical_series,
         red_flags=red_flags,
         highlights=highlights,
-        metric_sources=record.metric_sources,
-        error=record.provider_error,
+        metric_sources=resolved_record.metric_sources,
+        error=resolved_record.provider_error,
     )
 
 
@@ -231,6 +399,7 @@ def build_provider_error_snapshot(symbol: str, provider: str, error: str) -> Fun
         coverage_status="insufficient",
         freshness_status="unknown",
         pillars={},
+        historical_series={},
         red_flags=[error],
         highlights=["Provider call failed; no fresh fundamental snapshot is available."],
         error=error,
