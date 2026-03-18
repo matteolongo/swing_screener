@@ -1,8 +1,9 @@
 """Factory helpers for intelligence LLM providers, chat models, and classifiers."""
 from __future__ import annotations
 
-import os
 from typing import Optional
+
+from swing_screener.runtime_env import get_ollama_host, get_openai_api_key, get_openai_base_url
 
 from .classifier import EventClassifier
 from .client import MockLLMProvider
@@ -22,7 +23,7 @@ def build_langchain_chat_model(
     normalized = str(provider_name).strip().lower()
 
     if normalized == "openai":
-        resolved_api_key = str(api_key or os.environ.get("OPENAI_API_KEY", "")).strip()
+        resolved_api_key = str(api_key or get_openai_api_key()).strip()
         if not resolved_api_key:
             raise RuntimeError("OPENAI API key is required for provider 'openai'.")
         try:
@@ -32,10 +33,10 @@ def build_langchain_chat_model(
                 "langchain-openai is not installed. Install dependencies for OpenAI integration."
             ) from exc
         return ChatOpenAI(
-            model=str(model).strip() or "gpt-4o-mini",
+            model=str(model).strip() or "gpt-4.1-mini",
             temperature=temperature,
             api_key=resolved_api_key,
-            base_url=base_url or os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1"),
+            base_url=base_url or get_openai_base_url(),
             max_retries=max_retries,
         )
 
@@ -48,7 +49,7 @@ def build_langchain_chat_model(
             ) from exc
         return ChatOllama(
             model=str(model).strip() or "mistral:7b-instruct",
-            base_url=base_url or os.environ.get("OLLAMA_HOST", "http://localhost:11434"),
+            base_url=base_url or get_ollama_host(),
             temperature=temperature,
         )
 

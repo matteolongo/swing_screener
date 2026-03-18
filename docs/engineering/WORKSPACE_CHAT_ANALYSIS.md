@@ -21,7 +21,8 @@ The important implementation detail is that there is one real chat engine:
 
 - `ChatService`
 
-The API, agent, and MCP layers now forward requests into that service through the same agent+MCP path, and the API side keeps a lazy persistent backend agent runtime instead of starting a fresh one for each request.
+The API, agent, and MCP layers now forward requests into that service through the same agent+MCP path, and the API side keeps a persistent backend agent runtime instead of starting a fresh one for each request.
+That runtime is self-healing for the chat path: if one MCP-backed `ask()` call fails, it discards the cached agent, starts a fresh one, and retries the read-only request once.
 
 ## High-Level Flow
 
@@ -42,6 +43,12 @@ flowchart TD
     M --> N["Return response"]
     N --> O["UI renders answer, warnings, facts used, source badges"]
 ```
+
+The same runtime also exposes lightweight operational state through the API:
+
+- `/health` includes `checks.agent_runtime`
+- `/metrics` includes `agent_runtime_running`
+- `/metrics` includes `agent_runtime_restart_total`
 
 ## Request Data From The UI
 
@@ -394,7 +401,6 @@ For workspace chat, the service uses config for:
 - provider
 - model
 - base URL
-- API key
 - enabled flag
 
 But the actual chat prompt text is hardcoded in `ChatService`.
@@ -412,7 +418,7 @@ The shared chat model factory supports:
 For workspace chat:
 
 - `mock` is treated as not LLM-ready
-- `openai` requires an API key
+- `openai` requires `OPENAI_API_KEY` from the server environment or local `.env`
 - `ollama` uses the configured local host
 
 Chat inference is created with:

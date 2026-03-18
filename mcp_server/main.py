@@ -13,9 +13,12 @@ from typing import Optional
 
 from mcp_server.config import load_config, MCPConfig
 from mcp_server.tools import create_registry
+from swing_screener.runtime_env import ensure_runtime_env_loaded
 
 # Configure logging
 logger = logging.getLogger(__name__)
+
+ensure_runtime_env_loaded()
 
 
 def setup_logging(config: MCPConfig) -> None:

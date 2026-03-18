@@ -89,7 +89,6 @@ export interface StrategyIntelligenceLLM {
   provider: 'ollama' | 'mock' | 'openai';
   model: string;
   baseUrl: string;
-  apiKey?: string;
   enableCache: boolean;
   enableAudit: boolean;
   cachePath: string;
@@ -236,7 +235,6 @@ export interface StrategyIntelligenceLLMAPI {
   provider?: 'ollama' | 'mock' | 'openai';
   model?: string;
   base_url?: string;
-  api_key?: string;
   enable_cache?: boolean;
   enable_audit?: boolean;
   cache_path?: string;
@@ -413,10 +411,9 @@ export function transformStrategy(api: StrategyAPI): Strategy {
       marketContextSymbols: marketIntelligenceApi.market_context_symbols ?? ['SPY', 'QQQ', 'XLK', 'SMH', 'XBI'],
       llm: {
         enabled: marketIntelligenceLlmApi.enabled ?? false,
-        provider: marketIntelligenceLlmApi.provider ?? 'ollama',
-        model: marketIntelligenceLlmApi.model ?? 'mistral:7b-instruct',
-        baseUrl: marketIntelligenceLlmApi.base_url ?? 'http://localhost:11434',
-        apiKey: marketIntelligenceLlmApi.api_key ?? '',
+        provider: marketIntelligenceLlmApi.provider ?? 'openai',
+        model: marketIntelligenceLlmApi.model ?? 'gpt-4.1-mini',
+        baseUrl: marketIntelligenceLlmApi.base_url ?? 'https://api.openai.com/v1',
         enableCache: marketIntelligenceLlmApi.enable_cache ?? true,
         enableAudit: marketIntelligenceLlmApi.enable_audit ?? true,
         cachePath: marketIntelligenceLlmApi.cache_path ?? 'data/intelligence/llm_cache.json',
@@ -541,7 +538,6 @@ export function toStrategyUpdateRequest(strategy: Strategy): StrategyUpdateReque
         provider: strategy.marketIntelligence.llm.provider,
         model: strategy.marketIntelligence.llm.model,
         base_url: strategy.marketIntelligence.llm.baseUrl,
-        api_key: strategy.marketIntelligence.llm.apiKey ?? '',
         enable_cache: strategy.marketIntelligence.llm.enableCache,
         enable_audit: strategy.marketIntelligence.llm.enableAudit,
         cache_path: strategy.marketIntelligence.llm.cachePath,

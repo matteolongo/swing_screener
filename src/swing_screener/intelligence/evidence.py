@@ -862,7 +862,7 @@ def _build_llm_structurer(cfg: IntelligenceConfig) -> Any | None:
             provider_name=cfg.llm.provider,
             model=cfg.llm.model,
             base_url=cfg.llm.base_url,
-            api_key=cfg.llm.api_key,
+            api_key=None,
             system_prompt=cfg.llm.system_prompt,
             user_prompt_template=cfg.llm.user_prompt_template,
             cache_path=cfg.llm.cache_path,

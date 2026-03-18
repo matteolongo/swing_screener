@@ -527,9 +527,8 @@ const mockIntelligenceConfig = {
   llm: {
     enabled: false,
     provider: 'openai',
-    model: 'gpt-4o-mini',
+    model: 'gpt-4.1-mini',
     base_url: 'https://api.openai.com/v1',
-    api_key: '',
     system_prompt: '',
     user_prompt_template: '',
     enable_cache: true,
@@ -792,7 +791,7 @@ export const handlers = [
     const body = asObject(await request.json())
     return HttpResponse.json({
       provider: body.provider || 'openai',
-      model: body.model || 'gpt-4o-mini',
+      model: body.model || 'gpt-4.1-mini',
       available: true,
       detail: null,
     })

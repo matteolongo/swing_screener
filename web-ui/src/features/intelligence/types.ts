@@ -251,7 +251,6 @@ export interface IntelligenceLLMConfig {
   provider: IntelligenceLlmProvider;
   model: string;
   baseUrl: string;
-  apiKey: string;
   systemPrompt: string;
   userPromptTemplate: string;
   enableCache: boolean;
@@ -356,7 +355,6 @@ export interface IntelligenceLLMConfigAPI {
   provider: IntelligenceLlmProvider;
   model: string;
   base_url: string;
-  api_key?: string;
   system_prompt?: string;
   user_prompt_template?: string;
   enable_cache: boolean;
@@ -472,14 +470,12 @@ export interface IntelligenceProviderTestRequest {
   provider: IntelligenceLlmProvider;
   model: string;
   baseUrl?: string;
-  apiKey?: string;
 }
 
 export interface IntelligenceProviderTestRequestAPI {
   provider: IntelligenceLlmProvider;
   model: string;
   base_url?: string;
-  api_key?: string;
 }
 
 export interface IntelligenceProviderTestResponse {
@@ -709,7 +705,6 @@ export function transformIntelligenceConfig(api: IntelligenceConfigAPI): Intelli
       provider: api.llm.provider,
       model: api.llm.model,
       baseUrl: api.llm.base_url,
-      apiKey: api.llm.api_key ?? '',
       systemPrompt: api.llm.system_prompt ?? '',
       userPromptTemplate: api.llm.user_prompt_template ?? '',
       enableCache: api.llm.enable_cache,
@@ -799,7 +794,6 @@ export function toIntelligenceConfigAPI(config: IntelligenceConfig): Intelligenc
       provider: config.llm.provider,
       model: config.llm.model,
       base_url: config.llm.baseUrl,
-      api_key: config.llm.apiKey,
       system_prompt: config.llm.systemPrompt,
       user_prompt_template: config.llm.userPromptTemplate,
       enable_cache: config.llm.enableCache,
@@ -888,7 +882,6 @@ export function toProviderTestRequestAPI(
     provider: request.provider,
     model: request.model,
     base_url: request.baseUrl,
-    api_key: request.apiKey,
   };
 }
 

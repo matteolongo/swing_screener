@@ -47,14 +47,9 @@ class SwingScreenerAgent:
         ```
     """
     
-    def __init__(self, server_command: Optional[list[str]] = None):
-        """Initialize the agent.
-        
-        Args:
-            server_command: Optional MCP server launch command. Defaults to
-                `python -m mcp_server.main` in the current Python environment.
-        """
-        self.client = MCPClient(server_command)
+    def __init__(self):
+        """Initialize the agent."""
+        self.client = MCPClient()
         self.screening_workflow = None
         self.order_workflow = None
         self.position_workflow = None

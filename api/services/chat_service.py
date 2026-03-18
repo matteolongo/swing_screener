@@ -330,7 +330,7 @@ class ChatService:
             provider_name=llm_cfg.provider,
             model=llm_cfg.model,
             base_url=llm_cfg.base_url,
-            api_key=llm_cfg.api_key,
+            api_key=None,
             temperature=0,
             max_retries=0,
         )

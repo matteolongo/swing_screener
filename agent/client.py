@@ -7,7 +7,7 @@ import logging
 import sys
 from contextlib import AsyncExitStack
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -23,8 +23,8 @@ def _default_server_command() -> list[str]:
 class MCPClient:
     """Thin stdio MCP client used by workflows and the chat graph."""
 
-    def __init__(self, server_command: Optional[list[str]] = None):
-        self.server_command = list(server_command or _default_server_command())
+    def __init__(self):
+        self._server_command = _default_server_command()
         self._stack: AsyncExitStack | None = None
         self._session: Any | None = None
         self._local_registry: Any | None = None
@@ -33,8 +33,8 @@ class MCPClient:
     async def connect(self) -> None:
         if self._session is not None:
             return
-        if not self.server_command:
-            raise ValueError("server_command must include an executable")
+        if not self._server_command:
+            raise ValueError("default MCP server command must include an executable")
 
         try:
             from mcp.client.session import ClientSession
@@ -47,8 +47,8 @@ class MCPClient:
             self._connect_via_local_registry()
             return
 
-        command, *args = self.server_command
-        logger.info("Connecting agent via stdio MCP: %s", " ".join(self.server_command))
+        command, *args = self._server_command
+        logger.info("Connecting agent via stdio MCP: %s", " ".join(self._server_command))
 
         stack = AsyncExitStack()
         try:
@@ -178,21 +178,21 @@ class MCPClient:
 
     def _extract_module_name(self) -> str | None:
         try:
-            module_flag_index = self.server_command.index("-m")
+            module_flag_index = self._server_command.index("-m")
         except ValueError:
             return None
-        if module_flag_index + 1 >= len(self.server_command):
+        if module_flag_index + 1 >= len(self._server_command):
             return None
-        return self.server_command[module_flag_index + 1]
+        return self._server_command[module_flag_index + 1]
 
     def _extract_config_path(self) -> Path | None:
         try:
-            config_flag_index = self.server_command.index("--config")
+            config_flag_index = self._server_command.index("--config")
         except ValueError:
             return None
-        if config_flag_index + 1 >= len(self.server_command):
+        if config_flag_index + 1 >= len(self._server_command):
             return None
-        config_path = Path(self.server_command[config_flag_index + 1])
+        config_path = Path(self._server_command[config_flag_index + 1])
         if config_path.is_absolute():
             return config_path
         return _project_root() / config_path

@@ -26,7 +26,7 @@ def test_extract_json_payload_recovers_embedded_object():
 
 
 def test_openai_provider_parses_list_content_blocks():
-    provider = LangChainOpenAIProvider(model="gpt-4o-mini", api_key="test-key")
+    provider = LangChainOpenAIProvider(model="gpt-4.1-mini", api_key="test-key")
     provider._llm = _FakeLLM(
         [
             {
@@ -57,7 +57,7 @@ def test_openai_provider_parses_list_content_blocks():
 
 
 def test_openai_provider_invalid_json_error_includes_diagnostics():
-    provider = LangChainOpenAIProvider(model="gpt-4o-mini", api_key="test-key")
+    provider = LangChainOpenAIProvider(model="gpt-4.1-mini", api_key="test-key")
     provider._llm = _FakeLLM("")
 
     with pytest.raises(ValueError) as exc_info:
@@ -90,7 +90,7 @@ def test_extract_json_payload_parses_key_value_fallback():
 
 
 def test_openai_provider_parses_arrow_key_value_response():
-    provider = LangChainOpenAIProvider(model="gpt-4o-mini", api_key="test-key")
+    provider = LangChainOpenAIProvider(model="gpt-4.1-mini", api_key="test-key")
     provider._llm = _FakeLLM(
         (
             "→ event_type: M_AND_A, severity: HIGH, primary_symbol: \"CXO\", "
@@ -112,7 +112,7 @@ def test_openai_provider_parses_arrow_key_value_response():
 
 
 def test_openai_provider_coerces_company_name_primary_symbol():
-    provider = LangChainOpenAIProvider(model="gpt-4o-mini", api_key="test-key")
+    provider = LangChainOpenAIProvider(model="gpt-4.1-mini", api_key="test-key")
     provider._llm = _FakeLLM(
         (
             "{"

@@ -37,6 +37,7 @@ Project scope, constraints, and conventions for code changes.
 - Update tests when behavior changes.
 - Keep behavior deterministic.
 - Behavior changes require deterministic automated tests in the touched layer(s).
+- Before committing code changes, run the full test suite for the repository, not only targeted tests for the touched area.
 
 ## Docs
 - Keep module docs close to code.

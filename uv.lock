@@ -2612,7 +2612,7 @@ requires-dist = [
     { name = "langchain-openai", marker = "extra == 'llm'", specifier = ">=0.3.0" },
     { name = "langgraph", specifier = ">=0.2.0" },
     { name = "langgraph", marker = "extra == 'llm'", specifier = ">=0.2.0" },
-    { name = "mcp", marker = "extra == 'mcp'", specifier = ">=1.0.0" },
+    { name = "mcp", marker = "extra == 'mcp'", specifier = ">=1.26.0" },
     { name = "numpy", specifier = ">=1.24" },
     { name = "ollama", specifier = ">=0.6.1,<0.7.0" },
     { name = "ollama", marker = "extra == 'llm'", specifier = ">=0.1.0" },

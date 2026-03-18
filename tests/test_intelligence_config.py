@@ -8,6 +8,9 @@ def test_build_intelligence_config_defaults_when_missing():
     assert cfg.providers == ("yahoo_finance",)
     assert cfg.universe_scope == "screener_universe"
     assert cfg.market_context_symbols == ("SPY", "QQQ", "XLK", "SMH", "XBI")
+    assert cfg.llm.provider == "openai"
+    assert cfg.llm.model == "gpt-4.1-mini"
+    assert cfg.llm.base_url == "https://api.openai.com/v1"
     assert cfg.catalyst.false_catalyst_return_z == 1.5
     assert cfg.opportunity.technical_weight == 0.55
     assert cfg.opportunity.catalyst_weight == 0.45
@@ -119,6 +122,7 @@ def test_build_intelligence_config_prefers_ollama_host_env_for_default_localhost
     strategy = {
         "market_intelligence": {
             "llm": {
+                "provider": "ollama",
                 "base_url": "http://localhost:11434",
             }
         }
@@ -134,6 +138,7 @@ def test_build_intelligence_config_keeps_explicit_non_default_base_url(monkeypat
     strategy = {
         "market_intelligence": {
             "llm": {
+                "provider": "ollama",
                 "base_url": "http://custom-ollama.internal:11434",
             }
         }

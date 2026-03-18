@@ -12,7 +12,7 @@ Automation layer that orchestrates Swing Screener workflows through the real std
 - MCP dependency installed in the active Python environment (`uv sync --extra mcp`)
 - MCP tools enabled in `config/mcp_features.yaml`
 
-The agent launches `python -m mcp_server.main` by default and discovers tools from the live MCP registry. Pass `server_command=[...]` to `SwingScreenerAgent(...)` if you need a different launch command.
+The agent launches `python -m mcp_server.main` and discovers tools from the live MCP registry.
 
 ## CLI
 Examples (see `python -m agent.cli --help` for full options):
@@ -25,7 +25,7 @@ Examples (see `python -m agent.cli --help` for full options):
 - `python -m agent.cli daily-review`
 
 ## Python API
-Primary entry point: `SwingScreenerAgent`.
+Primary entry point: `SwingScreenerAgent()`.
 Common methods:
 - `daily_screening(universe, strategy_id, top)`
 - `review_positions()`

@@ -10,6 +10,8 @@ services:
       - .:/app
     environment:
       - PYTHONUNBUFFERED=1
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://api.openai.com/v1}
       - OLLAMA_HOST=http://ollama:11434
     depends_on:
       - ollama

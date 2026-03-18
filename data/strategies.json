@@ -94,10 +94,9 @@
       ],
       "llm": {
         "enabled": true,
-        "provider": "ollama",
-        "model": "mistral:7b-instruct",
-        "base_url": "http://localhost:11434",
-        "api_key": "",
+        "provider": "openai",
+        "model": "gpt-4.1-mini",
+        "base_url": "https://api.openai.com/v1",
         "enable_cache": true,
         "enable_audit": true,
         "cache_path": "data/intelligence/llm_cache.json",
@@ -251,15 +250,14 @@
       ],
       "llm": {
         "enabled": false,
-        "provider": "ollama",
-        "model": "mistral:7b-instruct",
-        "base_url": "http://localhost:11434",
+        "provider": "openai",
+        "model": "gpt-4.1-mini",
+        "base_url": "https://api.openai.com/v1",
         "enable_cache": true,
         "enable_audit": true,
         "cache_path": "data/intelligence/llm_cache.json",
         "audit_path": "data/intelligence/llm_audit",
-        "max_concurrency": 4,
-        "api_key": ""
+        "max_concurrency": 4
       },
       "catalyst": {
         "lookback_hours": 72,
@@ -425,15 +423,14 @@
       ],
       "llm": {
         "enabled": false,
-        "provider": "ollama",
-        "model": "mistral:7b-instruct",
-        "base_url": "http://localhost:11434",
+        "provider": "openai",
+        "model": "gpt-4.1-mini",
+        "base_url": "https://api.openai.com/v1",
         "enable_cache": true,
         "enable_audit": true,
         "cache_path": "data/intelligence/llm_cache.json",
         "audit_path": "data/intelligence/llm_audit",
-        "max_concurrency": 4,
-        "api_key": ""
+        "max_concurrency": 4
       },
       "catalyst": {
         "lookback_hours": 72,
@@ -597,10 +594,9 @@
       ],
       "llm": {
         "enabled": true,
-        "provider": "ollama",
-        "model": "mistral:7b-instruct",
-        "base_url": "http://localhost:11434",
-        "api_key": "",
+        "provider": "openai",
+        "model": "gpt-4.1-mini",
+        "base_url": "https://api.openai.com/v1",
         "enable_cache": true,
         "enable_audit": true,
         "cache_path": "data/intelligence/llm_cache.json",

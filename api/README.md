@@ -83,7 +83,8 @@ Intelligence (`/api/intelligence`):
 
 Chat (`/api/chat`):
 - `POST /api/chat/answer`
-- `POST /api/chat/answer` routes through `AgentChatService` -> lazy persistent `AgentRuntime` -> `agent` -> MCP `chat_answer` -> `ChatService`
+- `POST /api/chat/answer` routes through `AgentChatService` -> self-healing persistent `AgentRuntime` -> `agent` -> MCP `chat_answer` -> `ChatService`
+- `/health` and `/metrics` expose agent runtime status and restart counters
 
 Social (`/api/social`):
 - `GET /api/social/providers`

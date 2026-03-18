@@ -42,13 +42,13 @@ function normalizeSymbols(input: string): string[] {
 
 const PROVIDER_MODELS: Record<IntelligenceLlmProvider, string[]> = {
   ollama: ['mistral:7b-instruct', 'llama3.1:8b-instruct', 'qwen2.5:7b-instruct'],
-  openai: ['gpt-4o-mini', 'gpt-4.1-mini', 'gpt-4.1', 'o4-mini'],
+  openai: ['gpt-4.1-mini', 'gpt-4o-mini', 'gpt-4.1', 'o4-mini'],
   mock: ['mock-classifier'],
 };
 
 const PROVIDER_DEFAULTS: Record<IntelligenceLlmProvider, { model: string; baseUrl: string }> = {
   ollama: { model: 'mistral:7b-instruct', baseUrl: 'http://localhost:11434' },
-  openai: { model: 'gpt-4o-mini', baseUrl: 'https://api.openai.com/v1' },
+  openai: { model: 'gpt-4.1-mini', baseUrl: 'https://api.openai.com/v1' },
   mock: { model: 'mock-classifier', baseUrl: '' },
 };
 
@@ -171,7 +171,6 @@ export default function IntelligencePage() {
       provider: draftConfig.llm.provider,
       model: draftConfig.llm.model,
       baseUrl: draftConfig.llm.baseUrl,
-      apiKey: draftConfig.llm.apiKey,
     });
   };
 
@@ -537,8 +536,8 @@ export default function IntelligencePage() {
                   aria-label={t('intelligencePage.config.llmProvider')}
                   className="w-full rounded border border-gray-300 px-3 py-2"
                 >
-                  <option value="ollama">ollama</option>
                   <option value="openai">openai</option>
+                  <option value="ollama">ollama</option>
                   <option value="mock">mock</option>
                 </select>
               </label>
@@ -569,18 +568,9 @@ export default function IntelligencePage() {
                   className="w-full rounded border border-gray-300 px-3 py-2"
                 />
               </label>
-              <label className="text-sm">
-                <span className="mb-1 block text-xs text-gray-500">{t('intelligencePage.config.llmApiKey')}</span>
-                <input
-                  type="password"
-                  autoComplete="off"
-                  value={draftConfig.llm.apiKey}
-                  onChange={(event) =>
-                    setDraftConfig({ ...draftConfig, llm: { ...draftConfig.llm, apiKey: event.target.value } })
-                  }
-                  className="w-full rounded border border-gray-300 px-3 py-2"
-                />
-              </label>
+              {draftConfig.llm.provider === 'openai' ? (
+                <p className="text-xs text-gray-500">{t('intelligencePage.config.llmApiKeyEnvNotice')}</p>
+              ) : null}
               <label className="text-sm md:col-span-2">
                 <span className="mb-1 block text-xs text-gray-500">{t('intelligencePage.config.llmSystemPrompt')}</span>
                 <textarea

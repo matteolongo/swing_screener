@@ -341,6 +341,8 @@ class FakeConfigService:
         self.provider = provider
 
     def get_config(self):
+        model = "gpt-4.1-mini" if self.provider == "openai" else "test-model"
+        base_url = "https://api.openai.com/v1" if self.provider == "openai" else "http://localhost:11434"
         return IntelligenceConfigModel.model_validate(
             {
                 "enabled": True,
@@ -350,9 +352,8 @@ class FakeConfigService:
                 "llm": {
                     "enabled": self.llm_enabled,
                     "provider": self.provider,
-                    "model": "test-model",
-                    "base_url": "http://localhost:11434",
-                    "api_key": "",
+                    "model": model,
+                    "base_url": base_url,
                     "enable_cache": True,
                     "enable_audit": True,
                     "cache_path": "data/intelligence/llm_cache.json",

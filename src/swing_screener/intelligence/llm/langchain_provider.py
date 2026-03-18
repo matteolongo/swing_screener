@@ -2,11 +2,12 @@
 from __future__ import annotations
 
 import json
-import os
 import re
 from typing import Any, Optional
 
 from pydantic import ValidationError
+
+from swing_screener.runtime_env import get_ollama_host, get_openai_api_key, get_openai_base_url
 
 from .client import LLMProvider
 from .prompts import (
@@ -373,7 +374,7 @@ class LangChainOllamaProvider(LLMProvider):
         user_prompt_template: Optional[str] = None,
     ) -> None:
         self._model = model
-        self._base_url = base_url or os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+        self._base_url = base_url or get_ollama_host()
         self._system_prompt = resolve_system_prompt(system_prompt)
         self._user_prompt_template = resolve_user_prompt_template(user_prompt_template)
         self._prompt_version = build_prompt_fingerprint(
@@ -474,15 +475,15 @@ class LangChainOpenAIProvider(LLMProvider):
 
     def __init__(
         self,
-        model: str = "gpt-4o-mini",
+        model: str = "gpt-4.1-mini",
         base_url: Optional[str] = None,
         api_key: Optional[str] = None,
         system_prompt: Optional[str] = None,
         user_prompt_template: Optional[str] = None,
     ) -> None:
-        self._model = str(model).strip() or "gpt-4o-mini"
-        self._base_url = base_url or os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
-        self._api_key = str(api_key or os.environ.get("OPENAI_API_KEY", "")).strip()
+        self._model = str(model).strip() or "gpt-4.1-mini"
+        self._base_url = base_url or get_openai_base_url()
+        self._api_key = str(api_key or get_openai_api_key()).strip()
         self._system_prompt = resolve_system_prompt(system_prompt)
         self._user_prompt_template = resolve_user_prompt_template(user_prompt_template)
         self._prompt_version = build_prompt_fingerprint(

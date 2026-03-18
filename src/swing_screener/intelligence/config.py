@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-import os
 from typing import Any
 
 from swing_screener.utils import get_nested_dict
+from swing_screener.runtime_env import get_ollama_host, get_openai_base_url
 
 DEFAULT_INTEL_PROVIDERS = ("yahoo_finance",)
 SUPPORTED_INTEL_PROVIDERS = {"yahoo_finance", "earnings_calendar"}
@@ -124,10 +124,9 @@ class CalendarConfig:
 class LLMConfig:
     """LLM-based event classification configuration."""
     enabled: bool = False
-    provider: str = "ollama"
-    model: str = "mistral:7b-instruct"
-    base_url: str = "http://localhost:11434"
-    api_key: str = ""
+    provider: str = "openai"
+    model: str = "gpt-4.1-mini"
+    base_url: str = "https://api.openai.com/v1"
     system_prompt: str = ""
     user_prompt_template: str = ""
     enable_cache: bool = True
@@ -277,14 +276,11 @@ def _resolve_llm_base_url(llm_raw: dict[str, Any], provider_name: str) -> str:
     provider = str(provider_name).strip().lower()
 
     if provider == "openai":
-        env_openai_base = str(os.environ.get("OPENAI_BASE_URL", "")).strip()
         if configured:
             return configured
-        if env_openai_base:
-            return env_openai_base
-        return "https://api.openai.com/v1"
+        return get_openai_base_url()
 
-    env_ollama_host = str(os.environ.get("OLLAMA_HOST", "")).strip()
+    env_ollama_host = get_ollama_host()
 
     if configured:
         # If strategy persisted the generic localhost default, prefer container/runtime override.
@@ -294,15 +290,6 @@ def _resolve_llm_base_url(llm_raw: dict[str, Any], provider_name: str) -> str:
     if env_ollama_host:
         return env_ollama_host
     return "http://localhost:11434"
-
-
-def _resolve_llm_api_key(llm_raw: dict[str, Any], provider_name: str) -> str:
-    configured = str(llm_raw.get("api_key", "")).strip()
-    if configured:
-        return configured
-    if str(provider_name).strip().lower() == "openai":
-        return str(os.environ.get("OPENAI_API_KEY", "")).strip()
-    return ""
 
 
 def _clean_prompt_override(raw: Any) -> str:
@@ -359,8 +346,8 @@ def build_intelligence_config(strategy: dict) -> IntelligenceConfig:
         opportunity_raw.get("catalyst_weight"),
     )
 
-    llm_provider = str(llm_raw.get("provider", "ollama")).strip().lower()
-    default_model = "gpt-4o-mini" if llm_provider == "openai" else "mistral:7b-instruct"
+    llm_provider = str(llm_raw.get("provider", "openai")).strip().lower()
+    default_model = "gpt-4.1-mini" if llm_provider == "openai" else "mistral:7b-instruct"
 
     return IntelligenceConfig(
         enabled=bool(raw.get("enabled", False)),
@@ -373,7 +360,6 @@ def build_intelligence_config(strategy: dict) -> IntelligenceConfig:
             provider=llm_provider,
             model=str(llm_raw.get("model", default_model)).strip(),
             base_url=_resolve_llm_base_url(llm_raw, llm_provider),
-            api_key=_resolve_llm_api_key(llm_raw, llm_provider),
             system_prompt=_clean_prompt_override(llm_raw.get("system_prompt", "")),
             user_prompt_template=_clean_prompt_override(llm_raw.get("user_prompt_template", "")),
             enable_cache=bool(llm_raw.get("enable_cache", True)),

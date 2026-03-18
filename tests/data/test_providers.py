@@ -465,13 +465,18 @@ class TestAlpacaProvider:
         
         end = datetime.now().strftime("%Y-%m-%d")
         start = (datetime.now() - timedelta(days=10)).strftime("%Y-%m-%d")
-        
-        df = provider.fetch_ohlcv(
-            tickers=["AAPL"],
-            start_date=start,
-            end_date=end,
-            interval="1d"
-        )
+
+        try:
+            df = provider.fetch_ohlcv(
+                tickers=["AAPL"],
+                start_date=start,
+                end_date=end,
+                interval="1d"
+            )
+        except ConnectionError as exc:
+            if "subscription does not permit querying recent SIP data" in str(exc):
+                pytest.skip("Alpaca subscription does not include recent SIP data")
+            raise
         
         # Check format matches yfinance
         assert isinstance(df, pd.DataFrame)
