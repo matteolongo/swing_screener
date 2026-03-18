@@ -163,11 +163,21 @@ export default function DailyReview() {
   }
 
   if (!riskConfig) {
+    const configFailed = configDefaultsQuery.isError && !activeStrategyQuery.data?.risk;
     return (
       <div className="space-y-6">
         <div className="space-y-2">
           <h1 className="text-2xl font-bold">{t('dailyReview.header.title')}</h1>
-          <p className="text-gray-600 dark:text-gray-400">{t('dailyReview.header.loading')}</p>
+          <p className={configFailed ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'}>
+            {configFailed
+              ? t('dailyReview.header.error', {
+                  message:
+                    configDefaultsQuery.error instanceof Error
+                      ? configDefaultsQuery.error.message
+                      : t('dailyReview.header.unknownError'),
+                })
+              : t('dailyReview.header.loading')}
+          </p>
         </div>
       </div>
     );
