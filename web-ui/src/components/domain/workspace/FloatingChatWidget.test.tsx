@@ -130,7 +130,22 @@ describe('FloatingChatWidget', () => {
     await waitFor(() => expect(textarea.value).toBe(''));
   });
 
-  it('shows warnings when the response includes them', async () => {
+  it('does not render a warnings section when the response has no warnings', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<FloatingChatWidget />);
+
+    await user.click(screen.getByRole('button', { name: /open workspace chat/i }));
+    await user.type(screen.getByLabelText(/ask the workspace agent/i), 'Any warnings?');
+    await user.click(screen.getByRole('button', { name: /^ask$/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('AAPL looks good.')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByRole('button', { name: /expand chat warnings/i })).not.toBeInTheDocument();
+  });
+
+  it('shows warnings collapsed by default and toggles them open and closed', async () => {
     mutateMock.mockResolvedValue(
       buildChatResponse({ warnings: ['Context may be stale.'] })
     );
@@ -142,7 +157,22 @@ describe('FloatingChatWidget', () => {
     await user.click(screen.getByRole('button', { name: /^ask$/i }));
 
     await waitFor(() => {
-      expect(screen.getByText('Context may be stale.')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /expand chat warnings/i })).toBeInTheDocument();
     });
+
+    const warningsToggle = screen.getByRole('button', { name: /expand chat warnings/i });
+    expect(warningsToggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByText('Caveats & warnings (1)')).toBeInTheDocument();
+    expect(screen.queryByText('Context may be stale.')).not.toBeInTheDocument();
+
+    await user.click(warningsToggle);
+
+    expect(screen.getByRole('button', { name: /collapse chat warnings/i })).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText('Context may be stale.')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /collapse chat warnings/i }));
+
+    expect(screen.getByRole('button', { name: /expand chat warnings/i })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByText('Context may be stale.')).not.toBeInTheDocument();
   });
 });

@@ -28,6 +28,7 @@ export default function FloatingChatWidget() {
 
   const [isOpen, setIsOpen] = useState(false);
   const [isContextOpen, setIsContextOpen] = useState(false);
+  const [isWarningsOpen, setIsWarningsOpen] = useState(false);
   const [draft, setDraft] = useState('');
   const [conversation, setConversation] = useState<ChatTurn[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
@@ -70,6 +71,7 @@ export default function FloatingChatWidget() {
       });
       setConversation(response.conversationState);
       setWarnings(response.warnings);
+      setIsWarningsOpen(false);
       setFactsUsed(response.factsUsed);
       setSources(response.contextMeta.sources);
       setDraft('');
@@ -257,8 +259,38 @@ export default function FloatingChatWidget() {
 
           {/* Warnings */}
           {warnings.length > 0 ? (
-            <div className="mx-4 mb-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300 flex-shrink-0">
-              {warnings.map((w, i) => <p key={i}>{w}</p>)}
+            <div className="mx-4 mb-2 overflow-hidden rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900/60 dark:bg-amber-950/30 flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsWarningsOpen((current) => !current)}
+                aria-expanded={isWarningsOpen}
+                aria-controls="workspace-chat-warnings-panel"
+                aria-label={
+                  isWarningsOpen
+                    ? t('workspacePage.panels.chat.floating.warningToggleCollapseAria')
+                    : t('workspacePage.panels.chat.floating.warningToggleExpandAria')
+                }
+                className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-xs text-amber-800 hover:bg-amber-100/70 dark:text-amber-300 dark:hover:bg-amber-900/20"
+              >
+                <span className="font-medium">
+                  {t('workspacePage.panels.chat.floating.warningSummary', { count: warnings.length })}
+                </span>
+                {isWarningsOpen ? (
+                  <ChevronUp className="h-3.5 w-3.5 flex-shrink-0" />
+                ) : (
+                  <ChevronDown className="h-3.5 w-3.5 flex-shrink-0" />
+                )}
+              </button>
+              {isWarningsOpen ? (
+                <div
+                  id="workspace-chat-warnings-panel"
+                  className="border-t border-amber-200 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/60 dark:text-amber-300"
+                >
+                  {warnings.map((warning, index) => (
+                    <p key={index}>{warning}</p>
+                  ))}
+                </div>
+              ) : null}
             </div>
           ) : null}
 
