@@ -79,7 +79,7 @@ describe('Strategy Page', () => {
     await waitForQueriesToSettle(queryClient);
   });
 
-  it('keeps strategy management visible in beginner mode', async () => {
+  it('keeps strategy management controls visible', async () => {
     renderWithProviders(<StrategyPage />);
 
     expect(await screen.findByLabelText(/choose strategy/i)).toBeInTheDocument();
