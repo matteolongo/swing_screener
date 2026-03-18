@@ -8,7 +8,6 @@ The server is organized into feature domains:
 - Screener: Stock screening and analysis
 - Strategy: Trading strategy configuration
 - Config: System configuration management
-- Social: Social sentiment analysis
 - Daily Review: Combined workflow tools
 
 Phase 1 Status:

@@ -37,10 +37,6 @@ export const API_ENDPOINTS = {
   watchlist: '/api/watchlist',
   watchlistItem: (ticker: string) => `/api/watchlist/${encodeURIComponent(ticker)}`,
 
-  // Social
-  socialAnalyze: '/api/social/analyze',
-  socialWarmupStatus: (jobId: string) => `/api/social/warmup/${jobId}`,
-
   // Intelligence
   intelligenceConfig: '/api/intelligence/config',
   intelligenceProviders: '/api/intelligence/providers',

@@ -47,7 +47,6 @@ I controlli principali sono:
 - il rischio sta dentro il budget
 - il reward/risk è almeno il minimo richiesto
 - costi e slippage non mangiano troppo il trade
-- non c'è un veto dal social overlay
 
 Se anche solo uno di questi fallisce, il verdetto diventa `NOT_RECOMMENDED`.
 

@@ -103,7 +103,6 @@ def build_recommendation(
     commission_pct: float = 0.0,
     slippage_bps: float = 5.0,
     fx_estimate_pct: float = 0.0,
-    overlay_status: Optional[str] = None,
     min_shares: int = 1,
     thesis: Optional[dict] = None,  # Trade Thesis dictionary
 ) -> RecommendationPayload:
@@ -159,7 +158,6 @@ def build_recommendation(
     rr_ok = rr is not None and rr >= min_rr
     fee_ok = fee_to_risk_pct is not None and fee_to_risk_pct <= max_fee_risk_pct
     risk_ok = risk_pct <= risk_pct_target + 1e-9 if risk_pct_target > 0 else False
-    overlay_ok = (overlay_status or "").upper() != "VETO"
 
     checklist = [
         ChecklistGate(
@@ -199,12 +197,6 @@ def build_recommendation(
             if fee_ok
             else f"Fees too high vs risk (>{int(max_fee_risk_pct * 100)}%).",
             rule="R4",
-        ),
-        ChecklistGate(
-            gate_name="overlay_veto",
-            passed=overlay_ok,
-            explanation="No social overlay veto." if overlay_ok else "Social overlay veto.",
-            rule="R5",
         ),
     ]
 
@@ -279,28 +271,6 @@ def build_recommendation(
             )
         )
         suggestions.append("Avoid micro-sized trades where fees dominate risk.")
-
-    if not overlay_ok:
-        reasons_detailed.append(
-            Reason(
-                code="OVERLAY_VETO",
-                message="Social overlay vetoed this trade.",
-                severity="block",
-                rule="R5",
-            )
-        )
-        suggestions.append("Skip this setup until overlay conditions normalize.")
-
-    # Add soft warnings
-    if overlay_status and overlay_status.upper() == "REVIEW":
-        reasons_detailed.append(
-            Reason(
-                code="OVERLAY_REVIEW",
-                message="Social overlay suggests review for elevated attention.",
-                severity="warn",
-                rule="R5",
-            )
-        )
 
     verdict: Verdict = "RECOMMENDED" if all(g.passed for g in checklist) else "NOT_RECOMMENDED"
 

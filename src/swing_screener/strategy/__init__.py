@@ -8,7 +8,6 @@ from swing_screener.strategy.config import (
     build_ranking_config,
     build_report_config,
     build_risk_config,
-    build_social_overlay_config,
     build_universe_config,
 )
 from swing_screener.strategy.storage import (
@@ -31,7 +30,6 @@ __all__ = [
     "build_ranking_config",
     "build_report_config",
     "build_risk_config",
-    "build_social_overlay_config",
     "build_universe_config",
     "get_active_strategy",
     "get_strategy_by_id",

@@ -39,15 +39,6 @@ export interface ScreenerCandidate {
   score: number;
   confidence: number;
   rank: number;
-  overlayStatus?: string;
-  overlayReasons?: string[];
-  overlayRiskMultiplier?: number;
-  overlayMaxPosMultiplier?: number;
-  overlayAttentionZ?: number;
-  overlaySentimentScore?: number;
-  overlaySentimentConfidence?: number;
-  overlayHypeScore?: number;
-  overlaySampleSize?: number;
   signal?: string;
   entry?: number;
   stop?: number;
@@ -83,15 +74,6 @@ export interface ScreenerCandidateAPI {
   score: number;
   confidence: number;
   rank: number;
-  overlay_status?: string;
-  overlay_reasons?: string[];
-  overlay_risk_multiplier?: number;
-  overlay_max_pos_multiplier?: number;
-  overlay_attention_z?: number;
-  overlay_sentiment_score?: number;
-  overlay_sentiment_confidence?: number;
-  overlay_hype_score?: number;
-  overlay_sample_size?: number;
   signal?: string;
   entry?: number;
   stop?: number;
@@ -139,7 +121,6 @@ export interface ScreenerResponse {
   totalScreened: number;
   dataFreshness: 'final_close' | 'intraday';
   warnings?: string[];
-  socialWarmupJobId?: string;
   sameSymbolSuppressedCount?: number;
   sameSymbolAddOnCount?: number;
 }
@@ -151,7 +132,6 @@ export interface ScreenerResponseAPI {
   total_screened: number;
   data_freshness?: 'final_close' | 'intraday';
   warnings?: string[];
-  social_warmup_job_id?: string;
   same_symbol_suppressed_count?: number;
   same_symbol_add_on_count?: number;
 }
@@ -207,15 +187,6 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
       score: c.score,
       confidence: c.confidence,
       rank: c.rank,
-      overlayStatus: c.overlay_status,
-      overlayReasons: c.overlay_reasons,
-      overlayRiskMultiplier: c.overlay_risk_multiplier,
-      overlayMaxPosMultiplier: c.overlay_max_pos_multiplier,
-      overlayAttentionZ: c.overlay_attention_z,
-      overlaySentimentScore: c.overlay_sentiment_score,
-      overlaySentimentConfidence: c.overlay_sentiment_confidence,
-      overlayHypeScore: c.overlay_hype_score,
-      overlaySampleSize: c.overlay_sample_size,
       signal: c.signal,
       entry: c.entry,
       stop: c.stop,
@@ -249,7 +220,6 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
     totalScreened: apiResponse.total_screened,
     dataFreshness: apiResponse.data_freshness ?? 'final_close',
     warnings: apiResponse.warnings ?? [],
-    socialWarmupJobId: apiResponse.social_warmup_job_id ?? undefined,
     sameSymbolSuppressedCount: apiResponse.same_symbol_suppressed_count ?? 0,
     sameSymbolAddOnCount: apiResponse.same_symbol_add_on_count ?? 0,
   };

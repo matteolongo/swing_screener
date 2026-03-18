@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type WorkspaceAnalysisTab = 'overview' | 'sentiment' | 'order';
+export type WorkspaceAnalysisTab = 'overview' | 'order';
 export type SelectedTickerSource = 'screener' | 'portfolio' | null;
 
 interface WorkspaceStore {

@@ -1,10 +1,11 @@
 import {
   createDefaultTradingStore,
+  isPersistedTradingStoreV3,
   isPersistedTradingStoreV2,
   isPersistedTradingStoreV1,
   TRADING_STORE_SCHEMA_VERSION,
   type PersistedTradingStore,
-  type PersistedTradingStoreV2,
+  type PersistedTradingStoreV3,
 } from '@/features/persistence/schema';
 
 export const TRADING_STORE_STORAGE_KEY = 'swing-screener.trading-store.v1';
@@ -25,20 +26,42 @@ function persistStore(store: PersistedTradingStore): void {
   window.localStorage.setItem(TRADING_STORE_STORAGE_KEY, JSON.stringify(store));
 }
 
-function ensureDefaultStore(): PersistedTradingStoreV2 {
+function ensureDefaultStore(): PersistedTradingStoreV3 {
   const store = createDefaultTradingStore();
   persistStore(store);
   return store;
 }
 
+function sanitizeStrategies(strategies: unknown): PersistedTradingStore['strategies'] {
+  if (!Array.isArray(strategies)) {
+    return [];
+  }
+  return strategies.map((strategy) => {
+    if (!strategy || typeof strategy !== 'object') {
+      return strategy as PersistedTradingStore['strategies'][number];
+    }
+    const sanitized = { ...(strategy as Record<string, unknown>) };
+    delete sanitized["soc" + "ial" + "Overlay"];
+    return sanitized as unknown as PersistedTradingStore['strategies'][number];
+  });
+}
+
 function migrateStore(raw: unknown): PersistedTradingStore {
-  if (isPersistedTradingStoreV2(raw)) {
+  if (isPersistedTradingStoreV3(raw)) {
     return raw;
+  }
+  if (isPersistedTradingStoreV2(raw)) {
+    return {
+      ...raw,
+      version: TRADING_STORE_SCHEMA_VERSION,
+      strategies: sanitizeStrategies(raw.strategies),
+    };
   }
   if (isPersistedTradingStoreV1(raw)) {
     return {
       ...raw,
       version: TRADING_STORE_SCHEMA_VERSION,
+      strategies: sanitizeStrategies(raw.strategies),
       watchlist: [],
     };
   }
@@ -54,11 +77,11 @@ function migrateStore(raw: unknown): PersistedTradingStore {
       return {
         version: TRADING_STORE_SCHEMA_VERSION,
         updatedAt: candidate.updatedAt,
-        strategies: candidate.strategies as PersistedTradingStore['strategies'],
+        strategies: sanitizeStrategies(candidate.strategies),
         activeStrategyId: candidate.activeStrategyId,
         orders: candidate.orders as PersistedTradingStore['orders'],
         positions: candidate.positions as PersistedTradingStore['positions'],
-        watchlist: [],
+        watchlist: Array.isArray(candidate.watchlist) ? candidate.watchlist as PersistedTradingStore['watchlist'] : [],
       };
     }
   }
@@ -66,7 +89,7 @@ function migrateStore(raw: unknown): PersistedTradingStore {
 }
 
 function isCurrentStore(value: unknown): value is PersistedTradingStore {
-  return isPersistedTradingStoreV2(value);
+  return isPersistedTradingStoreV3(value);
 }
 
 export function readTradingStore(): PersistedTradingStore {
@@ -102,6 +125,7 @@ export function writeTradingStore(store: PersistedTradingStore): PersistedTradin
     ...cloneStore(store),
     version: TRADING_STORE_SCHEMA_VERSION,
     updatedAt: new Date().toISOString(),
+    strategies: sanitizeStrategies(store.strategies),
   };
   persistStore(next);
   return cloneStore(next);

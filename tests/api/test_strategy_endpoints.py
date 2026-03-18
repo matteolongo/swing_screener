@@ -163,3 +163,26 @@ def test_strategy_migration_prefers_existing_risk_fields(monkeypatch, tmp_path):
     assert active["risk"]["rr_target"] == 3.1
     assert active["risk"]["commission_pct"] == 0.001
     assert "backtest" not in active
+
+
+def test_strategy_migrates_legacy_removed_plugin_out_of_payload(monkeypatch, tmp_path):
+    _patch_strategy_storage(monkeypatch, tmp_path)
+    strategy_storage.STRATEGIES_FILE.parent.mkdir(parents=True, exist_ok=True)
+
+    legacy = strategy_storage._default_strategy_payload()  # noqa: SLF001
+    legacy["soc" "ial" "_overlay"] = {
+        "enabled": True,
+        "providers": ["reddit"],
+    }
+    strategy_storage.STRATEGIES_FILE.write_text(
+        yaml.safe_dump({"active_strategy_id": "default", "strategies": [legacy]}, sort_keys=False),
+        encoding="utf-8",
+    )
+
+    client = TestClient(app)
+    active = client.get("/api/strategy/active").json()
+
+    assert "soc" "ial" "_overlay" not in active
+
+    persisted = yaml.safe_load(strategy_storage.STRATEGIES_FILE.read_text(encoding="utf-8"))
+    assert "soc" "ial" "_overlay" not in persisted["strategies"][0]

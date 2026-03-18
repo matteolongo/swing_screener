@@ -53,8 +53,8 @@ Data Providers:
 - `/src/swing_screener/data/docs/BROKER_INTEGRATION.md`
 - `/src/swing_screener/data/docs/INDICATOR_VALIDATION.md`
 
-Intelligence and Social:
-- `/src/swing_screener/social/docs/SENTIMENT_PLUGIN_GUIDE.md`
+Intelligence:
+- `/src/swing_screener/intelligence/README.md`
 
 Config:
 - `/config/README.md`

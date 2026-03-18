@@ -83,18 +83,6 @@ export function buildStrategyCoachSections(strategy: Strategy): StrategyCoachSec
         smaBufferPct: asPercent(strategy.manage.smaBufferPct, 2),
       }),
     },
-    {
-      title: t('strategyCoach.sections.overlay.title'),
-      explanation: strategy.socialOverlay.enabled
-        ? t('strategyCoach.sections.overlay.enabledExplanation')
-        : t('strategyCoach.sections.overlay.disabledExplanation'),
-      formula: strategy.socialOverlay.enabled
-        ? t('strategyCoach.sections.overlay.formula', {
-          attentionZThreshold: strategy.socialOverlay.attentionZThreshold,
-          minSampleSize: strategy.socialOverlay.minSampleSize,
-        })
-        : undefined,
-    },
   ];
 }
 

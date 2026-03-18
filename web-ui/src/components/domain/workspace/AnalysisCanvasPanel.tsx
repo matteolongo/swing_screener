@@ -2,7 +2,6 @@ import Card from '@/components/common/Card';
 import CachedSymbolPriceChart from '@/components/domain/market/CachedSymbolPriceChart';
 import ActionPanel from '@/components/domain/workspace/ActionPanel';
 import KeyMetrics from '@/components/domain/workspace/KeyMetrics';
-import WorkspaceSentimentPanel from '@/components/domain/workspace/WorkspaceSentimentPanel';
 import type { SymbolIntelligenceStatus } from '@/features/intelligence/useSymbolIntelligenceRunner';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { t } from '@/i18n/t';
@@ -23,11 +22,10 @@ export default function AnalysisCanvasPanel({
   const activeTab = useWorkspaceStore((state) => state.analysisTab);
   const setAnalysisTab = useWorkspaceStore((state) => state.setAnalysisTab);
   const tabs: Array<{
-    id: 'overview' | 'sentiment' | 'order';
+    id: 'overview' | 'order';
     label: string;
   }> = [
     { id: 'overview', label: t('workspacePage.panels.analysis.tabs.overview') },
-    { id: 'sentiment', label: t('workspacePage.panels.analysis.tabs.sentiment') },
     { id: 'order', label: t('workspacePage.panels.analysis.tabs.order') },
   ];
 
@@ -145,8 +143,6 @@ export default function AnalysisCanvasPanel({
                 <KeyMetrics ticker={selectedTicker} />
               </>
             )}
-
-            {activeTab === 'sentiment' && <WorkspaceSentimentPanel ticker={selectedTicker} />}
 
             {activeTab === 'order' && <ActionPanel ticker={selectedTicker} />}
           </div>

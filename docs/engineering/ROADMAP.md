@@ -7,7 +7,7 @@
 
 - Core screening, portfolio, and order workflows exist in the API and CLI.
 - Web UI includes Workspace, Daily Review, and Strategy pages for the current workflow.
-- MCP server is implemented with tool domains for portfolio, screener, strategy, config, daily review, social, and intelligence.
+- MCP server is implemented with tool domains for portfolio, screener, strategy, config, daily review, and intelligence.
 - Agent integration is MCP-first and is now the canonical AI/tooling runtime.
 - Workspace chat and agent chat now share the same MCP-backed backend path.
 - Market data providers include yfinance (default) and Alpaca.

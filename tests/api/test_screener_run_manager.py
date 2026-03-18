@@ -16,7 +16,6 @@ def test_screener_run_manager_persists_jobs_across_instances(tmp_path):
         total_screened=42,
         data_freshness="final_close",
         warnings=[],
-        social_warmup_job_id=None,
     )
 
     job_id = manager_a.start_job(run_fn=lambda: expected_result)

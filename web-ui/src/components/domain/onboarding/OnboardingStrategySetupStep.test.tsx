@@ -65,17 +65,6 @@ function buildStrategy(): any {
       maxHoldingDays: 20,
       benchmark: 'SPY',
     },
-    socialOverlay: {
-      enabled: false,
-      lookbackHours: 24,
-      attentionZThreshold: 2,
-      minSampleSize: 10,
-      negativeSentThreshold: -0.3,
-      sentimentConfThreshold: 0.6,
-      hypePercentileThreshold: 0.9,
-      providers: [],
-      sentimentAnalyzer: 'mock',
-    },
     marketIntelligence: {
       enabled: false,
       providers: [],

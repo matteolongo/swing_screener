@@ -89,17 +89,6 @@ export const mockStrategies = [
       max_holding_days: 20,
       benchmark: 'SPY',
     },
-    social_overlay: {
-      enabled: false,
-      lookback_hours: 24,
-      attention_z_threshold: 3.0,
-      min_sample_size: 20,
-      negative_sent_threshold: -0.4,
-      sentiment_conf_threshold: 0.7,
-      hype_percentile_threshold: 95.0,
-      providers: ['reddit'],
-      sentiment_analyzer: 'keyword',
-    },
   },
   {
     id: 'momentum',
@@ -153,17 +142,6 @@ export const mockStrategies = [
       sma_buffer_pct: 0.004,
       max_holding_days: 15,
       benchmark: 'SPY',
-    },
-    social_overlay: {
-      enabled: true,
-      lookback_hours: 24,
-      attention_z_threshold: 3.0,
-      min_sample_size: 20,
-      negative_sent_threshold: -0.4,
-      sentiment_conf_threshold: 0.7,
-      hype_percentile_threshold: 95.0,
-      providers: ['reddit', 'yahoo_finance'],
-      sentiment_analyzer: 'vader',
     },
   },
 ]
@@ -402,15 +380,6 @@ export const mockScreenerResults = {
       momentum_12m: 45.0,
       rel_strength: 85.2,
       confidence: 72.5,
-      overlay_status: 'OK',
-      overlay_reasons: [],
-      overlay_risk_multiplier: 1.0,
-      overlay_max_pos_multiplier: 1.0,
-      overlay_attention_z: 0.5,
-      overlay_sentiment_score: 0.1,
-      overlay_sentiment_confidence: 0.4,
-      overlay_hype_score: 2.0,
-      overlay_sample_size: 30,
     },
   ],
   asof_date: '2026-02-08',
@@ -499,35 +468,6 @@ const resolveActiveStrategy = () => {
   }
   return found
 }
-
-const buildSocialAnalysis = (symbol: string) => ({
-  status: 'ok',
-  symbol,
-  providers: ['reddit'],
-  sentiment_analyzer: 'keyword',
-  lookback_hours: 24,
-  last_execution_at: '2026-02-09T09:00:00',
-  sample_size: 32,
-  sentiment_score: 0.18,
-  sentiment_confidence: 0.62,
-  attention_score: 32,
-  attention_z: 1.9,
-  hype_score: 2.1,
-  source_breakdown: { reddit: 32 },
-  reasons: [],
-  raw_events: [
-    {
-      source: 'reddit',
-      symbol,
-      timestamp: '2026-02-09T08:45:00',
-      text: `${symbol} looking strong today`,
-      author_id_hash: 'hash123',
-      upvotes: 12,
-      url: 'https://www.reddit.com/r/stocks/comments/abc123',
-      metadata: { subreddit: 'stocks', id: 'abc123' },
-    },
-  ],
-})
 
 const mockIntelligenceLaunch = {
   job_id: 'intel-job-123',
@@ -1024,20 +964,6 @@ export const handlers = [
 
   http.post(`${API_BASE_URL}/api/screener/run`, () => {
     return HttpResponse.json(mockScreenerResults)
-  }),
-
-  // Social endpoints
-  http.get(`${API_BASE_URL}/api/social/providers`, () => {
-    return HttpResponse.json({
-      providers: ['reddit', 'yahoo_finance'],
-      analyzers: ['keyword', 'vader'],
-    })
-  }),
-
-  http.post(`${API_BASE_URL}/api/social/analyze`, async ({ request }) => {
-    const body = asObject(await request.json())
-    const symbol = (body?.symbol || 'AAPL').toUpperCase()
-    return HttpResponse.json(buildSocialAnalysis(symbol))
   }),
 
   // Intelligence endpoints

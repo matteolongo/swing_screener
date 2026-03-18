@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toCandidateViewModel, isRecommended, hasFixes, hasOverlayData } from './viewModel';
+import { toCandidateViewModel, isRecommended, hasFixes } from './viewModel';
 import { ScreenerCandidate } from './types';
 
 describe('screener viewModel', () => {
@@ -133,25 +133,6 @@ describe('screener viewModel', () => {
       expect(vm.fixes).toEqual(['Increase R/R to 2.0', 'Reduce fee/risk ratio']);
     });
 
-    it('extracts overlay data', () => {
-      const candidate: ScreenerCandidate = {
-        ...baseCandidate,
-        overlayStatus: 'REVIEW',
-        overlayReasons: ['High attention', 'Sentiment extreme'],
-        overlayAttentionZ: 2.5,
-        overlaySentimentScore: 0.85,
-        overlayRiskMultiplier: 0.5,
-      };
-      
-      const vm = toCandidateViewModel(candidate);
-      
-      expect(vm.overlayStatus).toBe('REVIEW');
-      expect(vm.overlayReasons).toEqual(['High attention', 'Sentiment extreme']);
-      expect(vm.overlayAttentionZ).toBe(2.5);
-      expect(vm.overlaySentimentScore).toBe(0.85);
-      expect(vm.overlayRiskMultiplier).toBe(0.5);
-    });
-
     it('defaults missing name and sector', () => {
       const candidate: ScreenerCandidate = {
         ...baseCandidate,
@@ -247,38 +228,6 @@ describe('screener viewModel', () => {
       const vm = toCandidateViewModel(baseCandidate);
       
       expect(hasFixes(vm)).toBe(false);
-    });
-  });
-
-  describe('hasOverlayData', () => {
-    it('returns true when overlay status is not OFF and has reasons', () => {
-      const vm = toCandidateViewModel({
-        ...baseCandidate,
-        overlayStatus: 'REVIEW',
-        overlayReasons: ['Reason 1'],
-      });
-      
-      expect(hasOverlayData(vm)).toBe(true);
-    });
-
-    it('returns false when overlay status is OFF', () => {
-      const vm = toCandidateViewModel({
-        ...baseCandidate,
-        overlayStatus: 'OFF',
-        overlayReasons: ['Reason 1'],
-      });
-      
-      expect(hasOverlayData(vm)).toBe(false);
-    });
-
-    it('returns false when no overlay reasons', () => {
-      const vm = toCandidateViewModel({
-        ...baseCandidate,
-        overlayStatus: 'REVIEW',
-        overlayReasons: [],
-      });
-      
-      expect(hasOverlayData(vm)).toBe(false);
     });
   });
 });

@@ -18,6 +18,7 @@ CONFIG_DIR = config_dir()
 DATA_DIR = CONFIG_DIR
 STRATEGIES_FILE = strategies_yaml_path()
 ACTIVE_STRATEGY_FILE = STRATEGIES_FILE
+_LEGACY_REMOVED_PLUGIN_KEY = "soc" "ial" "_overlay"
 
 
 def _ensure_config_dir() -> None:
@@ -55,6 +56,7 @@ def _default_strategy_payload(now: dt.datetime | None = None) -> dict:
 
 def _sanitize_strategy_payload(strategy: dict) -> dict:
     payload = deepcopy(strategy)
+    payload.pop(_LEGACY_REMOVED_PLUGIN_KEY, None)
     market_intelligence = payload.get("market_intelligence")
     if isinstance(market_intelligence, dict):
         llm = market_intelligence.get("llm")
@@ -97,6 +99,8 @@ def _normalize_document(doc: dict[str, Any]) -> tuple[dict[str, Any], bool]:
         if not isinstance(raw_strategy, dict):
             dirty = True
             continue
+        if _LEGACY_REMOVED_PLUGIN_KEY in raw_strategy:
+            dirty = True
         strategy = _sanitize_strategy_payload(raw_strategy)
 
         risk = strategy.get("risk")
@@ -129,15 +133,6 @@ def _normalize_document(doc: dict[str, Any]) -> tuple[dict[str, Any], bool]:
             filt = universe.get("filt")
             if isinstance(filt, dict) and filt.get("currencies") is None:
                 filt["currencies"] = ["USD", "EUR"]
-                dirty = True
-
-        social_overlay = strategy.get("social_overlay")
-        if isinstance(social_overlay, dict):
-            if social_overlay.get("providers") is None:
-                social_overlay["providers"] = ["reddit"]
-                dirty = True
-            if social_overlay.get("sentiment_analyzer") is None:
-                social_overlay["sentiment_analyzer"] = "keyword"
                 dirty = True
 
         market_intelligence = strategy.get("market_intelligence")

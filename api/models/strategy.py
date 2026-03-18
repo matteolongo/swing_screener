@@ -88,18 +88,6 @@ class StrategyManage(BaseModel):
     benchmark: str
 
 
-class StrategySocialOverlay(BaseModel):
-    enabled: bool = False
-    lookback_hours: int = Field(default=24, ge=1)
-    attention_z_threshold: float = Field(default=3.0, ge=0)
-    min_sample_size: int = Field(default=20, ge=0)
-    negative_sent_threshold: float = Field(default=-0.4)
-    sentiment_conf_threshold: float = Field(default=0.7, ge=0, le=1)
-    hype_percentile_threshold: float = Field(default=95.0, ge=0, le=100)
-    providers: list[str] = Field(default_factory=lambda: ["reddit"])
-    sentiment_analyzer: str = Field(default="keyword")
-
-
 class StrategyIntelligenceLLM(BaseModel):
     enabled: bool = False
     provider: Literal["mock", "openai"] = "openai"
@@ -190,7 +178,6 @@ class StrategyBase(BaseModel):
     signals: StrategySignals
     risk: StrategyRisk
     manage: StrategyManage
-    social_overlay: StrategySocialOverlay = Field(default_factory=StrategySocialOverlay)
     market_intelligence: StrategyMarketIntelligence = Field(default_factory=StrategyMarketIntelligence)
 
 

@@ -86,10 +86,5 @@ Chat (`/api/chat`):
 - `POST /api/chat/answer` routes through `AgentChatService` -> self-healing persistent `AgentRuntime` -> `agent` -> MCP `chat_answer` -> `ChatService`
 - `/health` and `/metrics` expose agent runtime status and restart counters
 
-Social (`/api/social`):
-- `GET /api/social/providers`
-- `POST /api/social/analyze`
-- `GET /api/social/warmup/{job_id}`
-
 ## Ownership
 Routers live in `api/routers/` and call services in `api/services/`.

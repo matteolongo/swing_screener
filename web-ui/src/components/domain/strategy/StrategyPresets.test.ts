@@ -67,17 +67,6 @@ function buildStrategy(): Strategy {
       maxHoldingDays: 20,
       benchmark: 'SPY',
     },
-    socialOverlay: {
-      enabled: false,
-      lookbackHours: 24,
-      attentionZThreshold: 3.0,
-      minSampleSize: 20,
-      negativeSentThreshold: -0.4,
-      sentimentConfThreshold: 0.7,
-      hypePercentileThreshold: 95.0,
-      providers: ['reddit'],
-      sentimentAnalyzer: 'keyword',
-    },
     marketIntelligence: {
       enabled: false,
       providers: ['yahoo_finance'],
