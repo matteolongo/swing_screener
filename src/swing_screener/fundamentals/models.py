@@ -122,10 +122,14 @@ class FundamentalSnapshot:
                 except (TypeError, ValueError):
                     continue
                 points.append(FundamentalSeriesPoint(period_end=period_end, value=numeric_value))
+            raw_unit = str(value.get("unit", "number")).strip().lower()
+            unit = raw_unit if raw_unit in {"number"} else "number"
+            raw_direction = str(value.get("direction", "unknown")).strip().lower()
+            direction = raw_direction if raw_direction in {"unknown"} else "unknown"
             historical_series[str(key)] = FundamentalMetricSeries(
                 label=str(value.get("label", key)).strip() or str(key),
-                unit=str(value.get("unit", "number")).strip() or "number",
-                direction=str(value.get("direction", "unknown")).strip() or "unknown",
+                unit=unit,
+                direction=direction,
                 points=points,
             )
 
