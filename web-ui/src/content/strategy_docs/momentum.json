@@ -158,21 +158,6 @@
       "defaultGuidance": "Your current split is excellent.",
       "dangerZone": "Over-optimizing weights without enough live observation.",
       "proTip": "Robust strategies beat perfectly tuned ones."
-    },
-    "socialOverlay": {
-      "parameter": "socialOverlay",
-      "category": "confirmation",
-      "whatItIs": "Measures unusual online attention and sentiment around a stock.",
-      "whyItMatters": "Crowd attention can accelerate price moves.",
-      "howItAffectsTrades": "Adds contextual awareness, not prediction.",
-      "tradeoffs": {
-        "enabled": "Earlier discovery but risk of hype.",
-        "disabled": "Cleaner systematic behavior."
-      },
-      "beginnerRange": "Use cautiously.",
-      "defaultGuidance": "Treat social data as a tailwind, not a reason to enter.",
-      "dangerZone": "If social hype is the ONLY reason for a trade — skip it.",
-      "proTip": "Attention follows price more often than it leads it."
     }
   }
 }

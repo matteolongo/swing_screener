@@ -85,17 +85,6 @@ strategy:
     sma_buffer_pct: 0.005
     max_holding_days: 20
     benchmark: SPY
-  social_overlay:
-    enabled: false
-    lookback_hours: 24
-    attention_z_threshold: 3.0
-    min_sample_size: 20
-    negative_sent_threshold: -0.4
-    sentiment_conf_threshold: 0.7
-    hype_percentile_threshold: 95.0
-    providers:
-      - reddit
-    sentiment_analyzer: keyword
   market_intelligence:
     enabled: false
     providers:
@@ -283,7 +272,6 @@ runtime:
   orders_file: data/orders.json
   watchlist_file: data/watchlist.json
   daily_reviews_dir: data/daily_reviews
-  social_cache_dir: data/social_cache
   screener_jobs_dir: data/screener/jobs
   intelligence_run_jobs_file: data/intelligence/run_jobs.json
   intelligence_storage_dir: data/intelligence
@@ -349,25 +337,6 @@ low_level:
       breakout_lookback: 50
       pullback_ma: 20
       min_history: 260
-  social:
-    subreddits:
-      - wallstreetbets
-      - stocks
-      - investing
-      - options
-      - stockmarket
-      - securityanalysis
-      - valueinvesting
-      - pennystocks
-    user_agent: swing-screener/1.0
-    rate_limit_per_sec: 1.0
-    attention_lookback_days: 60
-    hype_lookback_days: 60
-    hype_fixed_threshold: 5.0
-    cache_ttl_hours: 6
-    default_providers:
-      - reddit
-    default_sentiment_analyzer: keyword
   execution:
     breakout_stop_buffer_pct: 0.002
     pullback_atr_fraction: 0.25

@@ -189,12 +189,6 @@ def create_registry(config: MCPConfig) -> ToolRegistry:
         registry.register_tools(get_daily_review_tools())
         logger.info("Registered daily_review tools")
     
-    # Register social tools if enabled
-    if config.is_feature_enabled('social'):
-        from mcp_server.tools.social import get_social_tools
-        registry.register_tools(get_social_tools())
-        logger.info("Registered social tools")
-
     # Register intelligence tools if enabled
     if config.is_feature_enabled('intelligence'):
         from mcp_server.tools.intelligence import get_intelligence_tools

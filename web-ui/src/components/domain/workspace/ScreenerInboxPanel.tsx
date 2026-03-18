@@ -287,12 +287,9 @@ export default function ScreenerInboxPanel({
               candidates={candidates}
               selectedTicker={selectedTicker}
               onSymbolClick={(ticker) => handleSelectCandidate(ticker, 'overview')}
-              onRowClick={(candidate) =>
-                handleSelectCandidate(candidate.ticker, analysisTab === 'sentiment' ? 'sentiment' : 'overview')
-              }
+              onRowClick={(candidate) => handleSelectCandidate(candidate.ticker, analysisTab === 'order' ? 'order' : 'overview')}
               onCreateOrder={(candidate) => handleSelectCandidate(candidate.ticker, 'order')}
               onRecommendationDetails={(candidate) => handleSelectCandidate(candidate.ticker, 'overview')}
-              onSocialAnalysis={(ticker) => handleSelectCandidate(ticker, 'sentiment')}
               onTradeThesis={handleTradeThesisAction}
               onRunIntelligence={(ticker) => onRunSymbolIntelligence?.(ticker)}
               getSymbolIntelligenceStatus={getSymbolIntelligenceStatus}

@@ -26,18 +26,7 @@ export interface CandidateViewModel {
   momentum6m: number;
   momentum12m: number;
   relStrength: number;
-  
-  // Overlay data
-  overlayStatus: string;
-  overlayReasons: string[];
-  overlayRiskMultiplier: number | null;
-  overlayMaxPosMultiplier: number | null;
-  overlayAttentionZ: number | null;
-  overlaySentimentScore: number | null;
-  overlaySentimentConfidence: number | null;
-  overlayHypeScore: number | null;
-  overlaySampleSize: number | null;
-  
+
   // Fix recommendations
   fixes: string[];
 
@@ -62,11 +51,7 @@ export function toCandidateViewModel(candidate: ScreenerCandidate): CandidateVie
   
   // Fix recommendations
   const fixes = candidate.recommendation?.education?.whatWouldMakeValid ?? [];
-  
-  // Overlay data
-  const overlayStatus = candidate.overlayStatus ?? 'OFF';
-  const overlayReasons = candidate.overlayReasons ?? [];
-  
+
   return {
     ticker: candidate.ticker,
     currency: candidate.currency,
@@ -90,18 +75,7 @@ export function toCandidateViewModel(candidate: ScreenerCandidate): CandidateVie
     momentum6m: candidate.momentum6m,
     momentum12m: candidate.momentum12m,
     relStrength: candidate.relStrength,
-    
-    // Overlay
-    overlayStatus,
-    overlayReasons,
-    overlayRiskMultiplier: candidate.overlayRiskMultiplier ?? null,
-    overlayMaxPosMultiplier: candidate.overlayMaxPosMultiplier ?? null,
-    overlayAttentionZ: candidate.overlayAttentionZ ?? null,
-    overlaySentimentScore: candidate.overlaySentimentScore ?? null,
-    overlaySentimentConfidence: candidate.overlaySentimentConfidence ?? null,
-    overlayHypeScore: candidate.overlayHypeScore ?? null,
-    overlaySampleSize: candidate.overlaySampleSize ?? null,
-    
+
     // Fix list
     fixes,
 
@@ -124,11 +98,4 @@ export function isRecommended(vm: CandidateViewModel): boolean {
  */
 export function hasFixes(vm: CandidateViewModel): boolean {
   return vm.fixes.length > 0;
-}
-
-/**
- * Check if candidate has overlay data
- */
-export function hasOverlayData(vm: CandidateViewModel): boolean {
-  return vm.overlayStatus !== 'OFF' && vm.overlayReasons.length > 0;
 }

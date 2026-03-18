@@ -35,16 +35,7 @@ def _create_mock_provider(ohlcv_data: pd.DataFrame) -> MarketDataProvider:
     return mock_provider
 
 
-def _disable_social_warmup(monkeypatch):
-    monkeypatch.setattr(
-        screener_service,
-        "get_social_warmup_manager",
-        lambda: SimpleNamespace(start_job=lambda **kwargs: None),
-    )
-
-
 def test_screener_top_over_100_returns_candidates(monkeypatch):
-    _disable_social_warmup(monkeypatch)
     ohlcv = _ohlcv_with_spy()
     mock_provider = _create_mock_provider(ohlcv)
 
@@ -83,7 +74,6 @@ def test_screener_top_over_100_returns_candidates(monkeypatch):
 
 
 def test_screener_empty_ohlcv_returns_404(monkeypatch):
-    _disable_social_warmup(monkeypatch)
     empty_df = pd.DataFrame()
     mock_provider = _create_mock_provider(empty_df)
     
@@ -96,7 +86,6 @@ def test_screener_empty_ohlcv_returns_404(monkeypatch):
 
 
 def test_screener_recommendation_payload_shape(monkeypatch):
-    _disable_social_warmup(monkeypatch)
     ohlcv = _ohlcv_with_spy()
     mock_provider = _create_mock_provider(ohlcv)
 
@@ -123,8 +112,6 @@ def test_screener_recommendation_payload_shape(monkeypatch):
             "suggested_order_type": ["BUY_STOP"],
             "suggested_order_price": [50.1],
             "execution_note": ["Breakout not triggered yet. Place BUY STOP slightly above breakout_level."],
-            "overlay_status": ["OK"],
-            "overlay_reasons": [[]],
         }
         return pd.DataFrame(data, index=idx)
 
@@ -158,7 +145,6 @@ def test_screener_recommendation_payload_shape(monkeypatch):
 
 
 def test_screener_currency_comes_from_metadata(monkeypatch):
-    _disable_social_warmup(monkeypatch)
     ohlcv = _ohlcv_with_spy()
     mock_provider = _create_mock_provider(ohlcv)
 
@@ -195,7 +181,6 @@ def test_screener_currency_comes_from_metadata(monkeypatch):
 
 
 def test_screener_request_currency_filter_overrides_strategy(monkeypatch):
-    _disable_social_warmup(monkeypatch)
     ohlcv = _ohlcv_with_spy()
     mock_provider = _create_mock_provider(ohlcv)
     captured = {}
@@ -232,7 +217,6 @@ def test_screener_request_currency_filter_overrides_strategy(monkeypatch):
 
 
 def test_screener_returns_same_symbol_add_on_metadata(monkeypatch):
-    _disable_social_warmup(monkeypatch)
     ohlcv = _ohlcv_with_spy()
     mock_provider = _create_mock_provider(ohlcv)
 
@@ -259,8 +243,6 @@ def test_screener_returns_same_symbol_add_on_metadata(monkeypatch):
             "suggested_order_type": ["BUY_LIMIT"],
             "suggested_order_price": [22.83],
             "execution_note": ["Pullback setup."],
-            "overlay_status": ["OK"],
-            "overlay_reasons": [[]],
         }
         return pd.DataFrame(data, index=idx)
 
@@ -352,7 +334,6 @@ def test_screener_async_mode_returns_job_and_status(monkeypatch):
             total_screened=0,
             data_freshness="final_close",
             warnings=[],
-            social_warmup_job_id=None,
         )
 
     monkeypatch.setattr(screener_service.ScreenerService, "run_screener", fake_run)

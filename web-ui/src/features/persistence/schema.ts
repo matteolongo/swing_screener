@@ -3,8 +3,9 @@ import type { Position } from '@/features/portfolio/types';
 import defaultStrategyFixtureApi from '@/features/persistence/defaultStrategyFixture.json';
 import { transformStrategy, type Strategy, type StrategyAPI } from '@/features/strategy/types';
 
-export const TRADING_STORE_SCHEMA_VERSION = 2 as const;
+export const TRADING_STORE_SCHEMA_VERSION = 3 as const;
 const LEGACY_TRADING_STORE_SCHEMA_VERSION = 1 as const;
+const LEGACY_TRADING_STORE_WITH_WATCHLIST_SCHEMA_VERSION = 2 as const;
 
 export interface PersistedWatchItem {
   ticker: string;
@@ -24,6 +25,16 @@ export interface PersistedTradingStoreV1 {
 }
 
 export interface PersistedTradingStoreV2 {
+  version: typeof LEGACY_TRADING_STORE_WITH_WATCHLIST_SCHEMA_VERSION;
+  updatedAt: string;
+  strategies: Strategy[];
+  activeStrategyId: string;
+  orders: Order[];
+  positions: Position[];
+  watchlist: PersistedWatchItem[];
+}
+
+export interface PersistedTradingStoreV3 {
   version: typeof TRADING_STORE_SCHEMA_VERSION;
   updatedAt: string;
   strategies: Strategy[];
@@ -33,7 +44,7 @@ export interface PersistedTradingStoreV2 {
   watchlist: PersistedWatchItem[];
 }
 
-export type PersistedTradingStore = PersistedTradingStoreV2;
+export type PersistedTradingStore = PersistedTradingStoreV3;
 
 export const DEFAULT_STRATEGY_ID = 'default';
 const DEFAULT_STRATEGY_FIXTURE = transformStrategy(defaultStrategyFixtureApi as StrategyAPI);
@@ -51,7 +62,7 @@ export function createDefaultStrategy(now: Date = new Date()): Strategy {
   };
 }
 
-export function createDefaultTradingStore(now: Date = new Date()): PersistedTradingStoreV2 {
+export function createDefaultTradingStore(now: Date = new Date()): PersistedTradingStoreV3 {
   return {
     version: TRADING_STORE_SCHEMA_VERSION,
     updatedAt: now.toISOString(),
@@ -76,7 +87,7 @@ export function isPersistedTradingStoreV1(value: unknown): value is PersistedTra
   );
 }
 
-function isPersistedWatchItem(value: unknown): value is PersistedWatchItem {
+export function isPersistedWatchItem(value: unknown): value is PersistedWatchItem {
   if (!value || typeof value !== 'object') return false;
   const candidate = value as Record<string, unknown>;
   return (
@@ -89,6 +100,21 @@ function isPersistedWatchItem(value: unknown): value is PersistedWatchItem {
 }
 
 export function isPersistedTradingStoreV2(value: unknown): value is PersistedTradingStoreV2 {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as Record<string, unknown>;
+  return (
+    candidate.version === LEGACY_TRADING_STORE_WITH_WATCHLIST_SCHEMA_VERSION &&
+    typeof candidate.updatedAt === 'string' &&
+    Array.isArray(candidate.strategies) &&
+    typeof candidate.activeStrategyId === 'string' &&
+    Array.isArray(candidate.orders) &&
+    Array.isArray(candidate.positions) &&
+    Array.isArray(candidate.watchlist) &&
+    candidate.watchlist.every(isPersistedWatchItem)
+  );
+}
+
+export function isPersistedTradingStoreV3(value: unknown): value is PersistedTradingStoreV3 {
   if (!value || typeof value !== 'object') return false;
   const candidate = value as Record<string, unknown>;
   return (

@@ -18,7 +18,6 @@ def test_risk_engine_respects_min_rr():
         entry=100.0,
         stop=99.0,
         shares=100,
-        overlay_status=None,
         risk_cfg=risk_cfg,
         rr_target=2.0,
         costs=RiskEngineConfig(commission_pct=0.0, slippage_bps=0.0, fx_estimate_pct=0.0),
@@ -26,4 +25,3 @@ def test_risk_engine_respects_min_rr():
 
     assert rec.verdict == "NOT_RECOMMENDED"
     assert any(r.code == "RR_TOO_LOW" for r in rec.reasons_detailed)
-

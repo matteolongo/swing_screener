@@ -1,7 +1,6 @@
 import Card, { CardContent, CardHeader, CardTitle } from '@/components/common/Card';
 import { t } from '@/i18n/t';
 import {
-  CheckboxInput,
   HelpInfo,
   NumberInput,
   SelectInput,
@@ -151,112 +150,6 @@ export default function StrategyCoreSettingsCards({
           </CardContent>
         </Card>
       )}
-
-      <Card variant="bordered">
-        <CardHeader>
-          <CardTitle>{t('strategyPage.core.cards.socialOverlay.title')}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <CheckboxInput
-              label={t('strategyPage.core.fields.enableSocialOverlay')}
-              checked={draft.socialOverlay.enabled}
-              onChange={(value) =>
-                setDraft({
-                  ...draft,
-                  socialOverlay: { ...draft.socialOverlay, enabled: value },
-                })
-              }
-              help={help.socialOverlayEnabled}
-            />
-            {draft.socialOverlay.enabled && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <NumberInput
-                  label={t('strategyPage.core.fields.lookbackHours')}
-                  value={draft.socialOverlay.lookbackHours}
-                  onChange={(value) =>
-                    setDraft({
-                      ...draft,
-                      socialOverlay: { ...draft.socialOverlay, lookbackHours: value },
-                    })
-                  }
-                  step={1}
-                  min={1}
-                  help={help.lookbackHours}
-                />
-                <NumberInput
-                  label={t('strategyPage.core.fields.attentionZThreshold')}
-                  value={draft.socialOverlay.attentionZThreshold}
-                  onChange={(value) =>
-                    setDraft({
-                      ...draft,
-                      socialOverlay: { ...draft.socialOverlay, attentionZThreshold: value },
-                    })
-                  }
-                  step={0.1}
-                  min={0}
-                  help={help.attentionZThreshold}
-                />
-                <NumberInput
-                  label={t('strategyPage.core.fields.minSampleSize')}
-                  value={draft.socialOverlay.minSampleSize}
-                  onChange={(value) =>
-                    setDraft({
-                      ...draft,
-                      socialOverlay: { ...draft.socialOverlay, minSampleSize: value },
-                    })
-                  }
-                  step={1}
-                  min={0}
-                  help={help.minSampleSize}
-                />
-                <NumberInput
-                  label={t('strategyPage.core.fields.negativeSentiment')}
-                  value={draft.socialOverlay.negativeSentThreshold}
-                  onChange={(value) =>
-                    setDraft({
-                      ...draft,
-                      socialOverlay: { ...draft.socialOverlay, negativeSentThreshold: value },
-                    })
-                  }
-                  step={0.05}
-                  min={-1}
-                  max={0}
-                  help={help.negativeSentThreshold}
-                />
-                <NumberInput
-                  label={t('strategyPage.core.fields.sentimentConfidence')}
-                  value={draft.socialOverlay.sentimentConfThreshold}
-                  onChange={(value) =>
-                    setDraft({
-                      ...draft,
-                      socialOverlay: { ...draft.socialOverlay, sentimentConfThreshold: value },
-                    })
-                  }
-                  step={0.05}
-                  min={0}
-                  max={1}
-                  help={help.sentimentConfThreshold}
-                />
-                <NumberInput
-                  label={t('strategyPage.core.fields.hypePercentile')}
-                  value={draft.socialOverlay.hypePercentileThreshold}
-                  onChange={(value) =>
-                    setDraft({
-                      ...draft,
-                      socialOverlay: { ...draft.socialOverlay, hypePercentileThreshold: value },
-                    })
-                  }
-                  step={1}
-                  min={0}
-                  max={100}
-                  help={help.hypePercentileThreshold}
-                />
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Signals - Use enhanced version if enabled */}
       {useEnhancedEducation ? (

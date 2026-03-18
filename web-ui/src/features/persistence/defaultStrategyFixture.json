@@ -62,17 +62,6 @@
     "max_holding_days": 20,
     "benchmark": "SPY"
   },
-  "social_overlay": {
-    "enabled": false,
-    "lookback_hours": 24,
-    "attention_z_threshold": 3,
-    "min_sample_size": 20,
-    "negative_sent_threshold": -0.4,
-    "sentiment_conf_threshold": 0.7,
-    "hype_percentile_threshold": 95,
-    "providers": ["reddit"],
-    "sentiment_analyzer": "keyword"
-  },
   "market_intelligence": {
     "enabled": false,
     "providers": ["yahoo_finance"],

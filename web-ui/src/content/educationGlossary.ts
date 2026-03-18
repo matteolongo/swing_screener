@@ -11,7 +11,6 @@ export type EducationMetricKey =
   | 'MOM_12M'
   | 'RISK_PCT'
   | 'FEE_TO_RISK'
-  | 'OVERLAY'
   | 'R_NOW';
 
 export interface EducationGlossaryEntry {
@@ -104,13 +103,6 @@ const EDUCATION_GLOSSARY_MESSAGE_KEYS: Record<EducationMetricKey, EducationGloss
     formula: 'educationGlossary.entries.feeToRisk.formula',
     interpretation: 'educationGlossary.entries.feeToRisk.interpretation',
   },
-  OVERLAY: {
-    label: 'educationGlossary.entries.overlay.label',
-    title: 'educationGlossary.entries.overlay.title',
-    tooltip: 'educationGlossary.entries.overlay.tooltip',
-    explanation: 'educationGlossary.entries.overlay.explanation',
-    interpretation: 'educationGlossary.entries.overlay.interpretation',
-  },
   R_NOW: {
     label: 'educationGlossary.entries.rNow.label',
     title: 'educationGlossary.entries.rNow.title',
@@ -129,7 +121,6 @@ export const SCREENER_GLOSSARY_KEYS: EducationMetricKey[] = [
   'MOM_6M',
   'MOM_12M',
   'RS',
-  'OVERLAY',
   'RISK_PCT',
   'FEE_TO_RISK',
 ];

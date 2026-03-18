@@ -55,7 +55,7 @@ The default module is `MomentumStrategyModule` (registered as `"momentum"`).
 
 ## Plugin System
 
-Plugins are self-contained feature modules in `strategy/plugins/`. Each plugin can be enabled/disabled and configured per strategy. The 18 available plugins:
+Plugins are self-contained feature modules in `strategy/plugins/`. Each plugin can be enabled/disabled and configured per strategy. Available plugins:
 
 | Plugin | Purpose |
 |--------|---------|
@@ -73,7 +73,6 @@ Plugins are self-contained feature modules in `strategy/plugins/`. Each plugin c
 | `regime_risk` | Scale down risk in bear/high-vol regimes |
 | `rr_gate` | Require minimum reward-to-risk ratio |
 | `rs_filter` | Require positive relative strength |
-| `social_overlay` | Sentiment/attention-based veto |
 | `time_exit_management` | Exit after max holding days |
 | `trailing_management` | Trail stop under SMA after 2R gain |
 | `trend_filter` | Require price above SMA200 in uptrend |
@@ -123,7 +122,6 @@ Convenience builders that construct typed config dataclasses from a raw strategy
 - `build_entry_config(strategy_dict)` → `EntrySignalConfig`
 - `build_risk_config(strategy_dict)` → `RiskConfig`
 - `build_manage_config(strategy_dict)` → `ManageConfig`
-- `build_social_overlay_config(strategy_dict)` → `SocialOverlayConfig`
 - `build_report_config(strategy_dict)` → `ReportConfig`
 
 ## Adding a Custom Strategy Module
@@ -148,5 +146,4 @@ register(MyStrategyModule())
 - `risk/position_sizing.py` — `build_trade_plans()`
 - `reporting/report.py` — `build_daily_report()` thin wrapper
 - `execution/guidance.py` — execution guidance columns added to report
-- `social/analysis.py` — social overlay integration
 - `intelligence/pipeline.py` — market intelligence integration

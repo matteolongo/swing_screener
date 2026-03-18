@@ -47,7 +47,6 @@ The main checks are:
 - the risk stays within the budget
 - reward/risk is at least the required minimum
 - costs and slippage do not eat too much of the trade
-- there is no veto from the social overlay
 
 If even one of these fails, the verdict becomes `NOT_RECOMMENDED`.
 

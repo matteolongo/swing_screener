@@ -239,55 +239,6 @@ export default function StrategyPage() {
         t('strategyPage.help.items.regimeVolMultiplier.why'),
         t('strategyPage.help.items.regimeVolMultiplier.how')
       ),
-      socialOverlayEnabled: buildHelp(
-        t('strategyPage.help.items.socialOverlayEnabled.title'),
-        t('strategyPage.help.items.socialOverlayEnabled.short'),
-        t('strategyPage.help.items.socialOverlayEnabled.what'),
-        t('strategyPage.help.items.socialOverlayEnabled.why'),
-        t('strategyPage.help.items.socialOverlayEnabled.how')
-      ),
-      lookbackHours: buildHelp(
-        t('strategyPage.help.items.lookbackHours.title'),
-        t('strategyPage.help.items.lookbackHours.short'),
-        t('strategyPage.help.items.lookbackHours.what'),
-        t('strategyPage.help.items.lookbackHours.why'),
-        t('strategyPage.help.items.lookbackHours.how')
-      ),
-      attentionZThreshold: buildHelp(
-        t('strategyPage.help.items.attentionZThreshold.title'),
-        t('strategyPage.help.items.attentionZThreshold.short'),
-        t('strategyPage.help.items.attentionZThreshold.what'),
-        t('strategyPage.help.items.attentionZThreshold.why'),
-        t('strategyPage.help.items.attentionZThreshold.how')
-      ),
-      minSampleSize: buildHelp(
-        t('strategyPage.help.items.minSampleSize.title'),
-        t('strategyPage.help.items.minSampleSize.short'),
-        t('strategyPage.help.items.minSampleSize.what'),
-        t('strategyPage.help.items.minSampleSize.why'),
-        t('strategyPage.help.items.minSampleSize.how')
-      ),
-      negativeSentThreshold: buildHelp(
-        t('strategyPage.help.items.negativeSentThreshold.title'),
-        t('strategyPage.help.items.negativeSentThreshold.short'),
-        t('strategyPage.help.items.negativeSentThreshold.what'),
-        t('strategyPage.help.items.negativeSentThreshold.why'),
-        t('strategyPage.help.items.negativeSentThreshold.how')
-      ),
-      sentimentConfThreshold: buildHelp(
-        t('strategyPage.help.items.sentimentConfThreshold.title'),
-        t('strategyPage.help.items.sentimentConfThreshold.short'),
-        t('strategyPage.help.items.sentimentConfThreshold.what'),
-        t('strategyPage.help.items.sentimentConfThreshold.why'),
-        t('strategyPage.help.items.sentimentConfThreshold.how')
-      ),
-      hypePercentileThreshold: buildHelp(
-        t('strategyPage.help.items.hypePercentileThreshold.title'),
-        t('strategyPage.help.items.hypePercentileThreshold.short'),
-        t('strategyPage.help.items.hypePercentileThreshold.what'),
-        t('strategyPage.help.items.hypePercentileThreshold.why'),
-        t('strategyPage.help.items.hypePercentileThreshold.how')
-      ),
     }),
     [locale, t]
   );

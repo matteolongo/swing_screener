@@ -17,9 +17,6 @@ User-authored configuration no longer lives under `data/`. Shared configuration 
 ## Daily Reviews
 - `daily_reviews/`: daily review snapshots (not committed)
 
-## Social Cache
-- `social_cache/`: cached sentiment data (not committed)
-
 ## Optional Database
 - `swing_screener.db`: SQLite database (module exists but not wired by default)
 - Migration notes: `docs/engineering/DATABASE_MIGRATION.md`

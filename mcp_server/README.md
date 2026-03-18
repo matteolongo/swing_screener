@@ -41,10 +41,6 @@ Daily Review:
 - `get_daily_review`
 - `get_candidate_recommendations`
 
-Social:
-- `get_social_sentiment`
-- `analyze_ticker_sentiment`
-
 Intelligence:
 - `get_workspace_context`
 - `get_intelligence_opportunities`

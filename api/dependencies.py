@@ -21,7 +21,6 @@ from api.services.intelligence_config_service import IntelligenceConfigService
 from api.services.intelligence_service import IntelligenceService
 from api.services.portfolio_service import PortfolioService
 from api.services.screener_service import ScreenerService
-from api.services.social_service import SocialService
 from api.services.strategy_service import StrategyService
 from api.services.workspace_context_service import WorkspaceContextService
 from api.utils.files import read_json_file, write_json_file, get_today_str
@@ -133,12 +132,6 @@ def get_screener_service(
     portfolio_service: PortfolioService = Depends(get_portfolio_service),
 ) -> ScreenerService:
     return ScreenerService(strategy_repo=strategy_repo, portfolio_service=portfolio_service)
-
-
-def get_social_service(
-    strategy_repo: StrategyRepository = Depends(get_strategy_repo),
-) -> SocialService:
-    return SocialService(strategy_repo=strategy_repo)
 
 
 def get_intelligence_service(

@@ -24,7 +24,6 @@ def evaluate_recommendation(
     entry: Optional[float],
     stop: Optional[float],
     shares: Optional[int],
-    overlay_status: Optional[str],
     risk_cfg: RiskConfig,
     rr_target: float,
     costs: RiskEngineConfig = RiskEngineConfig(),
@@ -107,7 +106,6 @@ def evaluate_recommendation(
         commission_pct=costs.commission_pct,
         slippage_bps=costs.slippage_bps,
         fx_estimate_pct=costs.fx_estimate_pct,
-        overlay_status=overlay_status,
         min_shares=risk_cfg.min_shares,
         thesis=thesis_dict,
     )

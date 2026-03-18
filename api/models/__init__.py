@@ -10,7 +10,6 @@ from api.models.strategy import (
     StrategySignals,
     StrategyRisk,
     StrategyManage,
-    StrategySocialOverlay,
     StrategyBase,
     StrategyCreateRequest,
     StrategyUpdateRequest,
@@ -49,7 +48,6 @@ from api.models.recommendation import (
     RecommendationEducation,
     ChecklistGate,
 )
-from api.models.social import SocialRawEvent, SocialAnalysisRequest, SocialAnalysisResponse
 from api.models.intelligence import (
     IntelligenceRunRequest,
     IntelligenceRunLaunchResponse,
@@ -89,7 +87,6 @@ __all__ = [
     "StrategySignals",
     "StrategyRisk",
     "StrategyManage",
-    "StrategySocialOverlay",
     "StrategyBase",
     "StrategyCreateRequest",
     "StrategyUpdateRequest",
@@ -126,9 +123,6 @@ __all__ = [
     "RecommendationCosts",
     "RecommendationEducation",
     "ChecklistGate",
-    "SocialRawEvent",
-    "SocialAnalysisRequest",
-    "SocialAnalysisResponse",
     "IntelligenceRunRequest",
     "IntelligenceRunLaunchResponse",
     "IntelligenceRunStatusResponse",

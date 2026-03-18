@@ -15,7 +15,6 @@ This document is the canonical module layout after the 2026 architecture consoli
 - `src/swing_screener/reporting`
 - `src/swing_screener/risk`
 - `src/swing_screener/selection`
-- `src/swing_screener/social`
 - `src/swing_screener/strategy`
 - `src/swing_screener/utils`
 

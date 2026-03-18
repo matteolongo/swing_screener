@@ -72,18 +72,6 @@ export interface StrategyManage {
   benchmark: string;
 }
 
-export interface StrategySocialOverlay {
-  enabled: boolean;
-  lookbackHours: number;
-  attentionZThreshold: number;
-  minSampleSize: number;
-  negativeSentThreshold: number;
-  sentimentConfThreshold: number;
-  hypePercentileThreshold: number;
-  providers: string[];
-  sentimentAnalyzer: string;
-}
-
 export interface StrategyIntelligenceLLM {
   enabled: boolean;
   provider: 'mock' | 'openai';
@@ -139,7 +127,6 @@ export interface Strategy {
   signals: StrategySignals;
   risk: StrategyRisk;
   manage: StrategyManage;
-  socialOverlay: StrategySocialOverlay;
   marketIntelligence: StrategyMarketIntelligence;
   isDefault: boolean;
   createdAt: string;
@@ -218,18 +205,6 @@ export interface StrategyManageAPI {
   benchmark: string;
 }
 
-export interface StrategySocialOverlayAPI {
-  enabled?: boolean;
-  lookback_hours?: number;
-  attention_z_threshold?: number;
-  min_sample_size?: number;
-  negative_sent_threshold?: number;
-  sentiment_conf_threshold?: number;
-  hype_percentile_threshold?: number;
-  providers?: string[];
-  sentiment_analyzer?: string;
-}
-
 export interface StrategyIntelligenceLLMAPI {
   enabled?: boolean;
   provider?: 'mock' | 'openai';
@@ -285,7 +260,6 @@ export interface StrategyAPI {
   signals: StrategySignalsAPI;
   risk: StrategyRiskAPI;
   manage: StrategyManageAPI;
-  social_overlay?: StrategySocialOverlayAPI;
   market_intelligence?: StrategyMarketIntelligenceAPI;
   is_default: boolean;
   created_at: string;
@@ -301,7 +275,6 @@ export interface StrategyUpdateRequestAPI {
   signals: StrategySignalsAPI;
   risk: StrategyRiskAPI;
   manage: StrategyManageAPI;
-  social_overlay: StrategySocialOverlayAPI;
   market_intelligence: StrategyMarketIntelligenceAPI;
 }
 
@@ -314,7 +287,6 @@ export interface ActiveStrategyRequestAPI {
 }
 
 export function transformStrategy(api: StrategyAPI): Strategy {
-  const socialOverlayApi = api.social_overlay ?? {};
   const marketIntelligenceApi = api.market_intelligence ?? {};
   const marketIntelligenceLlmApi = marketIntelligenceApi.llm ?? {};
   const marketIntelligenceCatalystApi = marketIntelligenceApi.catalyst ?? {};
@@ -392,17 +364,6 @@ export function transformStrategy(api: StrategyAPI): Strategy {
       smaBufferPct: api.manage.sma_buffer_pct,
       maxHoldingDays: api.manage.max_holding_days,
       benchmark: api.manage.benchmark,
-    },
-    socialOverlay: {
-      enabled: socialOverlayApi.enabled ?? false,
-      lookbackHours: socialOverlayApi.lookback_hours ?? 24,
-      attentionZThreshold: socialOverlayApi.attention_z_threshold ?? 3.0,
-      minSampleSize: socialOverlayApi.min_sample_size ?? 20,
-      negativeSentThreshold: socialOverlayApi.negative_sent_threshold ?? -0.4,
-      sentimentConfThreshold: socialOverlayApi.sentiment_conf_threshold ?? 0.7,
-      hypePercentileThreshold: socialOverlayApi.hype_percentile_threshold ?? 95.0,
-      providers: socialOverlayApi.providers ?? ['reddit'],
-      sentimentAnalyzer: socialOverlayApi.sentiment_analyzer ?? 'keyword',
     },
     marketIntelligence: {
       enabled: marketIntelligenceApi.enabled ?? false,
@@ -516,17 +477,6 @@ export function toStrategyUpdateRequest(strategy: Strategy): StrategyUpdateReque
       sma_buffer_pct: strategy.manage.smaBufferPct,
       max_holding_days: strategy.manage.maxHoldingDays,
       benchmark: strategy.manage.benchmark,
-    },
-    social_overlay: {
-      enabled: strategy.socialOverlay.enabled,
-      lookback_hours: strategy.socialOverlay.lookbackHours,
-      attention_z_threshold: strategy.socialOverlay.attentionZThreshold,
-      min_sample_size: strategy.socialOverlay.minSampleSize,
-      negative_sent_threshold: strategy.socialOverlay.negativeSentThreshold,
-      sentiment_conf_threshold: strategy.socialOverlay.sentimentConfThreshold,
-      hype_percentile_threshold: strategy.socialOverlay.hypePercentileThreshold,
-      providers: strategy.socialOverlay.providers,
-      sentiment_analyzer: strategy.socialOverlay.sentimentAnalyzer,
     },
     market_intelligence: {
       enabled: strategy.marketIntelligence.enabled,

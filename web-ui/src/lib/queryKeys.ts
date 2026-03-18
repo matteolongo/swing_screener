@@ -18,7 +18,6 @@ export const queryKeys = {
   portfolioSummary: () => ['portfolio-summary'] as const,
   positionStopSuggestion: (positionId?: string) =>
     ['positions', positionId, 'stop-suggestion'] as const,
-  socialWarmupStatus: (jobId?: string) => ['social-warmup', jobId] as const,
   intelligenceConfig: () => ['intelligence-config'] as const,
   intelligenceProviders: () => ['intelligence-providers'] as const,
   intelligenceSymbolSets: () => ['intelligence-symbol-sets'] as const,

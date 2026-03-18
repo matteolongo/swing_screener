@@ -34,11 +34,6 @@ features:
     tools:
     - get_config
     - update_config
-  social:
-    enabled: true
-    tools:
-    - get_social_sentiment
-    - analyze_ticker_sentiment
   intelligence:
     enabled: true
     tools:

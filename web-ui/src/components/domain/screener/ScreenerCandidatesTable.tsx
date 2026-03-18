@@ -29,7 +29,6 @@ interface ScreenerCandidatesTableProps {
   candidates: ScreenerCandidate[];
   onCreateOrder: (candidate: ScreenerCandidate) => void;
   onRecommendationDetails: (candidate: ScreenerCandidate) => void;
-  onSocialAnalysis: (ticker: string) => void;
   onTradeThesis: (candidate: ScreenerCandidate) => void;
   onRunIntelligence: (ticker: string) => void;
   getSymbolIntelligenceStatus?: (ticker: string) => SymbolIntelligenceStatus | undefined;
@@ -45,7 +44,6 @@ export default function ScreenerCandidatesTable({
   candidates,
   onCreateOrder,
   onRecommendationDetails,
-  onSocialAnalysis,
   onTradeThesis,
   onRunIntelligence,
   getSymbolIntelligenceStatus,
@@ -294,27 +292,13 @@ export default function ScreenerCandidatesTable({
                     variant="secondary"
                     onClick={(event) => {
                       event.stopPropagation();
-                      onSocialAnalysis(candidate.ticker);
+                      onTradeThesis(candidate);
                     }}
-                    title={t('screener.table.sentimentTitle')}
-                    aria-label={t('screener.table.sentimentAria', { ticker: candidate.ticker })}
+                    title={t('screener.table.tradeThesisTitle')}
+                    aria-label={t('screener.table.tradeThesisAria', { ticker: candidate.ticker })}
                   >
-                    {t('screener.table.sentimentTitle')}
+                    {t('screener.table.tradeThesisTitle')}
                   </Button>
-                  {candidate.recommendation?.thesis ? (
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onTradeThesis(candidate);
-                      }}
-                      title={t('screener.table.tradeThesisTitle')}
-                      aria-label={t('screener.table.tradeThesisAria', { ticker: candidate.ticker })}
-                    >
-                      {t('screener.table.tradeThesisTitle')}
-                    </Button>
-                  ) : null}
                 </div>
               ) : null}
             </div>
@@ -456,7 +440,6 @@ export default function ScreenerCandidatesTable({
             {isExpanded && (
               <ScreenerCandidateDetailsRow
                 candidate={vm}
-                onSocialClick={() => onSocialAnalysis(candidate.ticker)}
                 onThesisClick={() => onTradeThesis(candidate)}
                 onRunIntelligence={() => onRunIntelligence(candidate.ticker)}
                 intelligenceStatus={symbolIntelStatus}

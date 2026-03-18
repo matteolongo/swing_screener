@@ -45,15 +45,6 @@ class ScreenerCandidate(BaseModel):
     score: float
     confidence: float
     rank: int
-    overlay_status: Optional[str] = None
-    overlay_reasons: list[str] = Field(default_factory=list)
-    overlay_risk_multiplier: Optional[float] = None
-    overlay_max_pos_multiplier: Optional[float] = None
-    overlay_attention_z: Optional[float] = None
-    overlay_sentiment_score: Optional[float] = None
-    overlay_sentiment_confidence: Optional[float] = None
-    overlay_hype_score: Optional[float] = None
-    overlay_sample_size: Optional[int] = None
     # Plan + recommendation fields (education-first)
     signal: Optional[str] = None
     entry: Optional[float] = None
@@ -108,7 +99,6 @@ class ScreenerResponse(BaseModel):
     total_screened: int
     data_freshness: str = "final_close"
     warnings: list[str] = Field(default_factory=list)
-    social_warmup_job_id: Optional[str] = None
     same_symbol_suppressed_count: int = 0
     same_symbol_add_on_count: int = 0
 

@@ -21,7 +21,6 @@ from api.services.intelligence_config_service import IntelligenceConfigService
 from api.services.intelligence_service import IntelligenceService
 from api.services.portfolio_service import PortfolioService
 from api.services.screener_service import ScreenerService
-from api.services.social_service import SocialService
 from api.services.strategy_service import StrategyService
 from api.services.workspace_context_service import WorkspaceContextService
 from api.utils.file_lock import locked_write_json
@@ -101,11 +100,6 @@ def get_intelligence_config_service() -> IntelligenceConfigService:
 def get_screener_service() -> ScreenerService:
     """Get screener service instance with injected dependencies."""
     return ScreenerService(strategy_repo=get_strategy_repo(), portfolio_service=get_portfolio_service())
-
-
-def get_social_service() -> SocialService:
-    """Get social service instance with injected dependencies."""
-    return SocialService(strategy_repo=get_strategy_repo())
 
 
 def get_intelligence_service() -> IntelligenceService:

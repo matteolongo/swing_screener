@@ -96,9 +96,6 @@ All values below are `dataclass` defaults. They can be overridden via `RiskConfi
 | File | Symbol | Value | Context |
 |------|--------|-------|---------|
 | `utils/file_lock.py` | `DEFAULT_TIMEOUT` | `5.0` | File lock timeout in seconds |
-| `social/config.py` | `DEFAULT_RATE_LIMIT_PER_SEC` | `1.0` | Reddit/Yahoo scraper rate limit |
-| `social/config.py` | `DEFAULT_CACHE_TTL_HOURS` | `6` | Social event cache TTL |
-| `social/config.py` | `DEFAULT_HYPE_FIXED_THRESHOLD` | `5.0` | Fallback hype threshold (< 20 samples) |
 | `reporting/report.py` | `export_path` | `"out/daily_report.csv"` | Default CSV export path |
 | `data/providers/alpaca_provider.py` | `RATE_LIMIT_REQUESTS` | `200` | Alpaca API rate limit (200 req/60s) |
 
@@ -110,7 +107,7 @@ The following are observed strengths that should be preserved:
 
 - ✅ **No wildcard imports** — all imports are explicit
 - ✅ **Frozen dataclasses** for all config objects — prevents mutation bugs
-- ✅ **Protocol-based abstractions** — `StrategyModule`, `MarketDataProvider`, `SentimentAnalyzer`, `IngestionProvider`
+- ✅ **Protocol-based abstractions** — `StrategyModule`, `MarketDataProvider`, `IngestionProvider`
 - ✅ **File locking** via `portalocker` — safe concurrent CLI access
 - ✅ **JSON persistence** — simple, debuggable, diffable
 - ✅ **Sparse calendar handling** — indicators compute per-ticker on actual trading days, not calendar days
@@ -129,7 +126,6 @@ The following are observed strengths that should be preserved:
 | `execution/` | ✅ Updated | DeGiro fees, order lifecycle, files list |
 | `portfolio/` | ✅ Created | Position, ManageConfig, metrics |
 | `reporting/` | ✅ Created | All functions, notes on defaults |
-| `strategy/` | ✅ Created | Plugin system, 18 plugins listed |
-| `social/` | ✅ Created | Providers, analyzers, decisions |
+| `strategy/` | ✅ Created | Plugin system and config reference |
 | `intelligence/` | ✅ Updated | LLM providers, ingestion sources |
 | `utils/` | ✅ Created | All helpers documented |
