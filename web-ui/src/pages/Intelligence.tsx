@@ -519,7 +519,7 @@ export default function IntelligencePage() {
                     const providerEntry = getProviderCatalogEntry(providerCatalog, nextProvider);
                     const suggestedModels = providerEntry?.suggestedModels ?? [];
                     const defaultModel = providerEntry?.defaultModel ?? draftConfig.llm.model;
-                    const defaultBaseUrl = providerEntry?.defaultBaseUrl ?? '';
+                    const defaultBaseUrl = providerEntry?.defaultBaseUrl ?? draftConfig.llm.baseUrl;
                     const nextModel = suggestedModels.includes(draftConfig.llm.model)
                       ? draftConfig.llm.model
                       : defaultModel;

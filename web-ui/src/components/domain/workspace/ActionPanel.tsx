@@ -60,9 +60,14 @@ export default function ActionPanel({ ticker }: ActionPanelProps) {
     : t('workspacePage.panels.analysis.manualOrderNotes', { ticker: normalizedTicker });
 
   if (!risk) {
+    const configFailed = configDefaultsQuery.isError && !activeStrategyQuery.data?.risk;
     return (
-      <div className="rounded-lg border border-gray-200 p-3 text-sm text-gray-600 dark:border-gray-700 dark:text-gray-400">
-        {t('common.table.loading')}
+      <div className="rounded-lg border border-gray-200 p-3 text-sm dark:border-gray-700">
+        <p className={configFailed ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'}>
+          {configFailed
+            ? t('common.errors.generic')
+            : t('common.table.loading')}
+        </p>
       </div>
     );
   }

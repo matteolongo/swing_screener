@@ -88,6 +88,19 @@ strategies:
       cache_path: data/intelligence/llm_cache.json
       audit_path: data/intelligence/llm_audit
       max_concurrency: 4
+      education_template_version: v1
+      education_style_level: beginner
+      education_max_tokens: 450
+      education_forbidden_claim_categories:
+      - prediction
+      - guarantee
+      - financial_advice
+      education_recommendation_system_prompt: ''
+      education_recommendation_user_prompt_template: ''
+      education_thesis_system_prompt: ''
+      education_thesis_user_prompt_template: ''
+      education_learn_system_prompt: ''
+      education_learn_user_prompt_template: ''
     catalyst:
       lookback_hours: 72
       recency_half_life_hours: 36
@@ -217,6 +230,19 @@ strategies:
       cache_path: data/intelligence/llm_cache.json
       audit_path: data/intelligence/llm_audit
       max_concurrency: 4
+      education_template_version: v1
+      education_style_level: beginner
+      education_max_tokens: 450
+      education_forbidden_claim_categories:
+      - prediction
+      - guarantee
+      - financial_advice
+      education_recommendation_system_prompt: ''
+      education_recommendation_user_prompt_template: ''
+      education_thesis_system_prompt: ''
+      education_thesis_user_prompt_template: ''
+      education_learn_system_prompt: ''
+      education_learn_user_prompt_template: ''
     catalyst:
       lookback_hours: 72
       recency_half_life_hours: 36
@@ -271,6 +297,18 @@ strategies:
       binary_event_min_materiality: 0.75
       binary_event_min_threshold_boost: 0.08
       low_evidence_min_threshold_boost: 0.06
+  module: momentum
+  social_overlay:
+    enabled: false
+    lookback_hours: 24
+    attention_z_threshold: 3.0
+    min_sample_size: 20
+    negative_sent_threshold: -0.4
+    sentiment_conf_threshold: 0.7
+    hype_percentile_threshold: 95.0
+    providers:
+    - reddit
+    sentiment_analyzer: keyword
 - name: 2RISK-2ATR-EUR
   description: Default strategy seeded from current system settings.
   module: momentum
@@ -361,6 +399,19 @@ strategies:
       cache_path: data/intelligence/llm_cache.json
       audit_path: data/intelligence/llm_audit
       max_concurrency: 4
+      education_template_version: v1
+      education_style_level: beginner
+      education_max_tokens: 450
+      education_forbidden_claim_categories:
+      - prediction
+      - guarantee
+      - financial_advice
+      education_recommendation_system_prompt: ''
+      education_recommendation_user_prompt_template: ''
+      education_thesis_system_prompt: ''
+      education_thesis_user_prompt_template: ''
+      education_learn_system_prompt: ''
+      education_learn_user_prompt_template: ''
     catalyst:
       lookback_hours: 72
       recency_half_life_hours: 36
@@ -503,6 +554,19 @@ strategies:
       cache_path: data/intelligence/llm_cache.json
       audit_path: data/intelligence/llm_audit
       max_concurrency: 4
+      education_template_version: v1
+      education_style_level: beginner
+      education_max_tokens: 450
+      education_forbidden_claim_categories:
+      - prediction
+      - guarantee
+      - financial_advice
+      education_recommendation_system_prompt: ''
+      education_recommendation_user_prompt_template: ''
+      education_thesis_system_prompt: ''
+      education_thesis_user_prompt_template: ''
+      education_learn_system_prompt: ''
+      education_learn_user_prompt_template: ''
     catalyst:
       lookback_hours: 72
       recency_half_life_hours: 36

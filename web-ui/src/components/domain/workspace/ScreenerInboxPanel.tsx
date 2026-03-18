@@ -175,10 +175,13 @@ export default function ScreenerInboxPanel({
     handleSelectCandidate(candidate.ticker, 'order');
   }, [handleSelectCandidate]);
 
-  if (!riskConfig || !defaultIndicators) {
+  if (!riskConfig) {
+    const configFailed = configDefaultsQuery.isError && !activeStrategy?.risk;
     return (
       <Card variant="bordered" className="p-4 md:p-5">
-        <div className="text-sm text-gray-600 dark:text-gray-400">{t('common.table.loading')}</div>
+        <div className={`text-sm ${configFailed ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'}`}>
+          {configFailed ? t('common.errors.generic') : t('common.table.loading')}
+        </div>
       </Card>
     );
   }
