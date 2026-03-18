@@ -1,100 +1,48 @@
-"""Thread-safe configuration repository."""
+"""YAML-backed application configuration repository."""
 from __future__ import annotations
 
 from threading import Lock
 from typing import Optional
 
-from api.models.config import AppConfig, RiskConfig, IndicatorConfig, ManageConfig
-
-
-# Default configuration (matching web UI defaults)
-DEFAULT_CONFIG = AppConfig(
-    risk=RiskConfig(
-        account_size=50000,
-        risk_pct=0.01,
-        max_position_pct=0.60,
-        min_shares=1,
-        k_atr=2.0,
-        min_rr=2.0,
-        max_fee_risk_pct=0.2,
-    ),
-    indicators=IndicatorConfig(
-        sma_fast=20,
-        sma_mid=50,
-        sma_long=200,
-        atr_window=14,
-        lookback_6m=126,
-        lookback_12m=252,
-        benchmark="SPY",
-        breakout_lookback=50,
-        pullback_ma=20,
-        min_history=260,
-    ),
-    manage=ManageConfig(
-        breakeven_at_r=1.0,
-        trail_after_r=2.0,
-        trail_sma=20,
-        sma_buffer_pct=0.005,
-        max_holding_days=20,
-    ),
-    positions_file="data/positions.json",
-    orders_file="data/orders.json",
-)
+from api.models.config import AppConfig
+from swing_screener.settings import get_settings_manager
 
 
 class ConfigRepository:
-    """Thread-safe in-memory configuration repository.
-    
-    This replaces the global mutable config state with a thread-safe
-    implementation using locks to prevent race conditions.
-    """
+    """Thread-safe YAML-backed configuration repository."""
 
     def __init__(self, initial_config: Optional[AppConfig] = None) -> None:
-        """Initialize repository with optional config.
-        
-        Args:
-            initial_config: Initial configuration. If None, uses DEFAULT_CONFIG.
-        """
         self._lock = Lock()
-        self._config = (initial_config or DEFAULT_CONFIG).model_copy(deep=True)
+        self._initial_config = initial_config.model_copy(deep=True) if initial_config is not None else None
 
     def get(self) -> AppConfig:
-        """Get current configuration (thread-safe copy).
-        
-        Returns:
-            A deep copy of the current configuration.
-        """
         with self._lock:
-            return self._config.model_copy(deep=True)
+            if self._initial_config is not None:
+                return self._initial_config.model_copy(deep=True)
+            payload = get_settings_manager().get_app_config_payload()
+            return AppConfig.model_validate(payload)
 
     def update(self, config: AppConfig) -> AppConfig:
-        """Update configuration atomically.
-        
-        Args:
-            config: New configuration to set.
-            
-        Returns:
-            A deep copy of the updated configuration.
-        """
         with self._lock:
-            self._config = config.model_copy(deep=True)
-            return self._config.model_copy(deep=True)
+            if self._initial_config is not None:
+                self._initial_config = config.model_copy(deep=True)
+                return self._initial_config.model_copy(deep=True)
+            get_settings_manager().set_app_config_payload(config.model_dump())
+            return config.model_copy(deep=True)
 
     def reset(self) -> AppConfig:
-        """Reset configuration to defaults.
-        
-        Returns:
-            A deep copy of the default configuration.
-        """
         with self._lock:
-            self._config = DEFAULT_CONFIG.model_copy(deep=True)
-            return self._config.model_copy(deep=True)
+            defaults = self.get_defaults()
+            if self._initial_config is not None:
+                self._initial_config = defaults.model_copy(deep=True)
+                return self._initial_config.model_copy(deep=True)
+            manager = get_settings_manager()
+            user_doc = manager.load_user_document()
+            user_doc["app_config"] = {}
+            manager.save_user_document(user_doc)
+            return defaults
 
     @staticmethod
     def get_defaults() -> AppConfig:
-        """Get default configuration (static method).
-        
-        Returns:
-            A deep copy of the default configuration.
-        """
-        return DEFAULT_CONFIG.model_copy(deep=True)
+        payload = get_settings_manager().load_defaults_document().get("app_config", {})
+        return AppConfig.model_validate(payload)

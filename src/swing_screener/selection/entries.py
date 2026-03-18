@@ -5,13 +5,18 @@ from typing import Iterable
 
 import pandas as pd
 from swing_screener.utils.dataframe_helpers import get_close_matrix, sma
+from swing_screener.settings import get_settings_manager
+
+
+_SELECTION_DEFAULTS = get_settings_manager().get_low_level_defaults_payload("selection")
+_SIGNAL_DEFAULTS = _SELECTION_DEFAULTS.get("signals", {}) if isinstance(_SELECTION_DEFAULTS.get("signals", {}), dict) else {}
 
 
 @dataclass(frozen=True)
 class EntrySignalConfig:
-    breakout_lookback: int = 50
-    pullback_ma: int = 20
-    min_history: int = 260
+    breakout_lookback: int = int(_SIGNAL_DEFAULTS.get("breakout_lookback", 50))
+    pullback_ma: int = int(_SIGNAL_DEFAULTS.get("pullback_ma", 20))
+    min_history: int = int(_SIGNAL_DEFAULTS.get("min_history", 260))
 
 
 def breakout_signal(close_s: pd.Series, lookback: int) -> tuple[bool, float]:

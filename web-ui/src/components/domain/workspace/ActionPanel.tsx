@@ -1,9 +1,9 @@
 import OrderReviewExperience from '@/components/domain/orders/OrderReviewExperience';
+import { useConfigDefaultsQuery } from '@/features/config/hooks';
 import { useCreateOrderMutation, useOpenPositions } from '@/features/portfolio/hooks';
 import type { SameSymbolCandidateContext } from '@/features/screener/types';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 import { useScreenerStore } from '@/stores/screenerStore';
-import { DEFAULT_CONFIG } from '@/types/config';
 import { t } from '@/i18n/t';
 import { formatConfidencePercent, formatCurrency, formatScreenerScore } from '@/utils/formatters';
 
@@ -14,7 +14,8 @@ interface ActionPanelProps {
 export default function ActionPanel({ ticker }: ActionPanelProps) {
   const normalizedTicker = ticker.trim().toUpperCase();
   const activeStrategyQuery = useActiveStrategyQuery();
-  const risk = activeStrategyQuery.data?.risk ?? DEFAULT_CONFIG.risk;
+  const configDefaultsQuery = useConfigDefaultsQuery();
+  const risk = activeStrategyQuery.data?.risk ?? configDefaultsQuery.data?.risk;
   const openPositionsQuery = useOpenPositions();
   const openPosition = openPositionsQuery.data?.find((position) => position.ticker.toUpperCase() === normalizedTicker);
   const candidate = useScreenerStore((state) =>
@@ -57,6 +58,14 @@ export default function ActionPanel({ ticker }: ActionPanelProps) {
           rank: candidate.rank,
         })
     : t('workspacePage.panels.analysis.manualOrderNotes', { ticker: normalizedTicker });
+
+  if (!risk) {
+    return (
+      <div className="rounded-lg border border-gray-200 p-3 text-sm text-gray-600 dark:border-gray-700 dark:text-gray-400">
+        {t('common.table.loading')}
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-lg border border-gray-200 p-3 dark:border-gray-700">

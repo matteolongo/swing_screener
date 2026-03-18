@@ -6,26 +6,34 @@ import re
 
 import math
 import pandas as pd
+from swing_screener.settings import get_settings_manager
+
+
+_RISK_DEFAULTS = get_settings_manager().get_low_level_defaults_payload("risk")
+
+
+def _risk_default(key: str, fallback):
+    return _RISK_DEFAULTS.get(key, fallback)
 
 
 @dataclass(frozen=True)
 class RiskConfig:
-    account_size: float = 500.0
-    risk_pct: float = 0.01  # 1% of account per trade
-    k_atr: float = 2.0  # stop = entry - k*ATR
-    max_position_pct: float = 0.60  # max capital allocated to a single position
-    min_shares: int = 1
-    min_rr: float = 2.0  # minimum reward-to-risk to recommend
-    rr_target: float = 2.0  # default RR used to compute target and projected RR
-    commission_pct: float = 0.0  # per-side commission as % of price (for recommendation costs)
-    max_fee_risk_pct: float = 0.20  # max fees as % of planned risk
+    account_size: float = float(_risk_default("account_size", 500.0))
+    risk_pct: float = float(_risk_default("risk_pct", 0.01))
+    k_atr: float = float(_risk_default("k_atr", 2.0))
+    max_position_pct: float = float(_risk_default("max_position_pct", 0.60))
+    min_shares: int = int(_risk_default("min_shares", 1))
+    min_rr: float = float(_risk_default("min_rr", 2.0))
+    rr_target: float = float(_risk_default("rr_target", 2.0))
+    commission_pct: float = float(_risk_default("commission_pct", 0.0))
+    max_fee_risk_pct: float = float(_risk_default("max_fee_risk_pct", 0.20))
     # Regime-aware risk scaling (optional)
-    regime_enabled: bool = False
-    regime_trend_sma: int = 200
-    regime_trend_multiplier: float = 0.5
-    regime_vol_atr_window: int = 14
-    regime_vol_atr_pct_threshold: float = 6.0
-    regime_vol_multiplier: float = 0.5
+    regime_enabled: bool = bool(_risk_default("regime_enabled", False))
+    regime_trend_sma: int = int(_risk_default("regime_trend_sma", 200))
+    regime_trend_multiplier: float = float(_risk_default("regime_trend_multiplier", 0.5))
+    regime_vol_atr_window: int = int(_risk_default("regime_vol_atr_window", 14))
+    regime_vol_atr_pct_threshold: float = float(_risk_default("regime_vol_atr_pct_threshold", 6.0))
+    regime_vol_multiplier: float = float(_risk_default("regime_vol_multiplier", 0.5))
 
 
 def compute_stop(entry: float, atr14: float, k_atr: float) -> float:

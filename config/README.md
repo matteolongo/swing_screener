@@ -4,32 +4,45 @@ This directory contains configuration files for the Swing Screener application.
 
 ## Files
 
-### `mcp_features.yaml`
+### `defaults.yaml`
 
-Configuration file for the MCP (Model Context Protocol) server.
+Low-level shared defaults for the system:
+- runtime paths
+- app config defaults
+- strategy seed defaults
+- intelligence defaults
+- backend provider catalogs and operational fallback values
 
-**Purpose:** Controls which features and tools are exposed through the MCP server interface.
+### `user.yaml`
 
-**Structure:**
-- `features`: Feature domains (portfolio, strategy, screener, config, daily_review, social)
-  - Each feature has tools that can be individually enabled/disabled
-  - Per-tool settings: timeout, confirmation requirements
-- `security`: Security settings
-  - Confirmation requirements for dangerous operations
-  - Read-only mode toggle
-- `execution`: Execution settings
-  - Default/max timeouts
-  - Concurrency limits
-- `logging`: Logging configuration
+Shared user-facing configuration that affects UI and system behavior without carrying secrets:
+- `/api/config` compatibility payload under `app_config`
+- API serving settings
+- browser/app behavior defaults that are shared outside `localStorage`
 
-**Usage:**
+### `strategies.yaml`
 
-Edit this file to enable/disable MCP features:
+Authoritative strategy storage:
+- `active_strategy_id`
+- persisted strategy definitions
+
+### `intelligence.yaml`
+
+Dedicated intelligence configuration envelope:
+- sanitized intelligence config
+- bootstrap metadata
+- last update timestamp
+
+### `mcp.yaml`
+
+MCP feature flags and server metadata.
+
+Edit this file to enable or disable MCP features:
 
 ```yaml
 features:
   portfolio:
-    enabled: true    # Enable portfolio feature
+    enabled: true
     tools:
       - list_positions
       - close_position
@@ -42,7 +55,7 @@ Changes require MCP server restart.
 ## Notes
 
 - This directory is for **configuration files only**
-- Do not store data or temporary files here
+- Do not store runtime artifacts or temporary files here
 - Config files should be versioned (committed to git)
 - Sensitive credentials should use environment variables, not config files
 

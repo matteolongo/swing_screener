@@ -47,7 +47,7 @@ async def validate_client():
         print(f"✗ Failed to connect: {e}\n")
         print("Possible issues:")
         print("- MCP dependency not installed: uv sync --extra mcp")
-        print("- MCP configuration missing: check config/mcp_features.yaml")
+        print("- MCP configuration missing: check config/mcp.yaml")
         print("- Python path issue: ensure mcp_server is importable")
         return False
     

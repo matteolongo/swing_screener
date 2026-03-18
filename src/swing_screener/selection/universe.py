@@ -10,16 +10,21 @@ from swing_screener.indicators.volatility import (
     compute_volatility_features,
 )
 from swing_screener.indicators.momentum import MomentumConfig, compute_momentum_features
+from swing_screener.settings import get_settings_manager
+
+
+_SELECTION_DEFAULTS = get_settings_manager().get_low_level_defaults_payload("selection")
+_UNIVERSE_DEFAULTS = _SELECTION_DEFAULTS.get("universe", {}) if isinstance(_SELECTION_DEFAULTS.get("universe", {}), dict) else {}
 
 
 @dataclass(frozen=True)
 class UniverseFilterConfig:
-    min_price: float = 10.0
-    max_price: float = 60.0
-    max_atr_pct: float = 10.0
-    require_trend_ok: bool = True
-    require_rs_positive: bool = False
-    currencies: list[str] = field(default_factory=lambda: ["USD", "EUR"])
+    min_price: float = float(_UNIVERSE_DEFAULTS.get("min_price", 10.0))
+    max_price: float = float(_UNIVERSE_DEFAULTS.get("max_price", 60.0))
+    max_atr_pct: float = float(_UNIVERSE_DEFAULTS.get("max_atr_pct", 10.0))
+    require_trend_ok: bool = bool(_UNIVERSE_DEFAULTS.get("require_trend_ok", True))
+    require_rs_positive: bool = bool(_UNIVERSE_DEFAULTS.get("require_rs_positive", False))
+    currencies: list[str] = field(default_factory=lambda: list(_UNIVERSE_DEFAULTS.get("currencies", ["USD", "EUR"])))
 
 
 @dataclass(frozen=True)

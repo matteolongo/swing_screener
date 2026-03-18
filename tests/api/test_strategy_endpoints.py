@@ -1,15 +1,17 @@
 import json
 from fastapi.testclient import TestClient
+import yaml
 
 from api.main import app
 import swing_screener.strategy.storage as strategy_storage
 
 
 def _patch_strategy_storage(monkeypatch, tmp_path):
-    data_dir = tmp_path / "data"
-    monkeypatch.setattr(strategy_storage, "DATA_DIR", data_dir)
-    monkeypatch.setattr(strategy_storage, "STRATEGIES_FILE", data_dir / "strategies.json")
-    monkeypatch.setattr(strategy_storage, "ACTIVE_STRATEGY_FILE", data_dir / "active_strategy.json")
+    config_dir = tmp_path / "config"
+    monkeypatch.setattr(strategy_storage, "CONFIG_DIR", config_dir)
+    monkeypatch.setattr(strategy_storage, "DATA_DIR", config_dir)
+    monkeypatch.setattr(strategy_storage, "STRATEGIES_FILE", config_dir / "strategies.yaml")
+    monkeypatch.setattr(strategy_storage, "ACTIVE_STRATEGY_FILE", config_dir / "strategies.yaml")
 
 
 def _create_strategy_payload(base: dict, *, strategy_id: str, name: str) -> dict:
@@ -96,12 +98,14 @@ def test_strategy_rejects_invalid_currency(monkeypatch, tmp_path):
 
 def test_strategy_backfills_missing_currency_field(monkeypatch, tmp_path):
     _patch_strategy_storage(monkeypatch, tmp_path)
-    strategy_storage.DATA_DIR.mkdir(parents=True, exist_ok=True)
+    strategy_storage.STRATEGIES_FILE.parent.mkdir(parents=True, exist_ok=True)
 
     legacy = strategy_storage._default_strategy_payload()  # noqa: SLF001
     legacy["universe"]["filt"].pop("currencies", None)
-    strategy_storage.STRATEGIES_FILE.write_text(json.dumps([legacy]), encoding="utf-8")
-    strategy_storage.ACTIVE_STRATEGY_FILE.write_text(json.dumps({"id": "default"}), encoding="utf-8")
+    strategy_storage.STRATEGIES_FILE.write_text(
+        yaml.safe_dump({"active_strategy_id": "default", "strategies": [legacy]}, sort_keys=False),
+        encoding="utf-8",
+    )
 
     client = TestClient(app)
     active = client.get("/api/strategy/active").json()
@@ -110,7 +114,7 @@ def test_strategy_backfills_missing_currency_field(monkeypatch, tmp_path):
 
 def test_strategy_migrates_legacy_backtest_fields_into_risk(monkeypatch, tmp_path):
     _patch_strategy_storage(monkeypatch, tmp_path)
-    strategy_storage.DATA_DIR.mkdir(parents=True, exist_ok=True)
+    strategy_storage.STRATEGIES_FILE.parent.mkdir(parents=True, exist_ok=True)
 
     legacy = strategy_storage._default_strategy_payload()  # noqa: SLF001
     legacy["risk"].pop("rr_target", None)
@@ -119,8 +123,10 @@ def test_strategy_migrates_legacy_backtest_fields_into_risk(monkeypatch, tmp_pat
         "take_profit_r": 2.7,
         "commission_pct": 0.003,
     }
-    strategy_storage.STRATEGIES_FILE.write_text(json.dumps([legacy]), encoding="utf-8")
-    strategy_storage.ACTIVE_STRATEGY_FILE.write_text(json.dumps({"id": "default"}), encoding="utf-8")
+    strategy_storage.STRATEGIES_FILE.write_text(
+        yaml.safe_dump({"active_strategy_id": "default", "strategies": [legacy]}, sort_keys=False),
+        encoding="utf-8",
+    )
 
     client = TestClient(app)
     active = client.get("/api/strategy/active").json()
@@ -129,15 +135,15 @@ def test_strategy_migrates_legacy_backtest_fields_into_risk(monkeypatch, tmp_pat
     assert active["risk"]["commission_pct"] == 0.003
     assert "backtest" not in active
 
-    persisted = json.loads(strategy_storage.STRATEGIES_FILE.read_text(encoding="utf-8"))
-    assert persisted[0]["risk"]["rr_target"] == 2.7
-    assert persisted[0]["risk"]["commission_pct"] == 0.003
-    assert "backtest" not in persisted[0]
+    persisted = yaml.safe_load(strategy_storage.STRATEGIES_FILE.read_text(encoding="utf-8"))
+    assert persisted["strategies"][0]["risk"]["rr_target"] == 2.7
+    assert persisted["strategies"][0]["risk"]["commission_pct"] == 0.003
+    assert "backtest" not in persisted["strategies"][0]
 
 
 def test_strategy_migration_prefers_existing_risk_fields(monkeypatch, tmp_path):
     _patch_strategy_storage(monkeypatch, tmp_path)
-    strategy_storage.DATA_DIR.mkdir(parents=True, exist_ok=True)
+    strategy_storage.STRATEGIES_FILE.parent.mkdir(parents=True, exist_ok=True)
 
     legacy = strategy_storage._default_strategy_payload()  # noqa: SLF001
     legacy["risk"]["rr_target"] = 3.1
@@ -146,8 +152,10 @@ def test_strategy_migration_prefers_existing_risk_fields(monkeypatch, tmp_path):
         "take_profit_r": 4.5,
         "commission_pct": 0.02,
     }
-    strategy_storage.STRATEGIES_FILE.write_text(json.dumps([legacy]), encoding="utf-8")
-    strategy_storage.ACTIVE_STRATEGY_FILE.write_text(json.dumps({"id": "default"}), encoding="utf-8")
+    strategy_storage.STRATEGIES_FILE.write_text(
+        yaml.safe_dump({"active_strategy_id": "default", "strategies": [legacy]}, sort_keys=False),
+        encoding="utf-8",
+    )
 
     client = TestClient(app)
     active = client.get("/api/strategy/active").json()

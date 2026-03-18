@@ -1,0 +1,394 @@
+app_config:
+  risk:
+    account_size: 50000
+    risk_pct: 0.01
+    max_position_pct: 0.6
+    min_shares: 1
+    k_atr: 2.0
+    min_rr: 2.0
+    max_fee_risk_pct: 0.2
+  indicators:
+    sma_fast: 20
+    sma_mid: 50
+    sma_long: 200
+    atr_window: 14
+    lookback_6m: 126
+    lookback_12m: 252
+    benchmark: SPY
+    breakout_lookback: 50
+    pullback_ma: 20
+    min_history: 260
+  manage:
+    breakeven_at_r: 1.0
+    trail_after_r: 2.0
+    trail_sma: 20
+    sma_buffer_pct: 0.005
+    max_holding_days: 20
+  positions_file: data/positions.json
+  orders_file: data/orders.json
+
+strategy:
+  id: default
+  name: Default
+  description: Default strategy seeded from YAML system settings.
+  module: momentum
+  is_default: true
+  universe:
+    trend:
+      sma_fast: 20
+      sma_mid: 50
+      sma_long: 200
+    vol:
+      atr_window: 14
+    mom:
+      lookback_6m: 126
+      lookback_12m: 252
+      benchmark: SPY
+    filt:
+      min_price: 5.0
+      max_price: 500.0
+      max_atr_pct: 15.0
+      require_trend_ok: true
+      require_rs_positive: false
+      currencies:
+        - USD
+        - EUR
+  ranking:
+    w_mom_6m: 0.45
+    w_mom_12m: 0.35
+    w_rs_6m: 0.2
+    top_n: 100
+  signals:
+    breakout_lookback: 50
+    pullback_ma: 20
+    min_history: 260
+  risk:
+    account_size: 50000.0
+    risk_pct: 0.01
+    max_position_pct: 0.6
+    min_shares: 1
+    k_atr: 2.0
+    min_rr: 2.0
+    rr_target: 2.0
+    commission_pct: 0.0
+    max_fee_risk_pct: 0.2
+    regime_enabled: false
+    regime_trend_sma: 200
+    regime_trend_multiplier: 0.5
+    regime_vol_atr_window: 14
+    regime_vol_atr_pct_threshold: 6.0
+    regime_vol_multiplier: 0.5
+  manage:
+    breakeven_at_r: 1.0
+    trail_after_r: 2.0
+    trail_sma: 20
+    sma_buffer_pct: 0.005
+    max_holding_days: 20
+    benchmark: SPY
+  social_overlay:
+    enabled: false
+    lookback_hours: 24
+    attention_z_threshold: 3.0
+    min_sample_size: 20
+    negative_sent_threshold: -0.4
+    sentiment_conf_threshold: 0.7
+    hype_percentile_threshold: 95.0
+    providers:
+      - reddit
+    sentiment_analyzer: keyword
+  market_intelligence:
+    enabled: false
+    providers:
+      - yahoo_finance
+    universe_scope: screener_universe
+    market_context_symbols:
+      - SPY
+      - QQQ
+      - XLK
+      - SMH
+      - XBI
+    llm:
+      enabled: false
+      provider: openai
+      model: gpt-4.1-mini
+      base_url: https://api.openai.com/v1
+      enable_cache: true
+      enable_audit: true
+      cache_path: data/intelligence/llm_cache.json
+      audit_path: data/intelligence/llm_audit
+      max_concurrency: 4
+      education_template_version: v1
+      education_style_level: beginner
+      education_max_tokens: 450
+      education_forbidden_claim_categories:
+        - prediction
+        - guarantee
+        - financial_advice
+      education_recommendation_system_prompt: ""
+      education_recommendation_user_prompt_template: ""
+      education_thesis_system_prompt: ""
+      education_thesis_user_prompt_template: ""
+      education_learn_system_prompt: ""
+      education_learn_user_prompt_template: ""
+    catalyst:
+      lookback_hours: 72
+      recency_half_life_hours: 36
+      false_catalyst_return_z: 1.5
+      min_price_reaction_atr: 0.8
+      require_price_confirmation: true
+    theme:
+      enabled: true
+      min_cluster_size: 3
+      min_peer_confirmation: 2
+      curated_peer_map_path: data/intelligence/peer_map.yaml
+    opportunity:
+      technical_weight: 0.55
+      catalyst_weight: 0.45
+      max_daily_opportunities: 8
+      min_opportunity_score: 0.55
+    sources:
+      enabled:
+        - yahoo_finance
+        - earnings_calendar
+        - sec_edgar
+        - company_ir_rss
+      scraping_enabled: false
+      allowed_domains: []
+      rate_limits:
+        requests_per_minute: 90
+        max_concurrency: 4
+      timeouts:
+        connect_seconds: 5.0
+        read_seconds: 20.0
+      scrape_policy:
+        require_robots_allow: true
+        deny_if_robots_unreachable: true
+        require_tos_allow_flag: true
+        user_agent: swing-screener-intelligence-bot/1.0
+        max_robots_cache_hours: 24
+    scoring_v2:
+      enabled: true
+      weights:
+        reaction_z_component: 0.22
+        atr_shock_component: 0.12
+        recency_component: 0.14
+        proximity_component: 0.14
+        materiality_component: 0.14
+        source_quality_component: 0.1
+        confirmation_component: 0.08
+        filing_impact_component: 0.06
+        uncertainty_penalty_component: 0.1
+      low_evidence_confirmation_threshold: 0.25
+      low_evidence_source_quality_threshold: 0.45
+      stale_event_decay_hours: 120
+    calendar:
+      binary_event_window_days: 3
+      binary_event_min_materiality: 0.75
+      binary_event_min_threshold_boost: 0.08
+      low_evidence_min_threshold_boost: 0.06
+
+intelligence:
+  enabled: false
+  providers:
+    - yahoo_finance
+  universe_scope: screener_universe
+  market_context_symbols:
+    - SPY
+    - QQQ
+    - XLK
+    - SMH
+    - XBI
+  llm:
+    enabled: false
+    provider: openai
+    model: gpt-4.1-mini
+    base_url: https://api.openai.com/v1
+    enable_cache: true
+    enable_audit: true
+    cache_path: data/intelligence/llm_cache.json
+    audit_path: data/intelligence/llm_audit
+    max_concurrency: 4
+    education_template_version: v1
+    education_style_level: beginner
+    education_max_tokens: 450
+    education_forbidden_claim_categories:
+      - prediction
+      - guarantee
+      - financial_advice
+    education_recommendation_system_prompt: ""
+    education_recommendation_user_prompt_template: ""
+    education_thesis_system_prompt: ""
+    education_thesis_user_prompt_template: ""
+    education_learn_system_prompt: ""
+    education_learn_user_prompt_template: ""
+  catalyst:
+    lookback_hours: 72
+    recency_half_life_hours: 36
+    false_catalyst_return_z: 1.5
+    min_price_reaction_atr: 0.8
+    require_price_confirmation: true
+  theme:
+    enabled: true
+    min_cluster_size: 3
+    min_peer_confirmation: 2
+    curated_peer_map_path: data/intelligence/peer_map.yaml
+  opportunity:
+    technical_weight: 0.55
+    catalyst_weight: 0.45
+    max_daily_opportunities: 8
+    min_opportunity_score: 0.55
+  sources:
+    enabled:
+      - yahoo_finance
+      - earnings_calendar
+      - sec_edgar
+      - company_ir_rss
+    scraping_enabled: false
+    allowed_domains: []
+    rate_limits:
+      requests_per_minute: 90
+      max_concurrency: 4
+    timeouts:
+      connect_seconds: 5.0
+      read_seconds: 20.0
+    scrape_policy:
+      require_robots_allow: true
+      deny_if_robots_unreachable: true
+      require_tos_allow_flag: true
+      user_agent: swing-screener-intelligence-bot/1.0
+      max_robots_cache_hours: 24
+  scoring_v2:
+    enabled: true
+    weights:
+      reaction_z_component: 0.22
+      atr_shock_component: 0.12
+      recency_component: 0.14
+      proximity_component: 0.14
+      materiality_component: 0.14
+      source_quality_component: 0.1
+      confirmation_component: 0.08
+      filing_impact_component: 0.06
+      uncertainty_penalty_component: 0.1
+    low_evidence_confirmation_threshold: 0.25
+    low_evidence_source_quality_threshold: 0.45
+    stale_event_decay_hours: 120
+  calendar:
+    binary_event_window_days: 3
+    binary_event_min_materiality: 0.75
+    binary_event_min_threshold_boost: 0.08
+    low_evidence_min_threshold_boost: 0.06
+
+runtime:
+  positions_file: data/positions.json
+  orders_file: data/orders.json
+  watchlist_file: data/watchlist.json
+  daily_reviews_dir: data/daily_reviews
+  social_cache_dir: data/social_cache
+  screener_jobs_dir: data/screener/jobs
+  intelligence_run_jobs_file: data/intelligence/run_jobs.json
+  intelligence_storage_dir: data/intelligence
+  symbol_sets_file: data/intelligence/symbol_sets.json
+  yfinance_cache_dir: .cache/market_data
+  alpaca_cache_dir: .cache/alpaca_data
+  web_ui_dist_dir: web-ui/dist
+  database_file: data/swing_screener.db
+
+ui:
+  intelligence_providers:
+    openai:
+      default_model: gpt-4.1-mini
+      default_base_url: https://api.openai.com/v1
+      suggested_models:
+        - gpt-4.1-mini
+        - gpt-4o-mini
+        - gpt-4.1
+        - o4-mini
+    ollama:
+      default_model: mistral:7b-instruct
+      default_base_url: http://localhost:11434
+      suggested_models:
+        - mistral:7b-instruct
+        - llama3.1:8b-instruct
+        - qwen2.5:7b-instruct
+    mock:
+      default_model: mock-classifier
+      default_base_url: ""
+      suggested_models:
+        - mock-classifier
+
+low_level:
+  file_lock_timeout_seconds: 5.0
+  broker:
+    provider: yfinance
+    alpaca_paper: true
+  risk:
+    account_size: 500.0
+    risk_pct: 0.01
+    k_atr: 2.0
+    max_position_pct: 0.6
+    min_shares: 1
+    min_rr: 2.0
+    rr_target: 2.0
+    commission_pct: 0.0
+    max_fee_risk_pct: 0.2
+    regime_enabled: false
+    regime_trend_sma: 200
+    regime_trend_multiplier: 0.5
+    regime_vol_atr_window: 14
+    regime_vol_atr_pct_threshold: 6.0
+    regime_vol_multiplier: 0.5
+  selection:
+    universe:
+      min_price: 10.0
+      max_price: 60.0
+      max_atr_pct: 10.0
+      require_trend_ok: true
+      require_rs_positive: false
+      currencies:
+        - USD
+        - EUR
+    ranking:
+      w_mom_6m: 0.45
+      w_mom_12m: 0.35
+      w_rs_6m: 0.2
+      top_n: 15
+    signals:
+      breakout_lookback: 50
+      pullback_ma: 20
+      min_history: 260
+  social:
+    subreddits:
+      - wallstreetbets
+      - stocks
+      - investing
+      - options
+      - stockmarket
+      - securityanalysis
+      - valueinvesting
+      - pennystocks
+    user_agent: swing-screener/1.0
+    rate_limit_per_sec: 1.0
+    attention_lookback_days: 60
+    hype_lookback_days: 60
+    hype_fixed_threshold: 5.0
+    cache_ttl_hours: 6
+    default_providers:
+      - reddit
+    default_sentiment_analyzer: keyword
+  execution:
+    breakout_stop_buffer_pct: 0.002
+    pullback_atr_fraction: 0.25
+    pullback_band_atr_low: 0.5
+    pullback_band_atr_high: 0.0
+    allow_second_chance_breakout: true
+  data_providers:
+    yfinance:
+      thread_safe_batch_size: 20
+      retry_chunk_size: 10
+      auto_adjust: true
+      progress: false
+    alpaca:
+      rate_limit_requests: 200
+      rate_limit_window_seconds: 60
+      max_retries: 3
+      retry_delay_base_seconds: 1.0

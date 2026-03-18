@@ -3,13 +3,14 @@ import { Info, RefreshCw } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useDailyReview } from '@/features/dailyReview/api';
+import { useConfigDefaultsQuery } from '@/features/config/hooks';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
 import TableShell from '@/components/common/TableShell';
 import { formatCurrency, formatNumber } from '@/utils/formatters';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
-import { DEFAULT_CONFIG, type RiskConfig } from '@/types/config';
+import type { RiskConfig } from '@/types/config';
 import GlossaryLegend from '@/components/domain/education/GlossaryLegend';
 import MetricHelpLabel from '@/components/domain/education/MetricHelpLabel';
 import { DAILY_REVIEW_GLOSSARY_KEYS } from '@/content/educationGlossary';
@@ -64,6 +65,7 @@ export default function DailyReview() {
   const selectedUniverse = parseUniverseFromStorage(localStorage.getItem(SCREENER_UNIVERSE_STORAGE_KEY));
   const { data: review, isLoading, error, refetch, isFetching } = useDailyReview(200, selectedUniverse);
   const activeStrategyQuery = useActiveStrategyQuery();
+  const configDefaultsQuery = useConfigDefaultsQuery();
   const { isBeginnerMode } = useBeginnerModeStore();
   const { isReady: strategyReady } = useStrategyReadiness();
   const watchlistQuery = useWatchlist();
@@ -125,7 +127,7 @@ export default function DailyReview() {
     mediaQueryList.addEventListener('change', handleChange);
     return () => mediaQueryList.removeEventListener('change', handleChange);
   }, []);
-  const riskConfig: RiskConfig = activeStrategyQuery.data?.risk ?? DEFAULT_CONFIG.risk;
+  const riskConfig: RiskConfig | undefined = activeStrategyQuery.data?.risk ?? configDefaultsQuery.data?.risk;
   const openWorkspacePortfolioAction = useCallback(
     (params: { action: 'update-stop' | 'close-position'; ticker: string; positionId: string }) => {
       const searchParams = new URLSearchParams();
@@ -155,6 +157,17 @@ export default function DailyReview() {
         <div className="space-y-3">
           <div className="h-11 animate-pulse rounded-xl border border-gray-200 bg-white/70 dark:border-gray-700 dark:bg-gray-800/60" />
           <div className="h-36 animate-pulse rounded-xl border border-gray-200 bg-white/70 dark:border-gray-700 dark:bg-gray-800/60" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!riskConfig) {
+    return (
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <h1 className="text-2xl font-bold">{t('dailyReview.header.title')}</h1>
+          <p className="text-gray-600 dark:text-gray-400">{t('dailyReview.header.loading')}</p>
         </div>
       </div>
     );

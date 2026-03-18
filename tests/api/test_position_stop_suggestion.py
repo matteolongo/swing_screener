@@ -4,10 +4,11 @@ import pandas as pd
 from fastapi.testclient import TestClient
 from unittest.mock import MagicMock
 
+from api.models.config import AppConfig
 from api.main import app
 import api.dependencies
-import api.routers.config as config_router
 import api.services.portfolio_service as portfolio_service
+from api.repositories.config_repo import ConfigRepository
 from swing_screener.data.providers import MarketDataProvider
 
 def _ohlcv_for_ticker() -> pd.DataFrame:
@@ -47,10 +48,10 @@ def test_position_stop_suggestion(monkeypatch, tmp_path):
     }
     positions_file.write_text(json.dumps(positions_data))
 
-    config_router.current_config = config_router.DEFAULT_CONFIG.model_copy(deep=True)
-    # Keep this test focused on breakeven behavior only.
-    config_router.current_config.manage.trail_after_r = 999.0
-    config_router.current_config.manage.max_holding_days = 999
+    config = ConfigRepository.get_defaults().model_copy(deep=True)
+    config.manage.trail_after_r = 999.0
+    config.manage.max_holding_days = 999
+    monkeypatch.setattr(ConfigRepository, "get", lambda self: AppConfig.model_validate(config.model_dump()))
 
     monkeypatch.setattr(api.dependencies, "POSITIONS_FILE", positions_file)
     # Mock the provider
@@ -72,9 +73,10 @@ def test_position_stop_suggestion(monkeypatch, tmp_path):
 
 def test_position_stop_suggestion_compute_endpoint(monkeypatch):
     # Keep this test focused on compute endpoint behavior from payload only.
-    config_router.current_config = config_router.DEFAULT_CONFIG.model_copy(deep=True)
-    config_router.current_config.manage.trail_after_r = 999.0
-    config_router.current_config.manage.max_holding_days = 999
+    config = ConfigRepository.get_defaults().model_copy(deep=True)
+    config.manage.trail_after_r = 999.0
+    config.manage.max_holding_days = 999
+    monkeypatch.setattr(ConfigRepository, "get", lambda self: AppConfig.model_validate(config.model_dump()))
 
     ohlcv = _ohlcv_for_ticker()
     mock_provider = MagicMock(spec=MarketDataProvider)

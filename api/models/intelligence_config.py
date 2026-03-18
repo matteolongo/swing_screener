@@ -241,6 +241,10 @@ class IntelligenceProviderInfoResponse(BaseModel):
     provider: str
     available: bool
     detail: Optional[str] = None
+    default_model: str
+    default_base_url: Optional[str] = None
+    suggested_models: list[str] = Field(default_factory=list)
+    api_key_configured: bool = False
 
 
 class IntelligenceProviderTestRequest(BaseModel):

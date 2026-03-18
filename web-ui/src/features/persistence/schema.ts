@@ -1,6 +1,7 @@
 import type { Order } from '@/features/portfolio/types';
 import type { Position } from '@/features/portfolio/types';
-import type { Strategy } from '@/features/strategy/types';
+import defaultStrategyFixtureApi from '@/features/persistence/defaultStrategyFixture.json';
+import { transformStrategy, type Strategy, type StrategyAPI } from '@/features/strategy/types';
 
 export const TRADING_STORE_SCHEMA_VERSION = 2 as const;
 const LEGACY_TRADING_STORE_SCHEMA_VERSION = 1 as const;
@@ -35,111 +36,16 @@ export interface PersistedTradingStoreV2 {
 export type PersistedTradingStore = PersistedTradingStoreV2;
 
 export const DEFAULT_STRATEGY_ID = 'default';
+const DEFAULT_STRATEGY_FIXTURE = transformStrategy(defaultStrategyFixtureApi as StrategyAPI);
+
+function cloneDefaultStrategyFixture(): Strategy {
+  return JSON.parse(JSON.stringify(DEFAULT_STRATEGY_FIXTURE)) as Strategy;
+}
 
 export function createDefaultStrategy(now: Date = new Date()): Strategy {
   const timestamp = now.toISOString();
   return {
-    id: DEFAULT_STRATEGY_ID,
-    name: 'Default',
-    description: 'Default strategy seeded from current system settings.',
-    module: 'momentum',
-    universe: {
-      trend: { smaFast: 20, smaMid: 50, smaLong: 200 },
-      vol: { atrWindow: 14 },
-      mom: { lookback6m: 126, lookback12m: 252, benchmark: 'SPY' },
-      filt: {
-        minPrice: 5.0,
-        maxPrice: 500.0,
-        maxAtrPct: 15.0,
-        requireTrendOk: true,
-        requireRsPositive: false,
-        currencies: ['USD', 'EUR'],
-      },
-    },
-    ranking: {
-      wMom6m: 0.45,
-      wMom12m: 0.35,
-      wRs6m: 0.2,
-      topN: 100,
-    },
-    signals: {
-      breakoutLookback: 50,
-      pullbackMa: 20,
-      minHistory: 260,
-    },
-    risk: {
-      accountSize: 50000,
-      riskPct: 0.01,
-      maxPositionPct: 0.6,
-      minShares: 1,
-      kAtr: 2.0,
-      minRr: 2.0,
-      rrTarget: 2.0,
-      commissionPct: 0.0,
-      maxFeeRiskPct: 0.2,
-      regimeEnabled: false,
-      regimeTrendSma: 200,
-      regimeTrendMultiplier: 0.5,
-      regimeVolAtrWindow: 14,
-      regimeVolAtrPctThreshold: 6.0,
-      regimeVolMultiplier: 0.5,
-    },
-    manage: {
-      breakevenAtR: 1.0,
-      trailAfterR: 2.0,
-      trailSma: 20,
-      smaBufferPct: 0.005,
-      maxHoldingDays: 20,
-      benchmark: 'SPY',
-    },
-    socialOverlay: {
-      enabled: false,
-      lookbackHours: 24,
-      attentionZThreshold: 3.0,
-      minSampleSize: 20,
-      negativeSentThreshold: -0.4,
-      sentimentConfThreshold: 0.7,
-      hypePercentileThreshold: 95.0,
-      providers: ['reddit'],
-      sentimentAnalyzer: 'keyword',
-    },
-    marketIntelligence: {
-      enabled: false,
-      providers: ['yahoo_finance'],
-      universeScope: 'screener_universe',
-      marketContextSymbols: ['SPY', 'QQQ', 'XLK', 'SMH', 'XBI'],
-      llm: {
-        enabled: false,
-        provider: 'openai',
-        model: 'gpt-4.1-mini',
-        baseUrl: 'https://api.openai.com/v1',
-        enableCache: true,
-        enableAudit: true,
-        cachePath: 'data/intelligence/llm_cache.json',
-        auditPath: 'data/intelligence/llm_audit',
-        maxConcurrency: 4,
-      },
-      catalyst: {
-        lookbackHours: 72,
-        recencyHalfLifeHours: 36,
-        falseCatalystReturnZ: 1.5,
-        minPriceReactionAtr: 0.8,
-        requirePriceConfirmation: true,
-      },
-      theme: {
-        enabled: true,
-        minClusterSize: 3,
-        minPeerConfirmation: 2,
-        curatedPeerMapPath: 'data/intelligence/peer_map.yaml',
-      },
-      opportunity: {
-        technicalWeight: 0.55,
-        catalystWeight: 0.45,
-        maxDailyOpportunities: 8,
-        minOpportunityScore: 0.55,
-      },
-    },
-    isDefault: true,
+    ...cloneDefaultStrategyFixture(),
     createdAt: timestamp,
     updatedAt: timestamp,
   };

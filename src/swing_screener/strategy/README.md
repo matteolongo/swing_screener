@@ -33,7 +33,7 @@ strategy/
   plugin_system.py    ← plugin resolution and config merging
   config.py           ← builder functions for all config dataclasses
   report_config.py    ← ReportConfig aggregator
-  storage.py          ← strategy persistence (data/strategies.json)
+  storage.py          ← strategy persistence (config/strategies.yaml)
 ```
 
 ## StrategyModule Protocol
@@ -98,7 +98,7 @@ cfg = ReportConfig(
 
 ### Strategy Storage
 
-Strategies are persisted to `data/strategies.json`. The active strategy is referenced in `data/active_strategy.json`.
+Strategies are persisted to `config/strategies.yaml`, which also stores `active_strategy_id`.
 
 ```python
 from swing_screener.strategy.storage import (

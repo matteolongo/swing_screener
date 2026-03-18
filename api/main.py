@@ -10,6 +10,8 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from contextlib import asynccontextmanager
+from swing_screener.settings import get_settings_manager
+from swing_screener.settings.migration import migrate_legacy_config_to_yaml
 from swing_screener.runtime_env import ensure_runtime_env_loaded
 
 # Import routers
@@ -32,7 +34,10 @@ logger = logging.getLogger("swing_screener.api")
 ensure_runtime_env_loaded()
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-WEB_UI_DIST_DIR = Path(os.getenv("WEB_UI_DIST_DIR", str(PROJECT_ROOT / "web-ui" / "dist"))).resolve()
+_USER_DOC = get_settings_manager().load_user_document()
+_API_SETTINGS = _USER_DOC.get("api", {}) if isinstance(_USER_DOC.get("api", {}), dict) else {}
+_DEFAULT_WEB_UI_DIST = get_settings_manager().resolve_runtime_path("web_ui_dist_dir", PROJECT_ROOT / "web-ui" / "dist")
+WEB_UI_DIST_DIR = Path(os.getenv("WEB_UI_DIST_DIR", str(_DEFAULT_WEB_UI_DIST))).resolve()
 WEB_UI_INDEX_FILE = WEB_UI_DIST_DIR / "index.html"
 
 
@@ -46,7 +51,9 @@ def _is_truthy(value: str | None) -> bool:
 def _get_web_ui_mode() -> str:
     """Return configured web UI serving mode: auto, enabled, disabled."""
     raw = os.getenv("SERVE_WEB_UI")
-    if raw is None or raw.strip() == "" or raw.strip().lower() == "auto":
+    if raw is None or raw.strip() == "":
+        raw = str(_API_SETTINGS.get("serve_web_ui", "auto"))
+    if raw.strip().lower() == "auto":
         return "auto"
     if _is_truthy(raw):
         return "enabled"
@@ -85,6 +92,12 @@ def _resolve_spa_file(path: str) -> Path | None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup/shutdown."""
+    try:
+        migration_actions = migrate_legacy_config_to_yaml()
+        for action in migration_actions:
+            logger.info("Config migration: %s", action)
+    except Exception:
+        logger.exception("Failed to migrate legacy JSON configuration to YAML")
     logger.info("Swing Screener API starting up...")
     logger.info("API docs available at: http://localhost:8000/docs")
     logger.info("OpenAPI schema: http://localhost:8000/openapi.json")
@@ -120,7 +133,7 @@ app = FastAPI(
 # Security: Use explicit allowed methods and headers instead of wildcards
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:5174"],  # Vite dev servers
+    allow_origins=_API_SETTINGS.get("allow_origins", ["http://localhost:5173", "http://localhost:5174"]),
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],  # Explicit instead of ["*"]
     allow_headers=[

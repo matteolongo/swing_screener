@@ -8,7 +8,7 @@ python -m mcp_server.main
 ```
 Options:
 - `--validate-only`
-- `--config /path/to/config.yaml` (defaults to `config/mcp_features.yaml`)
+- `--config /path/to/config.yaml` (defaults to `config/mcp.yaml`)
 
 ## Tool Catalog
 Portfolio:
@@ -53,7 +53,7 @@ Intelligence:
 
 ## Architecture Notes
 - Tools reuse shared services in `api/services/`.
-- Feature toggles live in `config/mcp_features.yaml`.
+- Feature toggles live in `config/mcp.yaml`.
 - The agent launches this server over stdio and discovers tools from the live registry instead of a hardcoded adapter table.
 - MCP tool schemas are canonical now. Legacy aliases such as `top_n`, `strategy`, `fill_price`, `fill_date`, and `new_stop_price` are not accepted.
 

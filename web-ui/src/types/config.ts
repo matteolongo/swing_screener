@@ -1,5 +1,3 @@
-// Type definitions for configuration and settings
-
 export interface RiskConfig {
   accountSize: number;
   riskPct: number;
@@ -39,35 +37,111 @@ export interface AppConfig {
   ordersFile: string;
 }
 
-export const DEFAULT_CONFIG: AppConfig = {
-  risk: {
-    accountSize: 50000,
-    riskPct: 0.01,
-    maxPositionPct: 0.60,
-    minShares: 1,
-    kAtr: 2.0,
-    minRr: 2.0,
-    maxFeeRiskPct: 0.2,
-  },
-  indicators: {
-    smaFast: 20,
-    smaMid: 50,
-    smaLong: 200,
-    atrWindow: 14,
-    lookback6m: 126,
-    lookback12m: 252,
-    benchmark: 'SPY',
-    breakoutLookback: 50,
-    pullbackMa: 20,
-    minHistory: 260,
-  },
-  manage: {
-    breakevenAtR: 1.0,
-    trailAfterR: 2.0,
-    trailSma: 20,
-    smaBufferPct: 0.005,
-    maxHoldingDays: 20,
-  },
-  positionsFile: 'data/positions.json',
-  ordersFile: 'data/orders.json',
-};
+export interface RiskConfigAPI {
+  account_size: number;
+  risk_pct: number;
+  max_position_pct: number;
+  min_shares: number;
+  k_atr: number;
+  min_rr: number;
+  max_fee_risk_pct: number;
+}
+
+export interface IndicatorConfigAPI {
+  sma_fast: number;
+  sma_mid: number;
+  sma_long: number;
+  atr_window: number;
+  lookback_6m: number;
+  lookback_12m: number;
+  benchmark: string;
+  breakout_lookback: number;
+  pullback_ma: number;
+  min_history: number;
+}
+
+export interface ManageConfigAPI {
+  breakeven_at_r: number;
+  trail_after_r: number;
+  trail_sma: number;
+  sma_buffer_pct: number;
+  max_holding_days: number;
+}
+
+export interface AppConfigAPI {
+  risk: RiskConfigAPI;
+  indicators: IndicatorConfigAPI;
+  manage: ManageConfigAPI;
+  positions_file: string;
+  orders_file: string;
+}
+
+export function transformAppConfig(api: AppConfigAPI): AppConfig {
+  return {
+    risk: {
+      accountSize: api.risk.account_size,
+      riskPct: api.risk.risk_pct,
+      maxPositionPct: api.risk.max_position_pct,
+      minShares: api.risk.min_shares,
+      kAtr: api.risk.k_atr,
+      minRr: api.risk.min_rr,
+      maxFeeRiskPct: api.risk.max_fee_risk_pct,
+    },
+    indicators: {
+      smaFast: api.indicators.sma_fast,
+      smaMid: api.indicators.sma_mid,
+      smaLong: api.indicators.sma_long,
+      atrWindow: api.indicators.atr_window,
+      lookback6m: api.indicators.lookback_6m,
+      lookback12m: api.indicators.lookback_12m,
+      benchmark: api.indicators.benchmark,
+      breakoutLookback: api.indicators.breakout_lookback,
+      pullbackMa: api.indicators.pullback_ma,
+      minHistory: api.indicators.min_history,
+    },
+    manage: {
+      breakevenAtR: api.manage.breakeven_at_r,
+      trailAfterR: api.manage.trail_after_r,
+      trailSma: api.manage.trail_sma,
+      smaBufferPct: api.manage.sma_buffer_pct,
+      maxHoldingDays: api.manage.max_holding_days,
+    },
+    positionsFile: api.positions_file,
+    ordersFile: api.orders_file,
+  };
+}
+
+export function toAppConfigAPI(config: AppConfig): AppConfigAPI {
+  return {
+    risk: {
+      account_size: config.risk.accountSize,
+      risk_pct: config.risk.riskPct,
+      max_position_pct: config.risk.maxPositionPct,
+      min_shares: config.risk.minShares,
+      k_atr: config.risk.kAtr,
+      min_rr: config.risk.minRr,
+      max_fee_risk_pct: config.risk.maxFeeRiskPct,
+    },
+    indicators: {
+      sma_fast: config.indicators.smaFast,
+      sma_mid: config.indicators.smaMid,
+      sma_long: config.indicators.smaLong,
+      atr_window: config.indicators.atrWindow,
+      lookback_6m: config.indicators.lookback6m,
+      lookback_12m: config.indicators.lookback12m,
+      benchmark: config.indicators.benchmark,
+      breakout_lookback: config.indicators.breakoutLookback,
+      pullback_ma: config.indicators.pullbackMa,
+      min_history: config.indicators.minHistory,
+    },
+    manage: {
+      breakeven_at_r: config.manage.breakevenAtR,
+      trail_after_r: config.manage.trailAfterR,
+      trail_sma: config.manage.trailSma,
+      sma_buffer_pct: config.manage.smaBufferPct,
+      max_holding_days: config.manage.maxHoldingDays,
+    },
+    positions_file: config.positionsFile,
+    orders_file: config.ordersFile,
+  };
+}

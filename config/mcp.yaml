@@ -1,0 +1,59 @@
+server:
+  name: swing-screener-mcp
+  version: 0.1.0
+  description: Model Context Protocol server for Swing Screener
+environment: dev
+features:
+  portfolio:
+    enabled: true
+    tools:
+    - list_positions
+    - get_position
+    - update_position_stop
+    - list_orders
+    - create_order
+    - suggest_position_stop
+    - close_position
+    - fill_order
+    - cancel_order
+  screener:
+    enabled: true
+    tools:
+    - run_screener
+    - list_universes
+    - preview_order
+  strategy:
+    enabled: true
+    tools:
+    - list_strategies
+    - get_strategy
+    - get_active_strategy
+    - set_active_strategy
+  config:
+    enabled: true
+    tools:
+    - get_config
+    - update_config
+  social:
+    enabled: true
+    tools:
+    - get_social_sentiment
+    - analyze_ticker_sentiment
+  intelligence:
+    enabled: true
+    tools:
+    - get_workspace_context
+    - get_intelligence_opportunities
+    - get_intelligence_events
+    - chat_answer
+  daily_review:
+    enabled: true
+    tools:
+    - get_daily_review
+    - get_candidate_recommendations
+logging:
+  level: INFO
+  format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+rate_limiting:
+  enabled: false
+  requests_per_minute: 60

@@ -4,6 +4,7 @@ import Badge from '@/components/common/Badge';
 import Card from '@/components/common/Card';
 import ScreenerForm from '@/components/domain/screener/ScreenerForm';
 import ScreenerCandidatesTable from '@/components/domain/screener/ScreenerCandidatesTable';
+import { useConfigDefaultsQuery } from '@/features/config/hooks';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 import { useUniverses, useRunScreenerMutation } from '@/features/screener/hooks';
 import type { ScreenerCandidate } from '@/features/screener/types';
@@ -14,7 +15,6 @@ import type { WorkspaceAnalysisTab } from '@/stores/workspaceStore';
 import { t } from '@/i18n/t';
 import { useLocalStorage } from '@/hooks';
 import { formatDate } from '@/utils/formatters';
-import { DEFAULT_CONFIG } from '@/types/config';
 import {
   migrateLegacyScreenerStorage,
   parseUniverseValue,
@@ -59,10 +59,12 @@ export default function ScreenerInboxPanel({
   const setAnalysisTab = useWorkspaceStore((state) => state.setAnalysisTab);
   const runScreenerTrigger = useWorkspaceStore((state) => state.runScreenerTrigger);
   const activeStrategyQuery = useActiveStrategyQuery();
+  const configDefaultsQuery = useConfigDefaultsQuery();
   const activeStrategy = activeStrategyQuery.data;
   const strategySignals = activeStrategy?.signals;
+  const defaultIndicators = configDefaultsQuery.data?.indicators;
   const activeCurrencies = normalizeCurrencies(activeStrategyQuery.data?.universe?.filt?.currencies);
-  const riskConfig = activeStrategy?.risk ?? DEFAULT_CONFIG.risk;
+  const riskConfig = activeStrategy?.risk ?? configDefaultsQuery.data?.risk;
 
   useEffect(() => {
     migrateLegacyScreenerStorage(localStorage);
@@ -109,11 +111,14 @@ export default function ScreenerInboxPanel({
       minPrice,
       maxPrice,
       currencies: currencyFilterToRequest(currencyFilter),
-      breakoutLookback: strategySignals?.breakoutLookback ?? DEFAULT_CONFIG.indicators.breakoutLookback,
-      pullbackMa: strategySignals?.pullbackMa ?? DEFAULT_CONFIG.indicators.pullbackMa,
-      minHistory: strategySignals?.minHistory ?? DEFAULT_CONFIG.indicators.minHistory,
+      breakoutLookback: strategySignals?.breakoutLookback ?? defaultIndicators?.breakoutLookback ?? 50,
+      pullbackMa: strategySignals?.pullbackMa ?? defaultIndicators?.pullbackMa ?? 20,
+      minHistory: strategySignals?.minHistory ?? defaultIndicators?.minHistory ?? 260,
     });
   }, [
+    defaultIndicators?.breakoutLookback,
+    defaultIndicators?.minHistory,
+    defaultIndicators?.pullbackMa,
     screenerMutation.mutate,
     selectedUniverse,
     topN,
@@ -169,6 +174,14 @@ export default function ScreenerInboxPanel({
   const handleTradeThesisAction = useCallback((candidate: ScreenerCandidate) => {
     handleSelectCandidate(candidate.ticker, 'order');
   }, [handleSelectCandidate]);
+
+  if (!riskConfig || !defaultIndicators) {
+    return (
+      <Card variant="bordered" className="p-4 md:p-5">
+        <div className="text-sm text-gray-600 dark:text-gray-400">{t('common.table.loading')}</div>
+      </Card>
+    );
+  }
 
   return (
     <Card variant="bordered" className="p-4 md:p-5 flex min-h-0 flex-col gap-3 xl:h-full xl:overflow-hidden">

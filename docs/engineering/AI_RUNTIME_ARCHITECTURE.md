@@ -12,7 +12,7 @@ flowchart TD
     RUNTIME --> AGENT["agent/ package"]
     AGENT --> MCPCLIENT["stdio MCP client"]
     MCPCLIENT --> MCPSERVER["mcp_server.main"]
-    MCPSERVER --> REGISTRY["Registry from config/mcp_features.yaml"]
+    MCPSERVER --> REGISTRY["Registry from config/mcp.yaml"]
     REGISTRY --> CHAT["ChatService"]
     API --> INTEL["IntelligenceService"]
     API --> WCTX["WorkspaceContextService"]

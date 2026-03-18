@@ -3,10 +3,16 @@
 Runtime data for Swing Screener.
 
 ## Primary Files
-- `active_strategy.json`: active strategy id
-- `strategies.json`: saved strategies
 - `orders.json`: order records (primary storage today)
 - `positions.json`: position records (primary storage today)
+- `watchlist.json`: watchlist state
+- `intelligence/`: runtime intelligence snapshots, jobs, caches, and reports
+
+User-authored configuration no longer lives under `data/`. Shared configuration is stored in:
+- `config/user.yaml`
+- `config/strategies.yaml`
+- `config/intelligence.yaml`
+- `config/mcp.yaml`
 
 ## Daily Reviews
 - `daily_reviews/`: daily review snapshots (not committed)

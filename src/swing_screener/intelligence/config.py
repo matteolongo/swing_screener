@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from swing_screener.settings import deep_merge_dicts, get_settings_manager
 from swing_screener.utils import get_nested_dict
 from swing_screener.runtime_env import get_ollama_host, get_openai_base_url
 
@@ -311,8 +312,14 @@ def _clean_csv_list(raw: Any, *, fallback: tuple[str, ...]) -> tuple[str, ...]:
     return cleaned or fallback
 
 
+def _defaults_market_intelligence_payload() -> dict[str, Any]:
+    payload = get_settings_manager().get_intelligence_defaults_payload()
+    return payload if isinstance(payload, dict) else {}
+
+
 def build_intelligence_config(strategy: dict) -> IntelligenceConfig:
-    raw = get_nested_dict(strategy, "market_intelligence")
+    defaults_raw = _defaults_market_intelligence_payload()
+    raw = deep_merge_dicts(defaults_raw, get_nested_dict(strategy, "market_intelligence"))
     catalyst_raw = get_nested_dict(raw, "catalyst")
     theme_raw = get_nested_dict(raw, "theme")
     opportunity_raw = get_nested_dict(raw, "opportunity")

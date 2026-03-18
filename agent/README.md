@@ -10,7 +10,7 @@ Automation layer that orchestrates Swing Screener workflows through the real std
 
 ## Dependencies
 - MCP dependency installed in the active Python environment (`uv sync --extra mcp`)
-- MCP tools enabled in `config/mcp_features.yaml`
+- MCP tools enabled in `config/mcp.yaml`
 
 The agent launches `python -m mcp_server.main` and discovers tools from the live MCP registry.
 
