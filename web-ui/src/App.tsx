@@ -8,6 +8,7 @@ const Workspace = lazy(() => import('./pages/Workspace'));
 const DailyReview = lazy(() => import('./pages/DailyReview'));
 const Strategy = lazy(() => import('./pages/Strategy'));
 const Intelligence = lazy(() => import('./pages/Intelligence'));
+const Fundamentals = lazy(() => import('./pages/Fundamentals'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
 
 const queryClient = new QueryClient({
@@ -38,6 +39,7 @@ function App() {
               <Route path="dashboard" element={<Navigate to="/workspace" replace />} />
               <Route path="daily-review" element={<DailyReview />} />
               <Route path="intelligence" element={<Intelligence />} />
+              <Route path="fundamentals" element={<Fundamentals />} />
               <Route path="onboarding" element={<Onboarding />} />
               <Route path="screener" element={<Navigate to="/workspace" replace />} />
               <Route path="orders" element={<Navigate to="/workspace" replace />} />

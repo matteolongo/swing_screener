@@ -1,7 +1,9 @@
 import Card from '@/components/common/Card';
 import CachedSymbolPriceChart from '@/components/domain/market/CachedSymbolPriceChart';
+import FundamentalsSnapshotCard from '@/components/domain/fundamentals/FundamentalsSnapshotCard';
 import ActionPanel from '@/components/domain/workspace/ActionPanel';
 import KeyMetrics from '@/components/domain/workspace/KeyMetrics';
+import { useFundamentalSnapshotQuery } from '@/features/fundamentals/hooks';
 import type { SymbolIntelligenceStatus } from '@/features/intelligence/useSymbolIntelligenceRunner';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { t } from '@/i18n/t';
@@ -21,11 +23,15 @@ export default function AnalysisCanvasPanel({
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
   const activeTab = useWorkspaceStore((state) => state.analysisTab);
   const setAnalysisTab = useWorkspaceStore((state) => state.setAnalysisTab);
+  const fundamentalsQuery = useFundamentalSnapshotQuery(
+    activeTab === 'fundamentals' ? selectedTicker ?? undefined : undefined
+  );
   const tabs: Array<{
-    id: 'overview' | 'order';
+    id: 'overview' | 'fundamentals' | 'order';
     label: string;
   }> = [
     { id: 'overview', label: t('workspacePage.panels.analysis.tabs.overview') },
+    { id: 'fundamentals', label: 'Fundamentals' },
     { id: 'order', label: t('workspacePage.panels.analysis.tabs.order') },
   ];
 
@@ -145,6 +151,24 @@ export default function AnalysisCanvasPanel({
             )}
 
             {activeTab === 'order' && <ActionPanel ticker={selectedTicker} />}
+
+            {activeTab === 'fundamentals' && (
+              <>
+                {fundamentalsQuery.isLoading ? (
+                  <div className="text-sm text-gray-500">Loading fundamentals...</div>
+                ) : fundamentalsQuery.isError ? (
+                  <div className="text-sm text-rose-600">
+                    {fundamentalsQuery.error instanceof Error
+                      ? fundamentalsQuery.error.message
+                      : 'Failed to load fundamentals'}
+                  </div>
+                ) : fundamentalsQuery.data ? (
+                  <FundamentalsSnapshotCard snapshot={fundamentalsQuery.data} />
+                ) : (
+                  <div className="text-sm text-gray-500">No fundamentals snapshot available.</div>
+                )}
+              </>
+            )}
           </div>
         </>
       )}
