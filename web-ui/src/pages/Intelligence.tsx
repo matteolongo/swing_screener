@@ -215,7 +215,7 @@ export default function IntelligencePage() {
   }
 
   return (
-    <div className="space-y-6 pb-28 md:pb-0">
+    <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">{t('intelligencePage.title')}</h1>
         <p className="text-sm text-gray-600 dark:text-gray-400">{t('intelligencePage.subtitle')}</p>
@@ -312,7 +312,7 @@ export default function IntelligencePage() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-2 items-center">
-            <Button onClick={runIntelligence} disabled={!canRun || runMutation.isPending} className="w-full sm:w-auto">
+            <Button onClick={runIntelligence} disabled={!canRun || runMutation.isPending}>
               {runMutation.isPending ? t('intelligencePage.run.running') : t('intelligencePage.run.run')}
             </Button>
             <span className="text-xs text-gray-500">{t('intelligencePage.run.scopeHint')}</span>
@@ -338,7 +338,7 @@ export default function IntelligencePage() {
                 type="button"
                 variant="secondary"
                 size="sm"
-                className="mt-2 w-full sm:w-auto"
+                className="mt-2"
                 onClick={() => navigate('/workspace')}
               >
                 {t('intelligencePage.run.openWorkspace')}
@@ -755,24 +755,6 @@ export default function IntelligencePage() {
           </CardContent>
         </Card>
       ) : null}
-
-      <div
-        className="fixed inset-x-0 z-30 border-t border-gray-200 bg-white/95 px-3 py-3 shadow-[0_-8px_20px_rgba(0,0,0,0.08)] md:hidden dark:border-gray-700 dark:bg-gray-900/95"
-        style={{ bottom: 'calc(env(safe-area-inset-bottom) + 5.2rem)' }}
-      >
-        <div className="mx-auto max-w-5xl">
-          <Button
-            onClick={runIntelligence}
-            disabled={!canRun || runMutation.isPending}
-            className="w-full"
-          >
-            {runMutation.isPending ? t('intelligencePage.run.running') : t('intelligencePage.run.run')}
-          </Button>
-          <p className="mt-1 text-center text-[11px] text-gray-500">
-            {canRun ? t('intelligencePage.run.mobileStickyReady') : t('intelligencePage.run.mobileStickyHint')}
-          </p>
-        </div>
-      </div>
     </div>
   );
 }

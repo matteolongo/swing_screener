@@ -4,11 +4,11 @@ import { renderWithProviders } from '@/test/utils';
 import IntelligencePage from './Intelligence';
 
 describe('Intelligence Page', () => {
-  it('shows mobile sticky run guidance and opens workspace after opportunities are ready', async () => {
+  it('runs intelligence and opens workspace after opportunities are ready', async () => {
     const { user } = renderWithProviders(<IntelligencePage />, { route: '/intelligence' });
 
     expect(await screen.findByRole('heading', { name: 'Intelligence' })).toBeInTheDocument();
-    expect(screen.getByText('Add symbols to enable run')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Run$/i })).toBeDisabled();
 
     const manualSymbols = screen.getByLabelText(/manual symbols/i);
     await act(async () => {
@@ -16,12 +16,11 @@ describe('Intelligence Page', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText('Ready to run intelligence')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^Run$/i })).toBeEnabled();
     });
 
-    const runButtons = screen.getAllByRole('button', { name: /^Run$/i });
     await act(async () => {
-      await user.click(runButtons[0]);
+      await user.click(screen.getByRole('button', { name: /^Run$/i }));
     });
 
     await waitFor(() => {

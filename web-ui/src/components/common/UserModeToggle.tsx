@@ -12,19 +12,19 @@ export default function UserModeToggle() {
   return (
     <button
       onClick={toggleBeginnerMode}
-      className="inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-lg border border-gray-300 px-2.5 py-2 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 sm:px-3 sm:justify-start"
+      className="inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-lg border border-gray-300 px-3 py-2 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"
       title={isBeginnerMode ? 'Switch to Advanced Mode' : 'Switch to Beginner Mode'}
       aria-label={isBeginnerMode ? 'Switch to Advanced Mode' : 'Switch to Beginner Mode'}
     >
       {isBeginnerMode ? (
         <>
           <GraduationCap className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-          <span className="hidden text-sm font-medium text-gray-700 dark:text-gray-300 sm:inline">Beginner</span>
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Beginner</span>
         </>
       ) : (
         <>
           <Settings className="w-4 h-4 text-orange-600 dark:text-orange-400" />
-          <span className="hidden text-sm font-medium text-gray-700 dark:text-gray-300 sm:inline">Advanced</span>
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Advanced</span>
         </>
       )}
     </button>

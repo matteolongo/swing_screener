@@ -32,17 +32,6 @@ body {
   color: hsl(var(--foreground));
 }
 
-@media (max-width: 1023px) {
-  input:not([type='checkbox']):not([type='radio']),
-  select,
-  textarea,
-  button,
-  [role='button'],
-  [role='tab'] {
-    min-height: 44px;
-  }
-}
-
 code, .font-mono {
   font-family: 'Monaco', 'Courier New', monospace;
 }

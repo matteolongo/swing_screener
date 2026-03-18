@@ -208,13 +208,13 @@ export default function OnboardingModal({ isOpen, onClose }: OnboardingModalProp
   };
   
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-4">
-      <div className="flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-xl bg-white shadow-xl sm:max-h-[90vh] sm:max-w-2xl sm:rounded-lg">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg bg-white shadow-xl">
         {/* Header */}
-        <div className="flex items-center justify-between border-b p-4 sm:p-6">
+        <div className="flex items-center justify-between border-b p-6">
           <div className="flex items-center gap-3">
-            <IconComponent className="h-5 w-5 text-blue-600 sm:h-6 sm:w-6" />
-            <h2 className="text-base font-semibold text-gray-900 sm:text-xl">{step.title}</h2>
+            <IconComponent className="h-6 w-6 text-blue-600" />
+            <h2 className="text-xl font-semibold text-gray-900">{step.title}</h2>
           </div>
           <button
             onClick={handleDismiss}
@@ -226,7 +226,7 @@ export default function OnboardingModal({ isOpen, onClose }: OnboardingModalProp
         </div>
         
         {/* Progress indicator */}
-        <div className="px-4 pt-4 sm:px-6">
+        <div className="px-6 pt-4">
           <div className="flex gap-2">
             {STEPS.map((_, index) => (
               <div
@@ -243,12 +243,12 @@ export default function OnboardingModal({ isOpen, onClose }: OnboardingModalProp
         </div>
         
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+        <div className="flex-1 overflow-y-auto p-6">
           <p className="text-gray-600 mb-4">{step.description}</p>
           {stepIndex === 0 && (
             <div className="mb-4 rounded-lg border border-gray-200 p-4">
               <p className="text-sm font-medium text-gray-900 mb-2">{t('onboardingModal.modeSelect.title')}</p>
-              <div className="flex flex-col sm:flex-row gap-2">
+              <div className="flex gap-2">
                 <Button
                   variant={isBeginnerMode ? 'primary' : 'secondary'}
                   onClick={() => setBeginnerMode(true)}
@@ -271,8 +271,8 @@ export default function OnboardingModal({ isOpen, onClose }: OnboardingModalProp
         </div>
         
         {/* Footer */}
-        <div className="border-t bg-gray-50 p-4 sm:p-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="border-t bg-gray-50 p-6">
+          <div className="flex items-center justify-between gap-3">
             <div>
               {stepIndex > 0 && (
                 <Button variant="secondary" onClick={handleBack}>
@@ -281,7 +281,7 @@ export default function OnboardingModal({ isOpen, onClose }: OnboardingModalProp
               )}
             </div>
             
-            <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
+            <div className="flex gap-3">
               {step.action && (
                 <Button variant="secondary" onClick={handleAction}>
                   {step.action.label}

@@ -1238,8 +1238,6 @@ export const messagesEn = {
       run: 'Run',
       running: 'Running...',
       scopeHint: 'Provide manual symbols or select a symbol set.',
-      mobileStickyHint: 'Add symbols to enable run',
-      mobileStickyReady: 'Ready to run intelligence',
       statusLine:
         'Status: {{status}} ({{completed}}/{{total}} symbols, {{opportunities}} opportunities)',
       llmWarningsLine: 'LLM completed with {{count}} warning(s). Some events used fallback metadata.',
@@ -1354,9 +1352,6 @@ export const messagesEn = {
       default: 'Default',
       selectToEdit: 'Select a strategy to edit.',
       confirmDelete: 'Delete strategy "{{name}}"? This cannot be undone.',
-      showManagement: 'Show management',
-      hideManagement: 'Hide management',
-      managementHiddenHint: 'Strategy management is hidden to keep focus on setup and risk controls.',
     },
     create: {
       title: 'Save as new strategy',

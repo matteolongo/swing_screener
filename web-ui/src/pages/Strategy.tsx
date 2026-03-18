@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import { useStrategyEditor } from '@/features/strategy/useStrategyEditor';
@@ -18,15 +18,6 @@ import {
 } from '@/components/domain/strategy/StrategyFieldControls';
 import { getStrategyInfo } from '@/content/strategy_docs/loader';
 import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
-
-const MOBILE_LAYOUT_MEDIA_QUERY = '(max-width: 767px)';
-
-function getMobileLayoutMatch() {
-  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-    return false;
-  }
-  return window.matchMedia(MOBILE_LAYOUT_MEDIA_QUERY).matches;
-}
 
 export default function StrategyPage() {
   const { locale, t } = useI18n();
@@ -282,63 +273,25 @@ export default function StrategyPage() {
   const strategyValidationQuery = useStrategyValidationQuery(validationPayload);
   const validationResult = strategyValidationQuery.data;
   const validationWarnings = validationResult?.warnings ?? [];
-  const [isCompactMobileLayout, setIsCompactMobileLayout] = useState(getMobileLayoutMatch);
-  const [showStrategyManagement, setShowStrategyManagement] = useState(() => {
-    if (typeof window === 'undefined') {
-      return true;
-    }
-    const stored = window.localStorage.getItem('strategy.showManagement');
-    if (stored == null) {
-      return !(isBeginnerMode && getMobileLayoutMatch());
-    }
-    return stored === 'true';
-  });
-
-  useEffect(() => {
-    window.localStorage.setItem('strategy.showManagement', String(showStrategyManagement));
-  }, [showStrategyManagement]);
-
-  useEffect(() => {
-    if (!isBeginnerMode || !isCompactMobileLayout) {
-      setShowStrategyManagement(true);
-    }
-  }, [isBeginnerMode, isCompactMobileLayout]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-      return;
-    }
-
-    const mediaQueryList = window.matchMedia(MOBILE_LAYOUT_MEDIA_QUERY);
-    const handleChange = (event: MediaQueryListEvent) => {
-      setIsCompactMobileLayout(event.matches);
-    };
-
-    setIsCompactMobileLayout(mediaQueryList.matches);
-    mediaQueryList.addEventListener('change', handleChange);
-    return () => mediaQueryList.removeEventListener('change', handleChange);
-  }, []);
 
   return (
-    <div className={`mx-auto max-w-5xl space-y-6 ${draft ? 'pb-28 md:pb-0' : ''}`}>
+    <div className="mx-auto max-w-5xl space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">{t('strategyPage.header.title')}</h1>
           <p className="text-sm text-gray-500 mt-1">{t('strategyPage.header.subtitle')}</p>
         </div>
-        <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+        <div className="flex gap-2">
           <Button
             variant="secondary"
             onClick={handleReset}
             disabled={!draft || updateMutation.isPending}
-            className="flex-1 sm:flex-none"
           >
             {t('strategyPage.actions.resetChanges')}
           </Button>
           <Button
             onClick={handleSave}
             disabled={!draft || updateMutation.isPending}
-            className="flex-1 sm:flex-none"
           >
             {updateMutation.isPending ? t('strategyPage.actions.saving') : t('strategyPage.actions.saveChanges')}
           </Button>
@@ -356,7 +309,7 @@ export default function StrategyPage() {
               <li>{t('strategyPage.quickStart.step2')}</li>
               <li>{t('strategyPage.quickStart.step3')}</li>
             </ol>
-            <Button onClick={handleSave} disabled={!draft || updateMutation.isPending} className="w-full sm:w-auto">
+            <Button onClick={handleSave} disabled={!draft || updateMutation.isPending}>
               {updateMutation.isPending ? t('strategyPage.actions.saving') : t('strategyPage.quickStart.primaryAction')}
             </Button>
           </CardContent>
@@ -364,114 +317,96 @@ export default function StrategyPage() {
       ) : null}
 
       <Card variant="bordered">
-        <CardHeader className="flex flex-row items-center justify-between gap-2">
+        <CardHeader>
           <CardTitle>{t('strategyPage.selection.title')}</CardTitle>
-          {isBeginnerMode && isCompactMobileLayout ? (
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              onClick={() => setShowStrategyManagement((current) => !current)}
-            >
-              {showStrategyManagement
-                ? t('strategyPage.selection.hideManagement')
-                : t('strategyPage.selection.showManagement')}
-            </Button>
-          ) : null}
         </CardHeader>
         <CardContent>
-          {showStrategyManagement ? (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                <label className="text-sm font-medium md:col-span-2">
-                  <div className="mb-2">{t('strategyPage.selection.chooseStrategy')}</div>
-                  <select
-                    value={selectedId}
-                    onChange={(e) => setSelectedId(e.target.value)}
-                    className={strategyFieldClass}
-                    disabled={strategiesQuery.isLoading}
-                  >
-                    {!strategies.length && (
-                      <option value="">
-                        {strategiesQuery.isLoading
-                          ? t('strategyPage.selection.loadingStrategies')
-                          : t('strategyPage.selection.noStrategies')}
-                      </option>
-                    )}
-                    {strategies.map((strategy) => (
-                      <option key={strategy.id} value={strategy.id}>
-                        {strategy.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <div className="flex items-center gap-2">
-                  <Button variant="secondary" onClick={handleSetActive} disabled={!selectedStrategy || isActive}>
-                    {isActive ? t('strategyPage.selection.active') : t('strategyPage.selection.setActive')}
-                  </Button>
-                  <Button
-                    variant="danger"
-                    onClick={handleDelete}
-                    disabled={!selectedStrategy || selectedStrategy?.isDefault || deleteMutation.isPending}
-                  >
-                    {deleteMutation.isPending ? t('strategyPage.selection.deleting') : t('common.actions.delete')}
-                  </Button>
-                  {selectedStrategy?.isDefault && (
-                    <span className="text-xs text-gray-500">{t('strategyPage.selection.default')}</span>
-                  )}
-                </div>
-              </div>
-              <div className="mt-5 border-t border-border pt-4 space-y-3">
-                <div className="text-sm font-semibold">{t('strategyPage.create.title')}</div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <TextInput
-                    label={t('strategyPage.create.newId')}
-                    value={createId}
-                    onChange={(value) => setCreateId(value)}
-                    placeholder={t('strategyPage.create.newIdPlaceholder')}
-                  />
-                  <TextInput
-                    label={t('strategyPage.create.newName')}
-                    value={createName}
-                    onChange={(value) => setCreateName(value)}
-                    placeholder={t('strategyPage.create.newNamePlaceholder')}
-                  />
-                  <TextInput
-                    label={t('strategyPage.create.newDescription')}
-                    value={createDescription}
-                    onChange={(value) => setCreateDescription(value)}
-                    placeholder={t('strategyPage.create.newDescriptionPlaceholder')}
-                  />
-                </div>
-                {idAlreadyExists && (
-                  <div className="text-xs text-red-600">{t('strategyPage.create.idAlreadyExists')}</div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+            <label className="text-sm font-medium md:col-span-2">
+              <div className="mb-2">{t('strategyPage.selection.chooseStrategy')}</div>
+              <select
+                value={selectedId}
+                onChange={(e) => setSelectedId(e.target.value)}
+                className={strategyFieldClass}
+                disabled={strategiesQuery.isLoading}
+              >
+                {!strategies.length && (
+                  <option value="">
+                    {strategiesQuery.isLoading
+                      ? t('strategyPage.selection.loadingStrategies')
+                      : t('strategyPage.selection.noStrategies')}
+                  </option>
                 )}
-                <div className="flex items-center gap-2">
-                  <Button onClick={handleCreate} disabled={!canCreate}>
-                    {createMutation.isPending ? t('strategyPage.actions.saving') : t('strategyPage.create.saveAsNew')}
-                  </Button>
-                  <div className="text-xs text-gray-500">
-                    {t('strategyPage.create.idHint')}
-                  </div>
-                </div>
+                {strategies.map((strategy) => (
+                  <option key={strategy.id} value={strategy.id}>
+                    {strategy.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="flex items-center gap-2">
+              <Button variant="secondary" onClick={handleSetActive} disabled={!selectedStrategy || isActive}>
+                {isActive ? t('strategyPage.selection.active') : t('strategyPage.selection.setActive')}
+              </Button>
+              <Button
+                variant="danger"
+                onClick={handleDelete}
+                disabled={!selectedStrategy || selectedStrategy?.isDefault || deleteMutation.isPending}
+              >
+                {deleteMutation.isPending ? t('strategyPage.selection.deleting') : t('common.actions.delete')}
+              </Button>
+              {selectedStrategy?.isDefault && (
+                <span className="text-xs text-gray-500">{t('strategyPage.selection.default')}</span>
+              )}
+            </div>
+          </div>
+          <div className="mt-5 border-t border-border pt-4 space-y-3">
+            <div className="text-sm font-semibold">{t('strategyPage.create.title')}</div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <TextInput
+                label={t('strategyPage.create.newId')}
+                value={createId}
+                onChange={(value) => setCreateId(value)}
+                placeholder={t('strategyPage.create.newIdPlaceholder')}
+              />
+              <TextInput
+                label={t('strategyPage.create.newName')}
+                value={createName}
+                onChange={(value) => setCreateName(value)}
+                placeholder={t('strategyPage.create.newNamePlaceholder')}
+              />
+              <TextInput
+                label={t('strategyPage.create.newDescription')}
+                value={createDescription}
+                onChange={(value) => setCreateDescription(value)}
+                placeholder={t('strategyPage.create.newDescriptionPlaceholder')}
+              />
+            </div>
+            {idAlreadyExists && (
+              <div className="text-xs text-red-600">{t('strategyPage.create.idAlreadyExists')}</div>
+            )}
+            <div className="flex items-center gap-2">
+              <Button onClick={handleCreate} disabled={!canCreate}>
+                {createMutation.isPending ? t('strategyPage.actions.saving') : t('strategyPage.create.saveAsNew')}
+              </Button>
+              <div className="text-xs text-gray-500">
+                {t('strategyPage.create.idHint')}
               </div>
-              {statusMessage && <div className="mt-3 text-sm text-green-600">{statusMessage}</div>}
-              {updateMutation.isError && (
-                <div className="mt-3 text-sm text-red-600">{t('strategyPage.errors.saveFailed')}</div>
-              )}
-              {createMutation.isError && (
-                <div className="mt-3 text-sm text-red-600">
-                  {(createMutation.error as Error)?.message || t('strategyPage.errors.createFailed')}
-                </div>
-              )}
-              {deleteMutation.isError && (
-                <div className="mt-3 text-sm text-red-600">
-                  {(deleteMutation.error as Error)?.message || t('strategyPage.errors.deleteFailed')}
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="text-sm text-gray-500">{t('strategyPage.selection.managementHiddenHint')}</div>
+            </div>
+          </div>
+          {statusMessage && <div className="mt-3 text-sm text-green-600">{statusMessage}</div>}
+          {updateMutation.isError && (
+            <div className="mt-3 text-sm text-red-600">{t('strategyPage.errors.saveFailed')}</div>
+          )}
+          {createMutation.isError && (
+            <div className="mt-3 text-sm text-red-600">
+              {(createMutation.error as Error)?.message || t('strategyPage.errors.createFailed')}
+            </div>
+          )}
+          {deleteMutation.isError && (
+            <div className="mt-3 text-sm text-red-600">
+              {(deleteMutation.error as Error)?.message || t('strategyPage.errors.deleteFailed')}
+            </div>
           )}
         </CardContent>
       </Card>
@@ -538,28 +473,6 @@ export default function StrategyPage() {
           )}
         </>
       )}
-
-      {draft ? (
-        <div className="fixed inset-x-0 z-30 border-t border-gray-200 bg-white/95 px-3 py-3 shadow-[0_-8px_20px_rgba(0,0,0,0.08)] md:hidden dark:border-gray-700 dark:bg-gray-900/95" style={{ bottom: 'calc(env(safe-area-inset-bottom) + 5.2rem)' }}>
-          <div className="mx-auto flex max-w-5xl items-center gap-2">
-            <Button
-              variant="secondary"
-              onClick={handleReset}
-              disabled={!draft || updateMutation.isPending}
-              className="flex-1"
-            >
-              {t('strategyPage.actions.resetChanges')}
-            </Button>
-            <Button
-              onClick={handleSave}
-              disabled={!draft || updateMutation.isPending}
-              className="flex-[1.35]"
-            >
-              {updateMutation.isPending ? t('strategyPage.actions.saving') : t('strategyPage.actions.saveChanges')}
-            </Button>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
