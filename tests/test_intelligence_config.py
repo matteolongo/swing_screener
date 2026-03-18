@@ -117,36 +117,76 @@ def test_build_intelligence_config_guards_invalid_threshold_values():
     assert cfg.opportunity.min_opportunity_score == 0.55
 
 
-def test_build_intelligence_config_prefers_ollama_host_env_for_default_localhost(monkeypatch):
-    monkeypatch.setenv("OLLAMA_HOST", "http://ollama:11434")
+def test_build_intelligence_config_coerces_mock_model_and_base_url():
     strategy = {
         "market_intelligence": {
             "llm": {
-                "provider": "ollama",
-                "base_url": "http://localhost:11434",
+                "provider": "mock",
+                "model": "custom-model",
+                "base_url": "https://ignored.example/v1",
             }
         }
     }
 
     cfg = build_intelligence_config(strategy)
 
-    assert cfg.llm.base_url == "http://ollama:11434"
+    assert cfg.llm.provider == "mock"
+    assert cfg.llm.model == "mock-classifier"
+    assert cfg.llm.base_url == ""
 
 
-def test_build_intelligence_config_keeps_explicit_non_default_base_url(monkeypatch):
-    monkeypatch.setenv("OLLAMA_HOST", "http://ollama:11434")
+def test_build_intelligence_config_migrates_unsupported_provider_to_openai_when_key_exists(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
     strategy = {
         "market_intelligence": {
             "llm": {
-                "provider": "ollama",
-                "base_url": "http://custom-ollama.internal:11434",
+                "provider": "legacy-local",
+                "model": "",
+                "base_url": "",
             }
         }
     }
 
     cfg = build_intelligence_config(strategy)
 
-    assert cfg.llm.base_url == "http://custom-ollama.internal:11434"
+    assert cfg.llm.provider == "openai"
+    assert cfg.llm.model == "gpt-4.1-mini"
+    assert cfg.llm.base_url == "https://api.openai.com/v1"
+
+
+def test_build_intelligence_config_migrates_unsupported_provider_to_mock_without_openai_key(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    strategy = {
+        "market_intelligence": {
+            "llm": {
+                "provider": "legacy-local",
+                "model": "custom-model",
+                "base_url": "https://ignored.example/v1",
+            }
+        }
+    }
+
+    cfg = build_intelligence_config(strategy)
+
+    assert cfg.llm.provider == "mock"
+    assert cfg.llm.model == "mock-classifier"
+    assert cfg.llm.base_url == ""
+
+
+def test_build_intelligence_config_keeps_explicit_openai_base_url():
+    strategy = {
+        "market_intelligence": {
+            "llm": {
+                "provider": "openai",
+                "base_url": "https://custom-openai.example/v1",
+            }
+        }
+    }
+
+    cfg = build_intelligence_config(strategy)
+
+    assert cfg.llm.provider == "openai"
+    assert cfg.llm.base_url == "https://custom-openai.example/v1"
 
 
 def test_build_intelligence_config_maps_prompt_overrides():

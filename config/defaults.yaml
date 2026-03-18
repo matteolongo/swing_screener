@@ -303,13 +303,6 @@ ui:
         - gpt-4o-mini
         - gpt-4.1
         - o4-mini
-    ollama:
-      default_model: mistral:7b-instruct
-      default_base_url: http://localhost:11434
-      suggested_models:
-        - mistral:7b-instruct
-        - llama3.1:8b-instruct
-        - qwen2.5:7b-instruct
     mock:
       default_model: mock-classifier
       default_base_url: ""

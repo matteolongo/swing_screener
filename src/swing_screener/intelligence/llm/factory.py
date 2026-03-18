@@ -3,11 +3,12 @@ from __future__ import annotations
 
 from typing import Optional
 
-from swing_screener.runtime_env import get_ollama_host, get_openai_api_key, get_openai_base_url
+from swing_screener.intelligence.config import default_model_for_llm_provider
+from swing_screener.runtime_env import get_openai_api_key, get_openai_base_url
 
 from .classifier import EventClassifier
 from .client import MockLLMProvider
-from .langchain_provider import LangChainOllamaProvider, LangChainOpenAIProvider
+from .langchain_provider import LangChainOpenAIProvider
 
 
 def build_langchain_chat_model(
@@ -33,24 +34,11 @@ def build_langchain_chat_model(
                 "langchain-openai is not installed. Install dependencies for OpenAI integration."
             ) from exc
         return ChatOpenAI(
-            model=str(model).strip() or "gpt-4.1-mini",
+            model=str(model).strip() or default_model_for_llm_provider("openai"),
             temperature=temperature,
             api_key=resolved_api_key,
             base_url=base_url or get_openai_base_url(),
             max_retries=max_retries,
-        )
-
-    if normalized == "ollama":
-        try:
-            from langchain_ollama import ChatOllama
-        except ImportError as exc:
-            raise RuntimeError(
-                "langchain-ollama is not installed. Install dependencies for LangChain integration."
-            ) from exc
-        return ChatOllama(
-            model=str(model).strip() or "mistral:7b-instruct",
-            base_url=base_url or get_ollama_host(),
-            temperature=temperature,
         )
 
     if normalized == "mock":
@@ -71,13 +59,6 @@ def build_llm_provider(
     normalized = str(provider_name).strip().lower()
     if normalized == "mock":
         return MockLLMProvider()
-    if normalized == "ollama":
-        return LangChainOllamaProvider(
-            model=model,
-            base_url=base_url,
-            system_prompt=system_prompt,
-            user_prompt_template=user_prompt_template,
-        )
     if normalized == "openai":
         return LangChainOpenAIProvider(
             model=model,
@@ -86,7 +67,7 @@ def build_llm_provider(
             system_prompt=system_prompt,
             user_prompt_template=user_prompt_template,
         )
-    raise ValueError(f"Unsupported LLM provider: {provider_name}. Allowed: ollama, mock, openai")
+    raise ValueError(f"Unsupported LLM provider: {provider_name}. Allowed: mock, openai")
 
 
 def build_event_classifier(

@@ -35,8 +35,3 @@ def get_openai_api_key() -> str:
 def get_openai_base_url() -> str:
     value = get_env_value("OPENAI_BASE_URL", "https://api.openai.com/v1").strip()
     return value or "https://api.openai.com/v1"
-
-
-def get_ollama_host() -> str:
-    value = get_env_value("OLLAMA_HOST", "http://localhost:11434").strip()
-    return value or "http://localhost:11434"

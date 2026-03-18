@@ -1,4 +1,4 @@
-"""LangChain-backed provider implementations (Ollama and OpenAI)."""
+"""LangChain-backed provider implementations."""
 from __future__ import annotations
 
 import json
@@ -7,7 +7,7 @@ from typing import Any, Optional
 
 from pydantic import ValidationError
 
-from swing_screener.runtime_env import get_ollama_host, get_openai_api_key, get_openai_base_url
+from swing_screener.runtime_env import get_openai_api_key, get_openai_base_url
 
 from .client import LLMProvider
 from .prompts import (
@@ -361,113 +361,6 @@ def _preview_payload(payload: dict[str, Any], *, max_chars: int = 220) -> str:
     if len(text) <= max_chars:
         return text
     return f"{text[: max_chars - 3]}..."
-
-
-class LangChainOllamaProvider(LLMProvider):
-    """LLM provider using LangChain + Ollama chat models."""
-
-    def __init__(
-        self,
-        model: str = "mistral:7b-instruct",
-        base_url: Optional[str] = None,
-        system_prompt: Optional[str] = None,
-        user_prompt_template: Optional[str] = None,
-    ) -> None:
-        self._model = model
-        self._base_url = base_url or get_ollama_host()
-        self._system_prompt = resolve_system_prompt(system_prompt)
-        self._user_prompt_template = resolve_user_prompt_template(user_prompt_template)
-        self._prompt_version = build_prompt_fingerprint(
-            system_prompt_override=self._system_prompt,
-            user_prompt_template_override=self._user_prompt_template,
-        )
-        self._llm = None
-
-    def _get_llm(self):
-        if self._llm is None:
-            try:
-                from langchain_ollama import ChatOllama
-            except ImportError as exc:
-                raise RuntimeError(
-                    "langchain-ollama is not installed. Install dependencies for LangChain integration."
-                ) from exc
-
-            self._llm = ChatOllama(
-                model=self._model,
-                base_url=self._base_url,
-                temperature=0,
-            )
-        return self._llm
-
-    def is_available(self) -> bool:
-        try:
-            import ollama
-
-            client = ollama.Client(host=self._base_url)
-            models = client.list()
-            raw_models = models.get("models", []) if isinstance(models, dict) else getattr(models, "models", [])
-            names: list[str] = []
-            for item in raw_models or []:
-                if isinstance(item, dict):
-                    name = item.get("name") or item.get("model") or ""
-                else:
-                    name = getattr(item, "name", "") or getattr(item, "model", "")
-                text = str(name).strip()
-                if text:
-                    names.append(text)
-            return any(self._model in name for name in names)
-        except Exception:
-            return False
-
-    @property
-    def model_name(self) -> str:
-        return self._model
-
-    @property
-    def prompt_version(self) -> str:
-        return self._prompt_version
-
-    @property
-    def prompt_cache_key(self) -> str:
-        return self._prompt_version
-
-    def classify_event(self, headline: str, snippet: str = "") -> EventClassification:
-        if not self.is_available():
-            raise RuntimeError(
-                f"Ollama model '{self._model}' not available at '{self._base_url}'."
-            )
-
-        llm = self._get_llm()
-        user_prompt = build_user_prompt(
-            headline,
-            snippet,
-            user_prompt_template=self._user_prompt_template,
-        )
-        response = None
-        raw_content: Any = ""
-        payload: dict[str, Any] = {}
-        try:
-            from langchain_core.messages import HumanMessage, SystemMessage
-
-            response = llm.invoke(
-                [
-                    SystemMessage(content=self._system_prompt),
-                    HumanMessage(content=user_prompt),
-                ]
-            )
-            raw_content = getattr(response, "content", "")
-            payload = _normalize_payload_for_validation(_extract_json_payload(raw_content))
-            return EventClassification.model_validate(payload)
-        except json.JSONDecodeError as exc:
-            details = _build_json_error_details(response=response, raw_content=raw_content)
-            raise ValueError(f"LLM returned invalid JSON: {exc}. {details}") from exc
-        except ValidationError as exc:
-            raise ValueError(
-                f"LLM returned schema-invalid payload: {exc}. "
-                f"payload_preview={_preview_payload(payload)}"
-            ) from exc
-        except Exception as exc:
-            raise RuntimeError(f"Classification failed: {exc}") from exc
 
 
 class LangChainOpenAIProvider(LLMProvider):

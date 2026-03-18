@@ -85,8 +85,6 @@ There is no separate env toggle required for normal intelligence configuration.
 
 For OpenAI, `OPENAI_API_KEY` is resolved from the server environment or local `.env` file and is not stored in intelligence config.
 
-For Ollama, `OLLAMA_HOST` can be used as a fallback host in the LLM client when `base_url` is not explicitly passed.
-
 ## Supported LLM Providers
 
 The `intelligence/llm/` layer supports:
@@ -94,9 +92,7 @@ The `intelligence/llm/` layer supports:
 | Provider | `provider` value | Notes |
 |----------|-----------------|-------|
 | OpenAI | `"openai"` | Default. Hosted inference. Default model: `gpt-4.1-mini`. Requires `OPENAI_API_KEY`. |
-| Ollama | `"ollama"` | Local inference. Default model: `mistral:7b-instruct`. Uses `OLLAMA_HOST` env var as fallback host. |
-| Anthropic | `"anthropic"` | Requires `ANTHROPIC_API_KEY` |
-| LM Studio | `"lm_studio"` | Local OpenAI-compatible endpoint |
+| Mock | `"mock"` | Deterministic local test provider. Always uses `mock-classifier` and no base URL. |
 
 LLM is **disabled by default** (`llm.enabled: false`). When disabled, all events are processed with heuristic credibility scores only.
 
