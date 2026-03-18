@@ -4,6 +4,7 @@ import {
   listWatchlistLocal,
   readTradingStore,
   resetTradingStore,
+  TRADING_STORE_SCHEMA_VERSION,
   TRADING_STORE_STORAGE_KEY,
   unwatchSymbolLocal,
   watchSymbolLocal,
@@ -30,7 +31,7 @@ describe('watchlist local persistence service', () => {
     window.localStorage.setItem(TRADING_STORE_STORAGE_KEY, JSON.stringify(legacyStore));
 
     const migrated = readTradingStore();
-    expect(migrated.version).toBe(2);
+    expect(migrated.version).toBe(TRADING_STORE_SCHEMA_VERSION);
     expect(migrated.watchlist).toEqual([]);
   });
 

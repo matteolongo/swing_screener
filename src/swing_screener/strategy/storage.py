@@ -18,7 +18,7 @@ CONFIG_DIR = config_dir()
 DATA_DIR = CONFIG_DIR
 STRATEGIES_FILE = strategies_yaml_path()
 ACTIVE_STRATEGY_FILE = STRATEGIES_FILE
-_LEGACY_REMOVED_PLUGIN_KEY = "soc" "ial" "_overlay"
+_LEGACY_REMOVED_PLUGIN_KEY = "social_overlay"
 
 
 def _ensure_config_dir() -> None:
