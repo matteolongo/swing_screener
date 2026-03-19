@@ -54,6 +54,14 @@ Changes require MCP server restart.
 
 ## Notes
 
+- New configurable behavior should be added to the existing YAML configuration surfaces in this directory instead of being hardcoded in Python, TypeScript, or prompts.
+- Choose the config file that matches the scope of the setting:
+  - `defaults.yaml` for shared system defaults
+  - `user.yaml` for user-facing app and API behavior
+  - `strategies.yaml` for strategy definitions and strategy-level tuning
+  - `intelligence.yaml` for intelligence runtime settings and prompts
+  - `mcp.yaml` for MCP feature flags and server metadata
+- `docker-compose.yml` is the repo's local orchestration config. Use it for container/runtime wiring only, not for application defaults that belong in `config/*.yaml`.
 - This directory is for **configuration files only**
 - Do not store runtime artifacts or temporary files here
 - Config files should be versioned (committed to git)
