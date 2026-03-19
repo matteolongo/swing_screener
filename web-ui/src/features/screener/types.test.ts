@@ -21,6 +21,7 @@ describe('transformScreenerResponse', () => {
           score: 0.8,
           confidence: 78,
           rank: 1,
+          priority_rank: 1,
           fundamentals_coverage_status: 'supported',
           fundamentals_freshness_status: 'current',
           fundamentals_summary: 'Growth metrics are supportive.',
@@ -73,6 +74,7 @@ describe('transformScreenerResponse', () => {
     expect(result.candidates[0].suggestedOrderType).toBe('BUY_STOP');
     expect(result.candidates[0].suggestedOrderPrice).toBe(101.2);
     expect(result.candidates[0].executionNote).toContain('BUY STOP');
+    expect(result.candidates[0].priorityRank).toBe(1);
     expect(result.candidates[0].fundamentalsCoverageStatus).toBe('supported');
     expect(result.candidates[0].fundamentalsSummary).toBe('Growth metrics are supportive.');
     expect(result.candidates[0].decisionSummary?.action).toBe('BUY_NOW');

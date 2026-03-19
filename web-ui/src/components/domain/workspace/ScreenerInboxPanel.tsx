@@ -7,6 +7,7 @@ import ScreenerCandidatesTable from '@/components/domain/screener/ScreenerCandid
 import { useConfigDefaultsQuery } from '@/features/config/hooks';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 import { useUniverses, useRunScreenerMutation } from '@/features/screener/hooks';
+import { filterCandidates, prioritizeCandidates, type DecisionActionFilter } from '@/features/screener/prioritization';
 import type { ScreenerCandidate } from '@/features/screener/types';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
@@ -25,6 +26,16 @@ import type { SymbolIntelligenceStatus } from '@/features/intelligence/useSymbol
 const TOP_N_MAX = 200;
 
 type CurrencyFilter = 'all' | 'usd' | 'eur';
+const DECISION_ACTION_FILTERS: DecisionActionFilter[] = [
+  'all',
+  'BUY_NOW',
+  'BUY_ON_PULLBACK',
+  'WAIT_FOR_BREAKOUT',
+  'WATCH',
+  'TACTICAL_ONLY',
+  'AVOID',
+  'MANAGE_ONLY',
+];
 
 const normalizeCurrencies = (currencies?: string[]): ('USD' | 'EUR')[] => {
   const normalized = (currencies ?? [])
@@ -88,6 +99,16 @@ export default function ScreenerInboxPanel({
     }
   );
   const [recommendedOnly, setRecommendedOnly] = useLocalStorage('screener.recommendedOnly', false);
+  const [actionFilter, setActionFilter] = useLocalStorage<DecisionActionFilter>(
+    'screener.actionFilter',
+    'all',
+    (val: unknown) => {
+      if (typeof val === 'string' && DECISION_ACTION_FILTERS.includes(val as DecisionActionFilter)) {
+        return val as DecisionActionFilter;
+      }
+      return 'all';
+    }
+  );
   const [showAdvancedFilters, setShowAdvancedFilters] = useLocalStorage(
     'screener.showAdvancedFilters',
     !isBeginnerMode
@@ -128,10 +149,8 @@ export default function ScreenerInboxPanel({
   ]);
 
   const result = screenerMutation.data ?? lastResult;
-  const allCandidates = result?.candidates ?? [];
-  const candidates = recommendedOnly
-    ? allCandidates.filter((candidate) => candidate.recommendation?.verdict === 'RECOMMENDED')
-    : allCandidates;
+  const allCandidates = result ? prioritizeCandidates(result.candidates) : [];
+  const candidates = filterCandidates(allCandidates, { recommendedOnly, actionFilter });
 
   useEffect(() => {
     if (!candidates.length || !selectedTicker || selectedTickerSource === 'portfolio') {
@@ -195,6 +214,8 @@ export default function ScreenerInboxPanel({
         setCurrencyFilter={setCurrencyFilter}
         recommendedOnly={recommendedOnly}
         setRecommendedOnly={setRecommendedOnly}
+        actionFilter={actionFilter}
+        setActionFilter={setActionFilter}
         showAdvancedFilters={showAdvancedFilters}
         setShowAdvancedFilters={setShowAdvancedFilters}
         universes={universesQuery.data?.universes ?? []}
@@ -228,12 +249,17 @@ export default function ScreenerInboxPanel({
       {result ? (
         <div className="rounded-lg border border-gray-200 bg-white p-3 flex-1 min-h-0 flex flex-col gap-3">
           <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
-            <div className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
-              {t('workspacePage.panels.screener.resultSummary', {
-                shown: candidates.length,
-                total: allCandidates.length,
-                screened: result.totalScreened,
-              })}
+            <div className="space-y-1 text-xs md:text-sm text-gray-600 dark:text-gray-400">
+              <div>
+                {t('workspacePage.panels.screener.resultSummary', {
+                  shown: candidates.length,
+                  total: allCandidates.length,
+                  screened: result.totalScreened,
+                })}
+              </div>
+              <div className="text-[11px] md:text-xs">
+                {t('workspacePage.panels.screener.priorityExplanation')}
+              </div>
             </div>
             <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
               <span>

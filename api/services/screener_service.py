@@ -51,6 +51,20 @@ from api.services.screener_run_manager import get_screener_run_manager
 logger = logging.getLogger(__name__)
 PRICE_HISTORY_MAX_BARS = 252
 SUPPORTED_CURRENCIES = {"USD", "EUR"}
+DECISION_ACTION_PRIORITY = {
+    "BUY_NOW": 6,
+    "BUY_ON_PULLBACK": 5,
+    "WAIT_FOR_BREAKOUT": 4,
+    "WATCH": 3,
+    "TACTICAL_ONLY": 2,
+    "MANAGE_ONLY": 1,
+    "AVOID": 0,
+}
+DECISION_CONVICTION_PRIORITY = {
+    "high": 2,
+    "medium": 1,
+    "low": 0,
+}
 MARKET_CLOSE_BY_CURRENCY: dict[str, tuple[str, int, int]] = {
     # (IANA timezone, close hour, close minute), with a small post-close buffer.
     "USD": ("America/New_York", 16, 10),
@@ -355,6 +369,33 @@ def _apply_decision_summary_context(
             )
         )
     return enriched
+
+
+def _apply_decision_priority_ranking(candidates: list[ScreenerCandidate]) -> list[ScreenerCandidate]:
+    if not candidates:
+        return candidates
+
+    # Keep the raw screener rank intact and use decision action + conviction as an additive ordering layer.
+    ordered = sorted(
+        candidates,
+        key=lambda candidate: (
+            -DECISION_ACTION_PRIORITY.get(
+                getattr(getattr(candidate, "decision_summary", None), "action", ""),
+                -1,
+            ),
+            -DECISION_CONVICTION_PRIORITY.get(
+                getattr(getattr(candidate, "decision_summary", None), "conviction", ""),
+                -1,
+            ),
+            candidate.rank,
+            -candidate.confidence,
+            candidate.ticker,
+        ),
+    )
+    return [
+        candidate.model_copy(update={"priority_rank": index})
+        for index, candidate in enumerate(ordered, start=1)
+    ]
 
 
 
@@ -726,6 +767,7 @@ class ScreenerService:
             candidates = filtered_candidates
             candidates = _apply_cached_fundamentals_context(candidates)
             candidates = _apply_decision_summary_context(candidates)
+            candidates = _apply_decision_priority_ranking(candidates)
             if same_symbol_suppressed_count > 0:
                 warnings.append(
                     f"{same_symbol_suppressed_count} same-symbol candidate"

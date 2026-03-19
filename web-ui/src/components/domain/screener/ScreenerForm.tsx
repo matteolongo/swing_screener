@@ -1,6 +1,7 @@
 import { PlayCircle, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
 import { useCallback, type ChangeEvent } from 'react';
 import Button from '@/components/common/Button';
+import type { DecisionActionFilter } from '@/features/screener/prioritization';
 import { formatCurrency, formatPercent } from '@/utils/formatters';
 import { t } from '@/i18n/t';
 
@@ -12,6 +13,27 @@ const formatCurrencyFilterLabel = (currencies: ('USD' | 'EUR')[]): string => {
   if (currencies.length === 1 && currencies[0] === 'USD') return t('screener.currencyFilter.usdOnly');
   if (currencies.length === 1 && currencies[0] === 'EUR') return t('screener.currencyFilter.eurOnly');
   return t('screener.currencyFilter.both');
+};
+
+const formatActionFilterLabel = (value: DecisionActionFilter): string => {
+  switch (value) {
+    case 'BUY_NOW':
+      return t('workspacePage.panels.analysis.decisionSummary.actions.buyNow');
+    case 'BUY_ON_PULLBACK':
+      return t('workspacePage.panels.analysis.decisionSummary.actions.buyOnPullback');
+    case 'WAIT_FOR_BREAKOUT':
+      return t('workspacePage.panels.analysis.decisionSummary.actions.waitForBreakout');
+    case 'WATCH':
+      return t('workspacePage.panels.analysis.decisionSummary.actions.watch');
+    case 'TACTICAL_ONLY':
+      return t('workspacePage.panels.analysis.decisionSummary.actions.tacticalOnly');
+    case 'AVOID':
+      return t('workspacePage.panels.analysis.decisionSummary.actions.avoid');
+    case 'MANAGE_ONLY':
+      return t('workspacePage.panels.analysis.decisionSummary.actions.manageOnly');
+    default:
+      return t('screener.controls.allActions');
+  }
 };
 
 interface ScreenerFormProps {
@@ -28,6 +50,8 @@ interface ScreenerFormProps {
   setCurrencyFilter: (value: CurrencyFilter) => void;
   recommendedOnly: boolean;
   setRecommendedOnly: (value: boolean) => void;
+  actionFilter: DecisionActionFilter;
+  setActionFilter: (value: DecisionActionFilter) => void;
   showAdvancedFilters: boolean;
   setShowAdvancedFilters: (value: boolean) => void;
   universes: string[];
@@ -52,6 +76,8 @@ export default function ScreenerForm({
   setCurrencyFilter,
   recommendedOnly,
   setRecommendedOnly,
+  actionFilter,
+  setActionFilter,
   showAdvancedFilters,
   setShowAdvancedFilters,
   universes,
@@ -81,7 +107,7 @@ export default function ScreenerForm({
       {/* Beginner Mode: Simple controls layout */}
       {isBeginnerMode && (
         <div className="space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-3 items-end">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] gap-3 items-end">
             {/* Universe selection */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.universe')}</label>
@@ -115,6 +141,25 @@ export default function ScreenerForm({
                   {t('screener.controls.recommendedOnly')}
                 </span>
               </label>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.actionFilter')}</label>
+              <select
+                value={actionFilter}
+                onChange={(e) => setActionFilter(e.target.value as DecisionActionFilter)}
+                aria-label={t('screener.controls.actionFilter')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                disabled={isLoading}
+              >
+                {(['all', 'BUY_NOW', 'BUY_ON_PULLBACK', 'WAIT_FOR_BREAKOUT', 'WATCH', 'TACTICAL_ONLY', 'AVOID', 'MANAGE_ONLY'] as const).map(
+                  (value) => (
+                    <option key={value} value={value}>
+                      {formatActionFilterLabel(value)}
+                    </option>
+                  )
+                )}
+              </select>
             </div>
 
             {/* Run button */}
@@ -350,6 +395,43 @@ export default function ScreenerForm({
               )}
             </Button>
           </div>
+          </div>
+
+          <div className="flex flex-col gap-3 border-t border-gray-200 pt-3 md:flex-row md:items-end md:justify-between">
+            <div className="min-h-11 flex items-center">
+              <label className="flex min-h-11 items-center space-x-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={recommendedOnly}
+                  onChange={(e) => setRecommendedOnly(e.target.checked)}
+                  aria-label={t('screener.controls.recommendedOnly')}
+                  className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  disabled={isLoading}
+                />
+                <span className="text-sm font-medium text-gray-700">
+                  {t('screener.controls.recommendedOnly')}
+                </span>
+              </label>
+            </div>
+
+            <div className="w-full md:max-w-xs">
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.actionFilter')}</label>
+              <select
+                value={actionFilter}
+                onChange={(e) => setActionFilter(e.target.value as DecisionActionFilter)}
+                aria-label={t('screener.controls.actionFilter')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                disabled={isLoading}
+              >
+                {(['all', 'BUY_NOW', 'BUY_ON_PULLBACK', 'WAIT_FOR_BREAKOUT', 'WATCH', 'TACTICAL_ONLY', 'AVOID', 'MANAGE_ONLY'] as const).map(
+                  (value) => (
+                    <option key={value} value={value}>
+                      {formatActionFilterLabel(value)}
+                    </option>
+                  )
+                )}
+              </select>
+            </div>
           </div>
 
           <div className="pt-2 border-t border-gray-200 text-xs text-gray-600 flex flex-wrap items-center gap-2">

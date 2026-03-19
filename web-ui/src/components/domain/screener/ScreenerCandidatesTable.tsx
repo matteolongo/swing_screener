@@ -15,6 +15,40 @@ import { useUnwatchSymbolMutation, useWatchSymbolMutation, useWatchlist } from '
 import { formatCurrency, formatDate } from '@/utils/formatters';
 import { t } from '@/i18n/t';
 
+function actionLabel(action?: string): string | null {
+  switch (action) {
+    case 'BUY_NOW':
+      return t('workspacePage.panels.analysis.decisionSummary.actions.buyNow');
+    case 'BUY_ON_PULLBACK':
+      return t('workspacePage.panels.analysis.decisionSummary.actions.buyOnPullback');
+    case 'WAIT_FOR_BREAKOUT':
+      return t('workspacePage.panels.analysis.decisionSummary.actions.waitForBreakout');
+    case 'WATCH':
+      return t('workspacePage.panels.analysis.decisionSummary.actions.watch');
+    case 'TACTICAL_ONLY':
+      return t('workspacePage.panels.analysis.decisionSummary.actions.tacticalOnly');
+    case 'AVOID':
+      return t('workspacePage.panels.analysis.decisionSummary.actions.avoid');
+    case 'MANAGE_ONLY':
+      return t('workspacePage.panels.analysis.decisionSummary.actions.manageOnly');
+    default:
+      return null;
+  }
+}
+
+function convictionLabel(conviction?: string): string | null {
+  switch (conviction) {
+    case 'high':
+      return t('workspacePage.panels.analysis.decisionSummary.conviction.high');
+    case 'medium':
+      return t('workspacePage.panels.analysis.decisionSummary.conviction.medium');
+    case 'low':
+      return t('workspacePage.panels.analysis.decisionSummary.conviction.low');
+    default:
+      return null;
+  }
+}
+
 interface ScreenerCandidatesTableProps {
   candidates: ScreenerCandidate[];
   onCreateOrder: (candidate: ScreenerCandidate) => void;
@@ -139,7 +173,7 @@ export default function ScreenerCandidatesTable({
       headers={
         <tr>
           <th className="py-3 px-4 text-sm font-semibold text-gray-700 text-left">
-            {t('screener.table.headers.rank')}
+            {t('screener.table.headers.priority')}
           </th>
           <th className="py-3 px-4 text-sm font-semibold text-gray-700 text-left">
             {t('screener.table.headers.symbol')}
@@ -164,6 +198,8 @@ export default function ScreenerCandidatesTable({
         const isExpanded = expandedRows.has(candidate.ticker);
         const isSelected = selectedTicker != null && selectedTicker.toUpperCase() === candidate.ticker.toUpperCase();
         const symbolIntelStatus = getSymbolIntelligenceStatus?.(candidate.ticker);
+        const action = actionLabel(candidate.decisionSummary?.action);
+        const conviction = convictionLabel(candidate.decisionSummary?.conviction);
 
         return (
           <React.Fragment key={candidate.ticker}>
@@ -178,7 +214,19 @@ export default function ScreenerCandidatesTable({
             >
               {/* Rank */}
               <td className="py-3 px-4 text-sm text-gray-900 dark:text-gray-100 font-medium">
-                #{candidate.rank}
+                <div className="flex flex-col">
+                  <span>#{vm.priorityRank}</span>
+                  {vm.rawRank !== vm.priorityRank ? (
+                    <span className="text-[11px] font-normal text-gray-500 dark:text-gray-400">
+                      {t('screener.table.rawRank', { rank: vm.rawRank })}
+                    </span>
+                  ) : null}
+                  {action && conviction ? (
+                    <span className="text-[11px] font-normal text-gray-500 dark:text-gray-400">
+                      {t('screener.table.priorityMeta', { action, conviction })}
+                    </span>
+                  ) : null}
+                </div>
               </td>
 
               {/* Symbol (Identity Cell) */}
