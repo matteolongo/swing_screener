@@ -53,6 +53,14 @@ export const API_ENDPOINTS = {
   intelligenceEducationGenerate: '/api/intelligence/education/generate',
   intelligenceEducationBySymbol: (symbol: string) => `/api/intelligence/education/${encodeURIComponent(symbol)}`,
 
+  // Fundamentals
+  fundamentalsConfig: '/api/fundamentals/config',
+  fundamentalsSnapshot: (symbol: string) => `/api/fundamentals/snapshot/${encodeURIComponent(symbol)}`,
+  fundamentalsRefresh: '/api/fundamentals/refresh',
+  fundamentalsCompare: '/api/fundamentals/compare',
+  fundamentalsWarmup: '/api/fundamentals/warmup',
+  fundamentalsWarmupStatus: (jobId: string) => `/api/fundamentals/warmup/${jobId}`,
+
   // Chat
   chatAnswer: '/api/chat/answer',
 

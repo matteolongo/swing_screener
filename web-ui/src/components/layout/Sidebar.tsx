@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
+import {
+  BarChart3,
+  LayoutDashboard,
   SlidersHorizontal,
   ClipboardCheck,
   Brain,
@@ -12,9 +13,18 @@ import {
   useStrategiesQuery,
 } from '@/features/strategy/hooks';
 import { t } from '@/i18n/t';
+import type { MessageKey } from '@/i18n/types';
 import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 
-const navigation = [
+type NavigationItem = {
+  href: string;
+  icon: typeof LayoutDashboard;
+  advanced: boolean;
+  label?: string;
+  labelKey?: MessageKey;
+};
+
+const navigation: NavigationItem[] = [
   { 
     labelKey: 'sidebar.nav.workspace', 
     href: '/workspace', 
@@ -39,7 +49,13 @@ const navigation = [
     icon: Brain,
     advanced: false,
   },
-] as const;
+  {
+    labelKey: 'sidebar.nav.fundamentals',
+    href: '/fundamentals',
+    icon: BarChart3,
+    advanced: false,
+  },
+];
 
 interface SidebarProps {
   className?: string;
@@ -130,7 +146,7 @@ export default function Sidebar({ className, onNavigate }: SidebarProps) {
                 }
               >
                 <item.icon className="w-5 h-5" />
-                {t(item.labelKey)}
+                {item.labelKey ? t(item.labelKey) : item.label}
               </NavLink>
               {isDisabled && (
                 <div className="hidden group-hover:block absolute left-full ml-2 top-1/2 -translate-y-1/2 z-50">

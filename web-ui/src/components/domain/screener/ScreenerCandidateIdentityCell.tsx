@@ -27,6 +27,17 @@ export default function ScreenerCandidateIdentityCell({
   const scoreValue = Number.isFinite(candidate.score)
     ? formatScreenerScore(candidate.score)
     : null;
+  const fundamentalsCoverage = candidate.fundamentalsCoverageStatus;
+  const fundamentalsFreshness = candidate.fundamentalsFreshnessStatus;
+
+  const fundamentalsBadgeClass =
+    fundamentalsCoverage === 'supported'
+      ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+      : fundamentalsCoverage === 'partial'
+        ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+        : fundamentalsCoverage === 'unsupported'
+          ? 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300'
+          : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
 
   return (
     <div className="flex flex-col gap-1">
@@ -95,6 +106,15 @@ export default function ScreenerCandidateIdentityCell({
             ? t('screener.identity.confidenceUnknown')
             : t('screener.identity.confidenceLabel', { value: confidenceValue })}
         </div>
+        {fundamentalsCoverage ? (
+          <div className={`inline-flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-xs ${fundamentalsBadgeClass}`}>
+            <BarChart3 className="h-3 w-3" />
+            <span>
+              Fundamentals {fundamentalsCoverage}
+              {fundamentalsFreshness ? ` · ${fundamentalsFreshness}` : ''}
+            </span>
+          </div>
+        ) : null}
       </div>
 
       {/* Company and metadata */}
@@ -107,6 +127,9 @@ export default function ScreenerCandidateIdentityCell({
             {candidate.currency}
           </span>
         </div>
+        {candidate.fundamentalsSummary ? (
+          <div className="mt-1 text-gray-600 dark:text-gray-400">{candidate.fundamentalsSummary}</div>
+        ) : null}
       </div>
     </div>
   );

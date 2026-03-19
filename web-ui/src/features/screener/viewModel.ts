@@ -26,6 +26,9 @@ export interface CandidateViewModel {
   momentum6m: number;
   momentum12m: number;
   relStrength: number;
+  fundamentalsCoverageStatus: string | null;
+  fundamentalsFreshnessStatus: string | null;
+  fundamentalsSummary: string | null;
 
   // Fix recommendations
   fixes: string[];
@@ -75,6 +78,9 @@ export function toCandidateViewModel(candidate: ScreenerCandidate): CandidateVie
     momentum6m: candidate.momentum6m,
     momentum12m: candidate.momentum12m,
     relStrength: candidate.relStrength,
+    fundamentalsCoverageStatus: candidate.fundamentalsCoverageStatus ?? null,
+    fundamentalsFreshnessStatus: candidate.fundamentalsFreshnessStatus ?? null,
+    fundamentalsSummary: candidate.fundamentalsSummary ?? null,
 
     // Fix list
     fixes,

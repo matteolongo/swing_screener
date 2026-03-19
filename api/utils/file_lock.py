@@ -3,52 +3,52 @@ from __future__ import annotations
 
 from pathlib import Path
 import json
-import re
 import logging
-from typing import Any
+import re
+from typing import Any, Callable
 
-import portalocker
 from fastapi import HTTPException
+from swing_screener.utils.file_lock import (
+    DEFAULT_TIMEOUT,
+    FileLockTimeoutError,
+    read_json_with_lock,
+    update_json_with_lock,
+    write_json_with_lock,
+)
 
 logger = logging.getLogger(__name__)
-
-DEFAULT_TIMEOUT = 5.0  # seconds
 
 
 def _record_lock_contention():
     """Record a lock contention event in metrics."""
     try:
         from api.monitoring import get_metrics_collector
+
         get_metrics_collector().record_lock_contention()
     except Exception:
         # Don't fail if metrics aren't available
         pass
 
 
+def _normalize_json_text(text: str) -> str:
+    return re.sub(r"\bNaN\b", "null", text)
+
 
 def locked_read_json(path: Path, timeout: float = DEFAULT_TIMEOUT) -> dict[str, Any]:
-    """Read JSON file with exclusive file lock.
-    
-    Args:
-        path: Path to JSON file
-        timeout: Maximum seconds to wait for lock acquisition
-        
-    Returns:
-        Parsed JSON data as dict
-        
-    Raises:
-        HTTPException: 404 if file not found, 503 if lock timeout, 500 for other errors
-    """
+    """Read JSON file with a shared file lock."""
     if not path.exists():
         raise HTTPException(status_code=404, detail=f"File not found: {path.name}")
-    
+
     try:
-        with portalocker.Lock(path, mode="r", timeout=timeout, encoding="utf-8") as fh:
-            text = fh.read()
-            # Handle NaN values in JSON (convert to null)
-            text = re.sub(r"\bNaN\b", "null", text)
-            return json.loads(text)
-    except portalocker.exceptions.LockException:
+        payload = read_json_with_lock(path, timeout=timeout, text_filter=_normalize_json_text)
+        if not isinstance(payload, dict):
+            logger.error(f"Invalid JSON root type in {path.name}: {type(payload).__name__}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Invalid JSON in {path.name}",
+            )
+        return payload
+    except FileLockTimeoutError:
         _record_lock_contention()
         logger.error(f"Lock timeout reading {path.name} after {timeout}s")
         raise HTTPException(
@@ -61,7 +61,9 @@ def locked_read_json(path: Path, timeout: float = DEFAULT_TIMEOUT) -> dict[str, 
             status_code=500,
             detail=f"Invalid JSON in {path.name}"
         )
-    except Exception as exc:
+    except HTTPException:
+        raise
+    except Exception:
         logger.exception(f"Unexpected error reading {path.name}")
         raise HTTPException(
             status_code=500,
@@ -72,49 +74,19 @@ def locked_read_json(path: Path, timeout: float = DEFAULT_TIMEOUT) -> dict[str, 
 def locked_write_json(
     path: Path,
     data: dict[str, Any],
-    timeout: float = DEFAULT_TIMEOUT
+    timeout: float = DEFAULT_TIMEOUT,
 ) -> None:
-    """Write JSON file with exclusive file lock.
-    
-    Args:
-        path: Path to JSON file
-        data: Dictionary to write as JSON
-        timeout: Maximum seconds to wait for lock acquisition
-        
-    Raises:
-        HTTPException: 503 if lock timeout, 500 for other errors
-    """
+    """Write JSON file with an exclusive file lock."""
     try:
-        # Ensure parent directory exists
-        path.parent.mkdir(parents=True, exist_ok=True)
-        
-        # Write with exclusive lock using 'r+' to avoid truncation
-        # Create file if it doesn't exist
-        if not path.exists():
-            path.touch()
-        
-        with portalocker.Lock(
-            path,
-            mode="r+",
-            timeout=timeout,
-            encoding="utf-8",
-            flags=portalocker.LOCK_EX
-        ) as fh:
-            # Truncate and write
-            fh.seek(0)
-            fh.truncate()
-            json.dump(data, fh, indent=2, ensure_ascii=False)
-            fh.write('\n')  # Trailing newline
-            fh.flush()
-            
-    except portalocker.exceptions.LockException:
+        write_json_with_lock(path, data, timeout=timeout)
+    except FileLockTimeoutError:
         _record_lock_contention()
         logger.error(f"Lock timeout writing {path.name} after {timeout}s")
         raise HTTPException(
             status_code=503,
             detail=f"Service temporarily unavailable - file locked: {path.name}"
         )
-    except Exception as exc:
+    except Exception:
         logger.exception(f"Unexpected error writing {path.name}")
         raise HTTPException(
             status_code=500,
@@ -124,23 +96,45 @@ def locked_write_json(
 
 def locked_read_modify_write(
     path: Path,
-    modify_fn: callable,
-    timeout: float = DEFAULT_TIMEOUT
+    modify_fn: Callable[[dict[str, Any]], dict[str, Any]],
+    timeout: float = DEFAULT_TIMEOUT,
 ) -> dict[str, Any]:
-    """Atomic read-modify-write operation with exclusive lock.
-    
-    Args:
-        path: Path to JSON file
-        modify_fn: Function that takes data dict and returns modified dict
-        timeout: Maximum seconds to wait for lock acquisition
-        
-    Returns:
-        Modified data that was written
-        
-    Raises:
-        HTTPException: 404, 503, or 500 depending on error
-    """
-    data = locked_read_json(path, timeout=timeout)
-    modified_data = modify_fn(data)
-    locked_write_json(path, modified_data, timeout=timeout)
-    return modified_data
+    """Atomic read-modify-write operation with one exclusive file lock."""
+    if not path.exists():
+        raise HTTPException(status_code=404, detail=f"File not found: {path.name}")
+
+    try:
+        payload = update_json_with_lock(
+            path,
+            modify_fn,
+            timeout=timeout,
+            text_filter=_normalize_json_text,
+        )
+        if not isinstance(payload, dict):
+            logger.error(f"Invalid JSON root type in {path.name}: {type(payload).__name__}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Invalid JSON in {path.name}",
+            )
+        return payload
+    except FileLockTimeoutError:
+        _record_lock_contention()
+        logger.error(f"Lock timeout updating {path.name} after {timeout}s")
+        raise HTTPException(
+            status_code=503,
+            detail=f"Service temporarily unavailable - file locked: {path.name}"
+        )
+    except json.JSONDecodeError as exc:
+        logger.error(f"Invalid JSON in {path.name}: {exc}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Invalid JSON in {path.name}"
+        )
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception(f"Unexpected error updating {path.name}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to update file: {path.name}"
+        )

@@ -20,6 +20,9 @@ describe('screener viewModel', () => {
     score: 85.5,
     confidence: 0.75,
     rank: 1,
+    fundamentalsCoverageStatus: 'supported',
+    fundamentalsFreshnessStatus: 'current',
+    fundamentalsSummary: 'Growth metrics are supportive.',
   };
 
   describe('toCandidateViewModel', () => {
@@ -35,6 +38,8 @@ describe('screener viewModel', () => {
       expect(vm.stop).toBeNull();
       expect(vm.rr).toBeNull();
       expect(vm.riskUsd).toBeNull();
+      expect(vm.fundamentalsCoverageStatus).toBe('supported');
+      expect(vm.fundamentalsSummary).toBe('Growth metrics are supportive.');
     });
 
     it('uses candidate direct fields when no recommendation', () => {

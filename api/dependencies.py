@@ -8,6 +8,7 @@ from typing import Optional
 from fastapi import Depends
 
 from api.repositories.config_repo import ConfigRepository
+from api.repositories.fundamentals_config_repo import FundamentalsConfigRepository
 from api.repositories.orders_repo import OrdersRepository
 from api.repositories.positions_repo import PositionsRepository
 from api.repositories.strategy_repo import StrategyRepository
@@ -17,6 +18,7 @@ from api.repositories.watchlist_repo import WatchlistRepository
 from api.services.agent_chat_service import AgentChatService
 from api.services.agent_runtime import AgentRuntime
 from api.services.chat_service import ChatService
+from api.services.fundamentals_service import FundamentalsService
 from api.services.intelligence_config_service import IntelligenceConfigService
 from api.services.intelligence_service import IntelligenceService
 from api.services.portfolio_service import PortfolioService
@@ -83,6 +85,10 @@ def get_intelligence_config_repo() -> IntelligenceConfigRepository:
     return IntelligenceConfigRepository()
 
 
+def get_fundamentals_config_repo() -> FundamentalsConfigRepository:
+    return FundamentalsConfigRepository()
+
+
 def get_intelligence_symbol_sets_repo() -> IntelligenceSymbolSetsRepository:
     return IntelligenceSymbolSetsRepository()
 
@@ -139,6 +145,13 @@ def get_intelligence_service(
     config_service: IntelligenceConfigService = Depends(get_intelligence_config_service),
 ) -> IntelligenceService:
     return IntelligenceService(strategy_repo=strategy_repo, config_service=config_service)
+
+
+def get_fundamentals_service(
+    config_repo: FundamentalsConfigRepository = Depends(get_fundamentals_config_repo),
+    watchlist_repo: WatchlistRepository = Depends(get_watchlist_repo),
+) -> FundamentalsService:
+    return FundamentalsService(config_repo=config_repo, watchlist_repo=watchlist_repo)
 
 
 def get_workspace_context_service(

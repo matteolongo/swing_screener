@@ -19,6 +19,7 @@ from api.routers import (
     chat,
     config,
     daily_review,
+    fundamentals,
     intelligence,
     portfolio,
     screener,
@@ -308,6 +309,7 @@ app.include_router(screener.router, prefix="/api/screener", tags=["screener"])
 app.include_router(portfolio.router, prefix="/api/portfolio", tags=["portfolio"])
 app.include_router(watchlist.router, prefix="/api/watchlist", tags=["watchlist"])
 app.include_router(intelligence.router, prefix="/api/intelligence", tags=["intelligence"])
+app.include_router(fundamentals.router, prefix="/api/fundamentals", tags=["fundamentals"])
 app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
 app.include_router(daily_review.router, prefix="/api", tags=["daily-review"])
 

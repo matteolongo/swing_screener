@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { transformScreenerResponse, type ScreenerResponseAPI } from '@/features/screener/types';
 
 describe('transformScreenerResponse', () => {
-  it('maps execution guidance fields from API to UI shape', () => {
+  it('maps execution guidance and fundamentals fields from API to UI shape', () => {
     const apiResponse: ScreenerResponseAPI = {
       asof_date: '2026-03-02',
       total_screened: 1,
@@ -21,6 +21,9 @@ describe('transformScreenerResponse', () => {
           score: 0.8,
           confidence: 78,
           rank: 1,
+          fundamentals_coverage_status: 'supported',
+          fundamentals_freshness_status: 'current',
+          fundamentals_summary: 'Growth metrics are supportive.',
           signal: 'breakout',
           suggested_order_type: 'BUY_STOP',
           suggested_order_price: 101.2,
@@ -33,6 +36,7 @@ describe('transformScreenerResponse', () => {
     expect(result.candidates[0].suggestedOrderType).toBe('BUY_STOP');
     expect(result.candidates[0].suggestedOrderPrice).toBe(101.2);
     expect(result.candidates[0].executionNote).toContain('BUY STOP');
+    expect(result.candidates[0].fundamentalsCoverageStatus).toBe('supported');
+    expect(result.candidates[0].fundamentalsSummary).toBe('Growth metrics are supportive.');
   });
 });
-

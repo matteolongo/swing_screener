@@ -46,7 +46,7 @@ to_iso_date(timestamp) -> Optional[str]                   # None | str | datetim
 
 ### `file_lock.py`
 
-Thread-safe file operations using `portalocker`. Falls back to unlocked I/O if `portalocker` is not installed.
+Thread-safe file operations using `portalocker`. Timeouts are enforced with explicit non-blocking retry semantics (`LOCK_NB` with shared/exclusive locks as appropriate). Falls back to unlocked I/O if `portalocker` is not installed.
 
 ```python
 locked_read_json_cli(path: Path, timeout=5.0) -> Any
@@ -70,6 +70,7 @@ All indicator functions in `indicators/` use `get_close_matrix()` as their first
 ## Notes
 
 - `DEFAULT_TIMEOUT = 5.0` seconds for file lock acquisition — configurable per call.
+- Shared reads use `LOCK_SH | LOCK_NB`; writes and atomic updates use `LOCK_EX | LOCK_NB`.
 - If `portalocker` is unavailable (e.g., in test environments), file operations proceed without locking and a warning is logged.
 - `normalize_tickers()` is idempotent and order-preserving (first occurrence wins).
 

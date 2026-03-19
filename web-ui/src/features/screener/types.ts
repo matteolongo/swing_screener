@@ -39,6 +39,9 @@ export interface ScreenerCandidate {
   score: number;
   confidence: number;
   rank: number;
+  fundamentalsCoverageStatus?: string;
+  fundamentalsFreshnessStatus?: string;
+  fundamentalsSummary?: string;
   signal?: string;
   entry?: number;
   stop?: number;
@@ -74,6 +77,9 @@ export interface ScreenerCandidateAPI {
   score: number;
   confidence: number;
   rank: number;
+  fundamentals_coverage_status?: string;
+  fundamentals_freshness_status?: string;
+  fundamentals_summary?: string;
   signal?: string;
   entry?: number;
   stop?: number;
@@ -187,6 +193,9 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
       score: c.score,
       confidence: c.confidence,
       rank: c.rank,
+      fundamentalsCoverageStatus: c.fundamentals_coverage_status,
+      fundamentalsFreshnessStatus: c.fundamentals_freshness_status,
+      fundamentalsSummary: c.fundamentals_summary,
       signal: c.signal,
       entry: c.entry,
       stop: c.stop,

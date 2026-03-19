@@ -33,4 +33,8 @@ export const queryKeys = {
   intelligenceMetrics: (asofDate?: string) => ['intelligence-metrics', asofDate] as const,
   intelligenceEducation: (symbol?: string, asofDate?: string) =>
     ['intelligence-education', symbol, asofDate] as const,
+  fundamentalsConfig: () => ['fundamentals-config'] as const,
+  fundamentalsSnapshot: (symbol?: string, refresh?: boolean) =>
+    ['fundamentals-snapshot', symbol ?? null, refresh ?? false] as const,
+  fundamentalsWarmupStatus: (jobId?: string) => ['fundamentals-warmup-status', jobId] as const,
 };

@@ -4,6 +4,7 @@ import ModalShell from '@/components/common/ModalShell';
 import CachedSymbolPriceChart from '@/components/domain/market/CachedSymbolPriceChart';
 import KeyMetrics from '@/components/domain/workspace/KeyMetrics';
 import ActionPanel from '@/components/domain/workspace/ActionPanel';
+import WorkspaceFundamentalsPanel from '@/components/domain/workspace/WorkspaceFundamentalsPanel';
 import { t } from '@/i18n/t';
 import { cn } from '@/utils/cn';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
@@ -19,6 +20,7 @@ export default function WorkspaceSymbolModal({ ticker, onBack }: WorkspaceSymbol
 
   const tabs = [
     { id: 'overview', label: t('workspacePage.panels.analysis.tabs.overview') },
+    { id: 'fundamentals', label: t('workspacePage.panels.analysis.tabs.fundamentals') },
     { id: 'order', label: t('workspacePage.panels.analysis.tabs.order') },
   ] as const;
   const yahooUrl = `https://finance.yahoo.com/quote/${ticker}`;
@@ -101,6 +103,8 @@ export default function WorkspaceSymbolModal({ ticker, onBack }: WorkspaceSymbol
               <KeyMetrics ticker={ticker} />
             </>
           ) : null}
+
+          {activeTab === 'fundamentals' ? <WorkspaceFundamentalsPanel ticker={ticker} /> : null}
 
           {activeTab === 'order' ? <ActionPanel ticker={ticker} /> : null}
         </div>

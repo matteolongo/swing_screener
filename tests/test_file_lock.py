@@ -5,6 +5,7 @@ import json
 import tempfile
 import threading
 import time
+import warnings
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -12,6 +13,14 @@ import pytest
 from fastapi import HTTPException
 
 from api.utils.file_lock import locked_read_json, locked_write_json, locked_read_modify_write
+
+
+def _portalocker_timeout_warnings(caught: list[warnings.WarningMessage]) -> list[warnings.WarningMessage]:
+    return [
+        warning
+        for warning in caught
+        if "timeout has no effect in blocking mode" in str(warning.message)
+    ]
 
 
 class TestBasicLocking:
@@ -31,11 +40,14 @@ class TestBasicLocking:
         test_file = tmp_path / "test.json"
         test_data = {"foo": "bar", "count": 42}
 
-        locked_write_json(test_file, test_data)
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            locked_write_json(test_file, test_data)
 
         assert test_file.exists()
         content = json.loads(test_file.read_text())
         assert content == test_data
+        assert not _portalocker_timeout_warnings(caught)
 
     def test_locked_read_nonexistent_file(self, tmp_path):
         """Test that reading non-existent file raises HTTPException 404."""
@@ -199,7 +211,13 @@ class TestLockTimeout:
         def slow_write():
             """Hold lock for a bit then write."""
             import portalocker
-            with portalocker.Lock(test_file, mode="r+", timeout=5, encoding="utf-8"):
+            with portalocker.Lock(
+                test_file,
+                mode="r+",
+                timeout=5,
+                encoding="utf-8",
+                flags=portalocker.LOCK_EX | portalocker.LOCK_NB,
+            ):
                 time.sleep(0.5)  # Hold lock
                 data = {"slow": "write"}
                 with open(test_file, "r+") as f:
@@ -221,20 +239,23 @@ class TestLockTimeout:
         
         # Start both threads
         import concurrent.futures
-        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-            futures = [
-                executor.submit(slow_write),
-                executor.submit(fast_write),
-            ]
-            for future in concurrent.futures.as_completed(futures):
-                future.result()
-        
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+                futures = [
+                    executor.submit(slow_write),
+                    executor.submit(fast_write),
+                ]
+                for future in concurrent.futures.as_completed(futures):
+                    future.result()
+
         # Either fast succeeded or timed out, but no corruption
         assert len(results) == 2
         assert "slow" in results
         # File should be valid JSON
         data = json.loads(test_file.read_text())
         assert isinstance(data, dict)
+        assert not _portalocker_timeout_warnings(caught)
 
 
 class TestBackwardCompatibility:
@@ -312,10 +333,13 @@ class TestCLIFileLock:
         test_file = tmp_path / "test.json"
         test_data = {"cli": "write"}
 
-        locked_write_json_cli(test_file, test_data)
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            locked_write_json_cli(test_file, test_data)
 
         content = json.loads(test_file.read_text())
         assert content == test_data
+        assert not _portalocker_timeout_warnings(caught)
 
 
 if __name__ == "__main__":
