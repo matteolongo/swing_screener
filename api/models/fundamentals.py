@@ -114,3 +114,78 @@ class FundamentalsCompareRequest(BaseModel):
 
 class FundamentalsCompareResponse(BaseModel):
     snapshots: list[FundamentalSnapshotResponse] = Field(default_factory=list)
+
+
+class FundamentalsWarmupRequest(BaseModel):
+    source: Literal["watchlist", "symbols"] = "watchlist"
+    symbols: list[str] = Field(default_factory=list, max_length=100)
+    force_refresh: bool = False
+
+    @field_validator("symbols")
+    @classmethod
+    def _normalize_warmup_symbols(cls, values: list[str]) -> list[str]:
+        normalized: list[str] = []
+        seen: set[str] = set()
+        for value in values:
+            symbol = str(value).strip().upper()
+            if not symbol or symbol in seen:
+                continue
+            seen.add(symbol)
+            normalized.append(symbol)
+        return normalized
+
+    @field_validator("source")
+    @classmethod
+    def _normalize_source(cls, value: str) -> str:
+        return str(value).strip().lower()
+
+    @field_validator("symbols")
+    @classmethod
+    def _validate_symbols_required_for_symbols_source(cls, values: list[str], info) -> list[str]:
+        source = str(info.data.get("source", "watchlist")).strip().lower() if info.data else "watchlist"
+        if source == "symbols" and not values:
+            raise ValueError("Provide at least one symbol when source='symbols'.")
+        return values
+
+
+class FundamentalsWarmupCoverageCountsResponse(BaseModel):
+    supported: int = Field(default=0, ge=0)
+    partial: int = Field(default=0, ge=0)
+    insufficient: int = Field(default=0, ge=0)
+    unsupported: int = Field(default=0, ge=0)
+
+
+class FundamentalsWarmupFreshnessCountsResponse(BaseModel):
+    current: int = Field(default=0, ge=0)
+    stale: int = Field(default=0, ge=0)
+    unknown: int = Field(default=0, ge=0)
+
+
+class FundamentalsWarmupLaunchResponse(BaseModel):
+    job_id: str
+    status: Literal["queued", "running", "completed", "error"]
+    source: Literal["watchlist", "symbols"]
+    force_refresh: bool = False
+    total_symbols: int = Field(default=0, ge=0)
+    created_at: str
+    updated_at: str
+
+
+class FundamentalsWarmupStatusResponse(BaseModel):
+    job_id: str
+    status: Literal["queued", "running", "completed", "error"]
+    source: Literal["watchlist", "symbols"]
+    force_refresh: bool = False
+    total_symbols: int = Field(default=0, ge=0)
+    completed_symbols: int = Field(default=0, ge=0)
+    coverage_counts: FundamentalsWarmupCoverageCountsResponse = Field(
+        default_factory=FundamentalsWarmupCoverageCountsResponse
+    )
+    freshness_counts: FundamentalsWarmupFreshnessCountsResponse = Field(
+        default_factory=FundamentalsWarmupFreshnessCountsResponse
+    )
+    error_count: int = Field(default=0, ge=0)
+    last_completed_symbol: Optional[str] = None
+    error_sample: Optional[str] = None
+    created_at: str
+    updated_at: str

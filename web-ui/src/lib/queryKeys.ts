@@ -36,4 +36,5 @@ export const queryKeys = {
   fundamentalsConfig: () => ['fundamentals-config'] as const,
   fundamentalsSnapshot: (symbol?: string, refresh?: boolean) =>
     ['fundamentals-snapshot', symbol ?? null, refresh ?? false] as const,
+  fundamentalsWarmupStatus: (jobId?: string) => ['fundamentals-warmup-status', jobId] as const,
 };

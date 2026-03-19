@@ -75,6 +75,43 @@ class _FakeFundamentalsService:
             "snapshots": [self.get_snapshot(symbol, force_refresh=request.force_refresh) for symbol in request.symbols]
         }
 
+    def start_warmup(self, request):
+        return {
+            "job_id": "warmup-1",
+            "status": "queued",
+            "source": request.source,
+            "force_refresh": request.force_refresh,
+            "total_symbols": len(request.symbols) if request.source == "symbols" else 2,
+            "created_at": "2026-03-19T10:00:00",
+            "updated_at": "2026-03-19T10:00:00",
+        }
+
+    def get_warmup_status(self, job_id: str):
+        return {
+            "job_id": job_id,
+            "status": "running",
+            "source": "watchlist",
+            "force_refresh": False,
+            "total_symbols": 2,
+            "completed_symbols": 1,
+            "coverage_counts": {
+                "supported": 1,
+                "partial": 0,
+                "insufficient": 0,
+                "unsupported": 0,
+            },
+            "freshness_counts": {
+                "current": 1,
+                "stale": 0,
+                "unknown": 0,
+            },
+            "error_count": 0,
+            "last_completed_symbol": "AAPL",
+            "error_sample": None,
+            "created_at": "2026-03-19T10:00:00",
+            "updated_at": "2026-03-19T10:00:03",
+        }
+
 
 def test_fundamentals_snapshot_endpoint():
     app.dependency_overrides[get_fundamentals_service] = lambda: _FakeFundamentalsService()
@@ -105,5 +142,40 @@ def test_fundamentals_compare_endpoint():
     payload = res.json()
     assert len(payload["snapshots"]) == 2
     assert payload["snapshots"][1]["symbol"] == "MSFT"
+
+    app.dependency_overrides.clear()
+
+
+def test_fundamentals_warmup_launch_endpoint():
+    app.dependency_overrides[get_fundamentals_service] = lambda: _FakeFundamentalsService()
+    client = TestClient(app)
+
+    res = client.post(
+        "/api/fundamentals/warmup",
+        json={"source": "symbols", "symbols": ["AAPL", "MSFT"], "force_refresh": True},
+    )
+
+    assert res.status_code == 200
+    payload = res.json()
+    assert payload["job_id"] == "warmup-1"
+    assert payload["source"] == "symbols"
+    assert payload["force_refresh"] is True
+    assert payload["total_symbols"] == 2
+
+    app.dependency_overrides.clear()
+
+
+def test_fundamentals_warmup_status_endpoint():
+    app.dependency_overrides[get_fundamentals_service] = lambda: _FakeFundamentalsService()
+    client = TestClient(app)
+
+    res = client.get("/api/fundamentals/warmup/warmup-1")
+
+    assert res.status_code == 200
+    payload = res.json()
+    assert payload["job_id"] == "warmup-1"
+    assert payload["status"] == "running"
+    assert payload["coverage_counts"]["supported"] == 1
+    assert payload["last_completed_symbol"] == "AAPL"
 
     app.dependency_overrides.clear()

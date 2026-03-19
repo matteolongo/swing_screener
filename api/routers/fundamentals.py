@@ -10,6 +10,9 @@ from api.models.fundamentals import (
     FundamentalsCompareRequest,
     FundamentalsCompareResponse,
     FundamentalsConfigModel,
+    FundamentalsWarmupLaunchResponse,
+    FundamentalsWarmupRequest,
+    FundamentalsWarmupStatusResponse,
 )
 from api.services.fundamentals_service import FundamentalsService
 
@@ -54,3 +57,19 @@ def compare_fundamentals(
     service: FundamentalsService = Depends(get_fundamentals_service),
 ):
     return service.compare(request)
+
+
+@router.post("/warmup", response_model=FundamentalsWarmupLaunchResponse)
+def start_warmup(
+    request: FundamentalsWarmupRequest,
+    service: FundamentalsService = Depends(get_fundamentals_service),
+):
+    return service.start_warmup(request)
+
+
+@router.get("/warmup/{job_id}", response_model=FundamentalsWarmupStatusResponse)
+def get_warmup_status(
+    job_id: str,
+    service: FundamentalsService = Depends(get_fundamentals_service),
+):
+    return service.get_warmup_status(job_id)

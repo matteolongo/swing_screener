@@ -4,12 +4,17 @@ import {
   compareFundamentals,
   fetchFundamentalSnapshot,
   fetchFundamentalsConfig,
+  fetchFundamentalsWarmupStatus,
+  startFundamentalsWarmup,
 } from '@/features/fundamentals/api';
 import type {
   FundamentalSnapshot,
   FundamentalsCompareRequest,
   FundamentalsCompareResponse,
   FundamentalsConfig,
+  FundamentalsWarmupLaunchResponse,
+  FundamentalsWarmupRequest,
+  FundamentalsWarmupStatus,
 } from '@/features/fundamentals/types';
 import { queryKeys } from '@/lib/queryKeys';
 
@@ -36,6 +41,32 @@ export function useFundamentalSnapshotQuery(symbol?: string, refresh: boolean = 
 export function useCompareFundamentalsMutation() {
   return useMutation<FundamentalsCompareResponse, Error, FundamentalsCompareRequest>({
     mutationFn: (request) => compareFundamentals(request),
+  });
+}
+
+export function useStartFundamentalsWarmupMutation(
+  onSuccess?: (data: FundamentalsWarmupLaunchResponse) => void
+) {
+  return useMutation<FundamentalsWarmupLaunchResponse, Error, FundamentalsWarmupRequest>({
+    mutationFn: (request) => startFundamentalsWarmup(request),
+    onSuccess,
+  });
+}
+
+export function useFundamentalsWarmupStatus(jobId?: string) {
+  return useQuery<FundamentalsWarmupStatus>({
+    queryKey: queryKeys.fundamentalsWarmupStatus(jobId),
+    queryFn: () => fetchFundamentalsWarmupStatus(jobId as string),
+    enabled: Boolean(jobId),
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      if (status === 'completed' || status === 'error') {
+        return false;
+      }
+      return 2000;
+    },
+    retry: false,
+    refetchOnWindowFocus: false,
   });
 }
 
