@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { transformFundamentalSnapshot } from '@/features/fundamentals/types';
+import {
+  transformFundamentalSnapshot,
+  transformFundamentalsWarmupLaunchResponse,
+  transformFundamentalsWarmupStatus,
+} from '@/features/fundamentals/types';
 
 describe('fundamentals transforms', () => {
   it('maps API snapshot payload to UI shape', () => {
@@ -48,5 +52,47 @@ describe('fundamentals transforms', () => {
     expect(snapshot.historicalSeries.revenue.direction).toBe('improving');
     expect(snapshot.historicalSeries.revenue.points).toHaveLength(3);
     expect(snapshot.metricSources.revenue_growth_yoy).toBe('yfinance');
+  });
+
+  it('maps warmup launch and status payloads to UI shape', () => {
+    const launch = transformFundamentalsWarmupLaunchResponse({
+      job_id: 'warmup-1',
+      status: 'queued',
+      source: 'watchlist',
+      force_refresh: false,
+      total_symbols: 8,
+      created_at: '2026-03-19T10:00:00',
+      updated_at: '2026-03-19T10:00:00',
+    });
+    const status = transformFundamentalsWarmupStatus({
+      job_id: 'warmup-1',
+      status: 'running',
+      source: 'symbols',
+      force_refresh: true,
+      total_symbols: 3,
+      completed_symbols: 2,
+      coverage_counts: {
+        supported: 1,
+        partial: 1,
+        insufficient: 0,
+        unsupported: 0,
+      },
+      freshness_counts: {
+        current: 2,
+        stale: 0,
+        unknown: 0,
+      },
+      error_count: 0,
+      last_completed_symbol: 'MSFT',
+      error_sample: null,
+      created_at: '2026-03-19T10:00:00',
+      updated_at: '2026-03-19T10:00:03',
+    });
+
+    expect(launch.jobId).toBe('warmup-1');
+    expect(launch.totalSymbols).toBe(8);
+    expect(status.completedSymbols).toBe(2);
+    expect(status.coverageCounts.partial).toBe(1);
+    expect(status.lastCompletedSymbol).toBe('MSFT');
   });
 });

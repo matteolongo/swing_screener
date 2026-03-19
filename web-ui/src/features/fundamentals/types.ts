@@ -134,6 +134,96 @@ export interface FundamentalsCompareResponseAPI {
   snapshots: FundamentalSnapshotAPI[];
 }
 
+export interface FundamentalsWarmupRequest {
+  source: 'watchlist' | 'symbols';
+  symbols?: string[];
+  forceRefresh?: boolean;
+}
+
+export interface FundamentalsWarmupRequestAPI {
+  source: 'watchlist' | 'symbols';
+  symbols?: string[];
+  force_refresh?: boolean;
+}
+
+export interface FundamentalsWarmupCoverageCounts {
+  supported: number;
+  partial: number;
+  insufficient: number;
+  unsupported: number;
+}
+
+export interface FundamentalsWarmupCoverageCountsAPI {
+  supported: number;
+  partial: number;
+  insufficient: number;
+  unsupported: number;
+}
+
+export interface FundamentalsWarmupFreshnessCounts {
+  current: number;
+  stale: number;
+  unknown: number;
+}
+
+export interface FundamentalsWarmupFreshnessCountsAPI {
+  current: number;
+  stale: number;
+  unknown: number;
+}
+
+export interface FundamentalsWarmupLaunchResponse {
+  jobId: string;
+  status: 'queued' | 'running' | 'completed' | 'error';
+  source: 'watchlist' | 'symbols';
+  forceRefresh: boolean;
+  totalSymbols: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FundamentalsWarmupLaunchResponseAPI {
+  job_id: string;
+  status: 'queued' | 'running' | 'completed' | 'error';
+  source: 'watchlist' | 'symbols';
+  force_refresh: boolean;
+  total_symbols: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FundamentalsWarmupStatus {
+  jobId: string;
+  status: 'queued' | 'running' | 'completed' | 'error';
+  source: 'watchlist' | 'symbols';
+  forceRefresh: boolean;
+  totalSymbols: number;
+  completedSymbols: number;
+  coverageCounts: FundamentalsWarmupCoverageCounts;
+  freshnessCounts: FundamentalsWarmupFreshnessCounts;
+  errorCount: number;
+  lastCompletedSymbol?: string;
+  errorSample?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FundamentalsWarmupStatusAPI {
+  job_id: string;
+  status: 'queued' | 'running' | 'completed' | 'error';
+  source: 'watchlist' | 'symbols';
+  force_refresh: boolean;
+  total_symbols: number;
+  completed_symbols: number;
+  coverage_counts: FundamentalsWarmupCoverageCountsAPI;
+  freshness_counts: FundamentalsWarmupFreshnessCountsAPI;
+  error_count: number;
+  last_completed_symbol?: string | null;
+  error_sample?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export function transformFundamentalsConfig(api: FundamentalsConfigAPI): FundamentalsConfig {
   return {
     enabled: api.enabled,
@@ -211,5 +301,58 @@ export function transformFundamentalsCompareResponse(
 ): FundamentalsCompareResponse {
   return {
     snapshots: (api.snapshots ?? []).map(transformFundamentalSnapshot),
+  };
+}
+
+export function toFundamentalsWarmupRequestAPI(
+  request: FundamentalsWarmupRequest
+): FundamentalsWarmupRequestAPI {
+  return {
+    source: request.source,
+    symbols: request.symbols,
+    force_refresh: request.forceRefresh,
+  };
+}
+
+export function transformFundamentalsWarmupLaunchResponse(
+  api: FundamentalsWarmupLaunchResponseAPI
+): FundamentalsWarmupLaunchResponse {
+  return {
+    jobId: api.job_id,
+    status: api.status,
+    source: api.source,
+    forceRefresh: api.force_refresh,
+    totalSymbols: api.total_symbols,
+    createdAt: api.created_at,
+    updatedAt: api.updated_at,
+  };
+}
+
+export function transformFundamentalsWarmupStatus(
+  api: FundamentalsWarmupStatusAPI
+): FundamentalsWarmupStatus {
+  return {
+    jobId: api.job_id,
+    status: api.status,
+    source: api.source,
+    forceRefresh: api.force_refresh,
+    totalSymbols: api.total_symbols,
+    completedSymbols: api.completed_symbols,
+    coverageCounts: {
+      supported: api.coverage_counts.supported,
+      partial: api.coverage_counts.partial,
+      insufficient: api.coverage_counts.insufficient,
+      unsupported: api.coverage_counts.unsupported,
+    },
+    freshnessCounts: {
+      current: api.freshness_counts.current,
+      stale: api.freshness_counts.stale,
+      unknown: api.freshness_counts.unknown,
+    },
+    errorCount: api.error_count,
+    lastCompletedSymbol: api.last_completed_symbol ?? undefined,
+    errorSample: api.error_sample ?? undefined,
+    createdAt: api.created_at,
+    updatedAt: api.updated_at,
   };
 }

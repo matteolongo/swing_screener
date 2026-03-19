@@ -8,9 +8,17 @@ import {
   FundamentalsCompareResponseAPI,
   FundamentalsConfig,
   FundamentalsConfigAPI,
+  FundamentalsWarmupLaunchResponse,
+  FundamentalsWarmupLaunchResponseAPI,
+  FundamentalsWarmupRequest,
+  FundamentalsWarmupStatus,
+  FundamentalsWarmupStatusAPI,
+  toFundamentalsWarmupRequestAPI,
   transformFundamentalSnapshot,
   transformFundamentalsCompareResponse,
   transformFundamentalsConfig,
+  transformFundamentalsWarmupLaunchResponse,
+  transformFundamentalsWarmupStatus,
 } from '@/features/fundamentals/types';
 
 function toComparePayload(request: FundamentalsCompareRequest): FundamentalsCompareRequestAPI {
@@ -61,4 +69,30 @@ export async function compareFundamentals(
   }
   const payload: FundamentalsCompareResponseAPI = await response.json();
   return transformFundamentalsCompareResponse(payload);
+}
+
+export async function startFundamentalsWarmup(
+  request: FundamentalsWarmupRequest
+): Promise<FundamentalsWarmupLaunchResponse> {
+  const response = await fetch(apiUrl(API_ENDPOINTS.fundamentalsWarmup), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(toFundamentalsWarmupRequestAPI(request)),
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.detail || 'Failed to start fundamentals warmup');
+  }
+  const payload: FundamentalsWarmupLaunchResponseAPI = await response.json();
+  return transformFundamentalsWarmupLaunchResponse(payload);
+}
+
+export async function fetchFundamentalsWarmupStatus(jobId: string): Promise<FundamentalsWarmupStatus> {
+  const response = await fetch(apiUrl(API_ENDPOINTS.fundamentalsWarmupStatus(jobId)));
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.detail || 'Failed to fetch fundamentals warmup status');
+  }
+  const payload: FundamentalsWarmupStatusAPI = await response.json();
+  return transformFundamentalsWarmupStatus(payload);
 }

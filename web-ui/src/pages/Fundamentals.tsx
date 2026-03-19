@@ -5,6 +5,8 @@ import FundamentalsSnapshotCard from '@/components/domain/fundamentals/Fundament
 import {
   useCompareFundamentalsMutation,
   useFundamentalsConfigQuery,
+  useFundamentalsWarmupStatus,
+  useStartFundamentalsWarmupMutation,
 } from '@/features/fundamentals/hooks';
 
 function normalizeSymbols(input: string): string[] {
@@ -21,14 +23,32 @@ function normalizeSymbols(input: string): string[] {
 
 export default function FundamentalsPage() {
   const [symbolsInput, setSymbolsInput] = useState('AAPL, MSFT');
+  const [warmupJobId, setWarmupJobId] = useState<string | undefined>(undefined);
   const configQuery = useFundamentalsConfigQuery();
   const compareMutation = useCompareFundamentalsMutation();
+  const warmupMutation = useStartFundamentalsWarmupMutation((launch) => {
+    setWarmupJobId(launch.jobId);
+  });
+  const warmupStatusQuery = useFundamentalsWarmupStatus(warmupJobId);
   const symbols = useMemo(() => normalizeSymbols(symbolsInput), [symbolsInput]);
 
   const runCompare = () => {
     if (symbols.length < 2) return;
     compareMutation.mutate({ symbols, forceRefresh: false });
   };
+
+  const warmupSymbols = () => {
+    if (symbols.length < 1) return;
+    warmupMutation.mutate({ source: 'symbols', symbols, forceRefresh: false });
+  };
+
+  const warmupWatchlist = () => {
+    warmupMutation.mutate({ source: 'watchlist', forceRefresh: false });
+  };
+
+  const warmupStatus = warmupStatusQuery.data;
+  const progressText =
+    warmupStatus == null ? '0/0' : `${warmupStatus.completedSymbols}/${warmupStatus.totalSymbols}`;
 
   return (
     <div className="space-y-6">
@@ -58,12 +78,71 @@ export default function FundamentalsPage() {
           <Button type="button" onClick={runCompare} disabled={symbols.length < 2 || compareMutation.isPending}>
             {compareMutation.isPending ? 'Comparing...' : 'Compare fundamentals'}
           </Button>
-          <span className="text-xs text-gray-500">Enter at least two single-stock tickers.</span>
+          <Button type="button" onClick={warmupSymbols} disabled={symbols.length < 1 || warmupMutation.isPending}>
+            {warmupMutation.isPending ? 'Queueing...' : 'Warm listed symbols'}
+          </Button>
+          <Button type="button" onClick={warmupWatchlist} disabled={warmupMutation.isPending}>
+            Warm watchlist
+          </Button>
+          <span className="text-xs text-gray-500">Compare needs 2+ tickers. Warmup works with one or more.</span>
         </div>
-        {compareMutation.isError ? (
-          <p className="mt-3 text-sm text-rose-600">{compareMutation.error.message}</p>
-        ) : null}
+        <div className="mt-3 space-y-1">
+          {compareMutation.isError ? (
+            <p className="text-sm text-rose-600">{compareMutation.error.message}</p>
+          ) : null}
+          {warmupMutation.isError ? (
+            <p className="text-sm text-rose-600">{warmupMutation.error.message}</p>
+          ) : null}
+        </div>
       </div>
+
+      {warmupJobId ? (
+        <div className="rounded-lg border border-sky-200 bg-sky-50 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="text-sm font-semibold text-sky-950">Fundamentals warmup</div>
+              <div className="text-xs text-sky-800">
+                Job {warmupJobId} · {warmupStatus?.source ?? 'queued'} · {warmupStatus?.status ?? 'queued'}
+              </div>
+            </div>
+            <div className="text-right text-xs text-sky-800">
+              <div>Progress: {progressText}</div>
+              {warmupStatus?.lastCompletedSymbol ? <div>Last: {warmupStatus.lastCompletedSymbol}</div> : null}
+            </div>
+          </div>
+
+          {warmupStatus ? (
+            <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-3">
+              <div className="rounded-md bg-white/70 p-3 text-xs text-sky-900">
+                <div className="text-sky-700">Coverage</div>
+                <div className="mt-1">
+                  supported {warmupStatus.coverageCounts.supported} · partial {warmupStatus.coverageCounts.partial} ·
+                  insufficient {warmupStatus.coverageCounts.insufficient} · unsupported{' '}
+                  {warmupStatus.coverageCounts.unsupported}
+                </div>
+              </div>
+              <div className="rounded-md bg-white/70 p-3 text-xs text-sky-900">
+                <div className="text-sky-700">Freshness</div>
+                <div className="mt-1">
+                  current {warmupStatus.freshnessCounts.current} · stale {warmupStatus.freshnessCounts.stale} ·
+                  unknown {warmupStatus.freshnessCounts.unknown}
+                </div>
+              </div>
+              <div className="rounded-md bg-white/70 p-3 text-xs text-sky-900">
+                <div className="text-sky-700">Errors</div>
+                <div className="mt-1">
+                  {warmupStatus.errorCount}
+                  {warmupStatus.errorSample ? ` · ${warmupStatus.errorSample}` : ''}
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {warmupStatusQuery.isError ? (
+            <p className="mt-3 text-sm text-rose-600">{warmupStatusQuery.error.message}</p>
+          ) : null}
+        </div>
+      ) : null}
 
       {compareMutation.data ? (
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
