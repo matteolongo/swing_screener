@@ -20,6 +20,7 @@ vi.mock('@/components/domain/workspace/KeyMetrics', () => ({
   default: ({ ticker }: { ticker: string }) => <div>Key metrics {ticker}</div>,
 }));
 
+
 describe('AnalysisCanvasPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -123,4 +124,5 @@ describe('AnalysisCanvasPanel', () => {
     expect(screen.getByText('AAPL Decision Summary')).toBeInTheDocument();
     expect(screen.getByText('Buy Now')).toBeInTheDocument();
   });
+
 });

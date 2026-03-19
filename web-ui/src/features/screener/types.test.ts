@@ -66,5 +66,6 @@ describe('transformScreenerResponse', () => {
     expect(result.candidates[0].fundamentalsSummary).toBe('Growth metrics are supportive.');
     expect(result.candidates[0].decisionSummary?.action).toBe('BUY_NOW');
     expect(result.candidates[0].decisionSummary?.tradePlan.rr).toBe(2);
+
   });
 });

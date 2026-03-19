@@ -32,6 +32,7 @@ export default function AnalysisCanvasPanel({
   const selectedCandidate = lastScreenerResult?.candidates.find(
     (candidate) => candidate.ticker.toUpperCase() === selectedTicker?.toUpperCase()
   );
+
   const fundamentalsQuery = useFundamentalSnapshotQuery(
     activeTab === 'fundamentals' ? selectedTicker ?? undefined : undefined
   );
