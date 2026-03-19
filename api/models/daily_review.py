@@ -6,11 +6,14 @@ from api.models.recommendation import Recommendation
 from api.models.portfolio import Position, Order
 from api.models.screener import SameSymbolCandidateContext
 from api.models.strategy import Strategy
+from swing_screener.recommendation.models import DecisionSummary
 
 
 class DailyReviewCandidate(BaseModel):
     """A new trade candidate from the screener."""
     ticker: str
+    rank: int | None = None
+    priority_rank: int | None = None
     confidence: float | None = None
     signal: str
     close: float
@@ -25,6 +28,7 @@ class DailyReviewCandidate(BaseModel):
     execution_note: Optional[str] = None
     recommendation: Optional[Recommendation] = None
     same_symbol: Optional[SameSymbolCandidateContext] = None
+    decision_summary: Optional[DecisionSummary] = None
 
 
 class DailyReviewPositionHold(BaseModel):

@@ -22,6 +22,8 @@ import { queryKeys } from '@/lib/queryKeys';
 import { t } from '@/i18n/t';
 import { useUnwatchSymbolMutation, useWatchSymbolMutation, useWatchlist } from '@/features/watchlist/hooks';
 import type { WatchItem } from '@/features/watchlist/types';
+import { filterDailyReviewCandidates } from '@/features/dailyReview/prioritization';
+import type { DecisionActionFilter } from '@/features/screener/prioritization';
 import {
   parseUniverseFromStorage,
   SCREENER_UNIVERSE_STORAGE_KEY,
@@ -36,6 +38,55 @@ import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 import { useStrategyReadiness } from '@/features/strategy/useStrategyReadiness';
 import StrategyReadinessBlocker from '@/components/domain/onboarding/StrategyReadinessBlocker';
 
+const DAILY_REVIEW_ACTION_FILTERS: DecisionActionFilter[] = [
+  'all',
+  'BUY_NOW',
+  'BUY_ON_PULLBACK',
+  'WAIT_FOR_BREAKOUT',
+  'WATCH',
+  'TACTICAL_ONLY',
+  'AVOID',
+  'MANAGE_ONLY',
+];
+
+function decisionActionLabel(action?: string): string | null {
+  switch (action) {
+    case 'BUY_NOW':
+      return t('workspacePage.panels.analysis.decisionSummary.actions.buyNow');
+    case 'BUY_ON_PULLBACK':
+      return t('workspacePage.panels.analysis.decisionSummary.actions.buyOnPullback');
+    case 'WAIT_FOR_BREAKOUT':
+      return t('workspacePage.panels.analysis.decisionSummary.actions.waitForBreakout');
+    case 'WATCH':
+      return t('workspacePage.panels.analysis.decisionSummary.actions.watch');
+    case 'TACTICAL_ONLY':
+      return t('workspacePage.panels.analysis.decisionSummary.actions.tacticalOnly');
+    case 'AVOID':
+      return t('workspacePage.panels.analysis.decisionSummary.actions.avoid');
+    case 'MANAGE_ONLY':
+      return t('workspacePage.panels.analysis.decisionSummary.actions.manageOnly');
+    default:
+      return null;
+  }
+}
+
+function decisionConvictionLabel(conviction?: string): string | null {
+  switch (conviction) {
+    case 'high':
+      return t('workspacePage.panels.analysis.decisionSummary.conviction.high');
+    case 'medium':
+      return t('workspacePage.panels.analysis.decisionSummary.conviction.medium');
+    case 'low':
+      return t('workspacePage.panels.analysis.decisionSummary.conviction.low');
+    default:
+      return null;
+  }
+}
+
+function actionFilterLabel(value: DecisionActionFilter): string {
+  return decisionActionLabel(value) ?? t('screener.controls.allActions');
+}
+
 export default function DailyReview() {
   const [expandedSections, setExpandedSections] = useState({
     candidates: true,
@@ -45,6 +96,8 @@ export default function DailyReview() {
     close: true,
   });
   const [selectedCandidate, setSelectedCandidate] = useState<DailyReviewCandidate | null>(null);
+  const [candidateRecommendedOnly, setCandidateRecommendedOnly] = useState(true);
+  const [candidateActionFilter, setCandidateActionFilter] = useState<DecisionActionFilter>('all');
   const [dismissedReadinessBlocker, setDismissedReadinessBlocker] = useState(() => {
     // Persist dismissal state in localStorage
     return localStorage.getItem('dailyReview.dismissedReadinessBlocker') === 'true';
@@ -186,7 +239,27 @@ export default function DailyReview() {
   const recommendedAddOnCandidates = review.positionsAddOnCandidates.filter(
     (candidate) => candidate.recommendation?.verdict === 'RECOMMENDED',
   );
-  const hiddenCandidates = review.newCandidates.length - recommendedCandidates.length;
+  const visibleCandidates = filterDailyReviewCandidates(review.newCandidates, {
+    recommendedOnly: candidateRecommendedOnly,
+    actionFilter: candidateActionFilter,
+  });
+  const visibleAddOnCandidates = filterDailyReviewCandidates(review.positionsAddOnCandidates, {
+    recommendedOnly: candidateRecommendedOnly,
+    actionFilter: candidateActionFilter,
+  });
+  const hiddenCandidates = candidateRecommendedOnly ? review.newCandidates.length - recommendedCandidates.length : 0;
+  const hiddenAddOnCandidates = candidateRecommendedOnly
+    ? review.positionsAddOnCandidates.length - recommendedAddOnCandidates.length
+    : 0;
+  const candidateBaseCount = candidateRecommendedOnly ? recommendedCandidates.length : review.newCandidates.length;
+  const addOnBaseCount = candidateRecommendedOnly
+    ? recommendedAddOnCandidates.length
+    : review.positionsAddOnCandidates.length;
+  const actionFilteredCandidates =
+    candidateActionFilter === 'all' ? 0 : Math.max(candidateBaseCount - visibleCandidates.length, 0);
+  const actionFilteredAddOns =
+    candidateActionFilter === 'all' ? 0 : Math.max(addOnBaseCount - visibleAddOnCandidates.length, 0);
+  const usesDefaultCandidateFilter = candidateRecommendedOnly && candidateActionFilter === 'all';
   const quickActionCandidate = recommendedCandidates[0] ?? recommendedAddOnCandidates[0] ?? null;
   const quickActionIsAddOn = quickActionCandidate?.sameSymbol?.mode === 'ADD_ON';
 
@@ -275,16 +348,64 @@ export default function DailyReview() {
         </Card>
       ) : null}
 
+      <Card>
+        <CardContent className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+              {t('dailyReview.filters.title')}
+            </p>
+            <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+              {t('dailyReview.filters.explanation')}
+            </p>
+          </div>
+          <div className="flex flex-col gap-3 md:flex-row md:items-end">
+            <label className="flex min-h-11 items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+              <input
+                type="checkbox"
+                checked={candidateRecommendedOnly}
+                onChange={(event) => setCandidateRecommendedOnly(event.target.checked)}
+                className="h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span>{t('screener.controls.recommendedOnly')}</span>
+            </label>
+            <div className="w-full md:min-w-[14rem]">
+              <label
+                htmlFor="daily-review-action-filter"
+                className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+              >
+                {t('screener.controls.actionFilter')}
+              </label>
+              <select
+                id="daily-review-action-filter"
+                value={candidateActionFilter}
+                onChange={(event) => setCandidateActionFilter(event.target.value as DecisionActionFilter)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+              >
+                {DAILY_REVIEW_ACTION_FILTERS.map((value) => (
+                  <option key={value} value={value}>
+                    {actionFilterLabel(value)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <CollapsibleSection
-        title={t('dailyReview.sections.newTradeCandidates', { count: recommendedCandidates.length })}
+        title={t('dailyReview.sections.newTradeCandidates', { count: visibleCandidates.length })}
         isExpanded={expandedSections.candidates}
         onToggle={() => toggleSection('candidates')}
-        count={recommendedCandidates.length}
+        count={visibleCandidates.length}
       >
-        {recommendedCandidates.length === 0 ? (
+        {visibleCandidates.length === 0 ? (
           <div className="space-y-3">
-            <p className="text-gray-600 dark:text-gray-400">{t('dailyReview.sections.noRecommended')}</p>
-            {hiddenCandidates > 0 ? (
+            <p className="text-gray-600 dark:text-gray-400">
+              {usesDefaultCandidateFilter
+                ? t('dailyReview.sections.noRecommended')
+                : t('dailyReview.sections.noCandidatesForFilters')}
+            </p>
+            {hiddenCandidates > 0 && usesDefaultCandidateFilter ? (
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 {t('dailyReview.sections.hiddenByVerdict', {
                   count: hiddenCandidates,
@@ -292,24 +413,34 @@ export default function DailyReview() {
                 })}
               </p>
             ) : null}
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/20">
-              <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
-                {t('dailyReview.sections.noRecommendedExplainTitle')}
+            {hiddenCandidates > 0 || actionFilteredCandidates > 0 ? (
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {t('dailyReview.sections.showingFilteredCandidates', {
+                  shown: visibleCandidates.length,
+                  total: review.newCandidates.length,
+                })}
               </p>
-              <p className="mt-1 text-sm text-amber-800 dark:text-amber-300">
-                {t('dailyReview.sections.noRecommendedExplainBody')}
-              </p>
-              <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-amber-800 dark:text-amber-300">
-                <li>{t('dailyReview.sections.noRecommendedReasonSignal')}</li>
-                <li>{t('dailyReview.sections.noRecommendedReasonRisk')}</li>
-                <li>{t('dailyReview.sections.noRecommendedReasonReward')}</li>
-              </ul>
-            </div>
+            ) : null}
+            {usesDefaultCandidateFilter ? (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/20">
+                <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
+                  {t('dailyReview.sections.noRecommendedExplainTitle')}
+                </p>
+                <p className="mt-1 text-sm text-amber-800 dark:text-amber-300">
+                  {t('dailyReview.sections.noRecommendedExplainBody')}
+                </p>
+                <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-amber-800 dark:text-amber-300">
+                  <li>{t('dailyReview.sections.noRecommendedReasonSignal')}</li>
+                  <li>{t('dailyReview.sections.noRecommendedReasonRisk')}</li>
+                  <li>{t('dailyReview.sections.noRecommendedReasonReward')}</li>
+                </ul>
+              </div>
+            ) : null}
           </div>
         ) : (
           <div className="space-y-3">
             <GlossaryLegend metricKeys={DAILY_REVIEW_GLOSSARY_KEYS} title={t('dailyReview.sections.dailyGlossary')} />
-            {hiddenCandidates > 0 ? (
+            {hiddenCandidates > 0 && usesDefaultCandidateFilter ? (
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 {t('dailyReview.sections.showingRecommendedOnly', {
                   count: hiddenCandidates,
@@ -317,8 +448,16 @@ export default function DailyReview() {
                 })}
               </p>
             ) : null}
+            {(!usesDefaultCandidateFilter && (hiddenCandidates > 0 || actionFilteredCandidates > 0)) ? (
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {t('dailyReview.sections.showingFilteredCandidates', {
+                  shown: visibleCandidates.length,
+                  total: review.newCandidates.length,
+                })}
+              </p>
+            ) : null}
             <CandidatesTable
-              candidates={recommendedCandidates}
+              candidates={visibleCandidates}
               onOpenOrderReview={setSelectedCandidate}
               watchItemsByTicker={watchItemsByTicker}
               watchPending={watchPending}
@@ -330,22 +469,46 @@ export default function DailyReview() {
       </CollapsibleSection>
 
       <CollapsibleSection
-        title={t('dailyReview.sections.addOnCandidates', { count: recommendedAddOnCandidates.length })}
+        title={t('dailyReview.sections.addOnCandidates', { count: visibleAddOnCandidates.length })}
         isExpanded={expandedSections.addOns}
         onToggle={() => toggleSection('addOns')}
-        count={recommendedAddOnCandidates.length}
+        count={visibleAddOnCandidates.length}
       >
-        {recommendedAddOnCandidates.length === 0 ? (
-          <p className="text-gray-600 dark:text-gray-400">{t('dailyReview.sections.noAddOns')}</p>
+        {visibleAddOnCandidates.length === 0 ? (
+          <div className="space-y-3">
+            <p className="text-gray-600 dark:text-gray-400">
+              {usesDefaultCandidateFilter
+                ? t('dailyReview.sections.noAddOns')
+                : t('dailyReview.sections.noCandidatesForFilters')}
+            </p>
+            {hiddenAddOnCandidates > 0 || actionFilteredAddOns > 0 ? (
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {t('dailyReview.sections.showingFilteredCandidates', {
+                  shown: visibleAddOnCandidates.length,
+                  total: review.positionsAddOnCandidates.length,
+                })}
+              </p>
+            ) : null}
+          </div>
         ) : (
-          <CandidatesTable
-            candidates={recommendedAddOnCandidates}
-            onOpenOrderReview={setSelectedCandidate}
-            watchItemsByTicker={watchItemsByTicker}
-            watchPending={watchPending}
-            onWatch={handleWatch}
-            onUnwatch={handleUnwatch}
-          />
+          <div className="space-y-3">
+            {hiddenAddOnCandidates > 0 || actionFilteredAddOns > 0 ? (
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {t('dailyReview.sections.showingFilteredCandidates', {
+                  shown: visibleAddOnCandidates.length,
+                  total: review.positionsAddOnCandidates.length,
+                })}
+              </p>
+            ) : null}
+            <CandidatesTable
+              candidates={visibleAddOnCandidates}
+              onOpenOrderReview={setSelectedCandidate}
+              watchItemsByTicker={watchItemsByTicker}
+              watchPending={watchPending}
+              onWatch={handleWatch}
+              onUnwatch={handleUnwatch}
+            />
+          </div>
         )}
       </CollapsibleSection>
 
@@ -628,6 +791,7 @@ function CandidatesTable({
       tableClassName="text-sm"
       headers={(
         <tr>
+          <th className="text-left p-2">{t('dailyReview.table.candidates.headers.priority')}</th>
           <th className="text-left p-2">{t('dailyReview.table.candidates.headers.ticker')}</th>
           <th className="text-right p-2">
             <MetricHelpLabel metricKey="CONFIDENCE" className="justify-end w-full" />
@@ -645,9 +809,29 @@ function CandidatesTable({
         </tr>
       )}
     >
-      {candidates.map((candidate) => (
+      {candidates.map((candidate) => {
+        const action = decisionActionLabel(candidate.decisionSummary?.action);
+        const conviction = decisionConvictionLabel(candidate.decisionSummary?.conviction);
+        const priorityRank = candidate.priorityRank ?? candidate.rank;
+
+        return (
         <tr key={candidate.ticker} className="border-b dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
-          <td className="p-2 font-mono font-bold">
+          <td className="p-2 align-top">
+            <div className="flex flex-col font-mono font-bold">
+              <span>{priorityRank != null ? `#${priorityRank}` : t('common.placeholders.emDash')}</span>
+              {candidate.rank != null && priorityRank != null && candidate.rank !== priorityRank ? (
+                <span className="text-[11px] font-normal text-gray-500 dark:text-gray-400">
+                  {t('dailyReview.table.candidates.rawRank', { rank: candidate.rank })}
+                </span>
+              ) : null}
+              {action && conviction ? (
+                <span className="text-[11px] font-normal text-gray-500 dark:text-gray-400">
+                  {t('dailyReview.table.candidates.priorityMeta', { action, conviction })}
+                </span>
+              ) : null}
+            </div>
+          </td>
+          <td className="p-2 font-mono font-bold align-top">
             <a
               href={`https://finance.yahoo.com/quote/${candidate.ticker}`}
               target="_blank"
@@ -729,7 +913,7 @@ function CandidatesTable({
             </Button>
           </td>
         </tr>
-      ))}
+      )})}
     </TableShell>
   );
 }

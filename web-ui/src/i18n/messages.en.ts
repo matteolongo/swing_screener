@@ -1142,6 +1142,10 @@ export const messagesEn = {
       error: 'Error loading daily review: {{message}}',
       unknownError: 'Unknown error',
     },
+    filters: {
+      title: 'Candidate Filters',
+      explanation: 'Applies to both new ideas and add-ons. Priority still reflects decision action and conviction.',
+    },
     summary: {
       newCandidates: 'New Candidates',
       addOnCandidates: 'Add-On Candidates',
@@ -1199,6 +1203,8 @@ export const messagesEn = {
       noRecommendedReasonReward: 'Some may not offer enough reward relative to the risk.',
       hiddenByVerdict: '{{count}} candidate{{suffix}} hidden because verdict is Not Recommended.',
       showingRecommendedOnly: 'Showing recommended setups only. {{count}} candidate{{suffix}} hidden.',
+      showingFilteredCandidates: 'Showing {{shown}} of {{total}} candidates for the current filters.',
+      noCandidatesForFilters: 'No candidates match the current filters.',
       noStopUpdates: 'No stop updates needed.',
       noClose: 'No positions to close.',
       noHold: 'No positions to hold.',
@@ -1212,6 +1218,7 @@ export const messagesEn = {
       candidates: {
         empty: 'No candidates found',
         headers: {
+          priority: 'Priority',
           ticker: 'Ticker',
           confidence: 'Confidence',
           signal: 'Signal',
@@ -1225,6 +1232,8 @@ export const messagesEn = {
         },
         recommendationTitle: 'Recommendation details',
         recommendationAria: 'Recommendation details for {{ticker}}',
+        rawRank: 'Raw #{{rank}}',
+        priorityMeta: '{{action}} · {{conviction}}',
         createOrder: 'Create Order',
         addOnAction: 'Add On',
         addOnBadge: 'Add-On',
