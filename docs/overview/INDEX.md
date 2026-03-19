@@ -14,6 +14,7 @@
 - `/src/swing_screener/intelligence/README.md`
 
 ## Engineering
+- `/docs/engineering/COMBINED_ANALYSIS_IMPLEMENTATION_PLAN.md`
 - `/docs/engineering/ROADMAP.md`
 - `/docs/engineering/MODULE_ARCHITECTURE.md`
 - `/docs/engineering/DATABASE_MIGRATION.md`
@@ -26,6 +27,7 @@
 - `/docs/engineering/CODE_REVIEW.md`
 
 ## Product
+- `/docs/product/COMBINED_ANALYSIS_REASONING.md`
 - `/docs/product/DAILY_USAGE_GUIDE.md`
 
 ## Education

@@ -22,6 +22,64 @@ export interface PriceHistoryPoint {
   close: number;
 }
 
+export type DecisionAction =
+  | 'BUY_NOW'
+  | 'BUY_ON_PULLBACK'
+  | 'WAIT_FOR_BREAKOUT'
+  | 'WATCH'
+  | 'TACTICAL_ONLY'
+  | 'AVOID'
+  | 'MANAGE_ONLY';
+
+export type DecisionConviction = 'high' | 'medium' | 'low';
+export type DecisionSignalLabel = 'strong' | 'neutral' | 'weak';
+export type DecisionValuationLabel = 'cheap' | 'fair' | 'expensive' | 'unknown';
+export type DecisionCatalystLabel = 'active' | 'neutral' | 'weak';
+export type FairValueMethod = 'earnings_multiple' | 'sales_multiple' | 'book_multiple' | 'not_available';
+
+export interface DecisionTradePlan {
+  entry?: number;
+  stop?: number;
+  target?: number;
+  rr?: number;
+}
+
+export interface DecisionValuationContext {
+  method: FairValueMethod;
+  summary?: string;
+  trailingPe?: number;
+  priceToSales?: number;
+  bookValuePerShare?: number;
+  priceToBook?: number;
+  bookToPrice?: number;
+  fairValueLow?: number;
+  fairValueBase?: number;
+  fairValueHigh?: number;
+  premiumDiscountPct?: number;
+}
+
+export interface DecisionDrivers {
+  positives: string[];
+  negatives: string[];
+  warnings: string[];
+}
+
+export interface DecisionSummary {
+  symbol: string;
+  action: DecisionAction;
+  conviction: DecisionConviction;
+  technicalLabel: DecisionSignalLabel;
+  fundamentalsLabel: DecisionSignalLabel;
+  valuationLabel: DecisionValuationLabel;
+  catalystLabel: DecisionCatalystLabel;
+  whyNow: string;
+  whatToDo: string;
+  mainRisk: string;
+  tradePlan: DecisionTradePlan;
+  valuationContext: DecisionValuationContext;
+  drivers: DecisionDrivers;
+}
+
 export interface ScreenerCandidate {
   ticker: string;
   currency: 'USD' | 'EUR';
@@ -57,6 +115,50 @@ export interface ScreenerCandidate {
   suggestedOrderPrice?: number;
   executionNote?: string;
   sameSymbol?: SameSymbolCandidateContext;
+  decisionSummary?: DecisionSummary;
+}
+
+export interface DecisionTradePlanAPI {
+  entry?: number;
+  stop?: number;
+  target?: number;
+  rr?: number;
+}
+
+export interface DecisionValuationContextAPI {
+  method: FairValueMethod;
+  summary?: string | null;
+  trailing_pe?: number | null;
+  price_to_sales?: number | null;
+  book_value_per_share?: number | null;
+  price_to_book?: number | null;
+  book_to_price?: number | null;
+  fair_value_low?: number | null;
+  fair_value_base?: number | null;
+  fair_value_high?: number | null;
+  premium_discount_pct?: number | null;
+}
+
+export interface DecisionDriversAPI {
+  positives?: string[];
+  negatives?: string[];
+  warnings?: string[];
+}
+
+export interface DecisionSummaryAPI {
+  symbol: string;
+  action: DecisionAction;
+  conviction: DecisionConviction;
+  technical_label: DecisionSignalLabel;
+  fundamentals_label: DecisionSignalLabel;
+  valuation_label: DecisionValuationLabel;
+  catalyst_label: DecisionCatalystLabel;
+  why_now: string;
+  what_to_do: string;
+  main_risk: string;
+  trade_plan: DecisionTradePlanAPI;
+  valuation_context: DecisionValuationContextAPI;
+  drivers: DecisionDriversAPI;
 }
 
 // API response format (snake_case)
@@ -106,6 +208,7 @@ export interface ScreenerCandidateAPI {
     max_add_ons?: number;
     reason?: string;
   };
+  decision_summary?: DecisionSummaryAPI;
 }
 
 export interface ScreenerRequest {
@@ -173,6 +276,45 @@ export interface UniversesResponse {
   universes: string[];
 }
 
+function transformDecisionSummary(apiSummary: DecisionSummaryAPI): DecisionSummary {
+  return {
+    symbol: apiSummary.symbol,
+    action: apiSummary.action,
+    conviction: apiSummary.conviction,
+    technicalLabel: apiSummary.technical_label,
+    fundamentalsLabel: apiSummary.fundamentals_label,
+    valuationLabel: apiSummary.valuation_label,
+    catalystLabel: apiSummary.catalyst_label,
+    whyNow: apiSummary.why_now,
+    whatToDo: apiSummary.what_to_do,
+    mainRisk: apiSummary.main_risk,
+    tradePlan: {
+      entry: apiSummary.trade_plan?.entry ?? undefined,
+      stop: apiSummary.trade_plan?.stop ?? undefined,
+      target: apiSummary.trade_plan?.target ?? undefined,
+      rr: apiSummary.trade_plan?.rr ?? undefined,
+    },
+    valuationContext: {
+      method: apiSummary.valuation_context?.method ?? 'not_available',
+      summary: apiSummary.valuation_context?.summary ?? undefined,
+      trailingPe: apiSummary.valuation_context?.trailing_pe ?? undefined,
+      priceToSales: apiSummary.valuation_context?.price_to_sales ?? undefined,
+      bookValuePerShare: apiSummary.valuation_context?.book_value_per_share ?? undefined,
+      priceToBook: apiSummary.valuation_context?.price_to_book ?? undefined,
+      bookToPrice: apiSummary.valuation_context?.book_to_price ?? undefined,
+      fairValueLow: apiSummary.valuation_context?.fair_value_low ?? undefined,
+      fairValueBase: apiSummary.valuation_context?.fair_value_base ?? undefined,
+      fairValueHigh: apiSummary.valuation_context?.fair_value_high ?? undefined,
+      premiumDiscountPct: apiSummary.valuation_context?.premium_discount_pct ?? undefined,
+    },
+    drivers: {
+      positives: apiSummary.drivers?.positives ?? [],
+      negatives: apiSummary.drivers?.negatives ?? [],
+      warnings: apiSummary.drivers?.warnings ?? [],
+    },
+  };
+}
+
 // Transform API response to UI format
 export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): ScreenerResponse {
   return {
@@ -224,6 +366,7 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
             reason: c.same_symbol.reason ?? '',
           }
         : undefined,
+      decisionSummary: c.decision_summary ? transformDecisionSummary(c.decision_summary) : undefined,
     })),
     asofDate: apiResponse.asof_date,
     totalScreened: apiResponse.total_screened,

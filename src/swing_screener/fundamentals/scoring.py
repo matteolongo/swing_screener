@@ -31,7 +31,24 @@ _METRIC_LABELS = {
     "return_on_equity": "Return on equity",
     "trailing_pe": "Trailing PE",
     "price_to_sales": "Price / sales",
+    "shares_outstanding": "Shares outstanding",
+    "total_equity": "Total equity",
+    "book_value_per_share": "Book value / share",
+    "price_to_book": "Price / book",
+    "book_to_price": "Book / price",
 }
+
+
+def _merge_source_names(*names: str | None) -> str | None:
+    unique: list[str] = []
+    for name in names:
+        text = str(name or "").strip()
+        if not text or text in unique:
+            continue
+        unique.append(text)
+    if not unique:
+        return None
+    return " + ".join(unique)
 
 
 def _score_higher(value: float | None, *, weak: float, strong: float) -> float | None:
@@ -95,6 +112,8 @@ def _coverage_status(record: ProviderFundamentalsRecord, supported: bool) -> str
         record.return_on_equity,
         record.trailing_pe,
         record.price_to_sales,
+        record.book_value_per_share,
+        record.price_to_book,
     ]
     count = sum(1 for value in available if value is not None)
     if count >= 7:
@@ -194,7 +213,7 @@ def _cadence_from_source_name(source: str | None) -> str:
         return "unknown"
     if ".quarterly_" in text:
         return "quarterly"
-    if text.endswith(".financials") or text.endswith(".cashflow") or text.endswith(".income_stmt"):
+    if text.endswith(".financials") or text.endswith(".cashflow") or text.endswith(".income_stmt") or text.endswith(".balance_sheet"):
         return "annual"
     if ".info." in text:
         return "snapshot"
@@ -233,6 +252,42 @@ def _ensure_direct_metric_context(
         cadence=_cadence_from_source_name(source),
         derived=False,
         derived_from=[],
+        period_end=period_end,
+    )
+
+
+def _derived_metric_context(
+    metric_context: dict[str, FundamentalMetricContext],
+    metric_sources: dict[str, str],
+    metric_names: list[str],
+) -> FundamentalMetricContext:
+    contexts = [metric_context.get(metric_name) for metric_name in metric_names]
+    cadences = {context.cadence for context in contexts if context is not None and context.cadence != "unknown"}
+    cadence = next(iter(cadences)) if len(cadences) == 1 else "unknown"
+
+    derived_from: list[str] = []
+    for metric_name in metric_names:
+        source = metric_sources.get(metric_name)
+        if source and source not in derived_from:
+            derived_from.append(source)
+            continue
+        context = metric_context.get(metric_name)
+        if context is not None and context.source and context.source not in derived_from:
+            derived_from.append(context.source)
+
+    period_end = None
+    for context in contexts:
+        if context is None or not context.period_end:
+            continue
+        if period_end is None or context.period_end > period_end:
+            period_end = context.period_end
+
+    source = _merge_source_names(*derived_from)
+    return FundamentalMetricContext(
+        source=source,
+        cadence=cadence,
+        derived=True,
+        derived_from=derived_from,
         period_end=period_end,
     )
 
@@ -293,6 +348,7 @@ def _resolved_record(record: ProviderFundamentalsRecord) -> ProviderFundamentals
     series_map = record.historical_series
     updates: dict[str, float | str | None] = {}
     metric_context = dict(record.metric_context)
+    metric_sources = dict(record.metric_sources)
 
     if record.operating_margin is None:
         updates["operating_margin"] = _latest_series_value(series_map, "operating_margin")
@@ -318,11 +374,53 @@ def _resolved_record(record: ProviderFundamentalsRecord) -> ProviderFundamentals
         updates["most_recent_quarter"] = _latest_period_end(series_map, frequency="quarterly")
 
     for metric_name in _METRIC_LABELS:
-        _ensure_direct_metric_context(metric_context, record.metric_sources, series_map, metric_name)
+        _ensure_direct_metric_context(metric_context, metric_sources, series_map, metric_name)
 
-    if not updates and metric_context == record.metric_context:
+    if (
+        record.book_value_per_share is None
+        and record.total_equity not in (None, 0)
+        and record.shares_outstanding not in (None, 0)
+    ):
+        updates["book_value_per_share"] = float(record.total_equity) / float(record.shares_outstanding)
+        derived_context = _derived_metric_context(
+            metric_context,
+            metric_sources,
+            ["total_equity", "shares_outstanding"],
+        )
+        metric_context["book_value_per_share"] = derived_context
+        if derived_context.source:
+            metric_sources["book_value_per_share"] = derived_context.source
+
+    price_to_book = record.price_to_book
+    if price_to_book is None and record.market_cap not in (None, 0) and record.total_equity not in (None, 0):
+        updates["price_to_book"] = float(record.market_cap) / float(record.total_equity)
+        derived_context = _derived_metric_context(
+            metric_context,
+            metric_sources,
+            ["market_cap", "total_equity"],
+        )
+        metric_context["price_to_book"] = derived_context
+        if derived_context.source:
+            metric_sources["price_to_book"] = derived_context.source
+        price_to_book = updates["price_to_book"]
+
+    effective_price_to_book = (
+        float(price_to_book)
+        if price_to_book not in (None, 0)
+        else float(updates["price_to_book"])
+        if updates.get("price_to_book") not in (None, 0)
+        else None
+    )
+    if record.book_to_price is None and effective_price_to_book not in (None, 0):
+        updates["book_to_price"] = 1.0 / effective_price_to_book
+        derived_context = _derived_metric_context(metric_context, metric_sources, ["price_to_book"])
+        metric_context["book_to_price"] = derived_context
+        if derived_context.source:
+            metric_sources["book_to_price"] = derived_context.source
+
+    if not updates and metric_context == record.metric_context and metric_sources == record.metric_sources:
         return record
-    return replace(record, metric_context=metric_context, **updates)
+    return replace(record, metric_context=metric_context, metric_sources=metric_sources, **updates)
 
 
 def _build_pillars(record: ProviderFundamentalsRecord) -> dict[str, FundamentalPillarScore]:
@@ -343,6 +441,7 @@ def _build_pillars(record: ProviderFundamentalsRecord) -> dict[str, FundamentalP
     valuation_score = _blend_scores(
         _score_lower(record.trailing_pe, strong=12.0, weak=35.0),
         _score_lower(record.price_to_sales, strong=2.0, weak=8.0),
+        _score_lower(record.price_to_book, strong=1.2, weak=4.0),
     )
 
     return {
@@ -555,6 +654,11 @@ def build_snapshot(record: ProviderFundamentalsRecord, cfg: FundamentalsConfig) 
         return_on_equity=resolved_record.return_on_equity,
         trailing_pe=resolved_record.trailing_pe,
         price_to_sales=resolved_record.price_to_sales,
+        shares_outstanding=resolved_record.shares_outstanding,
+        total_equity=resolved_record.total_equity,
+        book_value_per_share=resolved_record.book_value_per_share,
+        price_to_book=resolved_record.price_to_book,
+        book_to_price=resolved_record.book_to_price,
         most_recent_quarter=resolved_record.most_recent_quarter,
         pillars=pillars,
         historical_series=historical_series,

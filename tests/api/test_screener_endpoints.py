@@ -140,6 +140,16 @@ def test_screener_recommendation_payload_shape(monkeypatch):
     assert candidate["suggested_order_type"] == "BUY_STOP"
     assert candidate["suggested_order_price"] == 50.1
     assert "BUY STOP" in candidate["execution_note"]
+    assert candidate["decision_summary"]["symbol"] == "AAA"
+    assert candidate["decision_summary"]["action"] in {
+        "BUY_NOW",
+        "BUY_ON_PULLBACK",
+        "WAIT_FOR_BREAKOUT",
+        "WATCH",
+        "TACTICAL_ONLY",
+        "AVOID",
+        "MANAGE_ONLY",
+    }
     assert isinstance(rec["checklist"][0]["gate_name"], str)
     assert isinstance(rec["education"]["what_would_make_valid"], list)
 
