@@ -44,6 +44,8 @@ class FundamentalsService:
 
     def get_snapshot(self, symbol: str, *, force_refresh: bool = False) -> FundamentalSnapshotResponse:
         cfg = build_fundamentals_config(self.get_config().model_dump())
+        if not cfg.enabled:
+            raise ValueError("Fundamentals feature is disabled. Enable it in configuration first.")
         snapshot = self._analysis_service.get_snapshot(symbol, cfg=cfg, force_refresh=force_refresh)
         return FundamentalSnapshotResponse.model_validate(snapshot.to_dict())
 
@@ -52,6 +54,8 @@ class FundamentalsService:
 
     def compare(self, request: FundamentalsCompareRequest) -> FundamentalsCompareResponse:
         cfg = build_fundamentals_config(self.get_config().model_dump())
+        if not cfg.enabled:
+            raise ValueError("Fundamentals feature is disabled. Enable it in configuration first.")
         snapshots = self._analysis_service.compare_symbols(
             request.symbols,
             cfg=cfg,

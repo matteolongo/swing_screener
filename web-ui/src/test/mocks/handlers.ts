@@ -1267,4 +1267,93 @@ export const handlers = [
     })
   }),
 
+  // Fundamentals endpoints
+  http.get(`${API_BASE_URL}/api/fundamentals/config`, () => {
+    return HttpResponse.json({
+      enabled: true,
+      providers: ['yfinance'],
+      cache_ttl_hours: 24,
+      stale_after_days: 90,
+      compare_limit: 5,
+    });
+  }),
+
+  http.post(`${API_BASE_URL}/api/fundamentals/compare`, async ({ request }) => {
+    const body = await request.json() as { symbols: string[]; force_refresh: boolean };
+    const symbols: string[] = body.symbols ?? [];
+    return HttpResponse.json({
+      snapshots: symbols.map((symbol) => ({
+        symbol,
+        asof_date: '2026-01-01',
+        provider: 'yfinance',
+        updated_at: '2026-01-01T00:00:00+00:00',
+        instrument_type: 'equity',
+        supported: true,
+        coverage_status: 'supported',
+        freshness_status: 'current',
+        company_name: `${symbol} Inc.`,
+        sector: 'Technology',
+        currency: 'USD',
+        market_cap: 1000000000,
+        revenue_growth_yoy: 0.1,
+        earnings_growth_yoy: 0.15,
+        gross_margin: 0.5,
+        operating_margin: 0.2,
+        free_cash_flow: 5000000000,
+        free_cash_flow_margin: 0.18,
+        debt_to_equity: 50,
+        current_ratio: 1.5,
+        return_on_equity: 0.3,
+        trailing_pe: 25,
+        price_to_sales: 5,
+        most_recent_quarter: '2025-12-31',
+        pillars: {
+          growth: { score: 0.8, status: 'strong', summary: 'Growth is solid.' },
+          cash_flow: { score: 0.75, status: 'strong', summary: 'Strong FCF margin.' },
+        },
+        historical_series: {},
+        red_flags: [],
+        highlights: ['Strong revenue growth', 'High margins'],
+        metric_sources: {},
+        error: null,
+      })),
+    });
+  }),
+
+  http.get(`${API_BASE_URL}/api/fundamentals/snapshot/:symbol`, ({ params }) => {
+    const symbol = params.symbol as string;
+    return HttpResponse.json({
+      symbol,
+      asof_date: '2026-01-01',
+      provider: 'yfinance',
+      updated_at: '2026-01-01T00:00:00+00:00',
+      instrument_type: 'equity',
+      supported: true,
+      coverage_status: 'supported',
+      freshness_status: 'current',
+      company_name: `${symbol} Inc.`,
+      sector: 'Technology',
+      currency: 'USD',
+      market_cap: 1000000000,
+      revenue_growth_yoy: 0.1,
+      earnings_growth_yoy: 0.15,
+      gross_margin: 0.5,
+      operating_margin: 0.2,
+      free_cash_flow: 5000000000,
+      free_cash_flow_margin: 0.18,
+      debt_to_equity: 50,
+      current_ratio: 1.5,
+      return_on_equity: 0.3,
+      trailing_pe: 25,
+      price_to_sales: 5,
+      most_recent_quarter: '2025-12-31',
+      pillars: {},
+      historical_series: {},
+      red_flags: [],
+      highlights: [],
+      metric_sources: {},
+      error: null,
+    });
+  }),
+
 ]

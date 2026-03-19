@@ -20,7 +20,7 @@ export default function WorkspaceSymbolModal({ ticker, onBack }: WorkspaceSymbol
 
   const tabs = [
     { id: 'overview', label: t('workspacePage.panels.analysis.tabs.overview') },
-    { id: 'fundamentals', label: 'Fundamentals' },
+    { id: 'fundamentals', label: t('workspacePage.panels.analysis.tabs.fundamentals') },
     { id: 'order', label: t('workspacePage.panels.analysis.tabs.order') },
   ] as const;
   const yahooUrl = `https://finance.yahoo.com/quote/${ticker}`;

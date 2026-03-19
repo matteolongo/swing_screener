@@ -1,5 +1,6 @@
 import Card, { CardContent, CardHeader, CardTitle } from '@/components/common/Card';
 import type { FundamentalSnapshot } from '@/features/fundamentals/types';
+import { t } from '@/i18n/t';
 
 function formatPercent(value?: number) {
   if (value == null) return 'n/a';
@@ -58,7 +59,7 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
           <div>
             <CardTitle>{snapshot.symbol}</CardTitle>
             <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-              {snapshot.companyName ?? 'Unknown company'}
+              {snapshot.companyName ?? t('fundamentalsSnapshot.unknownCompany')}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -74,34 +75,34 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-2 text-sm md:grid-cols-3">
           <div className="rounded-md bg-gray-50 p-2">
-            <div className="text-xs text-gray-500">Revenue YoY</div>
+            <div className="text-xs text-gray-500">{t('fundamentalsSnapshot.revenueYoy')}</div>
             <div className="mt-1 font-medium">{formatPercent(snapshot.revenueGrowthYoy)}</div>
           </div>
           <div className="rounded-md bg-gray-50 p-2">
-            <div className="text-xs text-gray-500">Earnings YoY</div>
+            <div className="text-xs text-gray-500">{t('fundamentalsSnapshot.earningsYoy')}</div>
             <div className="mt-1 font-medium">{formatPercent(snapshot.earningsGrowthYoy)}</div>
           </div>
           <div className="rounded-md bg-gray-50 p-2">
-            <div className="text-xs text-gray-500">Operating Margin</div>
+            <div className="text-xs text-gray-500">{t('fundamentalsSnapshot.operatingMargin')}</div>
             <div className="mt-1 font-medium">{formatPercent(snapshot.operatingMargin)}</div>
           </div>
           <div className="rounded-md bg-gray-50 p-2">
-            <div className="text-xs text-gray-500">FCF Margin</div>
+            <div className="text-xs text-gray-500">{t('fundamentalsSnapshot.fcfMargin')}</div>
             <div className="mt-1 font-medium">{formatPercent(snapshot.freeCashFlowMargin)}</div>
           </div>
           <div className="rounded-md bg-gray-50 p-2">
-            <div className="text-xs text-gray-500">Debt / Equity</div>
+            <div className="text-xs text-gray-500">{t('fundamentalsSnapshot.debtEquity')}</div>
             <div className="mt-1 font-medium">{formatNumber(snapshot.debtToEquity)}</div>
           </div>
           <div className="rounded-md bg-gray-50 p-2">
-            <div className="text-xs text-gray-500">Trailing PE</div>
+            <div className="text-xs text-gray-500">{t('fundamentalsSnapshot.trailingPe')}</div>
             <div className="mt-1 font-medium">{formatNumber(snapshot.trailingPe)}</div>
           </div>
         </div>
 
         {historicalSeries.length > 0 ? (
           <div className="space-y-2">
-            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Recent history</h4>
+            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('fundamentalsSnapshot.recentHistory')}</h4>
             <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
               {historicalSeries.map(([key, series]) => (
                 <div key={key} className="rounded-md border border-gray-200 p-3">
@@ -129,12 +130,12 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
 
         {pillars.length > 0 ? (
           <div className="space-y-2">
-            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Pillar scores</h4>
+            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('fundamentalsSnapshot.pillarScores')}</h4>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {pillars.map(([name, pillar]) => (
                 <div key={name} className="rounded-md border border-gray-200 p-3">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-medium capitalize">{name.replace('_', ' ')}</span>
+                    <span className="text-sm font-medium capitalize">{name.replaceAll('_', ' ')}</span>
                     <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${pillStatusClass(pillar.status)}`}>
                       {pillar.status}
                     </span>
@@ -151,7 +152,7 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
 
         {snapshot.highlights.length > 0 ? (
           <div>
-            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Highlights</h4>
+            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('fundamentalsSnapshot.highlights')}</h4>
             <ul className="mt-2 space-y-1 text-sm text-gray-600 dark:text-gray-400">
               {snapshot.highlights.map((item) => (
                 <li key={item}>• {item}</li>
@@ -162,7 +163,7 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
 
         {snapshot.redFlags.length > 0 ? (
           <div>
-            <h4 className="text-sm font-semibold text-rose-700 dark:text-rose-300">Red flags</h4>
+            <h4 className="text-sm font-semibold text-rose-700 dark:text-rose-300">{t('fundamentalsSnapshot.redFlags')}</h4>
             <ul className="mt-2 space-y-1 text-sm text-rose-700 dark:text-rose-300">
               {snapshot.redFlags.map((item) => (
                 <li key={item}>• {item}</li>

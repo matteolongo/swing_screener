@@ -11,9 +11,9 @@ config:
   - XBI
   llm:
     enabled: true
-    provider: openai
-    model: gpt-4.1-mini
-    base_url: https://api.openai.com/v1
+    provider: mock
+    model: mock-classifier
+    base_url: ''
     system_prompt: You are a strict event classifier.
     user_prompt_template: 'Classify this headline.
 
@@ -95,4 +95,4 @@ config:
     binary_event_min_threshold_boost: 0.08
     low_evidence_min_threshold_boost: 0.06
 bootstrapped_from_strategy: false
-updated_at: '2026-03-18T22:26:24'
+updated_at: '2026-03-19T00:20:58'

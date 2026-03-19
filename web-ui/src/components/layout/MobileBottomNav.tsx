@@ -40,7 +40,7 @@ const navItems: NavItem[] = [
     icon: Brain,
   },
   {
-    label: 'Fundamentals',
+    labelKey: 'sidebar.nav.fundamentals',
     href: '/fundamentals',
     icon: BarChart3,
   },

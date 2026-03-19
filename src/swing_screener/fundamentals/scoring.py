@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from datetime import datetime
+from datetime import datetime, timezone
 
 from swing_screener.fundamentals.config import FundamentalsConfig
 from swing_screener.fundamentals.models import (
@@ -54,7 +54,7 @@ def _freshness_status(most_recent_quarter: str | None, stale_after_days: int) ->
     if not most_recent_quarter:
         return "unknown"
     try:
-        age_days = (datetime.utcnow().date() - datetime.fromisoformat(most_recent_quarter).date()).days
+        age_days = (datetime.now(timezone.utc).date() - datetime.fromisoformat(most_recent_quarter).date()).days
     except ValueError:
         return "unknown"
     return "stale" if age_days > stale_after_days else "current"
@@ -235,10 +235,7 @@ def _build_pillars(record: ProviderFundamentalsRecord) -> dict[str, FundamentalP
         _score_lower(record.debt_to_equity, strong=60.0, weak=220.0),
         _score_higher(record.current_ratio, weak=0.9, strong=1.8),
     )
-    cash_flow_score = _blend_scores(
-        _score_higher(record.free_cash_flow, weak=0.0, strong=1.0),
-        _score_higher(record.free_cash_flow_margin, weak=0.0, strong=0.15),
-    )
+    cash_flow_score = _score_higher(record.free_cash_flow_margin, weak=0.0, strong=0.15)
     valuation_score = _blend_scores(
         _score_lower(record.trailing_pe, strong=12.0, weak=35.0),
         _score_lower(record.price_to_sales, strong=2.0, weak=8.0),
@@ -359,8 +356,7 @@ def build_snapshot(record: ProviderFundamentalsRecord, cfg: FundamentalsConfig) 
         symbol=resolved_record.symbol,
         asof_date=resolved_record.asof_date,
         provider=resolved_record.provider,
-        updated_at=datetime.utcnow().replace(microsecond=0).isoformat(),
-        instrument_type=resolved_record.instrument_type,
+        updated_at=datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
         supported=supported,
         coverage_status=coverage_status,
         freshness_status=freshness_status,
@@ -392,9 +388,9 @@ def build_snapshot(record: ProviderFundamentalsRecord, cfg: FundamentalsConfig) 
 def build_provider_error_snapshot(symbol: str, provider: str, error: str) -> FundamentalSnapshot:
     return FundamentalSnapshot(
         symbol=symbol,
-        asof_date=datetime.utcnow().date().isoformat(),
+        asof_date=datetime.now(timezone.utc).date().isoformat(),
         provider=provider,
-        updated_at=datetime.utcnow().replace(microsecond=0).isoformat(),
+        updated_at=datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
         supported=True,
         coverage_status="insufficient",
         freshness_status="unknown",

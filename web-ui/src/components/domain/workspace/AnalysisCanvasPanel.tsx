@@ -31,7 +31,7 @@ export default function AnalysisCanvasPanel({
     label: string;
   }> = [
     { id: 'overview', label: t('workspacePage.panels.analysis.tabs.overview') },
-    { id: 'fundamentals', label: 'Fundamentals' },
+    { id: 'fundamentals', label: t('workspacePage.panels.analysis.tabs.fundamentals') },
     { id: 'order', label: t('workspacePage.panels.analysis.tabs.order') },
   ];
 
@@ -155,17 +155,17 @@ export default function AnalysisCanvasPanel({
             {activeTab === 'fundamentals' && (
               <>
                 {fundamentalsQuery.isLoading ? (
-                  <div className="text-sm text-gray-500">Loading fundamentals...</div>
+                  <div className="text-sm text-gray-500">{t('workspacePage.panels.analysis.fundamentalsLoading')}</div>
                 ) : fundamentalsQuery.isError ? (
                   <div className="text-sm text-rose-600">
                     {fundamentalsQuery.error instanceof Error
                       ? fundamentalsQuery.error.message
-                      : 'Failed to load fundamentals'}
+                      : t('workspacePage.panels.analysis.fundamentalsError')}
                   </div>
                 ) : fundamentalsQuery.data ? (
                   <FundamentalsSnapshotCard snapshot={fundamentalsQuery.data} />
                 ) : (
-                  <div className="text-sm text-gray-500">No fundamentals snapshot available.</div>
+                  <div className="text-sm text-gray-500">{t('workspacePage.panels.analysis.fundamentalsEmpty')}</div>
                 )}
               </>
             )}

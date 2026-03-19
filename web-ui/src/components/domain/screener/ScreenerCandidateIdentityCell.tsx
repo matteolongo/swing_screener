@@ -110,8 +110,9 @@ export default function ScreenerCandidateIdentityCell({
           <div className={`inline-flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-xs ${fundamentalsBadgeClass}`}>
             <BarChart3 className="h-3 w-3" />
             <span>
-              Fundamentals {fundamentalsCoverage}
-              {fundamentalsFreshness ? ` · ${fundamentalsFreshness}` : ''}
+              {fundamentalsFreshness
+                ? t('screener.identity.fundamentalsLabelWithFreshness', { coverage: fundamentalsCoverage, freshness: fundamentalsFreshness })
+                : t('screener.identity.fundamentalsLabel', { coverage: fundamentalsCoverage })}
             </span>
           </div>
         ) : null}

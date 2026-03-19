@@ -6,6 +6,7 @@ import {
   useCompareFundamentalsMutation,
   useFundamentalsConfigQuery,
 } from '@/features/fundamentals/hooks';
+import { t } from '@/i18n/t';
 
 function normalizeSymbols(input: string): string[] {
   const seen = new Set<string>();
@@ -33,9 +34,9 @@ export default function FundamentalsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Fundamentals</h1>
+        <h1 className="text-2xl font-bold">{t('fundamentalsPage.title')}</h1>
         <p className="text-sm text-gray-600 dark:text-gray-400">
-          Compare company-quality snapshots without changing the screener ranking.
+          {t('fundamentalsPage.subtitle')}
         </p>
       </div>
 
@@ -47,18 +48,21 @@ export default function FundamentalsPage() {
       ) : null}
 
       <div className="rounded-lg border border-gray-200 bg-white p-4">
-        <label className="block text-sm font-medium text-gray-700">Symbols</label>
+        <label htmlFor="fundamentals-symbols-input" className="block text-sm font-medium text-gray-700">
+          {t('fundamentalsPage.symbolsLabel')}
+        </label>
         <input
+          id="fundamentals-symbols-input"
           value={symbolsInput}
           onChange={(event) => setSymbolsInput(event.target.value)}
-          placeholder="AAPL, MSFT, NVDA"
+          placeholder={t('fundamentalsPage.symbolsPlaceholder')}
           className="mt-2 w-full rounded-md border border-gray-300 px-3 py-2"
         />
         <div className="mt-3 flex items-center gap-3">
           <Button type="button" onClick={runCompare} disabled={symbols.length < 2 || compareMutation.isPending}>
-            {compareMutation.isPending ? 'Comparing...' : 'Compare fundamentals'}
+            {compareMutation.isPending ? t('fundamentalsPage.comparingButton') : t('fundamentalsPage.compareButton')}
           </Button>
-          <span className="text-xs text-gray-500">Enter at least two single-stock tickers.</span>
+          <span className="text-xs text-gray-500">{t('fundamentalsPage.symbolsHint')}</span>
         </div>
         {compareMutation.isError ? (
           <p className="mt-3 text-sm text-rose-600">{compareMutation.error.message}</p>

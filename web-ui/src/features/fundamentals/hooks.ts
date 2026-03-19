@@ -44,7 +44,7 @@ export function useRefreshFundamentalSnapshotMutation() {
   return useMutation<FundamentalSnapshot, Error, string>({
     mutationFn: (symbol) => fetchFundamentalSnapshot(symbol, true),
     onSuccess: async (snapshot) => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.fundamentalsSnapshot(snapshot.symbol) });
+      await queryClient.invalidateQueries({ queryKey: ['fundamentals-snapshot', snapshot.symbol] });
     },
   });
 }

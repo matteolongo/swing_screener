@@ -123,9 +123,9 @@ class FundamentalSnapshot:
                     continue
                 points.append(FundamentalSeriesPoint(period_end=period_end, value=numeric_value))
             raw_unit = str(value.get("unit", "number")).strip().lower()
-            unit = raw_unit if raw_unit in {"number"} else "number"
+            unit = raw_unit if raw_unit in {"number", "currency", "percent", "ratio"} else "number"
             raw_direction = str(value.get("direction", "unknown")).strip().lower()
-            direction = raw_direction if raw_direction in {"unknown"} else "unknown"
+            direction = raw_direction if raw_direction in {"unknown", "improving", "deteriorating", "stable"} else "unknown"
             historical_series[str(key)] = FundamentalMetricSeries(
                 label=str(value.get("label", key)).strip() or str(key),
                 unit=unit,
@@ -163,9 +163,9 @@ class FundamentalSnapshot:
             red_flags=[str(item) for item in payload.get("red_flags", []) if str(item).strip()],
             highlights=[str(item) for item in payload.get("highlights", []) if str(item).strip()],
             metric_sources={
-                str(key): str(value)
-                for key, value in (payload.get("metric_sources") or {}).items()
-                if str(key).strip() and str(value).strip()
+                str(key): str(val)
+                for key, val in (payload.get("metric_sources") if isinstance(payload.get("metric_sources"), dict) else {}).items()
+                if str(key).strip() and str(val).strip()
             },
             error=(str(payload.get("error")) if payload.get("error") else None),
         )
