@@ -9,6 +9,7 @@ from swing_screener.recommendation.models import (
     DecisionAction,
     DecisionConviction,
     DecisionDrivers,
+    FairValueMethod,
     DecisionSummary,
     DecisionTradePlan,
     DecisionValuationContext,
@@ -41,6 +42,13 @@ _VALUATION_LEAD: dict[ValuationLabel, str] = {
     "fair": "Valuation looks fair on current fundamentals.",
     "expensive": "Valuation looks demanding on current fundamentals.",
     "unknown": "Valuation context is limited because current multiples are incomplete.",
+}
+
+_FAIR_VALUE_METHOD_LABELS: dict[FairValueMethod, str] = {
+    "earnings_multiple": "earnings multiple",
+    "sales_multiple": "sales multiple",
+    "book_multiple": "book multiple",
+    "not_available": "not available",
 }
 
 
@@ -81,6 +89,29 @@ def _format_multiple(value: float | None) -> str | None:
     return f"{value:.1f}x"
 
 
+def _format_price(value: float | None) -> str | None:
+    if value is None:
+        return None
+    return f"{value:.2f}"
+
+
+def _format_percent(value: float | None) -> str | None:
+    if value is None:
+        return None
+    sign = "+" if value >= 0 else "-"
+    return f"{sign}{abs(value):.1f}%"
+
+
+def _format_abs_percent(value: float | None) -> str | None:
+    if value is None:
+        return None
+    return f"{abs(value):.1f}%"
+
+
+def _clamp(value: float, lower: float, upper: float) -> float:
+    return max(lower, min(upper, value))
+
+
 def _pillar(snapshot: FundamentalSnapshot | None, key: str) -> FundamentalPillarScore | None:
     if snapshot is None:
         return None
@@ -104,6 +135,115 @@ def _average(values: list[float | None]) -> float | None:
     if not available:
         return None
     return sum(available) / len(available)
+
+
+def _pillar_score(snapshot: FundamentalSnapshot | None, key: str) -> float | None:
+    pillar = _pillar(snapshot, key)
+    if pillar is None:
+        return None
+    return pillar.score if pillar.score is not None else _score_from_status(pillar.status)
+
+
+def _fair_value_range_from_earnings(
+    *,
+    current_price: float,
+    trailing_pe: float,
+    quality_score: float,
+    growth_score: float,
+) -> tuple[float, float, float] | None:
+    if current_price <= 0 or trailing_pe <= 0:
+        return None
+    eps = current_price / trailing_pe
+    if eps <= 0:
+        return None
+
+    base_multiple = _clamp(12.0 + (quality_score * 12.0) + (growth_score * 4.0), 10.0, 32.0)
+    low_multiple = _clamp(base_multiple - 3.0, 8.0, base_multiple)
+    high_multiple = _clamp(base_multiple + 3.0, base_multiple, 36.0)
+    return (
+        round(eps * low_multiple, 2),
+        round(eps * base_multiple, 2),
+        round(eps * high_multiple, 2),
+    )
+
+
+def _fair_value_range_from_sales(
+    *,
+    current_price: float,
+    price_to_sales: float,
+    quality_score: float,
+    growth_score: float,
+) -> tuple[float, float, float] | None:
+    if current_price <= 0 or price_to_sales <= 0:
+        return None
+    revenue_per_share = current_price / price_to_sales
+    if revenue_per_share <= 0:
+        return None
+
+    base_multiple = _clamp(1.5 + (quality_score * 3.0) + (growth_score * 1.5), 1.0, 8.0)
+    low_multiple = _clamp(base_multiple * 0.85, 0.8, base_multiple)
+    high_multiple = _clamp(base_multiple * 1.15, base_multiple, 10.0)
+    return (
+        round(revenue_per_share * low_multiple, 2),
+        round(revenue_per_share * base_multiple, 2),
+        round(revenue_per_share * high_multiple, 2),
+    )
+
+
+def _fair_value_estimate(
+    *,
+    candidate: Any,
+    snapshot: FundamentalSnapshot | None,
+    trailing_pe: float | None,
+    price_to_sales: float | None,
+) -> tuple[FairValueMethod, float | None, float | None, float | None, float | None]:
+    current_price = _safe_float(_get_value(candidate, "close"))
+    if current_price is None or current_price <= 0 or snapshot is None:
+        return "not_available", None, None, None, None
+
+    quality_score = _average(
+        [
+            _pillar_score(snapshot, "growth"),
+            _pillar_score(snapshot, "profitability"),
+            _pillar_score(snapshot, "balance_sheet"),
+            _pillar_score(snapshot, "cash_flow"),
+        ]
+    )
+    growth_score = _pillar_score(snapshot, "growth")
+    if quality_score is None:
+        return "not_available", None, None, None, None
+
+    quality = quality_score
+    growth = growth_score if growth_score is not None else quality_score
+
+    low = base = high = None
+    method: FairValueMethod = "not_available"
+    if trailing_pe is not None and 0 < trailing_pe <= 80:
+        estimate = _fair_value_range_from_earnings(
+            current_price=current_price,
+            trailing_pe=trailing_pe,
+            quality_score=quality,
+            growth_score=growth,
+        )
+        if estimate is not None:
+            low, base, high = estimate
+            method = "earnings_multiple"
+    elif price_to_sales is not None and 0 < price_to_sales <= 20:
+        estimate = _fair_value_range_from_sales(
+            current_price=current_price,
+            price_to_sales=price_to_sales,
+            quality_score=quality,
+            growth_score=growth,
+        )
+        if estimate is not None:
+            low, base, high = estimate
+            method = "sales_multiple"
+
+    if base is None or base <= 0:
+        return "not_available", None, None, None, None
+
+    premium_discount_pct = round(((current_price - base) / base) * 100, 1)
+    return method, low, base, high, premium_discount_pct
 
 
 def _technical_label(candidate: Any, opportunity: Opportunity | None) -> SignalLabel:
@@ -172,11 +312,18 @@ def _valuation_label(snapshot: FundamentalSnapshot | None) -> ValuationLabel:
 
 
 def _valuation_context(
+    candidate: Any,
     snapshot: FundamentalSnapshot | None,
     valuation_label: ValuationLabel,
 ) -> DecisionValuationContext:
     trailing_pe = _safe_float(_get_value(snapshot, "trailing_pe"))
     price_to_sales = _safe_float(_get_value(snapshot, "price_to_sales"))
+    method, fair_value_low, fair_value_base, fair_value_high, premium_discount_pct = _fair_value_estimate(
+        candidate=candidate,
+        snapshot=snapshot,
+        trailing_pe=trailing_pe,
+        price_to_sales=price_to_sales,
+    )
 
     detail_parts: list[str] = []
     if trailing_pe is not None:
@@ -185,6 +332,15 @@ def _valuation_context(
         detail_parts.append(f"price-to-sales is {_format_multiple(price_to_sales)}")
 
     summary = _VALUATION_LEAD[valuation_label]
+    if fair_value_base is not None and fair_value_low is not None and fair_value_high is not None:
+        premium_text = _format_abs_percent(premium_discount_pct)
+        comparison = "above" if (premium_discount_pct or 0) > 0 else "below" if (premium_discount_pct or 0) < 0 else "in line with"
+        summary = (
+            f"{summary} Fair value range is {_format_price(fair_value_low)} to {_format_price(fair_value_high)} "
+            f"using {_FAIR_VALUE_METHOD_LABELS[method]}, and the current price is "
+            f"{premium_text} {comparison} the base fair value."
+        )
+
     if detail_parts:
         if len(detail_parts) == 2:
             summary = f"{summary} {detail_parts[0]} and {detail_parts[1]}."
@@ -194,10 +350,14 @@ def _valuation_context(
         summary = "Valuation context is limited because no cached fundamentals snapshot is available yet."
 
     return DecisionValuationContext(
-        method="heuristic_multiple",
+        method=method,
         summary=summary,
         trailing_pe=trailing_pe,
         price_to_sales=price_to_sales,
+        fair_value_low=fair_value_low,
+        fair_value_base=fair_value_base,
+        fair_value_high=fair_value_high,
+        premium_discount_pct=premium_discount_pct,
     )
 
 
@@ -387,7 +547,7 @@ def build_decision_summary(
     technical_label = _technical_label(candidate, opportunity)
     fundamentals_label = _fundamentals_label(fundamentals)
     valuation_label = _valuation_label(fundamentals)
-    valuation_context = _valuation_context(fundamentals, valuation_label)
+    valuation_context = _valuation_context(candidate, fundamentals, valuation_label)
     catalyst_label = _catalyst_label(opportunity)
     action = _action(
         technical_label=technical_label,

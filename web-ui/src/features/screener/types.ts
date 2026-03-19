@@ -35,6 +35,7 @@ export type DecisionConviction = 'high' | 'medium' | 'low';
 export type DecisionSignalLabel = 'strong' | 'neutral' | 'weak';
 export type DecisionValuationLabel = 'cheap' | 'fair' | 'expensive' | 'unknown';
 export type DecisionCatalystLabel = 'active' | 'neutral' | 'weak';
+export type FairValueMethod = 'earnings_multiple' | 'sales_multiple' | 'book_multiple' | 'not_available';
 
 export interface DecisionTradePlan {
   entry?: number;
@@ -44,7 +45,7 @@ export interface DecisionTradePlan {
 }
 
 export interface DecisionValuationContext {
-  method: string;
+  method: FairValueMethod;
   summary?: string;
   trailingPe?: number;
   priceToSales?: number;
@@ -122,7 +123,7 @@ export interface DecisionTradePlanAPI {
 }
 
 export interface DecisionValuationContextAPI {
-  method: string;
+  method: FairValueMethod;
   summary?: string | null;
   trailing_pe?: number | null;
   price_to_sales?: number | null;
@@ -288,7 +289,7 @@ function transformDecisionSummary(apiSummary: DecisionSummaryAPI): DecisionSumma
       rr: apiSummary.trade_plan?.rr ?? undefined,
     },
     valuationContext: {
-      method: apiSummary.valuation_context?.method ?? 'heuristic_multiple',
+      method: apiSummary.valuation_context?.method ?? 'not_available',
       summary: apiSummary.valuation_context?.summary ?? undefined,
       trailingPe: apiSummary.valuation_context?.trailing_pe ?? undefined,
       priceToSales: apiSummary.valuation_context?.price_to_sales ?? undefined,

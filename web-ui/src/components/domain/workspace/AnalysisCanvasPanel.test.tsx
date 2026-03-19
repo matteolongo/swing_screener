@@ -1,8 +1,9 @@
-import { act, screen } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import AnalysisCanvasPanel from '@/components/domain/workspace/AnalysisCanvasPanel';
 import * as fundamentalsHooks from '@/features/fundamentals/hooks';
+import type { FundamentalSnapshot } from '@/features/fundamentals/types';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { renderWithProviders } from '@/test/utils';
@@ -19,6 +20,35 @@ vi.mock('@/components/domain/market/CachedSymbolPriceChart', () => ({
 vi.mock('@/components/domain/workspace/KeyMetrics', () => ({
   default: ({ ticker }: { ticker: string }) => <div>Key metrics {ticker}</div>,
 }));
+
+function buildSnapshot(): FundamentalSnapshot {
+  return {
+    symbol: 'AAPL',
+    asofDate: '2026-03-19',
+    provider: 'yfinance',
+    updatedAt: '2026-03-19T10:00:00',
+    instrumentType: 'equity',
+    supported: true,
+    coverageStatus: 'supported',
+    freshnessStatus: 'current',
+    trailingPe: 24.6,
+    priceToSales: 5.1,
+    pillars: {
+      growth: { score: 0.9, status: 'strong', summary: 'Growth profile.' },
+      profitability: { score: 0.9, status: 'strong', summary: 'Profitability profile.' },
+      balance_sheet: { score: 0.9, status: 'strong', summary: 'Balance sheet profile.' },
+      cash_flow: { score: 0.9, status: 'strong', summary: 'Cash flow profile.' },
+      valuation: { score: 0.55, status: 'neutral', summary: 'Valuation profile.' },
+    },
+    historicalSeries: {},
+    metricContext: {},
+    dataQualityStatus: 'high',
+    dataQualityFlags: [],
+    redFlags: [],
+    highlights: ['Growth metrics are supportive.'],
+    metricSources: {},
+  };
+}
 
 describe('AnalysisCanvasPanel', () => {
   beforeEach(() => {
@@ -41,6 +71,7 @@ describe('AnalysisCanvasPanel', () => {
     } as never);
     vi.mocked(fundamentalsHooks.useRefreshFundamentalSnapshotMutation).mockReturnValue({
       mutate,
+      data: undefined,
       isPending: false,
       isError: false,
       error: null,
@@ -95,7 +126,7 @@ describe('AnalysisCanvasPanel', () => {
               whatToDo: 'Use the current trade plan and keep sizing disciplined.',
               mainRisk: 'Valuation remains acceptable, but risk still matters.',
               tradePlan: { entry: 180, stop: 171, target: 198, rr: 2 },
-              valuationContext: { method: 'fundamental_pillar' },
+              valuationContext: { method: 'not_available' },
               drivers: {
                 positives: [],
                 negatives: [],
@@ -113,6 +144,7 @@ describe('AnalysisCanvasPanel', () => {
     } as never);
     vi.mocked(fundamentalsHooks.useRefreshFundamentalSnapshotMutation).mockReturnValue({
       mutate: vi.fn(),
+      data: undefined,
       isPending: false,
       isError: false,
       error: null,
@@ -122,5 +154,86 @@ describe('AnalysisCanvasPanel', () => {
 
     expect(screen.getByText('AAPL Decision Summary')).toBeInTheDocument();
     expect(screen.getByText('Buy Now')).toBeInTheDocument();
+  });
+
+  it('live reloads the selected candidate when refreshed fundamentals arrive', async () => {
+    useWorkspaceStore.setState({
+      selectedTicker: 'AAPL',
+      selectedTickerSource: 'screener',
+      analysisTab: 'overview',
+    });
+    useScreenerStore.setState({
+      lastResult: {
+        asofDate: '2026-03-19',
+        totalScreened: 1,
+        dataFreshness: 'final_close',
+        candidates: [
+          {
+            ticker: 'AAPL',
+            currency: 'USD',
+            close: 180,
+            sma20: 175,
+            sma50: 170,
+            sma200: 160,
+            atr: 3,
+            momentum6m: 0.18,
+            momentum12m: 0.27,
+            relStrength: 0.09,
+            score: 0.82,
+            confidence: 79,
+            rank: 1,
+            signal: 'breakout',
+            entry: 180,
+            stop: 171,
+            target: 198,
+            rr: 2,
+            decisionSummary: {
+              symbol: 'AAPL',
+              action: 'WATCH',
+              conviction: 'low',
+              technicalLabel: 'strong',
+              fundamentalsLabel: 'neutral',
+              valuationLabel: 'unknown',
+              catalystLabel: 'active',
+              whyNow: 'Old summary',
+              whatToDo: 'Old action',
+              mainRisk: 'Old risk',
+              tradePlan: { entry: 180, stop: 171, target: 198, rr: 2 },
+              valuationContext: {
+                method: 'not_available',
+                summary:
+                  'Valuation context is limited because no cached fundamentals snapshot is available yet.',
+              },
+              drivers: {
+                positives: [],
+                negatives: [],
+                warnings: ['No cached fundamentals snapshot is available yet.'],
+              },
+            },
+          },
+        ],
+      },
+    });
+    vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: undefined,
+    } as never);
+    vi.mocked(fundamentalsHooks.useRefreshFundamentalSnapshotMutation).mockReturnValue({
+      mutate: vi.fn(),
+      data: buildSnapshot(),
+      isPending: false,
+      isError: false,
+      error: null,
+    } as never);
+
+    renderWithProviders(<AnalysisCanvasPanel />);
+
+    await waitFor(() => {
+      const candidate = useScreenerStore.getState().lastResult?.candidates[0];
+      expect(candidate?.fundamentalsCoverageStatus).toBe('supported');
+      expect(candidate?.decisionSummary?.valuationContext.method).toBe('earnings_multiple');
+      expect(candidate?.decisionSummary?.valuationContext.summary).toContain('Trailing PE is 24.6x');
+    });
   });
 });

@@ -520,8 +520,15 @@ export const messagesEn = {
             method: 'Method: {{method}}',
             trailingPe: 'Trailing PE',
             priceToSales: 'Price / Sales',
+            fairValueLow: 'Fair Value Low',
+            fairValueBase: 'Fair Value Base',
+            fairValueHigh: 'Fair Value High',
+            premiumDiscount: 'Vs Base',
             methods: {
-              heuristicMultiple: 'Heuristic multiple',
+              earningsMultiple: 'Earnings multiple',
+              salesMultiple: 'Sales multiple',
+              bookMultiple: 'Book multiple',
+              notAvailable: 'Not available',
             },
           },
           tradePlan: {

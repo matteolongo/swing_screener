@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from api.models.screener import SameSymbolCandidateContext, ScreenerCandidate
 from swing_screener.fundamentals.models import FundamentalPillarScore, FundamentalSnapshot
 from swing_screener.intelligence.models import Opportunity
@@ -107,10 +109,10 @@ def test_decision_summary_round_trip() -> None:
 
     assert restored == summary
     assert restored.trade_plan.rr == 2.0
-    assert restored.valuation_context.method == "heuristic_multiple"
+    assert restored.valuation_context.method == "earnings_multiple"
 
 
-def test_strong_technical_and_fundamentals_with_fair_value_maps_to_buy_now() -> None:
+def test_strong_technical_and_fundamentals_with_earnings_fair_value_maps_to_buy_now() -> None:
     summary = build_decision_summary(_candidate(), opportunity=_opportunity(), fundamentals=_snapshot())
 
     assert summary.action == "BUY_NOW"
@@ -118,10 +120,27 @@ def test_strong_technical_and_fundamentals_with_fair_value_maps_to_buy_now() -> 
     assert summary.technical_label == "strong"
     assert summary.fundamentals_label == "strong"
     assert summary.valuation_label == "fair"
-    assert summary.valuation_context.summary == (
-        "Valuation looks fair on current fundamentals. "
-        "Trailing PE is 24.6x and price-to-sales is 5.1x."
+    assert summary.valuation_context.method == "earnings_multiple"
+    assert summary.valuation_context.fair_value_low == pytest.approx(171.22, abs=0.01)
+    assert summary.valuation_context.fair_value_base == pytest.approx(193.17, abs=0.01)
+    assert summary.valuation_context.fair_value_high == pytest.approx(215.12, abs=0.01)
+    assert summary.valuation_context.premium_discount_pct == pytest.approx(-6.8, abs=0.1)
+    assert "using earnings multiple" in summary.valuation_context.summary
+
+
+def test_sales_multiple_fair_value_used_when_pe_is_missing() -> None:
+    summary = build_decision_summary(
+        _candidate(close=120.0),
+        opportunity=_opportunity(),
+        fundamentals=_snapshot(trailing_pe=None, price_to_sales=4.0),
     )
+
+    assert summary.valuation_context.method == "sales_multiple"
+    assert summary.valuation_context.fair_value_low == pytest.approx(141.52, abs=0.01)
+    assert summary.valuation_context.fair_value_base == pytest.approx(166.5, abs=0.01)
+    assert summary.valuation_context.fair_value_high == pytest.approx(191.47, abs=0.01)
+    assert summary.valuation_context.premium_discount_pct == pytest.approx(-27.9, abs=0.1)
+    assert "using sales multiple" in summary.valuation_context.summary
 
 
 def test_strong_technical_and_fundamentals_with_expensive_value_maps_to_buy_on_pullback() -> None:
@@ -191,9 +210,10 @@ def test_valuation_context_handles_missing_raw_multiples() -> None:
         fundamentals=_snapshot(trailing_pe=None, price_to_sales=None, valuation_status="weak"),
     )
 
-    assert summary.valuation_context.method == "heuristic_multiple"
+    assert summary.valuation_context.method == "not_available"
     assert summary.valuation_context.trailing_pe is None
     assert summary.valuation_context.price_to_sales is None
+    assert summary.valuation_context.fair_value_base is None
     assert summary.valuation_context.summary == "Valuation looks demanding on current fundamentals."
 
 

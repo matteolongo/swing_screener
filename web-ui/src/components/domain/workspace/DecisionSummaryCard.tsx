@@ -3,12 +3,13 @@ import type {
   DecisionAction,
   DecisionCatalystLabel,
   DecisionConviction,
+  FairValueMethod,
   DecisionSignalLabel,
   DecisionSummary,
   DecisionValuationLabel,
 } from '@/features/screener/types';
 import { t } from '@/i18n/t';
-import { formatCurrency, formatNumber } from '@/utils/formatters';
+import { formatCurrency, formatNumber, formatPercent } from '@/utils/formatters';
 
 interface DecisionSummaryCardProps {
   summary: DecisionSummary;
@@ -124,6 +125,19 @@ function badgeVariantForSignal(
   return 'warning';
 }
 
+function fairValueMethodLabel(method: FairValueMethod): string {
+  switch (method) {
+    case 'earnings_multiple':
+      return t('workspacePage.panels.analysis.decisionSummary.valuationContext.methods.earningsMultiple');
+    case 'sales_multiple':
+      return t('workspacePage.panels.analysis.decisionSummary.valuationContext.methods.salesMultiple');
+    case 'book_multiple':
+      return t('workspacePage.panels.analysis.decisionSummary.valuationContext.methods.bookMultiple');
+    case 'not_available':
+      return t('workspacePage.panels.analysis.decisionSummary.valuationContext.methods.notAvailable');
+  }
+}
+
 export default function DecisionSummaryCard({
   summary,
   currency = 'USD',
@@ -152,6 +166,10 @@ export default function DecisionSummaryCard({
   ].filter((item) => item.value !== undefined);
 
   const warningItems = summary.drivers.warnings.filter(Boolean);
+  const hasFairValue =
+    summary.valuationContext.fairValueLow !== undefined &&
+    summary.valuationContext.fairValueBase !== undefined &&
+    summary.valuationContext.fairValueHigh !== undefined;
   const valuationMetrics = [
     {
       label: t('workspacePage.panels.analysis.decisionSummary.valuationContext.trailingPe'),
@@ -164,6 +182,30 @@ export default function DecisionSummaryCard({
       formatter: (value: number) => `${formatNumber(value, 1)}x`,
     },
   ].filter((item) => item.value !== undefined);
+  const fairValueMetrics = hasFairValue
+    ? [
+        {
+          label: t('workspacePage.panels.analysis.decisionSummary.valuationContext.fairValueLow'),
+          value: summary.valuationContext.fairValueLow,
+          formatter: (value: number) => formatCurrency(value, currency),
+        },
+        {
+          label: t('workspacePage.panels.analysis.decisionSummary.valuationContext.fairValueBase'),
+          value: summary.valuationContext.fairValueBase,
+          formatter: (value: number) => formatCurrency(value, currency),
+        },
+        {
+          label: t('workspacePage.panels.analysis.decisionSummary.valuationContext.fairValueHigh'),
+          value: summary.valuationContext.fairValueHigh,
+          formatter: (value: number) => formatCurrency(value, currency),
+        },
+        {
+          label: t('workspacePage.panels.analysis.decisionSummary.valuationContext.premiumDiscount'),
+          value: summary.valuationContext.premiumDiscountPct,
+          formatter: (value: number) => formatPercent(value, 1),
+        },
+      ]
+    : [];
 
   return (
     <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
@@ -218,14 +260,13 @@ export default function DecisionSummaryCard({
             <div className="text-xs font-medium uppercase tracking-wide text-gray-500">
               {t('workspacePage.panels.analysis.decisionSummary.valuationContext.title')}
             </div>
-            <div className="text-xs text-gray-500">
-              {t('workspacePage.panels.analysis.decisionSummary.valuationContext.method', {
-                method:
-                  summary.valuationContext.method === 'heuristic_multiple'
-                    ? t('workspacePage.panels.analysis.decisionSummary.valuationContext.methods.heuristicMultiple')
-                    : summary.valuationContext.method,
-              })}
-            </div>
+            {hasFairValue ? (
+              <div className="text-xs text-gray-500">
+                {t('workspacePage.panels.analysis.decisionSummary.valuationContext.method', {
+                  method: fairValueMethodLabel(summary.valuationContext.method),
+                })}
+              </div>
+            ) : null}
           </div>
           {summary.valuationContext.summary ? (
             <p className="mt-2 text-sm text-slate-800">{summary.valuationContext.summary}</p>
@@ -236,6 +277,18 @@ export default function DecisionSummaryCard({
                 <div key={item.label} className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
                   <div className="text-[11px] uppercase tracking-wide text-gray-500">{item.label}</div>
                   <div className="mt-1 text-sm font-semibold text-slate-900">
+                    {item.formatter(item.value as number)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : null}
+          {fairValueMetrics.length ? (
+            <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4">
+              {fairValueMetrics.map((item) => (
+                <div key={item.label} className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2">
+                  <div className="text-[11px] uppercase tracking-wide text-emerald-800">{item.label}</div>
+                  <div className="mt-1 text-sm font-semibold text-emerald-950">
                     {item.formatter(item.value as number)}
                   </div>
                 </div>
