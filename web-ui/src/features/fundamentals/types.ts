@@ -36,17 +36,37 @@ export interface FundamentalSeriesPointAPI {
   value: number;
 }
 
+export interface FundamentalMetricContext {
+  source?: string;
+  cadence: 'snapshot' | 'quarterly' | 'annual' | 'unknown';
+  derived: boolean;
+  derivedFrom: string[];
+  periodEnd?: string;
+}
+
+export interface FundamentalMetricContextAPI {
+  source?: string | null;
+  cadence: 'snapshot' | 'quarterly' | 'annual' | 'unknown';
+  derived: boolean;
+  derived_from?: string[];
+  period_end?: string | null;
+}
+
 export interface FundamentalMetricSeries {
   label: string;
   unit: 'number' | 'currency' | 'percent' | 'ratio';
-  direction: 'improving' | 'deteriorating' | 'stable' | 'unknown';
+  frequency: 'quarterly' | 'annual' | 'unknown';
+  direction: 'improving' | 'deteriorating' | 'stable' | 'unknown' | 'not_comparable';
+  source?: string;
   points: FundamentalSeriesPoint[];
 }
 
 export interface FundamentalMetricSeriesAPI {
   label: string;
   unit: 'number' | 'currency' | 'percent' | 'ratio';
-  direction: 'improving' | 'deteriorating' | 'stable' | 'unknown';
+  frequency: 'quarterly' | 'annual' | 'unknown';
+  direction: 'improving' | 'deteriorating' | 'stable' | 'unknown' | 'not_comparable';
+  source?: string | null;
   points?: FundamentalSeriesPointAPI[];
 }
 
@@ -77,6 +97,9 @@ export interface FundamentalSnapshot {
   mostRecentQuarter?: string;
   pillars: Record<string, FundamentalPillarScore>;
   historicalSeries: Record<string, FundamentalMetricSeries>;
+  metricContext: Record<string, FundamentalMetricContext>;
+  dataQualityStatus: 'high' | 'medium' | 'low';
+  dataQualityFlags: string[];
   redFlags: string[];
   highlights: string[];
   metricSources: Record<string, string>;
@@ -110,6 +133,9 @@ export interface FundamentalSnapshotAPI {
   most_recent_quarter?: string | null;
   pillars?: Record<string, FundamentalPillarScoreAPI>;
   historical_series?: Record<string, FundamentalMetricSeriesAPI>;
+  metric_context?: Record<string, FundamentalMetricContextAPI>;
+  data_quality_status?: 'high' | 'medium' | 'low';
+  data_quality_flags?: string[];
   red_flags?: string[];
   highlights?: string[];
   metric_sources?: Record<string, string>;
@@ -251,11 +277,26 @@ export function transformFundamentalSnapshot(api: FundamentalSnapshotAPI): Funda
       acc[key] = {
         label: value.label,
         unit: value.unit,
+        frequency: value.frequency,
         direction: value.direction,
+        source: value.source ?? undefined,
         points: (value.points ?? []).map((point) => ({
           periodEnd: point.period_end,
           value: point.value,
         })),
+      };
+      return acc;
+    },
+    {}
+  );
+  const metricContext = Object.entries(api.metric_context ?? {}).reduce<Record<string, FundamentalMetricContext>>(
+    (acc, [key, value]) => {
+      acc[key] = {
+        source: value.source ?? undefined,
+        cadence: value.cadence,
+        derived: value.derived,
+        derivedFrom: value.derived_from ?? [],
+        periodEnd: value.period_end ?? undefined,
       };
       return acc;
     },
@@ -289,6 +330,9 @@ export function transformFundamentalSnapshot(api: FundamentalSnapshotAPI): Funda
     mostRecentQuarter: api.most_recent_quarter ?? undefined,
     pillars,
     historicalSeries,
+    metricContext,
+    dataQualityStatus: api.data_quality_status ?? 'low',
+    dataQualityFlags: api.data_quality_flags ?? [],
     redFlags: api.red_flags ?? [],
     highlights: api.highlights ?? [],
     metricSources: api.metric_sources ?? {},
