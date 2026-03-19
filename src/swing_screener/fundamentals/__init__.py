@@ -10,6 +10,7 @@ from swing_screener.fundamentals.models import (
     FundamentalSeriesPoint,
     FundamentalSnapshot,
     ProviderFundamentalsRecord,
+    TRUST_METADATA_MISSING_FLAG,
 )
 from swing_screener.fundamentals.service import FundamentalsAnalysisService
 from swing_screener.fundamentals.storage import FundamentalsStorage
@@ -25,5 +26,6 @@ __all__ = [
     "FundamentalsConfig",
     "FundamentalsStorage",
     "ProviderFundamentalsRecord",
+    "TRUST_METADATA_MISSING_FLAG",
     "build_fundamentals_config",
 ]

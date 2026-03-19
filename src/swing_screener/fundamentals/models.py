@@ -8,6 +8,9 @@ VALID_SERIES_DIRECTIONS = {"improving", "deteriorating", "stable", "unknown", "n
 VALID_SERIES_FREQUENCIES = {"quarterly", "annual", "unknown"}
 VALID_METRIC_CADENCES = {"snapshot", "quarterly", "annual", "unknown"}
 VALID_DATA_QUALITY_STATUSES = {"high", "medium", "low"}
+TRUST_METADATA_MISSING_FLAG = (
+    "Snapshot lacks trust metadata; refresh fundamentals to validate cadence and provenance."
+)
 
 
 def _trend_claim_supported(
@@ -244,9 +247,8 @@ class FundamentalSnapshot:
         data_quality_status = raw_quality_status if raw_quality_status in VALID_DATA_QUALITY_STATUSES else "low"
         if "data_quality_status" not in payload:
             data_quality_status = "low"
-            trust_flag = "Snapshot lacks trust metadata; refresh fundamentals to validate cadence and provenance."
-            if trust_flag not in data_quality_flags:
-                data_quality_flags.append(trust_flag)
+            if TRUST_METADATA_MISSING_FLAG not in data_quality_flags:
+                data_quality_flags.append(TRUST_METADATA_MISSING_FLAG)
 
         return cls(
             symbol=str(payload.get("symbol", "")).strip().upper(),

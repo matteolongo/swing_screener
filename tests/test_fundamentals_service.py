@@ -8,6 +8,7 @@ from swing_screener.fundamentals.models import (
 )
 from swing_screener.fundamentals.service import FundamentalsAnalysisService
 from swing_screener.fundamentals.storage import FundamentalsStorage
+from swing_screener.utils.file_lock import locked_write_json_cli
 
 
 class _FakeQuarterlyProvider:
@@ -390,3 +391,44 @@ def test_fundamentals_service_does_not_emit_trend_claims_for_non_comparable_hist
     assert "FCF margin history is not comparable enough for trend claims." in snapshot.data_quality_flags
     assert "Free cash flow" not in " ".join(snapshot.highlights)
     assert "Quarterly cash-flow conversion is deteriorating." not in snapshot.red_flags
+
+
+def test_fundamentals_service_refreshes_legacy_snapshot_within_ttl(tmp_path):
+    storage = FundamentalsStorage(tmp_path / "fundamentals")
+    legacy_payload = {
+        "symbol": "AAPL",
+        "asof_date": "2026-03-19",
+        "provider": "yfinance",
+        "updated_at": "2099-03-19T10:00:00",
+        "instrument_type": "equity",
+        "supported": True,
+        "coverage_status": "supported",
+        "freshness_status": "current",
+        "company_name": "Apple Inc.",
+        "historical_series": {
+            "revenue": {
+                "label": "Revenue",
+                "unit": "currency",
+                "direction": "improving",
+                "points": [
+                    {"period_end": "2025-11-01", "value": 88_000_000_000.0},
+                    {"period_end": "2026-02-01", "value": 94_000_000_000.0},
+                ],
+            }
+        },
+        "highlights": ["Recent revenue trend is improving."],
+        "metric_sources": {"revenue_growth_yoy": "yfinance"},
+    }
+    locked_write_json_cli(storage.snapshot_path("AAPL"), legacy_payload)
+
+    service = FundamentalsAnalysisService(
+        storage=storage,
+        yfinance_provider=_FakeQuarterlyProvider(),
+    )
+
+    snapshot = service.get_snapshot("AAPL", cfg=_cfg(), force_refresh=False)
+
+    assert snapshot.metric_context["revenue_growth_yoy"].cadence == "quarterly"
+    assert snapshot.historical_series["revenue"].frequency == "quarterly"
+    assert snapshot.data_quality_status == "high"
+    assert snapshot.data_quality_flags == []

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from swing_screener.fundamentals.config import FundamentalsConfig
+from swing_screener.fundamentals.models import TRUST_METADATA_MISSING_FLAG, FundamentalSnapshot
 from swing_screener.fundamentals.providers import YfinanceFundamentalsProvider
 from swing_screener.fundamentals.scoring import build_provider_error_snapshot, build_snapshot
 from swing_screener.fundamentals.storage import FundamentalsStorage
@@ -28,6 +29,21 @@ class FundamentalsAnalysisService:
             raise ValueError("No supported fundamentals provider configured.")
         return self._yfinance_provider
 
+    def _should_reuse_cached_snapshot(
+        self,
+        snapshot: FundamentalSnapshot | None,
+        *,
+        cfg: FundamentalsConfig,
+        force_refresh: bool,
+    ) -> bool:
+        if snapshot is None or force_refresh:
+            return False
+        if self._storage.is_snapshot_expired(snapshot, cfg.cache_ttl_hours):
+            return False
+        if TRUST_METADATA_MISSING_FLAG in snapshot.data_quality_flags:
+            return False
+        return True
+
     def get_snapshot(
         self,
         symbol: str,
@@ -37,10 +53,7 @@ class FundamentalsAnalysisService:
     ):
         normalized_symbol = _normalize_symbol(symbol)
         cached = self._storage.load_snapshot(normalized_symbol)
-        if cached is not None and not force_refresh and not self._storage.is_snapshot_expired(
-            cached,
-            cfg.cache_ttl_hours,
-        ):
+        if self._should_reuse_cached_snapshot(cached, cfg=cfg, force_refresh=force_refresh):
             return cached
 
         provider = self._provider_for(cfg)
