@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { ScreenerResponse } from '@/features/screener/types';
+import { prioritizeCandidates } from '@/features/screener/prioritization';
 
 interface ScreenerStore {
   lastResult: ScreenerResponse | null;
@@ -16,7 +17,13 @@ export const useScreenerStore = create<ScreenerStore>()(
   persist(
     (set) => ({
       lastResult: null,
-      setLastResult: (result) => set({ lastResult: result }),
+      setLastResult: (result) =>
+        set({
+          lastResult: {
+            ...result,
+            candidates: prioritizeCandidates(result.candidates),
+          },
+        }),
       clearLastResult: () => set({ lastResult: null }),
       patchCandidate: (ticker, updater) =>
         set((state) => {
@@ -30,7 +37,7 @@ export const useScreenerStore = create<ScreenerStore>()(
           return {
             lastResult: {
               ...state.lastResult,
-              candidates: nextCandidates,
+              candidates: prioritizeCandidates(nextCandidates),
             },
           };
         }),

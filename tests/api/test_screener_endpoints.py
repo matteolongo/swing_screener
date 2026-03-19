@@ -10,6 +10,7 @@ from api.dependencies import get_portfolio_service
 import api.services.screener_service as screener_service
 from api.models.screener import ScreenerResponse
 from swing_screener.data.providers import MarketDataProvider
+from swing_screener.recommendation.models import DecisionSummary
 
 
 def _ohlcv_with_spy() -> pd.DataFrame:
@@ -152,6 +153,71 @@ def test_screener_recommendation_payload_shape(monkeypatch):
     }
     assert isinstance(rec["checklist"][0]["gate_name"], str)
     assert isinstance(rec["education"]["what_would_make_valid"], list)
+
+
+def test_screener_response_is_prioritized_by_decision_action_and_conviction(monkeypatch):
+    ohlcv = _ohlcv_with_spy()
+    mock_provider = _create_mock_provider(ohlcv)
+
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None):
+        idx = ["AAA", "BBB", "CCC"]
+        data = {
+            "atr14": [1.2, 1.2, 1.2],
+            "mom_6m": [0.1, 0.1, 0.1],
+            "mom_12m": [0.2, 0.2, 0.2],
+            "rs_6m": [0.05, 0.05, 0.05],
+            "score": [0.55, 0.55, 0.55],
+            "confidence": [95.0, 90.0, 85.0],
+            "last": [50.0, 50.0, 50.0],
+            "ma20_level": [48.0, 48.0, 48.0],
+            "dist_sma50_pct": [5.0, 5.0, 5.0],
+            "dist_sma200_pct": [10.0, 10.0, 10.0],
+            "rank": [1, 2, 3],
+        }
+        return pd.DataFrame(data, index=idx)
+
+    def fake_apply_decision_summary_context(candidates, **kwargs):
+        decision_map = {
+            "AAA": ("WATCH", "high"),
+            "BBB": ("BUY_NOW", "medium"),
+            "CCC": ("BUY_NOW", "high"),
+        }
+        enriched = []
+        for candidate in candidates:
+            action, conviction = decision_map[candidate.ticker]
+            enriched.append(
+                candidate.model_copy(
+                    update={
+                        "decision_summary": DecisionSummary(
+                            symbol=candidate.ticker,
+                            action=action,
+                            conviction=conviction,
+                            technical_label="strong",
+                            fundamentals_label="strong",
+                            valuation_label="fair",
+                            catalyst_label="active",
+                            why_now="Why now.",
+                            what_to_do="What to do.",
+                            main_risk="Main risk.",
+                        )
+                    }
+                )
+            )
+        return enriched
+
+    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
+    monkeypatch.setattr(screener_service, "get_multiple_ticker_info", lambda tickers: {})
+    monkeypatch.setattr(screener_service, "_apply_decision_summary_context", fake_apply_decision_summary_context)
+
+    client = TestClient(app)
+    res = client.post("/api/screener/run", json={"universe": "mega_all", "top": 20})
+    assert res.status_code == 200
+
+    candidates = res.json()["candidates"]
+    assert [candidate["ticker"] for candidate in candidates] == ["CCC", "BBB", "AAA"]
+    assert [candidate["priority_rank"] for candidate in candidates] == [1, 2, 3]
+    assert [candidate["rank"] for candidate in candidates] == [3, 2, 1]
 
 
 def test_screener_currency_comes_from_metadata(monkeypatch):

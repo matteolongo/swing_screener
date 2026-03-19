@@ -33,6 +33,8 @@ describe('screener viewModel', () => {
       expect(vm.currency).toBe('USD');
       expect(vm.name).toBe('Apple Inc.');
       expect(vm.sector).toBe('Technology');
+      expect(vm.priorityRank).toBe(1);
+      expect(vm.rawRank).toBe(1);
       expect(vm.verdict).toBe('UNKNOWN');
       expect(vm.entry).toBeNull();
       expect(vm.stop).toBeNull();
@@ -163,9 +165,13 @@ describe('screener viewModel', () => {
     });
 
     it('includes original candidate reference', () => {
-      const vm = toCandidateViewModel(baseCandidate);
+      const candidate = { ...baseCandidate, priorityRank: 3 };
+      const vm = toCandidateViewModel(candidate);
       
-      expect(vm.original).toBe(baseCandidate);
+      expect(vm.original).toBe(candidate);
+      expect(vm.priorityRank).toBe(3);
+      expect(vm.rawRank).toBe(1);
+      expect(vm.rank).toBe(3);
     });
   });
 

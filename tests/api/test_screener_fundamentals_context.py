@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 from api.models.screener import ScreenerCandidate
-from api.services.screener_service import _apply_cached_fundamentals_context, _apply_decision_summary_context
+from api.services.screener_service import (
+    _apply_cached_fundamentals_context,
+    _apply_decision_priority_ranking,
+    _apply_decision_summary_context,
+)
 from swing_screener.fundamentals.models import FundamentalPillarScore
 from swing_screener.fundamentals.models import FundamentalSnapshot
 from swing_screener.fundamentals.storage import FundamentalsStorage
 from swing_screener.intelligence.models import Opportunity
 from swing_screener.intelligence.storage import IntelligenceStorage
+from swing_screener.recommendation.models import DecisionSummary
 
 
 def _candidate() -> ScreenerCandidate:
@@ -100,3 +105,66 @@ def test_apply_decision_summary_context_combines_fundamentals_and_intelligence(t
     assert enriched[0].decision_summary.valuation_context.fair_value_base is not None
     assert enriched[0].decision_summary.valuation_context.premium_discount_pct is not None
     assert "Trailing PE is 21.4x" in enriched[0].decision_summary.valuation_context.summary
+
+
+def test_apply_decision_priority_ranking_uses_action_then_conviction_then_raw_rank() -> None:
+    watch_candidate = _candidate().model_copy(
+        update={
+            "ticker": "WATCH",
+            "rank": 1,
+            "decision_summary": DecisionSummary(
+                symbol="WATCH",
+                action="WATCH",
+                conviction="high",
+                technical_label="neutral",
+                fundamentals_label="neutral",
+                valuation_label="fair",
+                catalyst_label="neutral",
+                why_now="Watch it.",
+                what_to_do="Wait.",
+                main_risk="Not ready.",
+            ),
+        }
+    )
+    buy_now_medium = _candidate().model_copy(
+        update={
+            "ticker": "MEDIUM",
+            "rank": 3,
+            "decision_summary": DecisionSummary(
+                symbol="MEDIUM",
+                action="BUY_NOW",
+                conviction="medium",
+                technical_label="strong",
+                fundamentals_label="strong",
+                valuation_label="fair",
+                catalyst_label="active",
+                why_now="Ready.",
+                what_to_do="Act.",
+                main_risk="Execution.",
+            ),
+        }
+    )
+    buy_now_high = _candidate().model_copy(
+        update={
+            "ticker": "HIGH",
+            "rank": 4,
+            "decision_summary": DecisionSummary(
+                symbol="HIGH",
+                action="BUY_NOW",
+                conviction="high",
+                technical_label="strong",
+                fundamentals_label="strong",
+                valuation_label="cheap",
+                catalyst_label="active",
+                why_now="Very ready.",
+                what_to_do="Act first.",
+                main_risk="Execution.",
+            ),
+        }
+    )
+
+    prioritized = _apply_decision_priority_ranking([watch_candidate, buy_now_medium, buy_now_high])
+
+    assert [candidate.ticker for candidate in prioritized] == ["HIGH", "MEDIUM", "WATCH"]
+    assert [candidate.priority_rank for candidate in prioritized] == [1, 2, 3]
+    assert [candidate.rank for candidate in prioritized] == [4, 3, 1]

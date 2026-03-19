@@ -445,12 +445,13 @@ export const messagesEn = {
     },
     panels: {
       screener: {
-        title: 'Screener Inbox',
-        description: 'Run the screener and select a candidate to load in the analysis canvas.',
-        resultSummary: 'Showing {{shown}} of {{total}} candidates ({{screened}} screened).',
-        asOf: 'Data as of {{date}}',
-        freshness: {
-          finalClose: 'Final close',
+      title: 'Screener Inbox',
+      description: 'Run the screener and select a candidate to load in the analysis canvas.',
+      resultSummary: 'Showing {{shown}} of {{total}} candidates ({{screened}} screened).',
+      priorityExplanation: 'Prioritized by decision action and conviction. Raw rank remains visible in each row.',
+      asOf: 'Data as of {{date}}',
+      freshness: {
+        finalClose: 'Final close',
           intraday: 'Intraday',
         },
         placeholder: 'Screener controls and candidates will appear here.',
@@ -998,6 +999,8 @@ export const messagesEn = {
       refreshTitle: 'Refresh screener data',
       currencySummary: 'Currency: {{value}}',
       recommendedOnly: 'Show recommended only',
+      actionFilter: 'Decision Action',
+      allActions: 'All actions',
       showAdvanced: 'Show advanced filters',
       hideAdvanced: 'Hide advanced filters',
     },
@@ -1054,6 +1057,7 @@ export const messagesEn = {
       empty: 'No candidates found',
       headers: {
         rank: 'Rank',
+        priority: 'Priority',
         ticker: 'Ticker',
         symbol: 'Symbol',
         currency: 'Currency',
@@ -1074,6 +1078,8 @@ export const messagesEn = {
       fixLabel: 'Fix',
       recommendationDetailsTitle: 'Recommendation details',
       recommendationDetailsAria: 'Recommendation details for {{ticker}}',
+      rawRank: 'Raw #{{rank}}',
+      priorityMeta: '{{action}} · {{conviction}}',
       tradeThesisTitle: 'View Trade Thesis',
       tradeThesisAria: 'View trade thesis for {{ticker}}',
       createOrderTitle: 'Create Order',

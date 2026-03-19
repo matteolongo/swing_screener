@@ -12,6 +12,8 @@ export interface CandidateViewModel {
   close: number;
   confidence: number;
   rank: number;
+  priorityRank: number;
+  rawRank: number;
   verdict: 'RECOMMENDED' | 'NOT_RECOMMENDED' | 'UNKNOWN';
   
   // Setup fields (with fallback logic)
@@ -63,7 +65,9 @@ export function toCandidateViewModel(candidate: ScreenerCandidate): CandidateVie
     lastBar: candidate.lastBar ?? '-',
     close: candidate.close,
     confidence: candidate.confidence,
-    rank: candidate.rank,
+    rank: candidate.priorityRank ?? candidate.rank,
+    priorityRank: candidate.priorityRank ?? candidate.rank,
+    rawRank: candidate.rank,
     verdict,
     
     // Setup with fallbacks
