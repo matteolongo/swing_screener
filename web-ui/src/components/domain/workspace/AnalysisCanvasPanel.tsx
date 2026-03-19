@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+
 import Card from '@/components/common/Card';
 import CachedSymbolPriceChart from '@/components/domain/market/CachedSymbolPriceChart';
 import FundamentalsSnapshotCard from '@/components/domain/fundamentals/FundamentalsSnapshotCard';
@@ -8,6 +10,7 @@ import {
   useFundamentalSnapshotQuery,
   useRefreshFundamentalSnapshotMutation,
 } from '@/features/fundamentals/hooks';
+import { syncCandidateWithFundamentals } from '@/features/screener/decisionSummary';
 import type { SymbolIntelligenceStatus } from '@/features/intelligence/useSymbolIntelligenceRunner';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
@@ -27,6 +30,7 @@ export default function AnalysisCanvasPanel({
 }: AnalysisCanvasPanelProps) {
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
   const lastScreenerResult = useScreenerStore((state) => state.lastResult);
+  const patchCandidate = useScreenerStore((state) => state.patchCandidate);
   const activeTab = useWorkspaceStore((state) => state.analysisTab);
   const setAnalysisTab = useWorkspaceStore((state) => state.setAnalysisTab);
   const selectedCandidate = lastScreenerResult?.candidates.find(
@@ -36,6 +40,7 @@ export default function AnalysisCanvasPanel({
     activeTab === 'fundamentals' ? selectedTicker ?? undefined : undefined
   );
   const refreshFundamentalsMutation = useRefreshFundamentalSnapshotMutation();
+  const latestFundamentalsSnapshot = refreshFundamentalsMutation.data ?? fundamentalsQuery.data;
   const tabs: Array<{
     id: 'overview' | 'fundamentals' | 'order';
     label: string;
@@ -44,6 +49,22 @@ export default function AnalysisCanvasPanel({
     { id: 'fundamentals', label: t('workspacePage.panels.analysis.tabs.fundamentals') },
     { id: 'order', label: t('workspacePage.panels.analysis.tabs.order') },
   ];
+
+  useEffect(() => {
+    if (!selectedTicker || !selectedCandidate || !latestFundamentalsSnapshot) {
+      return;
+    }
+
+    if (latestFundamentalsSnapshot.symbol.trim().toUpperCase() !== selectedTicker.trim().toUpperCase()) {
+      return;
+    }
+
+    if (syncCandidateWithFundamentals(selectedCandidate, latestFundamentalsSnapshot) === selectedCandidate) {
+      return;
+    }
+
+    patchCandidate(selectedTicker, (candidate) => syncCandidateWithFundamentals(candidate, latestFundamentalsSnapshot));
+  }, [latestFundamentalsSnapshot, patchCandidate, selectedCandidate, selectedTicker]);
 
   return (
     <Card

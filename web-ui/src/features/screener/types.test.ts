@@ -46,10 +46,18 @@ describe('transformScreenerResponse', () => {
               rr: 2,
             },
             valuation_context: {
-              method: 'heuristic_multiple',
-              summary: 'Valuation looks fair on current fundamentals. Trailing PE is 24.6x and price-to-sales is 5.1x.',
+              method: 'earnings_multiple',
+              summary:
+                'Valuation looks fair on current fundamentals. Fair value range is 95.12 to 119.51 using earnings multiple, and the current price is 6.8% below the base fair value. Trailing PE is 24.6x, price-to-sales is 5.1x, book value per share is 18.40, and price-to-book is 5.4x.',
               trailing_pe: 24.6,
               price_to_sales: 5.1,
+              book_value_per_share: 18.4,
+              price_to_book: 5.4,
+              book_to_price: 0.1852,
+              fair_value_low: 95.12,
+              fair_value_base: 107.32,
+              fair_value_high: 119.51,
+              premium_discount_pct: -6.8,
             },
             drivers: {
               positives: ['Technical setup is ready.'],
@@ -69,7 +77,10 @@ describe('transformScreenerResponse', () => {
     expect(result.candidates[0].fundamentalsSummary).toBe('Growth metrics are supportive.');
     expect(result.candidates[0].decisionSummary?.action).toBe('BUY_NOW');
     expect(result.candidates[0].decisionSummary?.tradePlan.rr).toBe(2);
-    expect(result.candidates[0].decisionSummary?.valuationContext.method).toBe('heuristic_multiple');
+    expect(result.candidates[0].decisionSummary?.valuationContext.method).toBe('earnings_multiple');
     expect(result.candidates[0].decisionSummary?.valuationContext.trailingPe).toBe(24.6);
+    expect(result.candidates[0].decisionSummary?.valuationContext.bookValuePerShare).toBe(18.4);
+    expect(result.candidates[0].decisionSummary?.valuationContext.priceToBook).toBe(5.4);
+    expect(result.candidates[0].decisionSummary?.valuationContext.fairValueBase).toBe(107.32);
   });
 });

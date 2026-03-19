@@ -96,5 +96,7 @@ def test_apply_decision_summary_context_combines_fundamentals_and_intelligence(t
     assert enriched[0].decision_summary is not None
     assert enriched[0].decision_summary.action == "BUY_NOW"
     assert enriched[0].decision_summary.catalyst_label == "active"
-    assert enriched[0].decision_summary.valuation_context.method == "heuristic_multiple"
+    assert enriched[0].decision_summary.valuation_context.method == "earnings_multiple"
+    assert enriched[0].decision_summary.valuation_context.fair_value_base is not None
+    assert enriched[0].decision_summary.valuation_context.premium_discount_pct is not None
     assert "Trailing PE is 21.4x" in enriched[0].decision_summary.valuation_context.summary

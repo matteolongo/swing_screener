@@ -8,6 +8,7 @@ from swing_screener.fundamentals.models import (
     FundamentalSnapshot,
 )
 from swing_screener.fundamentals.storage import FundamentalsStorage
+from swing_screener.utils.file_lock import locked_write_json_cli
 
 
 def test_fundamentals_snapshot_roundtrip_preserves_trust_metadata(tmp_path):
@@ -23,6 +24,11 @@ def test_fundamentals_snapshot_roundtrip_preserves_trust_metadata(tmp_path):
         freshness_status="unknown",
         company_name="SBM Offshore N.V.",
         currency="EUR",
+        shares_outstanding=650_000_000.0,
+        total_equity=6_500_000_000.0,
+        book_value_per_share=10.0,
+        price_to_book=1.7,
+        book_to_price=0.5882,
         most_recent_quarter=None,
         pillars={
             "growth": FundamentalPillarScore(score=0.76, status="strong", summary="Growth profile."),
@@ -80,8 +86,38 @@ def test_fundamentals_snapshot_roundtrip_preserves_trust_metadata(tmp_path):
         "yfinance.financials",
         "yfinance.cashflow",
     ]
+    assert loaded.book_value_per_share == 10.0
+    assert loaded.price_to_book == 1.7
+    assert loaded.book_to_price == 0.5882
     assert loaded.data_quality_status == "medium"
     assert loaded.data_quality_flags == [
         "Visible statement history is annual-only, so quarter-level trust is limited.",
     ]
     assert loaded.highlights == ["Profitability profile looks healthy."]
+
+
+def test_fundamentals_snapshot_roundtrip_keeps_new_fields_optional_for_legacy_payloads(tmp_path):
+    storage = FundamentalsStorage(tmp_path / "fundamentals")
+    locked_write_json_cli(
+        storage.snapshot_path("legacy"),
+        {
+            "symbol": "LEGACY",
+            "asof_date": "2026-03-19",
+            "provider": "yfinance",
+            "updated_at": "2026-03-19T09:30:00",
+            "instrument_type": "equity",
+            "supported": True,
+            "coverage_status": "supported",
+            "freshness_status": "current",
+            "pillars": {
+                "growth": {"score": 0.76, "status": "strong", "summary": "Growth profile."},
+            },
+        },
+    )
+
+    loaded = storage.load_snapshot("legacy")
+
+    assert loaded is not None
+    assert loaded.book_value_per_share is None
+    assert loaded.price_to_book is None
+    assert loaded.book_to_price is None

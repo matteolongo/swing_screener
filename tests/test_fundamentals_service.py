@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import pytest
+
 from swing_screener.fundamentals.config import FundamentalsConfig
 from swing_screener.fundamentals.models import (
+    FundamentalMetricContext,
     FundamentalMetricSeries,
     FundamentalSeriesPoint,
     ProviderFundamentalsRecord,
@@ -299,6 +302,57 @@ class _FakeMismatchHistoryProvider:
         )
 
 
+class _FakeBookValueProvider:
+    name = "yfinance"
+
+    def fetch_record(self, symbol: str) -> ProviderFundamentalsRecord:
+        return ProviderFundamentalsRecord(
+            symbol=symbol,
+            asof_date="2026-03-18",
+            provider=self.name,
+            instrument_type="equity",
+            company_name="Book Co.",
+            sector="Financials",
+            currency="USD",
+            market_cap=12_000_000_000.0,
+            earnings_growth_yoy=0.08,
+            gross_margin=0.52,
+            debt_to_equity=88.0,
+            current_ratio=1.05,
+            return_on_equity=0.14,
+            shares_outstanding=500_000_000.0,
+            total_equity=10_000_000_000.0,
+            metric_context={
+                "market_cap": FundamentalMetricContext(
+                    source="yfinance.info.marketCap",
+                    cadence="snapshot",
+                    derived=False,
+                    derived_from=[],
+                    period_end="2026-03-18",
+                ),
+                "total_equity": FundamentalMetricContext(
+                    source="yfinance.balance_sheet",
+                    cadence="annual",
+                    derived=False,
+                    derived_from=[],
+                    period_end="2025-12-31",
+                ),
+                "shares_outstanding": FundamentalMetricContext(
+                    source="yfinance.info.sharesOutstanding",
+                    cadence="snapshot",
+                    derived=False,
+                    derived_from=[],
+                    period_end="2026-03-18",
+                ),
+            },
+            metric_sources={
+                "market_cap": "yfinance.info.marketCap",
+                "total_equity": "yfinance.balance_sheet",
+                "shares_outstanding": "yfinance.info.sharesOutstanding",
+            },
+        )
+
+
 def _cfg() -> FundamentalsConfig:
     return FundamentalsConfig(providers=("yfinance",), cache_ttl_hours=24, stale_after_days=120, compare_limit=5)
 
@@ -391,6 +445,26 @@ def test_fundamentals_service_does_not_emit_trend_claims_for_non_comparable_hist
     assert "FCF margin history is not comparable enough for trend claims." in snapshot.data_quality_flags
     assert "Free cash flow" not in " ".join(snapshot.highlights)
     assert "Quarterly cash-flow conversion is deteriorating." not in snapshot.red_flags
+
+
+def test_fundamentals_service_derives_book_value_metrics(tmp_path):
+    service = FundamentalsAnalysisService(
+        storage=FundamentalsStorage(tmp_path / "fundamentals"),
+        yfinance_provider=_FakeBookValueProvider(),
+    )
+
+    snapshot = service.get_snapshot("BOOK", cfg=_cfg(), force_refresh=True)
+
+    assert snapshot.book_value_per_share == 20.0
+    assert snapshot.price_to_book == 1.2
+    assert snapshot.book_to_price == pytest.approx(1 / 1.2)
+    assert snapshot.metric_context["book_value_per_share"].derived is True
+    assert snapshot.metric_context["book_value_per_share"].derived_from == [
+        "yfinance.balance_sheet",
+        "yfinance.info.sharesOutstanding",
+    ]
+    assert snapshot.metric_context["price_to_book"].derived is True
+    assert snapshot.metric_context["book_to_price"].derived is True
 
 
 def test_fundamentals_service_refreshes_legacy_snapshot_within_ttl(tmp_path):

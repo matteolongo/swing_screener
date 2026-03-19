@@ -35,6 +35,7 @@ export type DecisionConviction = 'high' | 'medium' | 'low';
 export type DecisionSignalLabel = 'strong' | 'neutral' | 'weak';
 export type DecisionValuationLabel = 'cheap' | 'fair' | 'expensive' | 'unknown';
 export type DecisionCatalystLabel = 'active' | 'neutral' | 'weak';
+export type FairValueMethod = 'earnings_multiple' | 'sales_multiple' | 'book_multiple' | 'not_available';
 
 export interface DecisionTradePlan {
   entry?: number;
@@ -44,10 +45,13 @@ export interface DecisionTradePlan {
 }
 
 export interface DecisionValuationContext {
-  method: string;
+  method: FairValueMethod;
   summary?: string;
   trailingPe?: number;
   priceToSales?: number;
+  bookValuePerShare?: number;
+  priceToBook?: number;
+  bookToPrice?: number;
   fairValueLow?: number;
   fairValueBase?: number;
   fairValueHigh?: number;
@@ -122,10 +126,13 @@ export interface DecisionTradePlanAPI {
 }
 
 export interface DecisionValuationContextAPI {
-  method: string;
+  method: FairValueMethod;
   summary?: string | null;
   trailing_pe?: number | null;
   price_to_sales?: number | null;
+  book_value_per_share?: number | null;
+  price_to_book?: number | null;
+  book_to_price?: number | null;
   fair_value_low?: number | null;
   fair_value_base?: number | null;
   fair_value_high?: number | null;
@@ -288,10 +295,13 @@ function transformDecisionSummary(apiSummary: DecisionSummaryAPI): DecisionSumma
       rr: apiSummary.trade_plan?.rr ?? undefined,
     },
     valuationContext: {
-      method: apiSummary.valuation_context?.method ?? 'heuristic_multiple',
+      method: apiSummary.valuation_context?.method ?? 'not_available',
       summary: apiSummary.valuation_context?.summary ?? undefined,
       trailingPe: apiSummary.valuation_context?.trailing_pe ?? undefined,
       priceToSales: apiSummary.valuation_context?.price_to_sales ?? undefined,
+      bookValuePerShare: apiSummary.valuation_context?.book_value_per_share ?? undefined,
+      priceToBook: apiSummary.valuation_context?.price_to_book ?? undefined,
+      bookToPrice: apiSummary.valuation_context?.book_to_price ?? undefined,
       fairValueLow: apiSummary.valuation_context?.fair_value_low ?? undefined,
       fairValueBase: apiSummary.valuation_context?.fair_value_base ?? undefined,
       fairValueHigh: apiSummary.valuation_context?.fair_value_high ?? undefined,
