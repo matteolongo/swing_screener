@@ -23,7 +23,10 @@ function buildSummary(overrides: Partial<DecisionSummary> = {}): DecisionSummary
       rr: 2.0,
     },
     valuationContext: {
-      method: 'fundamental_pillar',
+      method: 'heuristic_multiple',
+      summary: 'Valuation looks fair on current fundamentals. Trailing PE is 24.6x and price-to-sales is 5.1x.',
+      trailingPe: 24.6,
+      priceToSales: 5.1,
     },
     drivers: {
       positives: ['Technical setup is ready.'],
@@ -44,6 +47,9 @@ describe('DecisionSummaryCard', () => {
     expect(screen.getByText('Coverage Warnings')).toBeInTheDocument();
     expect(screen.getByText('$180.00')).toBeInTheDocument();
     expect(screen.getByText('No cached catalyst snapshot is available yet.')).toBeInTheDocument();
+    expect(screen.getByText('Valuation Context')).toBeInTheDocument();
+    expect(screen.getByText('Method: Heuristic multiple')).toBeInTheDocument();
+    expect(screen.getByText('24.6x')).toBeInTheDocument();
   });
 
   it('hides the trade plan grid when trade values are missing', () => {

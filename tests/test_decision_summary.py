@@ -38,6 +38,8 @@ def _snapshot(
     coverage_status: str = "supported",
     freshness_status: str = "current",
     data_quality_status: str = "high",
+    trailing_pe: float | None = 24.6,
+    price_to_sales: float | None = 5.1,
 ) -> FundamentalSnapshot:
     score_map = {"strong": 0.9, "neutral": 0.55, "weak": 0.2}
     return FundamentalSnapshot(
@@ -48,6 +50,8 @@ def _snapshot(
         coverage_status=coverage_status,
         freshness_status=freshness_status,
         data_quality_status=data_quality_status,
+        trailing_pe=trailing_pe,
+        price_to_sales=price_to_sales,
         pillars={
             "growth": FundamentalPillarScore(
                 score=score_map[fundamentals_status],
@@ -103,6 +107,7 @@ def test_decision_summary_round_trip() -> None:
 
     assert restored == summary
     assert restored.trade_plan.rr == 2.0
+    assert restored.valuation_context.method == "heuristic_multiple"
 
 
 def test_strong_technical_and_fundamentals_with_fair_value_maps_to_buy_now() -> None:
@@ -113,6 +118,10 @@ def test_strong_technical_and_fundamentals_with_fair_value_maps_to_buy_now() -> 
     assert summary.technical_label == "strong"
     assert summary.fundamentals_label == "strong"
     assert summary.valuation_label == "fair"
+    assert summary.valuation_context.summary == (
+        "Valuation looks fair on current fundamentals. "
+        "Trailing PE is 24.6x and price-to-sales is 5.1x."
+    )
 
 
 def test_strong_technical_and_fundamentals_with_expensive_value_maps_to_buy_on_pullback() -> None:
@@ -173,6 +182,19 @@ def test_stale_partial_fundamentals_lower_conviction_and_add_warning() -> None:
 
     assert summary.conviction == "medium"
     assert "Fundamental coverage is partial." in summary.drivers.warnings
+
+
+def test_valuation_context_handles_missing_raw_multiples() -> None:
+    summary = build_decision_summary(
+        _candidate(),
+        opportunity=_opportunity(),
+        fundamentals=_snapshot(trailing_pe=None, price_to_sales=None, valuation_status="weak"),
+    )
+
+    assert summary.valuation_context.method == "heuristic_multiple"
+    assert summary.valuation_context.trailing_pe is None
+    assert summary.valuation_context.price_to_sales is None
+    assert summary.valuation_context.summary == "Valuation looks demanding on current fundamentals."
 
 
 def test_manage_only_context_maps_to_manage_only() -> None:

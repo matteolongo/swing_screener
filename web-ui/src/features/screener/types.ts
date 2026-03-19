@@ -45,6 +45,9 @@ export interface DecisionTradePlan {
 
 export interface DecisionValuationContext {
   method: string;
+  summary?: string;
+  trailingPe?: number;
+  priceToSales?: number;
   fairValueLow?: number;
   fairValueBase?: number;
   fairValueHigh?: number;
@@ -120,6 +123,9 @@ export interface DecisionTradePlanAPI {
 
 export interface DecisionValuationContextAPI {
   method: string;
+  summary?: string | null;
+  trailing_pe?: number | null;
+  price_to_sales?: number | null;
   fair_value_low?: number | null;
   fair_value_base?: number | null;
   fair_value_high?: number | null;
@@ -282,7 +288,10 @@ function transformDecisionSummary(apiSummary: DecisionSummaryAPI): DecisionSumma
       rr: apiSummary.trade_plan?.rr ?? undefined,
     },
     valuationContext: {
-      method: apiSummary.valuation_context?.method ?? 'fundamental_pillar',
+      method: apiSummary.valuation_context?.method ?? 'heuristic_multiple',
+      summary: apiSummary.valuation_context?.summary ?? undefined,
+      trailingPe: apiSummary.valuation_context?.trailing_pe ?? undefined,
+      priceToSales: apiSummary.valuation_context?.price_to_sales ?? undefined,
       fairValueLow: apiSummary.valuation_context?.fair_value_low ?? undefined,
       fairValueBase: apiSummary.valuation_context?.fair_value_base ?? undefined,
       fairValueHigh: apiSummary.valuation_context?.fair_value_high ?? undefined,

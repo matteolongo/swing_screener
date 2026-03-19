@@ -27,7 +27,10 @@ class DecisionTradePlan(BaseModel):
 
 
 class DecisionValuationContext(BaseModel):
-    method: str = "fundamental_pillar"
+    method: str = "heuristic_multiple"
+    summary: str | None = None
+    trailing_pe: float | None = None
+    price_to_sales: float | None = None
     fair_value_low: float | None = None
     fair_value_base: float | None = None
     fair_value_high: float | None = None

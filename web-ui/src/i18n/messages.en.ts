@@ -515,6 +515,15 @@ export const messagesEn = {
             neutral: 'Neutral',
             weak: 'Weak',
           },
+          valuationContext: {
+            title: 'Valuation Context',
+            method: 'Method: {{method}}',
+            trailingPe: 'Trailing PE',
+            priceToSales: 'Price / Sales',
+            methods: {
+              heuristicMultiple: 'Heuristic multiple',
+            },
+          },
           tradePlan: {
             entry: 'Entry',
             stop: 'Stop',

@@ -36,6 +36,13 @@ _ACTION_WHAT_TO_DO: dict[DecisionAction, str] = {
     "MANAGE_ONLY": "Manage the existing position or pending order instead of opening a new setup.",
 }
 
+_VALUATION_LEAD: dict[ValuationLabel, str] = {
+    "cheap": "Valuation looks reasonable on current fundamentals.",
+    "fair": "Valuation looks fair on current fundamentals.",
+    "expensive": "Valuation looks demanding on current fundamentals.",
+    "unknown": "Valuation context is limited because current multiples are incomplete.",
+}
+
 
 def _get_value(source: Any, key: str, default: Any = None) -> Any:
     if source is None:
@@ -66,6 +73,12 @@ def _append_unique(target: list[str], value: str | None, *, limit: int = 2) -> N
     if not text or text in target or len(target) >= limit:
         return
     target.append(text)
+
+
+def _format_multiple(value: float | None) -> str | None:
+    if value is None:
+        return None
+    return f"{value:.1f}x"
 
 
 def _pillar(snapshot: FundamentalSnapshot | None, key: str) -> FundamentalPillarScore | None:
@@ -156,6 +169,36 @@ def _valuation_label(snapshot: FundamentalSnapshot | None) -> ValuationLabel:
     if status == "weak":
         return "expensive"
     return "unknown"
+
+
+def _valuation_context(
+    snapshot: FundamentalSnapshot | None,
+    valuation_label: ValuationLabel,
+) -> DecisionValuationContext:
+    trailing_pe = _safe_float(_get_value(snapshot, "trailing_pe"))
+    price_to_sales = _safe_float(_get_value(snapshot, "price_to_sales"))
+
+    detail_parts: list[str] = []
+    if trailing_pe is not None:
+        detail_parts.append(f"Trailing PE is {_format_multiple(trailing_pe)}")
+    if price_to_sales is not None:
+        detail_parts.append(f"price-to-sales is {_format_multiple(price_to_sales)}")
+
+    summary = _VALUATION_LEAD[valuation_label]
+    if detail_parts:
+        if len(detail_parts) == 2:
+            summary = f"{summary} {detail_parts[0]} and {detail_parts[1]}."
+        else:
+            summary = f"{summary} {detail_parts[0]}."
+    elif snapshot is None:
+        summary = "Valuation context is limited because no cached fundamentals snapshot is available yet."
+
+    return DecisionValuationContext(
+        method="heuristic_multiple",
+        summary=summary,
+        trailing_pe=trailing_pe,
+        price_to_sales=price_to_sales,
+    )
 
 
 def _catalyst_label(opportunity: Opportunity | None) -> CatalystLabel:
@@ -344,6 +387,7 @@ def build_decision_summary(
     technical_label = _technical_label(candidate, opportunity)
     fundamentals_label = _fundamentals_label(fundamentals)
     valuation_label = _valuation_label(fundamentals)
+    valuation_context = _valuation_context(fundamentals, valuation_label)
     catalyst_label = _catalyst_label(opportunity)
     action = _action(
         technical_label=technical_label,
@@ -400,7 +444,7 @@ def build_decision_summary(
             target=_safe_float(_get_value(candidate, "target")),
             rr=_safe_float(_get_value(candidate, "rr")),
         ),
-        valuation_context=DecisionValuationContext(method="fundamental_pillar"),
+        valuation_context=valuation_context,
         drivers=DecisionDrivers(
             positives=drivers.positives,
             negatives=drivers.negatives,
