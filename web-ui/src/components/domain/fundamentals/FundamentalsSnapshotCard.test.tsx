@@ -22,6 +22,11 @@ const snapshot: FundamentalSnapshot = {
   freeCashFlowMargin: 0.761,
   debtToEquity: 141.24,
   trailingPe: 7.46,
+  sharesOutstanding: 650_000_000,
+  totalEquity: 6_500_000_000,
+  bookValuePerShare: 10,
+  priceToBook: 1.7,
+  bookToPrice: 0.588,
   pillars: {
     growth: { score: 1, status: 'strong', summary: 'Revenue and earnings growth profile.' },
   },
@@ -83,6 +88,11 @@ describe('FundamentalsSnapshotCard', () => {
 
     expect(screen.getByText('quality low')).toBeInTheDocument();
     expect(screen.getByText('not comparable')).toBeInTheDocument();
+    expect(screen.getByText('Price / Book')).toBeInTheDocument();
+    expect(screen.getByText('1.7')).toBeInTheDocument();
+    expect(screen.getByText('58.8%')).toBeInTheDocument();
+    expect(screen.getByText('6.5B')).toBeInTheDocument();
+    expect(screen.getByText('650M')).toBeInTheDocument();
     expect(screen.getAllByText(/annual · yfinance\.financials/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/snapshot · yfinance\.info\.revenueGrowth · 2025-12-31/i)).toBeInTheDocument();
     expect(screen.getByText('Data quality')).toBeInTheDocument();

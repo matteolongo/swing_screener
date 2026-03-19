@@ -11,6 +11,14 @@ function formatNumber(value?: number) {
   return Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(value);
 }
 
+function formatCompactNumber(value?: number) {
+  if (value == null) return 'n/a';
+  return Intl.NumberFormat(undefined, {
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  }).format(value);
+}
+
 function formatSeriesValue(value: number, unit: 'number' | 'currency' | 'percent' | 'ratio') {
   if (unit === 'percent') {
     return formatPercent(value);
@@ -168,6 +176,32 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
       key: 'trailing_pe',
       label: 'Trailing PE',
       value: formatNumber(snapshot.trailingPe),
+    },
+    {
+      key: 'price_to_book',
+      label: 'Price / Book',
+      value: formatNumber(snapshot.priceToBook),
+    },
+    {
+      key: 'book_value_per_share',
+      label: 'Book Value / Share',
+      value: formatNumber(snapshot.bookValuePerShare),
+    },
+    {
+      key: 'book_to_price',
+      label: 'Book / Price',
+      value:
+        snapshot.bookToPrice == null ? 'n/a' : `${(snapshot.bookToPrice * 100).toFixed(1)}%`,
+    },
+    {
+      key: 'total_equity',
+      label: 'Total Equity',
+      value: formatCompactNumber(snapshot.totalEquity),
+    },
+    {
+      key: 'shares_outstanding',
+      label: 'Shares Outstanding',
+      value: formatCompactNumber(snapshot.sharesOutstanding),
     },
   ] as const;
 

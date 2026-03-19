@@ -181,6 +181,21 @@ export default function DecisionSummaryCard({
       value: summary.valuationContext.priceToSales,
       formatter: (value: number) => `${formatNumber(value, 1)}x`,
     },
+    {
+      label: t('workspacePage.panels.analysis.decisionSummary.valuationContext.bookValuePerShare'),
+      value: summary.valuationContext.bookValuePerShare,
+      formatter: (value: number) => formatCurrency(value, currency),
+    },
+    {
+      label: t('workspacePage.panels.analysis.decisionSummary.valuationContext.priceToBook'),
+      value: summary.valuationContext.priceToBook,
+      formatter: (value: number) => `${formatNumber(value, 1)}x`,
+    },
+    {
+      label: t('workspacePage.panels.analysis.decisionSummary.valuationContext.bookToPrice'),
+      value: summary.valuationContext.bookToPrice,
+      formatter: (value: number) => `${formatNumber(value * 100, 1)}%`,
+    },
   ].filter((item) => item.value !== undefined);
   const fairValueMetrics = hasFairValue
     ? [

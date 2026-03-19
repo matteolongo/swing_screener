@@ -83,6 +83,16 @@ def _append_unique(target: list[str], value: str | None, *, limit: int = 2) -> N
     target.append(text)
 
 
+def _join_detail_parts(parts: list[str]) -> str | None:
+    if not parts:
+        return None
+    if len(parts) == 1:
+        return f"{parts[0]}."
+    if len(parts) == 2:
+        return f"{parts[0]} and {parts[1]}."
+    return f"{', '.join(parts[:-1])}, and {parts[-1]}."
+
+
 def _format_multiple(value: float | None) -> str | None:
     if value is None:
         return None
@@ -190,12 +200,38 @@ def _fair_value_range_from_sales(
     )
 
 
+def _fair_value_range_from_book(
+    *,
+    book_value_per_share: float,
+    quality_score: float,
+    profitability_score: float,
+    balance_score: float,
+) -> tuple[float, float, float] | None:
+    if book_value_per_share <= 0:
+        return None
+
+    base_multiple = _clamp(
+        0.9 + (quality_score * 0.75) + (profitability_score * 1.25) + (balance_score * 0.85),
+        0.8,
+        4.5,
+    )
+    low_multiple = _clamp(base_multiple - 0.35, 0.6, base_multiple)
+    high_multiple = _clamp(base_multiple + 0.35, base_multiple, 5.0)
+    return (
+        round(book_value_per_share * low_multiple, 2),
+        round(book_value_per_share * base_multiple, 2),
+        round(book_value_per_share * high_multiple, 2),
+    )
+
+
 def _fair_value_estimate(
     *,
     candidate: Any,
     snapshot: FundamentalSnapshot | None,
     trailing_pe: float | None,
     price_to_sales: float | None,
+    book_value_per_share: float | None,
+    price_to_book: float | None,
 ) -> tuple[FairValueMethod, float | None, float | None, float | None, float | None]:
     current_price = _safe_float(_get_value(candidate, "close"))
     if current_price is None or current_price <= 0 or snapshot is None:
@@ -210,11 +246,15 @@ def _fair_value_estimate(
         ]
     )
     growth_score = _pillar_score(snapshot, "growth")
+    profitability_score = _pillar_score(snapshot, "profitability")
+    balance_score = _pillar_score(snapshot, "balance_sheet")
     if quality_score is None:
         return "not_available", None, None, None, None
 
     quality = quality_score
     growth = growth_score if growth_score is not None else quality_score
+    profitability = profitability_score if profitability_score is not None else quality_score
+    balance = balance_score if balance_score is not None else quality_score
 
     low = base = high = None
     method: FairValueMethod = "not_available"
@@ -238,6 +278,20 @@ def _fair_value_estimate(
         if estimate is not None:
             low, base, high = estimate
             method = "sales_multiple"
+    else:
+        effective_book_value_per_share = book_value_per_share
+        if effective_book_value_per_share is None and price_to_book is not None and 0 < price_to_book <= 10:
+            effective_book_value_per_share = current_price / price_to_book
+        if effective_book_value_per_share is not None and effective_book_value_per_share > 0:
+            estimate = _fair_value_range_from_book(
+                book_value_per_share=effective_book_value_per_share,
+                quality_score=quality,
+                profitability_score=profitability,
+                balance_score=balance,
+            )
+            if estimate is not None:
+                low, base, high = estimate
+                method = "book_multiple"
 
     if base is None or base <= 0:
         return "not_available", None, None, None, None
@@ -318,11 +372,16 @@ def _valuation_context(
 ) -> DecisionValuationContext:
     trailing_pe = _safe_float(_get_value(snapshot, "trailing_pe"))
     price_to_sales = _safe_float(_get_value(snapshot, "price_to_sales"))
+    book_value_per_share = _safe_float(_get_value(snapshot, "book_value_per_share"))
+    price_to_book = _safe_float(_get_value(snapshot, "price_to_book"))
+    book_to_price = _safe_float(_get_value(snapshot, "book_to_price"))
     method, fair_value_low, fair_value_base, fair_value_high, premium_discount_pct = _fair_value_estimate(
         candidate=candidate,
         snapshot=snapshot,
         trailing_pe=trailing_pe,
         price_to_sales=price_to_sales,
+        book_value_per_share=book_value_per_share,
+        price_to_book=price_to_book,
     )
 
     detail_parts: list[str] = []
@@ -330,6 +389,12 @@ def _valuation_context(
         detail_parts.append(f"Trailing PE is {_format_multiple(trailing_pe)}")
     if price_to_sales is not None:
         detail_parts.append(f"price-to-sales is {_format_multiple(price_to_sales)}")
+    if book_value_per_share is not None:
+        detail_parts.append(f"book value per share is {_format_price(book_value_per_share)}")
+    if price_to_book is not None:
+        detail_parts.append(f"price-to-book is {_format_multiple(price_to_book)}")
+    if book_to_price is not None:
+        detail_parts.append(f"book-to-price is {_format_abs_percent(book_to_price * 100)}")
 
     summary = _VALUATION_LEAD[valuation_label]
     if fair_value_base is not None and fair_value_low is not None and fair_value_high is not None:
@@ -341,11 +406,9 @@ def _valuation_context(
             f"{premium_text} {comparison} the base fair value."
         )
 
-    if detail_parts:
-        if len(detail_parts) == 2:
-            summary = f"{summary} {detail_parts[0]} and {detail_parts[1]}."
-        else:
-            summary = f"{summary} {detail_parts[0]}."
+    detail_summary = _join_detail_parts(detail_parts)
+    if detail_summary:
+        summary = f"{summary} {detail_summary}"
     elif snapshot is None:
         summary = "Valuation context is limited because no cached fundamentals snapshot is available yet."
 
@@ -354,6 +417,9 @@ def _valuation_context(
         summary=summary,
         trailing_pe=trailing_pe,
         price_to_sales=price_to_sales,
+        book_value_per_share=book_value_per_share,
+        price_to_book=price_to_book,
+        book_to_price=book_to_price,
         fair_value_low=fair_value_low,
         fair_value_base=fair_value_base,
         fair_value_high=fair_value_high,

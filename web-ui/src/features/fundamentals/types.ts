@@ -94,6 +94,11 @@ export interface FundamentalSnapshot {
   returnOnEquity?: number;
   trailingPe?: number;
   priceToSales?: number;
+  sharesOutstanding?: number;
+  totalEquity?: number;
+  bookValuePerShare?: number;
+  priceToBook?: number;
+  bookToPrice?: number;
   mostRecentQuarter?: string;
   pillars: Record<string, FundamentalPillarScore>;
   historicalSeries: Record<string, FundamentalMetricSeries>;
@@ -130,6 +135,11 @@ export interface FundamentalSnapshotAPI {
   return_on_equity?: number | null;
   trailing_pe?: number | null;
   price_to_sales?: number | null;
+  shares_outstanding?: number | null;
+  total_equity?: number | null;
+  book_value_per_share?: number | null;
+  price_to_book?: number | null;
+  book_to_price?: number | null;
   most_recent_quarter?: string | null;
   pillars?: Record<string, FundamentalPillarScoreAPI>;
   historical_series?: Record<string, FundamentalMetricSeriesAPI>;
@@ -327,6 +337,11 @@ export function transformFundamentalSnapshot(api: FundamentalSnapshotAPI): Funda
     returnOnEquity: api.return_on_equity ?? undefined,
     trailingPe: api.trailing_pe ?? undefined,
     priceToSales: api.price_to_sales ?? undefined,
+    sharesOutstanding: api.shares_outstanding ?? undefined,
+    totalEquity: api.total_equity ?? undefined,
+    bookValuePerShare: api.book_value_per_share ?? undefined,
+    priceToBook: api.price_to_book ?? undefined,
+    bookToPrice: api.book_to_price ?? undefined,
     mostRecentQuarter: api.most_recent_quarter ?? undefined,
     pillars,
     historicalSeries,
