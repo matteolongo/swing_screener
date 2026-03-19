@@ -6,6 +6,7 @@ from typing import Any
 import yfinance as yf
 
 from swing_screener.fundamentals.models import (
+    FundamentalMetricContext,
     FundamentalMetricSeries,
     FundamentalSeriesPoint,
     ProviderFundamentalsRecord,
@@ -52,6 +53,41 @@ def _frame_has_data(frame: Any) -> bool:
     return bool(getattr(frame, "index", None)) and bool(getattr(frame, "columns", None))
 
 
+def _statement_frequency(attr_name: str | None) -> str:
+    text = str(attr_name or "").strip().lower()
+    if text.startswith("quarterly_"):
+        return "quarterly"
+    if text:
+        return "annual"
+    return "unknown"
+
+
+def _merge_source_names(*names: str | None) -> str | None:
+    unique: list[str] = []
+    for name in names:
+        text = str(name or "").strip()
+        if not text or text in unique:
+            continue
+        unique.append(text)
+    if not unique:
+        return None
+    return " + ".join(unique)
+
+
+def _latest_period_for_frequency(
+    series_map: dict[str, FundamentalMetricSeries],
+    frequency: str,
+) -> str | None:
+    latest: str | None = None
+    for series in series_map.values():
+        if series.frequency != frequency:
+            continue
+        for point in series.points:
+            if latest is None or point.period_end > latest:
+                latest = point.period_end
+    return latest
+
+
 def _get_statement_frame(ticker: Any, attr_names: list[str]) -> tuple[Any | None, str | None]:
     for attr_name in attr_names:
         try:
@@ -92,24 +128,32 @@ def _series_from_frame(
     frame: Any,
     *,
     source_name: str,
+    frequency: str,
     row_candidates: list[str],
     label: str,
     unit: str,
     limit: int = 5,
-) -> tuple[FundamentalMetricSeries | None, str | None]:
+) -> FundamentalMetricSeries | None:
     if frame is None:
-        return None, None
+        return None
     row_label = _find_row_label(frame, row_candidates)
     if row_label is None:
-        return None, None
+        return None
     try:
         row = frame.loc[row_label]
     except Exception:
-        return None, None
+        return None
     points = _series_points_from_row(row, limit=limit)
     if not points:
-        return None, None
-    return FundamentalMetricSeries(label=label, unit=unit, points=points), source_name
+        return None
+    return FundamentalMetricSeries(
+        label=label,
+        unit=unit,
+        frequency=frequency,
+        source=source_name,
+        derived_from=[source_name],
+        points=points,
+    )
 
 
 def _combine_series(
@@ -130,7 +174,27 @@ def _combine_series(
         points.append(FundamentalSeriesPoint(period_end=point.period_end, value=point.value / base))
     if not points:
         return None
-    return FundamentalMetricSeries(label=label, unit=unit, points=points)
+
+    merged_frequency = (
+        numerator.frequency if numerator.frequency == denominator.frequency else "unknown"
+    )
+    derived_from = [
+        item
+        for item in (
+            list(numerator.derived_from or ([numerator.source] if numerator.source else []))
+            + list(denominator.derived_from or ([denominator.source] if denominator.source else []))
+        )
+        if item
+    ]
+
+    return FundamentalMetricSeries(
+        label=label,
+        unit=unit,
+        frequency=merged_frequency,
+        source=_merge_source_names(numerator.source, denominator.source),
+        derived_from=list(dict.fromkeys(derived_from)),
+        points=points,
+    )
 
 
 class YfinanceFundamentalsProvider:
@@ -143,59 +207,64 @@ class YfinanceFundamentalsProvider:
         instrument_type = str(
             info.get("quoteType") or info.get("instrumentType") or "unknown"
         ).strip().lower()
-        total_revenue = _safe_float(info.get("totalRevenue"))
-        free_cash_flow = _safe_float(info.get("freeCashflow"))
-        free_cash_flow_margin = None
-        if free_cash_flow is not None and total_revenue not in (None, 0):
-            free_cash_flow_margin = free_cash_flow / total_revenue
 
         metric_sources: dict[str, str] = {}
         historical_series: dict[str, FundamentalMetricSeries] = {}
+        metric_context: dict[str, FundamentalMetricContext] = {}
 
-        def _capture(name: str, value: Any) -> float | None:
+        def _info_source(field_name: str) -> str:
+            return f"{self.name}.info.{field_name}"
+
+        def _capture(
+            metric_name: str,
+            field_name: str,
+            value: Any,
+            *,
+            cadence: str = "snapshot",
+            period_end: str | None = None,
+        ) -> float | None:
             normalized = _safe_float(value)
-            if normalized is not None:
-                metric_sources[name] = self.name
+            if normalized is None:
+                return None
+            source = _info_source(field_name)
+            metric_sources[metric_name] = source
+            metric_context[metric_name] = FundamentalMetricContext(
+                source=source,
+                cadence=cadence,
+                derived=False,
+                derived_from=[],
+                period_end=period_end,
+            )
             return normalized
-
-        revenue_growth = _capture("revenue_growth_yoy", info.get("revenueGrowth"))
-        earnings_growth = _capture("earnings_growth_yoy", info.get("earningsGrowth"))
-        gross_margin = _capture("gross_margin", info.get("grossMargins"))
-        operating_margin = _capture("operating_margin", info.get("operatingMargins"))
-        debt_to_equity = _capture("debt_to_equity", info.get("debtToEquity"))
-        current_ratio = _capture("current_ratio", info.get("currentRatio"))
-        return_on_equity = _capture("return_on_equity", info.get("returnOnEquity"))
-        trailing_pe = _capture("trailing_pe", info.get("trailingPE"))
-        price_to_sales = _capture("price_to_sales", info.get("priceToSalesTrailing12Months"))
-        market_cap = _capture("market_cap", info.get("marketCap"))
-        if free_cash_flow is not None:
-            metric_sources["free_cash_flow"] = self.name
-        if free_cash_flow_margin is not None:
-            metric_sources["free_cash_flow_margin"] = self.name
 
         income_frame, income_source = _get_statement_frame(
             ticker,
             ["quarterly_income_stmt", "quarterly_financials", "income_stmt", "financials"],
         )
+        income_frequency = _statement_frequency(income_source)
         cashflow_frame, cashflow_source = _get_statement_frame(
             ticker,
             ["quarterly_cashflow", "cashflow"],
         )
+        cashflow_frequency = _statement_frequency(cashflow_source)
 
-        revenue_series, revenue_series_source = _series_from_frame(
+        revenue_series = _series_from_frame(
             income_frame,
             source_name=f"{self.name}.{income_source}" if income_source else self.name,
+            frequency=income_frequency,
             row_candidates=["Total Revenue", "Operating Revenue", "Revenue"],
             label="Revenue",
             unit="currency",
         )
-        if revenue_series is not None and revenue_series_source is not None:
+        if revenue_series is not None:
             historical_series["revenue"] = revenue_series
-            metric_sources["revenue_history"] = revenue_series_source
+            if revenue_series.source:
+                metric_sources["revenue_history"] = revenue_series.source
 
-        operating_income_series, operating_income_source = _series_from_frame(
+        operating_income_series = _series_from_frame(
             income_frame,
             source_name=f"{self.name}.{income_source}" if income_source else self.name,
+            frequency=income_frequency,
             row_candidates=["Operating Income", "EBIT"],
             label="Operating income",
             unit="currency",
@@ -208,20 +277,21 @@ class YfinanceFundamentalsProvider:
         )
         if operating_margin_series is not None:
             historical_series["operating_margin"] = operating_margin_series
-            metric_sources["operating_margin_history"] = (
-                operating_income_source or revenue_series_source or self.name
-            )
+            if operating_margin_series.source:
+                metric_sources["operating_margin_history"] = operating_margin_series.source
 
-        free_cash_flow_series, free_cash_flow_source = _series_from_frame(
+        free_cash_flow_series = _series_from_frame(
             cashflow_frame,
             source_name=f"{self.name}.{cashflow_source}" if cashflow_source else self.name,
+            frequency=cashflow_frequency,
             row_candidates=["Free Cash Flow"],
             label="Free cash flow",
             unit="currency",
         )
-        if free_cash_flow_series is not None and free_cash_flow_source is not None:
+        if free_cash_flow_series is not None:
             historical_series["free_cash_flow"] = free_cash_flow_series
-            metric_sources["free_cash_flow_history"] = free_cash_flow_source
+            if free_cash_flow_series.source:
+                metric_sources["free_cash_flow_history"] = free_cash_flow_series.source
 
         free_cash_flow_margin_series = _combine_series(
             free_cash_flow_series,
@@ -231,15 +301,102 @@ class YfinanceFundamentalsProvider:
         )
         if free_cash_flow_margin_series is not None:
             historical_series["free_cash_flow_margin"] = free_cash_flow_margin_series
-            metric_sources["free_cash_flow_margin_history"] = (
-                free_cash_flow_source or revenue_series_source or self.name
+            if free_cash_flow_margin_series.source:
+                metric_sources["free_cash_flow_margin_history"] = free_cash_flow_margin_series.source
+
+        most_recent_quarter = _coerce_iso_date(info.get("mostRecentQuarter"))
+        if most_recent_quarter:
+            metric_sources["most_recent_quarter"] = _info_source("mostRecentQuarter")
+        else:
+            most_recent_quarter = _latest_period_for_frequency(historical_series, "quarterly")
+            quarterly_history_source = _merge_source_names(
+                *[
+                    series.source
+                    for series in historical_series.values()
+                    if series.frequency == "quarterly" and series.source
+                ]
+            )
+            if most_recent_quarter and quarterly_history_source:
+                metric_sources["most_recent_quarter"] = quarterly_history_source
+
+        total_revenue = _capture(
+            "total_revenue",
+            "totalRevenue",
+            info.get("totalRevenue"),
+            period_end=most_recent_quarter,
+        )
+        free_cash_flow = _capture(
+            "free_cash_flow",
+            "freeCashflow",
+            info.get("freeCashflow"),
+            period_end=most_recent_quarter,
+        )
+        free_cash_flow_margin = None
+        if free_cash_flow is not None and total_revenue not in (None, 0):
+            free_cash_flow_margin = free_cash_flow / total_revenue
+            source = _merge_source_names(metric_sources.get("free_cash_flow"), metric_sources.get("total_revenue"))
+            metric_sources["free_cash_flow_margin"] = source or _info_source("freeCashflow")
+            metric_context["free_cash_flow_margin"] = FundamentalMetricContext(
+                source=source,
+                cadence="snapshot",
+                derived=True,
+                derived_from=[
+                    item
+                    for item in [metric_sources.get("free_cash_flow"), metric_sources.get("total_revenue")]
+                    if item
+                ],
+                period_end=most_recent_quarter,
             )
 
-        most_recent_quarter = _coerce_iso_date(
-            info.get("mostRecentQuarter") or info.get("lastFiscalYearEnd")
+        revenue_growth = _capture(
+            "revenue_growth_yoy",
+            "revenueGrowth",
+            info.get("revenueGrowth"),
+            period_end=most_recent_quarter,
         )
-        if most_recent_quarter:
-            metric_sources["most_recent_quarter"] = self.name
+        earnings_growth = _capture(
+            "earnings_growth_yoy",
+            "earningsGrowth",
+            info.get("earningsGrowth"),
+            period_end=most_recent_quarter,
+        )
+        gross_margin = _capture(
+            "gross_margin",
+            "grossMargins",
+            info.get("grossMargins"),
+            period_end=most_recent_quarter,
+        )
+        operating_margin = _capture(
+            "operating_margin",
+            "operatingMargins",
+            info.get("operatingMargins"),
+            period_end=most_recent_quarter,
+        )
+        debt_to_equity = _capture(
+            "debt_to_equity",
+            "debtToEquity",
+            info.get("debtToEquity"),
+            period_end=most_recent_quarter,
+        )
+        current_ratio = _capture(
+            "current_ratio",
+            "currentRatio",
+            info.get("currentRatio"),
+            period_end=most_recent_quarter,
+        )
+        return_on_equity = _capture(
+            "return_on_equity",
+            "returnOnEquity",
+            info.get("returnOnEquity"),
+            period_end=most_recent_quarter,
+        )
+        trailing_pe = _capture("trailing_pe", "trailingPE", info.get("trailingPE"))
+        price_to_sales = _capture(
+            "price_to_sales",
+            "priceToSalesTrailing12Months",
+            info.get("priceToSalesTrailing12Months"),
+        )
+        market_cap = _capture("market_cap", "marketCap", info.get("marketCap"))
 
         company_name = info.get("longName") or info.get("shortName")
         sector = info.get("sector")
@@ -267,5 +424,6 @@ class YfinanceFundamentalsProvider:
             trailing_pe=trailing_pe,
             price_to_sales=price_to_sales,
             historical_series=historical_series,
-            metric_sources=metric_sources,
+            metric_context=metric_context,
+            metric_sources={key: value for key, value in metric_sources.items() if value},
         )

@@ -5,12 +5,33 @@ from datetime import datetime
 
 from swing_screener.fundamentals.config import FundamentalsConfig
 from swing_screener.fundamentals.models import (
+    FundamentalMetricContext,
     FundamentalMetricSeries,
     FundamentalPillarScore,
     FundamentalSeriesPoint,
     FundamentalSnapshot,
     ProviderFundamentalsRecord,
 )
+
+_METRIC_SERIES_MAP = {
+    "revenue_growth_yoy": "revenue",
+    "operating_margin": "operating_margin",
+    "free_cash_flow": "free_cash_flow",
+    "free_cash_flow_margin": "free_cash_flow_margin",
+}
+_METRIC_LABELS = {
+    "revenue_growth_yoy": "Revenue YoY",
+    "earnings_growth_yoy": "Earnings YoY",
+    "gross_margin": "Gross margin",
+    "operating_margin": "Operating margin",
+    "free_cash_flow": "Free cash flow",
+    "free_cash_flow_margin": "FCF margin",
+    "debt_to_equity": "Debt / equity",
+    "current_ratio": "Current ratio",
+    "return_on_equity": "Return on equity",
+    "trailing_pe": "Trailing PE",
+    "price_to_sales": "Price / sales",
+}
 
 
 def _score_higher(value: float | None, *, weak: float, strong: float) -> float | None:
@@ -105,9 +126,21 @@ def _latest_series_value(series_map: dict[str, FundamentalMetricSeries], key: st
     return float(points[-1].value)
 
 
-def _latest_period_end(series_map: dict[str, FundamentalMetricSeries]) -> str | None:
+def _latest_series_period(series_map: dict[str, FundamentalMetricSeries], key: str) -> str | None:
+    series = series_map.get(key)
+    if not series:
+        return None
+    points = _sorted_points(series)
+    if not points:
+        return None
+    return points[-1].period_end
+
+
+def _latest_period_end(series_map: dict[str, FundamentalMetricSeries], *, frequency: str | None = None) -> str | None:
     latest: str | None = None
     for series in series_map.values():
+        if frequency is not None and series.frequency != frequency:
+            continue
         points = _sorted_points(series)
         if not points:
             continue
@@ -119,7 +152,7 @@ def _latest_period_end(series_map: dict[str, FundamentalMetricSeries]) -> str | 
 
 def _year_ago_point(series: FundamentalMetricSeries) -> FundamentalSeriesPoint | None:
     points = _sorted_points(series)
-    if len(points) < 2:
+    if len(points) < 2 or series.frequency not in {"quarterly", "annual"}:
         return None
     latest = points[-1]
     try:
@@ -155,6 +188,55 @@ def _growth_from_series(series_map: dict[str, FundamentalMetricSeries], key: str
     return round((latest.value / prior.value) - 1.0, 4)
 
 
+def _cadence_from_source_name(source: str | None) -> str:
+    text = str(source or "").strip().lower()
+    if not text:
+        return "unknown"
+    if ".quarterly_" in text:
+        return "quarterly"
+    if text.endswith(".financials") or text.endswith(".cashflow") or text.endswith(".income_stmt"):
+        return "annual"
+    if ".info." in text:
+        return "snapshot"
+    return "unknown"
+
+
+def _context_from_series(series: FundamentalMetricSeries | None) -> FundamentalMetricContext | None:
+    if series is None:
+        return None
+    source = series.source
+    derived_from = list(series.derived_from)
+    return FundamentalMetricContext(
+        source=source,
+        cadence=series.frequency,
+        derived=bool(derived_from and not (len(derived_from) == 1 and derived_from[0] == source)),
+        derived_from=derived_from,
+        period_end=(_sorted_points(series)[-1].period_end if _sorted_points(series) else None),
+    )
+
+
+def _ensure_direct_metric_context(
+    metric_context: dict[str, FundamentalMetricContext],
+    metric_sources: dict[str, str],
+    series_map: dict[str, FundamentalMetricSeries],
+    metric_name: str,
+) -> None:
+    if metric_name in metric_context:
+        return
+    source = metric_sources.get(metric_name)
+    if not source:
+        return
+    series_key = _METRIC_SERIES_MAP.get(metric_name)
+    period_end = _latest_series_period(series_map, series_key) if series_key else None
+    metric_context[metric_name] = FundamentalMetricContext(
+        source=source,
+        cadence=_cadence_from_source_name(source),
+        derived=False,
+        derived_from=[],
+        period_end=period_end,
+    )
+
+
 def _series_direction(
     series: FundamentalMetricSeries,
     *,
@@ -165,6 +247,8 @@ def _series_direction(
     points = _sorted_points(series)
     if len(points) < 2:
         return "unknown"
+    if series.frequency not in {"quarterly", "annual"}:
+        return "not_comparable"
     previous = float(points[-2].value)
     latest = float(points[-1].value)
     delta = latest - previous
@@ -196,29 +280,49 @@ def _decorate_historical_series(
         elif key == "free_cash_flow":
             direction = _series_direction(series, favorable_when="higher", relative_threshold=0.05)
         else:
-            direction = "unknown"
-        decorated[key] = replace(series, points=_sorted_points(series), direction=direction)
+            direction = "unknown" if len(_sorted_points(series)) < 2 else "not_comparable"
+        decorated[key] = replace(
+            series,
+            points=_sorted_points(series),
+            direction=direction,
+        )
     return decorated
 
 
 def _resolved_record(record: ProviderFundamentalsRecord) -> ProviderFundamentalsRecord:
     series_map = record.historical_series
     updates: dict[str, float | str | None] = {}
+    metric_context = dict(record.metric_context)
 
     if record.operating_margin is None:
         updates["operating_margin"] = _latest_series_value(series_map, "operating_margin")
+        context = _context_from_series(series_map.get("operating_margin"))
+        if context is not None:
+            metric_context["operating_margin"] = context
     if record.free_cash_flow is None:
         updates["free_cash_flow"] = _latest_series_value(series_map, "free_cash_flow")
+        context = _context_from_series(series_map.get("free_cash_flow"))
+        if context is not None:
+            metric_context["free_cash_flow"] = context
     if record.free_cash_flow_margin is None:
         updates["free_cash_flow_margin"] = _latest_series_value(series_map, "free_cash_flow_margin")
+        context = _context_from_series(series_map.get("free_cash_flow_margin"))
+        if context is not None:
+            metric_context["free_cash_flow_margin"] = context
     if record.revenue_growth_yoy is None:
         updates["revenue_growth_yoy"] = _growth_from_series(series_map, "revenue")
+        context = _context_from_series(series_map.get("revenue"))
+        if context is not None:
+            metric_context["revenue_growth_yoy"] = replace(context, derived=True)
     if record.most_recent_quarter is None:
-        updates["most_recent_quarter"] = _latest_period_end(series_map)
+        updates["most_recent_quarter"] = _latest_period_end(series_map, frequency="quarterly")
 
-    if not updates:
+    for metric_name in _METRIC_LABELS:
+        _ensure_direct_metric_context(metric_context, record.metric_sources, series_map, metric_name)
+
+    if not updates and metric_context == record.metric_context:
         return record
-    return replace(record, **updates)
+    return replace(record, metric_context=metric_context, **updates)
 
 
 def _build_pillars(record: ProviderFundamentalsRecord) -> dict[str, FundamentalPillarScore]:
@@ -273,6 +377,14 @@ def _build_pillars(record: ProviderFundamentalsRecord) -> dict[str, FundamentalP
     }
 
 
+def _trend_prefix(series: FundamentalMetricSeries) -> str:
+    if series.frequency == "quarterly":
+        return "Quarterly"
+    if series.frequency == "annual":
+        return "Annual"
+    return "Visible"
+
+
 def _build_red_flags(
     record: ProviderFundamentalsRecord,
     freshness_status: str,
@@ -292,18 +404,15 @@ def _build_red_flags(
     if freshness_status == "stale":
         flags.append("Latest reported quarter looks stale.")
 
-    if historical_series.get("revenue") and historical_series["revenue"].direction == "deteriorating":
-        flags.append("Revenue trend has weakened versus prior periods.")
-    if (
-        historical_series.get("operating_margin")
-        and historical_series["operating_margin"].direction == "deteriorating"
-    ):
-        flags.append("Operating margin is deteriorating.")
-    if (
-        historical_series.get("free_cash_flow_margin")
-        and historical_series["free_cash_flow_margin"].direction == "deteriorating"
-    ):
-        flags.append("Cash-flow conversion is deteriorating.")
+    revenue_series = historical_series.get("revenue")
+    if revenue_series and revenue_series.direction == "deteriorating":
+        flags.append(f"{_trend_prefix(revenue_series)} revenue trend is deteriorating.")
+    operating_margin_series = historical_series.get("operating_margin")
+    if operating_margin_series and operating_margin_series.direction == "deteriorating":
+        flags.append(f"{_trend_prefix(operating_margin_series)} operating margin is deteriorating.")
+    fcf_margin_series = historical_series.get("free_cash_flow_margin")
+    if fcf_margin_series and fcf_margin_series.direction == "deteriorating":
+        flags.append(f"{_trend_prefix(fcf_margin_series)} cash-flow conversion is deteriorating.")
 
     if record.provider_error:
         flags.append(record.provider_error)
@@ -323,13 +432,12 @@ def _build_highlights(
     if coverage_status == "insufficient":
         highlights.append("Coverage is still thin; use the snapshot as a partial research aid.")
 
-    if historical_series.get("revenue") and historical_series["revenue"].direction == "improving":
-        highlights.append("Recent revenue trend is improving.")
-    if (
-        historical_series.get("operating_margin")
-        and historical_series["operating_margin"].direction == "improving"
-    ):
-        highlights.append("Margins are improving across recent periods.")
+    revenue_series = historical_series.get("revenue")
+    if revenue_series and revenue_series.direction == "improving":
+        highlights.append(f"{_trend_prefix(revenue_series)} revenue trend is improving.")
+    operating_margin_series = historical_series.get("operating_margin")
+    if operating_margin_series and operating_margin_series.direction == "improving":
+        highlights.append(f"{_trend_prefix(operating_margin_series)} margins are improving.")
     if pillars["growth"].status == "strong":
         highlights.append("Growth metrics are supportive.")
     if pillars["profitability"].status == "strong":
@@ -338,11 +446,81 @@ def _build_highlights(
         highlights.append("Balance sheet quality needs caution.")
     if pillars["valuation"].status == "weak":
         highlights.append("Valuation looks demanding versus simple heuristics.")
-    if any(".quarterly_" in source or source.endswith(".financials") or source.endswith(".cashflow") for source in record.metric_sources.values()):
-        highlights.append("Snapshot was supplemented with statement history.")
+    if any(series.source and ".quarterly_" in series.source for series in historical_series.values()):
+        highlights.append("Quarterly statement history is available for context.")
     if not highlights:
         highlights.append("No strong fundamental edge is visible yet.")
     return highlights[:4]
+
+
+def _build_data_quality(
+    record: ProviderFundamentalsRecord,
+    historical_series: dict[str, FundamentalMetricSeries],
+) -> tuple[str, list[str]]:
+    flags: list[str] = []
+    low_severity = False
+
+    if record.provider_error:
+        flags.append("Provider reported an error; snapshot may be incomplete.")
+        low_severity = True
+
+    for metric_name in ("revenue_growth_yoy", "earnings_growth_yoy"):
+        value = getattr(record, metric_name)
+        if value is not None and abs(value) > 3.0:
+            flags.append(f"{_METRIC_LABELS[metric_name]} looks extreme and may reflect a base effect.")
+            low_severity = True
+
+    for metric_name, series_key in _METRIC_SERIES_MAP.items():
+        context = record.metric_context.get(metric_name)
+        series = historical_series.get(series_key)
+        if context is None or series is None:
+            continue
+        if context.cadence in {"snapshot", "quarterly", "annual"} and series.frequency in {"quarterly", "annual"}:
+            if context.cadence != series.frequency:
+                flags.append(
+                    f"{_METRIC_LABELS[metric_name]} mixes {context.cadence} metric data with {series.frequency} history."
+                )
+                low_severity = True
+
+    for series_key, label in (
+        ("revenue", "Revenue"),
+        ("operating_margin", "Operating margin"),
+        ("free_cash_flow_margin", "FCF margin"),
+    ):
+        series = historical_series.get(series_key)
+        if series is None:
+            continue
+        if series.direction == "not_comparable":
+            flags.append(f"{label} history is not comparable enough for trend claims.")
+        elif series.direction == "unknown" and len(_sorted_points(series)) > 0:
+            flags.append(f"{label} history is too sparse for a reliable trend signal.")
+
+    for metric_name in ("operating_margin", "free_cash_flow_margin"):
+        context = record.metric_context.get(metric_name)
+        if context is None or not context.derived:
+            continue
+        series = historical_series.get(_METRIC_SERIES_MAP.get(metric_name, ""))
+        if context.cadence == "unknown" or (series is not None and series.frequency == "unknown"):
+            flags.append(f"{_METRIC_LABELS[metric_name]} was derived from incomplete or mismatched periods.")
+            low_severity = True
+
+    has_annual_history = any(series.frequency == "annual" for series in historical_series.values())
+    has_quarterly_history = any(series.frequency == "quarterly" for series in historical_series.values())
+    if has_annual_history and not has_quarterly_history:
+        flags.append("Visible statement history is annual-only, so quarter-level trust is limited.")
+
+    deduped_flags: list[str] = []
+    for flag in flags:
+        text = str(flag).strip()
+        if not text or text in deduped_flags:
+            continue
+        deduped_flags.append(text)
+
+    if not deduped_flags:
+        return "high", []
+    if low_severity:
+        return "low", deduped_flags
+    return "medium", deduped_flags
 
 
 def build_snapshot(record: ProviderFundamentalsRecord, cfg: FundamentalsConfig) -> FundamentalSnapshot:
@@ -354,6 +532,7 @@ def build_snapshot(record: ProviderFundamentalsRecord, cfg: FundamentalsConfig) 
     pillars = _build_pillars(resolved_record)
     red_flags = _build_red_flags(resolved_record, freshness_status, historical_series)
     highlights = _build_highlights(resolved_record, pillars, coverage_status, historical_series)
+    data_quality_status, data_quality_flags = _build_data_quality(resolved_record, historical_series)
 
     return FundamentalSnapshot(
         symbol=resolved_record.symbol,
@@ -382,6 +561,9 @@ def build_snapshot(record: ProviderFundamentalsRecord, cfg: FundamentalsConfig) 
         most_recent_quarter=resolved_record.most_recent_quarter,
         pillars=pillars,
         historical_series=historical_series,
+        metric_context=resolved_record.metric_context,
+        data_quality_status=data_quality_status,
+        data_quality_flags=data_quality_flags,
         red_flags=red_flags,
         highlights=highlights,
         metric_sources=resolved_record.metric_sources,
@@ -400,6 +582,9 @@ def build_provider_error_snapshot(symbol: str, provider: str, error: str) -> Fun
         freshness_status="unknown",
         pillars={},
         historical_series={},
+        metric_context={},
+        data_quality_status="low",
+        data_quality_flags=["Provider reported an error; snapshot may be incomplete."],
         red_flags=[error],
         highlights=["Provider call failed; no fresh fundamental snapshot is available."],
         error=error,

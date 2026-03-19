@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import Button from '@/components/common/Button';
 import FundamentalsSnapshotCard from '@/components/domain/fundamentals/FundamentalsSnapshotCard';
@@ -24,13 +24,26 @@ function normalizeSymbols(input: string): string[] {
 export default function FundamentalsPage() {
   const [symbolsInput, setSymbolsInput] = useState('AAPL, MSFT');
   const [warmupJobId, setWarmupJobId] = useState<string | undefined>(undefined);
+  const [syncedWarmupJobId, setSyncedWarmupJobId] = useState<string | undefined>(undefined);
   const configQuery = useFundamentalsConfigQuery();
   const compareMutation = useCompareFundamentalsMutation();
   const warmupMutation = useStartFundamentalsWarmupMutation((launch) => {
     setWarmupJobId(launch.jobId);
+    setSyncedWarmupJobId(undefined);
   });
   const warmupStatusQuery = useFundamentalsWarmupStatus(warmupJobId);
   const symbols = useMemo(() => normalizeSymbols(symbolsInput), [symbolsInput]);
+
+  useEffect(() => {
+    if (!warmupJobId || warmupStatusQuery.data?.status !== 'completed') {
+      return;
+    }
+    if (syncedWarmupJobId === warmupJobId || symbols.length < 2) {
+      return;
+    }
+    setSyncedWarmupJobId(warmupJobId);
+    compareMutation.mutate({ symbols, forceRefresh: false });
+  }, [compareMutation, symbols, syncedWarmupJobId, warmupJobId, warmupStatusQuery.data?.status]);
 
   const runCompare = () => {
     if (symbols.length < 2) return;
@@ -39,11 +52,11 @@ export default function FundamentalsPage() {
 
   const warmupSymbols = () => {
     if (symbols.length < 1) return;
-    warmupMutation.mutate({ source: 'symbols', symbols, forceRefresh: false });
+    warmupMutation.mutate({ source: 'symbols', symbols, forceRefresh: true });
   };
 
   const warmupWatchlist = () => {
-    warmupMutation.mutate({ source: 'watchlist', forceRefresh: false });
+    warmupMutation.mutate({ source: 'watchlist', forceRefresh: true });
   };
 
   const warmupStatus = warmupStatusQuery.data;

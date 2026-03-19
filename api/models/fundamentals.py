@@ -40,10 +40,20 @@ class FundamentalSeriesPointResponse(BaseModel):
     value: float
 
 
+class FundamentalMetricContextResponse(BaseModel):
+    source: Optional[str] = None
+    cadence: Literal["snapshot", "quarterly", "annual", "unknown"] = "unknown"
+    derived: bool = False
+    derived_from: list[str] = Field(default_factory=list)
+    period_end: Optional[str] = None
+
+
 class FundamentalMetricSeriesResponse(BaseModel):
     label: str
     unit: Literal["number", "currency", "percent", "ratio"] = "number"
-    direction: Literal["improving", "deteriorating", "stable", "unknown"] = "unknown"
+    frequency: Literal["quarterly", "annual", "unknown"] = "unknown"
+    direction: Literal["improving", "deteriorating", "stable", "unknown", "not_comparable"] = "unknown"
+    source: Optional[str] = None
     points: list[FundamentalSeriesPointResponse] = Field(default_factory=list)
 
 
@@ -74,6 +84,9 @@ class FundamentalSnapshotResponse(BaseModel):
     most_recent_quarter: Optional[str] = None
     pillars: dict[str, FundamentalPillarScoreResponse] = Field(default_factory=dict)
     historical_series: dict[str, FundamentalMetricSeriesResponse] = Field(default_factory=dict)
+    metric_context: dict[str, FundamentalMetricContextResponse] = Field(default_factory=dict)
+    data_quality_status: Literal["high", "medium", "low"] = "low"
+    data_quality_flags: list[str] = Field(default_factory=list)
     red_flags: list[str] = Field(default_factory=list)
     highlights: list[str] = Field(default_factory=list)
     metric_sources: dict[str, str] = Field(default_factory=dict)

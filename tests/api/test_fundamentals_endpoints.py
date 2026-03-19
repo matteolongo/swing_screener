@@ -52,7 +52,9 @@ class _FakeFundamentalsService:
                 "revenue": {
                     "label": "Revenue",
                     "unit": "currency",
+                    "frequency": "quarterly",
                     "direction": "improving",
+                    "source": "yfinance.quarterly_income_stmt",
                     "points": [
                         {"period_end": "2025-05-01", "value": 80_000_000_000.0},
                         {"period_end": "2025-08-01", "value": 84_000_000_000.0},
@@ -61,6 +63,29 @@ class _FakeFundamentalsService:
                     ],
                 }
             },
+            "metric_context": {
+                "revenue_growth_yoy": {
+                    "source": "yfinance.info.revenueGrowth",
+                    "cadence": "snapshot",
+                    "derived": False,
+                    "derived_from": [],
+                    "period_end": "2026-02-01",
+                },
+                "operating_margin": {
+                    "source": "yfinance.quarterly_income_stmt",
+                    "cadence": "quarterly",
+                    "derived": True,
+                    "derived_from": [
+                        "yfinance.quarterly_income_stmt",
+                        "yfinance.quarterly_income_stmt",
+                    ],
+                    "period_end": "2026-02-01",
+                },
+            },
+            "data_quality_status": "medium",
+            "data_quality_flags": [
+                "Revenue YoY mixes snapshot metric data with quarterly history.",
+            ],
             "red_flags": [],
             "highlights": ["Growth metrics are supportive."],
             "metric_sources": {"revenue_growth_yoy": "yfinance"},
@@ -125,6 +150,11 @@ def test_fundamentals_snapshot_endpoint():
     assert payload["coverage_status"] == "supported"
     assert payload["pillars"]["growth"]["status"] == "strong"
     assert payload["historical_series"]["revenue"]["direction"] == "improving"
+    assert payload["historical_series"]["revenue"]["frequency"] == "quarterly"
+    assert payload["historical_series"]["revenue"]["source"] == "yfinance.quarterly_income_stmt"
+    assert payload["metric_context"]["revenue_growth_yoy"]["cadence"] == "snapshot"
+    assert payload["data_quality_status"] == "medium"
+    assert payload["data_quality_flags"] == ["Revenue YoY mixes snapshot metric data with quarterly history."]
 
     app.dependency_overrides.clear()
 

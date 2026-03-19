@@ -33,7 +33,9 @@ describe('fundamentals transforms', () => {
         revenue: {
           label: 'Revenue',
           unit: 'currency',
-          direction: 'improving',
+          frequency: 'quarterly',
+          direction: 'not_comparable',
+          source: 'yfinance.quarterly_income_stmt',
           points: [
             { period_end: '2025-08-01', value: 84_000_000_000 },
             { period_end: '2025-11-01', value: 88_000_000_000 },
@@ -41,6 +43,17 @@ describe('fundamentals transforms', () => {
           ],
         },
       },
+      metric_context: {
+        revenue_growth_yoy: {
+          source: 'yfinance.info.revenueGrowth',
+          cadence: 'snapshot',
+          derived: false,
+          derived_from: [],
+          period_end: '2026-02-01',
+        },
+      },
+      data_quality_status: 'low',
+      data_quality_flags: ['Revenue YoY mixes snapshot metric data with quarterly history.'],
       red_flags: [],
       highlights: ['Growth metrics are supportive.'],
       metric_sources: { revenue_growth_yoy: 'yfinance' },
@@ -49,8 +62,16 @@ describe('fundamentals transforms', () => {
     expect(snapshot.asofDate).toBe('2026-03-18');
     expect(snapshot.companyName).toBe('Apple Inc.');
     expect(snapshot.pillars.growth.status).toBe('strong');
-    expect(snapshot.historicalSeries.revenue.direction).toBe('improving');
+    expect(snapshot.historicalSeries.revenue.direction).toBe('not_comparable');
+    expect(snapshot.historicalSeries.revenue.frequency).toBe('quarterly');
+    expect(snapshot.historicalSeries.revenue.source).toBe('yfinance.quarterly_income_stmt');
     expect(snapshot.historicalSeries.revenue.points).toHaveLength(3);
+    expect(snapshot.metricContext.revenue_growth_yoy.cadence).toBe('snapshot');
+    expect(snapshot.metricContext.revenue_growth_yoy.periodEnd).toBe('2026-02-01');
+    expect(snapshot.dataQualityStatus).toBe('low');
+    expect(snapshot.dataQualityFlags).toEqual([
+      'Revenue YoY mixes snapshot metric data with quarterly history.',
+    ]);
     expect(snapshot.metricSources.revenue_growth_yoy).toBe('yfinance');
   });
 

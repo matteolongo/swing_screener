@@ -3,7 +3,10 @@ import CachedSymbolPriceChart from '@/components/domain/market/CachedSymbolPrice
 import FundamentalsSnapshotCard from '@/components/domain/fundamentals/FundamentalsSnapshotCard';
 import ActionPanel from '@/components/domain/workspace/ActionPanel';
 import KeyMetrics from '@/components/domain/workspace/KeyMetrics';
-import { useFundamentalSnapshotQuery } from '@/features/fundamentals/hooks';
+import {
+  useFundamentalSnapshotQuery,
+  useRefreshFundamentalSnapshotMutation,
+} from '@/features/fundamentals/hooks';
 import type { SymbolIntelligenceStatus } from '@/features/intelligence/useSymbolIntelligenceRunner';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { t } from '@/i18n/t';
@@ -26,6 +29,7 @@ export default function AnalysisCanvasPanel({
   const fundamentalsQuery = useFundamentalSnapshotQuery(
     activeTab === 'fundamentals' ? selectedTicker ?? undefined : undefined
   );
+  const refreshFundamentalsMutation = useRefreshFundamentalSnapshotMutation();
   const tabs: Array<{
     id: 'overview' | 'fundamentals' | 'order';
     label: string;
@@ -154,6 +158,40 @@ export default function AnalysisCanvasPanel({
 
             {activeTab === 'fundamentals' && (
               <>
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white p-3">
+                  <div>
+                    <h3 className="text-base font-semibold">{selectedTicker}</h3>
+                    <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                      {fundamentalsQuery.data
+                        ? 'Refresh the cached fundamentals snapshot for this symbol.'
+                        : 'Run fundamentals analysis for this symbol and cache the snapshot.'}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => refreshFundamentalsMutation.mutate(selectedTicker)}
+                    disabled={refreshFundamentalsMutation.isPending}
+                  >
+                    {refreshFundamentalsMutation.isPending
+                      ? fundamentalsQuery.data
+                        ? 'Refreshing fundamentals...'
+                        : 'Running fundamentals...'
+                      : fundamentalsQuery.data
+                        ? 'Refresh fundamentals'
+                        : 'Run fundamentals analysis'}
+                  </Button>
+                </div>
+
+                {refreshFundamentalsMutation.isError ? (
+                  <div className="text-sm text-rose-600">
+                    {refreshFundamentalsMutation.error instanceof Error
+                      ? refreshFundamentalsMutation.error.message
+                      : 'Failed to refresh fundamentals'}
+                  </div>
+                ) : null}
+
                 {fundamentalsQuery.isLoading ? (
                   <div className="text-sm text-gray-500">Loading fundamentals...</div>
                 ) : fundamentalsQuery.isError ? (
@@ -165,7 +203,7 @@ export default function AnalysisCanvasPanel({
                 ) : fundamentalsQuery.data ? (
                   <FundamentalsSnapshotCard snapshot={fundamentalsQuery.data} />
                 ) : (
-                  <div className="text-sm text-gray-500">No fundamentals snapshot available.</div>
+                  <div className="text-sm text-gray-500">No fundamentals snapshot available yet.</div>
                 )}
               </>
             )}
