@@ -8,6 +8,7 @@ import {
   useFundamentalsWarmupStatus,
   useStartFundamentalsWarmupMutation,
 } from '@/features/fundamentals/hooks';
+import { t } from '@/i18n/t';
 
 function normalizeSymbols(input: string): string[] {
   const seen = new Set<string>();
@@ -66,38 +67,44 @@ export default function FundamentalsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Fundamentals</h1>
+        <h1 className="text-2xl font-bold">{t('fundamentalsPage.title')}</h1>
         <p className="text-sm text-gray-600 dark:text-gray-400">
-          Compare company-quality snapshots without changing the screener ranking.
+          {t('fundamentalsPage.description')}
         </p>
       </div>
 
       {configQuery.data ? (
         <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-          Provider: {configQuery.data.providers.join(', ')} | cache TTL: {configQuery.data.cacheTtlHours}h | stale
-          after: {configQuery.data.staleAfterDays}d
+          {t('fundamentalsPage.config.providerInfo', {
+            provider: configQuery.data.providers.join(', '),
+            ttl: configQuery.data.cacheTtlHours,
+            stale: configQuery.data.staleAfterDays,
+          })}
         </div>
       ) : null}
 
       <div className="rounded-lg border border-gray-200 bg-white p-4">
-        <label className="block text-sm font-medium text-gray-700">Symbols</label>
+        <label htmlFor="fundamentals-symbols-input" className="block text-sm font-medium text-gray-700">
+          {t('fundamentalsPage.symbols.label')}
+        </label>
         <input
+          id="fundamentals-symbols-input"
           value={symbolsInput}
           onChange={(event) => setSymbolsInput(event.target.value)}
-          placeholder="AAPL, MSFT, NVDA"
+          placeholder={t('fundamentalsPage.symbols.placeholder')}
           className="mt-2 w-full rounded-md border border-gray-300 px-3 py-2"
         />
         <div className="mt-3 flex items-center gap-3">
           <Button type="button" onClick={runCompare} disabled={symbols.length < 2 || compareMutation.isPending}>
-            {compareMutation.isPending ? 'Comparing...' : 'Compare fundamentals'}
+            {compareMutation.isPending ? t('fundamentalsPage.comparingAction') : t('fundamentalsPage.compareAction')}
           </Button>
           <Button type="button" onClick={warmupSymbols} disabled={symbols.length < 1 || warmupMutation.isPending}>
-            {warmupMutation.isPending ? 'Queueing...' : 'Warm listed symbols'}
+            {warmupMutation.isPending ? t('fundamentalsPage.queueingAction') : t('fundamentalsPage.warmupSymbolsAction')}
           </Button>
           <Button type="button" onClick={warmupWatchlist} disabled={warmupMutation.isPending}>
-            Warm watchlist
+            {t('fundamentalsPage.warmupWatchlistAction')}
           </Button>
-          <span className="text-xs text-gray-500">Compare needs 2+ tickers. Warmup works with one or more.</span>
+          <span className="text-xs text-gray-500">{t('fundamentalsPage.hint')}</span>
         </div>
         <div className="mt-3 space-y-1">
           {compareMutation.isError ? (
@@ -113,39 +120,55 @@ export default function FundamentalsPage() {
         <div className="rounded-lg border border-sky-200 bg-sky-50 p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <div className="text-sm font-semibold text-sky-950">Fundamentals warmup</div>
+              <div className="text-sm font-semibold text-sky-950">{t('fundamentalsPage.warmup.title')}</div>
               <div className="text-xs text-sky-800">
-                Job {warmupJobId} · {warmupStatus?.source ?? 'queued'} · {warmupStatus?.status ?? 'queued'}
+                {t('fundamentalsPage.warmup.job', {
+                  jobId: warmupJobId,
+                  source: warmupStatus?.source ?? 'queued',
+                  status: warmupStatus?.status ?? 'queued',
+                })}
               </div>
             </div>
             <div className="text-right text-xs text-sky-800">
-              <div>Progress: {progressText}</div>
-              {warmupStatus?.lastCompletedSymbol ? <div>Last: {warmupStatus.lastCompletedSymbol}</div> : null}
+              <div>{t('fundamentalsPage.warmup.progress', { progress: progressText })}</div>
+              {warmupStatus?.lastCompletedSymbol ? (
+                <div>{t('fundamentalsPage.warmup.last', { symbol: warmupStatus.lastCompletedSymbol })}</div>
+              ) : null}
             </div>
           </div>
 
           {warmupStatus ? (
             <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-3">
               <div className="rounded-md bg-white/70 p-3 text-xs text-sky-900">
-                <div className="text-sky-700">Coverage</div>
+                <div className="text-sky-700">{t('fundamentalsPage.warmup.coverage.label')}</div>
                 <div className="mt-1">
-                  supported {warmupStatus.coverageCounts.supported} · partial {warmupStatus.coverageCounts.partial} ·
-                  insufficient {warmupStatus.coverageCounts.insufficient} · unsupported{' '}
-                  {warmupStatus.coverageCounts.unsupported}
+                  {t('fundamentalsPage.warmup.coverage.stats', {
+                    supported: warmupStatus.coverageCounts.supported,
+                    partial: warmupStatus.coverageCounts.partial,
+                    insufficient: warmupStatus.coverageCounts.insufficient,
+                    unsupported: warmupStatus.coverageCounts.unsupported,
+                  })}
                 </div>
               </div>
               <div className="rounded-md bg-white/70 p-3 text-xs text-sky-900">
-                <div className="text-sky-700">Freshness</div>
+                <div className="text-sky-700">{t('fundamentalsPage.warmup.freshness.label')}</div>
                 <div className="mt-1">
-                  current {warmupStatus.freshnessCounts.current} · stale {warmupStatus.freshnessCounts.stale} ·
-                  unknown {warmupStatus.freshnessCounts.unknown}
+                  {t('fundamentalsPage.warmup.freshness.stats', {
+                    current: warmupStatus.freshnessCounts.current,
+                    stale: warmupStatus.freshnessCounts.stale,
+                    unknown: warmupStatus.freshnessCounts.unknown,
+                  })}
                 </div>
               </div>
               <div className="rounded-md bg-white/70 p-3 text-xs text-sky-900">
-                <div className="text-sky-700">Errors</div>
+                <div className="text-sky-700">{t('fundamentalsPage.warmup.errors.label')}</div>
                 <div className="mt-1">
-                  {warmupStatus.errorCount}
-                  {warmupStatus.errorSample ? ` · ${warmupStatus.errorSample}` : ''}
+                  {warmupStatus.errorSample
+                    ? t('fundamentalsPage.warmup.errors.statsWithSample', {
+                        count: warmupStatus.errorCount,
+                        sample: warmupStatus.errorSample,
+                      })
+                    : t('fundamentalsPage.warmup.errors.statsCount', { count: warmupStatus.errorCount })}
                 </div>
               </div>
             </div>

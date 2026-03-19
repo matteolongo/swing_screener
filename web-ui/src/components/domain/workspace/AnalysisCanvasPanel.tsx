@@ -35,7 +35,7 @@ export default function AnalysisCanvasPanel({
     label: string;
   }> = [
     { id: 'overview', label: t('workspacePage.panels.analysis.tabs.overview') },
-    { id: 'fundamentals', label: 'Fundamentals' },
+    { id: 'fundamentals', label: t('workspacePage.panels.analysis.tabs.fundamentals') },
     { id: 'order', label: t('workspacePage.panels.analysis.tabs.order') },
   ];
 
@@ -163,8 +163,8 @@ export default function AnalysisCanvasPanel({
                     <h3 className="text-base font-semibold">{selectedTicker}</h3>
                     <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
                       {fundamentalsQuery.data
-                        ? 'Refresh the cached fundamentals snapshot for this symbol.'
-                        : 'Run fundamentals analysis for this symbol and cache the snapshot.'}
+                        ? t('workspacePage.panels.analysis.fundamentals.descriptionHasSnapshot')
+                        : t('workspacePage.panels.analysis.fundamentals.descriptionNoSnapshot')}
                     </p>
                   </div>
                   <Button
@@ -176,11 +176,11 @@ export default function AnalysisCanvasPanel({
                   >
                     {refreshFundamentalsMutation.isPending
                       ? fundamentalsQuery.data
-                        ? 'Refreshing fundamentals...'
-                        : 'Running fundamentals...'
+                        ? t('workspacePage.panels.analysis.fundamentals.refreshingAction')
+                        : t('workspacePage.panels.analysis.fundamentals.runningAction')
                       : fundamentalsQuery.data
-                        ? 'Refresh fundamentals'
-                        : 'Run fundamentals analysis'}
+                        ? t('workspacePage.panels.analysis.fundamentals.refreshAction')
+                        : t('workspacePage.panels.analysis.fundamentals.runAction')}
                   </Button>
                 </div>
 
@@ -188,22 +188,22 @@ export default function AnalysisCanvasPanel({
                   <div className="text-sm text-rose-600">
                     {refreshFundamentalsMutation.error instanceof Error
                       ? refreshFundamentalsMutation.error.message
-                      : 'Failed to refresh fundamentals'}
+                      : t('workspacePage.panels.analysis.fundamentals.refreshError')}
                   </div>
                 ) : null}
 
                 {fundamentalsQuery.isLoading ? (
-                  <div className="text-sm text-gray-500">Loading fundamentals...</div>
+                  <div className="text-sm text-gray-500">{t('workspacePage.panels.analysis.fundamentals.loading')}</div>
                 ) : fundamentalsQuery.isError ? (
                   <div className="text-sm text-rose-600">
                     {fundamentalsQuery.error instanceof Error
                       ? fundamentalsQuery.error.message
-                      : 'Failed to load fundamentals'}
+                      : t('workspacePage.panels.analysis.fundamentals.loadError')}
                   </div>
                 ) : fundamentalsQuery.data ? (
                   <FundamentalsSnapshotCard snapshot={fundamentalsQuery.data} />
                 ) : (
-                  <div className="text-sm text-gray-500">No fundamentals snapshot available yet.</div>
+                  <div className="text-sm text-gray-500">{t('workspacePage.panels.analysis.fundamentals.noSnapshot')}</div>
                 )}
               </>
             )}

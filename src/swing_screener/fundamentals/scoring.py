@@ -339,10 +339,7 @@ def _build_pillars(record: ProviderFundamentalsRecord) -> dict[str, FundamentalP
         _score_lower(record.debt_to_equity, strong=60.0, weak=220.0),
         _score_higher(record.current_ratio, weak=0.9, strong=1.8),
     )
-    cash_flow_score = _blend_scores(
-        _score_higher(record.free_cash_flow, weak=0.0, strong=1.0),
-        _score_higher(record.free_cash_flow_margin, weak=0.0, strong=0.15),
-    )
+    cash_flow_score = _score_higher(record.free_cash_flow_margin, weak=0.0, strong=0.15)
     valuation_score = _blend_scores(
         _score_lower(record.trailing_pe, strong=12.0, weak=35.0),
         _score_lower(record.price_to_sales, strong=2.0, weak=8.0),

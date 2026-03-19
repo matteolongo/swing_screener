@@ -461,6 +461,19 @@ export const messagesEn = {
         tabs: {
           overview: 'Overview',
           order: 'Order',
+          fundamentals: 'Fundamentals',
+        },
+        fundamentals: {
+          descriptionHasSnapshot: 'Refresh the cached fundamentals snapshot for this symbol.',
+          descriptionNoSnapshot: 'Run fundamentals analysis for this symbol and cache the snapshot.',
+          refreshingAction: 'Refreshing fundamentals...',
+          runningAction: 'Running fundamentals...',
+          refreshAction: 'Refresh fundamentals',
+          runAction: 'Run fundamentals analysis',
+          refreshError: 'Failed to refresh fundamentals',
+          loading: 'Loading fundamentals...',
+          loadError: 'Failed to load fundamentals',
+          noSnapshot: 'No fundamentals snapshot available yet.',
         },
         empty: 'Select a candidate from the screener to begin analysis.',
         chartHint: 'Open chart to view cached price history',
@@ -1814,6 +1827,42 @@ export const messagesEn = {
       title: "Review Today's Opportunities",
       description: 'Check Daily Review for new trade candidates and position management actions.',
       buttonLabel: 'Open Daily Review',
+    },
+  },
+  fundamentalsPage: {
+    title: 'Fundamentals',
+    description: 'Compare company-quality snapshots without changing the screener ranking.',
+    config: {
+      providerInfo: 'Provider: {{provider}} | cache TTL: {{ttl}}h | stale after: {{stale}}d',
+    },
+    symbols: {
+      label: 'Symbols',
+      placeholder: 'AAPL, MSFT, NVDA',
+    },
+    compareAction: 'Compare fundamentals',
+    comparingAction: 'Comparing...',
+    warmupSymbolsAction: 'Warm listed symbols',
+    warmupWatchlistAction: 'Warm watchlist',
+    queueingAction: 'Queueing...',
+    hint: 'Compare needs 2+ tickers. Warmup works with one or more.',
+    warmup: {
+      title: 'Fundamentals warmup',
+      job: 'Job {{jobId}} · {{source}} · {{status}}',
+      progress: 'Progress: {{progress}}',
+      last: 'Last: {{symbol}}',
+      coverage: {
+        label: 'Coverage',
+        stats: 'supported {{supported}} · partial {{partial}} · insufficient {{insufficient}} · unsupported {{unsupported}}',
+      },
+      freshness: {
+        label: 'Freshness',
+        stats: 'current {{current}} · stale {{stale}} · unknown {{unknown}}',
+      },
+      errors: {
+        label: 'Errors',
+        statsWithSample: '{{count}} · {{sample}}',
+        statsCount: '{{count}}',
+      },
     },
   },
 } as const;
