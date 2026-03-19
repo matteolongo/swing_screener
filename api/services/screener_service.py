@@ -291,9 +291,16 @@ def _apply_cached_fundamentals_context(
     if not candidates:
         return candidates
     fundamentals_storage = storage or FundamentalsStorage()
+    # Load each unique ticker's snapshot once to avoid N redundant file reads.
+    unique_tickers = {c.ticker for c in candidates}
+    snapshot_cache: dict[str, object] = {}
+    for ticker in unique_tickers:
+        snap = fundamentals_storage.load_snapshot(ticker)
+        if snap is not None:
+            snapshot_cache[ticker] = snap
     enriched: list[ScreenerCandidate] = []
     for candidate in candidates:
-        snapshot = fundamentals_storage.load_snapshot(candidate.ticker)
+        snapshot = snapshot_cache.get(candidate.ticker)
         if snapshot is None:
             enriched.append(candidate)
             continue

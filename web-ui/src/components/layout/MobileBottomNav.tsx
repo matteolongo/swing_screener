@@ -14,8 +14,7 @@ import type { MessageKey } from '@/i18n/types';
 type NavItem = {
   href: string;
   icon: typeof LayoutDashboard;
-  label?: string;
-  labelKey?: MessageKey;
+  labelKey: MessageKey;
 };
 
 const navItems: NavItem[] = [
@@ -40,7 +39,7 @@ const navItems: NavItem[] = [
     icon: Brain,
   },
   {
-    label: 'Fundamentals',
+    labelKey: 'sidebar.nav.fundamentals',
     href: '/fundamentals',
     icon: BarChart3,
   },
@@ -71,7 +70,7 @@ export default function MobileBottomNav() {
               >
                 <Icon className="h-4 w-4" />
                 <span className="mt-1 leading-none">
-                  {item.labelKey ? t(item.labelKey) : item.label}
+                  {t(item.labelKey)}
                 </span>
               </NavLink>
             );
