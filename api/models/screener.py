@@ -5,6 +5,7 @@ import math
 from typing import Literal, Optional
 from pydantic import BaseModel, Field, field_validator
 from api.models.recommendation import Recommendation
+from swing_screener.recommendation.models import DecisionSummary
 
 
 class PriceHistoryPoint(BaseModel):
@@ -64,6 +65,7 @@ class ScreenerCandidate(BaseModel):
     suggested_order_price: Optional[float] = None
     execution_note: Optional[str] = None
     same_symbol: Optional[SameSymbolCandidateContext] = None
+    decision_summary: Optional[DecisionSummary] = None
 
 
 class ScreenerRequest(BaseModel):

@@ -28,6 +28,32 @@ describe('transformScreenerResponse', () => {
           suggested_order_type: 'BUY_STOP',
           suggested_order_price: 101.2,
           execution_note: 'Breakout not triggered yet. Place BUY STOP slightly above breakout_level.',
+          decision_summary: {
+            symbol: 'AAPL',
+            action: 'BUY_NOW',
+            conviction: 'high',
+            technical_label: 'strong',
+            fundamentals_label: 'strong',
+            valuation_label: 'fair',
+            catalyst_label: 'active',
+            why_now: 'Setup timing is ready and the business-quality read supports conviction.',
+            what_to_do: 'Use the current trade plan and keep sizing inside your normal risk budget.',
+            main_risk: 'The trade still needs disciplined risk management because no single input guarantees follow-through.',
+            trade_plan: {
+              entry: 100,
+              stop: 96,
+              target: 108,
+              rr: 2,
+            },
+            valuation_context: {
+              method: 'fundamental_pillar',
+            },
+            drivers: {
+              positives: ['Technical setup is ready.'],
+              negatives: [],
+              warnings: ['No cached catalyst snapshot is available yet.'],
+            },
+          },
         },
       ],
     };
@@ -38,5 +64,7 @@ describe('transformScreenerResponse', () => {
     expect(result.candidates[0].executionNote).toContain('BUY STOP');
     expect(result.candidates[0].fundamentalsCoverageStatus).toBe('supported');
     expect(result.candidates[0].fundamentalsSummary).toBe('Growth metrics are supportive.');
+    expect(result.candidates[0].decisionSummary?.action).toBe('BUY_NOW');
+    expect(result.candidates[0].decisionSummary?.tradePlan.rr).toBe(2);
   });
 });

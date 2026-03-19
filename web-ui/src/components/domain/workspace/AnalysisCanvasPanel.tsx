@@ -2,12 +2,14 @@ import Card from '@/components/common/Card';
 import CachedSymbolPriceChart from '@/components/domain/market/CachedSymbolPriceChart';
 import FundamentalsSnapshotCard from '@/components/domain/fundamentals/FundamentalsSnapshotCard';
 import ActionPanel from '@/components/domain/workspace/ActionPanel';
+import DecisionSummaryCard from '@/components/domain/workspace/DecisionSummaryCard';
 import KeyMetrics from '@/components/domain/workspace/KeyMetrics';
 import {
   useFundamentalSnapshotQuery,
   useRefreshFundamentalSnapshotMutation,
 } from '@/features/fundamentals/hooks';
 import type { SymbolIntelligenceStatus } from '@/features/intelligence/useSymbolIntelligenceRunner';
+import { useScreenerStore } from '@/stores/screenerStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { t } from '@/i18n/t';
 import { cn } from '@/utils/cn';
@@ -24,8 +26,12 @@ export default function AnalysisCanvasPanel({
   symbolIntelligenceStatus,
 }: AnalysisCanvasPanelProps) {
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
+  const lastScreenerResult = useScreenerStore((state) => state.lastResult);
   const activeTab = useWorkspaceStore((state) => state.analysisTab);
   const setAnalysisTab = useWorkspaceStore((state) => state.setAnalysisTab);
+  const selectedCandidate = lastScreenerResult?.candidates.find(
+    (candidate) => candidate.ticker.toUpperCase() === selectedTicker?.toUpperCase()
+  );
   const fundamentalsQuery = useFundamentalSnapshotQuery(
     activeTab === 'fundamentals' ? selectedTicker ?? undefined : undefined
   );
@@ -88,6 +94,12 @@ export default function AnalysisCanvasPanel({
           <div className="flex-1 min-h-0 overflow-y-auto space-y-3">
             {activeTab === 'overview' && (
               <>
+                {selectedCandidate?.decisionSummary ? (
+                  <DecisionSummaryCard
+                    summary={selectedCandidate.decisionSummary}
+                    currency={selectedCandidate.currency}
+                  />
+                ) : null}
                 <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white p-3">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <h3 className="text-base font-semibold">{selectedTicker}</h3>

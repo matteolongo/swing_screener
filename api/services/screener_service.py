@@ -37,6 +37,8 @@ from swing_screener.data.ticker_info import get_multiple_ticker_info
 from swing_screener.reporting.report import ReportConfig, build_daily_report
 from swing_screener.reporting.concentration import sector_concentration_warnings
 from swing_screener.fundamentals.storage import FundamentalsStorage
+from swing_screener.intelligence.storage import IntelligenceStorage
+from swing_screener.recommendation import build_decision_summary
 from swing_screener.strategy.config import (
     build_entry_config,
     build_ranking_config,
@@ -310,6 +312,45 @@ def _apply_cached_fundamentals_context(
                     "fundamentals_coverage_status": getattr(snapshot, "coverage_status", None),
                     "fundamentals_freshness_status": getattr(snapshot, "freshness_status", None),
                     "fundamentals_summary": _fundamentals_summary(snapshot),
+                }
+            )
+        )
+    return enriched
+
+
+def _apply_decision_summary_context(
+    candidates: list[ScreenerCandidate],
+    *,
+    fundamentals_storage: FundamentalsStorage | None = None,
+    intelligence_storage: IntelligenceStorage | None = None,
+) -> list[ScreenerCandidate]:
+    if not candidates:
+        return candidates
+
+    fundamentals = fundamentals_storage or FundamentalsStorage()
+    intelligence = intelligence_storage or IntelligenceStorage()
+
+    unique_tickers = {candidate.ticker for candidate in candidates}
+    snapshot_cache = {ticker: fundamentals.load_snapshot(ticker) for ticker in unique_tickers}
+
+    opportunity_cache: dict[str, object] = {}
+    latest_opportunities_date = intelligence.latest_opportunities_date()
+    if latest_opportunities_date:
+        for opportunity in intelligence.load_opportunities(latest_opportunities_date):
+            symbol = str(getattr(opportunity, "symbol", "")).strip().upper()
+            if symbol and symbol in unique_tickers:
+                opportunity_cache[symbol] = opportunity
+
+    enriched: list[ScreenerCandidate] = []
+    for candidate in candidates:
+        enriched.append(
+            candidate.model_copy(
+                update={
+                    "decision_summary": build_decision_summary(
+                        candidate,
+                        opportunity=opportunity_cache.get(candidate.ticker),
+                        fundamentals=snapshot_cache.get(candidate.ticker),
+                    )
                 }
             )
         )
@@ -683,6 +724,7 @@ class ScreenerService:
 
             candidates = filtered_candidates
             candidates = _apply_cached_fundamentals_context(candidates)
+            candidates = _apply_decision_summary_context(candidates)
             if same_symbol_suppressed_count > 0:
                 warnings.append(
                     f"{same_symbol_suppressed_count} same-symbol candidate"
