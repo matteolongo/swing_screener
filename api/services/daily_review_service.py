@@ -64,6 +64,8 @@ class DailyReviewService:
         def _to_daily_candidate(c) -> DailyReviewCandidate:
             return DailyReviewCandidate(
                 ticker=c.ticker,
+                rank=c.rank,
+                priority_rank=c.priority_rank,
                 confidence=c.confidence,
                 signal=c.signal or "UNKNOWN",
                 close=c.close,
@@ -78,6 +80,7 @@ class DailyReviewService:
                 execution_note=c.execution_note,
                 recommendation=c.recommendation,
                 same_symbol=c.same_symbol,
+                decision_summary=c.decision_summary,
             )
         new_candidates = [_to_daily_candidate(c) for c in candidates if c.same_symbol is None or c.same_symbol.mode == "NEW_ENTRY"]
         add_on_candidates = [_to_daily_candidate(c) for c in candidates if c.same_symbol is not None and c.same_symbol.mode == "ADD_ON"]
@@ -245,6 +248,8 @@ class DailyReviewService:
         def _to_daily_candidate(c) -> DailyReviewCandidate:
             return DailyReviewCandidate(
                 ticker=c.ticker,
+                rank=c.rank,
+                priority_rank=c.priority_rank,
                 confidence=c.confidence,
                 signal=c.signal or "UNKNOWN",
                 close=c.close,
@@ -259,6 +264,7 @@ class DailyReviewService:
                 execution_note=c.execution_note,
                 recommendation=c.recommendation,
                 same_symbol=c.same_symbol,
+                decision_summary=c.decision_summary,
             )
         new_candidates = [_to_daily_candidate(c) for c in candidates if c.same_symbol is None or c.same_symbol.mode == "NEW_ENTRY"]
         add_on_candidates = [_to_daily_candidate(c) for c in candidates if c.same_symbol is not None and c.same_symbol.mode == "ADD_ON"]

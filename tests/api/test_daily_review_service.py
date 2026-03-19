@@ -8,6 +8,7 @@ from api.models.daily_review import DailyReview
 from api.models.screener import ScreenerResponse, ScreenerCandidate, SameSymbolCandidateContext
 from api.models.portfolio import Position, PositionUpdate, PositionsResponse
 from api.services.daily_review_service import DailyReviewService
+from swing_screener.recommendation.models import DecisionSummary
 from swing_screener.strategy.storage import _default_strategy_payload
 
 
@@ -39,7 +40,20 @@ def mock_screener_service():
                 rel_strength=1.2,
                 score=85.0,
                 confidence=0.9,
-                rank=1,
+                rank=2,
+                priority_rank=1,
+                decision_summary=DecisionSummary(
+                    symbol="AAPL",
+                    action="BUY_NOW",
+                    conviction="high",
+                    technical_label="strong",
+                    fundamentals_label="strong",
+                    valuation_label="fair",
+                    catalyst_label="active",
+                    why_now="Ready now.",
+                    what_to_do="Act first.",
+                    main_risk="Execution discipline.",
+                ),
             ),
             ScreenerCandidate(
                 ticker="MSFT",
@@ -63,7 +77,20 @@ def mock_screener_service():
                 rel_strength=1.1,
                 score=82.0,
                 confidence=0.85,
-                rank=2,
+                rank=1,
+                priority_rank=2,
+                decision_summary=DecisionSummary(
+                    symbol="MSFT",
+                    action="BUY_ON_PULLBACK",
+                    conviction="medium",
+                    technical_label="strong",
+                    fundamentals_label="strong",
+                    valuation_label="expensive",
+                    catalyst_label="active",
+                    why_now="Good but extended.",
+                    what_to_do="Wait for pullback.",
+                    main_risk="Chasing strength.",
+                ),
             ),
         ],
         asof_date=str(date.today()),
@@ -226,6 +253,10 @@ def test_generate_daily_review_candidates_fields(mock_screener_service, mock_por
     assert candidate.suggested_order_type == "BUY_LIMIT"
     assert candidate.suggested_order_price == 149.5
     assert "BUY LIMIT" in candidate.execution_note
+    assert candidate.rank == 2
+    assert candidate.priority_rank == 1
+    assert candidate.decision_summary is not None
+    assert candidate.decision_summary.action == "BUY_NOW"
 
 
 def test_generate_daily_review_position_hold(mock_screener_service, mock_portfolio_service, tmp_path):

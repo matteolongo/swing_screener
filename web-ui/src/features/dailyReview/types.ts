@@ -3,11 +3,17 @@
  */
 
 import { Recommendation, RecommendationAPI, transformRecommendation } from '@/types/recommendation';
-import type { SameSymbolCandidateContext } from '@/features/screener/types';
+import {
+  type DecisionSummary,
+  type DecisionSummaryAPI,
+  type SameSymbolCandidateContext,
+} from '@/features/screener/types';
 
 // API response types (snake_case from backend)
 export interface DailyReviewCandidateAPI {
   ticker: string;
+  rank?: number | null;
+  priority_rank?: number | null;
   confidence?: number | null;
   signal: string;
   close: number;
@@ -21,6 +27,7 @@ export interface DailyReviewCandidateAPI {
   suggested_order_price?: number | null;
   execution_note?: string | null;
   recommendation?: RecommendationAPI | null;
+  decision_summary?: DecisionSummaryAPI | null;
   same_symbol?: {
     mode: SameSymbolCandidateContext['mode'];
     position_id?: string | null;
@@ -88,6 +95,8 @@ export interface DailyReviewAPI {
 // Frontend types (camelCase)
 export interface DailyReviewCandidate {
   ticker: string;
+  rank?: number;
+  priorityRank?: number;
   confidence?: number;
   signal: string;
   close: number;
@@ -101,6 +110,7 @@ export interface DailyReviewCandidate {
   suggestedOrderPrice?: number;
   executionNote?: string;
   recommendation?: Recommendation;
+  decisionSummary?: DecisionSummary;
   sameSymbol?: SameSymbolCandidateContext;
 }
 
@@ -158,6 +168,8 @@ export interface DailyReview {
 export function transformCandidate(api: DailyReviewCandidateAPI): DailyReviewCandidate {
   return {
     ticker: api.ticker,
+    rank: api.rank ?? undefined,
+    priorityRank: api.priority_rank ?? undefined,
     confidence: api.confidence ?? undefined,
     signal: api.signal,
     close: api.close,
@@ -171,6 +183,44 @@ export function transformCandidate(api: DailyReviewCandidateAPI): DailyReviewCan
     suggestedOrderPrice: api.suggested_order_price ?? undefined,
     executionNote: api.execution_note ?? undefined,
     recommendation: api.recommendation ? transformRecommendation(api.recommendation) : undefined,
+    decisionSummary: api.decision_summary
+      ? {
+          symbol: api.decision_summary.symbol,
+          action: api.decision_summary.action,
+          conviction: api.decision_summary.conviction,
+          technicalLabel: api.decision_summary.technical_label,
+          fundamentalsLabel: api.decision_summary.fundamentals_label,
+          valuationLabel: api.decision_summary.valuation_label,
+          catalystLabel: api.decision_summary.catalyst_label,
+          whyNow: api.decision_summary.why_now,
+          whatToDo: api.decision_summary.what_to_do,
+          mainRisk: api.decision_summary.main_risk,
+          tradePlan: {
+            entry: api.decision_summary.trade_plan?.entry ?? undefined,
+            stop: api.decision_summary.trade_plan?.stop ?? undefined,
+            target: api.decision_summary.trade_plan?.target ?? undefined,
+            rr: api.decision_summary.trade_plan?.rr ?? undefined,
+          },
+          valuationContext: {
+            method: api.decision_summary.valuation_context?.method ?? 'not_available',
+            summary: api.decision_summary.valuation_context?.summary ?? undefined,
+            trailingPe: api.decision_summary.valuation_context?.trailing_pe ?? undefined,
+            priceToSales: api.decision_summary.valuation_context?.price_to_sales ?? undefined,
+            bookValuePerShare: api.decision_summary.valuation_context?.book_value_per_share ?? undefined,
+            priceToBook: api.decision_summary.valuation_context?.price_to_book ?? undefined,
+            bookToPrice: api.decision_summary.valuation_context?.book_to_price ?? undefined,
+            fairValueLow: api.decision_summary.valuation_context?.fair_value_low ?? undefined,
+            fairValueBase: api.decision_summary.valuation_context?.fair_value_base ?? undefined,
+            fairValueHigh: api.decision_summary.valuation_context?.fair_value_high ?? undefined,
+            premiumDiscountPct: api.decision_summary.valuation_context?.premium_discount_pct ?? undefined,
+          },
+          drivers: {
+            positives: api.decision_summary.drivers?.positives ?? [],
+            negatives: api.decision_summary.drivers?.negatives ?? [],
+            warnings: api.decision_summary.drivers?.warnings ?? [],
+          },
+        }
+      : undefined,
     sameSymbol: api.same_symbol
       ? {
           mode: api.same_symbol.mode,

@@ -9,6 +9,8 @@ const mockDailyReview = {
   new_candidates: [
     {
       ticker: 'VALE',
+      rank: 3,
+      priority_rank: 1,
       confidence: 91.6,
       signal: 'breakout',
       close: 17.2,
@@ -54,8 +56,35 @@ const mockDailyReview = {
           what_would_make_valid: [],
         },
       },
+      decision_summary: {
+        symbol: 'VALE',
+        action: 'BUY_NOW',
+        conviction: 'high',
+        technical_label: 'strong',
+        fundamentals_label: 'strong',
+        valuation_label: 'fair',
+        catalyst_label: 'active',
+        why_now: 'Ready now.',
+        what_to_do: 'Act.',
+        main_risk: 'Execution.',
+        trade_plan: {
+          entry: 17.38,
+          stop: 16.36,
+          target: 19.42,
+          rr: 2.0,
+        },
+        valuation_context: {
+          method: 'earnings_multiple',
+        },
+        drivers: {
+          positives: ['Ready.'],
+          negatives: [],
+          warnings: [],
+        },
+      },
     },
   ],
+  positions_add_on_candidates: [],
   positions_hold: [
     {
       position_id: 'POS-1',
@@ -86,6 +115,7 @@ const mockDailyReview = {
     update_stop: 1,
     close_positions: 0,
     new_candidates: 1,
+    add_on_candidates: 0,
     review_date: '2026-02-12',
   },
 }
@@ -103,10 +133,13 @@ describe('DailyReview Page', () => {
     await waitFor(() => {
       expect(screen.getByText('Daily Review Glossary')).toBeInTheDocument()
       expect(screen.getByText('Stop Management Glossary')).toBeInTheDocument()
+      expect(screen.getByText('Priority')).toBeInTheDocument()
       expect(screen.getByText('Confidence')).toBeInTheDocument()
       expect(screen.getByText('R:R')).toBeInTheDocument()
       expect(screen.getAllByText('R Now').length).toBeGreaterThan(0)
       expect(screen.getByText('91.6')).toBeInTheDocument()
+      expect(screen.getByText('Raw #3')).toBeInTheDocument()
+      expect(screen.getByText('Buy Now · High')).toBeInTheDocument()
     })
   })
 
@@ -270,6 +303,92 @@ describe('DailyReview Page', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Watch VALE/i })).toBeInTheDocument()
+    })
+  })
+
+  it('filters candidate sections by decision action and can reveal watch ideas when recommended-only is disabled', async () => {
+    server.use(
+      http.get('*/api/daily-review', () => HttpResponse.json({
+        ...mockDailyReview,
+        new_candidates: [
+          ...mockDailyReview.new_candidates,
+          {
+            ticker: 'PULL',
+            rank: 1,
+            priority_rank: 2,
+            confidence: 88.2,
+            signal: 'pullback',
+            close: 40.5,
+            entry: 40.2,
+            stop: 38.9,
+            shares: 5,
+            r_reward: 2.1,
+            name: 'Pullback Co',
+            sector: 'Industrials',
+            recommendation: {
+              ...mockDailyReview.new_candidates[0].recommendation,
+              verdict: 'RECOMMENDED',
+            },
+            decision_summary: {
+              ...mockDailyReview.new_candidates[0].decision_summary,
+              symbol: 'PULL',
+              action: 'BUY_ON_PULLBACK',
+              conviction: 'medium',
+            },
+          },
+          {
+            ticker: 'WATCHX',
+            rank: 2,
+            priority_rank: 3,
+            confidence: 70,
+            signal: 'watch',
+            close: 22,
+            entry: 22.4,
+            stop: 21,
+            shares: 4,
+            r_reward: 1.2,
+            name: 'Watch Inc',
+            sector: 'Utilities',
+            recommendation: {
+              ...mockDailyReview.new_candidates[0].recommendation,
+              verdict: 'NOT_RECOMMENDED',
+              reasons_short: ['Not ready yet.'],
+            },
+            decision_summary: {
+              ...mockDailyReview.new_candidates[0].decision_summary,
+              symbol: 'WATCHX',
+              action: 'WATCH',
+              conviction: 'medium',
+            },
+          },
+        ],
+        summary: {
+          ...mockDailyReview.summary,
+          new_candidates: 3,
+        },
+      }))
+    )
+
+    const { user } = renderWithProviders(<DailyReview />)
+
+    await waitFor(() => {
+      expect(screen.getByText('VALE')).toBeInTheDocument()
+      expect(screen.queryByText('WATCHX')).not.toBeInTheDocument()
+    })
+
+    await act(async () => {
+      await user.click(screen.getByRole('checkbox', { name: /show recommended only/i }))
+    })
+
+    await act(async () => {
+      await user.selectOptions(screen.getByLabelText(/decision action/i), 'WATCH')
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('WATCHX')).toBeInTheDocument()
+      expect(screen.queryByText('VALE')).not.toBeInTheDocument()
+      expect(screen.queryByText('PULL')).not.toBeInTheDocument()
+      expect(screen.getByText(/showing 1 of 3 candidates for the current filters/i)).toBeInTheDocument()
     })
   })
 })
