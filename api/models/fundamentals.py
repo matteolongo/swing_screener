@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field, field_validator
 
 class FundamentalsConfigModel(BaseModel):
     enabled: bool = True
-    providers: list[str] = Field(default_factory=lambda: ["yfinance"])
+    providers: list[str] = Field(default_factory=lambda: ["sec_edgar", "yfinance"])
     cache_ttl_hours: int = Field(default=24, ge=1, le=168)
     stale_after_days: int = Field(default=120, ge=30, le=730)
     compare_limit: int = Field(default=5, ge=2, le=10)
@@ -22,11 +22,11 @@ class FundamentalsConfigModel(BaseModel):
             provider = str(value).strip().lower()
             if not provider or provider in seen:
                 continue
-            if provider != "yfinance":
+            if provider not in {"sec_edgar", "yfinance"}:
                 continue
             seen.add(provider)
             normalized.append(provider)
-        return normalized or ["yfinance"]
+        return normalized or ["sec_edgar", "yfinance"]
 
 
 class FundamentalPillarScoreResponse(BaseModel):

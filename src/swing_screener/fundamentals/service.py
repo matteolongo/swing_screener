@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from swing_screener.fundamentals.config import FundamentalsConfig
 from swing_screener.fundamentals.models import TRUST_METADATA_MISSING_FLAG, FundamentalSnapshot
-from swing_screener.fundamentals.providers import YfinanceFundamentalsProvider
+from swing_screener.fundamentals.providers import (
+    SecEdgarFundamentalsProvider,
+    YfinanceFundamentalsProvider,
+)
 from swing_screener.fundamentals.scoring import build_provider_error_snapshot, build_snapshot
 from swing_screener.fundamentals.storage import FundamentalsStorage
 
@@ -19,15 +22,22 @@ class FundamentalsAnalysisService:
         self,
         *,
         storage: FundamentalsStorage | None = None,
+        sec_edgar_provider: SecEdgarFundamentalsProvider | None = None,
         yfinance_provider: YfinanceFundamentalsProvider | None = None,
     ) -> None:
         self._storage = storage or FundamentalsStorage()
+        self._sec_edgar_provider = sec_edgar_provider or SecEdgarFundamentalsProvider()
         self._yfinance_provider = yfinance_provider or YfinanceFundamentalsProvider()
 
-    def _provider_for(self, cfg: FundamentalsConfig) -> YfinanceFundamentalsProvider:
-        if "yfinance" not in cfg.providers:
+    def _providers_for(self, cfg: FundamentalsConfig):
+        provider_map = {
+            "sec_edgar": self._sec_edgar_provider,
+            "yfinance": self._yfinance_provider,
+        }
+        providers = [provider_map[name] for name in cfg.providers if name in provider_map]
+        if not providers:
             raise ValueError("No supported fundamentals provider configured.")
-        return self._yfinance_provider
+        return providers
 
     def _should_reuse_cached_snapshot(
         self,
@@ -56,14 +66,27 @@ class FundamentalsAnalysisService:
         if self._should_reuse_cached_snapshot(cached, cfg=cfg, force_refresh=force_refresh):
             return cached
 
-        provider = self._provider_for(cfg)
-        try:
-            record = provider.fetch_record(normalized_symbol)
-            snapshot = build_snapshot(record, cfg)
-        except Exception as exc:
+        providers = self._providers_for(cfg)
+        snapshot = None
+        last_error: Exception | None = None
+        last_provider_name = "unknown"
+        for provider in providers:
+            last_provider_name = provider.name
+            try:
+                record = provider.fetch_record(normalized_symbol)
+                snapshot = build_snapshot(record, cfg)
+                break
+            except Exception as exc:
+                last_error = exc
+                continue
+        if snapshot is None:
             if cached is not None:
                 return cached
-            snapshot = build_provider_error_snapshot(normalized_symbol, provider.name, str(exc))
+            snapshot = build_provider_error_snapshot(
+                normalized_symbol,
+                last_provider_name,
+                str(last_error or "No fundamentals providers succeeded."),
+            )
 
         self._storage.save_snapshot(snapshot)
         return snapshot

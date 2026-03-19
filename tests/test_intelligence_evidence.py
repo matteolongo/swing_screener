@@ -291,6 +291,71 @@ def test_resolve_instrument_profiles_prefers_override_over_master(tmp_path, monk
     assert profiles["AIR.PA"].resolution_confidence == 1.0
 
 
+def test_resolve_instrument_profiles_uses_openfigi_for_missing_suffix_symbol(tmp_path, monkeypatch):
+    master_path = tmp_path / "instrument_master.json"
+    override_path = tmp_path / "instrument_profiles_overrides.json"
+    cache_path = tmp_path / "openfigi_cache.json"
+    master_path.write_text("[]", encoding="utf-8")
+    override_path.write_text("{}", encoding="utf-8")
+
+    class _Client:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return None
+
+        def post(self, url, json):
+            assert url.endswith("/v3/mapping")
+            assert json == [
+                {
+                    "idType": "TICKER",
+                    "idValue": "ADS",
+                    "marketSecDes": "Equity",
+                    "micCode": "XETR",
+                    "currency": "EUR",
+                }
+            ]
+            return httpx.Response(
+                200,
+                json=[
+                    {
+                        "data": [
+                            {
+                                "ticker": "ADS",
+                                "name": "adidas AG",
+                                "figi": "BBG000TEST01",
+                                "compositeFIGI": "BBG000TEST02",
+                                "shareClassFIGI": "BBG000TEST03",
+                                "securityType": "Common Stock",
+                                "marketSector": "Equity",
+                            }
+                        ]
+                    }
+                ],
+                request=httpx.Request("POST", url),
+            )
+
+    monkeypatch.setenv("SWING_SCREENER_OPENFIGI_ENABLED", "true")
+    monkeypatch.setattr("swing_screener.intelligence.evidence.httpx.Client", _Client)
+    monkeypatch.setattr("swing_screener.intelligence.evidence._INSTRUMENT_MASTER_PATH", master_path)
+    monkeypatch.setattr("swing_screener.intelligence.evidence._INSTRUMENT_OVERRIDE_PATH", override_path)
+    monkeypatch.setattr("swing_screener.intelligence.evidence._OPENFIGI_CACHE_PATH", cache_path)
+
+    profiles = resolve_instrument_profiles(["ADS.DE"])
+
+    assert profiles["ADS.DE"].resolution_source == "openfigi"
+    assert profiles["ADS.DE"].exchange_mic == "XETR"
+    assert profiles["ADS.DE"].country_code == "DE"
+    assert profiles["ADS.DE"].currency == "EUR"
+    assert profiles["ADS.DE"].provider_symbol_map["stooq"] == "ads.de"
+    assert profiles["ADS.DE"].name == "adidas AG"
+    assert profiles["ADS.DE"].figi == "BBG000TEST01"
+
+
 def test_normalize_evidence_records_fuzzy_dedupe_and_dynamic_quality():
     records = [
         EvidenceRecord(

@@ -3,13 +3,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-SUPPORTED_FUNDAMENTAL_PROVIDERS = {"yfinance"}
+SUPPORTED_FUNDAMENTAL_PROVIDERS = {"sec_edgar", "yfinance"}
 
 
 @dataclass(frozen=True)
 class FundamentalsConfig:
     enabled: bool = True
-    providers: tuple[str, ...] = ("yfinance",)
+    providers: tuple[str, ...] = ("sec_edgar", "yfinance")
     cache_ttl_hours: int = 24
     stale_after_days: int = 120
     compare_limit: int = 5
@@ -42,7 +42,7 @@ def _clean_provider_list(raw: Any) -> tuple[str, ...]:
             continue
         if provider not in cleaned:
             cleaned.append(provider)
-    return tuple(cleaned) if cleaned else ("yfinance",)
+    return tuple(cleaned) if cleaned else ("sec_edgar", "yfinance")
 
 
 def build_fundamentals_config(raw_payload: dict[str, Any] | None = None) -> FundamentalsConfig:

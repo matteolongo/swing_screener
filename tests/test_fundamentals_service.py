@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 
 from swing_screener.fundamentals.config import FundamentalsConfig
@@ -357,6 +359,25 @@ def _cfg() -> FundamentalsConfig:
     return FundamentalsConfig(providers=("yfinance",), cache_ttl_hours=24, stale_after_days=120, compare_limit=5)
 
 
+class _FakeSecProvider:
+    name = "sec_edgar"
+
+    def fetch_record(self, symbol: str) -> ProviderFundamentalsRecord:
+        base = _FakeQuarterlyProvider().fetch_record(symbol)
+        return replace(
+            base,
+            provider=self.name,
+            metric_sources={"earnings_growth_yoy": "sec_edgar.us-gaap.NetIncomeLoss"},
+        )
+
+
+class _BrokenSecProvider:
+    name = "sec_edgar"
+
+    def fetch_record(self, symbol: str) -> ProviderFundamentalsRecord:
+        raise ValueError(f"SEC companyfacts unavailable for {symbol}")
+
+
 def test_fundamentals_service_builds_supported_quarterly_snapshot_with_high_trust(tmp_path):
     service = FundamentalsAnalysisService(
         storage=FundamentalsStorage(tmp_path / "fundamentals"),
@@ -506,3 +527,41 @@ def test_fundamentals_service_refreshes_legacy_snapshot_within_ttl(tmp_path):
     assert snapshot.historical_series["revenue"].frequency == "quarterly"
     assert snapshot.data_quality_status == "high"
     assert snapshot.data_quality_flags == []
+
+
+def test_fundamentals_service_uses_sec_provider_first_when_configured(tmp_path):
+    service = FundamentalsAnalysisService(
+        storage=FundamentalsStorage(tmp_path / "fundamentals"),
+        sec_edgar_provider=_FakeSecProvider(),
+        yfinance_provider=_FakeQuarterlyProvider(),
+    )
+
+    cfg = FundamentalsConfig(
+        providers=("sec_edgar", "yfinance"),
+        cache_ttl_hours=24,
+        stale_after_days=120,
+        compare_limit=5,
+    )
+    snapshot = service.get_snapshot("AAPL", cfg=cfg, force_refresh=True)
+
+    assert snapshot.provider == "sec_edgar"
+    assert snapshot.symbol == "AAPL"
+
+
+def test_fundamentals_service_falls_back_to_yfinance_when_sec_provider_fails(tmp_path):
+    service = FundamentalsAnalysisService(
+        storage=FundamentalsStorage(tmp_path / "fundamentals"),
+        sec_edgar_provider=_BrokenSecProvider(),
+        yfinance_provider=_FakeQuarterlyProvider(),
+    )
+
+    cfg = FundamentalsConfig(
+        providers=("sec_edgar", "yfinance"),
+        cache_ttl_hours=24,
+        stale_after_days=120,
+        compare_limit=5,
+    )
+    snapshot = service.get_snapshot("AAPL", cfg=cfg, force_refresh=True)
+
+    assert snapshot.provider == "yfinance"
+    assert snapshot.symbol == "AAPL"

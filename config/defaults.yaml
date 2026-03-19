@@ -141,6 +141,8 @@ strategy:
         - earnings_calendar
         - sec_edgar
         - company_ir_rss
+        - exchange_announcements
+        - financial_news_rss
       scraping_enabled: false
       allowed_domains: []
       rate_limits:
@@ -232,6 +234,8 @@ intelligence:
       - earnings_calendar
       - sec_edgar
       - company_ir_rss
+      - exchange_announcements
+      - financial_news_rss
     scraping_enabled: false
     allowed_domains: []
     rate_limits:
@@ -349,6 +353,9 @@ low_level:
       retry_chunk_size: 10
       auto_adjust: true
       progress: false
+      stooq_fallback_enabled: true
+    stooq:
+      timeout_seconds: 10.0
     alpaca:
       rate_limit_requests: 200
       rate_limit_window_seconds: 60

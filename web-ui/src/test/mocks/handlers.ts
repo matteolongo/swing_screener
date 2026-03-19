@@ -515,7 +515,14 @@ const mockIntelligenceConfig = {
     min_opportunity_score: 0.6,
   },
   sources: {
-    enabled: ['yahoo_finance', 'earnings_calendar', 'sec_edgar', 'company_ir_rss'],
+    enabled: [
+      'yahoo_finance',
+      'earnings_calendar',
+      'sec_edgar',
+      'company_ir_rss',
+      'exchange_announcements',
+      'financial_news_rss',
+    ],
     scraping_enabled: false,
     allowed_domains: [],
     rate_limits: {

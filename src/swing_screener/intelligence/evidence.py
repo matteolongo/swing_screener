@@ -7,6 +7,7 @@ import hashlib
 import json
 import logging
 import math
+import os
 from pathlib import Path
 import re
 import threading
@@ -38,6 +39,8 @@ _ROBOTS_CACHE_PATH = Path("data/intelligence/robots_cache.json")
 _ISSUER_REGISTRY_PATH = Path("data/intelligence/issuer_registry.json")
 _SOURCE_CATALOG_PATH = Path("data/intelligence/source_catalog.json")
 _DISCOVERED_FEEDS_CACHE_PATH = Path("data/intelligence/discovered_feeds_cache.json")
+_OPENFIGI_CACHE_PATH = Path("data/intelligence/openfigi_cache.json")
+_OPENFIGI_MAPPING_URL = "https://api.openfigi.com/v3/mapping"
 
 
 @dataclass(frozen=True)
@@ -281,6 +284,21 @@ _SYMBOL_SUFFIX_MAP: dict[str, tuple[str, str, str, str]] = {
     ".BR": ("XBRU", "BE", "EUR", "Europe/Brussels"),
 }
 _MIC_TO_SUFFIX: dict[str, str] = {payload[0]: suffix for suffix, payload in _SYMBOL_SUFFIX_MAP.items()}
+_MIC_METADATA_MAP: dict[str, tuple[str, str, str]] = {
+    payload[0]: (payload[1], payload[2], payload[3]) for payload in _SYMBOL_SUFFIX_MAP.values()
+}
+_STOOQ_MARKET_SUFFIX_MAP: dict[str, str] = {
+    ".PA": "fr",
+    ".AS": "nl",
+    ".MI": "it",
+    ".DE": "de",
+    ".L": "uk",
+    ".SW": "ch",
+    ".ST": "se",
+    ".MC": "es",
+    ".HE": "fi",
+    ".BR": "be",
+}
 
 
 def _normalize_symbol_input(raw_symbol: str) -> str:
@@ -311,6 +329,159 @@ def _domain_root_url(domain_or_url: str) -> str:
     if text.startswith("http://") or text.startswith("https://"):
         return text.rstrip("/")
     return f"https://{text.strip('/').lower()}"
+
+
+def _default_provider_symbol_map(symbol: str, payload: dict[str, Any]) -> dict[str, str]:
+    base_alias = str(symbol).split(".", 1)[0]
+    provider_map_raw = get_nested_dict(payload, "provider_symbol_map")
+    if not isinstance(provider_map_raw, dict):
+        provider_map_raw = {}
+    stooq_symbol = ""
+    for suffix, market in _STOOQ_MARKET_SUFFIX_MAP.items():
+        if str(symbol).endswith(suffix):
+            stooq_symbol = f"{base_alias.lower()}.{market}"
+            break
+    if not stooq_symbol:
+        stooq_symbol = f"{base_alias.lower()}.us"
+    return {
+        "yahoo_finance": str(provider_map_raw.get("yahoo_finance", symbol)).strip() or symbol,
+        "stooq": str(provider_map_raw.get("stooq", stooq_symbol)).strip() or stooq_symbol,
+        "sec_edgar": str(provider_map_raw.get("sec_edgar", base_alias)).strip() or base_alias,
+    }
+
+
+def _openfigi_enabled() -> bool:
+    enabled = str(os.getenv("SWING_SCREENER_OPENFIGI_ENABLED", "")).strip().lower()
+    if enabled in {"1", "true", "yes", "on"}:
+        return True
+    return bool(str(os.getenv("OPENFIGI_API_KEY", "")).strip())
+
+
+def _build_openfigi_mapping_job(symbol: str) -> dict[str, str] | None:
+    normalized = _normalize_symbol_input(symbol)
+    if not normalized or "." not in normalized:
+        return None
+    suffix = f".{normalized.rsplit('.', 1)[1]}"
+    mapping = _SYMBOL_SUFFIX_MAP.get(suffix)
+    if mapping is None:
+        return None
+    mic_code, _country, currency, _timezone = mapping
+    base_alias = normalized.split(".", 1)[0]
+    if not base_alias:
+        return None
+    return {
+        "idType": "TICKER",
+        "idValue": base_alias,
+        "marketSecDes": "Equity",
+        "micCode": mic_code,
+        "currency": currency,
+    }
+
+
+def _candidate_field(candidate: dict[str, Any], *keys: str) -> str | None:
+    for key in keys:
+        value = candidate.get(key)
+        if value is None:
+            continue
+        text = str(value).strip()
+        if text:
+            return text
+    return None
+
+
+def _select_openfigi_candidate(
+    *,
+    candidates: list[dict[str, Any]],
+    base_alias: str,
+) -> dict[str, Any] | None:
+    scored: list[tuple[int, dict[str, Any]]] = []
+    for candidate in candidates:
+        ticker = str(_candidate_field(candidate, "ticker") or "").strip().upper()
+        market_sector = str(_candidate_field(candidate, "marketSector", "market_sector") or "").strip().lower()
+        security_type = (
+            str(_candidate_field(candidate, "securityType2", "securityType", "security_type_2", "security_type") or "")
+            .strip()
+            .lower()
+        )
+        score = 0
+        if ticker == base_alias:
+            score += 5
+        if market_sector == "equity":
+            score += 2
+        if "common" in security_type or "ordinary" in security_type or "stock" in security_type:
+            score += 1
+        scored.append((score, candidate))
+    if not scored:
+        return None
+    scored.sort(key=lambda item: item[0], reverse=True)
+    best_score, best_candidate = scored[0]
+    if best_score <= 0:
+        return None
+    if len(scored) > 1 and scored[0][0] == scored[1][0]:
+        return None
+    return best_candidate
+
+
+def _resolve_openfigi_profile(symbol: str) -> dict[str, Any] | None:
+    normalized = _normalize_symbol_input(symbol)
+    if not normalized or not _openfigi_enabled():
+        return None
+
+    cache_payload = _safe_read_json(_OPENFIGI_CACHE_PATH)
+    cache = cache_payload if isinstance(cache_payload, dict) else {}
+    cached = cache.get(normalized)
+    if isinstance(cached, dict):
+        return cached
+
+    job = _build_openfigi_mapping_job(normalized)
+    if job is None:
+        return None
+
+    headers = {"Content-Type": "application/json"}
+    api_key = str(os.getenv("OPENFIGI_API_KEY", "")).strip()
+    if api_key:
+        headers["X-OPENFIGI-APIKEY"] = api_key
+
+    try:
+        with httpx.Client(timeout=10.0, headers=headers) as client:
+            response = client.post(_OPENFIGI_MAPPING_URL, json=[job])
+            response.raise_for_status()
+            payload = response.json()
+    except Exception as exc:
+        logger.warning("OpenFIGI enrichment failed for %s: %s", normalized, exc)
+        return None
+
+    results = payload if isinstance(payload, list) else []
+    first = results[0] if results and isinstance(results[0], dict) else {}
+    raw_candidates = first.get("data") if isinstance(first.get("data"), list) else []
+    candidates = [item for item in raw_candidates if isinstance(item, dict)]
+    base_alias = normalized.split(".", 1)[0]
+    selected = _select_openfigi_candidate(candidates=candidates, base_alias=base_alias)
+    if selected is None:
+        return None
+
+    mic_code = str(job.get("micCode", "")).strip().upper()
+    country_code, currency, timezone = _MIC_METADATA_MAP.get(
+        mic_code,
+        ("US", str(job.get("currency", "USD")).strip().upper() or "USD", "America/New_York"),
+    )
+    profile_payload = {
+        "symbol": normalized,
+        "exchange_mic": mic_code or "XNAS",
+        "country_code": country_code,
+        "currency": currency,
+        "timezone": timezone,
+        "provider_symbol_map": _default_provider_symbol_map(normalized, {}),
+        "name": _candidate_field(selected, "name"),
+        "figi": _candidate_field(selected, "figi"),
+        "composite_figi": _candidate_field(selected, "compositeFIGI", "composite_figi"),
+        "share_class_figi": _candidate_field(selected, "shareClassFIGI", "share_class_figi"),
+        "security_type": _candidate_field(selected, "securityType2", "securityType", "security_type_2", "security_type"),
+        "market_sector": _candidate_field(selected, "marketSector", "market_sector"),
+    }
+    cache[normalized] = profile_payload
+    _safe_write_json(_OPENFIGI_CACHE_PATH, cache)
+    return profile_payload
 
 
 def _extract_feed_links_from_html(html_text: str, page_url: str) -> list[str]:
@@ -731,8 +902,9 @@ def resolve_instrument_profiles(symbols: list[str] | tuple[str, ...]) -> dict[st
 
         override = overrides.get(normalized_symbol, {})
         master = master_by_symbol.get(normalized_symbol, {})
+        openfigi = _resolve_openfigi_profile(normalized_symbol) if not override and not master else None
 
-        source: Literal["override", "master", "heuristic"] = "heuristic"
+        source: Literal["override", "master", "openfigi", "heuristic"] = "heuristic"
         confidence = 0.5
         reason_code = "no_master_match"
         payload: dict[str, Any] = {}
@@ -746,6 +918,11 @@ def resolve_instrument_profiles(symbols: list[str] | tuple[str, ...]) -> dict[st
             confidence = 0.9
             reason_code = None
             payload = master
+        elif openfigi:
+            source = "openfigi"
+            confidence = 0.8
+            reason_code = None
+            payload = openfigi
 
         symbol = _normalize_symbol_input(str(payload.get("symbol", normalized_symbol)))
         exchange = "XNAS"
@@ -767,15 +944,10 @@ def resolve_instrument_profiles(symbols: list[str] | tuple[str, ...]) -> dict[st
                 aliases.append(alias)
         if input_symbol not in aliases:
             aliases.append(input_symbol)
+        if normalized_symbol not in aliases:
+            aliases.append(normalized_symbol)
 
-        provider_map_raw = get_nested_dict(payload, "provider_symbol_map")
-        if not isinstance(provider_map_raw, dict):
-            provider_map_raw = {}
-        provider_symbol_map = {
-            "yahoo_finance": str(provider_map_raw.get("yahoo_finance", symbol)).strip() or symbol,
-            "stooq": str(provider_map_raw.get("stooq", base_alias.lower())).strip() or base_alias.lower(),
-            "sec_edgar": str(provider_map_raw.get("sec_edgar", base_alias)).strip() or base_alias,
-        }
+        provider_symbol_map = _default_provider_symbol_map(symbol, payload)
 
         profile = InstrumentProfile(
             symbol=symbol,
@@ -788,6 +960,28 @@ def resolve_instrument_profiles(symbols: list[str] | tuple[str, ...]) -> dict[st
             resolution_source=source,
             resolution_confidence=round(_clamp01(confidence), 6),
             resolution_reason_code=reason_code,
+            name=(str(payload.get("name")).strip() if payload.get("name") else None),
+            figi=(str(payload.get("figi")).strip() if payload.get("figi") else None),
+            composite_figi=(
+                str(payload.get("composite_figi")).strip()
+                if payload.get("composite_figi")
+                else None
+            ),
+            share_class_figi=(
+                str(payload.get("share_class_figi")).strip()
+                if payload.get("share_class_figi")
+                else None
+            ),
+            security_type=(
+                str(payload.get("security_type")).strip()
+                if payload.get("security_type")
+                else None
+            ),
+            market_sector=(
+                str(payload.get("market_sector")).strip()
+                if payload.get("market_sector")
+                else None
+            ),
         )
 
         out[input_symbol] = profile
