@@ -50,6 +50,16 @@ _FAIR_VALUE_METHOD_LABELS: dict[FairValueMethod, str] = {
     "book_multiple": "book multiple",
     "not_available": "not available",
 }
+_GROWTH_SOFTWARE_SECTORS = {"technology", "communication services"}
+_MATURE_CASHFLOW_SECTORS = {
+    "basic materials",
+    "consumer defensive",
+    "consumer staples",
+    "energy",
+    "industrials",
+    "real estate",
+    "utilities",
+}
 
 
 def _get_value(source: Any, key: str, default: Any = None) -> Any:
@@ -147,11 +157,83 @@ def _average(values: list[float | None]) -> float | None:
     return sum(available) / len(available)
 
 
+def _score_lower(value: float | None, *, strong: float, weak: float) -> float | None:
+    if value is None:
+        return None
+    if value <= strong:
+        return 1.0
+    if value >= weak:
+        return 0.0
+    return (weak - value) / (weak - strong)
+
+
 def _pillar_score(snapshot: FundamentalSnapshot | None, key: str) -> float | None:
     pillar = _pillar(snapshot, key)
     if pillar is None:
         return None
     return pillar.score if pillar.score is not None else _score_from_status(pillar.status)
+
+
+def _sector_text(candidate: Any, snapshot: FundamentalSnapshot | None) -> str:
+    sector = str(_get_value(snapshot, "sector", "") or _get_value(candidate, "sector", "")).strip().lower()
+    return sector
+
+
+def _valuation_profile(candidate: Any, snapshot: FundamentalSnapshot | None) -> str:
+    sector = _sector_text(candidate, snapshot)
+    growth_score = _pillar_score(snapshot, "growth")
+    cash_flow_score = _pillar_score(snapshot, "cash_flow")
+
+    if any(keyword in sector for keyword in ("financial", "bank", "insurance", "capital markets", "asset management")):
+        return "financials"
+    if sector in _GROWTH_SOFTWARE_SECTORS and (growth_score is None or growth_score >= 0.55):
+        return "growth_software"
+    if sector in _MATURE_CASHFLOW_SECTORS and (cash_flow_score is None or cash_flow_score >= 0.4):
+        return "mature_cashflow"
+    return "default"
+
+
+def _valuation_profile_note(profile: str) -> str | None:
+    if profile == "financials":
+        return "For financials, book-based valuation carries more weight than sales multiples."
+    if profile == "growth_software":
+        return "For software and other high-growth names, sales multiples carry more weight than book value."
+    if profile == "mature_cashflow":
+        return "For mature cash-generative sectors, earnings and cash generation carry more weight than sales multiples."
+    return None
+
+
+def _sector_weighted_valuation_score(candidate: Any, snapshot: FundamentalSnapshot | None) -> float | None:
+    if snapshot is None:
+        return None
+
+    profile = _valuation_profile(candidate, snapshot)
+    trailing_pe = _safe_float(_get_value(snapshot, "trailing_pe"))
+    price_to_sales = _safe_float(_get_value(snapshot, "price_to_sales"))
+    price_to_book = _safe_float(_get_value(snapshot, "price_to_book"))
+    growth_score = _pillar_score(snapshot, "growth") or 0.55
+    cash_flow_score = _pillar_score(snapshot, "cash_flow") or 0.55
+
+    if profile == "financials":
+        book_score = _score_lower(price_to_book, strong=0.9, weak=2.6)
+        pe_score = _score_lower(trailing_pe, strong=7.0, weak=17.0)
+        return _average([book_score, book_score, pe_score])
+
+    if profile == "growth_software":
+        sales_strong = 3.0 + (growth_score * 2.0)
+        sales_weak = 7.0 + (growth_score * 5.0)
+        sales_score = _score_lower(price_to_sales, strong=sales_strong, weak=sales_weak)
+        pe_score = _score_lower(trailing_pe, strong=18.0, weak=45.0)
+        return _average([sales_score, sales_score, pe_score])
+
+    if profile == "mature_cashflow":
+        pe_strong = 10.0 + (cash_flow_score * 4.0)
+        pe_weak = 20.0 + (cash_flow_score * 8.0)
+        pe_score = _score_lower(trailing_pe, strong=pe_strong, weak=pe_weak)
+        sales_score = _score_lower(price_to_sales, strong=1.5, weak=5.5)
+        return _average([pe_score, pe_score, sales_score])
+
+    return None
 
 
 def _fair_value_range_from_earnings(
@@ -248,41 +330,56 @@ def _fair_value_estimate(
     growth_score = _pillar_score(snapshot, "growth")
     profitability_score = _pillar_score(snapshot, "profitability")
     balance_score = _pillar_score(snapshot, "balance_sheet")
+    cash_flow_score = _pillar_score(snapshot, "cash_flow")
     if quality_score is None:
         return "not_available", None, None, None, None
 
+    profile = _valuation_profile(candidate, snapshot)
     quality = quality_score
     growth = growth_score if growth_score is not None else quality_score
     profitability = profitability_score if profitability_score is not None else quality_score
     balance = balance_score if balance_score is not None else quality_score
+    if profile == "mature_cashflow" and cash_flow_score is not None:
+        growth = max(growth, cash_flow_score)
 
     low = base = high = None
     method: FairValueMethod = "not_available"
-    if trailing_pe is not None and 0 < trailing_pe <= 80:
-        estimate = _fair_value_range_from_earnings(
-            current_price=current_price,
-            trailing_pe=trailing_pe,
-            quality_score=quality,
-            growth_score=growth,
-        )
-        if estimate is not None:
-            low, base, high = estimate
-            method = "earnings_multiple"
-    elif price_to_sales is not None and 0 < price_to_sales <= 20:
-        estimate = _fair_value_range_from_sales(
-            current_price=current_price,
-            price_to_sales=price_to_sales,
-            quality_score=quality,
-            growth_score=growth,
-        )
-        if estimate is not None:
-            low, base, high = estimate
-            method = "sales_multiple"
-    else:
-        effective_book_value_per_share = book_value_per_share
-        if effective_book_value_per_share is None and price_to_book is not None and 0 < price_to_book <= 10:
-            effective_book_value_per_share = current_price / price_to_book
-        if effective_book_value_per_share is not None and effective_book_value_per_share > 0:
+    method_priority = {
+        "financials": ("book", "earnings", "sales"),
+        "growth_software": ("sales", "earnings", "book"),
+        "mature_cashflow": ("earnings", "sales", "book"),
+        "default": ("earnings", "sales", "book"),
+    }[profile]
+    effective_book_value_per_share = book_value_per_share
+    if effective_book_value_per_share is None and price_to_book is not None and 0 < price_to_book <= 10:
+        effective_book_value_per_share = current_price / price_to_book
+
+    for method_name in method_priority:
+        if method_name == "earnings" and trailing_pe is not None and 0 < trailing_pe <= 80:
+            estimate = _fair_value_range_from_earnings(
+                current_price=current_price,
+                trailing_pe=trailing_pe,
+                quality_score=quality,
+                growth_score=growth,
+            )
+            if estimate is not None:
+                low, base, high = estimate
+                method = "earnings_multiple"
+                break
+
+        if method_name == "sales" and price_to_sales is not None and 0 < price_to_sales <= 20:
+            estimate = _fair_value_range_from_sales(
+                current_price=current_price,
+                price_to_sales=price_to_sales,
+                quality_score=quality,
+                growth_score=growth,
+            )
+            if estimate is not None:
+                low, base, high = estimate
+                method = "sales_multiple"
+                break
+
+        if method_name == "book" and effective_book_value_per_share is not None and effective_book_value_per_share > 0:
             estimate = _fair_value_range_from_book(
                 book_value_per_share=effective_book_value_per_share,
                 quality_score=quality,
@@ -292,6 +389,7 @@ def _fair_value_estimate(
             if estimate is not None:
                 low, base, high = estimate
                 method = "book_multiple"
+                break
 
     if base is None or base <= 0:
         return "not_available", None, None, None, None
@@ -354,7 +452,15 @@ def _fundamentals_label(snapshot: FundamentalSnapshot | None) -> SignalLabel:
     return "weak"
 
 
-def _valuation_label(snapshot: FundamentalSnapshot | None) -> ValuationLabel:
+def _valuation_label(candidate: Any, snapshot: FundamentalSnapshot | None) -> ValuationLabel:
+    sector_weighted_score = _sector_weighted_valuation_score(candidate, snapshot)
+    if sector_weighted_score is not None:
+        if sector_weighted_score >= 0.67:
+            return "cheap"
+        if sector_weighted_score >= 0.4:
+            return "fair"
+        return "expensive"
+
     status = str(_get_value(_pillar(snapshot, "valuation"), "status", "")).strip().lower()
     if status == "strong":
         return "cheap"
@@ -370,6 +476,7 @@ def _valuation_context(
     snapshot: FundamentalSnapshot | None,
     valuation_label: ValuationLabel,
 ) -> DecisionValuationContext:
+    profile = _valuation_profile(candidate, snapshot)
     trailing_pe = _safe_float(_get_value(snapshot, "trailing_pe"))
     price_to_sales = _safe_float(_get_value(snapshot, "price_to_sales"))
     book_value_per_share = _safe_float(_get_value(snapshot, "book_value_per_share"))
@@ -397,6 +504,9 @@ def _valuation_context(
         detail_parts.append(f"book-to-price is {_format_abs_percent(book_to_price * 100)}")
 
     summary = _VALUATION_LEAD[valuation_label]
+    profile_note = _valuation_profile_note(profile)
+    if profile_note:
+        summary = f"{summary} {profile_note}"
     if fair_value_base is not None and fair_value_low is not None and fair_value_high is not None:
         premium_text = _format_abs_percent(premium_discount_pct)
         comparison = "above" if (premium_discount_pct or 0) > 0 else "below" if (premium_discount_pct or 0) < 0 else "in line with"
@@ -612,7 +722,7 @@ def build_decision_summary(
 
     technical_label = _technical_label(candidate, opportunity)
     fundamentals_label = _fundamentals_label(fundamentals)
-    valuation_label = _valuation_label(fundamentals)
+    valuation_label = _valuation_label(candidate, fundamentals)
     valuation_context = _valuation_context(candidate, fundamentals, valuation_label)
     catalyst_label = _catalyst_label(opportunity)
     action = _action(

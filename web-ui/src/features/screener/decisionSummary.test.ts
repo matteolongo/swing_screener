@@ -119,4 +119,83 @@ describe('rebuildDecisionSummaryWithFundamentals', () => {
     expect(rebuilt.valuationContext.summary).toContain('using book multiple');
     expect(rebuilt.valuationContext.summary).toContain('book value per share is 20.00');
   });
+
+  it('prefers book-based valuation context for financials', () => {
+    const rebuilt = rebuildDecisionSummaryWithFundamentals(
+      {
+        ...buildCandidate(),
+        close: 50,
+        sector: 'Financial Services',
+      },
+      {
+        ...buildSnapshot(),
+        sector: 'Financial Services',
+        trailingPe: 12,
+        priceToSales: 3.8,
+        bookValuePerShare: 20,
+        priceToBook: 2.5,
+        bookToPrice: 0.4,
+      }
+    );
+
+    expect(rebuilt.valuationContext.method).toBe('book_multiple');
+    expect(rebuilt.valuationContext.summary).toContain(
+      'For financials, book-based valuation carries more weight'
+    );
+  });
+
+  it('deemphasizes book value for software and high-growth valuation labels', () => {
+    const rebuilt = rebuildDecisionSummaryWithFundamentals(
+      {
+        ...buildCandidate(),
+        close: 80,
+        sector: 'Technology',
+      },
+      {
+        ...buildSnapshot(),
+        sector: 'Technology',
+        trailingPe: undefined,
+        priceToSales: 7.5,
+        bookValuePerShare: 4,
+        priceToBook: 20,
+        bookToPrice: 0.05,
+        pillars: {
+          ...buildSnapshot().pillars,
+          valuation: { score: 0.2, status: 'weak', summary: 'Valuation profile.' },
+        },
+      }
+    );
+
+    expect(rebuilt.valuationLabel).toBe('fair');
+    expect(rebuilt.valuationContext.method).toBe('sales_multiple');
+    expect(rebuilt.valuationContext.summary).toContain(
+      'sales multiples carry more weight than book value'
+    );
+  });
+
+  it('leans on earnings and cash generation for mature cashflow sectors', () => {
+    const rebuilt = rebuildDecisionSummaryWithFundamentals(
+      {
+        ...buildCandidate(),
+        close: 90,
+        sector: 'Utilities',
+      },
+      {
+        ...buildSnapshot(),
+        sector: 'Utilities',
+        trailingPe: 18,
+        priceToSales: 5.5,
+        pillars: {
+          ...buildSnapshot().pillars,
+          valuation: { score: 0.2, status: 'weak', summary: 'Valuation profile.' },
+        },
+      }
+    );
+
+    expect(rebuilt.valuationLabel).toBe('fair');
+    expect(rebuilt.valuationContext.method).toBe('earnings_multiple');
+    expect(rebuilt.valuationContext.summary).toContain(
+      'earnings and cash generation carry more weight than sales multiples'
+    );
+  });
 });

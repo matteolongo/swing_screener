@@ -46,6 +46,16 @@ const FAIR_VALUE_METHOD_LABELS: Record<FairValueMethod, string> = {
   book_multiple: 'book multiple',
   not_available: 'not available',
 };
+const GROWTH_SOFTWARE_SECTORS = new Set(['technology', 'communication services']);
+const MATURE_CASHFLOW_SECTORS = new Set([
+  'basic materials',
+  'consumer defensive',
+  'consumer staples',
+  'energy',
+  'industrials',
+  'real estate',
+  'utilities',
+]);
 
 function average(values: Array<number | undefined>): number | undefined {
   const available = values.filter((value): value is number => value !== undefined);
@@ -53,6 +63,25 @@ function average(values: Array<number | undefined>): number | undefined {
     return undefined;
   }
   return available.reduce((sum, value) => sum + value, 0) / available.length;
+}
+
+function scoreLower(
+  value: number | undefined,
+  thresholds: {
+    strong: number;
+    weak: number;
+  }
+): number | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value <= thresholds.strong) {
+    return 1;
+  }
+  if (value >= thresholds.weak) {
+    return 0;
+  }
+  return (thresholds.weak - value) / (thresholds.weak - thresholds.strong);
 }
 
 function scoreFromStatus(status?: string): number | undefined {
@@ -68,6 +97,44 @@ function pillarScore(snapshot: FundamentalSnapshot, key: string): number | undef
     return undefined;
   }
   return pillar.score ?? scoreFromStatus(pillar.status);
+}
+
+function valuationSector(candidate: ScreenerCandidate, snapshot: FundamentalSnapshot): string {
+  return (snapshot.sector ?? candidate.sector ?? '').trim().toLowerCase();
+}
+
+function valuationProfile(candidate: ScreenerCandidate, snapshot: FundamentalSnapshot): string {
+  const sector = valuationSector(candidate, snapshot);
+  const growthScore = pillarScore(snapshot, 'growth');
+  const cashFlowScore = pillarScore(snapshot, 'cash_flow');
+
+  if (
+    ['financial', 'bank', 'insurance', 'capital markets', 'asset management'].some((keyword) =>
+      sector.includes(keyword)
+    )
+  ) {
+    return 'financials';
+  }
+  if (GROWTH_SOFTWARE_SECTORS.has(sector) && (growthScore === undefined || growthScore >= 0.55)) {
+    return 'growth_software';
+  }
+  if (MATURE_CASHFLOW_SECTORS.has(sector) && (cashFlowScore === undefined || cashFlowScore >= 0.4)) {
+    return 'mature_cashflow';
+  }
+  return 'default';
+}
+
+function valuationProfileNote(profile: string): string | undefined {
+  if (profile === 'financials') {
+    return 'For financials, book-based valuation carries more weight than sales multiples.';
+  }
+  if (profile === 'growth_software') {
+    return 'For software and other high-growth names, sales multiples carry more weight than book value.';
+  }
+  if (profile === 'mature_cashflow') {
+    return 'For mature cash-generative sectors, earnings and cash generation carry more weight than sales multiples.';
+  }
+  return undefined;
 }
 
 function clamp(value: number, lower: number, upper: number): number {
@@ -139,7 +206,56 @@ function deriveFundamentalsLabel(snapshot: FundamentalSnapshot): DecisionSignalL
   return 'weak';
 }
 
-function deriveValuationLabel(snapshot: FundamentalSnapshot): DecisionValuationLabel {
+function deriveValuationLabel(
+  candidate: ScreenerCandidate,
+  snapshot: FundamentalSnapshot
+): DecisionValuationLabel {
+  const profile = valuationProfile(candidate, snapshot);
+  const growthScore = pillarScore(snapshot, 'growth') ?? 0.55;
+  const cashFlowScore = pillarScore(snapshot, 'cash_flow') ?? 0.55;
+  const trailingPe = snapshot.trailingPe;
+  const priceToSales = snapshot.priceToSales;
+  const priceToBook = snapshot.priceToBook;
+
+  let sectorWeightedScore: number | undefined;
+  if (profile === 'financials') {
+    sectorWeightedScore = average([
+      scoreLower(priceToBook, { strong: 0.9, weak: 2.6 }),
+      scoreLower(priceToBook, { strong: 0.9, weak: 2.6 }),
+      scoreLower(trailingPe, { strong: 7, weak: 17 }),
+    ]);
+  } else if (profile === 'growth_software') {
+    sectorWeightedScore = average([
+      scoreLower(priceToSales, {
+        strong: 3 + growthScore * 2,
+        weak: 7 + growthScore * 5,
+      }),
+      scoreLower(priceToSales, {
+        strong: 3 + growthScore * 2,
+        weak: 7 + growthScore * 5,
+      }),
+      scoreLower(trailingPe, { strong: 18, weak: 45 }),
+    ]);
+  } else if (profile === 'mature_cashflow') {
+    sectorWeightedScore = average([
+      scoreLower(trailingPe, {
+        strong: 10 + cashFlowScore * 4,
+        weak: 20 + cashFlowScore * 8,
+      }),
+      scoreLower(trailingPe, {
+        strong: 10 + cashFlowScore * 4,
+        weak: 20 + cashFlowScore * 8,
+      }),
+      scoreLower(priceToSales, { strong: 1.5, weak: 5.5 }),
+    ]);
+  }
+
+  if (sectorWeightedScore !== undefined) {
+    if (sectorWeightedScore >= 0.67) return 'cheap';
+    if (sectorWeightedScore >= 0.4) return 'fair';
+    return 'expensive';
+  }
+
   const status = snapshot.pillars.valuation?.status;
   if (status === 'strong') return 'cheap';
   if (status === 'neutral') return 'fair';
@@ -174,6 +290,7 @@ function fairValueEstimate(
   const growthScore = pillarScore(snapshot, 'growth') ?? qualityScore;
   const profitabilityScore = pillarScore(snapshot, 'profitability') ?? qualityScore;
   const balanceScore = pillarScore(snapshot, 'balance_sheet') ?? qualityScore;
+  const cashFlowScore = pillarScore(snapshot, 'cash_flow');
   if (
     qualityScore === undefined ||
     growthScore === undefined ||
@@ -183,33 +300,18 @@ function fairValueEstimate(
     return { method: 'not_available' };
   }
 
-  if (trailingPe !== undefined && trailingPe > 0 && trailingPe <= 80) {
-    const eps = candidate.close / trailingPe;
-    if (eps > 0) {
-      const baseMultiple = clamp(12 + qualityScore * 12 + growthScore * 4, 10, 32);
-      const lowMultiple = clamp(baseMultiple - 3, 8, baseMultiple);
-      const highMultiple = clamp(baseMultiple + 3, baseMultiple, 36);
-      const fairValueLow = Number((eps * lowMultiple).toFixed(2));
-      const fairValueBase = Number((eps * baseMultiple).toFixed(2));
-      const fairValueHigh = Number((eps * highMultiple).toFixed(2));
-      const premiumDiscountPct = Number((((candidate.close - fairValueBase) / fairValueBase) * 100).toFixed(1));
-      return { method: 'earnings_multiple', fairValueLow, fairValueBase, fairValueHigh, premiumDiscountPct };
-    }
-  }
+  const profile = valuationProfile(candidate, snapshot);
+  const weightedGrowthScore =
+    profile === 'mature_cashflow' && cashFlowScore !== undefined
+      ? Math.max(growthScore, cashFlowScore)
+      : growthScore;
 
-  if (priceToSales !== undefined && priceToSales > 0 && priceToSales <= 20) {
-    const revenuePerShare = candidate.close / priceToSales;
-    if (revenuePerShare > 0) {
-      const baseMultiple = clamp(1.5 + qualityScore * 3 + growthScore * 1.5, 1, 8);
-      const lowMultiple = clamp(baseMultiple * 0.85, 0.8, baseMultiple);
-      const highMultiple = clamp(baseMultiple * 1.15, baseMultiple, 10);
-      const fairValueLow = Number((revenuePerShare * lowMultiple).toFixed(2));
-      const fairValueBase = Number((revenuePerShare * baseMultiple).toFixed(2));
-      const fairValueHigh = Number((revenuePerShare * highMultiple).toFixed(2));
-      const premiumDiscountPct = Number((((candidate.close - fairValueBase) / fairValueBase) * 100).toFixed(1));
-      return { method: 'sales_multiple', fairValueLow, fairValueBase, fairValueHigh, premiumDiscountPct };
-    }
-  }
+  const methodPriority: Array<'earnings' | 'sales' | 'book'> =
+    profile === 'financials'
+      ? ['book', 'earnings', 'sales']
+      : profile === 'growth_software'
+        ? ['sales', 'earnings', 'book']
+        : ['earnings', 'sales', 'book'];
 
   const effectiveBookValuePerShare =
     bookValuePerShare !== undefined && bookValuePerShare > 0
@@ -217,19 +319,50 @@ function fairValueEstimate(
       : priceToBook !== undefined && priceToBook > 0 && priceToBook <= 10
         ? candidate.close / priceToBook
         : undefined;
-  if (effectiveBookValuePerShare !== undefined) {
-    const baseMultiple = clamp(
-      0.9 + qualityScore * 0.75 + profitabilityScore * 1.25 + balanceScore * 0.85,
-      0.8,
-      4.5
-    );
-    const lowMultiple = clamp(baseMultiple - 0.35, 0.6, baseMultiple);
-    const highMultiple = clamp(baseMultiple + 0.35, baseMultiple, 5);
-    const fairValueLow = Number((effectiveBookValuePerShare * lowMultiple).toFixed(2));
-    const fairValueBase = Number((effectiveBookValuePerShare * baseMultiple).toFixed(2));
-    const fairValueHigh = Number((effectiveBookValuePerShare * highMultiple).toFixed(2));
-    const premiumDiscountPct = Number((((candidate.close - fairValueBase) / fairValueBase) * 100).toFixed(1));
-    return { method: 'book_multiple', fairValueLow, fairValueBase, fairValueHigh, premiumDiscountPct };
+
+  for (const methodName of methodPriority) {
+    if (methodName === 'earnings' && trailingPe !== undefined && trailingPe > 0 && trailingPe <= 80) {
+      const eps = candidate.close / trailingPe;
+      if (eps > 0) {
+        const baseMultiple = clamp(12 + qualityScore * 12 + weightedGrowthScore * 4, 10, 32);
+        const lowMultiple = clamp(baseMultiple - 3, 8, baseMultiple);
+        const highMultiple = clamp(baseMultiple + 3, baseMultiple, 36);
+        const fairValueLow = Number((eps * lowMultiple).toFixed(2));
+        const fairValueBase = Number((eps * baseMultiple).toFixed(2));
+        const fairValueHigh = Number((eps * highMultiple).toFixed(2));
+        const premiumDiscountPct = Number((((candidate.close - fairValueBase) / fairValueBase) * 100).toFixed(1));
+        return { method: 'earnings_multiple', fairValueLow, fairValueBase, fairValueHigh, premiumDiscountPct };
+      }
+    }
+
+    if (methodName === 'sales' && priceToSales !== undefined && priceToSales > 0 && priceToSales <= 20) {
+      const revenuePerShare = candidate.close / priceToSales;
+      if (revenuePerShare > 0) {
+        const baseMultiple = clamp(1.5 + qualityScore * 3 + weightedGrowthScore * 1.5, 1, 8);
+        const lowMultiple = clamp(baseMultiple * 0.85, 0.8, baseMultiple);
+        const highMultiple = clamp(baseMultiple * 1.15, baseMultiple, 10);
+        const fairValueLow = Number((revenuePerShare * lowMultiple).toFixed(2));
+        const fairValueBase = Number((revenuePerShare * baseMultiple).toFixed(2));
+        const fairValueHigh = Number((revenuePerShare * highMultiple).toFixed(2));
+        const premiumDiscountPct = Number((((candidate.close - fairValueBase) / fairValueBase) * 100).toFixed(1));
+        return { method: 'sales_multiple', fairValueLow, fairValueBase, fairValueHigh, premiumDiscountPct };
+      }
+    }
+
+    if (methodName === 'book' && effectiveBookValuePerShare !== undefined) {
+      const baseMultiple = clamp(
+        0.9 + qualityScore * 0.75 + profitabilityScore * 1.25 + balanceScore * 0.85,
+        0.8,
+        4.5
+      );
+      const lowMultiple = clamp(baseMultiple - 0.35, 0.6, baseMultiple);
+      const highMultiple = clamp(baseMultiple + 0.35, baseMultiple, 5);
+      const fairValueLow = Number((effectiveBookValuePerShare * lowMultiple).toFixed(2));
+      const fairValueBase = Number((effectiveBookValuePerShare * baseMultiple).toFixed(2));
+      const fairValueHigh = Number((effectiveBookValuePerShare * highMultiple).toFixed(2));
+      const premiumDiscountPct = Number((((candidate.close - fairValueBase) / fairValueBase) * 100).toFixed(1));
+      return { method: 'book_multiple', fairValueLow, fairValueBase, fairValueHigh, premiumDiscountPct };
+    }
   }
 
   return { method: 'not_available' };
@@ -240,6 +373,7 @@ function buildValuationContext(
   snapshot: FundamentalSnapshot,
   valuationLabel: DecisionValuationLabel
 ): DecisionValuationContext {
+  const profile = valuationProfile(candidate, snapshot);
   const trailingPe = snapshot.trailingPe;
   const priceToSales = snapshot.priceToSales;
   const bookValuePerShare = snapshot.bookValuePerShare;
@@ -272,6 +406,10 @@ function buildValuationContext(
   }
 
   let summary = VALUATION_LEAD[valuationLabel];
+  const profileNote = valuationProfileNote(profile);
+  if (profileNote) {
+    summary = `${summary} ${profileNote}`;
+  }
   if (
     fairValue.fairValueLow !== undefined &&
     fairValue.fairValueBase !== undefined &&
@@ -442,7 +580,7 @@ export function rebuildDecisionSummaryWithFundamentals(
   const technicalLabel = candidate.decisionSummary?.technicalLabel ?? deriveTechnicalLabel(candidate);
   const catalystLabel = candidate.decisionSummary?.catalystLabel ?? 'weak';
   const fundamentalsLabel = deriveFundamentalsLabel(snapshot);
-  const valuationLabel = deriveValuationLabel(snapshot);
+  const valuationLabel = deriveValuationLabel(candidate, snapshot);
   const valuationContext = buildValuationContext(candidate, snapshot, valuationLabel);
   const action = deriveAction(
     technicalLabel,
