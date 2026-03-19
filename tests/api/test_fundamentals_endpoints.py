@@ -44,6 +44,11 @@ class _FakeFundamentalsService:
             "return_on_equity": 0.28,
             "trailing_pe": 28.0,
             "price_to_sales": 7.0,
+            "shares_outstanding": 14_900_000_000.0,
+            "total_equity": 74_500_000_000.0,
+            "book_value_per_share": 5.0,
+            "price_to_book": 5.6,
+            "book_to_price": 0.1786,
             "most_recent_quarter": "2026-02-01",
             "pillars": {
                 "growth": {"score": 0.9, "status": "strong", "summary": "Growth profile."},
@@ -153,6 +158,9 @@ def test_fundamentals_snapshot_endpoint():
     assert payload["historical_series"]["revenue"]["frequency"] == "quarterly"
     assert payload["historical_series"]["revenue"]["source"] == "yfinance.quarterly_income_stmt"
     assert payload["metric_context"]["revenue_growth_yoy"]["cadence"] == "snapshot"
+    assert payload["book_value_per_share"] == 5.0
+    assert payload["price_to_book"] == 5.6
+    assert payload["book_to_price"] == 0.1786
     assert payload["data_quality_status"] == "medium"
     assert payload["data_quality_flags"] == ["Revenue YoY mixes snapshot metric data with quarterly history."]
 

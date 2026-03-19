@@ -81,6 +81,11 @@ class FundamentalSnapshotResponse(BaseModel):
     return_on_equity: Optional[float] = None
     trailing_pe: Optional[float] = None
     price_to_sales: Optional[float] = None
+    shares_outstanding: Optional[float] = None
+    total_equity: Optional[float] = None
+    book_value_per_share: Optional[float] = None
+    price_to_book: Optional[float] = None
+    book_to_price: Optional[float] = None
     most_recent_quarter: Optional[str] = None
     pillars: dict[str, FundamentalPillarScoreResponse] = Field(default_factory=dict)
     historical_series: dict[str, FundamentalMetricSeriesResponse] = Field(default_factory=dict)

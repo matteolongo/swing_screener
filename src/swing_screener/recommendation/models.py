@@ -17,6 +17,7 @@ DecisionConviction = Literal["high", "medium", "low"]
 SignalLabel = Literal["strong", "neutral", "weak"]
 ValuationLabel = Literal["cheap", "fair", "expensive", "unknown"]
 CatalystLabel = Literal["active", "neutral", "weak"]
+FairValueMethod = Literal["earnings_multiple", "sales_multiple", "book_multiple", "not_available"]
 
 
 class DecisionTradePlan(BaseModel):
@@ -27,7 +28,13 @@ class DecisionTradePlan(BaseModel):
 
 
 class DecisionValuationContext(BaseModel):
-    method: str = "fundamental_pillar"
+    method: FairValueMethod = "not_available"
+    summary: str | None = None
+    trailing_pe: float | None = None
+    price_to_sales: float | None = None
+    book_value_per_share: float | None = None
+    price_to_book: float | None = None
+    book_to_price: float | None = None
     fair_value_low: float | None = None
     fair_value_base: float | None = None
     fair_value_high: float | None = None

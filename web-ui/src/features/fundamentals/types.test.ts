@@ -22,6 +22,11 @@ describe('fundamentals transforms', () => {
       currency: 'USD',
       revenue_growth_yoy: 0.18,
       earnings_growth_yoy: 0.24,
+      shares_outstanding: 14900000000,
+      total_equity: 74500000000,
+      book_value_per_share: 5,
+      price_to_book: 5.6,
+      book_to_price: 0.1786,
       pillars: {
         growth: {
           score: 0.9,
@@ -68,6 +73,9 @@ describe('fundamentals transforms', () => {
     expect(snapshot.historicalSeries.revenue.points).toHaveLength(3);
     expect(snapshot.metricContext.revenue_growth_yoy.cadence).toBe('snapshot');
     expect(snapshot.metricContext.revenue_growth_yoy.periodEnd).toBe('2026-02-01');
+    expect(snapshot.bookValuePerShare).toBe(5);
+    expect(snapshot.priceToBook).toBe(5.6);
+    expect(snapshot.bookToPrice).toBe(0.1786);
     expect(snapshot.dataQualityStatus).toBe('low');
     expect(snapshot.dataQualityFlags).toEqual([
       'Revenue YoY mixes snapshot metric data with quarterly history.',
