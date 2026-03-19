@@ -95,6 +95,19 @@ function formatAbsPercent(value?: number): string | undefined {
   return `${Math.abs(value).toFixed(1)}%`;
 }
 
+function joinDetailParts(parts: string[]): string | undefined {
+  if (!parts.length) {
+    return undefined;
+  }
+  if (parts.length === 1) {
+    return `${parts[0]}.`;
+  }
+  if (parts.length === 2) {
+    return `${parts[0]} and ${parts[1]}.`;
+  }
+  return `${parts.slice(0, -1).join(', ')}, and ${parts[parts.length - 1]}.`;
+}
+
 function deriveTechnicalLabel(candidate: ScreenerCandidate): DecisionSignalLabel {
   const confidence = Math.abs(candidate.confidence) <= 1 ? candidate.confidence * 100 : candidate.confidence;
   const supportiveSignals = [candidate.momentum6m, candidate.momentum12m, candidate.relStrength].filter(
@@ -138,7 +151,9 @@ function fairValueEstimate(
   candidate: ScreenerCandidate,
   snapshot: FundamentalSnapshot,
   trailingPe?: number,
-  priceToSales?: number
+  priceToSales?: number,
+  bookValuePerShare?: number,
+  priceToBook?: number
 ): {
   method: FairValueMethod;
   fairValueLow?: number;
@@ -157,7 +172,14 @@ function fairValueEstimate(
     pillarScore(snapshot, 'cash_flow'),
   ]);
   const growthScore = pillarScore(snapshot, 'growth') ?? qualityScore;
-  if (qualityScore === undefined || growthScore === undefined) {
+  const profitabilityScore = pillarScore(snapshot, 'profitability') ?? qualityScore;
+  const balanceScore = pillarScore(snapshot, 'balance_sheet') ?? qualityScore;
+  if (
+    qualityScore === undefined ||
+    growthScore === undefined ||
+    profitabilityScore === undefined ||
+    balanceScore === undefined
+  ) {
     return { method: 'not_available' };
   }
 
@@ -189,6 +211,27 @@ function fairValueEstimate(
     }
   }
 
+  const effectiveBookValuePerShare =
+    bookValuePerShare !== undefined && bookValuePerShare > 0
+      ? bookValuePerShare
+      : priceToBook !== undefined && priceToBook > 0 && priceToBook <= 10
+        ? candidate.close / priceToBook
+        : undefined;
+  if (effectiveBookValuePerShare !== undefined) {
+    const baseMultiple = clamp(
+      0.9 + qualityScore * 0.75 + profitabilityScore * 1.25 + balanceScore * 0.85,
+      0.8,
+      4.5
+    );
+    const lowMultiple = clamp(baseMultiple - 0.35, 0.6, baseMultiple);
+    const highMultiple = clamp(baseMultiple + 0.35, baseMultiple, 5);
+    const fairValueLow = Number((effectiveBookValuePerShare * lowMultiple).toFixed(2));
+    const fairValueBase = Number((effectiveBookValuePerShare * baseMultiple).toFixed(2));
+    const fairValueHigh = Number((effectiveBookValuePerShare * highMultiple).toFixed(2));
+    const premiumDiscountPct = Number((((candidate.close - fairValueBase) / fairValueBase) * 100).toFixed(1));
+    return { method: 'book_multiple', fairValueLow, fairValueBase, fairValueHigh, premiumDiscountPct };
+  }
+
   return { method: 'not_available' };
 }
 
@@ -199,7 +242,17 @@ function buildValuationContext(
 ): DecisionValuationContext {
   const trailingPe = snapshot.trailingPe;
   const priceToSales = snapshot.priceToSales;
-  const fairValue = fairValueEstimate(candidate, snapshot, trailingPe, priceToSales);
+  const bookValuePerShare = snapshot.bookValuePerShare;
+  const priceToBook = snapshot.priceToBook;
+  const bookToPrice = snapshot.bookToPrice;
+  const fairValue = fairValueEstimate(
+    candidate,
+    snapshot,
+    trailingPe,
+    priceToSales,
+    bookValuePerShare,
+    priceToBook
+  );
 
   const detailParts: string[] = [];
   if (trailingPe !== undefined) {
@@ -207,6 +260,15 @@ function buildValuationContext(
   }
   if (priceToSales !== undefined) {
     detailParts.push(`price-to-sales is ${formatMultiple(priceToSales)}`);
+  }
+  if (bookValuePerShare !== undefined) {
+    detailParts.push(`book value per share is ${formatPrice(bookValuePerShare)}`);
+  }
+  if (priceToBook !== undefined) {
+    detailParts.push(`price-to-book is ${formatMultiple(priceToBook)}`);
+  }
+  if (bookToPrice !== undefined) {
+    detailParts.push(`book-to-price is ${formatAbsPercent(bookToPrice * 100)}`);
   }
 
   let summary = VALUATION_LEAD[valuationLabel];
@@ -228,10 +290,9 @@ function buildValuationContext(
     )} ${comparison} the base fair value.`;
   }
 
-  if (detailParts.length === 2) {
-    summary = `${summary} ${detailParts[0]} and ${detailParts[1]}.`;
-  } else if (detailParts.length === 1) {
-    summary = `${summary} ${detailParts[0]}.`;
+  const details = joinDetailParts(detailParts);
+  if (details) {
+    summary = `${summary} ${details}`;
   }
 
   return {
@@ -239,6 +300,9 @@ function buildValuationContext(
     summary,
     trailingPe,
     priceToSales,
+    bookValuePerShare,
+    priceToBook,
+    bookToPrice,
     fairValueLow: fairValue.fairValueLow,
     fairValueBase: fairValue.fairValueBase,
     fairValueHigh: fairValue.fairValueHigh,

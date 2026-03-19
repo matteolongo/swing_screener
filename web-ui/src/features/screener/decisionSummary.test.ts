@@ -95,4 +95,28 @@ describe('rebuildDecisionSummaryWithFundamentals', () => {
     expect(patched.fundamentalsSummary).toBe('Growth metrics are supportive.');
     expect(patched.decisionSummary?.valuationContext.method).toBe('earnings_multiple');
   });
+
+  it('falls back to book multiple when earnings and sales inputs are unavailable', () => {
+    const snapshot = {
+      ...buildSnapshot(),
+      trailingPe: undefined,
+      priceToSales: undefined,
+      bookValuePerShare: 20,
+      priceToBook: 2.5,
+      bookToPrice: 0.4,
+    } satisfies FundamentalSnapshot;
+
+    const rebuilt = rebuildDecisionSummaryWithFundamentals(
+      {
+        ...buildCandidate(),
+        close: 50,
+      },
+      snapshot
+    );
+
+    expect(rebuilt.valuationContext.method).toBe('book_multiple');
+    expect(rebuilt.valuationContext.fairValueBase).toBe(69.3);
+    expect(rebuilt.valuationContext.summary).toContain('using book multiple');
+    expect(rebuilt.valuationContext.summary).toContain('book value per share is 20.00');
+  });
 });

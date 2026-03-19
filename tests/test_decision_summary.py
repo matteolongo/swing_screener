@@ -42,6 +42,9 @@ def _snapshot(
     data_quality_status: str = "high",
     trailing_pe: float | None = 24.6,
     price_to_sales: float | None = 5.1,
+    book_value_per_share: float | None = None,
+    price_to_book: float | None = None,
+    book_to_price: float | None = None,
 ) -> FundamentalSnapshot:
     score_map = {"strong": 0.9, "neutral": 0.55, "weak": 0.2}
     return FundamentalSnapshot(
@@ -54,6 +57,9 @@ def _snapshot(
         data_quality_status=data_quality_status,
         trailing_pe=trailing_pe,
         price_to_sales=price_to_sales,
+        book_value_per_share=book_value_per_share,
+        price_to_book=price_to_book,
+        book_to_price=book_to_price,
         pillars={
             "growth": FundamentalPillarScore(
                 score=score_map[fundamentals_status],
@@ -141,6 +147,30 @@ def test_sales_multiple_fair_value_used_when_pe_is_missing() -> None:
     assert summary.valuation_context.fair_value_high == pytest.approx(191.47, abs=0.01)
     assert summary.valuation_context.premium_discount_pct == pytest.approx(-27.9, abs=0.1)
     assert "using sales multiple" in summary.valuation_context.summary
+
+
+def test_book_multiple_fair_value_used_when_earnings_and_sales_are_missing() -> None:
+    summary = build_decision_summary(
+        _candidate(close=50.0),
+        opportunity=_opportunity(),
+        fundamentals=_snapshot(
+            trailing_pe=None,
+            price_to_sales=None,
+            book_value_per_share=20.0,
+            price_to_book=2.5,
+            book_to_price=0.4,
+        ),
+    )
+
+    assert summary.valuation_context.method == "book_multiple"
+    assert summary.valuation_context.fair_value_low == pytest.approx(62.30, abs=0.01)
+    assert summary.valuation_context.fair_value_base == pytest.approx(69.30, abs=0.01)
+    assert summary.valuation_context.fair_value_high == pytest.approx(76.30, abs=0.01)
+    assert summary.valuation_context.premium_discount_pct == pytest.approx(-27.8, abs=0.1)
+    assert summary.valuation_context.book_value_per_share == 20.0
+    assert summary.valuation_context.price_to_book == 2.5
+    assert summary.valuation_context.book_to_price == 0.4
+    assert "using book multiple" in summary.valuation_context.summary
 
 
 def test_strong_technical_and_fundamentals_with_expensive_value_maps_to_buy_on_pullback() -> None:

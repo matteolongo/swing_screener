@@ -120,6 +120,11 @@ class ProviderFundamentalsRecord:
     return_on_equity: float | None = None
     trailing_pe: float | None = None
     price_to_sales: float | None = None
+    shares_outstanding: float | None = None
+    total_equity: float | None = None
+    book_value_per_share: float | None = None
+    price_to_book: float | None = None
+    book_to_price: float | None = None
     historical_series: dict[str, FundamentalMetricSeries] = field(default_factory=dict)
     metric_context: dict[str, FundamentalMetricContext] = field(default_factory=dict)
     metric_sources: dict[str, str] = field(default_factory=dict)
@@ -151,6 +156,11 @@ class FundamentalSnapshot:
     return_on_equity: float | None = None
     trailing_pe: float | None = None
     price_to_sales: float | None = None
+    shares_outstanding: float | None = None
+    total_equity: float | None = None
+    book_value_per_share: float | None = None
+    price_to_book: float | None = None
+    book_to_price: float | None = None
     most_recent_quarter: str | None = None
     pillars: dict[str, FundamentalPillarScore] = field(default_factory=dict)
     historical_series: dict[str, FundamentalMetricSeries] = field(default_factory=dict)
@@ -274,6 +284,11 @@ class FundamentalSnapshot:
             return_on_equity=payload.get("return_on_equity"),
             trailing_pe=payload.get("trailing_pe"),
             price_to_sales=payload.get("price_to_sales"),
+            shares_outstanding=payload.get("shares_outstanding"),
+            total_equity=payload.get("total_equity"),
+            book_value_per_share=payload.get("book_value_per_share"),
+            price_to_book=payload.get("price_to_book"),
+            book_to_price=payload.get("book_to_price"),
             most_recent_quarter=payload.get("most_recent_quarter"),
             pillars=pillars,
             historical_series=historical_series,

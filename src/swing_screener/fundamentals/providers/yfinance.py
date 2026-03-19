@@ -247,6 +247,11 @@ class YfinanceFundamentalsProvider:
             ["quarterly_cashflow", "cashflow"],
         )
         cashflow_frequency = _statement_frequency(cashflow_source)
+        balance_frame, balance_source = _get_statement_frame(
+            ticker,
+            ["quarterly_balance_sheet", "balance_sheet"],
+        )
+        balance_frequency = _statement_frequency(balance_source)
 
         revenue_series = _series_from_frame(
             income_frame,
@@ -303,6 +308,35 @@ class YfinanceFundamentalsProvider:
             historical_series["free_cash_flow_margin"] = free_cash_flow_margin_series
             if free_cash_flow_margin_series.source:
                 metric_sources["free_cash_flow_margin_history"] = free_cash_flow_margin_series.source
+
+        total_equity_series = _series_from_frame(
+            balance_frame,
+            source_name=f"{self.name}.{balance_source}" if balance_source else self.name,
+            frequency=balance_frequency,
+            row_candidates=[
+                "Stockholders Equity",
+                "Stockholders' Equity",
+                "Total Stockholder Equity",
+                "Common Stock Equity",
+                "Total Equity Gross Minority Interest",
+                "Total Equity",
+            ],
+            label="Total equity",
+            unit="currency",
+        )
+        total_equity = None
+        if total_equity_series is not None and total_equity_series.points:
+            latest_total_equity = total_equity_series.points[-1]
+            total_equity = latest_total_equity.value
+            if total_equity_series.source:
+                metric_sources["total_equity"] = total_equity_series.source
+                metric_context["total_equity"] = FundamentalMetricContext(
+                    source=total_equity_series.source,
+                    cadence=total_equity_series.frequency,
+                    derived=False,
+                    derived_from=[],
+                    period_end=latest_total_equity.period_end,
+                )
 
         most_recent_quarter = _coerce_iso_date(info.get("mostRecentQuarter"))
         if most_recent_quarter:
@@ -396,6 +430,9 @@ class YfinanceFundamentalsProvider:
             "priceToSalesTrailing12Months",
             info.get("priceToSalesTrailing12Months"),
         )
+        shares_outstanding = _capture("shares_outstanding", "sharesOutstanding", info.get("sharesOutstanding"))
+        book_value_per_share = _capture("book_value_per_share", "bookValue", info.get("bookValue"))
+        price_to_book = _capture("price_to_book", "priceToBook", info.get("priceToBook"))
         market_cap = _capture("market_cap", "marketCap", info.get("marketCap"))
 
         company_name = info.get("longName") or info.get("shortName")
@@ -423,6 +460,10 @@ class YfinanceFundamentalsProvider:
             return_on_equity=return_on_equity,
             trailing_pe=trailing_pe,
             price_to_sales=price_to_sales,
+            shares_outstanding=shares_outstanding,
+            total_equity=total_equity,
+            book_value_per_share=book_value_per_share,
+            price_to_book=price_to_book,
             historical_series=historical_series,
             metric_context=metric_context,
             metric_sources={key: value for key, value in metric_sources.items() if value},
