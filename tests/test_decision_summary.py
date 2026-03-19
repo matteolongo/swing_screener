@@ -45,6 +45,7 @@ def _snapshot(
     book_value_per_share: float | None = None,
     price_to_book: float | None = None,
     book_to_price: float | None = None,
+    sector: str | None = None,
 ) -> FundamentalSnapshot:
     score_map = {"strong": 0.9, "neutral": 0.55, "weak": 0.2}
     return FundamentalSnapshot(
@@ -52,6 +53,7 @@ def _snapshot(
         asof_date="2026-03-19",
         provider="yfinance",
         updated_at="2026-03-19T08:00:00",
+        sector=sector,
         coverage_status=coverage_status,
         freshness_status=freshness_status,
         data_quality_status=data_quality_status,
@@ -171,6 +173,61 @@ def test_book_multiple_fair_value_used_when_earnings_and_sales_are_missing() -> 
     assert summary.valuation_context.price_to_book == 2.5
     assert summary.valuation_context.book_to_price == 0.4
     assert "using book multiple" in summary.valuation_context.summary
+
+
+def test_financials_prefer_book_based_valuation_context() -> None:
+    summary = build_decision_summary(
+        _candidate(close=50.0, sector="Financial Services"),
+        opportunity=_opportunity(),
+        fundamentals=_snapshot(
+            sector="Financial Services",
+            trailing_pe=12.0,
+            price_to_sales=3.8,
+            book_value_per_share=20.0,
+            price_to_book=2.5,
+            book_to_price=0.4,
+        ),
+    )
+
+    assert summary.valuation_context.method == "book_multiple"
+    assert "For financials, book-based valuation carries more weight" in summary.valuation_context.summary
+
+
+def test_growth_software_deemphasizes_book_based_multiple_for_valuation_label() -> None:
+    summary = build_decision_summary(
+        _candidate(close=80.0, sector="Technology"),
+        opportunity=_opportunity(),
+        fundamentals=_snapshot(
+            sector="Technology",
+            valuation_status="weak",
+            trailing_pe=None,
+            price_to_sales=7.5,
+            book_value_per_share=4.0,
+            price_to_book=20.0,
+            book_to_price=0.05,
+        ),
+    )
+
+    assert summary.valuation_label == "fair"
+    assert summary.valuation_context.method == "sales_multiple"
+    assert "sales multiples carry more weight than book value" in summary.valuation_context.summary
+
+
+def test_mature_cashflow_sector_leans_on_earnings_for_valuation_label() -> None:
+    summary = build_decision_summary(
+        _candidate(close=90.0, sector="Utilities"),
+        opportunity=_opportunity(),
+        fundamentals=_snapshot(
+            sector="Utilities",
+            valuation_status="weak",
+            trailing_pe=18.0,
+            price_to_sales=5.5,
+        ),
+    )
+
+    assert summary.valuation_label == "fair"
+    assert summary.valuation_context.method == "earnings_multiple"
+    assert "earnings and cash generation carry more weight" in summary.valuation_context.summary
 
 
 def test_strong_technical_and_fundamentals_with_expensive_value_maps_to_buy_on_pullback() -> None:
