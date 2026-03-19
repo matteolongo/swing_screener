@@ -413,6 +413,7 @@ export const messagesEn = {
       dailyReview: 'Daily Review',
       strategy: 'Strategy',
       intelligence: 'Intelligence',
+      fundamentals: 'Fundamentals',
     },
     activeStrategy: 'Active Strategy',
     loadingStrategies: 'Loading strategies...',

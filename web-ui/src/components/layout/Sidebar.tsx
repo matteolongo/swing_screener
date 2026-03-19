@@ -50,7 +50,7 @@ const navigation: NavigationItem[] = [
     advanced: false,
   },
   {
-    label: 'Fundamentals',
+    labelKey: 'sidebar.nav.fundamentals',
     href: '/fundamentals',
     icon: BarChart3,
     advanced: false,
