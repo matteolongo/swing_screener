@@ -357,6 +357,7 @@ def _apply_decision_summary_context(
     return enriched
 
 
+
 def _is_na_scalar(val) -> bool:
     if val is None:
         return True
