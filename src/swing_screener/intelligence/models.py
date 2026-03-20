@@ -38,9 +38,15 @@ class InstrumentProfile:
     timezone: str
     aliases: list[str] = field(default_factory=list)
     provider_symbol_map: dict[str, str] = field(default_factory=dict)
-    resolution_source: Literal["override", "master", "heuristic"] = "heuristic"
+    resolution_source: Literal["override", "master", "openfigi", "heuristic"] = "heuristic"
     resolution_confidence: float = 0.5
     resolution_reason_code: str | None = None
+    name: str | None = None
+    figi: str | None = None
+    composite_figi: str | None = None
+    share_class_figi: str | None = None
+    security_type: str | None = None
+    market_sector: str | None = None
 
     def to_dict(self) -> dict:
         return asdict(self)

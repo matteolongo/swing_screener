@@ -515,7 +515,14 @@ const mockIntelligenceConfig = {
     min_opportunity_score: 0.6,
   },
   sources: {
-    enabled: ['yahoo_finance', 'earnings_calendar', 'sec_edgar', 'company_ir_rss'],
+    enabled: [
+      'yahoo_finance',
+      'earnings_calendar',
+      'sec_edgar',
+      'company_ir_rss',
+      'exchange_announcements',
+      'financial_news_rss',
+    ],
     scraping_enabled: false,
     allowed_domains: [],
     rate_limits: {
@@ -1264,6 +1271,34 @@ export const handlers = [
         },
       },
       errors: [],
+    })
+  }),
+
+  // Fundamentals snapshot mock
+  http.get(`${API_BASE_URL}/api/fundamentals/snapshot/:symbol`, ({ params }) => {
+    const symbol = String(params.symbol ?? 'AAPL').toUpperCase()
+    const isEu = symbol.includes('.')
+    return HttpResponse.json({
+      symbol,
+      asof_date: '2026-03-20',
+      provider: 'sec_edgar',
+      updated_at: '2026-03-20T00:00:00',
+      instrument_type: 'equity',
+      supported: true,
+      coverage_status: 'supported',
+      freshness_status: 'current',
+      company_name: isEu ? 'European Corp' : 'Apple Inc.',
+      sector: 'Technology',
+      currency: isEu ? 'EUR' : 'USD',
+      data_region: isEu ? 'EU' : 'US',
+      pillars: {},
+      historical_series: {},
+      metric_context: {},
+      data_quality_status: 'high',
+      data_quality_flags: [],
+      red_flags: [],
+      highlights: [],
+      metric_sources: {},
     })
   }),
 

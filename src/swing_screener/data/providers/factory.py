@@ -44,12 +44,21 @@ def get_market_data_provider(
     manager = get_settings_manager()
     provider_defaults = manager.get_low_level_defaults_payload("data_providers")
     yfinance_defaults = provider_defaults.get("yfinance", {}) if isinstance(provider_defaults.get("yfinance", {}), dict) else {}
+    stooq_defaults = provider_defaults.get("stooq", {}) if isinstance(provider_defaults.get("stooq", {}), dict) else {}
     
     if config.provider == "yfinance":
         return YfinanceProvider(
             cache_dir=kwargs.get("cache_dir", str(manager.resolve_runtime_path("yfinance_cache_dir", ".cache/market_data"))),
             auto_adjust=kwargs.get("auto_adjust", bool(yfinance_defaults.get("auto_adjust", True))),
             progress=kwargs.get("progress", bool(yfinance_defaults.get("progress", False))),
+            stooq_fallback_enabled=kwargs.get(
+                "stooq_fallback_enabled",
+                bool(yfinance_defaults.get("stooq_fallback_enabled", True)),
+            ),
+            stooq_timeout_sec=kwargs.get(
+                "stooq_timeout_sec",
+                float(stooq_defaults.get("timeout_seconds", 10.0)),
+            ),
         )
     
     elif config.provider == "alpaca":

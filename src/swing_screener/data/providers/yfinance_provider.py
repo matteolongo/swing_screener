@@ -11,6 +11,7 @@ import pandas as pd
 import yfinance as yf
 
 from .base import MarketDataProvider
+from .stooq_provider import StooqDataProvider
 from ..market_data import fetch_ticker_metadata
 from swing_screener.utils import normalize_tickers
 
@@ -33,6 +34,9 @@ class YfinanceProvider(MarketDataProvider):
         cache_dir: str = ".cache/market_data",
         auto_adjust: bool = True,
         progress: bool = False,
+        stooq_fallback_enabled: bool = True,
+        stooq_timeout_sec: float = 10.0,
+        stooq_provider: StooqDataProvider | None = None,
     ):
         """
         Initialize Yfinance provider.
@@ -45,6 +49,8 @@ class YfinanceProvider(MarketDataProvider):
         self.cache_dir = Path(cache_dir)
         self.auto_adjust = auto_adjust
         self.progress = progress
+        self.stooq_fallback_enabled = bool(stooq_fallback_enabled)
+        self._stooq_provider = stooq_provider or StooqDataProvider(timeout_sec=stooq_timeout_sec)
         
         # Create cache directory
         self.cache_dir.mkdir(parents=True, exist_ok=True)
@@ -115,6 +121,44 @@ class YfinanceProvider(MarketDataProvider):
         """Yield fixed-size chunks from a ticker list."""
         for i in range(0, len(tickers), size):
             yield tickers[i : i + size]
+
+    def _supports_stooq_fallback(self, interval: str) -> bool:
+        return self.stooq_fallback_enabled and str(interval).strip().lower() == "1d"
+
+    def _stooq_end_date(self, end_date: Optional[str]) -> str:
+        if not end_date:
+            return date.today().isoformat()
+        try:
+            exclusive_end = datetime.strptime(end_date, "%Y-%m-%d").date()
+        except ValueError:
+            return end_date
+        return (exclusive_end - timedelta(days=1)).isoformat()
+
+    def _fetch_stooq_fallback(
+        self,
+        tickers: list[str],
+        start_date: str,
+        end_date: Optional[str],
+        *,
+        interval: str,
+    ) -> pd.DataFrame:
+        if not tickers or not self._supports_stooq_fallback(interval):
+            return pd.DataFrame()
+        try:
+            return self._stooq_provider.fetch_ohlcv(
+                tickers,
+                start_date=start_date,
+                end_date=self._stooq_end_date(end_date),
+                interval="1d",
+            )
+        except Exception as exc:
+            logger.warning(
+                "Stooq fallback failed for %s tickers (%s): %s",
+                len(tickers),
+                ",".join(tickers[:5]),
+                exc,
+            )
+            return pd.DataFrame()
 
     def _download_raw(
         self,
@@ -300,6 +344,7 @@ class YfinanceProvider(MarketDataProvider):
         tickers: list[str],
         start_date: str,
         end_date: Optional[str],
+        interval: str = "1d",
         use_cache: bool = True,
         force_refresh: bool = False,
         allow_cache_fallback_on_error: bool = True,
@@ -334,6 +379,8 @@ class YfinanceProvider(MarketDataProvider):
             df = self._download_sequential(tks, start_date, actual_end)
 
         if df is None or df.empty:
+            df = self._fetch_stooq_fallback(tks, start_date, end_date, interval=interval)
+        if df is None or df.empty:
             if allow_cache_fallback_on_error and cache_file.exists():
                 cached = self._read_cached_ohlcv(cache_file, tks)
                 if cached is not None:
@@ -357,6 +404,13 @@ class YfinanceProvider(MarketDataProvider):
                     len(remaining_missing),
                     ",".join(remaining_missing[:10]),
                 )
+                fallback_df = self._fetch_stooq_fallback(
+                    remaining_missing,
+                    start_date,
+                    end_date,
+                    interval=interval,
+                )
+                df = self._merge_ohlcv_frames(df, fallback_df)
         
         # Cache result
         if use_cache:
@@ -412,6 +466,7 @@ class YfinanceProvider(MarketDataProvider):
             tickers,
             start_date,
             end_date_adjusted,
+            interval,
             use_cache,
             force_refresh,
             allow_cache_fallback_on_error,

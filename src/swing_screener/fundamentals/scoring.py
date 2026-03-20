@@ -660,6 +660,7 @@ def build_snapshot(record: ProviderFundamentalsRecord, cfg: FundamentalsConfig) 
         price_to_book=resolved_record.price_to_book,
         book_to_price=resolved_record.book_to_price,
         most_recent_quarter=resolved_record.most_recent_quarter,
+        data_region=resolved_record.data_region,
         pillars=pillars,
         historical_series=historical_series,
         metric_context=resolved_record.metric_context,

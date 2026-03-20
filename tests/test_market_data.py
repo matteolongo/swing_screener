@@ -22,7 +22,8 @@ def _fake_download_multiindex(*args, **kwargs):
 
 def test_fetch_ohlcv_returns_multiindex(monkeypatch):
     monkeypatch.setattr(
-        "swing_screener.data.market_data.yf.download", _fake_download_multiindex
+        "swing_screener.data.providers.yfinance_provider.yf.download",
+        _fake_download_multiindex,
     )
     df = fetch_ohlcv(
         ["AAPL", "MSFT", "SPY"], MarketDataConfig(start="2023-01-01"), use_cache=False
@@ -46,7 +47,13 @@ def test_fetch_ohlcv_fallbacks_to_cache_on_download_error(tmp_path, monkeypatch)
     def _raise(*args, **kwargs):
         raise RuntimeError("network down")
 
-    monkeypatch.setattr("swing_screener.data.market_data.yf.download", _raise)
+    monkeypatch.setattr(
+        "swing_screener.data.providers.yfinance_provider.yf.download", _raise
+    )
+    monkeypatch.setattr(
+        "swing_screener.data.providers.stooq_provider.StooqDataProvider.fetch_ohlcv",
+        _raise,
+    )
 
     df = fetch_ohlcv(["AAPL", "MSFT", "SPY"], cfg, use_cache=False)
     assert ("Close", "AAPL") in df.columns

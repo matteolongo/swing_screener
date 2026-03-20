@@ -130,6 +130,8 @@ class IntelligenceSourcesConfigModel(BaseModel):
             "earnings_calendar",
             "sec_edgar",
             "company_ir_rss",
+            "exchange_announcements",
+            "financial_news_rss",
         ]
     )
     scraping_enabled: bool = False
@@ -158,7 +160,14 @@ class IntelligenceSourcesConfigModel(BaseModel):
                 continue
             seen.add(source)
             normalized.append(source)
-        return normalized or ["yahoo_finance", "earnings_calendar", "sec_edgar", "company_ir_rss"]
+        return normalized or [
+            "yahoo_finance",
+            "earnings_calendar",
+            "sec_edgar",
+            "company_ir_rss",
+            "exchange_announcements",
+            "financial_news_rss",
+        ]
 
     @field_validator("allowed_domains")
     @classmethod

@@ -439,11 +439,22 @@ class YfinanceFundamentalsProvider:
         sector = info.get("sector")
         currency = info.get("currency")
 
+        # Infer geographic region from ticker suffix (e.g. AIR.PA → EU, AAPL → US)
+        _EU_SUFFIXES = {".PA", ".DE", ".L", ".AS", ".MC", ".MI", ".BR", ".LS", ".HE", ".ST", ".CO", ".OL"}
+        ticker_upper = symbol.upper()
+        data_region: str | None = None
+        if "." in ticker_upper:
+            suffix = ticker_upper[ticker_upper.rfind("."):]
+            data_region = "EU" if suffix in _EU_SUFFIXES else "US"
+        else:
+            data_region = "US"
+
         return ProviderFundamentalsRecord(
             symbol=symbol,
             asof_date=date.today().isoformat(),
             provider=self.name,
             instrument_type=instrument_type,
+            data_region=data_region,
             company_name=str(company_name).strip() if company_name else None,
             sector=str(sector).strip() if sector else None,
             currency=str(currency).strip().upper() if currency else None,

@@ -10,6 +10,7 @@ import swing_screener.data.providers.yfinance_provider as yfinance_provider_modu
 
 from swing_screener.data.providers import (
     MarketDataProvider,
+    StooqDataProvider,
     YfinanceProvider,
     AlpacaDataProvider,
     get_market_data_provider,
@@ -232,6 +233,53 @@ class TestYfinanceProvider:
         assert ["AAPL"] in calls
         assert ["MSFT"] in calls
 
+    def test_fetch_ohlcv_falls_back_to_stooq_when_yfinance_is_unavailable(self, monkeypatch, tmp_path):
+        """Daily requests should fall back to Stooq when Yahoo returns no data."""
+        def fake_download(*args, **kwargs):
+            raise RuntimeError("synthetic provider outage")
+
+        monkeypatch.setattr(yfinance_provider_module.yf, "download", fake_download)
+        provider = YfinanceProvider(cache_dir=str(tmp_path / "cache"))
+        monkeypatch.setattr(
+            provider._stooq_provider,
+            "fetch_ohlcv",
+            lambda tickers, start_date, end_date, interval="1d": _mock_ohlcv_frame(tickers),
+        )
+
+        df = provider.fetch_ohlcv(["AAPL", "MSFT"], "2026-01-01", "2026-01-31")
+
+        assert df[("Close", "AAPL")].notna().any()
+        assert df[("Close", "MSFT")].notna().any()
+
+    def test_fetch_ohlcv_uses_stooq_for_remaining_missing_tickers(self, monkeypatch, tmp_path):
+        """Daily requests should use Stooq only for symbols Yahoo still misses."""
+        fallback_calls: list[list[str]] = []
+
+        def normalize_tickers(arg) -> list[str]:
+            if isinstance(arg, str):
+                return [arg]
+            return [str(t) for t in arg]
+
+        def fake_download(*args, **kwargs):
+            tickers = normalize_tickers(args[0])
+            if set(tickers) == {"AAPL", "MSFT"}:
+                return _mock_ohlcv_frame(["AAPL"])
+            return pd.DataFrame()
+
+        def fake_stooq_fetch(tickers, start_date, end_date, interval="1d"):
+            fallback_calls.append([str(t) for t in tickers])
+            return _mock_ohlcv_frame([str(t) for t in tickers])
+
+        monkeypatch.setattr(yfinance_provider_module.yf, "download", fake_download)
+        provider = YfinanceProvider(cache_dir=str(tmp_path / "cache"))
+        monkeypatch.setattr(provider._stooq_provider, "fetch_ohlcv", fake_stooq_fetch)
+
+        df = provider.fetch_ohlcv(["AAPL", "MSFT"], "2026-01-01", "2026-01-31")
+
+        assert df[("Close", "AAPL")].notna().any()
+        assert df[("Close", "MSFT")].notna().any()
+        assert fallback_calls == [["MSFT"]]
+
     def test_fetch_ohlcv_forces_refresh_on_live_edge(self, monkeypatch, tmp_path):
         """Today/end-date requests should bypass stale cache."""
         cache_dir = tmp_path / "test_cache"
@@ -383,6 +431,11 @@ class TestProviderFactory:
         config = BrokerConfig(provider="yfinance")
         provider = get_market_data_provider(config)
         assert isinstance(provider, YfinanceProvider)
+
+    def test_stooq_provider_name(self):
+        """Test direct Stooq provider metadata."""
+        provider = StooqDataProvider()
+        assert provider.get_provider_name() == "stooq"
     
     def test_get_alpaca_provider(self):
         """Test creating alpaca provider."""

@@ -62,9 +62,11 @@ describe('fundamentals transforms', () => {
       red_flags: [],
       highlights: ['Growth metrics are supportive.'],
       metric_sources: { revenue_growth_yoy: 'yfinance' },
+      data_region: 'US',
     });
 
     expect(snapshot.asofDate).toBe('2026-03-18');
+    expect(snapshot.dataRegion).toBe('US');
     expect(snapshot.companyName).toBe('Apple Inc.');
     expect(snapshot.pillars.growth.status).toBe('strong');
     expect(snapshot.historicalSeries.revenue.direction).toBe('not_comparable');

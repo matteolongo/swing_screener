@@ -19,6 +19,8 @@ DEFAULT_EVIDENCE_SOURCES = (
     "earnings_calendar",
     "sec_edgar",
     "company_ir_rss",
+    "exchange_announcements",
+    "financial_news_rss",
 )
 SUPPORTED_EVIDENCE_SOURCES = {
     "yahoo_finance",

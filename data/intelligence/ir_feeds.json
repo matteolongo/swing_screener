@@ -1,0 +1,38 @@
+{
+  "AAPL": [
+    "https://investor.apple.com/rss/feeds/all.rss"
+  ],
+  "MSFT": [
+    "https://news.microsoft.com/feed/"
+  ],
+  "NVDA": [
+    "https://nvidianews.nvidia.com/releases.xml"
+  ],
+  "ASML.AS": [
+    "https://www.asml.com/en/news/press-releases/rss"
+  ],
+  "AIR.PA": [
+    "https://www.airbus.com/en/newsroom/news/rss"
+  ],
+  "MC.PA": [
+    "https://www.lvmh.com/rss/actualites.xml"
+  ],
+  "SAP.DE": [
+    "https://news.sap.com/feed/"
+  ],
+  "SIE.DE": [
+    "https://press.siemens.com/global/en/rss-news-press-releases.rss"
+  ],
+  "SAN.MC": [
+    "https://www.santander.com/en/press-room/press-releases/rss"
+  ],
+  "ENI.MI": [
+    "https://www.eni.com/en-IT/media/news/rss-eni.xml"
+  ],
+  "NESN.SW": [
+    "https://www.nestle.com/rss/news"
+  ],
+  "VOD.L": [
+    "https://investors.vodafone.com/rss/news"
+  ]
+}

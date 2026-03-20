@@ -743,7 +743,14 @@ export function transformIntelligenceConfig(api: IntelligenceConfigAPI): Intelli
     sources: {
       enabled:
         api.sources?.enabled ??
-        ['yahoo_finance', 'earnings_calendar', 'sec_edgar', 'company_ir_rss'],
+        [
+          'yahoo_finance',
+          'earnings_calendar',
+          'sec_edgar',
+          'company_ir_rss',
+          'exchange_announcements',
+          'financial_news_rss',
+        ],
       scrapingEnabled: api.sources?.scraping_enabled ?? false,
       allowedDomains: api.sources?.allowed_domains ?? [],
       rateLimits: {
