@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, ListChecks } from 'lucide-react';
 import Button from '@/components/common/Button';
 import TableShell from '@/components/common/TableShell';
-import type { SymbolIntelligenceStatus } from '@/features/intelligence/useSymbolIntelligenceRunner';
 import { ScreenerCandidate } from '@/features/screener/types';
 import { toCandidateViewModel } from '@/features/screener/viewModel';
 import ScreenerCandidateIdentityCell from './ScreenerCandidateIdentityCell';
@@ -35,9 +34,6 @@ interface ScreenerCandidatesTableProps {
   candidates: ScreenerCandidate[];
   onCreateOrder: (candidate: ScreenerCandidate) => void;
   onRecommendationDetails: (candidate: ScreenerCandidate) => void;
-  onTradeThesis: (candidate: ScreenerCandidate) => void;
-  onRunIntelligence: (ticker: string) => void;
-  getSymbolIntelligenceStatus?: (ticker: string) => SymbolIntelligenceStatus | undefined;
   onSymbolClick?: (ticker: string) => void;
   selectedTicker?: string | null;
   onRowClick?: (candidate: ScreenerCandidate) => void;
@@ -50,9 +46,6 @@ export default function ScreenerCandidatesTable({
   candidates,
   onCreateOrder,
   onRecommendationDetails,
-  onTradeThesis,
-  onRunIntelligence,
-  getSymbolIntelligenceStatus,
   onSymbolClick,
   selectedTicker,
   onRowClick,
@@ -122,7 +115,6 @@ export default function ScreenerCandidatesTable({
         const vm = toCandidateViewModel(candidate);
         const isExpanded = expandedRows.has(candidate.ticker);
         const isSelected = selectedTicker != null && selectedTicker.toUpperCase() === candidate.ticker.toUpperCase();
-        const symbolIntelStatus = getSymbolIntelligenceStatus?.(candidate.ticker);
         const badge = signalBadge(candidate.decisionSummary?.action);
 
         return (
@@ -226,12 +218,7 @@ export default function ScreenerCandidatesTable({
             </tr>
 
             {isExpanded && (
-              <ScreenerCandidateDetailsRow
-                candidate={vm}
-                onThesisClick={() => onTradeThesis(candidate)}
-                onRunIntelligence={() => onRunIntelligence(candidate.ticker)}
-                intelligenceStatus={symbolIntelStatus}
-              />
+              <ScreenerCandidateDetailsRow candidate={vm} />
             )}
           </React.Fragment>
         );

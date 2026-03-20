@@ -49,10 +49,7 @@ export default function Workspace() {
             activeTablet === 'screener' ? 'w-full' : 'hidden xl:flex'
           )}
         >
-          <ScreenerInboxPanel
-            onRunSymbolIntelligence={runForTicker}
-            getSymbolIntelligenceStatus={getStatusForTicker}
-          />
+          <ScreenerInboxPanel />
         </div>
         <div
           className={cn(

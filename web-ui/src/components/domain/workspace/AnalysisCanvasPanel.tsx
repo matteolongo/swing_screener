@@ -106,9 +106,13 @@ export default function AnalysisCanvasPanel({
       </div>
 
       {!selectedTicker ? (
-        <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-700 p-6">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+        <div className="flex flex-1 flex-col items-center justify-center rounded-lg border border-dashed border-gray-300 dark:border-gray-700 p-8 text-center gap-3">
+          <div className="text-4xl select-none">📊</div>
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
             {t('workspacePage.panels.analysis.empty')}
+          </p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 max-w-xs">
+            Run the screener and select a symbol to see its analysis, trade plan, and intelligence.
           </p>
         </div>
       ) : (

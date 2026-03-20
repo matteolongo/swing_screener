@@ -8,9 +8,7 @@ import { useConfigDefaultsQuery } from '@/features/config/hooks';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 import { useUniverses, useRunScreenerMutation } from '@/features/screener/hooks';
 import { filterCandidates, prioritizeCandidates, type DecisionActionFilter } from '@/features/screener/prioritization';
-import type { ScreenerCandidate } from '@/features/screener/types';
 import { useScreenerStore } from '@/stores/screenerStore';
-import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import type { WorkspaceAnalysisTab } from '@/stores/workspaceStore';
 import { t } from '@/i18n/t';
@@ -21,7 +19,6 @@ import {
   parseUniverseValue,
   SCREENER_UNIVERSE_STORAGE_KEY,
 } from '@/features/screener/universeStorage';
-import type { SymbolIntelligenceStatus } from '@/features/intelligence/useSymbolIntelligenceRunner';
 
 const TOP_N_MAX = 200;
 
@@ -43,16 +40,7 @@ const currencyFilterToRequest = (value: CurrencyFilter): string[] => {
   if (value === 'eur') return ['EUR'];
   return ['USD', 'EUR'];
 };
-interface ScreenerInboxPanelProps {
-  onRunSymbolIntelligence?: (ticker: string) => void;
-  getSymbolIntelligenceStatus?: (ticker: string) => SymbolIntelligenceStatus | undefined;
-}
-
-export default function ScreenerInboxPanel({
-  onRunSymbolIntelligence,
-  getSymbolIntelligenceStatus,
-}: ScreenerInboxPanelProps) {
-  const { isBeginnerMode } = useBeginnerModeStore();
+export default function ScreenerInboxPanel() {
   const { lastResult, setLastResult } = useScreenerStore();
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
   const selectedTickerSource = useWorkspaceStore((state) => state.selectedTickerSource);
@@ -102,10 +90,6 @@ export default function ScreenerInboxPanel({
       }
       return 'all';
     }
-  );
-  const [showAdvancedFilters, setShowAdvancedFilters] = useLocalStorage(
-    'screener.showAdvancedFilters',
-    !isBeginnerMode
   );
   const [isFormCollapsed, setIsFormCollapsed] = useLocalStorage('screener-form-collapsed', false);
 
@@ -172,10 +156,6 @@ export default function ScreenerInboxPanel({
     [setAnalysisTab, setSelectedTicker]
   );
 
-  const handleTradeThesisAction = useCallback((candidate: ScreenerCandidate) => {
-    handleSelectCandidate(candidate.ticker, 'order');
-  }, [handleSelectCandidate]);
-
   if (!riskConfig) {
     const configFailed = configDefaultsQuery.isError && !activeStrategy?.risk;
     return (
@@ -197,7 +177,6 @@ export default function ScreenerInboxPanel({
       </div>
 
       <ScreenerForm
-        isBeginnerMode={isBeginnerMode}
         selectedUniverse={selectedUniverse}
         setSelectedUniverse={setSelectedUniverse}
         topN={topN}
@@ -212,8 +191,6 @@ export default function ScreenerInboxPanel({
         setRecommendedOnly={setRecommendedOnly}
         actionFilter={actionFilter}
         setActionFilter={setActionFilter}
-        showAdvancedFilters={showAdvancedFilters}
-        setShowAdvancedFilters={setShowAdvancedFilters}
         universes={universesQuery.data?.universes ?? []}
         isLoading={screenerMutation.isPending}
         onRun={handleRunScreener}
@@ -297,9 +274,6 @@ export default function ScreenerInboxPanel({
               onRowClick={(candidate) => handleSelectCandidate(candidate.ticker, analysisTab === 'order' ? 'order' : 'overview')}
               onCreateOrder={(candidate) => handleSelectCandidate(candidate.ticker, 'order')}
               onRecommendationDetails={(candidate) => handleSelectCandidate(candidate.ticker, 'overview')}
-              onTradeThesis={handleTradeThesisAction}
-              onRunIntelligence={(ticker) => onRunSymbolIntelligence?.(ticker)}
-              getSymbolIntelligenceStatus={getSymbolIntelligenceStatus}
             />
           </div>
         </div>
