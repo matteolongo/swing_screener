@@ -100,6 +100,7 @@ export interface FundamentalSnapshot {
   priceToBook?: number;
   bookToPrice?: number;
   mostRecentQuarter?: string;
+  dataRegion?: string;
   pillars: Record<string, FundamentalPillarScore>;
   historicalSeries: Record<string, FundamentalMetricSeries>;
   metricContext: Record<string, FundamentalMetricContext>;
@@ -141,6 +142,7 @@ export interface FundamentalSnapshotAPI {
   price_to_book?: number | null;
   book_to_price?: number | null;
   most_recent_quarter?: string | null;
+  data_region?: string | null;
   pillars?: Record<string, FundamentalPillarScoreAPI>;
   historical_series?: Record<string, FundamentalMetricSeriesAPI>;
   metric_context?: Record<string, FundamentalMetricContextAPI>;
@@ -343,6 +345,7 @@ export function transformFundamentalSnapshot(api: FundamentalSnapshotAPI): Funda
     priceToBook: api.price_to_book ?? undefined,
     bookToPrice: api.book_to_price ?? undefined,
     mostRecentQuarter: api.most_recent_quarter ?? undefined,
+    dataRegion: api.data_region ?? undefined,
     pillars,
     historicalSeries,
     metricContext,
