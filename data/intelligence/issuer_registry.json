@@ -1,0 +1,14 @@
+{
+  "AAPL": ["https://investor.apple.com"],
+  "MSFT": ["https://www.microsoft.com"],
+  "NVDA": ["https://investor.nvidia.com"],
+  "ASML.AS": ["https://www.asml.com"],
+  "AIR.PA": ["https://www.airbus.com"],
+  "MC.PA": ["https://www.lvmh.com"],
+  "SAP.DE": ["https://www.sap.com"],
+  "SIE.DE": ["https://www.siemens.com"],
+  "SAN.MC": ["https://www.santander.com"],
+  "ENI.MI": ["https://www.eni.com"],
+  "NESN.SW": ["https://www.nestle.com"],
+  "VOD.L": ["https://investors.vodafone.com"]
+}

@@ -51,9 +51,28 @@ data/social_cache/
 data/fundamentals/
 data/daily_reviews/
 data/screener/
-data/intelligence/
 data/*.db
 data/*.db-journal
+# data/intelligence — ignore runtime output, track seed/config files
+data/intelligence/run_jobs.json
+data/intelligence/symbol_sets.json
+data/intelligence/discovered_feeds_cache.json
+data/intelligence/llm_cache.json
+data/intelligence/llm_audit/
+data/intelligence/robots_cache.json
+data/intelligence/openfigi_cache.json
+data/intelligence/instrument_profiles_overrides.json
+data/intelligence/intelligence_metrics.json
+data/intelligence/source_quality_stats.json
+data/intelligence/sources_health.json
+data/intelligence/symbol_state.json
+data/intelligence/events_*.jsonl
+data/intelligence/evidence_*.jsonl
+data/intelligence/normalized_events_*.json
+data/intelligence/signals_*.json
+data/intelligence/opportunities_*.json
+data/intelligence/themes_*.json
+data/intelligence/education_*.json
 
 # =========================
 # Logs
