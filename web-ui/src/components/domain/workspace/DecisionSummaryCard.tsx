@@ -81,21 +81,6 @@ function catalystLabel(label: DecisionCatalystLabel): string {
   }
 }
 
-function badgeVariantForAction(action: DecisionAction): 'default' | 'primary' | 'success' | 'warning' | 'error' {
-  switch (action) {
-    case 'BUY_NOW':
-      return 'success';
-    case 'BUY_ON_PULLBACK':
-    case 'WAIT_FOR_BREAKOUT':
-    case 'TACTICAL_ONLY':
-      return 'warning';
-    case 'AVOID':
-      return 'error';
-    case 'WATCH':
-    case 'MANAGE_ONLY':
-      return 'default';
-  }
-}
 
 function badgeVariantForConviction(
   conviction: DecisionConviction
@@ -222,23 +207,42 @@ export default function DecisionSummaryCard({
       ]
     : [];
 
+  const bannerClass = (() => {
+    switch (summary.action) {
+      case 'BUY_NOW':
+        return 'bg-emerald-600 text-white';
+      case 'BUY_ON_PULLBACK':
+      case 'WAIT_FOR_BREAKOUT':
+      case 'TACTICAL_ONLY':
+        return 'bg-amber-400 text-amber-950';
+      case 'AVOID':
+        return 'bg-rose-600 text-white';
+      case 'WATCH':
+      case 'MANAGE_ONLY':
+        return 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
+    }
+  })();
+
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+    <div className="rounded-lg border border-slate-200 overflow-hidden">
+      {/* Colored verdict banner */}
+      <div className={`px-3 py-2 flex items-center justify-between gap-3 ${bannerClass}`}>
+        <span className="font-semibold text-sm">
+          {t('workspacePage.panels.analysis.decisionSummary.title', { ticker: summary.symbol })} — {actionLabel(summary.action)}
+        </span>
+        <Badge variant={badgeVariantForConviction(summary.conviction)}>
+          {convictionLabel(summary.conviction)}
+        </Badge>
+      </div>
+
+      <div className="bg-slate-50 p-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-base font-semibold">
-            {t('workspacePage.panels.analysis.decisionSummary.title', { ticker: summary.symbol })}
-          </h3>
-          <p className="mt-1 text-sm text-gray-600">
+          <p className="text-sm text-gray-600">
             {t('workspacePage.panels.analysis.decisionSummary.subtitle')}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Badge variant={badgeVariantForAction(summary.action)}>{actionLabel(summary.action)}</Badge>
-          <Badge variant={badgeVariantForConviction(summary.conviction)}>
-            {t('workspacePage.panels.analysis.decisionSummary.labels.conviction')}:{' '}
-            {convictionLabel(summary.conviction)}
-          </Badge>
         </div>
       </div>
 
@@ -346,6 +350,7 @@ export default function DecisionSummaryCard({
           </ul>
         </div>
       ) : null}
+      </div>
     </div>
   );
 }

@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useLocalStorage } from '@/hooks';
-import { Info, RefreshCw } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useDailyReview } from '@/features/dailyReview/api';
@@ -16,13 +16,8 @@ import GlossaryLegend from '@/components/domain/education/GlossaryLegend';
 import MetricHelpLabel from '@/components/domain/education/MetricHelpLabel';
 import { DAILY_REVIEW_GLOSSARY_KEYS } from '@/content/educationGlossary';
 import CandidateOrderModal from '@/components/domain/orders/CandidateOrderModal';
-import CachedSymbolPriceChart from '@/components/domain/market/CachedSymbolPriceChart';
-import WatchMetaInline from '@/components/domain/watchlist/WatchMetaInline';
-import WatchToggleButton from '@/components/domain/watchlist/WatchToggleButton';
 import { queryKeys } from '@/lib/queryKeys';
 import { t } from '@/i18n/t';
-import { useUnwatchSymbolMutation, useWatchSymbolMutation, useWatchlist } from '@/features/watchlist/hooks';
-import type { WatchItem } from '@/features/watchlist/types';
 import { filterDailyReviewCandidates } from '@/features/dailyReview/prioritization';
 import type { DecisionActionFilter } from '@/features/screener/prioritization';
 import {
@@ -122,46 +117,7 @@ export default function DailyReview() {
   const configDefaultsQuery = useConfigDefaultsQuery();
   const { isBeginnerMode } = useBeginnerModeStore();
   const { isReady: strategyReady } = useStrategyReadiness();
-  const watchlistQuery = useWatchlist();
-  const watchSymbolMutation = useWatchSymbolMutation();
-  const unwatchSymbolMutation = useUnwatchSymbolMutation();
 
-  const watchItemsByTicker = useMemo(() => {
-    const map = new Map<string, WatchItem>();
-    for (const item of watchlistQuery.data ?? []) {
-      map.set(item.ticker.toUpperCase(), item);
-    }
-    return map;
-  }, [watchlistQuery.data]);
-
-  const handleWatch = useCallback(
-    (ticker: string, currentPrice: number | null | undefined, source: string) => {
-      const normalizedTicker = ticker.trim().toUpperCase();
-      if (!normalizedTicker || watchItemsByTicker.has(normalizedTicker)) {
-        return;
-      }
-      watchSymbolMutation.mutate({
-        ticker: normalizedTicker,
-        watchPrice: currentPrice ?? null,
-        currency: null,
-        source,
-      });
-    },
-    [watchItemsByTicker, watchSymbolMutation],
-  );
-
-  const handleUnwatch = useCallback(
-    (ticker: string) => {
-      const normalizedTicker = ticker.trim().toUpperCase();
-      if (!normalizedTicker || !watchItemsByTicker.has(normalizedTicker)) {
-        return;
-      }
-      unwatchSymbolMutation.mutate(normalizedTicker);
-    },
-    [watchItemsByTicker, unwatchSymbolMutation],
-  );
-  const watchPending = watchSymbolMutation.isPending || unwatchSymbolMutation.isPending;
-  
   // Persist dismissal to localStorage
   useEffect(() => {
     localStorage.setItem('dailyReview.dismissedReadinessBlocker', String(dismissedReadinessBlocker));
@@ -470,10 +426,6 @@ export default function DailyReview() {
             <CandidatesTable
               candidates={visibleCandidates}
               onOpenOrderReview={setSelectedCandidate}
-              watchItemsByTicker={watchItemsByTicker}
-              watchPending={watchPending}
-              onWatch={handleWatch}
-              onUnwatch={handleUnwatch}
             />
           </div>
         )}
@@ -514,10 +466,6 @@ export default function DailyReview() {
             <CandidatesTable
               candidates={visibleAddOnCandidates}
               onOpenOrderReview={setSelectedCandidate}
-              watchItemsByTicker={watchItemsByTicker}
-              watchPending={watchPending}
-              onWatch={handleWatch}
-              onUnwatch={handleUnwatch}
             />
           </div>
         )}
@@ -544,10 +492,6 @@ export default function DailyReview() {
                   positionId: position.positionId,
                 })
               }
-              watchItemsByTicker={watchItemsByTicker}
-              watchPending={watchPending}
-              onWatch={handleWatch}
-              onUnwatch={handleUnwatch}
             />
           </div>
         )}
@@ -568,15 +512,11 @@ export default function DailyReview() {
               onAction={(position) =>
                 openWorkspacePortfolioAction({
                   action: 'close-position',
-                ticker: position.ticker,
+                  ticker: position.ticker,
                   positionId: position.positionId,
                 })
               }
-              watchItemsByTicker={watchItemsByTicker}
-              watchPending={watchPending}
-              onWatch={handleWatch}
-            onUnwatch={handleUnwatch}
-          />
+            />
         )}
       </CollapsibleSection>
 
@@ -591,10 +531,6 @@ export default function DailyReview() {
         ) : (
           <HoldTable
             positions={review.positionsHold}
-            watchItemsByTicker={watchItemsByTicker}
-            watchPending={watchPending}
-            onWatch={handleWatch}
-            onUnwatch={handleUnwatch}
           />
         )}
       </CollapsibleSection>
@@ -731,59 +667,13 @@ function CollapsibleSection({
   );
 }
 
-interface DailyReviewWatchProps {
-  watchItemsByTicker: Map<string, WatchItem>;
-  watchPending: boolean;
-  onWatch: (ticker: string, currentPrice: number | null | undefined, source: string) => void;
-  onUnwatch: (ticker: string) => void;
-}
-
-function WatchInlineBlock({
-  ticker,
-  currentPrice,
-  source,
-  watchItemsByTicker,
-  watchPending,
-  onWatch,
-  onUnwatch,
-}: {
-  ticker: string;
-  currentPrice: number | null | undefined;
-  source: string;
-} & DailyReviewWatchProps) {
-  const watchItem = watchItemsByTicker.get(ticker.trim().toUpperCase());
-  return (
-    <div className="mt-1 flex flex-col gap-1">
-      <WatchToggleButton
-        ticker={ticker}
-        isWatched={Boolean(watchItem)}
-        isPending={watchPending}
-        onWatch={(nextTicker) => onWatch(nextTicker, currentPrice, source)}
-        onUnwatch={onUnwatch}
-      />
-      {watchItem ? (
-        <WatchMetaInline
-          watchedAt={watchItem.watchedAt}
-          watchPrice={watchItem.watchPrice}
-          currentPrice={currentPrice}
-          currency={null}
-        />
-      ) : null}
-    </div>
-  );
-}
-
 function CandidatesTable({
   candidates,
   onOpenOrderReview,
-  watchItemsByTicker,
-  watchPending,
-  onWatch,
-  onUnwatch,
 }: {
   candidates: DailyReviewCandidate[];
   onOpenOrderReview: (candidate: DailyReviewCandidate) => void;
-} & DailyReviewWatchProps) {
+}) {
   const actionLabel = (candidate: DailyReviewCandidate) =>
     candidate.sameSymbol?.mode === 'ADD_ON'
       ? t('dailyReview.table.candidates.addOnAction')
@@ -804,18 +694,12 @@ function CandidatesTable({
         <tr>
           <th className="text-left p-2">{t('dailyReview.table.candidates.headers.priority')}</th>
           <th className="text-left p-2">{t('dailyReview.table.candidates.headers.ticker')}</th>
-          <th className="text-right p-2">
-            <MetricHelpLabel metricKey="CONFIDENCE" className="justify-end w-full" />
-          </th>
           <th className="text-left p-2">{t('dailyReview.table.candidates.headers.signal')}</th>
           <th className="text-right p-2">{t('dailyReview.table.candidates.headers.entry')}</th>
           <th className="text-right p-2">{t('dailyReview.table.candidates.headers.stop')}</th>
-          <th className="text-right p-2">{t('dailyReview.table.candidates.headers.shares')}</th>
           <th className="text-right p-2">
             <MetricHelpLabel metricKey="RR" labelOverride="R:R" className="justify-end w-full" />
           </th>
-          <th className="text-left p-2">{t('dailyReview.table.candidates.headers.sector')}</th>
-          <th className="text-center p-2">{t('dailyReview.table.candidates.headers.info')}</th>
           <th className="text-right p-2">{t('dailyReview.table.candidates.headers.action')}</th>
         </tr>
       )}
@@ -842,7 +726,7 @@ function CandidatesTable({
               ) : null}
             </div>
           </td>
-          <td className="p-2 font-mono font-bold align-top">
+          <td className="p-2 font-mono font-bold">
             <a
               href={`https://finance.yahoo.com/quote/${candidate.ticker}`}
               target="_blank"
@@ -852,24 +736,9 @@ function CandidatesTable({
             >
               {candidate.ticker}
             </a>
-            <WatchInlineBlock
-              ticker={candidate.ticker}
-              currentPrice={candidate.close}
-              source="daily_review_candidates"
-              watchItemsByTicker={watchItemsByTicker}
-              watchPending={watchPending}
-              onWatch={onWatch}
-              onUnwatch={onUnwatch}
-            />
-            <CachedSymbolPriceChart ticker={candidate.ticker} className="mt-1" />
-          </td>
-          <td className="p-2 text-right">
-            <span className="font-semibold text-purple-600">
-              {candidate.confidence != null ? formatNumber(candidate.confidence, 1) : '-'}
-            </span>
           </td>
           <td className="p-2">
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5">
               <Badge variant="primary">{candidate.signal}</Badge>
               {candidate.sameSymbol?.mode === 'ADD_ON' ? (
                 <Badge variant="warning">{t('dailyReview.table.candidates.addOnBadge')}</Badge>
@@ -878,47 +747,15 @@ function CandidatesTable({
           </td>
           <td className="p-2 text-right">{formatCurrency(candidate.entry)}</td>
           <td className="p-2 text-right">{formatCurrency(candidate.stop)}</td>
-          <td className="p-2 text-right">{candidate.shares}</td>
           <td className="p-2 text-right font-bold">
             {t('common.units.rValue', { value: formatNumber(candidate.rReward, 1) })}
-          </td>
-          <td className="p-2 text-sm text-gray-600 dark:text-gray-400">
-            <div>{candidate.sector || t('common.placeholders.dash')}</div>
-            {candidate.sameSymbol?.mode === 'ADD_ON' ? (
-              <div className="mt-1 text-xs text-amber-700 dark:text-amber-300">
-                {t('dailyReview.table.candidates.addOnReason', {
-                  liveStop:
-                    candidate.sameSymbol.currentPositionStop != null
-                      ? formatCurrency(candidate.sameSymbol.currentPositionStop)
-                      : t('common.placeholders.emDash'),
-                  freshStop:
-                    candidate.sameSymbol.freshSetupStop != null
-                      ? formatCurrency(candidate.sameSymbol.freshSetupStop)
-                      : t('common.placeholders.emDash'),
-                })}
-              </div>
-            ) : null}
-          </td>
-          <td className="p-2 text-center">
-            {candidate.recommendation ? (
-              <button
-                onClick={() => onOpenOrderReview(candidate)}
-                className="min-h-11 min-w-11 p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
-                title={t('dailyReview.table.candidates.recommendationTitle')}
-                aria-label={t('dailyReview.table.candidates.recommendationAria', { ticker: candidate.ticker })}
-              >
-                <Info className="w-4 h-4" />
-              </button>
-            ) : null}
           </td>
           <td className="p-2 text-right">
             <Button
               variant="primary"
               size="sm"
               onClick={() => onOpenOrderReview(candidate)}
-              title={
-                actionTitle(candidate)
-              }
+              title={actionTitle(candidate)}
             >
               {actionLabel(candidate)}
             </Button>
@@ -945,14 +782,10 @@ function formatDailyReviewReason(reason: string): string {
 function UpdateStopTable({
   positions,
   onAction,
-  watchItemsByTicker,
-  watchPending,
-  onWatch,
-  onUnwatch,
 }: {
   positions: DailyReviewPositionUpdate[];
   onAction: (position: DailyReviewPositionUpdate) => void;
-} & DailyReviewWatchProps) {
+}) {
   return (
     <TableShell
       empty={positions.length === 0}
@@ -985,16 +818,6 @@ function UpdateStopTable({
             >
               {pos.ticker}
             </a>
-            <WatchInlineBlock
-              ticker={pos.ticker}
-              currentPrice={pos.currentPrice}
-              source="daily_review_update_stop"
-              watchItemsByTicker={watchItemsByTicker}
-              watchPending={watchPending}
-              onWatch={onWatch}
-              onUnwatch={onUnwatch}
-            />
-            <CachedSymbolPriceChart ticker={pos.ticker} className="mt-1" />
           </td>
           <td className="p-2 text-right">{formatCurrency(pos.entryPrice)}</td>
           <td className="p-2 text-right">{formatCurrency(pos.currentPrice)}</td>
@@ -1025,14 +848,10 @@ function UpdateStopTable({
 function CloseTable({
   positions,
   onAction,
-  watchItemsByTicker,
-  watchPending,
-  onWatch,
-  onUnwatch,
 }: {
   positions: DailyReviewPositionClose[];
   onAction: (position: DailyReviewPositionClose) => void;
-} & DailyReviewWatchProps) {
+}) {
   return (
     <TableShell
       empty={positions.length === 0}
@@ -1064,16 +883,6 @@ function CloseTable({
             >
               {pos.ticker}
             </a>
-            <WatchInlineBlock
-              ticker={pos.ticker}
-              currentPrice={pos.currentPrice}
-              source="daily_review_close"
-              watchItemsByTicker={watchItemsByTicker}
-              watchPending={watchPending}
-              onWatch={onWatch}
-              onUnwatch={onUnwatch}
-            />
-            <CachedSymbolPriceChart ticker={pos.ticker} className="mt-1" />
           </td>
           <td className="p-2 text-right">{formatCurrency(pos.entryPrice)}</td>
           <td className="p-2 text-right">{formatCurrency(pos.currentPrice)}</td>
@@ -1102,13 +911,9 @@ function CloseTable({
 
 function HoldTable({
   positions,
-  watchItemsByTicker,
-  watchPending,
-  onWatch,
-  onUnwatch,
 }: {
   positions: DailyReviewPositionHold[];
-} & DailyReviewWatchProps) {
+}) {
   return (
     <TableShell
       empty={positions.length === 0}
@@ -1139,16 +944,6 @@ function HoldTable({
             >
               {pos.ticker}
             </a>
-            <WatchInlineBlock
-              ticker={pos.ticker}
-              currentPrice={pos.currentPrice}
-              source="daily_review_hold"
-              watchItemsByTicker={watchItemsByTicker}
-              watchPending={watchPending}
-              onWatch={onWatch}
-              onUnwatch={onUnwatch}
-            />
-            <CachedSymbolPriceChart ticker={pos.ticker} className="mt-1" />
           </td>
           <td className="p-2 text-right">{formatCurrency(pos.entryPrice)}</td>
           <td className="p-2 text-right">{formatCurrency(pos.currentPrice)}</td>
