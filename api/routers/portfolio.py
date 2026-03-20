@@ -19,6 +19,9 @@ from api.models.portfolio import (
     UpdateStopRequest,
     ClosePositionRequest,
     StopSuggestionComputeRequest,
+    DegiroSyncRequest,
+    DegiroSyncPreviewResponse,
+    DegiroApplyResponse,
 )
 from api.dependencies import get_config_repo, get_portfolio_service
 from api.dependencies import get_strategy_repo
@@ -180,3 +183,145 @@ async def cancel_order(
 ):
     """Cancel an order."""
     return service.cancel_order(order_id)
+
+
+# ===== DeGiro Sync =====
+
+def _check_degiro_available() -> None:
+    import importlib.util
+    from fastapi import HTTPException
+
+    if importlib.util.find_spec("degiro_connector") is None:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "degiro-connector is not installed. "
+                "Install it with: pip install -e '.[degiro]'"
+            ),
+        )
+    try:
+        from swing_screener.integrations.degiro.credentials import load_credentials
+        load_credentials()
+    except ValueError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+
+
+@router.post("/sync/degiro/preview", response_model=DegiroSyncPreviewResponse)
+async def degiro_sync_preview(
+    request: DegiroSyncRequest,
+    service: PortfolioService = Depends(get_portfolio_service),
+):
+    """Preview DeGiro portfolio sync — computes diffs without writing anything.
+
+    Returns 503 if degiro-connector is missing or credentials are absent.
+    """
+    _check_degiro_available()
+
+    from swing_screener.integrations.degiro.credentials import load_credentials
+    from swing_screener.integrations.degiro.client import DegiroClient
+    from swing_screener.integrations.degiro import sync as degiro_sync
+
+    credentials = load_credentials()
+
+    with DegiroClient(credentials) as client:
+        raw_data = degiro_sync.fetch_live_data(
+            client,
+            request.from_date,
+            request.to_date,
+            include_portfolio=request.include_portfolio,
+            include_orders_history=request.include_orders_history,
+            include_transactions=request.include_transactions,
+        )
+
+    sync_raw = degiro_sync.normalize(raw_data)
+
+    orders_resp = service.list_orders()
+    positions_resp = service.list_positions()
+    local_orders = [o.model_dump() for o in orders_resp.orders]
+    local_positions = [p.model_dump() for p in positions_resp.positions]
+
+    preview = degiro_sync.preview(sync_raw, local_orders, local_positions)
+
+    def _diff_list(diffs):
+        return [
+            {
+                "kind": d.kind,
+                "action": d.action,
+                "local_id": d.local_id,
+                "broker_id": d.broker_id,
+                "confidence": d.confidence,
+                "fields": d.fields,
+            }
+            for d in diffs
+        ]
+
+    return DegiroSyncPreviewResponse(
+        positions_to_create=_diff_list(preview.positions_to_create),
+        positions_to_update=_diff_list(preview.positions_to_update),
+        orders_to_create=_diff_list(preview.orders_to_create),
+        orders_to_update=_diff_list(preview.orders_to_update),
+        fees_applied=preview.fees_applied,
+        ambiguous=_diff_list(preview.ambiguous),
+        unmatched=_diff_list(preview.unmatched),
+    )
+
+
+@router.post("/sync/degiro/apply", response_model=DegiroApplyResponse)
+async def degiro_sync_apply(
+    request: DegiroSyncRequest,
+    service: PortfolioService = Depends(get_portfolio_service),
+):
+    """Apply DeGiro portfolio sync — idempotent upsert, no hard deletes.
+
+    Returns 503 if degiro-connector is missing or credentials are absent.
+    """
+    _check_degiro_available()
+
+    from swing_screener.integrations.degiro.credentials import load_credentials
+    from swing_screener.integrations.degiro.client import DegiroClient
+    from swing_screener.integrations.degiro import sync as degiro_sync
+    from swing_screener.settings import data_dir, get_settings_manager
+    from api.dependencies import get_orders_path, get_positions_path
+
+    credentials = load_credentials()
+
+    with DegiroClient(credentials) as client:
+        raw_data = degiro_sync.fetch_live_data(
+            client,
+            request.from_date,
+            request.to_date,
+            include_portfolio=request.include_portfolio,
+            include_orders_history=request.include_orders_history,
+            include_transactions=request.include_transactions,
+        )
+
+    sync_raw = degiro_sync.normalize(raw_data)
+
+    orders_resp = service.list_orders()
+    positions_resp = service.list_positions()
+    local_orders = [o.model_dump() for o in orders_resp.orders]
+    local_positions = [p.model_dump() for p in positions_resp.positions]
+
+    preview = degiro_sync.preview(sync_raw, local_orders, local_positions)
+
+    artifact_dir = get_settings_manager().resolve_runtime_path(
+        "degiro_sync_dir",
+        data_dir() / "degiro" / "sync",
+    )
+
+    result = degiro_sync.apply(
+        preview,
+        get_orders_path(),
+        get_positions_path(),
+        artifact_dir=artifact_dir,
+    )
+
+    return DegiroApplyResponse(
+        positions_created=result.positions_created,
+        positions_updated=result.positions_updated,
+        orders_created=result.orders_created,
+        orders_updated=result.orders_updated,
+        fees_applied=result.fees_applied,
+        ambiguous_skipped=result.ambiguous_skipped,
+        artifact_paths=result.artifact_paths,
+    )

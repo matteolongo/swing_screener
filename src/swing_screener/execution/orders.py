@@ -31,6 +31,11 @@ class Order:
     tif: Optional[str] = None
     fee_eur: Optional[float] = None
     fill_fx_rate: Optional[float] = None
+    broker: Optional[str] = None
+    broker_order_id: Optional[str] = None
+    broker_product_id: Optional[str] = None
+    isin: Optional[str] = None
+    broker_synced_at: Optional[str] = None
 
 
 def load_orders(path: str | Path) -> list[Order]:
@@ -90,6 +95,11 @@ def load_orders(path: str | Path) -> list[Order]:
                     if item.get("fill_fx_rate") is not None
                     else None
                 ),
+                broker=item.get("broker", None),
+                broker_order_id=item.get("broker_order_id", None),
+                broker_product_id=item.get("broker_product_id", None),
+                isin=item.get("isin", None),
+                broker_synced_at=item.get("broker_synced_at", None),
             )
         )
     return out
@@ -118,6 +128,11 @@ def save_orders(path: str | Path, orders: list[Order], asof: Optional[str] = Non
                 "tif": o.tif,
                 "fee_eur": o.fee_eur,
                 "fill_fx_rate": o.fill_fx_rate,
+                "broker": o.broker,
+                "broker_order_id": o.broker_order_id,
+                "broker_product_id": o.broker_product_id,
+                "isin": o.isin,
+                "broker_synced_at": o.broker_synced_at,
             }
             for o in orders
         ],

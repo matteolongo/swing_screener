@@ -4,6 +4,9 @@ from __future__ import annotations
 from fastapi import HTTPException
 
 from api.models.fundamentals import (
+    DegiroAuditRecordResponse,
+    DegiroCapabilityAuditRequest,
+    DegiroCapabilityAuditResponse,
     FundamentalRefreshRequest,
     FundamentalSnapshotResponse,
     FundamentalsCompareRequest,
@@ -144,3 +147,78 @@ class FundamentalsService:
         if job is None:
             raise HTTPException(status_code=404, detail="Fundamentals warmup job not found.")
         return self._serialize_warmup_job_status(job)
+
+    def run_degiro_capability_audit(
+        self, request: DegiroCapabilityAuditRequest
+    ) -> DegiroCapabilityAuditResponse:
+        import importlib.util
+
+        # Lazy-import check: raise 503 if degiro-connector not installed
+        if importlib.util.find_spec("degiro_connector") is None:
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    "degiro-connector is not installed. "
+                    "Install it with: pip install -e '.[degiro]'"
+                ),
+            )
+
+        # Credentials check
+        try:
+            from swing_screener.integrations.degiro.credentials import load_credentials
+            credentials = load_credentials()
+        except ValueError as exc:
+            raise HTTPException(status_code=503, detail=str(exc))
+
+        from swing_screener.integrations.degiro.audit import run_capability_audit
+        from swing_screener.integrations.degiro.client import DegiroClient
+        from swing_screener.integrations.degiro.storage import save_audit_run
+        from swing_screener.settings import data_dir, get_settings_manager
+
+        artifact_base = get_settings_manager().resolve_runtime_path(
+            "degiro_capability_audits_dir",
+            data_dir() / "degiro" / "capability_audits",
+        )
+
+        with DegiroClient(credentials) as client:
+            run = run_capability_audit(
+                client,
+                request.symbols,
+                include_quotes=request.include_quotes,
+                include_news=request.include_news,
+                include_agenda=request.include_agenda,
+            )
+
+        artifact_paths = save_audit_run(run, artifact_base)
+
+        results = [
+            DegiroAuditRecordResponse(
+                product_id=r.product_id,
+                isin=r.isin,
+                vwd_id=r.vwd_id,
+                name=r.name,
+                exchange=r.exchange,
+                currency=r.currency,
+                symbol=r.symbol,
+                has_quote=r.has_quote,
+                has_chart=r.has_chart,
+                has_profile=r.has_profile,
+                has_ratios=r.has_ratios,
+                has_statements=r.has_statements,
+                has_estimates=r.has_estimates,
+                has_agenda=r.has_agenda,
+                has_news=r.has_news,
+                resolution_confidence=r.resolution_confidence,
+                resolution_notes=r.resolution_notes,
+            )
+            for r in run.results
+        ]
+
+        return DegiroCapabilityAuditResponse(
+            audit_id=run.audit_id,
+            created_at=run.created_at,
+            symbols=list(run.symbols),
+            summary_counts=run.summary_counts,
+            artifact_paths=artifact_paths,
+            results=results,
+        )

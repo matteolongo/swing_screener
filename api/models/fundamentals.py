@@ -210,3 +210,59 @@ class FundamentalsWarmupStatusResponse(BaseModel):
     error_sample: Optional[str] = None
     created_at: str
     updated_at: str
+
+
+# ---------------------------------------------------------------------------
+# DeGiro capability audit request / response models (Phase 1)
+# ---------------------------------------------------------------------------
+
+class DegiroCapabilityAuditRequest(BaseModel):
+    symbols: list[str] = Field(min_length=1, max_length=20)
+    include_quotes: bool = True
+    include_news: bool = True
+    include_agenda: bool = True
+    force_refresh: bool = False
+
+    @field_validator("symbols")
+    @classmethod
+    def _normalize_symbols(cls, values: list[str]) -> list[str]:
+        normalized: list[str] = []
+        seen: set[str] = set()
+        for value in values:
+            symbol = str(value).strip().upper()
+            if not symbol or symbol in seen:
+                continue
+            seen.add(symbol)
+            normalized.append(symbol)
+        if not normalized:
+            raise ValueError("Provide at least one valid symbol.")
+        return normalized
+
+
+class DegiroAuditRecordResponse(BaseModel):
+    product_id: str
+    isin: Optional[str] = None
+    vwd_id: Optional[str] = None
+    name: str
+    exchange: Optional[str] = None
+    currency: Optional[str] = None
+    symbol: Optional[str] = None
+    has_quote: bool = False
+    has_chart: bool = False
+    has_profile: bool = False
+    has_ratios: bool = False
+    has_statements: bool = False
+    has_estimates: bool = False
+    has_agenda: bool = False
+    has_news: bool = False
+    resolution_confidence: str = "not_found"
+    resolution_notes: str = ""
+
+
+class DegiroCapabilityAuditResponse(BaseModel):
+    audit_id: str
+    created_at: str
+    symbols: list[str]
+    summary_counts: dict[str, int] = Field(default_factory=dict)
+    artifact_paths: dict[str, str] = Field(default_factory=dict)
+    results: list[DegiroAuditRecordResponse] = Field(default_factory=list)

@@ -5,6 +5,8 @@ from fastapi import APIRouter, Depends, Query
 
 from api.dependencies import get_fundamentals_service
 from api.models.fundamentals import (
+    DegiroCapabilityAuditRequest,
+    DegiroCapabilityAuditResponse,
     FundamentalRefreshRequest,
     FundamentalSnapshotResponse,
     FundamentalsCompareRequest,
@@ -73,3 +75,17 @@ def get_warmup_status(
     service: FundamentalsService = Depends(get_fundamentals_service),
 ):
     return service.get_warmup_status(job_id)
+
+
+@router.post("/degiro/capability-audit", response_model=DegiroCapabilityAuditResponse)
+def run_degiro_capability_audit(
+    request: DegiroCapabilityAuditRequest,
+    service: FundamentalsService = Depends(get_fundamentals_service),
+):
+    """Run a DeGiro capability audit for the given symbols.
+
+    Requires degiro-connector to be installed (`pip install -e '.[degiro]'`)
+    and DeGiro credentials in environment variables. Returns 503 if either
+    is missing.
+    """
+    return service.run_degiro_capability_audit(request)
