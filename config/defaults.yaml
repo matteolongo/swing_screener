@@ -347,6 +347,17 @@ low_level:
     pullback_band_atr_low: 0.5
     pullback_band_atr_high: 0.0
     allow_second_chance_breakout: true
+  # ---------------------------------------------------------------------------
+  # Tier 1 free-first data provider stack
+  # ---------------------------------------------------------------------------
+  # data_providers below configures the OHLCV / price pipeline (yfinance with
+  # Stooq fallback, optional Alpaca validation).  This is separate from
+  # `sources.enabled` above, which controls the evidence-adapter chain used by
+  # the market-intelligence / catalyst system (yahoo_finance, earnings_calendar,
+  # sec_edgar, company_ir_rss, exchange_announcements, financial_news_rss).
+  # Fundamentals providers (sec_edgar → yfinance) are configured independently
+  # via `FundamentalsConfig` and are NOT listed here.
+  # ---------------------------------------------------------------------------
   data_providers:
     yfinance:
       thread_safe_batch_size: 20

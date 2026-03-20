@@ -1,3 +1,7 @@
+# NOTE: market_intelligence.providers in each strategy governs the LLM pipeline
+# input (the news/price feed used for catalyst classification).  It is NOT the
+# evidence-adapter chain; that is controlled by sources.enabled in the
+# intelligence config (sec_edgar, company_ir_rss, exchange_announcements, etc.).
 active_strategy_id: default
 strategies:
 - name: Balanced
@@ -53,7 +57,7 @@ strategies:
     trail_after_r: 2.0
     trail_sma: 20
     sma_buffer_pct: 0.005
-    max_holding_days: 20
+    max_holding_days: 30
     benchmark: SPY
   market_intelligence:
     enabled: true
@@ -109,6 +113,8 @@ strategies:
       enabled:
       - yahoo_finance
       - earnings_calendar
+      - sec_edgar
+      - company_ir_rss
       scraping_enabled: false
       allowed_domains: []
       rate_limits:
@@ -146,7 +152,7 @@ strategies:
   id: default
   is_default: true
   created_at: '2026-02-08T00:00:00'
-  updated_at: '2026-03-02T17:26:00'
+  updated_at: '2026-03-19T21:16:35'
 - name: '1000'
   description: Default strategy seeded from current system settings.
   module: momentum
