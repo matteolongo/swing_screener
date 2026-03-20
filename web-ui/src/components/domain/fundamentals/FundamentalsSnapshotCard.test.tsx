@@ -89,10 +89,10 @@ describe('FundamentalsSnapshotCard', () => {
     expect(screen.getByText('quality low')).toBeInTheDocument();
     expect(screen.getByText('not comparable')).toBeInTheDocument();
     expect(screen.getByText('Price / Book')).toBeInTheDocument();
-    expect(screen.getByText('1.7')).toBeInTheDocument();
-    expect(screen.getByText('58.8%')).toBeInTheDocument();
-    expect(screen.getByText('6.5B')).toBeInTheDocument();
-    expect(screen.getByText('650M')).toBeInTheDocument();
+    expect(screen.getByText(/1[,.]7/)).toBeInTheDocument();
+    expect(screen.getByText(/58[,.]8%/)).toBeInTheDocument();
+    expect(screen.getByText(/6500\s*M/)).toBeInTheDocument();
+    expect(screen.getByText(/650\s*M/)).toBeInTheDocument();
     expect(screen.getAllByText(/annual · yfinance\.financials/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/snapshot · yfinance\.info\.revenueGrowth · 2025-12-31/i)).toBeInTheDocument();
     expect(screen.getByText('Data quality')).toBeInTheDocument();

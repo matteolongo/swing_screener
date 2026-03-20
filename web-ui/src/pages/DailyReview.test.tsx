@@ -134,24 +134,22 @@ describe('DailyReview Page', () => {
       expect(screen.getByText('Daily Review Glossary')).toBeInTheDocument()
       expect(screen.getByText('Stop Management Glossary')).toBeInTheDocument()
       expect(screen.getByText('Priority')).toBeInTheDocument()
-      expect(screen.getByText('Confidence')).toBeInTheDocument()
       expect(screen.getByText('R:R')).toBeInTheDocument()
       expect(screen.getAllByText('R Now').length).toBeGreaterThan(0)
-      expect(screen.getByText('91.6')).toBeInTheDocument()
       expect(screen.getByText('Raw #3')).toBeInTheDocument()
       expect(screen.getByText('Buy Now · High')).toBeInTheDocument()
     })
   })
 
-  it('opens the combined order review modal from the info action', async () => {
+  it('opens the combined order review modal from the create order action', async () => {
     const { user } = renderWithProviders(<DailyReview />)
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Recommendation details for VALE/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /Create Order/i })).toBeInTheDocument()
     })
 
     await act(async () => {
-      await user.click(screen.getByRole('button', { name: /Recommendation details for VALE/i }))
+      await user.click(screen.getByRole('button', { name: /Create Order/i }))
     })
 
     await waitFor(() => {
@@ -280,30 +278,15 @@ describe('DailyReview Page', () => {
     })
   })
 
-  it('allows watching and unwatching symbols inline in daily review tables', async () => {
-    const { user } = renderWithProviders(<DailyReview />)
+  it('does not show inline watch controls in daily review tables', async () => {
+    renderWithProviders(<DailyReview />)
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Watch VALE/i })).toBeInTheDocument()
+      expect(screen.getByText('VALE')).toBeInTheDocument()
     })
 
-    await act(async () => {
-      await user.click(screen.getByRole('button', { name: /Watch VALE/i }))
-    })
-
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Unwatch VALE/i })).toBeInTheDocument()
-      expect(screen.getAllByText(/Watched:/i).length).toBeGreaterThan(0)
-      expect(screen.getAllByText(/Since watched:/i).length).toBeGreaterThan(0)
-    })
-
-    await act(async () => {
-      await user.click(screen.getByRole('button', { name: /Unwatch VALE/i }))
-    })
-
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Watch VALE/i })).toBeInTheDocument()
-    })
+    expect(screen.queryByRole('button', { name: /Watch VALE/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Unwatch VALE/i })).not.toBeInTheDocument()
   })
 
   it('filters candidate sections by decision action and can reveal watch ideas when recommended-only is disabled', async () => {

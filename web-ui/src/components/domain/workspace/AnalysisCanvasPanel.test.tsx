@@ -152,8 +152,8 @@ describe('AnalysisCanvasPanel', () => {
 
     renderWithProviders(<AnalysisCanvasPanel />);
 
-    expect(screen.getByText('AAPL Decision Summary')).toBeInTheDocument();
-    expect(screen.getByText('Buy Now')).toBeInTheDocument();
+    expect(screen.getByText(/AAPL Decision Summary/)).toBeInTheDocument();
+    expect(screen.getByText(/Buy Now/)).toBeInTheDocument();
   });
 
   it('live reloads the selected candidate when refreshed fundamentals arrive', async () => {
