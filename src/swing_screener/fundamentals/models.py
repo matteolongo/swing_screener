@@ -125,6 +125,7 @@ class ProviderFundamentalsRecord:
     book_value_per_share: float | None = None
     price_to_book: float | None = None
     book_to_price: float | None = None
+    data_region: str | None = None
     historical_series: dict[str, FundamentalMetricSeries] = field(default_factory=dict)
     metric_context: dict[str, FundamentalMetricContext] = field(default_factory=dict)
     metric_sources: dict[str, str] = field(default_factory=dict)
@@ -162,6 +163,7 @@ class FundamentalSnapshot:
     price_to_book: float | None = None
     book_to_price: float | None = None
     most_recent_quarter: str | None = None
+    data_region: str | None = None
     pillars: dict[str, FundamentalPillarScore] = field(default_factory=dict)
     historical_series: dict[str, FundamentalMetricSeries] = field(default_factory=dict)
     metric_context: dict[str, FundamentalMetricContext] = field(default_factory=dict)
@@ -290,6 +292,7 @@ class FundamentalSnapshot:
             price_to_book=payload.get("price_to_book"),
             book_to_price=payload.get("book_to_price"),
             most_recent_quarter=payload.get("most_recent_quarter"),
+            data_region=(str(payload.get("data_region")).strip().upper() if payload.get("data_region") else None),
             pillars=pillars,
             historical_series=historical_series,
             metric_context=metric_context,

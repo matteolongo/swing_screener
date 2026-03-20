@@ -5,11 +5,17 @@ from typing import Any
 
 SUPPORTED_FUNDAMENTAL_PROVIDERS = {"sec_edgar", "yfinance"}
 
+# Ordered provider chain for the Tier 1 free-first stack.
+# SEC EDGAR is tried first (US equities only); yfinance covers EU/global fallback.
+# Add new providers here when graduating to Tier 2 — this is the single source
+# of truth referenced by both the domain config and the API validation layer.
+TIER1_PROVIDERS: tuple[str, ...] = ("sec_edgar", "yfinance")
+
 
 @dataclass(frozen=True)
 class FundamentalsConfig:
     enabled: bool = True
-    providers: tuple[str, ...] = ("sec_edgar", "yfinance")
+    providers: tuple[str, ...] = TIER1_PROVIDERS
     cache_ttl_hours: int = 24
     stale_after_days: int = 120
     compare_limit: int = 5
@@ -42,7 +48,7 @@ def _clean_provider_list(raw: Any) -> tuple[str, ...]:
             continue
         if provider not in cleaned:
             cleaned.append(provider)
-    return tuple(cleaned) if cleaned else ("sec_edgar", "yfinance")
+    return tuple(cleaned) if cleaned else TIER1_PROVIDERS
 
 
 def build_fundamentals_config(raw_payload: dict[str, Any] | None = None) -> FundamentalsConfig:

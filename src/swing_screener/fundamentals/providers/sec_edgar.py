@@ -670,6 +670,7 @@ class SecEdgarFundamentalsProvider:
             asof_date=_iso_today(),
             provider=self.name,
             instrument_type="equity",
+            data_region="US",
             company_name=company_name,
             currency="USD",
             most_recent_quarter=most_recent_quarter,

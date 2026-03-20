@@ -5,10 +5,12 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
+from swing_screener.fundamentals.config import SUPPORTED_FUNDAMENTAL_PROVIDERS, TIER1_PROVIDERS
+
 
 class FundamentalsConfigModel(BaseModel):
     enabled: bool = True
-    providers: list[str] = Field(default_factory=lambda: ["sec_edgar", "yfinance"])
+    providers: list[str] = Field(default_factory=lambda: list(TIER1_PROVIDERS))
     cache_ttl_hours: int = Field(default=24, ge=1, le=168)
     stale_after_days: int = Field(default=120, ge=30, le=730)
     compare_limit: int = Field(default=5, ge=2, le=10)
@@ -22,11 +24,11 @@ class FundamentalsConfigModel(BaseModel):
             provider = str(value).strip().lower()
             if not provider or provider in seen:
                 continue
-            if provider not in {"sec_edgar", "yfinance"}:
+            if provider not in SUPPORTED_FUNDAMENTAL_PROVIDERS:
                 continue
             seen.add(provider)
             normalized.append(provider)
-        return normalized or ["sec_edgar", "yfinance"]
+        return normalized or list(TIER1_PROVIDERS)
 
 
 class FundamentalPillarScoreResponse(BaseModel):
@@ -87,6 +89,7 @@ class FundamentalSnapshotResponse(BaseModel):
     price_to_book: Optional[float] = None
     book_to_price: Optional[float] = None
     most_recent_quarter: Optional[str] = None
+    data_region: Optional[str] = None
     pillars: dict[str, FundamentalPillarScoreResponse] = Field(default_factory=dict)
     historical_series: dict[str, FundamentalMetricSeriesResponse] = Field(default_factory=dict)
     metric_context: dict[str, FundamentalMetricContextResponse] = Field(default_factory=dict)
