@@ -14,6 +14,55 @@
     "blocked_paths": []
   },
   {
+    "domain": "www.euronext.com",
+    "tos_allowed": true,
+    "notes": "Official Euronext exchange operator. Market-notices RSS is a published public service covering XPAR, XAMS, XLIS, and XOSL.",
+    "allowed_paths": ["/"],
+    "blocked_paths": []
+  },
+  {
+    "domain": "www.cnmv.es",
+    "tos_allowed": true,
+    "notes": "Spanish financial regulator (CNMV). The hechosRelvEN RSS feed is the official English-language significant-facts disclosure service.",
+    "allowed_paths": ["/"],
+    "blocked_paths": []
+  },
+  {
+    "domain": "www.borsaitaliana.it",
+    "tos_allowed": true,
+    "notes": "Borsa Italiana (Euronext Milan) official press RSS. Used only as an RSS consumer, not a scraper.",
+    "allowed_paths": ["/"],
+    "blocked_paths": []
+  },
+  {
+    "domain": "www.investegate.co.uk",
+    "tos_allowed": true,
+    "notes": "UK RNS aggregator. RSS is their stated public distribution mechanism for regulatory news.",
+    "allowed_paths": ["/"],
+    "blocked_paths": []
+  },
+  {
+    "domain": "www.six-group.com",
+    "tos_allowed": true,
+    "notes": "SIX Swiss Exchange official news RSS for exchange regulation news.",
+    "allowed_paths": ["/"],
+    "blocked_paths": []
+  },
+  {
+    "domain": "www.nasdaqomxnordic.com",
+    "tos_allowed": true,
+    "notes": "Nasdaq Nordic exchange disclosure RSS (XHEL, XSTO, XCSE). Per-exchange query parameter: exchange=HE/ST/CO.",
+    "allowed_paths": ["/"],
+    "blocked_paths": []
+  },
+  {
+    "domain": "newsweb.oslobors.no",
+    "tos_allowed": true,
+    "notes": "Oslo Bors (Euronext Oslo) official company disclosure news RSS.",
+    "allowed_paths": ["/"],
+    "blocked_paths": []
+  },
+  {
     "domain": "www.investing.com",
     "tos_allowed": false,
     "notes": "Keep denied by default until legal/ToS review is completed.",

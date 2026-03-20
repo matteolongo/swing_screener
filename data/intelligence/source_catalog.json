@@ -6,13 +6,40 @@
     "XNYS": [
       "https://www.sec.gov/news/pressreleases.rss"
     ],
-    "XPAR": [],
+    "XPAR": [
+      "https://www.euronext.com/en/rss/market-notices"
+    ],
     "XETR": [],
-    "XMAD": [],
-    "XMIL": [],
-    "XAMS": [],
-    "XLON": [],
-    "XSWX": [],
+    "XMAD": [
+      "https://www.cnmv.es/portal/RSS/RSS.aspx?type=hechosRelvEN"
+    ],
+    "XMIL": [
+      "https://www.borsaitaliana.it/borsaitaliana/sala-stampa/comunicati-stampa/feed.en.xml"
+    ],
+    "XAMS": [
+      "https://www.euronext.com/en/rss/market-notices"
+    ],
+    "XLON": [
+      "https://www.investegate.co.uk/rss.aspx?pid=0&category=0"
+    ],
+    "XSWX": [
+      "https://www.six-group.com/dam/download/the-exchange/newsroom/rss/six-exchange-regulation-news.rss"
+    ],
+    "XHEL": [
+      "https://www.nasdaqomxnordic.com/aktieinformation/newsrss?exchange=HE"
+    ],
+    "XSTO": [
+      "https://www.nasdaqomxnordic.com/aktieinformation/newsrss?exchange=ST"
+    ],
+    "XCSE": [
+      "https://www.nasdaqomxnordic.com/aktieinformation/newsrss?exchange=CO"
+    ],
+    "XOSL": [
+      "https://newsweb.oslobors.no/rss"
+    ],
+    "XLIS": [
+      "https://www.euronext.com/en/rss/market-notices"
+    ],
     "*": []
   },
   "news_categories": {
