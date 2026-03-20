@@ -1,19 +1,12 @@
-import { PlayCircle, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
+import { PlayCircle, RefreshCw, ChevronDown, ChevronUp, Settings2 } from 'lucide-react';
 import { useCallback, type ChangeEvent } from 'react';
 import Button from '@/components/common/Button';
 import type { DecisionActionFilter } from '@/features/screener/prioritization';
-import { formatCurrency, formatPercent } from '@/utils/formatters';
 import { t } from '@/i18n/t';
 
 type CurrencyFilter = 'all' | 'usd' | 'eur';
 
 const TOP_N_MAX = 200;
-
-const formatCurrencyFilterLabel = (currencies: ('USD' | 'EUR')[]): string => {
-  if (currencies.length === 1 && currencies[0] === 'USD') return t('screener.currencyFilter.usdOnly');
-  if (currencies.length === 1 && currencies[0] === 'EUR') return t('screener.currencyFilter.eurOnly');
-  return t('screener.currencyFilter.both');
-};
 
 const formatActionFilterLabel = (value: DecisionActionFilter): string => {
   switch (value) {
@@ -56,10 +49,9 @@ interface ScreenerFormProps {
   setShowAdvancedFilters: (value: boolean) => void;
   universes: string[];
   isLoading: boolean;
-  accountSize: number;
-  riskPct: number;
-  activeCurrencies: ('USD' | 'EUR')[];
   onRun: () => void;
+  isCollapsed?: boolean;
+  onToggleCollapsed?: () => void;
 }
 
 export default function ScreenerForm({
@@ -82,10 +74,9 @@ export default function ScreenerForm({
   setShowAdvancedFilters,
   universes,
   isLoading,
-  accountSize,
-  riskPct,
-  activeCurrencies,
   onRun,
+  isCollapsed = false,
+  onToggleCollapsed,
 }: ScreenerFormProps) {
   // Memoized handlers to avoid recreating on every render and reduce duplication
   const handleTopNChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
@@ -102,8 +93,58 @@ export default function ScreenerForm({
     setMaxPrice(parseFloat(e.target.value) || 1000);
   }, [setMaxPrice]);
 
+  if (isCollapsed) {
+    return (
+      <div className="rounded-lg border border-gray-200 bg-gray-50/60 px-3 py-2 flex items-center gap-2 flex-wrap">
+        <Settings2 className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
+        <span className="text-xs text-gray-600 flex-1 min-w-0 truncate">
+          {selectedUniverse} · top {topN} · ${minPrice}–${maxPrice}
+          {currencyFilter !== 'all' ? ` · ${currencyFilter.toUpperCase()}` : ''}
+          {recommendedOnly ? ' · rec only' : ''}
+          {actionFilter !== 'all' ? ` · ${formatActionFilterLabel(actionFilter)}` : ''}
+        </span>
+        <Button onClick={onRun} disabled={isLoading} size="sm">
+          {isLoading ? (
+            <>
+              <RefreshCw className="w-3.5 h-3.5 mr-1 animate-spin" />
+              {t('screener.controls.running')}
+            </>
+          ) : (
+            <>
+              <PlayCircle className="w-3.5 h-3.5 mr-1" />
+              {t('screener.controls.run')}
+            </>
+          )}
+        </Button>
+        {onToggleCollapsed && (
+          <button
+            type="button"
+            onClick={onToggleCollapsed}
+            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
+            aria-label="Expand screener form"
+          >
+            <ChevronDown className="w-4 h-4 text-gray-500" />
+          </button>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-lg border border-gray-200 bg-gray-50/60 p-3 md:p-4">
+      {onToggleCollapsed && (
+        <div className="flex justify-end mb-2">
+          <button
+            type="button"
+            onClick={onToggleCollapsed}
+            className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 px-1"
+            aria-label="Collapse screener form"
+          >
+            <ChevronUp className="w-3.5 h-3.5" />
+            Collapse
+          </button>
+        </div>
+      )}
       {/* Beginner Mode: Simple controls layout */}
       {isBeginnerMode && (
         <div className="space-y-3">
@@ -274,20 +315,6 @@ export default function ScreenerForm({
             </div>
           )}
 
-          {/* Account info (always visible in beginner mode) */}
-          <div className="pt-3 border-t border-gray-200 text-xs text-gray-600 flex flex-wrap items-center gap-2">
-            <span className="rounded-md border border-gray-200 bg-white px-2 py-1">
-              {t('screener.controls.account')}: {formatCurrency(accountSize)}
-            </span>
-            <span className="rounded-md border border-gray-200 bg-white px-2 py-1">
-              {t('screener.controls.risk')}: {formatPercent(riskPct)}
-            </span>
-            <span className="rounded-md border border-gray-200 bg-white px-2 py-1">
-              {t('screener.controls.currencySummary', {
-                value: formatCurrencyFilterLabel(activeCurrencies),
-              })}
-            </span>
-          </div>
         </div>
       )}
 
@@ -434,19 +461,6 @@ export default function ScreenerForm({
             </div>
           </div>
 
-          <div className="pt-2 border-t border-gray-200 text-xs text-gray-600 flex flex-wrap items-center gap-2">
-            <span className="rounded-md border border-gray-200 bg-white px-2 py-1">
-              {t('screener.controls.account')}: {formatCurrency(accountSize)}
-            </span>
-            <span className="rounded-md border border-gray-200 bg-white px-2 py-1">
-              {t('screener.controls.risk')}: {formatPercent(riskPct)}
-            </span>
-            <span className="rounded-md border border-gray-200 bg-white px-2 py-1">
-              {t('screener.controls.currencySummary', {
-                value: formatCurrencyFilterLabel(activeCurrencies),
-              })}
-            </span>
-          </div>
         </div>
       )}
     </div>

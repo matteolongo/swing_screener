@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useLocalStorage } from '@/hooks';
 import { Info, RefreshCw } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -88,13 +89,23 @@ function actionFilterLabel(value: DecisionActionFilter): string {
 }
 
 export default function DailyReview() {
-  const [expandedSections, setExpandedSections] = useState({
-    candidates: true,
-    addOns: true,
-    hold: false,
-    update: true,
-    close: true,
-  });
+  const [expandedSections, setExpandedSections] = useLocalStorage(
+    'dailyreview-expanded-sections',
+    { candidates: true, addOns: true, hold: false, update: true, close: true },
+    (val: unknown) => {
+      if (val && typeof val === 'object' && !Array.isArray(val)) {
+        const v = val as Record<string, unknown>;
+        return {
+          candidates: typeof v.candidates === 'boolean' ? v.candidates : true,
+          addOns: typeof v.addOns === 'boolean' ? v.addOns : true,
+          hold: typeof v.hold === 'boolean' ? v.hold : false,
+          update: typeof v.update === 'boolean' ? v.update : true,
+          close: typeof v.close === 'boolean' ? v.close : true,
+        };
+      }
+      return { candidates: true, addOns: true, hold: false, update: true, close: true };
+    }
+  );
   const [selectedCandidate, setSelectedCandidate] = useState<DailyReviewCandidate | null>(null);
   const [candidateRecommendedOnly, setCandidateRecommendedOnly] = useState(true);
   const [candidateActionFilter, setCandidateActionFilter] = useState<DecisionActionFilter>('all');

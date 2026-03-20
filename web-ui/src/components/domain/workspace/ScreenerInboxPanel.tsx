@@ -37,12 +37,6 @@ const DECISION_ACTION_FILTERS: DecisionActionFilter[] = [
   'MANAGE_ONLY',
 ];
 
-const normalizeCurrencies = (currencies?: string[]): ('USD' | 'EUR')[] => {
-  const normalized = (currencies ?? [])
-    .map((value) => value.toUpperCase())
-    .filter((value): value is 'USD' | 'EUR' => value === 'USD' || value === 'EUR');
-  return normalized.length ? Array.from(new Set(normalized)) : ['USD', 'EUR'];
-};
 
 const currencyFilterToRequest = (value: CurrencyFilter): string[] => {
   if (value === 'usd') return ['USD'];
@@ -71,7 +65,7 @@ export default function ScreenerInboxPanel({
   const activeStrategy = activeStrategyQuery.data;
   const strategySignals = activeStrategy?.signals;
   const defaultIndicators = configDefaultsQuery.data?.indicators;
-  const activeCurrencies = normalizeCurrencies(activeStrategyQuery.data?.universe?.filt?.currencies);
+
   const riskConfig = activeStrategy?.risk ?? configDefaultsQuery.data?.risk;
 
   useEffect(() => {
@@ -113,6 +107,7 @@ export default function ScreenerInboxPanel({
     'screener.showAdvancedFilters',
     !isBeginnerMode
   );
+  const [isFormCollapsed, setIsFormCollapsed] = useLocalStorage('screener-form-collapsed', false);
 
   const universesQuery = useUniverses();
   const screenerMutation = useRunScreenerMutation((data) => {
@@ -120,6 +115,7 @@ export default function ScreenerInboxPanel({
     if (data.candidates.length > 0) {
       setSelectedTicker(data.candidates[0].ticker, 'screener');
     }
+    setIsFormCollapsed(true);
   });
 
   const handleRunScreener = useCallback(() => {
@@ -220,10 +216,9 @@ export default function ScreenerInboxPanel({
         setShowAdvancedFilters={setShowAdvancedFilters}
         universes={universesQuery.data?.universes ?? []}
         isLoading={screenerMutation.isPending}
-        accountSize={riskConfig.accountSize}
-        riskPct={riskConfig.riskPct}
-        activeCurrencies={activeCurrencies}
         onRun={handleRunScreener}
+        isCollapsed={isFormCollapsed}
+        onToggleCollapsed={() => setIsFormCollapsed(!isFormCollapsed)}
       />
 
       {screenerMutation.isError ? (

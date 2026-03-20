@@ -1,49 +1,31 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, ListChecks } from 'lucide-react';
 import Button from '@/components/common/Button';
 import TableShell from '@/components/common/TableShell';
 import type { SymbolIntelligenceStatus } from '@/features/intelligence/useSymbolIntelligenceRunner';
-import type { WatchItem } from '@/features/watchlist/types';
 import { ScreenerCandidate } from '@/features/screener/types';
 import { toCandidateViewModel } from '@/features/screener/viewModel';
 import ScreenerCandidateIdentityCell from './ScreenerCandidateIdentityCell';
-import ScreenerCandidateSetupCell from './ScreenerCandidateSetupCell';
 import ScreenerCandidateDetailsRow from './ScreenerCandidateDetailsRow';
-import WatchMetaInline from '@/components/domain/watchlist/WatchMetaInline';
-import WatchToggleButton from '@/components/domain/watchlist/WatchToggleButton';
-import { useUnwatchSymbolMutation, useWatchSymbolMutation, useWatchlist } from '@/features/watchlist/hooks';
-import { formatCurrency, formatDate } from '@/utils/formatters';
+import { formatCurrency } from '@/utils/formatters';
 import { t } from '@/i18n/t';
 
-function actionLabel(action?: string): string | null {
+function signalBadge(action?: string): { label: string; className: string } | null {
   switch (action) {
     case 'BUY_NOW':
-      return t('workspacePage.panels.analysis.decisionSummary.actions.buyNow');
+      return { label: 'Buy Now', className: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200' };
     case 'BUY_ON_PULLBACK':
-      return t('workspacePage.panels.analysis.decisionSummary.actions.buyOnPullback');
+      return { label: 'Pullback', className: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200' };
     case 'WAIT_FOR_BREAKOUT':
-      return t('workspacePage.panels.analysis.decisionSummary.actions.waitForBreakout');
+      return { label: 'Breakout', className: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-200' };
     case 'WATCH':
-      return t('workspacePage.panels.analysis.decisionSummary.actions.watch');
+      return { label: 'Watch', className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200' };
     case 'TACTICAL_ONLY':
-      return t('workspacePage.panels.analysis.decisionSummary.actions.tacticalOnly');
+      return { label: 'Tactical', className: 'bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-200' };
     case 'AVOID':
-      return t('workspacePage.panels.analysis.decisionSummary.actions.avoid');
+      return { label: 'Avoid', className: 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200' };
     case 'MANAGE_ONLY':
-      return t('workspacePage.panels.analysis.decisionSummary.actions.manageOnly');
-    default:
-      return null;
-  }
-}
-
-function convictionLabel(conviction?: string): string | null {
-  switch (conviction) {
-    case 'high':
-      return t('workspacePage.panels.analysis.decisionSummary.conviction.high');
-    case 'medium':
-      return t('workspacePage.panels.analysis.decisionSummary.conviction.medium');
-    case 'low':
-      return t('workspacePage.panels.analysis.decisionSummary.conviction.low');
+      return { label: 'Manage', className: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' };
     default:
       return null;
   }
@@ -62,7 +44,7 @@ interface ScreenerCandidatesTableProps {
 }
 
 /**
- * Simplified screener candidates table with essential columns and expandable details
+ * Simplified screener candidates table: Rank | Symbol | Signal | Close | R:R | Actions
  */
 export default function ScreenerCandidatesTable({
   candidates,
@@ -75,64 +57,7 @@ export default function ScreenerCandidatesTable({
   selectedTicker,
   onRowClick,
 }: ScreenerCandidatesTableProps) {
-  // Track expanded rows by ticker
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  const watchlistQuery = useWatchlist();
-  const watchSymbolMutation = useWatchSymbolMutation();
-  const unwatchSymbolMutation = useUnwatchSymbolMutation();
-
-  const watchItemsByTicker = useMemo(() => {
-    const map = new Map<string, WatchItem>();
-    for (const item of watchlistQuery.data ?? []) {
-      map.set(item.ticker.toUpperCase(), item);
-    }
-    return map;
-  }, [watchlistQuery.data]);
-
-  const handleWatch = (ticker: string, currentPrice: number | undefined, currency: string | undefined, source: string) => {
-    const normalizedTicker = ticker.trim().toUpperCase();
-    if (!normalizedTicker || watchItemsByTicker.has(normalizedTicker)) {
-      return;
-    }
-    watchSymbolMutation.mutate({
-      ticker: normalizedTicker,
-      watchPrice: currentPrice ?? null,
-      currency: currency ?? null,
-      source,
-    });
-  };
-
-  const handleUnwatch = (ticker: string) => {
-    const normalizedTicker = ticker.trim().toUpperCase();
-    if (!normalizedTicker || !watchItemsByTicker.has(normalizedTicker)) {
-      return;
-    }
-    unwatchSymbolMutation.mutate(normalizedTicker);
-  };
-
-  const renderWatchMeta = (ticker: string, currentPrice: number | undefined, currency: string | undefined, source: string) => {
-    const watchItem = watchItemsByTicker.get(ticker.trim().toUpperCase());
-    const isPending = watchSymbolMutation.isPending || unwatchSymbolMutation.isPending;
-    return (
-      <div className="mt-1 flex flex-col gap-1">
-        <WatchToggleButton
-          ticker={ticker}
-          isWatched={Boolean(watchItem)}
-          isPending={isPending}
-          onWatch={(nextTicker) => handleWatch(nextTicker, currentPrice, currency, source)}
-          onUnwatch={handleUnwatch}
-        />
-        {watchItem ? (
-          <WatchMetaInline
-            watchedAt={watchItem.watchedAt}
-            watchPrice={watchItem.watchPrice}
-            currentPrice={currentPrice}
-            currency={currency}
-          />
-        ) : null}
-      </div>
-    );
-  };
 
   const toggleRow = (ticker: string) => {
     setExpandedRows((prev) => {
@@ -172,22 +97,22 @@ export default function ScreenerCandidatesTable({
     <TableShell
       headers={
         <tr>
-          <th className="py-3 px-4 text-sm font-semibold text-gray-700 text-left">
+          <th className="py-2 px-3 text-xs font-semibold text-gray-700 text-left">
             {t('screener.table.headers.priority')}
           </th>
-          <th className="py-3 px-4 text-sm font-semibold text-gray-700 text-left">
+          <th className="py-2 px-3 text-xs font-semibold text-gray-700 text-left">
             {t('screener.table.headers.symbol')}
           </th>
-          <th className="py-3 px-4 text-sm font-semibold text-gray-700 text-left">
-            {t('screener.table.headers.lastBar')}
+          <th className="py-2 px-3 text-xs font-semibold text-gray-700 text-left">
+            Signal
           </th>
-          <th className="py-3 px-4 text-sm font-semibold text-gray-700 text-right">
+          <th className="py-2 px-3 text-xs font-semibold text-gray-700 text-right">
             {t('screener.table.headers.close')}
           </th>
-          <th className="py-3 px-4 text-sm font-semibold text-gray-700 text-left">
-            {t('screener.table.headers.setup')}
+          <th className="py-2 px-3 text-xs font-semibold text-gray-700 text-right">
+            R:R
           </th>
-          <th className="py-3 px-4 text-sm font-semibold text-gray-700 text-center">
+          <th className="py-2 px-3 text-xs font-semibold text-gray-700 text-center">
             {t('screener.table.headers.actions')}
           </th>
         </tr>
@@ -198,12 +123,10 @@ export default function ScreenerCandidatesTable({
         const isExpanded = expandedRows.has(candidate.ticker);
         const isSelected = selectedTicker != null && selectedTicker.toUpperCase() === candidate.ticker.toUpperCase();
         const symbolIntelStatus = getSymbolIntelligenceStatus?.(candidate.ticker);
-        const action = actionLabel(candidate.decisionSummary?.action);
-        const conviction = convictionLabel(candidate.decisionSummary?.conviction);
+        const badge = signalBadge(candidate.decisionSummary?.action);
 
         return (
           <React.Fragment key={candidate.ticker}>
-            {/* Main row with essential data */}
             <tr
               onClick={onRowClick ? () => onRowClick(candidate) : undefined}
               className={`border-b border-gray-100 dark:border-gray-700 ${
@@ -213,57 +136,53 @@ export default function ScreenerCandidatesTable({
               } ${onRowClick ? 'cursor-pointer' : ''}`}
             >
               {/* Rank */}
-              <td className="py-3 px-4 text-sm text-gray-900 dark:text-gray-100 font-medium">
-                <div className="flex flex-col">
-                  <span>#{vm.priorityRank}</span>
-                  {vm.rawRank !== vm.priorityRank ? (
-                    <span className="text-[11px] font-normal text-gray-500 dark:text-gray-400">
-                      {t('screener.table.rawRank', { rank: vm.rawRank })}
-                    </span>
-                  ) : null}
-                  {action && conviction ? (
-                    <span className="text-[11px] font-normal text-gray-500 dark:text-gray-400">
-                      {t('screener.table.priorityMeta', { action, conviction })}
-                    </span>
-                  ) : null}
-                </div>
+              <td className="py-1.5 px-3 text-xs text-gray-900 dark:text-gray-100 font-medium whitespace-nowrap">
+                #{vm.priorityRank}
               </td>
 
-              {/* Symbol (Identity Cell) */}
-              <td className="py-3 px-4">
+              {/* Symbol */}
+              <td className="py-1.5 px-3">
                 <ScreenerCandidateIdentityCell
                   candidate={vm}
                   onSymbolClick={onSymbolClick}
-                  watchContent={renderWatchMeta(candidate.ticker, candidate.close, candidate.currency, 'screener')}
                 />
               </td>
 
-              {/* Last Bar */}
-              <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-                {candidate.lastBar ? formatDate(candidate.lastBar) : '—'}
+              {/* Signal */}
+              <td className="py-1.5 px-3">
+                {badge ? (
+                  <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap ${badge.className}`}>
+                    {badge.label}
+                  </span>
+                ) : (
+                  <span className="text-xs text-gray-400">—</span>
+                )}
               </td>
 
               {/* Close */}
-              <td className="py-3 px-4 text-sm text-right text-gray-900 dark:text-gray-100 font-mono">
+              <td className="py-1.5 px-3 text-xs text-right text-gray-900 dark:text-gray-100 font-mono whitespace-nowrap">
                 {formatCurrency(candidate.close, candidate.currency)}
               </td>
 
-              {/* Setup Cell */}
-              <td className="py-3 px-4">
-                <ScreenerCandidateSetupCell candidate={vm} />
+              {/* R:R */}
+              <td className="py-1.5 px-3 text-xs text-right font-mono whitespace-nowrap">
+                {vm.rr != null && vm.rr > 0 ? (
+                  <span className="text-gray-900 dark:text-gray-100">{vm.rr.toFixed(1)}</span>
+                ) : (
+                  <span className="text-gray-400">—</span>
+                )}
               </td>
 
               {/* Actions */}
-              <td className="py-3 px-4">
-                <div className="flex gap-2 justify-center items-center">
-                  {/* Expand/Collapse toggle */}
+              <td className="py-1.5 px-3">
+                <div className="flex gap-1.5 justify-center items-center">
                   <button
                     type="button"
                     onClick={(event) => {
                       event.stopPropagation();
                       toggleRow(candidate.ticker);
                     }}
-                    className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                    className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
                     aria-label={
                       isExpanded
                         ? t('screener.table.collapseRowAria', { ticker: candidate.ticker })
@@ -272,13 +191,12 @@ export default function ScreenerCandidatesTable({
                     aria-expanded={isExpanded}
                   >
                     {isExpanded ? (
-                      <ChevronUp className="w-4 h-4" />
+                      <ChevronUp className="w-3.5 h-3.5" />
                     ) : (
-                      <ChevronDown className="w-4 h-4" />
+                      <ChevronDown className="w-3.5 h-3.5" />
                     )}
                   </button>
 
-                  {/* Recommendation Details */}
                   <Button
                     size="sm"
                     variant="secondary"
@@ -289,10 +207,9 @@ export default function ScreenerCandidatesTable({
                     title={t('screener.table.recommendationDetailsTitle')}
                     aria-label={t('screener.table.recommendationDetailsAria', { ticker: candidate.ticker })}
                   >
-                    <ListChecks className="w-4 h-4" />
+                    <ListChecks className="w-3.5 h-3.5" />
                   </Button>
 
-                  {/* Create Order */}
                   <Button
                     size="sm"
                     variant="primary"
@@ -300,9 +217,7 @@ export default function ScreenerCandidatesTable({
                       event.stopPropagation();
                       onCreateOrder(candidate);
                     }}
-                    title={
-                      orderActionTitle(candidate, vm.verdict)
-                    }
+                    title={orderActionTitle(candidate, vm.verdict)}
                   >
                     {orderActionLabel(candidate)}
                   </Button>
@@ -310,7 +225,6 @@ export default function ScreenerCandidatesTable({
               </td>
             </tr>
 
-            {/* Expandable details row */}
             {isExpanded && (
               <ScreenerCandidateDetailsRow
                 candidate={vm}
