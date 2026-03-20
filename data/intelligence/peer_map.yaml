@@ -1,0 +1,56 @@
+# Curated peer cluster map for theme confirmation and cross-symbol catalyst scoring.
+# Each key is a ticker; its list is the set of peers used for confirmation signals.
+# Keep clusters small (3-6 peers) and economically meaningful.
+# This file is consumed by load_curated_peer_map() in intelligence/relations.py.
+
+# --- US megacap technology ---
+AAPL:
+  - MSFT
+  - NVDA
+
+MSFT:
+  - AAPL
+  - NVDA
+
+NVDA:
+  - AAPL
+  - MSFT
+  - ASML.AS      # semiconductor supply chain link
+
+# --- EU semiconductors / industrials ---
+ASML.AS:
+  - NVDA          # ASML is NVDA's primary EUV toolmaker
+  - AIR.PA        # EU large-cap industrials cluster
+  - SIE.DE
+
+AIR.PA:
+  - ASML.AS
+  - SIE.DE
+  - MC.PA         # EU blue-chip cluster (CAC 40 anchors)
+
+SIE.DE:
+  - AIR.PA
+  - ASML.AS
+  - SAP.DE        # German large-cap industrial/tech cluster
+
+SAP.DE:
+  - SIE.DE
+
+# --- EU financials ---
+SAN.MC:
+  - ENI.MI        # Southern European large-cap cluster
+
+ENI.MI:
+  - SAN.MC
+
+# --- EU consumer / defensives ---
+MC.PA:
+  - AIR.PA
+  - NESN.SW       # EU premium consumer cluster
+
+NESN.SW:
+  - MC.PA
+
+# --- UK ---
+VOD.L:
+  []              # Telecom; no strong peer in the current universe
