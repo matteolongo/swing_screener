@@ -168,14 +168,7 @@ export default function ScreenerInboxPanel() {
   }
 
   return (
-    <Card variant="bordered" className="p-4 md:p-5 flex min-h-0 flex-col gap-3 xl:h-full xl:overflow-hidden">
-      <div>
-        <h2 className="text-lg font-semibold">{t('workspacePage.panels.screener.title')}</h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-          {t('workspacePage.panels.screener.description')}
-        </p>
-      </div>
-
+    <Card variant="bordered" className="p-3 md:p-4 flex min-h-0 flex-col gap-3 xl:h-full xl:overflow-hidden">
       <ScreenerForm
         selectedUniverse={selectedUniverse}
         setSelectedUniverse={setSelectedUniverse}
