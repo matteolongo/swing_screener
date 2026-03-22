@@ -32,6 +32,7 @@ export const API_ENDPOINTS = {
   orders: '/api/portfolio/orders',
   order: (id: string) => `/api/portfolio/orders/${id}`,
   orderFill: (id: string) => `/api/portfolio/orders/${id}/fill`,
+  degiroOrderSyncApply: '/api/portfolio/sync/degiro/apply',
 
   // Watchlist
   watchlist: '/api/watchlist',

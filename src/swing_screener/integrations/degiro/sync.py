@@ -58,7 +58,7 @@ def fetch_live_data(
             update = api.get_update(
                 request_list=[
                     UpdateRequest(option=UpdateOption.PORTFOLIO, last_updated=0),
-                    UpdateRequest(option=UpdateOption.TOTALPORTFOLIO, last_updated=0),
+                    UpdateRequest(option=UpdateOption.TOTAL_PORTFOLIO, last_updated=0),
                 ],
                 raw=True,
             ) or {}
@@ -89,7 +89,7 @@ def fetch_live_data(
 
         # Order history
         try:
-            from degiro_connector.trading.models.account import HistoryRequest
+            from degiro_connector.trading.models.order import HistoryRequest
             from_dt = date.fromisoformat(from_date)
             to_dt = date.fromisoformat(to_date)
             history = api.get_orders_history(
@@ -103,20 +103,11 @@ def fetch_live_data(
     # Transactions
     if include_transactions:
         try:
-            from degiro_connector.trading.models.transaction import (
-                TransactionsHistory,
-            )
+            from degiro_connector.trading.models.transaction import HistoryRequest as TxHistoryRequest
             from_dt = date.fromisoformat(from_date)
             to_dt = date.fromisoformat(to_date)
-            tx_request = TransactionsHistory.Request(
-                from_date=TransactionsHistory.Request.Date(
-                    year=from_dt.year, month=from_dt.month, day=from_dt.day
-                ),
-                to_date=TransactionsHistory.Request.Date(
-                    year=to_dt.year, month=to_dt.month, day=to_dt.day
-                ),
-            )
-            tx = api.get_transactions_history(request=tx_request, raw=True) or {}
+            tx_request = TxHistoryRequest(from_date=from_dt, to_date=to_dt)
+            tx = api.get_transactions_history(transaction_request=tx_request, raw=True) or {}
             result["transactions"] = tx.get("data", [])
         except Exception:
             logger.warning("Failed to fetch DeGiro transactions", exc_info=True)
@@ -356,19 +347,8 @@ def apply(
             positions_list[idx] = {**positions_list[idx], **diff.fields}
             positions_updated += 1
 
-    for diff in sync_preview.positions_to_create:
-        new_pos = {
-            "position_id": f"degiro-{diff.broker_id or uuid.uuid4().hex[:8]}",
-            "ticker": "",
-            "status": "open",
-            "entry_date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
-            "entry_price": 0.0,
-            "stop_price": 0.0,
-            "shares": diff.fields.get("shares", 0),
-            **diff.fields,
-        }
-        positions_list.append(new_pos)
-        positions_created += 1
+    # Skip creating positions without a ticker — they'd be unusable placeholders.
+    # Positions should be created manually with a known ticker symbol.
 
     asof = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     locked_write_json_cli(orders_p, {**orders_data, "asof": asof, "orders": orders_list})
