@@ -60,6 +60,7 @@ export const API_ENDPOINTS = {
   fundamentalsCompare: '/api/fundamentals/compare',
   fundamentalsWarmup: '/api/fundamentals/warmup',
   fundamentalsWarmupStatus: (jobId: string) => `/api/fundamentals/warmup/${jobId}`,
+  degiroPortfolioAudit: '/api/fundamentals/degiro/portfolio-audit',
 
   // Chat
   chatAnswer: '/api/chat/answer',

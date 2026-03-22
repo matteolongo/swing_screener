@@ -418,3 +418,66 @@ export function transformFundamentalsWarmupStatus(
     updatedAt: api.updated_at,
   };
 }
+
+// ---------------------------------------------------------------------------
+// DeGiro portfolio audit
+// ---------------------------------------------------------------------------
+
+export interface DegiroAuditRecord {
+  productId: string;
+  isin: string | null;
+  vwdId: string | null;
+  name: string;
+  exchange: string | null;
+  currency: string | null;
+  symbol: string;
+  hasQuote: boolean;
+  hasChart: boolean;
+  hasProfile: boolean;
+  hasRatios: boolean;
+  hasStatements: boolean;
+  hasEstimates: boolean;
+  hasAgenda: boolean;
+  hasNews: boolean;
+  resolutionConfidence: string;
+  resolutionNotes: string;
+}
+
+export interface DegiroAuditRun {
+  auditId: string;
+  createdAt: string;
+  symbols: string[];
+  summaryCounts: Record<string, number>;
+  artifactPaths: Record<string, string>;
+  results: DegiroAuditRecord[];
+}
+
+export function transformDegiroAuditRun(api: Record<string, unknown>): DegiroAuditRun {
+  const results = (api.results as Record<string, unknown>[]).map((r) => ({
+    productId: r.product_id as string,
+    isin: (r.isin as string | null) ?? null,
+    vwdId: (r.vwd_id as string | null) ?? null,
+    name: r.name as string,
+    exchange: (r.exchange as string | null) ?? null,
+    currency: (r.currency as string | null) ?? null,
+    symbol: r.symbol as string,
+    hasQuote: r.has_quote as boolean,
+    hasChart: r.has_chart as boolean,
+    hasProfile: r.has_profile as boolean,
+    hasRatios: r.has_ratios as boolean,
+    hasStatements: r.has_statements as boolean,
+    hasEstimates: r.has_estimates as boolean,
+    hasAgenda: r.has_agenda as boolean,
+    hasNews: r.has_news as boolean,
+    resolutionConfidence: r.resolution_confidence as string,
+    resolutionNotes: r.resolution_notes as string,
+  }));
+  return {
+    auditId: api.audit_id as string,
+    createdAt: api.created_at as string,
+    symbols: api.symbols as string[],
+    summaryCounts: api.summary_counts as Record<string, number>,
+    artifactPaths: api.artifact_paths as Record<string, string>,
+    results,
+  };
+}

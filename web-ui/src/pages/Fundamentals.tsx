@@ -4,10 +4,12 @@ import Button from '@/components/common/Button';
 import FundamentalsSnapshotCard from '@/components/domain/fundamentals/FundamentalsSnapshotCard';
 import {
   useCompareFundamentalsMutation,
+  useDegiroPortfolioAuditMutation,
   useFundamentalsConfigQuery,
   useFundamentalsWarmupStatus,
   useStartFundamentalsWarmupMutation,
 } from '@/features/fundamentals/hooks';
+import type { DegiroAuditRecord } from '@/features/fundamentals/types';
 import { t } from '@/i18n/t';
 
 function normalizeSymbols(input: string): string[] {
@@ -20,6 +22,57 @@ function normalizeSymbols(input: string): string[] {
       seen.add(value);
       return true;
     });
+}
+
+function CapabilityDot({ value }: { value: boolean }) {
+  return (
+    <span
+      className={`inline-block h-2.5 w-2.5 rounded-full ${value ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+      title={value ? 'Available' : 'Unavailable'}
+    />
+  );
+}
+
+function DegiroAuditTable({ records }: { records: DegiroAuditRecord[] }) {
+  const cols = ['quote', 'profile', 'ratios', 'estimates', 'statements', 'news', 'agenda'] as const;
+  const colKey: Record<typeof cols[number], keyof DegiroAuditRecord> = {
+    quote: 'hasQuote',
+    profile: 'hasProfile',
+    ratios: 'hasRatios',
+    estimates: 'hasEstimates',
+    statements: 'hasStatements',
+    news: 'hasNews',
+    agenda: 'hasAgenda',
+  };
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-gray-200 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:border-gray-700 dark:text-gray-400">
+            <th className="py-2 pr-4">Name</th>
+            <th className="py-2 pr-4">ISIN</th>
+            {cols.map((c) => (
+              <th key={c} className="px-2 py-2 text-center">{c}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+          {records.map((r) => (
+            <tr key={r.productId} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+              <td className="py-2 pr-4 font-medium">{r.name}</td>
+              <td className="py-2 pr-4 font-mono text-xs text-gray-500">{r.isin ?? '—'}</td>
+              {cols.map((c) => (
+                <td key={c} className="px-2 py-2 text-center">
+                  <CapabilityDot value={r[colKey[c]] as boolean} />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 export default function FundamentalsPage() {
@@ -59,6 +112,8 @@ export default function FundamentalsPage() {
   const warmupWatchlist = () => {
     warmupMutation.mutate({ source: 'watchlist', forceRefresh: true });
   };
+
+  const degiroAuditMutation = useDegiroPortfolioAuditMutation();
 
   const warmupStatus = warmupStatusQuery.data;
   const progressText =
@@ -187,6 +242,54 @@ export default function FundamentalsPage() {
           ))}
         </div>
       ) : null}
+
+      {/* DeGiro Portfolio Audit */}
+      <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-semibold">DeGiro Portfolio Audit</h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Probe available data endpoints for each product in your live DeGiro portfolio.
+            </p>
+          </div>
+          <Button
+            type="button"
+            onClick={() => degiroAuditMutation.mutate()}
+            disabled={degiroAuditMutation.isPending}
+          >
+            {degiroAuditMutation.isPending ? 'Running…' : 'Run Audit'}
+          </Button>
+        </div>
+
+        {degiroAuditMutation.isError ? (
+          <p className="mt-3 text-sm text-rose-600">{degiroAuditMutation.error.message}</p>
+        ) : null}
+
+        {degiroAuditMutation.data ? (
+          <div className="mt-4">
+            <div className="mb-3 flex flex-wrap gap-4 text-xs text-gray-500 dark:text-gray-400">
+              <span>
+                <span className="font-medium text-gray-700 dark:text-gray-300">
+                  {degiroAuditMutation.data.summaryCounts.total ?? 0}
+                </span>{' '}
+                products
+              </span>
+              {(['has_quote', 'has_profile', 'has_ratios', 'has_estimates'] as const).map((k) => (
+                <span key={k}>
+                  <span className="font-medium text-gray-700 dark:text-gray-300">
+                    {degiroAuditMutation.data!.summaryCounts[k] ?? 0}
+                  </span>{' '}
+                  {k.replace('has_', '')}
+                </span>
+              ))}
+              <span className="text-gray-400">
+                {new Date(degiroAuditMutation.data.createdAt).toLocaleString()}
+              </span>
+            </div>
+            <DegiroAuditTable records={degiroAuditMutation.data.results} />
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }
