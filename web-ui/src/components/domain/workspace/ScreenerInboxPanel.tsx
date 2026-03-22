@@ -8,9 +8,7 @@ import { useConfigDefaultsQuery } from '@/features/config/hooks';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 import { useUniverses, useRunScreenerMutation } from '@/features/screener/hooks';
 import { filterCandidates, prioritizeCandidates, type DecisionActionFilter } from '@/features/screener/prioritization';
-import type { ScreenerCandidate } from '@/features/screener/types';
 import { useScreenerStore } from '@/stores/screenerStore';
-import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import type { WorkspaceAnalysisTab } from '@/stores/workspaceStore';
 import { t } from '@/i18n/t';
@@ -21,7 +19,6 @@ import {
   parseUniverseValue,
   SCREENER_UNIVERSE_STORAGE_KEY,
 } from '@/features/screener/universeStorage';
-import type { SymbolIntelligenceStatus } from '@/features/intelligence/useSymbolIntelligenceRunner';
 
 const TOP_N_MAX = 200;
 
@@ -37,28 +34,13 @@ const DECISION_ACTION_FILTERS: DecisionActionFilter[] = [
   'MANAGE_ONLY',
 ];
 
-const normalizeCurrencies = (currencies?: string[]): ('USD' | 'EUR')[] => {
-  const normalized = (currencies ?? [])
-    .map((value) => value.toUpperCase())
-    .filter((value): value is 'USD' | 'EUR' => value === 'USD' || value === 'EUR');
-  return normalized.length ? Array.from(new Set(normalized)) : ['USD', 'EUR'];
-};
 
 const currencyFilterToRequest = (value: CurrencyFilter): string[] => {
   if (value === 'usd') return ['USD'];
   if (value === 'eur') return ['EUR'];
   return ['USD', 'EUR'];
 };
-interface ScreenerInboxPanelProps {
-  onRunSymbolIntelligence?: (ticker: string) => void;
-  getSymbolIntelligenceStatus?: (ticker: string) => SymbolIntelligenceStatus | undefined;
-}
-
-export default function ScreenerInboxPanel({
-  onRunSymbolIntelligence,
-  getSymbolIntelligenceStatus,
-}: ScreenerInboxPanelProps) {
-  const { isBeginnerMode } = useBeginnerModeStore();
+export default function ScreenerInboxPanel() {
   const { lastResult, setLastResult } = useScreenerStore();
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
   const selectedTickerSource = useWorkspaceStore((state) => state.selectedTickerSource);
@@ -71,7 +53,7 @@ export default function ScreenerInboxPanel({
   const activeStrategy = activeStrategyQuery.data;
   const strategySignals = activeStrategy?.signals;
   const defaultIndicators = configDefaultsQuery.data?.indicators;
-  const activeCurrencies = normalizeCurrencies(activeStrategyQuery.data?.universe?.filt?.currencies);
+
   const riskConfig = activeStrategy?.risk ?? configDefaultsQuery.data?.risk;
 
   useEffect(() => {
@@ -109,10 +91,7 @@ export default function ScreenerInboxPanel({
       return 'all';
     }
   );
-  const [showAdvancedFilters, setShowAdvancedFilters] = useLocalStorage(
-    'screener.showAdvancedFilters',
-    !isBeginnerMode
-  );
+  const [isFormCollapsed, setIsFormCollapsed] = useLocalStorage('screener-form-collapsed', false);
 
   const universesQuery = useUniverses();
   const screenerMutation = useRunScreenerMutation((data) => {
@@ -120,6 +99,7 @@ export default function ScreenerInboxPanel({
     if (data.candidates.length > 0) {
       setSelectedTicker(data.candidates[0].ticker, 'screener');
     }
+    setIsFormCollapsed(true);
   });
 
   const handleRunScreener = useCallback(() => {
@@ -176,10 +156,6 @@ export default function ScreenerInboxPanel({
     [setAnalysisTab, setSelectedTicker]
   );
 
-  const handleTradeThesisAction = useCallback((candidate: ScreenerCandidate) => {
-    handleSelectCandidate(candidate.ticker, 'order');
-  }, [handleSelectCandidate]);
-
   if (!riskConfig) {
     const configFailed = configDefaultsQuery.isError && !activeStrategy?.risk;
     return (
@@ -192,16 +168,8 @@ export default function ScreenerInboxPanel({
   }
 
   return (
-    <Card variant="bordered" className="p-4 md:p-5 flex min-h-0 flex-col gap-3 xl:h-full xl:overflow-hidden">
-      <div>
-        <h2 className="text-lg font-semibold">{t('workspacePage.panels.screener.title')}</h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-          {t('workspacePage.panels.screener.description')}
-        </p>
-      </div>
-
+    <Card variant="bordered" className="p-3 md:p-4 flex min-h-0 flex-col gap-3 xl:h-full xl:overflow-hidden">
       <ScreenerForm
-        isBeginnerMode={isBeginnerMode}
         selectedUniverse={selectedUniverse}
         setSelectedUniverse={setSelectedUniverse}
         topN={topN}
@@ -216,14 +184,11 @@ export default function ScreenerInboxPanel({
         setRecommendedOnly={setRecommendedOnly}
         actionFilter={actionFilter}
         setActionFilter={setActionFilter}
-        showAdvancedFilters={showAdvancedFilters}
-        setShowAdvancedFilters={setShowAdvancedFilters}
         universes={universesQuery.data?.universes ?? []}
         isLoading={screenerMutation.isPending}
-        accountSize={riskConfig.accountSize}
-        riskPct={riskConfig.riskPct}
-        activeCurrencies={activeCurrencies}
         onRun={handleRunScreener}
+        isCollapsed={isFormCollapsed}
+        onToggleCollapsed={() => setIsFormCollapsed(!isFormCollapsed)}
       />
 
       {screenerMutation.isError ? (
@@ -302,9 +267,6 @@ export default function ScreenerInboxPanel({
               onRowClick={(candidate) => handleSelectCandidate(candidate.ticker, analysisTab === 'order' ? 'order' : 'overview')}
               onCreateOrder={(candidate) => handleSelectCandidate(candidate.ticker, 'order')}
               onRecommendationDetails={(candidate) => handleSelectCandidate(candidate.ticker, 'overview')}
-              onTradeThesis={handleTradeThesisAction}
-              onRunIntelligence={(ticker) => onRunSymbolIntelligence?.(ticker)}
-              getSymbolIntelligenceStatus={getSymbolIntelligenceStatus}
             />
           </div>
         </div>

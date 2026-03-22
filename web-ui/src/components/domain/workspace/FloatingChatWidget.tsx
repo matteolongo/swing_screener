@@ -54,7 +54,7 @@ export default function FloatingChatWidget() {
   }, [isOpen]);
 
   const candidate = lastResult?.candidates.find(
-    (c) => c.ticker.toUpperCase() === (selectedTicker ?? '').toUpperCase()
+    (item) => item.ticker.toUpperCase() === (selectedTicker ?? '').toUpperCase()
   );
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -123,65 +123,84 @@ export default function FloatingChatWidget() {
             </button>
           </div>
 
-          {/* Context panel (collapsible) */}
           <div className="border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
             <button
               type="button"
-              onClick={() => setIsContextOpen((v) => !v)}
+              onClick={() => setIsContextOpen((current) => !current)}
               aria-expanded={isContextOpen}
               aria-controls="workspace-chat-context-panel"
-              className="w-full flex items-center justify-between px-4 py-2 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+              className="flex w-full items-center justify-between px-4 py-2 text-left text-xs font-medium text-gray-600 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-800/50"
             >
               <span>{t('workspacePage.panels.chat.floating.contextTitle')}</span>
-              {isContextOpen
-                ? <ChevronUp className="h-3.5 w-3.5" />
-                : <ChevronDown className="h-3.5 w-3.5" />}
+              {isContextOpen ? (
+                <ChevronUp className="h-3.5 w-3.5 flex-shrink-0" />
+              ) : (
+                <ChevronDown className="h-3.5 w-3.5 flex-shrink-0" />
+              )}
             </button>
             {isContextOpen ? (
-              <div id="workspace-chat-context-panel" className="px-4 pb-3 space-y-2">
-                {/* Selected symbol */}
+              <div id="workspace-chat-context-panel" className="space-y-2 px-4 pb-3">
                 <div className="text-xs space-y-1">
                   <span className="font-medium text-gray-700 dark:text-gray-300">
                     {t('workspacePage.panels.chat.floating.contextTicker')}:{' '}
                   </span>
-                  <span className="text-gray-900 dark:text-gray-100 font-mono">
+                  <span className="font-mono text-gray-900 dark:text-gray-100">
                     {selectedTicker ?? t('workspacePage.panels.chat.floating.contextNoTicker')}
                   </span>
                 </div>
 
-                {/* Candidate data */}
                 {selectedTicker ? (
                   candidate ? (
-                    <div className="rounded-lg bg-gray-50 dark:bg-gray-800 px-3 py-2 text-xs space-y-1">
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">{t('workspacePage.panels.chat.floating.contextCandidateRank')}</span>
+                    <div className="space-y-1 rounded-lg bg-gray-50 px-3 py-2 text-xs dark:bg-gray-800">
+                      <div className="flex justify-between gap-3">
+                        <span className="text-gray-500">
+                          {t('workspacePage.panels.chat.floating.contextCandidateRank')}
+                        </span>
                         <span className="font-mono">#{candidate.rank}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">{t('workspacePage.panels.chat.floating.contextCandidateSignal')}</span>
+                      <div className="flex justify-between gap-3">
+                        <span className="text-gray-500">
+                          {t('workspacePage.panels.chat.floating.contextCandidateSignal')}
+                        </span>
                         <span className="font-mono">{candidate.signal ?? '—'}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">{t('workspacePage.panels.chat.floating.contextCandidateEntry')}</span>
-                        <span className="font-mono">{candidate.entry != null ? formatCurrency(candidate.entry, candidate.currency) : '—'}</span>
+                      <div className="flex justify-between gap-3">
+                        <span className="text-gray-500">
+                          {t('workspacePage.panels.chat.floating.contextCandidateEntry')}
+                        </span>
+                        <span className="font-mono">
+                          {candidate.entry != null ? formatCurrency(candidate.entry, candidate.currency) : '—'}
+                        </span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">{t('workspacePage.panels.chat.floating.contextCandidateStop')}</span>
-                        <span className="font-mono">{candidate.stop != null ? formatCurrency(candidate.stop, candidate.currency) : '—'}</span>
+                      <div className="flex justify-between gap-3">
+                        <span className="text-gray-500">
+                          {t('workspacePage.panels.chat.floating.contextCandidateStop')}
+                        </span>
+                        <span className="font-mono">
+                          {candidate.stop != null ? formatCurrency(candidate.stop, candidate.currency) : '—'}
+                        </span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">{t('workspacePage.panels.chat.floating.contextCandidateRR')}</span>
-                        <span className="font-mono">{candidate.rr != null ? candidate.rr.toFixed(2) : '—'}</span>
+                      <div className="flex justify-between gap-3">
+                        <span className="text-gray-500">
+                          {t('workspacePage.panels.chat.floating.contextCandidateRR')}
+                        </span>
+                        <span className="font-mono">
+                          {candidate.rr != null ? candidate.rr.toFixed(2) : '—'}
+                        </span>
                       </div>
                       {candidate.recommendation?.verdict ? (
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">{t('workspacePage.panels.chat.floating.contextCandidateVerdict')}</span>
-                          <span className={cn(
-                            'font-medium',
-                            candidate.recommendation.verdict === 'RECOMMENDED'
-                              ? 'text-green-700 dark:text-green-400'
-                              : 'text-amber-700 dark:text-amber-400'
-                          )}>
+                        <div className="flex justify-between gap-3">
+                          <span className="text-gray-500">
+                            {t('workspacePage.panels.chat.floating.contextCandidateVerdict')}
+                          </span>
+                          <span
+                            className={cn(
+                              'font-medium',
+                              candidate.recommendation.verdict === 'RECOMMENDED'
+                                ? 'text-green-700 dark:text-green-400'
+                                : 'text-amber-700 dark:text-amber-400'
+                            )}
+                          >
                             {candidate.recommendation.verdict === 'RECOMMENDED'
                               ? t('workspacePage.panels.chat.floating.contextCandidateRecommended')
                               : t('workspacePage.panels.chat.floating.contextCandidateNotRecommended')}
@@ -190,22 +209,31 @@ export default function FloatingChatWidget() {
                       ) : null}
                     </div>
                   ) : (
-                    <p className="text-xs text-gray-500">{t('workspacePage.panels.chat.floating.contextNoCandidate')}</p>
+                    <p className="text-xs text-gray-500">
+                      {t('workspacePage.panels.chat.floating.contextNoCandidate')}
+                    </p>
                   )
                 ) : null}
 
-                {/* Source badges after first response — context panel only */}
                 {sources.length > 0 ? (
-                  <div className="flex flex-wrap gap-1.5" aria-label={t('workspacePage.panels.chat.contextBadgesAria')}>
+                  <div
+                    className="flex flex-wrap gap-1.5"
+                    aria-label={t('workspacePage.panels.chat.contextBadgesAria')}
+                  >
                     {sources.map((source) => (
                       <Badge key={source.source} variant={sourceBadgeVariant(source)} className="text-xs">
-                        {source.label} {source.loaded ? t('workspacePage.panels.chat.badges.ready') : t('workspacePage.panels.chat.badges.missing')}
+                        {source.label}{' '}
+                        {source.loaded
+                          ? t('workspacePage.panels.chat.badges.ready')
+                          : t('workspacePage.panels.chat.badges.missing')}
                       </Badge>
                     ))}
                   </div>
                 ) : (
                   <p className="text-xs text-gray-400 dark:text-gray-500">
-                    {t('workspacePage.panels.chat.snapshotStatus', { count: lastResult?.candidates.length ?? 0 })}
+                    {t('workspacePage.panels.chat.snapshotStatus', {
+                      count: lastResult?.candidates.length ?? 0,
+                    })}
                   </p>
                 )}
               </div>

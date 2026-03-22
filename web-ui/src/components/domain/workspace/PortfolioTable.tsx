@@ -15,10 +15,6 @@ import {
   usePositions,
   useUpdateStopMutation,
 } from '@/features/portfolio/hooks';
-import type { WatchItem } from '@/features/watchlist/types';
-import { useUnwatchSymbolMutation, useWatchSymbolMutation, useWatchlist } from '@/features/watchlist/hooks';
-import WatchMetaInline from '@/components/domain/watchlist/WatchMetaInline';
-import WatchToggleButton from '@/components/domain/watchlist/WatchToggleButton';
 import { type Order } from '@/features/portfolio/types';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { formatCurrency, formatPercent } from '@/utils/formatters';
@@ -30,27 +26,54 @@ interface PortfolioRow {
   status: 'open' | 'pending';
   netPnl: number | null;
   netPnlPercent: number | null;
-  grossPnl: number | null;
-  grossPnlPercent: number | null;
   entryPrice: number | null;
   currentPrice: number | null;
   stopLoss: number | null;
-  target: number | null;
   shares: number | null;
-  invested: number | null;
-  feesEur: number | null;
   position: PositionWithMetrics | null;
   order: Order | null;
-}
-
-function formatOptionalCurrency(value: number | null): string {
-  return value == null ? t('common.placeholders.dash') : formatCurrency(value);
 }
 
 function formatPnlValue(pnl: number | null, pnlPercent: number | null): string {
   if (pnl == null || pnlPercent == null) return t('common.placeholders.dash');
   const sign = pnl >= 0 ? '+' : '';
   return `${sign}${formatCurrency(pnl)} (${formatPercent(pnlPercent)})`;
+}
+
+function formatOptionalCurrency(value: number | null): string {
+  return value == null ? t('common.placeholders.dash') : formatCurrency(value);
+}
+
+/** Compact actions dropdown using native <details> */
+function ActionsDropdown({ children }: { children: React.ReactNode }) {
+  return (
+    <details className="relative inline-block">
+      <summary className="list-none cursor-pointer rounded p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 select-none">
+        ⋯
+      </summary>
+      <div className="absolute right-0 z-10 mt-1 min-w-[10rem] rounded-lg border border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-md p-1">
+        {children}
+      </div>
+    </details>
+  );
+}
+
+function DropdownItem({ onClick, label, className }: { onClick: () => void; label: string; className?: string }) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        // close the details parent
+        const details = (e.target as HTMLElement).closest('details');
+        if (details) (details as HTMLDetailsElement).open = false;
+        onClick();
+      }}
+      className={`w-full text-left px-3 py-1.5 text-sm rounded hover:bg-gray-100 dark:hover:bg-gray-700 ${className ?? ''}`}
+    >
+      {label}
+    </button>
+  );
 }
 
 export default function PortfolioTable() {
@@ -81,39 +104,6 @@ export default function PortfolioTable() {
     setShowCloseModal(false);
     setSelectedPosition(null);
   });
-  const watchlistQuery = useWatchlist();
-  const watchSymbolMutation = useWatchSymbolMutation();
-  const unwatchSymbolMutation = useUnwatchSymbolMutation();
-
-  const watchItemsByTicker = useMemo(() => {
-    const map = new Map<string, WatchItem>();
-    for (const item of watchlistQuery.data ?? []) {
-      map.set(item.ticker.toUpperCase(), item);
-    }
-    return map;
-  }, [watchlistQuery.data]);
-
-  const handleWatch = (ticker: string, currentPrice: number | null | undefined, source: string) => {
-    const normalizedTicker = ticker.trim().toUpperCase();
-    if (!normalizedTicker || watchItemsByTicker.has(normalizedTicker)) {
-      return;
-    }
-    watchSymbolMutation.mutate({
-      ticker: normalizedTicker,
-      watchPrice: currentPrice ?? null,
-      currency: null,
-      source,
-    });
-  };
-
-  const handleUnwatch = (ticker: string) => {
-    const normalizedTicker = ticker.trim().toUpperCase();
-    if (!normalizedTicker || !watchItemsByTicker.has(normalizedTicker)) {
-      return;
-    }
-    unwatchSymbolMutation.mutate(normalizedTicker);
-  };
-
   const fillOrderMutation = useFillOrderMutation(() => {
     setShowFillOrderModal(false);
     setSelectedPendingOrder(null);
@@ -135,7 +125,6 @@ export default function PortfolioTable() {
       } else if (order.orderKind === 'take_profit') {
         existing.targetOrder = order;
       } else {
-        // entry add-ons and other order kinds linked to a position must be visible as their own row
         standaloneOrders.push(order);
       }
       byPositionId.set(order.positionId, existing);
@@ -143,25 +132,17 @@ export default function PortfolioTable() {
 
     const positionRows: PortfolioRow[] = positions.map((position) => {
       const linked = position.positionId ? byPositionId.get(position.positionId) : undefined;
-      const entryValue = position.entryPrice * position.shares;
       const effectiveCurrentPrice = position.currentPrice ?? position.entryPrice;
-      const grossPnl = (effectiveCurrentPrice - position.entryPrice) * position.shares;
-      const grossPnlPercent = entryValue > 0 ? (grossPnl / entryValue) * 100 : 0;
       return {
         id: position.positionId ?? `open-${position.ticker}`,
         ticker: position.ticker,
         status: 'open',
         netPnl: position.pnl,
         netPnlPercent: position.pnlPercent,
-        grossPnl,
-        grossPnlPercent,
         entryPrice: position.entryPrice,
         currentPrice: effectiveCurrentPrice,
         stopLoss: linked?.stopOrder?.stopPrice ?? position.stopPrice,
-        target: linked?.targetOrder?.limitPrice ?? null,
         shares: position.shares,
-        invested: position.entryValue ?? entryValue,
-        feesEur: position.feesEur > 0 ? position.feesEur : null,
         position,
         order: null,
       };
@@ -173,15 +154,10 @@ export default function PortfolioTable() {
       status: 'pending',
       netPnl: null,
       netPnlPercent: null,
-      grossPnl: null,
-      grossPnlPercent: null,
       entryPrice: order.limitPrice ?? order.entryPrice ?? null,
       currentPrice: null,
       stopLoss: order.stopPrice ?? null,
-      target: order.orderKind === 'take_profit' ? order.limitPrice ?? null : null,
       shares: order.quantity,
-      invested: null,
-      feesEur: null,
       position: null,
       order,
     }));
@@ -221,10 +197,7 @@ export default function PortfolioTable() {
         return normalizedTicker ? row.ticker.toUpperCase() === normalizedTicker : false;
       })?.position;
 
-      if (!matchedPosition) {
-        clearPortfolioIntent();
-        return;
-      }
+      if (!matchedPosition) { clearPortfolioIntent(); return; }
 
       setSelectedPosition(matchedPosition);
       setSelectedPendingOrder(null);
@@ -247,10 +220,7 @@ export default function PortfolioTable() {
         return normalizedTicker ? row.ticker.toUpperCase() === normalizedTicker : false;
       })?.order;
 
-      if (!matchedOrder) {
-        clearPortfolioIntent();
-        return;
-      }
+      if (!matchedOrder) { clearPortfolioIntent(); return; }
 
       setSelectedPendingOrder(matchedOrder);
       setSelectedPosition(null);
@@ -268,56 +238,22 @@ export default function PortfolioTable() {
     {
       key: 'ticker',
       header: t('workspacePage.panels.portfolio.columns.symbol'),
-      render: (row) => {
-        const watchItem = watchItemsByTicker.get(row.ticker.toUpperCase());
-        return (
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2">
-              <span className="font-semibold">{row.ticker}</span>
-              <Badge variant={row.status === 'open' ? 'success' : 'warning'}>{row.status}</Badge>
-            </div>
-            <div className="flex flex-col gap-1">
-              <WatchToggleButton
-                ticker={row.ticker}
-                isWatched={Boolean(watchItem)}
-                isPending={watchSymbolMutation.isPending || unwatchSymbolMutation.isPending}
-                onWatch={(ticker) => handleWatch(ticker, row.currentPrice, 'workspace_portfolio')}
-                onUnwatch={handleUnwatch}
-              />
-              {watchItem ? (
-                <WatchMetaInline
-                  watchedAt={watchItem.watchedAt}
-                  watchPrice={watchItem.watchPrice}
-                  currentPrice={row.currentPrice}
-                  currency={null}
-                />
-              ) : null}
-            </div>
-          </div>
-        );
-      },
-    },
-    {
-      key: 'grossPnl',
-      header: t('workspacePage.panels.portfolio.columns.pnlGross'),
-      align: 'right',
-      render: (row) => {
-        const isPositive = (row.grossPnl ?? 0) >= 0;
-        return (
-          <span className={isPositive ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}>
-            {formatPnlValue(row.grossPnl, row.grossPnlPercent)}
-          </span>
-        );
-      },
+      render: (row) => (
+        <div className="flex items-center gap-1.5">
+          <span className="font-semibold text-sm">{row.ticker}</span>
+          <Badge variant={row.status === 'open' ? 'success' : 'warning'} >{row.status}</Badge>
+        </div>
+      ),
     },
     {
       key: 'netPnl',
-      header: t('workspacePage.panels.portfolio.columns.pnlNet'),
+      header: 'Net P&L',
       align: 'right',
       render: (row) => {
-        const isPositive = (row.netPnl ?? 0) >= 0;
+        if (row.netPnl == null) return <span className="text-gray-400 text-xs">—</span>;
+        const isPositive = row.netPnl >= 0;
         return (
-          <span className={isPositive ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}>
+          <span className={`font-semibold text-sm ${isPositive ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`}>
             {formatPnlValue(row.netPnl, row.netPnlPercent)}
           </span>
         );
@@ -325,111 +261,104 @@ export default function PortfolioTable() {
     },
     {
       key: 'entry',
-      header: t('workspacePage.panels.portfolio.columns.entry'),
-      align: 'right',
-      render: (row) => formatOptionalCurrency(row.entryPrice),
+      header: 'Prices',
+      render: (row) => (
+        <div className="text-xs space-y-0.5 font-mono">
+          <div className="flex gap-1 text-gray-500">
+            <span>Entry</span>
+            <span className="text-gray-900 dark:text-gray-100">{formatOptionalCurrency(row.entryPrice)}</span>
+          </div>
+          {row.currentPrice != null && row.currentPrice !== row.entryPrice ? (
+            <div className="flex gap-1 text-gray-500">
+              <span>Now</span>
+              <span className="text-gray-900 dark:text-gray-100">{formatOptionalCurrency(row.currentPrice)}</span>
+            </div>
+          ) : null}
+          <div className="flex gap-1 text-gray-500">
+            <span>Stop</span>
+            <span className="text-rose-700 dark:text-rose-400">{formatOptionalCurrency(row.stopLoss)}</span>
+          </div>
+        </div>
+      ),
     },
     {
-      key: 'current',
-      header: t('workspacePage.panels.portfolio.columns.current'),
+      key: 'shares',
+      header: 'Shares',
       align: 'right',
-      render: (row) => formatOptionalCurrency(row.currentPrice),
-    },
-    {
-      key: 'stop',
-      header: t('workspacePage.panels.portfolio.columns.stop'),
-      align: 'right',
-      render: (row) => formatOptionalCurrency(row.stopLoss),
-    },
-    {
-      key: 'target',
-      header: t('workspacePage.panels.portfolio.columns.target'),
-      align: 'right',
-      render: (row) => formatOptionalCurrency(row.target),
-    },
-    {
-      key: 'invested',
-      header: t('workspacePage.panels.portfolio.columns.invested'),
-      align: 'right',
-      render: (row) => formatOptionalCurrency(row.invested),
-    },
-    {
-      key: 'commissions',
-      header: t('workspacePage.panels.portfolio.columns.commissions'),
-      align: 'right',
-      render: (row) =>
-        row.feesEur != null
-          ? <span className="text-amber-700 dark:text-amber-300">€{row.feesEur.toFixed(2)}</span>
-          : <span className="text-gray-400">{t('common.placeholders.dash')}</span>,
+      render: (row) => (
+        <span className="text-sm font-mono">{row.shares ?? '—'}</span>
+      ),
     },
     {
       key: 'actions',
-      header: t('workspacePage.panels.portfolio.columns.actions'),
+      header: '',
       align: 'right',
-      render: (row) =>
-        row.position?.positionId ? (
-          <div className="flex justify-end gap-2" onClick={(event) => event.stopPropagation()}>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => {
-                setSelectedTicker(row.ticker, 'portfolio');
-                setAnalysisTab('order');
-              }}
-            >
-              {t('workspacePage.panels.portfolio.addOnEntry')}
-            </Button>
-            <Button
-              size="sm"
-              variant="primary"
-              onClick={() => {
-                setSelectedPosition(row.position);
-                setShowUpdateStopModal(true);
-              }}
-            >
-              {t('positionsPage.updateStop')}
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => {
-                setSelectedPosition(row.position);
-                setShowCloseModal(true);
-              }}
-            >
-              {t('positionsPage.closePosition')}
-            </Button>
-          </div>
-        ) : row.order ? (
-          <div className="flex justify-end gap-2" onClick={(event) => event.stopPropagation()}>
-            <Button
-              size="sm"
-              variant="primary"
-              disabled={!row.order || cancelOrderMutation.isPending || fillOrderMutation.isPending}
-              onClick={() => {
-                if (!row.order) return;
-                setSelectedPendingOrder(row.order);
-                setShowFillOrderModal(true);
-              }}
-            >
-              {t('common.actions.fillOrder')}
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              disabled={!row.order || cancelOrderMutation.isPending || fillOrderMutation.isPending}
-              onClick={() => {
-                if (!row.order) return;
-                if (!window.confirm(t('ordersPage.confirmCancel'))) return;
-                cancelOrderMutation.mutate(row.order.orderId);
-              }}
-            >
-              {cancelOrderMutation.isPending ? t('common.table.loading') : t('common.actions.cancel')}
-            </Button>
-          </div>
-        ) : (
-          <span className="text-xs text-gray-500">{t('workspacePage.panels.portfolio.pendingOnly')}</span>
-        ),
+      render: (row) => {
+        if (row.position?.positionId) {
+          return (
+            <div className="flex justify-end items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+              <Button
+                size="sm"
+                variant="primary"
+                onClick={() => {
+                  setSelectedPosition(row.position);
+                  setShowUpdateStopModal(true);
+                }}
+                title={t('positionsPage.updateStop')}
+              >
+                {t('positionsPage.updateStop')}
+              </Button>
+              <ActionsDropdown>
+                <DropdownItem
+                  label={t('workspacePage.panels.portfolio.addOnEntry')}
+                  onClick={() => {
+                    setSelectedTicker(row.ticker, 'portfolio');
+                    setAnalysisTab('order');
+                  }}
+                />
+                <DropdownItem
+                  label={t('positionsPage.closePosition')}
+                  className="text-rose-700 dark:text-rose-400"
+                  onClick={() => {
+                    setSelectedPosition(row.position);
+                    setShowCloseModal(true);
+                  }}
+                />
+              </ActionsDropdown>
+            </div>
+          );
+        }
+        if (row.order) {
+          return (
+            <div className="flex justify-end items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+              <Button
+                size="sm"
+                variant="primary"
+                disabled={cancelOrderMutation.isPending || fillOrderMutation.isPending}
+                onClick={() => {
+                  if (!row.order) return;
+                  setSelectedPendingOrder(row.order);
+                  setShowFillOrderModal(true);
+                }}
+              >
+                {t('common.actions.fillOrder')}
+              </Button>
+              <ActionsDropdown>
+                <DropdownItem
+                  label={cancelOrderMutation.isPending ? t('common.table.loading') : t('common.actions.cancel')}
+                  className="text-rose-700 dark:text-rose-400"
+                  onClick={() => {
+                    if (!row.order) return;
+                    if (!window.confirm(t('ordersPage.confirmCancel'))) return;
+                    cancelOrderMutation.mutate(row.order.orderId);
+                  }}
+                />
+              </ActionsDropdown>
+            </div>
+          );
+        }
+        return <span className="text-xs text-gray-500">{t('workspacePage.panels.portfolio.pendingOnly')}</span>;
+      },
     },
   ];
 
@@ -447,12 +376,12 @@ export default function PortfolioTable() {
         tableClassName="text-sm"
         rowClassName={(row) => {
           const isSelected = selectedTicker?.toUpperCase() === row.ticker.toUpperCase();
-          const base =
+          return (
             'border-t transition-colors cursor-pointer ' +
             (isSelected
               ? 'bg-blue-50/70 hover:bg-blue-100/80 dark:bg-blue-900/20 dark:hover:bg-blue-900/30'
-              : 'hover:bg-gray-50 dark:hover:bg-gray-800');
-          return base;
+              : 'hover:bg-gray-50 dark:hover:bg-gray-800')
+          );
         }}
         onRowClick={(row) => setSelectedTicker(row.ticker)}
       />
@@ -460,15 +389,9 @@ export default function PortfolioTable() {
       {showUpdateStopModal && selectedPosition ? (
         <UpdateStopModalForm
           position={selectedPosition}
-          onClose={() => {
-            setShowUpdateStopModal(false);
-            setSelectedPosition(null);
-          }}
+          onClose={() => { setShowUpdateStopModal(false); setSelectedPosition(null); }}
           onSubmit={(request) =>
-            updateStopMutation.mutate({
-              positionId: selectedPosition.positionId!,
-              request,
-            })
+            updateStopMutation.mutate({ positionId: selectedPosition.positionId!, request })
           }
           isLoading={updateStopMutation.isPending}
           error={updateStopMutation.error?.message}
@@ -478,15 +401,9 @@ export default function PortfolioTable() {
       {showCloseModal && selectedPosition ? (
         <ClosePositionModalForm
           position={selectedPosition}
-          onClose={() => {
-            setShowCloseModal(false);
-            setSelectedPosition(null);
-          }}
+          onClose={() => { setShowCloseModal(false); setSelectedPosition(null); }}
           onSubmit={(request) =>
-            closePositionMutation.mutate({
-              positionId: selectedPosition.positionId!,
-              request,
-            })
+            closePositionMutation.mutate({ positionId: selectedPosition.positionId!, request })
           }
           isLoading={closePositionMutation.isPending}
           error={closePositionMutation.error?.message}
@@ -497,18 +414,11 @@ export default function PortfolioTable() {
         <FillOrderModalForm
           order={selectedPendingOrder}
           hasOpenPositionForTicker={positions.some(
-            (position) =>
-              position.ticker?.trim().toUpperCase() === selectedPendingOrder.ticker?.trim().toUpperCase(),
+            (p) => p.ticker?.trim().toUpperCase() === selectedPendingOrder.ticker?.trim().toUpperCase()
           )}
-          onClose={() => {
-            setShowFillOrderModal(false);
-            setSelectedPendingOrder(null);
-          }}
+          onClose={() => { setShowFillOrderModal(false); setSelectedPendingOrder(null); }}
           onSubmit={(request) =>
-            fillOrderMutation.mutate({
-              orderId: selectedPendingOrder.orderId,
-              request,
-            })
+            fillOrderMutation.mutate({ orderId: selectedPendingOrder.orderId, request })
           }
           isLoading={fillOrderMutation.isPending}
           error={fillOrderMutation.error?.message}

@@ -49,9 +49,9 @@ describe('DecisionSummaryCard', () => {
   it('renders the decision summary card with trade plan and warnings', () => {
     render(<DecisionSummaryCard summary={buildSummary()} currency="USD" />);
 
-    expect(screen.getByText('AAPL Decision Summary')).toBeInTheDocument();
-    expect(screen.getByText('Buy Now')).toBeInTheDocument();
-    expect(screen.getByText('Conviction: High')).toBeInTheDocument();
+    expect(screen.getByText(/AAPL Decision Summary/)).toBeInTheDocument();
+    expect(screen.getByText(/Buy Now/)).toBeInTheDocument();
+    expect(screen.getByText('High')).toBeInTheDocument();
     expect(screen.getByText('Coverage Warnings')).toBeInTheDocument();
     expect(screen.getByText('$180.00')).toBeInTheDocument();
     expect(screen.getByText('No cached catalyst snapshot is available yet.')).toBeInTheDocument();
