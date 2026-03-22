@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import AnalysisCanvasPanel from '@/components/domain/workspace/AnalysisCanvasPanel';
 import FloatingChatWidget from '@/components/domain/workspace/FloatingChatWidget';
-import PortfolioPanel from '@/components/domain/workspace/PortfolioPanel';
 import ScreenerInboxPanel from '@/components/domain/workspace/ScreenerInboxPanel';
 import { useSymbolIntelligenceRunner } from '@/features/intelligence/useSymbolIntelligenceRunner';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
@@ -11,7 +10,7 @@ export default function Workspace() {
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
   const { runForTicker, getStatusForTicker } = useSymbolIntelligenceRunner();
   const selectedTickerIntelligenceStatus = selectedTicker ? getStatusForTicker(selectedTicker) : undefined;
-  const [activeTablet, setActiveTablet] = useState<'screener' | 'analysis' | 'portfolio'>('screener');
+  const [activeTablet, setActiveTablet] = useState<'screener' | 'analysis'>('screener');
   const prevTickerRef = useRef<string | null>(null);
 
   // On narrow screens, auto-switch to analysis panel when a symbol is selected
@@ -26,7 +25,7 @@ export default function Workspace() {
     <div className="mx-auto max-w-[1600px]">
       {/* Tablet tab switcher — only visible below xl breakpoint */}
       <div className="xl:hidden flex border-b border-border mb-3">
-        {(['screener', 'analysis', 'portfolio'] as const).map((tab) => (
+        {(['screener', 'analysis'] as const).map((tab) => (
           <button
             key={tab}
             type="button"
@@ -46,7 +45,7 @@ export default function Workspace() {
       <div className="flex gap-4 xl:h-[calc(100vh-120px)] min-h-[500px]">
         <div
           className={cn(
-            'min-w-0 flex flex-col xl:overflow-hidden xl:w-5/12',
+            'min-w-0 flex flex-col xl:overflow-hidden xl:w-7/12',
             activeTablet === 'screener' ? 'w-full' : 'hidden xl:flex'
           )}
         >
@@ -54,7 +53,7 @@ export default function Workspace() {
         </div>
         <div
           className={cn(
-            'min-w-0 flex flex-col xl:overflow-hidden xl:w-4/12',
+            'min-w-0 flex flex-col xl:overflow-hidden xl:w-5/12',
             activeTablet === 'analysis' ? 'w-full' : 'hidden xl:flex'
           )}
         >
@@ -62,14 +61,6 @@ export default function Workspace() {
             onRunSymbolIntelligence={runForTicker}
             symbolIntelligenceStatus={selectedTickerIntelligenceStatus}
           />
-        </div>
-        <div
-          className={cn(
-            'min-w-0 flex flex-col xl:overflow-hidden xl:w-3/12',
-            activeTablet === 'portfolio' ? 'w-full' : 'hidden xl:flex'
-          )}
-        >
-          <PortfolioPanel />
         </div>
       </div>
 

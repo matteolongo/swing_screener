@@ -411,6 +411,7 @@ export const messagesEn = {
     nav: {
       workspace: 'Workspace',
       dailyReview: 'Daily Review',
+      portfolio: 'Portfolio',
       strategy: 'Strategy',
       intelligence: 'Intelligence',
       fundamentals: 'Fundamentals',
