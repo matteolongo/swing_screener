@@ -3,6 +3,7 @@ from __future__ import annotations
 from swing_screener.fundamentals.config import FundamentalsConfig
 from swing_screener.fundamentals.models import TRUST_METADATA_MISSING_FLAG, FundamentalSnapshot
 from swing_screener.fundamentals.providers import (
+    DegiroFundamentalsProvider,
     SecEdgarFundamentalsProvider,
     YfinanceFundamentalsProvider,
 )
@@ -24,15 +25,18 @@ class FundamentalsAnalysisService:
         storage: FundamentalsStorage | None = None,
         sec_edgar_provider: SecEdgarFundamentalsProvider | None = None,
         yfinance_provider: YfinanceFundamentalsProvider | None = None,
+        degiro_provider: DegiroFundamentalsProvider | None = None,
     ) -> None:
         self._storage = storage or FundamentalsStorage()
         self._sec_edgar_provider = sec_edgar_provider or SecEdgarFundamentalsProvider()
         self._yfinance_provider = yfinance_provider or YfinanceFundamentalsProvider()
+        self._degiro_provider = degiro_provider or DegiroFundamentalsProvider()
 
     def _providers_for(self, cfg: FundamentalsConfig):
         provider_map = {
             "sec_edgar": self._sec_edgar_provider,
             "yfinance": self._yfinance_provider,
+            "degiro": self._degiro_provider,
         }
         providers = [provider_map[name] for name in cfg.providers if name in provider_map]
         if not providers:

@@ -1,7 +1,11 @@
 """Fundamentals service."""
 from __future__ import annotations
 
+import logging
+
 from fastapi import HTTPException
+
+logger = logging.getLogger(__name__)
 
 from api.models.fundamentals import (
     DegiroAuditRecordResponse,
@@ -267,6 +271,17 @@ class FundamentalsService:
             )
 
         artifact_paths = save_audit_run(run, artifact_base)
+
+        # Update the ISIN map so DegiroFundamentalsProvider can resolve these symbols
+        try:
+            from swing_screener.fundamentals.providers.degiro import update_isin_map_from_audit
+            update_isin_map_from_audit([
+                {"symbol": r.symbol, "isin": r.isin}
+                for r in run.results
+                if r.isin
+            ])
+        except Exception:
+            logger.warning("Failed to update ISIN map from portfolio audit", exc_info=True)
 
         results = [
             DegiroAuditRecordResponse(
