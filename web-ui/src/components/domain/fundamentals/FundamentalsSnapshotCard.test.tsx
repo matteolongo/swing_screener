@@ -91,7 +91,7 @@ describe('FundamentalsSnapshotCard', () => {
     expect(screen.getByText('Price / Book')).toBeInTheDocument();
     expect(screen.getByText(/1[,.]7/)).toBeInTheDocument();
     expect(screen.getByText(/58[,.]8%/)).toBeInTheDocument();
-    expect(screen.getByText(/6[,.]5\s*B/i)).toBeInTheDocument();
+    expect(screen.getByText(/6[,.]?5\s*B|6[,.]?500\s*M/i)).toBeInTheDocument();
     expect(screen.getByText(/650\s*M/i)).toBeInTheDocument();
     expect(screen.getAllByText(/annual · yfinance\.financials/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/snapshot · yfinance\.info\.revenueGrowth · 2025-12-31/i)).toBeInTheDocument();

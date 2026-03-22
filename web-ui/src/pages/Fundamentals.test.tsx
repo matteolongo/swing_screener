@@ -9,6 +9,7 @@ vi.mock('@/features/fundamentals/hooks', () => ({
   useCompareFundamentalsMutation: vi.fn(),
   useFundamentalsWarmupStatus: vi.fn(),
   useStartFundamentalsWarmupMutation: vi.fn(),
+  useDegiroPortfolioAuditMutation: vi.fn(() => ({ mutate: vi.fn(), isPending: false, data: undefined, isError: false })),
 }));
 
 import * as fundamentalsHooks from '@/features/fundamentals/hooks';

@@ -1171,10 +1171,12 @@ class SecEdgarEvidenceAdapter:
     def __init__(
         self,
         *,
-        user_agent: str = "swing-screener-intelligence/1.0 (research)",
+        user_agent: str | None = None,
         timeout_sec: float = 12.0,
     ) -> None:
-        self._user_agent = user_agent
+        email = os.environ.get("SEC_CONTACT_EMAIL", "")
+        contact = f" {email}" if email else ""
+        self._user_agent = user_agent or f"swing-screener-intelligence/1.0{contact}"
         self._timeout_sec = float(timeout_sec)
 
     def _load_ticker_map(

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
+import os
 from typing import Any
 
 import httpx
@@ -379,10 +380,12 @@ class SecEdgarFundamentalsProvider:
     def __init__(
         self,
         *,
-        user_agent: str = "swing-screener/1.0 (fundamentals research)",
+        user_agent: str | None = None,
         timeout_sec: float = 15.0,
     ) -> None:
-        self._user_agent = user_agent
+        email = os.environ.get("SEC_CONTACT_EMAIL", "")
+        contact = f" {email}" if email else ""
+        self._user_agent = user_agent or f"swing-screener/1.0{contact}"
         self._timeout_sec = float(timeout_sec)
         self._ticker_map: dict[str, tuple[str, str | None]] | None = None
 

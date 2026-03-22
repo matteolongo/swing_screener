@@ -148,13 +148,13 @@ export default function DecisionSummaryCard({
       value: summary.tradePlan.rr,
       formatter: (value: number) => `${formatNumber(value, 2)}x`,
     },
-  ].filter((item) => item.value !== undefined);
+  ].filter((item) => item.value != null);
 
   const warningItems = summary.drivers.warnings.filter(Boolean);
   const hasFairValue =
-    summary.valuationContext.fairValueLow !== undefined &&
-    summary.valuationContext.fairValueBase !== undefined &&
-    summary.valuationContext.fairValueHigh !== undefined;
+    summary.valuationContext.fairValueLow != null &&
+    summary.valuationContext.fairValueBase != null &&
+    summary.valuationContext.fairValueHigh != null;
   const valuationMetrics = [
     {
       label: t('workspacePage.panels.analysis.decisionSummary.valuationContext.trailingPe'),
@@ -181,7 +181,7 @@ export default function DecisionSummaryCard({
       value: summary.valuationContext.bookToPrice,
       formatter: (value: number) => `${formatNumber(value * 100, 1)}%`,
     },
-  ].filter((item) => item.value !== undefined);
+  ].filter((item) => item.value != null);
   const fairValueMetrics = hasFairValue
     ? [
         {

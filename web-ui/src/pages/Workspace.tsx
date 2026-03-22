@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import AnalysisCanvasPanel from '@/components/domain/workspace/AnalysisCanvasPanel';
 import FloatingChatWidget from '@/components/domain/workspace/FloatingChatWidget';
 import ScreenerInboxPanel from '@/components/domain/workspace/ScreenerInboxPanel';
@@ -11,6 +11,15 @@ export default function Workspace() {
   const { runForTicker, getStatusForTicker } = useSymbolIntelligenceRunner();
   const selectedTickerIntelligenceStatus = selectedTicker ? getStatusForTicker(selectedTicker) : undefined;
   const [activeTablet, setActiveTablet] = useState<'screener' | 'analysis'>('screener');
+  const prevTickerRef = useRef<string | null>(null);
+
+  // On narrow screens, auto-switch to analysis panel when a symbol is selected
+  useEffect(() => {
+    if (selectedTicker && selectedTicker !== prevTickerRef.current) {
+      prevTickerRef.current = selectedTicker;
+      setActiveTablet('analysis');
+    }
+  }, [selectedTicker]);
 
   return (
     <div className="mx-auto max-w-[1600px]">

@@ -173,16 +173,16 @@ export default function AnalysisCanvasPanel({
                 {selectedCandidate ? (
                   <div className="grid grid-cols-3 gap-2">
                     {[
-                      { label: 'ATR', value: selectedCandidate.atr.toFixed(2) },
-                      { label: 'SMA 20', value: selectedCandidate.sma20.toFixed(2) },
-                      { label: 'SMA 50', value: selectedCandidate.sma50.toFixed(2) },
-                      { label: 'SMA 200', value: selectedCandidate.sma200.toFixed(2) },
-                      { label: 'Mom 6M', value: formatPercent(selectedCandidate.momentum6m * 100) },
-                      { label: 'Mom 12M', value: formatPercent(selectedCandidate.momentum12m * 100) },
+                      { label: 'ATR', value: selectedCandidate.atr != null ? selectedCandidate.atr.toFixed(2) : null },
+                      { label: 'SMA 20', value: selectedCandidate.sma20 != null ? selectedCandidate.sma20.toFixed(2) : null },
+                      { label: 'SMA 50', value: selectedCandidate.sma50 != null ? selectedCandidate.sma50.toFixed(2) : null },
+                      { label: 'SMA 200', value: selectedCandidate.sma200 != null ? selectedCandidate.sma200.toFixed(2) : null },
+                      { label: 'Mom 6M', value: selectedCandidate.momentum6m != null ? formatPercent(selectedCandidate.momentum6m * 100) : null },
+                      { label: 'Mom 12M', value: selectedCandidate.momentum12m != null ? formatPercent(selectedCandidate.momentum12m * 100) : null },
                     ].map(({ label, value }) => (
                       <div key={label} className="rounded-md border border-gray-200 bg-white px-2 py-1.5">
                         <p className="text-[10px] uppercase tracking-wide text-gray-400">{label}</p>
-                        <p className="mt-0.5 text-xs font-mono font-semibold text-gray-800 dark:text-gray-200">{value}</p>
+                        <p className="mt-0.5 text-xs font-mono font-semibold text-gray-800 dark:text-gray-200">{value ?? '—'}</p>
                       </div>
                     ))}
                   </div>

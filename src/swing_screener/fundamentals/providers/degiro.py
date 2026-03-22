@@ -205,11 +205,12 @@ class DegiroFundamentalsProvider:
     # ------------------------------------------------------------------
 
     def fetch_record(self, symbol: str) -> ProviderFundamentalsRecord:
+        # Check credentials before making any network calls (fail fast)
+        client = self._ensure_client()
+
         isin = self._resolve_isin(symbol)
         if not isin:
             raise ValueError(f"degiro: cannot resolve ISIN for {symbol!r}")
-
-        client = self._ensure_client()
         api = client.api
 
         ratios_resp = api.get_company_ratios(product_isin=isin, raw=True) or {}
