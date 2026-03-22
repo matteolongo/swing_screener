@@ -89,3 +89,23 @@ def run_degiro_capability_audit(
     is missing.
     """
     return service.run_degiro_capability_audit(request)
+
+
+@router.post("/degiro/portfolio-audit", response_model=DegiroCapabilityAuditResponse)
+def run_degiro_portfolio_audit(
+    include_quotes: bool = True,
+    include_news: bool = True,
+    include_agenda: bool = True,
+    service: FundamentalsService = Depends(get_fundamentals_service),
+):
+    """Audit all products in the live DeGiro portfolio.
+
+    Unlike /capability-audit, this endpoint does not require ticker symbols —
+    it fetches product IDs directly from the live portfolio and resolves them
+    via get_products_info (works even when the text-search endpoint is unavailable).
+    """
+    return service.run_degiro_portfolio_audit(
+        include_quotes=include_quotes,
+        include_news=include_news,
+        include_agenda=include_agenda,
+    )

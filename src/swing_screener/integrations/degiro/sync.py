@@ -8,7 +8,7 @@ from __future__ import annotations
 import json
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
@@ -35,7 +35,14 @@ def fetch_live_data(
     include_orders_history: bool = True,
     include_transactions: bool = True,
 ) -> dict:
-    """Fetch raw data from DeGiro and return as a plain dict."""
+    """Fetch raw data from DeGiro using the correct API methods."""
+    try:
+        from degiro_connector.trading.models.account import UpdateOption, UpdateRequest
+    except ImportError as exc:
+        raise ImportError(
+            "degiro-connector is not installed. Install with: pip install -e '.[degiro]'"
+        ) from exc
+
     api = client.api
     result: dict[str, Any] = {
         "positions": [],
@@ -45,46 +52,76 @@ def fetch_live_data(
         "cash": [],
     }
 
+    # Portfolio positions and cash
     if include_portfolio:
         try:
-            portfolio = api.get_portfolio()
-            if portfolio:
-                result["positions"] = _extract_list(portfolio, "positions")
-                result["cash"] = _extract_list(portfolio, "cash")
+            update = api.get_update(
+                request_list=[
+                    UpdateRequest(option=UpdateOption.PORTFOLIO, last_updated=0),
+                    UpdateRequest(option=UpdateOption.TOTALPORTFOLIO, last_updated=0),
+                ],
+                raw=True,
+            ) or {}
+            portfolio_items = update.get("portfolio", {}).get("value", [])
+            positions = []
+            cash = []
+            for item in portfolio_items:
+                vals = {v["name"]: v["value"] for v in item.get("value", []) if "value" in v}
+                if vals.get("positionType") == "CASH":
+                    cash.append(vals)
+                elif vals.get("size", 0) and float(vals.get("size", 0)) != 0:
+                    positions.append(vals)
+            result["positions"] = positions
+            result["cash"] = cash
         except Exception:
             logger.warning("Failed to fetch DeGiro portfolio", exc_info=True)
 
+    # Pending orders
     if include_orders_history:
         try:
-            orders_resp = api.get_orders(from_date=from_date, to_date=to_date, active=False)
-            if orders_resp:
-                result["order_history"] = _extract_list(orders_resp, "orders")
-            pending_resp = api.get_orders(from_date=from_date, to_date=to_date, active=True)
-            if pending_resp:
-                result["pending_orders"] = _extract_list(pending_resp, "orders")
+            update = api.get_update(
+                request_list=[UpdateRequest(option=UpdateOption.ORDERS, last_updated=0)],
+                raw=True,
+            ) or {}
+            result["pending_orders"] = update.get("orders", {}).get("value", [])
         except Exception:
-            logger.warning("Failed to fetch DeGiro orders", exc_info=True)
+            logger.warning("Failed to fetch DeGiro pending orders", exc_info=True)
 
+        # Order history
+        try:
+            from degiro_connector.trading.models.account import HistoryRequest
+            from_dt = date.fromisoformat(from_date)
+            to_dt = date.fromisoformat(to_date)
+            history = api.get_orders_history(
+                history_request=HistoryRequest(from_date=from_dt, to_date=to_dt),
+                raw=True,
+            ) or {}
+            result["order_history"] = history.get("data", [])
+        except Exception:
+            logger.warning("Failed to fetch DeGiro orders history", exc_info=True)
+
+    # Transactions
     if include_transactions:
         try:
-            tx_resp = api.get_transactions(from_date=from_date, to_date=to_date)
-            if tx_resp:
-                result["transactions"] = _extract_list(tx_resp, "transactions")
+            from degiro_connector.trading.models.transaction import (
+                TransactionsHistory,
+            )
+            from_dt = date.fromisoformat(from_date)
+            to_dt = date.fromisoformat(to_date)
+            tx_request = TransactionsHistory.Request(
+                from_date=TransactionsHistory.Request.Date(
+                    year=from_dt.year, month=from_dt.month, day=from_dt.day
+                ),
+                to_date=TransactionsHistory.Request.Date(
+                    year=to_dt.year, month=to_dt.month, day=to_dt.day
+                ),
+            )
+            tx = api.get_transactions_history(request=tx_request, raw=True) or {}
+            result["transactions"] = tx.get("data", [])
         except Exception:
             logger.warning("Failed to fetch DeGiro transactions", exc_info=True)
 
     return result
-
-
-def _extract_list(response: Any, key: str) -> list[dict]:
-    if isinstance(response, dict):
-        return response.get(key, []) or []
-    if hasattr(response, key):
-        val = getattr(response, key)
-        if val is None:
-            return []
-        return list(val)
-    return []
 
 
 # ---------------------------------------------------------------------------
@@ -106,20 +143,19 @@ def normalize(raw: dict) -> DegiroSyncRaw:
 # ---------------------------------------------------------------------------
 
 def _match_order(broker_order: dict, local_orders: list[dict]) -> tuple[Optional[dict], str]:
-    """Return (local_order, confidence) or (None, reason)."""
     broker_id = str(broker_order.get("orderId", "")).strip()
 
     # Priority 1: broker_order_id exact match
     if broker_id:
         for lo in local_orders:
-            if str(lo.get("broker_order_id", "")).strip() == broker_id:
+            if str(lo.get("broker_order_id", "") or "").strip() == broker_id:
                 return lo, "exact"
 
     # Priority 2: product_id + side + quantity + date
-    broker_product = str(broker_order.get("productId", "")).strip()
-    broker_qty = abs(int(broker_order.get("quantity", 0) or 0))
-    broker_date = str(broker_order.get("date", "") or broker_order.get("created", ""))[:10]
-    broker_side = "buy" if int(broker_order.get("buysell", 0) or 0) == 1 else "sell"
+    broker_product = str(broker_order.get("productId", "") or "").strip()
+    broker_qty = abs(int(broker_order.get("size", 0) or broker_order.get("quantity", 0) or 0))
+    broker_date = str(broker_order.get("created", "") or broker_order.get("date", ""))[:10]
+    broker_side = "buy" if str(broker_order.get("buysell", "")).upper() in ("B", "BUY", "1") else "sell"
 
     fuzzy_hits = []
     for lo in local_orders:
@@ -142,7 +178,7 @@ def _match_order(broker_order: dict, local_orders: list[dict]) -> tuple[Optional
     if len(fuzzy_hits) > 1:
         return None, "ambiguous"
 
-    # Priority 3: ISIN + symbol alias
+    # Priority 3: ISIN match
     broker_isin = str(broker_order.get("isin", "") or "").strip()
     isin_hits = [lo for lo in local_orders if broker_isin and lo.get("isin") == broker_isin]
     if len(isin_hits) == 1:
@@ -154,10 +190,9 @@ def _match_order(broker_order: dict, local_orders: list[dict]) -> tuple[Optional
 
 
 def _resolve_fee(broker_order: dict, transactions: list[dict]) -> Optional[float]:
-    """Try to resolve fee from transaction data; return None if unresolved."""
-    broker_id = str(broker_order.get("orderId", "")).strip()
+    broker_id = str(broker_order.get("orderId", "") or "").strip()
     for tx in transactions:
-        if str(tx.get("orderId", "")).strip() == broker_id:
+        if str(tx.get("orderId", "") or "").strip() == broker_id:
             fee = tx.get("feeInBaseCurrency") or tx.get("totalFeesInBaseCurrency")
             if fee is not None:
                 return float(fee)
@@ -173,7 +208,6 @@ def preview(
     local_orders: list[dict],
     local_positions: list[dict],
 ) -> DegiroSyncPreview:
-    """Compute diffs without writing anything."""
     orders_to_create: list[SyncDiff] = []
     orders_to_update: list[SyncDiff] = []
     ambiguous: list[SyncDiff] = []
@@ -184,13 +218,13 @@ def preview(
 
     for bo in all_broker_orders:
         local, confidence = _match_order(bo, local_orders)
-        broker_id = str(bo.get("orderId", "")).strip() or None
+        broker_id = str(bo.get("orderId", "") or "").strip() or None
         fee = _resolve_fee(bo, sync_raw.transactions)
 
         fields: dict = {}
         if broker_id:
             fields["broker_order_id"] = broker_id
-        broker_product = str(bo.get("productId", "")).strip() or None
+        broker_product = str(bo.get("productId", "") or "").strip() or None
         if broker_product:
             fields["broker_product_id"] = broker_product
         if fee is not None:
@@ -208,14 +242,14 @@ def preview(
 
         if confidence == "ambiguous":
             ambiguous.append(diff)
-        elif confidence == "unmatched" and not local:
+        elif confidence == "unmatched":
             unmatched.append(diff)
         elif local:
             orders_to_update.append(diff)
         else:
             orders_to_create.append(diff)
 
-    # Positions: match by broker_product_id or ISIN
+    # Positions
     positions_to_create: list[SyncDiff] = []
     positions_to_update: list[SyncDiff] = []
 
@@ -226,11 +260,11 @@ def preview(
         local_pos = None
         pos_confidence = "unmatched"
         for lp in local_positions:
-            if product_id and str(lp.get("broker_product_id", "")).strip() == product_id:
+            if product_id and str(lp.get("broker_product_id", "") or "").strip() == product_id:
                 local_pos = lp
                 pos_confidence = "exact"
                 break
-            if isin and str(lp.get("isin", "")).strip() == isin:
+            if isin and str(lp.get("isin", "") or "").strip() == isin:
                 local_pos = lp
                 pos_confidence = "fuzzy"
                 break
@@ -242,7 +276,7 @@ def preview(
             fields["isin"] = isin
         size = bp.get("size") or bp.get("quantity")
         if size is not None:
-            fields["shares"] = int(size)
+            fields["shares"] = int(float(size))
 
         diff = SyncDiff(
             kind="position",
@@ -280,13 +314,11 @@ def apply(
     *,
     artifact_dir: Optional[str | Path] = None,
 ) -> DegiroApplyResult:
-    """Upsert local files based on preview. Idempotent; never hard-deletes."""
     from swing_screener.utils.file_lock import locked_read_json_cli, locked_write_json_cli
 
     orders_p = Path(orders_path)
     positions_p = Path(positions_path)
 
-    # Load current state
     orders_data = locked_read_json_cli(orders_p) if orders_p.exists() else {"orders": []}
     positions_data = (
         locked_read_json_cli(positions_p) if positions_p.exists() else {"positions": []}
@@ -298,7 +330,6 @@ def apply(
     orders_created = orders_updated = 0
     positions_created = positions_updated = 0
 
-    # Apply order updates
     order_idx = {o.get("order_id"): i for i, o in enumerate(orders_list)}
     for diff in sync_preview.orders_to_update:
         if diff.local_id and diff.local_id in order_idx:
@@ -318,7 +349,6 @@ def apply(
         orders_list.append(new_order)
         orders_created += 1
 
-    # Apply position updates
     pos_idx = {p.get("position_id"): i for i, p in enumerate(positions_list)}
     for diff in sync_preview.positions_to_update:
         if diff.local_id and diff.local_id in pos_idx:
@@ -340,12 +370,10 @@ def apply(
         positions_list.append(new_pos)
         positions_created += 1
 
-    # Write back
     asof = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     locked_write_json_cli(orders_p, {**orders_data, "asof": asof, "orders": orders_list})
     locked_write_json_cli(positions_p, {**positions_data, "asof": asof, "positions": positions_list})
 
-    # Optional artifact
     artifact_paths: dict[str, str] = {}
     if artifact_dir:
         artifact_dir_p = Path(artifact_dir)

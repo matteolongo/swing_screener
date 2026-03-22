@@ -1,7 +1,7 @@
 """Symbol resolver: map a ticker string to a DegiroProductRef.
 
 Resolution priority (highest → lowest confidence):
-  1. exact ticker / alias match from search results
+  1. exact ticker match from search results
   2. exchange + currency agreement
   3. ambiguous (multiple equally plausible hits)
   4. not_found
@@ -26,7 +26,7 @@ def _extract_product_ref(hit: dict) -> DegiroProductRef:
         name=str(hit.get("name", "")),
         exchange=hit.get("exchangeId") or hit.get("exchange") or None,
         currency=hit.get("currency") or None,
-        symbol=hit.get("symbol") or hit.get("contractSize") or None,
+        symbol=hit.get("symbol") or None,
     )
 
 
@@ -44,10 +44,7 @@ def resolve_symbol(
         confidence ∈ {"exact", "alias", "exchange", "ambiguous", "not_found"}
     """
     try:
-        from degiro_connector.trading.models.product_search import (
-            ProductSearch,
-            TextProductSearch,
-        )
+        from degiro_connector.trading.models.product_search import LookupRequest
     except ImportError as exc:
         raise ImportError(
             "degiro-connector is not installed. Install with: pip install -e '.[degiro]'"
@@ -55,15 +52,17 @@ def resolve_symbol(
 
     upper = symbol.strip().upper()
 
-    # Fetch search hits
     try:
-        request = TextProductSearch(search_text=upper, limit=10)
-        response = client.api.get_products_by_id(request)  # type: ignore[attr-defined]
-        raw_hits: list[dict] = []
-        if response and hasattr(response, "products"):
-            raw_hits = list(response.products) if response.products else []
-        elif isinstance(response, dict):
-            raw_hits = response.get("products", [])
+        response = client.api.product_search(  # type: ignore[attr-defined]
+            product_request=LookupRequest(
+                search_text=upper,
+                limit=10,
+                offset=0,
+                product_type_id=1,  # stocks
+            ),
+            raw=True,
+        )
+        raw_hits: list[dict] = response.get("products", []) if response else []
     except Exception:
         logger.warning("DeGiro product search failed for %s", upper, exc_info=True)
         return None, "not_found", "Search API error"
@@ -74,15 +73,12 @@ def resolve_symbol(
     logger.debug("DeGiro search for %r returned %d hit(s)", upper, len(raw_hits))
 
     # --- Pass 1: exact symbol match ---
-    exact: list[dict] = []
-    for hit in raw_hits:
-        hit_symbol = str(hit.get("symbol", "")).upper()
-        if hit_symbol == upper:
-            exact.append(hit)
+    exact: list[dict] = [
+        h for h in raw_hits if str(h.get("symbol", "")).upper() == upper
+    ]
 
     if len(exact) == 1:
-        ref = _extract_product_ref(exact[0])
-        return ref, "exact", f"Exact symbol match for {upper!r}"
+        return _extract_product_ref(exact[0]), "exact", f"Exact symbol match for {upper!r}"
 
     # --- Pass 2: exchange + currency filter ---
     candidates = exact if exact else raw_hits
@@ -101,8 +97,7 @@ def resolve_symbol(
 
     if len(filtered) == 1:
         confidence = "alias" if exact else "exchange"
-        ref = _extract_product_ref(filtered[0])
-        return ref, confidence, f"Exchange/currency filter narrowed to 1 result for {upper!r}"
+        return _extract_product_ref(filtered[0]), confidence, f"Filtered to 1 result for {upper!r}"
 
     # --- Ambiguous ---
     pool = filtered if filtered else candidates
@@ -112,6 +107,34 @@ def resolve_symbol(
         logger.info(notes)
         return None, "ambiguous", notes
 
-    # --- Single fallback hit ---
-    ref = _extract_product_ref(pool[0])
-    return ref, "alias", f"Single fallback result for {upper!r}"
+    if len(pool) == 1:
+        return _extract_product_ref(pool[0]), "alias", f"Single fallback result for {upper!r}"
+
+    return None, "not_found", f"No match for {upper!r}"
+
+
+def resolve_by_product_id(
+    client: object,
+    product_id: int | str,
+) -> tuple[Optional[DegiroProductRef], str, str]:
+    """Resolve a known DeGiro product ID to a DegiroProductRef via get_products_info.
+
+    This is the fallback when text search (LookupRequest) is unavailable.
+    Returns:
+        (product_ref, confidence, notes)
+    """
+    try:
+        response = client.api.get_products_info(  # type: ignore[attr-defined]
+            product_list=[int(product_id)],
+            raw=True,
+        )
+    except Exception:
+        logger.warning("get_products_info failed for product_id=%s", product_id, exc_info=True)
+        return None, "not_found", f"get_products_info error for {product_id}"
+
+    data: dict = (response or {}).get("data", {})
+    hit = data.get(str(product_id)) if data else None
+    if not hit:
+        return None, "not_found", f"Product ID {product_id} not found"
+
+    return _extract_product_ref(hit), "exact", f"Resolved product_id={product_id}"

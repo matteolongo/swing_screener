@@ -224,7 +224,7 @@ class TestAudit:
         with patch("swing_screener.integrations.degiro.audit.resolve_symbol") as mock_resolve, \
              patch("swing_screener.integrations.degiro.audit._probe_company_profile", return_value=True), \
              patch("swing_screener.integrations.degiro.audit._probe_financial_statements", return_value=True), \
-             patch("swing_screener.integrations.degiro.audit._probe_analyst_views", return_value=False), \
+             patch("swing_screener.integrations.degiro.audit._probe_estimates", return_value=False), \
              patch("swing_screener.integrations.degiro.audit._probe_news", return_value=True), \
              patch("swing_screener.integrations.degiro.audit._probe_agenda", return_value=False), \
              patch("swing_screener.integrations.degiro.audit._probe_quote", return_value=True):
@@ -269,7 +269,7 @@ class TestAudit:
         with patch("swing_screener.integrations.degiro.audit.resolve_symbol", side_effect=side_effect), \
              patch("swing_screener.integrations.degiro.audit._probe_company_profile", return_value=False), \
              patch("swing_screener.integrations.degiro.audit._probe_financial_statements", return_value=False), \
-             patch("swing_screener.integrations.degiro.audit._probe_analyst_views", return_value=False), \
+             patch("swing_screener.integrations.degiro.audit._probe_estimates", return_value=False), \
              patch("swing_screener.integrations.degiro.audit._probe_news", return_value=False), \
              patch("swing_screener.integrations.degiro.audit._probe_agenda", return_value=False), \
              patch("swing_screener.integrations.degiro.audit._probe_quote", return_value=False):
