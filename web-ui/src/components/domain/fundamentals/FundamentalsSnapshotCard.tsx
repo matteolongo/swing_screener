@@ -65,17 +65,19 @@ function formatCadence(value?: string) {
   return value;
 }
 
+function humanizeSource(source?: string): string | null {
+  if (!source) return null;
+  return source.split('.')[0] ?? null;
+}
+
 function formatMetricMeta(context?: FundamentalMetricContext) {
   if (!context) return null;
   const parts: string[] = [];
   const cadence = formatCadence(context.cadence);
   if (cadence) parts.push(cadence);
-  if (context.source) parts.push(context.source);
-  if (context.derived) {
-    parts.push(
-      context.derivedFrom.length > 0 ? `derived from ${context.derivedFrom.join(' + ')}` : 'derived'
-    );
-  }
+  const provider = humanizeSource(context.source);
+  if (provider) parts.push(provider);
+  if (context.derived) parts.push('derived');
   if (context.periodEnd) parts.push(context.periodEnd);
   return parts.join(' · ') || null;
 }
@@ -259,7 +261,7 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
                     </span>
                   </div>
                   <div className="mt-1 text-[11px] text-gray-500">
-                    {[formatCadence(series.frequency), series.source].filter(Boolean).join(' · ') || 'metadata unavailable'}
+                    {[formatCadence(series.frequency), humanizeSource(series.source)].filter(Boolean).join(' · ') || 'metadata unavailable'}
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
                     {series.points.map((point) => (
