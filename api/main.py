@@ -31,6 +31,11 @@ LOG_FORMAT = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
 logging.basicConfig(level=logging.INFO, format=LOG_FORMAT, stream=sys.stdout)
 logger = logging.getLogger("swing_screener.api")
 
+# degiro_connector logs CRITICAL when the API returns {} for stocks without
+# profile/ratios data (pydantic validation failure). This is expected and
+# handled by our probe functions — suppress the noise.
+logging.getLogger("degiro_connector").setLevel(logging.ERROR)
+
 ensure_runtime_env_loaded()
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
