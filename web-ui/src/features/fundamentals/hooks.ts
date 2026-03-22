@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
   compareFundamentals,
+  fetchDegiroCapabilityAudit,
   fetchDegiroPortfolioAudit,
   fetchFundamentalSnapshot,
   fetchFundamentalsConfig,
@@ -69,6 +70,13 @@ export function useFundamentalsWarmupStatus(jobId?: string) {
     },
     retry: false,
     refetchOnWindowFocus: false,
+  });
+}
+
+export function useDegiroCapabilityAuditMutation(onSuccess?: (data: DegiroAuditRun) => void) {
+  return useMutation<DegiroAuditRun, Error, string[]>({
+    mutationFn: fetchDegiroCapabilityAudit,
+    onSuccess,
   });
 }
 

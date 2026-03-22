@@ -89,6 +89,20 @@ export async function startFundamentalsWarmup(
   return transformFundamentalsWarmupLaunchResponse(payload);
 }
 
+export async function fetchDegiroCapabilityAudit(symbols: string[]): Promise<DegiroAuditRun> {
+  const response = await fetch(apiUrl(API_ENDPOINTS.degiroCapabilityAudit), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ symbols, include_quotes: true, include_news: true, include_agenda: true }),
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.detail || 'DeGiro capability audit failed');
+  }
+  const payload = await response.json();
+  return transformDegiroAuditRun(payload);
+}
+
 export async function fetchDegiroPortfolioAudit(): Promise<DegiroAuditRun> {
   const response = await fetch(apiUrl(API_ENDPOINTS.degiroPortfolioAudit), { method: 'POST' });
   if (!response.ok) {
