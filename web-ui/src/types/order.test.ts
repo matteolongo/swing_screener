@@ -180,6 +180,7 @@ describe('Order Type Transformations', () => {
         order_kind: 'entry',
         entry_mode: 'NEW_ENTRY',
         position_id: undefined,
+        isin: null,
       })
     })
 

@@ -167,6 +167,7 @@ class CreateOrderRequest(BaseModel):
     order_kind: OrderKind = "entry"
     position_id: Optional[str] = None
     entry_mode: EntryMode = "NEW_ENTRY"
+    isin: Optional[str] = None
 
     @field_validator("ticker")
     @classmethod

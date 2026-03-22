@@ -57,6 +57,25 @@ from swing_screener.utils.date_helpers import get_default_history_start
 
 logger = logging.getLogger(__name__)
 
+
+def _resolve_isin(ticker: str) -> Optional[str]:
+    """Look up ISIN from the DeGiro ISIN map for a given ticker.
+
+    Tries the full ticker first (e.g. 'REP.MC'), then the root without
+    exchange suffix (e.g. 'REP').
+    """
+    try:
+        from swing_screener.fundamentals.providers.degiro import _load_isin_map
+        isin_map = _load_isin_map()
+        isin = isin_map.get(ticker)
+        if not isin:
+            root = ticker.split(".")[0]
+            isin = isin_map.get(root)
+        return isin or None
+    except Exception:
+        return None
+
+
 # Simple cache for EURUSD rate with 5-minute TTL
 _eurusd_cache: dict[str, tuple[float, float]] = {}  # {"eurusd": (rate, timestamp)}
 _CACHE_TTL_SECONDS = 300  # 5 minutes
@@ -828,6 +847,8 @@ class PortfolioService:
         timestamp = dt.datetime.now().strftime("%Y%m%d%H%M%S")
         order_id = f"{ticker}-{timestamp}"
 
+        isin = request.isin or _resolve_isin(ticker)
+
         new_order = {
             "order_id": order_id,
             "ticker": ticker,
@@ -846,6 +867,7 @@ class PortfolioService:
             "tif": "GTC",
             "fee_eur": None,
             "fill_fx_rate": None,
+            "isin": isin,
         }
 
         orders.append(new_order)
