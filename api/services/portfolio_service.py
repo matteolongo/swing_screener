@@ -625,6 +625,8 @@ class PortfolioService:
                 if request.reason:
                     current_notes = pos.get("notes", "")
                     pos["notes"] = f"{current_notes}\nClosed: {request.reason}".strip()
+                if request.lesson is not None:
+                    pos["lesson"] = request.lesson
 
                 found = True
                 break
@@ -868,6 +870,7 @@ class PortfolioService:
             "fee_eur": None,
             "fill_fx_rate": None,
             "isin": isin,
+            "thesis": request.thesis,
         }
 
         orders.append(new_order)

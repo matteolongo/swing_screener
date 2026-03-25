@@ -36,6 +36,7 @@ class Order:
     broker_product_id: Optional[str] = None
     isin: Optional[str] = None
     broker_synced_at: Optional[str] = None
+    thesis: Optional[str] = None
 
 
 def load_orders(path: str | Path) -> list[Order]:
@@ -100,6 +101,7 @@ def load_orders(path: str | Path) -> list[Order]:
                 broker_product_id=item.get("broker_product_id", None),
                 isin=item.get("isin", None),
                 broker_synced_at=item.get("broker_synced_at", None),
+                thesis=item.get("thesis", None),
             )
         )
     return out
@@ -133,6 +135,7 @@ def save_orders(path: str | Path, orders: list[Order], asof: Optional[str] = Non
                 "broker_product_id": o.broker_product_id,
                 "isin": o.isin,
                 "broker_synced_at": o.broker_synced_at,
+                "thesis": o.thesis,
             }
             for o in orders
         ],

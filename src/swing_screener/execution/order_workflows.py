@@ -167,6 +167,7 @@ def fill_entry_order(
         notes=order.notes,
         exit_order_ids=exit_ids,
         isin=order.isin,
+        thesis=order.thesis,
     )
 
     new_orders: list[Order] = []

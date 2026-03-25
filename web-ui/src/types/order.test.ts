@@ -181,6 +181,7 @@ describe('Order Type Transformations', () => {
         entry_mode: 'NEW_ENTRY',
         position_id: undefined,
         isin: null,
+        thesis: null,
       })
     })
 

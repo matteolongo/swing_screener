@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import {
   BarChart3,
+  BookOpen,
   Brain,
   Briefcase,
   ClipboardCheck,
@@ -49,6 +50,11 @@ const navItems: NavItem[] = [
     href: '/fundamentals',
     icon: BarChart3,
   },
+  {
+    labelKey: 'sidebar.nav.journal',
+    href: '/journal',
+    icon: BookOpen,
+  },
 ];
 
 export default function MobileBottomNav() {
@@ -58,7 +64,7 @@ export default function MobileBottomNav() {
       className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-800 bg-zinc-950/95 backdrop-blur-sm lg:hidden"
     >
       <div className="mx-auto max-w-lg px-2 pt-2 pb-[max(env(safe-area-inset-bottom),0.45rem)]">
-        <div className="grid grid-cols-6 gap-1 rounded-2xl border border-zinc-800 bg-zinc-900/80 p-1 shadow-[0_10px_30px_rgba(0,0,0,0.45)]">
+        <div className="grid grid-cols-7 gap-1 rounded-2xl border border-zinc-800 bg-zinc-900/80 p-1 shadow-[0_10px_30px_rgba(0,0,0,0.45)]">
           {navItems.map((item) => {
             const Icon = item.icon;
             return (

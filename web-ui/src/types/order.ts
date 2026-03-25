@@ -35,6 +35,7 @@ export interface CreateOrderRequest {
   positionId?: string;
   entryMode?: EntryMode;
   isin?: string;
+  thesis?: string;
 }
 
 export interface FillOrderRequest {
@@ -152,5 +153,6 @@ export function transformCreateOrderRequest(req: CreateOrderRequest): any {
     position_id: req.positionId,
     entry_mode: req.entryMode || 'NEW_ENTRY',
     isin: req.isin ?? null,
+    thesis: req.thesis ?? null,
   };
 }

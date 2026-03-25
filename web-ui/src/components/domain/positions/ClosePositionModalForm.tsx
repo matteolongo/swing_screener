@@ -39,6 +39,7 @@ export default function ClosePositionModalForm({
   const [exitPriceValue, setExitPriceValue] = useState(() => position.entryPrice.toFixed(2));
   const [feeEurValue, setFeeEurValue] = useState('');
   const [reasonValue, setReasonValue] = useState('');
+  const [lessonValue, setLessonValue] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
 
   const handleSubmit = (event: React.FormEvent) => {
@@ -65,6 +66,7 @@ export default function ClosePositionModalForm({
       exitPrice,
       feeEur,
       reason: reasonValue,
+      lesson: lessonValue.trim() || undefined,
     });
   };
 
@@ -149,6 +151,20 @@ export default function ClosePositionModalForm({
             onChange={(event) => setReasonValue(event.target.value)}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
             placeholder={t('positions.closeModal.reasonPlaceholder')}
+          />
+        </div>
+
+        <div>
+          <label htmlFor="close-position-lesson" className="block text-xs font-medium text-muted-foreground mb-1">
+            {t('positions.closeModal.lessonOptional')}
+          </label>
+          <textarea
+            id="close-position-lesson"
+            rows={3}
+            value={lessonValue}
+            onChange={(event) => setLessonValue(event.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+            placeholder={t('positions.closeModal.lessonPlaceholder')}
           />
         </div>
 

@@ -325,6 +325,7 @@ export async function closePosition(
       exit_price: request.exitPrice,
       fee_eur: request.feeEur,
       reason: request.reason || '',
+      lesson: request.lesson ?? null,
     }),
   });
   if (!response.ok) {

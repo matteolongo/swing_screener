@@ -32,6 +32,8 @@ class Position(BaseModel):
     broker_product_id: Optional[str] = None
     isin: Optional[str] = None
     broker_synced_at: Optional[str] = None
+    thesis: Optional[str] = None
+    lesson: Optional[str] = None
 
 
 class PositionUpdate(BaseModel):
@@ -71,6 +73,7 @@ class ClosePositionRequest(BaseModel):
         description="Execution fee in EUR (optional)",
     )
     reason: str = Field(default="", description="Reason for closing")
+    lesson: Optional[str] = Field(default=None, description="Lesson / reflection (optional)")
 
     @field_validator("exit_price")
     @classmethod
@@ -168,6 +171,7 @@ class CreateOrderRequest(BaseModel):
     position_id: Optional[str] = None
     entry_mode: EntryMode = "NEW_ENTRY"
     isin: Optional[str] = None
+    thesis: Optional[str] = None
 
     @field_validator("ticker")
     @classmethod

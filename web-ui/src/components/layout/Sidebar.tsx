@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import {
   BarChart3,
+  BookOpen,
   Briefcase,
   LayoutDashboard,
   SlidersHorizontal,
@@ -59,6 +60,12 @@ const navigation: NavigationItem[] = [
     labelKey: 'sidebar.nav.fundamentals',
     href: '/fundamentals',
     icon: BarChart3,
+    advanced: false,
+  },
+  {
+    labelKey: 'sidebar.nav.journal',
+    href: '/journal',
+    icon: BookOpen,
     advanced: false,
   },
 ];

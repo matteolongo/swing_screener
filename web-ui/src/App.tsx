@@ -12,6 +12,7 @@ const Strategy = lazy(() => import('./pages/Strategy'));
 const Intelligence = lazy(() => import('./pages/Intelligence'));
 const Fundamentals = lazy(() => import('./pages/Fundamentals'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
+const Journal = lazy(() => import('./pages/Journal'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -49,6 +50,7 @@ function App() {
                 <Route path="orders" element={<Navigate to="/portfolio" replace />} />
                 <Route path="positions" element={<Navigate to="/portfolio" replace />} />
                 <Route path="strategy" element={<ErrorBoundary><Strategy /></ErrorBoundary>} />
+                <Route path="journal" element={<ErrorBoundary><Journal /></ErrorBoundary>} />
                 <Route path="settings" element={<Navigate to="/strategy" replace />} />
                 <Route path="*" element={<Navigate to="/workspace" replace />} />
               </Route>
