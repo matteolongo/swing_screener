@@ -237,6 +237,189 @@ class TestApplyIdempotency:
 
 
 # ---------------------------------------------------------------------------
+# Stale broker-managed local state reconciliation
+# ---------------------------------------------------------------------------
+
+class TestStaleBrokerReconciliation:
+    def test_apply_cancels_missing_broker_managed_pending_order(self, tmp_path):
+        orders_path = tmp_path / "orders.json"
+        orders_path.write_text(json.dumps({
+            "asof": "2026-03-25",
+            "orders": [{
+                "order_id": "local-pending",
+                "ticker": "EXAS",
+                "status": "pending",
+                "order_type": "BUY_LIMIT",
+                "quantity": 1,
+                "order_date": "2026-03-20",
+                "broker_order_id": "degiro-old-1",
+                "broker_synced_at": "2026-03-24T10:00:00+00:00",
+                "notes": "",
+            }],
+        }))
+        positions_path = tmp_path / "positions.json"
+        positions_path.write_text(json.dumps({"asof": "2026-03-25", "positions": []}))
+
+        local_orders = json.loads(orders_path.read_text())["orders"]
+        prev = preview(
+            DegiroSyncRaw(positions=[], pending_orders=[], order_history=[], transactions=[], cash=[]),
+            local_orders,
+            [],
+        )
+
+        assert any(
+            diff.local_id == "local-pending" and diff.fields.get("status") == "cancelled"
+            for diff in prev.orders_to_update
+        )
+
+        apply(prev, orders_path, positions_path)
+
+        final = json.loads(orders_path.read_text())["orders"]
+        assert final[0]["status"] == "cancelled"
+        assert "no longer active at broker" in final[0]["notes"]
+
+    def test_apply_preserves_local_only_pending_order(self, tmp_path):
+        orders_path = tmp_path / "orders.json"
+        orders_path.write_text(json.dumps({
+            "asof": "2026-03-25",
+            "orders": [{
+                "order_id": "local-draft",
+                "ticker": "EXAS",
+                "status": "pending",
+                "order_type": "BUY_LIMIT",
+                "quantity": 1,
+                "order_date": "2026-03-20",
+                "notes": "",
+            }],
+        }))
+        positions_path = tmp_path / "positions.json"
+        positions_path.write_text(json.dumps({"asof": "2026-03-25", "positions": []}))
+
+        local_orders = json.loads(orders_path.read_text())["orders"]
+        prev = preview(
+            DegiroSyncRaw(positions=[], pending_orders=[], order_history=[], transactions=[], cash=[]),
+            local_orders,
+            [],
+        )
+
+        assert not any(diff.local_id == "local-draft" for diff in prev.orders_to_update)
+
+        apply(prev, orders_path, positions_path)
+
+        final = json.loads(orders_path.read_text())["orders"]
+        assert final[0]["status"] == "pending"
+
+    def test_apply_closes_missing_broker_managed_position_and_linked_order(self, tmp_path):
+        orders_path = tmp_path / "orders.json"
+        orders_path.write_text(json.dumps({
+            "asof": "2026-03-25",
+            "orders": [{
+                "order_id": "stop-1",
+                "ticker": "REP.MC",
+                "status": "pending",
+                "order_type": "SELL_STOP",
+                "quantity": 23,
+                "position_id": "pos-1",
+                "order_date": "2026-03-15",
+                "notes": "",
+            }],
+        }))
+        positions_path = tmp_path / "positions.json"
+        positions_path.write_text(json.dumps({
+            "asof": "2026-03-25",
+            "positions": [{
+                "position_id": "pos-1",
+                "ticker": "REP.MC",
+                "status": "open",
+                "entry_date": "2026-03-10",
+                "entry_price": 21.40,
+                "stop_price": 21.85,
+                "shares": 23,
+                "broker_product_id": "prod-123",
+                "broker_synced_at": "2026-03-24T10:00:00+00:00",
+                "notes": "",
+            }],
+        }))
+
+        local_orders = json.loads(orders_path.read_text())["orders"]
+        local_positions = json.loads(positions_path.read_text())["positions"]
+        sync_raw = DegiroSyncRaw(
+            positions=[],
+            pending_orders=[],
+            order_history=[],
+            transactions=[{
+                "productId": "prod-123",
+                "date": "2026-03-25T14:30:00",
+                "price": 23.62,
+                "quantity": -23,
+                "buysell": "S",
+                "feeInBaseCurrency": 1.25,
+            }],
+            cash=[],
+        )
+
+        prev = preview(sync_raw, local_orders, local_positions)
+
+        assert any(
+            diff.local_id == "pos-1" and diff.fields.get("status") == "closed"
+            for diff in prev.positions_to_update
+        )
+        assert any(
+            diff.local_id == "stop-1" and diff.fields.get("status") == "cancelled"
+            for diff in prev.orders_to_update
+        )
+
+        apply(prev, orders_path, positions_path)
+
+        final_positions = json.loads(positions_path.read_text())["positions"]
+        final_orders = json.loads(orders_path.read_text())["orders"]
+        assert final_positions[0]["status"] == "closed"
+        assert final_positions[0]["exit_date"] == "2026-03-25"
+        assert final_positions[0]["exit_price"] == 23.62
+        assert final_positions[0]["exit_fee_eur"] == 1.25
+        assert "position no longer open at broker" in final_positions[0]["notes"]
+        assert final_orders[0]["status"] == "cancelled"
+        assert "linked position no longer open at broker" in final_orders[0]["notes"]
+
+    def test_apply_closes_missing_isin_only_open_position(self, tmp_path):
+        orders_path = tmp_path / "orders.json"
+        orders_path.write_text(json.dumps({"asof": "2026-03-25", "orders": []}))
+        positions_path = tmp_path / "positions.json"
+        positions_path.write_text(json.dumps({
+            "asof": "2026-03-25",
+            "positions": [{
+                "position_id": "pos-isin-only",
+                "ticker": "REP.MC",
+                "status": "open",
+                "entry_date": "2026-03-01",
+                "entry_price": 21.40,
+                "stop_price": 21.85,
+                "shares": 23,
+                "isin": "ES0173516115",
+                "notes": "",
+            }],
+        }))
+
+        local_positions = json.loads(positions_path.read_text())["positions"]
+        prev = preview(
+            DegiroSyncRaw(positions=[], pending_orders=[], order_history=[], transactions=[], cash=[]),
+            [],
+            local_positions,
+        )
+
+        assert any(
+            diff.local_id == "pos-isin-only" and diff.fields.get("status") == "closed"
+            for diff in prev.positions_to_update
+        )
+
+        apply(prev, orders_path, positions_path)
+
+        final_positions = json.loads(positions_path.read_text())["positions"]
+        assert final_positions[0]["status"] == "closed"
+        assert "position no longer open at broker" in final_positions[0]["notes"]
+
+
+# ---------------------------------------------------------------------------
 # Pending order sync
 # ---------------------------------------------------------------------------
 

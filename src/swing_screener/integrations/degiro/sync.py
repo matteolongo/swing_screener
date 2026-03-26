@@ -1,7 +1,7 @@
 """DeGiro portfolio reconciliation service.
 
 All degiro_connector imports are lazy. The service is read-only except for
-apply(), which upserts local files in an idempotent, no-hard-delete manner.
+apply(), which idempotently reconciles local files with the latest broker state.
 """
 from __future__ import annotations
 
@@ -20,6 +20,125 @@ from swing_screener.integrations.degiro.models import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _sync_timestamp() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+
+
+def _clean_text(value: Any) -> str:
+    return str(value or "").strip()
+
+
+def _append_note(existing: Any, note: str) -> str:
+    current = _clean_text(existing)
+    if not current:
+        return note
+    if note in current:
+        return current
+    return f"{current}\n{note}"
+
+
+def _float_or_none(value: Any) -> Optional[float]:
+    if value is None or value == "":
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _date_only(value: Any) -> Optional[str]:
+    text = _clean_text(value)
+    if not text:
+        return None
+    if "T" in text:
+        text = text.split("T", 1)[0]
+    if " " in text:
+        text = text.split(" ", 1)[0]
+    return text[:10] if len(text) >= 10 else text
+
+
+def _transaction_side(tx: dict) -> str:
+    raw = _clean_text(tx.get("buysell") or tx.get("side")).upper()
+    if raw in {"S", "SELL", "2"}:
+        return "sell"
+    if raw in {"B", "BUY", "1"}:
+        return "buy"
+    qty = _float_or_none(tx.get("quantity"))
+    if qty is not None:
+        if qty < 0:
+            return "sell"
+        if qty > 0:
+            return "buy"
+    return ""
+
+
+def _is_broker_managed_order(local_order: dict) -> bool:
+    broker = _clean_text(local_order.get("broker")).lower()
+    return bool(
+        broker == "degiro"
+        or _clean_text(local_order.get("broker_order_id"))
+        or _clean_text(local_order.get("broker_product_id"))
+        or _clean_text(local_order.get("broker_synced_at"))
+    )
+
+
+def _is_broker_managed_position(local_position: dict) -> bool:
+    broker = _clean_text(local_position.get("broker")).lower()
+    return bool(
+        broker == "degiro"
+        or _clean_text(local_position.get("broker_product_id"))
+        or _clean_text(local_position.get("isin"))
+        or _clean_text(local_position.get("broker_synced_at"))
+    )
+
+
+def _transaction_matches_position(tx: dict, local_position: dict) -> bool:
+    tx_product = _clean_text(tx.get("productId") or tx.get("product_id"))
+    pos_product = _clean_text(local_position.get("broker_product_id"))
+    if tx_product and pos_product and tx_product == pos_product:
+        return True
+
+    tx_isin = _clean_text(tx.get("isin"))
+    pos_isin = _clean_text(local_position.get("isin"))
+    return bool(tx_isin and pos_isin and tx_isin == pos_isin)
+
+
+def _stale_position_fields(local_position: dict, transactions: list[dict], sync_stamp: str) -> dict:
+    exit_tx = None
+    for tx in transactions:
+        if _transaction_side(tx) != "sell":
+            continue
+        if not _transaction_matches_position(tx, local_position):
+            continue
+        tx_date = _date_only(tx.get("date") or tx.get("created"))
+        candidate = (tx_date or "", tx)
+        if exit_tx is None or candidate[0] >= exit_tx[0]:
+            exit_tx = candidate
+
+    fields: dict[str, Any] = {
+        "status": "closed",
+        "broker": "degiro",
+        "broker_synced_at": sync_stamp,
+    }
+    if exit_tx is not None:
+        _, tx = exit_tx
+        fields["exit_date"] = _date_only(tx.get("date") or tx.get("created")) or sync_stamp[:10]
+        exit_price = _float_or_none(tx.get("price"))
+        if exit_price is not None:
+            fields["exit_price"] = exit_price
+        exit_fee = _float_or_none(tx.get("feeInBaseCurrency") or tx.get("totalFeesInBaseCurrency"))
+        if exit_fee is not None:
+            fields["exit_fee_eur"] = exit_fee
+    else:
+        fields["exit_date"] = sync_stamp[:10]
+
+    fields["notes"] = _append_note(
+        local_position.get("notes"),
+        "Closed via DeGiro sync: position no longer open at broker.",
+    )
+    return fields
 
 
 # ---------------------------------------------------------------------------
@@ -199,11 +318,13 @@ def preview(
     local_orders: list[dict],
     local_positions: list[dict],
 ) -> DegiroSyncPreview:
+    sync_stamp = _sync_timestamp()
     orders_to_create: list[SyncDiff] = []
     orders_to_update: list[SyncDiff] = []
     ambiguous: list[SyncDiff] = []
     unmatched: list[SyncDiff] = []
     fees_applied = 0
+    matched_local_order_ids: set[str] = set()
 
     all_broker_orders = list(sync_raw.order_history) + list(sync_raw.pending_orders)
 
@@ -218,6 +339,8 @@ def preview(
         broker_product = str(bo.get("productId", "") or "").strip() or None
         if broker_product:
             fields["broker_product_id"] = broker_product
+        fields["broker"] = "degiro"
+        fields["broker_synced_at"] = sync_stamp
         if fee is not None:
             fields["fee_eur"] = fee
             fees_applied += 1
@@ -236,6 +359,8 @@ def preview(
         elif confidence == "unmatched":
             unmatched.append(diff)
         elif local:
+            if diff.local_id:
+                matched_local_order_ids.add(diff.local_id)
             orders_to_update.append(diff)
         else:
             orders_to_create.append(diff)
@@ -243,6 +368,8 @@ def preview(
     # Positions
     positions_to_create: list[SyncDiff] = []
     positions_to_update: list[SyncDiff] = []
+    matched_local_position_ids: set[str] = set()
+    stale_closed_position_ids: set[str] = set()
 
     for bp in sync_raw.positions:
         product_id = str(bp.get("id", "") or "").strip()
@@ -265,6 +392,8 @@ def preview(
             fields["broker_product_id"] = product_id
         if isin:
             fields["isin"] = isin
+        fields["broker"] = "degiro"
+        fields["broker_synced_at"] = sync_stamp
         size = bp.get("size") or bp.get("quantity")
         if size is not None:
             fields["shares"] = int(float(size))
@@ -279,9 +408,69 @@ def preview(
         )
 
         if local_pos:
+            if diff.local_id:
+                matched_local_position_ids.add(diff.local_id)
             positions_to_update.append(diff)
         else:
             positions_to_create.append(diff)
+
+    for lp in local_positions:
+        local_id = _clean_text(lp.get("position_id"))
+        if not local_id or local_id in matched_local_position_ids:
+            continue
+        if _clean_text(lp.get("status")).lower() != "open":
+            continue
+        if not _is_broker_managed_position(lp):
+            continue
+
+        broker_id = _clean_text(lp.get("broker_product_id")) or None
+        diff = SyncDiff(
+            kind="position",
+            action="update",
+            local_id=local_id,
+            broker_id=broker_id,
+            confidence="exact" if broker_id else "fuzzy",
+            fields=_stale_position_fields(lp, sync_raw.transactions, sync_stamp),
+        )
+        positions_to_update.append(diff)
+        stale_closed_position_ids.add(local_id)
+
+    for lo in local_orders:
+        local_id = _clean_text(lo.get("order_id"))
+        if not local_id or local_id in matched_local_order_ids:
+            continue
+        if _clean_text(lo.get("status")).lower() != "pending":
+            continue
+
+        linked_position_id = _clean_text(lo.get("position_id"))
+        should_cancel = False
+        cancel_reason = ""
+        if linked_position_id and linked_position_id in stale_closed_position_ids:
+            should_cancel = True
+            cancel_reason = "Cancelled via DeGiro sync: linked position no longer open at broker."
+        elif _is_broker_managed_order(lo):
+            should_cancel = True
+            cancel_reason = "Cancelled via DeGiro sync: order no longer active at broker."
+
+        if not should_cancel:
+            continue
+
+        broker_id = _clean_text(lo.get("broker_order_id")) or None
+        orders_to_update.append(
+            SyncDiff(
+                kind="order",
+                action="update",
+                local_id=local_id,
+                broker_id=broker_id,
+                confidence="exact" if broker_id else "fuzzy",
+                fields={
+                    "status": "cancelled",
+                    "broker": "degiro",
+                    "broker_synced_at": sync_stamp,
+                    "notes": _append_note(lo.get("notes"), cancel_reason),
+                },
+            )
+        )
 
     return DegiroSyncPreview(
         positions_to_create=tuple(positions_to_create),
