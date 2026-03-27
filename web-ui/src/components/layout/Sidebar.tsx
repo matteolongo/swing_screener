@@ -4,6 +4,7 @@ import {
   BookOpen,
   Briefcase,
   LayoutDashboard,
+  LineChart,
   SlidersHorizontal,
   ClipboardCheck,
   Brain,
@@ -66,6 +67,12 @@ const navigation: NavigationItem[] = [
     labelKey: 'sidebar.nav.journal',
     href: '/journal',
     icon: BookOpen,
+    advanced: false,
+  },
+  {
+    labelKey: 'sidebar.nav.analytics',
+    href: '/analytics',
+    icon: LineChart,
     advanced: false,
   },
 ];
