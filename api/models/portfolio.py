@@ -116,6 +116,7 @@ class StopSuggestionComputeRequest(BaseModel):
 OrderStatus = Literal["pending", "filled", "cancelled"]
 OrderKind = Literal["entry", "stop", "take_profit"]
 EntryMode = Literal["NEW_ENTRY", "ADD_ON"]
+DegiroAvailabilityMode = Literal["ready", "missing_library", "missing_credentials"]
 
 BASE_ORDER_TYPES = {"MARKET", "LIMIT", "STOP", "STOP_LIMIT"}
 DIRECTIONAL_ORDER_TYPES = {
@@ -255,6 +256,14 @@ class OrderSnapshot(BaseModel):
 class OrdersSnapshotResponse(BaseModel):
     orders: list[OrderSnapshot]
     asof: str
+
+
+class DegiroStatus(BaseModel):
+    installed: bool
+    credentials_configured: bool
+    available: bool
+    mode: DegiroAvailabilityMode
+    detail: str
 
 
 class FillOrderRequest(BaseModel):

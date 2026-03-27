@@ -8,11 +8,13 @@ import {
   fetchPositionMetrics,
   fetchPositions,
   fetchPositionStopSuggestion,
+  fetchDegiroStatus,
   fillOrder,
   syncDegiroOrders,
   updatePositionStop,
   OrderFilterStatus,
   PositionFilterStatus,
+  DegiroStatus,
 } from './api';
 import {
   CreateOrderRequest,
@@ -94,6 +96,16 @@ export function usePortfolioSummary() {
     queryKey: queryKeys.portfolioSummary(),
     queryFn: fetchPortfolioSummary,
     staleTime: 30_000,
+  });
+}
+
+export function useDegiroStatusQuery() {
+  return useQuery<DegiroStatus>({
+    queryKey: queryKeys.degiroStatus(),
+    queryFn: fetchDegiroStatus,
+    staleTime: 60_000,
+    retry: false,
+    refetchOnWindowFocus: false,
   });
 }
 

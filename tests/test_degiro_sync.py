@@ -457,9 +457,35 @@ class TestPendingOrderSync:
 # ---------------------------------------------------------------------------
 
 class TestSyncEndpoints:
+    def test_status_endpoint_reports_optional_degiro_when_library_missing(self, monkeypatch):
+        import importlib.util
+        from fastapi.testclient import TestClient
+
+        original_find_spec = importlib.util.find_spec
+
+        def patched(name, *args, **kwargs):
+            if name == "degiro_connector":
+                return None
+            return original_find_spec(name, *args, **kwargs)
+
+        monkeypatch.setattr(importlib.util, "find_spec", patched)
+
+        try:
+            from main import app
+        except Exception:
+            pytest.skip("Could not import main app")
+
+        client = TestClient(app, raise_server_exceptions=False)
+        resp = client.get("/api/portfolio/degiro/status")
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["available"] is False
+        assert data["mode"] == "missing_library"
+        assert "rest of the app still works" in data["detail"]
+
     def test_preview_endpoint_503_without_library(self, monkeypatch):
         import importlib.util
-        from fastapi import HTTPException
         from fastapi.testclient import TestClient
 
         original_find_spec = importlib.util.find_spec

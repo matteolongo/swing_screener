@@ -1873,6 +1873,26 @@ export const messagesEn = {
         },
       },
     },
+    execution: {
+      title: 'How will you reconcile broker execution?',
+      description: 'Choose the workflow you expect to use so the app can explain the right broker implications.',
+      options: {
+        manual: 'Manual broker workflow',
+        degiro: 'I use DeGiro',
+      },
+      manual: {
+        title: 'Manual mode is fully supported',
+        body: 'Screener, Daily Review, workspace analysis, and order planning still work. You place trades in your broker, then update orders and positions in the app.',
+      },
+      degiro: {
+        readyTitle: 'DeGiro extras are ready',
+        readyBody: 'You can keep using the normal workflow and also unlock DeGiro sync and portfolio audits.',
+        setupTitle: 'DeGiro is optional, but setup is still missing',
+        setupBody: 'The rest of the app still works. Only Sync DeGiro and DeGiro audit actions stay unavailable until the connector and credentials are configured.',
+      },
+      statusLoading: 'Checking DeGiro availability…',
+      statusError: 'Could not verify DeGiro availability right now. Assume the app still works manually and treat DeGiro extras as optional.',
+    },
     strategyStep: {
       title: 'Setup your strategy profile',
       description: 'Pick a profile, tweak custom values if needed, then save.',

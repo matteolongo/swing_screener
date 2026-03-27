@@ -27,6 +27,7 @@ export const API_ENDPOINTS = {
   positionStopSuggestionCompute: '/api/portfolio/stop-suggestion/compute',
   positionClose: (id: string) => `/api/portfolio/positions/${id}/close`,
   portfolioSummary: '/api/portfolio/summary',
+  degiroStatus: '/api/portfolio/degiro/status',
   
   // Portfolio - Orders
   orders: '/api/portfolio/orders',

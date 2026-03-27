@@ -9,6 +9,7 @@ import {
   useFundamentalsWarmupStatus,
   useStartFundamentalsWarmupMutation,
 } from '@/features/fundamentals/hooks';
+import { useDegiroStatusQuery } from '@/features/portfolio/hooks';
 import type { DegiroAuditRecord } from '@/features/fundamentals/types';
 import { t } from '@/i18n/t';
 
@@ -114,6 +115,9 @@ export default function FundamentalsPage() {
   };
 
   const degiroAuditMutation = useDegiroPortfolioAuditMutation();
+  const degiroStatusQuery = useDegiroStatusQuery();
+  const degiroStatus = degiroStatusQuery.data;
+  const showDegiroUnavailable = degiroStatusQuery.isSuccess && degiroStatus?.available === false;
 
   const warmupStatus = warmupStatusQuery.data;
   const progressText =
@@ -252,14 +256,33 @@ export default function FundamentalsPage() {
               Probe available data endpoints for each product in your live DeGiro portfolio.
             </p>
           </div>
-          <Button
-            type="button"
-            onClick={() => degiroAuditMutation.mutate()}
-            disabled={degiroAuditMutation.isPending}
-          >
-            {degiroAuditMutation.isPending ? 'Running…' : 'Run Audit'}
-          </Button>
+          {degiroStatus?.available ? (
+            <Button
+              type="button"
+              onClick={() => degiroAuditMutation.mutate()}
+              disabled={degiroAuditMutation.isPending}
+            >
+              {degiroAuditMutation.isPending ? 'Running…' : 'Run Audit'}
+            </Button>
+          ) : null}
         </div>
+
+        {showDegiroUnavailable ? (
+          <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+            <p className="font-medium">DeGiro audit is unavailable on this setup</p>
+            <p className="mt-1">
+              This does not affect screener runs, Daily Review, workspace analysis, or fundamentals
+              snapshots. It only removes DeGiro-specific audit and sync actions.
+            </p>
+            <p className="mt-2 text-xs">{degiroStatus?.detail}</p>
+          </div>
+        ) : null}
+
+        {degiroStatusQuery.isError ? (
+          <p className="mt-3 text-sm text-amber-600">
+            Could not verify DeGiro availability. The core fundamentals workflow remains available.
+          </p>
+        ) : null}
 
         {degiroAuditMutation.isError ? (
           <p className="mt-3 text-sm text-rose-600">{degiroAuditMutation.error.message}</p>

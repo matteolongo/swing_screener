@@ -5,6 +5,7 @@ import {
   useFundamentalSnapshotQuery,
   useRefreshFundamentalSnapshotMutation,
 } from '@/features/fundamentals/hooks';
+import { useDegiroStatusQuery } from '@/features/portfolio/hooks';
 import type { DegiroAuditRecord } from '@/features/fundamentals/types';
 
 interface WorkspaceFundamentalsPanelProps {
@@ -22,6 +23,9 @@ export default function WorkspaceFundamentalsPanel({ ticker }: WorkspaceFundamen
   const snapshotQuery = useFundamentalSnapshotQuery(ticker);
   const refreshMutation = useRefreshFundamentalSnapshotMutation();
   const degiroAuditMutation = useDegiroCapabilityAuditMutation();
+  const degiroStatusQuery = useDegiroStatusQuery();
+  const degiroStatus = degiroStatusQuery.data;
+  const showDegiroUnavailable = degiroStatusQuery.isSuccess && degiroStatus?.available === false;
 
   if (snapshotQuery.isLoading) {
     return <div className="text-sm text-gray-500">Loading fundamentals...</div>;
@@ -56,16 +60,18 @@ export default function WorkspaceFundamentalsPanel({ ticker }: WorkspaceFundamen
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => degiroAuditMutation.mutate([ticker])}
-            disabled={degiroAuditMutation.isPending}
-            title="Check which DeGiro data endpoints are available for this symbol"
-          >
-            {degiroAuditMutation.isPending ? 'Checking...' : 'DeGiro'}
-          </Button>
+          {degiroStatus?.available ? (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => degiroAuditMutation.mutate([ticker])}
+              disabled={degiroAuditMutation.isPending}
+              title="Check which DeGiro data endpoints are available for this symbol"
+            >
+              {degiroAuditMutation.isPending ? 'Checking...' : 'DeGiro'}
+            </Button>
+          ) : null}
           {degiroRecord ? (
             <span className="flex items-center gap-1 text-xs text-gray-500">
               {CAPABILITY_COLS.map((col) => (
@@ -80,6 +86,12 @@ export default function WorkspaceFundamentalsPanel({ ticker }: WorkspaceFundamen
                 <span className="ml-1 text-amber-600">({degiroRecord.resolutionConfidence})</span>
               ) : null}
             </span>
+          ) : showDegiroUnavailable ? (
+            <span className="text-xs text-slate-500" title={degiroStatus?.detail}>
+              DeGiro audit hidden: setup not available
+            </span>
+          ) : degiroStatusQuery.isError ? (
+            <span className="text-xs text-amber-600">DeGiro status unavailable</span>
           ) : degiroAuditMutation.isError ? (
             <span className="text-xs text-rose-500" title={degiroAuditMutation.error.message}>
               unavailable

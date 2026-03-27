@@ -10,6 +10,17 @@ vi.mock('@/features/strategy/useStrategyReadiness', () => ({
   useStrategyReadiness: () => mockUseStrategyReadiness(),
 }));
 
+vi.mock('@/features/portfolio/hooks', () => ({
+  useDegiroStatusQuery: () => ({
+    data: {
+      available: false,
+      detail: 'DeGiro setup missing.',
+    },
+    isLoading: false,
+    isError: false,
+  }),
+}));
+
 vi.mock('@/components/domain/onboarding/OnboardingStrategySetupStep', () => ({
   default: () => <div>Mock Strategy Setup Step</div>,
 }));
@@ -66,5 +77,15 @@ describe('OnboardingPage', () => {
     await waitFor(() => {
       expect(useOnboardingStore.getState().status).toBe('completed');
     });
+  });
+
+  it('asks for broker workflow on the verify step', async () => {
+    mockUseStrategyReadiness.mockReturnValue({ isReady: true });
+    useOnboardingStore.setState({ status: 'new', currentStep: 4, executionSetup: 'degiro' });
+
+    renderWithProviders(<OnboardingPage />, { route: '/onboarding' });
+
+    expect(await screen.findByText('How will you reconcile broker execution?')).toBeInTheDocument();
+    expect(screen.getByText(/The rest of the app still works/i)).toBeInTheDocument();
   });
 });

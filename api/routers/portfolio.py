@@ -22,6 +22,7 @@ from api.models.portfolio import (
     DegiroSyncRequest,
     DegiroSyncPreviewResponse,
     DegiroApplyResponse,
+    DegiroStatus,
 )
 from api.dependencies import get_config_repo, get_portfolio_service
 from api.dependencies import get_strategy_repo
@@ -187,23 +188,56 @@ async def cancel_order(
 
 # ===== DeGiro Sync =====
 
-def _check_degiro_available() -> None:
+def _get_degiro_status() -> DegiroStatus:
     import importlib.util
-    from fastapi import HTTPException
 
     if importlib.util.find_spec("degiro_connector") is None:
-        raise HTTPException(
-            status_code=503,
+        return DegiroStatus(
+            installed=False,
+            credentials_configured=False,
+            available=False,
+            mode="missing_library",
             detail=(
-                "degiro-connector is not installed. "
-                "Install it with: pip install -e '.[degiro]'"
+                "degiro-connector is not installed. Install it with: pip install -e '.[degiro]'. "
+                "The rest of the app still works, but DeGiro sync and audits stay unavailable."
             ),
         )
     try:
         from swing_screener.integrations.degiro.credentials import load_credentials
+
         load_credentials()
     except ValueError as exc:
-        raise HTTPException(status_code=503, detail=str(exc))
+        return DegiroStatus(
+            installed=True,
+            credentials_configured=False,
+            available=False,
+            mode="missing_credentials",
+            detail=(
+                f"{exc} The rest of the app still works, but DeGiro sync and audits stay unavailable."
+            ),
+        )
+
+    return DegiroStatus(
+        installed=True,
+        credentials_configured=True,
+        available=True,
+        mode="ready",
+        detail="DeGiro sync and audits are available.",
+    )
+
+
+def _check_degiro_available() -> None:
+    from fastapi import HTTPException
+
+    status = _get_degiro_status()
+    if not status.available:
+        raise HTTPException(status_code=503, detail=status.detail)
+
+
+@router.get("/degiro/status", response_model=DegiroStatus)
+async def get_degiro_status():
+    """Report whether optional DeGiro sync/audit features are usable."""
+    return _get_degiro_status()
 
 
 @router.post("/sync/degiro/preview", response_model=DegiroSyncPreviewResponse)

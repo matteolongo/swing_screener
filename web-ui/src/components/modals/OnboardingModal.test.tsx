@@ -9,6 +9,17 @@ vi.mock('@/stores/onboardingStore', () => ({
   useOnboardingStore: vi.fn(),
 }));
 
+vi.mock('@/features/portfolio/hooks', () => ({
+  useDegiroStatusQuery: vi.fn(() => ({
+    data: {
+      available: false,
+      detail: 'DeGiro setup missing.',
+    },
+    isLoading: false,
+    isError: false,
+  })),
+}));
+
 // Mock useNavigate
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
@@ -29,7 +40,9 @@ describe('OnboardingModal', () => {
     vi.clearAllMocks();
     (useOnboardingStore as any).mockReturnValue({
       currentStep: 0,
+      executionSetup: 'manual',
       setCurrentStep: mockSetCurrentStep,
+      setExecutionSetup: vi.fn(),
       completeOnboarding: mockCompleteOnboarding,
       dismissOnboarding: mockDismissOnboarding,
     });
@@ -77,7 +90,9 @@ describe('OnboardingModal', () => {
   it('should go back to previous step when Back is clicked', () => {
     (useOnboardingStore as any).mockReturnValue({
       currentStep: 2,
+      executionSetup: 'manual',
       setCurrentStep: mockSetCurrentStep,
+      setExecutionSetup: vi.fn(),
       completeOnboarding: mockCompleteOnboarding,
       dismissOnboarding: mockDismissOnboarding,
     });
@@ -99,7 +114,9 @@ describe('OnboardingModal', () => {
   it('should complete onboarding on last step', () => {
     (useOnboardingStore as any).mockReturnValue({
       currentStep: 4,
+      executionSetup: 'manual',
       setCurrentStep: mockSetCurrentStep,
+      setExecutionSetup: vi.fn(),
       completeOnboarding: mockCompleteOnboarding,
       dismissOnboarding: mockDismissOnboarding,
     });
@@ -126,7 +143,9 @@ describe('OnboardingModal', () => {
   it('should navigate to Strategy page when action button is clicked on step 2', () => {
     (useOnboardingStore as any).mockReturnValue({
       currentStep: 1,
+      executionSetup: 'manual',
       setCurrentStep: mockSetCurrentStep,
+      setExecutionSetup: vi.fn(),
       completeOnboarding: mockCompleteOnboarding,
       dismissOnboarding: mockDismissOnboarding,
     });
@@ -155,5 +174,22 @@ describe('OnboardingModal', () => {
     
     const progressBars = screen.getByText('Step 1 of 5').parentElement?.querySelectorAll('div[class*="h-2"]');
     expect(progressBars?.length).toBe(5);
+  });
+
+  it('shows broker setup options on the verify step', () => {
+    (useOnboardingStore as any).mockReturnValue({
+      currentStep: 4,
+      executionSetup: 'manual',
+      setCurrentStep: mockSetCurrentStep,
+      setExecutionSetup: vi.fn(),
+      completeOnboarding: mockCompleteOnboarding,
+      dismissOnboarding: mockDismissOnboarding,
+    });
+
+    renderModal(true);
+
+    expect(screen.getByText('How will you reconcile broker execution?')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Manual broker workflow' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'I use DeGiro' })).toBeInTheDocument();
   });
 });

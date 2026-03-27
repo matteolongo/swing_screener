@@ -118,6 +118,22 @@ export interface PortfolioSummary {
   winRate: number;
 }
 
+export interface DegiroStatusApiResponse {
+  installed: boolean;
+  credentials_configured: boolean;
+  available: boolean;
+  mode: 'ready' | 'missing_library' | 'missing_credentials';
+  detail: string;
+}
+
+export interface DegiroStatus {
+  installed: boolean;
+  credentialsConfigured: boolean;
+  available: boolean;
+  mode: 'ready' | 'missing_library' | 'missing_credentials';
+  detail: string;
+}
+
 export type OrderFilterStatus = OrderStatus | 'all';
 export type PositionFilterStatus = PositionStatus | 'all';
 
@@ -357,6 +373,30 @@ export async function syncDegiroOrders(): Promise<DegiroSyncResult> {
   });
   if (!response.ok) throw await buildApiError(response, 'DeGiro sync failed');
   return response.json();
+}
+
+export async function fetchDegiroStatus(): Promise<DegiroStatus> {
+  if (isLocalPersistenceMode()) {
+    return {
+      installed: false,
+      credentialsConfigured: false,
+      available: false,
+      mode: 'missing_library',
+      detail: 'Local persistence mode keeps broker tracking manual. DeGiro sync and audits are unavailable.',
+    };
+  }
+
+  const response = await fetch(apiUrl(API_ENDPOINTS.degiroStatus));
+  if (!response.ok) throw await buildApiError(response, 'Failed to fetch DeGiro status');
+
+  const payload: DegiroStatusApiResponse = await response.json();
+  return {
+    installed: payload.installed,
+    credentialsConfigured: payload.credentials_configured,
+    available: payload.available,
+    mode: payload.mode,
+    detail: payload.detail,
+  };
 }
 
 function transformPositionMetrics(data: PositionMetricsApiResponse): PositionMetrics {

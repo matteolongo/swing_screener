@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle, Calendar, Search, ShoppingCart } from 'lucide-react';
 import Button from '@/components/common/Button';
 import Card, { CardContent } from '@/components/common/Card';
+import OnboardingExecutionSetupCard from '@/components/domain/onboarding/OnboardingExecutionSetupCard';
 import OnboardingStrategySetupStep from '@/components/domain/onboarding/OnboardingStrategySetupStep';
 import { useStrategyReadiness } from '@/features/strategy/useStrategyReadiness';
 import { t } from '@/i18n/t';
@@ -81,6 +82,7 @@ const STEPS: OnboardingStep[] = [
           <li>{t('onboardingPage.steps.verify.items.orders')}</li>
           <li>{t('onboardingPage.steps.verify.items.positions')}</li>
         </ul>
+        <OnboardingExecutionSetupCard />
       </div>
     ),
   },
