@@ -96,6 +96,125 @@ class TestOrderMatching:
 
 
 # ---------------------------------------------------------------------------
+# Position matching
+# ---------------------------------------------------------------------------
+
+class TestPositionMatching:
+    def _local_position(self, **kwargs) -> dict:
+        base = {
+            "position_id": "pos-1",
+            "ticker": "CRBN.AS",
+            "status": "open",
+            "entry_date": "2026-03-01",
+            "entry_price": 18.48,
+            "stop_price": 18.06,
+            "shares": 20,
+            "broker_product_id": None,
+            "isin": None,
+            "notes": "",
+        }
+        return {**base, **kwargs}
+
+    def _broker_position(self, **kwargs) -> dict:
+        base = {
+            "id": "700001",
+            "size": 20,
+            "symbol": "CRBN",
+            "currency": "EUR",
+            "isin": "NL0010583399",
+            "breakEvenPrice": 18.47,
+            "value": 372.20,
+            "plBase": 2.80,
+            "name": "Corbion NV Class C",
+        }
+        return {**base, **kwargs}
+
+    def _make_sync_raw(self, broker_positions: list[dict]) -> DegiroSyncRaw:
+        return DegiroSyncRaw(
+            positions=broker_positions,
+            pending_orders=[],
+            order_history=[],
+            transactions=[],
+            cash=[],
+        )
+
+    def test_matches_position_by_broker_product_id_and_imports_broker_basis(self):
+        local_positions = [self._local_position(broker_product_id="700001")]
+        sync_raw = self._make_sync_raw([self._broker_position()])
+
+        result = preview(sync_raw, [], local_positions)
+
+        assert result.matched_by_product_id == 1
+        assert result.positions_with_broker_basis == 1
+        assert len(result.positions_to_update) == 1
+        matched = result.positions_to_update[0]
+        assert matched.confidence == "exact"
+        assert matched.fields["broker_avg_cost"] == 18.47
+        assert matched.fields["broker_symbol"] == "CRBN"
+        assert matched.fields["broker_currency"] == "EUR"
+        assert matched.fields["broker_market_value"] == 372.20
+        assert matched.fields["broker_unrealized_pnl"] == 2.80
+
+    def test_matches_position_by_isin_when_product_id_missing_locally(self):
+        local_positions = [self._local_position(isin="NL0010583399")]
+        sync_raw = self._make_sync_raw([self._broker_position()])
+
+        result = preview(sync_raw, [], local_positions)
+
+        assert result.matched_by_isin == 1
+        assert len(result.positions_to_update) == 1
+        assert result.positions_to_update[0].confidence == "isin"
+
+    def test_uses_ticker_map_only_when_unambiguous(self):
+        local_positions = [self._local_position(ticker="CRBN.AS")]
+        sync_raw = self._make_sync_raw([self._broker_position()])
+
+        with patch(
+            "swing_screener.fundamentals.providers.degiro._load_isin_map",
+            return_value={"CRBN.AS": "NL0010583399"},
+        ):
+            result = preview(sync_raw, [], local_positions)
+
+        assert result.matched_by_ticker_map == 1
+        assert len(result.positions_to_update) == 1
+        assert result.positions_to_update[0].confidence == "ticker_map"
+
+    def test_does_not_match_by_symbol_when_isin_differs(self):
+        local_positions = [self._local_position(ticker="CRBN.AS", isin=None)]
+        sync_raw = self._make_sync_raw([self._broker_position()])
+
+        with patch(
+            "swing_screener.fundamentals.providers.degiro._load_isin_map",
+            return_value={},
+        ):
+            result = preview(sync_raw, [], local_positions)
+
+        assert result.matched_by_product_id == 0
+        assert result.matched_by_isin == 0
+        assert result.matched_by_ticker_map == 0
+        assert result.unmatched_positions == 1
+        assert len(result.positions_to_update) == 0
+        assert any(diff.kind == "position" and diff.action == "unmatched" for diff in result.unmatched)
+
+    def test_reports_unmatched_position_with_resolved_ticker_context(self):
+        sync_raw = self._make_sync_raw([self._broker_position()])
+
+        with patch(
+            "swing_screener.fundamentals.providers.degiro._load_isin_map",
+            return_value={"CRBN.AS": "NL0010583399"},
+        ):
+            result = preview(sync_raw, [], [])
+
+        assert result.unmatched_positions == 1
+        assert len(result.unmatched) == 1
+        unmatched = result.unmatched[0]
+        assert unmatched.kind == "position"
+        assert unmatched.action == "unmatched"
+        assert unmatched.fields["resolved_ticker"] == "CRBN.AS"
+        assert "No local position matched" in unmatched.fields["match_reason"]
+
+
+# ---------------------------------------------------------------------------
 # Fee resolution
 # ---------------------------------------------------------------------------
 

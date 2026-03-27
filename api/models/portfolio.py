@@ -30,6 +30,11 @@ class Position(BaseModel):
     exit_order_ids: Optional[list[str]] = None
     broker: Optional[str] = None
     broker_product_id: Optional[str] = None
+    broker_symbol: Optional[str] = None
+    broker_currency: Optional[str] = None
+    broker_avg_cost: Optional[float] = None
+    broker_market_value: Optional[float] = None
+    broker_unrealized_pnl: Optional[float] = None
     isin: Optional[str] = None
     broker_synced_at: Optional[str] = None
     thesis: Optional[str] = None
@@ -157,6 +162,9 @@ class Order(BaseModel):
     broker: Optional[str] = None
     broker_order_id: Optional[str] = None
     broker_product_id: Optional[str] = None
+    broker_symbol: Optional[str] = None
+    broker_currency: Optional[str] = None
+    broker_avg_cost: Optional[float] = None
     isin: Optional[str] = None
     broker_synced_at: Optional[str] = None
 
@@ -383,6 +391,11 @@ class DegiroSyncPreviewResponse(BaseModel):
     ambiguous: list[SyncDiffResponse] = Field(default_factory=list)
     unmatched: list[SyncDiffResponse] = Field(default_factory=list)
     artifact_paths: dict[str, str] = Field(default_factory=dict)
+    matched_by_product_id: int = 0
+    matched_by_isin: int = 0
+    matched_by_ticker_map: int = 0
+    positions_with_broker_basis: int = 0
+    unmatched_positions: int = 0
 
 
 class DegiroApplyResponse(BaseModel):
@@ -393,3 +406,8 @@ class DegiroApplyResponse(BaseModel):
     fees_applied: int = 0
     ambiguous_skipped: int = 0
     artifact_paths: dict[str, str] = Field(default_factory=dict)
+    matched_by_product_id: int = 0
+    matched_by_isin: int = 0
+    matched_by_ticker_map: int = 0
+    positions_with_broker_basis: int = 0
+    unmatched_positions: int = 0

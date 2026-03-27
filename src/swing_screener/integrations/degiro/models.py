@@ -66,7 +66,7 @@ class DegiroSyncRaw:
 @dataclass(frozen=True)
 class SyncDiff:
     kind: str        # "position" | "order"
-    action: str      # "create" | "update"
+    action: str      # "create" | "update" | "unmatched"
     local_id: Optional[str]
     broker_id: Optional[str]
     confidence: str  # "exact" | "fuzzy" | "ambiguous"
@@ -82,6 +82,11 @@ class DegiroSyncPreview:
     ambiguous: tuple[SyncDiff, ...]
     unmatched: tuple[SyncDiff, ...]
     fees_applied: int
+    matched_by_product_id: int = 0
+    matched_by_isin: int = 0
+    matched_by_ticker_map: int = 0
+    positions_with_broker_basis: int = 0
+    unmatched_positions: int = 0
 
 
 @dataclass(frozen=True)
@@ -93,3 +98,8 @@ class DegiroApplyResult:
     fees_applied: int
     ambiguous_skipped: int
     artifact_paths: dict[str, str]
+    matched_by_product_id: int = 0
+    matched_by_isin: int = 0
+    matched_by_ticker_map: int = 0
+    positions_with_broker_basis: int = 0
+    unmatched_positions: int = 0

@@ -34,6 +34,18 @@ interface PortfolioRow {
   order: Order | null;
 }
 
+function reconciliationBadge(row: PortfolioRow): { label: string; variant: 'default' | 'primary' | 'warning' } | null {
+  const position = row.position;
+  if (!position) return null;
+  if (position.broker === 'degiro') {
+    if (position.brokerAvgCost != null) {
+      return { label: 'broker aligned', variant: 'primary' };
+    }
+    return { label: 'broker basis missing', variant: 'warning' };
+  }
+  return { label: 'local only', variant: 'default' };
+}
+
 function formatPnlValue(pnl: number | null, pnlPercent: number | null): string {
   if (pnl == null || pnlPercent == null) return t('common.placeholders.dash');
   const sign = pnl >= 0 ? '+' : '';
@@ -238,12 +250,25 @@ export default function PortfolioTable() {
     {
       key: 'ticker',
       header: t('workspacePage.panels.portfolio.columns.symbol'),
-      render: (row) => (
-        <div className="flex items-center gap-1.5">
-          <span className="font-semibold text-sm">{row.ticker}</span>
-          <Badge variant={row.status === 'open' ? 'success' : 'warning'} >{row.status}</Badge>
-        </div>
-      ),
+      render: (row) => {
+        const reconciliation = reconciliationBadge(row);
+        return (
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5">
+              <span className="font-semibold text-sm">{row.ticker}</span>
+              <Badge variant={row.status === 'open' ? 'success' : 'warning'}>{row.status}</Badge>
+              {reconciliation ? (
+                <Badge variant={reconciliation.variant}>{reconciliation.label}</Badge>
+              ) : null}
+            </div>
+            {row.position?.broker === 'degiro' && row.position.isin ? (
+              <div className="text-[11px] text-gray-500">
+                {row.position.brokerSymbol ?? row.ticker} · {row.position.isin}
+              </div>
+            ) : null}
+          </div>
+        );
+      },
     },
     {
       key: 'netPnl',
@@ -262,13 +287,25 @@ export default function PortfolioTable() {
     {
       key: 'entry',
       header: 'Prices',
-      render: (row) => (
+      render: (row) => {
+        const brokerAvgCost = row.position?.brokerAvgCost ?? null;
+        const displayEntryPrice = brokerAvgCost ?? row.entryPrice;
+        const displayEntryLabel = brokerAvgCost != null ? 'PMC' : 'Entry';
+        const showLocalPlanEntry = brokerAvgCost != null && row.entryPrice != null && brokerAvgCost !== row.entryPrice;
+
+        return (
         <div className="text-xs space-y-0.5 font-mono">
           <div className="flex gap-1 text-gray-500">
-            <span>Entry</span>
-            <span className="text-gray-900 dark:text-gray-100">{formatOptionalCurrency(row.entryPrice)}</span>
+            <span>{displayEntryLabel}</span>
+            <span className="text-gray-900 dark:text-gray-100">{formatOptionalCurrency(displayEntryPrice)}</span>
           </div>
-          {row.currentPrice != null && row.currentPrice !== row.entryPrice ? (
+          {showLocalPlanEntry ? (
+            <div className="flex gap-1 text-gray-500">
+              <span>Plan</span>
+              <span className="text-gray-900 dark:text-gray-100">{formatOptionalCurrency(row.entryPrice)}</span>
+            </div>
+          ) : null}
+          {row.currentPrice != null && row.currentPrice !== displayEntryPrice ? (
             <div className="flex gap-1 text-gray-500">
               <span>Now</span>
               <span className="text-gray-900 dark:text-gray-100">{formatOptionalCurrency(row.currentPrice)}</span>
@@ -278,8 +315,14 @@ export default function PortfolioTable() {
             <span>Stop</span>
             <span className="text-rose-700 dark:text-rose-400">{formatOptionalCurrency(row.stopLoss)}</span>
           </div>
+          {row.position?.broker === 'degiro' && row.position.brokerAvgCost == null ? (
+            <div className="text-[11px] text-amber-700 dark:text-amber-400">
+              Broker sync has no PMC yet. P&amp;L may differ from DeGiro.
+            </div>
+          ) : null}
         </div>
-      ),
+        );
+      },
     },
     {
       key: 'shares',

@@ -236,6 +236,27 @@ class PortfolioService:
 
         return last_prices
 
+    @staticmethod
+    def _effective_basis_price(position: dict) -> float:
+        broker = str(position.get("broker", "") or "").strip().lower()
+        broker_avg_cost = position.get("broker_avg_cost")
+        if broker == "degiro" and broker_avg_cost is not None:
+            return float(broker_avg_cost)
+        return float(position.get("entry_price", 0.0))
+
+    @staticmethod
+    def _effective_current_price(position: dict, live_price: Optional[float]) -> float:
+        if live_price is not None:
+            return float(live_price)
+        market_value = position.get("broker_market_value")
+        shares = position.get("shares")
+        if market_value is not None and shares not in (None, 0):
+            try:
+                return float(market_value) / float(shares)
+            except (TypeError, ValueError, ZeroDivisionError):
+                pass
+        return PortfolioService._fallback_price(position)
+
     def _fee_map_by_position_id(self) -> dict[str, float]:
         fees: dict[str, float] = {}
         try:
@@ -285,7 +306,8 @@ class PortfolioService:
         # Live price from provider (may be None / missing)
         live_price = current_prices.get(ticker)
         # Effective price for metrics: fall back if live price is unavailable
-        current_price_for_metrics = live_price if live_price is not None else self._fallback_price(position)
+        current_price_for_metrics = self._effective_current_price(position, live_price)
+        basis_price = self._effective_basis_price(position)
         per_share_risk = calculate_per_share_risk(state_position)
         fees_eur = fee_map.get(state_position.position_id or "", 0.0)
         position_ccy = detect_currency(ticker)
@@ -301,8 +323,8 @@ class PortfolioService:
                 ticker,
             )
             fee_in_quote_ccy = fees_eur
-        pnl = calculate_pnl(state_position.entry_price, current_price_for_metrics, state_position.shares) - fee_in_quote_ccy
-        entry_value = calculate_total_position_value(state_position.entry_price, state_position.shares)
+        pnl = calculate_pnl(basis_price, current_price_for_metrics, state_position.shares) - fee_in_quote_ccy
+        entry_value = calculate_total_position_value(basis_price, state_position.shares)
         pnl_percent = (pnl / entry_value * 100.0) if entry_value > 0 else 0.0
 
         payload = dict(position)
@@ -364,9 +386,11 @@ class PortfolioService:
         ticker_currency = detect_currency(ticker)
         eurusd_rate = self._eurusd_rate() if ticker_currency == "USD" else 1.0
         fee_in_quote_ccy = fees_eur if ticker_currency == "EUR" else fees_eur * eurusd_rate
-        pnl = calculate_pnl(state_position.entry_price, current_price, state_position.shares) - fee_in_quote_ccy
+        effective_current_price = self._effective_current_price(position, current_price)
+        basis_price = self._effective_basis_price(position)
+        pnl = calculate_pnl(basis_price, effective_current_price, state_position.shares) - fee_in_quote_ccy
         per_share_risk = calculate_per_share_risk(state_position)
-        entry_value = calculate_total_position_value(state_position.entry_price, state_position.shares)
+        entry_value = calculate_total_position_value(basis_price, state_position.shares)
         pnl_percent = (pnl / entry_value * 100.0) if entry_value > 0 else 0.0
 
         return PositionMetrics(
@@ -374,9 +398,9 @@ class PortfolioService:
             pnl=pnl,
             fees_eur=fees_eur,
             pnl_percent=pnl_percent,
-            r_now=calculate_r_now(state_position, current_price),
+            r_now=calculate_r_now(state_position, effective_current_price),
             entry_value=entry_value,
-            current_value=calculate_current_position_value(current_price, state_position.shares),
+            current_value=calculate_current_position_value(effective_current_price, state_position.shares),
             per_share_risk=per_share_risk,
             total_risk=per_share_risk * state_position.shares,
         )
@@ -869,7 +893,14 @@ class PortfolioService:
             "tif": "GTC",
             "fee_eur": None,
             "fill_fx_rate": None,
+            "broker": None,
+            "broker_order_id": None,
+            "broker_product_id": None,
+            "broker_symbol": None,
+            "broker_currency": None,
+            "broker_avg_cost": None,
             "isin": isin,
+            "broker_synced_at": None,
             "thesis": request.thesis,
         }
 

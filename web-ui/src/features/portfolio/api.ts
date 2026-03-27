@@ -351,10 +351,17 @@ export async function closePosition(
 }
 
 export interface DegiroSyncResult {
+  positions_created: number;
+  positions_updated: number;
   orders_created: number;
   orders_updated: number;
   fees_applied: number;
   ambiguous_skipped: number;
+  matched_by_product_id: number;
+  matched_by_isin: number;
+  matched_by_ticker_map: number;
+  positions_with_broker_basis: number;
+  unmatched_positions: number;
 }
 
 export async function syncDegiroOrders(): Promise<DegiroSyncResult> {
