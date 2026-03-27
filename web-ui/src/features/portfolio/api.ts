@@ -118,6 +118,22 @@ export interface PortfolioSummary {
   winRate: number;
 }
 
+export interface DegiroStatusApiResponse {
+  installed: boolean;
+  credentials_configured: boolean;
+  available: boolean;
+  mode: 'ready' | 'missing_library' | 'missing_credentials';
+  detail: string;
+}
+
+export interface DegiroStatus {
+  installed: boolean;
+  credentialsConfigured: boolean;
+  available: boolean;
+  mode: 'ready' | 'missing_library' | 'missing_credentials';
+  detail: string;
+}
+
 export type OrderFilterStatus = OrderStatus | 'all';
 export type PositionFilterStatus = PositionStatus | 'all';
 
@@ -325,12 +341,62 @@ export async function closePosition(
       exit_price: request.exitPrice,
       fee_eur: request.feeEur,
       reason: request.reason || '',
+      lesson: request.lesson ?? null,
     }),
   });
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.detail || 'Failed to close position');
   }
+}
+
+export interface DegiroSyncResult {
+  orders_created: number;
+  orders_updated: number;
+  fees_applied: number;
+  ambiguous_skipped: number;
+}
+
+export async function syncDegiroOrders(): Promise<DegiroSyncResult> {
+  const toDate = new Date().toISOString().split('T')[0];
+  const fromDate = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const response = await fetch(apiUrl(API_ENDPOINTS.degiroOrderSyncApply), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from_date: fromDate,
+      to_date: toDate,
+      include_portfolio: true,
+      include_orders_history: true,
+      include_transactions: true,
+    }),
+  });
+  if (!response.ok) throw await buildApiError(response, 'DeGiro sync failed');
+  return response.json();
+}
+
+export async function fetchDegiroStatus(): Promise<DegiroStatus> {
+  if (isLocalPersistenceMode()) {
+    return {
+      installed: false,
+      credentialsConfigured: false,
+      available: false,
+      mode: 'missing_library',
+      detail: 'Local persistence mode keeps broker tracking manual. DeGiro sync and audits are unavailable.',
+    };
+  }
+
+  const response = await fetch(apiUrl(API_ENDPOINTS.degiroStatus));
+  if (!response.ok) throw await buildApiError(response, 'Failed to fetch DeGiro status');
+
+  const payload: DegiroStatusApiResponse = await response.json();
+  return {
+    installed: payload.installed,
+    credentialsConfigured: payload.credentials_configured,
+    available: payload.available,
+    mode: payload.mode,
+    detail: payload.detail,
+  };
 }
 
 function transformPositionMetrics(data: PositionMetricsApiResponse): PositionMetrics {

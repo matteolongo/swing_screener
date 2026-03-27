@@ -1,6 +1,8 @@
 import { NavLink } from 'react-router-dom';
 import {
   BarChart3,
+  BookOpen,
+  Briefcase,
   LayoutDashboard,
   SlidersHorizontal,
   ClipboardCheck,
@@ -30,11 +32,17 @@ const navigation: NavigationItem[] = [
     icon: LayoutDashboard,
     advanced: false, // Always enabled
   },
-  { 
-    labelKey: 'sidebar.nav.dailyReview', 
-    href: '/daily-review', 
+  {
+    labelKey: 'sidebar.nav.dailyReview',
+    href: '/daily-review',
     icon: ClipboardCheck,
-    advanced: false, // Always enabled
+    advanced: false,
+  },
+  {
+    labelKey: 'sidebar.nav.portfolio',
+    href: '/portfolio',
+    icon: Briefcase,
+    advanced: false,
   },
   { 
     labelKey: 'sidebar.nav.strategy', 
@@ -52,6 +60,12 @@ const navigation: NavigationItem[] = [
     labelKey: 'sidebar.nav.fundamentals',
     href: '/fundamentals',
     icon: BarChart3,
+    advanced: false,
+  },
+  {
+    labelKey: 'sidebar.nav.journal',
+    href: '/journal',
+    icon: BookOpen,
     advanced: false,
   },
 ];

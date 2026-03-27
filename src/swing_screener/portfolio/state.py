@@ -32,6 +32,12 @@ class Position:
     exit_price: Optional[float] = None
     notes: str = ""
     exit_order_ids: Optional[list[str]] = field(default=None)
+    broker: Optional[str] = None
+    broker_product_id: Optional[str] = None
+    isin: Optional[str] = None
+    broker_synced_at: Optional[str] = None
+    thesis: Optional[str] = None
+    lesson: Optional[str] = None
 
 
 @dataclass
@@ -100,6 +106,12 @@ def load_positions(path: str | Path) -> list[Position]:
                     if isinstance(item.get("exit_order_ids", None), list)
                     else None
                 ),
+                broker=item.get("broker", None),
+                broker_product_id=item.get("broker_product_id", None),
+                isin=item.get("isin", None),
+                broker_synced_at=item.get("broker_synced_at", None),
+                thesis=item.get("thesis", None),
+                lesson=item.get("lesson", None),
             )
         )
     return out
@@ -127,6 +139,12 @@ def save_positions(
                 "exit_price": pos.exit_price,
                 "notes": pos.notes,
                 "exit_order_ids": pos.exit_order_ids,
+                "broker": pos.broker,
+                "broker_product_id": pos.broker_product_id,
+                "isin": pos.isin,
+                "broker_synced_at": pos.broker_synced_at,
+                "thesis": pos.thesis,
+                "lesson": pos.lesson,
             }
             for pos in positions
         ],

@@ -166,6 +166,8 @@ def fill_entry_order(
         max_favorable_price=float(fill_price),
         notes=order.notes,
         exit_order_ids=exit_ids,
+        isin=order.isin,
+        thesis=order.thesis,
     )
 
     new_orders: list[Order] = []

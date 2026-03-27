@@ -28,6 +28,12 @@ class Position(BaseModel):
     current_price: Optional[float] = None
     notes: str = ""
     exit_order_ids: Optional[list[str]] = None
+    broker: Optional[str] = None
+    broker_product_id: Optional[str] = None
+    isin: Optional[str] = None
+    broker_synced_at: Optional[str] = None
+    thesis: Optional[str] = None
+    lesson: Optional[str] = None
 
 
 class PositionUpdate(BaseModel):
@@ -67,6 +73,7 @@ class ClosePositionRequest(BaseModel):
         description="Execution fee in EUR (optional)",
     )
     reason: str = Field(default="", description="Reason for closing")
+    lesson: Optional[str] = Field(default=None, description="Lesson / reflection (optional)")
 
     @field_validator("exit_price")
     @classmethod
@@ -109,6 +116,7 @@ class StopSuggestionComputeRequest(BaseModel):
 OrderStatus = Literal["pending", "filled", "cancelled"]
 OrderKind = Literal["entry", "stop", "take_profit"]
 EntryMode = Literal["NEW_ENTRY", "ADD_ON"]
+DegiroAvailabilityMode = Literal["ready", "missing_library", "missing_credentials"]
 
 BASE_ORDER_TYPES = {"MARKET", "LIMIT", "STOP", "STOP_LIMIT"}
 DIRECTIONAL_ORDER_TYPES = {
@@ -146,6 +154,11 @@ class Order(BaseModel):
     tif: Optional[str] = None
     fee_eur: Optional[float] = None
     fill_fx_rate: Optional[float] = None
+    broker: Optional[str] = None
+    broker_order_id: Optional[str] = None
+    broker_product_id: Optional[str] = None
+    isin: Optional[str] = None
+    broker_synced_at: Optional[str] = None
 
 
 class CreateOrderRequest(BaseModel):
@@ -158,6 +171,8 @@ class CreateOrderRequest(BaseModel):
     order_kind: OrderKind = "entry"
     position_id: Optional[str] = None
     entry_mode: EntryMode = "NEW_ENTRY"
+    isin: Optional[str] = None
+    thesis: Optional[str] = None
 
     @field_validator("ticker")
     @classmethod
@@ -241,6 +256,14 @@ class OrderSnapshot(BaseModel):
 class OrdersSnapshotResponse(BaseModel):
     orders: list[OrderSnapshot]
     asof: str
+
+
+class DegiroStatus(BaseModel):
+    installed: bool
+    credentials_configured: bool
+    available: bool
+    mode: DegiroAvailabilityMode
+    detail: str
 
 
 class FillOrderRequest(BaseModel):
@@ -328,3 +351,45 @@ class PortfolioSummary(BaseModel):
 class OrdersResponse(BaseModel):
     orders: list[Order]
     asof: str
+
+
+# ---------------------------------------------------------------------------
+# DeGiro sync request / response models (Phase 2)
+# ---------------------------------------------------------------------------
+
+class DegiroSyncRequest(BaseModel):
+    from_date: str = Field(description="Start date (YYYY-MM-DD)")
+    to_date: str = Field(description="End date (YYYY-MM-DD)")
+    include_portfolio: bool = True
+    include_orders_history: bool = True
+    include_transactions: bool = True
+
+
+class SyncDiffResponse(BaseModel):
+    kind: str
+    action: str
+    local_id: Optional[str] = None
+    broker_id: Optional[str] = None
+    confidence: str
+    fields: dict = Field(default_factory=dict)
+
+
+class DegiroSyncPreviewResponse(BaseModel):
+    positions_to_create: list[SyncDiffResponse] = Field(default_factory=list)
+    positions_to_update: list[SyncDiffResponse] = Field(default_factory=list)
+    orders_to_create: list[SyncDiffResponse] = Field(default_factory=list)
+    orders_to_update: list[SyncDiffResponse] = Field(default_factory=list)
+    fees_applied: int = 0
+    ambiguous: list[SyncDiffResponse] = Field(default_factory=list)
+    unmatched: list[SyncDiffResponse] = Field(default_factory=list)
+    artifact_paths: dict[str, str] = Field(default_factory=dict)
+
+
+class DegiroApplyResponse(BaseModel):
+    positions_created: int = 0
+    positions_updated: int = 0
+    orders_created: int = 0
+    orders_updated: int = 0
+    fees_applied: int = 0
+    ambiguous_skipped: int = 0
+    artifact_paths: dict[str, str] = Field(default_factory=dict)

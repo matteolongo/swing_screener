@@ -40,9 +40,12 @@ describe('Position Helper Functions', () => {
         maxFavorablePrice: 110,
         exitDate: undefined,
         exitPrice: undefined,
+        exitFeeEur: undefined,
         currentPrice: 105,
         notes: 'Test position',
         exitOrderIds: undefined,
+        thesis: null,
+        lesson: null,
       })
     })
 

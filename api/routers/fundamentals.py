@@ -5,6 +5,8 @@ from fastapi import APIRouter, Depends, Query
 
 from api.dependencies import get_fundamentals_service
 from api.models.fundamentals import (
+    DegiroCapabilityAuditRequest,
+    DegiroCapabilityAuditResponse,
     FundamentalRefreshRequest,
     FundamentalSnapshotResponse,
     FundamentalsCompareRequest,
@@ -73,3 +75,37 @@ def get_warmup_status(
     service: FundamentalsService = Depends(get_fundamentals_service),
 ):
     return service.get_warmup_status(job_id)
+
+
+@router.post("/degiro/capability-audit", response_model=DegiroCapabilityAuditResponse)
+def run_degiro_capability_audit(
+    request: DegiroCapabilityAuditRequest,
+    service: FundamentalsService = Depends(get_fundamentals_service),
+):
+    """Run a DeGiro capability audit for the given symbols.
+
+    Requires degiro-connector to be installed (`pip install -e '.[degiro]'`)
+    and DeGiro credentials in environment variables. Returns 503 if either
+    is missing.
+    """
+    return service.run_degiro_capability_audit(request)
+
+
+@router.post("/degiro/portfolio-audit", response_model=DegiroCapabilityAuditResponse)
+def run_degiro_portfolio_audit(
+    include_quotes: bool = True,
+    include_news: bool = True,
+    include_agenda: bool = True,
+    service: FundamentalsService = Depends(get_fundamentals_service),
+):
+    """Audit all products in the live DeGiro portfolio.
+
+    Unlike /capability-audit, this endpoint does not require ticker symbols —
+    it fetches product IDs directly from the live portfolio and resolves them
+    via get_products_info (works even when the text-search endpoint is unavailable).
+    """
+    return service.run_degiro_portfolio_audit(
+        include_quotes=include_quotes,
+        include_news=include_news,
+        include_agenda=include_agenda,
+    )

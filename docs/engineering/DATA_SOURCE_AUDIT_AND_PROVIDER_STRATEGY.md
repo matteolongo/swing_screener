@@ -15,8 +15,38 @@ Last updated: 2026-03-20
 | --- | --- | --- |
 | **Tier 1** — Free-first / Bootstrap | ✅ Complete | `codex/tier1-free-first-bootstrap` |
 | **Tier 1.5** — EU catalog population | ✅ Complete | `codex/tier1-free-first-bootstrap` |
+| **DeGiro enrichment layer** — Capability audit + portfolio sync | ✅ Phase 1 & 2 | `codex/degiro-capability-sync` |
 | **Tier 2** — Low-cost / Practical | Not started | — |
 | **Tier 3** — Best Quality / Production | Not started | — |
+
+---
+
+---
+
+## DeGiro as a Validated Enrichment Layer (Phase 1 & 2)
+
+DeGiro is treated as an **opt-in enrichment layer**, not inserted into the `config.py` provider chain. It is accessed exclusively via the `degiro-connector` optional dependency (`pip install -e '.[degiro]'`) and authenticated through environment variables (`DEGIRO_USERNAME`, `DEGIRO_PASSWORD`, `DEGIRO_INT_ACCOUNT`, `DEGIRO_TOTP_SECRET_KEY` or `DEGIRO_ONE_TIME_PASSWORD`).
+
+### Phase 1 — Capability Audit (`POST /api/fundamentals/degiro/capability-audit`)
+
+- Resolves each requested symbol to a DeGiro product reference (exact → alias → exchange/currency → ambiguous).
+- Probes available data endpoints: quotes, company profile, financial statements, analyst views, news, agenda.
+- Writes two artifacts per run: `{audit_id}_summary.md` (markdown table) and `{audit_id}_normalized.json` (full JSON), stored under `data/degiro/capability_audits/`.
+- Returns `503` when the library is missing or credentials are absent — no import-time crash.
+
+### Phase 2 — Portfolio Reconciliation (`POST /api/portfolio/sync/degiro/preview` and `/apply`)
+
+- Fetches live portfolio, pending orders, order history, and transactions from DeGiro.
+- Matches broker records to local orders/positions using: `broker_order_id` (exact) → `product_id + side + quantity + date` (fuzzy) → `isin/symbol alias`. Ambiguous matches are never auto-applied.
+- `preview` is read-only; `apply` is idempotent (upsert-only, no hard deletes).
+- Fee resolution uses transaction data; unresolved fees stay `None` (CSV importer remains the fallback for fee hydration).
+- Artifacts written to `data/degiro/sync/`.
+
+### Design decisions
+
+- **Not in the provider chain**: DeGiro is a user's own broker; its data is portfolio-scoped, not market-wide. It sits alongside the fundamentals chain, not inside it.
+- **Lazy imports everywhere**: the absence of `degiro-connector` never breaks the server startup or the existing fundamentals/screener APIs.
+- **Read-only philosophy**: the integration never places orders. It reconciles state that already exists in DeGiro.
 
 ---
 

@@ -138,6 +138,7 @@ export default function OrderReviewExperience({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSucceeded, setSubmitSucceeded] = useState(false);
   const [activeSection, setActiveSection] = useState<ReviewSectionId>('decision');
+  const [tradeThesis, setTradeThesis] = useState('');
 
   useEffect(() => {
     form.reset({
@@ -152,6 +153,7 @@ export default function OrderReviewExperience({
     setSubmitSucceeded(false);
     setIsSubmitting(false);
     setActiveSection('decision');
+    setTradeThesis('');
   }, [defaultNotes, defaultOrderType, form, suggestedEntry, suggestedShares, suggestedStop, normalizedTicker]);
 
   const orderType = form.watch('orderType') ?? defaultOrderType;
@@ -237,6 +239,7 @@ export default function OrderReviewExperience({
         positionId: context.sameSymbol?.mode === 'ADD_ON' ? (context.positionId ?? context.sameSymbol.positionId) : undefined,
         entryMode: context.sameSymbol?.mode === 'ADD_ON' ? 'ADD_ON' : 'NEW_ENTRY',
         notes: values.notes?.trim() ?? '',
+        thesis: tradeThesis.trim() || undefined,
       });
       setSubmitSucceeded(true);
       onSuccess?.();
@@ -686,6 +689,20 @@ export default function OrderReviewExperience({
                   id={fieldIds.notes}
                   rows={3}
                   {...form.register('notes')}
+                  className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800"
+                />
+              </div>
+
+              <div>
+                <label htmlFor={`order-review-thesis-${normalizedTicker}`} className="mb-1 block text-xs font-medium text-muted-foreground">
+                  {t('order.candidateModal.tradeThesis')}
+                </label>
+                <textarea
+                  id={`order-review-thesis-${normalizedTicker}`}
+                  rows={3}
+                  value={tradeThesis}
+                  onChange={(e) => setTradeThesis(e.target.value)}
+                  placeholder={t('order.candidateModal.tradeThesisPlaceholder')}
                   className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800"
                 />
               </div>

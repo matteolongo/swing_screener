@@ -25,19 +25,19 @@ export default function ScreenerCandidateDetailsRow({ candidate }: ScreenerCandi
             </div>
             <div className="rounded-md border border-gray-200 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-800">
               <MetricHelpLabel metricKey="ATR" className="text-gray-600 dark:text-gray-400" />
-              <div className="font-mono mt-1 text-base">{candidate.atr.toFixed(2)}</div>
+              <div className="font-mono mt-1 text-base">{candidate.atr != null ? candidate.atr.toFixed(2) : '—'}</div>
             </div>
             <div className="rounded-md border border-gray-200 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-800">
               <MetricHelpLabel metricKey="MOM_6M" className="text-gray-600 dark:text-gray-400" />
-              <div className="font-mono mt-1 text-base">{formatPercent(candidate.momentum6m * 100)}</div>
+              <div className="font-mono mt-1 text-base">{candidate.momentum6m != null ? formatPercent(candidate.momentum6m * 100) : '—'}</div>
             </div>
             <div className="rounded-md border border-gray-200 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-800">
               <MetricHelpLabel metricKey="MOM_12M" className="text-gray-600 dark:text-gray-400" />
-              <div className="font-mono mt-1 text-base">{formatPercent(candidate.momentum12m * 100)}</div>
+              <div className="font-mono mt-1 text-base">{candidate.momentum12m != null ? formatPercent(candidate.momentum12m * 100) : '—'}</div>
             </div>
             <div className="rounded-md border border-gray-200 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-800">
               <MetricHelpLabel metricKey="RS" className="text-gray-600 dark:text-gray-400" />
-              <div className="font-mono mt-1 text-base">{formatPercent(candidate.relStrength * 100)}</div>
+              <div className="font-mono mt-1 text-base">{candidate.relStrength != null ? formatPercent(candidate.relStrength * 100) : '—'}</div>
             </div>
           </div>
         </div>

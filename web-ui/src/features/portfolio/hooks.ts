@@ -8,10 +8,13 @@ import {
   fetchPositionMetrics,
   fetchPositions,
   fetchPositionStopSuggestion,
+  fetchDegiroStatus,
   fillOrder,
+  syncDegiroOrders,
   updatePositionStop,
   OrderFilterStatus,
   PositionFilterStatus,
+  DegiroStatus,
 } from './api';
 import {
   CreateOrderRequest,
@@ -96,6 +99,16 @@ export function usePortfolioSummary() {
   });
 }
 
+export function useDegiroStatusQuery() {
+  return useQuery<DegiroStatus>({
+    queryKey: queryKeys.degiroStatus(),
+    queryFn: fetchDegiroStatus,
+    staleTime: 60_000,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+}
+
 export function useUpdateStopMutation(onSuccess?: () => void) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -127,6 +140,19 @@ export function useClosePositionMutation(onSuccess?: () => void) {
     onSuccess: async () => {
       await invalidatePositionQueries(queryClient);
       onSuccess?.();
+    },
+  });
+}
+
+export function useSyncDegiroOrdersMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: syncDegiroOrders,
+    onSuccess: async () => {
+      await Promise.all([
+        invalidateOrderQueries(queryClient),
+        invalidatePositionQueries(queryClient),
+      ]);
     },
   });
 }

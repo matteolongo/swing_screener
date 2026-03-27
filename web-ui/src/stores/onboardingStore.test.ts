@@ -21,6 +21,7 @@ describe('useOnboardingStore', () => {
     
     expect(result.current.status).toBe('new');
     expect(result.current.currentStep).toBe(0);
+    expect(result.current.executionSetup).toBe('manual');
   });
 
   it('should set onboarding status', () => {
@@ -45,6 +46,16 @@ describe('useOnboardingStore', () => {
     });
     
     expect(result.current.currentStep).toBe(2);
+  });
+
+  it('should set execution setup', () => {
+    const { result } = renderHook(() => useOnboardingStore());
+
+    act(() => {
+      result.current.setExecutionSetup('degiro');
+    });
+
+    expect(result.current.executionSetup).toBe('degiro');
   });
 
   it('should dismiss onboarding', () => {
@@ -82,6 +93,7 @@ describe('useOnboardingStore', () => {
     
     expect(result.current.status).toBe('new');
     expect(result.current.currentStep).toBe(0);
+    expect(result.current.executionSetup).toBe('manual');
   });
 
   it('should persist onboarding state in localStorage', () => {
@@ -100,6 +112,23 @@ describe('useOnboardingStore', () => {
       const parsed = JSON.parse(stored);
       expect(parsed.state.status).toBe('dismissed');
       expect(parsed.state.currentStep).toBe(2);
+      expect(parsed.state.executionSetup).toBe('manual');
+    }
+  });
+
+  it('should persist execution setup in localStorage', () => {
+    const { result } = renderHook(() => useOnboardingStore());
+
+    act(() => {
+      result.current.setExecutionSetup('degiro');
+    });
+
+    const stored = localStorage.getItem('swing-screener-onboarding');
+    expect(stored).toBeTruthy();
+
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      expect(parsed.state.executionSetup).toBe('degiro');
     }
   });
 

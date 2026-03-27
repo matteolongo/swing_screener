@@ -9,11 +9,20 @@ const mockDailyReview = {
   new_candidates: [
     {
       ticker: 'VALE',
+      currency: 'USD',
       rank: 3,
       priority_rank: 1,
       confidence: 91.6,
       signal: 'breakout',
       close: 17.2,
+      score: 87.4,
+      atr: 0.56,
+      sma_20: 18.8,
+      sma_50: 19.81,
+      sma_200: 18.29,
+      momentum_6m: 0.174,
+      momentum_12m: 0.026,
+      rel_strength: 0.091,
       entry: 17.38,
       stop: 16.36,
       shares: 8,
@@ -141,7 +150,7 @@ describe('DailyReview Page', () => {
     })
   })
 
-  it('opens the combined order review modal from the create order action', async () => {
+  it('opens the shared analysis modal on the order tab from the create order action', async () => {
     const { user } = renderWithProviders(<DailyReview />)
 
     await waitFor(() => {
@@ -153,9 +162,60 @@ describe('DailyReview Page', () => {
     })
 
     await waitFor(() => {
-      expect(screen.getByText(/Create Order - VALE/i)).toBeInTheDocument()
-      expect(screen.getByRole('tab', { name: 'Decision' })).toHaveAttribute('aria-selected', 'true')
+      expect(screen.getByText(/VALE Details/i)).toBeInTheDocument()
+      expect(screen.getByRole('tab', { name: 'Order' })).toHaveAttribute('aria-selected', 'true')
       expect(screen.getByText('Place Order')).toBeInTheDocument()
+    })
+  })
+
+  it('opens the shared analysis modal on overview when clicking the ticker and renders technical metrics', async () => {
+    const { user } = renderWithProviders(<DailyReview />)
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'VALE' })).toBeInTheDocument()
+    })
+
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'VALE' }))
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText(/VALE Details/i)).toBeInTheDocument()
+      expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true')
+      expect(screen.getByText(/VALE Decision Summary/i)).toBeInTheDocument()
+      expect(screen.getByText('ATR')).toBeInTheDocument()
+      expect(screen.getByText('0.56')).toBeInTheDocument()
+      expect(screen.getByText('SMA 20')).toBeInTheDocument()
+      expect(screen.getByText('18.80')).toBeInTheDocument()
+    })
+  })
+
+  it('shows intelligence run feedback and loaded opportunity results in the shared modal', async () => {
+    const { user } = renderWithProviders(<DailyReview />)
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'VALE' })).toBeInTheDocument()
+    })
+
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'VALE' }))
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText(/VALE Details/i)).toBeInTheDocument()
+    })
+
+    await act(async () => {
+      await user.click(screen.getByRole('tab', { name: 'Intelligence' }))
+    })
+
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: /Run Intelligence/i }))
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText(/Intelligence run complete/i)).toBeInTheDocument()
+      expect(screen.getByText(/Catalyst \+ follow-through confirmed/i)).toBeInTheDocument()
     })
   })
 
@@ -228,7 +288,7 @@ describe('DailyReview Page', () => {
     })
   })
 
-  it('closes Create Order modal with Escape and with close button', async () => {
+  it('closes the shared analysis modal with Escape and with close button', async () => {
     const { user } = renderWithProviders(<DailyReview />)
 
     await waitFor(() => {
@@ -240,7 +300,7 @@ describe('DailyReview Page', () => {
     })
 
     await waitFor(() => {
-      expect(screen.getByText(/Create Order - VALE/i)).toBeInTheDocument()
+      expect(screen.getByText(/VALE Details/i)).toBeInTheDocument()
       expect(screen.getByRole('button', { name: /Close create order modal/i })).toBeInTheDocument()
     })
 
@@ -249,7 +309,7 @@ describe('DailyReview Page', () => {
     })
 
     await waitFor(() => {
-      expect(screen.queryByText(/Create Order - VALE/i)).not.toBeInTheDocument()
+      expect(screen.queryByText(/VALE Details/i)).not.toBeInTheDocument()
     })
 
     await act(async () => {
@@ -257,7 +317,7 @@ describe('DailyReview Page', () => {
     })
 
     await waitFor(() => {
-      expect(screen.getByText(/Create Order - VALE/i)).toBeInTheDocument()
+      expect(screen.getByText(/VALE Details/i)).toBeInTheDocument()
     })
 
     await act(async () => {
@@ -265,7 +325,7 @@ describe('DailyReview Page', () => {
     })
 
     await waitFor(() => {
-      expect(screen.queryByText(/Create Order - VALE/i)).not.toBeInTheDocument()
+      expect(screen.queryByText(/VALE Details/i)).not.toBeInTheDocument()
     })
   })
 

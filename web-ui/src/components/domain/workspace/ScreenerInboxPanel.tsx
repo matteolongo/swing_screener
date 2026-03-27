@@ -10,7 +10,7 @@ import { useUniverses, useRunScreenerMutation } from '@/features/screener/hooks'
 import { filterCandidates, prioritizeCandidates, type DecisionActionFilter } from '@/features/screener/prioritization';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
-import type { WorkspaceAnalysisTab } from '@/stores/workspaceStore';
+import type { WorkspaceAnalysisTab } from '@/components/domain/workspace/types';
 import { t } from '@/i18n/t';
 import { useLocalStorage } from '@/hooks';
 import { formatDate } from '@/utils/formatters';

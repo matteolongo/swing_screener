@@ -3,13 +3,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-SUPPORTED_FUNDAMENTAL_PROVIDERS = {"sec_edgar", "yfinance"}
+SUPPORTED_FUNDAMENTAL_PROVIDERS = {"sec_edgar", "yfinance", "degiro"}
 
 # Ordered provider chain for the Tier 1 free-first stack.
-# SEC EDGAR is tried first (US equities only); yfinance covers EU/global fallback.
+# SEC EDGAR is tried first (US equities only); degiro covers EU equities with
+# analyst estimates and ratios; yfinance is the global fallback.
 # Add new providers here when graduating to Tier 2 — this is the single source
 # of truth referenced by both the domain config and the API validation layer.
-TIER1_PROVIDERS: tuple[str, ...] = ("sec_edgar", "yfinance")
+TIER1_PROVIDERS: tuple[str, ...] = ("sec_edgar", "degiro", "yfinance")
 
 
 @dataclass(frozen=True)

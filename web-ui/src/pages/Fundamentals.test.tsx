@@ -9,6 +9,19 @@ vi.mock('@/features/fundamentals/hooks', () => ({
   useCompareFundamentalsMutation: vi.fn(),
   useFundamentalsWarmupStatus: vi.fn(),
   useStartFundamentalsWarmupMutation: vi.fn(),
+  useDegiroPortfolioAuditMutation: vi.fn(() => ({ mutate: vi.fn(), isPending: false, data: undefined, isError: false })),
+}));
+
+vi.mock('@/features/portfolio/hooks', () => ({
+  useDegiroStatusQuery: vi.fn(() => ({
+    data: {
+      available: false,
+      detail: 'DeGiro setup missing.',
+    },
+    isLoading: false,
+    isError: false,
+    isSuccess: true,
+  })),
 }));
 
 import * as fundamentalsHooks from '@/features/fundamentals/hooks';
@@ -118,5 +131,42 @@ describe('FundamentalsPage', () => {
         forceRefresh: false,
       });
     });
+  });
+
+  it('explains DeGiro implications when audit is unavailable', async () => {
+    vi.mocked(fundamentalsHooks.useFundamentalsConfigQuery).mockReturnValue({
+      data: {
+        enabled: true,
+        providers: ['yfinance'],
+        cacheTtlHours: 24,
+        staleAfterDays: 120,
+        compareLimit: 5,
+      },
+    } as never);
+
+    vi.mocked(fundamentalsHooks.useCompareFundamentalsMutation).mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+      isError: false,
+      data: undefined,
+      error: null,
+    } as never);
+
+    vi.mocked(fundamentalsHooks.useFundamentalsWarmupStatus).mockReturnValue({
+      data: undefined,
+      isError: false,
+    } as never);
+
+    vi.mocked(fundamentalsHooks.useStartFundamentalsWarmupMutation).mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+      isError: false,
+      error: null,
+    } as never);
+
+    renderWithProviders(<FundamentalsPage />, { route: '/fundamentals' });
+
+    expect(await screen.findByText('DeGiro audit is unavailable on this setup')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Run Audit' })).not.toBeInTheDocument();
   });
 });

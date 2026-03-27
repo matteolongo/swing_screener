@@ -16,6 +16,7 @@ export const queryKeys = {
   positionMetrics: (positionId?: string) =>
     positionId == null ? (['position-metrics'] as const) : (['position-metrics', positionId] as const),
   portfolioSummary: () => ['portfolio-summary'] as const,
+  degiroStatus: () => ['degiro-status'] as const,
   positionStopSuggestion: (positionId?: string) =>
     ['positions', positionId, 'stop-suggestion'] as const,
   intelligenceConfig: () => ['intelligence-config'] as const,

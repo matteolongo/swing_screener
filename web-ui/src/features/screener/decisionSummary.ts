@@ -141,22 +141,22 @@ function clamp(value: number, lower: number, upper: number): number {
   return Math.max(lower, Math.min(upper, value));
 }
 
-function formatMultiple(value?: number): string | undefined {
-  if (value === undefined) {
+function formatMultiple(value?: number | null): string | undefined {
+  if (value == null) {
     return undefined;
   }
   return `${value.toFixed(1)}x`;
 }
 
-function formatPrice(value?: number): string | undefined {
-  if (value === undefined) {
+function formatPrice(value?: number | null): string | undefined {
+  if (value == null) {
     return undefined;
   }
   return value.toFixed(2);
 }
 
-function formatAbsPercent(value?: number): string | undefined {
-  if (value === undefined) {
+function formatAbsPercent(value?: number | null): string | undefined {
+  if (value == null) {
     return undefined;
   }
   return `${Math.abs(value).toFixed(1)}%`;
@@ -389,19 +389,19 @@ function buildValuationContext(
   );
 
   const detailParts: string[] = [];
-  if (trailingPe !== undefined) {
+  if (trailingPe != null) {
     detailParts.push(`Trailing PE is ${formatMultiple(trailingPe)}`);
   }
-  if (priceToSales !== undefined) {
+  if (priceToSales != null) {
     detailParts.push(`price-to-sales is ${formatMultiple(priceToSales)}`);
   }
-  if (bookValuePerShare !== undefined) {
+  if (bookValuePerShare != null) {
     detailParts.push(`book value per share is ${formatPrice(bookValuePerShare)}`);
   }
-  if (priceToBook !== undefined) {
+  if (priceToBook != null) {
     detailParts.push(`price-to-book is ${formatMultiple(priceToBook)}`);
   }
-  if (bookToPrice !== undefined) {
+  if (bookToPrice != null) {
     detailParts.push(`book-to-price is ${formatAbsPercent(bookToPrice * 100)}`);
   }
 
@@ -411,9 +411,9 @@ function buildValuationContext(
     summary = `${summary} ${profileNote}`;
   }
   if (
-    fairValue.fairValueLow !== undefined &&
-    fairValue.fairValueBase !== undefined &&
-    fairValue.fairValueHigh !== undefined
+    fairValue.fairValueLow != null &&
+    fairValue.fairValueBase != null &&
+    fairValue.fairValueHigh != null
   ) {
     const comparison =
       (fairValue.premiumDiscountPct ?? 0) > 0

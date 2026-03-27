@@ -1,7 +1,8 @@
 /**
  * Format number with specified decimals (e.g., 2.34, 1.5)
  */
-export function formatNumber(value: number, decimals: number = 2): string {
+export function formatNumber(value: number | null | undefined, decimals: number = 2): string {
+  if (value == null) return '—';
   return value.toFixed(decimals);
 }
 
@@ -16,7 +17,8 @@ export function formatR(r: number): string {
 /**
  * Format number as percentage (e.g., 42.3%, -5.1%)
  */
-export function formatPercent(value: number, decimals: number = 1): string {
+export function formatPercent(value: number | null | undefined, decimals: number = 1): string {
+  if (value == null) return '—';
   const sign = value >= 0 ? '+' : '';
   return `${sign}${value.toFixed(decimals)}%`;
 }

@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, CheckCircle, Calendar, Search, ShoppingCart } from 'lucide-react';
 import Button from '@/components/common/Button';
+import OnboardingExecutionSetupCard from '@/components/domain/onboarding/OnboardingExecutionSetupCard';
 import { useOnboardingStore } from '@/stores/onboardingStore';
 import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 import { t } from '@/i18n/t';
@@ -136,9 +137,10 @@ const STEPS = [
         </ul>
         <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mt-4">
           <p className="text-sm text-blue-800">
-            💡 <strong>Best Practice:</strong> Execute orders manually through your broker, then update status in the app.
+            💡 <strong>Best Practice:</strong> The app works without DeGiro. DeGiro only adds optional sync and audit tools.
           </p>
         </div>
+        <OnboardingExecutionSetupCard />
         <div className="mt-6 p-4 bg-gray-50 rounded-lg">
           <p className="text-center text-gray-700 font-medium">
             🎉 You're ready to start systematic swing trading!

@@ -27,11 +27,13 @@ export const API_ENDPOINTS = {
   positionStopSuggestionCompute: '/api/portfolio/stop-suggestion/compute',
   positionClose: (id: string) => `/api/portfolio/positions/${id}/close`,
   portfolioSummary: '/api/portfolio/summary',
+  degiroStatus: '/api/portfolio/degiro/status',
   
   // Portfolio - Orders
   orders: '/api/portfolio/orders',
   order: (id: string) => `/api/portfolio/orders/${id}`,
   orderFill: (id: string) => `/api/portfolio/orders/${id}/fill`,
+  degiroOrderSyncApply: '/api/portfolio/sync/degiro/apply',
 
   // Watchlist
   watchlist: '/api/watchlist',
@@ -60,6 +62,8 @@ export const API_ENDPOINTS = {
   fundamentalsCompare: '/api/fundamentals/compare',
   fundamentalsWarmup: '/api/fundamentals/warmup',
   fundamentalsWarmupStatus: (jobId: string) => `/api/fundamentals/warmup/${jobId}`,
+  degiroPortfolioAudit: '/api/fundamentals/degiro/portfolio-audit',
+  degiroCapabilityAudit: '/api/fundamentals/degiro/capability-audit',
 
   // Chat
   chatAnswer: '/api/chat/answer',

@@ -33,6 +33,8 @@ function buildSnapshot(): FundamentalSnapshot {
     freshnessStatus: 'current',
     trailingPe: 24.6,
     priceToSales: 5.1,
+    revenueGrowthYoy: 0.042,
+    grossMargin: 0.265,
     pillars: {
       growth: { score: 0.9, status: 'strong', summary: 'Growth profile.' },
       profitability: { score: 0.9, status: 'strong', summary: 'Profitability profile.' },
@@ -41,7 +43,36 @@ function buildSnapshot(): FundamentalSnapshot {
       valuation: { score: 0.55, status: 'neutral', summary: 'Valuation profile.' },
     },
     historicalSeries: {},
-    metricContext: {},
+    metricContext: {
+      trailing_pe: {
+        source: 'yfinance.info.trailingPE',
+        cadence: 'snapshot',
+        derived: false,
+        derivedFrom: [],
+        periodEnd: '2026-03-19',
+      },
+      price_to_sales: {
+        source: 'yfinance.info.priceToSalesTrailing12Months',
+        cadence: 'snapshot',
+        derived: false,
+        derivedFrom: [],
+        periodEnd: '2026-03-19',
+      },
+      revenue_growth_yoy: {
+        source: 'yfinance.info.revenueGrowth',
+        cadence: 'snapshot',
+        derived: false,
+        derivedFrom: [],
+        periodEnd: '2025-12-31',
+      },
+      gross_margin: {
+        source: 'yfinance.info.grossMargins',
+        cadence: 'snapshot',
+        derived: false,
+        derivedFrom: [],
+        periodEnd: '2025-12-31',
+      },
+    },
     dataQualityStatus: 'high',
     dataQualityFlags: [],
     redFlags: [],
@@ -154,6 +185,32 @@ describe('AnalysisCanvasPanel', () => {
 
     expect(screen.getByText(/AAPL Decision Summary/)).toBeInTheDocument();
     expect(screen.getByText(/Buy Now/)).toBeInTheDocument();
+  });
+
+  it('labels the fundamentals summary strip by metric horizon', () => {
+    vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: buildSnapshot(),
+    } as never);
+    vi.mocked(fundamentalsHooks.useRefreshFundamentalSnapshotMutation).mockReturnValue({
+      mutate: vi.fn(),
+      data: undefined,
+      isPending: false,
+      isError: false,
+      error: null,
+    } as never);
+
+    renderWithProviders(<AnalysisCanvasPanel />);
+
+    expect(
+      screen.getByText(/Metric labels show whether a number is price-derived/i)
+    ).toBeInTheDocument();
+    expect(screen.getAllByText('price-derived').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('snapshot').length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(/price-derived · snapshot · yfinance · 2026-03-19/i).length
+    ).toBeGreaterThan(0);
   });
 
   it('live reloads the selected candidate when refreshed fundamentals arrive', async () => {

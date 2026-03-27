@@ -1,6 +1,6 @@
 import { create } from 'zustand';
+import type { WorkspaceAnalysisTab } from '@/components/domain/workspace/types';
 
-export type WorkspaceAnalysisTab = 'overview' | 'fundamentals' | 'intelligence' | 'order';
 export type SelectedTickerSource = 'screener' | 'portfolio' | null;
 
 interface WorkspaceStore {
