@@ -12,11 +12,20 @@ import {
 // API response types (snake_case from backend)
 export interface DailyReviewCandidateAPI {
   ticker: string;
+  currency?: 'USD' | 'EUR';
   rank?: number | null;
   priority_rank?: number | null;
   confidence?: number | null;
   signal: string;
   close: number;
+  score?: number | null;
+  atr?: number | null;
+  sma_20?: number | null;
+  sma_50?: number | null;
+  sma_200?: number | null;
+  momentum_6m?: number | null;
+  momentum_12m?: number | null;
+  rel_strength?: number | null;
   entry: number;
   stop: number;
   shares: number;
@@ -95,11 +104,20 @@ export interface DailyReviewAPI {
 // Frontend types (camelCase)
 export interface DailyReviewCandidate {
   ticker: string;
+  currency?: 'USD' | 'EUR';
   rank?: number;
   priorityRank?: number;
   confidence?: number;
   signal: string;
   close: number;
+  score?: number;
+  atr?: number;
+  sma20?: number;
+  sma50?: number;
+  sma200?: number;
+  momentum6m?: number;
+  momentum12m?: number;
+  relStrength?: number;
   entry: number;
   stop: number;
   shares: number;
@@ -168,11 +186,20 @@ export interface DailyReview {
 export function transformCandidate(api: DailyReviewCandidateAPI): DailyReviewCandidate {
   return {
     ticker: api.ticker,
+    currency: api.currency === 'EUR' ? 'EUR' : 'USD',
     rank: api.rank ?? undefined,
     priorityRank: api.priority_rank ?? undefined,
     confidence: api.confidence ?? undefined,
     signal: api.signal,
     close: api.close,
+    score: api.score ?? undefined,
+    atr: api.atr ?? undefined,
+    sma20: api.sma_20 ?? undefined,
+    sma50: api.sma_50 ?? undefined,
+    sma200: api.sma_200 ?? undefined,
+    momentum6m: api.momentum_6m ?? undefined,
+    momentum12m: api.momentum_12m ?? undefined,
+    relStrength: api.rel_strength ?? undefined,
     entry: api.entry,
     stop: api.stop,
     shares: api.shares,

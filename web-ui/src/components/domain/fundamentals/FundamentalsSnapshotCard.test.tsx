@@ -93,7 +93,9 @@ describe('FundamentalsSnapshotCard', () => {
     expect(screen.getByText(/58[,.]8%/)).toBeInTheDocument();
     expect(screen.getByText(/6[,.]?5\s*B|6[,.]?500\s*M/i)).toBeInTheDocument();
     expect(screen.getByText(/650\s*M/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/annual · yfinance/i).length).toBeGreaterThan(0);
+    expect(screen.getByText('latest FY')).toBeInTheDocument();
+    expect(screen.getByText('snapshot')).toBeInTheDocument();
+    expect(screen.getByText(/latest FY · yfinance · derived · 2024-12-31/i)).toBeInTheDocument();
     expect(screen.getByText(/snapshot · yfinance · 2025-12-31/i)).toBeInTheDocument();
     expect(screen.getByText('Data quality')).toBeInTheDocument();
     expect(

@@ -241,9 +241,18 @@ def test_generate_daily_review_candidates_fields(mock_screener_service, mock_por
     
     candidate = review.new_candidates[0]
     assert candidate.ticker == "AAPL"
+    assert candidate.currency == "USD"
     assert candidate.confidence == 0.9
     assert candidate.signal == "MOMENTUM"
     assert candidate.close == 150.0
+    assert candidate.score == 85.0
+    assert candidate.atr == 2.5
+    assert candidate.sma_20 == 148.0
+    assert candidate.sma_50 == 145.0
+    assert candidate.sma_200 == 140.0
+    assert candidate.momentum_6m == 0.15
+    assert candidate.momentum_12m == 0.25
+    assert candidate.rel_strength == 1.2
     assert candidate.entry == 150.0
     assert candidate.stop == 145.0
     assert candidate.shares == 10

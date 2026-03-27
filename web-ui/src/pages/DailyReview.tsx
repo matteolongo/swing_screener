@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocalStorage } from '@/hooks';
-import { RefreshCw } from 'lucide-react';
+import { ExternalLink, RefreshCw } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useDailyReview } from '@/features/dailyReview/api';
@@ -15,7 +15,9 @@ import type { RiskConfig } from '@/types/config';
 import GlossaryLegend from '@/components/domain/education/GlossaryLegend';
 import MetricHelpLabel from '@/components/domain/education/MetricHelpLabel';
 import { DAILY_REVIEW_GLOSSARY_KEYS } from '@/content/educationGlossary';
-import CandidateOrderModal from '@/components/domain/orders/CandidateOrderModal';
+import OrderActionPanel from '@/components/domain/orders/OrderActionPanel';
+import SymbolAnalysisModal from '@/components/domain/workspace/SymbolAnalysisModal';
+import type { WorkspaceAnalysisTab } from '@/components/domain/workspace/types';
 import { queryKeys } from '@/lib/queryKeys';
 import { t } from '@/i18n/t';
 import { filterDailyReviewCandidates } from '@/features/dailyReview/prioritization';
@@ -30,6 +32,8 @@ import type {
   DailyReviewPositionUpdate,
   DailyReviewPositionClose,
 } from '@/features/dailyReview/types';
+import { createOrder } from '@/features/portfolio/api';
+import { useSymbolIntelligenceRunner } from '@/features/intelligence/useSymbolIntelligenceRunner';
 import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 import { useStrategyReadiness } from '@/features/strategy/useStrategyReadiness';
 import StrategyReadinessBlocker from '@/components/domain/onboarding/StrategyReadinessBlocker';
@@ -102,6 +106,7 @@ export default function DailyReview() {
     }
   );
   const [selectedCandidate, setSelectedCandidate] = useState<DailyReviewCandidate | null>(null);
+  const [selectedAnalysisTab, setSelectedAnalysisTab] = useState<WorkspaceAnalysisTab>('overview');
   const [candidateRecommendedOnly, setCandidateRecommendedOnly] = useState(true);
   const [candidateActionFilter, setCandidateActionFilter] = useState<DecisionActionFilter>('all');
   const [dismissedReadinessBlocker, setDismissedReadinessBlocker] = useState(() => {
@@ -117,6 +122,7 @@ export default function DailyReview() {
   const configDefaultsQuery = useConfigDefaultsQuery();
   const { isBeginnerMode } = useBeginnerModeStore();
   const { isReady: strategyReady } = useStrategyReadiness();
+  const { runForTicker, getStatusForTicker } = useSymbolIntelligenceRunner();
 
   // Persist dismissal to localStorage
   useEffect(() => {
@@ -136,6 +142,14 @@ export default function DailyReview() {
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
   };
+
+  const openCandidateAnalysis = useCallback(
+    (candidate: DailyReviewCandidate, tab: WorkspaceAnalysisTab) => {
+      setSelectedCandidate(candidate);
+      setSelectedAnalysisTab(tab);
+    },
+    [],
+  );
 
   if (isLoading) {
     return (
@@ -304,7 +318,7 @@ export default function DailyReview() {
               size="sm"
               className="w-full sm:w-auto"
               onClick={() => {
-                setSelectedCandidate(quickActionCandidate);
+                openCandidateAnalysis(quickActionCandidate, 'order');
               }}
             >
               {quickActionIsAddOn
@@ -425,7 +439,8 @@ export default function DailyReview() {
             ) : null}
             <CandidatesTable
               candidates={visibleCandidates}
-              onOpenOrderReview={setSelectedCandidate}
+              onOpenCandidate={(candidate) => openCandidateAnalysis(candidate, 'overview')}
+              onOpenOrderReview={(candidate) => openCandidateAnalysis(candidate, 'order')}
             />
           </div>
         )}
@@ -465,7 +480,8 @@ export default function DailyReview() {
             ) : null}
             <CandidatesTable
               candidates={visibleAddOnCandidates}
-              onOpenOrderReview={setSelectedCandidate}
+              onOpenCandidate={(candidate) => openCandidateAnalysis(candidate, 'overview')}
+              onOpenOrderReview={(candidate) => openCandidateAnalysis(candidate, 'order')}
             />
           </div>
         )}
@@ -536,49 +552,71 @@ export default function DailyReview() {
       </CollapsibleSection>
 
       {selectedCandidate ? (
-        <CandidateOrderModal
-          candidate={{
-            ticker: selectedCandidate.ticker,
-            signal: selectedCandidate.signal,
-            close: selectedCandidate.close,
-            entry: selectedCandidate.entry,
-            stop: selectedCandidate.stop,
-            shares: selectedCandidate.shares,
-            recommendation: selectedCandidate.recommendation,
-            sector: selectedCandidate.sector,
-            rReward: selectedCandidate.rReward,
-            suggestedOrderType: selectedCandidate.suggestedOrderType,
-            suggestedOrderPrice: selectedCandidate.suggestedOrderPrice,
-            executionNote: selectedCandidate.executionNote,
-            positionId: selectedCandidate.sameSymbol?.positionId,
-            sameSymbol: selectedCandidate.sameSymbol,
-          }}
-          risk={riskConfig}
-          defaultNotes={
-            selectedCandidate.sameSymbol?.mode === 'ADD_ON'
-              ? t('dailyReview.defaultAddOnNotes', {
-                  liveStop:
-                    selectedCandidate.sameSymbol.currentPositionStop != null
-                      ? formatCurrency(selectedCandidate.sameSymbol.currentPositionStop)
-                      : t('common.placeholders.emDash'),
-                  freshStop:
-                    selectedCandidate.sameSymbol.freshSetupStop != null
-                      ? formatCurrency(selectedCandidate.sameSymbol.freshSetupStop)
-                      : t('common.placeholders.emDash'),
-                  rr: formatNumber(selectedCandidate.rReward, 1),
-                })
-              : t('dailyReview.defaultNotes', {
-                  entry: formatCurrency(selectedCandidate.entry),
-                  rr: formatNumber(selectedCandidate.rReward, 1),
-                })
-          }
+        <SymbolAnalysisModal
+          ticker={selectedCandidate.ticker}
+          candidate={selectedCandidate}
+          activeTab={selectedAnalysisTab}
+          onTabChange={setSelectedAnalysisTab}
           onClose={() => {
             setSelectedCandidate(null);
+            setSelectedAnalysisTab('overview');
           }}
-          onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: queryKeys.orders() });
-            setSelectedCandidate(null);
-          }}
+          onRunSymbolIntelligence={runForTicker}
+          symbolIntelligenceStatus={getStatusForTicker(selectedCandidate.ticker)}
+          orderPanel={
+            <OrderActionPanel
+              context={{
+                ticker: selectedCandidate.ticker,
+                signal: selectedCandidate.signal,
+                close: selectedCandidate.close,
+                entry: selectedCandidate.entry,
+                stop:
+                  selectedCandidate.sameSymbol?.mode === 'ADD_ON' &&
+                  selectedCandidate.sameSymbol.executionStop != null
+                    ? selectedCandidate.sameSymbol.executionStop
+                    : selectedCandidate.stop,
+                shares: selectedCandidate.shares,
+                recommendation: selectedCandidate.recommendation,
+                sector: selectedCandidate.sector ?? undefined,
+                rReward: selectedCandidate.rReward,
+                score: selectedCandidate.score,
+                rank: selectedCandidate.rank,
+                atr: selectedCandidate.atr,
+                currency: selectedCandidate.currency,
+                suggestedOrderType: selectedCandidate.suggestedOrderType,
+                suggestedOrderPrice: selectedCandidate.suggestedOrderPrice,
+                executionNote: selectedCandidate.executionNote,
+                positionId: selectedCandidate.sameSymbol?.positionId,
+                sameSymbol: selectedCandidate.sameSymbol,
+              }}
+              risk={riskConfig}
+              defaultNotes={
+                selectedCandidate.sameSymbol?.mode === 'ADD_ON'
+                  ? t('dailyReview.defaultAddOnNotes', {
+                      liveStop:
+                        selectedCandidate.sameSymbol.currentPositionStop != null
+                          ? formatCurrency(selectedCandidate.sameSymbol.currentPositionStop, selectedCandidate.currency)
+                          : t('common.placeholders.emDash'),
+                      freshStop:
+                        selectedCandidate.sameSymbol.freshSetupStop != null
+                          ? formatCurrency(selectedCandidate.sameSymbol.freshSetupStop, selectedCandidate.currency)
+                          : t('common.placeholders.emDash'),
+                      rr: formatNumber(selectedCandidate.rReward, 1),
+                    })
+                  : t('dailyReview.defaultNotes', {
+                      entry: formatCurrency(selectedCandidate.entry, selectedCandidate.currency),
+                      rr: formatNumber(selectedCandidate.rReward, 1),
+                    })
+              }
+              onSubmitOrder={createOrder}
+              onSuccess={() => {
+                queryClient.invalidateQueries({ queryKey: queryKeys.orders() });
+                queryClient.invalidateQueries({ queryKey: queryKeys.dailyReview(200, selectedUniverse) });
+                setSelectedCandidate(null);
+                setSelectedAnalysisTab('overview');
+              }}
+            />
+          }
         />
       ) : null}
     </div>
@@ -669,9 +707,11 @@ function CollapsibleSection({
 
 function CandidatesTable({
   candidates,
+  onOpenCandidate,
   onOpenOrderReview,
 }: {
   candidates: DailyReviewCandidate[];
+  onOpenCandidate: (candidate: DailyReviewCandidate) => void;
   onOpenOrderReview: (candidate: DailyReviewCandidate) => void;
 }) {
   const actionLabel = (candidate: DailyReviewCandidate) =>
@@ -727,15 +767,26 @@ function CandidatesTable({
             </div>
           </td>
           <td className="p-2 font-mono font-bold">
-            <a
-              href={`https://finance.yahoo.com/quote/${candidate.ticker}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:text-blue-800 hover:underline"
-              title={t('dailyReview.table.candidates.yahooFinanceTooltip', { ticker: candidate.ticker })}
-            >
-              {candidate.ticker}
-            </a>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => onOpenCandidate(candidate)}
+                className="text-blue-600 hover:text-blue-800 hover:underline"
+                title={t('workspacePage.symbolDetails.openTitle', { ticker: candidate.ticker })}
+              >
+                {candidate.ticker}
+              </button>
+              <a
+                href={`https://finance.yahoo.com/quote/${candidate.ticker}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                title={t('dailyReview.table.candidates.yahooFinanceTooltip', { ticker: candidate.ticker })}
+                aria-label={t('dailyReview.table.candidates.yahooFinanceTooltip', { ticker: candidate.ticker })}
+              >
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
           </td>
           <td className="p-2">
             <div className="flex flex-wrap gap-1.5">

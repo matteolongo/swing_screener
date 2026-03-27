@@ -7,11 +7,20 @@ describe('transformDailyReview', () => {
       new_candidates: [
         {
           ticker: 'AAPL',
+          currency: 'USD',
           rank: 2,
           priority_rank: 1,
           confidence: 80,
           signal: 'breakout',
           close: 100,
+          score: 83.2,
+          atr: 2.4,
+          sma_20: 98,
+          sma_50: 96,
+          sma_200: 90,
+          momentum_6m: 0.15,
+          momentum_12m: 0.24,
+          rel_strength: 0.08,
           entry: 101,
           stop: 97,
           shares: 10,
@@ -64,6 +73,10 @@ describe('transformDailyReview', () => {
 
     const result = transformDailyReview(apiPayload);
     expect(result.newCandidates[0].close).toBe(100);
+    expect(result.newCandidates[0].currency).toBe('USD');
+    expect(result.newCandidates[0].score).toBe(83.2);
+    expect(result.newCandidates[0].atr).toBe(2.4);
+    expect(result.newCandidates[0].sma20).toBe(98);
     expect(result.newCandidates[0].rank).toBe(2);
     expect(result.newCandidates[0].priorityRank).toBe(1);
     expect(result.newCandidates[0].suggestedOrderType).toBe('BUY_STOP');

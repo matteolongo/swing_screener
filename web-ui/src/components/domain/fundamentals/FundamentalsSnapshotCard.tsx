@@ -1,5 +1,12 @@
 import Card, { CardContent, CardHeader, CardTitle } from '@/components/common/Card';
-import type { FundamentalMetricContext, FundamentalSnapshot } from '@/features/fundamentals/types';
+import type { FundamentalSnapshot } from '@/features/fundamentals/types';
+import {
+  formatFundamentalCadence,
+  formatFundamentalMetricMeta,
+  humanizeFundamentalSource,
+  metricHorizonClass,
+  metricHorizonLabel,
+} from '@/features/fundamentals/presentation';
 
 function formatPercent(value?: number) {
   if (value == null) return 'n/a';
@@ -55,31 +62,6 @@ function trendClass(direction: 'improving' | 'deteriorating' | 'stable' | 'unkno
 
 function humanizeDirection(direction: 'improving' | 'deteriorating' | 'stable' | 'unknown' | 'not_comparable') {
   return direction === 'not_comparable' ? 'not comparable' : direction;
-}
-
-function formatCadence(value?: string) {
-  if (!value) return null;
-  if (value === 'snapshot') return 'snapshot';
-  if (value === 'quarterly') return 'quarterly';
-  if (value === 'annual') return 'annual';
-  return value;
-}
-
-function humanizeSource(source?: string): string | null {
-  if (!source) return null;
-  return source.split('.')[0] ?? null;
-}
-
-function formatMetricMeta(context?: FundamentalMetricContext) {
-  if (!context) return null;
-  const parts: string[] = [];
-  const cadence = formatCadence(context.cadence);
-  if (cadence) parts.push(cadence);
-  const provider = humanizeSource(context.source);
-  if (provider) parts.push(provider);
-  if (context.derived) parts.push('derived');
-  if (context.periodEnd) parts.push(context.periodEnd);
-  return parts.join(' · ') || null;
 }
 
 function isSupportedTrendNarrative(
@@ -237,10 +219,17 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
         <div className="grid grid-cols-2 gap-2 text-sm md:grid-cols-3">
           {metricCards.map((metric) => {
             const context = snapshot.metricContext[metric.key];
-            const meta = formatMetricMeta(context);
+            const meta = formatFundamentalMetricMeta(metric.key, context);
             return (
               <div key={metric.key} className="rounded-md bg-gray-50 p-2">
-                <div className="text-xs text-gray-500">{metric.label}</div>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="text-xs text-gray-500">{metric.label}</div>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${metricHorizonClass(metric.key, context)}`}
+                  >
+                    {metricHorizonLabel(metric.key, context)}
+                  </span>
+                </div>
                 <div className="mt-1 font-medium">{metric.value}</div>
                 {meta ? <div className="mt-1 text-[11px] text-gray-500">{meta}</div> : null}
               </div>
@@ -261,7 +250,12 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
                     </span>
                   </div>
                   <div className="mt-1 text-[11px] text-gray-500">
-                    {[formatCadence(series.frequency), humanizeSource(series.source)].filter(Boolean).join(' · ') || 'metadata unavailable'}
+                    {[
+                      formatFundamentalCadence(series.frequency),
+                      humanizeFundamentalSource(series.source),
+                    ]
+                      .filter(Boolean)
+                      .join(' · ') || 'metadata unavailable'}
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
                     {series.points.map((point) => (

@@ -19,6 +19,8 @@ export interface SymbolIntelligenceStatus {
   stage: SymbolIntelligenceStage;
   jobId?: string;
   asofDate?: string;
+  totalSymbols?: number;
+  completedSymbols?: number;
   opportunitiesCount?: number;
   llmWarningsCount?: number;
   llmWarningSample?: string;
@@ -117,6 +119,8 @@ export function useSymbolIntelligenceRunner() {
             ticker: symbol,
             stage: launch.status === 'queued' ? 'queued' : 'running',
             jobId: launch.jobId,
+            totalSymbols: launch.totalSymbols,
+            completedSymbols: 0,
             updatedAt: nowIso(),
           },
         }));
@@ -129,6 +133,8 @@ export function useSymbolIntelligenceRunner() {
               stage: status.status === 'queued' ? 'queued' : 'running',
               jobId: status.jobId,
               asofDate: status.asofDate,
+              totalSymbols: status.totalSymbols,
+              completedSymbols: status.completedSymbols,
               opportunitiesCount: status.opportunitiesCount,
               llmWarningsCount: status.llmWarningsCount,
               llmWarningSample: status.llmWarningSample,
@@ -194,6 +200,8 @@ export function useSymbolIntelligenceRunner() {
             stage: 'completed',
             jobId: finalStatus.jobId,
             asofDate: education.asofDate,
+            totalSymbols: finalStatus.totalSymbols,
+            completedSymbols: finalStatus.completedSymbols,
             opportunitiesCount: finalStatus.opportunitiesCount,
             llmWarningsCount: finalStatus.llmWarningsCount,
             llmWarningSample: finalStatus.llmWarningSample,

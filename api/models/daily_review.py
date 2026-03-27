@@ -12,11 +12,20 @@ from swing_screener.recommendation.models import DecisionSummary
 class DailyReviewCandidate(BaseModel):
     """A new trade candidate from the screener."""
     ticker: str
+    currency: str = "USD"
     rank: int | None = None
     priority_rank: int | None = None
     confidence: float | None = None
     signal: str
     close: float
+    score: float | None = None
+    atr: float | None = None
+    sma_20: float | None = None
+    sma_50: float | None = None
+    sma_200: float | None = None
+    momentum_6m: float | None = None
+    momentum_12m: float | None = None
+    rel_strength: float | None = None
     entry: float
     stop: float
     shares: int

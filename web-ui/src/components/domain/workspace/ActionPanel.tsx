@@ -1,4 +1,6 @@
-import OrderReviewExperience from '@/components/domain/orders/OrderReviewExperience';
+import OrderActionPanel from '@/components/domain/orders/OrderActionPanel';
+import type { OrderReviewContext } from '@/components/domain/orders/OrderReviewExperience';
+import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
 import { useConfigDefaultsQuery } from '@/features/config/hooks';
 import { useCreateOrderMutation, useOpenPositions } from '@/features/portfolio/hooks';
 import type { SameSymbolCandidateContext } from '@/features/screener/types';
@@ -9,6 +11,68 @@ import { formatConfidencePercent, formatCurrency, formatScreenerScore } from '@/
 
 interface ActionPanelProps {
   ticker: string;
+}
+
+function resolveSameSymbolContext(
+  candidate: SymbolAnalysisCandidate | null,
+  openPosition:
+    | {
+        positionId?: string;
+        entryPrice: number;
+        stopPrice: number;
+      }
+    | undefined,
+): SameSymbolCandidateContext | undefined {
+  if (candidate?.sameSymbol?.mode === 'ADD_ON') {
+    return candidate.sameSymbol;
+  }
+
+  if (openPosition?.positionId) {
+    return {
+      mode: 'ADD_ON',
+      positionId: openPosition.positionId,
+      currentPositionEntry: openPosition.entryPrice,
+      currentPositionStop: openPosition.stopPrice,
+      freshSetupStop: candidate?.sameSymbol?.freshSetupStop ?? candidate?.stop,
+      executionStop: openPosition.stopPrice,
+      pendingEntryExists: candidate?.sameSymbol?.pendingEntryExists ?? false,
+      addOnCount: candidate?.sameSymbol?.addOnCount ?? 0,
+      maxAddOns: candidate?.sameSymbol?.maxAddOns,
+      reason: 'Workspace inferred add-on mode from the current open position.',
+    };
+  }
+
+  return candidate?.sameSymbol;
+}
+
+function buildDefaultNotes(
+  candidate: SymbolAnalysisCandidate | null,
+  sameSymbol: SameSymbolCandidateContext | undefined,
+  normalizedTicker: string,
+): string {
+  if (!candidate) {
+    return t('workspacePage.panels.analysis.manualOrderNotes', { ticker: normalizedTicker });
+  }
+
+  if (sameSymbol?.mode === 'ADD_ON') {
+    return t('screener.addOnNotes', {
+      score: formatScreenerScore(candidate.score ?? 0),
+      confidence: formatConfidencePercent(candidate.confidence ?? 0),
+      rank: candidate.rank ?? '—',
+      liveStop: sameSymbol.currentPositionStop != null
+        ? formatCurrency(sameSymbol.currentPositionStop, candidate.currency)
+        : '—',
+      freshStop: sameSymbol.freshSetupStop != null
+        ? formatCurrency(sameSymbol.freshSetupStop, candidate.currency)
+        : '—',
+    });
+  }
+
+  return t('screener.defaultNotes', {
+    score: formatScreenerScore(candidate.score ?? 0),
+    confidence: formatConfidencePercent(candidate.confidence ?? 0),
+    rank: candidate.rank ?? '—',
+  });
 }
 
 export default function ActionPanel({ ticker }: ActionPanelProps) {
@@ -22,95 +86,49 @@ export default function ActionPanel({ ticker }: ActionPanelProps) {
     state.lastResult?.candidates.find((item) => item.ticker.toUpperCase() === normalizedTicker)
   );
   const createOrderMutation = useCreateOrderMutation();
-  const effectiveSameSymbol: SameSymbolCandidateContext | undefined = candidate?.sameSymbol?.mode === 'ADD_ON'
-    ? candidate.sameSymbol
-    : openPosition
-      ? {
-          mode: 'ADD_ON',
-          positionId: openPosition.positionId,
-          currentPositionEntry: openPosition.entryPrice,
-          currentPositionStop: openPosition.stopPrice,
-          freshSetupStop: candidate?.sameSymbol?.freshSetupStop ?? candidate?.stop,
-          executionStop: openPosition.stopPrice,
-          pendingEntryExists: candidate?.sameSymbol?.pendingEntryExists ?? false,
-          addOnCount: candidate?.sameSymbol?.addOnCount ?? 0,
-          maxAddOns: candidate?.sameSymbol?.maxAddOns,
-          reason: 'Workspace inferred add-on mode from the current open position.',
-        }
-      : candidate?.sameSymbol;
 
-  const defaultNotes = candidate
-    ? effectiveSameSymbol?.mode === 'ADD_ON'
-      ? t('screener.addOnNotes', {
-          score: formatScreenerScore(candidate.score ?? 0),
-          confidence: formatConfidencePercent(candidate.confidence ?? 0),
-          rank: candidate.rank,
-          liveStop: effectiveSameSymbol.currentPositionStop != null
-            ? formatCurrency(effectiveSameSymbol.currentPositionStop, candidate.currency)
-            : '—',
-          freshStop: effectiveSameSymbol.freshSetupStop != null
-            ? formatCurrency(effectiveSameSymbol.freshSetupStop, candidate.currency)
-            : '—',
-        })
-      : t('screener.defaultNotes', {
-          score: formatScreenerScore(candidate.score ?? 0),
-          confidence: formatConfidencePercent(candidate.confidence ?? 0),
-          rank: candidate.rank,
-        })
-    : t('workspacePage.panels.analysis.manualOrderNotes', { ticker: normalizedTicker });
+  const sameSymbol = resolveSameSymbolContext(candidate ?? null, openPosition);
+  const defaultNotes = buildDefaultNotes(candidate ?? null, sameSymbol, normalizedTicker);
 
   if (!risk) {
     const configFailed = configDefaultsQuery.isError && !activeStrategyQuery.data?.risk;
     return (
       <div className="rounded-lg border border-gray-200 p-3 text-sm dark:border-gray-700">
         <p className={configFailed ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'}>
-          {configFailed
-            ? t('common.errors.generic')
-            : t('common.table.loading')}
+          {configFailed ? t('common.errors.generic') : t('common.table.loading')}
         </p>
       </div>
     );
   }
 
-  return (
-    <div className="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
-      <div className="mb-4">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-          {t('workspacePage.panels.analysis.actionTitle')}
-        </h3>
-        <p className="text-xs text-gray-600 dark:text-gray-400">
-          {t('workspacePage.panels.analysis.actionDescription')}
-        </p>
-      </div>
+  const context: OrderReviewContext = {
+    ticker: normalizedTicker,
+    signal: candidate?.signal,
+    close: candidate?.close,
+    entry: candidate?.entry,
+    stop: sameSymbol?.mode === 'ADD_ON' && sameSymbol.executionStop != null ? sameSymbol.executionStop : candidate?.stop,
+    shares: candidate?.shares,
+    recommendation: candidate?.recommendation,
+    sector: candidate?.sector ?? undefined,
+    rReward: candidate?.rr,
+    score: candidate?.score,
+    rank: candidate?.rank,
+    atr: candidate?.atr,
+    currency: candidate?.currency,
+    suggestedOrderType: candidate?.suggestedOrderType,
+    suggestedOrderPrice: candidate?.suggestedOrderPrice,
+    executionNote: candidate?.executionNote,
+    positionId: sameSymbol?.positionId,
+    sameSymbol,
+  };
 
-      <OrderReviewExperience
-        context={{
-          ticker: normalizedTicker,
-          signal: candidate?.signal,
-          close: candidate?.close,
-          entry: candidate?.entry,
-          stop: effectiveSameSymbol?.mode === 'ADD_ON' && effectiveSameSymbol.executionStop != null
-            ? effectiveSameSymbol.executionStop
-            : candidate?.stop,
-          shares: candidate?.shares,
-          recommendation: candidate?.recommendation,
-          sector: candidate?.sector,
-          rReward: candidate?.rr,
-          score: candidate?.score,
-          rank: candidate?.rank,
-          atr: candidate?.atr,
-          currency: candidate?.currency,
-          suggestedOrderType: candidate?.suggestedOrderType,
-          suggestedOrderPrice: candidate?.suggestedOrderPrice,
-          executionNote: candidate?.executionNote,
-          positionId: effectiveSameSymbol?.positionId,
-          sameSymbol: effectiveSameSymbol,
-        }}
-        risk={risk}
-        defaultNotes={defaultNotes}
-        showManualOrderHint={!candidate}
-        onSubmitOrder={(request) => createOrderMutation.mutateAsync(request)}
-      />
-    </div>
+  return (
+    <OrderActionPanel
+      context={context}
+      risk={risk}
+      defaultNotes={defaultNotes}
+      showManualOrderHint={!candidate}
+      onSubmitOrder={(request) => createOrderMutation.mutateAsync(request)}
+    />
   );
 }
