@@ -97,7 +97,6 @@ All values below are `dataclass` defaults. They can be overridden via `RiskConfi
 |------|--------|-------|---------|
 | `utils/file_lock.py` | `DEFAULT_TIMEOUT` | `5.0` | File lock timeout in seconds |
 | `reporting/report.py` | `export_path` | `"out/daily_report.csv"` | Default CSV export path |
-| `data/providers/alpaca_provider.py` | `RATE_LIMIT_REQUESTS` | `200` | Alpaca API rate limit (200 req/60s) |
 
 ---
 
