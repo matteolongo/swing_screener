@@ -421,6 +421,10 @@ export const messagesEn = {
       fundamentals: 'Fundamentals',
       journal: 'Journal',
       analytics: 'Analytics',
+      today: 'Today',
+      book: 'Book',
+      research: 'Research',
+      settings: 'Settings',
     },
     activeStrategy: 'Active Strategy',
     loadingStrategies: 'Loading strategies...',
@@ -2062,6 +2066,39 @@ export const messagesEn = {
     stopsToUpdate: '{{n}} stops to update',
     positionsToClose: '{{n}} positions to close',
     onHold: '{{n}} on hold',
+  },
+  bookPage: {
+    title: 'Trading Book',
+    subtitle: 'Positions, trade history and performance.',
+    tabs: {
+      positions: 'Positions',
+      journal: 'Journal',
+      performance: 'Performance',
+    },
+  },
+  researchPage: {
+    title: 'Research',
+    subtitle: 'Intelligence and fundamental analysis.',
+    tabs: {
+      intelligence: 'Intelligence',
+      fundamentals: 'Fundamentals',
+    },
+  },
+  todayPage: {
+    tabs: {
+      today: 'Today',
+      screener: 'Screener',
+    },
+    actionList: {
+      requiresAction: 'Requires Action',
+      opportunities: 'New Opportunities',
+      holding: 'Holding',
+      close: 'Close',
+      updateStop: 'Update Stop',
+      addOn: 'Add-on',
+      empty: 'No items for today.',
+      loading: "Loading today's review...",
+    },
   },
 } as const;
 
