@@ -19,6 +19,15 @@ export interface Position {
   currentPrice?: number;  // Live price for open positions
   notes?: string;
   exitOrderIds?: string[];
+  broker?: string | null;
+  brokerProductId?: string | null;
+  brokerSymbol?: string | null;
+  brokerCurrency?: string | null;
+  brokerAvgCost?: number | null;
+  brokerMarketValue?: number | null;
+  brokerUnrealizedPnl?: number | null;
+  isin?: string | null;
+  brokerSyncedAt?: string | null;
   thesis?: string | null;
   lesson?: string | null;
 }
@@ -81,6 +90,15 @@ export interface PositionApiResponse {
   current_price: number | null;  // Live price for open positions
   notes: string;
   exit_order_ids: string[] | null;
+  broker?: string | null;
+  broker_product_id?: string | null;
+  broker_symbol?: string | null;
+  broker_currency?: string | null;
+  broker_avg_cost?: number | null;
+  broker_market_value?: number | null;
+  broker_unrealized_pnl?: number | null;
+  isin?: string | null;
+  broker_synced_at?: string | null;
   thesis?: string | null;
   lesson?: string | null;
 }
@@ -103,6 +121,15 @@ export function transformPosition(apiPosition: PositionApiResponse): Position {
     currentPrice: apiPosition.current_price ?? undefined,
     notes: apiPosition.notes || '',
     exitOrderIds: apiPosition.exit_order_ids ?? undefined,
+    broker: apiPosition.broker ?? null,
+    brokerProductId: apiPosition.broker_product_id ?? null,
+    brokerSymbol: apiPosition.broker_symbol ?? null,
+    brokerCurrency: apiPosition.broker_currency ?? null,
+    brokerAvgCost: apiPosition.broker_avg_cost ?? null,
+    brokerMarketValue: apiPosition.broker_market_value ?? null,
+    brokerUnrealizedPnl: apiPosition.broker_unrealized_pnl ?? null,
+    isin: apiPosition.isin ?? null,
+    brokerSyncedAt: apiPosition.broker_synced_at ?? null,
     thesis: apiPosition.thesis ?? null,
     lesson: apiPosition.lesson ?? null,
   };

@@ -34,6 +34,9 @@ class Order:
     broker: Optional[str] = None
     broker_order_id: Optional[str] = None
     broker_product_id: Optional[str] = None
+    broker_symbol: Optional[str] = None
+    broker_currency: Optional[str] = None
+    broker_avg_cost: Optional[float] = None
     isin: Optional[str] = None
     broker_synced_at: Optional[str] = None
     thesis: Optional[str] = None
@@ -99,6 +102,13 @@ def load_orders(path: str | Path) -> list[Order]:
                 broker=item.get("broker", None),
                 broker_order_id=item.get("broker_order_id", None),
                 broker_product_id=item.get("broker_product_id", None),
+                broker_symbol=item.get("broker_symbol", None),
+                broker_currency=item.get("broker_currency", None),
+                broker_avg_cost=(
+                    float(item["broker_avg_cost"])
+                    if item.get("broker_avg_cost") is not None
+                    else None
+                ),
                 isin=item.get("isin", None),
                 broker_synced_at=item.get("broker_synced_at", None),
                 thesis=item.get("thesis", None),
@@ -133,6 +143,9 @@ def save_orders(path: str | Path, orders: list[Order], asof: Optional[str] = Non
                 "broker": o.broker,
                 "broker_order_id": o.broker_order_id,
                 "broker_product_id": o.broker_product_id,
+                "broker_symbol": o.broker_symbol,
+                "broker_currency": o.broker_currency,
+                "broker_avg_cost": o.broker_avg_cost,
                 "isin": o.isin,
                 "broker_synced_at": o.broker_synced_at,
                 "thesis": o.thesis,

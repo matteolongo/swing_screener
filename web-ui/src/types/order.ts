@@ -22,6 +22,14 @@ export interface Order {
   tif: string | null;
   feeEur?: number | null;
   fillFxRate?: number | null;
+  broker?: string | null;
+  brokerOrderId?: string | null;
+  brokerProductId?: string | null;
+  brokerSymbol?: string | null;
+  brokerCurrency?: string | null;
+  brokerAvgCost?: number | null;
+  isin?: string | null;
+  brokerSyncedAt?: string | null;
 }
 
 export interface CreateOrderRequest {
@@ -65,6 +73,14 @@ export interface OrderApiResponse {
   tif: string | null;
   fee_eur?: number | null;
   fill_fx_rate?: number | null;
+  broker?: string | null;
+  broker_order_id?: string | null;
+  broker_product_id?: string | null;
+  broker_symbol?: string | null;
+  broker_currency?: string | null;
+  broker_avg_cost?: number | null;
+  isin?: string | null;
+  broker_synced_at?: string | null;
 }
 
 export interface OrderSnapshot {
@@ -121,6 +137,14 @@ export function transformOrder(apiOrder: OrderApiResponse): Order {
     tif: apiOrder.tif,
     feeEur: apiOrder.fee_eur ?? null,
     fillFxRate: apiOrder.fill_fx_rate ?? null,
+    broker: apiOrder.broker ?? null,
+    brokerOrderId: apiOrder.broker_order_id ?? null,
+    brokerProductId: apiOrder.broker_product_id ?? null,
+    brokerSymbol: apiOrder.broker_symbol ?? null,
+    brokerCurrency: apiOrder.broker_currency ?? null,
+    brokerAvgCost: apiOrder.broker_avg_cost ?? null,
+    isin: apiOrder.isin ?? null,
+    brokerSyncedAt: apiOrder.broker_synced_at ?? null,
   };
 }
 

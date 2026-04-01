@@ -1,7 +1,6 @@
 """Tests for market data providers."""
 from __future__ import annotations
 
-import importlib.util
 from types import SimpleNamespace
 import pytest
 import pandas as pd
@@ -9,16 +8,12 @@ from datetime import datetime, timedelta
 import swing_screener.data.providers.yfinance_provider as yfinance_provider_module
 
 from swing_screener.data.providers import (
-    MarketDataProvider,
     StooqDataProvider,
     YfinanceProvider,
-    AlpacaDataProvider,
     get_market_data_provider,
     get_default_provider,
 )
 from swing_screener.config import BrokerConfig
-
-ALPACA_AVAILABLE = importlib.util.find_spec("alpaca") is not None
 
 
 def _mock_ohlcv_frame(tickers: list[str]) -> pd.DataFrame:
@@ -386,28 +381,10 @@ class TestBrokerConfig:
         """Test default configuration."""
         config = BrokerConfig()
         assert config.provider == "yfinance"
-        assert config.alpaca_api_key is None
-        assert config.alpaca_secret_key is None
-        assert config.alpaca_paper is True
     
     def test_validate_yfinance(self):
         """Test validation for yfinance provider."""
         config = BrokerConfig(provider="yfinance")
-        config.validate()  # Should not raise
-    
-    def test_validate_alpaca_missing_keys(self):
-        """Test validation fails for Alpaca without keys."""
-        config = BrokerConfig(provider="alpaca")
-        with pytest.raises(ValueError, match="requires api_key"):
-            config.validate()
-    
-    def test_validate_alpaca_with_keys(self):
-        """Test validation succeeds for Alpaca with keys."""
-        config = BrokerConfig(
-            provider="alpaca",
-            alpaca_api_key="test_key",
-            alpaca_secret_key="test_secret"
-        )
         config.validate()  # Should not raise
     
     def test_validate_invalid_provider(self):
@@ -437,105 +414,11 @@ class TestProviderFactory:
         provider = StooqDataProvider()
         assert provider.get_provider_name() == "stooq"
     
-    def test_get_alpaca_provider(self):
-        """Test creating alpaca provider."""
-        config = BrokerConfig(
-            provider="alpaca",
-            alpaca_api_key="test_key",
-            alpaca_secret_key="test_secret"
-        )
-        if not ALPACA_AVAILABLE:
-            with pytest.raises(ModuleNotFoundError, match="alpaca-py"):
-                get_market_data_provider(config)
-            return
-        provider = get_market_data_provider(config)
-        assert isinstance(provider, AlpacaDataProvider)
-        assert provider.get_provider_name() in ("alpaca", "alpaca-paper")
-    
     def test_invalid_provider_raises(self):
         """Test invalid provider raises error."""
         config = BrokerConfig(provider="invalid")
         with pytest.raises(ValueError):
             get_market_data_provider(config)
-
-
-class TestAlpacaProvider:
-    """Test AlpacaDataProvider (requires API keys)."""
-
-    @pytest.fixture(autouse=True)
-    def skip_if_no_alpaca_package(self):
-        """Skip class if alpaca-py is not installed."""
-        if not ALPACA_AVAILABLE:
-            pytest.skip("alpaca-py not installed")
-    
-    @pytest.fixture
-    def skip_if_no_alpaca_keys(self):
-        """Skip test if Alpaca keys not available."""
-        import os
-        if not os.getenv("ALPACA_API_KEY") or not os.getenv("ALPACA_SECRET_KEY"):
-            pytest.skip("Alpaca API keys not available")
-    
-    def test_provider_name(self):
-        """Test provider name."""
-        provider = AlpacaDataProvider(
-            api_key="test_key",
-            secret_key="test_secret",
-            paper=True
-        )
-        assert provider.get_provider_name() == "alpaca-paper"
-    
-    def test_parse_timeframe(self):
-        """Test timeframe parsing."""
-        provider = AlpacaDataProvider(
-            api_key="test_key",
-            secret_key="test_secret"
-        )
-        
-        from alpaca.data.timeframe import TimeFrame
-        
-        # Test that parsing works and returns TimeFrame objects
-        result_1d = provider._parse_timeframe("1d")
-        result_1h = provider._parse_timeframe("1h")
-        result_1m = provider._parse_timeframe("1m")
-        
-        assert isinstance(result_1d, TimeFrame)
-        assert isinstance(result_1h, TimeFrame)
-        assert isinstance(result_1m, TimeFrame)
-        
-        # Test that invalid interval raises ValueError
-        with pytest.raises(ValueError, match="Unsupported interval"):
-            provider._parse_timeframe("invalid")
-    
-    @pytest.mark.integration
-    def test_fetch_ohlcv_integration(self, skip_if_no_alpaca_keys):
-        """Integration test: fetch real data from Alpaca."""
-        import os
-        provider = AlpacaDataProvider(
-            api_key=os.getenv("ALPACA_API_KEY"),
-            secret_key=os.getenv("ALPACA_SECRET_KEY"),
-            paper=True
-        )
-        
-        end = datetime.now().strftime("%Y-%m-%d")
-        start = (datetime.now() - timedelta(days=10)).strftime("%Y-%m-%d")
-
-        try:
-            df = provider.fetch_ohlcv(
-                tickers=["AAPL"],
-                start_date=start,
-                end_date=end,
-                interval="1d"
-            )
-        except ConnectionError as exc:
-            if "subscription does not permit querying recent SIP data" in str(exc):
-                pytest.skip("Alpaca subscription does not include recent SIP data")
-            raise
-        
-        # Check format matches yfinance
-        assert isinstance(df, pd.DataFrame)
-        assert isinstance(df.columns, pd.MultiIndex)
-        assert ("Close", "AAPL") in df.columns
-        assert not df.empty
 
 
 class TestProviderCompatibility:

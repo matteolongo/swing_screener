@@ -102,7 +102,7 @@ class MarketDataProvider(ABC):
             
         Note:
             For historical data providers (yfinance), may always return False.
-            For live data providers (Alpaca, IB), returns actual market status.
+            For live data providers, returns actual market status.
         """
         pass
     
@@ -112,6 +112,6 @@ class MarketDataProvider(ABC):
         Get provider name for logging and debugging.
         
         Returns:
-            Provider name (e.g., "yfinance", "alpaca", "ib")
+            Provider name (e.g., "yfinance", "ib")
         """
         pass

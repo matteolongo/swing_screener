@@ -56,11 +56,17 @@ export default function PortfolioPanel() {
 
       {syncMutation.isSuccess ? (
         <p className="text-xs text-emerald-600">
-          {syncMutation.data.orders_created > 0 || syncMutation.data.orders_updated > 0
-            ? `${syncMutation.data.orders_created} created · ${syncMutation.data.orders_updated} updated · ${syncMutation.data.fees_applied} fees applied`
+          {syncMutation.data.orders_created > 0 ||
+          syncMutation.data.orders_updated > 0 ||
+          syncMutation.data.positions_updated > 0 ||
+          syncMutation.data.positions_created > 0
+            ? `${syncMutation.data.positions_updated} positions updated · ${syncMutation.data.orders_updated} orders updated · ${syncMutation.data.positions_with_broker_basis} with broker basis · ${syncMutation.data.fees_applied} fees applied`
             : 'Already up to date'}
           {syncMutation.data.ambiguous_skipped > 0
             ? ` · ${syncMutation.data.ambiguous_skipped} ambiguous skipped`
+            : null}
+          {syncMutation.data.unmatched_positions > 0
+            ? ` · ${syncMutation.data.unmatched_positions} unmatched positions`
             : null}
         </p>
       ) : null}

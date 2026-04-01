@@ -34,6 +34,11 @@ class Position:
     exit_order_ids: Optional[list[str]] = field(default=None)
     broker: Optional[str] = None
     broker_product_id: Optional[str] = None
+    broker_symbol: Optional[str] = None
+    broker_currency: Optional[str] = None
+    broker_avg_cost: Optional[float] = None
+    broker_market_value: Optional[float] = None
+    broker_unrealized_pnl: Optional[float] = None
     isin: Optional[str] = None
     broker_synced_at: Optional[str] = None
     thesis: Optional[str] = None
@@ -108,6 +113,23 @@ def load_positions(path: str | Path) -> list[Position]:
                 ),
                 broker=item.get("broker", None),
                 broker_product_id=item.get("broker_product_id", None),
+                broker_symbol=item.get("broker_symbol", None),
+                broker_currency=item.get("broker_currency", None),
+                broker_avg_cost=(
+                    float(item["broker_avg_cost"])
+                    if item.get("broker_avg_cost") is not None
+                    else None
+                ),
+                broker_market_value=(
+                    float(item["broker_market_value"])
+                    if item.get("broker_market_value") is not None
+                    else None
+                ),
+                broker_unrealized_pnl=(
+                    float(item["broker_unrealized_pnl"])
+                    if item.get("broker_unrealized_pnl") is not None
+                    else None
+                ),
                 isin=item.get("isin", None),
                 broker_synced_at=item.get("broker_synced_at", None),
                 thesis=item.get("thesis", None),
@@ -141,6 +163,11 @@ def save_positions(
                 "exit_order_ids": pos.exit_order_ids,
                 "broker": pos.broker,
                 "broker_product_id": pos.broker_product_id,
+                "broker_symbol": pos.broker_symbol,
+                "broker_currency": pos.broker_currency,
+                "broker_avg_cost": pos.broker_avg_cost,
+                "broker_market_value": pos.broker_market_value,
+                "broker_unrealized_pnl": pos.broker_unrealized_pnl,
                 "isin": pos.isin,
                 "broker_synced_at": pos.broker_synced_at,
                 "thesis": pos.thesis,

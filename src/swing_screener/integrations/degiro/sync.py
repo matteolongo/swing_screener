@@ -105,6 +105,153 @@ def _transaction_matches_position(tx: dict, local_position: dict) -> bool:
     return bool(tx_isin and pos_isin and tx_isin == pos_isin)
 
 
+def _position_product_id(broker_position: dict) -> str:
+    return _clean_text(
+        broker_position.get("id")
+        or broker_position.get("productId")
+        or broker_position.get("product_id")
+    )
+
+
+def _position_shares(broker_position: dict) -> Optional[int]:
+    size = _float_or_none(
+        broker_position.get("size")
+        or broker_position.get("quantity")
+        or broker_position.get("position")
+    )
+    if size is None:
+        return None
+    return int(size)
+
+
+def _first_float(broker_position: dict, *keys: str) -> Optional[float]:
+    for key in keys:
+        value = _float_or_none(broker_position.get(key))
+        if value is not None:
+            return value
+    return None
+
+
+def _position_avg_cost(broker_position: dict) -> Optional[float]:
+    return _first_float(
+        broker_position,
+        "breakEvenPrice",
+        "break_even_price",
+        "averagePrice",
+        "avgPrice",
+        "priceAvg",
+        "price_average",
+        "purchasePrice",
+    )
+
+
+def _position_market_value(broker_position: dict) -> Optional[float]:
+    return _first_float(
+        broker_position,
+        "value",
+        "marketValue",
+        "market_value",
+        "valueBase",
+    )
+
+
+def _position_unrealized_pnl(broker_position: dict) -> Optional[float]:
+    return _first_float(
+        broker_position,
+        "plBase",
+        "pl",
+        "unrealizedPnl",
+        "unrealized_pnl",
+    )
+
+
+def _position_symbol(broker_position: dict) -> Optional[str]:
+    symbol = _clean_text(
+        broker_position.get("symbol")
+        or broker_position.get("productSymbol")
+        or broker_position.get("broker_symbol")
+    )
+    return symbol or None
+
+
+def _position_currency(broker_position: dict) -> Optional[str]:
+    currency = _clean_text(
+        broker_position.get("currency")
+        or broker_position.get("currencyCode")
+        or broker_position.get("broker_currency")
+    )
+    return currency or None
+
+
+def _position_name(broker_position: dict) -> Optional[str]:
+    name = _clean_text(broker_position.get("name") or broker_position.get("productName"))
+    return name or None
+
+
+def _position_isin(broker_position: dict) -> Optional[str]:
+    isin = _clean_text(broker_position.get("isin"))
+    return isin or None
+
+
+def _trustworthy_ticker_for_isin(broker_position: dict) -> Optional[str]:
+    broker_isin = _position_isin(broker_position)
+    broker_symbol = _position_symbol(broker_position)
+    if not broker_isin or not broker_symbol:
+        return None
+
+    try:
+        from swing_screener.fundamentals.providers.degiro import _load_isin_map
+    except Exception:
+        return None
+
+    isin_map = _load_isin_map()
+    candidates = {
+        ticker
+        for ticker, isin in isin_map.items()
+        if _clean_text(isin) == broker_isin and _clean_text(ticker).split(".")[0].upper() == broker_symbol.upper()
+    }
+    if len(candidates) == 1:
+        return next(iter(candidates))
+    return None
+
+
+def _match_position(broker_position: dict, local_positions: list[dict]) -> tuple[Optional[dict], str]:
+    product_id = _position_product_id(broker_position)
+    if product_id:
+        for local_position in local_positions:
+            if _clean_text(local_position.get("broker_product_id")) == product_id:
+                return local_position, "exact"
+
+    isin = _position_isin(broker_position)
+    if isin:
+        isin_hits = [position for position in local_positions if _clean_text(position.get("isin")) == isin]
+        if len(isin_hits) == 1:
+            return isin_hits[0], "isin"
+        if len(isin_hits) > 1:
+            return None, "ambiguous"
+
+        try:
+            from swing_screener.fundamentals.providers.degiro import _load_isin_map
+            isin_map = _load_isin_map()
+        except Exception:
+            isin_map = {}
+
+        ticker_map_hits = [
+            position
+            for position in local_positions
+            if _clean_text(isin_map.get(_clean_text(position.get("ticker"))))
+            == isin
+            or _clean_text(isin_map.get(_clean_text(position.get("ticker")).split(".")[0]))
+            == isin
+        ]
+        if len(ticker_map_hits) == 1:
+            return ticker_map_hits[0], "ticker_map"
+        if len(ticker_map_hits) > 1:
+            return None, "ambiguous"
+
+    return None, "unmatched"
+
+
 def _stale_position_fields(local_position: dict, transactions: list[dict], sync_stamp: str) -> dict:
     exit_tx = None
     for tx in transactions:
@@ -171,6 +318,25 @@ def fetch_live_data(
         "cash": [],
     }
 
+    def _product_info_map(product_ids: list[str]) -> dict[str, dict]:
+        ids = []
+        for product_id in product_ids:
+            text = _clean_text(product_id)
+            if not text:
+                continue
+            try:
+                ids.append(int(text))
+            except ValueError:
+                continue
+        if not ids:
+            return {}
+        try:
+            response = api.get_products_info(product_list=ids, raw=True) or {}
+            return response.get("data", {}) or {}
+        except Exception:
+            logger.warning("Failed to fetch DeGiro product info for sync", exc_info=True)
+            return {}
+
     # Portfolio positions and cash
     if include_portfolio:
         try:
@@ -190,6 +356,15 @@ def fetch_live_data(
                     cash.append(vals)
                 elif vals.get("size", 0) and float(vals.get("size", 0)) != 0:
                     positions.append(vals)
+            info_map = _product_info_map([_position_product_id(position) for position in positions])
+            for position in positions:
+                info = info_map.get(_position_product_id(position), {})
+                if info:
+                    position.setdefault("symbol", info.get("symbol"))
+                    position.setdefault("name", info.get("name"))
+                    position.setdefault("currency", info.get("currency"))
+                    position.setdefault("exchange", info.get("exchangeId") or info.get("exchange"))
+                    position.setdefault("isin", info.get("isin"))
             result["positions"] = positions
             result["cash"] = cash
         except Exception:
@@ -202,7 +377,18 @@ def fetch_live_data(
                 request_list=[UpdateRequest(option=UpdateOption.ORDERS, last_updated=0)],
                 raw=True,
             ) or {}
-            result["pending_orders"] = update.get("orders", {}).get("value", [])
+            pending_orders = update.get("orders", {}).get("value", [])
+            info_map = _product_info_map([
+                _clean_text(order.get("productId") or order.get("product_id"))
+                for order in pending_orders
+            ])
+            for order in pending_orders:
+                info = info_map.get(_clean_text(order.get("productId") or order.get("product_id")), {})
+                if info:
+                    order.setdefault("symbol", info.get("symbol"))
+                    order.setdefault("currency", info.get("currency"))
+                    order.setdefault("isin", info.get("isin"))
+            result["pending_orders"] = pending_orders
         except Exception:
             logger.warning("Failed to fetch DeGiro pending orders", exc_info=True)
 
@@ -215,7 +401,18 @@ def fetch_live_data(
                 history_request=HistoryRequest(from_date=from_dt, to_date=to_dt),
                 raw=True,
             ) or {}
-            result["order_history"] = history.get("data", [])
+            order_history = history.get("data", [])
+            info_map = _product_info_map([
+                _clean_text(order.get("productId") or order.get("product_id"))
+                for order in order_history
+            ])
+            for order in order_history:
+                info = info_map.get(_clean_text(order.get("productId") or order.get("product_id")), {})
+                if info:
+                    order.setdefault("symbol", info.get("symbol"))
+                    order.setdefault("currency", info.get("currency"))
+                    order.setdefault("isin", info.get("isin"))
+            result["order_history"] = order_history
         except Exception:
             logger.warning("Failed to fetch DeGiro orders history", exc_info=True)
 
@@ -341,6 +538,12 @@ def preview(
             fields["broker_product_id"] = broker_product
         fields["broker"] = "degiro"
         fields["broker_synced_at"] = sync_stamp
+        broker_symbol = _clean_text(bo.get("symbol")) or None
+        broker_currency = _clean_text(bo.get("currency")) or None
+        if broker_symbol:
+            fields["broker_symbol"] = broker_symbol
+        if broker_currency:
+            fields["broker_currency"] = broker_currency
         if fee is not None:
             fields["fee_eur"] = fee
             fees_applied += 1
@@ -370,22 +573,22 @@ def preview(
     positions_to_update: list[SyncDiff] = []
     matched_local_position_ids: set[str] = set()
     stale_closed_position_ids: set[str] = set()
+    matched_by_product_id = 0
+    matched_by_isin = 0
+    matched_by_ticker_map = 0
+    positions_with_broker_basis = 0
+    unmatched_positions = 0
 
     for bp in sync_raw.positions:
-        product_id = str(bp.get("id", "") or "").strip()
-        isin = str(bp.get("isin", "") or "").strip() or None
+        product_id = _position_product_id(bp)
+        isin = _position_isin(bp)
+        broker_symbol = _position_symbol(bp)
+        broker_currency = _position_currency(bp)
+        broker_avg_cost = _position_avg_cost(bp)
+        broker_market_value = _position_market_value(bp)
+        broker_unrealized_pnl = _position_unrealized_pnl(bp)
 
-        local_pos = None
-        pos_confidence = "unmatched"
-        for lp in local_positions:
-            if product_id and str(lp.get("broker_product_id", "") or "").strip() == product_id:
-                local_pos = lp
-                pos_confidence = "exact"
-                break
-            if isin and str(lp.get("isin", "") or "").strip() == isin:
-                local_pos = lp
-                pos_confidence = "fuzzy"
-                break
+        local_pos, pos_confidence = _match_position(bp, local_positions)
 
         fields = {}
         if product_id:
@@ -394,25 +597,59 @@ def preview(
             fields["isin"] = isin
         fields["broker"] = "degiro"
         fields["broker_synced_at"] = sync_stamp
+        if broker_symbol:
+            fields["broker_symbol"] = broker_symbol
+        if broker_currency:
+            fields["broker_currency"] = broker_currency
+        if broker_avg_cost is not None:
+            fields["broker_avg_cost"] = broker_avg_cost
+        if broker_market_value is not None:
+            fields["broker_market_value"] = broker_market_value
+        if broker_unrealized_pnl is not None:
+            fields["broker_unrealized_pnl"] = broker_unrealized_pnl
         size = bp.get("size") or bp.get("quantity")
         if size is not None:
             fields["shares"] = int(float(size))
 
-        diff = SyncDiff(
-            kind="position",
-            action="update" if local_pos else "create",
-            local_id=local_pos.get("position_id") if local_pos else None,
-            broker_id=product_id or None,
-            confidence=pos_confidence,
-            fields=fields,
-        )
-
         if local_pos:
+            diff = SyncDiff(
+                kind="position",
+                action="update",
+                local_id=local_pos.get("position_id") if local_pos else None,
+                broker_id=product_id or None,
+                confidence=pos_confidence,
+                fields=fields,
+            )
             if diff.local_id:
                 matched_local_position_ids.add(diff.local_id)
+            if pos_confidence == "exact":
+                matched_by_product_id += 1
+            elif pos_confidence == "isin":
+                matched_by_isin += 1
+            elif pos_confidence == "ticker_map":
+                matched_by_ticker_map += 1
+            if broker_avg_cost is not None:
+                positions_with_broker_basis += 1
             positions_to_update.append(diff)
         else:
-            positions_to_create.append(diff)
+            diff = SyncDiff(
+                kind="position",
+                action="unmatched",
+                local_id=None,
+                broker_id=product_id or None,
+                confidence=pos_confidence,
+                fields={
+                    **fields,
+                    "match_reason": "No local position matched by broker product id, ISIN, or ticker-root ISIN map.",
+                    "resolved_ticker": _trustworthy_ticker_for_isin(bp),
+                    "broker_name": _position_name(bp),
+                },
+            )
+            if pos_confidence == "ambiguous":
+                ambiguous.append(diff)
+            else:
+                unmatched_positions += 1
+                unmatched.append(diff)
 
     for lp in local_positions:
         local_id = _clean_text(lp.get("position_id"))
@@ -480,6 +717,11 @@ def preview(
         ambiguous=tuple(ambiguous),
         unmatched=tuple(unmatched),
         fees_applied=fees_applied,
+        matched_by_product_id=matched_by_product_id,
+        matched_by_isin=matched_by_isin,
+        matched_by_ticker_map=matched_by_ticker_map,
+        positions_with_broker_basis=positions_with_broker_basis,
+        unmatched_positions=unmatched_positions,
     )
 
 
@@ -558,6 +800,11 @@ def apply(
                     "positions_updated": positions_updated,
                     "fees_applied": sync_preview.fees_applied,
                     "ambiguous_skipped": len(sync_preview.ambiguous),
+                    "matched_by_product_id": sync_preview.matched_by_product_id,
+                    "matched_by_isin": sync_preview.matched_by_isin,
+                    "matched_by_ticker_map": sync_preview.matched_by_ticker_map,
+                    "positions_with_broker_basis": sync_preview.positions_with_broker_basis,
+                    "unmatched_positions": sync_preview.unmatched_positions,
                     "asof": asof,
                 },
                 indent=2,
@@ -574,4 +821,9 @@ def apply(
         fees_applied=sync_preview.fees_applied,
         ambiguous_skipped=len(sync_preview.ambiguous),
         artifact_paths=artifact_paths,
+        matched_by_product_id=sync_preview.matched_by_product_id,
+        matched_by_isin=sync_preview.matched_by_isin,
+        matched_by_ticker_map=sync_preview.matched_by_ticker_map,
+        positions_with_broker_basis=sync_preview.positions_with_broker_basis,
+        unmatched_positions=sync_preview.unmatched_positions,
     )

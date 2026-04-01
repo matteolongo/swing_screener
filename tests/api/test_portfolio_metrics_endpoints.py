@@ -151,6 +151,76 @@ def test_position_metrics_subtracts_recorded_fees(monkeypatch: pytest.MonkeyPatc
     assert data["pnl"] == pytest.approx(-4.84, abs=0.01)
 
 
+def test_position_metrics_prefers_degiro_broker_avg_cost_for_basis(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    positions_file = tmp_path / "positions.json"
+    orders_file = tmp_path / "orders.json"
+    positions_file.write_text(
+        json.dumps(
+            {
+                "asof": "2026-03-27",
+                "positions": [
+                    {
+                        "ticker": "CRBN.AS",
+                        "status": "open",
+                        "entry_date": "2026-03-26",
+                        "entry_price": 18.48,
+                        "stop_price": 18.06,
+                        "shares": 20,
+                        "position_id": "POS-CRBN-1",
+                        "broker": "degiro",
+                        "broker_product_id": "700001",
+                        "broker_avg_cost": 18.47,
+                        "broker_market_value": 372.20,
+                        "broker_unrealized_pnl": 2.80,
+                        "isin": "NL0010583399",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    orders_file.write_text(
+        json.dumps(
+            {
+                "asof": "2026-03-27",
+                "orders": [
+                    {
+                        "order_id": "ORD-CRBN-ENTRY",
+                        "ticker": "CRBN.AS",
+                        "position_id": "POS-CRBN-1",
+                        "status": "filled",
+                        "order_type": "BUY_LIMIT",
+                        "quantity": 20,
+                        "fee_eur": 4.90,
+                        "order_kind": "entry",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(api.dependencies, "POSITIONS_FILE", positions_file)
+    monkeypatch.setattr(api.dependencies, "ORDERS_FILE", orders_file)
+
+    mock_provider = MagicMock(spec=MarketDataProvider)
+    mock_provider.fetch_ohlcv.return_value = _ohlcv_with_closes({"CRBN.AS": [18.55, 18.61]})
+    mock_provider.get_provider_name.return_value = "mock"
+    monkeypatch.setattr(portfolio_service, "get_default_provider", lambda **kwargs: mock_provider)
+
+    client = TestClient(app)
+    res = client.get("/api/portfolio/positions/POS-CRBN-1/metrics")
+    assert res.status_code == 200
+
+    data = res.json()
+    # (18.61 - 18.47) * 20 - 4.90 = -2.10
+    assert data["entry_value"] == pytest.approx(369.40, abs=0.01)
+    assert data["pnl"] == pytest.approx(-2.10, abs=0.01)
+    assert data["fees_eur"] == pytest.approx(4.90, abs=0.01)
+
+
 def test_position_metrics_subtracts_recorded_fees_usd(
     monkeypatch: pytest.MonkeyPatch, tmp_path
 ) -> None:

@@ -297,6 +297,11 @@ async def degiro_sync_preview(
         fees_applied=preview.fees_applied,
         ambiguous=_diff_list(preview.ambiguous),
         unmatched=_diff_list(preview.unmatched),
+        matched_by_product_id=preview.matched_by_product_id,
+        matched_by_isin=preview.matched_by_isin,
+        matched_by_ticker_map=preview.matched_by_ticker_map,
+        positions_with_broker_basis=preview.positions_with_broker_basis,
+        unmatched_positions=preview.unmatched_positions,
     )
 
 
@@ -358,4 +363,9 @@ async def degiro_sync_apply(
         fees_applied=result.fees_applied,
         ambiguous_skipped=result.ambiguous_skipped,
         artifact_paths=result.artifact_paths,
+        matched_by_product_id=result.matched_by_product_id,
+        matched_by_isin=result.matched_by_isin,
+        matched_by_ticker_map=result.matched_by_ticker_map,
+        positions_with_broker_basis=result.positions_with_broker_basis,
+        unmatched_positions=result.unmatched_positions,
     )
