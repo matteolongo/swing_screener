@@ -281,7 +281,6 @@ runtime:
   intelligence_storage_dir: data/intelligence
   symbol_sets_file: data/intelligence/symbol_sets.json
   yfinance_cache_dir: .cache/market_data
-  alpaca_cache_dir: .cache/alpaca_data
   web_ui_dist_dir: web-ui/dist
   database_file: data/swing_screener.db
 
@@ -305,7 +304,6 @@ low_level:
   file_lock_timeout_seconds: 5.0
   broker:
     provider: yfinance
-    alpaca_paper: true
   risk:
     account_size: 500.0
     risk_pct: 0.01
@@ -351,7 +349,7 @@ low_level:
   # Tier 1 free-first data provider stack
   # ---------------------------------------------------------------------------
   # data_providers below configures the OHLCV / price pipeline (yfinance with
-  # Stooq fallback, optional Alpaca validation).  This is separate from
+  # Stooq fallback). This is separate from
   # `sources.enabled` above, which controls the evidence-adapter chain used by
   # the market-intelligence / catalyst system (yahoo_finance, earnings_calendar,
   # sec_edgar, company_ir_rss, exchange_announcements, financial_news_rss).
@@ -367,8 +365,3 @@ low_level:
       stooq_fallback_enabled: true
     stooq:
       timeout_seconds: 10.0
-    alpaca:
-      rate_limit_requests: 200
-      rate_limit_window_seconds: 60
-      max_retries: 3
-      retry_delay_base_seconds: 1.0

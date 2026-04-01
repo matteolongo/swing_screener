@@ -42,7 +42,7 @@ currency = detect_currency("ASML.AS")  # EUR
 | `market_data.py` | Legacy `fetch_ohlcv()` wrapper (backward-compat; prefer provider factory) |
 | `ticker_info.py` | `get_ticker_info()` — name, sector, currency |
 | `currency.py` | `detect_currency()` — USD vs EUR from ticker suffix |
-| `providers/` | Abstract provider layer (factory, base, yfinance, alpaca) |
+| `providers/` | Abstract provider layer (factory, base, yfinance, stooq fallback support) |
 
 ## Provider Configuration
 
@@ -62,15 +62,11 @@ provider = get_market_data_provider()  # reads env vars below
 
 | Environment Variable | Purpose |
 |----------------------|---------|
-| `SWING_SCREENER_PROVIDER` | `"yfinance"` (default) or `"alpaca"` |
-| `ALPACA_API_KEY` | Alpaca API key (required for `"alpaca"`) |
-| `ALPACA_SECRET_KEY` | Alpaca secret key (required for `"alpaca"`) |
-| `ALPACA_PAPER` | `"true"` for paper trading endpoint (default: `true`) |
+| `SWING_SCREENER_PROVIDER` | Optional. If set, must be `"yfinance"` |
 
 | Provider | Description |
 |----------|-------------|
 | `YfinanceProvider` | Yahoo Finance (default, no API key required) |
-| `AlpacaDataProvider` | Alpaca Markets (professional, requires credentials) |
 
 ## Caching
 
@@ -108,3 +104,4 @@ tickers = load_universe_from_package("usd_all", cfg)
 - `fetch_ohlcv()` in `market_data.py` is a backward-compatibility wrapper. New code should use `get_market_data_provider()` directly.
 - `detect_currency()` uses ticker suffix heuristics (e.g., `.AS` → EUR, no suffix → USD).
 - `BrokerConfig.from_env()` is called automatically when no config is passed to the factory.
+- The only supported OHLCV provider path is `yfinance` with Stooq fallback inside `YfinanceProvider`.

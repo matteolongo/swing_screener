@@ -82,7 +82,6 @@ For paid data, the cleanest production path remains a split stack:
 | --- | --- | --- | --- | --- | --- |
 | Price / OHLCV | `yfinance` | `unofficial` | Primary | Mixed (strongest on US liquid names) | Active |
 | Price / OHLCV | `Stooq CSV` | `public web` | Automatic fallback when yfinance returns no data | Mixed | ✅ Wired (Tier 1) |
-| Price / OHLCV | `Alpaca Basic` | `aggregated commercial` | Validation only (`scripts/validate_ohlcv_alpaca.py`) | US only | ✅ Script only (Tier 1) |
 | Ticker metadata | `yfinance info` | `unofficial` | Primary | Mixed | Active; no replacement yet |
 | Fundamentals | `SEC EDGAR/XBRL` | `official` | Primary for US equities | US only | ✅ Active (Tier 1) |
 | Fundamentals | `yfinance` | `unofficial` | Fallback (EU/global, or when EDGAR has no CIK) | Mixed | Active fallback |
@@ -120,7 +119,7 @@ For paid data, the cleanest production path remains a split stack:
 
 | Domain | Primary | Secondary | Fallback | Implemented |
 | --- | --- | --- | --- | --- |
-| US price / OHLCV | `yfinance` | `Alpaca Basic` (validation script only) | `Stooq` (automatic) | ✅ |
+| US price / OHLCV | `yfinance` | — | `Stooq` (automatic) | ✅ |
 | US fundamentals | `SEC EDGAR/XBRL` | — (Alpha Vantage skipped: 25 req/day unusable) | `yfinance` | ✅ |
 | EU/global fundamentals | — (no viable free primary) | — | `yfinance` fallback + instrument_master overrides | ✅ (fallback wired) |
 | Events / news | `SEC RSS + SEC APIs + company IR RSS` | `exchange_announcements + financial_news_rss` | compliant HTML scrape (disabled) | ✅ |
@@ -135,7 +134,6 @@ For paid data, the cleanest production path remains a split stack:
 - OpenFIGI integration in `evidence.py` (env var opt-in, local cache)
 - `InstrumentProfile` FIGI fields in `intelligence/models.py`
 - Provider badge in `FundamentalsSnapshotCard` (UI shows e.g. `"sec_edgar · US"`)
-- `scripts/validate_ohlcv_alpaca.py` — developer validation tool
 - `tests/test_tier1_stack_smoke.py` — 5 integration smoke tests (all mocked HTTP)
 
 ---
@@ -174,16 +172,16 @@ For paid data, the cleanest production path remains a split stack:
 
 | Domain | Planned primary | Planned secondary | Free fallback |
 | --- | --- | --- | --- |
-| US price / OHLCV | `Alpaca SIP` | `yfinance` | `Stooq` |
+| US price / OHLCV | Contracted US feed | `yfinance` | `Stooq` |
 | US fundamentals | `SEC EDGAR/XBRL` | `EODHD` for convenience fields | `yfinance` spot checks |
 | EU/global fundamentals + reference | `EODHD` | `Twelve Data` | manual reports for priority names |
-| Events / news | `Alpaca News (Benzinga-backed)` | `SEC + IR RSS + exchange feeds` | public RSS catalogs |
+| Events / news | Paid financial news API | `SEC + IR RSS + exchange feeds` | public RSS catalogs |
 | Security master | `OpenFIGI` | repo overrides | heuristics |
 
 **Priority items for Tier 2:**
 1. `EohdFundamentalsProvider` — EU fundamentals coverage (biggest remaining gap)
-2. Promote Alpaca from validation-only to secondary OHLCV (Algo Trader Plus plan)
-3. Wire Alpaca News as a paid intelligence source to replace Yahoo Finance news ingestion
+2. Add a contracted US OHLCV/reference backup if yfinance quality becomes the bottleneck
+3. Wire a paid financial-news source to replace Yahoo Finance news ingestion
 4. Config shape refactor: split `market_data.primary/secondary`, `fundamentals.primary/secondary` per domain
 
 ---
@@ -192,11 +190,11 @@ For paid data, the cleanest production path remains a split stack:
 
 | Domain | Planned primary | Planned secondary | Free fallback |
 | --- | --- | --- | --- |
-| US price / OHLCV + reference | `Polygon` | `Alpaca SIP` | `Stooq` / `yfinance` emergency only |
+| US price / OHLCV + reference | `Polygon` | Contracted US feed | `Stooq` / `yfinance` emergency only |
 | US fundamentals | `SEC EDGAR/XBRL` | `Polygon financials/ratios` | `Alpha Vantage` selective use |
 | EU/global fundamentals + reference | `EODHD` | `Twelve Data` | issuer reports + repo overrides |
 | Forward corporate events | `Wall Street Horizon` | `SEC + IR RSS + exchange feeds` | compliant public calendars |
-| News / catalysts | `Benzinga via Polygon or Alpaca` | `financial_news_rss + IR RSS` | Yahoo news tertiary only |
+| News / catalysts | `Benzinga via Polygon or similar` | `financial_news_rss + IR RSS` | Yahoo news tertiary only |
 | Security master | `OpenFIGI` | repo `instrument_master` | heuristics |
 
 ---
@@ -223,17 +221,6 @@ Classification: `aggregated commercial`
 - Polygon's newer ratios/fundamentals endpoints are available on higher-end stock plans or add-ons: [Ratios API](https://polygon.io/docs/rest/stocks/fundamentals/ratios), [Changelog](https://polygon.io/changelog).
 
 Verdict: best fit for US price/reference infrastructure if we want one commercial anchor instead of stitching together multiple lighter vendors. Target for Tier 3.
-
-### Alpaca
-
-Classification: `aggregated commercial`
-
-- Alpaca's Basic trading plan is free, but equities real-time coverage is only `IEX`; Algo Trader Plus adds full US stock exchange coverage: [Market data plans](https://docs.alpaca.markets/docs/about-market-data-api).
-- On historical stock data, Alpaca documents `iex` as a single exchange covering roughly `~2.5%` of US market volume, while `sip` covers all US exchanges: [Historical stock data](https://docs.alpaca.markets/docs/historical-stock-data-1).
-- Alpaca's Basic plan keeps historical data since 2016, but limits access to the latest 15 minutes and 200 requests/minute; Algo Trader Plus removes that restriction: [Market data plans](https://docs.alpaca.markets/docs/about-market-data-api).
-- Alpaca's news API is directly provided by Benzinga and offers history back to 2015: [Historical news data](https://docs.alpaca.markets/docs/historical-news-data).
-
-Verdict: excellent low-cost US API ergonomics, but free IEX should not be mistaken for full-market US truth. **Wired as validation-only in Tier 1 (`scripts/validate_ohlcv_alpaca.py`); promote to secondary OHLCV in Tier 2.**
 
 ### EODHD
 
