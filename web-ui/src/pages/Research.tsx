@@ -3,20 +3,31 @@ import { cn } from '@/utils/cn';
 import { t } from '@/i18n/t';
 import IntelligencePage from './Intelligence';
 import FundamentalsPage from './Fundamentals';
-
-
+import EventsCalendar from '@/components/domain/calendar/EventsCalendar';
+import { usePositions } from '@/features/portfolio/hooks';
+import { useWatchlist } from '@/features/watchlist/hooks';
 
 const STORAGE_KEY = 'research.activeTab';
-type ResearchTab = 'intelligence' | 'fundamentals';
+type ResearchTab = 'intelligence' | 'fundamentals' | 'calendar';
 
 export default function Research() {
   const [activeTab, setActiveTab] = useState<ResearchTab>(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === 'intelligence' || stored === 'fundamentals') {
+    if (stored === 'intelligence' || stored === 'fundamentals' || stored === 'calendar') {
       return stored;
     }
     return 'intelligence';
   });
+
+  const openPositionsQuery = usePositions('open');
+  const watchlistQuery = useWatchlist();
+
+  const calendarSymbols = [
+    ...new Set([
+      ...(openPositionsQuery.data ?? []).map((p) => p.ticker),
+      ...(watchlistQuery.data ?? []).map((w) => w.ticker),
+    ]),
+  ];
 
   const [sharedSymbol, setSharedSymbol] = useState('');
   const [committedSymbol, setCommittedSymbol] = useState('');
@@ -28,6 +39,7 @@ export default function Research() {
   const tabs: { key: ResearchTab; label: string }[] = [
     { key: 'intelligence', label: t('researchPage.tabs.intelligence') },
     { key: 'fundamentals', label: t('researchPage.tabs.fundamentals') },
+    { key: 'calendar', label: t('researchPage.tabs.calendar') },
   ];
 
   return (
@@ -93,6 +105,9 @@ export default function Research() {
       <div>
         {activeTab === 'intelligence' && <IntelligencePage initialSymbol={committedSymbol} />}
         {activeTab === 'fundamentals' && <FundamentalsPage initialSymbol={committedSymbol} />}
+        {activeTab === 'calendar' && (
+          <EventsCalendar symbols={calendarSymbols} daysAhead={30} />
+        )}
       </div>
     </div>
   );

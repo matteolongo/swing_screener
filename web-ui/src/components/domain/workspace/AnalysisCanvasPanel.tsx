@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import Card from '@/components/common/Card';
 import ActionPanel from '@/components/domain/workspace/ActionPanel';
 import SymbolAnalysisContent from '@/components/domain/workspace/SymbolAnalysisContent';
+import SymbolNoteWidget from '@/components/domain/workspace/SymbolNoteWidget';
 import { syncCandidateWithFundamentals } from '@/features/screener/decisionSummary';
 import type { SymbolIntelligenceStatus } from '@/features/intelligence/useSymbolIntelligenceRunner';
 import { useFundamentalSnapshotQuery, useRefreshFundamentalSnapshotMutation } from '@/features/fundamentals/hooks';
@@ -67,15 +68,18 @@ export default function AnalysisCanvasPanel({
           </p>
         </div>
       ) : (
-        <SymbolAnalysisContent
-          ticker={selectedTicker}
-          candidate={selectedCandidate}
-          activeTab={activeTab}
-          onTabChange={setAnalysisTab}
-          orderPanel={<ActionPanel ticker={selectedTicker} />}
-          onRunSymbolIntelligence={onRunSymbolIntelligence}
-          symbolIntelligenceStatus={symbolIntelligenceStatus}
-        />
+        <>
+          <SymbolAnalysisContent
+            ticker={selectedTicker}
+            candidate={selectedCandidate}
+            activeTab={activeTab}
+            onTabChange={setAnalysisTab}
+            orderPanel={<ActionPanel ticker={selectedTicker} />}
+            onRunSymbolIntelligence={onRunSymbolIntelligence}
+            symbolIntelligenceStatus={symbolIntelligenceStatus}
+          />
+          <SymbolNoteWidget ticker={selectedTicker} />
+        </>
       )}
     </Card>
   );

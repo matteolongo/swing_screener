@@ -9,7 +9,6 @@ from fastapi import Depends
 
 from api.repositories.config_repo import ConfigRepository
 from api.repositories.fundamentals_config_repo import FundamentalsConfigRepository
-from api.repositories.orders_repo import OrdersRepository
 from api.repositories.positions_repo import PositionsRepository
 from api.repositories.strategy_repo import StrategyRepository
 from api.repositories.intelligence_config_repo import IntelligenceConfigRepository
@@ -32,7 +31,6 @@ from swing_screener.settings import data_dir, get_settings_manager, project_root
 ROOT_DIR = project_root()
 DATA_DIR = data_dir()
 POSITIONS_FILE = get_settings_manager().resolve_runtime_path("positions_file", DATA_DIR / "positions.json")
-ORDERS_FILE = get_settings_manager().resolve_runtime_path("orders_file", DATA_DIR / "orders.json")
 WATCHLIST_FILE = get_settings_manager().resolve_runtime_path("watchlist_file", DATA_DIR / "watchlist.json")
 
 # Global singleton config repository (thread-safe)
@@ -47,22 +45,9 @@ def get_positions_path() -> Path:
     return POSITIONS_FILE
 
 
-def get_orders_path() -> Path:
-    """Get path to orders.json."""
-    return ORDERS_FILE
-
-
 def get_watchlist_path() -> Path:
     """Get path to watchlist.json."""
     return WATCHLIST_FILE
-
-
-def get_orders_repo() -> OrdersRepository:
-    path = get_orders_path()
-    if not path.exists():
-        from api.utils.file_lock import locked_write_json
-        locked_write_json(path, {"asof": get_today_str(), "orders": []})
-    return OrdersRepository(path)
 
 
 def get_positions_repo() -> PositionsRepository:
@@ -121,10 +106,9 @@ def get_config_repo() -> ConfigRepository:
 
 
 def get_portfolio_service(
-    orders_repo: OrdersRepository = Depends(get_orders_repo),
     positions_repo: PositionsRepository = Depends(get_positions_repo),
 ) -> PortfolioService:
-    return PortfolioService(orders_repo=orders_repo, positions_repo=positions_repo)
+    return PortfolioService(positions_repo=positions_repo)
 
 
 def get_strategy_service(
@@ -195,3 +179,27 @@ async def shutdown_agent_runtime() -> None:
     _agent_runtime = None
     if runtime is not None:
         await runtime.shutdown()
+
+
+from api.repositories.screener_history_repo import ScreenerHistoryRepository
+
+SCREENER_HISTORY_FILE = DATA_DIR / "screener_history.json"
+
+def get_screener_history_repo() -> ScreenerHistoryRepository:
+    return ScreenerHistoryRepository(SCREENER_HISTORY_FILE)
+
+
+from api.repositories.symbol_notes_repo import SymbolNotesRepository
+
+SYMBOL_NOTES_FILE = DATA_DIR / "symbol_notes.json"
+
+def get_symbol_notes_repo() -> SymbolNotesRepository:
+    return SymbolNotesRepository(SYMBOL_NOTES_FILE)
+
+
+from api.repositories.weekly_reviews_repo import WeeklyReviewsRepository
+
+WEEKLY_REVIEWS_FILE = DATA_DIR / "weekly_reviews.json"
+
+def get_weekly_reviews_repo() -> WeeklyReviewsRepository:
+    return WeeklyReviewsRepository(WEEKLY_REVIEWS_FILE)

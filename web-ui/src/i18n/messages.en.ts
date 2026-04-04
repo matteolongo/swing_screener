@@ -2078,6 +2078,7 @@ export const messagesEn = {
       positions: 'Positions',
       journal: 'Journal',
       performance: 'Performance',
+      review: 'Weekly Review',
     },
   },
   researchPage: {
@@ -2086,6 +2087,7 @@ export const messagesEn = {
     tabs: {
       intelligence: 'Intelligence',
       fundamentals: 'Fundamentals',
+      calendar: 'Calendar',
     },
     symbolSearch: {
       placeholder: 'Symbol (e.g. AAPL)',
