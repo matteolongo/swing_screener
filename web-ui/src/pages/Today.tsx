@@ -1,15 +1,21 @@
-import { useEffect, useRef, useState } from 'react';
-import { RefreshCw } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { CheckCircle2, RefreshCw } from 'lucide-react';
 import AnalysisCanvasPanel from '@/components/domain/workspace/AnalysisCanvasPanel';
 import FloatingChatWidget from '@/components/domain/workspace/FloatingChatWidget';
 import ScreenerInboxPanel from '@/components/domain/workspace/ScreenerInboxPanel';
+import ClosePositionModalForm from '@/components/domain/positions/ClosePositionModalForm';
+import UpdateStopModalForm from '@/components/domain/positions/UpdateStopModalForm';
 import { useSymbolIntelligenceRunner } from '@/features/intelligence/useSymbolIntelligenceRunner';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useDailyReview } from '@/features/dailyReview/api';
+import { filterDailyReviewCandidates } from '@/features/dailyReview/prioritization';
 import {
   parseUniverseFromStorage,
   SCREENER_UNIVERSE_STORAGE_KEY,
 } from '@/features/screener/universeStorage';
+import { usePositions, useUpdateStopMutation, useClosePositionMutation } from '@/features/portfolio/hooks';
+import type { ClosePositionRequest, Position, UpdateStopRequest } from '@/features/portfolio/types';
+import { useLocalStorage } from '@/hooks';
 import { cn } from '@/utils/cn';
 import { t } from '@/i18n/t';
 import { formatNumber } from '@/utils/formatters';
@@ -25,14 +31,21 @@ import type {
 interface CloseItemProps {
   item: DailyReviewPositionClose;
   onClick: (ticker: string) => void;
+  onAction?: () => void;
+  isDone?: boolean;
+  isFocused?: boolean;
 }
 
-function CloseItem({ item, onClick }: CloseItemProps) {
+function CloseItem({ item, onClick, onAction, isDone, isFocused }: CloseItemProps) {
   return (
     <button
       type="button"
       onClick={() => onClick(item.ticker)}
-      className="w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-l-2 border-red-500"
+      className={cn(
+        'w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-l-2 border-red-500',
+        isDone && 'opacity-50',
+        isFocused && 'ring-1 ring-primary',
+      )}
     >
       <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 min-w-[60px]">
         {item.ticker}
@@ -44,6 +57,19 @@ function CloseItem({ item, onClick }: CloseItemProps) {
         {item.rNow >= 0 ? '+' : ''}{formatNumber(item.rNow, 2)}R
       </span>
       <span className="text-xs text-gray-500 dark:text-gray-400 truncate flex-1">{item.reason}</span>
+      {isDone ? (
+        <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+      ) : onAction ? (
+        <span
+          role="button"
+          tabIndex={0}
+          onClick={(e) => { e.stopPropagation(); onAction(); }}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onAction(); } }}
+          className="text-xs px-2 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-800/40 shrink-0 cursor-pointer"
+        >
+          {t('todayPage.actionList.closeAction')}
+        </span>
+      ) : null}
     </button>
   );
 }
@@ -51,14 +77,21 @@ function CloseItem({ item, onClick }: CloseItemProps) {
 interface UpdateStopItemProps {
   item: DailyReviewPositionUpdate;
   onClick: (ticker: string) => void;
+  onAction?: () => void;
+  isDone?: boolean;
+  isFocused?: boolean;
 }
 
-function UpdateStopItem({ item, onClick }: UpdateStopItemProps) {
+function UpdateStopItem({ item, onClick, onAction, isDone, isFocused }: UpdateStopItemProps) {
   return (
     <button
       type="button"
       onClick={() => onClick(item.ticker)}
-      className="w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-l-2 border-amber-500"
+      className={cn(
+        'w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-l-2 border-amber-500',
+        isDone && 'opacity-50',
+        isFocused && 'ring-1 ring-primary',
+      )}
     >
       <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 min-w-[60px]">
         {item.ticker}
@@ -70,6 +103,19 @@ function UpdateStopItem({ item, onClick }: UpdateStopItemProps) {
         {item.rNow >= 0 ? '+' : ''}{formatNumber(item.rNow, 2)}R
       </span>
       <span className="text-xs text-gray-500 dark:text-gray-400 truncate flex-1">{item.reason}</span>
+      {isDone ? (
+        <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+      ) : onAction ? (
+        <span
+          role="button"
+          tabIndex={0}
+          onClick={(e) => { e.stopPropagation(); onAction(); }}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onAction(); } }}
+          className="text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-800/40 shrink-0 cursor-pointer"
+        >
+          {t('todayPage.actionList.updateAction')}
+        </span>
+      ) : null}
     </button>
   );
 }
@@ -78,14 +124,18 @@ interface CandidateItemProps {
   item: DailyReviewCandidate;
   isAddOn?: boolean;
   onClick: (ticker: string) => void;
+  isFocused?: boolean;
 }
 
-function CandidateItem({ item, isAddOn, onClick }: CandidateItemProps) {
+function CandidateItem({ item, isAddOn, onClick, isFocused }: CandidateItemProps) {
   return (
     <button
       type="button"
       onClick={() => onClick(item.ticker)}
-      className="w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-l-2 border-blue-500"
+      className={cn(
+        'w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-l-2 border-blue-500',
+        isFocused && 'ring-1 ring-primary',
+      )}
     >
       <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 min-w-[60px]">
         {item.ticker}
@@ -112,14 +162,18 @@ function CandidateItem({ item, isAddOn, onClick }: CandidateItemProps) {
 interface HoldItemProps {
   item: DailyReviewPositionHold;
   onClick: (ticker: string) => void;
+  isFocused?: boolean;
 }
 
-function HoldItem({ item, onClick }: HoldItemProps) {
+function HoldItem({ item, onClick, isFocused }: HoldItemProps) {
   return (
     <button
       type="button"
       onClick={() => onClick(item.ticker)}
-      className="w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-l-2 border-gray-300 dark:border-gray-600"
+      className={cn(
+        'w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-l-2 border-gray-300 dark:border-gray-600',
+        isFocused && 'ring-1 ring-primary',
+      )}
     >
       <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 min-w-[60px]">
         {item.ticker}
@@ -171,12 +225,114 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
   const selectedUniverse = parseUniverseFromStorage(localStorage.getItem(SCREENER_UNIVERSE_STORAGE_KEY));
   const { data: review, isLoading, error, refetch, isFetching } = useDailyReview(200, selectedUniverse);
 
+  // Open positions lookup for modal actions
+  const openPositionsQuery = usePositions('open');
+  const positionById = useMemo(
+    () => new Map(openPositionsQuery.data?.map((p) => [p.positionId, p]) ?? []),
+    [openPositionsQuery.data],
+  );
+
+  // Filter state (persisted)
+  const [recommendedOnly, setRecommendedOnly] = useLocalStorage('today.recommendedOnly', false);
+  const [actionFilter, setActionFilter] = useLocalStorage<string>('today.actionFilter', 'all');
+
+  // Done state after executing actions
+  const [doneIds, setDoneIds] = useState<Set<string>>(() => new Set());
+
+  // Modal targets
+  const [updateStopTarget, setUpdateStopTarget] = useState<Position | null>(null);
+  const [closeTarget, setCloseTarget] = useState<Position | null>(null);
+
+  // Mutations (no built-in onSuccess — we use per-call callbacks)
+  const updateStopMutation = useUpdateStopMutation();
+  const closePositionMutation = useClosePositionMutation();
+
+  const handleUpdateStop = useCallback((position: Position, req: UpdateStopRequest) => {
+    updateStopMutation.mutate(
+      { positionId: position.positionId!, request: req },
+      {
+        onSuccess: () => {
+          setUpdateStopTarget(null);
+          setDoneIds((prev) => new Set([...prev, position.positionId!]));
+        },
+      },
+    );
+  }, [updateStopMutation]);
+
+  const handleClosePosition = useCallback((position: Position, req: ClosePositionRequest) => {
+    closePositionMutation.mutate(
+      { positionId: position.positionId!, request: req },
+      {
+        onSuccess: () => {
+          setCloseTarget(null);
+          setDoneIds((prev) => new Set([...prev, position.positionId!]));
+        },
+      },
+    );
+  }, [closePositionMutation]);
+
   const [holdExpanded, setHoldExpanded] = useState(false);
+
+  // Keyboard navigation
+  const [focusedIndex, setFocusedIndex] = useState(-1);
+
+  // Apply filters to candidates
+  const filteredCandidates = useMemo(
+    () =>
+      filterDailyReviewCandidates(review?.newCandidates ?? [], {
+        recommendedOnly,
+        actionFilter: actionFilter as Parameters<typeof filterDailyReviewCandidates>[1]['actionFilter'],
+      }),
+    [review?.newCandidates, recommendedOnly, actionFilter],
+  );
+
+  const filteredAddOns = useMemo(
+    () =>
+      filterDailyReviewCandidates(review?.positionsAddOnCandidates ?? [], {
+        recommendedOnly,
+        actionFilter: actionFilter as Parameters<typeof filterDailyReviewCandidates>[1]['actionFilter'],
+      }),
+    [review?.positionsAddOnCandidates, recommendedOnly, actionFilter],
+  );
+
+  // Flat ordered list for keyboard navigation
+  const flatItems = useMemo(
+    () => [
+      ...(review?.positionsClose.map((i) => ({ ticker: i.ticker, id: i.positionId })) ?? []),
+      ...(review?.positionsUpdateStop.map((i) => ({ ticker: i.ticker, id: i.positionId })) ?? []),
+      ...filteredCandidates.map((i) => ({ ticker: i.ticker, id: i.ticker })),
+      ...filteredAddOns.map((i) => ({ ticker: i.ticker, id: i.ticker + '-addon' })),
+      ...(review?.positionsHold.map((i) => ({ ticker: i.ticker, id: i.positionId })) ?? []),
+    ],
+    [review, filteredCandidates, filteredAddOns],
+  );
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement)?.tagName)) return;
+      if (e.key === 'j' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        setFocusedIndex((i) => {
+          const next = Math.min(i + 1, flatItems.length - 1);
+          if (flatItems[next]) onTickerSelect(flatItems[next].ticker);
+          return next;
+        });
+      } else if (e.key === 'k' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        setFocusedIndex((i) => {
+          const prev = Math.max(i - 1, 0);
+          if (flatItems[prev]) onTickerSelect(flatItems[prev].ticker);
+          return prev;
+        });
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [flatItems, onTickerSelect]);
 
   const requiresActionCount =
     (review?.positionsClose.length ?? 0) + (review?.positionsUpdateStop.length ?? 0);
-  const opportunitiesCount =
-    (review?.newCandidates.length ?? 0) + (review?.positionsAddOnCandidates.length ?? 0);
+  const opportunitiesCount = filteredCandidates.length + filteredAddOns.length;
   const holdCount = review?.positionsHold.length ?? 0;
 
   if (isLoading) {
@@ -240,6 +396,28 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
         </div>
       )}
 
+      {/* Filter bar */}
+      <div className="flex items-center gap-3 px-3 py-2 border-b border-border shrink-0">
+        <label className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={recommendedOnly}
+            onChange={(e) => setRecommendedOnly(e.target.checked)}
+            className="rounded"
+          />
+          {t('dailyReview.filter.recommendedOnly')}
+        </label>
+        <select
+          value={actionFilter}
+          onChange={(e) => setActionFilter(e.target.value)}
+          className="text-xs border border-border rounded px-1.5 py-1 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+        >
+          {['all', 'BUY_NOW', 'BUY_ON_PULLBACK', 'WAIT_FOR_BREAKOUT', 'WATCH', 'TACTICAL_ONLY', 'AVOID', 'MANAGE_ONLY'].map((v) => (
+            <option key={v} value={v}>{v === 'all' ? t('dailyReview.filter.all') : v}</option>
+          ))}
+        </select>
+      </div>
+
       {/* Action list */}
       <div className="flex-1 overflow-y-auto px-2 py-2 space-y-3">
         {isEmpty && (
@@ -255,12 +433,34 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
               {t('todayPage.actionList.requiresAction')} · {requiresActionCount}
             </div>
             <div className="space-y-0.5">
-              {review?.positionsClose.map((item) => (
-                <CloseItem key={item.positionId} item={item} onClick={onTickerSelect} />
-              ))}
-              {review?.positionsUpdateStop.map((item) => (
-                <UpdateStopItem key={item.positionId} item={item} onClick={onTickerSelect} />
-              ))}
+              {review?.positionsClose.map((item) => {
+                const position = positionById.get(item.positionId);
+                const idx = flatItems.findIndex((fi) => fi.ticker === item.ticker);
+                return (
+                  <CloseItem
+                    key={item.positionId}
+                    item={item}
+                    onClick={onTickerSelect}
+                    onAction={position ? () => setCloseTarget(position) : undefined}
+                    isDone={doneIds.has(item.positionId)}
+                    isFocused={focusedIndex === idx}
+                  />
+                );
+              })}
+              {review?.positionsUpdateStop.map((item) => {
+                const position = positionById.get(item.positionId);
+                const idx = flatItems.findIndex((fi) => fi.ticker === item.ticker);
+                return (
+                  <UpdateStopItem
+                    key={item.positionId}
+                    item={item}
+                    onClick={onTickerSelect}
+                    onAction={position ? () => setUpdateStopTarget(position) : undefined}
+                    isDone={doneIds.has(item.positionId)}
+                    isFocused={focusedIndex === idx}
+                  />
+                );
+              })}
             </div>
           </div>
         )}
@@ -272,12 +472,29 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
               {t('todayPage.actionList.opportunities')} · {opportunitiesCount}
             </div>
             <div className="space-y-0.5">
-              {review?.newCandidates.map((item) => (
-                <CandidateItem key={item.ticker} item={item} onClick={onTickerSelect} />
-              ))}
-              {review?.positionsAddOnCandidates.map((item) => (
-                <CandidateItem key={item.ticker} item={item} isAddOn onClick={onTickerSelect} />
-              ))}
+              {filteredCandidates.map((item) => {
+                const idx = flatItems.findIndex((fi) => fi.id === item.ticker);
+                return (
+                  <CandidateItem
+                    key={item.ticker}
+                    item={item}
+                    onClick={onTickerSelect}
+                    isFocused={focusedIndex === idx}
+                  />
+                );
+              })}
+              {filteredAddOns.map((item) => {
+                const idx = flatItems.findIndex((fi) => fi.id === item.ticker + '-addon');
+                return (
+                  <CandidateItem
+                    key={item.ticker}
+                    item={item}
+                    isAddOn
+                    onClick={onTickerSelect}
+                    isFocused={focusedIndex === idx}
+                  />
+                );
+              })}
             </div>
           </div>
         )}
@@ -294,14 +511,47 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
             />
             {holdExpanded && (
               <div className="space-y-0.5">
-                {review?.positionsHold.map((item) => (
-                  <HoldItem key={item.positionId} item={item} onClick={onTickerSelect} />
-                ))}
+                {review?.positionsHold.map((item) => {
+                  const idx = flatItems.findIndex((fi) => fi.id === item.positionId);
+                  return (
+                    <HoldItem
+                      key={item.positionId}
+                      item={item}
+                      onClick={onTickerSelect}
+                      isFocused={focusedIndex === idx}
+                    />
+                  );
+                })}
               </div>
             )}
           </div>
         )}
       </div>
+
+      {/* Keyboard hint */}
+      <div className="px-3 py-1.5 border-t border-border shrink-0">
+        <p className="text-[10px] text-gray-400 dark:text-gray-600">{t('todayPage.keyboard.hint')}</p>
+      </div>
+
+      {/* Modals */}
+      {updateStopTarget && (
+        <UpdateStopModalForm
+          position={updateStopTarget}
+          isLoading={updateStopMutation.isPending}
+          error={updateStopMutation.error instanceof Error ? updateStopMutation.error.message : undefined}
+          onClose={() => setUpdateStopTarget(null)}
+          onSubmit={(req) => handleUpdateStop(updateStopTarget, req)}
+        />
+      )}
+      {closeTarget && (
+        <ClosePositionModalForm
+          position={closeTarget}
+          isLoading={closePositionMutation.isPending}
+          error={closePositionMutation.error instanceof Error ? closePositionMutation.error.message : undefined}
+          onClose={() => setCloseTarget(null)}
+          onSubmit={(req) => handleClosePosition(closeTarget, req)}
+        />
+      )}
     </div>
   );
 }
@@ -329,9 +579,9 @@ export default function Today() {
     }
   }, [selectedTicker]);
 
-  const handleTickerSelect = (ticker: string) => {
+  const handleTickerSelect = useCallback((ticker: string) => {
     setSelectedTicker(ticker, 'screener');
-  };
+  }, [setSelectedTicker]);
 
   return (
     <div className="mx-auto max-w-[1600px]">

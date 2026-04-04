@@ -4,6 +4,8 @@ import { t } from '@/i18n/t';
 import IntelligencePage from './Intelligence';
 import FundamentalsPage from './Fundamentals';
 
+
+
 const STORAGE_KEY = 'research.activeTab';
 type ResearchTab = 'intelligence' | 'fundamentals';
 
@@ -15,6 +17,9 @@ export default function Research() {
     }
     return 'intelligence';
   });
+
+  const [sharedSymbol, setSharedSymbol] = useState('');
+  const [committedSymbol, setCommittedSymbol] = useState('');
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, activeTab);
@@ -35,6 +40,34 @@ export default function Research() {
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
           {t('researchPage.subtitle')}
         </p>
+      </div>
+
+      {/* Symbol search */}
+      <div className="flex gap-2 mb-4">
+        <input
+          type="text"
+          value={sharedSymbol}
+          onChange={(e) => setSharedSymbol(e.target.value.toUpperCase())}
+          onKeyDown={(e) => { if (e.key === 'Enter') setCommittedSymbol(sharedSymbol); }}
+          placeholder={t('researchPage.symbolSearch.placeholder')}
+          className="w-48 px-3 py-1.5 text-sm border border-border rounded-md bg-white dark:bg-gray-800"
+        />
+        <button
+          type="button"
+          onClick={() => setCommittedSymbol(sharedSymbol)}
+          className="px-3 py-1.5 text-sm bg-primary/10 text-primary rounded-md hover:bg-primary/20"
+        >
+          {t('researchPage.symbolSearch.search')}
+        </button>
+        {committedSymbol && (
+          <button
+            type="button"
+            onClick={() => { setSharedSymbol(''); setCommittedSymbol(''); }}
+            className="px-2 py-1.5 text-sm text-gray-500 hover:text-gray-700"
+          >
+            ✕
+          </button>
+        )}
       </div>
 
       {/* Tab bar */}
@@ -58,8 +91,8 @@ export default function Research() {
 
       {/* Tab content */}
       <div>
-        {activeTab === 'intelligence' && <IntelligencePage />}
-        {activeTab === 'fundamentals' && <FundamentalsPage />}
+        {activeTab === 'intelligence' && <IntelligencePage initialSymbol={committedSymbol} />}
+        {activeTab === 'fundamentals' && <FundamentalsPage initialSymbol={committedSymbol} />}
       </div>
     </div>
   );

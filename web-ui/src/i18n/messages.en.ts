@@ -1144,6 +1144,10 @@ export const messagesEn = {
       'Same-symbol add-on: Score {{score}}, Confidence {{confidence}}%, Rank #{{rank}}, Live stop {{liveStop}}, Fresh setup stop {{freshStop}}',
   },
   dailyReview: {
+    filter: {
+      recommendedOnly: 'Recommended only',
+      all: 'All',
+    },
     header: {
       title: 'Daily Review',
       loading: 'Loading daily review...',
@@ -2083,6 +2087,10 @@ export const messagesEn = {
       intelligence: 'Intelligence',
       fundamentals: 'Fundamentals',
     },
+    symbolSearch: {
+      placeholder: 'Symbol (e.g. AAPL)',
+      search: 'Search',
+    },
   },
   todayPage: {
     tabs: {
@@ -2098,6 +2106,11 @@ export const messagesEn = {
       addOn: 'Add-on',
       empty: 'No items for today.',
       loading: "Loading today's review...",
+      closeAction: 'Close →',
+      updateAction: 'Update →',
+    },
+    keyboard: {
+      hint: 'j/k navigate · Enter select',
     },
   },
 } as const;
