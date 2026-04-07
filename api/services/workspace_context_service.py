@@ -206,7 +206,6 @@ class WorkspaceContextService:
         normalized_ticker = _normalize_ticker(selected_ticker)
         warnings: list[str] = []
 
-        orders_response = self._portfolio_service.list_orders()
         positions_response = self._portfolio_service.list_positions()
 
         account_size = self._active_account_size()
@@ -270,7 +269,7 @@ class WorkspaceContextService:
 
         context = WorkspaceContext(
             selected_ticker=normalized_ticker,
-            orders=orders_response.orders,
+            orders=[],
             positions=positions_response.positions,
             portfolio_summary=portfolio_summary,
             screener_snapshot=workspace_snapshot,
@@ -285,11 +284,8 @@ class WorkspaceContextService:
                         label="Portfolio",
                         loaded=True,
                         origin="stored_state",
-                        asof=max(
-                            orders_response.asof,
-                            positions_response.asof,
-                        ),
-                        count=len(orders_response.orders) + len(positions_response.positions),
+                        asof=positions_response.asof,
+                        count=len(positions_response.positions),
                     ),
                     WorkspaceContextSourceMeta(
                         source="screener",

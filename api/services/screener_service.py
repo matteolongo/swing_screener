@@ -739,7 +739,7 @@ class ScreenerService:
                 )
 
             portfolio_positions = self._portfolio_service.list_positions(status="open").positions
-            portfolio_orders = self._portfolio_service.list_orders().orders
+            portfolio_orders: list = []
             same_symbol_evaluator = SameSymbolReentryEvaluator(self._portfolio_service)
             same_symbol_suppressed_count = 0
             same_symbol_add_on_count = 0

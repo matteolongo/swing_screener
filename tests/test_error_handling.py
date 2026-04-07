@@ -24,20 +24,19 @@ class TestErrorMasking:
         """Test that Pydantic validation errors show field-level details."""
         # Send invalid data - negative price
         response = client.post(
-            "/api/portfolio/orders",
+            "/api/portfolio/positions",
             json={
                 "ticker": "AAPL",
-                "direction": "long",
                 "entry_price": -100.0,  # Invalid - negative
                 "stop_price": 95.0,
-                "quantity": 10,
-                "risk_pct": 1.0,
+                "shares": 10,
+                "entry_date": "2026-01-01",
             }
         )
-        
+
         assert response.status_code == 422
         data = response.json()
-        
+
         # Should contain validation error details (intentional)
         assert "detail" in data
         # Pydantic validation errors are list of dicts
@@ -46,17 +45,16 @@ class TestErrorMasking:
     def test_validation_error_on_invalid_ticker(self):
         """Test ticker validation error."""
         response = client.post(
-            "/api/portfolio/orders",
+            "/api/portfolio/positions",
             json={
                 "ticker": "TOOLONGTICKERXYZ",  # Invalid - too long
-                "direction": "long",
                 "entry_price": 100.0,
                 "stop_price": 95.0,
-                "quantity": 10,
-                "risk_pct": 1.0,
+                "shares": 10,
+                "entry_date": "2026-01-01",
             }
         )
-        
+
         assert response.status_code == 422
         data = response.json()
         assert "detail" in data
@@ -128,46 +126,43 @@ class TestInputValidation:
     def test_negative_price_rejected(self):
         """Test negative prices are rejected."""
         response = client.post(
-            "/api/portfolio/orders",
+            "/api/portfolio/positions",
             json={
                 "ticker": "AAPL",
-                "direction": "long",
                 "entry_price": -50.0,
                 "stop_price": 45.0,
-                "quantity": 10,
-                "risk_pct": 1.0,
+                "shares": 10,
+                "entry_date": "2026-01-01",
             }
         )
-        
+
         assert response.status_code == 422
 
-    def test_invalid_direction_rejected(self):
-        """Test invalid direction is rejected."""
+    def test_invalid_shares_rejected(self):
+        """Test that zero or negative shares are rejected."""
         response = client.post(
-            "/api/portfolio/orders",
+            "/api/portfolio/positions",
             json={
                 "ticker": "AAPL",
-                "direction": "sideways",  # Invalid
                 "entry_price": 100.0,
                 "stop_price": 95.0,
-                "quantity": 10,
-                "risk_pct": 1.0,
+                "shares": -5,  # Invalid - negative shares
+                "entry_date": "2026-01-01",
             }
         )
-        
+
         assert response.status_code == 422
 
     def test_stop_above_entry_for_long_rejected(self):
-        """Test that stop > entry for long is rejected."""
+        """Test that stop >= entry is rejected."""
         response = client.post(
-            "/api/portfolio/orders",
+            "/api/portfolio/positions",
             json={
                 "ticker": "AAPL",
-                "direction": "long",
                 "entry_price": 100.0,
-                "stop_price": 105.0,  # Invalid - stop above entry for long
-                "quantity": 10,
-                "risk_pct": 1.0,
+                "stop_price": 105.0,  # Invalid - stop above entry
+                "shares": 10,
+                "entry_date": "2026-01-01",
             }
         )
         

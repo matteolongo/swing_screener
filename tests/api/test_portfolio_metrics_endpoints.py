@@ -36,7 +36,6 @@ def _set_account_size(monkeypatch: pytest.MonkeyPatch, account_size: float) -> N
 
 def test_position_metrics_endpoint(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
     positions_file = tmp_path / "positions.json"
-    orders_file = tmp_path / "orders.json"
     positions_file.write_text(
         json.dumps(
             {
@@ -57,10 +56,8 @@ def test_position_metrics_endpoint(monkeypatch: pytest.MonkeyPatch, tmp_path) ->
         ),
         encoding="utf-8",
     )
-    orders_file.write_text(json.dumps({"asof": "2026-02-08", "orders": []}), encoding="utf-8")
 
     monkeypatch.setattr(api.dependencies, "POSITIONS_FILE", positions_file)
-    monkeypatch.setattr(api.dependencies, "ORDERS_FILE", orders_file)
 
     mock_provider = MagicMock(spec=MarketDataProvider)
     mock_provider.fetch_ohlcv.return_value = _ohlcv_with_closes({"VALE": [16.30, 16.65]})
@@ -84,7 +81,6 @@ def test_position_metrics_endpoint(monkeypatch: pytest.MonkeyPatch, tmp_path) ->
 
 def test_position_metrics_subtracts_recorded_fees(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
     positions_file = tmp_path / "positions.json"
-    orders_file = tmp_path / "orders.json"
     positions_file.write_text(
         json.dumps(
             {
@@ -99,34 +95,7 @@ def test_position_metrics_subtracts_recorded_fees(monkeypatch: pytest.MonkeyPatc
                         "shares": 2,
                         "position_id": "POS-BAMNB.AS-1",
                         "initial_risk": 0.60,
-                    }
-                ],
-            }
-        ),
-        encoding="utf-8",
-    )
-    orders_file.write_text(
-        json.dumps(
-            {
-                "asof": "2026-02-08",
-                "orders": [
-                    {
-                        "order_id": "ORD-BAMNB-ENTRY",
-                        "ticker": "BAMNB.AS",
-                        "status": "filled",
-                        "order_type": "BUY_LIMIT",
-                        "quantity": 2,
-                        "limit_price": 9.97,
-                        "stop_price": 9.37,
-                        "order_date": "2026-02-17",
-                        "filled_date": "2026-02-17",
-                        "entry_price": 9.97,
-                        "notes": "",
-                        "order_kind": "entry",
-                        "parent_order_id": None,
-                        "position_id": "POS-BAMNB.AS-1",
-                        "tif": "GTC",
-                        "fee_eur": 4.90,
+                        "entry_fee_eur": 4.90,
                     }
                 ],
             }
@@ -135,7 +104,6 @@ def test_position_metrics_subtracts_recorded_fees(monkeypatch: pytest.MonkeyPatc
     )
 
     monkeypatch.setattr(api.dependencies, "POSITIONS_FILE", positions_file)
-    monkeypatch.setattr(api.dependencies, "ORDERS_FILE", orders_file)
 
     mock_provider = MagicMock(spec=MarketDataProvider)
     mock_provider.fetch_ohlcv.return_value = _ohlcv_with_closes({"BAMNB.AS": [9.98, 10.0]})
@@ -158,9 +126,8 @@ def test_position_metrics_subtracts_recorded_fees_usd(
     # Clear EURUSD cache to ensure fresh fetch
     import api.services.portfolio_service as ps
     ps._eurusd_cache.clear()
-    
+
     positions_file = tmp_path / "positions.json"
-    orders_file = tmp_path / "orders.json"
     positions_file.write_text(
         json.dumps(
             {
@@ -175,28 +142,7 @@ def test_position_metrics_subtracts_recorded_fees_usd(
                         "shares": 1,
                         "position_id": "POS-INTC-USD-1",
                         "initial_risk": 1.0,
-                    }
-                ],
-            }
-        ),
-        encoding="utf-8",
-    )
-    # Record a simple executed order with non-zero fees for the USD-denominated INTC position.
-    orders_file.write_text(
-        json.dumps(
-            {
-                "asof": "2026-02-08",
-                "orders": [
-                    {
-                        "order_id": "ORD-INTC-1",
-                        "ticker": "INTC",
-                        "position_id": "POS-INTC-USD-1",
-                        "status": "filled",
-                        "side": "buy",
-                        "order_type": "BUY_LIMIT",
-                        "quantity": 1,
-                        "fee_eur": 5.0,
-                        "order_kind": "entry",
+                        "entry_fee_eur": 5.0,
                     }
                 ],
             }
@@ -205,14 +151,14 @@ def test_position_metrics_subtracts_recorded_fees_usd(
     )
 
     monkeypatch.setattr(api.dependencies, "POSITIONS_FILE", positions_file)
-    monkeypatch.setattr(api.dependencies, "ORDERS_FILE", orders_file)
 
     mock_provider = MagicMock(spec=MarketDataProvider)
-    # Mock fetch_ohlcv to return data for both INTC and EURUSD=X
+
     def mock_fetch_ohlcv(tickers, **kwargs):
         if "EURUSD=X" in tickers:
             return _ohlcv_with_closes({"EURUSD=X": [1.18, 1.18]})
         return _ohlcv_with_closes({"INTC": [48.0, 47.5]})
+
     mock_provider.fetch_ohlcv = mock_fetch_ohlcv
     mock_provider.get_provider_name.return_value = "mock"
     monkeypatch.setattr(portfolio_service, "get_default_provider", lambda **kwargs: mock_provider)
@@ -234,7 +180,6 @@ def test_positions_endpoint_returns_precomputed_metrics(
     monkeypatch: pytest.MonkeyPatch, tmp_path
 ) -> None:
     positions_file = tmp_path / "positions.json"
-    orders_file = tmp_path / "orders.json"
     positions_file.write_text(
         json.dumps(
             {
@@ -267,10 +212,8 @@ def test_positions_endpoint_returns_precomputed_metrics(
         ),
         encoding="utf-8",
     )
-    orders_file.write_text(json.dumps({"asof": "2026-02-08", "orders": []}), encoding="utf-8")
 
     monkeypatch.setattr(api.dependencies, "POSITIONS_FILE", positions_file)
-    monkeypatch.setattr(api.dependencies, "ORDERS_FILE", orders_file)
 
     mock_provider = MagicMock(spec=MarketDataProvider)
     mock_provider.fetch_ohlcv.return_value = _ohlcv_with_closes({"VALE": [16.30, 16.65]})
@@ -310,7 +253,6 @@ def test_positions_endpoint_returns_precomputed_metrics(
 
 def test_portfolio_summary_endpoint(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
     positions_file = tmp_path / "positions.json"
-    orders_file = tmp_path / "orders.json"
     positions_file.write_text(
         json.dumps(
             {
@@ -351,10 +293,8 @@ def test_portfolio_summary_endpoint(monkeypatch: pytest.MonkeyPatch, tmp_path) -
         ),
         encoding="utf-8",
     )
-    orders_file.write_text(json.dumps({"asof": "2026-02-08", "orders": []}), encoding="utf-8")
 
     monkeypatch.setattr(api.dependencies, "POSITIONS_FILE", positions_file)
-    monkeypatch.setattr(api.dependencies, "ORDERS_FILE", orders_file)
     _set_account_size(monkeypatch, account_size=1000.0)
 
     mock_provider = MagicMock(spec=MarketDataProvider)
@@ -395,7 +335,6 @@ def test_portfolio_summary_endpoint(monkeypatch: pytest.MonkeyPatch, tmp_path) -
 
 def test_portfolio_summary_endpoint_no_open_positions(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
     positions_file = tmp_path / "positions.json"
-    orders_file = tmp_path / "orders.json"
     positions_file.write_text(
         json.dumps(
             {
@@ -416,10 +355,8 @@ def test_portfolio_summary_endpoint_no_open_positions(monkeypatch: pytest.Monkey
         ),
         encoding="utf-8",
     )
-    orders_file.write_text(json.dumps({"asof": "2026-02-08", "orders": []}), encoding="utf-8")
 
     monkeypatch.setattr(api.dependencies, "POSITIONS_FILE", positions_file)
-    monkeypatch.setattr(api.dependencies, "ORDERS_FILE", orders_file)
     _set_account_size(monkeypatch, account_size=1000.0)
 
     mock_provider = MagicMock(spec=MarketDataProvider)

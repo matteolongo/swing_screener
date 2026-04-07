@@ -22,6 +22,7 @@ class Position(BaseModel):
     source_order_id: Optional[str] = None
     initial_risk: Optional[float] = None
     max_favorable_price: Optional[float] = None
+    entry_fee_eur: Optional[float] = None
     exit_date: Optional[str] = None
     exit_price: Optional[float] = None
     exit_fee_eur: Optional[float] = None
@@ -113,66 +114,21 @@ class StopSuggestionComputeRequest(BaseModel):
     manage: Optional[StopSuggestionManageConfig] = None
 
 
-OrderStatus = Literal["pending", "filled", "cancelled"]
-OrderKind = Literal["entry", "stop", "take_profit"]
-EntryMode = Literal["NEW_ENTRY", "ADD_ON"]
 DegiroAvailabilityMode = Literal["ready", "missing_library", "missing_credentials"]
 
-BASE_ORDER_TYPES = {"MARKET", "LIMIT", "STOP", "STOP_LIMIT"}
-DIRECTIONAL_ORDER_TYPES = {
-    "BUY_MARKET",
-    "BUY_LIMIT",
-    "BUY_STOP",
-    "BUY_STOP_LIMIT",
-    "SELL_MARKET",
-    "SELL_LIMIT",
-    "SELL_STOP",
-    "SELL_STOP_LIMIT",
-}
-SUPPORTED_ORDER_TYPES = BASE_ORDER_TYPES | DIRECTIONAL_ORDER_TYPES
 
-LIMIT_ORDER_TYPES = {"LIMIT", "BUY_LIMIT", "SELL_LIMIT"}
-STOP_ORDER_TYPES = {"STOP", "BUY_STOP", "SELL_STOP"}
-STOP_LIMIT_ORDER_TYPES = {"STOP_LIMIT", "BUY_STOP_LIMIT", "SELL_STOP_LIMIT"}
+class CreatePositionRequest(BaseModel):
+    """Request to manually register a position after a DeGiro fill."""
 
-
-class Order(BaseModel):
-    order_id: str
     ticker: str
-    status: OrderStatus
-    order_type: str
-    quantity: int
-    limit_price: Optional[float] = None
-    stop_price: Optional[float] = None
-    order_date: str = ""
-    filled_date: str = ""
-    entry_price: Optional[float] = None
-    notes: str = ""
-    order_kind: Optional[OrderKind] = None
-    parent_order_id: Optional[str] = None
-    position_id: Optional[str] = None
-    tif: Optional[str] = None
-    fee_eur: Optional[float] = None
-    fill_fx_rate: Optional[float] = None
-    broker: Optional[str] = None
-    broker_order_id: Optional[str] = None
-    broker_product_id: Optional[str] = None
-    isin: Optional[str] = None
-    broker_synced_at: Optional[str] = None
-
-
-class CreateOrderRequest(BaseModel):
-    ticker: str
-    order_type: str
-    quantity: int
-    limit_price: Optional[float] = None
-    stop_price: Optional[float] = None
-    notes: str = ""
-    order_kind: OrderKind = "entry"
-    position_id: Optional[str] = None
-    entry_mode: EntryMode = "NEW_ENTRY"
-    isin: Optional[str] = None
+    entry_price: float = Field(gt=0, description="Entry fill price")
+    stop_price: float = Field(gt=0, description="Initial stop-loss price")
+    shares: int = Field(gt=0, description="Number of shares")
+    entry_date: str = Field(description="Entry date (YYYY-MM-DD)")
     thesis: Optional[str] = None
+    isin: Optional[str] = None
+    notes: str = ""
+    fee_eur: Optional[float] = Field(default=None, ge=0, description="Entry fee in EUR (optional)")
 
     @field_validator("ticker")
     @classmethod
@@ -186,75 +142,30 @@ class CreateOrderRequest(BaseModel):
             raise ValueError("Ticker must contain only letters, numbers, dots, or hyphens")
         return v
 
-    @field_validator("quantity")
-    @classmethod
-    def validate_quantity(cls, v: int) -> int:
-        if v <= 0:
-            raise ValueError("Quantity must be positive")
-        if v > 1000000:
-            raise ValueError("Quantity exceeds maximum (1,000,000 shares)")
-        return v
-
-    @field_validator("limit_price", "stop_price")
-    @classmethod
-    def validate_price(cls, v: Optional[float]) -> Optional[float]:
-        if v is None:
-            return v
-        if not math.isfinite(v):
-            raise ValueError("Price must be a finite number (not NaN or Inf)")
-        if v <= 0:
-            raise ValueError("Price must be positive")
-        if v > 100000:
-            raise ValueError("Price exceeds reasonable maximum (100,000)")
-        return v
-
-    @field_validator("order_type")
-    @classmethod
-    def validate_order_type(cls, v: str) -> str:
-        v = v.strip().upper()
-        if v not in SUPPORTED_ORDER_TYPES:
-            raise ValueError(
-                f"Invalid order type: {v}. Must be one of {', '.join(sorted(SUPPORTED_ORDER_TYPES))}"
-            )
-        return v
-
-    @field_validator("entry_mode")
-    @classmethod
-    def validate_entry_mode(cls, value: str) -> str:
-        normalized = value.strip().upper()
-        if normalized not in {"NEW_ENTRY", "ADD_ON"}:
-            raise ValueError("entry_mode must be NEW_ENTRY or ADD_ON")
-        return normalized
-
     @model_validator(mode="after")
-    def validate_order_consistency(self):
-        """Validate price fields match order type."""
-        if self.order_type in LIMIT_ORDER_TYPES and self.limit_price is None:
-            raise ValueError(f"{self.order_type} order requires limit_price")
-        if self.order_type in STOP_ORDER_TYPES | STOP_LIMIT_ORDER_TYPES and self.stop_price is None:
-            raise ValueError(f"{self.order_type} order requires stop_price")
-        if self.order_type in STOP_LIMIT_ORDER_TYPES and self.limit_price is None:
-            raise ValueError(f"{self.order_type} order requires both stop_price and limit_price")
+    def validate_stop_below_entry(self):
+        if self.stop_price >= self.entry_price:
+            raise ValueError("stop_price must be below entry_price for a long position")
         return self
 
 
-class OrderSnapshot(BaseModel):
+class DegiroOrder(BaseModel):
+    """Live order read from DeGiro API (read-only)."""
+
     order_id: str
-    ticker: str
-    status: OrderStatus
-    order_type: str
+    product_id: Optional[str] = None
+    isin: Optional[str] = None
+    product_name: Optional[str] = None
+    status: str
+    price: Optional[float] = None
     quantity: int
-    limit_price: Optional[float] = None
-    stop_price: Optional[float] = None
-    order_kind: Optional[OrderKind] = None
-    last_price: Optional[float] = None
-    last_bar: Optional[str] = None
-    pct_to_limit: Optional[float] = None
-    pct_to_stop: Optional[float] = None
+    order_type: Optional[str] = None
+    side: Optional[str] = None
+    created_at: Optional[str] = None
 
 
-class OrdersSnapshotResponse(BaseModel):
-    orders: list[OrderSnapshot]
+class DegiroOrdersResponse(BaseModel):
+    orders: list[DegiroOrder]
     asof: str
 
 
@@ -264,26 +175,6 @@ class DegiroStatus(BaseModel):
     available: bool
     mode: DegiroAvailabilityMode
     detail: str
-
-
-class FillOrderRequest(BaseModel):
-    filled_price: float = Field(gt=0, description="Price at which order was filled")
-    filled_date: str = Field(description="Date order was filled (YYYY-MM-DD)")
-    stop_price: Optional[float] = Field(
-        default=None,
-        gt=0,
-        description="Stop price to use when filling entry orders (optional override)",
-    )
-    fee_eur: Optional[float] = Field(
-        default=None,
-        ge=0,
-        description="Execution fee in EUR (optional)",
-    )
-    fill_fx_rate: Optional[float] = Field(
-        default=None,
-        gt=0,
-        description="Exchange rate at fill time (e.g., 1.18 means 1 EUR = 1.18 USD). Optional.",
-    )
 
 
 class PositionsResponse(BaseModel):
@@ -346,11 +237,6 @@ class PortfolioSummary(BaseModel):
     positions_profitable: int = Field(..., description="Number of positions in profit")
     positions_losing: int = Field(..., description="Number of positions at loss")
     win_rate: float = Field(..., description="Percentage of positions profitable")
-
-
-class OrdersResponse(BaseModel):
-    orders: list[Order]
-    asof: str
 
 
 # ---------------------------------------------------------------------------

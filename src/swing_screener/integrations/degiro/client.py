@@ -82,3 +82,23 @@ class DegiroClient:
 
     def __exit__(self, *_: Any) -> None:
         self.disconnect()
+
+    # ------------------------------------------------------------------
+    # Order reads
+    # ------------------------------------------------------------------
+
+    def get_orders(self) -> list[dict]:
+        """Fetch current pending orders from DeGiro."""
+        try:
+            from degiro_connector.trading.models.account import UpdateOption, UpdateRequest
+        except ImportError as exc:
+            raise ImportError(
+                "degiro-connector is not installed. "
+                "Install it with: pip install -e '.[degiro]'"
+            ) from exc
+
+        update = self.api.get_update(
+            request_list=[UpdateRequest(option=UpdateOption.ORDERS, last_updated=0)],
+            raw=True,
+        ) or {}
+        return update.get("orders", {}).get("value", [])

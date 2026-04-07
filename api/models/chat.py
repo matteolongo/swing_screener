@@ -10,7 +10,7 @@ from api.models.intelligence import (
     IntelligenceEventResponse,
     IntelligenceOpportunityResponse,
 )
-from api.models.portfolio import Order, PortfolioSummary, PositionWithMetrics
+from api.models.portfolio import PortfolioSummary, PositionWithMetrics
 from api.models.screener import SameSymbolCandidateContext
 
 
@@ -135,7 +135,7 @@ class WorkspaceIntelligenceContext(BaseModel):
 
 class WorkspaceContext(BaseModel):
     selected_ticker: Optional[str] = None
-    orders: list[Order] = Field(default_factory=list)
+    orders: list = Field(default_factory=list)
     positions: list[PositionWithMetrics] = Field(default_factory=list)
     portfolio_summary: Optional[PortfolioSummary] = None
     screener_snapshot: Optional[WorkspaceSnapshot] = None

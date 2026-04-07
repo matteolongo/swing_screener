@@ -12,7 +12,6 @@ from pathlib import Path
 
 from api.repositories.intelligence_config_repo import IntelligenceConfigRepository
 from api.repositories.intelligence_symbol_sets_repo import IntelligenceSymbolSetsRepository
-from api.repositories.orders_repo import OrdersRepository
 from api.repositories.positions_repo import PositionsRepository
 from api.repositories.strategy_repo import StrategyRepository
 from api.services.chat_service import ChatService
@@ -31,25 +30,11 @@ from swing_screener.settings import data_dir, get_settings_manager, project_root
 ROOT_DIR = project_root()
 DATA_DIR = data_dir()
 POSITIONS_FILE = get_settings_manager().resolve_runtime_path("positions_file", DATA_DIR / "positions.json")
-ORDERS_FILE = get_settings_manager().resolve_runtime_path("orders_file", DATA_DIR / "orders.json")
 
 
 def get_positions_path() -> Path:
     """Get path to positions.json."""
     return POSITIONS_FILE
-
-
-def get_orders_path() -> Path:
-    """Get path to orders.json."""
-    return ORDERS_FILE
-
-
-def get_orders_repo() -> OrdersRepository:
-    """Get orders repository instance."""
-    path = get_orders_path()
-    if not path.exists():
-        locked_write_json(path, {"asof": get_today_str(), "orders": []})
-    return OrdersRepository(path)
 
 
 def get_positions_repo() -> PositionsRepository:
@@ -78,7 +63,6 @@ def get_intelligence_symbol_sets_repo() -> IntelligenceSymbolSetsRepository:
 def get_portfolio_service() -> PortfolioService:
     """Get portfolio service instance with injected dependencies."""
     return PortfolioService(
-        orders_repo=get_orders_repo(),
         positions_repo=get_positions_repo(),
     )
 

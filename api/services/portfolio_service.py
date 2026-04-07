@@ -1,33 +1,29 @@
-"""Portfolio service - positions and orders logic."""
+"""Portfolio service - positions and live DeGiro order reads."""
 from __future__ import annotations
 
-from dataclasses import replace
 import datetime as dt
-from decimal import Decimal, ROUND_HALF_UP
 import logging
+import uuid
+from decimal import Decimal, ROUND_HALF_UP
 from typing import Optional
 
 import pandas as pd
 from fastapi import HTTPException
 
 from api.models.portfolio import (
+    CreatePositionRequest,
+    DegiroOrder,
+    DegiroOrdersResponse,
     Position,
     PositionUpdate,
     PositionWithMetrics,
     PositionsWithMetricsResponse,
     PositionMetrics,
     PortfolioSummary,
-    Order,
-    OrdersResponse,
-    OrderSnapshot,
-    OrdersSnapshotResponse,
-    CreateOrderRequest,
-    FillOrderRequest,
     UpdateStopRequest,
     ClosePositionRequest,
 )
 from api.repositories.config_repo import ConfigRepository
-from api.repositories.orders_repo import OrdersRepository
 from api.repositories.positions_repo import PositionsRepository
 from api.utils.files import get_today_str
 from swing_screener.portfolio.state import (
@@ -36,13 +32,6 @@ from swing_screener.portfolio.state import (
     evaluate_positions,
     load_positions,
     save_positions,
-)
-from swing_screener.execution.orders import load_orders, save_orders
-from swing_screener.execution.order_workflows import (
-    fill_entry_order,
-    infer_order_kind,
-    normalize_orders,
-    scale_in_fill,
 )
 from swing_screener.data.providers import MarketDataProvider, get_default_provider
 from swing_screener.data.currency import detect_currency
@@ -59,11 +48,7 @@ logger = logging.getLogger(__name__)
 
 
 def _resolve_isin(ticker: str) -> Optional[str]:
-    """Look up ISIN from the DeGiro ISIN map for a given ticker.
-
-    Tries the full ticker first (e.g. 'REP.MC'), then the root without
-    exchange suffix (e.g. 'REP').
-    """
+    """Look up ISIN from the DeGiro ISIN map for a given ticker."""
     try:
         from swing_screener.fundamentals.providers.degiro import _load_isin_map
         isin_map = _load_isin_map()
@@ -178,14 +163,32 @@ def _to_state_position(position: dict) -> StatePosition:
     )
 
 
+def _normalize_degiro_order(raw: dict) -> DegiroOrder:
+    """Convert a raw DeGiro order dict to DegiroOrder model."""
+    vals = {v["name"]: v.get("value") for v in raw.get("value", [])} if "value" in raw else raw
+    side_raw = str(vals.get("buysell", "") or "").upper()
+    side = "buy" if side_raw in ("B", "BUY", "1") else ("sell" if side_raw in ("S", "SELL", "2") else None)
+    order_type_raw = vals.get("orderTypeId") or vals.get("orderType")
+    return DegiroOrder(
+        order_id=str(vals.get("orderId", "") or raw.get("orderId", "")),
+        product_id=str(vals.get("productId", "") or "") or None,
+        isin=str(vals.get("isin", "") or "") or None,
+        product_name=str(vals.get("product", "") or vals.get("productName", "") or "") or None,
+        status=str(vals.get("status", "") or vals.get("orderStatus", "") or "").lower(),
+        price=float(vals["price"]) if vals.get("price") is not None else None,
+        quantity=int(float(vals.get("size", 0) or vals.get("quantity", 0) or 0)),
+        order_type=str(order_type_raw) if order_type_raw is not None else None,
+        side=side,
+        created_at=str(vals.get("date", "") or vals.get("created", "") or "") or None,
+    )
+
+
 class PortfolioService:
     def __init__(
         self,
-        orders_repo: OrdersRepository,
         positions_repo: PositionsRepository,
         provider: Optional[MarketDataProvider] = None
     ) -> None:
-        self._orders_repo = orders_repo
         self._positions_repo = positions_repo
         self._provider = provider or get_default_provider()
 
@@ -222,13 +225,11 @@ class PortfolioService:
                         ticker = str(pos.get("ticker", "")).upper()
                         pos["current_price"] = last_prices.get(ticker)
             except (KeyError, ValueError, TypeError) as exc:
-                # Known data access errors - log and continue with null prices
                 logger.warning("Failed to fetch current prices (data error): %s", exc)
                 for pos in positions:
                     if pos.get("status") == "open":
                         pos["current_price"] = None
-            except Exception as exc:
-                # Unexpected errors - log with full context but continue
+            except Exception:
                 logger.exception("Unexpected error fetching current prices")
                 for pos in positions:
                     if pos.get("status") == "open":
@@ -236,25 +237,8 @@ class PortfolioService:
 
         return last_prices
 
-    def _fee_map_by_position_id(self) -> dict[str, float]:
-        fees: dict[str, float] = {}
-        try:
-            orders = load_orders(self._orders_repo.path)
-            for order in orders:
-                if order.status != "filled":
-                    continue
-                if not order.position_id:
-                    continue
-                if order.fee_eur is None:
-                    continue
-                fee_value = abs(float(order.fee_eur))
-                fees[order.position_id] = fees.get(order.position_id, 0.0) + fee_value
-        except Exception as exc:
-            logger.warning("Failed to load order fees: %s", exc)
-        return fees
-
     def _eurusd_rate(self) -> float:
-        """Fetch EURUSD rate with simple caching to avoid redundant API calls."""
+        """Fetch EURUSD rate with simple caching."""
         import time
         now = time.time()
         cached = _eurusd_cache.get("eurusd")
@@ -262,7 +246,7 @@ class PortfolioService:
             rate, timestamp = cached
             if now - timestamp < _CACHE_TTL_SECONDS:
                 return rate
-        
+
         try:
             fx = self._fetch_last_prices(["EURUSD=X"])
             rate = float(fx.get("EURUSD=X", 0.0))
@@ -270,50 +254,34 @@ class PortfolioService:
             _eurusd_cache["eurusd"] = (rate, now)
             return rate
         except Exception as exc:
-            logger.warning("Failed to fetch EURUSD fx rate for fee conversion: %s", exc)
+            logger.warning("Failed to fetch EURUSD fx rate: %s", exc)
             return 1.0
 
     def _build_position_with_metrics(
         self,
         position: dict,
         current_prices: dict[str, float],
-        fee_map: dict[str, float],
         eurusd_rate: float,
     ) -> PositionWithMetrics:
         state_position = _to_state_position(position)
         ticker = state_position.ticker.upper()
-        # Live price from provider (may be None / missing)
         live_price = current_prices.get(ticker)
-        # Effective price for metrics: fall back if live price is unavailable
         current_price_for_metrics = live_price if live_price is not None else self._fallback_price(position)
         per_share_risk = calculate_per_share_risk(state_position)
-        fees_eur = fee_map.get(state_position.position_id or "", 0.0)
-        position_ccy = detect_currency(ticker)
-        if position_ccy == "EUR":
-            fee_in_quote_ccy = fees_eur
-        elif position_ccy == "USD":
-            fee_in_quote_ccy = fees_eur * eurusd_rate
-        else:
-            logger.warning(
-                "Unexpected currency '%s' detected for ticker '%s' when converting fees; "
-                "using raw EUR fee amount without FX conversion.",
-                position_ccy,
-                ticker,
-            )
-            fee_in_quote_ccy = fees_eur
-        pnl = calculate_pnl(state_position.entry_price, current_price_for_metrics, state_position.shares) - fee_in_quote_ccy
+        entry_fee_eur = float(position.get("entry_fee_eur") or 0.0)
+        fee_for_pnl = entry_fee_eur * eurusd_rate if detect_currency(ticker) == "USD" else entry_fee_eur
+        pnl = calculate_pnl(state_position.entry_price, current_price_for_metrics, state_position.shares) - fee_for_pnl
         entry_value = calculate_total_position_value(state_position.entry_price, state_position.shares)
         pnl_percent = (pnl / entry_value * 100.0) if entry_value > 0 else 0.0
 
         payload = dict(position)
-        # Only expose current_price in the API payload when we have a live quote
         if state_position.status == "open" and live_price is not None:
             payload["current_price"] = live_price
 
         return PositionWithMetrics(
             **payload,
             pnl=pnl,
-            fees_eur=fees_eur,
+            fees_eur=entry_fee_eur,
             pnl_percent=pnl_percent,
             r_now=calculate_r_now(state_position, current_price_for_metrics),
             entry_value=entry_value,
@@ -325,7 +293,6 @@ class PortfolioService:
     def list_positions(self, status: Optional[str] = None) -> PositionsWithMetricsResponse:
         positions, asof = self._positions_repo.list_positions(status=status)
         current_prices = self._attach_live_prices(positions)
-        fee_map = self._fee_map_by_position_id()
         has_usd_positions = any(
             detect_currency(str(position.get("ticker", "")).upper()) == "USD"
             for position in positions
@@ -333,7 +300,7 @@ class PortfolioService:
         eurusd_rate = self._eurusd_rate() if has_usd_positions else 1.0
 
         positions_with_metrics = [
-            self._build_position_with_metrics(position, current_prices, fee_map, eurusd_rate)
+            self._build_position_with_metrics(position, current_prices, eurusd_rate)
             for position in positions
         ]
         return PositionsWithMetricsResponse(positions=positions_with_metrics, asof=asof)
@@ -359,12 +326,10 @@ class PortfolioService:
                 logger.warning("Failed to fetch current price for %s metrics: %s", ticker, exc)
 
         state_position = _to_state_position(position)
-        fee_map = self._fee_map_by_position_id()
-        fees_eur = fee_map.get(state_position.position_id or "", 0.0)
-        ticker_currency = detect_currency(ticker)
-        eurusd_rate = self._eurusd_rate() if ticker_currency == "USD" else 1.0
-        fee_in_quote_ccy = fees_eur if ticker_currency == "EUR" else fees_eur * eurusd_rate
-        pnl = calculate_pnl(state_position.entry_price, current_price, state_position.shares) - fee_in_quote_ccy
+        entry_fee_eur = float(position.get("entry_fee_eur") or 0.0)
+        eurusd_rate = self._eurusd_rate() if detect_currency(ticker) == "USD" and entry_fee_eur else 1.0
+        fee_for_pnl = entry_fee_eur * eurusd_rate if detect_currency(ticker) == "USD" else entry_fee_eur
+        pnl = calculate_pnl(state_position.entry_price, current_price, state_position.shares) - fee_for_pnl
         per_share_risk = calculate_per_share_risk(state_position)
         entry_value = calculate_total_position_value(state_position.entry_price, state_position.shares)
         pnl_percent = (pnl / entry_value * 100.0) if entry_value > 0 else 0.0
@@ -372,7 +337,7 @@ class PortfolioService:
         return PositionMetrics(
             ticker=ticker,
             pnl=pnl,
-            fees_eur=fees_eur,
+            fees_eur=entry_fee_eur,
             pnl_percent=pnl_percent,
             r_now=calculate_r_now(state_position, current_price),
             entry_value=entry_value,
@@ -480,12 +445,43 @@ class PortfolioService:
             win_rate=win_rate,
         )
 
+    def create_position(self, request: CreatePositionRequest) -> Position:
+        """Register a position directly (after manual fill at DeGiro)."""
+        data = self._positions_repo.read()
+        positions = data.get("positions", [])
+
+        ticker = request.ticker.upper()
+        position_id = f"POS-{uuid.uuid4().hex[:8].upper()}"
+        initial_risk = (request.entry_price - request.stop_price) * request.shares
+        isin = request.isin or _resolve_isin(ticker)
+
+        new_position: dict = {
+            "position_id": position_id,
+            "ticker": ticker,
+            "status": "open",
+            "entry_date": request.entry_date,
+            "entry_price": request.entry_price,
+            "stop_price": request.stop_price,
+            "shares": request.shares,
+            "initial_risk": initial_risk,
+            "thesis": request.thesis,
+            "isin": isin,
+            "notes": request.notes,
+            "broker": "degiro",
+            "entry_fee_eur": request.fee_eur,
+        }
+
+        positions.append(new_position)
+        data["positions"] = positions
+        data["asof"] = get_today_str()
+        self._positions_repo.write(data)
+
+        return Position(**new_position)
+
     def update_position_stop(self, position_id: str, request: UpdateStopRequest) -> dict:
         data = self._positions_repo.read()
         positions = data.get("positions", [])
         found = False
-        ticker = None
-        shares = None
         old_stop = None
         new_stop = _round_price(request.new_stop)
 
@@ -495,18 +491,14 @@ class PortfolioService:
                     raise HTTPException(status_code=400, detail="Cannot update stop on closed position")
 
                 old_stop = _round_price(float(pos.get("stop_price")))
-                ticker = pos.get("ticker")
-                shares = pos.get("shares")
-                
-                # Validation: stop must move up only (trailing stop)
+
                 if new_stop <= old_stop:
                     raise HTTPException(
                         status_code=400,
                         detail=f"Cannot move stop down. Current: {old_stop}, Requested: {new_stop}",
                     )
-                
-                # Validation: for long positions, updated stop must stay at or below current price
-                # when market data is available.
+
+                ticker = pos.get("ticker")
                 current_price = None
                 try:
                     end_date = get_today_str()
@@ -517,8 +509,8 @@ class PortfolioService:
                         if not pd.isna(latest_close):
                             current_price = float(latest_close)
                 except Exception as exc:
-                    logger.warning(f"Could not fetch current price for validation: {exc}")
-                
+                    logger.warning("Could not fetch current price for validation: %s", exc)
+
                 if current_price is not None and new_stop > current_price:
                     raise HTTPException(
                         status_code=400,
@@ -528,7 +520,6 @@ class PortfolioService:
                         ),
                     )
 
-                # Update position stop
                 pos["stop_price"] = new_stop
                 if request.reason:
                     current_notes = pos.get("notes", "")
@@ -540,72 +531,14 @@ class PortfolioService:
         if not found:
             raise HTTPException(status_code=404, detail=f"Position not found: {position_id}")
 
-        # Sync stop orders: Cancel old SELL_STOP orders and create new one
-        orders_data = self._orders_repo.read()
-        orders = orders_data.get("orders", [])
-        cancelled_order_ids = []
-        new_order_id = None
-
-        # Find and cancel existing SELL_STOP orders for this position
-        for order in orders:
-            if (order.get("position_id") == position_id and 
-                order.get("order_kind") == "stop" and
-                order.get("status") == "pending"):
-                
-                # Cancel the old stop order
-                order["status"] = "cancelled"
-                cancel_reason = f"Replaced with new stop at {new_stop} (was {old_stop})"
-                order["notes"] = f"{order.get('notes', '')}\n{cancel_reason}".strip()
-                cancelled_order_ids.append(order.get("order_id"))
-                logger.info(f"Cancelled stop order {order.get('order_id')} for position {position_id}")
-
-        # Create new SELL_STOP order
-        if ticker and shares:
-            import uuid
-            new_order_id = f"ORD-{uuid.uuid4().hex[:8].upper()}"
-            new_order = {
-                "order_id": new_order_id,
-                "ticker": ticker,
-                "status": "pending",
-                "order_type": "STOP",
-                "quantity": shares,
-                "stop_price": new_stop,
-                "order_date": get_today_str(),
-                "notes": f"Auto-created from position stop update (was {old_stop})",
-                "order_kind": "stop",
-                "position_id": position_id,
-                "tif": "GTC",  # Good Till Cancelled
-            }
-            orders.append(new_order)
-            logger.info(f"Created new stop order {new_order_id} at {new_stop} for position {position_id}")
-
-            # Update position's exit_order_ids
-            for pos in positions:
-                if pos.get("position_id") == position_id:
-                    exit_order_ids = pos.get("exit_order_ids", [])
-                    if not isinstance(exit_order_ids, list):
-                        exit_order_ids = []
-                    # Add new order, keep old ones for history
-                    if new_order_id not in exit_order_ids:
-                        exit_order_ids.append(new_order_id)
-                    pos["exit_order_ids"] = exit_order_ids
-                    break
-
-        # Save both positions and orders
         data["asof"] = get_today_str()
         self._positions_repo.write(data)
-        
-        orders_data["orders"] = orders
-        orders_data["asof"] = get_today_str()
-        self._orders_repo.write(orders_data)
 
         return {
             "status": "ok",
             "position_id": position_id,
             "new_stop": new_stop,
             "old_stop": old_stop,
-            "cancelled_orders": cancelled_order_ids,
-            "new_order_id": new_order_id,
         }
 
     def close_position(self, position_id: str, request: ClosePositionRequest) -> dict:
@@ -719,268 +652,14 @@ class PortfolioService:
             raise HTTPException(status_code=404, detail=f"Position not found: {position_id}")
         return self._suggest_position_stop_from_dict(position)
 
-    def list_orders(self, status: Optional[str] = None, ticker: Optional[str] = None) -> OrdersResponse:
-        orders, asof = self._orders_repo.list_orders(status=status, ticker=ticker)
-        return OrdersResponse(orders=orders, asof=asof)
+    def list_degiro_orders(self) -> DegiroOrdersResponse:
+        """Fetch live orders from DeGiro API."""
+        from swing_screener.integrations.degiro.credentials import load_credentials
+        from swing_screener.integrations.degiro.client import DegiroClient
 
-    def list_order_snapshots(self, status: Optional[str] = "pending") -> OrdersSnapshotResponse:
-        data = self._orders_repo.read()
-        orders = data.get("orders", [])
+        credentials = load_credentials()
+        with DegiroClient(credentials) as client:
+            raw_orders = client.get_orders()
 
-        if status:
-            orders = [o for o in orders if o.get("status") == status]
-
-        if not orders:
-            return OrdersSnapshotResponse(orders=[], asof=data.get("asof", get_today_str()))
-
-        tickers = list({o.get("ticker", "").upper() for o in orders if o.get("ticker")})
-        last_prices: dict[str, float] = {}
-        last_bars: dict[str, str] = {}
-
-        if tickers:
-            try:
-                start_date = get_default_history_start()
-                end_date = get_today_str()
-                ohlcv = self._provider.fetch_ohlcv(tickers, start_date=start_date, end_date=end_date)
-                last_prices, last_bars = _last_close_map(ohlcv)
-            except Exception as exc:
-                logger.warning("Failed to fetch order snapshot prices: %s", exc)
-
-        snapshots: list[OrderSnapshot] = []
-        for order in orders:
-            ticker = order.get("ticker", "").upper()
-            last_price = last_prices.get(ticker)
-            last_bar = last_bars.get(ticker)
-            limit_price = order.get("limit_price")
-            stop_price = order.get("stop_price")
-
-            snapshots.append(
-                OrderSnapshot(
-                    order_id=order.get("order_id", ""),
-                    ticker=ticker,
-                    status=order.get("status", ""),
-                    order_type=order.get("order_type", ""),
-                    quantity=order.get("quantity", 0),
-                    limit_price=limit_price,
-                    stop_price=stop_price,
-                    order_kind=order.get("order_kind"),
-                    last_price=last_price,
-                    last_bar=last_bar,
-                    pct_to_limit=_pct_to_target(limit_price, last_price),
-                    pct_to_stop=_pct_to_target(stop_price, last_price),
-                )
-            )
-
-        return OrdersSnapshotResponse(orders=snapshots, asof=data.get("asof", get_today_str()))
-
-    def get_order(self, order_id: str) -> Order:
-        order = self._orders_repo.get_order(order_id)
-        if order is None:
-            raise HTTPException(status_code=404, detail=f"Order not found: {order_id}")
-        return Order(**order)
-
-    @staticmethod
-    def _count_filled_add_ons(orders: list[dict], position_id: str | None) -> int:
-        if not position_id:
-            return 0
-        filled_entries = [
-            order for order in orders
-            if order.get("status") == "filled"
-            and order.get("position_id") == position_id
-            and infer_order_kind(Order(**order)) == "entry"
-        ]
-        return max(0, len(filled_entries) - 1)
-
-    def create_order(self, request: CreateOrderRequest) -> Order:
-        data = self._orders_repo.read()
-        open_positions, _ = self._positions_repo.list_positions(status="open")
-
-        ticker = request.ticker.upper()
-        orders = data.get("orders", [])
-        order_kind = request.order_kind
-        linked_position_id = request.position_id
-
-        if order_kind == "entry":
-            if request.entry_mode == "ADD_ON":
-                pending_add_on_for_position = any(
-                    order.get("status") == "pending"
-                    and order.get("ticker", "").upper() == ticker
-                    and infer_order_kind(Order(**order)) == "entry"
-                    and (
-                        not request.position_id
-                        or order.get("position_id") == request.position_id
-                    )
-                    for order in orders
-                )
-                if pending_add_on_for_position:
-                    raise HTTPException(status_code=400, detail=f"{ticker}: pending entry order already exists.")
-            else:
-                pending_same_symbol_entry = any(
-                    order.get("status") == "pending"
-                    and order.get("ticker", "").upper() == ticker
-                    and infer_order_kind(Order(**order)) == "entry"
-                    for order in orders
-                )
-                if pending_same_symbol_entry:
-                    raise HTTPException(status_code=400, detail=f"{ticker}: pending entry order already exists.")
-
-            matching_positions = [
-                position for position in open_positions if str(position.get("ticker", "")).upper() == ticker
-            ]
-            if request.entry_mode == "ADD_ON":
-                if not matching_positions:
-                    raise HTTPException(status_code=400, detail=f"{ticker}: no open position found for add-on order.")
-                matching_position = next(
-                    (
-                        position for position in matching_positions
-                        if request.position_id and position.get("position_id") == request.position_id
-                    ),
-                    None,
-                ) if request.position_id else matching_positions[0]
-                if matching_position is None:
-                    raise HTTPException(status_code=400, detail=f"{ticker}: linked open position not found.")
-                linked_position_id = matching_position.get("position_id")
-            elif matching_positions:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"{ticker}: open position already exists. Create this as an ADD_ON order instead.",
-                )
-
-        timestamp = dt.datetime.now().strftime("%Y%m%d%H%M%S")
-        order_id = f"{ticker}-{timestamp}"
-
-        isin = request.isin or _resolve_isin(ticker)
-
-        new_order = {
-            "order_id": order_id,
-            "ticker": ticker,
-            "status": "pending",
-            "order_type": request.order_type,
-            "quantity": request.quantity,
-            "limit_price": request.limit_price,
-            "stop_price": request.stop_price,
-            "order_date": get_today_str(),
-            "filled_date": "",
-            "entry_price": None,
-            "notes": request.notes,
-            "order_kind": order_kind,
-            "parent_order_id": None,
-            "position_id": linked_position_id,
-            "tif": "GTC",
-            "fee_eur": None,
-            "fill_fx_rate": None,
-            "isin": isin,
-            "thesis": request.thesis,
-        }
-
-        orders.append(new_order)
-        data["orders"] = orders
-        data["asof"] = get_today_str()
-
-        self._orders_repo.write(data)
-        return Order(**new_order)
-
-    def fill_order(self, order_id: str, request: FillOrderRequest) -> dict:
-        orders_path = self._orders_repo.path
-        positions_path = self._positions_repo.path
-
-        orders = load_orders(orders_path)
-        orders, normalized = normalize_orders(orders)
-        if normalized:
-            save_orders(orders_path, orders, asof=get_today_str())
-
-        positions = load_positions(positions_path)
-
-        order = next((o for o in orders if o.order_id == order_id), None)
-        if order is None:
-            raise HTTPException(status_code=404, detail=f"Order not found: {order_id}")
-        if order.status != "pending":
-            raise HTTPException(status_code=400, detail=f"Order not pending: {order.status}")
-
-        kind = infer_order_kind(order)
-        if kind == "entry":
-            has_open_position = any(
-                position.status == "open" and position.ticker == order.ticker for position in positions
-            )
-            stop_price = request.stop_price if request.stop_price is not None else order.stop_price
-            if order.quantity <= 0:
-                raise HTTPException(status_code=400, detail="Order quantity must be > 0")
-
-            try:
-                if has_open_position:
-                    new_orders, new_positions = scale_in_fill(
-                        orders,
-                        positions,
-                        order_id=order_id,
-                        fill_price=request.filled_price,
-                        fill_date=request.filled_date,
-                        quantity=order.quantity,
-                        fee_eur=request.fee_eur,
-                        fill_fx_rate=request.fill_fx_rate,
-                    )
-                else:
-                    if stop_price is None:
-                        raise HTTPException(
-                            status_code=400,
-                            detail="stop_price is required for entry fills",
-                        )
-                    new_orders, new_positions = fill_entry_order(
-                        orders,
-                        positions,
-                        order_id=order_id,
-                        fill_price=request.filled_price,
-                        fill_date=request.filled_date,
-                        quantity=order.quantity,
-                        stop_price=stop_price,
-                        tp_price=None,
-                        fee_eur=request.fee_eur,
-                        fill_fx_rate=request.fill_fx_rate,
-                    )
-            except ValueError as exc:
-                raise HTTPException(status_code=400, detail=str(exc)) from exc
-            save_orders(orders_path, new_orders, asof=get_today_str())
-            save_positions(positions_path, new_positions, asof=get_today_str())
-            filled_order = next((o for o in new_orders if o.order_id == order_id), None)
-            position_id = filled_order.position_id if filled_order is not None else None
-            return {
-                "status": "ok",
-                "order_id": order_id,
-                "filled_price": request.filled_price,
-                "position_id": position_id,
-            }
-
-        for idx, o in enumerate(orders):
-            if o.order_id == order_id:
-                orders[idx] = replace(
-                    o,
-                    status="filled",
-                    filled_date=request.filled_date,
-                    entry_price=request.filled_price,
-                    fee_eur=request.fee_eur,
-                    fill_fx_rate=request.fill_fx_rate,
-                )
-                break
-
-        save_orders(orders_path, orders, asof=get_today_str())
-        return {"status": "ok", "order_id": order_id, "filled_price": request.filled_price}
-
-    def cancel_order(self, order_id: str) -> dict:
-        data = self._orders_repo.read()
-        orders = data.get("orders", [])
-        found = False
-
-        for order in orders:
-            if order.get("order_id") == order_id:
-                if order.get("status") != "pending":
-                    raise HTTPException(status_code=400, detail=f"Order not pending: {order.get('status')}")
-
-                order["status"] = "cancelled"
-                found = True
-                break
-
-        if not found:
-            raise HTTPException(status_code=404, detail=f"Order not found: {order_id}")
-
-        data["asof"] = get_today_str()
-        self._orders_repo.write(data)
-        return {"status": "ok", "order_id": order_id}
+        orders = [_normalize_degiro_order(o) for o in raw_orders]
+        return DegiroOrdersResponse(orders=orders, asof=get_today_str())
