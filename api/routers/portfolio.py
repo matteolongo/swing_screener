@@ -19,6 +19,7 @@ from api.models.portfolio import (
     StopSuggestionComputeRequest,
     DegiroSyncRequest,
     DegiroSyncPreviewResponse,
+    DegiroApplyResponse,
     DegiroStatus,
 )
 from api.dependencies import get_config_repo, get_portfolio_service
@@ -255,4 +256,70 @@ async def degiro_sync_preview(
         fees_applied=0,
         ambiguous=[],
         unmatched=[],
+    )
+
+
+@router.post("/sync/degiro/apply", response_model=DegiroApplyResponse)
+async def degiro_sync_apply(
+    request: DegiroSyncRequest,
+    service: PortfolioService = Depends(get_portfolio_service),
+):
+    """Apply DeGiro portfolio sync — updates local positions to match broker state.
+
+    Returns 503 if degiro-connector is missing or credentials are absent.
+    """
+    _check_degiro_available()
+
+    from swing_screener.integrations.degiro.credentials import load_credentials
+    from swing_screener.integrations.degiro.client import DegiroClient
+    from swing_screener.integrations.degiro import sync as degiro_sync
+    from api.utils.files import get_today_str
+
+    credentials = load_credentials()
+
+    with DegiroClient(credentials) as client:
+        raw_data = degiro_sync.fetch_live_data(
+            client,
+            request.from_date,
+            request.to_date,
+            include_portfolio=request.include_portfolio,
+            include_orders_history=False,
+            include_transactions=request.include_transactions,
+        )
+
+    sync_raw = degiro_sync.normalize(raw_data)
+
+    positions_resp = service.list_positions()
+    local_positions = [p.model_dump() for p in positions_resp.positions]
+
+    preview = degiro_sync.preview(sync_raw, local_positions)
+
+    # Apply position updates to the repository
+    positions_updated = 0
+    ambiguous_skipped = 0
+
+    data = service._positions_repo.read()
+    positions = data.get("positions", [])
+
+    for diff in preview.positions_to_update:
+        if not diff.local_id:
+            ambiguous_skipped += 1
+            continue
+        for pos in positions:
+            if pos.get("position_id") == diff.local_id:
+                pos.update(diff.fields)
+                positions_updated += 1
+                break
+
+    if positions_updated > 0:
+        data["asof"] = get_today_str()
+        service._positions_repo.write(data)
+
+    return DegiroApplyResponse(
+        positions_created=0,
+        positions_updated=positions_updated,
+        orders_created=0,
+        orders_updated=positions_updated,  # frontend uses orders_updated to show "N updated"
+        fees_applied=0,
+        ambiguous_skipped=ambiguous_skipped,
     )
