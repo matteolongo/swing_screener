@@ -202,3 +202,47 @@ def test_breakout_level_fallback_is_row_wise_and_prefers_primary_values():
     assert out.loc["AAA", "suggested_order_price"] == approx(106.0 * 1.002, rel=1e-9)
     assert out.loc["BBB", "suggested_order_type"] == "BUY_STOP"
     assert out.loc["BBB", "suggested_order_price"] == approx(105.0 * 1.002, rel=1e-9)
+
+
+def test_missing_ma_and_atr_columns_produce_skip_not_crash():
+    """When neither an MA level column nor an ATR column is present in the DataFrame,
+    execution guidance must return gracefully with SKIP — not raise an exception.
+    Regression test for: silent empty-series fallback when columns are absent."""
+    df = pd.DataFrame(
+        {
+            "signal": ["breakout", "pullback"],
+            "last": [100.0, 95.0],
+            "breakout_level": [105.0, np.nan],
+            # intentionally omit atr14 / ma20_level entirely
+        },
+        index=["BRK", "PBK"],
+    )
+
+    out = add_execution_guidance(df)
+
+    # breakout below breakout_level but no ATR → band will be NaN, order type still BUY_STOP
+    assert out.loc["BRK", "suggested_order_type"] == "BUY_STOP"
+    assert np.isnan(out.loc["BRK", "order_price_band_low"])
+
+    # pullback with no MA → cannot determine pullback entry → SKIP
+    assert out.loc["PBK", "suggested_order_type"] == "SKIP"
+
+
+def test_missing_atr_column_does_not_affect_breakout_stop_price():
+    """A missing ATR column must not corrupt the BUY_STOP price for breakout signals;
+    only the band (which uses ATR) should be NaN."""
+    df = pd.DataFrame(
+        {
+            "signal": ["breakout"],
+            "last": [98.0],
+            "breakout_level": [100.0],
+            # no atr column
+        },
+        index=["X"],
+    )
+
+    out = add_execution_guidance(df)
+
+    assert out.loc["X", "suggested_order_type"] == "BUY_STOP"
+    assert out.loc["X", "suggested_order_price"] == approx(100.0 * 1.002, rel=1e-9)
+    assert np.isnan(out.loc["X", "order_price_band_low"])

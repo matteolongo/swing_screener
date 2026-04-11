@@ -406,6 +406,11 @@ def _rebuild_recommendations_with_decision_action(
             continue
 
         # Rebuild using decision action as signal so signal_active reflects the full picture.
+        logger.debug(
+            "Rebuilding recommendation for %s: signal_active was False, decision_summary.action=%s",
+            candidate.ticker,
+            action,
+        )
         new_rec_payload = evaluate_recommendation(
             signal=action,
             entry=rec.risk.entry if rec.risk else None,

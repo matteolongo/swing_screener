@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import logging
 
 import numpy as np
 import pandas as pd
 import re
 from swing_screener.settings import get_settings_manager
+
+logger = logging.getLogger(__name__)
 
 
 def _execution_defaults() -> dict:
@@ -89,6 +92,11 @@ def add_execution_guidance(
 
     ma_col = _pick_feature_column(out, r"^ma\d+_level$", "ma20_level")
     atr_col = _pick_feature_column(out, r"^atr\d+$", "atr14")
+
+    if ma_col is None:
+        logger.warning("execution guidance: no MA level column found (tried ma*_level, ma20_level); pullback signals will use empty MA series")
+    if atr_col is None:
+        logger.warning("execution guidance: no ATR column found (tried atr*, atr14); order price bands will be empty")
 
     last = _pick_numeric_column(out, ["last"])
     breakout_level = _pick_numeric_column(out, ["breakout_level", "breakout_level_sig"])

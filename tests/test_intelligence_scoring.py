@@ -226,3 +226,126 @@ def test_build_opportunities_applies_binary_event_guard_threshold_boost():
     if opportunities:
         assert opportunities[0].score_breakdown_v2
         assert opportunities[0].top_catalysts
+
+
+def _feature_vector(symbol: str) -> CatalystFeatureVector:
+    """Minimal feature vector with non-zero confirmation so has_evidence is True."""
+    return CatalystFeatureVector(
+        symbol=symbol,
+        proximity_score=0.8,
+        materiality_score=0.8,
+        source_quality_score=0.7,
+        confirmation_score=0.5,
+        uncertainty_penalty=0.1,
+        filing_impact_score=0.0,
+        calendar_risk_score=0.3,
+    )
+
+
+def test_stale_event_scores_lower_than_fresh_event():
+    """Regression test for inverted decay: a stale catalyst event must receive a
+    lower opportunity score than an otherwise identical fresh event when V2 scoring
+    is enabled.
+
+    Before the fix the formula was:
+        decay_factor = exp(-recency_score / stale_hours)
+        multiplier   = 0.9 + 0.1 * decay_factor
+    which gave ~1.0 to stale events and slightly below 1.0 to fresh events —
+    the opposite of the intended behaviour.
+
+    After the fix:
+        multiplier = max(0.6, 0.6 + 0.4 * recency_score)
+    fresh (recency_score≈1) → multiplier≈1.0, stale (recency_score≈0) → multiplier=0.6.
+    """
+    events_fresh = [Event("ef", "FRESH", "yahoo_finance", "2026-02-18T00:00:00", "A", "news", 0.8)]
+    events_stale = [Event("es", "STALE", "yahoo_finance", "2026-02-18T00:00:00", "B", "news", 0.8)]
+
+    fresh_signal = _signal("FRESH", "ef", return_z=2.0, atr_shock=1.2, peers=1, recency=2.0)
+    stale_signal = _signal("STALE", "es", return_z=2.0, atr_shock=1.2, peers=1, recency=300.0)
+
+    fv_fresh = _feature_vector("FRESH")
+    fv_stale = _feature_vector("STALE")
+
+    catalyst_map = {
+        **build_catalyst_score_map_v2(
+            signals=[fresh_signal],
+            events=events_fresh,
+            themes=[],
+            feature_vectors={"FRESH": fv_fresh},
+            scoring_cfg=ScoringV2Config(enabled=True),
+        ),
+        **build_catalyst_score_map_v2(
+            signals=[stale_signal],
+            events=events_stale,
+            themes=[],
+            feature_vectors={"STALE": fv_stale},
+            scoring_cfg=ScoringV2Config(enabled=True),
+        ),
+    }
+
+    cfg = OpportunityConfig(
+        technical_weight=0.55,
+        catalyst_weight=0.45,
+        max_daily_opportunities=10,
+        min_opportunity_score=0.0,  # let everything through so both appear
+    )
+
+    opportunities = build_opportunities(
+        technical_readiness={"FRESH": 0.7, "STALE": 0.7},
+        catalyst_scores=catalyst_map,
+        symbol_states={},
+        cfg=cfg,
+        feature_vectors={"FRESH": fv_fresh, "STALE": fv_stale},
+        scoring_cfg=ScoringV2Config(enabled=True),
+        calendar_cfg=CalendarConfig(),
+    )
+
+    by_symbol = {o.symbol: o for o in opportunities}
+    assert "FRESH" in by_symbol, "fresh event must produce an opportunity"
+    assert "STALE" in by_symbol, "stale event must produce an opportunity"
+
+    fresh_score = by_symbol["FRESH"].opportunity_score
+    stale_score = by_symbol["STALE"].opportunity_score
+    assert fresh_score > stale_score, (
+        f"expected fresh ({fresh_score:.4f}) > stale ({stale_score:.4f}); "
+        "stale events must receive a lower score than fresh events"
+    )
+
+
+def test_fully_stale_event_multiplier_floor():
+    """A fully stale event (recency_score→0) must still receive at least 60% of its
+    pre-decay score (the floor is 0.6)."""
+    events = [Event("e1", "OLD", "yahoo_finance", "2026-01-01T00:00:00", "A", "news", 0.9)]
+    signal = _signal("OLD", "e1", return_z=2.5, atr_shock=1.5, peers=2, recency=10_000.0)
+    fv = _feature_vector("OLD")
+
+    catalyst_map = build_catalyst_score_map_v2(
+        signals=[signal],
+        events=events,
+        themes=[],
+        feature_vectors={"OLD": fv},
+        scoring_cfg=ScoringV2Config(enabled=True),
+    )
+
+    cfg = OpportunityConfig(
+        technical_weight=0.55,
+        catalyst_weight=0.45,
+        max_daily_opportunities=10,
+        min_opportunity_score=0.0,
+    )
+
+    opportunities = build_opportunities(
+        technical_readiness={"OLD": 0.7},
+        catalyst_scores=catalyst_map,
+        symbol_states={},
+        cfg=cfg,
+        feature_vectors={"OLD": fv},
+        scoring_cfg=ScoringV2Config(enabled=True),
+        calendar_cfg=CalendarConfig(),
+    )
+
+    assert opportunities, "stale event with high catalyst should still surface"
+    pre_decay_score = cfg.technical_weight * 0.7 + cfg.catalyst_weight * catalyst_map["OLD"].score
+    assert opportunities[0].opportunity_score >= pre_decay_score * 0.6 - 1e-6, (
+        "staleness floor must not reduce score below 60% of the pre-decay blend"
+    )

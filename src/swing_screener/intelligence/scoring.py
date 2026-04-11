@@ -305,9 +305,10 @@ def build_opportunities(
             ):
                 min_threshold = _clamp01(min_threshold + calendar_config.low_evidence_min_threshold_boost)
 
-            stale_hours = max(1, int(scoring_config.stale_event_decay_hours))
-            decay_factor = math.exp(-max(0.0, breakdown.recency_score) / float(stale_hours))
-            score = _clamp01(score * max(0.6, min(1.0, 0.9 + 0.1 * decay_factor)))
+            # recency_score is 1.0 for fresh events and decays toward 0.0 for stale ones.
+            # Dampen stale events: multiplier scales linearly from 0.6 (fully stale) to 1.0 (fresh).
+            # stale_event_decay_hours controls the half-life used when computing recency_score upstream.
+            score = _clamp01(score * max(0.6, 0.6 + 0.4 * breakdown.recency_score))
 
         if score < min_threshold:
             continue
