@@ -45,11 +45,12 @@ def compute_hot_score(
     out = df.copy()
 
     # Percentile ranks (0..1), higher is better.
-    # na_option='bottom' sends NaN momentum values to rank 0 so they sort last
+    # na_option='top' assigns NaN values the smallest rank (≈0 percentile) so
+    # candidates with missing momentum data score near zero and sort to the bottom
     # rather than receiving NaN scores that corrupt the ordering.
-    r6 = out["mom_6m"].rank(pct=True, na_option="bottom")
-    r12 = out["mom_12m"].rank(pct=True, na_option="bottom")
-    rrs = out["rs_6m"].rank(pct=True, na_option="bottom")
+    r6 = out["mom_6m"].rank(pct=True, na_option="top")
+    r12 = out["mom_12m"].rank(pct=True, na_option="top")
+    rrs = out["rs_6m"].rank(pct=True, na_option="top")
 
     wsum = cfg.w_mom_6m + cfg.w_mom_12m + cfg.w_rs_6m
     w6 = cfg.w_mom_6m / wsum
