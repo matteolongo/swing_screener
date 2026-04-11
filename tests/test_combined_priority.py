@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from api.models.screener import ScreenerCandidate
+from swing_screener.fundamentals.models import FundamentalSnapshot
 from swing_screener.recommendation.models import (
     DecisionSummary,
     DecisionDrivers,
@@ -23,6 +24,7 @@ def _candidate(
     fundamentals_label: str = "neutral",
     catalyst_label: str = "neutral",
     valuation_label: str = "fair",
+    fundamentals_snapshot: FundamentalSnapshot | None = None,
 ) -> ScreenerCandidate:
     ds = DecisionSummary(
         symbol=ticker,
@@ -53,6 +55,7 @@ def _candidate(
         confidence=confidence,
         rank=rank,
         decision_summary=ds,
+        fundamentals_snapshot=fundamentals_snapshot,
     )
 
 
@@ -125,3 +128,51 @@ def test_combined_priority_score_is_in_unit_interval() -> None:
     for c in result:
         assert c.combined_priority_score is not None
         assert 0.0 <= c.combined_priority_score <= 1.0 + 1e-9
+
+
+def test_fundamentals_snapshot_penalties_and_quality_shape_priority() -> None:
+    penalized = _candidate(
+        "PENALIZED",
+        confidence=95,
+        rank=1,
+        fundamentals_label="strong",
+        catalyst_label="neutral",
+        valuation_label="fair",
+        fundamentals_snapshot=FundamentalSnapshot(
+            symbol="PENALIZED",
+            asof_date="2026-03-31",
+            provider="test",
+            updated_at="2026-03-31T00:00:00",
+            business_quality_score=0.9,
+            valuation_attractiveness=0.4,
+            freshness_penalty=0.4,
+            coverage_penalty=0.6,
+        ),
+    )
+    resilient = _candidate(
+        "RESILIENT",
+        confidence=80,
+        rank=2,
+        fundamentals_label="neutral",
+        catalyst_label="neutral",
+        valuation_label="fair",
+        fundamentals_snapshot=FundamentalSnapshot(
+            symbol="RESILIENT",
+            asof_date="2026-03-31",
+            provider="test",
+            updated_at="2026-03-31T00:00:00",
+            business_quality_score=0.85,
+            valuation_attractiveness=0.75,
+            freshness_penalty=0.0,
+            coverage_penalty=0.0,
+        ),
+    )
+    anchor = _candidate("ANCHOR", confidence=20, rank=3)
+
+    result = compute_combined_priority([penalized, resilient, anchor], cfg=_CFG)
+
+    assert result[0].ticker == "RESILIENT"
+    scores = {candidate.ticker: candidate.combined_priority_score for candidate in result}
+    assert scores["PENALIZED"] is not None
+    assert scores["RESILIENT"] is not None
+    assert scores["PENALIZED"] < scores["RESILIENT"]

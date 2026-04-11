@@ -17,6 +17,10 @@ vi.mock('@/components/domain/market/CachedSymbolPriceChart', () => ({
   default: ({ ticker }: { ticker: string }) => <div>Chart {ticker}</div>,
 }));
 
+vi.mock('@/components/domain/workspace/SymbolNoteWidget', () => ({
+  default: ({ ticker }: { ticker: string }) => <div>Note {ticker}</div>,
+}));
+
 vi.mock('@/components/domain/workspace/KeyMetrics', () => ({
   default: ({ ticker }: { ticker: string }) => <div>Key metrics {ticker}</div>,
 }));

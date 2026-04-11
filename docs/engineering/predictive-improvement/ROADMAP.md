@@ -15,7 +15,7 @@
 | 3 | [PR3 — Explanation contract](PR3_explanation_contract.md) | Structured server-owned explanation; remove frontend recomputation | `[~]` | `feat/explanation-contract` |
 | 4 | [PR4 — Combined ranking](PR4_combined_ranking.md) | Two-stage pipeline: technical prefilter + combined priority score | `[~]` | `feat/combined-ranking` |
 | 5 | [PR5 — Richer technical model](PR5_richer_technical_model.md) | Setup quality, SMA slope, sector RS, volume confirmation | `[~]` | `feat/richer-technical-model` |
-| 6 | [PR6 — Fundamentals conviction](PR6_fundamentals_conviction.md) | Trend acceleration, freshness penalty, quality/valuation split | `[ ]` | `feat/fundamentals-conviction` |
+| 6 | [PR6 — Fundamentals conviction](PR6_fundamentals_conviction.md) | Trend acceleration, freshness penalty, quality/valuation split | `[~]` | `feat/fundamentals-conviction` |
 | 7 | [PR7 — Intelligence scoring](PR7_intelligence_scoring.md) | Event-type weights, evidence quality cap, state multipliers | `[ ]` | `feat/intelligence-scoring` |
 | 8 | [PR8 — Measurement framework](PR8_measurement_framework.md) | EvaluationRecord, forward returns, hit-rate metrics | `[ ]` | `feat/measurement-framework` |
 

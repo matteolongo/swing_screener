@@ -667,6 +667,23 @@ def _drivers(
             _append_unique(warnings, "Fundamental snapshot is stale.")
         if str(snapshot.data_quality_status or "").strip().lower() == "low":
             _append_unique(warnings, "Fundamental data quality is limited.")
+        # Numeric conviction modifiers from PR6
+        freshness_pen = _safe_float(getattr(snapshot, "freshness_penalty", None))
+        coverage_pen = _safe_float(getattr(snapshot, "coverage_penalty", None))
+        if freshness_pen is not None and freshness_pen > 0.15:
+            try:
+                from datetime import datetime
+                mrq = getattr(snapshot, "most_recent_quarter", None)
+                if mrq:
+                    age_days = (datetime.utcnow().date() - datetime.fromisoformat(mrq).date()).days
+                    months = max(1, round(age_days / 30))
+                    _append_unique(warnings, f"Fundamentals data is {months} months old.")
+                else:
+                    _append_unique(warnings, "Fundamentals data age is unknown.")
+            except Exception:
+                _append_unique(warnings, "Fundamentals data may be stale.")
+        if coverage_pen is not None and coverage_pen > 0.25:
+            _append_unique(warnings, "Some fundamental pillars are missing.")
 
     rr = _safe_float(_get_value(candidate, "rr"))
     if rr is None:

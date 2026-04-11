@@ -368,6 +368,7 @@ def _apply_decision_summary_context(
                         opportunity=opportunity_cache.get(candidate.ticker),
                         fundamentals=fund_snap,
                     ),
+                    "fundamentals_snapshot": fund_snap,
                     "fundamentals_asof": str(fund_asof) if fund_asof else None,
                     "intelligence_asof": latest_opportunities_date,
                 }

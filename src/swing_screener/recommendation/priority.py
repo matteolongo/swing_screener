@@ -9,7 +9,7 @@ All weights are configurable via ``selection.combined_priority`` in defaults.yam
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from api.models.screener import ScreenerCandidate
@@ -61,8 +61,55 @@ _VALUATION_SCORE: dict[str, float] = {
 }
 
 
+def _safe_float(value: Any) -> float | None:
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def _label_score(mapping: dict[str, float], label: str | None, default: float = 0.5) -> float:
     return mapping.get((label or "").lower(), default)
+
+
+def _fundamentals_score(candidate: ScreenerCandidate) -> float:
+    """Fundamentals sub-score: uses business_quality_score from snapshot when available,
+    falls back to decision_summary label. Applies freshness and coverage penalties."""
+    ds = candidate.decision_summary
+    score = _label_score(
+        _FUNDAMENTALS_SCORE,
+        getattr(ds, "fundamentals_label", None) if ds else None,
+    )
+    snapshot = getattr(candidate, "fundamentals_snapshot", None)
+    if snapshot is None:
+        return score
+
+    business_quality = _safe_float(getattr(snapshot, "business_quality_score", None))
+    if business_quality is not None:
+        score = business_quality
+
+    freshness_penalty = _safe_float(getattr(snapshot, "freshness_penalty", None)) or 0.0
+    coverage_penalty = _safe_float(getattr(snapshot, "coverage_penalty", None)) or 0.0
+    penalty_multiplier = max(0.0, 1.0 - freshness_penalty - (coverage_penalty * 0.5))
+    return max(0.0, score * penalty_multiplier)
+
+
+def _valuation_score(candidate: ScreenerCandidate) -> float:
+    """Valuation sub-score: uses valuation_attractiveness from snapshot when available,
+    falls back to decision_summary label."""
+    ds = candidate.decision_summary
+    score = _label_score(
+        _VALUATION_SCORE,
+        getattr(ds, "valuation_label", None) if ds else None,
+    )
+    snapshot = getattr(candidate, "fundamentals_snapshot", None)
+    if snapshot is None:
+        return score
+
+    valuation = _safe_float(getattr(snapshot, "valuation_attractiveness", None))
+    return valuation if valuation is not None else score
 
 
 def compute_combined_priority(
@@ -76,7 +123,8 @@ def compute_combined_priority(
     - Computes ``combined_priority_score`` in [0, 1].
 
     The caller is responsible for slicing the returned list to the desired final top-N.
-    Penalties (freshness, data quality) are reserved for PR6/PR7 and currently 0.0.
+    PR6 fundamentals penalties apply when cached snapshots are available; catalyst/data-quality
+    caps remain future work.
     """
     if not candidates:
         return candidates
@@ -92,48 +140,42 @@ def compute_combined_priority(
             return 0.5
         return (conf - conf_min) / conf_range
 
+    total_weight = (
+        cfg.technical_weight
+        + cfg.fundamentals_weight
+        + cfg.catalyst_weight
+        + cfg.valuation_weight
+    ) or 1.0
+
     # --- compute per-candidate scores ------------------------------------------
-    scored: list[tuple[ScreenerCandidate, float]] = []
+    scored: list[tuple[ScreenerCandidate, float, int]] = []
     for candidate in candidates:
         ds = candidate.decision_summary
 
         tech = _tech(candidate.confidence)
-        fund = _label_score(
-            _FUNDAMENTALS_SCORE,
-            getattr(ds, "fundamentals_label", None) if ds else None,
-        )
+        fund = _fundamentals_score(candidate)
         catalyst = _label_score(
             _CATALYST_SCORE,
             getattr(ds, "catalyst_label", None) if ds else None,
         )
-        valuation = _label_score(
-            _VALUATION_SCORE,
-            getattr(ds, "valuation_label", None) if ds else None,
-        )
-
-        # Penalties reserved for PR6/PR7.
-        freshness_penalty = 0.0
-        data_quality_penalty = 0.0
+        valuation = _valuation_score(candidate)
 
         combined = (
             cfg.technical_weight * tech
             + cfg.fundamentals_weight * fund
             + cfg.catalyst_weight * catalyst
             + cfg.valuation_weight * valuation
-            - freshness_penalty
-            - data_quality_penalty
-        )
-        # Clamp to [0, 1] to guard against future penalty values.
+        ) / total_weight
         combined = max(0.0, min(1.0, combined))
 
-        scored.append((candidate, combined))
+        scored.append((candidate, combined, candidate.rank))
 
     # --- sort descending -------------------------------------------------------
-    scored.sort(key=lambda t: t[1], reverse=True)
+    scored.sort(key=lambda item: (-item[1], item[2], item[0].ticker))
 
     # --- stamp fields on output candidates ------------------------------------
     result: list[ScreenerCandidate] = []
-    for candidate, score in scored:
+    for candidate, score, _raw_rank in scored:
         result.append(
             candidate.model_copy(
                 update={

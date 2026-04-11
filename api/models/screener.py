@@ -5,6 +5,7 @@ import math
 from typing import Literal, Optional
 from pydantic import BaseModel, Field, field_validator
 from api.models.recommendation import Recommendation
+from swing_screener.fundamentals.models import FundamentalSnapshot
 from swing_screener.recommendation.models import DecisionSummary
 
 
@@ -69,6 +70,7 @@ class ScreenerCandidate(BaseModel):
     execution_note: Optional[str] = None
     same_symbol: Optional[SameSymbolCandidateContext] = None
     decision_summary: Optional[DecisionSummary] = None
+    fundamentals_snapshot: Optional[FundamentalSnapshot] = Field(default=None, exclude=True)
     raw_technical_rank: Optional[int] = None
     combined_priority_score: Optional[float] = None
     sma20_slope: Optional[float] = None
