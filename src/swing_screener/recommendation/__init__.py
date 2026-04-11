@@ -7,6 +7,7 @@ from .models import (
     DecisionSummary,
     DecisionTradePlan,
     DecisionValuationContext,
+    ExplanationContract,
     SignalLabel,
     ValuationLabel,
 )
@@ -19,6 +20,7 @@ __all__ = [
     "DecisionSummary",
     "DecisionTradePlan",
     "DecisionValuationContext",
+    "ExplanationContract",
     "SignalLabel",
     "ValuationLabel",
     "build_decision_summary",
