@@ -47,6 +47,16 @@ class DecisionDrivers(BaseModel):
     warnings: list[str] = Field(default_factory=list)
 
 
+class ExplanationContract(BaseModel):
+    summary_line: str
+    why_it_qualified: list[str] = Field(default_factory=list)
+    why_now: list[str] = Field(default_factory=list)
+    main_risks: list[str] = Field(default_factory=list)
+    what_invalidates_it: list[str] = Field(default_factory=list)
+    next_best_action: str
+    confidence_notes: list[str] = Field(default_factory=list)
+
+
 class DecisionSummary(BaseModel):
     symbol: str
     action: DecisionAction
@@ -61,3 +71,4 @@ class DecisionSummary(BaseModel):
     trade_plan: DecisionTradePlan = Field(default_factory=DecisionTradePlan)
     valuation_context: DecisionValuationContext = Field(default_factory=DecisionValuationContext)
     drivers: DecisionDrivers = Field(default_factory=DecisionDrivers)
+    explanation: ExplanationContract | None = None

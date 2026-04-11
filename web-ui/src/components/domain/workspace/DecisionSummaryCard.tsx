@@ -150,7 +150,7 @@ export default function DecisionSummaryCard({
     },
   ].filter((item) => item.value != null);
 
-  const warningItems = summary.drivers.warnings.filter(Boolean);
+  const warningItems = (summary.explanation?.confidenceNotes ?? summary.drivers.warnings).filter(Boolean);
   const hasFairValue =
     summary.valuationContext.fairValueLow != null &&
     summary.valuationContext.fairValueBase != null &&
@@ -317,26 +317,79 @@ export default function DecisionSummaryCard({
         </div>
       ) : null}
 
-      <div className="mt-3 grid gap-3 md:grid-cols-3">
-        <div className="rounded-md bg-white p-3">
-          <div className="text-xs font-medium uppercase tracking-wide text-gray-500">
-            {t('workspacePage.panels.analysis.decisionSummary.copy.whyNow')}
-          </div>
-          <p className="mt-2 text-sm text-slate-800">{summary.whyNow}</p>
+      {summary.explanation ? (
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
+          {summary.explanation.whyItQualified.length > 0 && (
+            <div className="rounded-md bg-white p-3">
+              <div className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                {t('workspacePage.panels.analysis.decisionSummary.copy.whyItQualified')}
+              </div>
+              <ul className="mt-2 space-y-1 text-sm text-slate-800">
+                {summary.explanation.whyItQualified.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {summary.explanation.whyNow.length > 0 && (
+            <div className="rounded-md bg-white p-3">
+              <div className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                {t('workspacePage.panels.analysis.decisionSummary.copy.whyNow')}
+              </div>
+              <ul className="mt-2 space-y-1 text-sm text-slate-800">
+                {summary.explanation.whyNow.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {summary.explanation.mainRisks.length > 0 && (
+            <div className="rounded-md bg-white p-3">
+              <div className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                {t('workspacePage.panels.analysis.decisionSummary.copy.mainRisk')}
+              </div>
+              <ul className="mt-2 space-y-1 text-sm text-slate-800">
+                {summary.explanation.mainRisks.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {summary.explanation.whatInvalidatesIt.length > 0 && (
+            <div className="rounded-md bg-white p-3">
+              <div className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                {t('workspacePage.panels.analysis.decisionSummary.copy.whatInvalidatesIt')}
+              </div>
+              <ul className="mt-2 space-y-1 text-sm text-slate-800">
+                {summary.explanation.whatInvalidatesIt.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
-        <div className="rounded-md bg-white p-3">
-          <div className="text-xs font-medium uppercase tracking-wide text-gray-500">
-            {t('workspacePage.panels.analysis.decisionSummary.copy.whatToDo')}
+      ) : (
+        <div className="mt-3 grid gap-3 md:grid-cols-3">
+          <div className="rounded-md bg-white p-3">
+            <div className="text-xs font-medium uppercase tracking-wide text-gray-500">
+              {t('workspacePage.panels.analysis.decisionSummary.copy.whyNow')}
+            </div>
+            <p className="mt-2 text-sm text-slate-800">{summary.whyNow}</p>
           </div>
-          <p className="mt-2 text-sm text-slate-800">{summary.whatToDo}</p>
-        </div>
-        <div className="rounded-md bg-white p-3">
-          <div className="text-xs font-medium uppercase tracking-wide text-gray-500">
-            {t('workspacePage.panels.analysis.decisionSummary.copy.mainRisk')}
+          <div className="rounded-md bg-white p-3">
+            <div className="text-xs font-medium uppercase tracking-wide text-gray-500">
+              {t('workspacePage.panels.analysis.decisionSummary.copy.whatToDo')}
+            </div>
+            <p className="mt-2 text-sm text-slate-800">{summary.whatToDo}</p>
           </div>
-          <p className="mt-2 text-sm text-slate-800">{summary.mainRisk}</p>
+          <div className="rounded-md bg-white p-3">
+            <div className="text-xs font-medium uppercase tracking-wide text-gray-500">
+              {t('workspacePage.panels.analysis.decisionSummary.copy.mainRisk')}
+            </div>
+            <p className="mt-2 text-sm text-slate-800">{summary.mainRisk}</p>
+          </div>
         </div>
-      </div>
+      )}
 
       {warningItems.length ? (
         <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2">

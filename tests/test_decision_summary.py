@@ -318,3 +318,55 @@ def test_manage_only_context_maps_to_manage_only() -> None:
 
     assert summary.action == "MANAGE_ONLY"
     assert summary.conviction == "low"
+
+
+# ── ExplanationContract tests ──────────────────────────────────────────────────
+
+
+def test_explanation_contract_is_populated() -> None:
+    summary = build_decision_summary(
+        _candidate(),
+        opportunity=_opportunity(),
+        fundamentals=_snapshot(),
+    )
+
+    assert summary.explanation is not None
+    assert len(summary.explanation.why_it_qualified) >= 1
+    assert summary.explanation.next_best_action != ""
+    assert summary.explanation.summary_line != ""
+
+
+def test_explanation_contract_is_deterministic() -> None:
+    candidate = _candidate()
+    opportunity = _opportunity()
+    fundamentals = _snapshot()
+
+    s1 = build_decision_summary(candidate, opportunity=opportunity, fundamentals=fundamentals)
+    s2 = build_decision_summary(candidate, opportunity=opportunity, fundamentals=fundamentals)
+
+    assert s1.explanation == s2.explanation
+
+
+def test_stale_fundamentals_produce_confidence_note() -> None:
+    summary = build_decision_summary(
+        _candidate(),
+        opportunity=_opportunity(),
+        fundamentals=_snapshot(freshness_status="stale"),
+    )
+
+    assert summary.explanation is not None
+    assert any(
+        "stale" in note.lower() or "old" in note.lower()
+        for note in summary.explanation.confidence_notes
+    )
+
+
+def test_partial_coverage_produces_confidence_note() -> None:
+    summary = build_decision_summary(
+        _candidate(),
+        opportunity=_opportunity(),
+        fundamentals=_snapshot(coverage_status="partial"),
+    )
+
+    assert summary.explanation is not None
+    assert len(summary.explanation.confidence_notes) >= 1
