@@ -85,6 +85,21 @@ def compute_trend_features(
         dist_sma50 = ((last_val / sma_mid_val) - 1.0) * 100.0 if pd.notna(sma_mid_val) else float("nan")
         dist_sma200 = ((last_val / sma_long_val) - 1.0) * 100.0 if pd.notna(sma_long_val) else float("nan")
         
+        # SMA slopes: (sma[t] / sma[t-window]) - 1 (trend acceleration)
+        sma20_slope = float("nan")
+        if len(valid) >= cfg.sma_fast * 2:
+            sma_now = valid.iloc[-cfg.sma_fast:].mean()
+            sma_prev = valid.iloc[-cfg.sma_fast * 2:-cfg.sma_fast].mean()
+            if sma_prev and sma_prev != 0:
+                sma20_slope = (sma_now / sma_prev) - 1.0
+
+        sma50_slope = float("nan")
+        if len(valid) >= cfg.sma_mid * 2:
+            sma_now_mid = valid.iloc[-cfg.sma_mid:].mean()
+            sma_prev_mid = valid.iloc[-cfg.sma_mid * 2:-cfg.sma_mid].mean()
+            if sma_prev_mid and sma_prev_mid != 0:
+                sma50_slope = (sma_now_mid / sma_prev_mid) - 1.0
+
         results.append({
             "ticker": ticker,
             "last": last_val,
@@ -94,6 +109,8 @@ def compute_trend_features(
             "trend_ok": trend_ok,
             "dist_sma50_pct": dist_sma50,
             "dist_sma200_pct": dist_sma200,
+            "sma20_slope": sma20_slope,
+            "sma50_slope": sma50_slope,
         })
     
     if not results:

@@ -44,6 +44,7 @@ def compute_returns(close: pd.DataFrame, lookback: int) -> pd.Series:
 def compute_momentum_features(
     ohlcv: pd.DataFrame,
     cfg: MomentumConfig = MomentumConfig(),
+    sector_benchmark_returns: dict[str, float] | None = None,
 ) -> pd.DataFrame:
     """
     Output per ticker:
@@ -79,5 +80,18 @@ def compute_momentum_features(
 
     # Drop tickers lacking enough history
     feats = feats.dropna(subset=["mom_6m", "mom_12m"])
+
+    # sector_rs_6m: mom_6m minus sector benchmark return; falls back to rs_6m when unavailable
+    if sector_benchmark_returns:
+        sector_rs_vals = {}
+        for ticker in feats.index:
+            bmk = sector_benchmark_returns.get(str(ticker))
+            if bmk is not None and pd.notna(bmk):
+                sector_rs_vals[ticker] = feats.loc[ticker, "mom_6m"] - float(bmk)
+            else:
+                sector_rs_vals[ticker] = feats.loc[ticker, "rs_6m"]
+        feats["sector_rs_6m"] = pd.Series(sector_rs_vals)
+    else:
+        feats["sector_rs_6m"] = feats["rs_6m"]
 
     return feats.sort_index()

@@ -51,6 +51,18 @@ def pullback_reclaim_signal(close_s: pd.Series, ma_window: int) -> tuple[bool, f
     return bool(ok), float(t_ma)
 
 
+def _get_volume_matrix(ohlcv: pd.DataFrame) -> pd.DataFrame | None:
+    """Return the (date × ticker) volume DataFrame, or None if absent."""
+    if not isinstance(ohlcv.columns, pd.MultiIndex):
+        return None
+    level0 = ohlcv.columns.get_level_values(0)
+    for candidate in ("Volume", "volume", "VOLUME"):
+        if candidate in level0:
+            vol = ohlcv[candidate]
+            return vol if isinstance(vol, pd.DataFrame) else vol.to_frame()
+    return None
+
+
 def build_signal_board(
     ohlcv: pd.DataFrame,
     tickers: Iterable[str],
@@ -62,8 +74,10 @@ def build_signal_board(
       - breakout{lookback} (bool) + breakout_level
       - pullback_ma{ma} (bool) + ma{ma}_level
       - signal in {'both','breakout','pullback','none'}
+      - breakout_volume_confirmation (bool, optional — present when volume data available)
     """
     close = get_close_matrix(ohlcv)
+    vol_matrix = _get_volume_matrix(ohlcv)
 
     tks = [str(t).strip().upper() for t in tickers if t and str(t).strip()]
     tks = [t for i, t in enumerate(tks) if t not in tks[:i]]  # unique preserve order
@@ -97,17 +111,25 @@ def build_signal_board(
         else:
             sig = "none"
 
-        rows.append(
-            {
-                "ticker": t,
-                "last": last,
-                breakout_col: brk,
-                "breakout_level": brk_lvl,
-                pullback_col: pb,
-                ma_col: ma_lvl,
-                "signal": sig,
-            }
-        )
+        row: dict = {
+            "ticker": t,
+            "last": last,
+            breakout_col: brk,
+            "breakout_level": brk_lvl,
+            pullback_col: pb,
+            ma_col: ma_lvl,
+            "signal": sig,
+        }
+
+        # Volume confirmation: present only when volume data available
+        if vol_matrix is not None and t in vol_matrix.columns:
+            v = vol_matrix[t].dropna()
+            if len(v) >= 21:
+                today_vol = float(v.iloc[-1])
+                avg_vol_20 = float(v.iloc[-21:-1].mean())
+                row["breakout_volume_confirmation"] = bool(today_vol > 1.5 * avg_vol_20)
+
+        rows.append(row)
 
     board_cols = [
         "last",
