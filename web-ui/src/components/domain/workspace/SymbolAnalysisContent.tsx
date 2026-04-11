@@ -126,32 +126,17 @@ export default function SymbolAnalysisContent({
 
         {activeTab === 'overview' && (
           <>
-            <div
-              className={cn(
-                'gap-3',
-                candidate?.decisionSummary
-                  ? 'grid xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]'
-                  : 'space-y-3',
-              )}
-            >
-              {candidate?.decisionSummary ? (
-                <DecisionSummaryCard summary={candidate.decisionSummary} currency={candidate.currency} />
-              ) : null}
-              <div className="rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700">
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Price context</p>
-                    <p className="text-sm text-slate-600">Cached chart for fast timing review.</p>
-                  </div>
-                </div>
-                <CachedSymbolPriceChart
-                  ticker={ticker}
-                  defaultOpen
-                  showToggle={false}
-                  width={820}
-                  height={180}
-                />
-              </div>
+            {candidate?.decisionSummary ? (
+              <DecisionSummaryCard summary={candidate.decisionSummary} currency={candidate.currency} />
+            ) : null}
+            <div className="rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700">
+              <CachedSymbolPriceChart
+                ticker={ticker}
+                defaultOpen
+                showToggle={false}
+                width={820}
+                height={200}
+              />
             </div>
             {candidate ? <TechnicalMetricsGrid candidate={candidate} /> : null}
           </>

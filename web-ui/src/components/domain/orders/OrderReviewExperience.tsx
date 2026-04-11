@@ -283,10 +283,10 @@ export default function OrderReviewExperience({
                 {t('order.review.kicker')}
               </p>
               <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
-                Review the trade before sending the order
+                {t('order.review.title' as any)}
               </h3>
               <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                Keep the key numbers in view, then use the tabs to inspect setup quality and invalidation.
+                {t('order.review.subtitle' as any)}
               </p>
             </div>
           </div>
@@ -478,7 +478,7 @@ export default function OrderReviewExperience({
               <div className="space-y-4">
                 {hardInvalidations.length ? (
                   <div>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Hard invalidation</p>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('order.review.hardInvalidationTitle' as any)}</p>
                     <ul className="mt-2 space-y-2">
                       {hardInvalidations.map((rule) => (
                         <li
@@ -499,7 +499,7 @@ export default function OrderReviewExperience({
 
                 {(softInvalidations.length || context.recommendation?.thesis?.explanation.whatCouldGoWrong.length) ? (
                   <div>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Soft warnings</p>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('order.review.softWarningsTitle' as any)}</p>
                     <ul className="mt-2 space-y-2">
                       {softInvalidations.map((rule) => (
                         <li
@@ -530,7 +530,7 @@ export default function OrderReviewExperience({
 
                 <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/20">
                   <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
-                    Execution caution
+                    {t('order.review.executionCautionTitle' as any)}
                   </p>
                   <p className="mt-2 text-sm text-amber-950 dark:text-amber-100">
                     {context.recommendation?.education.commonBiasWarning || t(guidance.cautionKey)}
@@ -748,15 +748,15 @@ export default function OrderReviewExperience({
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="grid grid-cols-3 gap-2 text-xs text-slate-600">
                     <div>
-                      <div className="uppercase tracking-wide text-slate-500">Position</div>
+                      <div className="uppercase tracking-wide text-slate-500">{t('order.review.summaryPosition' as any)}</div>
                       <div className="mt-1 font-semibold text-slate-900">{formatCurrency(positionSize, currency)}</div>
                     </div>
                     <div>
-                      <div className="uppercase tracking-wide text-slate-500">Risk</div>
+                      <div className="uppercase tracking-wide text-slate-500">{t('order.review.summaryRisk' as any)}</div>
                       <div className="mt-1 font-semibold text-slate-900">{formatCurrency(riskAmount, currency)}</div>
                     </div>
                     <div>
-                      <div className="uppercase tracking-wide text-slate-500">Risk %</div>
+                      <div className="uppercase tracking-wide text-slate-500">{t('order.review.summaryRiskPct' as any)}</div>
                       <div className={`mt-1 font-semibold ${riskPercent > risk.riskPct * 100 ? 'text-red-600' : 'text-emerald-600'}`}>
                         {riskPercent.toFixed(2)}%
                       </div>
@@ -781,7 +781,7 @@ export default function OrderReviewExperience({
             <div className="space-y-4">
               <div className="rounded-lg border border-blue-200 bg-blue-50/70 p-3 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950/20 dark:text-blue-100">
                 <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">
-                  Execution guide
+                  {t('order.review.executionGuideTitle' as any)}
                 </p>
                 <div className="mt-2 space-y-2">
                   <p>
@@ -797,13 +797,13 @@ export default function OrderReviewExperience({
               </div>
 
               <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-100">
-                <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">Execution caution</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">{t('order.review.executionCautionTitle' as any)}</p>
                 <p className="mt-2">{t(guidance.cautionKey)}</p>
               </div>
 
               <details className="rounded-lg border border-slate-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-950">
                 <summary className="cursor-pointer list-none text-sm font-semibold text-slate-900 dark:text-gray-100">
-                  Broker-specific steps
+                  {t('order.review.brokerStepsTitle' as any)}
                 </summary>
                 <div className="mt-3">
                   <SetupExecutionGuide signal={guidanceSignal} />
@@ -812,7 +812,7 @@ export default function OrderReviewExperience({
 
               <details className="rounded-lg border border-slate-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-950">
                 <summary className="cursor-pointer list-none text-sm font-semibold text-slate-900 dark:text-gray-100">
-                  Exact Degiro setup
+                  {t('order.review.degiroSetupTitle' as any)}
                 </summary>
                 <div className="mt-3">
                   <DegiroOrderConfigGuide
