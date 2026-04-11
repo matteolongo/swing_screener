@@ -787,6 +787,12 @@ class ScreenerService:
                 signal = row.get("signal")
                 entry_val = _safe_optional_float(row.get("entry")) or last_price
                 stop_val = _safe_optional_float(row.get("stop"))
+                if stop_val is None and entry_val:
+                    # No explicit stop from the pipeline — derive one from ATR so that
+                    # target and R:R can be computed for the order panel.
+                    atr_val = _safe_optional_float(row.get(atr_col))
+                    if atr_val and atr_val > 0:
+                        stop_val = round(entry_val - 2.0 * atr_val, 4)
                 shares_val = _safe_optional_int(row.get("shares"))
                 position_size = _safe_optional_float(row.get("position_value"))
                 risk_usd = _safe_optional_float(row.get("realized_risk"))
