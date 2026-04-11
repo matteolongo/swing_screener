@@ -48,19 +48,6 @@ export function migrateRemovedUniverseIds(storage: Storage, defaultId = 'us_all'
   storage.setItem(SCREENER_UNIVERSE_STORAGE_KEY, JSON.stringify(replacement));
 }
 
-function looksLikeJsonLiteral(value: string): boolean {
-  const trimmed = value.trim();
-  return (
-    value.startsWith('"') ||
-    value.startsWith('{') ||
-    value.startsWith('[') ||
-    value === 'true' ||
-    value === 'false' ||
-    value === 'null' ||
-    (trimmed !== '' && !Number.isNaN(Number(trimmed)))
-  );
-}
-
 function normalizeDoubleQuotedLegacyString(rawValue: string): string {
   if (rawValue.startsWith('""') && rawValue.endsWith('""')) {
     return rawValue.slice(1, -1);
