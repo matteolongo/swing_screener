@@ -1,0 +1,37 @@
+{
+  "id": "us_defense_etfs",
+  "kind": "curated",
+  "description": "USD defense theme ETFs",
+  "benchmark": "SPY",
+  "source": "manual",
+  "source_asof": "2026-04-11",
+  "last_reviewed_at": "2026-04-11",
+  "stale_after_days": 365,
+  "rules": {
+    "currencies": [
+      "USD"
+    ]
+  },
+  "constituents": [
+    {
+      "symbol": "ITA",
+      "exchange_mic": "ARCX",
+      "currency": "USD"
+    },
+    {
+      "symbol": "XAR",
+      "exchange_mic": "ARCX",
+      "currency": "USD"
+    },
+    {
+      "symbol": "PPA",
+      "exchange_mic": "ARCX",
+      "currency": "USD"
+    },
+    {
+      "symbol": "DFEN",
+      "exchange_mic": "ARCX",
+      "currency": "USD"
+    }
+  ]
+}

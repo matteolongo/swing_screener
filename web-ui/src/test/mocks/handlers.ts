@@ -349,17 +349,20 @@ export const mockOrders = [
 
 export const mockUniverses = {
   universes: [
-    'usd_all',
-    'eur_all',
-    'usd_mega_stocks',
-    'usd_core_etfs',
-    'usd_defense_all',
-    'usd_healthcare_all',
-    'eur_europe_large',
-    'eur_amsterdam_all',
-    'SP500',
-    'NASDAQ100',
-    'DOW30',
+    'amsterdam_aex',
+    'amsterdam_amx',
+    'amsterdam_all',
+    'europe_large_eur',
+    'europe_proxies_usd',
+    'us_all',
+    'us_mega_stocks',
+    'us_core_etfs',
+    'us_defense_all',
+    'us_defense_stocks',
+    'us_defense_etfs',
+    'us_healthcare_all',
+    'us_healthcare_stocks',
+    'us_healthcare_etfs',
   ],
 }
 

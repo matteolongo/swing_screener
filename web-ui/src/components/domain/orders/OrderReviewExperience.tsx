@@ -118,6 +118,12 @@ export default function OrderReviewExperience({
   const suggestedShares = recRisk?.shares ?? context.shares ?? Math.max(1, risk.minShares);
   const verdict = context.recommendation?.verdict ?? 'UNKNOWN';
   const isRecommended = verdict === 'RECOMMENDED';
+  const reasonsDetailed = context.recommendation?.reasonsDetailed;
+  const COMPLETENESS_CODES = new Set(['STOP_MISSING', 'NO_SIGNAL']);
+  const isIncomplete =
+    verdict === 'NOT_RECOMMENDED' &&
+    !!reasonsDetailed?.length &&
+    reasonsDetailed.filter((r) => r.severity === 'block').every((r) => COMPLETENESS_CODES.has(r.code));
   const currency = context.currency ?? 'USD';
   const knownCurrentPrice =
     typeof context.close === 'number' && Number.isFinite(context.close) && context.close > 0 ? context.close : null;
@@ -161,7 +167,7 @@ export default function OrderReviewExperience({
   const limitPrice = form.watch('limitPrice') ?? 0;
   const stopPrice = form.watch('stopPrice') ?? 0;
   const hasOrderTypeMismatch = hasSuggestedOrderType && orderType !== normalizedSuggestedOrderType;
-  const needsOverrideConfirmation = hasSkipSuggestion || hasOrderTypeMismatch;
+  const needsOverrideConfirmation = hasOrderTypeMismatch || (hasSkipSuggestion && !isRecommended);
   const invalidBuyStopPrice = orderType === 'BUY_STOP' && knownCurrentPrice != null && limitPrice <= knownCurrentPrice;
   const triggerPriceLabel =
     orderType === 'BUY_STOP' ? t('order.candidateModal.triggerPrice') : t('order.candidateModal.limitPrice');
@@ -341,10 +347,12 @@ export default function OrderReviewExperience({
                     'rounded-xl border p-4',
                     isRecommended
                       ? 'border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/20'
-                      : 'border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/20',
+                      : isIncomplete
+                        ? 'border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/20'
+                        : 'border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/20',
                   )}>
                     <div className="flex flex-wrap items-center gap-2">
-                      <RecommendationBadge verdict={verdict} />
+                      <RecommendationBadge verdict={verdict} reasonsDetailed={reasonsDetailed} />
                       <span className="text-sm text-gray-700 dark:text-gray-300">{t('recommendation.summary')}</span>
                     </div>
                     {context.recommendation.reasonsShort.length ? (

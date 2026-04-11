@@ -49,7 +49,7 @@ async def _run_agent_flows() -> tuple[dict, dict, dict]:
     agent = SwingScreenerAgent()
     await agent.start()
     try:
-        screening = await agent.daily_screening(universe="mega_all", top=1)
+        screening = await agent.daily_screening(universe="us_all", top=1)
         review = await agent.daily_review()
         chat = await agent.ask("What pending orders do I have?", selected_ticker="AAPL")
         return screening, review, chat
@@ -90,7 +90,7 @@ def test_agent_chat_matches_api_response_shape_over_mcp():
 def test_agent_screen_daily_review_and_chat_flow_through_stdio_mcp():
     screening, review, chat = asyncio.run(_run_agent_flows())
 
-    assert screening["universe"] == "mega_all"
+    assert screening["universe"] == "us_all"
     assert len(screening["candidates"]) == 1
     assert screening["candidates"][0]["ticker"] == "AAPL"
     assert screening["candidates"][0]["entry"] == 175.5

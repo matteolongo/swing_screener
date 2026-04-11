@@ -104,6 +104,7 @@ def build_recommendation(
     slippage_bps: float = 5.0,
     fx_estimate_pct: float = 0.0,
     min_shares: int = 1,
+    max_position_pct: float = 1.0,
     thesis: Optional[dict] = None,  # Trade Thesis dictionary
 ) -> RecommendationPayload:
     if entry is None or not math.isfinite(entry) or entry <= 0:
@@ -127,6 +128,15 @@ def build_recommendation(
     if shares_final is None and risk_per_share and risk_per_share > 0:
         shares_by_risk = math.floor(risk_amount_target / risk_per_share)
         shares_final = max(0, int(shares_by_risk))
+
+    # Cap shares by max position size (e.g. 50% of account)
+    if entry > 0 and max_position_pct > 0:
+        max_position_value = account_size * max_position_pct
+        shares_by_cap = math.floor(max_position_value / entry)
+        if shares_final is None:
+            shares_final = shares_by_cap
+        else:
+            shares_final = min(shares_final, shares_by_cap)
 
     if shares_final is None:
         shares_final = 0

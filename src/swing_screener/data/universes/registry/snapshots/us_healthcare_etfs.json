@@ -1,0 +1,52 @@
+{
+  "id": "us_healthcare_etfs",
+  "kind": "curated",
+  "description": "USD healthcare and biotech ETFs",
+  "benchmark": "SPY",
+  "source": "manual",
+  "source_asof": "2026-04-11",
+  "last_reviewed_at": "2026-04-11",
+  "stale_after_days": 365,
+  "rules": {
+    "currencies": [
+      "USD"
+    ]
+  },
+  "constituents": [
+    {
+      "symbol": "XLV",
+      "exchange_mic": "ARCX",
+      "currency": "USD"
+    },
+    {
+      "symbol": "VHT",
+      "exchange_mic": "ARCX",
+      "currency": "USD"
+    },
+    {
+      "symbol": "IBB",
+      "exchange_mic": "ARCX",
+      "currency": "USD"
+    },
+    {
+      "symbol": "XBI",
+      "exchange_mic": "ARCX",
+      "currency": "USD"
+    },
+    {
+      "symbol": "IHE",
+      "exchange_mic": "ARCX",
+      "currency": "USD"
+    },
+    {
+      "symbol": "IXJ",
+      "exchange_mic": "ARCX",
+      "currency": "USD"
+    },
+    {
+      "symbol": "PJP",
+      "exchange_mic": "ARCX",
+      "currency": "USD"
+    }
+  ]
+}

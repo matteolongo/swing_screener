@@ -1,19 +1,23 @@
-from pathlib import Path
+import pytest
 
 from swing_screener.data.universe import (
     list_package_universes,
     filter_ticker_list,
-    save_universe_file,
     apply_universe_config,
     UniverseConfig,
     load_universe_from_package,
 )
 
 
-def test_list_package_universes_includes_currency_all():
+def test_list_package_universes_returns_new_ids():
     universes = list_package_universes()
-    assert "usd_all" in universes
-    assert "eur_all" in universes
+    assert "us_all" in universes
+    assert "amsterdam_aex" in universes
+    assert "europe_large_eur" in universes
+    # Old ids must not be present
+    assert "usd_all" not in universes
+    assert "eur_all" not in universes
+    assert "mega_all" not in universes
 
 
 def test_filter_ticker_list_include_exclude_and_grep():
@@ -28,37 +32,41 @@ def test_filter_ticker_list_include_exclude_and_grep():
     assert filtered == ["TECH1", "ZZZ"]
 
 
-def test_save_universe_file_and_apply_config(tmp_path: Path):
+def test_apply_universe_config_benchmark_and_max():
     tickers = ["AAA", "BBB"]
-    path = save_universe_file(tickers, tmp_path / "out.csv")
-    assert path.exists()
-    text = path.read_text(encoding="utf-8").strip().splitlines()
-    assert text == tickers
-
     cfg = UniverseConfig(benchmark="SPY", ensure_benchmark=True, max_tickers=2)
     applied = apply_universe_config(tickers, cfg)
     # Max tickers keeps 2; benchmark replaces last slot
     assert applied[-1] == "SPY"
 
 
-def test_universe_aliases_resolve_to_usd_all():
+def test_load_us_all_returns_non_empty():
     cfg = UniverseConfig(benchmark="SPY", ensure_benchmark=False)
-    by_alias = load_universe_from_package("mega", cfg)
-    by_legacy = load_universe_from_package("mega_all", cfg)
-    by_canonical = load_universe_from_package("usd_all", cfg)
-    assert by_alias == by_canonical
-    assert by_legacy == by_canonical
+    tickers = load_universe_from_package("us_all", cfg)
+    assert len(tickers) > 50
+    assert "AAPL" in tickers
 
 
-def test_universe_alias_amsterdam_all_resolves():
+def test_load_amsterdam_all_returns_non_empty():
+    cfg = UniverseConfig(benchmark="^AEX", ensure_benchmark=False)
+    tickers = load_universe_from_package("amsterdam_all", cfg)
+    assert len(tickers) > 10
+    assert all("." in t for t in tickers)  # All Amsterdam tickers have suffix
+
+
+def test_load_unknown_id_raises_value_error():
+    cfg = UniverseConfig(benchmark="SPY", ensure_benchmark=False)
+    with pytest.raises(ValueError, match="Unknown universe id"):
+        load_universe_from_package("mega_all", cfg)
+
+
+def test_load_old_usd_id_raises_value_error():
+    cfg = UniverseConfig(benchmark="SPY", ensure_benchmark=False)
+    with pytest.raises(ValueError, match="Unknown universe id"):
+        load_universe_from_package("usd_all", cfg)
+
+
+def test_load_removed_eur_all_raises_value_error():
     cfg = UniverseConfig(benchmark="VGK", ensure_benchmark=False)
-    by_legacy = load_universe_from_package("amsterdam_all", cfg)
-    by_canonical = load_universe_from_package("eur_amsterdam_all", cfg)
-    assert by_legacy == by_canonical
-
-
-def test_quoted_universe_name_is_normalized():
-    cfg = UniverseConfig(benchmark="VGK", ensure_benchmark=False)
-    quoted = load_universe_from_package('"eur_all"', cfg)
-    canonical = load_universe_from_package("eur_all", cfg)
-    assert quoted == canonical
+    with pytest.raises(ValueError, match="Unknown universe id"):
+        load_universe_from_package("eur_all", cfg)

@@ -39,6 +39,10 @@ function formatSeriesValue(value: number, unit: 'number' | 'currency' | 'percent
   return formatNumber(value);
 }
 
+function comparePeriodDesc(left: string, right: string) {
+  return right.localeCompare(left);
+}
+
 function pillStatusClass(status: FundamentalSnapshot['coverageStatus'] | 'strong' | 'neutral' | 'weak' | 'unavailable') {
   if (status === 'supported' || status === 'strong') return 'bg-emerald-100 text-emerald-800';
   if (status === 'partial' || status === 'neutral') return 'bg-amber-100 text-amber-800';
@@ -257,15 +261,33 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
                       .filter(Boolean)
                       .join(' · ') || 'metadata unavailable'}
                   </div>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {series.points.map((point) => (
-                      <div key={`${key}-${point.periodEnd}`} className="rounded-md bg-gray-50 px-2 py-1 text-xs">
-                        <div className="text-gray-500">{point.periodEnd}</div>
-                        <div className="mt-1 font-medium text-gray-800">
-                          {formatSeriesValue(point.value, series.unit)}
-                        </div>
-                      </div>
-                    ))}
+                  <div className="mt-3 overflow-hidden rounded-md border border-gray-200">
+                    <table className="min-w-full divide-y divide-gray-200 text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                            Date
+                          </th>
+                          <th className="px-3 py-2 text-right text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                            Value
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 bg-white">
+                        {[...series.points]
+                          .sort((left, right) => comparePeriodDesc(left.periodEnd, right.periodEnd))
+                          .map((point) => (
+                            <tr key={`${key}-${point.periodEnd}`}>
+                              <td className="px-3 py-2 font-mono text-xs text-gray-500">
+                                {point.periodEnd}
+                              </td>
+                              <td className="px-3 py-2 text-right font-medium text-gray-800">
+                                {formatSeriesValue(point.value, series.unit)}
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               ))}
