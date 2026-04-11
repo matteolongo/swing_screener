@@ -52,6 +52,8 @@ export interface WorkspaceContextSourceMeta {
 export interface WorkspaceContextMeta {
   selectedTicker?: string;
   sources: WorkspaceContextSourceMeta[];
+  isConsistentSnapshot: boolean;
+  snapshotWarnings: string[];
 }
 
 export interface ChatAnswerRequest {
@@ -129,6 +131,8 @@ interface WorkspaceContextSourceMetaAPI {
 interface WorkspaceContextMetaAPI {
   selected_ticker?: string;
   sources: WorkspaceContextSourceMetaAPI[];
+  is_consistent_snapshot?: boolean;
+  snapshot_warnings?: string[];
 }
 
 interface ChatAnswerRequestAPI {
@@ -256,6 +260,8 @@ export function transformChatAnswerResponse(payload: ChatAnswerResponseAPI): Cha
         asof: source.asof,
         count: source.count,
       })),
+      isConsistentSnapshot: payload.context_meta.is_consistent_snapshot ?? true,
+      snapshotWarnings: payload.context_meta.snapshot_warnings ?? [],
     },
     conversationState: (payload.conversation_state ?? []).map((turn) => ({
       role: turn.role,

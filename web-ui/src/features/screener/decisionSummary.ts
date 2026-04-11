@@ -639,7 +639,13 @@ export function syncCandidateWithFundamentals(
   snapshot: FundamentalSnapshot
 ): ScreenerCandidate {
   const fundamentalsSummary = buildFundamentalsSummary(snapshot);
-  const decisionSummary = rebuildDecisionSummaryWithFundamentals(candidate, snapshot);
+  // Preserve the backend decision summary when one already exists so the server
+  // remains the single source of truth for action/conviction/drivers.
+  // Only rebuild locally when the backend has not yet enriched the candidate.
+  const decisionSummary =
+    candidate.decisionSummary != null
+      ? candidate.decisionSummary
+      : rebuildDecisionSummaryWithFundamentals(candidate, snapshot);
   const changed =
     candidate.fundamentalsCoverageStatus !== snapshot.coverageStatus ||
     candidate.fundamentalsFreshnessStatus !== snapshot.freshnessStatus ||
