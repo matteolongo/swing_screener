@@ -44,10 +44,12 @@ def compute_hot_score(
 
     out = df.copy()
 
-    # Percentile ranks (0..1), higher is better
-    r6 = out["mom_6m"].rank(pct=True)
-    r12 = out["mom_12m"].rank(pct=True)
-    rrs = out["rs_6m"].rank(pct=True)
+    # Percentile ranks (0..1), higher is better.
+    # na_option='bottom' sends NaN momentum values to rank 0 so they sort last
+    # rather than receiving NaN scores that corrupt the ordering.
+    r6 = out["mom_6m"].rank(pct=True, na_option="bottom")
+    r12 = out["mom_12m"].rank(pct=True, na_option="bottom")
+    rrs = out["rs_6m"].rank(pct=True, na_option="bottom")
 
     wsum = cfg.w_mom_6m + cfg.w_mom_12m + cfg.w_rs_6m
     w6 = cfg.w_mom_6m / wsum
