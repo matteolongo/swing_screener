@@ -16,6 +16,7 @@ import { useLocalStorage } from '@/hooks';
 import { formatDate } from '@/utils/formatters';
 import {
   parseUniverseValue,
+  migrateRemovedUniverseIds,
   SCREENER_UNIVERSE_STORAGE_KEY,
 } from '@/features/screener/universeStorage';
 
@@ -55,6 +56,7 @@ export default function ScreenerInboxPanel() {
 
   const riskConfig = activeStrategy?.risk ?? configDefaultsQuery.data?.risk;
 
+  migrateRemovedUniverseIds(localStorage);
   const [selectedUniverse, setSelectedUniverse] = useLocalStorage(
     SCREENER_UNIVERSE_STORAGE_KEY,
     'us_all',
