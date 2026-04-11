@@ -781,22 +781,23 @@ export default function OrderReviewExperience({
             <div className="space-y-4">
               <div className="rounded-lg border border-blue-200 bg-blue-50/70 p-3 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950/20 dark:text-blue-100">
                 <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">
-                  How to place this setup
+                  Execution guide
                 </p>
-                <p className="mt-2">
-                  <span className="font-semibold">{t('order.setupGuidance.setupLabel')}</span> {t(guidance.setupLabelKey)}
-                </p>
-                <p className="mt-2">{t(guidance.whatItMeansKey)}</p>
+                <div className="mt-2 space-y-2">
+                  <p>
+                    <span className="font-semibold">{t('order.setupGuidance.setupLabel')}</span> {t(guidance.setupLabelKey)}
+                  </p>
+                  <p>{t(guidance.whatItMeansKey)}</p>
+                  {context.executionNote ? (
+                    <div className="rounded-md border border-blue-200 bg-white/70 px-3 py-2 text-xs text-blue-800 dark:border-blue-900 dark:bg-blue-950/20 dark:text-blue-100">
+                      {context.executionNote}
+                    </div>
+                  ) : null}
+                </div>
               </div>
 
-              {context.executionNote ? (
-                <div className="rounded border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800 dark:border-blue-900 dark:bg-blue-950/20 dark:text-blue-100">
-                  {context.executionNote}
-                </div>
-              ) : null}
-
               <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-100">
-                <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">Caution</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">Execution caution</p>
                 <p className="mt-2">{t(guidance.cautionKey)}</p>
               </div>
 

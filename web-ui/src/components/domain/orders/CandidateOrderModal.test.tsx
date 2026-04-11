@@ -128,7 +128,7 @@ describe('CandidateOrderModal', () => {
       />,
     );
 
-    expect(screen.getByText('How to place this setup')).toBeInTheDocument();
+    expect(screen.getByText('Execution guide')).toBeInTheDocument();
     expect(screen.getAllByText('Breakout setup').length).toBeGreaterThan(0);
     expect(screen.getAllByText(/BUY STOP/i).length).toBeGreaterThan(0);
     expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('BUY_STOP');

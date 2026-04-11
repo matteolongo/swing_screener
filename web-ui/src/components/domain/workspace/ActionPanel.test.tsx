@@ -117,7 +117,7 @@ describe('ActionPanel', () => {
     expect(screen.getByText('Place Order')).toBeInTheDocument();
     expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('BUY_STOP');
     expect(screen.getByText('Trigger Price (Buy Stop entry in Degiro)')).toBeInTheDocument();
-    expect(screen.getByText('How to place this setup')).toBeInTheDocument();
+    expect(screen.getByText('Execution guide')).toBeInTheDocument();
     expect(screen.getByText('Exact Degiro setup')).toBeInTheDocument();
   });
 

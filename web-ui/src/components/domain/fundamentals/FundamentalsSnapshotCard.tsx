@@ -220,6 +220,15 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
             <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
               {snapshot.companyName ?? 'Unknown company'}
             </p>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              {[
+                snapshot.sector,
+                snapshot.currency,
+                snapshot.mostRecentQuarter ? `most recent ${snapshot.mostRecentQuarter}` : null,
+              ]
+                .filter(Boolean)
+                .join(' · ') || 'Snapshot context unavailable'}
+            </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <span className={`rounded-full px-2 py-1 text-xs font-medium ${pillStatusClass(snapshot.coverageStatus)}`}>

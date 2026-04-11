@@ -24,6 +24,10 @@ export interface SymbolIntelligenceStatus {
   opportunitiesCount?: number;
   llmWarningsCount?: number;
   llmWarningSample?: string;
+  eventsKeptCount?: number;
+  eventsDroppedCount?: number;
+  duplicateSuppressedCount?: number;
+  analysisSummary?: string;
   explanationSource?: 'llm' | 'deterministic_fallback';
   educationSource?: 'llm' | 'deterministic_fallback' | 'cache';
   educationStatus?: 'ok' | 'partial' | 'error';
@@ -139,6 +143,10 @@ export function useSymbolIntelligenceRunner() {
               opportunitiesCount: status.opportunitiesCount,
               llmWarningsCount: status.llmWarningsCount,
               llmWarningSample: status.llmWarningSample,
+              eventsKeptCount: status.eventsKeptCount,
+              eventsDroppedCount: status.eventsDroppedCount,
+              duplicateSuppressedCount: status.duplicateSuppressedCount,
+              analysisSummary: status.analysisSummary,
               updatedAt: nowIso(),
             },
           }));
@@ -206,6 +214,10 @@ export function useSymbolIntelligenceRunner() {
             opportunitiesCount: finalStatus.opportunitiesCount,
             llmWarningsCount: finalStatus.llmWarningsCount,
             llmWarningSample: finalStatus.llmWarningSample,
+            eventsKeptCount: finalStatus.eventsKeptCount,
+            eventsDroppedCount: finalStatus.eventsDroppedCount,
+            duplicateSuppressedCount: finalStatus.duplicateSuppressedCount,
+            analysisSummary: finalStatus.analysisSummary,
             explanationSource: thesisEducation?.source ?? 'deterministic_fallback',
             educationSource: education.source,
             educationStatus: education.status,
