@@ -107,5 +107,6 @@ def evaluate_recommendation(
         slippage_bps=costs.slippage_bps,
         fx_estimate_pct=costs.fx_estimate_pct,
         min_shares=risk_cfg.min_shares,
+        max_position_pct=risk_cfg.max_position_pct,
         thesis=thesis_dict,
     )
