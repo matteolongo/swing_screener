@@ -19,7 +19,7 @@ async def list_notes(repo: SymbolNotesRepository = Depends(get_symbol_notes_repo
 async def get_note(ticker: str, repo: SymbolNotesRepository = Depends(get_symbol_notes_repo)):
     note = repo.get_note(ticker.upper())
     if not note:
-        raise HTTPException(status_code=404, detail="Note not found")
+        return SymbolNote(ticker=ticker.upper())
     return note
 
 

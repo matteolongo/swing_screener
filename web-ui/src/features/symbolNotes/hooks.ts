@@ -6,14 +6,6 @@ export function useSymbolNote(ticker: string | null | undefined) {
     queryKey: ['symbol-note', ticker?.toUpperCase() ?? null],
     queryFn: () => fetchSymbolNote(ticker as string),
     enabled: !!ticker,
-    retry: (failureCount, error: unknown) => {
-      // Don't retry 404s — note simply doesn't exist yet
-      if (error && typeof error === 'object' && 'response' in error) {
-        const e = error as { response?: { status?: number } };
-        if (e.response?.status === 404) return false;
-      }
-      return failureCount < 2;
-    },
   });
 }
 

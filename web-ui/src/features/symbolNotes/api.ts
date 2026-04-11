@@ -3,8 +3,8 @@ import { API_BASE_URL } from '@/lib/api';
 
 export interface SymbolNote {
   ticker: string;
-  note: string;
-  updated_at: string;
+  note: string | null;
+  updated_at: string | null;
 }
 
 const base = () => `${API_BASE_URL}/api/symbol-notes`;
