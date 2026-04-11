@@ -71,6 +71,12 @@ class ScreenerCandidate(BaseModel):
     decision_summary: Optional[DecisionSummary] = None
     raw_technical_rank: Optional[int] = None
     combined_priority_score: Optional[float] = None
+    sma20_slope: Optional[float] = None
+    sma50_slope: Optional[float] = None
+    consolidation_tightness: Optional[float] = None
+    close_location_in_range: Optional[float] = None
+    above_breakout_extension: Optional[float] = None
+    breakout_volume_confirmation: Optional[bool] = None
 
 
 class ScreenerRequest(BaseModel):

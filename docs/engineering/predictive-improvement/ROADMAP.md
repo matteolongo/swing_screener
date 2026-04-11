@@ -10,11 +10,11 @@
 
 | # | PR | Focus | Status | Branch |
 |---|---|---|---|---|
-| 1 | [PR1 — Intelligence handoff](PR1_intelligence_handoff.md) | Pass real technical readiness into intelligence runs | `[ ]` | `fix/intelligence-handoff` |
-| 2 | [PR2 — Unified snapshot](PR2_unified_snapshot.md) | One backend object per symbol with shared timestamps | `[ ]` | `feat/unified-snapshot` |
-| 3 | [PR3 — Explanation contract](PR3_explanation_contract.md) | Structured server-owned explanation; remove frontend recomputation | `[ ]` | `feat/explanation-contract` |
-| 4 | [PR4 — Combined ranking](PR4_combined_ranking.md) | Two-stage pipeline: technical prefilter + combined priority score | `[ ]` | `feat/combined-ranking` |
-| 5 | [PR5 — Richer technical model](PR5_richer_technical_model.md) | Setup quality, SMA slope, sector RS, volume confirmation | `[ ]` | `feat/richer-technical-model` |
+| 1 | [PR1 — Intelligence handoff](PR1_intelligence_handoff.md) | Pass real technical readiness into intelligence runs | `[x]` | `fix/intelligence-handoff` |
+| 2 | [PR2 — Unified snapshot](PR2_unified_snapshot.md) | One backend object per symbol with shared timestamps | `[~]` | `feat/unified-snapshot` |
+| 3 | [PR3 — Explanation contract](PR3_explanation_contract.md) | Structured server-owned explanation; remove frontend recomputation | `[~]` | `feat/explanation-contract` |
+| 4 | [PR4 — Combined ranking](PR4_combined_ranking.md) | Two-stage pipeline: technical prefilter + combined priority score | `[~]` | `feat/combined-ranking` |
+| 5 | [PR5 — Richer technical model](PR5_richer_technical_model.md) | Setup quality, SMA slope, sector RS, volume confirmation | `[~]` | `feat/richer-technical-model` |
 | 6 | [PR6 — Fundamentals conviction](PR6_fundamentals_conviction.md) | Trend acceleration, freshness penalty, quality/valuation split | `[ ]` | `feat/fundamentals-conviction` |
 | 7 | [PR7 — Intelligence scoring](PR7_intelligence_scoring.md) | Event-type weights, evidence quality cap, state multipliers | `[ ]` | `feat/intelligence-scoring` |
 | 8 | [PR8 — Measurement framework](PR8_measurement_framework.md) | EvaluationRecord, forward returns, hit-rate metrics | `[ ]` | `feat/measurement-framework` |
@@ -55,8 +55,8 @@ PRs 5, 6, 7 can be worked in parallel once PR 4 is merged.
 
 The project is complete when:
 
-- [ ] Technical, fundamentals, and intelligence all contribute before final ranking is locked (PR4)
-- [ ] Symbol analysis uses one consistent snapshot with visible provenance (PR2)
-- [ ] Explanations come from one backend source of truth (PR3)
-- [ ] Workspace intelligence runs use real technical readiness (PR1)
+- [~] Technical, fundamentals, and intelligence all contribute before final ranking is locked (PR4)
+- [~] Symbol analysis uses one consistent snapshot with visible provenance (PR2)
+- [~] Explanations come from one backend source of truth (PR3)
+- [x] Workspace intelligence runs use real technical readiness (PR1)
 - [ ] Ranking and decision changes are measurable with stored outcome metrics (PR8)

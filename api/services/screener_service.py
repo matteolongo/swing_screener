@@ -793,6 +793,16 @@ class ScreenerService:
                         score=_safe_float(row.get("score")),
                         confidence=_safe_float(row.get("confidence")),
                         rank=int(row.get("rank", len(candidates) + 1)),
+                        sma20_slope=_safe_optional_float(row.get("sma20_slope")),
+                        sma50_slope=_safe_optional_float(row.get("sma50_slope")),
+                        consolidation_tightness=_safe_optional_float(row.get("consolidation_tightness")),
+                        close_location_in_range=_safe_optional_float(row.get("close_location_in_range")),
+                        above_breakout_extension=_safe_optional_float(row.get("above_breakout_extension")),
+                        breakout_volume_confirmation=(
+                            bool(row.get("breakout_volume_confirmation"))
+                            if not _is_na_scalar(row.get("breakout_volume_confirmation"))
+                            else None
+                        ),
                         signal=str(signal) if not _is_na_scalar(signal) else None,
                         entry=rec_risk.entry,
                         stop=rec_risk.stop if stop_val is not None else None,
