@@ -9,6 +9,7 @@ from swing_screener.recommendation.models import (
     DecisionAction,
     DecisionConviction,
     DecisionDrivers,
+    ExplanationContract,
     FairValueMethod,
     DecisionSummary,
     DecisionTradePlan,
@@ -740,6 +741,68 @@ def _main_risk(
     return "The trade still needs disciplined risk management because no single input guarantees follow-through."
 
 
+_CONVICTION_PHRASE: dict[DecisionConviction, str] = {
+    "high": "high conviction",
+    "medium": "medium conviction",
+    "low": "low conviction",
+}
+
+_ACTION_PHRASE: dict[DecisionAction, str] = {
+    "BUY_NOW": "set up to buy now",
+    "BUY_ON_PULLBACK": "a buy-on-pullback candidate",
+    "WAIT_FOR_BREAKOUT": "waiting for a breakout",
+    "WATCH": "on the watchlist",
+    "TACTICAL_ONLY": "tactical-only",
+    "AVOID": "avoided for now",
+    "MANAGE_ONLY": "in manage-only mode",
+}
+
+
+def _build_explanation_contract(
+    *,
+    action: DecisionAction,
+    conviction: DecisionConviction,
+    drivers: DecisionDrivers,
+    why_now: str,
+    main_risk: str,
+    candidate: Any,
+) -> ExplanationContract:
+    first_positive = drivers.positives[0] if drivers.positives else "Setup is under review"
+    first_positive_clean = first_positive.rstrip(".")
+    summary_line = (
+        f"{first_positive_clean} — {_CONVICTION_PHRASE[conviction]}, {_ACTION_PHRASE[action]}."
+    )
+
+    why_it_qualified = list(drivers.positives)
+
+    why_now_list = [why_now] if why_now else []
+
+    main_risks: list[str] = list(drivers.negatives)
+    if main_risk and main_risk not in main_risks:
+        main_risks.append(main_risk)
+
+    what_invalidates_it: list[str] = []
+    stop = _safe_float(_get_value(candidate, "stop"))
+    if stop is not None:
+        what_invalidates_it.append(f"Price closing below the stop at {stop} invalidates the setup.")
+    if not what_invalidates_it:
+        what_invalidates_it.append("Disciplined adherence to the trade plan is required to manage risk.")
+
+    next_best_action = _ACTION_WHAT_TO_DO[action]
+
+    confidence_notes = list(drivers.warnings)
+
+    return ExplanationContract(
+        summary_line=summary_line,
+        why_it_qualified=why_it_qualified,
+        why_now=why_now_list,
+        main_risks=main_risks,
+        what_invalidates_it=what_invalidates_it,
+        next_best_action=next_best_action,
+        confidence_notes=confidence_notes,
+    )
+
+
 def build_decision_summary(
     candidate: Any,
     opportunity: Opportunity | None = None,
@@ -785,6 +848,24 @@ def build_decision_summary(
     if action in {"WATCH", "WAIT_FOR_BREAKOUT"} and catalyst_label == "active":
         why_now = "Catalyst support is active, but cleaner confirmation is still needed before acting."
 
+    main_risk_text = _main_risk(
+        snapshot=fundamentals,
+        opportunity=opportunity,
+        technical_label=technical_label,
+        fundamentals_label=fundamentals_label,
+        valuation_label=valuation_label,
+        same_symbol_mode=same_symbol_mode,
+    )
+
+    explanation = _build_explanation_contract(
+        action=action,
+        conviction=conviction,
+        drivers=drivers,
+        why_now=why_now,
+        main_risk=main_risk_text,
+        candidate=candidate,
+    )
+
     return DecisionSummary(
         symbol=symbol,
         action=action,
@@ -795,14 +876,7 @@ def build_decision_summary(
         catalyst_label=catalyst_label,
         why_now=why_now,
         what_to_do=_ACTION_WHAT_TO_DO[action],
-        main_risk=_main_risk(
-            snapshot=fundamentals,
-            opportunity=opportunity,
-            technical_label=technical_label,
-            fundamentals_label=fundamentals_label,
-            valuation_label=valuation_label,
-            same_symbol_mode=same_symbol_mode,
-        ),
+        main_risk=main_risk_text,
         trade_plan=DecisionTradePlan(
             entry=_safe_float(_get_value(candidate, "entry")),
             stop=_safe_float(_get_value(candidate, "stop")),
@@ -815,4 +889,5 @@ def build_decision_summary(
             negatives=drivers.negatives,
             warnings=drivers.warnings,
         ),
+        explanation=explanation,
     )

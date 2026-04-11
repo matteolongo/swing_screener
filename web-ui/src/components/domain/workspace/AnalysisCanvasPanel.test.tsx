@@ -25,6 +25,10 @@ vi.mock('@/components/domain/workspace/KeyMetrics', () => ({
   default: ({ ticker }: { ticker: string }) => <div>Key metrics {ticker}</div>,
 }));
 
+vi.mock('@/components/domain/workspace/SymbolNoteWidget', () => ({
+  default: ({ ticker }: { ticker: string }) => <div>Note {ticker}</div>,
+}));
+
 function buildSnapshot(): FundamentalSnapshot {
   return {
     symbol: 'AAPL',
@@ -248,6 +252,7 @@ describe('AnalysisCanvasPanel', () => {
             stop: 171,
             target: 198,
             rr: 2,
+            // No backend decisionSummary yet — triggers local rebuild from fundamentals
             decisionSummary: undefined,
           },
         ],

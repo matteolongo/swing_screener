@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 
 def _combined_priority_defaults() -> dict:
     from swing_screener.settings import get_settings_manager
+
     sel = get_settings_manager().get_low_level_defaults_payload("selection")
     d = sel.get("combined_priority", {})
     return d if isinstance(d, dict) else {}
@@ -41,6 +42,7 @@ class CombinedPriorityConfig:
     )
 
 
+# Label → sub-score mappings (0..1, higher is better).
 _FUNDAMENTALS_SCORE: dict[str, float] = {
     "strong": 1.0,
     "neutral": 0.5,
@@ -73,6 +75,8 @@ def _label_score(mapping: dict[str, float], label: str | None, default: float = 
 
 
 def _fundamentals_score(candidate: ScreenerCandidate) -> float:
+    """Fundamentals sub-score: uses business_quality_score from snapshot when available,
+    falls back to decision_summary label. Applies freshness and coverage penalties."""
     ds = candidate.decision_summary
     score = _label_score(
         _FUNDAMENTALS_SCORE,
@@ -93,6 +97,8 @@ def _fundamentals_score(candidate: ScreenerCandidate) -> float:
 
 
 def _valuation_score(candidate: ScreenerCandidate) -> float:
+    """Valuation sub-score: uses valuation_attractiveness from snapshot when available,
+    falls back to decision_summary label."""
     ds = candidate.decision_summary
     score = _label_score(
         _VALUATION_SCORE,
@@ -123,6 +129,7 @@ def compute_combined_priority(
     if not candidates:
         return candidates
 
+    # --- normalize technical readiness (min-max over batch) --------------------
     confidences = [c.confidence for c in candidates]
     conf_min = min(confidences)
     conf_max = max(confidences)
@@ -140,6 +147,7 @@ def compute_combined_priority(
         + cfg.valuation_weight
     ) or 1.0
 
+    # --- compute per-candidate scores ------------------------------------------
     scored: list[tuple[ScreenerCandidate, float, int]] = []
     for candidate in candidates:
         ds = candidate.decision_summary
@@ -162,8 +170,10 @@ def compute_combined_priority(
 
         scored.append((candidate, combined, candidate.rank))
 
+    # --- sort descending -------------------------------------------------------
     scored.sort(key=lambda item: (-item[1], item[2], item[0].ticker))
 
+    # --- stamp fields on output candidates ------------------------------------
     result: list[ScreenerCandidate] = []
     for candidate, score, _raw_rank in scored:
         result.append(
