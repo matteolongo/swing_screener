@@ -357,14 +357,18 @@ def _apply_decision_summary_context(
 
     enriched: list[ScreenerCandidate] = []
     for candidate in candidates:
+        fund_snap = snapshot_cache.get(candidate.ticker)
+        fund_asof = getattr(fund_snap, "asof_date", None) if fund_snap is not None else None
         enriched.append(
             candidate.model_copy(
                 update={
                     "decision_summary": build_decision_summary(
                         candidate,
                         opportunity=opportunity_cache.get(candidate.ticker),
-                        fundamentals=snapshot_cache.get(candidate.ticker),
-                    )
+                        fundamentals=fund_snap,
+                    ),
+                    "fundamentals_asof": str(fund_asof) if fund_asof else None,
+                    "intelligence_asof": latest_opportunities_date,
                 }
             )
         )

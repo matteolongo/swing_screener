@@ -116,6 +116,8 @@ class WorkspaceContextSourceMeta(BaseModel):
 class WorkspaceContextMeta(BaseModel):
     selected_ticker: Optional[str] = None
     sources: list[WorkspaceContextSourceMeta] = Field(default_factory=list)
+    is_consistent_snapshot: bool = True
+    snapshot_warnings: list[str] = Field(default_factory=list)
 
     @field_validator("selected_ticker")
     @classmethod

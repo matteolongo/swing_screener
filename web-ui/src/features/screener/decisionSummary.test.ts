@@ -87,12 +87,21 @@ describe('rebuildDecisionSummaryWithFundamentals', () => {
     expect(rebuilt.valuationContext.summary).toContain('Trailing PE is 24.6x');
   });
 
-  it('patches a stale candidate in place with the loaded fundamentals snapshot', () => {
+  it('patches metadata from the snapshot but preserves existing backend decisionSummary', () => {
     const patched = syncCandidateWithFundamentals(buildCandidate(), buildSnapshot());
 
     expect(patched.fundamentalsCoverageStatus).toBe('supported');
     expect(patched.fundamentalsFreshnessStatus).toBe('current');
     expect(patched.fundamentalsSummary).toBe('Growth metrics are supportive.');
+    // decisionSummary came from the backend (buildCandidate has one) — must be preserved, not rebuilt
+    expect(patched.decisionSummary?.valuationContext.method).toBe('not_available');
+  });
+
+  it('rebuilds decisionSummary locally when the backend has not yet enriched the candidate', () => {
+    const candidate: ScreenerCandidate = { ...buildCandidate(), decisionSummary: undefined };
+    const patched = syncCandidateWithFundamentals(candidate, buildSnapshot());
+
+    expect(patched.decisionSummary?.fundamentalsLabel).toBe('strong');
     expect(patched.decisionSummary?.valuationContext.method).toBe('earnings_multiple');
   });
 
