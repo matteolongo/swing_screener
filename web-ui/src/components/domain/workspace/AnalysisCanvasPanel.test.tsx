@@ -17,6 +17,10 @@ vi.mock('@/components/domain/market/CachedSymbolPriceChart', () => ({
   default: ({ ticker }: { ticker: string }) => <div>Chart {ticker}</div>,
 }));
 
+vi.mock('@/components/domain/workspace/SymbolNoteWidget', () => ({
+  default: ({ ticker }: { ticker: string }) => <div>Note {ticker}</div>,
+}));
+
 vi.mock('@/components/domain/workspace/KeyMetrics', () => ({
   default: ({ ticker }: { ticker: string }) => <div>Key metrics {ticker}</div>,
 }));
@@ -244,29 +248,7 @@ describe('AnalysisCanvasPanel', () => {
             stop: 171,
             target: 198,
             rr: 2,
-            decisionSummary: {
-              symbol: 'AAPL',
-              action: 'WATCH',
-              conviction: 'low',
-              technicalLabel: 'strong',
-              fundamentalsLabel: 'neutral',
-              valuationLabel: 'unknown',
-              catalystLabel: 'active',
-              whyNow: 'Old summary',
-              whatToDo: 'Old action',
-              mainRisk: 'Old risk',
-              tradePlan: { entry: 180, stop: 171, target: 198, rr: 2 },
-              valuationContext: {
-                method: 'not_available',
-                summary:
-                  'Valuation context is limited because no cached fundamentals snapshot is available yet.',
-              },
-              drivers: {
-                positives: [],
-                negatives: [],
-                warnings: ['No cached fundamentals snapshot is available yet.'],
-              },
-            },
+            decisionSummary: undefined,
           },
         ],
       },

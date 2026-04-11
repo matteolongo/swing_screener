@@ -173,6 +173,16 @@ class FundamentalSnapshot:
     highlights: list[str] = field(default_factory=list)
     metric_sources: dict[str, str] = field(default_factory=dict)
     error: str | None = None
+    # Trend acceleration signals (computed in scoring)
+    revenue_acceleration: float | None = None      # slope of 3-period revenue growth series (positive = accelerating)
+    margin_trend_slope: float | None = None        # slope of operating margin over 3 periods
+    fcf_margin_trend: float | None = None          # slope of FCF margin over 3 periods
+    # Conviction modifiers (used by combined ranking)
+    freshness_penalty: float = 0.0    # 0..1, higher = more stale; reduces combined priority
+    coverage_penalty: float = 0.0     # 0..1, higher = more missing pillars; caps conviction
+    # Separate quality vs valuation
+    business_quality_score: float | None = None    # growth + profitability + balance sheet + FCF only
+    valuation_attractiveness: float | None = None  # valuation pillar only, separate from quality
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

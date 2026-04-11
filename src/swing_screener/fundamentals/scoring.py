@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from datetime import datetime
+from datetime import date, datetime
 
 from swing_screener.fundamentals.config import FundamentalsConfig
 from swing_screener.fundamentals.models import (
@@ -619,6 +619,125 @@ def _build_data_quality(
     return "medium", deduped_flags
 
 
+def _linear_slope(values: list[float]) -> float | None:
+    """Fit a linear slope over an ordered list of values using OLS. Returns slope per unit step."""
+    n = len(values)
+    if n < 2:
+        return None
+    xs = list(range(n))
+    x_mean = sum(xs) / n
+    y_mean = sum(values) / n
+    numerator = sum((xs[i] - x_mean) * (values[i] - y_mean) for i in range(n))
+    denominator = sum((xs[i] - x_mean) ** 2 for i in range(n))
+    if denominator == 0:
+        return None
+    return numerator / denominator
+
+
+def _last_n_values(series: FundamentalMetricSeries, n: int) -> list[float]:
+    points = _sorted_points(series)
+    return [p.value for p in points[-n:]]
+
+
+def _revenue_acceleration(series_map: dict[str, FundamentalMetricSeries]) -> float | None:
+    """
+    Compute slope of 3-period revenue growth rates.
+    Uses growth_from_series logic applied to consecutive pairs in the revenue series.
+    Positive = accelerating growth.
+    """
+    revenue = series_map.get("revenue")
+    if revenue is None:
+        return None
+    points = _sorted_points(revenue)
+    if len(points) < 4:
+        return None
+    # Build up to 3 most-recent YoY growth rates from consecutive annual points
+    rates: list[float] = []
+    for i in range(len(points) - 1, 0, -1):
+        if len(rates) >= 3:
+            break
+        curr = points[i].value
+        prev = points[i - 1].value
+        if prev == 0:
+            continue
+        rates.append((curr / prev) - 1.0)
+    rates.reverse()
+    if len(rates) < 2:
+        return None
+    return _linear_slope(rates)
+
+
+def _margin_trend_slope(series_map: dict[str, FundamentalMetricSeries]) -> float | None:
+    """Slope of operating margin over up to 3 periods."""
+    series = series_map.get("operating_margin")
+    if series is None:
+        return None
+    values = _last_n_values(series, 3)
+    if len(values) < 2:
+        return None
+    return _linear_slope(values)
+
+
+def _fcf_margin_trend(series_map: dict[str, FundamentalMetricSeries]) -> float | None:
+    """Slope of FCF margin over up to 3 periods."""
+    series = series_map.get("free_cash_flow_margin")
+    if series is None:
+        return None
+    values = _last_n_values(series, 3)
+    if len(values) < 2:
+        return None
+    return _linear_slope(values)
+
+
+def _freshness_penalty_from_date(report_date: date | None, reference_date: date) -> float:
+    """
+    Penalty (0..0.5) for stale fundamentals data.
+    0.0   = data <= 90 days old (fresh)
+    0.15  = 91–180 days old
+    0.30  = 181–365 days old
+    0.50  = > 365 days old OR unknown date
+    """
+    if report_date is None:
+        return 0.5
+    age_days = (reference_date - report_date).days
+    if age_days <= 90:
+        return 0.0
+    if age_days <= 180:
+        return 0.15
+    if age_days <= 365:
+        return 0.30
+    return 0.50
+
+
+def _coverage_penalty_from_pillars(pillar_scores: dict[str, float | None]) -> float:
+    """
+    Penalty (0..1) based on fraction of missing pillar scores.
+    A fully covered snapshot scores 0.0; a completely missing snapshot scores 1.0.
+    """
+    total = len(pillar_scores)
+    if total == 0:
+        return 0.0
+    missing = sum(1 for v in pillar_scores.values() if v is None)
+    return missing / total
+
+
+def _business_quality_score(pillars: dict[str, FundamentalPillarScore]) -> float | None:
+    """Average score of growth, profitability, balance_sheet, cash_flow pillars (excludes valuation)."""
+    quality_keys = ("growth", "profitability", "balance_sheet", "cash_flow")
+    scores = [pillars[k].score for k in quality_keys if k in pillars and pillars[k].score is not None]
+    if not scores:
+        return None
+    return round(sum(scores) / len(scores), 4)
+
+
+def _valuation_attractiveness_score(pillars: dict[str, FundamentalPillarScore]) -> float | None:
+    """Valuation pillar score only, kept separate from quality."""
+    valuation = pillars.get("valuation")
+    if valuation is None or valuation.score is None:
+        return None
+    return valuation.score
+
+
 def build_snapshot(record: ProviderFundamentalsRecord, cfg: FundamentalsConfig) -> FundamentalSnapshot:
     resolved_record = _resolved_record(record)
     supported = _is_supported_equity(resolved_record.instrument_type)
@@ -629,6 +748,31 @@ def build_snapshot(record: ProviderFundamentalsRecord, cfg: FundamentalsConfig) 
     red_flags = _build_red_flags(resolved_record, freshness_status, historical_series)
     highlights = _build_highlights(resolved_record, pillars, coverage_status, historical_series)
     data_quality_status, data_quality_flags = _build_data_quality(resolved_record, historical_series)
+
+    # Compute trend acceleration signals
+    rev_accel = _revenue_acceleration(historical_series)
+    margin_slope = _margin_trend_slope(historical_series)
+    fcf_slope = _fcf_margin_trend(historical_series)
+
+    # Compute conviction modifiers
+    try:
+        report_date = (
+            datetime.fromisoformat(resolved_record.most_recent_quarter).date()
+            if resolved_record.most_recent_quarter
+            else None
+        )
+    except ValueError:
+        report_date = None
+    today = datetime.utcnow().date()
+    freshness_pen = _freshness_penalty_from_date(report_date, today)
+
+    pillar_score_map: dict[str, float | None] = {
+        k: v.score for k, v in pillars.items()
+    }
+    coverage_pen = _coverage_penalty_from_pillars(pillar_score_map)
+
+    bqs = _business_quality_score(pillars)
+    val_attract = _valuation_attractiveness_score(pillars)
 
     return FundamentalSnapshot(
         symbol=resolved_record.symbol,
@@ -670,6 +814,13 @@ def build_snapshot(record: ProviderFundamentalsRecord, cfg: FundamentalsConfig) 
         highlights=highlights,
         metric_sources=resolved_record.metric_sources,
         error=resolved_record.provider_error,
+        revenue_acceleration=rev_accel,
+        margin_trend_slope=margin_slope,
+        fcf_margin_trend=fcf_slope,
+        freshness_penalty=freshness_pen,
+        coverage_penalty=coverage_pen,
+        business_quality_score=bqs,
+        valuation_attractiveness=val_attract,
     )
 
 
