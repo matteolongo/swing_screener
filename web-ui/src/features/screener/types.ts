@@ -64,6 +64,16 @@ export interface DecisionDrivers {
   warnings: string[];
 }
 
+export interface ExplanationContract {
+  summaryLine: string;
+  whyItQualified: string[];
+  whyNow: string[];
+  mainRisks: string[];
+  whatInvalidatesIt: string[];
+  nextBestAction: string;
+  confidenceNotes: string[];
+}
+
 export interface DecisionSummary {
   symbol: string;
   action: DecisionAction;
@@ -78,6 +88,7 @@ export interface DecisionSummary {
   tradePlan: DecisionTradePlan;
   valuationContext: DecisionValuationContext;
   drivers: DecisionDrivers;
+  explanation?: ExplanationContract;
 }
 
 export interface ScreenerCandidate {
@@ -148,6 +159,16 @@ export interface DecisionDriversAPI {
   warnings?: string[];
 }
 
+export interface ExplanationContractAPI {
+  summary_line: string;
+  why_it_qualified: string[];
+  why_now: string[];
+  main_risks: string[];
+  what_invalidates_it: string[];
+  next_best_action: string;
+  confidence_notes: string[];
+}
+
 export interface DecisionSummaryAPI {
   symbol: string;
   action: DecisionAction;
@@ -162,6 +183,7 @@ export interface DecisionSummaryAPI {
   trade_plan: DecisionTradePlanAPI;
   valuation_context: DecisionValuationContextAPI;
   drivers: DecisionDriversAPI;
+  explanation?: ExplanationContractAPI | null;
 }
 
 // API response format (snake_case)
@@ -318,6 +340,17 @@ function transformDecisionSummary(apiSummary: DecisionSummaryAPI): DecisionSumma
       negatives: apiSummary.drivers?.negatives ?? [],
       warnings: apiSummary.drivers?.warnings ?? [],
     },
+    explanation: apiSummary.explanation
+      ? {
+          summaryLine: apiSummary.explanation.summary_line,
+          whyItQualified: apiSummary.explanation.why_it_qualified,
+          whyNow: apiSummary.explanation.why_now,
+          mainRisks: apiSummary.explanation.main_risks,
+          whatInvalidatesIt: apiSummary.explanation.what_invalidates_it,
+          nextBestAction: apiSummary.explanation.next_best_action,
+          confidenceNotes: apiSummary.explanation.confidence_notes,
+        }
+      : undefined,
   };
 }
 

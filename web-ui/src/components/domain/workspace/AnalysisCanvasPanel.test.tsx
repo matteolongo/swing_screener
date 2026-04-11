@@ -248,6 +248,7 @@ describe('AnalysisCanvasPanel', () => {
             stop: 171,
             target: 198,
             rr: 2,
+            // No backend decisionSummary yet — triggers local rebuild from fundamentals
             decisionSummary: undefined,
           },
         ],
