@@ -27,7 +27,7 @@ class FakeDailyReviewResult(BaseModel):
 
 class FakeScreenerService:
     def list_universes(self) -> dict[str, list[str]]:
-        return {"universes": ["mega_all", "test_universe"]}
+        return {"universes": ["us_all", "test_universe"]}
 
     def run_screener(self, request) -> FakeScreenerResult:
         top = int(getattr(request, "top", 1) or 1)

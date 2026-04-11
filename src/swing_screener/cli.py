@@ -18,10 +18,10 @@ from swing_screener.data.universe import (
     UniverseConfig,
     list_package_universes,
     get_universe_benchmark,
-    get_universe_package_path,
+    get_universe_meta,
     filter_ticker_list,
     apply_universe_config,
-    save_universe_file,
+    validate_universe_snapshot,
 )
 from swing_screener.portfolio.state import load_positions, save_positions
 from swing_screener.strategy.config import build_manage_config, build_report_config, build_risk_config
@@ -132,21 +132,16 @@ def main() -> None:
     )
 
     # -------------------------
-    # UNIVERSES (list/show/filter)
+    # UNIVERSES (list/show/validate/doctor)
     # -------------------------
-    uni = sub.add_parser("universes", help="Inspect and build universes")
+    uni = sub.add_parser("universes", help="Inspect and validate universes")
     uni_sub = uni.add_subparsers(dest="uni_command", required=True)
 
-    uni_list = uni_sub.add_parser("list", help="List packaged universes")
-    uni_list.add_argument(
-        "--show-paths",
-        action="store_true",
-        help="Show underlying CSV paths",
-    )
+    uni_sub.add_parser("list", help="List packaged universes")
 
     uni_show = uni_sub.add_parser("show", help="Preview a universe")
     src_show = uni_show.add_mutually_exclusive_group(required=True)
-    src_show.add_argument("--name", help="Packaged universe name (e.g. mega_all)")
+    src_show.add_argument("--name", help="Packaged universe name (e.g. us_all)")
     src_show.add_argument("--file", help="Path to a universe file")
     uni_show.add_argument("--top", type=int, default=20, help="Preview the first N tickers")
     uni_show.add_argument("--grep", help="Keep tickers containing this substring (case-insensitive)")
@@ -166,35 +161,10 @@ def main() -> None:
         help="Optional cap on tickers after filtering",
     )
 
-    uni_filter = uni_sub.add_parser("filter", help="Filter a universe and save to CSV")
-    src_filter = uni_filter.add_mutually_exclusive_group(required=True)
-    src_filter.add_argument("--name", help="Packaged universe name (e.g. mega_all)")
-    src_filter.add_argument("--file", help="Path to a universe file")
-    uni_filter.add_argument(
-        "--grep", help="Keep tickers containing this substring (case-insensitive)"
-    )
-    uni_filter.add_argument("--include", nargs="+", help="Extra tickers to include")
-    uni_filter.add_argument("--exclude", nargs="+", help="Tickers to exclude")
-    uni_filter.add_argument(
-        "--benchmark", default="SPY", help="Benchmark to ensure (default: SPY)"
-    )
-    uni_filter.add_argument(
-        "--no-benchmark",
-        action="store_true",
-        help="Do not auto-ensure benchmark ticker",
-    )
-    uni_filter.add_argument(
-        "--max",
-        dest="max_tickers",
-        type=int,
-        default=None,
-        help="Optional cap on tickers after filtering",
-    )
-    uni_filter.add_argument(
-        "--out",
-        required=True,
-        help="Path to save the filtered universe CSV",
-    )
+    uni_sub.add_parser("validate", help="Validate all packaged universes against instrument master and rules")
+
+    uni_doctor = uni_sub.add_parser("doctor", help="Detailed validation for a single universe")
+    uni_doctor.add_argument("--name", required=True, help="Universe id to inspect")
 
     # -------------------------
     # CLASSIFY NEWS (LLM event classification)
@@ -485,14 +455,12 @@ def main() -> None:
                 return
             print("Packaged universes:")
             for n in names:
-                if args.show_paths:
-                    p = get_universe_package_path(n)
-                    print(f"- {n} ({p})")
-                else:
-                    print(f"- {n}")
+                meta = get_universe_meta(n)
+                desc = meta.get("description", "") if meta else ""
+                print(f"- {n}" + (f"  {desc}" if desc else ""))
             return
 
-        if args.uni_command in ("show", "filter"):
+        if args.uni_command == "show":
             base = _load_base(getattr(args, "name", None), getattr(args, "file", None))
             filtered = filter_ticker_list(
                 base,
@@ -500,26 +468,57 @@ def main() -> None:
                 exclude=args.exclude,
                 grep=args.grep,
             )
-
             cfg = UniverseConfig(
                 benchmark=args.benchmark,
                 ensure_benchmark=not args.no_benchmark,
                 max_tickers=args.max_tickers,
             )
             tickers = apply_universe_config(filtered, cfg)
+            n = len(tickers)
+            top_n = args.top if args.top is not None else n
+            print(f"Tickers: {n} (showing first {min(top_n, n)})")
+            for t in tickers[:top_n]:
+                print(t)
+            return
 
-            if args.uni_command == "show":
-                n = len(tickers)
-                top_n = args.top if args.top is not None else n
-                print(f"Tickers: {n} (showing first {min(top_n, n)})")
-                for t in tickers[:top_n]:
-                    print(t)
-                return
+        if args.uni_command == "validate":
+            names = list_package_universes()
+            all_ok = True
+            for uid in names:
+                errors = validate_universe_snapshot(uid)
+                if errors:
+                    all_ok = False
+                    print(f"FAIL {uid}:")
+                    for e in errors:
+                        print(f"     {e}")
+                else:
+                    print(f"OK   {uid}")
+            if not all_ok:
+                sys.exit(1)
+            return
 
-            if args.uni_command == "filter":
-                path = save_universe_file(tickers, Path(args.out))
-                print(f"Saved {len(tickers)} tickers to {path.resolve()}")
-                return
+        if args.uni_command == "doctor":
+            uid = args.name
+            meta = get_universe_meta(uid)
+            if meta is None:
+                print(f"Unknown universe id: '{uid}'")
+                sys.exit(1)
+            print(f"Universe: {uid}")
+            print(f"  Kind:           {meta.get('kind', '?')}")
+            print(f"  Description:    {meta.get('description', '')}")
+            print(f"  Benchmark:      {meta.get('benchmark', '?')}")
+            print(f"  Source:         {meta.get('source', '?')} @ {meta.get('source_asof', '?')}")
+            print(f"  Last reviewed:  {meta.get('last_reviewed_at', '?')}")
+            print(f"  Stale after:    {meta.get('stale_after_days', '?')} days")
+            errors = validate_universe_snapshot(uid)
+            if errors:
+                print(f"  Validation: FAIL ({len(errors)} issues)")
+                for e in errors:
+                    print(f"    {e}")
+                sys.exit(1)
+            else:
+                print("  Validation: OK")
+            return
 
         parser.error("Unknown universes command")
         sys.exit(1)

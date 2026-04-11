@@ -1,0 +1,257 @@
+{
+  "id": "us_defense_all",
+  "kind": "curated",
+  "description": "USD defense theme (stocks plus ETFs)",
+  "benchmark": "SPY",
+  "source": "manual",
+  "source_asof": "2026-04-11",
+  "last_reviewed_at": "2026-04-11",
+  "stale_after_days": 365,
+  "rules": {
+    "currencies": [
+      "USD"
+    ]
+  },
+  "constituents": [
+    {
+      "symbol": "GE",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "RTX",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "BA",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "LMT",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "NOC",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "LHX",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "GD",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "TDG",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "HWM",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "AXON",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "HII",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "SAIC",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "CACI",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "LDOS",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "KTOS",
+      "exchange_mic": "XNAS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "AVAV",
+      "exchange_mic": "XNAS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "TXT",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "BWXT",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "HEI",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "MRCY",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "DRS",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "CW",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "WWD",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "HXL",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "TDY",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "PLTR",
+      "exchange_mic": "XNAS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "BAH",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "OSIS",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "HON",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "KBR",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "FLR",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "PKE",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "VSEC",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "RKLB",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "BAESY",
+      "exchange_mic": "XOTC",
+      "currency": "USD"
+    },
+    {
+      "symbol": "EADSY",
+      "exchange_mic": "XOTC",
+      "currency": "USD"
+    },
+    {
+      "symbol": "FINMY",
+      "exchange_mic": "XOTC",
+      "currency": "USD"
+    },
+    {
+      "symbol": "THLLY",
+      "exchange_mic": "XOTC",
+      "currency": "USD"
+    },
+    {
+      "symbol": "RNMBY",
+      "exchange_mic": "XOTC",
+      "currency": "USD"
+    },
+    {
+      "symbol": "SAABY",
+      "exchange_mic": "XOTC",
+      "currency": "USD"
+    },
+    {
+      "symbol": "SAFRY",
+      "exchange_mic": "XOTC",
+      "currency": "USD"
+    },
+    {
+      "symbol": "RYCEY",
+      "exchange_mic": "XOTC",
+      "currency": "USD"
+    },
+    {
+      "symbol": "QNTQY",
+      "exchange_mic": "XOTC",
+      "currency": "USD"
+    },
+    {
+      "symbol": "MTLHY",
+      "exchange_mic": "XOTC",
+      "currency": "USD"
+    },
+    {
+      "symbol": "ITA",
+      "exchange_mic": "ARCX",
+      "currency": "USD"
+    },
+    {
+      "symbol": "XAR",
+      "exchange_mic": "ARCX",
+      "currency": "USD"
+    },
+    {
+      "symbol": "PPA",
+      "exchange_mic": "ARCX",
+      "currency": "USD"
+    },
+    {
+      "symbol": "DFEN",
+      "exchange_mic": "ARCX",
+      "currency": "USD"
+    }
+  ]
+}

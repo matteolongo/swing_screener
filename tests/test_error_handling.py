@@ -114,8 +114,8 @@ class TestExceptionHandlingRobustness:
             }
         )
         
-        # Should get error (might be 400 or 500 depending on implementation)
-        assert response.status_code in [400, 404, 500]
+        # Invalid universe returns 422 with explicit error message
+        assert response.status_code in [400, 404, 422, 500]
         data = response.json()
         assert "detail" in data
 

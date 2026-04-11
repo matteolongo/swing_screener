@@ -1,42 +1,41 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import {
-  migrateLegacyScreenerStorage,
   parseUniverseFromStorage,
   parseUniverseValue,
-  SCREENER_CURRENCY_FILTER_STORAGE_KEY,
   SCREENER_UNIVERSE_STORAGE_KEY,
 } from '@/features/screener/universeStorage'
 
 describe('universeStorage', () => {
-  it('normalizes aliased universe values', () => {
-    expect(parseUniverseValue('mega')).toBe('usd_all')
-    expect(parseUniverseValue('mega_stocks')).toBe('usd_mega_stocks')
-    expect(parseUniverseValue('eur_amsterdam_all')).toBe('eur_amsterdam_all')
-  })
-
-  it('parses universe from JSON and legacy raw strings', () => {
-    expect(parseUniverseFromStorage('"mega"')).toBe('usd_all')
-    expect(parseUniverseFromStorage('mega_stocks')).toBe('usd_mega_stocks')
-    expect(parseUniverseFromStorage('""mega_all""')).toBe('usd_all')
+  it('parses universe from JSON string', () => {
+    expect(parseUniverseFromStorage('"us_all"')).toBe('us_all')
+    expect(parseUniverseFromStorage('"amsterdam_aex"')).toBe('amsterdam_aex')
     expect(parseUniverseFromStorage(null)).toBeNull()
   })
 
-  it('migrates legacy screener storage values', () => {
-    const values: Record<string, string | null> = {
-      [SCREENER_UNIVERSE_STORAGE_KEY]: 'mega',
-      [SCREENER_CURRENCY_FILTER_STORAGE_KEY]: 'all',
-    }
+  it('parses universe from raw string (no JSON wrapping)', () => {
+    expect(parseUniverseFromStorage('us_all')).toBe('us_all')
+    expect(parseUniverseFromStorage('europe_large_eur')).toBe('europe_large_eur')
+  })
 
-    const storage = {
-      getItem: vi.fn((key: string) => values[key] ?? null),
-      setItem: vi.fn((key: string, value: string) => {
-        values[key] = value
-      }),
-    }
+  it('strips double-quoted legacy format', () => {
+    // Legacy format: ""us_all"" (double-double-quoted)
+    expect(parseUniverseFromStorage('""us_all""')).toBe('us_all')
+  })
 
-    migrateLegacyScreenerStorage(storage)
+  it('does not resolve old aliases — old ids pass through as-is', () => {
+    // No alias resolution: mega_all is returned as-is (API will 422 it)
+    expect(parseUniverseFromStorage('"mega_all"')).toBe('mega_all')
+    expect(parseUniverseValue('mega_stocks')).toBe('mega_stocks')
+  })
 
-    expect(storage.setItem).toHaveBeenCalledWith(SCREENER_UNIVERSE_STORAGE_KEY, '"mega"')
-    expect(storage.setItem).toHaveBeenCalledWith(SCREENER_CURRENCY_FILTER_STORAGE_KEY, '"all"')
+  it('returns null for empty or null input', () => {
+    expect(parseUniverseFromStorage('')).toBeNull()
+    expect(parseUniverseFromStorage(null)).toBeNull()
+    expect(parseUniverseValue('')).toBeNull()
+    expect(parseUniverseValue(null)).toBeNull()
+  })
+
+  it('SCREENER_UNIVERSE_STORAGE_KEY is defined', () => {
+    expect(SCREENER_UNIVERSE_STORAGE_KEY).toBe('screener.universe')
   })
 })

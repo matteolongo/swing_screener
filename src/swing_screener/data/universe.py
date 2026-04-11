@@ -1,39 +1,29 @@
 from __future__ import annotations
 
+import datetime
+import json
+import re
+import warnings
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import Iterable, Optional, Sequence
-import csv
-import json
-import re
-from pathlib import Path
 
 try:
-    # py>=3.9
     from importlib import resources as importlib_resources
 except Exception:  # pragma: no cover
     import importlib_resources  # type: ignore
 
 
 _TICKER_RE = re.compile(r"^[A-Z0-9.\-]+$")
+_REGISTRY_PKG = "swing_screener.data"
+_REGISTRY_REL = "universes/registry"
 
 
 @dataclass(frozen=True)
 class UniverseConfig:
     benchmark: str = "SPY"
     ensure_benchmark: bool = True
-    max_tickers: Optional[int] = None  # optional cap after loading
-
-
-def _normalize_universe_token(name: str) -> str:
-    """Normalize a universe name token from API/client inputs.
-
-    Accepts accidental wrapping quotes (e.g. '"eur_all"' or "'usd_all'").
-    """
-    token = str(name).strip()
-    while len(token) >= 2 and token[0] == token[-1] and token[0] in {"'", '"'}:
-        token = token[1:-1].strip()
-    return token
+    max_tickers: Optional[int] = None
 
 
 def normalize_tickers(items: Iterable[str]) -> list[str]:
@@ -42,7 +32,6 @@ def normalize_tickers(items: Iterable[str]) -> list[str]:
         t = str(raw).strip().upper()
         if not t:
             continue
-        # allow comments like "AAPL  # apple"
         if "#" in t:
             t = t.split("#", 1)[0].strip()
         if not t:
@@ -56,232 +45,20 @@ def normalize_tickers(items: Iterable[str]) -> list[str]:
     return out
 
 
-def list_package_universes() -> list[str]:
-    """
-    Return available packaged universes.
-    If a manifest is present, use it to determine the public names.
-    """
-    manifest = _manifest_universes()
-    names: list[str] = []
-    for entry in manifest:
-        if entry.get("deprecated"):
-            continue
-        name = str(entry.get("name", "")).strip()
-        if name and name not in names:
-            names.append(name)
-
-    # Also include any CSVs not referenced in the manifest
-    pkg = "swing_screener.data"
-    base = importlib_resources.files(pkg).joinpath("universes")
-    manifest_names = {str(e.get("name", "")).strip().lower() for e in manifest}
-    manifest_aliases = _manifest_aliases()
-    for p in base.iterdir():
-        if p.suffix != ".csv":
-            continue
-        stem = p.stem
-        key = stem.lower()
-        if key in manifest_names or key in manifest_aliases:
-            continue
-        names.append(stem)
-
-    return sorted(names)
-
-
-def _read_csv_lines(text: str) -> list[str]:
-    # Accept both "one per line" and comma-separated
-    lines = [ln.strip() for ln in text.splitlines()]
-    raw_items: list[str] = []
-    for ln in lines:
-        if not ln or ln.lstrip().startswith("#"):
-            continue
-        # if commas exist, split; otherwise treat as single token
-        if "," in ln:
-            raw_items.extend([x.strip() for x in ln.split(",")])
-        else:
-            raw_items.append(ln)
-    return raw_items
-
-
-def load_universe_from_package(
-    name: str, cfg: UniverseConfig = UniverseConfig()
-) -> list[str]:
-    """
-    Load universe tickers from package data:
-      swing_screener/data/universes/<name>.csv
-    """
-    raw_name = _normalize_universe_token(name)
-    if not raw_name:
-        raise ValueError("Universe name is empty.")
-
-    filename = resolve_universe_filename(raw_name)
-    rel = f"universes/{filename}"
-    pkg = "swing_screener.data"
-
-    try:
-        data = importlib_resources.files(pkg).joinpath(rel).read_text(encoding="utf-8")
-    except FileNotFoundError as e:
-        raise FileNotFoundError(
-            f"Universe '{raw_name}' not found. Expected package file: {pkg}/{rel}"
-        ) from e
-
-    tickers = normalize_tickers(_read_csv_lines(data))
-    tickers = apply_universe_config(tickers, cfg)
-    return tickers
-
-
-def resolve_universe_name(name: str) -> str:
-    key = _normalize_universe_token(name).lower()
-    if not key:
-        raise ValueError("Universe name is empty.")
-    by_name = _manifest_by_name()
-    if key in by_name:
-        return by_name[key]["name"]
-    aliases = _manifest_aliases()
-    if key in aliases:
-        return aliases[key]
-    return key
-
-
-def resolve_universe_filename(name: str) -> str:
-    meta = get_universe_meta(name)
-    if meta:
-        file = meta.get("file")
-        if file:
-            return str(file)
-    canonical = resolve_universe_name(name)
-    return f"{canonical}.csv"
-
-
-def get_universe_meta(name: str) -> Optional[dict]:
-    key = _normalize_universe_token(name).lower()
-    if not key:
-        return None
-    by_name = _manifest_by_name()
-    if key in by_name:
-        return by_name[key]
-    aliases = _manifest_aliases()
-    if key in aliases:
-        return by_name.get(aliases[key])
-    return None
-
-
-def get_universe_benchmark(name: str) -> Optional[str]:
-    meta = get_universe_meta(name)
-    if not meta:
-        return None
-    bench = meta.get("benchmark")
-    if bench:
-        return str(bench).strip().upper()
-    return None
-
-
-def get_universe_package_path(name: str) -> Path:
-    pkg = "swing_screener.data"
-    filename = resolve_universe_filename(name)
-    return importlib_resources.files(pkg).joinpath(f"universes/{filename}").resolve()
-
-
-@lru_cache
-def _load_manifest() -> dict:
-    pkg = "swing_screener.data"
-    rel = "universes/manifest.json"
-    try:
-        data = importlib_resources.files(pkg).joinpath(rel).read_text(encoding="utf-8")
-    except FileNotFoundError:
-        return {}
-    try:
-        return json.loads(data)
-    except json.JSONDecodeError as exc:
-        raise ValueError(f"Invalid universe manifest JSON: {rel}") from exc
-
-
-def _manifest_universes() -> list[dict]:
-    data = _load_manifest()
-    entries = data.get("universes", [])
-    if not isinstance(entries, list):
-        return []
-    out: list[dict] = []
-    for entry in entries:
-        if not isinstance(entry, dict):
-            continue
-        name = str(entry.get("name", "")).strip()
-        if name:
-            entry = dict(entry)
-            entry["name"] = name.lower()
-            out.append(entry)
-    return out
-
-
-@lru_cache
-def _manifest_by_name() -> dict[str, dict]:
-    entries = _manifest_universes()
-    return {e["name"]: e for e in entries}
-
-
-@lru_cache
-def _manifest_aliases() -> dict[str, str]:
-    aliases: dict[str, str] = {}
-    for entry in _manifest_universes():
-        name = entry["name"]
-        for alias in entry.get("aliases", []) or []:
-            key = str(alias).strip().lower()
-            if key:
-                aliases[key] = name
-    return aliases
-
-
-def load_universe_from_file(
-    path: str, cfg: UniverseConfig = UniverseConfig()
-) -> list[str]:
-    """
-    Load universe tickers from a user-provided file.
-    Supports:
-      - one ticker per line
-      - CSV with ticker in first column
-      - comma-separated lines
-    """
-    p = str(path)
-    with open(p, "r", encoding="utf-8") as f:
-        text = f.read()
-
-    # First try simple line parsing (covers most cases)
-    items = _read_csv_lines(text)
-
-    # If it looks like a structured CSV, also parse first column
-    # (harmless if not a structured CSV)
-    try:
-        reader = csv.reader(text.splitlines())
-        for row in reader:
-            if row:
-                items.append(row[0])
-    except Exception:
-        pass
-
-    tickers = normalize_tickers(items)
-    tickers = apply_universe_config(tickers, cfg)
-    return tickers
-
-
 def apply_universe_config(tickers: list[str], cfg: UniverseConfig) -> list[str]:
     out = tickers[:]
     if cfg.ensure_benchmark:
         b = cfg.benchmark.strip().upper()
         if b and b not in out:
             out.append(b)
-
     if cfg.max_tickers is not None:
         if cfg.max_tickers <= 0:
             raise ValueError("max_tickers must be positive.")
-        # keep order, cap length
         out = out[: cfg.max_tickers]
-
-        # if capped, ensure benchmark still included
         if cfg.ensure_benchmark:
             b = cfg.benchmark.strip().upper()
             if b and b not in out:
-                # replace last item with benchmark
                 out[-1] = b
-
     return out
 
 
@@ -291,42 +68,194 @@ def filter_ticker_list(
     exclude: Optional[Sequence[str]] = None,
     grep: Optional[str] = None,
 ) -> list[str]:
-    """
-    Apply simple include/exclude/substring filters to a ticker list.
-    - include/exclude are literal tickers (validated).
-    - grep keeps tickers containing the substring (case-insensitive).
-    """
     base = [str(t).strip().upper() for t in tickers if str(t).strip()]
-
     if grep:
         g = str(grep).strip().upper()
         base = [t for t in base if g in t]
-
-    if exclude:
-        excl = set(normalize_tickers(exclude))
-    else:
-        excl = set()
-
-    if include:
-        inc = normalize_tickers(include)
-    else:
-        inc = []
-
+    excl = set(normalize_tickers(exclude)) if exclude else set()
+    inc = normalize_tickers(include) if include else []
     out: list[str] = []
     for t in base + inc:
         if t in excl:
             continue
         if t not in out:
             out.append(t)
-
     if not out:
         raise ValueError("No tickers left after filtering.")
     return out
 
 
-def save_universe_file(tickers: Sequence[str], path: Path) -> Path:
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    content = "\n".join([t for t in tickers])
-    path.write_text(content + "\n", encoding="utf-8")
-    return path
+@lru_cache(maxsize=1)
+def _load_registry_manifest() -> list[dict]:
+    rel = f"{_REGISTRY_REL}/manifest.json"
+    try:
+        data = importlib_resources.files(_REGISTRY_PKG).joinpath(rel).read_text(encoding="utf-8")
+    except FileNotFoundError as exc:
+        raise FileNotFoundError(
+            f"Universe registry manifest not found: {_REGISTRY_PKG}/{rel}"
+        ) from exc
+    try:
+        result = json.loads(data)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Invalid registry manifest JSON: {rel}") from exc
+    if not isinstance(result, list):
+        raise ValueError(f"Registry manifest must be a JSON array: {rel}")
+    return result
+
+
+@lru_cache(maxsize=64)
+def _load_snapshot(universe_id: str) -> dict:
+    rel = f"{_REGISTRY_REL}/snapshots/{universe_id}.json"
+    try:
+        data = importlib_resources.files(_REGISTRY_PKG).joinpath(rel).read_text(encoding="utf-8")
+    except FileNotFoundError as exc:
+        raise FileNotFoundError(
+            f"Snapshot not found for universe '{universe_id}': {_REGISTRY_PKG}/{rel}"
+        ) from exc
+    try:
+        return json.loads(data)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Invalid snapshot JSON for universe '{universe_id}'") from exc
+
+
+def _check_stale(snapshot: dict) -> None:
+    uid = snapshot.get("id", "?")
+    kind = snapshot.get("kind", "curated")
+    last_reviewed = snapshot.get("last_reviewed_at")
+    stale_after = snapshot.get("stale_after_days")
+    if not last_reviewed or not stale_after:
+        return
+    try:
+        reviewed_date = datetime.date.fromisoformat(str(last_reviewed))
+    except ValueError:
+        return
+    age_days = (datetime.date.today() - reviewed_date).days
+    if age_days > stale_after:
+        msg = (
+            f"Universe '{uid}' is stale: last reviewed {last_reviewed} "
+            f"({age_days} days ago, limit {stale_after} days)."
+        )
+        if kind == "index":
+            raise RuntimeError(msg + " Index universes must be updated before use.")
+        else:
+            warnings.warn(msg + " Curated universe loaded with stale data.", UserWarning, stacklevel=4)
+
+
+def _load_instrument_master() -> dict[str, dict]:
+    """Return instrument master as symbol → record dict, cached."""
+    return _instrument_master_cache()
+
+
+@lru_cache(maxsize=1)
+def _instrument_master_cache() -> dict[str, dict]:
+    import os
+    # Try project-relative path first (works in dev), then package data
+    for candidate in [
+        "data/intelligence/instrument_master.json",
+        os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "data", "intelligence", "instrument_master.json"),
+    ]:
+        p = os.path.abspath(candidate)
+        if os.path.exists(p):
+            with open(p, encoding="utf-8") as f:
+                records = json.load(f)
+            return {r["symbol"]: r for r in records}
+    return {}
+
+
+def validate_universe_snapshot(universe_id: str) -> list[str]:
+    """Validate a snapshot against instrument master and rules. Returns list of error strings."""
+    snapshot = _load_snapshot(universe_id)
+    master = _load_instrument_master()
+    errors: list[str] = []
+    rules = snapshot.get("rules", {})
+    allowed_mics: list[str] = rules.get("exchange_mics", [])
+    allowed_currencies: list[str] = rules.get("currencies", [])
+    for c in snapshot.get("constituents", []):
+        sym = c["symbol"]
+        if master and sym not in master:
+            errors.append(f"[{universe_id}] {sym}: not in instrument master")
+            continue
+        if master and sym in master:
+            rec = master[sym]
+            if allowed_mics and rec.get("exchange_mic") not in allowed_mics:
+                errors.append(
+                    f"[{universe_id}] {sym}: exchange_mic '{rec.get('exchange_mic')}' "
+                    f"not in allowed {allowed_mics}"
+                )
+            if allowed_currencies and rec.get("currency") not in allowed_currencies:
+                errors.append(
+                    f"[{universe_id}] {sym}: currency '{rec.get('currency')}' "
+                    f"not in allowed {allowed_currencies}"
+                )
+    return errors
+
+
+def list_package_universes() -> list[str]:
+    """Return universe ids from registry manifest, sorted."""
+    return sorted(e["id"] for e in _load_registry_manifest())
+
+
+def load_universe_from_package(
+    name: str, cfg: UniverseConfig = UniverseConfig()
+) -> list[str]:
+    """Load tickers from a registry snapshot. Fails on unknown id or stale index."""
+    manifest_ids = {e["id"] for e in _load_registry_manifest()}
+    if name not in manifest_ids:
+        raise ValueError(
+            f"Unknown universe id: '{name}'. Available: {sorted(manifest_ids)}"
+        )
+    snapshot = _load_snapshot(name)
+    _check_stale(snapshot)
+    tickers = [c["symbol"] for c in snapshot.get("constituents", [])]
+    tickers = normalize_tickers(tickers)
+    return apply_universe_config(tickers, cfg)
+
+
+def get_universe_benchmark(name: str) -> Optional[str]:
+    """Return benchmark from manifest entry."""
+    for entry in _load_registry_manifest():
+        if entry.get("id") == name:
+            b = entry.get("benchmark")
+            return str(b).strip().upper() if b else None
+    return None
+
+
+def get_universe_meta(name: str) -> Optional[dict]:
+    """Return manifest entry for the given universe id."""
+    for entry in _load_registry_manifest():
+        if entry.get("id") == name:
+            return entry
+    return None
+
+
+def load_universe_from_file(
+    path: str, cfg: UniverseConfig = UniverseConfig()
+) -> list[str]:
+    """Load universe tickers from a user-provided file."""
+    import csv as csv_mod
+
+    p = str(path)
+    with open(p, "r", encoding="utf-8") as f:
+        text = f.read()
+
+    lines = [ln.strip() for ln in text.splitlines()]
+    raw_items: list[str] = []
+    for ln in lines:
+        if not ln or ln.lstrip().startswith("#"):
+            continue
+        if "," in ln:
+            raw_items.extend([x.strip() for x in ln.split(",")])
+        else:
+            raw_items.append(ln)
+
+    try:
+        reader = csv_mod.reader(text.splitlines())
+        for row in reader:
+            if row:
+                raw_items.append(row[0])
+    except Exception:
+        pass
+
+    tickers = normalize_tickers(raw_items)
+    tickers = apply_universe_config(tickers, cfg)
+    return tickers

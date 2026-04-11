@@ -6,7 +6,6 @@ from .universe import (
     load_universe_from_file,
     filter_ticker_list,
     apply_universe_config,
-    save_universe_file,
     UniverseConfig,
 )
 

@@ -1,0 +1,92 @@
+{
+  "id": "us_core_etfs",
+  "kind": "curated",
+  "description": "USD core market and sector ETFs",
+  "benchmark": "SPY",
+  "source": "manual",
+  "source_asof": "2026-04-11",
+  "last_reviewed_at": "2026-04-11",
+  "stale_after_days": 365,
+  "rules": {
+    "currencies": [
+      "USD"
+    ]
+  },
+  "constituents": [
+    {
+      "symbol": "SPY",
+      "exchange_mic": "ARCX",
+      "currency": "USD"
+    },
+    {
+      "symbol": "QQQ",
+      "exchange_mic": "ARCX",
+      "currency": "USD"
+    },
+    {
+      "symbol": "DIA",
+      "exchange_mic": "ARCX",
+      "currency": "USD"
+    },
+    {
+      "symbol": "IWM",
+      "exchange_mic": "ARCX",
+      "currency": "USD"
+    },
+    {
+      "symbol": "XLB",
+      "exchange_mic": "ARCX",
+      "currency": "USD"
+    },
+    {
+      "symbol": "XLC",
+      "exchange_mic": "ARCX",
+      "currency": "USD"
+    },
+    {
+      "symbol": "XLE",
+      "exchange_mic": "ARCX",
+      "currency": "USD"
+    },
+    {
+      "symbol": "XLF",
+      "exchange_mic": "ARCX",
+      "currency": "USD"
+    },
+    {
+      "symbol": "XLI",
+      "exchange_mic": "ARCX",
+      "currency": "USD"
+    },
+    {
+      "symbol": "XLK",
+      "exchange_mic": "ARCX",
+      "currency": "USD"
+    },
+    {
+      "symbol": "XLP",
+      "exchange_mic": "ARCX",
+      "currency": "USD"
+    },
+    {
+      "symbol": "XLU",
+      "exchange_mic": "ARCX",
+      "currency": "USD"
+    },
+    {
+      "symbol": "XLV",
+      "exchange_mic": "ARCX",
+      "currency": "USD"
+    },
+    {
+      "symbol": "XLY",
+      "exchange_mic": "ARCX",
+      "currency": "USD"
+    },
+    {
+      "symbol": "XLRE",
+      "exchange_mic": "ARCX",
+      "currency": "USD"
+    }
+  ]
+}

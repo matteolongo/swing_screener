@@ -1,0 +1,157 @@
+{
+  "id": "europe_proxies_usd",
+  "kind": "curated",
+  "description": "USD-traded US-venue Europe exposure proxies",
+  "benchmark": "VGK",
+  "source": "manual",
+  "source_asof": "2026-04-11",
+  "last_reviewed_at": "2026-04-11",
+  "stale_after_days": 365,
+  "rules": {
+    "currencies": [
+      "USD"
+    ]
+  },
+  "constituents": [
+    {
+      "symbol": "ASML",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "SAP",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "NVO",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "NVS",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "SNY",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "UL",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "DEO",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "GSK",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "AZN",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "BP",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "SHEL",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "HSBC",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "RIO",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "BTI",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "RELX",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "ING",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "UBS",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "DB",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "SAN",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "BBVA",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "TEF",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "EADSY",
+      "exchange_mic": "XOTC",
+      "currency": "USD"
+    },
+    {
+      "symbol": "BAESY",
+      "exchange_mic": "XOTC",
+      "currency": "USD"
+    },
+    {
+      "symbol": "SAFRY",
+      "exchange_mic": "XOTC",
+      "currency": "USD"
+    },
+    {
+      "symbol": "RYCEY",
+      "exchange_mic": "XOTC",
+      "currency": "USD"
+    },
+    {
+      "symbol": "LVMUY",
+      "exchange_mic": "XOTC",
+      "currency": "USD"
+    },
+    {
+      "symbol": "RHHBY",
+      "exchange_mic": "XOTC",
+      "currency": "USD"
+    },
+    {
+      "symbol": "TTE",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    }
+  ]
+}

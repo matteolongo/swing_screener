@@ -1,0 +1,402 @@
+{
+  "id": "us_healthcare_stocks",
+  "kind": "curated",
+  "description": "USD healthcare and biotech stocks only",
+  "benchmark": "SPY",
+  "source": "manual",
+  "source_asof": "2026-04-11",
+  "last_reviewed_at": "2026-04-11",
+  "stale_after_days": 365,
+  "rules": {
+    "currencies": [
+      "USD"
+    ]
+  },
+  "constituents": [
+    {
+      "symbol": "JNJ",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "PFE",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "MRK",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "ABBV",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "BMY",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "LLY",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "AMGN",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "GILD",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "VRTX",
+      "exchange_mic": "XNAS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "REGN",
+      "exchange_mic": "XNAS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "BIIB",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "ALNY",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "MRNA",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "BNTX",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "NVS",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "AZN",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "SNY",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "RHHBY",
+      "exchange_mic": "XOTC",
+      "currency": "USD"
+    },
+    {
+      "symbol": "NVO",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "GSK",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "TAK",
+      "exchange_mic": "XOTC",
+      "currency": "USD"
+    },
+    {
+      "symbol": "TEVA",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "BAYRY",
+      "exchange_mic": "XOTC",
+      "currency": "USD"
+    },
+    {
+      "symbol": "CSLLY",
+      "exchange_mic": "XOTC",
+      "currency": "USD"
+    },
+    {
+      "symbol": "MDT",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "ABT",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "SYK",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "BSX",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "ISRG",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "ZBH",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "EW",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "HOLX",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "DXCM",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "RMD",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "BDX",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "BAX",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "TMO",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "DHR",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "STE",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "PEN",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "IDXX",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "ZTS",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "WAT",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "MTD",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "IQV",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "LH",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "DGX",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "ILMN",
+      "exchange_mic": "XNAS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "EXAS",
+      "exchange_mic": "XNAS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "NTRA",
+      "exchange_mic": "XNAS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "ALKS",
+      "exchange_mic": "XNAS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "HALO",
+      "exchange_mic": "XNAS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "KRYS",
+      "exchange_mic": "XNAS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "FOLD",
+      "exchange_mic": "XNAS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "RVMD",
+      "exchange_mic": "XNAS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "PCVX",
+      "exchange_mic": "XNAS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "MIRM",
+      "exchange_mic": "XNAS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "PRAX",
+      "exchange_mic": "XNAS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "INSM",
+      "exchange_mic": "XNAS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "ARGX",
+      "exchange_mic": "XNAS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "SRPT",
+      "exchange_mic": "XNAS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "CRSP",
+      "exchange_mic": "XNAS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "NTLA",
+      "exchange_mic": "XNAS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "BEAM",
+      "exchange_mic": "XNAS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "EDIT",
+      "exchange_mic": "XNAS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "UNH",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "ELV",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "CI",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "HUM",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "CVS",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "HCA",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "CNC",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "UHS",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "THC",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "MCK",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "CAH",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "COR",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    }
+  ]
+}

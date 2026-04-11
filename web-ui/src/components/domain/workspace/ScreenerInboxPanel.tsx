@@ -15,7 +15,6 @@ import { t } from '@/i18n/t';
 import { useLocalStorage } from '@/hooks';
 import { formatDate } from '@/utils/formatters';
 import {
-  migrateLegacyScreenerStorage,
   parseUniverseValue,
   SCREENER_UNIVERSE_STORAGE_KEY,
 } from '@/features/screener/universeStorage';
@@ -56,14 +55,10 @@ export default function ScreenerInboxPanel() {
 
   const riskConfig = activeStrategy?.risk ?? configDefaultsQuery.data?.risk;
 
-  useEffect(() => {
-    migrateLegacyScreenerStorage(localStorage);
-  }, []);
-
   const [selectedUniverse, setSelectedUniverse] = useLocalStorage(
     SCREENER_UNIVERSE_STORAGE_KEY,
-    'usd_all',
-    (value: unknown) => parseUniverseValue(value) ?? 'usd_all'
+    'us_all',
+    (value: unknown) => parseUniverseValue(value) ?? 'us_all'
   );
   const [topN, setTopN] = useLocalStorage('screener.topN', 20, (val: unknown) => {
     const parsed = typeof val === 'number' ? val : parseInt(String(val), 10);

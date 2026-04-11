@@ -1,0 +1,274 @@
+{
+  "id": "europe_large_eur",
+  "kind": "index",
+  "description": "EUR-traded large-cap Europe (local listings only)",
+  "benchmark": "VGK",
+  "source": "manual",
+  "source_asof": "2026-04-11",
+  "last_reviewed_at": "2026-04-11",
+  "stale_after_days": 180,
+  "rules": {
+    "exchange_mics": [
+      "XAMS",
+      "XPAR",
+      "XETR",
+      "XMIL",
+      "XMAD",
+      "XBRU",
+      "XLIS",
+      "XHEL",
+      "XDUB",
+      "XWBO"
+    ],
+    "currencies": [
+      "EUR"
+    ]
+  },
+  "constituents": [
+    {
+      "symbol": "ASML.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "AD.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "HEIA.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "UNA.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "RAND.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "KPN.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "SAP.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "SIE.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "DTE.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "ALV.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "BMW.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "MBG.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "VOW3.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "BAS.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "BAYN.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "IFX.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "MUV2.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "RWE.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "VNA.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "PUM.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "FRE.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "FME.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "HNR1.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "MC.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "OR.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "AIR.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "SAN.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "BNP.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "ACA.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "GLE.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "SU.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "DG.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "HO.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "KER.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "RI.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "TTE.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "ENGI.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "SGO.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "CAP.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "ITX.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "IBE.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "SAN.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "BBVA.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "TEF.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "REP.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "ENEL.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "ENI.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "ISP.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "UCG.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR"
+    }
+  ]
+}

@@ -80,7 +80,9 @@ def apply_universe_filters(
         index=df.index,
     )
     df["currency"] = detected_currencies
-    cond_currency = detected_currencies.isin(allowed_currencies)
+    # UNKNOWN currency passes the filter (can't confirm a mismatch without instrument master entry).
+    # Tickers with a known non-matching currency (e.g. GBP in a USD-only filter) are excluded.
+    cond_currency = detected_currencies.isin(allowed_currencies) | (detected_currencies == "UNKNOWN")
 
     cond_trend = (
         (df["trend_ok"] == True)

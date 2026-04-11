@@ -71,4 +71,7 @@ markers = [
 ]
 
 [tool.setuptools.package-data]
-"swing_screener.data" = ["universes/*.csv", "universes/*.json"]
+"swing_screener.data" = [
+  "universes/registry/*.json",
+  "universes/registry/snapshots/*.json",
+]

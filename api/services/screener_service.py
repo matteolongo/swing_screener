@@ -47,6 +47,39 @@ from swing_screener.strategy.config import (
     build_universe_config,
 )
 from swing_screener.risk.regime import compute_regime_risk_multiplier
+
+# Map of removed universe ids to their replacements (or None if dropped with no replacement).
+_REMOVED_UNIVERSE_IDS: dict[str, str | None] = {
+    "usd_all": "us_all",
+    "mega": "us_all",
+    "mega_all": "us_all",
+    "eur_all": None,
+    "usd_mega_stocks": "us_mega_stocks",
+    "mega_stocks": "us_mega_stocks",
+    "usd_core_etfs": "us_core_etfs",
+    "core_etfs": "us_core_etfs",
+    "usd_defense_all": "us_defense_all",
+    "defense_all": "us_defense_all",
+    "mega_defense": "us_defense_all",
+    "usd_defense_stocks": "us_defense_stocks",
+    "defense_stocks": "us_defense_stocks",
+    "usd_defense_etfs": "us_defense_etfs",
+    "defense_etfs": "us_defense_etfs",
+    "usd_healthcare_all": "us_healthcare_all",
+    "healthcare_all": "us_healthcare_all",
+    "mega_healthcare_biotech": "us_healthcare_all",
+    "usd_healthcare_stocks": "us_healthcare_stocks",
+    "healthcare_stocks": "us_healthcare_stocks",
+    "usd_healthcare_etfs": "us_healthcare_etfs",
+    "healthcare_etfs": "us_healthcare_etfs",
+    "eur_europe_large": "europe_large_eur",
+    "europe_large": "europe_large_eur",
+    "mega_europe": "europe_large_eur",
+    "usd_europe_large": "europe_proxies_usd",
+    "eur_amsterdam_all": "amsterdam_all",
+    "eur_amsterdam_aex": "amsterdam_aex",
+    "eur_amsterdam_amx": "amsterdam_amx",
+}
 from api.services.screener_run_manager import get_screener_run_manager
 
 logger = logging.getLogger(__name__)
@@ -571,6 +604,20 @@ class ScreenerService:
             now_utc = dt.datetime.now(dt.timezone.utc)
             benchmark = universe_cfg.mom.benchmark
             if request.universe:
+                valid_ids = set(list_package_universes())
+                if request.universe not in valid_ids:
+                    replacement = _REMOVED_UNIVERSE_IDS.get(request.universe)
+                    if replacement:
+                        detail = (
+                            f"Universe '{request.universe}' was removed. "
+                            f"Use '{replacement}' instead."
+                        )
+                    else:
+                        detail = (
+                            f"Universe '{request.universe}' is not available. "
+                            f"Available universes: {sorted(valid_ids)}"
+                        )
+                    raise HTTPException(status_code=422, detail=detail)
                 uni_benchmark = get_universe_benchmark(request.universe)
                 if uni_benchmark and uni_benchmark != benchmark:
                     universe_cfg = replace(
@@ -595,7 +642,7 @@ class ScreenerService:
             else:
                 universe_cap = max(500, requested_top * 2)
                 ucfg = DataUniverseConfig(benchmark=benchmark, ensure_benchmark=True, max_tickers=universe_cap)
-                tickers = load_universe_from_package("usd_all", ucfg)
+                tickers = load_universe_from_package("us_all", ucfg)
 
             from swing_screener.data.market_data import MarketDataConfig
 

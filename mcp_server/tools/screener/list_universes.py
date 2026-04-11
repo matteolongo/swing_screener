@@ -24,7 +24,7 @@ class ListUniversesTool(BaseTool):
     
     @property
     def description(self) -> str:
-        return "List all available stock universes that can be used for screening (e.g., mega_all, sp500, nasdaq100)."
+        return "List all available stock universes that can be used for screening (e.g., us_all, amsterdam_aex, europe_large_eur)."
     
     @property
     def input_schema(self) -> dict[str, Any]:
