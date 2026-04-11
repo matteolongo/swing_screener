@@ -437,6 +437,10 @@ def _normalize_technical(
     technical_readiness: Optional[dict[str, float]],
 ) -> dict[str, float]:
     if technical_readiness is None:
+        logger.debug(
+            "_normalize_technical: no technical_readiness provided, all %d symbol(s) default to 0.5",
+            len(symbols),
+        )
         return {symbol: 0.5 for symbol in symbols}
     out: dict[str, float] = {}
     for symbol in symbols:
@@ -447,6 +451,10 @@ def _normalize_technical(
             out[symbol] = max(0.0, min(1.0, float(value if value is not None else 0.5)))
         except (TypeError, ValueError):
             out[symbol] = 0.5
+        if value is None:
+            logger.debug(
+                "_normalize_technical: no value for %s, using fallback 0.5", symbol
+            )
     return out
 
 
