@@ -31,18 +31,18 @@ export default function SymbolNoteWidget({ ticker }: SymbolNoteWidgetProps) {
   };
 
   return (
-    <div className="border-t border-gray-200 dark:border-gray-700 mt-2 pt-2">
+    <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50/70 px-3 py-2 dark:border-gray-700 dark:bg-gray-900/40">
       <button
         type="button"
         onClick={() => setIsExpanded((v) => !v)}
-        className="w-full flex items-center justify-between text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 py-1"
+        className="flex w-full items-center justify-between py-1 text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-gray-400 dark:hover:text-gray-200"
       >
         <span>Notes for {ticker}</span>
         <span>{isExpanded ? '▲' : '▼'}</span>
       </button>
 
       {isExpanded && (
-        <div className="mt-1 space-y-1.5">
+        <div className="mt-2 space-y-1.5 border-t border-slate-200 pt-2 dark:border-gray-700">
           <textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}

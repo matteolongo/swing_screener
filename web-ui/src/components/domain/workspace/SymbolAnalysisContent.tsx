@@ -3,6 +3,7 @@ import Button from '@/components/common/Button';
 import CachedSymbolPriceChart from '@/components/domain/market/CachedSymbolPriceChart';
 import FundamentalsSnapshotCard from '@/components/domain/fundamentals/FundamentalsSnapshotCard';
 import IntelligenceOpportunityCard from '@/components/domain/intelligence/IntelligenceOpportunityCard';
+import AnalysisDecisionStrip from '@/components/domain/workspace/AnalysisDecisionStrip';
 import DecisionSummaryCard from '@/components/domain/workspace/DecisionSummaryCard';
 import TechnicalMetricsGrid from '@/components/domain/workspace/TechnicalMetricsGrid';
 import type { SymbolAnalysisCandidate, WorkspaceAnalysisTab } from '@/components/domain/workspace/types';
@@ -98,6 +99,8 @@ export default function SymbolAnalysisContent({
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto space-y-3">
+        <AnalysisDecisionStrip ticker={ticker} candidate={candidate} />
+
         {activeTab === 'overview' && (
           <>
             {candidate?.decisionSummary ? (
@@ -167,67 +170,69 @@ export default function SymbolAnalysisContent({
             </div>
 
             {fundamentalsQuery.data ? (
-              <div className="space-y-2">
-                <p className="text-xs text-gray-500">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Metric provenance</p>
+                <p className="mt-1 text-sm text-slate-600">
                   Metric labels show whether a number is price-derived, latest-quarter, latest-FY, or a source snapshot.
                 </p>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                {[
-                  {
-                    key: 'trailing_pe',
-                    label: 'P/E',
-                    value: fundamentalsQuery.data.trailingPe ?? null,
-                    suffix: undefined as string | undefined,
-                    good: (value: number) => value < 25,
-                  },
-                  {
-                    key: 'price_to_sales',
-                    label: 'P/S',
-                    value: fundamentalsQuery.data.priceToSales ?? null,
-                    suffix: undefined as string | undefined,
-                    good: (value: number) => value < 5,
-                  },
-                  {
-                    key: 'revenue_growth_yoy',
-                    label: 'Revenue YoY',
-                    value: fundamentalsQuery.data.revenueGrowthYoy != null
-                      ? fundamentalsQuery.data.revenueGrowthYoy * 100
-                      : null,
-                    suffix: '%' as string | undefined,
-                    good: (value: number) => value > 10,
-                  },
-                  {
-                    key: 'gross_margin',
-                    label: 'Gross Margin',
-                    value: fundamentalsQuery.data.grossMargin != null
-                      ? fundamentalsQuery.data.grossMargin * 100
-                      : null,
-                    suffix: '%' as string | undefined,
-                    good: (value: number) => value > 40,
-                  },
-                ].map(({ key, label, value, suffix, good }) => {
-                  const context = fundamentalsQuery.data.metricContext[key];
-                  const meta = formatFundamentalMetricMeta(key, context);
-                  return (
-                  <div key={key} className="rounded-md border border-gray-200 bg-white p-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="text-[10px] uppercase tracking-wide text-gray-500">{label}</p>
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${metricHorizonClass(key, context)}`}
-                      >
-                        {metricHorizonLabel(key, context)}
-                      </span>
-                    </div>
-                    {value != null ? (
-                      <p className={`mt-1 text-sm font-mono font-semibold ${good(value) ? 'text-emerald-700' : 'text-rose-600'}`}>
-                        {value.toFixed(1)}{suffix ?? ''}
-                      </p>
-                    ) : (
-                      <p className="mt-1 text-sm text-gray-400">—</p>
-                    )}
-                    {meta ? <p className="mt-1 text-[11px] text-gray-500">{meta}</p> : null}
-                  </div>
-                )})}
+                <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4">
+                  {[
+                    {
+                      key: 'trailing_pe',
+                      label: 'P/E',
+                      value: fundamentalsQuery.data.trailingPe ?? null,
+                      suffix: undefined as string | undefined,
+                      good: (value: number) => value < 25,
+                    },
+                    {
+                      key: 'price_to_sales',
+                      label: 'P/S',
+                      value: fundamentalsQuery.data.priceToSales ?? null,
+                      suffix: undefined as string | undefined,
+                      good: (value: number) => value < 5,
+                    },
+                    {
+                      key: 'revenue_growth_yoy',
+                      label: 'Revenue YoY',
+                      value: fundamentalsQuery.data.revenueGrowthYoy != null
+                        ? fundamentalsQuery.data.revenueGrowthYoy * 100
+                        : null,
+                      suffix: '%' as string | undefined,
+                      good: (value: number) => value > 10,
+                    },
+                    {
+                      key: 'gross_margin',
+                      label: 'Gross Margin',
+                      value: fundamentalsQuery.data.grossMargin != null
+                        ? fundamentalsQuery.data.grossMargin * 100
+                        : null,
+                      suffix: '%' as string | undefined,
+                      good: (value: number) => value > 40,
+                    },
+                  ].map(({ key, label, value, suffix, good }) => {
+                    const context = fundamentalsQuery.data.metricContext[key];
+                    const meta = formatFundamentalMetricMeta(key, context);
+                    return (
+                      <div key={key} className="rounded-md border border-slate-200 bg-white p-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-[10px] uppercase tracking-wide text-slate-500">{label}</p>
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${metricHorizonClass(key, context)}`}
+                          >
+                            {metricHorizonLabel(key, context)}
+                          </span>
+                        </div>
+                        {value != null ? (
+                          <p className={`mt-1 text-sm font-mono font-semibold ${good(value) ? 'text-emerald-700' : 'text-rose-600'}`}>
+                            {value.toFixed(1)}{suffix ?? ''}
+                          </p>
+                        ) : (
+                          <p className="mt-1 text-sm text-slate-400">—</p>
+                        )}
+                        {meta ? <p className="mt-1 text-[11px] text-slate-500">{meta}</p> : null}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             ) : null}
@@ -327,9 +332,32 @@ export default function SymbolAnalysisContent({
             ) : opportunity ? (
               <IntelligenceOpportunityCard opportunity={opportunity} />
             ) : symbolIntelligenceStatus?.stage === 'completed' ? (
-              <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-700 p-6 text-center">
-                <p className="text-sm text-gray-500">No actionable opportunities found for {ticker}.</p>
-                <p className="text-xs text-gray-400 mt-1">The signal does not meet the intelligence thresholds. Try running again after a price move.</p>
+              <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-left dark:border-gray-700">
+                <p className="text-sm font-semibold text-slate-800">No actionable intelligence setup right now</p>
+                <p className="mt-2 text-sm text-slate-600">
+                  No opportunity passed the current intelligence thresholds for {ticker}.
+                </p>
+                <div className="mt-4 grid gap-3 md:grid-cols-3">
+                  <div className="rounded-md border border-slate-200 bg-white p-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Why not</p>
+                    <p className="mt-2 text-sm text-slate-700">
+                      The latest signal did not clear the required catalyst and timing filters.
+                    </p>
+                  </div>
+                  <div className="rounded-md border border-slate-200 bg-white p-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">What to watch</p>
+                    <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-slate-700">
+                      <li>A cleaner price move into the preferred entry zone.</li>
+                      <li>Fresh catalyst confirmation or renewed relative strength.</li>
+                    </ul>
+                  </div>
+                  <div className="rounded-md border border-slate-200 bg-white p-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Last checked</p>
+                    <p className="mt-2 text-sm text-slate-700">
+                      {formatDateTime(symbolIntelligenceStatus.updatedAt)}
+                    </p>
+                  </div>
+                </div>
               </div>
             ) : (
               <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-700 p-6 text-center">

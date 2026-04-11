@@ -192,7 +192,7 @@ describe('AnalysisCanvasPanel', () => {
     renderWithProviders(<AnalysisCanvasPanel />);
 
     expect(screen.getByText(/AAPL Decision Summary/)).toBeInTheDocument();
-    expect(screen.getByText(/Buy Now/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Buy Now/).length).toBeGreaterThan(0);
   });
 
   it('labels the fundamentals summary strip by metric horizon', () => {

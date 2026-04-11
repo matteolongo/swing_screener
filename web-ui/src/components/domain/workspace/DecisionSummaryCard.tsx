@@ -225,7 +225,6 @@ export default function DecisionSummaryCard({
 
   return (
     <div className="rounded-lg border border-slate-200 overflow-hidden">
-      {/* Colored verdict banner */}
       <div className={`px-3 py-2 flex items-center justify-between gap-3 ${bannerClass}`}>
         <span className="font-semibold text-sm">
           {t('workspacePage.panels.analysis.decisionSummary.title', { ticker: summary.symbol })} — {actionLabel(summary.action)}
@@ -237,12 +236,10 @@ export default function DecisionSummaryCard({
 
       <div className="bg-slate-50 p-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
+        <div className="max-w-3xl">
           <p className="text-sm text-gray-600">
-            {t('workspacePage.panels.analysis.decisionSummary.subtitle')}
+            {summary.explanation?.summaryLine || t('workspacePage.panels.analysis.decisionSummary.subtitle')}
           </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
         </div>
       </div>
 
@@ -270,50 +267,6 @@ export default function DecisionSummaryCard({
               <div className="mt-1 text-sm font-semibold text-slate-900">{item.formatter(item.value as number)}</div>
             </div>
           ))}
-        </div>
-      ) : null}
-
-      {summary.valuationContext.summary || valuationMetrics.length ? (
-        <div className="mt-3 rounded-md border border-slate-200 bg-white p-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="text-xs font-medium uppercase tracking-wide text-gray-500">
-              {t('workspacePage.panels.analysis.decisionSummary.valuationContext.title')}
-            </div>
-            {hasFairValue ? (
-              <div className="text-xs text-gray-500">
-                {t('workspacePage.panels.analysis.decisionSummary.valuationContext.method', {
-                  method: fairValueMethodLabel(summary.valuationContext.method),
-                })}
-              </div>
-            ) : null}
-          </div>
-          {summary.valuationContext.summary ? (
-            <p className="mt-2 text-sm text-slate-800">{summary.valuationContext.summary}</p>
-          ) : null}
-          {valuationMetrics.length ? (
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              {valuationMetrics.map((item) => (
-                <div key={item.label} className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
-                  <div className="text-[11px] uppercase tracking-wide text-gray-500">{item.label}</div>
-                  <div className="mt-1 text-sm font-semibold text-slate-900">
-                    {item.formatter(item.value as number)}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : null}
-          {fairValueMetrics.length ? (
-            <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4">
-              {fairValueMetrics.map((item) => (
-                <div key={item.label} className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2">
-                  <div className="text-[11px] uppercase tracking-wide text-emerald-800">{item.label}</div>
-                  <div className="mt-1 text-sm font-semibold text-emerald-950">
-                    {item.formatter(item.value as number)}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : null}
         </div>
       ) : null}
 
@@ -390,6 +343,48 @@ export default function DecisionSummaryCard({
           </div>
         </div>
       )}
+
+      {summary.valuationContext.summary || valuationMetrics.length ? (
+        <details className="mt-3 rounded-md border border-slate-200 bg-white p-3">
+          <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2">
+            <span className="text-xs font-medium uppercase tracking-wide text-gray-500">
+              {t('workspacePage.panels.analysis.decisionSummary.valuationContext.title')}
+            </span>
+            <span className="text-xs text-gray-500">
+              {t('workspacePage.panels.analysis.decisionSummary.valuationContext.method', {
+                method: fairValueMethodLabel(summary.valuationContext.method),
+              })}
+            </span>
+          </summary>
+          {summary.valuationContext.summary ? (
+            <p className="mt-3 text-sm text-slate-800">{summary.valuationContext.summary}</p>
+          ) : null}
+          {valuationMetrics.length ? (
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {valuationMetrics.map((item) => (
+                <div key={item.label} className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+                  <div className="text-[11px] uppercase tracking-wide text-gray-500">{item.label}</div>
+                  <div className="mt-1 text-sm font-semibold text-slate-900">
+                    {item.formatter(item.value as number)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : null}
+          {fairValueMetrics.length ? (
+            <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4">
+              {fairValueMetrics.map((item) => (
+                <div key={item.label} className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2">
+                  <div className="text-[11px] uppercase tracking-wide text-emerald-800">{item.label}</div>
+                  <div className="mt-1 text-sm font-semibold text-emerald-950">
+                    {item.formatter(item.value as number)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </details>
+      ) : null}
 
       {warningItems.length ? (
         <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
