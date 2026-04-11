@@ -39,6 +39,7 @@ from swing_screener.reporting.concentration import sector_concentration_warnings
 from swing_screener.fundamentals.storage import FundamentalsStorage
 from swing_screener.intelligence.storage import IntelligenceStorage
 from swing_screener.recommendation import build_decision_summary
+from swing_screener.recommendation.priority import CombinedPriorityConfig, compute_combined_priority
 from swing_screener.strategy.config import (
     build_entry_config,
     build_ranking_config,
@@ -559,6 +560,7 @@ class ScreenerService:
             requested_top = request.top or 20
             if requested_top <= 0:
                 raise HTTPException(status_code=422, detail="top must be >= 1")
+            combined_priority_cfg = CombinedPriorityConfig()
             warnings: list[str] = []
 
             fields_set = request.model_fields_set
@@ -695,7 +697,9 @@ class ScreenerService:
             if not results.empty and "confidence" in results.columns:
                 results = results.sort_values("confidence", ascending=False)
                 if request.top:
-                    results = results.head(request.top)
+                    # Stage 1: widen prefilter to allow combined priority stage to re-rank
+                    prefilter_n = request.top * combined_priority_cfg.prefilter_multiplier
+                    results = results.head(prefilter_n)
                 results["rank"] = range(1, len(results) + 1)
 
             if len(results) < requested_top:
@@ -843,6 +847,9 @@ class ScreenerService:
             candidates = filtered_candidates
             candidates = _apply_cached_fundamentals_context(candidates)
             candidates = _apply_decision_summary_context(candidates)
+            # Stage 2: combined priority re-ranks prefilter set and trims to final top-N
+            candidates = compute_combined_priority(candidates, cfg=combined_priority_cfg)
+            candidates = candidates[:requested_top]
             candidates = _rebuild_recommendations_with_decision_action(
                 candidates,
                 risk_cfg=risk_cfg,
