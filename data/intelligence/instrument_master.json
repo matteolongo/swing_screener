@@ -6790,8 +6790,8 @@
       "stooq": "wdp.nl"
     },
     "primary_listing": false,
-    "status": "active",
-    "status_reason": null,
+    "status": "unresolvable",
+    "status_reason": "yfinance and stooq cannot resolve WDP.AS; Amsterdam dual-listing not yet available from any packaged provider (2026-04-11)",
     "replacement_symbol": null,
     "source": "manual",
     "source_asof": "2026-04-11",

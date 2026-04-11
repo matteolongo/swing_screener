@@ -155,11 +155,6 @@
       "symbol": "SBMO.AS",
       "exchange_mic": "XAMS",
       "currency": "EUR"
-    },
-    {
-      "symbol": "WDP.AS",
-      "exchange_mic": "XAMS",
-      "currency": "EUR"
     }
   ]
 }

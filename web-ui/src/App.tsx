@@ -4,6 +4,9 @@ import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/reac
 import MainLayout from './components/layout/MainLayout';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import { registerTradingStoreSync } from '@/features/persistence';
+import { migrateRemovedUniverseIds } from '@/features/screener/universeStorage';
+
+migrateRemovedUniverseIds(localStorage);
 
 const Strategy = lazy(() => import('./pages/Strategy'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
