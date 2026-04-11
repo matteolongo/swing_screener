@@ -167,7 +167,7 @@ export default function OrderReviewExperience({
   const limitPrice = form.watch('limitPrice') ?? 0;
   const stopPrice = form.watch('stopPrice') ?? 0;
   const hasOrderTypeMismatch = hasSuggestedOrderType && orderType !== normalizedSuggestedOrderType;
-  const needsOverrideConfirmation = hasSkipSuggestion || hasOrderTypeMismatch;
+  const needsOverrideConfirmation = hasOrderTypeMismatch || (hasSkipSuggestion && !isRecommended);
   const invalidBuyStopPrice = orderType === 'BUY_STOP' && knownCurrentPrice != null && limitPrice <= knownCurrentPrice;
   const triggerPriceLabel =
     orderType === 'BUY_STOP' ? t('order.candidateModal.triggerPrice') : t('order.candidateModal.limitPrice');

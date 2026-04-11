@@ -12,10 +12,14 @@ import { cn } from '@/utils/cn';
 interface CachedSymbolPriceChartProps {
   ticker: string;
   className?: string;
+  defaultOpen?: boolean;
+  showToggle?: boolean;
+  width?: number;
+  height?: number;
 }
 
-const CHART_WIDTH = 220;
-const CHART_HEIGHT = 72;
+const DEFAULT_CHART_WIDTH = 220;
+const DEFAULT_CHART_HEIGHT = 72;
 const CHART_PADDING = 4;
 const EMPTY_HISTORY: never[] = [];
 
@@ -31,7 +35,7 @@ function toShortDate(raw: string): string {
   });
 }
 
-function buildPolyline(points: number[]): string {
+function buildPolyline(points: number[], chartWidth: number, chartHeight: number): string {
   if (points.length === 0) {
     return '';
   }
@@ -39,8 +43,8 @@ function buildPolyline(points: number[]): string {
   const minValue = Math.min(...points);
   const maxValue = Math.max(...points);
   const valueRange = maxValue - minValue;
-  const usableWidth = CHART_WIDTH - CHART_PADDING * 2;
-  const usableHeight = CHART_HEIGHT - CHART_PADDING * 2;
+  const usableWidth = chartWidth - CHART_PADDING * 2;
+  const usableHeight = chartHeight - CHART_PADDING * 2;
 
   return points
     .map((value, idx) => {
@@ -52,16 +56,27 @@ function buildPolyline(points: number[]): string {
     .join(' ');
 }
 
-export default function CachedSymbolPriceChart({ ticker, className }: CachedSymbolPriceChartProps) {
+export default function CachedSymbolPriceChart({
+  ticker,
+  className,
+  defaultOpen = false,
+  showToggle = true,
+  width = DEFAULT_CHART_WIDTH,
+  height = DEFAULT_CHART_HEIGHT,
+}: CachedSymbolPriceChartProps) {
   const history = useScreenerStore((state) => {
     const symbol = ticker.trim().toUpperCase();
     const candidate = state.lastResult?.candidates.find((item) => item.ticker.toUpperCase() === symbol);
     return candidate?.priceHistory ?? EMPTY_HISTORY;
   });
 
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(defaultOpen);
   const availableRanges = useMemo(() => getAvailablePriceRanges(history), [history]);
   const [range, setRange] = useState<PriceRangeKey>('MAX');
+
+  useEffect(() => {
+    setIsOpen(defaultOpen);
+  }, [defaultOpen, ticker]);
 
   useEffect(() => {
     if (availableRanges.length === 0) {
@@ -73,12 +88,19 @@ export default function CachedSymbolPriceChart({ ticker, className }: CachedSymb
   }, [availableRanges, range]);
 
   if (history.length < 2) {
+    if (!showToggle) {
+      return (
+        <div className={cn('rounded-md border border-dashed border-gray-300 p-4 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400', className)}>
+          No cached chart is available for {ticker} yet.
+        </div>
+      );
+    }
     return null;
   }
 
   const visibleHistory = slicePriceHistory(history, range);
   const prices = visibleHistory.map((point) => point.close);
-  const polyline = buildPolyline(prices);
+  const polyline = buildPolyline(prices, width, height);
   const firstPrice = prices[0] ?? 0;
   const lastPrice = prices[prices.length - 1] ?? 0;
   const changePct = firstPrice > 0 ? ((lastPrice - firstPrice) / firstPrice) * 100 : 0;
@@ -87,16 +109,18 @@ export default function CachedSymbolPriceChart({ ticker, className }: CachedSymb
   return (
     <div className={cn('mt-1', className)}>
       <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() => setIsOpen((value) => !value)}
-          className="inline-flex items-center gap-1 rounded border border-gray-300 px-2 py-0.5 text-[11px] font-medium text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
-          title={`Toggle cached chart for ${ticker}`}
-          aria-label={`Toggle cached chart for ${ticker}`}
-        >
-          <LineChart className="h-3 w-3" />
-          Chart
-        </button>
+        {showToggle ? (
+          <button
+            type="button"
+            onClick={() => setIsOpen((value) => !value)}
+            className="inline-flex items-center gap-1 rounded border border-gray-300 px-2 py-0.5 text-[11px] font-medium text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+            title={`Toggle cached chart for ${ticker}`}
+            aria-label={`Toggle cached chart for ${ticker}`}
+          >
+            <LineChart className="h-3 w-3" />
+            Chart
+          </button>
+        ) : null}
 
         {isOpen && availableRanges.length > 1 ? (
           <label className="inline-flex items-center gap-1 text-[11px] text-gray-600 dark:text-gray-400">
@@ -118,7 +142,10 @@ export default function CachedSymbolPriceChart({ ticker, className }: CachedSymb
       </div>
 
       {isOpen ? (
-        <div className="mt-2 w-[230px] rounded-md border border-gray-200 bg-white p-2 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+        <div className={cn(
+          'mt-2 rounded-md border border-gray-200 bg-white p-2 shadow-sm dark:border-gray-700 dark:bg-gray-900',
+          showToggle ? 'w-[230px]' : 'w-full',
+        )}>
           <div className="mb-2 flex items-baseline justify-between text-[11px]">
             <span className="font-mono text-gray-500 dark:text-gray-400">{firstPrice.toFixed(2)}</span>
             <span className="font-mono text-sm font-semibold text-gray-900 dark:text-gray-100">{lastPrice.toFixed(2)}</span>
@@ -129,8 +156,9 @@ export default function CachedSymbolPriceChart({ ticker, className }: CachedSymb
           </div>
 
           <svg
-            viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
-            className="h-[72px] w-full"
+            viewBox={`0 0 ${width} ${height}`}
+            className="w-full"
+            style={{ height }}
             role="img"
             aria-label={`Cached price chart for ${ticker}`}
           >

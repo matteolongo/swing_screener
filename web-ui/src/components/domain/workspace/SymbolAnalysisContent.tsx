@@ -103,34 +103,14 @@ export default function SymbolAnalysisContent({
             {candidate?.decisionSummary ? (
               <DecisionSummaryCard summary={candidate.decisionSummary} currency={candidate.currency} />
             ) : null}
-            <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white p-3">
-              <div className="flex items-center justify-between gap-3 mb-2">
-                <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{ticker}</span>
-                {onRunSymbolIntelligence ? (
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => onRunSymbolIntelligence(ticker)}
-                    disabled={symbolIntelligenceStatus?.stage === 'queued' || symbolIntelligenceStatus?.stage === 'running'}
-                  >
-                    {symbolIntelligenceStatus?.stage === 'queued' || symbolIntelligenceStatus?.stage === 'running'
-                      ? t('screener.symbolIntelligence.running')
-                      : t('screener.symbolIntelligence.runAction')}
-                  </Button>
-                ) : null}
-              </div>
-              {symbolIntelligenceStatus?.stage === 'completed' ? (
-                <p className="text-xs text-gray-500 mb-2">
-                  {t('screener.symbolIntelligence.updatedAt', {
-                    at: formatDateTime(
-                      symbolIntelligenceStatus.explanationGeneratedAt || symbolIntelligenceStatus.updatedAt
-                    ),
-                  })}
-                </p>
-              ) : symbolIntelligenceStatus?.stage === 'error' ? (
-                <p className="text-xs text-rose-600 mb-2">{symbolIntelligenceStatus.error || t('screener.error.unknown')}</p>
-              ) : null}
-              <CachedSymbolPriceChart ticker={ticker} />
+            <div className="rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700">
+              <CachedSymbolPriceChart
+                ticker={ticker}
+                defaultOpen
+                showToggle={false}
+                width={820}
+                height={180}
+              />
             </div>
             {candidate ? <TechnicalMetricsGrid candidate={candidate} /> : null}
           </>
