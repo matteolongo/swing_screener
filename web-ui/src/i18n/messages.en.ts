@@ -553,9 +553,11 @@ export const messagesEn = {
             rr: 'R/R',
           },
           copy: {
+            whyItQualified: 'Why It Qualified',
             whyNow: 'Why Now',
             whatToDo: 'What to Do',
             mainRisk: 'Main Risk',
+            whatInvalidatesIt: 'What Invalidates It',
           },
           warningsTitle: 'Coverage Warnings',
         },
