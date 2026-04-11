@@ -53,25 +53,26 @@ def test_run_intelligence_pipeline_persists_outputs(tmp_path, monkeypatch):
         symbols=symbols,
         cfg=IntelligenceConfig(enabled=True),
         technical_readiness={symbol: 0.8 for symbol in symbols},
-        asof_dt=datetime.fromisoformat("2026-02-15T00:00:00"),
+        # Keep the event fresh enough to survive opportunity-stage stale-event damping.
+        asof_dt=datetime.fromisoformat("2026-02-03T00:00:00"),
         storage=storage,
         ohlcv=_ohlcv(symbols),
         peer_map={"AAPL": ("MSFT", "NVDA"), "MSFT": ("AAPL", "NVDA"), "NVDA": ("AAPL", "MSFT")},
     )
 
-    assert snapshot.asof_date == "2026-02-15"
+    assert snapshot.asof_date == "2026-02-03"
     assert len(snapshot.events) == 3
     assert len(snapshot.signals) == 3
     assert len(snapshot.opportunities) > 0
     assert isinstance(snapshot.evidence_records, list)
     assert isinstance(snapshot.normalized_events, list)
     assert isinstance(snapshot.source_health, dict)
-    assert storage.events_path("2026-02-15").exists()
-    assert storage.evidence_path("2026-02-15").exists()
-    assert storage.normalized_events_path("2026-02-15").exists()
-    assert storage.signals_path("2026-02-15").exists()
-    assert storage.themes_path("2026-02-15").exists()
-    assert storage.opportunities_path("2026-02-15").exists()
+    assert storage.events_path("2026-02-03").exists()
+    assert storage.evidence_path("2026-02-03").exists()
+    assert storage.normalized_events_path("2026-02-03").exists()
+    assert storage.signals_path("2026-02-03").exists()
+    assert storage.themes_path("2026-02-03").exists()
+    assert storage.opportunities_path("2026-02-03").exists()
     assert storage.symbol_state_path.exists()
     assert storage.source_health_path.exists()
 
