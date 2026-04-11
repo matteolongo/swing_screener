@@ -128,6 +128,24 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
   const pillars = Object.entries(snapshot.pillars);
   const safeHighlights = filterTrendNarratives(snapshot.highlights, snapshot.historicalSeries);
   const safeRedFlags = filterTrendNarratives(snapshot.redFlags, snapshot.historicalSeries);
+  const strongPillars = pillars.filter(([, pillar]) => pillar.status === 'strong');
+  const weakPillars = pillars.filter(([, pillar]) => pillar.status === 'weak');
+  const overallRead =
+    strongPillars.length >= 2 && weakPillars.length === 0
+      ? 'Positive'
+      : weakPillars.length >= 2
+        ? 'Weak'
+        : 'Mixed';
+  const topSupports = safeHighlights.slice(0, 2).length
+    ? safeHighlights.slice(0, 2)
+    : strongPillars.slice(0, 2).map(([name, pillar]) => `${name.replace('_', ' ')}: ${pillar.summary}`);
+  const topConcerns = safeRedFlags.slice(0, 2).length
+    ? safeRedFlags.slice(0, 2)
+    : weakPillars.slice(0, 2).map(([name, pillar]) => `${name.replace('_', ' ')}: ${pillar.summary}`);
+  const trustStatement = snapshot.dataQualityFlags[0]
+    ?? (snapshot.dataQualityStatus === 'high'
+      ? 'Coverage looks stable enough for directional use.'
+      : 'Use extra care when relying on the current fundamentals snapshot.');
   const historicalSeries = Object.entries(snapshot.historicalSeries).sort(([left], [right]) => {
     const order = ['revenue', 'operating_margin', 'free_cash_flow_margin', 'free_cash_flow'];
     const leftIndex = order.indexOf(left);
@@ -202,6 +220,15 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
             <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
               {snapshot.companyName ?? 'Unknown company'}
             </p>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              {[
+                snapshot.sector,
+                snapshot.currency,
+                snapshot.mostRecentQuarter ? `most recent ${snapshot.mostRecentQuarter}` : null,
+              ]
+                .filter(Boolean)
+                .join(' · ') || 'Snapshot context unavailable'}
+            </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <span className={`rounded-full px-2 py-1 text-xs font-medium ${pillStatusClass(snapshot.coverageStatus)}`}>
@@ -220,6 +247,61 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-4">
+          <div className="rounded-md border border-gray-200 bg-white p-3">
+            <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Overall read</div>
+            <div className="mt-2 text-lg font-semibold text-gray-900">{overallRead}</div>
+            <p className="mt-2 text-sm text-gray-600">
+              Use the pillar scores and trust notes below to confirm the quality of the setup.
+            </p>
+          </div>
+          <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3">
+            <div className="text-[11px] font-medium uppercase tracking-wide text-emerald-800">Key supports</div>
+            <ul className="mt-2 space-y-1 text-sm text-emerald-950">
+              {(topSupports.length ? topSupports : ['No strong support stands out yet.']).map((item) => (
+                <li key={item}>• {item}</li>
+              ))}
+            </ul>
+          </div>
+          <div className="rounded-md border border-rose-200 bg-rose-50 p-3">
+            <div className="text-[11px] font-medium uppercase tracking-wide text-rose-800">Main concerns</div>
+            <ul className="mt-2 space-y-1 text-sm text-rose-900">
+              {(topConcerns.length ? topConcerns : ['No major fundamental red flag is currently visible.']).map((item) => (
+                <li key={item}>• {item}</li>
+              ))}
+            </ul>
+          </div>
+          <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
+            <div className="text-[11px] font-medium uppercase tracking-wide text-amber-800">Data quality</div>
+            <p className="mt-2 text-sm text-amber-900">{trustStatement}</p>
+            <p className="mt-2 text-xs text-amber-800">
+              Quality status: <span className="font-semibold">{snapshot.dataQualityStatus}</span>
+            </p>
+          </div>
+        </div>
+
+        {pillars.length > 0 ? (
+          <div className="space-y-2">
+            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Pillar scores</h4>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {pillars.map(([name, pillar]) => (
+                <div key={name} className="rounded-md border border-gray-200 bg-white p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium capitalize">{name.replace('_', ' ')}</span>
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${pillStatusClass(pillar.status)}`}>
+                      {pillar.status}
+                    </span>
+                  </div>
+                  <div className="mt-2 text-2xl font-semibold text-gray-900">
+                    {pillar.score == null ? 'n/a' : `${Math.round(pillar.score * 100)}/100`}
+                  </div>
+                  <div className="mt-2 text-xs text-gray-500">{pillar.summary}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
         <div className="grid grid-cols-2 gap-2 text-sm md:grid-cols-3">
           {metricCards.map((metric) => {
             const context = snapshot.metricContext[metric.key];
@@ -241,27 +323,66 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
           })}
         </div>
 
+        {snapshot.dataQualityFlags.length > 0 ? (
+          <div>
+            <h4 className="text-sm font-semibold text-amber-700 dark:text-amber-300">Data quality</h4>
+            <ul className="mt-2 space-y-1 text-sm text-amber-800 dark:text-amber-200">
+              {snapshot.dataQualityFlags.map((item) => (
+                <li key={item}>• {item}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        {(safeHighlights.length > 0 || safeRedFlags.length > 0) ? (
+          <div className="grid gap-4 md:grid-cols-2">
+            {safeHighlights.length > 0 ? (
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Highlights</h4>
+                <ul className="mt-2 space-y-1 text-sm text-gray-600 dark:text-gray-400">
+                  {safeHighlights.map((item) => (
+                    <li key={item}>• {item}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {safeRedFlags.length > 0 ? (
+              <div>
+                <h4 className="text-sm font-semibold text-rose-700 dark:text-rose-300">Red flags</h4>
+                <ul className="mt-2 space-y-1 text-sm text-rose-700 dark:text-rose-300">
+                  {safeRedFlags.map((item) => (
+                    <li key={item}>• {item}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
         {historicalSeries.length > 0 ? (
           <div className="space-y-2">
             <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Recent history</h4>
             <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
               {historicalSeries.map(([key, series]) => (
-                <div key={key} className="rounded-md border border-gray-200 p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-medium">{series.label}</span>
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${trendClass(series.direction)}`}>
-                      {humanizeDirection(series.direction)}
-                    </span>
+                <div key={key} className="overflow-hidden rounded-md border border-gray-200 bg-white">
+                  <div className="space-y-1 p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-medium">{series.label}</span>
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${trendClass(series.direction)}`}>
+                        {humanizeDirection(series.direction)}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-gray-500">
+                      {[
+                        formatFundamentalCadence(series.frequency),
+                        humanizeFundamentalSource(series.source),
+                      ]
+                        .filter(Boolean)
+                        .join(' · ') || 'metadata unavailable'}
+                    </div>
                   </div>
-                  <div className="mt-1 text-[11px] text-gray-500">
-                    {[
-                      formatFundamentalCadence(series.frequency),
-                      humanizeFundamentalSource(series.source),
-                    ]
-                      .filter(Boolean)
-                      .join(' · ') || 'metadata unavailable'}
-                  </div>
-                  <div className="mt-3 overflow-hidden rounded-md border border-gray-200">
+                  <div className="border-t border-gray-200">
                     <table className="min-w-full divide-y divide-gray-200 text-sm">
                       <thead className="bg-gray-50">
                         <tr>
@@ -292,61 +413,6 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
                 </div>
               ))}
             </div>
-          </div>
-        ) : null}
-
-        {pillars.length > 0 ? (
-          <div className="space-y-2">
-            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Pillar scores</h4>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {pillars.map(([name, pillar]) => (
-                <div key={name} className="rounded-md border border-gray-200 p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-medium capitalize">{name.replace('_', ' ')}</span>
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${pillStatusClass(pillar.status)}`}>
-                      {pillar.status}
-                    </span>
-                  </div>
-                  <div className="mt-2 text-xs text-gray-500">{pillar.summary}</div>
-                  <div className="mt-2 text-sm font-medium">
-                    {pillar.score == null ? 'n/a' : `${Math.round(pillar.score * 100)}/100`}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : null}
-
-        {snapshot.dataQualityFlags.length > 0 ? (
-          <div>
-            <h4 className="text-sm font-semibold text-amber-700 dark:text-amber-300">Data quality</h4>
-            <ul className="mt-2 space-y-1 text-sm text-amber-800 dark:text-amber-200">
-              {snapshot.dataQualityFlags.map((item) => (
-                <li key={item}>• {item}</li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-
-        {safeHighlights.length > 0 ? (
-          <div>
-            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Highlights</h4>
-            <ul className="mt-2 space-y-1 text-sm text-gray-600 dark:text-gray-400">
-              {safeHighlights.map((item) => (
-                <li key={item}>• {item}</li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-
-        {safeRedFlags.length > 0 ? (
-          <div>
-            <h4 className="text-sm font-semibold text-rose-700 dark:text-rose-300">Red flags</h4>
-            <ul className="mt-2 space-y-1 text-sm text-rose-700 dark:text-rose-300">
-              {safeRedFlags.map((item) => (
-                <li key={item}>• {item}</li>
-              ))}
-            </ul>
           </div>
         ) : null}
 

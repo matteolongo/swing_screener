@@ -128,13 +128,11 @@ describe('CandidateOrderModal', () => {
       />,
     );
 
-    expect(screen.getByText('Setup Execution (Degiro)')).toBeInTheDocument();
+    expect(screen.getByText('Execution guide')).toBeInTheDocument();
     expect(screen.getAllByText('Breakout setup').length).toBeGreaterThan(0);
     expect(screen.getAllByText(/BUY STOP/i).length).toBeGreaterThan(0);
     expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('BUY_STOP');
-    expect(screen.getByText('Exact Degiro setup for this order')).toBeInTheDocument();
-    expect(screen.getByText(/Tipo di Ordine: Stop Loss \(Buy Stop entry trigger\)/i)).toBeInTheDocument();
-    expect(screen.getByText(/2\) Protective stop after entry fill \(Vendita\)/i)).toBeInTheDocument();
+    expect(screen.getByText('Exact Degiro setup')).toBeInTheDocument();
   });
 
   it('shows pullback execution guidance when breakout signal is already passed and backend suggests BUY_LIMIT', () => {
@@ -162,7 +160,7 @@ describe('CandidateOrderModal', () => {
     expect(screen.getAllByText('Pullback setup').length).toBeGreaterThan(0);
     expect(screen.queryAllByText('Breakout setup')).toHaveLength(0);
     expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('BUY_LIMIT');
-    expect(screen.getByText(/Tipo di Ordine: Limite/i)).toBeInTheDocument();
+    expect(screen.getByText(/Breakout already occurred/i)).toBeInTheDocument();
   });
 
   it('requires override confirmation before submitting mismatch order type', async () => {

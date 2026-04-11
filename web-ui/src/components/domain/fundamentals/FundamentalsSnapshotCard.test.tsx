@@ -97,12 +97,12 @@ describe('FundamentalsSnapshotCard', () => {
     expect(screen.getByText('snapshot')).toBeInTheDocument();
     expect(screen.getByText(/latest FY · yfinance · derived · 2024-12-31/i)).toBeInTheDocument();
     expect(screen.getByText(/snapshot · yfinance · 2025-12-31/i)).toBeInTheDocument();
-    expect(screen.getByText('Data quality')).toBeInTheDocument();
+    expect(screen.getAllByText('Data quality').length).toBeGreaterThan(0);
     expect(
-      screen.getByText(/Revenue YoY mixes snapshot metric data with annual history\./i)
-    ).toBeInTheDocument();
+      screen.getAllByText(/Revenue YoY mixes snapshot metric data with annual history\./i).length
+    ).toBeGreaterThan(0);
     expect(screen.queryByText('Revenue trend is improving.')).not.toBeInTheDocument();
     expect(screen.queryByText('Operating margin is deteriorating.')).not.toBeInTheDocument();
-    expect(screen.getByText(/Profitability profile looks healthy\./i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Profitability profile looks healthy\./i).length).toBeGreaterThan(0);
   });
 });

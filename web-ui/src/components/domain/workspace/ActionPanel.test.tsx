@@ -117,8 +117,8 @@ describe('ActionPanel', () => {
     expect(screen.getByText('Place Order')).toBeInTheDocument();
     expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('BUY_STOP');
     expect(screen.getByText('Trigger Price (Buy Stop entry in Degiro)')).toBeInTheDocument();
-    expect(screen.getByText('Exact Degiro setup for this order')).toBeInTheDocument();
-    expect(screen.getByText(/Tipo di Ordine: Stop Loss \(Buy Stop entry trigger\)/i)).toBeInTheDocument();
+    expect(screen.getByText('Execution guide')).toBeInTheDocument();
+    expect(screen.getByText('Exact Degiro setup')).toBeInTheDocument();
   });
 
   it('uses pullback execution guidance when breakout signal already passed with BUY_LIMIT suggestion', () => {
@@ -133,7 +133,7 @@ describe('ActionPanel', () => {
     expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('BUY_LIMIT');
     expect(screen.getAllByText('Pullback setup').length).toBeGreaterThan(0);
     expect(screen.queryAllByText('Breakout setup')).toHaveLength(0);
-    expect(screen.getByText(/Tipo di Ordine: Limite/i)).toBeInTheDocument();
+    expect(screen.getByText(/Breakout already occurred/i)).toBeInTheDocument();
   });
 
   it('requires override confirmation before submitting a mismatch order type', async () => {

@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import Button from '@/components/common/Button';
@@ -83,6 +82,19 @@ function EmptySection({ body }: { body: string }) {
       {body}
     </div>
   );
+}
+
+function classifyInvalidationRule(condition: string) {
+  const normalized = condition.toLowerCase();
+  if (
+    normalized.includes('stop') ||
+    normalized.includes('close') ||
+    normalized.includes('breaks below') ||
+    normalized.includes('invalid')
+  ) {
+    return 'hard';
+  }
+  return 'soft';
 }
 
 export default function OrderReviewExperience({
@@ -196,8 +208,10 @@ export default function OrderReviewExperience({
     }
     return nextWarnings;
   }, [enforceRecommendation, hasOrderTypeMismatch, hasSkipSuggestion, normalizedSuggestedOrderType, verdict]);
+  const invalidationRules = context.recommendation?.thesis?.invalidationRules ?? [];
+  const hardInvalidations = invalidationRules.filter((rule) => classifyInvalidationRule(rule.condition) === 'hard');
+  const softInvalidations = invalidationRules.filter((rule) => classifyInvalidationRule(rule.condition) === 'soft');
 
-  const activeSectionIndex = REVIEW_SECTIONS.findIndex((section) => section.id === activeSection);
   const fieldIds = useMemo(
     () => ({
       orderType: `order-review-order-type-${normalizedTicker}`,
@@ -259,48 +273,21 @@ export default function OrderReviewExperience({
   return (
     <div className="space-y-4">
       <section
-        className="rounded-lg border border-gray-200 bg-gray-50/80 p-3 dark:border-gray-700 dark:bg-gray-900/50"
+        className="rounded-lg border border-gray-200 bg-slate-50/70 p-3 dark:border-gray-700 dark:bg-gray-900/50"
         aria-label={t('order.review.carouselLabel')}
       >
         <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-2">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                 {t('order.review.kicker')}
               </p>
               <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
-                {t((REVIEW_SECTIONS[activeSectionIndex]?.titleKey ?? 'order.review.sections.decision') as any)}
+                {t('order.review.title' as any)}
               </h3>
-            </div>
-            <div className="flex items-center gap-2 self-start sm:self-auto">
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                {t('order.review.position', {
-                  current: activeSectionIndex + 1,
-                  total: REVIEW_SECTIONS.length,
-                })}
-              </span>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() => setActiveSection(REVIEW_SECTIONS[Math.max(0, activeSectionIndex - 1)].id)}
-                disabled={activeSectionIndex === 0}
-                aria-label={t('order.review.previous')}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() =>
-                  setActiveSection(REVIEW_SECTIONS[Math.min(REVIEW_SECTIONS.length - 1, activeSectionIndex + 1)].id)
-                }
-                disabled={activeSectionIndex === REVIEW_SECTIONS.length - 1}
-                aria-label={t('order.review.next')}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
+              <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                {t('order.review.subtitle' as any)}
+              </p>
             </div>
           </div>
 
@@ -489,24 +476,11 @@ export default function OrderReviewExperience({
               className="p-4"
             >
               <div className="space-y-4">
-                {context.recommendation?.thesis?.explanation.whatCouldGoWrong.length ? (
+                {hardInvalidations.length ? (
                   <div>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('tradeThesis.whatCouldGoWrong')}</p>
-                    <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-gray-700 dark:text-gray-300">
-                      {(
-                        thesisEducation?.watchouts.length ? thesisEducation.watchouts : context.recommendation.thesis.explanation.whatCouldGoWrong
-                      ).map((riskItem) => (
-                        <li key={riskItem}>{riskItem}</li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
-
-                {context.recommendation?.thesis?.invalidationRules.length ? (
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('tradeThesis.invalidation')}</p>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('order.review.hardInvalidationTitle' as any)}</p>
                     <ul className="mt-2 space-y-2">
-                      {context.recommendation.thesis.invalidationRules.map((rule) => (
+                      {hardInvalidations.map((rule) => (
                         <li
                           key={rule.ruleId}
                           className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900 dark:border-red-900 dark:bg-red-950/20 dark:text-red-100"
@@ -523,9 +497,40 @@ export default function OrderReviewExperience({
                   </div>
                 ) : null}
 
+                {(softInvalidations.length || context.recommendation?.thesis?.explanation.whatCouldGoWrong.length) ? (
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('order.review.softWarningsTitle' as any)}</p>
+                    <ul className="mt-2 space-y-2">
+                      {softInvalidations.map((rule) => (
+                        <li
+                          key={rule.ruleId}
+                          className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-100"
+                        >
+                          <p>{rule.condition}</p>
+                          {rule.metric && rule.threshold != null ? (
+                            <p className="mt-1 text-xs text-amber-800 dark:text-amber-300">
+                              {t('tradeThesis.monitor')}: {rule.metric} {t('tradeThesis.thresholdAt')} {rule.threshold}
+                            </p>
+                          ) : null}
+                        </li>
+                      ))}
+                      {(
+                        thesisEducation?.watchouts.length ? thesisEducation.watchouts : context.recommendation?.thesis?.explanation.whatCouldGoWrong ?? []
+                      ).map((riskItem) => (
+                        <li
+                          key={riskItem}
+                          className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-100"
+                        >
+                          {riskItem}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+
                 <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/20">
                   <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
-                    {t('order.review.cautionTitle')}
+                    {t('order.review.executionCautionTitle' as any)}
                   </p>
                   <p className="mt-2 text-sm text-amber-950 dark:text-amber-100">
                     {context.recommendation?.education.commonBiasWarning || t(guidance.cautionKey)}
@@ -540,7 +545,7 @@ export default function OrderReviewExperience({
                 </div>
 
                 {!context.recommendation?.thesis?.explanation.whatCouldGoWrong.length &&
-                !context.recommendation?.thesis?.invalidationRules.length ? (
+                !invalidationRules.length ? (
                   <EmptySection body={t('order.review.riskFallback')} />
                 ) : null}
               </div>
@@ -739,33 +744,86 @@ export default function OrderReviewExperience({
                 </div>
               ) : null}
 
-              <Button
-                type="submit"
-                disabled={
-                  isSubmitting ||
-                  invalidBuyStopPrice ||
-                  (needsOverrideConfirmation && !overrideConfirmed) ||
-                  (enforceRecommendation && !isRecommended)
-                }
-              >
-                {isSubmitting ? t('order.candidateModal.creating') : t('order.candidateModal.createAction')}
-              </Button>
+              <div className="sticky bottom-0 z-10 -mx-1 rounded-xl border border-slate-200 bg-white/95 p-3 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-white/90">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="grid grid-cols-3 gap-2 text-xs text-slate-600">
+                    <div>
+                      <div className="uppercase tracking-wide text-slate-500">{t('order.review.summaryPosition' as any)}</div>
+                      <div className="mt-1 font-semibold text-slate-900">{formatCurrency(positionSize, currency)}</div>
+                    </div>
+                    <div>
+                      <div className="uppercase tracking-wide text-slate-500">{t('order.review.summaryRisk' as any)}</div>
+                      <div className="mt-1 font-semibold text-slate-900">{formatCurrency(riskAmount, currency)}</div>
+                    </div>
+                    <div>
+                      <div className="uppercase tracking-wide text-slate-500">{t('order.review.summaryRiskPct' as any)}</div>
+                      <div className={`mt-1 font-semibold ${riskPercent > risk.riskPct * 100 ? 'text-red-600' : 'text-emerald-600'}`}>
+                        {riskPercent.toFixed(2)}%
+                      </div>
+                    </div>
+                  </div>
+                  <Button
+                    type="submit"
+                    disabled={
+                      isSubmitting ||
+                      invalidBuyStopPrice ||
+                      (needsOverrideConfirmation && !overrideConfirmed) ||
+                      (enforceRecommendation && !isRecommended)
+                    }
+                    className="w-full sm:w-auto"
+                  >
+                    {isSubmitting ? t('order.candidateModal.creating') : t('order.candidateModal.createAction')}
+                  </Button>
+                </div>
+              </div>
             </div>
 
             <div className="space-y-4">
-              <SetupExecutionGuide signal={guidanceSignal} />
-              {context.executionNote ? (
-                <div className="rounded border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800 dark:border-blue-900 dark:bg-blue-950/20 dark:text-blue-100">
-                  {context.executionNote}
+              <div className="rounded-lg border border-blue-200 bg-blue-50/70 p-3 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950/20 dark:text-blue-100">
+                <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">
+                  {t('order.review.executionGuideTitle' as any)}
+                </p>
+                <div className="mt-2 space-y-2">
+                  <p>
+                    <span className="font-semibold">{t('order.setupGuidance.setupLabel')}</span> {t(guidance.setupLabelKey)}
+                  </p>
+                  <p>{t(guidance.whatItMeansKey)}</p>
+                  {context.executionNote ? (
+                    <div className="rounded-md border border-blue-200 bg-white/70 px-3 py-2 text-xs text-blue-800 dark:border-blue-900 dark:bg-blue-950/20 dark:text-blue-100">
+                      {context.executionNote}
+                    </div>
+                  ) : null}
                 </div>
-              ) : null}
-              <DegiroOrderConfigGuide
-                orderType={orderType}
-                entryPrice={limitPrice}
-                stopPrice={stopPrice}
-                quantity={quantity}
-                currency={currency}
-              />
+              </div>
+
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-100">
+                <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">{t('order.review.executionCautionTitle' as any)}</p>
+                <p className="mt-2">{t(guidance.cautionKey)}</p>
+              </div>
+
+              <details className="rounded-lg border border-slate-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-950">
+                <summary className="cursor-pointer list-none text-sm font-semibold text-slate-900 dark:text-gray-100">
+                  {t('order.review.brokerStepsTitle' as any)}
+                </summary>
+                <div className="mt-3">
+                  <SetupExecutionGuide signal={guidanceSignal} />
+                </div>
+              </details>
+
+              <details className="rounded-lg border border-slate-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-950">
+                <summary className="cursor-pointer list-none text-sm font-semibold text-slate-900 dark:text-gray-100">
+                  {t('order.review.degiroSetupTitle' as any)}
+                </summary>
+                <div className="mt-3">
+                  <DegiroOrderConfigGuide
+                    orderType={orderType}
+                    entryPrice={limitPrice}
+                    stopPrice={stopPrice}
+                    quantity={quantity}
+                    currency={currency}
+                  />
+                </div>
+              </details>
             </div>
           </div>
         </form>

@@ -3,6 +3,7 @@ import Button from '@/components/common/Button';
 import CachedSymbolPriceChart from '@/components/domain/market/CachedSymbolPriceChart';
 import FundamentalsSnapshotCard from '@/components/domain/fundamentals/FundamentalsSnapshotCard';
 import IntelligenceOpportunityCard from '@/components/domain/intelligence/IntelligenceOpportunityCard';
+import AnalysisDecisionStrip from '@/components/domain/workspace/AnalysisDecisionStrip';
 import DecisionSummaryCard from '@/components/domain/workspace/DecisionSummaryCard';
 import TechnicalMetricsGrid from '@/components/domain/workspace/TechnicalMetricsGrid';
 import type { SymbolAnalysisCandidate, WorkspaceAnalysisTab } from '@/components/domain/workspace/types';
@@ -10,11 +11,6 @@ import {
   useFundamentalSnapshotQuery,
   useRefreshFundamentalSnapshotMutation,
 } from '@/features/fundamentals/hooks';
-import {
-  formatFundamentalMetricMeta,
-  metricHorizonClass,
-  metricHorizonLabel,
-} from '@/features/fundamentals/presentation';
 import {
   useIntelligenceOpportunitiesScoped,
   useIntelligenceUpcomingCatalystsQuery,
@@ -33,6 +29,14 @@ interface SymbolAnalysisContentProps {
   orderPanel?: ReactNode;
   onRunSymbolIntelligence?: (ticker: string) => void;
   symbolIntelligenceStatus?: SymbolIntelligenceStatus;
+}
+
+function provenanceLegendItems() {
+  return [
+    { label: 'Price-derived', detail: 'live market multiple or ratio' },
+    { label: 'Snapshot', detail: 'latest provider snapshot value' },
+    { label: 'Latest FY / quarter', detail: 'reported statement period' },
+  ];
 }
 
 export default function SymbolAnalysisContent({
@@ -63,6 +67,26 @@ export default function SymbolAnalysisContent({
 
   const opportunity = intelligenceQuery.data?.opportunities?.[0] ?? null;
   const catalysts = catalystsQuery.data?.items ?? [];
+  const intelligenceDiagnostics = symbolIntelligenceStatus
+    ? [
+        {
+          label: 'Events kept',
+          value: symbolIntelligenceStatus.eventsKeptCount,
+        },
+        {
+          label: 'Events dropped',
+          value: symbolIntelligenceStatus.eventsDroppedCount,
+        },
+        {
+          label: 'Duplicates',
+          value: symbolIntelligenceStatus.duplicateSuppressedCount,
+        },
+        {
+          label: 'LLM warnings',
+          value: symbolIntelligenceStatus.llmWarningsCount,
+        },
+      ].filter((item) => item.value != null)
+    : [];
   const tabs: Array<{ id: WorkspaceAnalysisTab; label: string }> = [
     { id: 'overview', label: t('workspacePage.panels.analysis.tabs.overview') },
     { id: 'fundamentals', label: t('workspacePage.panels.analysis.tabs.fundamentals') },
@@ -98,6 +122,8 @@ export default function SymbolAnalysisContent({
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto space-y-3">
+        <AnalysisDecisionStrip ticker={ticker} candidate={candidate} />
+
         {activeTab === 'overview' && (
           <>
             {candidate?.decisionSummary ? (
@@ -109,7 +135,7 @@ export default function SymbolAnalysisContent({
                 defaultOpen
                 showToggle={false}
                 width={820}
-                height={180}
+                height={200}
               />
             </div>
             {candidate ? <TechnicalMetricsGrid candidate={candidate} /> : null}
@@ -147,67 +173,25 @@ export default function SymbolAnalysisContent({
             </div>
 
             {fundamentalsQuery.data ? (
-              <div className="space-y-2">
-                <p className="text-xs text-gray-500">
-                  Metric labels show whether a number is price-derived, latest-quarter, latest-FY, or a source snapshot.
-                </p>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                {[
-                  {
-                    key: 'trailing_pe',
-                    label: 'P/E',
-                    value: fundamentalsQuery.data.trailingPe ?? null,
-                    suffix: undefined as string | undefined,
-                    good: (value: number) => value < 25,
-                  },
-                  {
-                    key: 'price_to_sales',
-                    label: 'P/S',
-                    value: fundamentalsQuery.data.priceToSales ?? null,
-                    suffix: undefined as string | undefined,
-                    good: (value: number) => value < 5,
-                  },
-                  {
-                    key: 'revenue_growth_yoy',
-                    label: 'Revenue YoY',
-                    value: fundamentalsQuery.data.revenueGrowthYoy != null
-                      ? fundamentalsQuery.data.revenueGrowthYoy * 100
-                      : null,
-                    suffix: '%' as string | undefined,
-                    good: (value: number) => value > 10,
-                  },
-                  {
-                    key: 'gross_margin',
-                    label: 'Gross Margin',
-                    value: fundamentalsQuery.data.grossMargin != null
-                      ? fundamentalsQuery.data.grossMargin * 100
-                      : null,
-                    suffix: '%' as string | undefined,
-                    good: (value: number) => value > 40,
-                  },
-                ].map(({ key, label, value, suffix, good }) => {
-                  const context = fundamentalsQuery.data.metricContext[key];
-                  const meta = formatFundamentalMetricMeta(key, context);
-                  return (
-                  <div key={key} className="rounded-md border border-gray-200 bg-white p-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="text-[10px] uppercase tracking-wide text-gray-500">{label}</p>
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${metricHorizonClass(key, context)}`}
-                      >
-                        {metricHorizonLabel(key, context)}
-                      </span>
-                    </div>
-                    {value != null ? (
-                      <p className={`mt-1 text-sm font-mono font-semibold ${good(value) ? 'text-emerald-700' : 'text-rose-600'}`}>
-                        {value.toFixed(1)}{suffix ?? ''}
-                      </p>
-                    ) : (
-                      <p className="mt-1 text-sm text-gray-400">—</p>
-                    )}
-                    {meta ? <p className="mt-1 text-[11px] text-gray-500">{meta}</p> : null}
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Metric labels</p>
+                    <p className="mt-1 text-sm text-slate-600">
+                      Read horizon pills as source context, not as another scorecard.
+                    </p>
                   </div>
-                )})}
+                  <div className="text-xs text-slate-500">
+                    Updated {formatDateTime(fundamentalsQuery.data.updatedAt)}
+                  </div>
+                </div>
+                <div className="mt-3 grid gap-2 md:grid-cols-3">
+                  {provenanceLegendItems().map((item) => (
+                    <div key={item.label} className="rounded-md border border-slate-200 bg-white px-3 py-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{item.label}</p>
+                      <p className="mt-1 text-sm text-slate-700">{item.detail}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
             ) : null}
@@ -239,19 +223,31 @@ export default function SymbolAnalysisContent({
         {activeTab === 'intelligence' && (
           <>
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white p-3">
-              <h3 className="text-base font-semibold">{ticker} — Intelligence</h3>
-              {onRunSymbolIntelligence ? (
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => onRunSymbolIntelligence(ticker)}
-                  disabled={symbolIntelligenceStatus?.stage === 'queued' || symbolIntelligenceStatus?.stage === 'running'}
-                >
-                  {symbolIntelligenceStatus?.stage === 'queued' || symbolIntelligenceStatus?.stage === 'running'
-                    ? t('screener.symbolIntelligence.running')
-                    : t('screener.symbolIntelligence.runAction')}
-                </Button>
-              ) : null}
+              <div>
+                <h3 className="text-base font-semibold">{ticker} — Intelligence</h3>
+                <p className="mt-1 text-sm text-slate-600">
+                  Catalyst and timing diagnostics for this symbol only.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {symbolIntelligenceStatus?.stage === 'completed' ? (
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+                    Last checked {formatDateTime(symbolIntelligenceStatus.updatedAt)}
+                  </span>
+                ) : null}
+                {onRunSymbolIntelligence ? (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => onRunSymbolIntelligence(ticker)}
+                    disabled={symbolIntelligenceStatus?.stage === 'queued' || symbolIntelligenceStatus?.stage === 'running'}
+                  >
+                    {symbolIntelligenceStatus?.stage === 'queued' || symbolIntelligenceStatus?.stage === 'running'
+                      ? t('screener.symbolIntelligence.running')
+                      : t('screener.symbolIntelligence.runAction')}
+                  </Button>
+                ) : null}
+              </div>
             </div>
 
             {symbolIntelligenceStatus?.stage === 'queued' ? (
@@ -293,6 +289,9 @@ export default function SymbolAnalysisContent({
                     updatedAt: formatDateTime(symbolIntelligenceStatus.updatedAt),
                   })}
                 </p>
+                {symbolIntelligenceStatus.analysisSummary ? (
+                  <p className="mt-2 text-sm text-emerald-950">{symbolIntelligenceStatus.analysisSummary}</p>
+                ) : null}
               </div>
             ) : null}
 
@@ -307,9 +306,49 @@ export default function SymbolAnalysisContent({
             ) : opportunity ? (
               <IntelligenceOpportunityCard opportunity={opportunity} />
             ) : symbolIntelligenceStatus?.stage === 'completed' ? (
-              <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-700 p-6 text-center">
-                <p className="text-sm text-gray-500">No actionable opportunities found for {ticker}.</p>
-                <p className="text-xs text-gray-400 mt-1">The signal does not meet the intelligence thresholds. Try running again after a price move.</p>
+              <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-left dark:border-gray-700">
+                <p className="text-sm font-semibold text-slate-800">No actionable intelligence setup right now</p>
+                <p className="mt-2 text-sm text-slate-600">
+                  No opportunity passed the current intelligence thresholds for {ticker}.
+                </p>
+                <div className="mt-4 grid gap-3 md:grid-cols-3">
+                  <div className="rounded-md border border-slate-200 bg-white p-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Why not</p>
+                    <p className="mt-2 text-sm text-slate-700">
+                      {symbolIntelligenceStatus.analysisSummary
+                        ?? 'The latest signal did not clear the required catalyst and timing filters.'}
+                    </p>
+                  </div>
+                  <div className="rounded-md border border-slate-200 bg-white p-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">What to watch</p>
+                    <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-slate-700">
+                      <li>A cleaner price move into the preferred entry zone.</li>
+                      <li>Fresh catalyst confirmation or renewed relative strength.</li>
+                    </ul>
+                  </div>
+                  <div className="rounded-md border border-slate-200 bg-white p-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Run diagnostics</p>
+                    <div className="mt-2 grid grid-cols-2 gap-2 text-sm text-slate-700">
+                      {intelligenceDiagnostics.length ? (
+                        intelligenceDiagnostics.map((item) => (
+                          <div key={item.label} className="rounded-md bg-slate-50 px-2 py-1.5">
+                            <div className="text-[10px] uppercase tracking-wide text-slate-500">{item.label}</div>
+                            <div className="mt-1 font-semibold text-slate-900">{item.value}</div>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="col-span-2 text-sm text-slate-600">
+                          Last checked {formatDateTime(symbolIntelligenceStatus.updatedAt)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                {symbolIntelligenceStatus.llmWarningSample ? (
+                  <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                    <span className="font-semibold">Model warning:</span> {symbolIntelligenceStatus.llmWarningSample}
+                  </div>
+                ) : null}
               </div>
             ) : (
               <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-700 p-6 text-center">

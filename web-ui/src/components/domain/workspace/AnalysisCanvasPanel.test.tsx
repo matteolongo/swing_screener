@@ -192,7 +192,7 @@ describe('AnalysisCanvasPanel', () => {
     renderWithProviders(<AnalysisCanvasPanel />);
 
     expect(screen.getByText(/AAPL Decision Summary/)).toBeInTheDocument();
-    expect(screen.getByText(/Buy Now/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Buy Now/).length).toBeGreaterThan(0);
   });
 
   it('labels the fundamentals summary strip by metric horizon', () => {
@@ -211,11 +211,10 @@ describe('AnalysisCanvasPanel', () => {
 
     renderWithProviders(<AnalysisCanvasPanel />);
 
-    expect(
-      screen.getByText(/Metric labels show whether a number is price-derived/i)
-    ).toBeInTheDocument();
-    expect(screen.getAllByText('price-derived').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('snapshot').length).toBeGreaterThan(0);
+    expect(screen.getByText(/Read horizon pills as source context/i)).toBeInTheDocument();
+    expect(screen.getByText('Price-derived')).toBeInTheDocument();
+    expect(screen.getByText('Snapshot')).toBeInTheDocument();
+    expect(screen.getByText('Latest FY / quarter')).toBeInTheDocument();
     expect(
       screen.getAllByText(/price-derived · snapshot · yfinance · 2026-03-19/i).length
     ).toBeGreaterThan(0);
