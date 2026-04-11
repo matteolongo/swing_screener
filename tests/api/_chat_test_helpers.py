@@ -16,7 +16,9 @@ from api.models.intelligence import (
 )
 from api.models.screener import SameSymbolCandidateContext
 from api.models.intelligence_config import IntelligenceConfigModel
-from api.models.portfolio import Order, PortfolioSummary, PositionWithMetrics
+from types import SimpleNamespace
+
+from api.models.portfolio import PortfolioSummary, PositionWithMetrics
 
 
 def make_order(
@@ -28,8 +30,9 @@ def make_order(
     quantity: int = 5,
     limit_price: float | None = 101.0,
     stop_price: float | None = 96.0,
-) -> Order:
-    return Order(
+):
+    """Return a lightweight order namespace (Order model removed)."""
+    return SimpleNamespace(
         order_id=order_id,
         ticker=ticker,
         status=status,

@@ -48,7 +48,11 @@ function getProviderCatalogEntry(
   return providers?.find((item) => item.provider === provider);
 }
 
-export default function IntelligencePage() {
+interface IntelligencePageProps {
+  initialSymbol?: string;
+}
+
+export default function IntelligencePage({ initialSymbol }: IntelligencePageProps) {
   const navigate = useNavigate();
   const configQuery = useIntelligenceConfigQuery();
   const providersQuery = useIntelligenceProvidersQuery();
@@ -79,6 +83,10 @@ export default function IntelligencePage() {
       setDraftConfig(configQuery.data);
     }
   }, [configQuery.data]);
+
+  useEffect(() => {
+    if (initialSymbol) setManualSymbolsInput(initialSymbol);
+  }, [initialSymbol]);
 
   useEffect(() => {
     window.localStorage.setItem('intelligence.showAdvancedConfig', String(showAdvancedConfig));

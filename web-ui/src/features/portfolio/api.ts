@@ -23,7 +23,6 @@ import {
   PositionStatus,
   UpdateStopRequest,
   ClosePositionRequest,
-  transformOrder,
   transformCreateOrderRequest,
   transformPosition,
   transformPositionUpdate,
@@ -159,11 +158,9 @@ export async function fetchOrders(status: OrderFilterStatus): Promise<Order[]> {
   if (isLocalPersistenceMode()) {
     return listOrdersLocal(status);
   }
-  const params = status !== 'all' ? `?status=${status}` : '';
-  const response = await fetch(apiUrl(API_ENDPOINTS.orders + params));
-  if (!response.ok) throw new Error('Failed to fetch orders');
-  const data = await response.json();
-  return data.orders.map(transformOrder);
+  // Managed orders were removed; the /orders endpoint now returns live DeGiro
+  // read-only orders in a different schema. Return empty to avoid crashes.
+  return [];
 }
 
 export async function createOrder(request: CreateOrderRequest): Promise<void> {

@@ -112,7 +112,8 @@ export function useSymbolIntelligenceRunner() {
       }));
 
       try {
-        const launch = await runIntelligence({ symbols: [symbol] });
+        const technicalReadiness = candidate != null ? { [symbol]: candidate.confidence } : undefined;
+        const launch = await runIntelligence({ symbols: [symbol], technicalReadiness });
         setStatusByTicker((prev) => ({
           ...prev,
           [symbol]: {

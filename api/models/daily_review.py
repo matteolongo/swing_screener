@@ -3,7 +3,7 @@ from datetime import date
 from typing import Optional
 from pydantic import BaseModel, Field
 from api.models.recommendation import Recommendation
-from api.models.portfolio import Position, Order
+from api.models.portfolio import Position
 from api.models.screener import SameSymbolCandidateContext
 from api.models.strategy import Strategy
 from swing_screener.recommendation.models import DecisionSummary
@@ -98,6 +98,6 @@ class DailyReview(BaseModel):
 class DailyReviewComputeRequest(BaseModel):
     strategy: Strategy
     positions: list[Position] = Field(default_factory=list)
-    orders: list[Order] = Field(default_factory=list)
+    orders: list = Field(default_factory=list)
     top_n: int = Field(default=200, ge=1, le=200)
     universe: Optional[str] = None

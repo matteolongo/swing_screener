@@ -326,6 +326,11 @@ export default function SymbolAnalysisContent({
               <div className="text-sm text-gray-500">Loading intelligence…</div>
             ) : opportunity ? (
               <IntelligenceOpportunityCard opportunity={opportunity} />
+            ) : symbolIntelligenceStatus?.stage === 'completed' ? (
+              <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-700 p-6 text-center">
+                <p className="text-sm text-gray-500">No actionable opportunities found for {ticker}.</p>
+                <p className="text-xs text-gray-400 mt-1">The signal does not meet the intelligence thresholds. Try running again after a price move.</p>
+              </div>
             ) : (
               <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-700 p-6 text-center">
                 <p className="text-sm text-gray-500">Run Intelligence to get insights for {ticker}</p>

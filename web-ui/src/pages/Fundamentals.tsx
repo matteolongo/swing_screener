@@ -76,10 +76,18 @@ function DegiroAuditTable({ records }: { records: DegiroAuditRecord[] }) {
   );
 }
 
-export default function FundamentalsPage() {
+interface FundamentalsPageProps {
+  initialSymbol?: string;
+}
+
+export default function FundamentalsPage({ initialSymbol }: FundamentalsPageProps) {
   const [symbolsInput, setSymbolsInput] = useState('AAPL, MSFT');
   const [warmupJobId, setWarmupJobId] = useState<string | undefined>(undefined);
   const [syncedWarmupJobId, setSyncedWarmupJobId] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    if (initialSymbol) setSymbolsInput(initialSymbol);
+  }, [initialSymbol]);
+
   const configQuery = useFundamentalsConfigQuery();
   const compareMutation = useCompareFundamentalsMutation();
   const warmupMutation = useStartFundamentalsWarmupMutation((launch) => {

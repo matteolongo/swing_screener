@@ -10,7 +10,6 @@ def _seed_position_files(tmp_path):
     data_dir = tmp_path / "data"
     data_dir.mkdir(parents=True, exist_ok=True)
     positions_path = data_dir / "positions.json"
-    orders_path = data_dir / "orders.json"
 
     positions_path.write_text(
         json.dumps(
@@ -40,18 +39,12 @@ def _seed_position_files(tmp_path):
         ),
         encoding="utf-8",
     )
-    orders_path.write_text(
-        json.dumps({"asof": "2026-03-03", "orders": []}, indent=2),
-        encoding="utf-8",
-    )
-
-    return positions_path, orders_path
+    return positions_path
 
 
 def test_close_position_persists_optional_fee(monkeypatch, tmp_path):
-    positions_path, orders_path = _seed_position_files(tmp_path)
+    positions_path = _seed_position_files(tmp_path)
     monkeypatch.setattr(deps, "POSITIONS_FILE", positions_path)
-    monkeypatch.setattr(deps, "ORDERS_FILE", orders_path)
 
     client = TestClient(app)
     response = client.post(

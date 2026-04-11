@@ -23,8 +23,11 @@ from api.routers import (
     intelligence,
     portfolio,
     screener,
+    screener_history,
     strategy,
+    symbol_notes,
     watchlist,
+    weekly_reviews,
 )
 
 LOG_FORMAT = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
@@ -311,12 +314,15 @@ async def metrics():
 app.include_router(config.router, prefix="/api/config", tags=["config"])
 app.include_router(strategy.router, prefix="/api/strategy", tags=["strategy"])
 app.include_router(screener.router, prefix="/api/screener", tags=["screener"])
+app.include_router(screener_history.router, prefix="/api/screener", tags=["screener"])
 app.include_router(portfolio.router, prefix="/api/portfolio", tags=["portfolio"])
 app.include_router(watchlist.router, prefix="/api/watchlist", tags=["watchlist"])
 app.include_router(intelligence.router, prefix="/api/intelligence", tags=["intelligence"])
 app.include_router(fundamentals.router, prefix="/api/fundamentals", tags=["fundamentals"])
 app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
 app.include_router(daily_review.router, prefix="/api", tags=["daily-review"])
+app.include_router(symbol_notes.router, prefix="/api/symbol-notes", tags=["symbol-notes"])
+app.include_router(weekly_reviews.router, prefix="/api/weekly-reviews", tags=["weekly-reviews"])
 
 
 @app.get("/{full_path:path}", include_in_schema=False)

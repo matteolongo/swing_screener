@@ -5,15 +5,11 @@ apply(), which idempotently reconciles local files with the latest broker state.
 """
 from __future__ import annotations
 
-import json
 import logging
-import uuid
 from datetime import date, datetime, timezone
-from pathlib import Path
 from typing import Any, Optional
 
 from swing_screener.integrations.degiro.models import (
-    DegiroApplyResult,
     DegiroSyncPreview,
     DegiroSyncRaw,
     SyncDiff,
@@ -315,61 +311,13 @@ def _resolve_fee(broker_order: dict, transactions: list[dict]) -> Optional[float
 
 def preview(
     sync_raw: DegiroSyncRaw,
-    local_orders: list[dict],
     local_positions: list[dict],
 ) -> DegiroSyncPreview:
+    """Compute position-only diffs (orders are now read live from DeGiro)."""
     sync_stamp = _sync_timestamp()
-    orders_to_create: list[SyncDiff] = []
-    orders_to_update: list[SyncDiff] = []
-    ambiguous: list[SyncDiff] = []
-    unmatched: list[SyncDiff] = []
-    fees_applied = 0
-    matched_local_order_ids: set[str] = set()
-
-    all_broker_orders = list(sync_raw.order_history) + list(sync_raw.pending_orders)
-
-    for bo in all_broker_orders:
-        local, confidence = _match_order(bo, local_orders)
-        broker_id = str(bo.get("orderId", "") or "").strip() or None
-        fee = _resolve_fee(bo, sync_raw.transactions)
-
-        fields: dict = {}
-        if broker_id:
-            fields["broker_order_id"] = broker_id
-        broker_product = str(bo.get("productId", "") or "").strip() or None
-        if broker_product:
-            fields["broker_product_id"] = broker_product
-        fields["broker"] = "degiro"
-        fields["broker_synced_at"] = sync_stamp
-        if fee is not None:
-            fields["fee_eur"] = fee
-            fees_applied += 1
-
-        diff = SyncDiff(
-            kind="order",
-            action="update" if local else "create",
-            local_id=local.get("order_id") if local else None,
-            broker_id=broker_id,
-            confidence=confidence,
-            fields=fields,
-        )
-
-        if confidence == "ambiguous":
-            ambiguous.append(diff)
-        elif confidence == "unmatched":
-            unmatched.append(diff)
-        elif local:
-            if diff.local_id:
-                matched_local_order_ids.add(diff.local_id)
-            orders_to_update.append(diff)
-        else:
-            orders_to_create.append(diff)
-
-    # Positions
     positions_to_create: list[SyncDiff] = []
     positions_to_update: list[SyncDiff] = []
     matched_local_position_ids: set[str] = set()
-    stale_closed_position_ids: set[str] = set()
 
     for bp in sync_raw.positions:
         product_id = str(bp.get("id", "") or "").strip()
@@ -387,7 +335,7 @@ def preview(
                 pos_confidence = "fuzzy"
                 break
 
-        fields = {}
+        fields: dict = {}
         if product_id:
             fields["broker_product_id"] = product_id
         if isin:
@@ -414,6 +362,8 @@ def preview(
         else:
             positions_to_create.append(diff)
 
+    # Mark locally-open broker-managed positions as stale if not found at DeGiro
+    stale_closed_position_ids: set[str] = set()
     for lp in local_positions:
         local_id = _clean_text(lp.get("position_id"))
         if not local_id or local_id in matched_local_position_ids:
@@ -435,143 +385,12 @@ def preview(
         positions_to_update.append(diff)
         stale_closed_position_ids.add(local_id)
 
-    for lo in local_orders:
-        local_id = _clean_text(lo.get("order_id"))
-        if not local_id or local_id in matched_local_order_ids:
-            continue
-        if _clean_text(lo.get("status")).lower() != "pending":
-            continue
-
-        linked_position_id = _clean_text(lo.get("position_id"))
-        should_cancel = False
-        cancel_reason = ""
-        if linked_position_id and linked_position_id in stale_closed_position_ids:
-            should_cancel = True
-            cancel_reason = "Cancelled via DeGiro sync: linked position no longer open at broker."
-        elif _is_broker_managed_order(lo):
-            should_cancel = True
-            cancel_reason = "Cancelled via DeGiro sync: order no longer active at broker."
-
-        if not should_cancel:
-            continue
-
-        broker_id = _clean_text(lo.get("broker_order_id")) or None
-        orders_to_update.append(
-            SyncDiff(
-                kind="order",
-                action="update",
-                local_id=local_id,
-                broker_id=broker_id,
-                confidence="exact" if broker_id else "fuzzy",
-                fields={
-                    "status": "cancelled",
-                    "broker": "degiro",
-                    "broker_synced_at": sync_stamp,
-                    "notes": _append_note(lo.get("notes"), cancel_reason),
-                },
-            )
-        )
-
     return DegiroSyncPreview(
         positions_to_create=tuple(positions_to_create),
         positions_to_update=tuple(positions_to_update),
-        orders_to_create=tuple(orders_to_create),
-        orders_to_update=tuple(orders_to_update),
-        ambiguous=tuple(ambiguous),
-        unmatched=tuple(unmatched),
-        fees_applied=fees_applied,
-    )
-
-
-# ---------------------------------------------------------------------------
-# Apply
-# ---------------------------------------------------------------------------
-
-def apply(
-    sync_preview: DegiroSyncPreview,
-    orders_path: str | Path,
-    positions_path: str | Path,
-    *,
-    artifact_dir: Optional[str | Path] = None,
-) -> DegiroApplyResult:
-    from swing_screener.utils.file_lock import locked_read_json_cli, locked_write_json_cli
-
-    orders_p = Path(orders_path)
-    positions_p = Path(positions_path)
-
-    orders_data = locked_read_json_cli(orders_p) if orders_p.exists() else {"orders": []}
-    positions_data = (
-        locked_read_json_cli(positions_p) if positions_p.exists() else {"positions": []}
-    )
-
-    orders_list: list[dict] = orders_data.get("orders", [])
-    positions_list: list[dict] = positions_data.get("positions", [])
-
-    orders_created = orders_updated = 0
-    positions_created = positions_updated = 0
-
-    order_idx = {o.get("order_id"): i for i, o in enumerate(orders_list)}
-    for diff in sync_preview.orders_to_update:
-        if diff.local_id and diff.local_id in order_idx:
-            idx = order_idx[diff.local_id]
-            orders_list[idx] = {**orders_list[idx], **diff.fields}
-            orders_updated += 1
-
-    for diff in sync_preview.orders_to_create:
-        new_order = {
-            "order_id": f"degiro-{diff.broker_id or uuid.uuid4().hex[:8]}",
-            "ticker": "",
-            "status": "filled",
-            "order_type": "MARKET",
-            "quantity": diff.fields.get("quantity", 0),
-            **diff.fields,
-        }
-        orders_list.append(new_order)
-        orders_created += 1
-
-    pos_idx = {p.get("position_id"): i for i, p in enumerate(positions_list)}
-    for diff in sync_preview.positions_to_update:
-        if diff.local_id and diff.local_id in pos_idx:
-            idx = pos_idx[diff.local_id]
-            positions_list[idx] = {**positions_list[idx], **diff.fields}
-            positions_updated += 1
-
-    # Skip creating positions without a ticker — they'd be unusable placeholders.
-    # Positions should be created manually with a known ticker symbol.
-
-    asof = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    locked_write_json_cli(orders_p, {**orders_data, "asof": asof, "orders": orders_list})
-    locked_write_json_cli(positions_p, {**positions_data, "asof": asof, "positions": positions_list})
-
-    artifact_paths: dict[str, str] = {}
-    if artifact_dir:
-        artifact_dir_p = Path(artifact_dir)
-        artifact_dir_p.mkdir(parents=True, exist_ok=True)
-        run_id = uuid.uuid4().hex[:12]
-        result_path = artifact_dir_p / f"{run_id}_apply_result.json"
-        result_path.write_text(
-            json.dumps(
-                {
-                    "orders_created": orders_created,
-                    "orders_updated": orders_updated,
-                    "positions_created": positions_created,
-                    "positions_updated": positions_updated,
-                    "fees_applied": sync_preview.fees_applied,
-                    "ambiguous_skipped": len(sync_preview.ambiguous),
-                    "asof": asof,
-                },
-                indent=2,
-            ),
-            encoding="utf-8",
-        )
-        artifact_paths["apply_result_json"] = str(result_path)
-
-    return DegiroApplyResult(
-        positions_created=positions_created,
-        positions_updated=positions_updated,
-        orders_created=orders_created,
-        orders_updated=orders_updated,
-        fees_applied=sync_preview.fees_applied,
-        ambiguous_skipped=len(sync_preview.ambiguous),
-        artifact_paths=artifact_paths,
+        orders_to_create=(),
+        orders_to_update=(),
+        ambiguous=(),
+        unmatched=(),
+        fees_applied=0,
     )

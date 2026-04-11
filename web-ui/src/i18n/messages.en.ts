@@ -421,6 +421,10 @@ export const messagesEn = {
       fundamentals: 'Fundamentals',
       journal: 'Journal',
       analytics: 'Analytics',
+      today: 'Today',
+      book: 'Book',
+      research: 'Research',
+      settings: 'Settings',
     },
     activeStrategy: 'Active Strategy',
     loadingStrategies: 'Loading strategies...',
@@ -549,9 +553,11 @@ export const messagesEn = {
             rr: 'R/R',
           },
           copy: {
+            whyItQualified: 'Why It Qualified',
             whyNow: 'Why Now',
             whatToDo: 'What to Do',
             mainRisk: 'Main Risk',
+            whatInvalidatesIt: 'What Invalidates It',
           },
           warningsTitle: 'Coverage Warnings',
         },
@@ -1140,6 +1146,10 @@ export const messagesEn = {
       'Same-symbol add-on: Score {{score}}, Confidence {{confidence}}%, Rank #{{rank}}, Live stop {{liveStop}}, Fresh setup stop {{freshStop}}',
   },
   dailyReview: {
+    filter: {
+      recommendedOnly: 'Recommended only',
+      all: 'All',
+    },
     header: {
       title: 'Daily Review',
       loading: 'Loading daily review...',
@@ -2062,6 +2072,50 @@ export const messagesEn = {
     stopsToUpdate: '{{n}} stops to update',
     positionsToClose: '{{n}} positions to close',
     onHold: '{{n}} on hold',
+  },
+  bookPage: {
+    title: 'Trading Book',
+    subtitle: 'Positions, trade history and performance.',
+    tabs: {
+      positions: 'Positions',
+      journal: 'Journal',
+      performance: 'Performance',
+      review: 'Weekly Review',
+    },
+  },
+  researchPage: {
+    title: 'Research',
+    subtitle: 'Intelligence and fundamental analysis.',
+    tabs: {
+      intelligence: 'Intelligence',
+      fundamentals: 'Fundamentals',
+      calendar: 'Calendar',
+    },
+    symbolSearch: {
+      placeholder: 'Symbol (e.g. AAPL)',
+      search: 'Search',
+    },
+  },
+  todayPage: {
+    tabs: {
+      today: 'Today',
+      screener: 'Screener',
+    },
+    actionList: {
+      requiresAction: 'Requires Action',
+      opportunities: 'New Opportunities',
+      holding: 'Holding',
+      close: 'Close',
+      updateStop: 'Update Stop',
+      addOn: 'Add-on',
+      empty: 'No items for today.',
+      loading: "Loading today's review...",
+      closeAction: 'Close →',
+      updateAction: 'Update →',
+    },
+    keyboard: {
+      hint: 'j/k navigate · Enter select',
+    },
   },
 } as const;
 

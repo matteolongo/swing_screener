@@ -1,56 +1,38 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { screen } from '@testing-library/react';
 import { renderWithProviders } from '@/test/utils';
 import Sidebar from './Sidebar';
 
-// Mock the strategy hooks
-vi.mock('@/features/strategy/hooks', () => ({
-  useStrategiesQuery: () => ({
-    data: [
-      { id: 'strategy-1', name: 'Test Strategy', isDefault: true },
-    ],
-    isLoading: false,
-    isError: false,
-  }),
-  useActiveStrategyQuery: () => ({
-    data: { id: 'strategy-1', name: 'Test Strategy', isDefault: true },
-    isLoading: false,
-    isError: false,
-  }),
-  useSetActiveStrategyMutation: () => ({
-    mutate: vi.fn(),
-    isPending: false,
-    isError: false,
-  }),
-}));
 
 describe('Sidebar', () => {
   beforeEach(() => {
     localStorage.clear();
   });
 
-  it('should render all navigation items', () => {
+  it('should render primary navigation items', () => {
     renderWithProviders(<Sidebar />);
 
-    expect(screen.getByText('Workspace')).toBeInTheDocument();
-    expect(screen.getByText('Daily Review')).toBeInTheDocument();
-    expect(screen.getByText('Strategy')).toBeInTheDocument();
-    expect(screen.getByText('Intelligence')).toBeInTheDocument();
+    expect(screen.getByText('Today')).toBeInTheDocument();
+    expect(screen.getByText('Book')).toBeInTheDocument();
+    expect(screen.getByText('Research')).toBeInTheDocument();
+    expect(screen.getByText('Settings')).toBeInTheDocument();
   });
 
-  it('should not show mode toggle', () => {
+  it('should not show old navigation items removed in revamp', () => {
     renderWithProviders(<Sidebar />);
 
-    expect(screen.queryByText('Mode')).not.toBeInTheDocument();
-    expect(screen.queryByText('Beginner')).not.toBeInTheDocument();
-    expect(screen.queryByText('Advanced')).not.toBeInTheDocument();
+    expect(screen.queryByText('Workspace')).not.toBeInTheDocument();
+    expect(screen.queryByText('Daily Review')).not.toBeInTheDocument();
+    expect(screen.queryByText('Intelligence')).not.toBeInTheDocument();
+    expect(screen.queryByText('Fundamentals')).not.toBeInTheDocument();
+    expect(screen.queryByText('Journal')).not.toBeInTheDocument();
+    expect(screen.queryByText('Analytics')).not.toBeInTheDocument();
   });
 
-  it('should show active strategy selector', () => {
+  it('should not show strategy selector (moved to header)', () => {
     renderWithProviders(<Sidebar />);
 
-    expect(screen.getByText('Active Strategy')).toBeInTheDocument();
-    expect(screen.getByRole('combobox')).toBeInTheDocument();
-    expect(screen.getByText('Test Strategy')).toBeInTheDocument();
+    expect(screen.queryByText('Active Strategy')).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
   });
 });

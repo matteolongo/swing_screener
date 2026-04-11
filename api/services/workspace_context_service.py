@@ -17,6 +17,7 @@ from api.services.intelligence_service import IntelligenceService
 from api.services.portfolio_service import PortfolioService
 from api.services.strategy_service import StrategyService
 from swing_screener.intelligence.storage import IntelligenceStorage
+from swing_screener.recommendation.snapshot import build_symbol_analysis_snapshot
 
 logger = logging.getLogger(__name__)
 
@@ -206,7 +207,6 @@ class WorkspaceContextService:
         normalized_ticker = _normalize_ticker(selected_ticker)
         warnings: list[str] = []
 
-        orders_response = self._portfolio_service.list_orders()
         positions_response = self._portfolio_service.list_positions()
 
         account_size = self._active_account_size()
@@ -268,9 +268,34 @@ class WorkspaceContextService:
                 education=education,
             )
 
+        # Compute snapshot consistency across technical, fundamentals, and intelligence layers.
+        screener_asof_str = workspace_snapshot.asof_date if workspace_snapshot else None
+        snapshot_consistency = None
+        if screener_asof_str and normalized_ticker:
+            try:
+                import datetime as _dt
+                reference_date = _dt.date.fromisoformat(screener_asof_str)
+                fund_asof_str = getattr(selected_candidate, "fundamentals_asof", None)
+                intel_asof_str = getattr(selected_candidate, "intelligence_asof", None) or intelligence_asof
+                source_dates: dict[str, _dt.date | None] = {
+                    "technical": reference_date,
+                    "fundamentals": _dt.date.fromisoformat(fund_asof_str) if fund_asof_str else None,
+                    "intelligence": _dt.date.fromisoformat(intel_asof_str) if intel_asof_str else None,
+                }
+                snapshot_consistency = build_symbol_analysis_snapshot(
+                    symbol=normalized_ticker,
+                    reference_date=reference_date,
+                    source_dates=source_dates,
+                )
+            except Exception as exc:
+                logger.debug("Snapshot consistency check failed: %s", exc)
+
+        is_consistent = snapshot_consistency.is_consistent_snapshot if snapshot_consistency else True
+        snapshot_warnings = snapshot_consistency.warnings if snapshot_consistency else []
+
         context = WorkspaceContext(
             selected_ticker=normalized_ticker,
-            orders=orders_response.orders,
+            orders=[],
             positions=positions_response.positions,
             portfolio_summary=portfolio_summary,
             screener_snapshot=workspace_snapshot,
@@ -279,17 +304,16 @@ class WorkspaceContextService:
             warnings=warnings,
             meta=WorkspaceContextMeta(
                 selected_ticker=normalized_ticker,
+                is_consistent_snapshot=is_consistent,
+                snapshot_warnings=snapshot_warnings,
                 sources=[
                     WorkspaceContextSourceMeta(
                         source="portfolio",
                         label="Portfolio",
                         loaded=True,
                         origin="stored_state",
-                        asof=max(
-                            orders_response.asof,
-                            positions_response.asof,
-                        ),
-                        count=len(orders_response.orders) + len(positions_response.positions),
+                        asof=positions_response.asof,
+                        count=len(positions_response.positions),
                     ),
                     WorkspaceContextSourceMeta(
                         source="screener",

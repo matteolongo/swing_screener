@@ -7,7 +7,6 @@ from tests.api._chat_test_helpers import (
     make_education,
     make_event,
     make_opportunity,
-    make_order,
     make_portfolio_summary,
     make_position,
     make_workspace_snapshot,
@@ -16,14 +15,9 @@ from api.models.screener import SameSymbolCandidateContext
 
 
 class FakePortfolioService:
-    def __init__(self, *, orders, positions, summary):
-        self._orders = orders
+    def __init__(self, *, orders=None, positions, summary):
         self._positions = positions
         self._summary = summary
-
-    def list_orders(self, status=None, ticker=None):
-        del status, ticker
-        return SimpleNamespace(orders=self._orders, asof="2026-03-13")
 
     def list_positions(self, status=None):
         del status
@@ -78,7 +72,6 @@ class FakeStorage:
 def test_build_context_without_screener_snapshot_marks_screener_unloaded():
     service = WorkspaceContextService(
         portfolio_service=FakePortfolioService(
-            orders=[make_order()],
             positions=[make_position()],
             summary=make_portfolio_summary(),
         ),
@@ -100,7 +93,6 @@ def test_build_context_filters_intelligence_to_selected_ticker_and_builds_fact_m
     intelligence_service = FakeIntelligenceService()
     service = WorkspaceContextService(
         portfolio_service=FakePortfolioService(
-            orders=[make_order()],
             positions=[make_position()],
             summary=make_portfolio_summary(),
         ),
@@ -131,7 +123,6 @@ def test_build_context_filters_intelligence_to_selected_ticker_and_builds_fact_m
 def test_build_context_warns_when_cached_education_is_missing():
     service = WorkspaceContextService(
         portfolio_service=FakePortfolioService(
-            orders=[make_order()],
             positions=[make_position()],
             summary=make_portfolio_summary(),
         ),
@@ -156,7 +147,6 @@ def test_build_context_warns_when_cached_education_is_missing():
 def test_build_context_includes_same_symbol_fact_map_keys():
     service = WorkspaceContextService(
         portfolio_service=FakePortfolioService(
-            orders=[make_order()],
             positions=[make_position()],
             summary=make_portfolio_summary(),
         ),

@@ -12,8 +12,8 @@ export interface SetupExecutionGuidance {
 
 export function normalizeSetupSignal(signal?: string | null): SetupSignal {
   const normalized = String(signal ?? '').trim().toLowerCase();
-  if (normalized === 'breakout') return 'breakout';
-  if (normalized === 'pullback') return 'pullback';
+  if (normalized === 'breakout' || normalized === 'buy_now' || normalized === 'wait_for_breakout') return 'breakout';
+  if (normalized === 'pullback' || normalized === 'buy_on_pullback') return 'pullback';
   if (normalized === 'both') return 'both';
   return 'unknown';
 }

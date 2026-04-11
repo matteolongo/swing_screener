@@ -93,3 +93,21 @@ class DegiroApplyResult:
     fees_applied: int
     ambiguous_skipped: int
     artifact_paths: dict[str, str]
+
+
+# ---------------------------------------------------------------------------
+# Live order read model (Phase 2 — DeGiro as source of truth)
+# ---------------------------------------------------------------------------
+
+@dataclass(frozen=True)
+class DegiroOrder:
+    order_id: str
+    product_id: Optional[str]
+    isin: Optional[str]
+    product_name: Optional[str]
+    status: str
+    price: Optional[float]
+    quantity: int
+    order_type: Optional[str]
+    side: Optional[str]  # "buy" or "sell"
+    created_at: Optional[str]

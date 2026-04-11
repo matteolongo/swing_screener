@@ -111,7 +111,12 @@ def build_recommendation(
     if stop is None or not math.isfinite(stop):
         stop = None
 
-    signal_active = signal in {"both", "breakout", "pullback"}
+    # Accept both raw screener vocab ("breakout"/"pullback"/"both") and
+    # unified decision-action vocab ("BUY_NOW"/"BUY_ON_PULLBACK"/"WAIT_FOR_BREAKOUT").
+    signal_active = signal in {
+        "both", "breakout", "pullback",
+        "BUY_NOW", "BUY_ON_PULLBACK", "WAIT_FOR_BREAKOUT",
+    }
 
     stop_defined = stop is not None and stop < entry
     risk_per_share = (entry - stop) if stop_defined else None

@@ -5,7 +5,7 @@ import pandas as pd
 
 from swing_screener.intelligence.config import IntelligenceConfig, LLMConfig
 from swing_screener.intelligence.models import Event
-from swing_screener.intelligence.pipeline import run_intelligence_pipeline
+from swing_screener.intelligence.pipeline import _normalize_technical, run_intelligence_pipeline
 from swing_screener.intelligence.storage import IntelligenceStorage
 
 
@@ -53,25 +53,26 @@ def test_run_intelligence_pipeline_persists_outputs(tmp_path, monkeypatch):
         symbols=symbols,
         cfg=IntelligenceConfig(enabled=True),
         technical_readiness={symbol: 0.8 for symbol in symbols},
-        asof_dt=datetime.fromisoformat("2026-02-15T00:00:00"),
+        # Keep the event fresh enough to survive opportunity-stage stale-event damping.
+        asof_dt=datetime.fromisoformat("2026-02-03T00:00:00"),
         storage=storage,
         ohlcv=_ohlcv(symbols),
         peer_map={"AAPL": ("MSFT", "NVDA"), "MSFT": ("AAPL", "NVDA"), "NVDA": ("AAPL", "MSFT")},
     )
 
-    assert snapshot.asof_date == "2026-02-15"
+    assert snapshot.asof_date == "2026-02-03"
     assert len(snapshot.events) == 3
     assert len(snapshot.signals) == 3
     assert len(snapshot.opportunities) > 0
     assert isinstance(snapshot.evidence_records, list)
     assert isinstance(snapshot.normalized_events, list)
     assert isinstance(snapshot.source_health, dict)
-    assert storage.events_path("2026-02-15").exists()
-    assert storage.evidence_path("2026-02-15").exists()
-    assert storage.normalized_events_path("2026-02-15").exists()
-    assert storage.signals_path("2026-02-15").exists()
-    assert storage.themes_path("2026-02-15").exists()
-    assert storage.opportunities_path("2026-02-15").exists()
+    assert storage.events_path("2026-02-03").exists()
+    assert storage.evidence_path("2026-02-03").exists()
+    assert storage.normalized_events_path("2026-02-03").exists()
+    assert storage.signals_path("2026-02-03").exists()
+    assert storage.themes_path("2026-02-03").exists()
+    assert storage.opportunities_path("2026-02-03").exists()
     assert storage.symbol_state_path.exists()
     assert storage.source_health_path.exists()
 
@@ -288,3 +289,87 @@ def test_run_intelligence_pipeline_skips_llm_for_events_dropped_by_prefilter(tmp
     assert classifier.calls == 0
     assert snapshot.events == []
     assert snapshot.events_dropped_count == 1
+
+
+# ---------------------------------------------------------------------------
+# _normalize_technical unit tests (PR1 — intelligence handoff)
+# ---------------------------------------------------------------------------
+
+
+def test_normalize_technical_passes_through_provided_value():
+    """A value explicitly passed for a symbol must be returned unchanged (clamped to [0,1])."""
+    result = _normalize_technical(["AAPL"], {"AAPL": 0.85})
+    assert abs(result["AAPL"] - 0.85) < 1e-9
+
+
+def test_normalize_technical_missing_symbol_defaults_to_0_5():
+    """A symbol absent from the dict must receive 0.5, not raise."""
+    result = _normalize_technical(["AAPL", "MSFT"], {"AAPL": 0.9})
+    assert abs(result["AAPL"] - 0.9) < 1e-9
+    assert abs(result["MSFT"] - 0.5) < 1e-9
+
+
+def test_normalize_technical_none_map_defaults_all_to_0_5():
+    """Passing technical_readiness=None must default every symbol to 0.5."""
+    symbols = ["AAPL", "MSFT", "NVDA"]
+    result = _normalize_technical(symbols, None)
+    assert set(result.keys()) == set(symbols)
+    assert all(abs(v - 0.5) < 1e-9 for v in result.values())
+
+
+def test_normalize_technical_higher_readiness_raises_opportunity_score(monkeypatch):
+    """Opportunity score must be strictly higher when technical_readiness=0.9 vs 0.5
+    for an otherwise identical symbol setup — verifying the end-to-end handoff."""
+    from swing_screener.intelligence.models import Event
+    from swing_screener.intelligence.scoring import build_opportunities
+    from swing_screener.intelligence.config import OpportunityConfig
+
+    event = Event(
+        event_id="e1",
+        symbol="AAPL",
+        source="yahoo_finance",
+        occurred_at="2026-02-02T00:00:00",
+        headline="Strong earnings",
+        event_type="news",
+        credibility=0.9,
+    )
+    from swing_screener.intelligence.scoring import build_catalyst_score_map
+    from swing_screener.intelligence.models import CatalystSignal
+
+    signal = CatalystSignal(
+        symbol="AAPL",
+        event_id="e1",
+        return_z=2.0,
+        atr_shock=1.2,
+        peer_confirmation_count=1,
+        recency_hours=4.0,
+        is_false_catalyst=False,
+        reasons=[],
+    )
+    catalyst_map = build_catalyst_score_map(signals=[signal], events=[event], themes=[])
+    cfg = OpportunityConfig(
+        technical_weight=0.55,
+        catalyst_weight=0.45,
+        max_daily_opportunities=5,
+        min_opportunity_score=0.0,
+    )
+
+    high_readiness = build_opportunities(
+        technical_readiness={"AAPL": 0.9},
+        catalyst_scores=catalyst_map,
+        symbol_states={},
+        cfg=cfg,
+    )
+    low_readiness = build_opportunities(
+        technical_readiness={"AAPL": 0.5},
+        catalyst_scores=catalyst_map,
+        symbol_states={},
+        cfg=cfg,
+    )
+
+    high_score = next(o.opportunity_score for o in high_readiness if o.symbol == "AAPL")
+    low_score = next(o.opportunity_score for o in low_readiness if o.symbol == "AAPL")
+    assert high_score > low_score, (
+        f"expected opportunity_score with readiness=0.9 ({high_score:.4f}) "
+        f"> readiness=0.5 ({low_score:.4f})"
+    )

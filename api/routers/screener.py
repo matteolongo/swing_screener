@@ -13,8 +13,9 @@ from api.models.screener import (
     ScreenerRunStatusResponse,
     OrderPreview,
 )
-from api.dependencies import get_screener_service
+from api.dependencies import get_screener_service, get_screener_history_repo
 from api.services.screener_service import ScreenerService
+from api.repositories.screener_history_repo import ScreenerHistoryRepository
 from pydantic import BaseModel, Field, field_validator
 
 router = APIRouter()
@@ -77,12 +78,20 @@ async def list_universes(service: ScreenerService = Depends(get_screener_service
 async def run_screener(
     request: ScreenerRequest,
     service: ScreenerService = Depends(get_screener_service),
+    history_repo: ScreenerHistoryRepository = Depends(get_screener_history_repo),
 ):
     """Run screener sync or launch async job depending on environment mode."""
     if _resolve_screener_run_mode() == "async":
         launch = service.start_run_async(request)
         return JSONResponse(status_code=202, content=launch.model_dump())
-    return service.run_screener(request)
+    result = service.run_screener(request)
+    try:
+        tickers = [c.ticker for c in result.candidates]
+        if tickers:
+            history_repo.record_run(result.asof_date, tickers)
+    except Exception:
+        pass  # Never fail a screener run due to history recording
+    return result
 
 
 @router.get("/run/{job_id}", response_model=ScreenerRunStatusResponse)

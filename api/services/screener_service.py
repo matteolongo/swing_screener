@@ -357,18 +357,94 @@ def _apply_decision_summary_context(
 
     enriched: list[ScreenerCandidate] = []
     for candidate in candidates:
+        fund_snap = snapshot_cache.get(candidate.ticker)
+        fund_asof = getattr(fund_snap, "asof_date", None) if fund_snap is not None else None
         enriched.append(
             candidate.model_copy(
                 update={
                     "decision_summary": build_decision_summary(
                         candidate,
                         opportunity=opportunity_cache.get(candidate.ticker),
-                        fundamentals=snapshot_cache.get(candidate.ticker),
-                    )
+                        fundamentals=fund_snap,
+                    ),
+                    "fundamentals_asof": str(fund_asof) if fund_asof else None,
+                    "intelligence_asof": latest_opportunities_date,
                 }
             )
         )
     return enriched
+
+
+def _rebuild_recommendations_with_decision_action(
+    candidates: list[ScreenerCandidate],
+    *,
+    risk_cfg,
+    rr_target: float,
+    commission_pct: float,
+) -> list[ScreenerCandidate]:
+    """Rebuild each candidate's recommendation using the decision_summary action as the
+    signal input so that the Order tab verdict is consistent with the decision badge."""
+    if not candidates:
+        return candidates
+
+    rebuilt: list[ScreenerCandidate] = []
+    for candidate in candidates:
+        action = getattr(getattr(candidate, "decision_summary", None), "action", None)
+        if not action:
+            rebuilt.append(candidate)
+            continue
+
+        rec = candidate.recommendation
+        if rec is None:
+            rebuilt.append(candidate)
+            continue
+
+        # Only rebuild when the original recommendation already failed signal_active.
+        # This prevents demoting a RECOMMENDED candidate that already has a chart signal.
+        signal_gate_passed = any(
+            gate.gate_name == "signal_active" and gate.passed
+            for gate in (rec.checklist or [])
+        )
+        if signal_gate_passed:
+            rebuilt.append(candidate)
+            continue
+
+        # Rebuild using decision action as signal so signal_active reflects the full picture.
+        logger.debug(
+            "Rebuilding recommendation for %s: signal_active was False, decision_summary.action=%s",
+            candidate.ticker,
+            action,
+        )
+        new_rec_payload = evaluate_recommendation(
+            signal=action,
+            entry=rec.risk.entry if rec.risk else None,
+            stop=rec.risk.stop if rec.risk else None,
+            shares=rec.risk.shares if rec.risk else None,
+            risk_cfg=risk_cfg,
+            rr_target=rr_target,
+            costs=RiskEngineConfig(
+                commission_pct=commission_pct,
+                slippage_bps=5.0,
+                fx_estimate_pct=0.0,
+            ),
+            ticker=candidate.ticker,
+            strategy="Momentum",
+            close=candidate.close,
+            sma_20=candidate.sma_20,
+            sma_50=candidate.sma_50,
+            sma_200=candidate.sma_200,
+            atr=candidate.atr,
+            momentum_6m=candidate.momentum_6m,
+            momentum_12m=candidate.momentum_12m,
+            rel_strength=candidate.rel_strength,
+            confidence=candidate.confidence,
+        )
+        rebuilt.append(
+            candidate.model_copy(
+                update={"recommendation": Recommendation.model_validate(asdict(new_rec_payload))}
+            )
+        )
+    return rebuilt
 
 
 def _apply_decision_priority_ranking(candidates: list[ScreenerCandidate]) -> list[ScreenerCandidate]:
@@ -739,7 +815,7 @@ class ScreenerService:
                 )
 
             portfolio_positions = self._portfolio_service.list_positions(status="open").positions
-            portfolio_orders = self._portfolio_service.list_orders().orders
+            portfolio_orders: list = []
             same_symbol_evaluator = SameSymbolReentryEvaluator(self._portfolio_service)
             same_symbol_suppressed_count = 0
             same_symbol_add_on_count = 0
@@ -767,6 +843,12 @@ class ScreenerService:
             candidates = filtered_candidates
             candidates = _apply_cached_fundamentals_context(candidates)
             candidates = _apply_decision_summary_context(candidates)
+            candidates = _rebuild_recommendations_with_decision_action(
+                candidates,
+                risk_cfg=risk_cfg,
+                rr_target=_safe_float(getattr(risk_cfg, "rr_target", 2.0), default=2.0),
+                commission_pct=_safe_float(getattr(risk_cfg, "commission_pct", 0.0), default=0.0),
+            )
             candidates = _apply_decision_priority_ranking(candidates)
             if same_symbol_suppressed_count > 0:
                 warnings.append(

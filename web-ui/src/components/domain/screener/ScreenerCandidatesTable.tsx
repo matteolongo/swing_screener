@@ -4,6 +4,7 @@ import Button from '@/components/common/Button';
 import TableShell from '@/components/common/TableShell';
 import { ScreenerCandidate } from '@/features/screener/types';
 import { toCandidateViewModel } from '@/features/screener/viewModel';
+import { useScreenerRecurrence } from '@/features/screener/recurrenceHooks';
 import ScreenerCandidateIdentityCell from './ScreenerCandidateIdentityCell';
 import ScreenerCandidateDetailsRow from './ScreenerCandidateDetailsRow';
 import { formatCurrency } from '@/utils/formatters';
@@ -51,6 +52,10 @@ export default function ScreenerCandidatesTable({
   onRowClick,
 }: ScreenerCandidatesTableProps) {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const recurrenceQuery = useScreenerRecurrence();
+  const recurrenceByTicker = new Map<string, number>(
+    (recurrenceQuery.data ?? []).map((r) => [r.ticker, r.streak])
+  );
 
   const toggleRow = (ticker: string) => {
     setExpandedRows((prev) => {
@@ -137,6 +142,7 @@ export default function ScreenerCandidatesTable({
                 <ScreenerCandidateIdentityCell
                   candidate={vm}
                   onSymbolClick={onSymbolClick}
+                  streak={recurrenceByTicker.get(candidate.ticker.toUpperCase())}
                 />
               </td>
 

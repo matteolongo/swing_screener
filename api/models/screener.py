@@ -50,6 +50,8 @@ class ScreenerCandidate(BaseModel):
     fundamentals_coverage_status: Optional[str] = None
     fundamentals_freshness_status: Optional[str] = None
     fundamentals_summary: Optional[str] = None
+    fundamentals_asof: Optional[str] = None
+    intelligence_asof: Optional[str] = None
     # Plan + recommendation fields (education-first)
     signal: Optional[str] = None
     entry: Optional[float] = None
