@@ -65,6 +65,19 @@ def compute_hot_score(
     return out
 
 
+def normalize_technical_score(df: pd.DataFrame) -> pd.Series:
+    """Returns the score column normalized to 0..1 range (min-max).
+
+    Used as input to the combined priority stage. Returns 0.5 for all rows
+    when the range is zero (all candidates share the same score).
+    """
+    s = df["score"]
+    rng = s.max() - s.min()
+    if rng == 0:
+        return pd.Series(0.5, index=df.index)
+    return (s - s.min()) / rng
+
+
 def top_candidates(
     df: pd.DataFrame, cfg: RankingConfig = RankingConfig()
 ) -> pd.DataFrame:
