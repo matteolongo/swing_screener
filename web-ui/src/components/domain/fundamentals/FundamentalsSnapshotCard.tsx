@@ -356,22 +356,24 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
             <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Recent history</h4>
             <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
               {historicalSeries.map(([key, series]) => (
-                <div key={key} className="rounded-md border border-gray-200 p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-medium">{series.label}</span>
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${trendClass(series.direction)}`}>
-                      {humanizeDirection(series.direction)}
-                    </span>
+                <div key={key} className="overflow-hidden rounded-md border border-gray-200 bg-white">
+                  <div className="space-y-1 p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-medium">{series.label}</span>
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${trendClass(series.direction)}`}>
+                        {humanizeDirection(series.direction)}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-gray-500">
+                      {[
+                        formatFundamentalCadence(series.frequency),
+                        humanizeFundamentalSource(series.source),
+                      ]
+                        .filter(Boolean)
+                        .join(' · ') || 'metadata unavailable'}
+                    </div>
                   </div>
-                  <div className="mt-1 text-[11px] text-gray-500">
-                    {[
-                      formatFundamentalCadence(series.frequency),
-                      humanizeFundamentalSource(series.source),
-                    ]
-                      .filter(Boolean)
-                      .join(' · ') || 'metadata unavailable'}
-                  </div>
-                  <div className="mt-3 overflow-hidden rounded-md border border-gray-200">
+                  <div className="border-t border-gray-200">
                     <table className="min-w-full divide-y divide-gray-200 text-sm">
                       <thead className="bg-gray-50">
                         <tr>
