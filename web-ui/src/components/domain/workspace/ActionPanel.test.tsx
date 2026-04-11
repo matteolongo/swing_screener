@@ -154,6 +154,17 @@ describe('ActionPanel', () => {
     expect(submit).toBeEnabled();
   });
 
+  it('does not require override confirmation when verdict is recommended but backend guidance is SKIP', () => {
+    setCandidate({
+      suggestedOrderType: 'SKIP',
+    });
+    renderWithProviders(<ActionPanel ticker="AAPL" />);
+
+    expect(screen.getAllByText(/currently not an actionable entry/i).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create Order' })).toBeEnabled();
+  });
+
   it('keeps form values while switching review sections', async () => {
     const user = userEvent.setup();
     renderWithProviders(<ActionPanel ticker="AAPL" />);
