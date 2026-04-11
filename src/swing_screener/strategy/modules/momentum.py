@@ -9,6 +9,7 @@ from swing_screener.strategy.report_config import ReportConfig
 from swing_screener.selection.universe import eligible_universe
 from swing_screener.selection.ranking import top_candidates
 from swing_screener.selection.entries import build_signal_board
+from swing_screener.indicators.setup_quality import compute_setup_quality
 from swing_screener.risk.position_sizing import build_trade_plans
 from swing_screener.execution.guidance import add_execution_guidance
 
@@ -92,6 +93,7 @@ def build_momentum_report(
 
     tickers = ranked.index.tolist()
     board = build_signal_board(ohlcv, tickers, cfg.signals)
+    setup = compute_setup_quality(ohlcv, tickers)
 
     atr_col = f"atr{cfg.universe.vol.atr_window}"
 
@@ -102,8 +104,10 @@ def build_momentum_report(
         atr_col=atr_col,
     )
 
-    # merge: ranked features + signal board (left) + plans (left)
+    # merge: ranked features + signal board (left) + setup quality (left) + plans (left)
     report = ranked.join(board, how="left", rsuffix="_sig")
+    if not setup.empty:
+        report = report.join(setup, how="left", rsuffix="_sq")
 
     if plans is not None and not plans.empty:
         # keep some plan cols
@@ -124,10 +128,13 @@ def build_momentum_report(
     keep = [
         "rank", "score", "confidence",
         "last", "currency", atr_col, "atr_pct",
-        "mom_6m", "mom_12m", "rs_6m",
+        "mom_6m", "mom_12m", "rs_6m", "sector_rs_6m",
+        "sma20_slope", "sma50_slope",
         "trend_ok", "dist_sma50_pct", "dist_sma200_pct",
         "signal",
         "breakout_level", ma_col,
+        "consolidation_tightness", "close_location_in_range",
+        "above_breakout_extension", "breakout_volume_confirmation",
         "entry", "stop", "shares", "position_value", "realized_risk",
     ]
     keep = [c for c in keep if c in report.columns]

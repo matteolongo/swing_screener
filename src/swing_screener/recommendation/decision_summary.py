@@ -692,6 +692,18 @@ def _drivers(
     elif rr < 1.5:
         _append_unique(negatives, "Reward-to-risk is light for a swing setup.")
 
+    consolidation = _safe_float(_get_value(candidate, "consolidation_tightness"))
+    if consolidation is not None and consolidation > 0.7:
+        _append_unique(positives, "Tight consolidation base.")
+
+    vol_conf = _get_value(candidate, "breakout_volume_confirmation")
+    if vol_conf is True:
+        _append_unique(positives, "Volume-confirmed breakout.")
+
+    extension = _safe_float(_get_value(candidate, "above_breakout_extension"))
+    if extension is not None and extension > 0.05:
+        _append_unique(warnings, "Extended — avoid chasing at current levels.")
+
     if same_symbol_mode == "MANAGE_ONLY":
         _append_unique(warnings, "This symbol is already in an active manage-only state.")
 

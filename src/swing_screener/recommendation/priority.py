@@ -1,12 +1,22 @@
+"""Combined priority scoring for screener candidates.
+
+Two-stage ranking pipeline:
+  Stage 1 — technical prefilter (top_n × prefilter_multiplier candidates)
+  Stage 2 — combined priority: blends technical + fundamentals + catalyst + valuation
+
+All weights are configurable via ``selection.combined_priority`` in defaults.yaml.
+"""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from swing_screener.settings import get_settings_manager
+if TYPE_CHECKING:
+    from api.models.screener import ScreenerCandidate
 
 
-def _priority_defaults() -> dict:
+def _combined_priority_defaults() -> dict:
+    from swing_screener.settings import get_settings_manager
     sel = get_settings_manager().get_low_level_defaults_payload("selection")
     d = sel.get("combined_priority", {})
     return d if isinstance(d, dict) else {}
@@ -14,24 +24,39 @@ def _priority_defaults() -> dict:
 
 @dataclass(frozen=True)
 class CombinedPriorityConfig:
-    technical_weight: float = field(default_factory=lambda: float(_priority_defaults().get("technical_weight", 0.45)))
-    fundamentals_weight: float = field(default_factory=lambda: float(_priority_defaults().get("fundamentals_weight", 0.25)))
-    catalyst_weight: float = field(default_factory=lambda: float(_priority_defaults().get("catalyst_weight", 0.20)))
-    valuation_weight: float = field(default_factory=lambda: float(_priority_defaults().get("valuation_weight", 0.10)))
-    prefilter_multiplier: int = field(default_factory=lambda: int(_priority_defaults().get("prefilter_multiplier", 3)))
+    technical_weight: float = field(
+        default_factory=lambda: float(_combined_priority_defaults().get("technical_weight", 0.45))
+    )
+    fundamentals_weight: float = field(
+        default_factory=lambda: float(_combined_priority_defaults().get("fundamentals_weight", 0.25))
+    )
+    catalyst_weight: float = field(
+        default_factory=lambda: float(_combined_priority_defaults().get("catalyst_weight", 0.20))
+    )
+    valuation_weight: float = field(
+        default_factory=lambda: float(_combined_priority_defaults().get("valuation_weight", 0.10))
+    )
+    prefilter_multiplier: int = field(
+        default_factory=lambda: int(_combined_priority_defaults().get("prefilter_multiplier", 3))
+    )
 
 
-_FUNDAMENTALS_SCORE: dict[str, float] = {"strong": 1.0, "neutral": 0.5, "weak": 0.0}
-_CATALYST_SCORE: dict[str, float] = {"active": 1.0, "neutral": 0.5, "weak": 0.0}
-_VALUATION_SCORE: dict[str, float] = {"cheap": 1.0, "fair": 0.5, "expensive": 0.0, "unknown": 0.5}
-
-
-def _get(source: Any, key: str, default: Any = None) -> Any:
-    if source is None:
-        return default
-    if isinstance(source, dict):
-        return source.get(key, default)
-    return getattr(source, key, default)
+_FUNDAMENTALS_SCORE: dict[str, float] = {
+    "strong": 1.0,
+    "neutral": 0.5,
+    "weak": 0.0,
+}
+_CATALYST_SCORE: dict[str, float] = {
+    "active": 1.0,
+    "neutral": 0.5,
+    "weak": 0.0,
+}
+_VALUATION_SCORE: dict[str, float] = {
+    "cheap": 1.0,
+    "fair": 0.5,
+    "expensive": 0.0,
+    "unknown": 0.5,
+}
 
 
 def _safe_float(value: Any) -> float | None:
@@ -43,86 +68,111 @@ def _safe_float(value: Any) -> float | None:
         return None
 
 
+def _label_score(mapping: dict[str, float], label: str | None, default: float = 0.5) -> float:
+    return mapping.get((label or "").lower(), default)
+
+
+def _fundamentals_score(candidate: ScreenerCandidate) -> float:
+    ds = candidate.decision_summary
+    score = _label_score(
+        _FUNDAMENTALS_SCORE,
+        getattr(ds, "fundamentals_label", None) if ds else None,
+    )
+    snapshot = getattr(candidate, "fundamentals_snapshot", None)
+    if snapshot is None:
+        return score
+
+    business_quality = _safe_float(getattr(snapshot, "business_quality_score", None))
+    if business_quality is not None:
+        score = business_quality
+
+    freshness_penalty = _safe_float(getattr(snapshot, "freshness_penalty", None)) or 0.0
+    coverage_penalty = _safe_float(getattr(snapshot, "coverage_penalty", None)) or 0.0
+    penalty_multiplier = max(0.0, 1.0 - freshness_penalty - (coverage_penalty * 0.5))
+    return max(0.0, score * penalty_multiplier)
+
+
+def _valuation_score(candidate: ScreenerCandidate) -> float:
+    ds = candidate.decision_summary
+    score = _label_score(
+        _VALUATION_SCORE,
+        getattr(ds, "valuation_label", None) if ds else None,
+    )
+    snapshot = getattr(candidate, "fundamentals_snapshot", None)
+    if snapshot is None:
+        return score
+
+    valuation = _safe_float(getattr(snapshot, "valuation_attractiveness", None))
+    return valuation if valuation is not None else score
+
+
 def compute_combined_priority(
-    candidates: list[Any],
+    candidates: list[ScreenerCandidate],
     cfg: CombinedPriorityConfig = CombinedPriorityConfig(),
-) -> list[Any]:
-    """
-    Re-rank candidates using a blended score that incorporates technical confidence,
-    fundamentals quality, catalyst strength, and valuation attractiveness.
+) -> list[ScreenerCandidate]:
+    """Sort *candidates* by combined priority score (descending).
 
-    For each candidate, attempts to read `decision_summary` for label-based sub-scores.
-    Falls back to neutral (0.5) when a label is absent.
+    For each candidate:
+    - Stamps ``raw_technical_rank`` from its current ``rank`` field.
+    - Computes ``combined_priority_score`` in [0, 1].
 
-    New fields set on each candidate dict (if candidates are dicts):
-      - raw_technical_rank: original rank before combined scoring
-      - combined_priority_score: final blended score in [0, 1]
-
-    For dataclass / object candidates the fields are set as attributes if possible.
-
-    Returns candidates sorted descending by combined_priority_score.
+    The caller is responsible for slicing the returned list to the desired final top-N.
+    PR6 fundamentals penalties apply when cached snapshots are available; catalyst/data-quality
+    caps remain future work.
     """
     if not candidates:
         return candidates
 
-    # Normalise technical confidence to [0, 1] via min-max
-    confidences = [_safe_float(_get(c, "confidence")) for c in candidates]
-    valid_conf = [v for v in confidences if v is not None]
-    conf_min = min(valid_conf) if valid_conf else 0.0
-    conf_max = max(valid_conf) if valid_conf else 100.0
-    conf_range = conf_max - conf_min if conf_max > conf_min else 1.0
+    confidences = [c.confidence for c in candidates]
+    conf_min = min(confidences)
+    conf_max = max(confidences)
+    conf_range = conf_max - conf_min
 
-    wt = cfg.technical_weight
-    wf = cfg.fundamentals_weight
-    wc = cfg.catalyst_weight
-    wv = cfg.valuation_weight
-    total_w = wt + wf + wc + wv or 1.0
+    def _tech(conf: float) -> float:
+        if conf_range == 0:
+            return 0.5
+        return (conf - conf_min) / conf_range
 
-    scored: list[tuple[float, int, Any]] = []
-    for i, candidate in enumerate(candidates):
-        raw_rank = _safe_float(_get(candidate, "rank")) or float(i + 1)
+    total_weight = (
+        cfg.technical_weight
+        + cfg.fundamentals_weight
+        + cfg.catalyst_weight
+        + cfg.valuation_weight
+    ) or 1.0
 
-        conf = confidences[i]
-        tech_score = ((conf - conf_min) / conf_range) if conf is not None else 0.5
+    scored: list[tuple[ScreenerCandidate, float, int]] = []
+    for candidate in candidates:
+        ds = candidate.decision_summary
 
-        ds = _get(candidate, "decision_summary")
-        fund_label = str(_get(ds, "fundamentals_label", "neutral") or "neutral").lower()
-        cat_label = str(_get(ds, "catalyst_label", "neutral") or "neutral").lower()
-        val_label = str(_get(ds, "valuation_label", "unknown") or "unknown").lower()
+        tech = _tech(candidate.confidence)
+        fund = _fundamentals_score(candidate)
+        catalyst = _label_score(
+            _CATALYST_SCORE,
+            getattr(ds, "catalyst_label", None) if ds else None,
+        )
+        valuation = _valuation_score(candidate)
 
-        fund_score = _FUNDAMENTALS_SCORE.get(fund_label, 0.5)
-        cat_score = _CATALYST_SCORE.get(cat_label, 0.5)
-        val_score = _VALUATION_SCORE.get(val_label, 0.5)
+        combined = (
+            cfg.technical_weight * tech
+            + cfg.fundamentals_weight * fund
+            + cfg.catalyst_weight * catalyst
+            + cfg.valuation_weight * valuation
+        ) / total_weight
+        combined = max(0.0, min(1.0, combined))
 
-        # Apply freshness and coverage penalties from business_quality_score if available
-        snap = _get(candidate, "fundamentals_snapshot")
-        if snap is not None:
-            bqs = _safe_float(_get(snap, "business_quality_score"))
-            if bqs is not None:
-                fund_score = bqs  # use richer quality score when available
-            freshness_pen = _safe_float(_get(snap, "freshness_penalty")) or 0.0
-            coverage_pen = _safe_float(_get(snap, "coverage_penalty")) or 0.0
-            # Penalties reduce the fundamentals contribution proportionally
-            fund_score = fund_score * max(0.0, 1.0 - freshness_pen - coverage_pen * 0.5)
+        scored.append((candidate, combined, candidate.rank))
 
-        combined = (wt * tech_score + wf * fund_score + wc * cat_score + wv * val_score) / total_w
-        scored.append((combined, int(raw_rank), candidate))
+    scored.sort(key=lambda item: (-item[1], item[2], item[0].ticker))
 
-    scored.sort(key=lambda t: (-t[0], t[1]))
-
-    result: list[Any] = []
-    for priority_rank, (combined_score, _raw_rank, candidate) in enumerate(scored, start=1):
-        raw_technical_rank = _safe_float(_get(candidate, "rank")) or float(priority_rank)
-        if isinstance(candidate, dict):
-            candidate = dict(candidate)
-            candidate["raw_technical_rank"] = int(raw_technical_rank)
-            candidate["combined_priority_score"] = round(combined_score, 4)
-        else:
-            try:
-                object.__setattr__(candidate, "raw_technical_rank", int(raw_technical_rank))
-                object.__setattr__(candidate, "combined_priority_score", round(combined_score, 4))
-            except (AttributeError, TypeError):
-                pass
-        result.append(candidate)
+    result: list[ScreenerCandidate] = []
+    for candidate, score, _raw_rank in scored:
+        result.append(
+            candidate.model_copy(
+                update={
+                    "raw_technical_rank": candidate.rank,
+                    "combined_priority_score": round(score, 6),
+                }
+            )
+        )
 
     return result

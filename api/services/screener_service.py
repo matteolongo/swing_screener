@@ -39,6 +39,7 @@ from swing_screener.reporting.concentration import sector_concentration_warnings
 from swing_screener.fundamentals.storage import FundamentalsStorage
 from swing_screener.intelligence.storage import IntelligenceStorage
 from swing_screener.recommendation import build_decision_summary
+from swing_screener.recommendation.priority import CombinedPriorityConfig, compute_combined_priority
 from swing_screener.strategy.config import (
     build_entry_config,
     build_ranking_config,
@@ -367,6 +368,7 @@ def _apply_decision_summary_context(
                         opportunity=opportunity_cache.get(candidate.ticker),
                         fundamentals=fund_snap,
                     ),
+                    "fundamentals_snapshot": fund_snap,
                     "fundamentals_asof": str(fund_asof) if fund_asof else None,
                     "intelligence_asof": latest_opportunities_date,
                 }
@@ -559,6 +561,7 @@ class ScreenerService:
             requested_top = request.top or 20
             if requested_top <= 0:
                 raise HTTPException(status_code=422, detail="top must be >= 1")
+            combined_priority_cfg = CombinedPriorityConfig()
             warnings: list[str] = []
 
             fields_set = request.model_fields_set
@@ -695,7 +698,9 @@ class ScreenerService:
             if not results.empty and "confidence" in results.columns:
                 results = results.sort_values("confidence", ascending=False)
                 if request.top:
-                    results = results.head(request.top)
+                    # Stage 1: widen prefilter to allow combined priority stage to re-rank
+                    prefilter_n = request.top * combined_priority_cfg.prefilter_multiplier
+                    results = results.head(prefilter_n)
                 results["rank"] = range(1, len(results) + 1)
 
             if len(results) < requested_top:
@@ -789,6 +794,16 @@ class ScreenerService:
                         score=_safe_float(row.get("score")),
                         confidence=_safe_float(row.get("confidence")),
                         rank=int(row.get("rank", len(candidates) + 1)),
+                        sma20_slope=_safe_optional_float(row.get("sma20_slope")),
+                        sma50_slope=_safe_optional_float(row.get("sma50_slope")),
+                        consolidation_tightness=_safe_optional_float(row.get("consolidation_tightness")),
+                        close_location_in_range=_safe_optional_float(row.get("close_location_in_range")),
+                        above_breakout_extension=_safe_optional_float(row.get("above_breakout_extension")),
+                        breakout_volume_confirmation=(
+                            bool(row.get("breakout_volume_confirmation"))
+                            if not _is_na_scalar(row.get("breakout_volume_confirmation"))
+                            else None
+                        ),
                         signal=str(signal) if not _is_na_scalar(signal) else None,
                         entry=rec_risk.entry,
                         stop=rec_risk.stop if stop_val is not None else None,
@@ -843,6 +858,9 @@ class ScreenerService:
             candidates = filtered_candidates
             candidates = _apply_cached_fundamentals_context(candidates)
             candidates = _apply_decision_summary_context(candidates)
+            # Stage 2: combined priority re-ranks prefilter set and trims to final top-N
+            candidates = compute_combined_priority(candidates, cfg=combined_priority_cfg)
+            candidates = candidates[:requested_top]
             candidates = _rebuild_recommendations_with_decision_action(
                 candidates,
                 risk_cfg=risk_cfg,
