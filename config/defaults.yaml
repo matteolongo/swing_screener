@@ -337,6 +337,12 @@ low_level:
       w_mom_12m: 0.35
       w_rs_6m: 0.2
       top_n: 15
+    combined_priority:
+      technical_weight: 0.45
+      fundamentals_weight: 0.25
+      catalyst_weight: 0.20
+      valuation_weight: 0.10
+      prefilter_multiplier: 3
     signals:
       breakout_lookback: 50
       pullback_ma: 20

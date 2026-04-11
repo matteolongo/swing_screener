@@ -69,6 +69,8 @@ class ScreenerCandidate(BaseModel):
     execution_note: Optional[str] = None
     same_symbol: Optional[SameSymbolCandidateContext] = None
     decision_summary: Optional[DecisionSummary] = None
+    raw_technical_rank: Optional[int] = None
+    combined_priority_score: Optional[float] = None
 
 
 class ScreenerRequest(BaseModel):
