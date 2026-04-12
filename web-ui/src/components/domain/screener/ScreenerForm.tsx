@@ -1,6 +1,7 @@
 import { PlayCircle, RefreshCw, ChevronDown, ChevronUp, Settings2 } from 'lucide-react';
 import { useCallback, type ChangeEvent } from 'react';
 import Button from '@/components/common/Button';
+import Badge from '@/components/common/Badge';
 import type { DecisionActionFilter } from '@/features/screener/prioritization';
 import type { UniverseSummary } from '@/features/screener/types';
 import { t } from '@/i18n/t';
@@ -10,6 +11,38 @@ type ExchangeFilter = 'all' | 'us_primary' | 'europe_primary' | 'xams' | 'xetr' 
 type InstrumentFilter = 'all' | 'equity' | 'etf';
 
 const TOP_N_MAX = 200;
+
+const universeFreshnessVariant = (status: UniverseSummary['freshness_status']): 'default' | 'success' | 'warning' | 'error' => {
+  switch (status) {
+    case 'fresh':
+      return 'success';
+    case 'review_due':
+      return 'warning';
+    case 'stale':
+      return 'error';
+    default:
+      return 'default';
+  }
+};
+
+const universeFreshnessLabel = (status: UniverseSummary['freshness_status']): string => {
+  switch (status) {
+    case 'fresh':
+      return 'Fresh';
+    case 'review_due':
+      return 'Review due';
+    case 'stale':
+      return 'Stale';
+    default:
+      return 'Unknown';
+  }
+};
+
+const universeSourceLabel = (source: string): string => {
+  if (source === 'euronext_review') return 'Euronext review';
+  if (source === 'manual') return 'Manual';
+  return source;
+};
 
 const formatActionFilterLabel = (value: DecisionActionFilter): string => {
   switch (value) {
@@ -108,6 +141,7 @@ export default function ScreenerForm({
         <Settings2 className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
         <span className="text-xs text-gray-600 flex-1 min-w-0 truncate">
           {selectedUniverseMeta?.description ?? selectedUniverse} · top {topN} · ${minPrice}–${maxPrice}
+          {selectedUniverseMeta ? ` · ${selectedUniverseMeta.member_count} members · ${universeSourceLabel(selectedUniverseMeta.source)} · ${universeFreshnessLabel(selectedUniverseMeta.freshness_status)}` : ''}
           {currencyFilter !== 'all' ? ` · ${currencyFilter.toUpperCase()}` : ''}
           {exchangeFilter !== 'all' ? ` · ${exchangeFilter}` : ''}
           {instrumentFilter !== 'all' ? ` · ${instrumentFilter}` : ''}
@@ -289,6 +323,28 @@ export default function ScreenerForm({
             </Button>
           </div>
         </div>
+
+        {selectedUniverseMeta ? (
+          <div className="rounded-lg border border-gray-200 bg-white px-3 py-2">
+            <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+              <div className="text-xs text-gray-600">
+                <span className="font-medium text-gray-900">{selectedUniverseMeta.member_count}</span> members
+                {' · '}
+                {universeSourceLabel(selectedUniverseMeta.source)}
+                {' · '}
+                source as of {selectedUniverseMeta.source_asof}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Badge variant={universeFreshnessVariant(selectedUniverseMeta.freshness_status)}>
+                  {universeFreshnessLabel(selectedUniverseMeta.freshness_status)}
+                </Badge>
+                {selectedUniverseMeta.exchange_mics.map((mic) => (
+                  <Badge key={mic} variant="default">{mic}</Badge>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         <div className="flex flex-col gap-3 border-t border-gray-200 pt-3 md:flex-row md:items-end md:justify-between">
           <div className="flex flex-col gap-3 md:flex-row md:items-center">

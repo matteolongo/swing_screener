@@ -9,7 +9,8 @@
   "stale_after_days": 100,
   "rules": {
     "exchange_mics": [
-      "XAMS"
+      "XAMS",
+      "XPAR"
     ],
     "currencies": [
       "EUR"
@@ -17,124 +18,190 @@
   },
   "constituents": [
     {
-      "symbol": "ARCAD.AS",
-      "exchange_mic": "XAMS",
-      "currency": "EUR"
-    },
-    {
-      "symbol": "HAL.AS",
-      "exchange_mic": "XAMS",
-      "currency": "EUR"
-    },
-    {
       "symbol": "AALB.AS",
       "exchange_mic": "XAMS",
-      "currency": "EUR"
+      "currency": "EUR",
+      "source_name": "AALBERTS NV",
+      "source_symbol": "AALB"
     },
     {
-      "symbol": "LIGHT.AS",
-      "exchange_mic": "XAMS",
-      "currency": "EUR"
+      "symbol": "AF.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "AIR FRANCE -KLM",
+      "source_symbol": "AF"
     },
     {
       "symbol": "ALLFG.AS",
       "exchange_mic": "XAMS",
-      "currency": "EUR"
-    },
-    {
-      "symbol": "VPK.AS",
-      "exchange_mic": "XAMS",
-      "currency": "EUR"
-    },
-    {
-      "symbol": "CTPNV.AS",
-      "exchange_mic": "XAMS",
-      "currency": "EUR"
-    },
-    {
-      "symbol": "BAMNB.AS",
-      "exchange_mic": "XAMS",
-      "currency": "EUR"
-    },
-    {
-      "symbol": "HEIJM.AS",
-      "exchange_mic": "XAMS",
-      "currency": "EUR"
-    },
-    {
-      "symbol": "VLK.AS",
-      "exchange_mic": "XAMS",
-      "currency": "EUR"
-    },
-    {
-      "symbol": "FAGR.AS",
-      "exchange_mic": "XAMS",
-      "currency": "EUR"
-    },
-    {
-      "symbol": "APAM.AS",
-      "exchange_mic": "XAMS",
-      "currency": "EUR"
-    },
-    {
-      "symbol": "ECMPA.AS",
-      "exchange_mic": "XAMS",
-      "currency": "EUR"
-    },
-    {
-      "symbol": "TWEKA.AS",
-      "exchange_mic": "XAMS",
-      "currency": "EUR"
-    },
-    {
-      "symbol": "GLPG.AS",
-      "exchange_mic": "XAMS",
-      "currency": "EUR"
-    },
-    {
-      "symbol": "BFIT.AS",
-      "exchange_mic": "XAMS",
-      "currency": "EUR"
-    },
-    {
-      "symbol": "HAVAS.AS",
-      "exchange_mic": "XAMS",
-      "currency": "EUR"
+      "currency": "EUR",
+      "source_name": "ALLFUNDS GROUP",
+      "source_symbol": "ALLFG"
     },
     {
       "symbol": "AMG.AS",
       "exchange_mic": "XAMS",
-      "currency": "EUR"
+      "currency": "EUR",
+      "source_name": "AMG",
+      "source_symbol": "AMG"
     },
     {
-      "symbol": "FLOW.AS",
+      "symbol": "APAM.AS",
       "exchange_mic": "XAMS",
-      "currency": "EUR"
+      "currency": "EUR",
+      "source_name": "APERAM",
+      "source_symbol": "APAM"
+    },
+    {
+      "symbol": "ARCAD.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR",
+      "source_name": "ARCADIS",
+      "source_symbol": "ARCAD"
+    },
+    {
+      "symbol": "BAMNB.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR",
+      "source_name": "BAM GROEP KON",
+      "source_symbol": "BAMNB"
+    },
+    {
+      "symbol": "BFIT.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR",
+      "source_name": "BASIC-FIT",
+      "source_symbol": "BFIT"
     },
     {
       "symbol": "CRBN.AS",
       "exchange_mic": "XAMS",
-      "currency": "EUR"
+      "currency": "EUR",
+      "source_name": "CORBION",
+      "source_symbol": "CRBN"
     },
     {
-      "symbol": "PHARM.AS",
+      "symbol": "CTPNV.AS",
       "exchange_mic": "XAMS",
-      "currency": "EUR"
+      "currency": "EUR",
+      "source_name": "CTP",
+      "source_symbol": "CTPNV"
+    },
+    {
+      "symbol": "ECMPA.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR",
+      "source_name": "EUROCOMMERCIAL",
+      "source_symbol": "ECMPA"
+    },
+    {
+      "symbol": "FAGR.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR",
+      "source_name": "FAGRON",
+      "source_symbol": "FAGR"
+    },
+    {
+      "symbol": "FLOW.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR",
+      "source_name": "FLOW TRADERS",
+      "source_symbol": "FLOW"
     },
     {
       "symbol": "FUR.AS",
       "exchange_mic": "XAMS",
-      "currency": "EUR"
+      "currency": "EUR",
+      "source_name": "FUGRO",
+      "source_symbol": "FUR"
+    },
+    {
+      "symbol": "GLPG.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR",
+      "source_name": "GALAPAGOS",
+      "source_symbol": "GLPG"
+    },
+    {
+      "symbol": "HAL.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR",
+      "source_name": "HAL TRUST",
+      "source_symbol": "HAL"
+    },
+    {
+      "symbol": "HAVAS.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR",
+      "source_name": "HAVAS",
+      "source_symbol": "HAVAS"
+    },
+    {
+      "symbol": "HEIJM.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR",
+      "source_name": "HEIJMANS KON",
+      "source_symbol": "HEIJM"
+    },
+    {
+      "symbol": "PHARM.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR",
+      "source_name": "PHARMING GROUP",
+      "source_symbol": "PHARM"
+    },
+    {
+      "symbol": "LIGHT.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR",
+      "source_name": "SIGNIFY NV",
+      "source_symbol": "LIGHT"
+    },
+    {
+      "symbol": "TWEKA.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR",
+      "source_name": "TKH GROUP",
+      "source_symbol": "TWEKA"
+    },
+    {
+      "symbol": "VLK.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR",
+      "source_name": "V LANSCHOT KEMPEN",
+      "source_symbol": "VLK"
+    },
+    {
+      "symbol": "VPK.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR",
+      "source_name": "VOPAK",
+      "source_symbol": "VPK"
     },
     {
       "symbol": "RAND.AS",
       "exchange_mic": "XAMS",
-      "currency": "EUR"
+      "currency": "EUR",
+      "source_name": "RANDSTAD NV",
+      "source_symbol": "RAND"
     },
     {
       "symbol": "THEON.AS",
       "exchange_mic": "XAMS",
-      "currency": "EUR"
+      "currency": "EUR",
+      "source_name": "THEON INTERNATIONAL",
+      "source_symbol": "THEON"
+    }
+  ],
+  "source_adapter": "euronext_aex_family_review",
+  "source_documents": [
+    {
+      "label": "Euronext September 2025 review results",
+      "url": "https://www.euronext.com/en/about/media/euronext-press-releases/euronext-announces-september-2025-review-results-aexr-family"
+    },
+    {
+      "label": "Euronext March 2026 annual review results",
+      "url": "https://www.euronext.com/en/about/media/euronext-press-releases/euronext-announces-march-2026-annual-review-results-aexr-family"
     }
   ]
 }

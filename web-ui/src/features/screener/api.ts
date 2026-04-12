@@ -10,7 +10,7 @@ import {
 } from './types';
 
 export async function fetchUniverses(): Promise<UniversesResponse> {
-  const res = await fetch(apiUrl(API_ENDPOINTS.screenerUniverses));
+  const res = await fetch(apiUrl(API_ENDPOINTS.universes));
   if (!res.ok) throw new Error('Failed to fetch universes');
   return res.json();
 }

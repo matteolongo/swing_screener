@@ -435,6 +435,7 @@ export const messagesEn = {
       today: 'Today',
       book: 'Book',
       research: 'Research',
+      universes: 'Universes',
       settings: 'Settings',
     },
     activeStrategy: 'Active Strategy',

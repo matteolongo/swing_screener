@@ -26,6 +26,7 @@ from api.routers import (
     screener_history,
     strategy,
     symbol_notes,
+    universes,
     watchlist,
     weekly_reviews,
 )
@@ -291,6 +292,7 @@ app.include_router(config.router, prefix="/api/config", tags=["config"])
 app.include_router(strategy.router, prefix="/api/strategy", tags=["strategy"])
 app.include_router(screener.router, prefix="/api/screener", tags=["screener"])
 app.include_router(screener_history.router, prefix="/api/screener", tags=["screener"])
+app.include_router(universes.router, prefix="/api/universes", tags=["universes"])
 app.include_router(portfolio.router, prefix="/api/portfolio", tags=["portfolio"])
 app.include_router(watchlist.router, prefix="/api/watchlist", tags=["watchlist"])
 app.include_router(intelligence.router, prefix="/api/intelligence", tags=["intelligence"])

@@ -19,152 +19,223 @@
     {
       "symbol": "ABN.AS",
       "exchange_mic": "XAMS",
-      "currency": "EUR"
+      "currency": "EUR",
+      "source_name": "ABN AMRO BANK N.V.",
+      "source_symbol": "ABN"
     },
     {
       "symbol": "ADYEN.AS",
       "exchange_mic": "XAMS",
-      "currency": "EUR"
+      "currency": "EUR",
+      "source_name": "ADYEN",
+      "source_symbol": "ADYEN"
     },
     {
       "symbol": "AGN.AS",
       "exchange_mic": "XAMS",
-      "currency": "EUR"
+      "currency": "EUR",
+      "source_name": "AEGON",
+      "source_symbol": "AGN"
     },
     {
       "symbol": "AD.AS",
       "exchange_mic": "XAMS",
-      "currency": "EUR"
+      "currency": "EUR",
+      "source_name": "AHOLD DEL",
+      "source_symbol": "AD"
     },
     {
       "symbol": "AKZA.AS",
       "exchange_mic": "XAMS",
-      "currency": "EUR"
+      "currency": "EUR",
+      "source_name": "AKZO NOBEL",
+      "source_symbol": "AKZA"
     },
     {
       "symbol": "MT.AS",
       "exchange_mic": "XAMS",
-      "currency": "EUR"
+      "currency": "EUR",
+      "source_name": "ARCELORMITTAL SA",
+      "source_symbol": "MT"
     },
     {
       "symbol": "ASM.AS",
       "exchange_mic": "XAMS",
-      "currency": "EUR"
+      "currency": "EUR",
+      "source_name": "ASM INTERNATIONAL",
+      "source_symbol": "ASM"
     },
     {
       "symbol": "ASML.AS",
       "exchange_mic": "XAMS",
-      "currency": "EUR"
+      "currency": "EUR",
+      "source_name": "ASML HOLDING",
+      "source_symbol": "ASML"
     },
     {
       "symbol": "ASRNL.AS",
       "exchange_mic": "XAMS",
-      "currency": "EUR"
+      "currency": "EUR",
+      "source_name": "ASR NEDERLAND",
+      "source_symbol": "ASRNL"
     },
     {
       "symbol": "BESI.AS",
       "exchange_mic": "XAMS",
-      "currency": "EUR"
-    },
-    {
-      "symbol": "DSFIR.AS",
-      "exchange_mic": "XAMS",
-      "currency": "EUR"
-    },
-    {
-      "symbol": "EXO.AS",
-      "exchange_mic": "XAMS",
-      "currency": "EUR"
-    },
-    {
-      "symbol": "HEIA.AS",
-      "exchange_mic": "XAMS",
-      "currency": "EUR"
-    },
-    {
-      "symbol": "IMCD.AS",
-      "exchange_mic": "XAMS",
-      "currency": "EUR"
-    },
-    {
-      "symbol": "INGA.AS",
-      "exchange_mic": "XAMS",
-      "currency": "EUR"
-    },
-    {
-      "symbol": "KPN.AS",
-      "exchange_mic": "XAMS",
-      "currency": "EUR"
-    },
-    {
-      "symbol": "NN.AS",
-      "exchange_mic": "XAMS",
-      "currency": "EUR"
-    },
-    {
-      "symbol": "PHIA.AS",
-      "exchange_mic": "XAMS",
-      "currency": "EUR"
-    },
-    {
-      "symbol": "PRX.AS",
-      "exchange_mic": "XAMS",
-      "currency": "EUR"
-    },
-    {
-      "symbol": "REN.AS",
-      "exchange_mic": "XAMS",
-      "currency": "EUR"
-    },
-    {
-      "symbol": "SHELL.AS",
-      "exchange_mic": "XAMS",
-      "currency": "EUR"
-    },
-    {
-      "symbol": "UMG.AS",
-      "exchange_mic": "XAMS",
-      "currency": "EUR"
-    },
-    {
-      "symbol": "UNA.AS",
-      "exchange_mic": "XAMS",
-      "currency": "EUR"
-    },
-    {
-      "symbol": "WKL.AS",
-      "exchange_mic": "XAMS",
-      "currency": "EUR"
+      "currency": "EUR",
+      "source_name": "BE SEMICONDUCTOR",
+      "source_symbol": "BESI"
     },
     {
       "symbol": "CVC.AS",
       "exchange_mic": "XAMS",
-      "currency": "EUR"
+      "currency": "EUR",
+      "source_name": "CVC CAPITAL",
+      "source_symbol": "CVC"
+    },
+    {
+      "symbol": "DSFIR.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR",
+      "source_name": "DSM FIRMENICH AG",
+      "source_symbol": "DSFIR"
+    },
+    {
+      "symbol": "EXO.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR",
+      "source_name": "EXOR NV",
+      "source_symbol": "EXO"
+    },
+    {
+      "symbol": "HEIA.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR",
+      "source_name": "HEINEKEN",
+      "source_symbol": "HEIA"
+    },
+    {
+      "symbol": "IMCD.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR",
+      "source_name": "IMCD",
+      "source_symbol": "IMCD"
+    },
+    {
+      "symbol": "INGA.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR",
+      "source_name": "ING GROEP N.V.",
+      "source_symbol": "INGA"
     },
     {
       "symbol": "INPST.AS",
       "exchange_mic": "XAMS",
-      "currency": "EUR"
+      "currency": "EUR",
+      "source_name": "INPOST",
+      "source_symbol": "INPST"
     },
     {
       "symbol": "JDEP.AS",
       "exchange_mic": "XAMS",
-      "currency": "EUR"
-    },
-    {
-      "symbol": "SBMO.AS",
-      "exchange_mic": "XAMS",
-      "currency": "EUR"
-    },
-    {
-      "symbol": "WDP.AS",
-      "exchange_mic": "XAMS",
-      "currency": "EUR"
+      "currency": "EUR",
+      "source_name": "JDE PEET'S",
+      "source_symbol": "JDEP"
     },
     {
       "symbol": "TKWY.AS",
       "exchange_mic": "XAMS",
-      "currency": "EUR"
+      "currency": "EUR",
+      "source_name": "JUST EAT TAKEAWAY",
+      "source_symbol": "TKWY"
+    },
+    {
+      "symbol": "KPN.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR",
+      "source_name": "KPN KON",
+      "source_symbol": "KPN"
+    },
+    {
+      "symbol": "NN.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR",
+      "source_name": "NN GROUP",
+      "source_symbol": "NN"
+    },
+    {
+      "symbol": "PHIA.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR",
+      "source_name": "PHILIPS KON",
+      "source_symbol": "PHIA"
+    },
+    {
+      "symbol": "PRX.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR",
+      "source_name": "PROSUS",
+      "source_symbol": "PRX"
+    },
+    {
+      "symbol": "REN.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR",
+      "source_name": "RELX",
+      "source_symbol": "REN"
+    },
+    {
+      "symbol": "SHELL.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR",
+      "source_name": "SHELL PLC",
+      "source_symbol": "SHELL"
+    },
+    {
+      "symbol": "UMG.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR",
+      "source_name": "UMG",
+      "source_symbol": "UMG"
+    },
+    {
+      "symbol": "UNA.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR",
+      "source_name": "UNILEVER",
+      "source_symbol": "UNA"
+    },
+    {
+      "symbol": "WDP.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR",
+      "source_name": "WDP",
+      "source_symbol": "WDP"
+    },
+    {
+      "symbol": "WKL.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR",
+      "source_name": "WOLTERS KLUWER",
+      "source_symbol": "WKL"
+    },
+    {
+      "symbol": "SBMO.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR",
+      "source_name": "SBM OFFSHORE",
+      "source_symbol": "SBMO"
+    }
+  ],
+  "source_adapter": "euronext_aex_family_review",
+  "source_documents": [
+    {
+      "label": "Euronext September 2025 review results",
+      "url": "https://www.euronext.com/en/about/media/euronext-press-releases/euronext-announces-september-2025-review-results-aexr-family"
+    },
+    {
+      "label": "Euronext March 2026 annual review results",
+      "url": "https://www.euronext.com/en/about/media/euronext-press-releases/euronext-announces-march-2026-annual-review-results-aexr-family"
     }
   ]
 }

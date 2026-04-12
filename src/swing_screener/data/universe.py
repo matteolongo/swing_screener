@@ -6,12 +6,15 @@ import re
 import warnings
 from dataclasses import dataclass
 from functools import lru_cache
+from pathlib import Path
 from typing import Iterable, Optional, Sequence
 
 try:
     from importlib import resources as importlib_resources
 except Exception:  # pragma: no cover
     import importlib_resources  # type: ignore
+
+from swing_screener.data.universe_sources import refresh_snapshot_from_source
 
 
 _TICKER_RE = re.compile(r"^[A-Z0-9.\-]+$")
@@ -118,6 +121,59 @@ def _load_snapshot(universe_id: str) -> dict:
         raise ValueError(f"Invalid snapshot JSON for universe '{universe_id}'") from exc
 
 
+def _registry_root_path() -> Path:
+    return Path(__file__).resolve().parent / "universes" / "registry"
+
+
+def _snapshot_path(universe_id: str) -> Path:
+    return _registry_root_path() / "snapshots" / f"{universe_id}.json"
+
+
+def _write_snapshot(universe_id: str, snapshot: dict) -> None:
+    path = _snapshot_path(universe_id)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(snapshot, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
+    _load_snapshot.cache_clear()
+
+
+def _freshness_payload(snapshot: dict) -> dict:
+    last_reviewed = snapshot.get("last_reviewed_at")
+    stale_after = snapshot.get("stale_after_days")
+    try:
+        reviewed_date = datetime.date.fromisoformat(str(last_reviewed))
+    except (TypeError, ValueError):
+        return {
+            "days_since_review": None,
+            "freshness_status": "unknown",
+            "is_stale": False,
+        }
+
+    days_since_review = max((datetime.date.today() - reviewed_date).days, 0)
+    if not stale_after:
+        return {
+            "days_since_review": days_since_review,
+            "freshness_status": "fresh",
+            "is_stale": False,
+        }
+    if days_since_review > stale_after:
+        return {
+            "days_since_review": days_since_review,
+            "freshness_status": "stale",
+            "is_stale": True,
+        }
+    if days_since_review >= max(int(stale_after * 0.8), 1):
+        return {
+            "days_since_review": days_since_review,
+            "freshness_status": "review_due",
+            "is_stale": False,
+        }
+    return {
+        "days_since_review": days_since_review,
+        "freshness_status": "fresh",
+        "is_stale": False,
+    }
+
+
 def _check_stale(snapshot: dict) -> None:
     uid = snapshot.get("id", "?")
     kind = snapshot.get("kind", "curated")
@@ -197,18 +253,125 @@ def get_instrument_record(symbol: str) -> Optional[dict]:
     return _load_instrument_master().get(str(symbol).strip().upper())
 
 
+def _summary_from_entry(entry: dict, snapshot: dict) -> dict:
+    constituents = snapshot.get("constituents", [])
+    item = dict(entry)
+    for key in ("description", "benchmark", "source", "source_asof", "last_reviewed_at", "stale_after_days", "kind"):
+        if key in snapshot and snapshot.get(key) not in (None, ""):
+            item[key] = snapshot.get(key)
+    item["member_count"] = len(constituents)
+    item["currencies"] = sorted({str(c.get("currency", "")).upper() for c in constituents if c.get("currency")})
+    item["exchange_mics"] = sorted({str(c.get("exchange_mic", "")).upper() for c in constituents if c.get("exchange_mic")})
+    item["source_adapter"] = str(snapshot.get("source_adapter") or "manual_snapshot")
+    item["source_documents"] = list(snapshot.get("source_documents") or [])
+    item["refreshable"] = item["source_adapter"] != "manual_snapshot"
+    item.update(_freshness_payload(snapshot))
+    return item
+
+
 def list_package_universe_entries() -> list[dict]:
     """Return manifest entries enriched with lightweight snapshot metadata."""
     entries = []
     for entry in _load_registry_manifest():
-        item = dict(entry)
-        snapshot = _load_snapshot(item["id"])
-        constituents = snapshot.get("constituents", [])
-        item["member_count"] = len(constituents)
-        item["currencies"] = sorted({str(c.get("currency", "")).upper() for c in constituents if c.get("currency")})
-        item["exchange_mics"] = sorted({str(c.get("exchange_mic", "")).upper() for c in constituents if c.get("exchange_mic")})
+        snapshot = _load_snapshot(entry["id"])
+        item = _summary_from_entry(entry, snapshot)
         entries.append(item)
     return sorted(entries, key=lambda item: str(item.get("id", "")))
+
+
+def get_package_universe_entry(universe_id: str) -> dict:
+    entry = get_universe_meta(universe_id)
+    if not entry:
+        raise ValueError(f"Unknown universe id: '{universe_id}'")
+    snapshot = _load_snapshot(universe_id)
+    return _summary_from_entry(entry, snapshot)
+
+
+def get_package_universe_detail(universe_id: str) -> dict:
+    entry = get_package_universe_entry(universe_id)
+    snapshot = _load_snapshot(universe_id)
+    errors = validate_universe_snapshot(universe_id)
+    constituents: list[dict] = []
+    for item in snapshot.get("constituents", []):
+        rec = get_instrument_record(item.get("symbol", "")) or {}
+        yahoo_symbol = str((rec.get("provider_symbol_map") or {}).get("yahoo_finance") or item.get("symbol") or "")
+        constituents.append(
+            {
+                "symbol": item.get("symbol"),
+                "source_name": item.get("source_name"),
+                "source_symbol": item.get("source_symbol") or yahoo_symbol.split(".")[0],
+                "exchange_mic": item.get("exchange_mic") or rec.get("exchange_mic"),
+                "currency": item.get("currency") or rec.get("currency"),
+                "instrument_type": rec.get("instrument_type"),
+                "status": rec.get("status"),
+                "primary_listing": rec.get("primary_listing"),
+            }
+        )
+    return {
+        **entry,
+        "rules": snapshot.get("rules", {}),
+        "validation_errors": errors,
+        "constituents": constituents,
+    }
+
+
+def refresh_package_universe(universe_id: str, *, apply: bool = False) -> dict:
+    entry = get_universe_meta(universe_id)
+    if not entry:
+        raise ValueError(f"Unknown universe id: '{universe_id}'")
+    current_snapshot = _load_snapshot(universe_id)
+    instrument_master = _load_instrument_master()
+    preview = refresh_snapshot_from_source(universe_id, current_snapshot, instrument_master)
+    proposed_snapshot = json.loads(json.dumps(current_snapshot))
+    proposed_snapshot["constituents"] = preview.constituents
+    proposed_snapshot["source_asof"] = preview.source_asof
+    proposed_snapshot["source_adapter"] = preview.source_adapter
+    proposed_snapshot["source_documents"] = preview.source_documents
+    proposed_snapshot["last_reviewed_at"] = datetime.date.today().isoformat()
+    rules = dict(proposed_snapshot.get("rules") or {})
+    exchange_mics = sorted(
+        {
+            str(item.get("exchange_mic", "")).upper()
+            for item in preview.constituents
+            if item.get("exchange_mic")
+        }
+    )
+    currencies = sorted(
+        {
+            str(item.get("currency", "")).upper()
+            for item in preview.constituents
+            if item.get("currency")
+        }
+    )
+    if exchange_mics:
+        rules["exchange_mics"] = exchange_mics
+    if currencies:
+        rules["currencies"] = currencies
+    proposed_snapshot["rules"] = rules
+
+    current_symbols = [str(item.get("symbol", "")).upper() for item in current_snapshot.get("constituents", [])]
+    proposed_symbols = [str(item.get("symbol", "")).upper() for item in proposed_snapshot.get("constituents", [])]
+    current_set = set(current_symbols)
+    proposed_set = set(proposed_symbols)
+    additions = [symbol for symbol in proposed_symbols if symbol not in current_set]
+    removals = [symbol for symbol in current_symbols if symbol not in proposed_set]
+    changed = current_symbols != proposed_symbols
+
+    if apply and changed:
+        _write_snapshot(universe_id, proposed_snapshot)
+        current_snapshot = proposed_snapshot
+
+    summary = _summary_from_entry(entry, current_snapshot if apply and changed else proposed_snapshot)
+    return {
+        "universe": summary,
+        "applied": apply and changed,
+        "changed": changed,
+        "current_member_count": len(current_symbols),
+        "proposed_member_count": len(proposed_symbols),
+        "additions": additions,
+        "removals": removals,
+        "notes": list(preview.notes),
+    }
 
 
 def filter_tickers_by_metadata(

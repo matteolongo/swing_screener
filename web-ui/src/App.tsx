@@ -15,6 +15,7 @@ const Onboarding = lazy(() => import('./pages/Onboarding'));
 const Today = lazy(() => import('./pages/Today'));
 const Book = lazy(() => import('./pages/Book'));
 const Research = lazy(() => import('./pages/Research'));
+const Universes = lazy(() => import('./pages/Universes'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -45,6 +46,7 @@ function App() {
                 <Route path="today" element={<ErrorBoundary><Today /></ErrorBoundary>} />
                 <Route path="book" element={<ErrorBoundary><Book /></ErrorBoundary>} />
                 <Route path="research" element={<ErrorBoundary><Research /></ErrorBoundary>} />
+                <Route path="universes" element={<ErrorBoundary><Universes /></ErrorBoundary>} />
 
                 {/* Strategy / settings — still accessible */}
                 <Route path="strategy" element={<ErrorBoundary><Strategy /></ErrorBoundary>} />

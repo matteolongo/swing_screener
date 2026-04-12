@@ -214,6 +214,29 @@
     "instrument_type": "equity"
   },
   {
+    "symbol": "AF.PA",
+    "exchange_mic": "XPAR",
+    "country_code": "FR",
+    "currency": "EUR",
+    "timezone": "Europe/Paris",
+    "aliases": [
+      "AF.PA",
+      "AF",
+      "AIR FRANCE-KLM"
+    ],
+    "provider_symbol_map": {
+      "yahoo_finance": "AF.PA"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "manual",
+    "source_asof": "2026-04-12",
+    "last_reviewed_at": "2026-04-12",
+    "instrument_type": "equity"
+  },
+  {
     "symbol": "AGN.AS",
     "exchange_mic": "XAMS",
     "country_code": "NL",

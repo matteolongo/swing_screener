@@ -321,10 +321,21 @@ export interface UniverseSummary {
   member_count: number;
   currencies: string[];
   exchange_mics: string[];
+  source_adapter: string;
+  source_documents: UniverseSourceDocument[];
+  refreshable: boolean;
+  days_since_review: number | null;
+  freshness_status: 'fresh' | 'review_due' | 'stale' | 'unknown';
+  is_stale: boolean;
 }
 
 export interface UniversesResponse {
   universes: UniverseSummary[];
+}
+
+export interface UniverseSourceDocument {
+  label: string;
+  url: string;
 }
 
 function transformDecisionSummary(apiSummary: DecisionSummaryAPI): DecisionSummary {

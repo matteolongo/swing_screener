@@ -152,23 +152,30 @@ def test_fresh_snapshot_does_not_raise_or_warn():
 
 def test_amsterdam_aex_all_xams():
     snapshot = _load_snapshot("amsterdam_aex")
+    assert len(snapshot["constituents"]) == 30
     for c in snapshot["constituents"]:
         assert c["exchange_mic"] == "XAMS", f"{c['symbol']} has wrong MIC: {c['exchange_mic']}"
         assert c["currency"] == "EUR", f"{c['symbol']} has wrong currency: {c['currency']}"
 
 
-def test_amsterdam_amx_all_xams():
+def test_amsterdam_amx_official_membership_includes_air_france_klm():
     snapshot = _load_snapshot("amsterdam_amx")
+    assert len(snapshot["constituents"]) == 25
+    symbols = {c["symbol"] for c in snapshot["constituents"]}
+    assert "AF.PA" in symbols
     for c in snapshot["constituents"]:
-        assert c["exchange_mic"] == "XAMS", f"{c['symbol']} has wrong MIC: {c['exchange_mic']}"
         assert c["currency"] == "EUR"
+        assert c["exchange_mic"] in {"XAMS", "XPAR"}, f"{c['symbol']} has wrong MIC: {c['exchange_mic']}"
 
 
-def test_amsterdam_all_all_xams():
+def test_amsterdam_all_tracks_verified_aex_plus_amx_membership():
     snapshot = _load_snapshot("amsterdam_all")
+    assert len(snapshot["constituents"]) == 55
+    symbols = {c["symbol"] for c in snapshot["constituents"]}
+    assert "AF.PA" in symbols
     for c in snapshot["constituents"]:
-        assert c["exchange_mic"] == "XAMS", f"{c['symbol']} has wrong MIC"
         assert c["currency"] == "EUR"
+        assert c["exchange_mic"] in {"XAMS", "XPAR"}, f"{c['symbol']} has wrong MIC"
 
 
 def test_europe_large_caps_no_gbp():
