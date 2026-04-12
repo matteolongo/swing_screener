@@ -436,6 +436,10 @@ export const messagesEn = {
       book: 'Book',
       research: 'Research',
       settings: 'Settings',
+      learn: 'Learn',
+      practice: 'Practice',
+      review: 'Review',
+      methodSettings: 'Method Settings',
     },
     activeStrategy: 'Active Strategy',
     loadingStrategies: 'Loading strategies...',
@@ -446,13 +450,112 @@ export const messagesEn = {
     loadError: 'Failed to load strategies',
     updateError: 'Failed to update active strategy',
     versionLabel: 'Risk-first swing trading',
-    mode: {
-      label: 'Mode',
-      beginner: 'Beginner',
-      advanced: 'Advanced',
-      toggle: 'Toggle between Beginner and Advanced mode',
+  },
+  practice: {
+    objective: {
+      title: 'Practice Today’s Setups',
+      candidateCount: '{{n}} live setups to review',
+      progress: 'Candidate {{current}} of {{total}}',
+      noSession: 'No session loaded',
     },
-    disabledHint: 'Enable Advanced Mode to access',
+    exercise: {
+      prompt: 'What would you do?',
+      options: {
+        tradeNow: 'Trade now',
+        wait: 'Wait',
+        avoid: 'Avoid',
+      },
+      correct: 'Your call matches the system verdict.',
+      incorrect: 'The system sees this setup differently. Review the evidence before acting.',
+      seeSystemView: 'See the system’s analysis',
+    },
+    card: {
+      nextCandidate: 'Next Candidate',
+      sessionComplete: 'Session Complete',
+      whatToLearn: 'What to Learn',
+      commonMistake: 'Common Mistake',
+      ruleToRemember: 'Rule to Remember',
+    },
+    empty: {
+      headline: 'No live practice cards for today.',
+      body: 'Use Review to study open positions and recent trades while you wait for stronger setups.',
+    },
+  },
+  executionReadback: {
+    title: 'Execution Readback',
+    because: 'You are placing this trade because',
+    maxLoss: 'Your maximum loss is',
+    invalidIf: 'This trade becomes invalid if',
+    checklist: {
+      title: 'Checklist Gate',
+      understandMaxLoss: 'I understand my max loss',
+      allPassedNote: 'Check each item before placing the trade.',
+      failedGatesWarning: 'System warnings',
+    },
+    actions: {
+      placeTrade: 'Place Trade',
+      cancel: 'Cancel',
+    },
+  },
+  learn: {
+    nav: {
+      concepts: 'Concepts',
+      glossary: 'Glossary',
+      settings: 'Settings',
+      powerTools: 'Power Tools',
+    },
+    concepts: {
+      riskReward: {
+        title: 'Risk / Reward',
+        body: 'Compare the planned upside with the downside before you enter. A trade can look exciting and still fail because the reward is not worth the risk.',
+      },
+      stopLoss: {
+        title: 'Stop Loss',
+        body: 'The stop is the price that proves your idea is wrong. Define it before entry, not after the trade starts moving against you.',
+      },
+      positionSizing: {
+        title: 'Position Sizing',
+        body: 'Size the trade so the loss stays small if your stop is hit. Good sizing protects you from one trade damaging the whole account.',
+      },
+      tradeThesis: {
+        title: 'Trade Thesis',
+        body: 'A thesis explains why this setup deserves capital right now. If you cannot explain the setup in plain language, you are not ready to place it.',
+      },
+      invalidation: {
+        title: 'Invalidation',
+        body: 'Invalidation is the condition that ends the trade idea. It can be a price level, a failed breakout, or new evidence that breaks the original logic.',
+      },
+    },
+    glossary: {
+      title: 'Glossary',
+      subtitle: 'Keep the core trading terms in plain English while you read live setups.',
+    },
+    methodSettings: {
+      title: 'Method Settings',
+      subtitle: 'These rules shape what the app considers tradable, how it sizes risk, and how it manages positions.',
+    },
+    powerTools: {
+      title: 'Power Tools',
+      subtitle: 'Advanced raw screener access for reference only. Use this when you want to inspect the underlying table without changing the guided workflow.',
+    },
+  },
+  review: {
+    tabs: {
+      openPositions: 'Open Positions',
+      pastTrades: 'Past Trades',
+    },
+    caseStudy: {
+      title: 'Position Case Study',
+      keyQuestion: 'Key Question',
+      nextMilestone: 'Next Milestone',
+      invalidationCheck: 'Invalidation Check',
+    },
+    learningPrompts: {
+      title: 'Past Trade Reflection',
+      q1: 'What evidence was strongest when you entered, and is that evidence visible in the outcome?',
+      q2: 'Did you follow the original risk plan, or did emotion change the decision after entry?',
+      q3: 'If the same setup appeared tomorrow, what would you repeat and what would you change?',
+    },
   },
   workspacePage: {
     title: 'Workspace',
@@ -1716,12 +1819,6 @@ export const messagesEn = {
       subtitle: 'Set up your workflow without leaving onboarding.',
     },
     progress: 'Step {{step}} of {{total}}',
-    mode: {
-      title: 'Choose your mode',
-      beginner: 'Beginner',
-      advanced: 'Advanced',
-      hint: 'Beginner keeps the flow simple, Advanced unlocks all surfaces.',
-    },
     actions: {
       skip: 'Skip for now',
       back: 'Back',
@@ -1734,44 +1831,35 @@ export const messagesEn = {
         description: "Let's get your daily routine in place.",
         body: 'This onboarding will guide your full flow:',
         items: {
-          configure: 'Configure strategy and risk',
+          learn: 'Learn the method and glossary',
+          practice: 'Practice trade / wait / avoid decisions',
           review: 'Review daily opportunities',
-          act: 'Place orders or acknowledge no action',
-          verify: 'Verify orders and positions',
+          journal: 'Journal the week’s lesson and next focus',
         },
       },
       strategy: {
-        title: 'Step 1: Configure Strategy & Risk',
-        description: 'Choose a setup and save your strategy directly here.',
+        title: 'Step 1: Learn Your Method',
+        description: 'Configure the rules that drive your guided practice.',
       },
-      dailyReview: {
-        title: 'Step 2: Open Daily Review',
-        description: 'Use Daily Review for the final trading decisions.',
-        body: 'Daily Review combines opportunities and position management:',
+      practice: {
+        title: 'Step 2: Practice with Live Setups',
+        description: 'Make your own decision before seeing the system answer.',
+        body: 'Practice takes one live candidate at a time:',
         items: {
-          candidates: 'New candidates ranked by quality',
-          updateStop: 'Open positions that need stop updates',
-          close: 'Positions suggested to close',
-          hold: 'Positions that need no action',
+          objective: 'Review the day’s objective and candidate count',
+          decide: 'Choose trade now, wait, or avoid before seeing the analysis',
+          reveal: 'Reveal the evidence and learning notes',
+          execute: 'Only place a trade after the readback checklist',
         },
       },
-      action: {
-        title: 'Step 3: Act or Acknowledge No Action',
-        description: 'Follow recommendations with discipline.',
-        body: 'At this point you either take action or record no action:',
+      review: {
+        title: 'Step 3: Review and Journal',
+        description: 'Turn positions and outcomes into learning.',
+        body: 'Use Review and Journal to build feedback loops:',
         items: {
-          createOrder: 'Create an order for a recommended candidate',
-          updatePosition: 'Update stop or close when suggested',
-          noAction: 'Acknowledge no action on quiet days',
-        },
-      },
-      verify: {
-        title: 'Step 4: Verify Orders & Positions',
-        description: 'Track execution and risk status after decisions.',
-        body: 'Always confirm broker execution and app records:',
-        items: {
-          orders: 'Review pending/filled orders',
-          positions: 'Monitor open positions and stop levels',
+          review: 'Study open positions as ongoing case studies',
+          caseStudies: 'Review past trades with reflection prompts',
+          journal: 'Write the week’s lesson and next-week focus',
         },
       },
     },
@@ -1906,6 +1994,35 @@ export const messagesEn = {
       notes: 'Notes',
       lesson: 'Lesson',
       noEntry: '—',
+    },
+  },
+  journal: {
+    thisWeek: {
+      title: 'This Week',
+      noEntries: 'No closed trades have been journaled for this week yet.',
+    },
+    weeklyPrompts: {
+      title: 'Weekly Learning Prompts',
+      whatWorked: {
+        label: 'What worked this week?',
+        hint: 'Which setups, decisions, or habits deserve to be repeated?',
+      },
+      whatNeedsWork: {
+        label: 'What needs work?',
+        hint: 'Where did your process break down or feel unclear?',
+      },
+      lessonLearned: {
+        label: 'Lesson learned',
+        hint: 'What is the clearest lesson you want to carry forward?',
+      },
+      nextWeekFocus: {
+        label: 'Next week focus',
+        hint: 'What single behavior or concept will you focus on next week?',
+      },
+    },
+    pastWeeks: {
+      title: 'Past Weeks',
+      noReviews: 'No past weekly reviews yet.',
     },
   },
   analyticsPage: {

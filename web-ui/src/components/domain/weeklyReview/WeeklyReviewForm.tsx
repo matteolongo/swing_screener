@@ -11,6 +11,8 @@ function getCurrentWeekId(): string {
 interface WeeklyReviewFormProps {
   weekId?: string;
   onSaved?: () => void;
+  title?: string;
+  fieldMeta?: Partial<Record<keyof FormState, { label: string; placeholder: string }>>;
 }
 
 interface FormState {
@@ -34,7 +36,7 @@ const FIELDS: Array<{ key: keyof FormState; label: string; placeholder: string }
   { key: 'next_week_focus', label: 'Next Week Focus', placeholder: 'What will you focus on or improve?' },
 ];
 
-export default function WeeklyReviewForm({ weekId, onSaved }: WeeklyReviewFormProps) {
+export default function WeeklyReviewForm({ weekId, onSaved, title, fieldMeta }: WeeklyReviewFormProps) {
   const resolvedWeekId = weekId ?? getCurrentWeekId();
   const reviewQuery = useWeeklyReview(resolvedWeekId);
   const upsertMutation = useUpsertWeeklyReviewMutation();
@@ -71,7 +73,7 @@ export default function WeeklyReviewForm({ weekId, onSaved }: WeeklyReviewFormPr
     <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-          Week {resolvedWeekId}
+          {title ?? `Week ${resolvedWeekId}`}
         </h3>
         {updatedAt && (
           <span className="text-[11px] text-gray-400">
@@ -83,13 +85,13 @@ export default function WeeklyReviewForm({ weekId, onSaved }: WeeklyReviewFormPr
       {FIELDS.map(({ key, label, placeholder }) => (
         <div key={key}>
           <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-            {label}
+            {fieldMeta?.[key]?.label ?? label}
           </label>
           <textarea
             value={form[key]}
             onChange={(e) => setForm((prev) => ({ ...prev, [key]: e.target.value }))}
             rows={3}
-            placeholder={placeholder}
+            placeholder={fieldMeta?.[key]?.placeholder ?? placeholder}
             className="w-full text-sm px-2 py-1.5 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-none focus:outline-none focus:ring-1 focus:ring-primary/50"
           />
         </div>

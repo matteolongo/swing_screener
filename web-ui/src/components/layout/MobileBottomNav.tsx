@@ -1,9 +1,10 @@
 import { NavLink } from 'react-router-dom';
 import {
-  CalendarCheck,
-  BookMarked,
-  FlaskConical,
-  Settings2,
+  BookOpen,
+  BrainCircuit,
+  ClipboardCheck,
+  type LucideIcon,
+  NotebookText,
 } from 'lucide-react';
 
 import { cn } from '@/utils/cn';
@@ -12,30 +13,30 @@ import type { MessageKey } from '@/i18n/types';
 
 type NavItem = {
   href: string;
-  icon: typeof CalendarCheck;
+  icon: LucideIcon;
   labelKey: MessageKey;
 };
 
 const navItems: NavItem[] = [
   {
-    labelKey: 'sidebar.nav.today',
-    href: '/today',
-    icon: CalendarCheck,
+    labelKey: 'sidebar.nav.learn',
+    href: '/learn',
+    icon: BookOpen,
   },
   {
-    labelKey: 'sidebar.nav.book',
-    href: '/book',
-    icon: BookMarked,
+    labelKey: 'sidebar.nav.practice',
+    href: '/practice',
+    icon: BrainCircuit,
   },
   {
-    labelKey: 'sidebar.nav.research',
-    href: '/research',
-    icon: FlaskConical,
+    labelKey: 'sidebar.nav.review',
+    href: '/review',
+    icon: ClipboardCheck,
   },
   {
-    labelKey: 'sidebar.nav.settings',
-    href: '/strategy',
-    icon: Settings2,
+    labelKey: 'sidebar.nav.journal',
+    href: '/journal',
+    icon: NotebookText,
   },
 ];
 

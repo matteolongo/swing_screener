@@ -1,13 +1,12 @@
 import { useEffect, useMemo, type ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CheckCircle, Calendar, Search, ShoppingCart } from 'lucide-react';
+import { CheckCircle, Calendar, Search } from 'lucide-react';
 import Button from '@/components/common/Button';
 import Card, { CardContent } from '@/components/common/Card';
 import OnboardingExecutionSetupCard from '@/components/domain/onboarding/OnboardingExecutionSetupCard';
 import OnboardingStrategySetupStep from '@/components/domain/onboarding/OnboardingStrategySetupStep';
 import { useStrategyReadiness } from '@/features/strategy/useStrategyReadiness';
 import { t } from '@/i18n/t';
-import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 import { useOnboardingStore } from '@/stores/onboardingStore';
 
 type OnboardingStep = {
@@ -26,10 +25,10 @@ const STEPS: OnboardingStep[] = [
       <div className="space-y-4 text-sm text-gray-700">
         <p>{t('onboardingPage.steps.welcome.body')}</p>
         <ol className="list-decimal space-y-2 pl-5">
-          <li>{t('onboardingPage.steps.welcome.items.configure')}</li>
+          <li>{t('onboardingPage.steps.welcome.items.learn')}</li>
+          <li>{t('onboardingPage.steps.welcome.items.practice')}</li>
           <li>{t('onboardingPage.steps.welcome.items.review')}</li>
-          <li>{t('onboardingPage.steps.welcome.items.act')}</li>
-          <li>{t('onboardingPage.steps.welcome.items.verify')}</li>
+          <li>{t('onboardingPage.steps.welcome.items.journal')}</li>
         </ol>
       </div>
     ),
@@ -41,46 +40,32 @@ const STEPS: OnboardingStep[] = [
     content: <OnboardingStrategySetupStep />,
   },
   {
-    title: t('onboardingPage.steps.dailyReview.title'),
-    description: t('onboardingPage.steps.dailyReview.description'),
+    title: t('onboardingPage.steps.practice.title'),
+    description: t('onboardingPage.steps.practice.description'),
     icon: Calendar,
     content: (
       <div className="space-y-3 text-sm text-gray-700">
-        <p>{t('onboardingPage.steps.dailyReview.body')}</p>
+        <p>{t('onboardingPage.steps.practice.body')}</p>
         <ul className="list-disc space-y-1 pl-5">
-          <li>{t('onboardingPage.steps.dailyReview.items.candidates')}</li>
-          <li>{t('onboardingPage.steps.dailyReview.items.updateStop')}</li>
-          <li>{t('onboardingPage.steps.dailyReview.items.close')}</li>
-          <li>{t('onboardingPage.steps.dailyReview.items.hold')}</li>
+          <li>{t('onboardingPage.steps.practice.items.objective')}</li>
+          <li>{t('onboardingPage.steps.practice.items.decide')}</li>
+          <li>{t('onboardingPage.steps.practice.items.reveal')}</li>
+          <li>{t('onboardingPage.steps.practice.items.execute')}</li>
         </ul>
       </div>
     ),
   },
   {
-    title: t('onboardingPage.steps.action.title'),
-    description: t('onboardingPage.steps.action.description'),
-    icon: ShoppingCart,
-    content: (
-      <div className="space-y-3 text-sm text-gray-700">
-        <p>{t('onboardingPage.steps.action.body')}</p>
-        <ul className="list-disc space-y-1 pl-5">
-          <li>{t('onboardingPage.steps.action.items.createOrder')}</li>
-          <li>{t('onboardingPage.steps.action.items.updatePosition')}</li>
-          <li>{t('onboardingPage.steps.action.items.noAction')}</li>
-        </ul>
-      </div>
-    ),
-  },
-  {
-    title: t('onboardingPage.steps.verify.title'),
-    description: t('onboardingPage.steps.verify.description'),
+    title: t('onboardingPage.steps.review.title'),
+    description: t('onboardingPage.steps.review.description'),
     icon: Search,
     content: (
       <div className="space-y-3 text-sm text-gray-700">
-        <p>{t('onboardingPage.steps.verify.body')}</p>
+        <p>{t('onboardingPage.steps.review.body')}</p>
         <ul className="list-disc space-y-1 pl-5">
-          <li>{t('onboardingPage.steps.verify.items.orders')}</li>
-          <li>{t('onboardingPage.steps.verify.items.positions')}</li>
+          <li>{t('onboardingPage.steps.review.items.review')}</li>
+          <li>{t('onboardingPage.steps.review.items.caseStudies')}</li>
+          <li>{t('onboardingPage.steps.review.items.journal')}</li>
         </ul>
         <OnboardingExecutionSetupCard />
       </div>
@@ -101,7 +86,6 @@ export default function OnboardingPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { currentStep, setCurrentStep, completeOnboarding, dismissOnboarding } = useOnboardingStore();
-  const { isBeginnerMode, setBeginnerMode } = useBeginnerModeStore();
   const { isReady: strategyReady } = useStrategyReadiness();
 
   useEffect(() => {
@@ -127,7 +111,7 @@ export default function OnboardingPage() {
   const handleNext = () => {
     if (stepIndex >= STEPS.length - 1) {
       completeOnboarding();
-      navigate('/workspace');
+      navigate('/practice');
       return;
     }
 
@@ -145,7 +129,7 @@ export default function OnboardingPage() {
 
   const handleSkip = () => {
     dismissOnboarding();
-    navigate('/workspace');
+    navigate('/practice');
   };
 
   return (
@@ -177,29 +161,6 @@ export default function OnboardingPage() {
           <p className="text-xs text-gray-500">
             {t('onboardingPage.progress', { step: stepIndex + 1, total: STEPS.length })}
           </p>
-
-          {stepIndex === 0 ? (
-            <div className="rounded-lg border border-gray-200 p-3">
-              <p className="mb-2 text-sm font-medium text-gray-900">{t('onboardingPage.mode.title')}</p>
-              <div className="flex gap-2">
-                <Button
-                  variant={isBeginnerMode ? 'primary' : 'secondary'}
-                  onClick={() => setBeginnerMode(true)}
-                  size="sm"
-                >
-                  {t('onboardingPage.mode.beginner')}
-                </Button>
-                <Button
-                  variant={!isBeginnerMode ? 'primary' : 'secondary'}
-                  onClick={() => setBeginnerMode(false)}
-                  size="sm"
-                >
-                  {t('onboardingPage.mode.advanced')}
-                </Button>
-              </div>
-              <p className="mt-2 text-xs text-gray-600">{t('onboardingPage.mode.hint')}</p>
-            </div>
-          ) : null}
 
           <div>{step.content}</div>
 

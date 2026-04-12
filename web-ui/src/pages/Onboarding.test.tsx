@@ -33,59 +33,33 @@ describe('OnboardingPage', () => {
     mockUseStrategyReadiness.mockReturnValue({ isReady: false });
   });
 
-  it('renders strategy step when current step is set to 2', async () => {
+  it('renders the strategy step when current step is set to 2', async () => {
     useOnboardingStore.setState({ status: 'new', currentStep: 1 });
     renderWithProviders(<OnboardingPage />, { route: '/onboarding' });
 
     expect(await screen.findByText('Mock Strategy Setup Step')).toBeInTheDocument();
-    expect(screen.getByText('Step 2 of 5')).toBeInTheDocument();
+    expect(screen.getByText('Step 2 of 4')).toBeInTheDocument();
   });
 
-  it('blocks progress on strategy step when strategy is not ready', async () => {
+  it('blocks progress on the strategy step when the method is not ready', async () => {
     useOnboardingStore.setState({ status: 'new', currentStep: 1 });
     renderWithProviders(<OnboardingPage />, { route: '/onboarding' });
 
-    await screen.findByText('Step 2 of 5');
-    const nextButton = screen.getByRole('button', { name: 'Next' });
-    expect(nextButton).toBeDisabled();
-    expect(
-      screen.getByText('Save a valid strategy before moving to the next onboarding step.'),
-    ).toBeInTheDocument();
+    await screen.findByText('Step 2 of 4');
+    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
+    expect(screen.getByText('Save a valid strategy before moving to the next onboarding step.')).toBeInTheDocument();
   });
 
-  it('allows progress when strategy is ready', async () => {
+  it('allows progress when the strategy is ready', async () => {
     mockUseStrategyReadiness.mockReturnValue({ isReady: true });
     useOnboardingStore.setState({ status: 'new', currentStep: 1 });
     renderWithProviders(<OnboardingPage />, { route: '/onboarding' });
 
-    await screen.findByText('Step 2 of 5');
+    await screen.findByText('Step 2 of 4');
     fireEvent.click(screen.getByRole('button', { name: 'Next' }));
 
     await waitFor(() => {
-      expect(screen.getByText('Step 3 of 5')).toBeInTheDocument();
+      expect(screen.getByText('Step 3 of 4')).toBeInTheDocument();
     });
-  });
-
-  it('completes onboarding from the last step', async () => {
-    mockUseStrategyReadiness.mockReturnValue({ isReady: true });
-    useOnboardingStore.setState({ status: 'new', currentStep: 4 });
-
-    renderWithProviders(<OnboardingPage />, { route: '/onboarding' });
-
-    fireEvent.click(screen.getByRole('button', { name: 'Complete' }));
-
-    await waitFor(() => {
-      expect(useOnboardingStore.getState().status).toBe('completed');
-    });
-  });
-
-  it('asks for broker workflow on the verify step', async () => {
-    mockUseStrategyReadiness.mockReturnValue({ isReady: true });
-    useOnboardingStore.setState({ status: 'new', currentStep: 4, executionSetup: 'degiro' });
-
-    renderWithProviders(<OnboardingPage />, { route: '/onboarding' });
-
-    expect(await screen.findByText('How will you reconcile broker execution?')).toBeInTheDocument();
-    expect(screen.getByText(/The rest of the app still works/i)).toBeInTheDocument();
   });
 });

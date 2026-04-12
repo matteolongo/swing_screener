@@ -1,11 +1,9 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, CheckCircle, Calendar, Search, ShoppingCart } from 'lucide-react';
+import { X, CheckCircle, Calendar, Search } from 'lucide-react';
 import Button from '@/components/common/Button';
 import OnboardingExecutionSetupCard from '@/components/domain/onboarding/OnboardingExecutionSetupCard';
 import { useOnboardingStore } from '@/stores/onboardingStore';
-import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
-import { t } from '@/i18n/t';
 
 interface OnboardingModalProps {
   isOpen: boolean;
@@ -16,136 +14,79 @@ const STEPS = [
   {
     title: 'Welcome to Swing Screener',
     icon: CheckCircle,
-    description: 'Let\'s get you set up for successful swing trading',
+    description: 'Learn the workflow before you act on live setups.',
     content: (
       <div className="space-y-4">
         <p className="text-gray-700">
-          This quick guide will walk you through your daily workflow:
+          This quick guide will walk you through the education-first workflow:
         </p>
         <ol className="list-decimal list-inside space-y-2 text-gray-700">
-          <li><strong>Configure</strong> your strategy and risk parameters</li>
-          <li><strong>Review</strong> daily trade opportunities</li>
-          <li><strong>Act</strong> on recommendations (or acknowledge no action)</li>
-          <li><strong>Verify</strong> your orders and positions</li>
+          <li><strong>Learn</strong> the method and glossary</li>
+          <li><strong>Practice</strong> trade / wait / avoid decisions on live data</li>
+          <li><strong>Review</strong> open positions and past trades as case studies</li>
+          <li><strong>Journal</strong> what worked and what needs work</li>
         </ol>
-        <p className="text-sm text-gray-600 mt-4">
-          You can complete this guide even on no-trade days.
-        </p>
       </div>
     ),
     action: null,
   },
   {
-    title: 'Step 1: Configure Strategy & Risk',
+    title: 'Step 1: Learn Your Method',
     icon: CheckCircle,
-    description: 'Set up your trading parameters',
+    description: 'Set up the rules you will study and follow.',
     content: (
       <div className="space-y-4">
         <p className="text-gray-700">
-          Before you start trading, configure your strategy on the <strong>Strategy</strong> page:
+          Configure your rules in <strong>Learn → Method Settings</strong>:
         </p>
         <ul className="list-disc list-inside space-y-2 text-gray-700 ml-4">
-          <li><strong>Account Size</strong>: Your total capital</li>
-          <li><strong>Risk %</strong>: Percentage to risk per trade (typically 1%)</li>
-          <li><strong>Risk/Reward</strong>: Minimum R:R ratio (e.g., 2:1)</li>
+          <li><strong>Account Size</strong>: your capital base</li>
+          <li><strong>Risk %</strong>: the loss budget per trade</li>
+          <li><strong>Risk/Reward</strong>: the minimum payoff you require</li>
         </ul>
-        <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mt-4">
-          <p className="text-sm text-blue-800">
-            💡 <strong>Tip:</strong> Start with beginner-friendly defaults and adjust as you gain experience.
-          </p>
-        </div>
       </div>
     ),
     action: {
-      label: 'Go to Strategy',
-      path: '/strategy',
+      label: 'Open Method Settings',
+      path: '/learn/settings',
     },
   },
   {
-    title: 'Step 2: Open Daily Review',
+    title: 'Step 2: Practice the Decision',
     icon: Calendar,
-    description: 'Your primary surface for daily decisions',
+    description: 'Use live setups to decide trade, wait, or avoid.',
     content: (
       <div className="space-y-4">
         <p className="text-gray-700">
-          The <strong>Daily Review</strong> page combines screener results with position management:
+          The <strong>Practice</strong> page reveals one setup at a time:
         </p>
         <ul className="list-disc list-inside space-y-2 text-gray-700 ml-4">
-          <li><strong>New Candidates</strong>: Potential trades ranked by quality</li>
-          <li><strong>Positions to Hold</strong>: Current trades performing well</li>
-          <li><strong>Positions to Update</strong>: Stop-loss adjustments needed</li>
-          <li><strong>Positions to Close</strong>: Trades hitting exit criteria</li>
+          <li>Make your own decision first</li>
+          <li>Compare it with the system verdict and evidence</li>
+          <li>Only place a trade after the execution readback</li>
         </ul>
-        <div className="bg-amber-50 border-l-4 border-amber-400 p-4 mt-4">
-          <p className="text-sm text-amber-800">
-            ⚠️ Daily Review requires a configured strategy. Complete Step 1 first.
-          </p>
-        </div>
-        <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mt-4">
-          <p className="text-sm font-semibold text-slate-900">
-            What "Recommended" really means
-          </p>
-          <p className="mt-2 text-sm text-slate-700">
-            A high-scoring stock is not automatically a trade. The app first finds strong stocks, then checks whether the setup is tradable with a clear stop, acceptable risk, and enough upside.
-          </p>
-          <p className="mt-2 text-sm text-slate-700">
-            Only setups that pass both layers are marked as <strong>Recommended</strong>.
-          </p>
-        </div>
       </div>
     ),
     action: {
-      label: 'Go to Daily Review',
-      path: '/daily-review',
+      label: 'Open Practice',
+      path: '/practice',
     },
   },
   {
-    title: 'Step 3: Complete Action or Acknowledge No Action',
-    icon: ShoppingCart,
-    description: 'Act on recommendations (or note no action today)',
-    content: (
-      <div className="space-y-4">
-        <p className="text-gray-700">
-          After reviewing opportunities, you have three options:
-        </p>
-        <ul className="list-disc list-inside space-y-2 text-gray-700 ml-4">
-          <li><strong>Create Order</strong>: Place a trade for a recommended candidate</li>
-          <li><strong>Update Position</strong>: Adjust stops or take action on existing trades</li>
-          <li><strong>No Action Today</strong>: Mark the review as complete with no trades</li>
-        </ul>
-        <div className="bg-green-50 border-l-4 border-green-400 p-4 mt-4">
-          <p className="text-sm text-green-800">
-            ✅ <strong>Remember:</strong> Not every day requires action. The system is designed for selective trading.
-          </p>
-        </div>
-      </div>
-    ),
-    action: null,
-  },
-  {
-    title: 'Step 4: Verify Orders & Positions',
+    title: 'Step 3: Review and Journal',
     icon: Search,
-    description: 'Review your orders and open positions',
+    description: 'Turn outcomes into learning, not just activity.',
     content: (
       <div className="space-y-4">
         <p className="text-gray-700">
-          Finally, verify your trades on the <strong>Orders</strong> and <strong>Positions</strong> pages:
+          Use <strong>Review</strong> and <strong>Journal</strong> to close the loop:
         </p>
         <ul className="list-disc list-inside space-y-2 text-gray-700 ml-4">
-          <li><strong>Orders Page</strong>: View pending orders and mark them as filled</li>
-          <li><strong>Positions Page</strong>: Track open positions, P&L, and stop-loss levels</li>
+          <li>Challenge whether each open position still deserves capital</li>
+          <li>Study past trades with reflection prompts</li>
+          <li>Capture the week’s lesson and next-week focus</li>
         </ul>
-        <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mt-4">
-          <p className="text-sm text-blue-800">
-            💡 <strong>Best Practice:</strong> The app works without DeGiro. DeGiro only adds optional sync and audit tools.
-          </p>
-        </div>
         <OnboardingExecutionSetupCard />
-        <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-          <p className="text-center text-gray-700 font-medium">
-            🎉 You're ready to start systematic swing trading!
-          </p>
-        </div>
       </div>
     ),
     action: null,
@@ -155,64 +96,58 @@ const STEPS = [
 export default function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
   const navigate = useNavigate();
   const { currentStep, setCurrentStep, completeOnboarding, dismissOnboarding } = useOnboardingStore();
-  const { isBeginnerMode, setBeginnerMode } = useBeginnerModeStore();
-  
+
   const stepIndex = Math.min(currentStep, STEPS.length - 1);
   const step = STEPS[stepIndex];
   const IconComponent = step.icon;
-  
-  // Handle escape key - using stable refs to avoid recreating handler
+
   useEffect(() => {
     if (!isOpen) return;
-    
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
         dismissOnboarding();
         onClose();
       }
     };
-    
+
     window.addEventListener('keydown', handleEscape);
     return () => window.removeEventListener('keydown', handleEscape);
-  }, [isOpen, dismissOnboarding, onClose]);
-  
+  }, [dismissOnboarding, isOpen, onClose]);
+
   if (!isOpen) return null;
-  
+
   const handleDismiss = () => {
     dismissOnboarding();
     onClose();
   };
-  
+
   const handleNext = () => {
     if (stepIndex < STEPS.length - 1) {
       setCurrentStep(stepIndex + 1);
-    } else {
-      handleComplete();
+      return;
     }
+    completeOnboarding();
+    onClose();
   };
-  
+
   const handleBack = () => {
     if (stepIndex > 0) {
       setCurrentStep(stepIndex - 1);
     }
   };
-  
-  const handleComplete = () => {
-    completeOnboarding();
+
+  const handleAction = () => {
+    if (!step.action) {
+      return;
+    }
+    navigate(step.action.path);
     onClose();
   };
-  
-  const handleAction = () => {
-    if (step.action) {
-      navigate(step.action.path);
-      onClose();
-    }
-  };
-  
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg bg-white shadow-xl">
-        {/* Header */}
         <div className="flex items-center justify-between border-b p-6">
           <div className="flex items-center gap-3">
             <IconComponent className="h-6 w-6 text-blue-600" />
@@ -226,81 +161,47 @@ export default function OnboardingModal({ isOpen, onClose }: OnboardingModalProp
             <X className="w-5 h-5" />
           </button>
         </div>
-        
-        {/* Progress indicator */}
+
         <div className="px-6 pt-4">
           <div className="flex gap-2">
             {STEPS.map((_, index) => (
               <div
                 key={index}
-                className={`h-2 flex-1 rounded-full transition-colors ${
-                  index <= stepIndex ? 'bg-blue-600' : 'bg-gray-200'
-                }`}
+                className={`h-2 flex-1 rounded-full transition-colors ${index <= stepIndex ? 'bg-blue-600' : 'bg-gray-200'}`}
               />
             ))}
           </div>
-          <p className="text-sm text-gray-600 mt-2">
+          <p className="mt-2 text-sm text-gray-600">
             Step {stepIndex + 1} of {STEPS.length}
           </p>
         </div>
-        
-        {/* Content */}
+
         <div className="flex-1 overflow-y-auto p-6">
-          <p className="text-gray-600 mb-4">{step.description}</p>
-          {stepIndex === 0 && (
-            <div className="mb-4 rounded-lg border border-gray-200 p-4">
-              <p className="text-sm font-medium text-gray-900 mb-2">{t('onboardingModal.modeSelect.title')}</p>
-              <div className="flex gap-2">
-                <Button
-                  variant={isBeginnerMode ? 'primary' : 'secondary'}
-                  onClick={() => setBeginnerMode(true)}
-                >
-                  {t('onboardingModal.modeSelect.beginner')}
-                </Button>
-                <Button
-                  variant={!isBeginnerMode ? 'primary' : 'secondary'}
-                  onClick={() => setBeginnerMode(false)}
-                >
-                  {t('onboardingModal.modeSelect.advanced')}
-                </Button>
-              </div>
-              <p className="text-xs text-gray-600 mt-2">
-                {t('onboardingModal.modeSelect.hint')}
-              </p>
-            </div>
-          )}
+          <p className="mb-4 text-gray-600">{step.description}</p>
           {step.content}
         </div>
-        
-        {/* Footer */}
+
         <div className="border-t bg-gray-50 p-6">
           <div className="flex items-center justify-between gap-3">
             <div>
-              {stepIndex > 0 && (
+              {stepIndex > 0 ? (
                 <Button variant="secondary" onClick={handleBack}>
                   Back
                 </Button>
-              )}
+              ) : null}
             </div>
-            
+
             <div className="flex gap-3">
-              {step.action && (
+              {step.action ? (
                 <Button variant="secondary" onClick={handleAction}>
                   {step.action.label}
                 </Button>
-              )}
-              
+              ) : null}
               <Button onClick={handleNext}>
                 {stepIndex === STEPS.length - 1 ? 'Complete' : 'Next'}
               </Button>
             </div>
           </div>
-          
-          {stepIndex === 0 && (
-            <p className="text-sm text-gray-500 mt-4 text-center">
-              You can resume this guide anytime from the Getting Started button in the header.
-            </p>
-          )}
         </div>
       </div>
     </div>
