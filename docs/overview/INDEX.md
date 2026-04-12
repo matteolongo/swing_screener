@@ -44,9 +44,6 @@ Web UI:
 - `/web-ui/docs/WEB_UI_GUIDE.md`
 - `/web-ui/docs/WEB_UI_ARCHITECTURE.md`
 
-MCP Server:
-- `/mcp_server/README.md`
-
 Agent:
 - `/agent/README.md`
 

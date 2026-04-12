@@ -655,7 +655,7 @@ Likely test files to touch:
 - `web-ui/src/components/domain/workspace/DecisionSummaryCard.test.tsx`
 - `web-ui/src/components/domain/orders/CandidateOrderModal.test.tsx`
 - `web-ui/src/components/domain/fundamentals/FundamentalsSnapshotCard.test.tsx`
-- `web-ui/src/pages/DailyReview.test.tsx`
+
 
 ## Non-Goals
 

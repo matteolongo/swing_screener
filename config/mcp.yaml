@@ -11,11 +11,8 @@ features:
     - get_position
     - update_position_stop
     - list_orders
-    - create_order
     - suggest_position_stop
     - close_position
-    - fill_order
-    - cancel_order
   screener:
     enabled: true
     tools:
@@ -49,6 +46,3 @@ features:
 logging:
   level: INFO
   format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-rate_limiting:
-  enabled: false
-  requests_per_minute: 60
