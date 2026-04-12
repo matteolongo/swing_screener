@@ -6,6 +6,7 @@ import {
   humanizeFundamentalSource,
   metricHorizonClass,
   metricHorizonLabel,
+  metricHorizonTooltip,
 } from '@/features/fundamentals/presentation';
 
 function formatPercent(value?: number) {
@@ -311,7 +312,8 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
                 <div className="flex items-start justify-between gap-2">
                   <div className="text-xs text-gray-500">{metric.label}</div>
                   <span
-                    className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${metricHorizonClass(metric.key, context)}`}
+                    className={`cursor-help rounded-full px-2 py-0.5 text-[10px] font-medium ${metricHorizonClass(metric.key, context)}`}
+                    title={metricHorizonTooltip(metric.key, context)}
                   >
                     {metricHorizonLabel(metric.key, context)}
                   </span>

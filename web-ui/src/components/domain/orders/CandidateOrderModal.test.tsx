@@ -238,7 +238,7 @@ describe('CandidateOrderModal', () => {
     );
 
     expect(screen.getAllByText('Manual setup').length).toBeGreaterThan(0);
-    expect(screen.getByText(/Choose BUY LIMIT for pullback or BUY STOP/i)).toBeInTheDocument();
+    expect(screen.getByText(/Use BUY LIMIT if you are targeting a dip\/reclaim level/i)).toBeInTheDocument();
   });
 
   it('preserves entered values while moving between review sections', async () => {

@@ -234,13 +234,13 @@ export const messagesEn = {
         },
         unknown: {
           label: 'Manual setup',
-          whatItMeans: 'No explicit setup type is available from the screener for this symbol.',
+          whatItMeans: 'No explicit entry type was derived from the screener. Decide before sending: is this a pullback entry (BUY LIMIT near support) or a breakout entry (BUY STOP above trigger)?',
           steps: {
-            step1: 'Confirm the intended setup in your notes before placing any order in Degiro.',
-            step2: 'Choose BUY LIMIT for pullback or BUY STOP (Degiro Acquisto Stop Loss) for breakout intentionally.',
-            step3: 'Verify stop placement and position size still match your risk plan.',
+            step1: 'Write down the setup type in your notes before touching Degiro.',
+            step2: 'Use BUY LIMIT if you are targeting a dip/reclaim level. Use BUY STOP (Degiro Acquisto Stop Loss) if you are waiting for a breakout.',
+            step3: 'Confirm stop placement and position size match your risk plan before submitting.',
           },
-          caution: 'Skip execution if setup logic is unclear.',
+          caution: 'Resolve the entry type first — do not send an order if you are unsure whether this is a limit or stop entry.',
         },
       },
     },
