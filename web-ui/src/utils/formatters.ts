@@ -90,20 +90,3 @@ export function formatDateTime(date: string | Date): string {
   }).format(d);
 }
 
-/**
- * Get color class based on R-multiple value
- */
-export function getRColor(r: number): string {
-  if (r >= 1.0) return 'text-success';
-  if (r >= -0.5) return 'text-warning';
-  return 'text-danger';
-}
-
-/**
- * Get background color class based on R-multiple value
- */
-export function getRBgColor(r: number): string {
-  if (r >= 1.0) return 'bg-success/10';
-  if (r >= -0.5) return 'bg-warning/10';
-  return 'bg-danger/10';
-}

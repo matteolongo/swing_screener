@@ -29,10 +29,8 @@ Primary entry point: `SwingScreenerAgent()`.
 Common methods:
 - `daily_screening(universe, strategy_id, top)`
 - `review_positions()`
-- `create_order_from_candidate(candidate)`
 - `suggest_stop_updates()`
 - `update_position_stop(position_id, new_stop)`
-- `fill_order(order_id, filled_price, filled_date)`
 - `close_position(position_id, exit_price, exit_date)`
 - `daily_review()`
 

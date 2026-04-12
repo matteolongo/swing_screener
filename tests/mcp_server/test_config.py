@@ -17,7 +17,6 @@ from mcp_server.config import (
     ServerConfig,
     FeatureConfig,
     LoggingConfig,
-    RateLimitConfig,
     load_config,
 )
 
@@ -132,10 +131,6 @@ class TestMCPConfig:
         # Check logging
         assert config.logging.level == "DEBUG"
         assert config.logging.format == "%(message)s"
-        
-        # Check rate limiting
-        assert config.rate_limiting.enabled is False
-        assert config.rate_limiting.requests_per_minute == 60
     
     def test_from_yaml_missing_file(self):
         """Test loading from non-existent file."""
@@ -241,24 +236,6 @@ class TestMCPConfig:
         warnings = config.validate()
         
         assert any("No features enabled" in w for w in warnings)
-    
-    def test_validate_rate_limit_too_low(self):
-        """Test validation warns on invalid rate limit."""
-        config = MCPConfig(
-            rate_limiting=RateLimitConfig(enabled=True, requests_per_minute=0)
-        )
-        warnings = config.validate()
-        
-        assert any("requests_per_minute must be >= 1" in w for w in warnings)
-    
-    def test_validate_rate_limit_too_high(self):
-        """Test validation warns on very high rate limit."""
-        config = MCPConfig(
-            rate_limiting=RateLimitConfig(enabled=True, requests_per_minute=5000)
-        )
-        warnings = config.validate()
-        
-        assert any("too high" in w for w in warnings)
     
     def test_environment_validation(self):
         """Test environment validation defaults to 'dev'."""

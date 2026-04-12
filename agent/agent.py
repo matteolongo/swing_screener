@@ -157,41 +157,6 @@ class SwingScreenerAgent:
             workspace_snapshot=workspace_snapshot,
         )
     
-    async def create_order_from_candidate(
-        self,
-        candidate: dict[str, Any]
-    ) -> dict[str, Any]:
-        """Create an entry order from a screening candidate.
-        
-        Args:
-            candidate: Screening candidate with entry/stop prices
-            
-        Returns:
-            Order creation result with insights
-        """
-        self._check_running()
-        
-        ticker = candidate.get("ticker")
-        entry_price = candidate.get("entry")
-        stop_price = candidate.get("stop")
-        
-        if not all([ticker, entry_price, stop_price]):
-            raise ValueError("Candidate must have ticker, entry, and stop")
-        
-        logger.info(f"Creating order for candidate: {ticker}")
-        
-        result = await self.order_workflow.execute(
-            action="create",
-            ticker=ticker,
-            order_type="LIMIT",
-            order_kind="entry",
-            entry_price=entry_price,
-            stop_price=stop_price,
-            limit_price=entry_price
-        )
-        
-        return result
-    
     async def review_positions(self) -> dict[str, Any]:
         """Review all open positions with analysis.
         
@@ -276,38 +241,6 @@ class SwingScreenerAgent:
         result = await self.order_workflow.execute(
             action="list",
             status=status
-        )
-        
-        return result
-    
-    async def fill_order(
-        self,
-        order_id: str,
-        filled_price: float,
-        filled_date: Optional[str] = None
-    ) -> dict[str, Any]:
-        """Mark an order as filled after broker execution.
-        
-        Args:
-            order_id: Order identifier
-            filled_price: Actual fill price from broker
-            filled_date: Fill date (default: today)
-            
-        Returns:
-            Fill result with insights
-        """
-        self._check_running()
-        
-        if filled_date is None:
-            filled_date = datetime.now().strftime("%Y-%m-%d")
-        
-        logger.info(f"Filling order {order_id} at ${filled_price}")
-        
-        result = await self.order_workflow.execute(
-            action="fill",
-            order_id=order_id,
-            filled_price=filled_price,
-            filled_date=filled_date
         )
         
         return result

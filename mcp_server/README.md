@@ -18,9 +18,6 @@ Portfolio:
 - `suggest_position_stop`
 - `close_position`
 - `list_orders`
-- `create_order`
-- `fill_order`
-- `cancel_order`
 
 Screener:
 - `list_universes`
@@ -56,7 +53,6 @@ Intelligence:
 ## Canonical Tool Arguments
 - `run_screener`: `universe`, `top`, `strategy_id`, optional filters
 - `preview_order`: `ticker`, `entry_price`, `stop_price`, optional risk inputs
-- `fill_order`: `order_id`, `filled_price`, `filled_date`, optional `stop_price`
 - `update_position_stop`: `position_id`, `new_stop`, optional `reason`
 
 ## Related Docs

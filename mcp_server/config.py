@@ -41,14 +41,6 @@ class LoggingConfig:
 
 
 @dataclass
-class RateLimitConfig:
-    """Rate limiting configuration."""
-    
-    enabled: bool = False
-    requests_per_minute: int = 60
-
-
-@dataclass
 class MCPConfig:
     """Main MCP server configuration.
     
@@ -60,7 +52,6 @@ class MCPConfig:
     environment: str = "dev"
     features: dict[str, FeatureConfig] = field(default_factory=dict)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
-    rate_limiting: RateLimitConfig = field(default_factory=RateLimitConfig)
     
     @classmethod
     def from_yaml(cls, config_path: Path) -> MCPConfig:
@@ -122,19 +113,11 @@ class MCPConfig:
             format=logging_data.get("format", "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
         )
         
-        # Parse rate limiting config
-        rate_limit_data = data.get("rate_limiting", {})
-        rate_limiting = RateLimitConfig(
-            enabled=bool(rate_limit_data.get("enabled", False)),
-            requests_per_minute=int(rate_limit_data.get("requests_per_minute", 60))
-        )
-        
         config = cls(
             server=server,
             environment=environment,
             features=features,
             logging=logging_config,
-            rate_limiting=rate_limiting,
         )
         
         logger.info(
@@ -223,17 +206,6 @@ class MCPConfig:
             warnings.append(
                 f"No features enabled in {self.environment} environment"
             )
-        
-        # Check rate limiting is reasonable
-        if self.rate_limiting.enabled:
-            if self.rate_limiting.requests_per_minute < 1:
-                warnings.append(
-                    "Rate limiting requests_per_minute must be >= 1"
-                )
-            elif self.rate_limiting.requests_per_minute > 1000:
-                warnings.append(
-                    "Rate limiting requests_per_minute > 1000 may be too high"
-                )
         
         return warnings
 

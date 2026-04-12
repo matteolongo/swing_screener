@@ -223,33 +223,6 @@ async def cmd_orders_list(args: argparse.Namespace) -> int:
         return 1
 
 
-async def cmd_orders_fill(args: argparse.Namespace) -> int:
-    """Fill an order."""
-    agent = SwingScreenerAgent()
-    
-    try:
-        await agent.start()
-        
-        result = await agent.fill_order(
-            order_id=args.order_id,
-            filled_price=args.filled_price,
-            filled_date=args.filled_date
-        )
-        
-        print(f"\n✅ Order {args.order_id} filled at ${args.filled_price}")
-        
-        if result.get("result", {}).get("position_created"):
-            print(f"   Position created: {result['result'].get('position_id')}")
-        
-        await agent.stop()
-        return 0
-        
-    except Exception as e:
-        logging.error(f"Order fill failed: {e}", exc_info=True)
-        await agent.stop()
-        return 1
-
-
 async def cmd_daily_review(args: argparse.Namespace) -> int:
     """Run comprehensive daily review."""
     agent = SwingScreenerAgent()
@@ -368,11 +341,6 @@ def main() -> int:
         help="Filter by status"
     )
     
-    fill_order_parser = ord_subparsers.add_parser("fill", help="Fill an order")
-    fill_order_parser.add_argument("order_id", help="Order ID")
-    fill_order_parser.add_argument("filled_price", type=float, help="Filled price")
-    fill_order_parser.add_argument("--filled-date", help="Filled date (YYYY-MM-DD)")
-    
     # Daily review command
     subparsers.add_parser("daily-review", help="Run comprehensive daily review")
     
@@ -411,8 +379,6 @@ def main() -> int:
             return 1
         if args.action == "list":
             return asyncio.run(cmd_orders_list(args))
-        elif args.action == "fill":
-            return asyncio.run(cmd_orders_fill(args))
     elif args.command == "daily-review":
         return asyncio.run(cmd_daily_review(args))
     elif args.command == "chat":

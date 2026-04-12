@@ -148,35 +148,29 @@ class ScreeningWorkflow(BaseWorkflow):
 
 
 class OrderManagementWorkflow(BaseWorkflow):
-    """Workflow for creating and managing orders."""
-    
+    """Workflow for listing orders."""
+
     async def execute(
         self,
         action: str = "list",
         **kwargs
     ) -> dict[str, Any]:
         """Execute order management workflow.
-        
+
         Args:
-            action: Action to perform (list, create, fill, cancel)
+            action: Action to perform (list)
             **kwargs: Action-specific arguments
-            
+
         Returns:
             Order management results
         """
         self.insights.clear()
-        
+
         if action == "list":
             return await self._list_orders(**kwargs)
-        elif action == "create":
-            return await self._create_order(**kwargs)
-        elif action == "fill":
-            return await self._fill_order(**kwargs)
-        elif action == "cancel":
-            return await self._cancel_order(**kwargs)
         else:
             raise ValueError(f"Unknown action: {action}")
-    
+
     async def _list_orders(self, status: Optional[str] = None) -> dict[str, Any]:
         """List orders with optional status filter."""
         self.add_insight(f"Listing orders (status={status or 'all'})")
@@ -212,105 +206,6 @@ class OrderManagementWorkflow(BaseWorkflow):
                 "filled": filled,
                 "cancelled": cancelled
             },
-            "insights": self.get_insights()
-        }
-    
-    async def _create_order(
-        self,
-        ticker: str,
-        order_type: str,
-        order_kind: str,
-        **kwargs
-    ) -> dict[str, Any]:
-        """Create a new order."""
-        self.add_insight(f"Creating {order_kind} {order_type} order for {ticker}")
-        
-        # Validate required fields
-        if order_kind == "entry" and "entry_price" not in kwargs:
-            raise ValueError("entry_price required for entry orders")
-        if order_kind == "stop" and "stop_price" not in kwargs:
-            raise ValueError("stop_price required for stop orders")
-        
-        # Preview position sizing for entry orders
-        if order_kind == "entry" and "entry_price" in kwargs and "stop_price" in kwargs:
-            preview = await self.client.call_tool("preview_order", {
-                "ticker": ticker,
-                "entry_price": kwargs["entry_price"],
-                "stop_price": kwargs["stop_price"]
-            })
-            
-            shares = preview.get("shares", 0)
-            position_value = preview.get("position_size_usd", 0)
-            risk_amount = preview.get("risk_usd", 0)
-            
-            self.add_insight(f"Position preview: {shares} shares, ${position_value:.2f} value")
-            self.add_insight(f"Risk (1R): ${risk_amount:.2f}")
-        
-        # Create the order
-        order_params = {
-            "ticker": ticker,
-            "order_type": order_type,
-            "order_kind": order_kind,
-            **kwargs
-        }
-        
-        result = await self.client.call_tool("create_order", order_params)
-        
-        self.add_insight(f"Order created successfully: ID {result.get('order_id', 'unknown')}")
-        self.add_insight("")
-        self.add_insight("📋 Next Steps:")
-        self.add_insight("1. Execute this order at your broker (e.g., Degiro)")
-        self.add_insight("2. Return here to mark the order as filled")
-        self.add_insight("3. Record the actual fill price and date")
-        
-        return {
-            "order": result,
-            "insights": self.get_insights()
-        }
-    
-    async def _fill_order(
-        self,
-        order_id: str,
-        filled_price: float,
-        filled_date: str
-    ) -> dict[str, Any]:
-        """Fill an order."""
-        self.add_insight(f"Filling order {order_id} at ${filled_price}")
-        
-        result = await self.client.call_tool("fill_order", {
-            "order_id": order_id,
-            "filled_price": filled_price,
-            "filled_date": filled_date
-        })
-        
-        self.add_insight("Order filled successfully")
-        
-        if result.get("position_created"):
-            position_id = result.get("position_id")
-            self.add_insight(f"Position created: {position_id}")
-            self.add_insight("")
-            self.add_insight("🎯 Position Management:")
-            self.add_insight("- Monitor position for stop/target levels")
-            self.add_insight("- Update trailing stop when position reaches +1.5R")
-            self.add_insight("- Consider taking partial profits at +2R")
-        
-        return {
-            "result": result,
-            "insights": self.get_insights()
-        }
-    
-    async def _cancel_order(self, order_id: str) -> dict[str, Any]:
-        """Cancel an order."""
-        self.add_insight(f"Cancelling order {order_id}")
-        
-        result = await self.client.call_tool("cancel_order", {
-            "order_id": order_id
-        })
-        
-        self.add_insight("Order cancelled successfully")
-        
-        return {
-            "result": result,
             "insights": self.get_insights()
         }
 
