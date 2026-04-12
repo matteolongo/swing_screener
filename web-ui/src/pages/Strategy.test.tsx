@@ -1,88 +1,30 @@
 import { describe, it, expect } from 'vitest';
-import { renderWithProviders, screen, within, waitForQueriesToSettle } from '@/test/utils';
-import { act } from '@testing-library/react';
+import { screen, renderWithProviders, waitForQueriesToSettle } from '@/test/utils';
 import StrategyPage from './Strategy';
 
 describe('Strategy Page', () => {
   it('renders strategy editor and loads options', async () => {
     const { queryClient } = renderWithProviders(<StrategyPage />);
 
-    expect(
-      await screen.findByRole('heading', { name: /^Strategy$/ })
-    ).toBeInTheDocument();
-
-    const select = await screen.findByLabelText(/choose strategy/i);
-    expect(select).toBeInTheDocument();
-
-    expect(within(select).getByRole('option', { name: 'Default' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /^Strategy$/ })).toBeInTheDocument();
+    expect(await screen.findByLabelText(/choose strategy/i)).toBeInTheDocument();
     await waitForQueriesToSettle(queryClient);
   });
 
-  it('toggles advanced settings via beginner mode', async () => {
-    const { user, queryClient } = renderWithProviders(<StrategyPage />);
-
-    // In beginner mode, advanced settings are hidden
-    expect(screen.queryByText('SMA Fast')).not.toBeInTheDocument();
-
-    // Find and toggle beginner mode off to access advanced settings
-    const beginnerModeCheckbox = await screen.findByRole('checkbox');
-    await act(async () => {
-      await user.click(beginnerModeCheckbox);
-    });
-
-    // Now advanced settings card should be visible, need to expand it
-    const advancedToggle = await screen.findByRole('button', { name: /show advanced/i });
-    await act(async () => {
-      await user.click(advancedToggle);
-    });
-
-    expect(await screen.findByText('SMA Fast')).toBeInTheDocument();
-    await waitForQueriesToSettle(queryClient);
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    });
-  });
-
-  it('disables delete for default strategy', async () => {
-    const { queryClient } = renderWithProviders(<StrategyPage />);
-
-    const deleteButton = await screen.findByRole('button', { name: /delete/i });
-    expect(deleteButton).toBeDisabled();
-    await waitForQueriesToSettle(queryClient);
-  });
-
-  it('can save a strategy as new', async () => {
-    const { user, queryClient } = renderWithProviders(<StrategyPage />);
-
-    const idInput = await screen.findByLabelText(/new id/i);
-    const nameInput = screen.getByLabelText(/new name/i);
-
-    await act(async () => {
-      await user.type(idInput, 'breakout_v2');
-      await user.type(nameInput, 'Breakout v2');
-    });
-
-    const saveButton = screen.getByRole('button', { name: /save as new/i });
-    await act(async () => {
-      await user.click(saveButton);
-    });
-
-    expect(await screen.findByText(/saved as new strategy/i)).toBeInTheDocument();
-    expect(await screen.findByRole('option', { name: 'Breakout v2' })).toBeInTheDocument();
-    await waitForQueriesToSettle(queryClient);
-  });
-
-  it('renders currency filter selector', async () => {
-    const { queryClient } = renderWithProviders(<StrategyPage />);
-
-    expect(await screen.findByRole('combobox', { name: /currencies/i })).toBeInTheDocument();
-    await waitForQueriesToSettle(queryClient);
-  });
-
-  it('keeps strategy management controls visible', async () => {
+  it('always renders core strategy settings', async () => {
     renderWithProviders(<StrategyPage />);
 
-    expect(await screen.findByLabelText(/choose strategy/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /save as new/i })).toBeInTheDocument();
+    expect(await screen.findByText('Basics')).toBeInTheDocument();
+    expect(screen.getByLabelText(/account size/i)).toBeInTheDocument();
+  });
+
+  it('keeps advanced settings available without a mode toggle', async () => {
+    const { user } = renderWithProviders(<StrategyPage />);
+
+    const toggle = await screen.findByRole('button', { name: /show advanced/i });
+    await user.click(toggle);
+
+    expect(await screen.findByText('SMA Fast')).toBeInTheDocument();
+    expect(screen.queryByText(/beginner mode/i)).not.toBeInTheDocument();
   });
 });

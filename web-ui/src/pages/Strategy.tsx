@@ -8,7 +8,6 @@ import StrategyAdvancedSettingsCard from '@/components/domain/strategy/StrategyA
 import StrategyCoreSettingsCards from '@/components/domain/strategy/StrategyCoreSettingsCards';
 import StrategyPhilosophyCard from '@/components/domain/strategy/StrategyPhilosophyCard';
 import StrategySafetyScore from '@/components/domain/strategy/StrategySafetyScore';
-import BeginnerModeToggle from '@/components/domain/strategy/BeginnerModeToggle';
 import StrategyPresets, { applyPresetToStrategy } from '@/components/domain/strategy/StrategyPresets';
 import { useI18n } from '@/i18n/I18nProvider';
 import {
@@ -17,11 +16,13 @@ import {
   TextInput,
 } from '@/components/domain/strategy/StrategyFieldControls';
 import { getStrategyInfo } from '@/content/strategy_docs/loader';
-import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 
-export default function StrategyPage() {
+interface StrategyPageProps {
+  embedded?: boolean;
+}
+
+export default function StrategyPage({ embedded = false }: StrategyPageProps) {
   const { locale, t } = useI18n();
-  const { isBeginnerMode, setBeginnerMode } = useBeginnerModeStore();
 
   const help = useMemo(
     () => ({
@@ -276,44 +277,28 @@ export default function StrategyPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">{t('strategyPage.header.title')}</h1>
-          <p className="text-sm text-gray-500 mt-1">{t('strategyPage.header.subtitle')}</p>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="secondary"
-            onClick={handleReset}
-            disabled={!draft || updateMutation.isPending}
-          >
-            {t('strategyPage.actions.resetChanges')}
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={!draft || updateMutation.isPending}
-          >
-            {updateMutation.isPending ? t('strategyPage.actions.saving') : t('strategyPage.actions.saveChanges')}
-          </Button>
-        </div>
-      </div>
-
-      {draft && isBeginnerMode ? (
-        <Card variant="bordered" className="border-emerald-200 bg-emerald-50/70 dark:border-emerald-900 dark:bg-emerald-950/20">
-          <CardHeader>
-            <CardTitle>{t('strategyPage.quickStart.title')}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <ol className="space-y-1 text-sm text-gray-700 dark:text-gray-200">
-              <li>{t('strategyPage.quickStart.step1')}</li>
-              <li>{t('strategyPage.quickStart.step2')}</li>
-              <li>{t('strategyPage.quickStart.step3')}</li>
-            </ol>
-            <Button onClick={handleSave} disabled={!draft || updateMutation.isPending}>
-              {updateMutation.isPending ? t('strategyPage.actions.saving') : t('strategyPage.quickStart.primaryAction')}
+      {!embedded ? (
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold">{t('strategyPage.header.title')}</h1>
+            <p className="text-sm text-gray-500 mt-1">{t('strategyPage.header.subtitle')}</p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              onClick={handleReset}
+              disabled={!draft || updateMutation.isPending}
+            >
+              {t('strategyPage.actions.resetChanges')}
             </Button>
-          </CardContent>
-        </Card>
+            <Button
+              onClick={handleSave}
+              disabled={!draft || updateMutation.isPending}
+            >
+              {updateMutation.isPending ? t('strategyPage.actions.saving') : t('strategyPage.actions.saveChanges')}
+            </Button>
+          </div>
+        </div>
       ) : null}
 
       <Card variant="bordered">
@@ -427,22 +412,13 @@ export default function StrategyPage() {
             return strategyInfo ? <StrategyPhilosophyCard strategyInfo={strategyInfo} /> : null;
           })()}
 
-          {/* Beginner Mode Toggle */}
-          <BeginnerModeToggle
-            isBeginnerMode={isBeginnerMode}
-            onToggle={setBeginnerMode}
+          <StrategyPresets
+            currentStrategy={draft}
+            onApplyPreset={(preset) => {
+              const updated = applyPresetToStrategy(draft, preset);
+              setDraft(updated);
+            }}
           />
-
-          {/* Presets - Only show in beginner mode */}
-          {isBeginnerMode && (
-            <StrategyPresets
-              currentStrategy={draft}
-              onApplyPreset={(preset) => {
-                const updated = applyPresetToStrategy(draft, preset);
-                setDraft(updated);
-              }}
-            />
-          )}
 
           {/* Safety Score - Provides feedback on configuration quality */}
           <StrategySafetyScore
@@ -456,21 +432,18 @@ export default function StrategyPage() {
             setDraft={setDraft}
             help={help}
             validationWarnings={validationWarnings}
-            useEnhancedEducation={isBeginnerMode}
+            useEnhancedEducation
           />
 
-          {/* Advanced Settings - Hidden in beginner mode */}
-          {!isBeginnerMode && (
-            <StrategyAdvancedSettingsCard
-              draft={draft}
-              setDraft={setDraft}
-              showAdvanced={showAdvanced}
-              setShowAdvanced={setShowAdvanced}
-              lowRrWarning={lowRrWarning}
-              highFeeWarning={highFeeWarning}
-              help={help}
-            />
-          )}
+          <StrategyAdvancedSettingsCard
+            draft={draft}
+            setDraft={setDraft}
+            showAdvanced={showAdvanced}
+            setShowAdvanced={setShowAdvanced}
+            lowRrWarning={lowRrWarning}
+            highFeeWarning={highFeeWarning}
+            help={help}
+          />
         </>
       )}
     </div>

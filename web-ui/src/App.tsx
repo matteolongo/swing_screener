@@ -7,14 +7,16 @@ import { registerTradingStoreSync } from '@/features/persistence';
 import { migrateRemovedUniverseIds } from '@/features/screener/universeStorage';
 
 migrateRemovedUniverseIds(localStorage);
+localStorage.removeItem('swing-screener-beginner-mode');
 
-const Strategy = lazy(() => import('./pages/Strategy'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
-
-// New primary destination pages
-const Today = lazy(() => import('./pages/Today'));
-const Book = lazy(() => import('./pages/Book'));
-const Research = lazy(() => import('./pages/Research'));
+const Learn = lazy(() => import('./pages/Learn'));
+const Practice = lazy(() => import('./pages/Practice'));
+const Review = lazy(() => import('./pages/Review'));
+const Journal = lazy(() => import('./pages/Journal'));
+const Intelligence = lazy(() => import('./pages/Intelligence'));
+const Fundamentals = lazy(() => import('./pages/Fundamentals'));
+const Calendar = lazy(() => import('./pages/Calendar'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -40,35 +42,33 @@ function App() {
           <Suspense fallback={<div className="p-6 text-sm text-gray-500">Loading page...</div>}>
             <Routes>
               <Route path="/" element={<MainLayout />}>
-                {/* New primary destinations */}
-                <Route index element={<Navigate to="/today" replace />} />
-                <Route path="today" element={<ErrorBoundary><Today /></ErrorBoundary>} />
-                <Route path="book" element={<ErrorBoundary><Book /></ErrorBoundary>} />
-                <Route path="research" element={<ErrorBoundary><Research /></ErrorBoundary>} />
-
-                {/* Strategy / settings — still accessible */}
-                <Route path="strategy" element={<ErrorBoundary><Strategy /></ErrorBoundary>} />
-                <Route path="settings" element={<Navigate to="/strategy" replace />} />
-
-                {/* Onboarding */}
+                <Route index element={<Navigate to="/practice" replace />} />
+                <Route path="practice" element={<ErrorBoundary><Practice /></ErrorBoundary>} />
+                <Route path="learn" element={<ErrorBoundary><Learn /></ErrorBoundary>} />
+                <Route path="learn/settings" element={<ErrorBoundary><Learn /></ErrorBoundary>} />
+                <Route path="review" element={<ErrorBoundary><Review /></ErrorBoundary>} />
+                <Route path="journal" element={<ErrorBoundary><Journal /></ErrorBoundary>} />
                 <Route path="onboarding" element={<Onboarding />} />
+                <Route path="intelligence" element={<ErrorBoundary><Intelligence /></ErrorBoundary>} />
+                <Route path="fundamentals" element={<ErrorBoundary><Fundamentals /></ErrorBoundary>} />
+                <Route path="calendar" element={<ErrorBoundary><Calendar /></ErrorBoundary>} />
 
-                {/* Legacy routes → redirects to new destinations */}
-                <Route path="workspace" element={<Navigate to="/today" replace />} />
-                <Route path="daily-review" element={<Navigate to="/today" replace />} />
-                <Route path="portfolio" element={<Navigate to="/book" replace />} />
-                <Route path="journal" element={<Navigate to="/book" replace />} />
-                <Route path="analytics" element={<Navigate to="/book" replace />} />
-                <Route path="intelligence" element={<Navigate to="/research" replace />} />
-                <Route path="fundamentals" element={<Navigate to="/research" replace />} />
+                <Route path="today" element={<Navigate to="/practice" replace />} />
+                <Route path="book" element={<Navigate to="/review" replace />} />
+                <Route path="research" element={<Navigate to="/learn" replace />} />
+                <Route path="strategy" element={<Navigate to="/learn/settings" replace />} />
+                <Route path="settings" element={<Navigate to="/learn/settings" replace />} />
 
-                {/* Other legacy redirects */}
-                <Route path="dashboard" element={<Navigate to="/today" replace />} />
-                <Route path="screener" element={<Navigate to="/today" replace />} />
-                <Route path="orders" element={<Navigate to="/book" replace />} />
-                <Route path="positions" element={<Navigate to="/book" replace />} />
+                <Route path="workspace" element={<Navigate to="/practice" replace />} />
+                <Route path="daily-review" element={<Navigate to="/practice" replace />} />
+                <Route path="portfolio" element={<Navigate to="/review" replace />} />
+                <Route path="analytics" element={<Navigate to="/journal" replace />} />
+                <Route path="dashboard" element={<Navigate to="/practice" replace />} />
+                <Route path="screener" element={<Navigate to="/practice" replace />} />
+                <Route path="orders" element={<Navigate to="/review" replace />} />
+                <Route path="positions" element={<Navigate to="/review" replace />} />
 
-                <Route path="*" element={<Navigate to="/today" replace />} />
+                <Route path="*" element={<Navigate to="/practice" replace />} />
               </Route>
             </Routes>
           </Suspense>
