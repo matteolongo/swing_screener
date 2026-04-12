@@ -25,7 +25,10 @@ from api.services.same_symbol_reentry import SameSymbolReentryEvaluator
 from swing_screener.risk.engine import RiskEngineConfig, evaluate_recommendation
 from api.repositories.strategy_repo import StrategyRepository
 from swing_screener.data.universe import (
+    filter_tickers_by_metadata,
+    get_instrument_record,
     load_universe_from_package,
+    list_package_universe_entries,
     list_package_universes,
     UniverseConfig as DataUniverseConfig,
     get_universe_benchmark,
@@ -50,35 +53,46 @@ from swing_screener.risk.regime import compute_regime_risk_multiplier
 
 # Map of removed universe ids to their replacements (or None if dropped with no replacement).
 _REMOVED_UNIVERSE_IDS: dict[str, str | None] = {
-    "usd_all": "us_all",
-    "mega": "us_all",
-    "mega_all": "us_all",
+    "usd_all": "broad_market_stocks",
+    "mega": "broad_market_stocks",
+    "mega_all": "broad_market_stocks",
     "eur_all": None,
-    "usd_mega_stocks": "us_mega_stocks",
-    "mega_stocks": "us_mega_stocks",
-    "usd_core_etfs": "us_core_etfs",
-    "core_etfs": "us_core_etfs",
-    "usd_defense_all": "us_defense_all",
-    "defense_all": "us_defense_all",
-    "mega_defense": "us_defense_all",
-    "usd_defense_stocks": "us_defense_stocks",
-    "defense_stocks": "us_defense_stocks",
-    "usd_defense_etfs": "us_defense_etfs",
-    "defense_etfs": "us_defense_etfs",
-    "usd_healthcare_all": "us_healthcare_all",
-    "healthcare_all": "us_healthcare_all",
-    "mega_healthcare_biotech": "us_healthcare_all",
-    "usd_healthcare_stocks": "us_healthcare_stocks",
-    "healthcare_stocks": "us_healthcare_stocks",
-    "usd_healthcare_etfs": "us_healthcare_etfs",
-    "healthcare_etfs": "us_healthcare_etfs",
-    "eur_europe_large": "europe_large_eur",
-    "europe_large": "europe_large_eur",
-    "mega_europe": "europe_large_eur",
-    "usd_europe_large": "europe_proxies_usd",
+    "usd_mega_stocks": "broad_market_stocks",
+    "mega_stocks": "broad_market_stocks",
+    "usd_core_etfs": "broad_market_etfs",
+    "core_etfs": "broad_market_etfs",
+    "usd_defense_all": "defense_stocks",
+    "defense_all": "defense_stocks",
+    "mega_defense": "defense_stocks",
+    "usd_defense_stocks": "defense_stocks",
+    "defense_stocks": "defense_stocks",
+    "usd_defense_etfs": "defense_etfs",
+    "defense_etfs": "defense_etfs",
+    "usd_healthcare_all": "healthcare_stocks",
+    "healthcare_all": "healthcare_stocks",
+    "mega_healthcare_biotech": "healthcare_stocks",
+    "usd_healthcare_stocks": "healthcare_stocks",
+    "healthcare_stocks": "healthcare_stocks",
+    "usd_healthcare_etfs": "healthcare_etfs",
+    "healthcare_etfs": "healthcare_etfs",
+    "eur_europe_large": "europe_large_caps",
+    "europe_large": "europe_large_caps",
+    "mega_europe": "europe_large_caps",
+    "usd_europe_large": "global_proxy_stocks",
     "eur_amsterdam_all": "amsterdam_all",
     "eur_amsterdam_aex": "amsterdam_aex",
     "eur_amsterdam_amx": "amsterdam_amx",
+    "us_all": "broad_market_stocks",
+    "us_mega_stocks": "broad_market_stocks",
+    "us_core_etfs": "broad_market_etfs",
+    "us_defense_all": "defense_stocks",
+    "us_defense_stocks": "defense_stocks",
+    "us_defense_etfs": "defense_etfs",
+    "us_healthcare_all": "healthcare_stocks",
+    "us_healthcare_stocks": "healthcare_stocks",
+    "us_healthcare_etfs": "healthcare_etfs",
+    "europe_large_eur": "europe_large_caps",
+    "europe_proxies_usd": "global_proxy_stocks",
 }
 from api.services.screener_run_manager import get_screener_run_manager
 
@@ -186,19 +200,6 @@ def _infer_active_currencies(
     strategy_currencies: list[str] | tuple[str, ...] | None,
 ) -> list[str]:
     requested = _normalize_currency_codes(request.currencies)
-    universe_name = (request.universe or "").strip().lower()
-    universe_hint: list[str] = []
-    if universe_name.startswith("eur_"):
-        universe_hint = ["EUR"]
-    elif universe_name.startswith("usd_"):
-        universe_hint = ["USD"]
-
-    # If universe explicitly maps to one market, keep that unless user selected a single override.
-    if universe_hint:
-        if len(requested) == 1:
-            return requested
-        return universe_hint
-
     if requested:
         return requested
 
@@ -580,7 +581,7 @@ class ScreenerService:
 
     def list_universes(self) -> dict:
         try:
-            universes = list_package_universes()
+            universes = list_package_universe_entries()
             return {"universes": universes}
         except (FileNotFoundError, PermissionError) as exc:
             logger.error("Failed to access universe files: %s", exc)
@@ -642,7 +643,24 @@ class ScreenerService:
             else:
                 universe_cap = max(500, requested_top * 2)
                 ucfg = DataUniverseConfig(benchmark=benchmark, ensure_benchmark=True, max_tickers=universe_cap)
-                tickers = load_universe_from_package("us_all", ucfg)
+                tickers = load_universe_from_package("broad_market_stocks", ucfg)
+
+            filtered_tickers = filter_tickers_by_metadata(
+                tickers,
+                currencies=request.currencies,
+                exchange_mics=request.exchange_mics,
+                include_otc=request.include_otc if request.include_otc is not None else True,
+                instrument_types=request.instrument_types,
+            )
+            if benchmark not in filtered_tickers:
+                filtered_tickers.append(benchmark)
+            if len(filtered_tickers) < len(tickers):
+                warnings.append(
+                    f"Universe filters reduced the working list from {len(tickers)} to {len(filtered_tickers)} tickers."
+                )
+            tickers = filtered_tickers
+            if len(tickers) <= 1 and benchmark in tickers:
+                raise HTTPException(status_code=404, detail="No tickers left after applying screener filters")
 
             from swing_screener.data.market_data import MarketDataConfig
 
@@ -653,7 +671,7 @@ class ScreenerService:
             
             logger.info(
                 "Screener run: universe=%s top=%s tickers=%s provider=%s",
-                request.universe or "usd_all",
+                request.universe or "broad_market_stocks",
                 requested_top,
                 len(tickers),
                 self._provider.get_provider_name(),
@@ -775,14 +793,14 @@ class ScreenerService:
 
                 ticker_str = str(idx)
                 info = ticker_info.get(ticker_str, {})
+                instrument = get_instrument_record(ticker_str) or {}
                 last_bar = last_bar_map.get(ticker_str) or overall_last_bar
                 currency = str(
                     info.get("currency")
                     or row.get("currency")
+                    or instrument.get("currency")
                     or detect_currency(ticker_str)
                 ).upper()
-                if currency not in {"USD", "EUR"}:
-                    currency = detect_currency(ticker_str)
 
                 signal = row.get("signal")
                 entry_val = _safe_optional_float(row.get("entry")) or last_price
@@ -833,6 +851,9 @@ class ScreenerService:
                     ScreenerCandidate(
                         ticker=ticker_str,
                         currency=currency,
+                        exchange_mic=str(instrument.get("exchange_mic") or "").upper() or None,
+                        instrument_type=str(instrument.get("instrument_type") or "").lower() or None,
+                        is_otc=str(instrument.get("exchange_mic") or "").upper() == "XOTC",
                         name=info.get("name"),
                         sector=info.get("sector"),
                         last_bar=last_bar,

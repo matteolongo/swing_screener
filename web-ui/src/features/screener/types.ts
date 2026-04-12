@@ -93,7 +93,10 @@ export interface DecisionSummary {
 
 export interface ScreenerCandidate {
   ticker: string;
-  currency: 'USD' | 'EUR';
+  currency: string;
+  exchangeMic?: string;
+  instrumentType?: 'equity' | 'etf' | string;
+  isOtc?: boolean;
   name?: string;
   sector?: string;
   lastBar?: string;
@@ -190,6 +193,9 @@ export interface DecisionSummaryAPI {
 export interface ScreenerCandidateAPI {
   ticker: string;
   currency?: string;
+  exchange_mic?: string;
+  instrument_type?: string;
+  is_otc?: boolean;
   name?: string;
   sector?: string;
   last_bar?: string;
@@ -247,6 +253,9 @@ export interface ScreenerRequest {
   minPrice?: number;
   maxPrice?: number;
   currencies?: string[];
+  exchangeMics?: string[];
+  includeOtc?: boolean;
+  instrumentTypes?: Array<'equity' | 'etf'>;
   breakoutLookback?: number;
   pullbackMa?: number;
   minHistory?: number;
@@ -300,8 +309,22 @@ export interface OrderPreview {
   riskPct: number;
 }
 
+export interface UniverseSummary {
+  id: string;
+  description: string;
+  kind: string;
+  benchmark: string;
+  source: string;
+  source_asof: string;
+  last_reviewed_at: string;
+  stale_after_days: number;
+  member_count: number;
+  currencies: string[];
+  exchange_mics: string[];
+}
+
 export interface UniversesResponse {
-  universes: string[];
+  universes: UniverseSummary[];
 }
 
 function transformDecisionSummary(apiSummary: DecisionSummaryAPI): DecisionSummary {
@@ -359,7 +382,10 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
   return {
     candidates: apiResponse.candidates.map(c => ({
       ticker: c.ticker,
-      currency: c.currency === 'EUR' ? 'EUR' : 'USD',
+      currency: c.currency ?? 'UNKNOWN',
+      exchangeMic: c.exchange_mic,
+      instrumentType: c.instrument_type,
+      isOtc: c.is_otc ?? undefined,
       name: c.name,
       sector: c.sector,
       lastBar: c.last_bar,

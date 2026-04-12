@@ -1,0 +1,88 @@
+{
+  "id": "semiconductor_stocks",
+  "kind": "curated",
+  "description": "Semiconductor designers, manufacturers, and equipment makers",
+  "benchmark": "SMH",
+  "source": "manual",
+  "source_asof": "2026-04-12",
+  "last_reviewed_at": "2026-04-12",
+  "stale_after_days": 180,
+  "rules": {
+    "exchange_mics": [
+      "XNAS",
+      "XAMS",
+      "XETR"
+    ],
+    "currencies": [
+      "USD",
+      "EUR"
+    ]
+  },
+  "constituents": [
+    {
+      "symbol": "NVDA",
+      "exchange_mic": "XNAS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "AVGO",
+      "exchange_mic": "XNAS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "AMD",
+      "exchange_mic": "XNAS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "INTC",
+      "exchange_mic": "XNAS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "QCOM",
+      "exchange_mic": "XNAS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "TXN",
+      "exchange_mic": "XNAS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "AMAT",
+      "exchange_mic": "XNAS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "LRCX",
+      "exchange_mic": "XNAS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "MU",
+      "exchange_mic": "XNAS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "ASML.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "ASM.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "BESI.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "IFX.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR"
+    }
+  ]
+}

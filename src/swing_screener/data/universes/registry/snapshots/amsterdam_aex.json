@@ -5,7 +5,7 @@
   "benchmark": "^AEX",
   "source": "euronext_review",
   "source_asof": "2026-03-23",
-  "last_reviewed_at": "2026-04-11",
+  "last_reviewed_at": "2026-04-12",
   "stale_after_days": 100,
   "rules": {
     "exchange_mics": [
@@ -153,6 +153,16 @@
     },
     {
       "symbol": "SBMO.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "WDP.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "TKWY.AS",
       "exchange_mic": "XAMS",
       "currency": "EUR"
     }

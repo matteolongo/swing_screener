@@ -22,6 +22,8 @@ import {
 const TOP_N_MAX = 200;
 
 type CurrencyFilter = 'all' | 'usd' | 'eur';
+type ExchangeFilter = 'all' | 'us_primary' | 'europe_primary' | 'xams' | 'xetr' | 'xpar' | 'xmil' | 'xmad';
+type InstrumentFilter = 'all' | 'equity' | 'etf';
 const DECISION_ACTION_FILTERS: DecisionActionFilter[] = [
   'all',
   'BUY_NOW',
@@ -39,6 +41,33 @@ const currencyFilterToRequest = (value: CurrencyFilter): string[] => {
   if (value === 'eur') return ['EUR'];
   return ['USD', 'EUR'];
 };
+
+const exchangeFilterToRequest = (value: ExchangeFilter): string[] | undefined => {
+  switch (value) {
+    case 'us_primary':
+      return ['XNYS', 'XNAS', 'ARCX'];
+    case 'europe_primary':
+      return ['XAMS', 'XETR', 'XPAR', 'XMIL', 'XMAD'];
+    case 'xams':
+      return ['XAMS'];
+    case 'xetr':
+      return ['XETR'];
+    case 'xpar':
+      return ['XPAR'];
+    case 'xmil':
+      return ['XMIL'];
+    case 'xmad':
+      return ['XMAD'];
+    default:
+      return undefined;
+  }
+};
+
+const instrumentFilterToRequest = (value: InstrumentFilter): Array<'equity' | 'etf'> | undefined => {
+  if (value === 'all') return undefined;
+  return [value];
+};
+
 export default function ScreenerInboxPanel() {
   const { lastResult, setLastResult } = useScreenerStore();
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
@@ -57,8 +86,8 @@ export default function ScreenerInboxPanel() {
 
   const [selectedUniverse, setSelectedUniverse] = useLocalStorage(
     SCREENER_UNIVERSE_STORAGE_KEY,
-    'us_all',
-    (value: unknown) => parseUniverseValue(value) ?? 'us_all'
+    'broad_market_stocks',
+    (value: unknown) => parseUniverseValue(value) ?? 'broad_market_stocks'
   );
   const [topN, setTopN] = useLocalStorage('screener.topN', 20, (val: unknown) => {
     const parsed = typeof val === 'number' ? val : parseInt(String(val), 10);
@@ -75,6 +104,22 @@ export default function ScreenerInboxPanel() {
       return 'all';
     }
   );
+  const [exchangeFilter, setExchangeFilter] = useLocalStorage<ExchangeFilter>(
+    'screener.exchangeFilter',
+    'all',
+    (val: unknown) => {
+      if (val === 'all' || val === 'us_primary' || val === 'europe_primary' || val === 'xams' || val === 'xetr' || val === 'xpar' || val === 'xmil' || val === 'xmad') {
+        return val;
+      }
+      return 'all';
+    }
+  );
+  const [instrumentFilter, setInstrumentFilter] = useLocalStorage<InstrumentFilter>(
+    'screener.instrumentFilter',
+    'all',
+    (val: unknown) => (val === 'equity' || val === 'etf' || val === 'all' ? val : 'all')
+  );
+  const [includeOtc, setIncludeOtc] = useLocalStorage('screener.includeOtc', false);
   const [recommendedOnly, setRecommendedOnly] = useLocalStorage('screener.recommendedOnly', false);
   const [actionFilter, setActionFilter] = useLocalStorage<DecisionActionFilter>(
     'screener.actionFilter',
@@ -104,6 +149,9 @@ export default function ScreenerInboxPanel() {
       minPrice,
       maxPrice,
       currencies: currencyFilterToRequest(currencyFilter),
+      exchangeMics: exchangeFilterToRequest(exchangeFilter),
+      includeOtc,
+      instrumentTypes: instrumentFilterToRequest(instrumentFilter),
       breakoutLookback: strategySignals?.breakoutLookback ?? defaultIndicators?.breakoutLookback ?? 50,
       pullbackMa: strategySignals?.pullbackMa ?? defaultIndicators?.pullbackMa ?? 20,
       minHistory: strategySignals?.minHistory ?? defaultIndicators?.minHistory ?? 260,
@@ -118,6 +166,9 @@ export default function ScreenerInboxPanel() {
     minPrice,
     maxPrice,
     currencyFilter,
+    exchangeFilter,
+    instrumentFilter,
+    includeOtc,
     strategySignals?.breakoutLookback,
     strategySignals?.pullbackMa,
     strategySignals?.minHistory,
@@ -175,6 +226,12 @@ export default function ScreenerInboxPanel() {
         setMaxPrice={setMaxPrice}
         currencyFilter={currencyFilter}
         setCurrencyFilter={setCurrencyFilter}
+        exchangeFilter={exchangeFilter}
+        setExchangeFilter={setExchangeFilter}
+        instrumentFilter={instrumentFilter}
+        setInstrumentFilter={setInstrumentFilter}
+        includeOtc={includeOtc}
+        setIncludeOtc={setIncludeOtc}
         recommendedOnly={recommendedOnly}
         setRecommendedOnly={setRecommendedOnly}
         actionFilter={actionFilter}

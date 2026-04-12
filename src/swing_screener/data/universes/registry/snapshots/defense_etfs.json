@@ -1,0 +1,53 @@
+{
+  "id": "defense_etfs",
+  "kind": "curated",
+  "description": "Defense and aerospace ETFs across USD and EUR venues",
+  "benchmark": "ITA",
+  "source": "manual",
+  "source_asof": "2026-04-12",
+  "last_reviewed_at": "2026-04-12",
+  "stale_after_days": 180,
+  "rules": {
+    "exchange_mics": [
+      "ARCX",
+      "XPAR",
+      "XMIL"
+    ],
+    "currencies": [
+      "USD",
+      "EUR"
+    ]
+  },
+  "constituents": [
+    {
+      "symbol": "ITA",
+      "exchange_mic": "ARCX",
+      "currency": "USD"
+    },
+    {
+      "symbol": "XAR",
+      "exchange_mic": "ARCX",
+      "currency": "USD"
+    },
+    {
+      "symbol": "PPA",
+      "exchange_mic": "ARCX",
+      "currency": "USD"
+    },
+    {
+      "symbol": "DFEN",
+      "exchange_mic": "ARCX",
+      "currency": "USD"
+    },
+    {
+      "symbol": "DFNS.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "DFNS.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR"
+    }
+  ]
+}

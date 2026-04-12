@@ -1,15 +1,22 @@
 {
-  "id": "us_defense_stocks",
+  "id": "defense_stocks",
   "kind": "curated",
-  "description": "USD defense theme stocks only",
-  "benchmark": "SPY",
+  "description": "Aerospace and defense primary-listing stocks",
+  "benchmark": "ITA",
   "source": "manual",
-  "source_asof": "2026-04-11",
-  "last_reviewed_at": "2026-04-11",
-  "stale_after_days": 365,
+  "source_asof": "2026-04-12",
+  "last_reviewed_at": "2026-04-12",
+  "stale_after_days": 180,
   "rules": {
+    "exchange_mics": [
+      "XNAS",
+      "XNYS",
+      "XPAR",
+      "XAMS"
+    ],
     "currencies": [
-      "USD"
+      "USD",
+      "EUR"
     ]
   },
   "constituents": [
@@ -184,54 +191,19 @@
       "currency": "USD"
     },
     {
-      "symbol": "BAESY",
-      "exchange_mic": "XOTC",
-      "currency": "USD"
+      "symbol": "AIR.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR"
     },
     {
-      "symbol": "EADSY",
-      "exchange_mic": "XOTC",
-      "currency": "USD"
+      "symbol": "HO.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR"
     },
     {
-      "symbol": "FINMY",
-      "exchange_mic": "XOTC",
-      "currency": "USD"
-    },
-    {
-      "symbol": "THLLY",
-      "exchange_mic": "XOTC",
-      "currency": "USD"
-    },
-    {
-      "symbol": "RNMBY",
-      "exchange_mic": "XOTC",
-      "currency": "USD"
-    },
-    {
-      "symbol": "SAABY",
-      "exchange_mic": "XOTC",
-      "currency": "USD"
-    },
-    {
-      "symbol": "SAFRY",
-      "exchange_mic": "XOTC",
-      "currency": "USD"
-    },
-    {
-      "symbol": "RYCEY",
-      "exchange_mic": "XOTC",
-      "currency": "USD"
-    },
-    {
-      "symbol": "QNTQY",
-      "exchange_mic": "XOTC",
-      "currency": "USD"
-    },
-    {
-      "symbol": "MTLHY",
-      "exchange_mic": "XOTC",
-      "currency": "USD"
+      "symbol": "THEON.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR"
     }
   ]
 }

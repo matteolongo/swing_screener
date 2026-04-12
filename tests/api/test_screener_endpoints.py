@@ -63,7 +63,7 @@ def test_screener_top_over_100_returns_candidates(monkeypatch):
     monkeypatch.setattr(screener_service, "get_multiple_ticker_info", lambda tickers: {})
 
     client = TestClient(app)
-    res = client.post("/api/screener/run", json={"universe": "us_all", "top": 200})
+    res = client.post("/api/screener/run", json={"universe": "broad_market_stocks", "top": 200})
     assert res.status_code == 200
     data = res.json()
     assert len(data["candidates"]) == 150
@@ -83,7 +83,7 @@ def test_screener_empty_ohlcv_returns_404(monkeypatch):
     monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
 
     client = TestClient(app)
-    res = client.post("/api/screener/run", json={"universe": "us_all", "top": 200})
+    res = client.post("/api/screener/run", json={"universe": "broad_market_stocks", "top": 200})
     assert res.status_code == 404
 
 
@@ -123,7 +123,7 @@ def test_screener_recommendation_payload_shape(monkeypatch):
     monkeypatch.setattr(screener_service, "get_multiple_ticker_info", lambda tickers: {})
 
     client = TestClient(app)
-    res = client.post("/api/screener/run", json={"universe": "us_all", "top": 20})
+    res = client.post("/api/screener/run", json={"universe": "broad_market_stocks", "top": 20})
     assert res.status_code == 200
 
     candidate = res.json()["candidates"][0]
@@ -212,7 +212,7 @@ def test_screener_response_is_prioritized_by_decision_action_and_conviction(monk
     monkeypatch.setattr(screener_service, "_apply_decision_summary_context", fake_apply_decision_summary_context)
 
     client = TestClient(app)
-    res = client.post("/api/screener/run", json={"universe": "us_all", "top": 20})
+    res = client.post("/api/screener/run", json={"universe": "broad_market_stocks", "top": 20})
     assert res.status_code == 200
 
     candidates = res.json()["candidates"]
@@ -251,7 +251,7 @@ def test_screener_currency_comes_from_metadata(monkeypatch):
     )
 
     client = TestClient(app)
-    res = client.post("/api/screener/run", json={"universe": "us_all", "top": 20})
+    res = client.post("/api/screener/run", json={"universe": "broad_market_stocks", "top": 20})
     assert res.status_code == 200
     candidate = res.json()["candidates"][0]
     assert candidate["currency"] == "EUR"
@@ -287,10 +287,60 @@ def test_screener_request_currency_filter_overrides_strategy(monkeypatch):
     client = TestClient(app)
     res = client.post(
         "/api/screener/run",
-        json={"universe": "us_all", "top": 20, "currencies": ["EUR"]},
+        json={"universe": "broad_market_stocks", "top": 20, "currencies": ["EUR"]},
     )
     assert res.status_code == 200
     assert captured["currencies"] == ["EUR"]
+
+
+def test_screener_exchange_filter_reduces_working_list(monkeypatch):
+    ohlcv = _ohlcv_with_spy()
+    captured: dict[str, list[str]] = {}
+    mock_provider = _create_mock_provider(ohlcv)
+
+    def fake_fetch_ohlcv(tickers, start_date=None, end_date=None):
+        del start_date, end_date
+        captured["tickers"] = list(tickers)
+        return ohlcv
+
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None):
+        del ohlcv, cfg, exclude_tickers
+        return pd.DataFrame(
+            {
+                "atr14": [1.2],
+                "mom_6m": [0.1],
+                "mom_12m": [0.2],
+                "rs_6m": [0.05],
+                "score": [0.55],
+                "confidence": [60.0],
+                "last": [50.0],
+                "ma20_level": [48.0],
+                "dist_sma50_pct": [5.0],
+                "dist_sma200_pct": [10.0],
+                "rank": [1],
+            },
+            index=["AAPL"],
+        )
+
+    mock_provider.fetch_ohlcv.side_effect = fake_fetch_ohlcv
+    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(screener_service, "load_universe_from_package", lambda name, cfg: ["AAPL", "ASML.AS", "SPY"])
+    monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
+    monkeypatch.setattr(screener_service, "get_multiple_ticker_info", lambda tickers: {})
+
+    client = TestClient(app)
+    res = client.post(
+        "/api/screener/run",
+        json={
+            "universe": "broad_market_stocks",
+            "top": 20,
+            "exchange_mics": ["XNAS", "XNYS"],
+            "include_otc": False,
+        },
+    )
+    assert res.status_code == 200
+    assert captured["tickers"] == ["AAPL", "SPY"]
+    assert "reduced the working list" in res.json()["warnings"][0].lower()
 
 
 def test_screener_returns_same_symbol_add_on_metadata(monkeypatch):
@@ -360,7 +410,7 @@ def test_screener_returns_same_symbol_add_on_metadata(monkeypatch):
     app.dependency_overrides[get_portfolio_service] = lambda: StubPortfolioService()
     try:
         client = TestClient(app)
-        res = client.post("/api/screener/run", json={"universe": "us_all", "top": 20})
+        res = client.post("/api/screener/run", json={"universe": "broad_market_stocks", "top": 20})
         assert res.status_code == 200
 
         body = res.json()
@@ -378,7 +428,7 @@ def test_screener_invalid_currency_rejected():
     client = TestClient(app)
     res = client.post(
         "/api/screener/run",
-        json={"universe": "us_all", "top": 20, "currencies": ["JPY"]},
+        json={"universe": "broad_market_stocks", "top": 20, "currencies": ["JPY"]},
     )
     assert res.status_code == 422
 
@@ -416,7 +466,7 @@ def test_screener_async_mode_returns_job_and_status(monkeypatch):
     monkeypatch.setattr(screener_service.ScreenerService, "run_screener", fake_run)
 
     client = TestClient(app)
-    launch_res = client.post("/api/screener/run", json={"universe": "us_all", "top": 20})
+    launch_res = client.post("/api/screener/run", json={"universe": "broad_market_stocks", "top": 20})
     assert launch_res.status_code == 202
     launch_payload = launch_res.json()
     assert launch_payload["status"] in {"queued", "running", "completed"}
@@ -437,13 +487,24 @@ def test_screener_async_mode_returns_job_and_status(monkeypatch):
     assert final_payload["result"]["total_screened"] == 0
 
 
+def test_list_universes_returns_metadata_objects():
+    client = TestClient(app)
+    res = client.get("/api/screener/universes")
+    assert res.status_code == 200
+    body = res.json()
+    assert isinstance(body["universes"], list)
+    assert body["universes"][0]["id"]
+    assert "member_count" in body["universes"][0]
+    assert "exchange_mics" in body["universes"][0]
+
+
 def test_screener_run_returns_422_for_removed_universe_with_replacement():
     client = TestClient(app)
     res = client.post("/api/screener/run", json={"universe": "mega_all", "top": 20})
     assert res.status_code == 422
     detail = res.json()["detail"]
     assert "mega_all" in detail
-    assert "us_all" in detail
+    assert "broad_market_stocks" in detail
 
 
 def test_screener_run_returns_422_for_removed_universe_no_replacement():

@@ -190,6 +190,67 @@ def validate_universe_snapshot(universe_id: str) -> list[str]:
     return errors
 
 
+def get_instrument_record(symbol: str) -> Optional[dict]:
+    """Return instrument-master metadata for a symbol when available."""
+    if not symbol:
+        return None
+    return _load_instrument_master().get(str(symbol).strip().upper())
+
+
+def list_package_universe_entries() -> list[dict]:
+    """Return manifest entries enriched with lightweight snapshot metadata."""
+    entries = []
+    for entry in _load_registry_manifest():
+        item = dict(entry)
+        snapshot = _load_snapshot(item["id"])
+        constituents = snapshot.get("constituents", [])
+        item["member_count"] = len(constituents)
+        item["currencies"] = sorted({str(c.get("currency", "")).upper() for c in constituents if c.get("currency")})
+        item["exchange_mics"] = sorted({str(c.get("exchange_mic", "")).upper() for c in constituents if c.get("exchange_mic")})
+        entries.append(item)
+    return sorted(entries, key=lambda item: str(item.get("id", "")))
+
+
+def filter_tickers_by_metadata(
+    tickers: Sequence[str],
+    *,
+    currencies: Optional[Sequence[str]] = None,
+    exchange_mics: Optional[Sequence[str]] = None,
+    include_otc: Optional[bool] = None,
+    instrument_types: Optional[Sequence[str]] = None,
+) -> list[str]:
+    """
+    Filter tickers using instrument-master metadata.
+
+    Unknown metadata is only tolerated when no corresponding filter is requested.
+    """
+    allowed_currencies = {str(c).strip().upper() for c in (currencies or []) if str(c).strip()}
+    allowed_exchanges = {str(m).strip().upper() for m in (exchange_mics or []) if str(m).strip()}
+    allowed_types = {str(t).strip().lower() for t in (instrument_types or []) if str(t).strip()}
+
+    out: list[str] = []
+    for raw in tickers:
+        symbol = str(raw).strip().upper()
+        if not symbol:
+            continue
+        rec = get_instrument_record(symbol)
+        currency = str((rec or {}).get("currency") or "").strip().upper() or "UNKNOWN"
+        exchange = str((rec or {}).get("exchange_mic") or "").strip().upper() or "UNKNOWN"
+        instrument_type = str((rec or {}).get("instrument_type") or "unknown").strip().lower()
+
+        if allowed_currencies and currency not in allowed_currencies:
+            continue
+        if allowed_exchanges and exchange not in allowed_exchanges:
+            continue
+        if include_otc is False and exchange == "XOTC":
+            continue
+        if allowed_types and instrument_type not in allowed_types:
+            continue
+        if symbol not in out:
+            out.append(symbol)
+    return out
+
+
 def list_package_universes() -> list[str]:
     """Return universe ids from registry manifest, sorted."""
     return sorted(e["id"] for e in _load_registry_manifest())

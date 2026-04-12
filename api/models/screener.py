@@ -33,6 +33,9 @@ class SameSymbolCandidateContext(BaseModel):
 class ScreenerCandidate(BaseModel):
     ticker: str
     currency: str = "USD"
+    exchange_mic: Optional[str] = None
+    instrument_type: Optional[str] = None
+    is_otc: Optional[bool] = None
     name: Optional[str] = None
     sector: Optional[str] = None
     last_bar: Optional[str] = None
@@ -93,6 +96,18 @@ class ScreenerRequest(BaseModel):
         default=None,
         description="Allowed currencies (e.g., ['USD'], ['EUR'], ['USD','EUR'])",
     )
+    exchange_mics: Optional[list[str]] = Field(
+        default=None,
+        description="Allowed exchange MICs (e.g., ['XAMS'], ['XNYS','XNAS'])",
+    )
+    include_otc: Optional[bool] = Field(
+        default=None,
+        description="Whether to include OTC listings (XOTC). Defaults to true.",
+    )
+    instrument_types: Optional[list[str]] = Field(
+        default=None,
+        description="Allowed instrument types (e.g., ['equity'], ['etf'])",
+    )
     breakout_lookback: Optional[int] = Field(default=None, gt=0, description="Breakout lookback window")
     pullback_ma: Optional[int] = Field(default=None, gt=0, description="Pullback MA window")
     min_history: Optional[int] = Field(default=None, gt=0, description="Minimum bars required for signals")
@@ -109,6 +124,25 @@ class ScreenerRequest(BaseModel):
         if invalid:
             raise ValueError(f"Unsupported currency codes: {', '.join(invalid)}")
         return list(dict.fromkeys(cleaned))
+
+    @field_validator("exchange_mics")
+    @classmethod
+    def validate_exchange_mics(cls, values: Optional[list[str]]) -> Optional[list[str]]:
+        if values is None:
+            return None
+        cleaned = [str(v).strip().upper() for v in values if str(v).strip()]
+        return list(dict.fromkeys(cleaned)) or None
+
+    @field_validator("instrument_types")
+    @classmethod
+    def validate_instrument_types(cls, values: Optional[list[str]]) -> Optional[list[str]]:
+        if values is None:
+            return None
+        cleaned = [str(v).strip().lower() for v in values if str(v).strip()]
+        invalid = [v for v in cleaned if v not in {"equity", "etf"}]
+        if invalid:
+            raise ValueError(f"Unsupported instrument types: {', '.join(invalid)}")
+        return list(dict.fromkeys(cleaned)) or None
 
 
 class ScreenerResponse(BaseModel):

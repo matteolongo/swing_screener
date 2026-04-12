@@ -8,19 +8,18 @@ import {
 
 describe('universeStorage', () => {
   it('parses universe from JSON string', () => {
-    expect(parseUniverseFromStorage('"us_all"')).toBe('us_all')
+    expect(parseUniverseFromStorage('"broad_market_stocks"')).toBe('broad_market_stocks')
     expect(parseUniverseFromStorage('"amsterdam_aex"')).toBe('amsterdam_aex')
     expect(parseUniverseFromStorage(null)).toBeNull()
   })
 
   it('parses universe from raw string (no JSON wrapping)', () => {
-    expect(parseUniverseFromStorage('us_all')).toBe('us_all')
-    expect(parseUniverseFromStorage('europe_large_eur')).toBe('europe_large_eur')
+    expect(parseUniverseFromStorage('broad_market_stocks')).toBe('broad_market_stocks')
+    expect(parseUniverseFromStorage('europe_large_caps')).toBe('europe_large_caps')
   })
 
   it('strips double-quoted legacy format', () => {
-    // Legacy format: ""us_all"" (double-double-quoted)
-    expect(parseUniverseFromStorage('""us_all""')).toBe('us_all')
+    expect(parseUniverseFromStorage('""broad_market_stocks""')).toBe('broad_market_stocks')
   })
 
   it('does not resolve old aliases — old ids pass through as-is', () => {
@@ -63,19 +62,19 @@ describe('migrateRemovedUniverseIds', () => {
   it('rewrites eur_all (no replacement) to the default', () => {
     const storage = makeStorage({ [SCREENER_UNIVERSE_STORAGE_KEY]: '"eur_all"' })
     migrateRemovedUniverseIds(storage)
-    expect(storage.getItem(SCREENER_UNIVERSE_STORAGE_KEY)).toBe('"us_all"')
+    expect(storage.getItem(SCREENER_UNIVERSE_STORAGE_KEY)).toBe('"broad_market_stocks"')
   })
 
-  it('rewrites mega_all to us_all', () => {
+  it('rewrites mega_all to broad_market_stocks', () => {
     const storage = makeStorage({ [SCREENER_UNIVERSE_STORAGE_KEY]: '"mega_all"' })
     migrateRemovedUniverseIds(storage)
-    expect(storage.getItem(SCREENER_UNIVERSE_STORAGE_KEY)).toBe('"us_all"')
+    expect(storage.getItem(SCREENER_UNIVERSE_STORAGE_KEY)).toBe('"broad_market_stocks"')
   })
 
   it('does not touch a valid current id', () => {
-    const storage = makeStorage({ [SCREENER_UNIVERSE_STORAGE_KEY]: '"us_all"' })
+    const storage = makeStorage({ [SCREENER_UNIVERSE_STORAGE_KEY]: '"broad_market_stocks"' })
     migrateRemovedUniverseIds(storage)
-    expect(storage.getItem(SCREENER_UNIVERSE_STORAGE_KEY)).toBe('"us_all"')
+    expect(storage.getItem(SCREENER_UNIVERSE_STORAGE_KEY)).toBe('"broad_market_stocks"')
   })
 
   it('does nothing when storage key is absent', () => {
