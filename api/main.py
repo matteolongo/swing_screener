@@ -125,8 +125,6 @@ async def lifespan(app: FastAPI):
             WEB_UI_INDEX_FILE,
         )
     yield
-    from api.dependencies import shutdown_agent_runtime
-    await shutdown_agent_runtime()
     logger.info("Shutting down...")
 
 
@@ -241,37 +239,25 @@ async def health_check():
         - checks: individual component checks
         - uptime: time since API started
     """
-    from api.dependencies import get_agent_runtime
     from api.monitoring import HealthChecker, get_metrics_collector
-    
+
     file_check = HealthChecker.check_file_access()
     data_check = HealthChecker.check_data_directory()
-    agent_runtime = await get_agent_runtime().snapshot()
     metrics = get_metrics_collector().get_metrics()
-    metrics.update(
-        {
-            "agent_runtime_running": int(bool(agent_runtime["running"])),
-            "agent_runtime_restart_total": int(agent_runtime["restart_count"]),
-        }
-    )
-    
+
     # Determine overall status
     if file_check["status"] == "unhealthy" or data_check["status"] == "error":
         overall_status = "unhealthy"
         status_code = 503
-    elif (
-        file_check["status"] == "degraded"
-        or data_check["status"] == "warning"
-        or agent_runtime["status"] == "error"
-    ):
+    elif file_check["status"] == "degraded" or data_check["status"] == "warning":
         overall_status = "degraded"
-        status_code = 200  # Still serving traffic
+        status_code = 200
     else:
         overall_status = "healthy"
         status_code = 200
-    
+
     from fastapi.responses import JSONResponse
-    
+
     return JSONResponse(
         status_code=status_code,
         content={
@@ -279,10 +265,9 @@ async def health_check():
             "checks": {
                 "files": file_check,
                 "data_directory": data_check,
-                "agent_runtime": agent_runtime,
             },
             "metrics": metrics,
-        }
+        },
     )
 
 
@@ -296,18 +281,9 @@ async def metrics():
         - lock_contention_total: number of times file lock acquisition timed out
         - validation_failures_total: number of Pydantic validation errors (422 status)
     """
-    from api.dependencies import get_agent_runtime
     from api.monitoring import get_metrics_collector
-    
-    metrics = get_metrics_collector().get_metrics()
-    agent_runtime = await get_agent_runtime().snapshot()
-    metrics.update(
-        {
-            "agent_runtime_running": int(bool(agent_runtime["running"])),
-            "agent_runtime_restart_total": int(agent_runtime["restart_count"]),
-        }
-    )
-    return metrics
+
+    return get_metrics_collector().get_metrics()
 
 
 # Include routers

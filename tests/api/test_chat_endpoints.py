@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
-from api.dependencies import get_agent_chat_service
+from api.dependencies import get_chat_service
 from api.main import app
 from api.models.chat import WorkspaceIntelligenceContext
 from api.services.chat_service import ChatService
@@ -26,31 +26,21 @@ def _override_chat_service(context):
     )
 
 
-class FakeAgentChatService:
-    def __init__(self, chat_service: ChatService):
-        self._chat_service = chat_service
-
-    async def answer(self, request):
-        return self._chat_service.answer(request)
-
-
 def test_chat_answer_endpoint_returns_answer_and_freshness_metadata():
-    app.dependency_overrides[get_agent_chat_service] = lambda: FakeAgentChatService(
-        _override_chat_service(
-            make_context(
-                selected_ticker="AAPL",
-                orders=[make_order()],
-                positions=[make_position()],
-                portfolio_summary=make_portfolio_summary(),
-                screener_snapshot=make_workspace_snapshot("AAPL"),
-                intelligence=WorkspaceIntelligenceContext(
-                    asof_date="2026-03-13",
-                    opportunities=[make_opportunity("AAPL")],
-                    events=[],
-                    education=make_education("AAPL"),
-                ),
+    app.dependency_overrides[get_chat_service] = lambda: _override_chat_service(
+        make_context(
+            selected_ticker="AAPL",
+            orders=[make_order()],
+            positions=[make_position()],
+            portfolio_summary=make_portfolio_summary(),
+            screener_snapshot=make_workspace_snapshot("AAPL"),
+            intelligence=WorkspaceIntelligenceContext(
+                asof_date="2026-03-13",
+                opportunities=[make_opportunity("AAPL")],
+                events=[],
+                education=make_education("AAPL"),
             ),
-        )
+        ),
     )
 
     try:
@@ -69,7 +59,7 @@ def test_chat_answer_endpoint_returns_answer_and_freshness_metadata():
             },
         )
     finally:
-        app.dependency_overrides.pop(get_agent_chat_service, None)
+        app.dependency_overrides.pop(get_chat_service, None)
 
     assert response.status_code == 200
     payload = response.json()
@@ -95,27 +85,23 @@ def test_chat_answer_endpoint_rejects_malformed_workspace_snapshot():
 
 
 def test_chat_answer_endpoint_handles_empty_portfolio():
-    app.dependency_overrides[get_agent_chat_service] = lambda: FakeAgentChatService(
-        _override_chat_service(make_context())
-    )
+    app.dependency_overrides[get_chat_service] = lambda: _override_chat_service(make_context())
 
     try:
         client = TestClient(app)
         response = client.post("/api/chat/answer", json={"question": "What positions do I have?"})
     finally:
-        app.dependency_overrides.pop(get_agent_chat_service, None)
+        app.dependency_overrides.pop(get_chat_service, None)
 
     assert response.status_code == 200
     assert "no stored orders or positions" in response.json()["answer"].lower()
 
 
 def test_chat_answer_endpoint_warns_when_intelligence_is_missing():
-    app.dependency_overrides[get_agent_chat_service] = lambda: FakeAgentChatService(
-        _override_chat_service(
-            make_context(
-                selected_ticker="AAPL",
-                screener_snapshot=make_workspace_snapshot("AAPL"),
-            )
+    app.dependency_overrides[get_chat_service] = lambda: _override_chat_service(
+        make_context(
+            selected_ticker="AAPL",
+            screener_snapshot=make_workspace_snapshot("AAPL"),
         )
     )
 
@@ -126,7 +112,7 @@ def test_chat_answer_endpoint_warns_when_intelligence_is_missing():
             json={"question": "What does intelligence say about AAPL?", "selected_ticker": "AAPL"},
         )
     finally:
-        app.dependency_overrides.pop(get_agent_chat_service, None)
+        app.dependency_overrides.pop(get_chat_service, None)
 
     assert response.status_code == 200
     payload = response.json()
@@ -135,19 +121,17 @@ def test_chat_answer_endpoint_warns_when_intelligence_is_missing():
 
 
 def test_chat_answer_endpoint_supports_bounded_forward_looking_scenarios():
-    app.dependency_overrides[get_agent_chat_service] = lambda: FakeAgentChatService(
-        _override_chat_service(
-            make_context(
-                selected_ticker="AAPL",
-                screener_snapshot=make_workspace_snapshot("AAPL"),
-                intelligence=WorkspaceIntelligenceContext(
-                    asof_date="2026-03-13",
-                    opportunities=[make_opportunity("AAPL")],
-                    events=[],
-                    education=make_education("AAPL"),
-                ),
+    app.dependency_overrides[get_chat_service] = lambda: _override_chat_service(
+        make_context(
+            selected_ticker="AAPL",
+            screener_snapshot=make_workspace_snapshot("AAPL"),
+            intelligence=WorkspaceIntelligenceContext(
+                asof_date="2026-03-13",
+                opportunities=[make_opportunity("AAPL")],
+                events=[],
+                education=make_education("AAPL"),
             ),
-        )
+        ),
     )
 
     try:
@@ -160,7 +144,7 @@ def test_chat_answer_endpoint_supports_bounded_forward_looking_scenarios():
             },
         )
     finally:
-        app.dependency_overrides.pop(get_agent_chat_service, None)
+        app.dependency_overrides.pop(get_chat_service, None)
 
     assert response.status_code == 200
     payload = response.json()

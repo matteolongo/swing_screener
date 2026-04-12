@@ -41,10 +41,6 @@ dev = [
   "ruff",
   "TA-Lib>=0.4.28"
 ]
-mcp = [
-  "mcp>=1.26.0",
-  "pyyaml>=6.0"
-]
 llm = [
   "langchain-core>=0.3.0",
   "langchain-openai>=0.3.0",
@@ -56,11 +52,11 @@ degiro = ["degiro-connector>=3.0.35"]
 swing-screener = "swing_screener.cli:main"
 
 [tool.setuptools]
-package-dir = {"" = "src", "mcp_server" = "mcp_server"}
+package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src", "."]
-include = ["swing_screener*", "mcp_server*"]
+include = ["swing_screener*"]
 
 
 [tool.pytest.ini_options]
