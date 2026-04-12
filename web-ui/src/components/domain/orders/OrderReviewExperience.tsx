@@ -127,7 +127,12 @@ export default function OrderReviewExperience({
   const suggestedEntry = Number.isFinite(initialEntry) && initialEntry > 0 ? initialEntry : fallbackEntry;
   const initialStop = recRisk?.stop ?? context.stop ?? suggestedEntry * 0.95;
   const suggestedStop = Math.max(0.01, Math.min(initialStop, suggestedEntry - 0.01));
-  const suggestedShares = recRisk?.shares ?? context.shares ?? Math.max(1, risk.minShares);
+  const rawSuggestedShares = recRisk?.shares ?? context.shares ?? Math.max(1, risk.minShares);
+  const maxSharesByPositionCap =
+    risk.maxPositionPct > 0 && suggestedEntry > 0
+      ? Math.floor((risk.accountSize * risk.maxPositionPct) / suggestedEntry)
+      : rawSuggestedShares;
+  const suggestedShares = Math.max(1, Math.min(rawSuggestedShares, maxSharesByPositionCap));
   const verdict = context.recommendation?.verdict ?? 'UNKNOWN';
   const isRecommended = verdict === 'RECOMMENDED';
   const reasonsDetailed = context.recommendation?.reasonsDetailed;
