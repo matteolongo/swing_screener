@@ -49,7 +49,7 @@ export function metricHorizonClass(metricKey: string, context?: FundamentalMetri
   return 'bg-gray-100 text-gray-700';
 }
 
-export function formatFundamentalMetricMeta(metricKey: string, context?: FundamentalMetricContext) {
+export function formatFundamentalMetricMeta(_metricKey: string, context?: FundamentalMetricContext) {
   if (!context) return null;
 
   const parts: string[] = [];

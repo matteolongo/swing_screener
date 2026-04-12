@@ -110,7 +110,7 @@ export default function ActionPanel({ ticker }: ActionPanelProps) {
 
   const context: OrderReviewContext = {
     ticker: normalizedTicker,
-    signal: candidate?.signal ?? signalFromAction(candidate?.decisionSummary?.action),
+    signal: candidate?.signal ?? signalFromAction(candidate?.decisionSummary?.action) ?? undefined,
     close: candidate?.close,
     entry: candidate?.entry,
     stop: sameSymbol?.mode === 'ADD_ON' && sameSymbol.executionStop != null ? sameSymbol.executionStop : candidate?.stop,
