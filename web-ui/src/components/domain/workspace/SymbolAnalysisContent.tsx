@@ -33,9 +33,9 @@ interface SymbolAnalysisContentProps {
 
 function provenanceLegendItems() {
   return [
-    { label: 'Price-derived', detail: 'live market multiple or ratio' },
-    { label: 'Snapshot', detail: 'latest provider snapshot value' },
-    { label: 'Latest FY / quarter', detail: 'reported statement period' },
+    { label: 'Live price', detail: 'multiple or ratio that moves with the stock price' },
+    { label: 'Reported', detail: 'point-in-time value from the latest data snapshot' },
+    { label: 'Latest FY / quarter', detail: 'value from a specific reported statement period' },
   ];
 }
 

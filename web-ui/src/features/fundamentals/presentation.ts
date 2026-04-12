@@ -25,33 +25,37 @@ export function isPriceDerivedFundamentalMetric(metricKey: string) {
 }
 
 export function metricHorizonLabel(metricKey: string, context?: FundamentalMetricContext) {
-  if (isPriceDerivedFundamentalMetric(metricKey)) return 'price-derived';
-  return formatFundamentalCadence(context?.cadence) ?? 'source-specific';
+  if (isPriceDerivedFundamentalMetric(metricKey)) return 'live price';
+  const cadence = formatFundamentalCadence(context?.cadence);
+  if (cadence === 'snapshot') return 'reported';
+  return cadence ?? 'varies';
+}
+
+export function metricHorizonTooltip(metricKey: string, context?: FundamentalMetricContext) {
+  const label = metricHorizonLabel(metricKey, context);
+  if (label === 'live price') return 'Calculated from the current stock price — updates with the market';
+  if (label === 'reported') return 'Point-in-time value from the latest available data snapshot';
+  if (label === 'latest quarter') return 'From the most recently filed quarterly report';
+  if (label === 'latest FY') return 'From the most recently filed annual report';
+  return 'Data cadence depends on the provider';
 }
 
 export function metricHorizonClass(metricKey: string, context?: FundamentalMetricContext) {
   const label = metricHorizonLabel(metricKey, context);
-  if (label === 'price-derived') return 'bg-sky-100 text-sky-800';
+  if (label === 'live price') return 'bg-sky-100 text-sky-800';
   if (label === 'latest FY') return 'bg-emerald-100 text-emerald-800';
   if (label === 'latest quarter') return 'bg-amber-100 text-amber-800';
-  if (label === 'snapshot') return 'bg-violet-100 text-violet-800';
+  if (label === 'reported') return 'bg-violet-100 text-violet-800';
   return 'bg-gray-100 text-gray-700';
 }
 
 export function formatFundamentalMetricMeta(metricKey: string, context?: FundamentalMetricContext) {
-  if (!context && !isPriceDerivedFundamentalMetric(metricKey)) return null;
+  if (!context) return null;
 
   const parts: string[] = [];
-  if (isPriceDerivedFundamentalMetric(metricKey)) parts.push('price-derived');
-
-  const cadence = formatFundamentalCadence(context?.cadence);
-  if (cadence) parts.push(cadence);
-
-  const provider = humanizeFundamentalSource(context?.source);
+  const provider = humanizeFundamentalSource(context.source);
   if (provider) parts.push(provider);
-
-  if (context?.derived) parts.push('derived');
-  if (context?.periodEnd) parts.push(context.periodEnd);
+  if (context.periodEnd) parts.push(context.periodEnd);
 
   return parts.join(' · ') || null;
 }

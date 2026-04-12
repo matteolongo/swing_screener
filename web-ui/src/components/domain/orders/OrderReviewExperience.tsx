@@ -788,7 +788,7 @@ export default function OrderReviewExperience({
                     <span className="font-semibold">{t('order.setupGuidance.setupLabel')}</span> {t(guidance.setupLabelKey)}
                   </p>
                   <p>{t(guidance.whatItMeansKey)}</p>
-                  {context.executionNote ? (
+                  {context.executionNote && normalizedSignal === 'unknown' ? (
                     <div className="rounded-md border border-blue-200 bg-white/70 px-3 py-2 text-xs text-blue-800 dark:border-blue-900 dark:bg-blue-950/20 dark:text-blue-100">
                       {context.executionNote}
                     </div>
