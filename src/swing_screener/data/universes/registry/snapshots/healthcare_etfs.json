@@ -1,15 +1,20 @@
 {
-  "id": "us_healthcare_etfs",
+  "id": "healthcare_etfs",
   "kind": "curated",
-  "description": "USD healthcare and biotech ETFs",
-  "benchmark": "SPY",
+  "description": "Healthcare and biotech ETFs across USD and EUR venues",
+  "benchmark": "IXJ",
   "source": "manual",
-  "source_asof": "2026-04-11",
-  "last_reviewed_at": "2026-04-11",
-  "stale_after_days": 365,
+  "source_asof": "2026-04-12",
+  "last_reviewed_at": "2026-04-12",
+  "stale_after_days": 180,
   "rules": {
+    "exchange_mics": [
+      "ARCX",
+      "XMIL"
+    ],
     "currencies": [
-      "USD"
+      "USD",
+      "EUR"
     ]
   },
   "constituents": [
@@ -47,6 +52,11 @@
       "symbol": "PJP",
       "exchange_mic": "ARCX",
       "currency": "USD"
+    },
+    {
+      "symbol": "HLTW.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR"
     }
   ]
 }

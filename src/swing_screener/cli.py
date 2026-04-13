@@ -141,7 +141,7 @@ def main() -> None:
 
     uni_show = uni_sub.add_parser("show", help="Preview a universe")
     src_show = uni_show.add_mutually_exclusive_group(required=True)
-    src_show.add_argument("--name", help="Packaged universe name (e.g. us_all)")
+    src_show.add_argument("--name", help="Packaged universe name (e.g. broad_market_stocks)")
     src_show.add_argument("--file", help="Path to a universe file")
     uni_show.add_argument("--top", type=int, default=20, help="Preview the first N tickers")
     uni_show.add_argument("--grep", help="Keep tickers containing this substring (case-insensitive)")

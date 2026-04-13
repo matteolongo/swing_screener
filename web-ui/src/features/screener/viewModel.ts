@@ -5,7 +5,7 @@ import { SameSymbolCandidateContext, ScreenerCandidate } from './types';
 
 export interface CandidateViewModel {
   ticker: string;
-  currency: 'USD' | 'EUR';
+  currency: string;
   name: string;
   sector: string;
   lastBar: string;

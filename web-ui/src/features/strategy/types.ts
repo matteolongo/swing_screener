@@ -1,4 +1,4 @@
-export type StrategyCurrency = 'USD' | 'EUR';
+export type StrategyCurrency = string;
 
 export interface StrategyTrend {
   smaFast: number;
@@ -294,12 +294,10 @@ export function transformStrategy(api: StrategyAPI): Strategy {
   const marketIntelligenceOpportunityApi = marketIntelligenceApi.opportunity ?? {};
   const currenciesRaw = api.universe.filt.currencies ?? ['USD', 'EUR'];
   const currencies = currenciesRaw
-    .map((value) => value.toUpperCase())
-    .filter((value): value is StrategyCurrency => value === 'USD' || value === 'EUR');
+    .map((value) => String(value).trim().toUpperCase())
+    .filter((value) => value.length > 0);
   const uniqueCurrencies: StrategyCurrency[] = Array.from(new Set(currencies));
-  const normalizedCurrencies: StrategyCurrency[] = uniqueCurrencies.length
-    ? uniqueCurrencies
-    : ['USD', 'EUR'];
+  const normalizedCurrencies: StrategyCurrency[] = uniqueCurrencies.length ? uniqueCurrencies : ['USD', 'EUR'];
 
   return {
     id: api.id,
@@ -411,8 +409,8 @@ export function toStrategyUpdateRequest(strategy: Strategy): StrategyUpdateReque
   const currencies = Array.from(
     new Set(
       strategy.universe.filt.currencies
-        .map((value) => value.toUpperCase())
-        .filter((value) => value === 'USD' || value === 'EUR')
+        .map((value) => String(value).trim().toUpperCase())
+        .filter((value) => value.length > 0)
     )
   );
   return {

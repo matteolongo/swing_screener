@@ -1,0 +1,137 @@
+{
+  "id": "financial_stocks",
+  "kind": "curated",
+  "description": "Banks, insurers, and financial-services leaders",
+  "benchmark": "IXG",
+  "source": "manual",
+  "source_asof": "2026-04-12",
+  "last_reviewed_at": "2026-04-12",
+  "stale_after_days": 180,
+  "rules": {
+    "exchange_mics": [
+      "XNAS",
+      "XNYS",
+      "XAMS",
+      "XETR",
+      "XPAR",
+      "XMAD",
+      "XMIL"
+    ],
+    "currencies": [
+      "USD",
+      "EUR"
+    ]
+  },
+  "constituents": [
+    {
+      "symbol": "BRK-B",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "JPM",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "BAC",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "WFC",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "GS",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "MS",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "V",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "MA",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "AXP",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "ABN.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "INGA.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "NN.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "ASRNL.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "BNP.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "ACA.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "GLE.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "ALV.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "MUV2.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "BBVA.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "SAN.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "UCG.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "ISP.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR"
+    }
+  ]
+}

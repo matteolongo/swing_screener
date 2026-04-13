@@ -8,7 +8,7 @@ import { t } from '@/i18n/t';
 interface RecommendationDetailsModalProps {
   ticker: string;
   recommendation?: Recommendation;
-  currency?: 'USD' | 'EUR';
+  currency?: string;
   onClose: () => void;
 }
 

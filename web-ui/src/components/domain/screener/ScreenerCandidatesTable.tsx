@@ -5,9 +5,10 @@ import TableShell from '@/components/common/TableShell';
 import { ScreenerCandidate } from '@/features/screener/types';
 import { toCandidateViewModel } from '@/features/screener/viewModel';
 import { useScreenerRecurrence } from '@/features/screener/recurrenceHooks';
+import { useScreenerStore } from '@/stores/screenerStore';
 import ScreenerCandidateIdentityCell from './ScreenerCandidateIdentityCell';
 import ScreenerCandidateDetailsRow from './ScreenerCandidateDetailsRow';
-import { formatCurrency } from '@/utils/formatters';
+import { formatCurrency, formatPercent } from '@/utils/formatters';
 import { t } from '@/i18n/t';
 
 function signalBadge(action?: string): { label: string; className: string } | null {
@@ -53,6 +54,7 @@ export default function ScreenerCandidatesTable({
 }: ScreenerCandidatesTableProps) {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const recurrenceQuery = useScreenerRecurrence();
+  const benchmarkTicker = useScreenerStore((state) => state.lastResult?.benchmarkTicker ?? 'Benchmark');
   const recurrenceByTicker = new Map<string, number>(
     (recurrenceQuery.data ?? []).map((r) => [r.ticker, r.streak])
   );
@@ -108,6 +110,9 @@ export default function ScreenerCandidatesTable({
             {t('screener.table.headers.close')}
           </th>
           <th className="py-2 px-3 text-xs font-semibold text-gray-700 text-right">
+            {`vs ${benchmarkTicker}`}
+          </th>
+          <th className="py-2 px-3 text-xs font-semibold text-gray-700 text-right">
             R:R
           </th>
           <th className="py-2 px-3 text-xs font-semibold text-gray-700 text-center">
@@ -160,6 +165,17 @@ export default function ScreenerCandidatesTable({
               {/* Close */}
               <td className="py-1.5 px-3 text-xs text-right text-gray-900 dark:text-gray-100 font-mono whitespace-nowrap">
                 {formatCurrency(candidate.close, candidate.currency)}
+              </td>
+
+              {/* Benchmark */}
+              <td className="py-1.5 px-3 text-xs text-right font-mono whitespace-nowrap">
+                {candidate.benchmarkOutperformancePct != null ? (
+                  <span className={candidate.benchmarkOutperformancePct >= 0 ? 'text-emerald-600' : 'text-rose-600'}>
+                    {formatPercent(candidate.benchmarkOutperformancePct, 1)}
+                  </span>
+                ) : (
+                  <span className="text-gray-400">—</span>
+                )}
               </td>
 
               {/* R:R */}

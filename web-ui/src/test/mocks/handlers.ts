@@ -349,20 +349,20 @@ export const mockOrders = [
 
 export const mockUniverses = {
   universes: [
-    'amsterdam_aex',
-    'amsterdam_amx',
-    'amsterdam_all',
-    'europe_large_eur',
-    'europe_proxies_usd',
-    'us_all',
-    'us_mega_stocks',
-    'us_core_etfs',
-    'us_defense_all',
-    'us_defense_stocks',
-    'us_defense_etfs',
-    'us_healthcare_all',
-    'us_healthcare_stocks',
-    'us_healthcare_etfs',
+    { id: 'amsterdam_aex', description: 'Euronext Amsterdam AEX constituents', kind: 'index', benchmark: '^AEX', source: 'euronext_review', source_asof: '2026-03-23', last_reviewed_at: '2026-04-12', stale_after_days: 100, member_count: 30, currencies: ['EUR'], exchange_mics: ['XAMS'], source_adapter: 'euronext_aex_family_review', source_documents: [], refreshable: true, days_since_review: 0, freshness_status: 'fresh', is_stale: false },
+    { id: 'amsterdam_amx', description: 'Euronext Amsterdam AMX constituents', kind: 'index', benchmark: '^AMX', source: 'euronext_review', source_asof: '2026-03-23', last_reviewed_at: '2026-04-12', stale_after_days: 100, member_count: 25, currencies: ['EUR'], exchange_mics: ['XAMS', 'XPAR'], source_adapter: 'euronext_aex_family_review', source_documents: [], refreshable: true, days_since_review: 0, freshness_status: 'fresh', is_stale: false },
+    { id: 'amsterdam_all', description: 'Euronext Amsterdam AEX + AMX constituents', kind: 'index', benchmark: '^AEX', source: 'euronext_review', source_asof: '2026-03-23', last_reviewed_at: '2026-04-12', stale_after_days: 100, member_count: 55, currencies: ['EUR'], exchange_mics: ['XAMS', 'XPAR'], source_adapter: 'euronext_aex_family_review', source_documents: [], refreshable: true, days_since_review: 0, freshness_status: 'fresh', is_stale: false },
+    { id: 'broad_market_stocks', description: 'Large liquid primary-listing stocks across US and Europe', kind: 'curated', benchmark: 'ACWI', source: 'manual', source_asof: '2026-04-12', last_reviewed_at: '2026-04-12', stale_after_days: 180, member_count: 145, currencies: ['EUR', 'USD'], exchange_mics: ['XAMS', 'XETR', 'XMAD', 'XMIL', 'XNAS', 'XNYS', 'XPAR'], source_adapter: 'manual_snapshot', source_documents: [], refreshable: false, days_since_review: 0, freshness_status: 'fresh', is_stale: false },
+    { id: 'broad_market_etfs', description: 'Core market and sector ETFs across USD and EUR venues', kind: 'curated', benchmark: 'ACWI', source: 'manual', source_asof: '2026-04-12', last_reviewed_at: '2026-04-12', stale_after_days: 180, member_count: 20, currencies: ['EUR', 'USD'], exchange_mics: ['ARCX', 'XETR'], source_adapter: 'manual_snapshot', source_documents: [], refreshable: false, days_since_review: 0, freshness_status: 'fresh', is_stale: false },
+    { id: 'europe_large_caps', description: 'Primary European large-cap local listings', kind: 'curated', benchmark: 'VGK', source: 'manual', source_asof: '2026-04-12', last_reviewed_at: '2026-04-12', stale_after_days: 180, member_count: 49, currencies: ['EUR'], exchange_mics: ['XAMS', 'XETR', 'XMAD', 'XMIL', 'XPAR'], source_adapter: 'manual_snapshot', source_documents: [], refreshable: false, days_since_review: 0, freshness_status: 'fresh', is_stale: false },
+    { id: 'global_proxy_stocks', description: 'ADRs, US listings, and OTC proxies for non-local exposure', kind: 'curated', benchmark: 'VXUS', source: 'manual', source_asof: '2026-04-12', last_reviewed_at: '2026-04-12', stale_after_days: 180, member_count: 37, currencies: ['USD'], exchange_mics: ['XNYS', 'XOTC'], source_adapter: 'manual_snapshot', source_documents: [], refreshable: false, days_since_review: 0, freshness_status: 'fresh', is_stale: false },
+    { id: 'defense_stocks', description: 'Aerospace and defense primary-listing stocks', kind: 'curated', benchmark: 'ITA', source: 'manual', source_asof: '2026-04-12', last_reviewed_at: '2026-04-12', stale_after_days: 180, member_count: 37, currencies: ['EUR', 'USD'], exchange_mics: ['XAMS', 'XNAS', 'XNYS', 'XPAR'], source_adapter: 'manual_snapshot', source_documents: [], refreshable: false, days_since_review: 0, freshness_status: 'fresh', is_stale: false },
+    { id: 'defense_etfs', description: 'Defense and aerospace ETFs across USD and EUR venues', kind: 'curated', benchmark: 'ITA', source: 'manual', source_asof: '2026-04-12', last_reviewed_at: '2026-04-12', stale_after_days: 180, member_count: 6, currencies: ['EUR', 'USD'], exchange_mics: ['ARCX', 'XMIL', 'XPAR'], source_adapter: 'manual_snapshot', source_documents: [], refreshable: false, days_since_review: 0, freshness_status: 'fresh', is_stale: false },
+    { id: 'healthcare_stocks', description: 'Healthcare, pharma, medtech, and biotech primary listings', kind: 'curated', benchmark: 'IXJ', source: 'manual', source_asof: '2026-04-12', last_reviewed_at: '2026-04-12', stale_after_days: 180, member_count: 79, currencies: ['EUR', 'USD'], exchange_mics: ['XAMS', 'XETR', 'XMIL', 'XNAS', 'XNYS', 'XPAR'], source_adapter: 'manual_snapshot', source_documents: [], refreshable: false, days_since_review: 0, freshness_status: 'fresh', is_stale: false },
+    { id: 'healthcare_etfs', description: 'Healthcare and biotech ETFs across USD and EUR venues', kind: 'curated', benchmark: 'IXJ', source: 'manual', source_asof: '2026-04-12', last_reviewed_at: '2026-04-12', stale_after_days: 180, member_count: 8, currencies: ['EUR', 'USD'], exchange_mics: ['ARCX', 'XMIL'], source_adapter: 'manual_snapshot', source_documents: [], refreshable: false, days_since_review: 0, freshness_status: 'fresh', is_stale: false },
+    { id: 'semiconductor_stocks', description: 'Semiconductor designers, manufacturers, and equipment makers', kind: 'curated', benchmark: 'SMH', source: 'manual', source_asof: '2026-04-12', last_reviewed_at: '2026-04-12', stale_after_days: 180, member_count: 13, currencies: ['EUR', 'USD'], exchange_mics: ['XAMS', 'XETR', 'XNAS'], source_adapter: 'manual_snapshot', source_documents: [], refreshable: false, days_since_review: 0, freshness_status: 'fresh', is_stale: false },
+    { id: 'energy_stocks', description: 'Integrated energy majors and services leaders', kind: 'curated', benchmark: 'IXC', source: 'manual', source_asof: '2026-04-12', last_reviewed_at: '2026-04-12', stale_after_days: 180, member_count: 8, currencies: ['EUR', 'USD'], exchange_mics: ['XMAD', 'XMIL', 'XNYS', 'XAMS', 'XPAR'], source_adapter: 'manual_snapshot', source_documents: [], refreshable: false, days_since_review: 0, freshness_status: 'fresh', is_stale: false },
+    { id: 'financial_stocks', description: 'Banks, insurers, and financial-services leaders', kind: 'curated', benchmark: 'IXG', source: 'manual', source_asof: '2026-04-12', last_reviewed_at: '2026-04-12', stale_after_days: 180, member_count: 22, currencies: ['EUR', 'USD'], exchange_mics: ['XAMS', 'XETR', 'XMAD', 'XMIL', 'XNAS', 'XNYS', 'XPAR'], source_adapter: 'manual_snapshot', source_documents: [], refreshable: false, days_since_review: 0, freshness_status: 'fresh', is_stale: false },
   ],
 }
 
@@ -383,10 +383,25 @@ export const mockScreenerResults = {
       momentum_12m: 45.0,
       rel_strength: 85.2,
       confidence: 72.5,
+      price_history: [
+        { date: '2026-02-03', close: 170.0 },
+        { date: '2026-02-04', close: 172.0 },
+        { date: '2026-02-05', close: 175.5 },
+      ],
+      benchmark_price_history: [
+        { date: '2026-02-03', close: 170.0 },
+        { date: '2026-02-04', close: 170.5 },
+        { date: '2026-02-05', close: 171.0 },
+      ],
+      symbol_change_pct: 20.0,
+      benchmark_outperformance_pct: 18.0,
     },
   ],
   asof_date: '2026-02-08',
   total_screened: 500,
+  benchmark_ticker: 'ACWI',
+  benchmark_change_pct: 2.0,
+  benchmark_last_bar: '2026-02-07T16:00:00',
   warnings: [],
 }
 
@@ -970,6 +985,66 @@ export const handlers = [
   // Screener endpoints
   http.get(`${API_BASE_URL}/api/screener/universes`, () => {
     return HttpResponse.json(mockUniverses)
+  }),
+
+  http.get(`${API_BASE_URL}/api/universes`, () => {
+    return HttpResponse.json(mockUniverses)
+  }),
+
+  http.get(`${API_BASE_URL}/api/universes/:universeId`, ({ params }) => {
+    const universe = mockUniverses.universes.find((item) => item.id === params.universeId)
+    if (!universe) {
+      return HttpResponse.json({ detail: 'Universe not found' }, { status: 404 })
+    }
+    return HttpResponse.json({
+      ...universe,
+      rules: { exchange_mics: universe.exchange_mics, currencies: universe.currencies },
+      validation_errors: [],
+      constituents: [
+        {
+          symbol: universe.id === 'amsterdam_amx' ? 'AF.PA' : 'ASML.AS',
+          source_name: universe.id === 'amsterdam_amx' ? 'AIR FRANCE -KLM' : 'ASML HOLDING',
+          source_symbol: universe.id === 'amsterdam_amx' ? 'AF' : 'ASML',
+          exchange_mic: universe.id === 'amsterdam_amx' ? 'XPAR' : universe.exchange_mics[0],
+          currency: universe.currencies[0],
+          instrument_type: 'equity',
+          status: 'active',
+          primary_listing: true,
+        },
+      ],
+    })
+  }),
+
+  http.post(`${API_BASE_URL}/api/universes/:universeId/refresh`, async ({ params, request }) => {
+    const universe = mockUniverses.universes.find((item) => item.id === params.universeId)
+    if (!universe) {
+      return HttpResponse.json({ detail: 'Universe not found' }, { status: 404 })
+    }
+    const body = asObject(await request.json())
+    return HttpResponse.json({
+      universe,
+      applied: Boolean(body.apply),
+      changed: false,
+      current_member_count: universe.member_count,
+      proposed_member_count: universe.member_count,
+      additions: [],
+      removals: [],
+      notes: ['Mock refresh completed without changes.'],
+    })
+  }),
+
+  http.post(`${API_BASE_URL}/api/universes/:universeId/benchmark`, async ({ params, request }) => {
+    const universe = mockUniverses.universes.find((item) => item.id === params.universeId)
+    if (!universe) {
+      return HttpResponse.json({ detail: 'Universe not found' }, { status: 404 })
+    }
+    const body = asObject(await request.json())
+    const benchmark = String(body.benchmark || '').trim().toUpperCase()
+    if (!benchmark) {
+      return HttpResponse.json({ detail: 'Benchmark cannot be empty.' }, { status: 422 })
+    }
+    universe.benchmark = benchmark
+    return HttpResponse.json(universe)
   }),
 
   http.post(`${API_BASE_URL}/api/screener/run`, () => {

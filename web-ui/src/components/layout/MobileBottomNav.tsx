@@ -3,6 +3,7 @@ import {
   CalendarCheck,
   BookMarked,
   FlaskConical,
+  Database,
   Settings2,
 } from 'lucide-react';
 
@@ -33,6 +34,11 @@ const navItems: NavItem[] = [
     icon: FlaskConical,
   },
   {
+    labelKey: 'sidebar.nav.universes',
+    href: '/universes',
+    icon: Database,
+  },
+  {
     labelKey: 'sidebar.nav.settings',
     href: '/strategy',
     icon: Settings2,
@@ -46,7 +52,7 @@ export default function MobileBottomNav() {
       className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-800 bg-zinc-950/95 backdrop-blur-sm lg:hidden"
     >
       <div className="mx-auto max-w-lg px-2 pt-2 pb-[max(env(safe-area-inset-bottom),0.45rem)]">
-        <div className="grid grid-cols-4 gap-1 rounded-2xl border border-zinc-800 bg-zinc-900/80 p-1 shadow-[0_10px_30px_rgba(0,0,0,0.45)]">
+        <div className="grid grid-cols-5 gap-1 rounded-2xl border border-zinc-800 bg-zinc-900/80 p-1 shadow-[0_10px_30px_rgba(0,0,0,0.45)]">
           {navItems.map((item) => {
             const Icon = item.icon;
             return (

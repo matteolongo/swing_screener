@@ -1,0 +1,65 @@
+{
+  "id": "energy_stocks",
+  "kind": "curated",
+  "description": "Integrated energy majors and services leaders",
+  "benchmark": "IXC",
+  "source": "manual",
+  "source_asof": "2026-04-12",
+  "last_reviewed_at": "2026-04-12",
+  "stale_after_days": 180,
+  "rules": {
+    "exchange_mics": [
+      "XNYS",
+      "XAMS",
+      "XPAR",
+      "XMIL",
+      "XMAD"
+    ],
+    "currencies": [
+      "USD",
+      "EUR"
+    ]
+  },
+  "constituents": [
+    {
+      "symbol": "XOM",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "CVX",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "COP",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "SLB",
+      "exchange_mic": "XNYS",
+      "currency": "USD"
+    },
+    {
+      "symbol": "SHELL.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "TTE.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "ENI.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR"
+    },
+    {
+      "symbol": "REP.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR"
+    }
+  ]
+}

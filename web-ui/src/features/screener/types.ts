@@ -93,7 +93,10 @@ export interface DecisionSummary {
 
 export interface ScreenerCandidate {
   ticker: string;
-  currency: 'USD' | 'EUR';
+  currency: string;
+  exchangeMic?: string;
+  instrumentType?: 'equity' | 'etf' | string;
+  isOtc?: boolean;
   name?: string;
   sector?: string;
   lastBar?: string;
@@ -123,6 +126,9 @@ export interface ScreenerCandidate {
   riskPct?: number;
   recommendation?: Recommendation;
   priceHistory?: PriceHistoryPoint[];
+  benchmarkPriceHistory?: PriceHistoryPoint[];
+  symbolChangePct?: number;
+  benchmarkOutperformancePct?: number;
   suggestedOrderType?: string;
   suggestedOrderPrice?: number;
   executionNote?: string;
@@ -190,6 +196,9 @@ export interface DecisionSummaryAPI {
 export interface ScreenerCandidateAPI {
   ticker: string;
   currency?: string;
+  exchange_mic?: string;
+  instrument_type?: string;
+  is_otc?: boolean;
   name?: string;
   sector?: string;
   last_bar?: string;
@@ -219,6 +228,9 @@ export interface ScreenerCandidateAPI {
   risk_pct?: number;
   recommendation?: RecommendationAPI;
   price_history?: PriceHistoryPoint[];
+  benchmark_price_history?: PriceHistoryPoint[];
+  symbol_change_pct?: number;
+  benchmark_outperformance_pct?: number;
   suggested_order_type?: string;
   suggested_order_price?: number;
   execution_note?: string;
@@ -247,6 +259,9 @@ export interface ScreenerRequest {
   minPrice?: number;
   maxPrice?: number;
   currencies?: string[];
+  exchangeMics?: string[];
+  includeOtc?: boolean;
+  instrumentTypes?: Array<'equity' | 'etf'>;
   breakoutLookback?: number;
   pullbackMa?: number;
   minHistory?: number;
@@ -256,6 +271,9 @@ export interface ScreenerResponse {
   candidates: ScreenerCandidate[];
   asofDate: string;
   totalScreened: number;
+  benchmarkTicker?: string;
+  benchmarkChangePct?: number;
+  benchmarkLastBar?: string;
   dataFreshness: 'final_close' | 'intraday';
   warnings?: string[];
   sameSymbolSuppressedCount?: number;
@@ -267,6 +285,9 @@ export interface ScreenerResponseAPI {
   candidates: ScreenerCandidateAPI[];
   asof_date: string;
   total_screened: number;
+  benchmark_ticker?: string;
+  benchmark_change_pct?: number;
+  benchmark_last_bar?: string;
   data_freshness?: 'final_close' | 'intraday';
   warnings?: string[];
   same_symbol_suppressed_count?: number;
@@ -300,8 +321,33 @@ export interface OrderPreview {
   riskPct: number;
 }
 
+export interface UniverseSummary {
+  id: string;
+  description: string;
+  kind: string;
+  benchmark: string;
+  source: string;
+  source_asof: string;
+  last_reviewed_at: string;
+  stale_after_days: number;
+  member_count: number;
+  currencies: string[];
+  exchange_mics: string[];
+  source_adapter: string;
+  source_documents: UniverseSourceDocument[];
+  refreshable: boolean;
+  days_since_review: number | null;
+  freshness_status: 'fresh' | 'review_due' | 'stale' | 'unknown';
+  is_stale: boolean;
+}
+
 export interface UniversesResponse {
-  universes: string[];
+  universes: UniverseSummary[];
+}
+
+export interface UniverseSourceDocument {
+  label: string;
+  url: string;
 }
 
 function transformDecisionSummary(apiSummary: DecisionSummaryAPI): DecisionSummary {
@@ -359,7 +405,10 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
   return {
     candidates: apiResponse.candidates.map(c => ({
       ticker: c.ticker,
-      currency: c.currency === 'EUR' ? 'EUR' : 'USD',
+      currency: c.currency ?? 'UNKNOWN',
+      exchangeMic: c.exchange_mic,
+      instrumentType: c.instrument_type,
+      isOtc: c.is_otc ?? undefined,
       name: c.name,
       sector: c.sector,
       lastBar: c.last_bar,
@@ -389,6 +438,9 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
       riskPct: c.risk_pct,
       recommendation: c.recommendation ? transformRecommendation(c.recommendation) : undefined,
       priceHistory: c.price_history ?? [],
+      benchmarkPriceHistory: c.benchmark_price_history ?? [],
+      symbolChangePct: c.symbol_change_pct,
+      benchmarkOutperformancePct: c.benchmark_outperformance_pct,
       suggestedOrderType: c.suggested_order_type,
       suggestedOrderPrice: c.suggested_order_price,
       executionNote: c.execution_note,
@@ -412,6 +464,9 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
     })),
     asofDate: apiResponse.asof_date,
     totalScreened: apiResponse.total_screened,
+    benchmarkTicker: apiResponse.benchmark_ticker,
+    benchmarkChangePct: apiResponse.benchmark_change_pct,
+    benchmarkLastBar: apiResponse.benchmark_last_bar,
     dataFreshness: apiResponse.data_freshness ?? 'final_close',
     warnings: apiResponse.warnings ?? [],
     sameSymbolSuppressedCount: apiResponse.same_symbol_suppressed_count ?? 0,

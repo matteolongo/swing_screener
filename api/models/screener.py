@@ -33,6 +33,9 @@ class SameSymbolCandidateContext(BaseModel):
 class ScreenerCandidate(BaseModel):
     ticker: str
     currency: str = "USD"
+    exchange_mic: Optional[str] = None
+    instrument_type: Optional[str] = None
+    is_otc: Optional[bool] = None
     name: Optional[str] = None
     sector: Optional[str] = None
     last_bar: Optional[str] = None
@@ -65,6 +68,7 @@ class ScreenerCandidate(BaseModel):
     risk_pct: Optional[float] = None
     recommendation: Optional[Recommendation] = None
     price_history: list[PriceHistoryPoint] = Field(default_factory=list)
+    benchmark_price_history: list[PriceHistoryPoint] = Field(default_factory=list)
     suggested_order_type: Optional[str] = None
     suggested_order_price: Optional[float] = None
     execution_note: Optional[str] = None
@@ -79,6 +83,8 @@ class ScreenerCandidate(BaseModel):
     close_location_in_range: Optional[float] = None
     above_breakout_extension: Optional[float] = None
     breakout_volume_confirmation: Optional[bool] = None
+    symbol_change_pct: Optional[float] = None
+    benchmark_outperformance_pct: Optional[float] = None
 
 
 class ScreenerRequest(BaseModel):
@@ -92,6 +98,18 @@ class ScreenerRequest(BaseModel):
     currencies: Optional[list[str]] = Field(
         default=None,
         description="Allowed currencies (e.g., ['USD'], ['EUR'], ['USD','EUR'])",
+    )
+    exchange_mics: Optional[list[str]] = Field(
+        default=None,
+        description="Allowed exchange MICs (e.g., ['XAMS'], ['XNYS','XNAS'])",
+    )
+    include_otc: Optional[bool] = Field(
+        default=None,
+        description="Whether to include OTC listings (XOTC). Defaults to true.",
+    )
+    instrument_types: Optional[list[str]] = Field(
+        default=None,
+        description="Allowed instrument types (e.g., ['equity'], ['etf'])",
     )
     breakout_lookback: Optional[int] = Field(default=None, gt=0, description="Breakout lookback window")
     pullback_ma: Optional[int] = Field(default=None, gt=0, description="Pullback MA window")
@@ -110,11 +128,33 @@ class ScreenerRequest(BaseModel):
             raise ValueError(f"Unsupported currency codes: {', '.join(invalid)}")
         return list(dict.fromkeys(cleaned))
 
+    @field_validator("exchange_mics")
+    @classmethod
+    def validate_exchange_mics(cls, values: Optional[list[str]]) -> Optional[list[str]]:
+        if values is None:
+            return None
+        cleaned = [str(v).strip().upper() for v in values if str(v).strip()]
+        return list(dict.fromkeys(cleaned)) or None
+
+    @field_validator("instrument_types")
+    @classmethod
+    def validate_instrument_types(cls, values: Optional[list[str]]) -> Optional[list[str]]:
+        if values is None:
+            return None
+        cleaned = [str(v).strip().lower() for v in values if str(v).strip()]
+        invalid = [v for v in cleaned if v not in {"equity", "etf"}]
+        if invalid:
+            raise ValueError(f"Unsupported instrument types: {', '.join(invalid)}")
+        return list(dict.fromkeys(cleaned)) or None
+
 
 class ScreenerResponse(BaseModel):
     candidates: list[ScreenerCandidate]
     asof_date: str
     total_screened: int
+    benchmark_ticker: Optional[str] = None
+    benchmark_change_pct: Optional[float] = None
+    benchmark_last_bar: Optional[str] = None
     data_freshness: str = "final_close"
     warnings: list[str] = Field(default_factory=list)
     same_symbol_suppressed_count: int = 0

@@ -10,7 +10,7 @@ import {
 } from './types';
 
 export async function fetchUniverses(): Promise<UniversesResponse> {
-  const res = await fetch(apiUrl(API_ENDPOINTS.screenerUniverses));
+  const res = await fetch(apiUrl(API_ENDPOINTS.universes));
   if (!res.ok) throw new Error('Failed to fetch universes');
   return res.json();
 }
@@ -24,6 +24,9 @@ export async function runScreener(request: ScreenerRequest): Promise<ScreenerRes
     min_price: request.minPrice,
     max_price: request.maxPrice,
     currencies: request.currencies,
+    exchange_mics: request.exchangeMics,
+    include_otc: request.includeOtc,
+    instrument_types: request.instrumentTypes,
     breakout_lookback: request.breakoutLookback,
     pullback_ma: request.pullbackMa,
     min_history: request.minHistory,

@@ -23,7 +23,7 @@ import { cn } from '@/utils/cn';
 interface TradeInsightModalProps {
   ticker: string;
   recommendation?: Recommendation;
-  currency?: 'USD' | 'EUR';
+  currency?: string;
   asofDate?: string;
   candidateContext?: IntelligenceExplainCandidateContext;
   defaultTab?: 'recommendation' | 'thesis' | 'learn';

@@ -75,7 +75,7 @@ describe('Strategy Page', () => {
   it('renders currency filter selector', async () => {
     const { queryClient } = renderWithProviders(<StrategyPage />);
 
-    expect(await screen.findByRole('combobox', { name: /currencies/i })).toBeInTheDocument();
+    expect(await screen.findByRole('textbox', { name: /currencies/i })).toBeInTheDocument();
     await waitForQueriesToSettle(queryClient);
   });
 

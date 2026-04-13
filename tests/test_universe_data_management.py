@@ -3,6 +3,7 @@ import pytest
 from swing_screener.data.universe import (
     list_package_universes,
     filter_ticker_list,
+    filter_tickers_by_metadata,
     apply_universe_config,
     UniverseConfig,
     load_universe_from_package,
@@ -11,9 +12,9 @@ from swing_screener.data.universe import (
 
 def test_list_package_universes_returns_new_ids():
     universes = list_package_universes()
-    assert "us_all" in universes
+    assert "broad_market_stocks" in universes
     assert "amsterdam_aex" in universes
-    assert "europe_large_eur" in universes
+    assert "europe_large_caps" in universes
     # Old ids must not be present
     assert "usd_all" not in universes
     assert "eur_all" not in universes
@@ -40,9 +41,9 @@ def test_apply_universe_config_benchmark_and_max():
     assert applied[-1] == "SPY"
 
 
-def test_load_us_all_returns_non_empty():
+def test_load_broad_market_stocks_returns_non_empty():
     cfg = UniverseConfig(benchmark="SPY", ensure_benchmark=False)
-    tickers = load_universe_from_package("us_all", cfg)
+    tickers = load_universe_from_package("broad_market_stocks", cfg)
     assert len(tickers) > 50
     assert "AAPL" in tickers
 
@@ -70,3 +71,14 @@ def test_load_removed_eur_all_raises_value_error():
     cfg = UniverseConfig(benchmark="VGK", ensure_benchmark=False)
     with pytest.raises(ValueError, match="Unknown universe id"):
         load_universe_from_package("eur_all", cfg)
+
+
+def test_filter_tickers_by_metadata_respects_exchange_and_instrument_type():
+    filtered = filter_tickers_by_metadata(
+        ["AAPL", "SPY", "ASML.AS", "BAESY"],
+        currencies=["USD", "EUR"],
+        exchange_mics=["XNAS", "XNYS", "XAMS"],
+        include_otc=False,
+        instrument_types=["equity"],
+    )
+    assert filtered == ["AAPL", "ASML.AS"]

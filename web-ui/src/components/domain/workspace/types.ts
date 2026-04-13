@@ -5,7 +5,7 @@ export type WorkspaceAnalysisTab = 'overview' | 'fundamentals' | 'intelligence' 
 
 export interface SymbolAnalysisCandidate {
   ticker: string;
-  currency?: 'USD' | 'EUR';
+  currency?: string;
   name?: string | null;
   sector?: string | null;
   close?: number;

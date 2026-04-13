@@ -13,7 +13,7 @@ import { formatCurrency, formatNumber, formatPercent } from '@/utils/formatters'
 
 interface DecisionSummaryCardProps {
   summary: DecisionSummary;
-  currency?: 'USD' | 'EUR';
+  currency?: string;
 }
 
 function actionLabel(action: DecisionAction): string {

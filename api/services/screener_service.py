@@ -25,7 +25,10 @@ from api.services.same_symbol_reentry import SameSymbolReentryEvaluator
 from swing_screener.risk.engine import RiskEngineConfig, evaluate_recommendation
 from api.repositories.strategy_repo import StrategyRepository
 from swing_screener.data.universe import (
+    filter_tickers_by_metadata,
+    get_instrument_record,
     load_universe_from_package,
+    list_package_universe_entries,
     list_package_universes,
     UniverseConfig as DataUniverseConfig,
     get_universe_benchmark,
@@ -50,35 +53,46 @@ from swing_screener.risk.regime import compute_regime_risk_multiplier
 
 # Map of removed universe ids to their replacements (or None if dropped with no replacement).
 _REMOVED_UNIVERSE_IDS: dict[str, str | None] = {
-    "usd_all": "us_all",
-    "mega": "us_all",
-    "mega_all": "us_all",
+    "usd_all": "broad_market_stocks",
+    "mega": "broad_market_stocks",
+    "mega_all": "broad_market_stocks",
     "eur_all": None,
-    "usd_mega_stocks": "us_mega_stocks",
-    "mega_stocks": "us_mega_stocks",
-    "usd_core_etfs": "us_core_etfs",
-    "core_etfs": "us_core_etfs",
-    "usd_defense_all": "us_defense_all",
-    "defense_all": "us_defense_all",
-    "mega_defense": "us_defense_all",
-    "usd_defense_stocks": "us_defense_stocks",
-    "defense_stocks": "us_defense_stocks",
-    "usd_defense_etfs": "us_defense_etfs",
-    "defense_etfs": "us_defense_etfs",
-    "usd_healthcare_all": "us_healthcare_all",
-    "healthcare_all": "us_healthcare_all",
-    "mega_healthcare_biotech": "us_healthcare_all",
-    "usd_healthcare_stocks": "us_healthcare_stocks",
-    "healthcare_stocks": "us_healthcare_stocks",
-    "usd_healthcare_etfs": "us_healthcare_etfs",
-    "healthcare_etfs": "us_healthcare_etfs",
-    "eur_europe_large": "europe_large_eur",
-    "europe_large": "europe_large_eur",
-    "mega_europe": "europe_large_eur",
-    "usd_europe_large": "europe_proxies_usd",
+    "usd_mega_stocks": "broad_market_stocks",
+    "mega_stocks": "broad_market_stocks",
+    "usd_core_etfs": "broad_market_etfs",
+    "core_etfs": "broad_market_etfs",
+    "usd_defense_all": "defense_stocks",
+    "defense_all": "defense_stocks",
+    "mega_defense": "defense_stocks",
+    "usd_defense_stocks": "defense_stocks",
+    "defense_stocks": "defense_stocks",
+    "usd_defense_etfs": "defense_etfs",
+    "defense_etfs": "defense_etfs",
+    "usd_healthcare_all": "healthcare_stocks",
+    "healthcare_all": "healthcare_stocks",
+    "mega_healthcare_biotech": "healthcare_stocks",
+    "usd_healthcare_stocks": "healthcare_stocks",
+    "healthcare_stocks": "healthcare_stocks",
+    "usd_healthcare_etfs": "healthcare_etfs",
+    "healthcare_etfs": "healthcare_etfs",
+    "eur_europe_large": "europe_large_caps",
+    "europe_large": "europe_large_caps",
+    "mega_europe": "europe_large_caps",
+    "usd_europe_large": "global_proxy_stocks",
     "eur_amsterdam_all": "amsterdam_all",
     "eur_amsterdam_aex": "amsterdam_aex",
     "eur_amsterdam_amx": "amsterdam_amx",
+    "us_all": "broad_market_stocks",
+    "us_mega_stocks": "broad_market_stocks",
+    "us_core_etfs": "broad_market_etfs",
+    "us_defense_all": "defense_stocks",
+    "us_defense_stocks": "defense_stocks",
+    "us_defense_etfs": "defense_etfs",
+    "us_healthcare_all": "healthcare_stocks",
+    "us_healthcare_stocks": "healthcare_stocks",
+    "us_healthcare_etfs": "healthcare_etfs",
+    "europe_large_eur": "europe_large_caps",
+    "europe_proxies_usd": "global_proxy_stocks",
 }
 from api.services.screener_run_manager import get_screener_run_manager
 
@@ -186,19 +200,6 @@ def _infer_active_currencies(
     strategy_currencies: list[str] | tuple[str, ...] | None,
 ) -> list[str]:
     requested = _normalize_currency_codes(request.currencies)
-    universe_name = (request.universe or "").strip().lower()
-    universe_hint: list[str] = []
-    if universe_name.startswith("eur_"):
-        universe_hint = ["EUR"]
-    elif universe_name.startswith("usd_"):
-        universe_hint = ["USD"]
-
-    # If universe explicitly maps to one market, keep that unless user selected a single override.
-    if universe_hint:
-        if len(requested) == 1:
-            return requested
-        return universe_hint
-
     if requested:
         return requested
 
@@ -314,6 +315,77 @@ def _price_history_map(
         if points:
             out[str(ticker)] = points
     return out
+
+
+def _price_history_change_pct(history: list[dict]) -> Optional[float]:
+    if len(history) < 2:
+        return None
+    try:
+        start = float(history[0]["close"])
+        end = float(history[-1]["close"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    if not math.isfinite(start) or not math.isfinite(end) or start <= 0:
+        return None
+    return ((end - start) / start) * 100.0
+
+
+def _aligned_benchmark_price_history(
+    candidate_history: list[dict],
+    benchmark_history: list[dict],
+) -> list[dict]:
+    """Return benchmark closes aligned to the candidate timeline and normalized to the symbol's start price."""
+    if len(candidate_history) < 2 or len(benchmark_history) < 1:
+        return []
+
+    candidate_dates: list[pd.Timestamp] = []
+    candidate_closes: list[float] = []
+    for point in candidate_history:
+        try:
+            ts = pd.Timestamp(str(point["date"]))
+            close = float(point["close"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if pd.isna(ts) or not math.isfinite(close) or close <= 0:
+            continue
+        candidate_dates.append(ts)
+        candidate_closes.append(close)
+
+    benchmark_points: list[tuple[pd.Timestamp, float]] = []
+    for point in benchmark_history:
+        try:
+            ts = pd.Timestamp(str(point["date"]))
+            close = float(point["close"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if pd.isna(ts) or not math.isfinite(close) or close <= 0:
+            continue
+        benchmark_points.append((ts, close))
+
+    if len(candidate_dates) < 2 or not benchmark_points:
+        return []
+
+    benchmark_series = pd.Series(
+        {ts: close for ts, close in benchmark_points},
+        dtype=float,
+    ).sort_index()
+    aligned = benchmark_series.reindex(pd.DatetimeIndex(candidate_dates)).ffill().bfill()
+    if aligned.isna().any():
+        return []
+
+    symbol_start = candidate_closes[0]
+    benchmark_start = float(aligned.iloc[0])
+    if symbol_start <= 0 or benchmark_start <= 0:
+        return []
+
+    scale = symbol_start / benchmark_start
+    return [
+        {
+            "date": _to_date_iso(ts) or str(ts),
+            "close": float(close * scale),
+        }
+        for ts, close in zip(candidate_dates, aligned.tolist())
+    ]
 
 
 def _fundamentals_summary(snapshot) -> str | None:
@@ -580,7 +652,7 @@ class ScreenerService:
 
     def list_universes(self) -> dict:
         try:
-            universes = list_package_universes()
+            universes = list_package_universe_entries()
             return {"universes": universes}
         except (FileNotFoundError, PermissionError) as exc:
             logger.error("Failed to access universe files: %s", exc)
@@ -642,7 +714,24 @@ class ScreenerService:
             else:
                 universe_cap = max(500, requested_top * 2)
                 ucfg = DataUniverseConfig(benchmark=benchmark, ensure_benchmark=True, max_tickers=universe_cap)
-                tickers = load_universe_from_package("us_all", ucfg)
+                tickers = load_universe_from_package("broad_market_stocks", ucfg)
+
+            filtered_tickers = filter_tickers_by_metadata(
+                tickers,
+                currencies=request.currencies,
+                exchange_mics=request.exchange_mics,
+                include_otc=request.include_otc if request.include_otc is not None else True,
+                instrument_types=request.instrument_types,
+            )
+            if benchmark not in filtered_tickers:
+                filtered_tickers.append(benchmark)
+            if len(filtered_tickers) < len(tickers):
+                warnings.append(
+                    f"Universe filters reduced the working list from {len(tickers)} to {len(filtered_tickers)} tickers."
+                )
+            tickers = filtered_tickers
+            if len(tickers) <= 1 and benchmark in tickers:
+                raise HTTPException(status_code=404, detail="No tickers left after applying screener filters")
 
             from swing_screener.data.market_data import MarketDataConfig
 
@@ -653,7 +742,7 @@ class ScreenerService:
             
             logger.info(
                 "Screener run: universe=%s top=%s tickers=%s provider=%s",
-                request.universe or "usd_all",
+                request.universe or "broad_market_stocks",
                 requested_top,
                 len(tickers),
                 self._provider.get_provider_name(),
@@ -760,6 +849,9 @@ class ScreenerService:
             
             # Build price history only for candidate tickers to improve performance
             price_history_map = _price_history_map(ohlcv, tickers=ticker_list)
+            benchmark_history = _price_history_map(ohlcv, tickers=[benchmark]).get(benchmark, [])
+            benchmark_change_pct = _price_history_change_pct(benchmark_history)
+            benchmark_last_bar = last_bar_map.get(benchmark) or overall_last_bar
 
             atr_col = f"atr{universe_cfg.vol.atr_window}"
             ma_col = f"ma{signals_cfg.pullback_ma}_level"
@@ -775,14 +867,14 @@ class ScreenerService:
 
                 ticker_str = str(idx)
                 info = ticker_info.get(ticker_str, {})
+                instrument = get_instrument_record(ticker_str) or {}
                 last_bar = last_bar_map.get(ticker_str) or overall_last_bar
                 currency = str(
                     info.get("currency")
                     or row.get("currency")
+                    or instrument.get("currency")
                     or detect_currency(ticker_str)
                 ).upper()
-                if currency not in {"USD", "EUR"}:
-                    currency = detect_currency(ticker_str)
 
                 signal = row.get("signal")
                 entry_val = _safe_optional_float(row.get("entry")) or last_price
@@ -828,11 +920,22 @@ class ScreenerService:
                 )
                 recommendation = Recommendation.model_validate(asdict(rec_payload))
                 rec_risk = recommendation.risk
+                candidate_history = price_history_map.get(ticker_str, [])
+                symbol_change_pct = _price_history_change_pct(candidate_history)
+                benchmark_price_history = _aligned_benchmark_price_history(candidate_history, benchmark_history)
+                benchmark_outperformance_pct = (
+                    symbol_change_pct - benchmark_change_pct
+                    if symbol_change_pct is not None and benchmark_change_pct is not None
+                    else None
+                )
 
                 candidates.append(
                     ScreenerCandidate(
                         ticker=ticker_str,
                         currency=currency,
+                        exchange_mic=str(instrument.get("exchange_mic") or "").upper() or None,
+                        instrument_type=str(instrument.get("instrument_type") or "").lower() or None,
+                        is_otc=str(instrument.get("exchange_mic") or "").upper() == "XOTC",
                         name=info.get("name"),
                         sector=info.get("sector"),
                         last_bar=last_bar,
@@ -857,6 +960,8 @@ class ScreenerService:
                             if not _is_na_scalar(row.get("breakout_volume_confirmation"))
                             else None
                         ),
+                        symbol_change_pct=symbol_change_pct,
+                        benchmark_outperformance_pct=benchmark_outperformance_pct,
                         signal=str(signal) if not _is_na_scalar(signal) else None,
                         entry=rec_risk.entry,
                         stop=rec_risk.stop if stop_val is not None else None,
@@ -868,6 +973,7 @@ class ScreenerService:
                         risk_pct=risk_pct if risk_pct is not None else rec_risk.risk_pct,
                         recommendation=recommendation,
                         price_history=price_history_map.get(ticker_str, []),
+                        benchmark_price_history=benchmark_price_history,
                         suggested_order_type=(
                             str(row.get("suggested_order_type"))
                             if not _is_na_scalar(row.get("suggested_order_type"))
@@ -935,6 +1041,9 @@ class ScreenerService:
                 candidates=candidates,
                 asof_date=asof_str,
                 total_screened=len(tickers),
+                benchmark_ticker=benchmark,
+                benchmark_change_pct=benchmark_change_pct,
+                benchmark_last_bar=benchmark_last_bar,
                 data_freshness=data_freshness,
                 warnings=warnings,
                 same_symbol_suppressed_count=same_symbol_suppressed_count,

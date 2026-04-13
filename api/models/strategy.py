@@ -35,9 +35,6 @@ class StrategyFilt(BaseModel):
         cleaned = [str(v).strip().upper() for v in values if str(v).strip()]
         if not cleaned:
             return ["USD", "EUR"]
-        invalid = [v for v in cleaned if v not in {"USD", "EUR"}]
-        if invalid:
-            raise ValueError(f"Unsupported currency codes: {', '.join(invalid)}")
         return list(dict.fromkeys(cleaned))
 
 

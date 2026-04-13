@@ -1,15 +1,24 @@
 {
-  "id": "us_healthcare_all",
+  "id": "healthcare_stocks",
   "kind": "curated",
-  "description": "USD healthcare and biotech (stocks plus ETFs)",
-  "benchmark": "SPY",
+  "description": "Healthcare, pharma, medtech, and biotech primary listings",
+  "benchmark": "IXJ",
   "source": "manual",
-  "source_asof": "2026-04-11",
-  "last_reviewed_at": "2026-04-11",
-  "stale_after_days": 365,
+  "source_asof": "2026-04-12",
+  "last_reviewed_at": "2026-04-12",
+  "stale_after_days": 180,
   "rules": {
+    "exchange_mics": [
+      "XNAS",
+      "XNYS",
+      "XAMS",
+      "XETR",
+      "XPAR",
+      "XMIL"
+    ],
     "currencies": [
-      "USD"
+      "USD",
+      "EUR"
     ]
   },
   "constituents": [
@@ -99,11 +108,6 @@
       "currency": "USD"
     },
     {
-      "symbol": "RHHBY",
-      "exchange_mic": "XOTC",
-      "currency": "USD"
-    },
-    {
       "symbol": "NVO",
       "exchange_mic": "XNYS",
       "currency": "USD"
@@ -114,23 +118,8 @@
       "currency": "USD"
     },
     {
-      "symbol": "TAK",
-      "exchange_mic": "XOTC",
-      "currency": "USD"
-    },
-    {
       "symbol": "TEVA",
       "exchange_mic": "XNYS",
-      "currency": "USD"
-    },
-    {
-      "symbol": "BAYRY",
-      "exchange_mic": "XOTC",
-      "currency": "USD"
-    },
-    {
-      "symbol": "CSLLY",
-      "exchange_mic": "XOTC",
       "currency": "USD"
     },
     {
@@ -399,39 +388,34 @@
       "currency": "USD"
     },
     {
-      "symbol": "XLV",
-      "exchange_mic": "ARCX",
-      "currency": "USD"
+      "symbol": "SAN.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR"
     },
     {
-      "symbol": "VHT",
-      "exchange_mic": "ARCX",
-      "currency": "USD"
+      "symbol": "BAYN.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR"
     },
     {
-      "symbol": "IBB",
-      "exchange_mic": "ARCX",
-      "currency": "USD"
+      "symbol": "FRE.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR"
     },
     {
-      "symbol": "XBI",
-      "exchange_mic": "ARCX",
-      "currency": "USD"
+      "symbol": "FME.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR"
     },
     {
-      "symbol": "IHE",
-      "exchange_mic": "ARCX",
-      "currency": "USD"
+      "symbol": "GLPG.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR"
     },
     {
-      "symbol": "IXJ",
-      "exchange_mic": "ARCX",
-      "currency": "USD"
-    },
-    {
-      "symbol": "PJP",
-      "exchange_mic": "ARCX",
-      "currency": "USD"
+      "symbol": "PHARM.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR"
     }
   ]
 }

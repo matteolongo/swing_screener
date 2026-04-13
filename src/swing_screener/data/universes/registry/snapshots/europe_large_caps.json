@@ -1,24 +1,19 @@
 {
-  "id": "europe_large_eur",
-  "kind": "index",
-  "description": "EUR-traded large-cap Europe (local listings only)",
+  "id": "europe_large_caps",
+  "kind": "curated",
+  "description": "Primary European large-cap local listings",
   "benchmark": "VGK",
   "source": "manual",
-  "source_asof": "2026-04-11",
-  "last_reviewed_at": "2026-04-11",
+  "source_asof": "2026-04-12",
+  "last_reviewed_at": "2026-04-12",
   "stale_after_days": 180,
   "rules": {
     "exchange_mics": [
       "XAMS",
-      "XPAR",
       "XETR",
-      "XMIL",
+      "XPAR",
       "XMAD",
-      "XBRU",
-      "XLIS",
-      "XHEL",
-      "XDUB",
-      "XWBO"
+      "XMIL"
     ],
     "currencies": [
       "EUR"

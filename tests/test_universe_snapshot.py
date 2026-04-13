@@ -33,10 +33,11 @@ def test_list_package_universes_contains_expected():
     ids = list_package_universes()
     expected = {
         "amsterdam_aex", "amsterdam_amx", "amsterdam_all",
-        "europe_large_eur", "europe_proxies_usd",
-        "us_all", "us_mega_stocks", "us_core_etfs",
-        "us_defense_all", "us_defense_stocks", "us_defense_etfs",
-        "us_healthcare_all", "us_healthcare_stocks", "us_healthcare_etfs",
+        "broad_market_stocks", "broad_market_etfs",
+        "europe_large_caps", "global_proxy_stocks",
+        "defense_stocks", "defense_etfs",
+        "healthcare_stocks", "healthcare_etfs",
+        "semiconductor_stocks", "energy_stocks", "financial_stocks",
     }
     assert expected == set(ids)
 
@@ -50,8 +51,8 @@ def test_list_package_universes_sorted():
 # Loading
 # ---------------------------------------------------------------------------
 
-def test_load_us_all_non_empty():
-    tickers = load_universe_from_package("us_all", _CFG_NO_BENCH)
+def test_load_broad_market_stocks_non_empty():
+    tickers = load_universe_from_package("broad_market_stocks", _CFG_NO_BENCH)
     assert len(tickers) > 50
     assert "AAPL" in tickers
 
@@ -88,12 +89,12 @@ def test_benchmark_amsterdam_amx():
     assert get_universe_benchmark("amsterdam_amx") == "^AMX"
 
 
-def test_benchmark_us_all():
-    assert get_universe_benchmark("us_all") == "SPY"
+def test_benchmark_broad_market_stocks():
+    assert get_universe_benchmark("broad_market_stocks") == "ACWI"
 
 
-def test_benchmark_europe_large_eur():
-    assert get_universe_benchmark("europe_large_eur") == "VGK"
+def test_benchmark_europe_large_caps():
+    assert get_universe_benchmark("europe_large_caps") == "VGK"
 
 
 def test_benchmark_unknown_returns_none():
@@ -118,7 +119,7 @@ def test_stale_index_hard_fails():
 
 def test_stale_curated_warns_but_does_not_raise():
     stale_snapshot = {
-        "id": "us_all",
+        "id": "broad_market_stocks",
         "kind": "curated",
         "last_reviewed_at": "2020-01-01",
         "stale_after_days": 100,
@@ -151,69 +152,76 @@ def test_fresh_snapshot_does_not_raise_or_warn():
 
 def test_amsterdam_aex_all_xams():
     snapshot = _load_snapshot("amsterdam_aex")
+    assert len(snapshot["constituents"]) == 30
     for c in snapshot["constituents"]:
         assert c["exchange_mic"] == "XAMS", f"{c['symbol']} has wrong MIC: {c['exchange_mic']}"
         assert c["currency"] == "EUR", f"{c['symbol']} has wrong currency: {c['currency']}"
 
 
-def test_amsterdam_amx_all_xams():
+def test_amsterdam_amx_official_membership_includes_air_france_klm():
     snapshot = _load_snapshot("amsterdam_amx")
+    assert len(snapshot["constituents"]) == 25
+    symbols = {c["symbol"] for c in snapshot["constituents"]}
+    assert "AF.PA" in symbols
     for c in snapshot["constituents"]:
-        assert c["exchange_mic"] == "XAMS", f"{c['symbol']} has wrong MIC: {c['exchange_mic']}"
         assert c["currency"] == "EUR"
+        assert c["exchange_mic"] in {"XAMS", "XPAR"}, f"{c['symbol']} has wrong MIC: {c['exchange_mic']}"
 
 
-def test_amsterdam_all_all_xams():
+def test_amsterdam_all_tracks_verified_aex_plus_amx_membership():
     snapshot = _load_snapshot("amsterdam_all")
+    assert len(snapshot["constituents"]) == 55
+    symbols = {c["symbol"] for c in snapshot["constituents"]}
+    assert "AF.PA" in symbols
     for c in snapshot["constituents"]:
-        assert c["exchange_mic"] == "XAMS", f"{c['symbol']} has wrong MIC"
         assert c["currency"] == "EUR"
+        assert c["exchange_mic"] in {"XAMS", "XPAR"}, f"{c['symbol']} has wrong MIC"
 
 
-def test_europe_large_eur_no_gbp():
-    snapshot = _load_snapshot("europe_large_eur")
+def test_europe_large_caps_no_gbp():
+    snapshot = _load_snapshot("europe_large_caps")
     for c in snapshot["constituents"]:
         assert not c["symbol"].endswith(".L"), (
-            f"GBP ticker {c['symbol']} should not be in europe_large_eur"
+            f"GBP ticker {c['symbol']} should not be in europe_large_caps"
         )
 
 
-def test_europe_large_eur_no_chf():
-    snapshot = _load_snapshot("europe_large_eur")
+def test_europe_large_caps_no_chf():
+    snapshot = _load_snapshot("europe_large_caps")
     for c in snapshot["constituents"]:
         assert not c["symbol"].endswith(".SW"), (
-            f"CHF ticker {c['symbol']} should not be in europe_large_eur"
+            f"CHF ticker {c['symbol']} should not be in europe_large_caps"
         )
 
 
-def test_europe_large_eur_no_sek():
-    snapshot = _load_snapshot("europe_large_eur")
+def test_europe_large_caps_no_sek():
+    snapshot = _load_snapshot("europe_large_caps")
     for c in snapshot["constituents"]:
         assert not c["symbol"].endswith(".ST"), (
-            f"SEK ticker {c['symbol']} should not be in europe_large_eur"
+            f"SEK ticker {c['symbol']} should not be in europe_large_caps"
         )
 
 
-def test_europe_large_eur_no_dkk():
-    snapshot = _load_snapshot("europe_large_eur")
+def test_europe_large_caps_no_dkk():
+    snapshot = _load_snapshot("europe_large_caps")
     for c in snapshot["constituents"]:
         assert not c["symbol"].endswith(".CO"), (
-            f"DKK ticker {c['symbol']} should not be in europe_large_eur"
+            f"DKK ticker {c['symbol']} should not be in europe_large_caps"
         )
 
 
-def test_europe_proxies_usd_all_usd():
-    snapshot = _load_snapshot("europe_proxies_usd")
+def test_global_proxy_stocks_all_usd():
+    snapshot = _load_snapshot("global_proxy_stocks")
     for c in snapshot["constituents"]:
         assert c["currency"] == "USD", (
-            f"{c['symbol']} has currency {c['currency']}, expected USD in europe_proxies_usd"
+            f"{c['symbol']} has currency {c['currency']}, expected USD in global_proxy_stocks"
         )
 
 
-def test_us_all_no_suffix_tickers():
-    snapshot = _load_snapshot("us_all")
-    non_us = [c["symbol"] for c in snapshot["constituents"] if c["currency"] != "USD"]
-    assert not non_us, f"Non-USD tickers in us_all: {non_us}"
+def test_broad_market_etfs_contains_eur_and_usd():
+    snapshot = _load_snapshot("broad_market_etfs")
+    currencies = {c["currency"] for c in snapshot["constituents"]}
+    assert currencies == {"USD", "EUR"}
 
 
 # ---------------------------------------------------------------------------

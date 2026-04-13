@@ -6,17 +6,7 @@
     "benchmark": "^AEX",
     "source": "euronext_review",
     "source_asof": "2026-03-23",
-    "last_reviewed_at": "2026-04-11",
-    "stale_after_days": 100
-  },
-  {
-    "id": "amsterdam_amx",
-    "description": "Euronext Amsterdam AMX constituents",
-    "kind": "index",
-    "benchmark": "^AMX",
-    "source": "euronext_review",
-    "source_asof": "2026-03-23",
-    "last_reviewed_at": "2026-04-11",
+    "last_reviewed_at": "2026-04-12",
     "stale_after_days": 100
   },
   {
@@ -26,117 +16,127 @@
     "benchmark": "^AEX",
     "source": "euronext_review",
     "source_asof": "2026-03-23",
-    "last_reviewed_at": "2026-04-11",
+    "last_reviewed_at": "2026-04-12",
     "stale_after_days": 100
   },
   {
-    "id": "europe_large_eur",
-    "description": "EUR-traded large-cap Europe (local listings only, no GBP/CHF/SEK/DKK)",
+    "id": "amsterdam_amx",
+    "description": "Euronext Amsterdam AMX constituents",
     "kind": "index",
-    "benchmark": "VGK",
+    "benchmark": "^AMX",
+    "source": "euronext_review",
+    "source_asof": "2026-03-23",
+    "last_reviewed_at": "2026-04-12",
+    "stale_after_days": 100
+  },
+  {
+    "id": "broad_market_etfs",
+    "description": "Core market and sector ETFs across USD and EUR venues",
+    "kind": "curated",
+    "benchmark": "ACWI",
     "source": "manual",
-    "source_asof": "2026-04-11",
-    "last_reviewed_at": "2026-04-11",
+    "source_asof": "2026-04-12",
+    "last_reviewed_at": "2026-04-12",
     "stale_after_days": 180
   },
   {
-    "id": "europe_proxies_usd",
-    "description": "USD-traded US-venue proxies for European large-cap exposure",
+    "id": "broad_market_stocks",
+    "description": "Large liquid primary-listing stocks across US and Europe",
+    "kind": "curated",
+    "benchmark": "ACWI",
+    "source": "manual",
+    "source_asof": "2026-04-12",
+    "last_reviewed_at": "2026-04-12",
+    "stale_after_days": 180
+  },
+  {
+    "id": "defense_etfs",
+    "description": "Defense and aerospace ETFs across USD and EUR venues",
+    "kind": "curated",
+    "benchmark": "ITA",
+    "source": "manual",
+    "source_asof": "2026-04-12",
+    "last_reviewed_at": "2026-04-12",
+    "stale_after_days": 180
+  },
+  {
+    "id": "defense_stocks",
+    "description": "Aerospace and defense primary-listing stocks",
+    "kind": "curated",
+    "benchmark": "ITA",
+    "source": "manual",
+    "source_asof": "2026-04-12",
+    "last_reviewed_at": "2026-04-12",
+    "stale_after_days": 180
+  },
+  {
+    "id": "energy_stocks",
+    "description": "Integrated energy majors and services leaders",
+    "kind": "curated",
+    "benchmark": "IXC",
+    "source": "manual",
+    "source_asof": "2026-04-12",
+    "last_reviewed_at": "2026-04-12",
+    "stale_after_days": 180
+  },
+  {
+    "id": "europe_large_caps",
+    "description": "Primary European large-cap local listings",
     "kind": "curated",
     "benchmark": "VGK",
     "source": "manual",
-    "source_asof": "2026-04-11",
-    "last_reviewed_at": "2026-04-11",
-    "stale_after_days": 365
+    "source_asof": "2026-04-12",
+    "last_reviewed_at": "2026-04-12",
+    "stale_after_days": 180
   },
   {
-    "id": "us_all",
-    "description": "All USD-listed symbols across packaged universes",
+    "id": "financial_stocks",
+    "description": "Banks, insurers, and financial-services leaders",
     "kind": "curated",
-    "benchmark": "SPY",
+    "benchmark": "IXG",
     "source": "manual",
-    "source_asof": "2026-04-11",
-    "last_reviewed_at": "2026-04-11",
-    "stale_after_days": 365
+    "source_asof": "2026-04-12",
+    "last_reviewed_at": "2026-04-12",
+    "stale_after_days": 180
   },
   {
-    "id": "us_mega_stocks",
-    "description": "USD mega-cap stocks only (no ETFs)",
+    "id": "global_proxy_stocks",
+    "description": "ADRs, US listings, and OTC proxies for non-local exposure",
     "kind": "curated",
-    "benchmark": "SPY",
+    "benchmark": "VXUS",
     "source": "manual",
-    "source_asof": "2026-04-11",
-    "last_reviewed_at": "2026-04-11",
-    "stale_after_days": 365
+    "source_asof": "2026-04-12",
+    "last_reviewed_at": "2026-04-12",
+    "stale_after_days": 180
   },
   {
-    "id": "us_core_etfs",
-    "description": "USD core market and sector ETFs",
+    "id": "healthcare_etfs",
+    "description": "Healthcare and biotech ETFs across USD and EUR venues",
     "kind": "curated",
-    "benchmark": "SPY",
+    "benchmark": "IXJ",
     "source": "manual",
-    "source_asof": "2026-04-11",
-    "last_reviewed_at": "2026-04-11",
-    "stale_after_days": 365
+    "source_asof": "2026-04-12",
+    "last_reviewed_at": "2026-04-12",
+    "stale_after_days": 180
   },
   {
-    "id": "us_defense_all",
-    "description": "USD defense theme (stocks plus ETFs)",
+    "id": "healthcare_stocks",
+    "description": "Healthcare, pharma, medtech, and biotech primary listings",
     "kind": "curated",
-    "benchmark": "SPY",
+    "benchmark": "IXJ",
     "source": "manual",
-    "source_asof": "2026-04-11",
-    "last_reviewed_at": "2026-04-11",
-    "stale_after_days": 365
+    "source_asof": "2026-04-12",
+    "last_reviewed_at": "2026-04-12",
+    "stale_after_days": 180
   },
   {
-    "id": "us_defense_stocks",
-    "description": "USD defense theme stocks only",
+    "id": "semiconductor_stocks",
+    "description": "Semiconductor designers, manufacturers, and equipment makers",
     "kind": "curated",
-    "benchmark": "SPY",
+    "benchmark": "SMH",
     "source": "manual",
-    "source_asof": "2026-04-11",
-    "last_reviewed_at": "2026-04-11",
-    "stale_after_days": 365
-  },
-  {
-    "id": "us_defense_etfs",
-    "description": "USD defense theme ETFs",
-    "kind": "curated",
-    "benchmark": "SPY",
-    "source": "manual",
-    "source_asof": "2026-04-11",
-    "last_reviewed_at": "2026-04-11",
-    "stale_after_days": 365
-  },
-  {
-    "id": "us_healthcare_all",
-    "description": "USD healthcare and biotech (stocks plus ETFs)",
-    "kind": "curated",
-    "benchmark": "SPY",
-    "source": "manual",
-    "source_asof": "2026-04-11",
-    "last_reviewed_at": "2026-04-11",
-    "stale_after_days": 365
-  },
-  {
-    "id": "us_healthcare_stocks",
-    "description": "USD healthcare and biotech stocks only",
-    "kind": "curated",
-    "benchmark": "SPY",
-    "source": "manual",
-    "source_asof": "2026-04-11",
-    "last_reviewed_at": "2026-04-11",
-    "stale_after_days": 365
-  },
-  {
-    "id": "us_healthcare_etfs",
-    "description": "USD healthcare and biotech ETFs",
-    "kind": "curated",
-    "benchmark": "SPY",
-    "source": "manual",
-    "source_asof": "2026-04-11",
-    "last_reviewed_at": "2026-04-11",
-    "stale_after_days": 365
+    "source_asof": "2026-04-12",
+    "last_reviewed_at": "2026-04-12",
+    "stale_after_days": 180
   }
 ]

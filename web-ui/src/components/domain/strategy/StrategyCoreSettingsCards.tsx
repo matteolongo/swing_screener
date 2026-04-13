@@ -6,25 +6,27 @@ import {
   SelectInput,
   TextInput,
 } from '@/components/domain/strategy/StrategyFieldControls';
-import { Strategy, StrategyCurrency } from '@/features/strategy/types';
+import { Strategy } from '@/features/strategy/types';
 import type { ValidationWarning } from '@/features/strategy/api';
 import EnhancedSignalsCard from './EnhancedSignalsCard';
 import EnhancedRiskCard from './EnhancedRiskCard';
 
-type CurrencyFilterValue = 'all' | 'usd' | 'eur';
-
-function currenciesToFilterValue(currencies: StrategyCurrency[]): CurrencyFilterValue {
-  const hasUsd = currencies.includes('USD');
-  const hasEur = currencies.includes('EUR');
-  if (hasUsd && !hasEur) return 'usd';
-  if (!hasUsd && hasEur) return 'eur';
-  return 'all';
+function currenciesToTextValue(currencies: string[]): string {
+  return currencies
+    .map((value) => String(value).trim().toUpperCase())
+    .filter((value, index, values) => value.length > 0 && values.indexOf(value) === index)
+    .join(', ');
 }
 
-function filterValueToCurrencies(value: CurrencyFilterValue): StrategyCurrency[] {
-  if (value === 'usd') return ['USD'];
-  if (value === 'eur') return ['EUR'];
-  return ['USD', 'EUR'];
+function textValueToCurrencies(value: string): string[] {
+  return Array.from(
+    new Set(
+      value
+        .split(',')
+        .map((item) => item.trim().toUpperCase())
+        .filter((item) => item.length > 0)
+    )
+  );
 }
 
 interface StrategyCoreSettingsCardsProps {
@@ -44,12 +46,6 @@ export default function StrategyCoreSettingsCards({
 }: StrategyCoreSettingsCardsProps) {
   const strategyModules = [
     { value: 'momentum', label: t('strategyPage.core.options.moduleMomentumDefault') },
-  ];
-
-  const currencyFilterOptions = [
-    { value: 'all', label: t('strategyPage.core.options.currencyAll') },
-    { value: 'usd', label: t('strategyPage.core.options.currencyUsd') },
-    { value: 'eur', label: t('strategyPage.core.options.currencyEur') },
   ];
 
   return (
@@ -241,9 +237,9 @@ export default function StrategyCoreSettingsCards({
               step={1}
               min={0}
             />
-            <SelectInput
+            <TextInput
               label={t('strategyPage.core.fields.currencies')}
-              value={currenciesToFilterValue(draft.universe.filt.currencies)}
+              value={currenciesToTextValue(draft.universe.filt.currencies)}
               onChange={(value) =>
                 setDraft({
                   ...draft,
@@ -251,12 +247,12 @@ export default function StrategyCoreSettingsCards({
                     ...draft.universe,
                     filt: {
                       ...draft.universe.filt,
-                      currencies: filterValueToCurrencies(value as CurrencyFilterValue),
+                      currencies: textValueToCurrencies(value),
                     },
                   },
                 })
               }
-              options={currencyFilterOptions}
+              placeholder="USD, EUR, GBP"
               help={help.currencies}
             />
           </div>

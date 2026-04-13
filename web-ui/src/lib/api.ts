@@ -18,6 +18,12 @@ export const API_ENDPOINTS = {
   screenerRunStatus: (jobId: string) => `/api/screener/run/${jobId}`,
   screenerUniverses: '/api/screener/universes',
   screenerPreview: '/api/screener/preview-order',
+
+  // Universe management
+  universes: '/api/universes',
+  universeById: (id: string) => `/api/universes/${encodeURIComponent(id)}`,
+  universeRefresh: (id: string) => `/api/universes/${encodeURIComponent(id)}/refresh`,
+  universeBenchmark: (id: string) => `/api/universes/${encodeURIComponent(id)}/benchmark`,
   
   // Portfolio - Positions
   positions: '/api/portfolio/positions',
