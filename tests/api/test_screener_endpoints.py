@@ -18,6 +18,11 @@ def _ohlcv_with_spy() -> pd.DataFrame:
     idx = pd.date_range("2024-01-01", periods=3, freq="D")
     close = pd.Series([100.0, 101.0, 102.0], index=idx, dtype=float)
     data = {
+        ("Close", "ACWI"): close,
+        ("Open", "ACWI"): close,
+        ("High", "ACWI"): close + 1.0,
+        ("Low", "ACWI"): close - 1.0,
+        ("Volume", "ACWI"): pd.Series(1_000_000, index=idx, dtype=float),
         ("Close", "SPY"): close,
         ("Open", "SPY"): close,
         ("High", "SPY"): close + 1.0,
@@ -32,17 +37,22 @@ def _ohlcv_with_spy() -> pd.DataFrame:
 def _ohlcv_with_symbol_and_spy() -> pd.DataFrame:
     idx = pd.date_range("2024-01-01", periods=3, freq="D")
     aaa = pd.Series([10.0, 11.0, 12.0], index=idx, dtype=float)
-    spy = pd.Series([100.0, 101.0, 102.0], index=idx, dtype=float)
+    acwi = pd.Series([100.0, 101.0, 102.0], index=idx, dtype=float)
     data = {
         ("Close", "AAA"): aaa,
         ("Open", "AAA"): aaa,
         ("High", "AAA"): aaa + 0.5,
         ("Low", "AAA"): aaa - 0.5,
         ("Volume", "AAA"): pd.Series(1_000_000, index=idx, dtype=float),
-        ("Close", "SPY"): spy,
-        ("Open", "SPY"): spy,
-        ("High", "SPY"): spy + 1.0,
-        ("Low", "SPY"): spy - 1.0,
+        ("Close", "ACWI"): acwi,
+        ("Open", "ACWI"): acwi,
+        ("High", "ACWI"): acwi + 1.0,
+        ("Low", "ACWI"): acwi - 1.0,
+        ("Volume", "ACWI"): pd.Series(1_000_000, index=idx, dtype=float),
+        ("Close", "SPY"): acwi,
+        ("Open", "SPY"): acwi,
+        ("High", "SPY"): acwi + 1.0,
+        ("Low", "SPY"): acwi - 1.0,
         ("Volume", "SPY"): pd.Series(1_000_000, index=idx, dtype=float),
     }
     df = pd.DataFrame(data, index=idx)
@@ -210,7 +220,7 @@ def test_screener_attaches_benchmark_comparison(monkeypatch):
     payload = res.json()
     candidate = payload["candidates"][0]
 
-    assert payload["benchmark_ticker"] == "SPY"
+    assert payload["benchmark_ticker"] == "ACWI"
     assert payload["benchmark_change_pct"] == 2.0
     assert candidate["symbol_change_pct"] == 20.0
     assert candidate["benchmark_outperformance_pct"] == 18.0
@@ -385,7 +395,7 @@ def test_screener_exchange_filter_reduces_working_list(monkeypatch):
 
     mock_provider.fetch_ohlcv.side_effect = fake_fetch_ohlcv
     monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
-    monkeypatch.setattr(screener_service, "load_universe_from_package", lambda name, cfg: ["AAPL", "ASML.AS", "SPY"])
+    monkeypatch.setattr(screener_service, "load_universe_from_package", lambda name, cfg: ["AAPL", "ASML.AS", "ACWI"])
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
     monkeypatch.setattr(screener_service, "get_multiple_ticker_info", lambda tickers: {})
 
@@ -400,7 +410,7 @@ def test_screener_exchange_filter_reduces_working_list(monkeypatch):
         },
     )
     assert res.status_code == 200
-    assert captured["tickers"] == ["AAPL", "SPY"]
+    assert captured["tickers"] == ["AAPL", "ACWI"]
     assert "reduced the working list" in res.json()["warnings"][0].lower()
 
 
