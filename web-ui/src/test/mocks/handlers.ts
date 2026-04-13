@@ -1033,6 +1033,20 @@ export const handlers = [
     })
   }),
 
+  http.post(`${API_BASE_URL}/api/universes/:universeId/benchmark`, async ({ params, request }) => {
+    const universe = mockUniverses.universes.find((item) => item.id === params.universeId)
+    if (!universe) {
+      return HttpResponse.json({ detail: 'Universe not found' }, { status: 404 })
+    }
+    const body = asObject(await request.json())
+    const benchmark = String(body.benchmark || '').trim().toUpperCase()
+    if (!benchmark) {
+      return HttpResponse.json({ detail: 'Benchmark cannot be empty.' }, { status: 422 })
+    }
+    universe.benchmark = benchmark
+    return HttpResponse.json(universe)
+  }),
+
   http.post(`${API_BASE_URL}/api/screener/run`, () => {
     return HttpResponse.json(mockScreenerResults)
   }),

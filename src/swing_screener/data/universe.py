@@ -18,6 +18,7 @@ from swing_screener.data.universe_sources import refresh_snapshot_from_source
 
 
 _TICKER_RE = re.compile(r"^[A-Z0-9.\-]+$")
+_BENCHMARK_RE = re.compile(r"^[A-Z0-9.^\-]+$")
 _REGISTRY_PKG = "swing_screener.data"
 _REGISTRY_REL = "universes/registry"
 
@@ -269,6 +270,15 @@ def _summary_from_entry(entry: dict, snapshot: dict) -> dict:
     return item
 
 
+def _normalize_benchmark_symbol(value: str) -> str:
+    benchmark = str(value or "").strip().upper()
+    if not benchmark:
+        raise ValueError("Benchmark cannot be empty.")
+    if not _BENCHMARK_RE.match(benchmark):
+        raise ValueError(f"Invalid benchmark '{benchmark}'. Allowed: A-Z 0-9 . - ^")
+    return benchmark
+
+
 def list_package_universe_entries() -> list[dict]:
     """Return manifest entries enriched with lightweight snapshot metadata."""
     entries = []
@@ -437,10 +447,17 @@ def load_universe_from_package(
 
 def get_universe_benchmark(name: str) -> Optional[str]:
     """Return benchmark from manifest entry."""
+    try:
+        snapshot = _load_snapshot(name)
+        benchmark = snapshot.get("benchmark")
+        if benchmark:
+            return _normalize_benchmark_symbol(str(benchmark))
+    except Exception:
+        pass
     for entry in _load_registry_manifest():
         if entry.get("id") == name:
             b = entry.get("benchmark")
-            return str(b).strip().upper() if b else None
+            return _normalize_benchmark_symbol(str(b)) if b else None
     return None
 
 
@@ -450,6 +467,21 @@ def get_universe_meta(name: str) -> Optional[dict]:
         if entry.get("id") == name:
             return entry
     return None
+
+
+def update_package_universe_benchmark(universe_id: str, benchmark: str) -> dict:
+    entry = get_universe_meta(universe_id)
+    if not entry:
+        raise ValueError(f"Unknown universe id: '{universe_id}'")
+    snapshot = _load_snapshot(universe_id)
+    normalized = _normalize_benchmark_symbol(benchmark)
+    current = str(snapshot.get("benchmark") or "").strip().upper()
+    if current == normalized:
+        return _summary_from_entry(entry, snapshot)
+    proposed = json.loads(json.dumps(snapshot))
+    proposed["benchmark"] = normalized
+    _write_snapshot(universe_id, proposed)
+    return _summary_from_entry(entry, proposed)
 
 
 def load_universe_from_file(

@@ -1,11 +1,34 @@
-import { RefreshCw, Database, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { RefreshCw, Database, AlertTriangle, CheckCircle2, Target } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
-import { useRefreshUniverseMutation, useUniverseCatalog, useUniverseDetail } from '@/features/universes/hooks';
+import { useRefreshUniverseMutation, useUniverseCatalog, useUniverseDetail, useUpdateUniverseBenchmarkMutation } from '@/features/universes/hooks';
 import type { UniverseSummary } from '@/features/screener/types';
+
+const BENCHMARK_OPTIONS = [
+  'SPY',
+  'QQQ',
+  'IWM',
+  'VGK',
+  'XLV',
+  'XLF',
+  'XLE',
+  'SMH',
+  'ITA',
+  'XLI',
+  'XLP',
+  'XLY',
+  '^AEX',
+  '^AMX',
+  '^STOXX50E',
+  '^GDAXI',
+  '^FCHI',
+  '^IBEX',
+  '^FTSE',
+  '^GSPC',
+] as const;
 
 const freshnessVariant = (status: UniverseSummary['freshness_status']): 'success' | 'warning' | 'error' | 'default' => {
   switch (status) {
@@ -52,12 +75,19 @@ export default function Universes() {
 
   const detailQuery = useUniverseDetail(selectedUniverseId);
   const refreshMutation = useRefreshUniverseMutation(selectedUniverseId);
+  const benchmarkMutation = useUpdateUniverseBenchmarkMutation(selectedUniverseId);
+  const [benchmarkDraft, setBenchmarkDraft] = useState('');
   const selectedSummary = useMemo(
     () => universes.find((item) => item.id === selectedUniverseId) ?? null,
     [selectedUniverseId, universes],
   );
   const detail = detailQuery.data;
   const refreshResult = refreshMutation.data;
+
+  useEffect(() => {
+    const benchmark = detail?.benchmark ?? selectedSummary?.benchmark ?? '';
+    setBenchmarkDraft(benchmark);
+  }, [detail?.benchmark, selectedSummary?.benchmark, selectedUniverseId]);
 
   return (
     <div className="mx-auto max-w-[1680px] px-4 py-4">
@@ -154,7 +184,7 @@ export default function Universes() {
                   <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
                     <div className="text-xs uppercase tracking-wide text-gray-500">Source As Of</div>
                     <div className="mt-1 text-sm font-medium text-gray-900">{detail.source_asof}</div>
-                    <div className="mt-1 text-xs text-gray-500">Benchmark {detail.benchmark}</div>
+                    <div className="mt-1 text-xs text-gray-500">Configured benchmark {detail.benchmark}</div>
                   </div>
                   <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
                     <div className="text-xs uppercase tracking-wide text-gray-500">Rules</div>
@@ -165,6 +195,62 @@ export default function Universes() {
                       {(detail.rules.exchange_mics ?? []).join(', ') || 'Any exchange'}
                     </div>
                   </div>
+                </div>
+
+                <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                    <div>
+                      <div className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-gray-100">
+                        <Target className="h-4 w-4 text-gray-500" />
+                        Benchmark
+                      </div>
+                      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                        Select the index or ETF used for performance comparison in the screener and chart overlay.
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-2 sm:min-w-[360px] sm:flex-row">
+                      <div className="flex-1">
+                        <label htmlFor="universe-benchmark" className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">
+                          Benchmark symbol
+                        </label>
+                        <input
+                          id="universe-benchmark"
+                          type="text"
+                          list="universe-benchmark-options"
+                          value={benchmarkDraft}
+                          onChange={(event) => setBenchmarkDraft(event.target.value.toUpperCase())}
+                          placeholder="SPY"
+                          className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
+                        />
+                      </div>
+                      <Button
+                        onClick={() => benchmarkMutation.mutate({ benchmark: benchmarkDraft.trim().toUpperCase() })}
+                        disabled={benchmarkMutation.isPending || benchmarkDraft.trim().length === 0}
+                        variant="secondary"
+                        size="sm"
+                        className="self-end"
+                      >
+                        {benchmarkMutation.isPending ? 'Saving…' : 'Save benchmark'}
+                      </Button>
+                    </div>
+                  </div>
+                  <datalist id="universe-benchmark-options">
+                    {Array.from(new Set([...BENCHMARK_OPTIONS, ...universes.map((item) => item.benchmark)]))
+                      .filter((value) => value && value.trim().length > 0)
+                      .map((value) => (
+                        <option key={value} value={value} />
+                      ))}
+                  </datalist>
+                  {benchmarkMutation.isError ? (
+                    <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                      {benchmarkMutation.error instanceof Error ? benchmarkMutation.error.message : 'Failed to update benchmark.'}
+                    </div>
+                  ) : null}
+                  {benchmarkMutation.data ? (
+                    <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+                      Benchmark updated to {benchmarkMutation.data.benchmark}. The catalog and screener will pick it up after refresh.
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="flex flex-wrap gap-2">

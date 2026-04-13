@@ -1,5 +1,5 @@
 import { API_ENDPOINTS, apiUrl } from '@/lib/api';
-import type { UniversesResponse } from '@/features/screener/types';
+import type { UniversesResponse, UniverseSummary } from '@/features/screener/types';
 import type { UniverseDetail, UniverseRefreshPreview } from './types';
 
 export async function fetchUniverseCatalog(): Promise<UniversesResponse> {
@@ -26,6 +26,19 @@ export async function refreshUniverse(id: string, apply = false): Promise<Univer
   if (!res.ok) {
     const error = await res.json().catch(() => ({}));
     throw new Error(error.detail || 'Failed to refresh universe');
+  }
+  return res.json();
+}
+
+export async function updateUniverseBenchmark(id: string, benchmark: string): Promise<UniverseSummary> {
+  const res = await fetch(apiUrl(API_ENDPOINTS.universeBenchmark(id)), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ benchmark }),
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    throw new Error(error.detail || 'Failed to update universe benchmark');
   }
   return res.json();
 }

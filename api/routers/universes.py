@@ -7,6 +7,7 @@ from swing_screener.data.universe import (
     get_package_universe_detail,
     list_package_universe_entries,
     refresh_package_universe,
+    update_package_universe_benchmark,
 )
 from swing_screener.data.universe_sources import UniverseSourceError
 
@@ -16,6 +17,10 @@ router = APIRouter()
 
 class UniverseRefreshRequest(BaseModel):
     apply: bool = False
+
+
+class UniverseBenchmarkRequest(BaseModel):
+    benchmark: str
 
 
 @router.get("")
@@ -46,3 +51,13 @@ async def refresh_universe(universe_id: str, request: UniverseRefreshRequest):
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Failed to refresh universe") from exc
+
+
+@router.post("/{universe_id}/benchmark")
+async def update_universe_benchmark(universe_id: str, request: UniverseBenchmarkRequest):
+    try:
+        return update_package_universe_benchmark(universe_id, request.benchmark)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Failed to update universe benchmark") from exc
