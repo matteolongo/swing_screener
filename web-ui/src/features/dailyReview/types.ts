@@ -12,7 +12,7 @@ import {
 // API response types (snake_case from backend)
 export interface DailyReviewCandidateAPI {
   ticker: string;
-  currency?: 'USD' | 'EUR';
+  currency?: string;
   rank?: number | null;
   priority_rank?: number | null;
   confidence?: number | null;
@@ -104,7 +104,7 @@ export interface DailyReviewAPI {
 // Frontend types (camelCase)
 export interface DailyReviewCandidate {
   ticker: string;
-  currency?: 'USD' | 'EUR';
+  currency?: string;
   rank?: number;
   priorityRank?: number;
   confidence?: number;

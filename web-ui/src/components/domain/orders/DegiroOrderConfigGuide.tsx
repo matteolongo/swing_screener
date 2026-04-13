@@ -8,7 +8,7 @@ interface DegiroOrderConfigGuideProps {
   entryPrice: number;
   stopPrice: number;
   quantity: number;
-  currency: 'USD' | 'EUR';
+  currency: string;
 }
 
 export default function DegiroOrderConfigGuide({

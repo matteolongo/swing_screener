@@ -7,7 +7,7 @@ import { t } from '@/i18n/t';
 
 interface RecommendationSectionProps {
   recommendation?: Recommendation;
-  currency?: 'USD' | 'EUR';
+  currency?: string;
   educationView?: RecommendationEducationVM;
   deterministicFacts?: Record<string, string>;
 }

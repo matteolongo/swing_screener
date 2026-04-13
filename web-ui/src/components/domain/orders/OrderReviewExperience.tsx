@@ -30,7 +30,7 @@ export interface OrderReviewContext {
   score?: number;
   rank?: number;
   atr?: number;
-  currency?: 'USD' | 'EUR';
+  currency?: string;
   suggestedOrderType?: string | null;
   suggestedOrderPrice?: number | null;
   executionNote?: string | null;

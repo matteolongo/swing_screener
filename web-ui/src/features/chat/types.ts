@@ -11,7 +11,7 @@ export interface ChatTurn {
 
 export interface WorkspaceSnapshotCandidate {
   ticker: string;
-  currency?: 'USD' | 'EUR';
+  currency?: string;
   name?: string;
   sector?: string;
   rank?: number;
@@ -79,7 +79,7 @@ interface ChatTurnAPI {
 
 interface WorkspaceSnapshotCandidateAPI {
   ticker: string;
-  currency?: 'USD' | 'EUR';
+  currency?: string;
   name?: string;
   sector?: string;
   rank?: number;

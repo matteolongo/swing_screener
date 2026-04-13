@@ -50,7 +50,7 @@ export function formatConfidencePercent(value: number, decimals: number = 1): st
 /**
  * Format number as currency (e.g., $1,234.56 / €1,234.56)
  */
-export function formatCurrency(value: number, currency: 'USD' | 'EUR' = 'USD'): string {
+export function formatCurrency(value: number, currency: string = 'USD'): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency,
@@ -89,4 +89,3 @@ export function formatDateTime(date: string | Date): string {
     minute: '2-digit',
   }).format(d);
 }
-

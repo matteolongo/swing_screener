@@ -84,16 +84,18 @@ def test_strategy_create_default_id_forbidden(monkeypatch, tmp_path):
     assert res.status_code == 400
 
 
-def test_strategy_rejects_invalid_currency(monkeypatch, tmp_path):
+def test_strategy_accepts_additional_currency_codes(monkeypatch, tmp_path):
     _patch_strategy_storage(monkeypatch, tmp_path)
 
     client = TestClient(app)
     active = client.get("/api/strategy/active").json()
     payload = _create_strategy_payload(active, strategy_id="bad-currency", name="Bad Currency")
-    payload["universe"]["filt"]["currencies"] = ["JPY"]
+    payload["universe"]["filt"]["currencies"] = ["JPY", "usd", "JPY"]
 
     res = client.post("/api/strategy", json=payload)
-    assert res.status_code == 422
+    assert res.status_code == 200
+    created = res.json()
+    assert created["universe"]["filt"]["currencies"] == ["JPY", "USD"]
 
 
 def test_strategy_backfills_missing_currency_field(monkeypatch, tmp_path):
