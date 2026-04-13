@@ -1,6 +1,7 @@
 import pandas as pd
 import datetime as dt
 import time
+import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import MagicMock
 from types import SimpleNamespace
@@ -213,6 +214,7 @@ def test_screener_attaches_benchmark_comparison(monkeypatch):
     assert payload["benchmark_change_pct"] == 2.0
     assert candidate["symbol_change_pct"] == 20.0
     assert candidate["benchmark_outperformance_pct"] == 18.0
+    assert [point["close"] for point in candidate["benchmark_price_history"]] == pytest.approx([10.0, 10.1, 10.2])
 
 
 def test_screener_response_is_prioritized_by_decision_action_and_conviction(monkeypatch):

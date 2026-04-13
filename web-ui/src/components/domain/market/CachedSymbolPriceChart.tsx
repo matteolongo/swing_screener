@@ -6,6 +6,7 @@ import {
   slicePriceHistory,
   type PriceRangeKey,
 } from '@/features/screener/priceHistory';
+import type { PriceHistoryPoint } from '@/features/screener/types';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { cn } from '@/utils/cn';
 import { formatPercent } from '@/utils/formatters';
@@ -22,7 +23,12 @@ interface CachedSymbolPriceChartProps {
 const DEFAULT_CHART_WIDTH = 220;
 const DEFAULT_CHART_HEIGHT = 72;
 const CHART_PADDING = 4;
-const EMPTY_HISTORY: never[] = [];
+const EMPTY_HISTORY: PriceHistoryPoint[] = [];
+
+interface ValueBounds {
+  min: number;
+  max: number;
+}
 
 function toShortDate(raw: string): string {
   const parsed = new Date(raw);
@@ -36,13 +42,29 @@ function toShortDate(raw: string): string {
   });
 }
 
-function buildPolyline(points: number[], chartWidth: number, chartHeight: number): string {
+function getValueBounds(series: number[][]): ValueBounds | null {
+  const values = series.flat().filter((value) => Number.isFinite(value));
+  if (values.length === 0) {
+    return null;
+  }
+  return {
+    min: Math.min(...values),
+    max: Math.max(...values),
+  };
+}
+
+function buildPolyline(
+  points: number[],
+  chartWidth: number,
+  chartHeight: number,
+  bounds?: ValueBounds | null,
+): string {
   if (points.length === 0) {
     return '';
   }
 
-  const minValue = Math.min(...points);
-  const maxValue = Math.max(...points);
+  const minValue = bounds?.min ?? Math.min(...points);
+  const maxValue = bounds?.max ?? Math.max(...points);
   const valueRange = maxValue - minValue;
   const usableWidth = chartWidth - CHART_PADDING * 2;
   const usableHeight = chartHeight - CHART_PADDING * 2;
@@ -65,15 +87,12 @@ export default function CachedSymbolPriceChart({
   width = DEFAULT_CHART_WIDTH,
   height = DEFAULT_CHART_HEIGHT,
 }: CachedSymbolPriceChartProps) {
-  const history = useScreenerStore((state) => {
-    const symbol = ticker.trim().toUpperCase();
-    const candidate = state.lastResult?.candidates.find((item) => item.ticker.toUpperCase() === symbol);
-    return candidate?.priceHistory ?? EMPTY_HISTORY;
-  });
-  const benchmarkSummary = useScreenerStore((state) => {
+  const chartData = useScreenerStore((state) => {
     const symbol = ticker.trim().toUpperCase();
     const candidate = state.lastResult?.candidates.find((item) => item.ticker.toUpperCase() === symbol);
     return {
+      history: candidate?.priceHistory ?? EMPTY_HISTORY,
+      benchmarkHistory: candidate?.benchmarkPriceHistory ?? EMPTY_HISTORY,
       benchmarkTicker: state.lastResult?.benchmarkTicker,
       benchmarkChangePct: state.lastResult?.benchmarkChangePct,
       benchmarkLastBar: state.lastResult?.benchmarkLastBar,
@@ -83,7 +102,7 @@ export default function CachedSymbolPriceChart({
   });
 
   const [isOpen, setIsOpen] = useState(defaultOpen);
-  const availableRanges = useMemo(() => getAvailablePriceRanges(history), [history]);
+  const availableRanges = useMemo(() => getAvailablePriceRanges(chartData.history), [chartData.history]);
   const [range, setRange] = useState<PriceRangeKey>('MAX');
 
   useEffect(() => {
@@ -99,7 +118,7 @@ export default function CachedSymbolPriceChart({
     }
   }, [availableRanges, range]);
 
-  if (history.length < 2) {
+  if (chartData.history.length < 2) {
     if (!showToggle) {
       return (
         <div className={cn('rounded-md border border-dashed border-gray-300 p-4 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400', className)}>
@@ -110,18 +129,30 @@ export default function CachedSymbolPriceChart({
     return null;
   }
 
-  const visibleHistory = slicePriceHistory(history, range);
+  const visibleHistory = slicePriceHistory(chartData.history, range);
+  const visibleBenchmarkHistory = useMemo(() => {
+    if (chartData.benchmarkHistory.length === 0 || visibleHistory.length === 0) {
+      return [];
+    }
+    const visibleDates = new Set(visibleHistory.map((point) => point.date));
+    return chartData.benchmarkHistory.filter((point) => visibleDates.has(point.date));
+  }, [chartData.benchmarkHistory, visibleHistory]);
+
   const prices = visibleHistory.map((point) => point.close);
-  const polyline = buildPolyline(prices, width, height);
+  const benchmarkPrices = visibleBenchmarkHistory.map((point) => point.close);
+  const valueBounds = useMemo(() => getValueBounds([prices, benchmarkPrices]), [prices, benchmarkPrices]);
+  const polyline = buildPolyline(prices, width, height, valueBounds);
+  const benchmarkPolyline = buildPolyline(benchmarkPrices, width, height, valueBounds);
   const firstPrice = prices[0] ?? 0;
   const lastPrice = prices[prices.length - 1] ?? 0;
   const changePct = firstPrice > 0 ? ((lastPrice - firstPrice) / firstPrice) * 100 : 0;
   const isPositive = changePct >= 0;
   const showBenchmarkSummary =
-    benchmarkSummary.benchmarkTicker != null &&
-    benchmarkSummary.symbolChangePct != null &&
-    benchmarkSummary.benchmarkChangePct != null &&
-    benchmarkSummary.benchmarkOutperformancePct != null;
+    chartData.benchmarkTicker != null &&
+    chartData.symbolChangePct != null &&
+    chartData.benchmarkChangePct != null &&
+    chartData.benchmarkOutperformancePct != null;
+  const showBenchmarkOverlay = benchmarkPolyline.length > 0;
 
   return (
     <div className={cn('mt-1', className)}>
@@ -165,8 +196,19 @@ export default function CachedSymbolPriceChart({
               'mt-2 rounded-md border border-gray-200 bg-white p-2 shadow-sm dark:border-gray-700 dark:bg-gray-900',
               showToggle ? 'w-[230px]' : 'w-full',
             )}>
-              <div className="mb-2 flex items-baseline justify-between text-[11px]">
-                <span className="font-mono text-gray-500 dark:text-gray-400">{firstPrice.toFixed(2)}</span>
+              <div className="mb-2 flex items-center justify-between gap-2 text-[11px]">
+                <div className="flex items-center gap-3">
+                  <span className="inline-flex items-center gap-1 text-gray-500 dark:text-gray-400">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                    Symbol
+                  </span>
+                  {showBenchmarkOverlay && chartData.benchmarkTicker ? (
+                    <span className="inline-flex items-center gap-1 text-gray-500 dark:text-gray-400">
+                      <span className="h-2 w-2 rounded-full bg-sky-500" />
+                      {chartData.benchmarkTicker}
+                    </span>
+                  ) : null}
+                </div>
                 <span className="font-mono text-sm font-semibold text-gray-900 dark:text-gray-100">{lastPrice.toFixed(2)}</span>
                 <span className={cn('font-semibold', isPositive ? 'text-emerald-600' : 'text-rose-600')}>
                   {isPositive ? '+' : ''}
@@ -181,6 +223,17 @@ export default function CachedSymbolPriceChart({
                 role="img"
                 aria-label={`Cached price chart for ${ticker}`}
               >
+                {showBenchmarkOverlay ? (
+                  <polyline
+                    points={benchmarkPolyline}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.75"
+                    strokeDasharray="4 3"
+                    vectorEffect="non-scaling-stroke"
+                    className="text-sky-500"
+                  />
+                ) : null}
                 <polyline
                   points={polyline}
                   fill="none"
@@ -204,15 +257,15 @@ export default function CachedSymbolPriceChart({
             <div className="mb-2 flex items-center justify-between gap-2">
               <div>
                 <p className="font-semibold text-gray-900 dark:text-gray-100">Benchmark</p>
-                <p className="text-gray-500 dark:text-gray-400">{benchmarkSummary.benchmarkTicker}</p>
+                <p className="text-gray-500 dark:text-gray-400">{chartData.benchmarkTicker}</p>
               </div>
               <div className={cn(
                 'rounded-full px-2 py-0.5 font-semibold',
-                (benchmarkSummary.benchmarkOutperformancePct ?? 0) >= 0
+                (chartData.benchmarkOutperformancePct ?? 0) >= 0
                   ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
                   : 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300',
               )}>
-                {(benchmarkSummary.benchmarkOutperformancePct ?? 0) >= 0 ? 'Outperforming' : 'Lagging'}
+                {(chartData.benchmarkOutperformancePct ?? 0) >= 0 ? 'Outperforming' : 'Lagging'}
               </div>
             </div>
             <div className="space-y-1.5">
@@ -220,31 +273,31 @@ export default function CachedSymbolPriceChart({
                 <span className="text-gray-500 dark:text-gray-400">Symbol</span>
                 <span className={cn(
                   'font-mono font-semibold',
-                  (benchmarkSummary.symbolChangePct ?? 0) >= 0 ? 'text-emerald-600' : 'text-rose-600',
+                  (chartData.symbolChangePct ?? 0) >= 0 ? 'text-emerald-600' : 'text-rose-600',
                 )}>
-                  {formatPercent(benchmarkSummary.symbolChangePct ?? 0, 1)}
+                  {formatPercent(chartData.symbolChangePct ?? 0, 1)}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-3">
                 <span className="text-gray-500 dark:text-gray-400">Benchmark</span>
                 <span className={cn(
                   'font-mono font-semibold',
-                  (benchmarkSummary.benchmarkChangePct ?? 0) >= 0 ? 'text-emerald-600' : 'text-rose-600',
+                  (chartData.benchmarkChangePct ?? 0) >= 0 ? 'text-emerald-600' : 'text-rose-600',
                 )}>
-                  {formatPercent(benchmarkSummary.benchmarkChangePct ?? 0, 1)}
+                  {formatPercent(chartData.benchmarkChangePct ?? 0, 1)}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-3">
                 <span className="text-gray-500 dark:text-gray-400">Diff</span>
                 <span className={cn(
                   'font-mono font-semibold',
-                  (benchmarkSummary.benchmarkOutperformancePct ?? 0) >= 0 ? 'text-emerald-600' : 'text-rose-600',
+                  (chartData.benchmarkOutperformancePct ?? 0) >= 0 ? 'text-emerald-600' : 'text-rose-600',
                 )}>
-                  {formatPercent(benchmarkSummary.benchmarkOutperformancePct ?? 0, 1)}
+                  {formatPercent(chartData.benchmarkOutperformancePct ?? 0, 1)}
                 </span>
               </div>
               <div className="text-gray-500 dark:text-gray-400">
-                Compared on cached history up to {benchmarkSummary.benchmarkLastBar ? toShortDate(benchmarkSummary.benchmarkLastBar) : 'latest bar'}.
+                Compared on cached history up to {chartData.benchmarkLastBar ? toShortDate(chartData.benchmarkLastBar) : 'latest bar'}.
               </div>
             </div>
           </aside>

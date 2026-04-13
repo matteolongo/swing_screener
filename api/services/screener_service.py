@@ -330,6 +330,64 @@ def _price_history_change_pct(history: list[dict]) -> Optional[float]:
     return ((end - start) / start) * 100.0
 
 
+def _aligned_benchmark_price_history(
+    candidate_history: list[dict],
+    benchmark_history: list[dict],
+) -> list[dict]:
+    """Return benchmark closes aligned to the candidate timeline and normalized to the symbol's start price."""
+    if len(candidate_history) < 2 or len(benchmark_history) < 1:
+        return []
+
+    candidate_dates: list[pd.Timestamp] = []
+    candidate_closes: list[float] = []
+    for point in candidate_history:
+        try:
+            ts = pd.Timestamp(str(point["date"]))
+            close = float(point["close"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if pd.isna(ts) or not math.isfinite(close) or close <= 0:
+            continue
+        candidate_dates.append(ts)
+        candidate_closes.append(close)
+
+    benchmark_points: list[tuple[pd.Timestamp, float]] = []
+    for point in benchmark_history:
+        try:
+            ts = pd.Timestamp(str(point["date"]))
+            close = float(point["close"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if pd.isna(ts) or not math.isfinite(close) or close <= 0:
+            continue
+        benchmark_points.append((ts, close))
+
+    if len(candidate_dates) < 2 or not benchmark_points:
+        return []
+
+    benchmark_series = pd.Series(
+        {ts: close for ts, close in benchmark_points},
+        dtype=float,
+    ).sort_index()
+    aligned = benchmark_series.reindex(pd.DatetimeIndex(candidate_dates)).ffill().bfill()
+    if aligned.isna().any():
+        return []
+
+    symbol_start = candidate_closes[0]
+    benchmark_start = float(aligned.iloc[0])
+    if symbol_start <= 0 or benchmark_start <= 0:
+        return []
+
+    scale = symbol_start / benchmark_start
+    return [
+        {
+            "date": _to_date_iso(ts) or str(ts),
+            "close": float(close * scale),
+        }
+        for ts, close in zip(candidate_dates, aligned.tolist())
+    ]
+
+
 def _fundamentals_summary(snapshot) -> str | None:
     for value in getattr(snapshot, "highlights", []) or []:
         text = str(value).strip()
@@ -864,6 +922,7 @@ class ScreenerService:
                 rec_risk = recommendation.risk
                 candidate_history = price_history_map.get(ticker_str, [])
                 symbol_change_pct = _price_history_change_pct(candidate_history)
+                benchmark_price_history = _aligned_benchmark_price_history(candidate_history, benchmark_history)
                 benchmark_outperformance_pct = (
                     symbol_change_pct - benchmark_change_pct
                     if symbol_change_pct is not None and benchmark_change_pct is not None
@@ -914,6 +973,7 @@ class ScreenerService:
                         risk_pct=risk_pct if risk_pct is not None else rec_risk.risk_pct,
                         recommendation=recommendation,
                         price_history=price_history_map.get(ticker_str, []),
+                        benchmark_price_history=benchmark_price_history,
                         suggested_order_type=(
                             str(row.get("suggested_order_type"))
                             if not _is_na_scalar(row.get("suggested_order_type"))

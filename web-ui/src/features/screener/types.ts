@@ -126,6 +126,7 @@ export interface ScreenerCandidate {
   riskPct?: number;
   recommendation?: Recommendation;
   priceHistory?: PriceHistoryPoint[];
+  benchmarkPriceHistory?: PriceHistoryPoint[];
   symbolChangePct?: number;
   benchmarkOutperformancePct?: number;
   suggestedOrderType?: string;
@@ -227,6 +228,7 @@ export interface ScreenerCandidateAPI {
   risk_pct?: number;
   recommendation?: RecommendationAPI;
   price_history?: PriceHistoryPoint[];
+  benchmark_price_history?: PriceHistoryPoint[];
   symbol_change_pct?: number;
   benchmark_outperformance_pct?: number;
   suggested_order_type?: string;
@@ -436,6 +438,7 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
       riskPct: c.risk_pct,
       recommendation: c.recommendation ? transformRecommendation(c.recommendation) : undefined,
       priceHistory: c.price_history ?? [],
+      benchmarkPriceHistory: c.benchmark_price_history ?? [],
       symbolChangePct: c.symbol_change_pct,
       benchmarkOutperformancePct: c.benchmark_outperformance_pct,
       suggestedOrderType: c.suggested_order_type,

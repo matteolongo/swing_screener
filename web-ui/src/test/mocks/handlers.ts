@@ -383,6 +383,16 @@ export const mockScreenerResults = {
       momentum_12m: 45.0,
       rel_strength: 85.2,
       confidence: 72.5,
+      price_history: [
+        { date: '2026-02-03', close: 170.0 },
+        { date: '2026-02-04', close: 172.0 },
+        { date: '2026-02-05', close: 175.5 },
+      ],
+      benchmark_price_history: [
+        { date: '2026-02-03', close: 170.0 },
+        { date: '2026-02-04', close: 170.5 },
+        { date: '2026-02-05', close: 171.0 },
+      ],
       symbol_change_pct: 20.0,
       benchmark_outperformance_pct: 18.0,
     },
