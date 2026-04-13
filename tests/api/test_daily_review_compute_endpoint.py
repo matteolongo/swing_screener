@@ -68,7 +68,27 @@ def test_daily_review_compute_endpoint():
                         "exit_order_ids": ["ORD-STOP-AAPL-TEST"],
                     }
                 ],
-                "orders": [],
+                "orders": [
+                    {
+                        "order_id": "ORD-AAPL-ENTRY-TEST",
+                        "ticker": "AAPL",
+                        "status": "filled",
+                        "order_type": "BUY_LIMIT",
+                        "quantity": 10,
+                        "limit_price": 100.0,
+                        "stop_price": 95.0,
+                        "order_date": "2026-02-20",
+                        "filled_date": "2026-02-21",
+                        "entry_price": 100.0,
+                        "notes": "local snapshot order",
+                        "order_kind": "entry",
+                        "parent_order_id": None,
+                        "position_id": "POS-AAPL-TEST",
+                        "tif": "GTC",
+                        "fee_eur": None,
+                        "fill_fx_rate": None,
+                    }
+                ],
             },
         )
 
@@ -81,5 +101,6 @@ def test_daily_review_compute_endpoint():
         assert stub_service.received["universe"] == "usd_all"
         assert stub_service.received["strategy"]["id"] == active_strategy["id"]
         assert len(stub_service.received["positions"]) == 1
+        assert stub_service.received["orders"][0]["order_id"] == "ORD-AAPL-ENTRY-TEST"
     finally:
         app.dependency_overrides.pop(get_daily_review_service, None)
