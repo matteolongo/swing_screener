@@ -12,12 +12,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Backend (Python)
 ```bash
-# Setup
-python -m venv .venv && source .venv/bin/activate
-pip install -e ".[mcp]"
+# Setup (uv is available; alternatively use venv)
+uv sync
+# or: python -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]"
 
 # Tests (run before and after changes)
 pytest -q
+pytest tests/test_ranking.py -q          # single file
+pytest -k "test_position_sizing" -q      # by name pattern
+pytest -m "not integration" -q          # skip tests requiring API keys
 
 # Lint / format
 ruff check .
@@ -26,11 +29,11 @@ black .
 # Run API server
 python -m uvicorn api.main:app --port 8000 --reload
 
-# Run MCP server
-python -m mcp_server.main
-
 # CLI
 python -m agent.cli screen --universe mega_all --strategy-id default --top 10
+python -m agent.cli positions review
+python -m agent.cli daily-review
+python -m agent.cli chat "What orders are pending?"
 ```
 
 ### Frontend (TypeScript)
@@ -43,6 +46,8 @@ npm test             # Vitest (run before and after changes)
 npm run typecheck    # tsc --noEmit
 npm run lint         # ESLint strict, zero warnings allowed
 npm run test:coverage
+npx vitest run src/features/portfolio  # single directory
+npx vitest -t "renders positions"      # by test name
 ```
 
 ### Full test suite before committing
@@ -52,19 +57,17 @@ pytest -q && cd web-ui && npm test
 
 ## Architecture
 
-### Three Runtime Paths
-All converge on the same shared services:
-1. **Web UI** → FastAPI (`api/`) → Services → MCP → Core library
-2. **Agent CLI** (`agent/`) → MCP Server (stdio) → Services → Core library
-3. **Workspace Chat** → API → AgentChatService → AgentRuntime → MCP
+### Two Runtime Paths
+Both converge on the same shared services:
+1. **Web UI** → FastAPI (`api/`) → Services → Core library
+2. **Agent CLI** (`agent/`) → Services → Core library (same service factories as the API, no HTTP hop)
 
 ### Layer Responsibilities
 | Layer | Path | Role |
 |-------|------|------|
-| Core library | `src/swing_screener/` | Pure trading logic (15 modules) |
-| API | `api/routers/` + `api/services/` + `api/repositories/` | FastAPI REST, business logic, JSON I/O |
-| MCP Server | `mcp_server/` | Model Context Protocol tools for agent use |
-| Agent CLI | `agent/` | MCP client, workflow orchestration, chat graph |
+| Core library | `src/swing_screener/` | Pure trading logic |
+| API | `api/routers/` + `api/services/` + `api/repositories/` | FastAPI REST, business logic, JSON/SQLite I/O |
+| Agent CLI | `agent/cli.py` | argparse CLI, calls service factories directly, includes LangGraph chat loop |
 | Web UI | `web-ui/` | React 18 + TypeScript, Zustand, React Query |
 
 ### Core Library Modules (`src/swing_screener/`)
@@ -73,9 +76,15 @@ All converge on the same shared services:
 - **portfolio/**: position lifecycle, P&L, R-multiple metrics
 - **execution/**: orders, order workflows, entry fills
 - **indicators/**: SMA trend, RS/momentum %, ATR volatility
-- **intelligence/**: post-close LLM enrichment, event ingestion, catalyst scoring
-- **strategy/**: strategy config, module/regime plugins, recommendation engine
-- **data/**: universe definitions, snapshot registries
+- **intelligence/**: post-close LLM enrichment (LangChain/LangGraph), event ingestion, catalyst scoring
+- **strategy/**: strategy config, module/regime plugins
+- **recommendation/**: recommendation engine (separate from strategy/)
+- **fundamentals/**: fundamental data providers, scoring, snapshot storage
+- **social/**: sentiment providers and scoring
+- **integrations/**: broker integrations (e.g. DeGiro via `degiro` optional dep)
+- **data/**: universe definitions, snapshot registries, market data providers
+- **settings/**: YAML config loading, `SettingsManager`, path resolution
+- **db.py**: SQLAlchemy ORM models for positions/orders (SQLite); parallel to JSON files
 
 ### Configuration Surfaces (YAML — never hardcode configurable behavior)
 - `config/defaults.yaml` — system defaults
@@ -113,7 +122,7 @@ Require migration/backfill notes in the nearest `README.md`.
 
 ## Testing Patterns
 
-**Backend:** prefer pure functions; keep behavior deterministic; use `pytest`.
+**Backend:** prefer pure functions; keep behavior deterministic; use `pytest`. Tests requiring external API keys must be marked `@pytest.mark.integration` — they are skipped in CI.
 
 **Frontend:**
 - Use `renderWithProviders()` for component tests
