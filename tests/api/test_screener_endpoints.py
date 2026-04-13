@@ -28,6 +28,27 @@ def _ohlcv_with_spy() -> pd.DataFrame:
     return df
 
 
+def _ohlcv_with_symbol_and_spy() -> pd.DataFrame:
+    idx = pd.date_range("2024-01-01", periods=3, freq="D")
+    aaa = pd.Series([10.0, 11.0, 12.0], index=idx, dtype=float)
+    spy = pd.Series([100.0, 101.0, 102.0], index=idx, dtype=float)
+    data = {
+        ("Close", "AAA"): aaa,
+        ("Open", "AAA"): aaa,
+        ("High", "AAA"): aaa + 0.5,
+        ("Low", "AAA"): aaa - 0.5,
+        ("Volume", "AAA"): pd.Series(1_000_000, index=idx, dtype=float),
+        ("Close", "SPY"): spy,
+        ("Open", "SPY"): spy,
+        ("High", "SPY"): spy + 1.0,
+        ("Low", "SPY"): spy - 1.0,
+        ("Volume", "SPY"): pd.Series(1_000_000, index=idx, dtype=float),
+    }
+    df = pd.DataFrame(data, index=idx)
+    df.columns = pd.MultiIndex.from_tuples(df.columns)
+    return df
+
+
 def _create_mock_provider(ohlcv_data: pd.DataFrame) -> MarketDataProvider:
     """Create a mock provider that returns the given OHLCV data."""
     mock_provider = MagicMock(spec=MarketDataProvider)
@@ -154,6 +175,44 @@ def test_screener_recommendation_payload_shape(monkeypatch):
     }
     assert isinstance(rec["checklist"][0]["gate_name"], str)
     assert isinstance(rec["education"]["what_would_make_valid"], list)
+
+
+def test_screener_attaches_benchmark_comparison(monkeypatch):
+    ohlcv = _ohlcv_with_symbol_and_spy()
+    mock_provider = _create_mock_provider(ohlcv)
+
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None):
+        idx = ["AAA"]
+        data = {
+            "atr14": [1.2],
+            "mom_6m": [0.1],
+            "mom_12m": [0.2],
+            "rs_6m": [0.05],
+            "score": [0.55],
+            "confidence": [60.0],
+            "last": [12.0],
+            "ma20_level": [11.0],
+            "dist_sma50_pct": [5.0],
+            "dist_sma200_pct": [10.0],
+            "rank": [1],
+        }
+        return pd.DataFrame(data, index=idx)
+
+    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
+    monkeypatch.setattr(screener_service, "get_multiple_ticker_info", lambda tickers: {})
+
+    client = TestClient(app)
+    res = client.post("/api/screener/run", json={"universe": "broad_market_stocks", "top": 20})
+    assert res.status_code == 200
+
+    payload = res.json()
+    candidate = payload["candidates"][0]
+
+    assert payload["benchmark_ticker"] == "SPY"
+    assert payload["benchmark_change_pct"] == 2.0
+    assert candidate["symbol_change_pct"] == 20.0
+    assert candidate["benchmark_outperformance_pct"] == 18.0
 
 
 def test_screener_response_is_prioritized_by_decision_action_and_conviction(monkeypatch):

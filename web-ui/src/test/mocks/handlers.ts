@@ -383,10 +383,15 @@ export const mockScreenerResults = {
       momentum_12m: 45.0,
       rel_strength: 85.2,
       confidence: 72.5,
+      symbol_change_pct: 20.0,
+      benchmark_outperformance_pct: 18.0,
     },
   ],
   asof_date: '2026-02-08',
   total_screened: 500,
+  benchmark_ticker: 'SPY',
+  benchmark_change_pct: 2.0,
+  benchmark_last_bar: '2026-02-07T16:00:00',
   warnings: [],
 }
 

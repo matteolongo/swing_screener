@@ -126,6 +126,8 @@ export interface ScreenerCandidate {
   riskPct?: number;
   recommendation?: Recommendation;
   priceHistory?: PriceHistoryPoint[];
+  symbolChangePct?: number;
+  benchmarkOutperformancePct?: number;
   suggestedOrderType?: string;
   suggestedOrderPrice?: number;
   executionNote?: string;
@@ -225,6 +227,8 @@ export interface ScreenerCandidateAPI {
   risk_pct?: number;
   recommendation?: RecommendationAPI;
   price_history?: PriceHistoryPoint[];
+  symbol_change_pct?: number;
+  benchmark_outperformance_pct?: number;
   suggested_order_type?: string;
   suggested_order_price?: number;
   execution_note?: string;
@@ -265,6 +269,9 @@ export interface ScreenerResponse {
   candidates: ScreenerCandidate[];
   asofDate: string;
   totalScreened: number;
+  benchmarkTicker?: string;
+  benchmarkChangePct?: number;
+  benchmarkLastBar?: string;
   dataFreshness: 'final_close' | 'intraday';
   warnings?: string[];
   sameSymbolSuppressedCount?: number;
@@ -276,6 +283,9 @@ export interface ScreenerResponseAPI {
   candidates: ScreenerCandidateAPI[];
   asof_date: string;
   total_screened: number;
+  benchmark_ticker?: string;
+  benchmark_change_pct?: number;
+  benchmark_last_bar?: string;
   data_freshness?: 'final_close' | 'intraday';
   warnings?: string[];
   same_symbol_suppressed_count?: number;
@@ -426,6 +436,8 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
       riskPct: c.risk_pct,
       recommendation: c.recommendation ? transformRecommendation(c.recommendation) : undefined,
       priceHistory: c.price_history ?? [],
+      symbolChangePct: c.symbol_change_pct,
+      benchmarkOutperformancePct: c.benchmark_outperformance_pct,
       suggestedOrderType: c.suggested_order_type,
       suggestedOrderPrice: c.suggested_order_price,
       executionNote: c.execution_note,
@@ -449,6 +461,9 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
     })),
     asofDate: apiResponse.asof_date,
     totalScreened: apiResponse.total_screened,
+    benchmarkTicker: apiResponse.benchmark_ticker,
+    benchmarkChangePct: apiResponse.benchmark_change_pct,
+    benchmarkLastBar: apiResponse.benchmark_last_bar,
     dataFreshness: apiResponse.data_freshness ?? 'final_close',
     warnings: apiResponse.warnings ?? [],
     sameSymbolSuppressedCount: apiResponse.same_symbol_suppressed_count ?? 0,

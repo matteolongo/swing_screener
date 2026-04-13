@@ -82,6 +82,8 @@ class ScreenerCandidate(BaseModel):
     close_location_in_range: Optional[float] = None
     above_breakout_extension: Optional[float] = None
     breakout_volume_confirmation: Optional[bool] = None
+    symbol_change_pct: Optional[float] = None
+    benchmark_outperformance_pct: Optional[float] = None
 
 
 class ScreenerRequest(BaseModel):
@@ -149,6 +151,9 @@ class ScreenerResponse(BaseModel):
     candidates: list[ScreenerCandidate]
     asof_date: str
     total_screened: int
+    benchmark_ticker: Optional[str] = None
+    benchmark_change_pct: Optional[float] = None
+    benchmark_last_bar: Optional[str] = None
     data_freshness: str = "final_close"
     warnings: list[str] = Field(default_factory=list)
     same_symbol_suppressed_count: int = 0

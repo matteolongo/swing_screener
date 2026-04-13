@@ -317,6 +317,19 @@ def _price_history_map(
     return out
 
 
+def _price_history_change_pct(history: list[dict]) -> Optional[float]:
+    if len(history) < 2:
+        return None
+    try:
+        start = float(history[0]["close"])
+        end = float(history[-1]["close"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    if not math.isfinite(start) or not math.isfinite(end) or start <= 0:
+        return None
+    return ((end - start) / start) * 100.0
+
+
 def _fundamentals_summary(snapshot) -> str | None:
     for value in getattr(snapshot, "highlights", []) or []:
         text = str(value).strip()
@@ -778,6 +791,9 @@ class ScreenerService:
             
             # Build price history only for candidate tickers to improve performance
             price_history_map = _price_history_map(ohlcv, tickers=ticker_list)
+            benchmark_history = _price_history_map(ohlcv, tickers=[benchmark]).get(benchmark, [])
+            benchmark_change_pct = _price_history_change_pct(benchmark_history)
+            benchmark_last_bar = last_bar_map.get(benchmark) or overall_last_bar
 
             atr_col = f"atr{universe_cfg.vol.atr_window}"
             ma_col = f"ma{signals_cfg.pullback_ma}_level"
@@ -846,6 +862,13 @@ class ScreenerService:
                 )
                 recommendation = Recommendation.model_validate(asdict(rec_payload))
                 rec_risk = recommendation.risk
+                candidate_history = price_history_map.get(ticker_str, [])
+                symbol_change_pct = _price_history_change_pct(candidate_history)
+                benchmark_outperformance_pct = (
+                    symbol_change_pct - benchmark_change_pct
+                    if symbol_change_pct is not None and benchmark_change_pct is not None
+                    else None
+                )
 
                 candidates.append(
                     ScreenerCandidate(
@@ -878,6 +901,8 @@ class ScreenerService:
                             if not _is_na_scalar(row.get("breakout_volume_confirmation"))
                             else None
                         ),
+                        symbol_change_pct=symbol_change_pct,
+                        benchmark_outperformance_pct=benchmark_outperformance_pct,
                         signal=str(signal) if not _is_na_scalar(signal) else None,
                         entry=rec_risk.entry,
                         stop=rec_risk.stop if stop_val is not None else None,
@@ -956,6 +981,9 @@ class ScreenerService:
                 candidates=candidates,
                 asof_date=asof_str,
                 total_screened=len(tickers),
+                benchmark_ticker=benchmark,
+                benchmark_change_pct=benchmark_change_pct,
+                benchmark_last_bar=benchmark_last_bar,
                 data_freshness=data_freshness,
                 warnings=warnings,
                 same_symbol_suppressed_count=same_symbol_suppressed_count,
