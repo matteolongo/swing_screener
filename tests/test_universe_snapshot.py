@@ -90,7 +90,7 @@ def test_benchmark_amsterdam_amx():
 
 
 def test_benchmark_broad_market_stocks():
-    assert get_universe_benchmark("broad_market_stocks") == "SPY"
+    assert get_universe_benchmark("broad_market_stocks") == "ACWI"
 
 
 def test_benchmark_europe_large_caps():

@@ -8,14 +8,17 @@ import { useRefreshUniverseMutation, useUniverseCatalog, useUniverseDetail, useU
 import type { UniverseSummary } from '@/features/screener/types';
 
 const BENCHMARK_OPTIONS = [
+  'ACWI',
   'SPY',
   'QQQ',
   'IWM',
+  'VXUS',
   'VGK',
-  'XLV',
-  'XLF',
-  'XLE',
+  'IXC',
+  'IXG',
+  'IXJ',
   'SMH',
+  'SOXX',
   'ITA',
   'XLI',
   'XLP',

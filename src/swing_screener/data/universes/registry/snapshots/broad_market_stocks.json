@@ -2,7 +2,7 @@
   "id": "broad_market_stocks",
   "kind": "curated",
   "description": "Large liquid primary-listing stocks across US and Europe",
-  "benchmark": "SPY",
+  "benchmark": "ACWI",
   "source": "manual",
   "source_asof": "2026-04-12",
   "last_reviewed_at": "2026-04-12",

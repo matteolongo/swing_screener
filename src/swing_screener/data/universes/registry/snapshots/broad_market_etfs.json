@@ -2,7 +2,7 @@
   "id": "broad_market_etfs",
   "kind": "curated",
   "description": "Core market and sector ETFs across USD and EUR venues",
-  "benchmark": "SPY",
+  "benchmark": "ACWI",
   "source": "manual",
   "source_asof": "2026-04-12",
   "last_reviewed_at": "2026-04-12",

@@ -2,7 +2,7 @@
   "id": "financial_stocks",
   "kind": "curated",
   "description": "Banks, insurers, and financial-services leaders",
-  "benchmark": "XLF",
+  "benchmark": "IXG",
   "source": "manual",
   "source_asof": "2026-04-12",
   "last_reviewed_at": "2026-04-12",

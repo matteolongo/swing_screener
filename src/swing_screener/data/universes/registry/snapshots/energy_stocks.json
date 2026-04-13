@@ -2,7 +2,7 @@
   "id": "energy_stocks",
   "kind": "curated",
   "description": "Integrated energy majors and services leaders",
-  "benchmark": "XLE",
+  "benchmark": "IXC",
   "source": "manual",
   "source_asof": "2026-04-12",
   "last_reviewed_at": "2026-04-12",
