@@ -1,0 +1,42 @@
+"""Orders JSON repository."""
+from __future__ import annotations
+
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Optional
+
+from api.utils.file_lock import locked_read_json, locked_write_json
+from api.utils.files import get_today_str
+
+
+@dataclass
+class OrdersRepository:
+    path: Path
+
+    def read(self) -> dict:
+        return locked_read_json(self.path)
+
+    def write(self, data: dict) -> None:
+        locked_write_json(self.path, data)
+
+    def list_orders(self, status: Optional[str] = None) -> tuple[list[dict], str]:
+        data = self.read()
+        orders = data.get("orders", [])
+        if status:
+            orders = [o for o in orders if o.get("status") == status]
+        return orders, data.get("asof", get_today_str())
+
+    def get_order(self, order_id: str) -> dict | None:
+        data = self.read()
+        for order in data.get("orders", []):
+            if order.get("order_id") == order_id:
+                return order
+        return None
+
+    def append_order(self, order: dict) -> None:
+        data = self.read()
+        orders = data.get("orders", [])
+        orders.append(order)
+        data["orders"] = orders
+        data["asof"] = get_today_str()
+        self.write(data)
