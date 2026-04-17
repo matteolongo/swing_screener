@@ -10,6 +10,7 @@ describe('Strategy Page', () => {
     expect(
       await screen.findByRole('heading', { name: /^Strategy$/ })
     ).toBeInTheDocument();
+    expect(await screen.findByText('Capital Risk at a Glance')).toBeInTheDocument();
 
     const select = await screen.findByLabelText(/choose strategy/i);
     expect(select).toBeInTheDocument();

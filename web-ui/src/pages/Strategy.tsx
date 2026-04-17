@@ -8,6 +8,7 @@ import StrategyAdvancedSettingsCard from '@/components/domain/strategy/StrategyA
 import StrategyCoreSettingsCards from '@/components/domain/strategy/StrategyCoreSettingsCards';
 import StrategyPhilosophyCard from '@/components/domain/strategy/StrategyPhilosophyCard';
 import StrategySafetyScore from '@/components/domain/strategy/StrategySafetyScore';
+import StrategyCapitalRiskSummary from '@/components/domain/strategy/StrategyCapitalRiskSummary';
 import BeginnerModeToggle from '@/components/domain/strategy/BeginnerModeToggle';
 import StrategyPresets, { applyPresetToStrategy } from '@/components/domain/strategy/StrategyPresets';
 import { useI18n } from '@/i18n/I18nProvider';
@@ -315,6 +316,8 @@ export default function StrategyPage() {
           </CardContent>
         </Card>
       ) : null}
+
+      <StrategyCapitalRiskSummary strategy={draft} />
 
       <Card variant="bordered">
         <CardHeader>
