@@ -62,6 +62,7 @@ const EDUCATION_GLOSSARY_MESSAGE_KEYS: Record<EducationMetricKey, EducationGloss
     title: 'educationGlossary.entries.score.title',
     tooltip: 'educationGlossary.entries.score.tooltip',
     explanation: 'educationGlossary.entries.score.explanation',
+    formula: 'educationGlossary.entries.score.formula',
     interpretation: 'educationGlossary.entries.score.interpretation',
   },
   CONFIDENCE: {

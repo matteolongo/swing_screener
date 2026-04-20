@@ -311,6 +311,18 @@ export default function ScreenerInboxPanel() {
               ) : null}
             </div>
           ) : null}
+          {result.warnings && result.warnings.length > 0 ? (
+            <div className="flex flex-col gap-1">
+              {result.warnings.map((warning, i) => (
+                <div
+                  key={i}
+                  className="rounded border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200"
+                >
+                  {warning}
+                </div>
+              ))}
+            </div>
+          ) : null}
           <div className="flex-1 min-h-0 overflow-auto rounded-md border border-gray-200 dark:border-gray-700">
             <ScreenerCandidatesTable
               candidates={candidates}

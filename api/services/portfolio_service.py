@@ -11,6 +11,7 @@ import pandas as pd
 from fastapi import HTTPException
 
 from api.models.portfolio import (
+    CreateOrderRequest,
     CreatePositionRequest,
     DegiroOrder,
     DegiroOrdersResponse,
@@ -24,6 +25,7 @@ from api.models.portfolio import (
     ClosePositionRequest,
 )
 from api.repositories.config_repo import ConfigRepository
+from api.repositories.orders_repo import OrdersRepository
 from api.repositories.positions_repo import PositionsRepository
 from api.utils.files import get_today_str
 from swing_screener.portfolio.state import (
@@ -187,9 +189,11 @@ class PortfolioService:
     def __init__(
         self,
         positions_repo: PositionsRepository,
+        orders_repo: Optional[OrdersRepository] = None,
         provider: Optional[MarketDataProvider] = None
     ) -> None:
         self._positions_repo = positions_repo
+        self._orders_repo = orders_repo
         self._provider = provider or get_default_provider()
 
     def _fetch_last_prices(self, tickers: list[str]) -> dict[str, float]:
@@ -444,6 +448,69 @@ class PortfolioService:
             positions_losing=positions_losing,
             win_rate=win_rate,
         )
+
+    def create_order(self, request: CreateOrderRequest) -> dict:
+        """Create a pending entry order in orders.json."""
+        if self._orders_repo is None:
+            raise HTTPException(status_code=503, detail="Orders repository not configured")
+
+        ticker = request.ticker.upper()
+        orders, _ = self._orders_repo.list_orders()
+
+        if request.order_kind == "entry":
+            pending_entry = any(
+                o.get("ticker") == ticker
+                and o.get("status") == "pending"
+                and o.get("order_kind") == "entry"
+                for o in orders
+            )
+            if pending_entry:
+                raise HTTPException(status_code=409, detail=f"{ticker}: pending entry order already exists.")
+
+            positions, _ = self._positions_repo.list_positions(status="open")
+            open_position = next((p for p in positions if p.get("ticker") == ticker), None)
+
+            if request.entry_mode == "ADD_ON":
+                if not open_position:
+                    raise HTTPException(status_code=409, detail=f"{ticker}: no open position found for add-on order.")
+            elif open_position:
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"{ticker}: open position already exists. Create this as an ADD_ON order instead.",
+                )
+
+        existing_ids = {o.get("order_id", "") for o in orders}
+        base = f"ORD-{ticker}"
+        n = 1
+        order_id = f"{base}-{n:03d}"
+        while order_id in existing_ids:
+            n += 1
+            order_id = f"{base}-{n:03d}"
+
+        isin = request.isin or _resolve_isin(ticker)
+        order = {
+            "order_id": order_id,
+            "ticker": ticker,
+            "status": "pending",
+            "order_type": request.order_type,
+            "quantity": request.quantity,
+            "limit_price": request.limit_price,
+            "stop_price": request.stop_price,
+            "order_date": get_today_str(),
+            "filled_date": None,
+            "entry_price": None,
+            "notes": request.notes.strip(),
+            "order_kind": request.order_kind,
+            "parent_order_id": None,
+            "position_id": request.position_id if request.entry_mode == "ADD_ON" else None,
+            "tif": "GTC",
+            "fee_eur": None,
+            "fill_fx_rate": None,
+            "isin": isin,
+            "thesis": request.thesis,
+        }
+        self._orders_repo.append_order(order)
+        return order
 
     def create_position(self, request: CreatePositionRequest) -> Position:
         """Register a position directly (after manual fill at DeGiro)."""

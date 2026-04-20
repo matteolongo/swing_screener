@@ -149,6 +149,37 @@ class CreatePositionRequest(BaseModel):
         return self
 
 
+class CreateOrderRequest(BaseModel):
+    """Request to create a pending entry order."""
+
+    ticker: str
+    order_type: str
+    quantity: int = Field(gt=0, description="Number of shares")
+    limit_price: Optional[float] = Field(default=None, ge=0)
+    stop_price: Optional[float] = Field(default=None, ge=0)
+    notes: str = ""
+    order_kind: str = "entry"
+    position_id: Optional[str] = None
+    entry_mode: str = "NEW_ENTRY"
+    isin: Optional[str] = None
+    thesis: Optional[str] = None
+
+    @field_validator("ticker")
+    @classmethod
+    def validate_ticker(cls, v: str) -> str:
+        v = v.strip().upper()
+        if not v:
+            raise ValueError("Ticker cannot be empty")
+        if len(v) > 20:
+            raise ValueError("Ticker too long")
+        return v
+
+    @field_validator("order_type")
+    @classmethod
+    def validate_order_type(cls, v: str) -> str:
+        return v.strip().upper()
+
+
 class DegiroOrder(BaseModel):
     """Live order read from DeGiro API (read-only)."""
 
