@@ -30,6 +30,25 @@ class SameSymbolCandidateContext(BaseModel):
     reason: str = ""
 
 
+class PriorTradeContext(BaseModel):
+    last_exit_date: str
+    last_exit_price: float
+    last_entry_price: float
+    last_r_outcome: float       # R multiple at exit (negative = loss)
+    was_profitable: bool
+    trade_count: int            # total closed trades for this ticker
+
+
+class ReentryCheckResult(BaseModel):
+    passed: bool
+    reason: str
+
+
+class ReentryGateResult(BaseModel):
+    suppressed: bool
+    checks: dict[str, ReentryCheckResult]
+
+
 class ScreenerCandidate(BaseModel):
     ticker: str
     currency: str = "USD"
@@ -73,6 +92,8 @@ class ScreenerCandidate(BaseModel):
     suggested_order_price: Optional[float] = None
     execution_note: Optional[str] = None
     same_symbol: Optional[SameSymbolCandidateContext] = None
+    prior_trades: Optional[PriorTradeContext] = None
+    reentry_gate: Optional[ReentryGateResult] = None
     decision_summary: Optional[DecisionSummary] = None
     fundamentals_snapshot: Optional[FundamentalSnapshot] = Field(default=None, exclude=True)
     raw_technical_rank: Optional[int] = None
