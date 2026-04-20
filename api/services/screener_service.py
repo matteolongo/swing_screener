@@ -803,6 +803,18 @@ class ScreenerService:
             overall_last_bar = _to_iso(ohlcv.index.max())
             data_freshness = _resolve_data_freshness(asof_str, now_utc, active_currencies)
 
+            # Detect tickers that failed to download and surface them as warnings
+            if "Close" in ohlcv.columns.get_level_values(0):
+                present = set(ohlcv["Close"].columns.tolist())
+                requested_set = set(tickers) - {benchmark}
+                missing = sorted(requested_set - present)
+                if missing:
+                    warnings.append(
+                        f"{len(missing)} ticker{'s' if len(missing) != 1 else ''} could not be downloaded "
+                        f"and were excluded from screening (possibly delisted or renamed): "
+                        f"{', '.join(missing)}"
+                    )
+
             if "min_price" in fields_set or "max_price" in fields_set:
                 filt = universe_cfg.filt
                 min_price = request.min_price if request.min_price is not None else filt.min_price

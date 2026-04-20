@@ -120,7 +120,7 @@ def test_screener_top_over_100_returns_candidates(monkeypatch):
     assert res.status_code == 200
     data = res.json()
     assert len(data["candidates"]) == 150
-    assert data["warnings"] == ["Only 150 candidates found for top 200."]
+    assert any("Only 150 candidates found for top 200." in w for w in data["warnings"])
     assert data["candidates"][0]["last_bar"] == "2024-01-03T00:00:00"
     # Synthetic test tickers (T000...) have no instrument master entry → UNKNOWN
     assert data["candidates"][0]["currency"] in ("USD", "UNKNOWN")
