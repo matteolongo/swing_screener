@@ -1,6 +1,15 @@
 # tests/api/test_prior_trade_annotator.py
 from __future__ import annotations
-from api.models.screener import PriorTradeContext, ReentryCheckResult, ReentryGateResult
+
+from types import SimpleNamespace
+
+from api.models.screener import (
+    PriorTradeContext,
+    ReentryCheckResult,
+    ReentryGateResult,
+    ScreenerCandidate,
+)
+from api.services.prior_trade_annotator import PriorTradeAnnotator
 
 
 def test_prior_trade_context_model():
@@ -28,11 +37,6 @@ def test_reentry_gate_result_suppression():
     assert gate.checks["thesis_valid"].passed is False
 
 
-import pytest
-from api.models.screener import ScreenerCandidate
-from api.services.prior_trade_annotator import PriorTradeAnnotator
-
-
 def _make_candidate(ticker: str = "AAPL") -> ScreenerCandidate:
     return ScreenerCandidate(
         ticker=ticker,
@@ -58,7 +62,6 @@ def _make_closed_position(
     initial_risk: float = 25.0,
     exit_date: str = "2026-03-01",
 ):
-    from types import SimpleNamespace
     return SimpleNamespace(
         ticker=ticker,
         status="closed",
