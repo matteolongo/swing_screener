@@ -22,6 +22,8 @@ from api.models.screener import (
 from api.models.recommendation import Recommendation
 from api.services.portfolio_service import PortfolioService
 from api.services.same_symbol_reentry import SameSymbolReentryEvaluator
+from api.services.prior_trade_annotator import PriorTradeAnnotator
+from api.services.reentry_gate_evaluator import ReentryGateEvaluator
 from swing_screener.risk.engine import RiskEngineConfig, evaluate_recommendation
 from api.repositories.strategy_repo import StrategyRepository
 from swing_screener.data.universe import (
@@ -1062,6 +1064,53 @@ class ScreenerService:
                     filtered_candidates.append(enriched_candidate)
 
             candidates = filtered_candidates
+
+            # ── Re-entry annotation + gate ────────────────────────────────
+            closed_positions = [
+                p for p in portfolio_positions
+                if getattr(p, "status", None) == "closed"
+            ]
+            if closed_positions:
+                annotator = PriorTradeAnnotator()
+                candidates = annotator.annotate(candidates, closed_positions=closed_positions)
+
+                # Resolve upcoming earnings for market_context_clean rule
+                upcoming_earnings: set[str] = set()
+                try:
+                    import datetime as _dt  # noqa: PLC0415
+                    from swing_screener.intelligence.storage import IntelligenceStorage  # noqa: PLC0415
+                    _intel_storage = IntelligenceStorage()
+                    _today = _dt.date.today()
+                    for _offset in range(5):
+                        _day = (_today + _dt.timedelta(days=_offset)).isoformat()
+                        _catalyst_path = _intel_storage.signals_path(_day)
+                        if _catalyst_path.exists():
+                            import json as _json  # noqa: PLC0415
+                            _data = _json.loads(_catalyst_path.read_text())
+                            for _signal in _data.get("signals", []):
+                                _sym = _signal.get("symbol", "")
+                                if _sym:
+                                    upcoming_earnings.add(_sym.upper())
+                except Exception:  # noqa: BLE001 — intelligence data is optional
+                    pass
+
+                rr_threshold = _safe_float(getattr(risk_cfg, "rr_target", 2.0)) or 2.0
+                gate_evaluator = ReentryGateEvaluator(
+                    rr_threshold=rr_threshold,
+                    upcoming_earnings_tickers=upcoming_earnings,
+                )
+                candidates = gate_evaluator.evaluate(candidates)
+
+                # Remove suppressed re-entry candidates
+                reentry_suppressed = [c for c in candidates if c.reentry_gate and c.reentry_gate.suppressed]
+                if reentry_suppressed:
+                    warnings.append(
+                        f"{len(reentry_suppressed)} re-entry candidate"
+                        f"{'s' if len(reentry_suppressed) != 1 else ''} suppressed (gate rules not met)."
+                    )
+                candidates = [c for c in candidates if not (c.reentry_gate and c.reentry_gate.suppressed)]
+            # ── End re-entry gate ─────────────────────────────────────────
+
             candidates = _apply_cached_fundamentals_context(candidates)
             candidates = _apply_decision_summary_context(candidates)
             # Stage 2: combined priority re-ranks prefilter set and trims to final top-N
