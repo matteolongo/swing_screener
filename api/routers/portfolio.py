@@ -22,6 +22,7 @@ from api.models.portfolio import (
     DegiroSyncPreviewResponse,
     DegiroApplyResponse,
     DegiroStatus,
+    SymbolHistoryResponse,
 )
 from api.dependencies import get_config_repo, get_portfolio_service
 from api.dependencies import get_strategy_repo
@@ -333,3 +334,14 @@ async def degiro_sync_apply(
         fees_applied=0,
         ambiguous_skipped=ambiguous_skipped,
     )
+
+
+# ===== Symbol History =====
+
+@router.get("/symbol-history/{ticker}", response_model=SymbolHistoryResponse)
+async def get_symbol_history(
+    ticker: str,
+    service: PortfolioService = Depends(get_portfolio_service),
+):
+    """Get all positions for a specific ticker, ordered by entry date descending."""
+    return service.get_symbol_history(ticker.upper())

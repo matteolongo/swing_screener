@@ -23,6 +23,7 @@ from api.models.portfolio import (
     PortfolioSummary,
     UpdateStopRequest,
     ClosePositionRequest,
+    SymbolHistoryResponse,
 )
 from api.repositories.config_repo import ConfigRepository
 from api.repositories.orders_repo import OrdersRepository
@@ -718,6 +719,25 @@ class PortfolioService:
         if position is None:
             raise HTTPException(status_code=404, detail=f"Position not found: {position_id}")
         return self._suggest_position_stop_from_dict(position)
+
+    def get_symbol_history(self, ticker: str) -> SymbolHistoryResponse:
+        """Return all positions for a specific ticker, ordered by entry date descending."""
+        ticker_upper = ticker.upper()
+        all_raw, _ = self._positions_repo.list_positions()
+        matching = [
+            p for p in all_raw
+            if p.get("ticker", "").upper() == ticker_upper
+        ]
+        matching.sort(key=lambda p: p.get("entry_date", ""), reverse=True)
+        positions = [Position(**p) for p in matching]
+        open_count = sum(1 for p in positions if p.status == "open")
+        closed_count = sum(1 for p in positions if p.status == "closed")
+        return SymbolHistoryResponse(
+            ticker=ticker_upper,
+            positions=positions,
+            open_count=open_count,
+            closed_count=closed_count,
+        )
 
     def list_degiro_orders(self) -> DegiroOrdersResponse:
         """Fetch live orders from DeGiro API."""

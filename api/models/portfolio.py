@@ -310,3 +310,10 @@ class DegiroApplyResponse(BaseModel):
     fees_applied: int = 0
     ambiguous_skipped: int = 0
     artifact_paths: dict[str, str] = Field(default_factory=dict)
+
+
+class SymbolHistoryResponse(BaseModel):
+    ticker: str
+    positions: list[Position]
+    open_count: int
+    closed_count: int
