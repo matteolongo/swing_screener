@@ -1,7 +1,7 @@
 import type { Recommendation } from '@/types/recommendation';
-import type { DecisionSummary, SameSymbolCandidateContext } from '@/features/screener/types';
+import type { DecisionSummary, SameSymbolCandidateContext, PriorTradeContext, ReentryGateResult } from '@/features/screener/types';
 
-export type WorkspaceAnalysisTab = 'overview' | 'fundamentals' | 'intelligence' | 'order';
+export type WorkspaceAnalysisTab = 'overview' | 'fundamentals' | 'intelligence' | 'order' | 'history';
 
 export interface SymbolAnalysisCandidate {
   ticker: string;
@@ -31,4 +31,6 @@ export interface SymbolAnalysisCandidate {
   executionNote?: string;
   sameSymbol?: SameSymbolCandidateContext;
   decisionSummary?: DecisionSummary;
+  priorTrades?: PriorTradeContext;
+  reentryGate?: ReentryGateResult;
 }

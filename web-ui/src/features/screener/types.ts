@@ -17,6 +17,44 @@ export interface SameSymbolCandidateContext {
   reason: string;
 }
 
+export interface PriorTradeContext {
+  lastExitDate: string;
+  lastExitPrice: number;
+  lastEntryPrice: number;
+  lastROutcome: number;
+  wasProfitable: boolean;
+  tradeCount: number;
+}
+
+export interface ReentryCheckResult {
+  passed: boolean;
+  reason: string;
+}
+
+export interface ReentryGateResult {
+  suppressed: boolean;
+  checks: Record<string, ReentryCheckResult>;
+}
+
+export interface PriorTradeContextAPI {
+  last_exit_date: string;
+  last_exit_price: number;
+  last_entry_price: number;
+  last_r_outcome: number;
+  was_profitable: boolean;
+  trade_count: number;
+}
+
+export interface ReentryCheckResultAPI {
+  passed: boolean;
+  reason: string;
+}
+
+export interface ReentryGateResultAPI {
+  suppressed: boolean;
+  checks: Record<string, ReentryCheckResultAPI>;
+}
+
 export interface PriceHistoryPoint {
   date: string;
   close: number;
@@ -136,6 +174,8 @@ export interface ScreenerCandidate {
   decisionSummary?: DecisionSummary;
   rawTechnicalRank?: number;
   combinedPriorityScore?: number;
+  priorTrades?: PriorTradeContext;
+  reentryGate?: ReentryGateResult;
 }
 
 export interface DecisionTradePlanAPI {
@@ -249,6 +289,8 @@ export interface ScreenerCandidateAPI {
   decision_summary?: DecisionSummaryAPI;
   raw_technical_rank?: number;
   combined_priority_score?: number;
+  prior_trades?: PriorTradeContextAPI | null;
+  reentry_gate?: ReentryGateResultAPI | null;
 }
 
 export interface ScreenerRequest {
@@ -461,6 +503,27 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
       decisionSummary: c.decision_summary ? transformDecisionSummary(c.decision_summary) : undefined,
       rawTechnicalRank: c.raw_technical_rank ?? undefined,
       combinedPriorityScore: c.combined_priority_score ?? undefined,
+      priorTrades: c.prior_trades
+        ? {
+            lastExitDate: c.prior_trades.last_exit_date,
+            lastExitPrice: c.prior_trades.last_exit_price,
+            lastEntryPrice: c.prior_trades.last_entry_price,
+            lastROutcome: c.prior_trades.last_r_outcome,
+            wasProfitable: c.prior_trades.was_profitable,
+            tradeCount: c.prior_trades.trade_count,
+          }
+        : undefined,
+      reentryGate: c.reentry_gate
+        ? {
+            suppressed: c.reentry_gate.suppressed,
+            checks: Object.fromEntries(
+              Object.entries(c.reentry_gate.checks).map(([k, v]) => [
+                k,
+                { passed: v.passed, reason: v.reason },
+              ])
+            ),
+          }
+        : undefined,
     })),
     asofDate: apiResponse.asof_date,
     totalScreened: apiResponse.total_screened,

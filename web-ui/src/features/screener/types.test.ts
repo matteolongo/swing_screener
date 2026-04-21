@@ -86,3 +86,65 @@ describe('transformScreenerResponse', () => {
     expect(result.candidates[0].decisionSummary?.valuationContext.fairValueBase).toBe(107.32);
   });
 });
+
+describe('transformScreenerResponse — prior_trades and reentry_gate', () => {
+  it('maps prior_trades from API to camelCase', () => {
+    const apiResponse: ScreenerResponseAPI = {
+      asof_date: '2026-04-21',
+      total_screened: 1,
+      data_freshness: 'final_close',
+      candidates: [
+        {
+          ticker: 'AAPL',
+          close: 150, sma_20: 148, sma_50: 145, sma_200: 140,
+          atr: 3, momentum_6m: 0.15, momentum_12m: 0.2,
+          rel_strength: 1.1, score: 0.8, confidence: 75, rank: 1,
+          prior_trades: {
+            last_exit_date: '2026-03-01',
+            last_exit_price: 110,
+            last_entry_price: 100,
+            last_r_outcome: 2.0,
+            was_profitable: true,
+            trade_count: 2,
+          },
+          reentry_gate: {
+            suppressed: false,
+            checks: {
+              thesis_valid: { passed: true, reason: 'RECOMMENDED' },
+              reward_sufficient: { passed: true, reason: 'R/R 2.5 >= 2.0' },
+            },
+          },
+        },
+      ],
+    };
+
+    const result = transformScreenerResponse(apiResponse);
+    const c = result.candidates[0];
+
+    expect(c.priorTrades?.wasProfitable).toBe(true);
+    expect(c.priorTrades?.tradeCount).toBe(2);
+    expect(c.priorTrades?.lastROutcome).toBe(2.0);
+    expect(c.reentryGate?.suppressed).toBe(false);
+    expect(c.reentryGate?.checks['thesis_valid'].passed).toBe(true);
+  });
+
+  it('leaves priorTrades and reentryGate undefined when absent', () => {
+    const apiResponse: ScreenerResponseAPI = {
+      asof_date: '2026-04-21',
+      total_screened: 1,
+      data_freshness: 'final_close',
+      candidates: [
+        {
+          ticker: 'MSFT',
+          close: 300, sma_20: 298, sma_50: 290, sma_200: 280,
+          atr: 5, momentum_6m: 0.1, momentum_12m: 0.15,
+          rel_strength: 1.0, score: 0.7, confidence: 70, rank: 2,
+        },
+      ],
+    };
+
+    const result = transformScreenerResponse(apiResponse);
+    expect(result.candidates[0].priorTrades).toBeUndefined();
+    expect(result.candidates[0].reentryGate).toBeUndefined();
+  });
+});
