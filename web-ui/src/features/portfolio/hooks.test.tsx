@@ -12,6 +12,7 @@ vi.mock('@/features/portfolio/api', () => ({
   fetchPositionStopSuggestion: vi.fn(),
   updatePositionStop: vi.fn(),
   closePosition: vi.fn(),
+  fetchSymbolHistory: vi.fn(),
 }))
 
 vi.mock('@/lib/queryInvalidation', () => ({
@@ -26,6 +27,7 @@ import {
   useOrders,
   usePositionStopSuggestion,
   useUpdateStopMutation,
+  useSymbolHistory,
 } from '@/features/portfolio/hooks'
 
 function createQueryClient() {
@@ -163,5 +165,40 @@ describe('portfolio hooks', () => {
 
     expect(mockedFetchPositionStopSuggestion).toHaveBeenCalledWith('POS-1')
     expect(result.current.data?.stopSuggested).toBe(97)
+  })
+})
+
+describe('useSymbolHistory', () => {
+  const mockedFetchSymbolHistory = vi.mocked(portfolioApi.fetchSymbolHistory)
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('returns symbol history for a ticker', async () => {
+    const mockHistory = {
+      ticker: 'AAPL',
+      positions: [],
+      openCount: 0,
+      closedCount: 0,
+    }
+    mockedFetchSymbolHistory.mockResolvedValueOnce(mockHistory)
+
+    const queryClient = createQueryClient()
+    const { result } = renderHook(() => useSymbolHistory('AAPL'), {
+      wrapper: createWrapper(queryClient),
+    })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(result.current.data?.ticker).toBe('AAPL')
+    expect(mockedFetchSymbolHistory).toHaveBeenCalledWith('AAPL')
+  })
+
+  it('does not fetch when ticker is undefined', () => {
+    const queryClient = createQueryClient()
+    const { result } = renderHook(() => useSymbolHistory(undefined), {
+      wrapper: createWrapper(queryClient),
+    })
+    expect(result.current.fetchStatus).toBe('idle')
   })
 })

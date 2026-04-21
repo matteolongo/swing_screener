@@ -423,6 +423,34 @@ function transformPositionWithMetrics(data: PositionWithMetricsApiResponse): Pos
   };
 }
 
+export interface SymbolHistoryResponse {
+  ticker: string;
+  positions: PositionApiResponse[];
+  openCount: number;
+  closedCount: number;
+}
+
+interface SymbolHistoryApiResponse {
+  ticker: string;
+  positions: PositionApiResponse[];
+  open_count: number;
+  closed_count: number;
+}
+
+export async function fetchSymbolHistory(ticker: string): Promise<SymbolHistoryResponse> {
+  const response = await fetch(
+    apiUrl(`/api/portfolio/symbol-history/${encodeURIComponent(ticker)}`),
+  );
+  if (!response.ok) throw await buildApiError(response, 'Failed to fetch symbol history');
+  const data: SymbolHistoryApiResponse = await response.json();
+  return {
+    ticker: data.ticker,
+    positions: data.positions,
+    openCount: data.open_count,
+    closedCount: data.closed_count,
+  };
+}
+
 function transformPortfolioSummary(data: PortfolioSummaryApiResponse): PortfolioSummary {
   return {
     totalPositions: data.total_positions,

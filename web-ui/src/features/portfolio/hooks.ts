@@ -9,12 +9,14 @@ import {
   fetchPositions,
   fetchPositionStopSuggestion,
   fetchDegiroStatus,
+  fetchSymbolHistory,
   fillOrder,
   syncDegiroOrders,
   updatePositionStop,
   OrderFilterStatus,
   PositionFilterStatus,
   DegiroStatus,
+  type SymbolHistoryResponse,
 } from './api';
 import {
   CreateOrderRequest,
@@ -154,5 +156,14 @@ export function useSyncDegiroOrdersMutation() {
         invalidatePositionQueries(queryClient),
       ]);
     },
+  });
+}
+
+export function useSymbolHistory(ticker: string | undefined) {
+  return useQuery<SymbolHistoryResponse>({
+    queryKey: ['symbol-history', ticker],
+    queryFn: () => fetchSymbolHistory(ticker!),
+    enabled: !!ticker,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
