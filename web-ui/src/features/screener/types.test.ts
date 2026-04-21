@@ -147,4 +147,40 @@ describe('transformScreenerResponse — prior_trades and reentry_gate', () => {
     expect(result.candidates[0].priorTrades).toBeUndefined();
     expect(result.candidates[0].reentryGate).toBeUndefined();
   });
+
+  it('preserves reason strings when reentry_gate has suppressed checks', () => {
+    const apiResponse: ScreenerResponseAPI = {
+      asof_date: '2026-04-21',
+      total_screened: 1,
+      data_freshness: 'final_close',
+      candidates: [
+        {
+          ticker: 'TSLA',
+          close: 200, sma_20: 198, sma_50: 190, sma_200: 180,
+          atr: 8,
+          momentum_6m: 0.05,
+          momentum_12m: 0.08,
+          rel_strength: 0.9,
+          score: 0.4,
+          confidence: 40,
+          rank: 5,
+          reentry_gate: {
+            suppressed: true,
+            checks: {
+              thesis_valid: { passed: false, reason: 'No active recommendation' },
+              reward_sufficient: { passed: true, reason: 'R/R 2.5 >= 2.0' },
+            },
+          },
+        },
+      ],
+    };
+
+    const result = transformScreenerResponse(apiResponse);
+    const c = result.candidates[0];
+
+    expect(c.reentryGate?.suppressed).toBe(true);
+    expect(c.reentryGate?.checks['thesis_valid'].passed).toBe(false);
+    expect(c.reentryGate?.checks['thesis_valid'].reason).toBe('No active recommendation');
+    expect(c.reentryGate?.checks['reward_sufficient'].passed).toBe(true);
+  });
 });

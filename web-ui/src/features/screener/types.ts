@@ -517,7 +517,7 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
         ? {
             suppressed: c.reentry_gate.suppressed,
             checks: Object.fromEntries(
-              Object.entries(c.reentry_gate.checks).map(([k, v]) => [
+              Object.entries(c.reentry_gate.checks ?? {}).map(([k, v]) => [
                 k,
                 { passed: v.passed, reason: v.reason },
               ])
