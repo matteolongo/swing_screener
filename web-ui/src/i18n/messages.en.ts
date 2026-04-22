@@ -2010,6 +2010,23 @@ export const messagesEn = {
       hint: 'j/k navigate · Enter select',
     },
   },
+  symbolTradeHistory: {
+    loading: 'Loading trade history...',
+    noPastTrades: 'No past trades for {{ticker}}.',
+    tradeSingular: '1 trade',
+    tradePlural: '{{n}} trades',
+    summary: '{{n}} trades · win rate {{winRate}}% · avg outcome {{avgR}}',
+    openPosition: 'Open Position',
+    entryLabel: 'Entry',
+    stopLabel: 'Stop',
+    sharesLabel: 'Shares',
+    dateRange: '{{from}} → {{to}}',
+    priceRange: '{{entry}} → {{exit}}',
+    rOutcome: '{{value}}R',
+    screenerSeenCount: 'Seen in screener {{n}}×',
+    screenerStreak: 'Streak: {{n}}',
+    screenerLastSeen: 'Last seen: {{date}}',
+  },
 } as const;
 
 export type MessagesEn = typeof messagesEn;
