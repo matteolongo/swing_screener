@@ -2027,6 +2027,20 @@ export const messagesEn = {
     screenerStreak: 'Streak: {{n}}',
     screenerLastSeen: 'Last seen: {{date}}',
   },
+  reentryChecklist: {
+    title: '{{ticker}} — Re-entry Checklist',
+    priorTradeSummary: 'Prior trade summary',
+    lastOutcome: 'Last outcome',
+    daysSinceExit: 'Days since exit',
+    tradeCount: 'Trade count',
+    stopOutWarning: 'Last trade was a stop-out. Review your thesis before re-entering.',
+    gateChecks: 'Re-entry gate checks',
+    checkPassed: 'Passed',
+    checkFailed: 'Failed',
+    manualIntentLabel: 'I am not re-entering out of emotion or FOMO',
+    proceedButton: 'Proceed to order setup',
+    skipButton: 'Skip — no trade',
+  },
 } as const;
 
 export type MessagesEn = typeof messagesEn;
