@@ -1003,7 +1003,10 @@ export const messagesEn = {
       sectorUnknown: 'Unknown',
       scoreLabel: 'Score {{value}}',
       addOnLabel: 'Add-On',
+      addOnWithEntry: 'ADD-ON · open @ ${{entry}}',
+      manageOnlyLabel: 'MANAGE ONLY',
       inPositionLabel: 'In Position',
+      reentryLabel: '↩ Re-entry',
       confidenceLabel: '{{value}}% confidence',
       confidenceUnknown: 'Confidence N/A',
     },
@@ -2005,6 +2008,7 @@ export const messagesEn = {
       loading: "Loading today's review...",
       closeAction: 'Close →',
       updateAction: 'Update →',
+      reentryBadge: '↩ Re-entry',
     },
     keyboard: {
       hint: 'j/k navigate · Enter select',

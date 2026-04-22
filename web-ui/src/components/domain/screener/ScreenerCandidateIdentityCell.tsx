@@ -2,6 +2,7 @@ import { ExternalLink } from 'lucide-react';
 import { CandidateViewModel } from '@/features/screener/viewModel';
 import RecommendationBadge from '@/components/domain/recommendation/RecommendationBadge';
 import { t } from '@/i18n/t';
+import { cn } from '@/utils/cn';
 
 interface ScreenerCandidateIdentityCellProps {
   candidate: CandidateViewModel;
@@ -12,6 +13,7 @@ interface ScreenerCandidateIdentityCellProps {
 /**
  * Simplified identity cell: ticker, verdict badge, company/sector secondary line.
  * Currency is shown as text color (green=USD, blue=EUR).
+ * Border-left color reflects same-symbol mode and re-entry context.
  */
 export default function ScreenerCandidateIdentityCell({
   candidate,
@@ -20,8 +22,23 @@ export default function ScreenerCandidateIdentityCell({
 }: ScreenerCandidateIdentityCellProps) {
   const yahooUrl = `https://finance.yahoo.com/quote/${candidate.ticker}`;
 
+  const sameSymbolMode = candidate.sameSymbol?.mode;
+  const priorTrades = candidate.original.priorTrades;
+  const hasReentry = Boolean(priorTrades) && !sameSymbolMode;
+
+  const borderClass =
+    sameSymbolMode === 'ADD_ON'
+      ? 'border-l-2 border-amber-400'
+      : sameSymbolMode === 'MANAGE_ONLY'
+        ? 'border-l-2 border-gray-400'
+        : hasReentry
+          ? 'border-l-2 border-amber-300'
+          : undefined;
+
+  const currentPositionEntry = candidate.sameSymbol?.currentPositionEntry;
+
   return (
-    <div className="flex flex-col gap-0.5">
+    <div className={cn('flex flex-col gap-0.5', borderClass, borderClass ? 'pl-1.5' : undefined)}>
       {/* Ticker + verdict + external link */}
       <div className="flex items-center gap-1.5">
         {onSymbolClick ? (
@@ -63,14 +80,21 @@ export default function ScreenerCandidateIdentityCell({
             {streak}d
           </span>
         ) : null}
-        {candidate.sameSymbol?.mode === 'ADD_ON' ? (
+        {sameSymbolMode === 'ADD_ON' ? (
           <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
-            {t('screener.identity.addOnLabel')}
+            {currentPositionEntry != null
+              ? t('screener.identity.addOnWithEntry', { entry: currentPositionEntry.toFixed(2) })
+              : t('screener.identity.addOnLabel')}
           </span>
         ) : null}
-        {candidate.sameSymbol?.mode === 'MANAGE_ONLY' ? (
-          <span className="rounded bg-violet-100 px-1.5 py-0.5 text-[10px] text-violet-800 dark:bg-violet-900/40 dark:text-violet-200">
-            {t('screener.identity.inPositionLabel')}
+        {sameSymbolMode === 'MANAGE_ONLY' ? (
+          <span className="rounded bg-red-100 px-1.5 py-0.5 text-[10px] text-red-700 dark:bg-red-900/40 dark:text-red-300 opacity-75">
+            {t('screener.identity.manageOnlyLabel')}
+          </span>
+        ) : null}
+        {hasReentry ? (
+          <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+            {t('screener.identity.reentryLabel')}
           </span>
         ) : null}
       </div>

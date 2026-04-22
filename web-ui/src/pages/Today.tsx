@@ -5,6 +5,7 @@ import FloatingChatWidget from '@/components/domain/workspace/FloatingChatWidget
 import ScreenerInboxPanel from '@/components/domain/workspace/ScreenerInboxPanel';
 import ClosePositionModalForm from '@/components/domain/positions/ClosePositionModalForm';
 import UpdateStopModalForm from '@/components/domain/positions/UpdateStopModalForm';
+import ReentryChecklistModal from '@/components/domain/recommendation/ReentryChecklistModal';
 import { useSymbolIntelligenceRunner } from '@/features/intelligence/useSymbolIntelligenceRunner';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useDailyReview } from '@/features/dailyReview/api';
@@ -25,6 +26,7 @@ import type {
   DailyReviewPositionHold,
   DailyReviewPositionUpdate,
 } from '@/features/dailyReview/types';
+import type { ScreenerCandidate } from '@/features/screener/types';
 
 // ─── Action item row components ─────────────────────────────────────────────
 
@@ -125,37 +127,90 @@ interface CandidateItemProps {
   isAddOn?: boolean;
   onClick: (ticker: string) => void;
   isFocused?: boolean;
+  candidate?: ScreenerCandidate;
 }
 
-function CandidateItem({ item, isAddOn, onClick, isFocused }: CandidateItemProps) {
+function CandidateItem({ item, isAddOn, onClick, isFocused, candidate }: CandidateItemProps) {
+  const [reentryModalOpen, setReentryModalOpen] = useState(false);
+
+  const hasReentry = Boolean(candidate?.priorTrades);
+  const reentryGateSuppressed = candidate?.reentryGate?.suppressed === true;
+  const sameSymbolMode = candidate?.sameSymbol?.mode;
+
+  const borderClass =
+    sameSymbolMode === 'ADD_ON'
+      ? 'border-amber-400'
+      : sameSymbolMode === 'MANAGE_ONLY'
+        ? 'border-gray-400'
+        : 'border-blue-500';
+
+  const handleClick = () => {
+    if (hasReentry && !reentryGateSuppressed && candidate?.reentryGate) {
+      setReentryModalOpen(true);
+    } else {
+      onClick(item.ticker);
+    }
+  };
+
+  const lastR = candidate?.priorTrades?.lastROutcome;
+  const lastRFormatted =
+    lastR !== undefined
+      ? `${lastR >= 0 ? '+' : '\u2212'}${Math.abs(lastR).toFixed(1)}R`
+      : null;
+
   return (
-    <button
-      type="button"
-      onClick={() => onClick(item.ticker)}
-      className={cn(
-        'w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-l-2 border-blue-500',
-        isFocused && 'ring-1 ring-primary',
-      )}
-    >
-      <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 min-w-[60px]">
-        {item.ticker}
-      </span>
-      {isAddOn ? (
-        <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
-          {t('todayPage.actionList.addOn')}
+    <>
+      <button
+        type="button"
+        onClick={handleClick}
+        className={cn(
+          'w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-l-2',
+          borderClass,
+          isFocused && 'ring-1 ring-primary',
+        )}
+      >
+        <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 min-w-[60px]">
+          {item.ticker}
         </span>
-      ) : (
-        <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-          {item.decisionSummary?.action ?? item.signal}
+        {isAddOn ? (
+          <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
+            {t('todayPage.actionList.addOn')}
+          </span>
+        ) : (
+          <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+            {item.decisionSummary?.action ?? item.signal}
+          </span>
+        )}
+        {hasReentry && (
+          <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 flex items-center gap-1">
+            {t('todayPage.actionList.reentryBadge')}
+            {lastRFormatted && (
+              <span className={cn('tabular-nums', (lastR ?? 0) >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400')}>
+                {lastRFormatted}
+              </span>
+            )}
+          </span>
+        )}
+        <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">
+          r/r: {formatNumber(item.rReward, 2)}R
         </span>
+        {item.name && (
+          <span className="text-xs text-gray-400 dark:text-gray-500 truncate flex-1">{item.name}</span>
+        )}
+      </button>
+      {reentryModalOpen && candidate?.priorTrades && candidate?.reentryGate && (
+        <ReentryChecklistModal
+          ticker={item.ticker}
+          priorTrades={candidate.priorTrades}
+          reentryGate={candidate.reentryGate}
+          onProceed={() => {
+            setReentryModalOpen(false);
+            onClick(item.ticker);
+          }}
+          onSkip={() => setReentryModalOpen(false)}
+        />
       )}
-      <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">
-        r/r: {formatNumber(item.rReward, 2)}R
-      </span>
-      {item.name && (
-        <span className="text-xs text-gray-400 dark:text-gray-500 truncate flex-1">{item.name}</span>
-      )}
-    </button>
+    </>
   );
 }
 
