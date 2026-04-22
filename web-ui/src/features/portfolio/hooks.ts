@@ -161,7 +161,7 @@ export function useSyncDegiroOrdersMutation() {
 
 export function useSymbolHistory(ticker: string | undefined) {
   return useQuery<SymbolHistoryResponse>({
-    queryKey: ['symbol-history', ticker],
+    queryKey: queryKeys.symbolHistory(ticker),
     queryFn: () => fetchSymbolHistory(ticker!),
     enabled: !!ticker,
     staleTime: 5 * 60 * 1000, // 5 minutes

@@ -6,6 +6,7 @@ import {
   fillOrderLocal,
   getActiveStrategyLocal,
   getPositionByIdLocal,
+  getAllPositionsLocal,
   isLocalPersistenceMode,
   listOrdersLocal,
   listPositionsLocal,
@@ -425,7 +426,7 @@ function transformPositionWithMetrics(data: PositionWithMetricsApiResponse): Pos
 
 export interface SymbolHistoryResponse {
   ticker: string;
-  positions: PositionApiResponse[];
+  positions: Position[];
   openCount: number;
   closedCount: number;
 }
@@ -438,6 +439,13 @@ interface SymbolHistoryApiResponse {
 }
 
 export async function fetchSymbolHistory(ticker: string): Promise<SymbolHistoryResponse> {
+  if (isLocalPersistenceMode()) {
+    const all = getAllPositionsLocal();
+    const filtered = all.filter((p) => p.ticker.toUpperCase() === ticker.toUpperCase());
+    const open = filtered.filter((p) => p.status === 'open');
+    const closed = filtered.filter((p) => p.status === 'closed');
+    return { ticker, positions: filtered, openCount: open.length, closedCount: closed.length };
+  }
   const response = await fetch(
     apiUrl(`/api/portfolio/symbol-history/${encodeURIComponent(ticker)}`),
   );
@@ -445,7 +453,7 @@ export async function fetchSymbolHistory(ticker: string): Promise<SymbolHistoryR
   const data: SymbolHistoryApiResponse = await response.json();
   return {
     ticker: data.ticker,
-    positions: data.positions,
+    positions: data.positions.map(transformPosition),
     openCount: data.open_count,
     closedCount: data.closed_count,
   };
