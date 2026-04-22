@@ -1380,4 +1380,6 @@ export const handlers = [
     })
   }),
 
+  http.get(`${API_BASE_URL}/api/screener/recurrence`, () => HttpResponse.json([])),
+
 ]

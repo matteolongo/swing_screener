@@ -27,7 +27,7 @@ function ROutcomeBadge({ r }: { r: number | null }) {
     return <span className="text-gray-400">{t('common.placeholders.dash')}</span>;
   }
   const sign = r >= 0 ? '+' : '';
-  const formatted = `${sign}${formatNumber(r, 1)}R`;
+  const formatted = t('symbolTradeHistory.rOutcome', { value: `${sign}${formatNumber(r, 1)}` });
   return (
     <span className={cn('font-mono font-semibold', r >= 0 ? 'text-green-600' : 'text-red-500')}>
       {formatted}
@@ -36,13 +36,21 @@ function ROutcomeBadge({ r }: { r: number | null }) {
 }
 
 export default function SymbolTradeHistory({ ticker }: SymbolTradeHistoryProps) {
-  const { data, isLoading } = useSymbolHistory(ticker);
+  const { data, isLoading, isError } = useSymbolHistory(ticker);
   const recurrenceQuery = useScreenerRecurrence();
 
   if (isLoading) {
     return (
       <div className="text-sm text-gray-500 py-4 text-center">
         {t('symbolTradeHistory.loading')}
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="text-sm text-red-500 py-4 text-center">
+        {t('common.errors.generic')}
       </div>
     );
   }
@@ -151,12 +159,17 @@ export default function SymbolTradeHistory({ ticker }: SymbolTradeHistoryProps) 
                     className="border-b border-gray-100 dark:border-gray-800 last:border-0"
                   >
                     <td className="py-1.5 pr-3 text-gray-500 whitespace-nowrap">
-                      {pos.entryDate}
-                      {pos.exitDate ? ` → ${pos.exitDate}` : ''}
+                      {pos.exitDate
+                        ? t('symbolTradeHistory.dateRange', { from: pos.entryDate, to: pos.exitDate })
+                        : pos.entryDate}
                     </td>
                     <td className="py-1.5 pr-3 text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                      {formatNumber(pos.entryPrice, 2)}
-                      {pos.exitPrice != null ? ` → ${formatNumber(pos.exitPrice, 2)}` : ''}
+                      {pos.exitPrice != null
+                        ? t('symbolTradeHistory.priceRange', {
+                            entry: formatNumber(pos.entryPrice, 2),
+                            exit: formatNumber(pos.exitPrice, 2),
+                          })
+                        : formatNumber(pos.entryPrice, 2)}
                     </td>
                     <td className="py-1.5 text-right">
                       <ROutcomeBadge r={r} />

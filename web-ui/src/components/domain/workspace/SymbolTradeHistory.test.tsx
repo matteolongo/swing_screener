@@ -1,9 +1,14 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/test/mocks/server';
 import { renderWithProviders } from '@/test/utils';
 import SymbolTradeHistory from './SymbolTradeHistory';
+
+// Recurrence is not under test here — stub it out to avoid XHR noise
+vi.mock('@/features/screener/recurrenceHooks', () => ({
+  useScreenerRecurrence: () => ({ data: [], isLoading: false }),
+}));
 
 const closedPosition = {
   ticker: 'AAPL',
