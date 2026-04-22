@@ -39,6 +39,7 @@ export default function ReentryChecklistModal({
     <ModalShell
       title={t('reentryChecklist.title', { ticker })}
       onClose={onSkip}
+      closeAriaLabel={t('modal.closeAria')}
       className="max-w-lg"
     >
       {/* Prior trade summary */}

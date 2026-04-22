@@ -3,6 +3,7 @@ import { screen, fireEvent } from '@testing-library/react';
 import { renderWithProviders } from '@/test/utils';
 import ReentryChecklistModal from './ReentryChecklistModal';
 import type { PriorTradeContext, ReentryGateResult } from '@/features/screener/types';
+import { t } from '@/i18n/t';
 
 const priorTrades: PriorTradeContext = {
   lastExitDate: '2026-03-01',
@@ -37,9 +38,8 @@ describe('ReentryChecklistModal', () => {
         onSkip={vi.fn()}
       />
     );
-    expect(screen.getByText(/AAPL/)).toBeInTheDocument();
-    expect(screen.getByText(/Re-entry Checklist/i)).toBeInTheDocument();
-    expect(screen.getByText(/\u22121\.0R/)).toBeInTheDocument();
+    expect(screen.getByText(t('reentryChecklist.title', { ticker: 'AAPL' }))).toBeInTheDocument();
+    expect(screen.getByText('\u22121.0R')).toBeInTheDocument();
   });
 
   it('proceed button is disabled until manual checkbox is ticked', () => {
@@ -52,7 +52,7 @@ describe('ReentryChecklistModal', () => {
         onSkip={vi.fn()}
       />
     );
-    const proceed = screen.getByRole('button', { name: /proceed/i });
+    const proceed = screen.getByRole('button', { name: t('reentryChecklist.proceedButton') });
     expect(proceed).toBeDisabled();
     fireEvent.click(screen.getByRole('checkbox'));
     expect(proceed).toBeEnabled();
@@ -70,7 +70,7 @@ describe('ReentryChecklistModal', () => {
       />
     );
     fireEvent.click(screen.getByRole('checkbox'));
-    fireEvent.click(screen.getByRole('button', { name: /proceed/i }));
+    fireEvent.click(screen.getByRole('button', { name: t('reentryChecklist.proceedButton') }));
     expect(onProceed).toHaveBeenCalledOnce();
   });
 
@@ -85,7 +85,7 @@ describe('ReentryChecklistModal', () => {
         onSkip={onSkip}
       />
     );
-    fireEvent.click(screen.getByRole('button', { name: /skip/i }));
+    fireEvent.click(screen.getByRole('button', { name: t('reentryChecklist.skipButton') }));
     expect(onSkip).toHaveBeenCalledOnce();
   });
 
@@ -99,7 +99,20 @@ describe('ReentryChecklistModal', () => {
         onSkip={vi.fn()}
       />
     );
-    expect(screen.getByText(/stop-out/i)).toBeInTheDocument();
+    expect(screen.getByText(t('reentryChecklist.stopOutWarning'))).toBeInTheDocument();
+  });
+
+  it('does not show stop-out warning when last trade was profitable', () => {
+    renderWithProviders(
+      <ReentryChecklistModal
+        ticker="AAPL"
+        priorTrades={{ ...priorTrades, wasProfitable: true }}
+        reentryGate={reentryGate}
+        onProceed={vi.fn()}
+        onSkip={vi.fn()}
+      />
+    );
+    expect(screen.queryByText(t('reentryChecklist.stopOutWarning'))).not.toBeInTheDocument();
   });
 
   it('shows failed check with reason text', () => {
