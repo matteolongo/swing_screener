@@ -26,7 +26,6 @@ import type {
   DailyReviewPositionHold,
   DailyReviewPositionUpdate,
 } from '@/features/dailyReview/types';
-import type { ScreenerCandidate } from '@/features/screener/types';
 
 // ─── Action item row components ─────────────────────────────────────────────
 
@@ -127,15 +126,14 @@ interface CandidateItemProps {
   isAddOn?: boolean;
   onClick: (ticker: string) => void;
   isFocused?: boolean;
-  candidate?: ScreenerCandidate;
 }
 
-function CandidateItem({ item, isAddOn, onClick, isFocused, candidate }: CandidateItemProps) {
+function CandidateItem({ item, isAddOn, onClick, isFocused }: CandidateItemProps) {
   const [reentryModalOpen, setReentryModalOpen] = useState(false);
 
-  const hasReentry = Boolean(candidate?.priorTrades);
-  const reentryGateSuppressed = candidate?.reentryGate?.suppressed === true;
-  const sameSymbolMode = candidate?.sameSymbol?.mode;
+  const hasReentry = Boolean(item.priorTrades);
+  const reentryGateSuppressed = item.reentryGate?.suppressed === true;
+  const sameSymbolMode = item.sameSymbol?.mode;
 
   const borderClass =
     sameSymbolMode === 'ADD_ON'
@@ -145,14 +143,14 @@ function CandidateItem({ item, isAddOn, onClick, isFocused, candidate }: Candida
         : 'border-blue-500';
 
   const handleClick = () => {
-    if (hasReentry && !reentryGateSuppressed && candidate?.reentryGate) {
+    if (hasReentry && !reentryGateSuppressed && item.reentryGate) {
       setReentryModalOpen(true);
     } else {
       onClick(item.ticker);
     }
   };
 
-  const lastR = candidate?.priorTrades?.lastROutcome;
+  const lastR = item.priorTrades?.lastROutcome;
   const lastRFormatted =
     lastR !== undefined
       ? `${lastR >= 0 ? '+' : '\u2212'}${Math.abs(lastR).toFixed(1)}R`
@@ -198,11 +196,11 @@ function CandidateItem({ item, isAddOn, onClick, isFocused, candidate }: Candida
           <span className="text-xs text-gray-400 dark:text-gray-500 truncate flex-1">{item.name}</span>
         )}
       </button>
-      {reentryModalOpen && candidate?.priorTrades && candidate?.reentryGate && (
+      {reentryModalOpen && item.priorTrades && item.reentryGate && (
         <ReentryChecklistModal
           ticker={item.ticker}
-          priorTrades={candidate.priorTrades}
-          reentryGate={candidate.reentryGate}
+          priorTrades={item.priorTrades}
+          reentryGate={item.reentryGate}
           onProceed={() => {
             setReentryModalOpen(false);
             onClick(item.ticker);

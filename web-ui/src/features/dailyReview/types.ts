@@ -6,6 +6,10 @@ import { Recommendation, RecommendationAPI, transformRecommendation } from '@/ty
 import {
   type DecisionSummary,
   type DecisionSummaryAPI,
+  type PriorTradeContext,
+  type PriorTradeContextAPI,
+  type ReentryGateResult,
+  type ReentryGateResultAPI,
   type SameSymbolCandidateContext,
 } from '@/features/screener/types';
 
@@ -49,6 +53,8 @@ export interface DailyReviewCandidateAPI {
     max_add_ons?: number;
     reason?: string;
   } | null;
+  prior_trades?: PriorTradeContextAPI | null;
+  reentry_gate?: ReentryGateResultAPI | null;
 }
 
 export interface DailyReviewPositionHoldAPI {
@@ -130,6 +136,8 @@ export interface DailyReviewCandidate {
   recommendation?: Recommendation;
   decisionSummary?: DecisionSummary;
   sameSymbol?: SameSymbolCandidateContext;
+  priorTrades?: PriorTradeContext;
+  reentryGate?: ReentryGateResult;
 }
 
 export interface DailyReviewPositionHold {
@@ -260,6 +268,27 @@ export function transformCandidate(api: DailyReviewCandidateAPI): DailyReviewCan
           addOnCount: api.same_symbol.add_on_count ?? 0,
           maxAddOns: api.same_symbol.max_add_ons ?? undefined,
           reason: api.same_symbol.reason ?? '',
+        }
+      : undefined,
+    priorTrades: api.prior_trades
+      ? {
+          lastExitDate: api.prior_trades.last_exit_date,
+          lastExitPrice: api.prior_trades.last_exit_price,
+          lastEntryPrice: api.prior_trades.last_entry_price,
+          lastROutcome: api.prior_trades.last_r_outcome,
+          wasProfitable: api.prior_trades.was_profitable,
+          tradeCount: api.prior_trades.trade_count,
+        }
+      : undefined,
+    reentryGate: api.reentry_gate
+      ? {
+          suppressed: api.reentry_gate.suppressed,
+          checks: Object.fromEntries(
+            Object.entries(api.reentry_gate.checks ?? {}).map(([k, v]) => [
+              k,
+              { passed: v.passed, reason: v.reason },
+            ])
+          ),
         }
       : undefined,
   };
