@@ -4,6 +4,7 @@ import { http, HttpResponse } from 'msw';
 import { server } from '@/test/mocks/server';
 import { renderWithProviders } from '@/test/utils';
 import SymbolTradeHistory from './SymbolTradeHistory';
+import { t } from '@/i18n/t';
 
 // Recurrence is not under test here — stub it out to avoid XHR noise
 vi.mock('@/features/screener/recurrenceHooks', () => ({
@@ -44,7 +45,7 @@ describe('SymbolTradeHistory', () => {
     renderWithProviders(<SymbolTradeHistory ticker="AAPL" />);
 
     expect(await screen.findByText('AAPL')).toBeInTheDocument();
-    expect(await screen.findByText('1 trade')).toBeInTheDocument();
+    expect(await screen.findByText(t('symbolTradeHistory.tradeSingular'))).toBeInTheDocument();
   });
 
   it('shows empty state when no history', async () => {
@@ -56,6 +57,6 @@ describe('SymbolTradeHistory', () => {
 
     renderWithProviders(<SymbolTradeHistory ticker="MSFT" />);
 
-    expect(await screen.findByText(/no past trades/i)).toBeInTheDocument();
+    expect(await screen.findByText(t('symbolTradeHistory.noPastTrades', { ticker: 'MSFT' }))).toBeInTheDocument();
   });
 });
