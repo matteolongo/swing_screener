@@ -4,6 +4,7 @@ import CachedSymbolPriceChart from '@/components/domain/market/CachedSymbolPrice
 import FundamentalsSnapshotCard from '@/components/domain/fundamentals/FundamentalsSnapshotCard';
 import IntelligenceOpportunityCard from '@/components/domain/intelligence/IntelligenceOpportunityCard';
 import AnalysisDecisionStrip from '@/components/domain/workspace/AnalysisDecisionStrip';
+import SymbolTradeHistory from '@/components/domain/workspace/SymbolTradeHistory';
 import DecisionSummaryCard from '@/components/domain/workspace/DecisionSummaryCard';
 import TechnicalMetricsGrid from '@/components/domain/workspace/TechnicalMetricsGrid';
 import type { SymbolAnalysisCandidate, WorkspaceAnalysisTab } from '@/components/domain/workspace/types';
@@ -119,6 +120,21 @@ export default function SymbolAnalysisContent({
             </button>
           );
         })}
+        {candidate?.priorTrades && (
+          <button
+            key="history"
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'history'}
+            onClick={() => onTabChange('history')}
+            className={cn(
+              'whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+              activeTab === 'history' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+            )}
+          >
+            {t('symbolAnalysis.historyTab')}
+          </button>
+        )}
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto space-y-3">
@@ -373,6 +389,12 @@ export default function SymbolAnalysisContent({
               </div>
             ) : null}
           </>
+        )}
+
+        {activeTab === 'history' && ticker && (
+          <div className="overflow-y-auto flex-1 pt-2">
+            <SymbolTradeHistory ticker={ticker} />
+          </div>
         )}
       </div>
     </>

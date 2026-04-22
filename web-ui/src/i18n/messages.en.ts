@@ -2010,6 +2010,9 @@ export const messagesEn = {
       hint: 'j/k navigate · Enter select',
     },
   },
+  symbolAnalysis: {
+    historyTab: 'History',
+  },
   symbolTradeHistory: {
     loading: 'Loading trade history...',
     noPastTrades: 'No past trades for {{ticker}}.',
