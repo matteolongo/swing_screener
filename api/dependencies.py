@@ -33,6 +33,11 @@ POSITIONS_FILE = get_settings_manager().resolve_runtime_path("positions_file", D
 ORDERS_FILE = DATA_DIR / "orders.json"
 WATCHLIST_FILE = get_settings_manager().resolve_runtime_path("watchlist_file", DATA_DIR / "watchlist.json")
 
+# Patchable path aliases used by tests (monkeypatch these to redirect I/O).
+# Set to None to fall through to the module-level constants.
+_positions_path: Optional[Path] = None
+_orders_path: Optional[Path] = None
+
 # Global singleton config repository (thread-safe)
 _config_repository: Optional[ConfigRepository] = None
 _config_repository_lock = threading.Lock()
@@ -40,7 +45,8 @@ _config_repository_lock = threading.Lock()
 
 def get_positions_path() -> Path:
     """Get path to positions.json."""
-    return POSITIONS_FILE
+    import api.dependencies as _self
+    return _self._positions_path if _self._positions_path is not None else POSITIONS_FILE
 
 
 def get_watchlist_path() -> Path:
@@ -57,10 +63,12 @@ def get_positions_repo() -> PositionsRepository:
 
 
 def get_orders_repo() -> OrdersRepository:
-    if not ORDERS_FILE.exists():
+    import api.dependencies as _self
+    path = _self._orders_path if _self._orders_path is not None else ORDERS_FILE
+    if not path.exists():
         from api.utils.file_lock import locked_write_json
-        locked_write_json(ORDERS_FILE, {"asof": get_today_str(), "orders": []})
-    return OrdersRepository(ORDERS_FILE)
+        locked_write_json(path, {"asof": get_today_str(), "orders": []})
+    return OrdersRepository(path)
 
 
 def get_watchlist_repo() -> WatchlistRepository:

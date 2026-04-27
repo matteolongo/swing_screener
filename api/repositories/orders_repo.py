@@ -40,3 +40,16 @@ class OrdersRepository:
         data["orders"] = orders
         data["asof"] = get_today_str()
         self.write(data)
+
+    def update_order(self, order_id: str, updates: dict) -> dict | None:
+        """Update fields on an existing order. Returns updated order or None if not found."""
+        data = self.read()
+        orders = data.get("orders", [])
+        for order in orders:
+            if order.get("order_id") == order_id:
+                order.update(updates)
+                data["orders"] = orders
+                data["asof"] = get_today_str()
+                self.write(data)
+                return order
+        return None

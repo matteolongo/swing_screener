@@ -15,6 +15,8 @@ from api.models.portfolio import (
     CreatePositionRequest,
     DegiroOrder,
     DegiroOrdersResponse,
+    FillOrderRequest,
+    FillOrderResponse,
     Position,
     PositionUpdate,
     PositionWithMetrics,
@@ -511,6 +513,70 @@ class PortfolioService:
         }
         self._orders_repo.append_order(order)
         return order
+
+    def list_local_orders(self, status: Optional[str] = None) -> dict:
+        """List locally stored orders from orders.json."""
+        if self._orders_repo is None:
+            raise HTTPException(status_code=503, detail="Orders repository not configured")
+        orders, asof = self._orders_repo.list_orders(status=status)
+        return {"orders": orders, "asof": asof}
+
+    def fill_order(self, order_id: str, request: FillOrderRequest) -> FillOrderResponse:
+        """Mark a pending order as filled and create the open position."""
+        if self._orders_repo is None:
+            raise HTTPException(status_code=503, detail="Orders repository not configured")
+
+        order = self._orders_repo.get_order(order_id)
+        if order is None:
+            raise HTTPException(status_code=404, detail=f"Order {order_id} not found")
+        if order.get("status") != "pending":
+            raise HTTPException(status_code=409, detail=f"Order {order_id} is already {order.get('status')}")
+
+        ticker = order["ticker"]
+        stop_price = request.stop_price or order.get("stop_price")
+        if not stop_price:
+            raise HTTPException(status_code=422, detail=f"No stop price available for order {order_id}")
+        if stop_price >= request.filled_price:
+            raise HTTPException(status_code=422, detail="stop_price must be below filled_price")
+
+        updates = {
+            "status": "filled",
+            "entry_price": request.filled_price,
+            "filled_date": request.filled_date,
+            "fee_eur": request.fee_eur,
+            "fill_fx_rate": request.fill_fx_rate,
+            "stop_price": stop_price,
+        }
+        self._orders_repo.update_order(order_id, updates)
+
+        isin = order.get("isin") or _resolve_isin(ticker)
+        position_id = f"POS-{uuid.uuid4().hex[:8].upper()}"
+        initial_risk = (request.filled_price - stop_price) * order["quantity"]
+
+        new_position: dict = {
+            "position_id": position_id,
+            "ticker": ticker,
+            "status": "open",
+            "entry_date": request.filled_date,
+            "entry_price": request.filled_price,
+            "stop_price": stop_price,
+            "shares": order["quantity"],
+            "initial_risk": initial_risk,
+            "source_order_id": order_id,
+            "isin": isin,
+            "thesis": order.get("thesis"),
+            "notes": order.get("notes", ""),
+            "entry_fee_eur": request.fee_eur,
+        }
+
+        data = self._positions_repo.read()
+        positions = data.get("positions", [])
+        positions.append(new_position)
+        data["positions"] = positions
+        data["asof"] = get_today_str()
+        self._positions_repo.write(data)
+
+        return FillOrderResponse(order_id=order_id, position=Position(**new_position))
 
     def create_position(self, request: CreatePositionRequest) -> Position:
         """Register a position directly (after manual fill at DeGiro)."""

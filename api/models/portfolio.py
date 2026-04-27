@@ -180,6 +180,27 @@ class CreateOrderRequest(BaseModel):
         return v.strip().upper()
 
 
+class FillOrderRequest(BaseModel):
+    """Request to manually mark a pending order as filled."""
+    filled_price: float = Field(gt=0, description="Actual fill price")
+    filled_date: str = Field(description="Fill date (YYYY-MM-DD)")
+    stop_price: Optional[float] = Field(default=None, gt=0, description="Override stop price from order")
+    fee_eur: Optional[float] = Field(default=None, ge=0, description="Execution fee in EUR")
+    fill_fx_rate: Optional[float] = Field(default=None, gt=0, description="FX rate at fill")
+
+    @field_validator("filled_price")
+    @classmethod
+    def validate_filled_price(cls, v: float) -> float:
+        if not math.isfinite(v):
+            raise ValueError("Filled price must be finite")
+        return v
+
+
+class FillOrderResponse(BaseModel):
+    order_id: str
+    position: Position
+
+
 class DegiroOrder(BaseModel):
     """Live order read from DeGiro API (read-only)."""
 
