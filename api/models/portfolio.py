@@ -195,6 +195,14 @@ class FillOrderRequest(BaseModel):
             raise ValueError("Filled price must be finite")
         return v
 
+    @field_validator("filled_date")
+    @classmethod
+    def validate_filled_date(cls, v: str) -> str:
+        import re
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", v):
+            raise ValueError("filled_date must be in YYYY-MM-DD format")
+        return v
+
 
 class FillOrderResponse(BaseModel):
     order_id: str

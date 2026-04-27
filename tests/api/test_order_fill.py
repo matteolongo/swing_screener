@@ -50,12 +50,15 @@ def test_fill_order_creates_position(client_with_pending_order):
     assert pos["entry_date"] == "2026-04-26"
     assert pos["stop_price"] == 11.20
     assert pos["status"] == "open"
+    assert pos["source_order_id"] == "ORD-SBMO-001"
+    assert abs(pos["initial_risk"] - (12.34 - 11.20) * 200) < 0.01  # 228.0
 
 def test_fill_order_already_filled_returns_409(client_with_pending_order):
-    client_with_pending_order.post(
+    first = client_with_pending_order.post(
         "/api/portfolio/orders/ORD-SBMO-001/fill",
         json={"filled_price": 12.34, "filled_date": "2026-04-26"},
     )
+    assert first.status_code == 201
     resp = client_with_pending_order.post(
         "/api/portfolio/orders/ORD-SBMO-001/fill",
         json={"filled_price": 12.34, "filled_date": "2026-04-26"},

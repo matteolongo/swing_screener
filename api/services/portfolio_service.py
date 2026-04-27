@@ -533,9 +533,9 @@ class PortfolioService:
             raise HTTPException(status_code=409, detail=f"Order {order_id} is already {order.get('status')}")
 
         ticker = order["ticker"]
-        stop_price = request.stop_price or order.get("stop_price")
-        if not stop_price:
-            raise HTTPException(status_code=422, detail=f"No stop price available for order {order_id}")
+        stop_price = request.stop_price if request.stop_price is not None else order.get("stop_price")
+        if not stop_price or stop_price <= 0:
+            raise HTTPException(status_code=422, detail=f"No valid stop price for order {order_id}")
         if stop_price >= request.filled_price:
             raise HTTPException(status_code=422, detail="stop_price must be below filled_price")
 
