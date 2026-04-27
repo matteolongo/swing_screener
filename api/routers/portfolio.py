@@ -159,6 +159,29 @@ async def get_orders(
     return service.list_degiro_orders()
 
 
+@router.get("/degiro/order-history", response_model=DegiroOrdersResponse)
+async def get_degiro_order_history(
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+    service: PortfolioService = Depends(get_portfolio_service),
+):
+    """Fetch order history (filled/cancelled orders) from DeGiro.
+
+    Defaults to the last 30 days if from_date/to_date are not provided.
+    """
+    _check_degiro_available()
+    from datetime import date, timedelta
+    from api.utils.files import get_today_str
+
+    if to_date is None:
+        to_date = get_today_str()
+    if from_date is None:
+        from_dt = date.fromisoformat(to_date) - timedelta(days=30)
+        from_date = from_dt.isoformat()
+
+    return service.list_degiro_order_history(from_date=from_date, to_date=to_date)
+
+
 @router.get("/orders/local")
 async def list_local_orders(
     status: Optional[str] = None,

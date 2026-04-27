@@ -78,3 +78,39 @@ def test_list_local_orders_returns_pending(client_with_pending_order):
     data = resp.json()
     assert len(data["orders"]) == 1
     assert data["orders"][0]["order_id"] == "ORD-SBMO-001"
+
+
+def test_get_degiro_order_history(monkeypatch):
+    """GET /api/portfolio/degiro/order-history returns normalized buy orders."""
+    import api.routers.portfolio as portfolio_router
+    import api.services.portfolio_service as svc_module
+
+    class _FakeClient:
+        def __init__(self, creds): pass
+        def __enter__(self): return self
+        def __exit__(self, *a): pass
+        def get_order_history(self, from_date, to_date):
+            return [{
+                "orderId": "DG-BUY-1",
+                "productId": "12345",
+                "isin": "NL0010273215",
+                "product": "SBMO Offshore",
+                "buysell": "B",
+                "size": 200,
+                "price": 12.34,
+                "date": "2026-04-26T09:14:00",
+                "status": "confirmed",
+            }]
+
+    monkeypatch.setattr(portfolio_router, "_check_degiro_available", lambda: None)
+    monkeypatch.setattr(svc_module, "DegiroClient", _FakeClient)
+    monkeypatch.setattr(svc_module, "load_credentials", lambda: object())
+
+    client = TestClient(app)
+    resp = client.get("/api/portfolio/degiro/order-history")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data["orders"]) == 1
+    assert data["orders"][0]["order_id"] == "DG-BUY-1"
+    assert data["orders"][0]["side"] == "buy"
+    assert data["orders"][0]["price"] == 12.34

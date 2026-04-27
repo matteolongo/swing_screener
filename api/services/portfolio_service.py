@@ -48,6 +48,13 @@ from swing_screener.portfolio.metrics import (
 )
 from swing_screener.utils.date_helpers import get_default_history_start
 
+try:
+    from swing_screener.integrations.degiro.credentials import load_credentials
+    from swing_screener.integrations.degiro.client import DegiroClient
+except ImportError:
+    load_credentials = None  # type: ignore[assignment]
+    DegiroClient = None  # type: ignore[assignment,misc]
+
 logger = logging.getLogger(__name__)
 
 
@@ -787,12 +794,18 @@ class PortfolioService:
 
     def list_degiro_orders(self) -> DegiroOrdersResponse:
         """Fetch live orders from DeGiro API."""
-        from swing_screener.integrations.degiro.credentials import load_credentials
-        from swing_screener.integrations.degiro.client import DegiroClient
-
         credentials = load_credentials()
         with DegiroClient(credentials) as client:
             raw_orders = client.get_orders()
+
+        orders = [_normalize_degiro_order(o) for o in raw_orders]
+        return DegiroOrdersResponse(orders=orders, asof=get_today_str())
+
+    def list_degiro_order_history(self, from_date: str, to_date: str) -> DegiroOrdersResponse:
+        """Fetch recent filled/cancelled orders from DeGiro order history."""
+        credentials = load_credentials()
+        with DegiroClient(credentials) as client:
+            raw_orders = client.get_order_history(from_date=from_date, to_date=to_date)
 
         orders = [_normalize_degiro_order(o) for o in raw_orders]
         return DegiroOrdersResponse(orders=orders, asof=get_today_str())
