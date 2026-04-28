@@ -10,9 +10,10 @@ import JournalPage from './Journal';
 import AnalyticsPage from './Analytics';
 import WeeklyReviewForm, { getCurrentWeekId } from '@/components/domain/weeklyReview/WeeklyReviewForm';
 import type { WeeklyReview } from '@/features/weeklyReview/api';
+import PendingOrdersTab from '@/components/domain/orders/PendingOrdersTab';
 
 const STORAGE_KEY = 'book.activeTab';
-type BookTab = 'positions' | 'journal' | 'performance' | 'review';
+type BookTab = 'positions' | 'orders' | 'journal' | 'performance' | 'review';
 
 function PositionsTab() {
   const openPositionsQuery = usePositions('open');
@@ -100,7 +101,7 @@ function WeeklyReviewTab() {
 export default function Book() {
   const [activeTab, setActiveTab] = useState<BookTab>(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === 'positions' || stored === 'journal' || stored === 'performance' || stored === 'review') {
+    if (stored === 'positions' || stored === 'orders' || stored === 'journal' || stored === 'performance' || stored === 'review') {
       return stored;
     }
     return 'positions';
@@ -112,6 +113,7 @@ export default function Book() {
 
   const tabs: { key: BookTab; label: string }[] = [
     { key: 'positions', label: t('bookPage.tabs.positions') },
+    { key: 'orders', label: t('bookPage.tabs.orders') },
     { key: 'journal', label: t('bookPage.tabs.journal') },
     { key: 'performance', label: t('bookPage.tabs.performance') },
     { key: 'review', label: t('bookPage.tabs.review') },
@@ -151,6 +153,7 @@ export default function Book() {
       {/* Tab content */}
       <div>
         {activeTab === 'positions' && <PositionsTab />}
+        {activeTab === 'orders' && <PendingOrdersTab />}
         {activeTab === 'journal' && <JournalPage />}
         {activeTab === 'performance' && <AnalyticsPage />}
         {activeTab === 'review' && <WeeklyReviewTab />}
