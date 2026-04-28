@@ -13,8 +13,9 @@ import {
   parseUniverseFromStorage,
   SCREENER_UNIVERSE_STORAGE_KEY,
 } from '@/features/screener/universeStorage';
-import { usePositions, useUpdateStopMutation, useClosePositionMutation } from '@/features/portfolio/hooks';
+import { useOrders, usePositions, useUpdateStopMutation, useClosePositionMutation } from '@/features/portfolio/hooks';
 import type { ClosePositionRequest, Position, UpdateStopRequest } from '@/features/portfolio/types';
+import { useNavigate } from 'react-router-dom';
 import { useLocalStorage } from '@/hooks';
 import { cn } from '@/utils/cn';
 import { t } from '@/i18n/t';
@@ -212,6 +213,36 @@ function SectionHeader({ label, count, colorClass, expanded, onToggle }: Section
       <span>{label}</span>
       <span className="font-bold">{count} {expanded ? '▲' : '▼'}</span>
     </button>
+  );
+}
+
+// ─── Pending orders badge ────────────────────────────────────────────────────
+
+function PendingOrdersBadge() {
+  const ordersQuery = useOrders('pending');
+  const navigate = useNavigate();
+  const count = (ordersQuery.data ?? []).filter((o) => o.orderKind === 'entry').length;
+  if (count === 0) return null;
+
+  const label =
+    count === 1
+      ? t('todayPage.pendingBadge.singular', { count: String(count) })
+      : t('todayPage.pendingBadge.plural', { count: String(count) });
+
+  return (
+    <div className="mb-4 flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 dark:border-amber-700 dark:bg-amber-950">
+      <span className="text-sm text-amber-800 dark:text-amber-200">
+        <span aria-hidden="true">⏳ </span>
+        <span>{label}</span>
+      </span>
+      <button
+        type="button"
+        onClick={() => navigate('/book', { state: { tab: 'orders' } })}
+        className="ml-auto text-xs font-medium text-amber-700 hover:underline dark:text-amber-300"
+      >
+        {t('todayPage.pendingBadge.goToOrders')}
+      </button>
+    </div>
   );
 }
 
@@ -634,7 +665,12 @@ export default function Today() {
           {/* Left panel content */}
           <div className="flex-1 overflow-hidden">
             {leftTab === 'today' && (
-              <TodayActionList onTickerSelect={handleTickerSelect} />
+              <>
+                <div className="px-3 pt-3">
+                  <PendingOrdersBadge />
+                </div>
+                <TodayActionList onTickerSelect={handleTickerSelect} />
+              </>
             )}
             {leftTab === 'screener' && (
               <ScreenerInboxPanel />

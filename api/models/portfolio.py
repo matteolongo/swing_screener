@@ -180,6 +180,47 @@ class CreateOrderRequest(BaseModel):
         return v.strip().upper()
 
 
+class FillOrderRequest(BaseModel):
+    """Request to manually mark a pending order as filled."""
+    filled_price: float = Field(gt=0, description="Actual fill price")
+    filled_date: str = Field(description="Fill date (YYYY-MM-DD)")
+    stop_price: Optional[float] = Field(default=None, gt=0, description="Override stop price from order")
+    fee_eur: Optional[float] = Field(default=None, ge=0, description="Execution fee in EUR")
+    fill_fx_rate: Optional[float] = Field(default=None, gt=0, description="FX rate at fill")
+
+    @field_validator("filled_price")
+    @classmethod
+    def validate_filled_price(cls, v: float) -> float:
+        if not math.isfinite(v):
+            raise ValueError("Filled price must be finite")
+        return v
+
+    @field_validator("filled_date")
+    @classmethod
+    def validate_filled_date(cls, v: str) -> str:
+        import re
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", v):
+            raise ValueError("filled_date must be in YYYY-MM-DD format")
+        return v
+
+
+class FillOrderResponse(BaseModel):
+    order_id: str
+    position: Position
+
+
+class FillFromDegiroRequest(BaseModel):
+    """Request to fill a local order using a specific DeGiro order ID."""
+    degiro_order_id: str
+
+
+class FillFromDegiroResponse(BaseModel):
+    order_id: str
+    broker_order_id: str
+    quantity_mismatch: bool
+    position: Position
+
+
 class DegiroOrder(BaseModel):
     """Live order read from DeGiro API (read-only)."""
 
