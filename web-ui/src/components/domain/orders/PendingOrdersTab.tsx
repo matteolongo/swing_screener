@@ -4,7 +4,7 @@ import { t } from '@/i18n/t';
 import type { Order } from '@/types/order';
 import FillOrderModalForm from './FillOrderModalForm';
 
-// TODO (Task 6): import FillViaDegiroModal once it exists
+import FillViaDegiroModal from './FillViaDegiroModal';
 
 export default function PendingOrdersTab() {
   const ordersQuery = useOrders('pending');
@@ -82,9 +82,11 @@ export default function PendingOrdersTab() {
         </table>
       </div>
 
-      {/* TODO (Task 6): render FillViaDegiroModal when fillDegiroOrder is set */}
       {fillDegiroOrder && (
-        <div className="hidden" aria-hidden="true" />
+        <FillViaDegiroModal
+          order={fillDegiroOrder}
+          onClose={() => setFillDegiroOrder(null)}
+        />
       )}
 
       {fillManualOrder && (
