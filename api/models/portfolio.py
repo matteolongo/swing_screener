@@ -209,6 +209,18 @@ class FillOrderResponse(BaseModel):
     position: Position
 
 
+class FillFromDegiroRequest(BaseModel):
+    """Request to fill a local order using a specific DeGiro order ID."""
+    degiro_order_id: str
+
+
+class FillFromDegiroResponse(BaseModel):
+    order_id: str
+    broker_order_id: str
+    quantity_mismatch: bool
+    position: Position
+
+
 class DegiroOrder(BaseModel):
     """Live order read from DeGiro API (read-only)."""
 

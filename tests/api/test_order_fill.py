@@ -80,6 +80,98 @@ def test_list_local_orders_returns_pending(client_with_pending_order):
     assert data["orders"][0]["order_id"] == "ORD-SBMO-001"
 
 
+def test_fill_from_degiro_creates_position(client_with_pending_order, monkeypatch):
+    import api.routers.portfolio as portfolio_router
+    import api.services.portfolio_service as svc_module
+
+    class _FakeClient:
+        def __init__(self, creds): pass
+        def __enter__(self): return self
+        def __exit__(self, *a): pass
+        def get_order_history(self, from_date, to_date):
+            return [{
+                "orderId": "DG-BUY-42",
+                "productId": "9876",
+                "isin": "NL0010273215",
+                "product": "SBMO Offshore",
+                "buysell": "B",
+                "size": 200,
+                "price": 12.34,
+                "date": "2026-04-26",
+                "status": "confirmed",
+            }]
+
+    monkeypatch.setattr(portfolio_router, "_check_degiro_available", lambda: None)
+    monkeypatch.setattr(svc_module, "DegiroClient", _FakeClient)
+    monkeypatch.setattr(svc_module, "load_credentials", lambda: object())
+
+    resp = client_with_pending_order.post(
+        "/api/portfolio/orders/ORD-SBMO-001/fill-from-degiro",
+        json={"degiro_order_id": "DG-BUY-42"},
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    pos = body["position"]
+    assert pos["ticker"] == "SBMO"
+    assert pos["entry_price"] == 12.34
+    assert pos["entry_date"] == "2026-04-26"
+    assert body["broker_order_id"] == "DG-BUY-42"
+    assert body["quantity_mismatch"] is False
+
+
+def test_fill_from_degiro_quantity_mismatch_warns(client_with_pending_order, monkeypatch):
+    import api.routers.portfolio as portfolio_router
+    import api.services.portfolio_service as svc_module
+
+    class _FakeClient:
+        def __init__(self, creds): pass
+        def __enter__(self): return self
+        def __exit__(self, *a): pass
+        def get_order_history(self, from_date, to_date):
+            return [{
+                "orderId": "DG-BUY-99",
+                "productId": "9876",
+                "buysell": "B",
+                "size": 150,   # mismatch: local order has 200
+                "price": 12.34,
+                "date": "2026-04-26",
+                "status": "confirmed",
+            }]
+
+    monkeypatch.setattr(portfolio_router, "_check_degiro_available", lambda: None)
+    monkeypatch.setattr(svc_module, "DegiroClient", _FakeClient)
+    monkeypatch.setattr(svc_module, "load_credentials", lambda: object())
+
+    resp = client_with_pending_order.post(
+        "/api/portfolio/orders/ORD-SBMO-001/fill-from-degiro",
+        json={"degiro_order_id": "DG-BUY-99"},
+    )
+    assert resp.status_code == 201
+    assert resp.json()["quantity_mismatch"] is True
+
+
+def test_fill_from_degiro_not_found_returns_422(client_with_pending_order, monkeypatch):
+    import api.routers.portfolio as portfolio_router
+    import api.services.portfolio_service as svc_module
+
+    class _FakeClient:
+        def __init__(self, creds): pass
+        def __enter__(self): return self
+        def __exit__(self, *a): pass
+        def get_order_history(self, from_date, to_date):
+            return []
+
+    monkeypatch.setattr(portfolio_router, "_check_degiro_available", lambda: None)
+    monkeypatch.setattr(svc_module, "DegiroClient", _FakeClient)
+    monkeypatch.setattr(svc_module, "load_credentials", lambda: object())
+
+    resp = client_with_pending_order.post(
+        "/api/portfolio/orders/ORD-SBMO-001/fill-from-degiro",
+        json={"degiro_order_id": "DG-NOTFOUND"},
+    )
+    assert resp.status_code == 422
+
+
 def test_get_degiro_order_history(monkeypatch):
     """GET /api/portfolio/degiro/order-history returns normalized buy orders."""
     import api.routers.portfolio as portfolio_router

@@ -17,6 +17,8 @@ from api.models.portfolio import (
     CreatePositionRequest,
     FillOrderRequest,
     FillOrderResponse,
+    FillFromDegiroRequest,
+    FillFromDegiroResponse,
     UpdateStopRequest,
     ClosePositionRequest,
     StopSuggestionComputeRequest,
@@ -199,6 +201,17 @@ async def fill_order(
 ):
     """Mark a pending order as filled and create an open position."""
     return service.fill_order(order_id, request)
+
+
+@router.post("/orders/{order_id}/fill-from-degiro", status_code=201, response_model=FillFromDegiroResponse)
+async def fill_order_from_degiro(
+    order_id: str,
+    request: FillFromDegiroRequest,
+    service: PortfolioService = Depends(get_portfolio_service),
+):
+    """Fill a local pending order by linking it to a DeGiro order."""
+    _check_degiro_available()
+    return service.fill_order_from_degiro(order_id, request.degiro_order_id)
 
 
 # ===== DeGiro Integration =====
