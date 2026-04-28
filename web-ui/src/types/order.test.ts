@@ -47,6 +47,9 @@ describe('Order Type Transformations', () => {
         notes: 'Test order',
         feeEur: null,
         fillFxRate: null,
+        brokerOrderId: null,
+        broker: null,
+        brokerSyncedAt: null,
       })
     })
 

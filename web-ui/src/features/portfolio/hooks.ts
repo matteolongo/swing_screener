@@ -9,7 +9,9 @@ import {
   fetchPositions,
   fetchPositionStopSuggestion,
   fetchDegiroStatus,
+  fetchDegiroOrderHistory,
   fillOrder,
+  fillOrderFromDegiro,
   syncDegiroOrders,
   updatePositionStop,
   OrderFilterStatus,
@@ -53,6 +55,27 @@ export function useFillOrderMutation(onSuccess?: () => void) {
         invalidateOrderQueries(queryClient),
         invalidatePositionQueries(queryClient),
       ]);
+      onSuccess?.();
+    },
+  });
+}
+
+export function useDegiroOrderHistory() {
+  return useQuery({
+    queryKey: ['degiro-order-history'] as const,
+    queryFn: () => fetchDegiroOrderHistory(),
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+export function useFillFromDegiroMutation(onSuccess?: () => void) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orderId, degiroOrderId }: { orderId: string; degiroOrderId: string }) =>
+      fillOrderFromDegiro(orderId, { degiroOrderId }),
+    onSuccess: async () => {
+      await invalidateOrderQueries(queryClient);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.positions('open') });
       onSuccess?.();
     },
   });

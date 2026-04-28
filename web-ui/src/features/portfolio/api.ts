@@ -24,9 +24,13 @@ import {
   UpdateStopRequest,
   ClosePositionRequest,
   transformCreateOrderRequest,
+  transformOrder,
   transformPosition,
   transformPositionUpdate,
   PositionUpdate,
+  DegiroOrder,
+  FillFromDegiroRequest,
+  FillFromDegiroResponse,
 } from './types';
 
 interface PositionMetricsApiResponse {
@@ -158,9 +162,13 @@ export async function fetchOrders(status: OrderFilterStatus): Promise<Order[]> {
   if (isLocalPersistenceMode()) {
     return listOrdersLocal(status);
   }
-  // Managed orders were removed; the /orders endpoint now returns live DeGiro
-  // read-only orders in a different schema. Return empty to avoid crashes.
-  return [];
+  const params = status ? `?status=${status}` : '';
+  const response = await fetch(apiUrl(`${API_ENDPOINTS.localOrders}${params}`));
+  if (!response.ok) {
+    throw await buildApiError(response, 'Failed to fetch orders');
+  }
+  const data = await response.json();
+  return (data.orders ?? []).map(transformOrder);
 }
 
 export async function createOrder(request: CreateOrderRequest): Promise<void> {
@@ -214,6 +222,53 @@ export async function cancelOrder(orderId: string): Promise<void> {
     method: 'DELETE',
   });
   if (!response.ok) throw new Error('Failed to cancel order');
+}
+
+export async function fetchDegiroOrderHistory(): Promise<DegiroOrder[]> {
+  if (isLocalPersistenceMode()) {
+    return [];
+  }
+  const response = await fetch(apiUrl(API_ENDPOINTS.degiroOrderHistory));
+  if (!response.ok) {
+    throw await buildApiError(response, 'Failed to fetch DeGiro order history');
+  }
+  const data = await response.json();
+  return (data.orders ?? []).map((o: Record<string, unknown>): DegiroOrder => ({
+    orderId: String(o.order_id ?? ''),
+    productId: (o.product_id as string | null) ?? null,
+    isin: (o.isin as string | null) ?? null,
+    productName: (o.product_name as string | null) ?? null,
+    status: String(o.status ?? ''),
+    price: typeof o.price === 'number' ? o.price : null,
+    quantity: typeof o.quantity === 'number' ? o.quantity : 0,
+    orderType: (o.order_type as string | null) ?? null,
+    side: (o.side as string | null) ?? null,
+    createdAt: (o.created_at as string | null) ?? null,
+  }));
+}
+
+export async function fillOrderFromDegiro(
+  orderId: string,
+  request: FillFromDegiroRequest,
+): Promise<FillFromDegiroResponse> {
+  if (isLocalPersistenceMode()) {
+    throw new Error('fill-from-degiro not supported in local mode');
+  }
+  const response = await fetch(apiUrl(API_ENDPOINTS.orderFillFromDegiro(orderId)), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ degiro_order_id: request.degiroOrderId }),
+  });
+  if (!response.ok) {
+    throw await buildApiError(response, 'Failed to fill order from DeGiro');
+  }
+  const data = await response.json();
+  return {
+    orderId: data.order_id,
+    brokerOrderId: data.broker_order_id,
+    quantityMismatch: data.quantity_mismatch,
+    position: data.position,
+  };
 }
 
 export async function fetchPositions(status: PositionFilterStatus): Promise<PositionWithMetrics[]> {
