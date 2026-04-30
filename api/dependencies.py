@@ -9,6 +9,7 @@ from fastapi import Depends
 
 from api.repositories.config_repo import ConfigRepository
 from api.repositories.fundamentals_config_repo import FundamentalsConfigRepository
+from api.repositories.orders_repo import OrdersRepository
 from api.repositories.positions_repo import PositionsRepository
 from api.repositories.strategy_repo import StrategyRepository
 from api.repositories.intelligence_config_repo import IntelligenceConfigRepository
@@ -29,6 +30,7 @@ from swing_screener.settings import data_dir, get_settings_manager, project_root
 ROOT_DIR = project_root()
 DATA_DIR = data_dir()
 POSITIONS_FILE = get_settings_manager().resolve_runtime_path("positions_file", DATA_DIR / "positions.json")
+ORDERS_FILE = DATA_DIR / "orders.json"
 WATCHLIST_FILE = get_settings_manager().resolve_runtime_path("watchlist_file", DATA_DIR / "watchlist.json")
 
 # Global singleton config repository (thread-safe)
@@ -52,6 +54,13 @@ def get_positions_repo() -> PositionsRepository:
         from api.utils.file_lock import locked_write_json
         locked_write_json(path, {"asof": get_today_str(), "positions": []})
     return PositionsRepository(path)
+
+
+def get_orders_repo() -> OrdersRepository:
+    if not ORDERS_FILE.exists():
+        from api.utils.file_lock import locked_write_json
+        locked_write_json(ORDERS_FILE, {"asof": get_today_str(), "orders": []})
+    return OrdersRepository(ORDERS_FILE)
 
 
 def get_watchlist_repo() -> WatchlistRepository:
@@ -103,8 +112,9 @@ def get_config_repo() -> ConfigRepository:
 
 def get_portfolio_service(
     positions_repo: PositionsRepository = Depends(get_positions_repo),
+    orders_repo: OrdersRepository = Depends(get_orders_repo),
 ) -> PortfolioService:
-    return PortfolioService(positions_repo=positions_repo)
+    return PortfolioService(positions_repo=positions_repo, orders_repo=orders_repo)
 
 
 def get_strategy_service(

@@ -13,6 +13,7 @@ from api.models.portfolio import (
     PortfolioSummary,
     DegiroOrder,
     DegiroOrdersResponse,
+    CreateOrderRequest,
     CreatePositionRequest,
     UpdateStopRequest,
     ClosePositionRequest,
@@ -133,7 +134,16 @@ async def get_portfolio_summary(
     return service.get_portfolio_summary(account_size=account_size)
 
 
-# ===== Orders (live read from DeGiro) =====
+# ===== Orders =====
+
+@router.post("/orders", status_code=201)
+async def create_order(
+    request: CreateOrderRequest,
+    service: PortfolioService = Depends(get_portfolio_service),
+):
+    """Create a pending entry order."""
+    return service.create_order(request)
+
 
 @router.get("/orders", response_model=DegiroOrdersResponse)
 async def get_orders(
@@ -224,7 +234,7 @@ async def degiro_sync_preview(
             request.from_date,
             request.to_date,
             include_portfolio=request.include_portfolio,
-            include_orders_history=False,
+            include_orders_history=request.include_orders_history,
             include_transactions=request.include_transactions,
         )
 
@@ -283,7 +293,7 @@ async def degiro_sync_apply(
             request.from_date,
             request.to_date,
             include_portfolio=request.include_portfolio,
-            include_orders_history=False,
+            include_orders_history=request.include_orders_history,
             include_transactions=request.include_transactions,
         )
 

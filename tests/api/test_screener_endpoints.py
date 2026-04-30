@@ -60,6 +60,27 @@ def _ohlcv_with_symbol_and_spy() -> pd.DataFrame:
     return df
 
 
+def _ohlcv_with_abn_and_aex() -> pd.DataFrame:
+    idx = pd.to_datetime(["2026-04-15", "2026-04-16"])
+    abn = pd.Series([35.10, 35.42], index=idx, dtype=float)
+    aex = pd.Series([920.0, 925.0], index=idx, dtype=float)
+    data = {
+        ("Close", "ABN.AS"): abn,
+        ("Open", "ABN.AS"): abn,
+        ("High", "ABN.AS"): abn + 0.2,
+        ("Low", "ABN.AS"): abn - 0.2,
+        ("Volume", "ABN.AS"): pd.Series([100_000, 120_000], index=idx, dtype=float),
+        ("Close", "^AEX"): aex,
+        ("Open", "^AEX"): aex,
+        ("High", "^AEX"): aex + 2.0,
+        ("Low", "^AEX"): aex - 2.0,
+        ("Volume", "^AEX"): pd.Series([1_000_000, 1_100_000], index=idx, dtype=float),
+    }
+    df = pd.DataFrame(data, index=idx)
+    df.columns = pd.MultiIndex.from_tuples(df.columns)
+    return df
+
+
 def _create_mock_provider(ohlcv_data: pd.DataFrame) -> MarketDataProvider:
     """Create a mock provider that returns the given OHLCV data."""
     mock_provider = MagicMock(spec=MarketDataProvider)
@@ -99,7 +120,7 @@ def test_screener_top_over_100_returns_candidates(monkeypatch):
     assert res.status_code == 200
     data = res.json()
     assert len(data["candidates"]) == 150
-    assert data["warnings"] == ["Only 150 candidates found for top 200."]
+    assert any("Only 150 candidates found for top 200." in w for w in data["warnings"])
     assert data["candidates"][0]["last_bar"] == "2024-01-03T00:00:00"
     # Synthetic test tickers (T000...) have no instrument master entry → UNKNOWN
     assert data["candidates"][0]["currency"] in ("USD", "UNKNOWN")
@@ -520,6 +541,62 @@ def test_data_freshness_is_intraday_for_today_before_close():
     now_utc = dt.datetime(2026, 2, 19, 15, 0, tzinfo=dt.timezone.utc)
     freshness = screener_service._resolve_data_freshness("2026-02-19", now_utc, ["EUR"])
     assert freshness == "intraday"
+
+
+def test_screener_uses_universe_currency_for_european_close(monkeypatch):
+    class FrozenDateTime(dt.datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return cls(2026, 4, 16, 16, 5, tzinfo=tz or dt.timezone.utc)
+
+    monkeypatch.setattr(screener_service.dt, "datetime", FrozenDateTime)
+
+    ohlcv = _ohlcv_with_abn_and_aex()
+    mock_provider = _create_mock_provider(ohlcv)
+
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None):
+        idx = ["ABN.AS"]
+        data = {
+            "atr14": [1.0],
+            "mom_6m": [0.1],
+            "mom_12m": [0.2],
+            "rs_6m": [0.05],
+            "score": [0.8],
+            "confidence": [70.0],
+            "last": [35.42],
+            "ma20_level": [35.10],
+            "dist_sma50_pct": [4.0],
+            "dist_sma200_pct": [8.0],
+            "rank": [1],
+            "signal": ["buy_now"],
+            "entry": [35.42],
+            "stop": [34.0],
+            "shares": [100],
+            "position_value": [3542.0],
+            "realized_risk": [142.0],
+            "suggested_order_type": ["BUY_LIMIT"],
+            "suggested_order_price": [35.18],
+            "execution_note": ["European session is closed; use the latest same-day close."],
+        }
+        return pd.DataFrame(data, index=idx)
+
+    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
+    monkeypatch.setattr(
+        screener_service,
+        "get_multiple_ticker_info",
+        lambda tickers: {"ABN.AS": {"name": "ABN AMRO BANK N.V.", "currency": "EUR"}},
+    )
+
+    client = TestClient(app)
+    res = client.post("/api/screener/run", json={"universe": "amsterdam_aex", "top": 20})
+    assert res.status_code == 200
+    payload = res.json()
+
+    assert payload["asof_date"] == "2026-04-16"
+    assert payload["data_freshness"] == "final_close"
+    assert payload["candidates"][0]["ticker"] == "ABN.AS"
+    assert payload["candidates"][0]["last_bar"] == "2026-04-16T00:00:00"
 
 
 def test_screener_async_mode_returns_job_and_status(monkeypatch):

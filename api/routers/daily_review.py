@@ -13,6 +13,14 @@ from api.dependencies import (
 router = APIRouter(prefix="/daily-review", tags=["daily-review"])
 
 
+def _dump_payload_item(item):
+    """Serialize either a Pydantic model or a plain dict payload."""
+    model_dump = getattr(item, "model_dump", None)
+    if callable(model_dump):
+        return model_dump()
+    return item
+
+
 def get_daily_review_service(
     screener_service: ScreenerService = Depends(get_screener_service),
     portfolio_service: PortfolioService = Depends(get_portfolio_service),
@@ -50,9 +58,9 @@ def compute_daily_review(
 ) -> DailyReview:
     """Compute daily review from client-provided state without backend persistence writes."""
     return service.compute_daily_review_from_state(
-        strategy=request.strategy.model_dump(),
-        positions=[position.model_dump() for position in request.positions],
-        orders=[order.model_dump() for order in request.orders],
+        strategy=_dump_payload_item(request.strategy),
+        positions=[_dump_payload_item(position) for position in request.positions],
+        orders=[_dump_payload_item(order) for order in request.orders],
         top_n=request.top_n,
         universe=request.universe,
     )
