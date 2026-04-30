@@ -175,7 +175,6 @@ def _is_broker_managed_position(local_position: dict) -> bool:
     return bool(
         broker == "degiro"
         or _clean_text(local_position.get("broker_product_id"))
-        or _clean_text(local_position.get("isin"))
         or _clean_text(local_position.get("broker_synced_at"))
     )
 
