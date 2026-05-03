@@ -4,6 +4,31 @@ Read this before picking up any feature plan. It describes the codebase conventi
 
 ---
 
+## Current implementation status - 2026-05-03
+
+The 2026-05-03 plan work is being shipped as sequential stacked PRs:
+
+| Feature | Branch | Base | PR | Status |
+|---|---|---|---|---|
+| Feature 1 - Trade tagging | `codex/trade-tagging` | `main` | https://github.com/matteolongo/swing_screener/pull/232 | Draft, implemented |
+| Feature 2 - Edge breakdown | `codex/edge-breakdown` | `codex/trade-tagging` | https://github.com/matteolongo/swing_screener/pull/233 | Draft, implemented |
+| Feature 3 - Account equity auto-update | `codex/account-equity` | `codex/edge-breakdown` | https://github.com/matteolongo/swing_screener/pull/234 | Draft, backend + UI implemented |
+
+Review agents should review the PRs in order. Each branch intentionally builds on the previous one, so diffs should be compared against the listed base branch, not always against `main`.
+
+Known local dirty files that were not part of this work and should not be included unless explicitly requested:
+
+- `config/intelligence.yaml`
+- `data/screener_history.json`
+
+Validation already run during implementation:
+
+- Feature 1: backend trade tagging test, frontend typecheck, focused modal/journal tests, frontend suite during the feature work.
+- Feature 2: focused `EdgeBreakdownTable` test and frontend suite during the feature work.
+- Feature 3: `pytest tests/api/test_account_equity.py -v`, `pytest -q`, `cd web-ui && npm run typecheck`, `cd web-ui && npx vitest run`.
+
+Planning gap for upgrade: Feature 3 now exposes and displays effective equity, but the Settings UI toggle for switching base/equity mode is not yet implemented. The next planning pass should either add that as the next atomic task or explicitly defer it.
+
 ## What this app is
 
 A deterministic, risk-first swing-trading framework. It screens stocks post-market-close, sizes positions using R-multiples (`1R = entry_price - stop_price`), and keeps all execution manual. No live trading, no auto-execution.
@@ -104,4 +129,4 @@ Use `locked_read_json` / `locked_write_json` from `api/utils/file_lock.py` — n
 
 ## Active branch
 
-Feature work currently lives on `feature/pending-orders-degiro-fill`. Start new features from `main` after that branch is merged, or from the current branch if building on top.
+Current stacked feature work lives on `codex/account-equity`, based on `codex/edge-breakdown`, which is based on `codex/trade-tagging`.

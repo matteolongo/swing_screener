@@ -11,6 +11,38 @@
 
 ---
 
+## Implementation status - 2026-05-03
+
+Status: implemented in draft PR https://github.com/matteolongo/swing_screener/pull/232.
+
+Branch stack:
+
+- Branch: `codex/trade-tagging`
+- Base: `main`
+- Head commit: `6128fd03`
+
+Implemented commits:
+
+- `763f68d8 feat: add tags field to Position model and close endpoint`
+- `f4637299 feat: add tags to frontend Position types`
+- `353e11c2 feat: add trade tag i18n strings`
+- `7f048d63 feat: add tag picker step to close position modal`
+- `6128fd03 feat: add tag column and filters to journal`
+
+What changed:
+
+- `Position` records now support a `tags` list.
+- Closing a position can persist selected tags.
+- Frontend position types transform tags at the API boundary.
+- The close-position modal includes a tag picker step.
+- The journal shows trade tags and supports client-side tag filtering.
+
+Review notes:
+
+- Compare PR #232 against `main`.
+- Confirm tag IDs are stable enough for analytics, because Feature 2 aggregates directly on stored tag strings.
+- Confirm UX copy and available tags match the desired trading workflow before merging downstream PRs.
+
 ## File map
 
 | File | Change |
