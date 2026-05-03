@@ -394,6 +394,7 @@ export async function closePosition(
       fee_eur: request.feeEur,
       reason: request.reason || '',
       lesson: request.lesson ?? null,
+      tags: request.tags ?? [],
     }),
   });
   if (!response.ok) {
