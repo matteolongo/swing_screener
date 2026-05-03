@@ -2,9 +2,16 @@ import Card, { CardContent, CardHeader, CardTitle } from '@/components/common/Ca
 import type { Strategy } from '@/features/strategy/types';
 import { cn } from '@/utils/cn';
 import { formatCurrency, formatRatioAsPercent } from '@/utils/formatters';
+import { t } from '@/i18n/t';
+
+interface EquitySnapshot {
+  effectiveAccountSize: number;
+  realizedPnl: number;
+}
 
 interface StrategyCapitalRiskSummaryProps {
   strategy?: Strategy | null;
+  equitySnapshot?: EquitySnapshot;
   variant?: 'card' | 'compact';
   className?: string;
 }
@@ -16,9 +23,10 @@ function formatOrDash(value: number | null | undefined, formatter: (value: numbe
   return formatter(value);
 }
 
-function buildRiskSnapshot(strategy?: Strategy | null) {
+function buildRiskSnapshot(strategy?: Strategy | null, equitySnapshot?: EquitySnapshot) {
   const risk = strategy?.risk;
-  const accountSize = risk?.accountSize ?? null;
+  const baseAccountSize = risk?.accountSize ?? null;
+  const accountSize = equitySnapshot?.effectiveAccountSize ?? baseAccountSize;
   const riskPct = risk?.riskPct ?? null;
   const maxPositionPct = risk?.maxPositionPct ?? null;
   const capitalAtRisk = accountSize != null && riskPct != null ? accountSize * riskPct : null;
@@ -27,6 +35,9 @@ function buildRiskSnapshot(strategy?: Strategy | null) {
   return {
     strategyName: strategy?.name ?? 'Strategy',
     accountSize,
+    baseAccountSize,
+    realizedPnl: equitySnapshot?.realizedPnl ?? null,
+    isEquityMode: equitySnapshot != null,
     riskPct,
     maxPositionPct,
     capitalAtRisk,
@@ -36,11 +47,14 @@ function buildRiskSnapshot(strategy?: Strategy | null) {
 
 export default function StrategyCapitalRiskSummary({
   strategy,
+  equitySnapshot,
   variant = 'card',
   className,
 }: StrategyCapitalRiskSummaryProps) {
-  const snapshot = buildRiskSnapshot(strategy);
+  const snapshot = buildRiskSnapshot(strategy, equitySnapshot);
   const accountSizeLabel = formatOrDash(snapshot.accountSize, (value) => formatCurrency(value));
+  const baseAccountLabel = formatOrDash(snapshot.baseAccountSize, (value) => formatCurrency(value));
+  const realizedPnlLabel = formatOrDash(snapshot.realizedPnl, (value) => `${value >= 0 ? '+' : ''}${formatCurrency(value)}`);
   const riskPctLabel = formatOrDash(snapshot.riskPct, (value) => formatRatioAsPercent(value));
   const capitalAtRiskLabel = formatOrDash(snapshot.capitalAtRisk, (value) => formatCurrency(value));
   const maxPositionLabel = formatOrDash(snapshot.maxPositionValue, (value) => formatCurrency(value));
@@ -57,7 +71,12 @@ export default function StrategyCapitalRiskSummary({
           <span className="text-slate-500 dark:text-slate-400">Risk</span>
           <span>{snapshot.strategyName}</span>
         </span>
-        <span>Account {accountSizeLabel}</span>
+        <span title={snapshot.isEquityMode ? t('portfolioHeader.equityModeHint') : undefined}>
+          {snapshot.isEquityMode ? t('portfolioHeader.effectiveEquity') : 'Account'} {accountSizeLabel}
+        </span>
+        {snapshot.isEquityMode ? (
+          <span>{t('portfolioHeader.realizedPnl')} {realizedPnlLabel}</span>
+        ) : null}
         <span>Risk / trade {capitalAtRiskLabel} ({riskPctLabel})</span>
         <span>Max position {maxPositionLabel}</span>
       </div>
@@ -89,11 +108,16 @@ export default function StrategyCapitalRiskSummary({
         <div className="grid gap-3 md:grid-cols-3">
           <div className="rounded-lg border border-slate-200 bg-white/80 p-3 dark:border-slate-700 dark:bg-slate-900/60">
             <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              Account Size
+              {snapshot.isEquityMode ? t('portfolioHeader.effectiveEquity') : 'Account Size'}
             </div>
             <div className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-50">
               {accountSizeLabel}
             </div>
+            {snapshot.isEquityMode ? (
+              <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                {t('portfolioHeader.baseAccount')} {baseAccountLabel} · {t('portfolioHeader.realizedPnl')} {realizedPnlLabel}
+              </div>
+            ) : null}
           </div>
           <div className="rounded-lg border border-slate-200 bg-white/80 p-3 dark:border-slate-700 dark:bg-slate-900/60">
             <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">

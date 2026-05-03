@@ -1986,9 +1986,17 @@ export const messagesEn = {
   },
   portfolioRisk: {
     openPositions: 'Open Positions',
+    effectiveEquity: 'Equity',
+    realizedPnl: 'Realized P&L',
     totalRisk: 'Total Risk',
     portfolioHeat: 'Portfolio Heat',
     avgRNow: 'Avg R Now',
+  },
+  portfolioHeader: {
+    effectiveEquity: 'Equity',
+    baseAccount: 'Base',
+    realizedPnl: 'Realized P&L',
+    equityModeHint: 'Account size + realized P&L from closed trades',
   },
   dailyReviewBanner: {
     newCandidates: '{{n}} new candidates',

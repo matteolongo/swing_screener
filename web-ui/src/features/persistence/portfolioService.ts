@@ -58,6 +58,8 @@ export interface LocalPortfolioSummary {
   positionsProfitable: number;
   positionsLosing: number;
   winRate: number;
+  realizedPnl: number;
+  effectiveAccountSize: number;
 }
 
 export type LocalOrderFilterStatus = OrderStatus | 'all';
@@ -475,6 +477,12 @@ export function positionMetricsLocal(positionId: string): LocalPositionMetrics {
 
 export function portfolioSummaryLocal(): LocalPortfolioSummary {
   const accountSize = activeAccountSize();
+  const closedPositions = listPositionsLocal('closed');
+  const realizedPnl = closedPositions.reduce(
+    (sum, position) => sum + ((position.exitPrice ?? position.entryPrice) - position.entryPrice) * position.shares - (position.exitFeeEur ?? 0),
+    0,
+  );
+  const effectiveAccountSize = accountSize + realizedPnl;
   const positions = listPositionsLocal('open');
   if (positions.length === 0) {
     return {
@@ -497,6 +505,8 @@ export function portfolioSummaryLocal(): LocalPortfolioSummary {
       positionsProfitable: 0,
       positionsLosing: 0,
       winRate: 0,
+      realizedPnl,
+      effectiveAccountSize,
     };
   }
 
@@ -555,9 +565,9 @@ export function portfolioSummaryLocal(): LocalPortfolioSummary {
     totalPnl,
     totalPnlPercent: totalCostBasis > 0 ? (totalPnl / totalCostBasis) * 100 : 0,
     openRisk,
-    openRiskPercent: accountSize > 0 ? (openRisk / accountSize) * 100 : 0,
+    openRiskPercent: effectiveAccountSize > 0 ? (openRisk / effectiveAccountSize) * 100 : 0,
     accountSize,
-    availableCapital: accountSize - totalValue,
+    availableCapital: effectiveAccountSize - totalValue,
     largestPositionValue,
     largestPositionTicker,
     bestPerformerTicker,
@@ -568,6 +578,8 @@ export function portfolioSummaryLocal(): LocalPortfolioSummary {
     positionsProfitable,
     positionsLosing,
     winRate: positions.length > 0 ? (positionsProfitable / positions.length) * 100 : 0,
+    realizedPnl,
+    effectiveAccountSize,
   };
 }
 

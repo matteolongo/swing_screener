@@ -106,4 +106,18 @@ describe('StrategyCapitalRiskSummary', () => {
     expect(screen.getByText(/Account \$800.00/)).toBeInTheDocument();
     expect(screen.getByText(/Risk \/ trade \$20.00/)).toBeInTheDocument();
   });
+
+  it('uses effective equity when a portfolio equity snapshot is provided', () => {
+    render(
+      <StrategyCapitalRiskSummary
+        strategy={strategy}
+        equitySnapshot={{ effectiveAccountSize: 925, realizedPnl: 125 }}
+        variant="compact"
+      />,
+    );
+
+    expect(screen.getByText(/Equity \$925.00/)).toBeInTheDocument();
+    expect(screen.getByText(/Realized P&L \+\$125.00/)).toBeInTheDocument();
+    expect(screen.getByText(/Risk \/ trade \$23.13/)).toBeInTheDocument();
+  });
 });

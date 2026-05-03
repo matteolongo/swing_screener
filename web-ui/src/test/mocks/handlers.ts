@@ -445,6 +445,8 @@ export const mockPortfolioSummary = {
   positions_profitable: 1,
   positions_losing: 0,
   win_rate: 100,
+  realized_pnl: 125,
+  effective_account_size: 625,
 }
 
 export const mockPositionMetrics = {

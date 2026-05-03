@@ -75,6 +75,8 @@ interface PortfolioSummaryApiResponse {
   positions_profitable: number;
   positions_losing: number;
   win_rate: number;
+  realized_pnl?: number;
+  effective_account_size?: number;
 }
 
 export interface PositionMetrics {
@@ -119,6 +121,8 @@ export interface PortfolioSummary {
   positionsProfitable: number;
   positionsLosing: number;
   winRate: number;
+  realizedPnl: number;
+  effectiveAccountSize: number;
 }
 
 export interface DegiroStatusApiResponse {
@@ -500,5 +504,7 @@ function transformPortfolioSummary(data: PortfolioSummaryApiResponse): Portfolio
     positionsProfitable: data.positions_profitable,
     positionsLosing: data.positions_losing,
     winRate: data.win_rate,
+    realizedPnl: data.realized_pnl ?? 0,
+    effectiveAccountSize: data.effective_account_size ?? data.account_size,
   };
 }
