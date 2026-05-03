@@ -1972,6 +1972,17 @@ export const messagesEn = {
       maxR: 'Max R',
       holdDays: 'Hold Days',
     },
+    edgeBreakdown: {
+      title: 'Edge by setup type',
+      emptyState: 'Close and tag 5 or more trades to see your edge breakdown.',
+      colTag: 'Tag',
+      colTrades: 'Trades',
+      colWinRate: 'Win rate',
+      colAvgR: 'Avg R',
+      colExpectancy: 'Expectancy',
+      expectancyHint: 'Average R per tagged trade',
+      byConditionTitle: 'By market condition',
+    },
   },
   portfolioRisk: {
     openPositions: 'Open Positions',
