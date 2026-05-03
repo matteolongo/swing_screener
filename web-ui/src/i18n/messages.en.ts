@@ -1918,6 +1918,7 @@ export const messagesEn = {
       entry: 'Entry',
       exit: 'Exit',
       shares: 'Shares',
+      tags: 'Tags',
       initialRisk: 'Initial Risk',
       finalR: 'Final R',
       maxR: 'Max R',

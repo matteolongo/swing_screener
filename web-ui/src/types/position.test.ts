@@ -46,6 +46,7 @@ describe('Position Helper Functions', () => {
         exitOrderIds: undefined,
         thesis: null,
         lesson: null,
+        tags: [],
       })
     })
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { usePositions } from '@/features/portfolio/hooks';
 import type { Position } from '@/features/portfolio/types';
@@ -30,6 +30,22 @@ function RBadge({ value }: { value: number | null }) {
   );
 }
 
+function getTagLabel(tag: string): string {
+  const labels: Record<string, string> = {
+    breakout: t('tradeTags.breakout'),
+    pullback: t('tradeTags.pullback'),
+    add_on: t('tradeTags.addOn'),
+    stop_hit: t('tradeTags.stopHit'),
+    target_reached: t('tradeTags.targetReached'),
+    time_stop: t('tradeTags.timeStop'),
+    manual_exit: t('tradeTags.manualExit'),
+    trending: t('tradeTags.trending'),
+    choppy: t('tradeTags.choppy'),
+    news_driven: t('tradeTags.newsDriven'),
+  };
+  return labels[tag] ?? tag;
+}
+
 interface JournalRowProps {
   position: Position;
 }
@@ -55,6 +71,22 @@ function JournalRow({ position }: JournalRowProps) {
           {position.exitPrice != null ? formatCurrency(position.exitPrice) : '—'}
         </td>
         <td className="px-4 py-3 text-sm text-right tabular-nums">{position.shares}</td>
+        <td className="px-4 py-3 text-sm">
+          {(position.tags ?? []).length > 0 ? (
+            <div className="flex flex-wrap gap-1">
+              {(position.tags ?? []).map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                >
+                  {getTagLabel(tag)}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <span className="text-gray-400">{t('common.placeholders.emDash')}</span>
+          )}
+        </td>
         <td className="px-4 py-3 text-sm text-right tabular-nums">
           {position.initialRisk != null ? formatCurrency(position.initialRisk) : '—'}
         </td>
@@ -64,7 +96,7 @@ function JournalRow({ position }: JournalRowProps) {
 
       {expanded && (
         <tr>
-          <td colSpan={8} className="px-4 pb-4 pt-0 bg-gray-50 dark:bg-gray-800/30">
+          <td colSpan={9} className="px-4 pb-4 pt-0 bg-gray-50 dark:bg-gray-800/30">
             <div className="grid gap-4 sm:grid-cols-3 text-sm">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">
@@ -100,6 +132,7 @@ function JournalRow({ position }: JournalRowProps) {
 
 export default function Journal() {
   const { data, isLoading, isError } = usePositions('closed');
+  const [activeTagFilter, setActiveTagFilter] = useState<string | null>(null);
 
   const positions = (data ?? []).slice().sort((a, b) => {
     const da = a.exitDate ?? '';
@@ -107,11 +140,24 @@ export default function Journal() {
     return db.localeCompare(da);
   });
 
-  const totalTrades = positions.length;
-  const wins = positions.filter((p) => (computeFinalR(p) ?? 0) > 0).length;
-  const losses = positions.filter((p) => (computeFinalR(p) ?? 0) < 0).length;
-  const finalRValues = positions.map(computeFinalR).filter((r): r is number => r !== null);
-  const maxRValues = positions.map(computeMaxR).filter((r): r is number => r !== null);
+  const allTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    positions.forEach((position) => (position.tags ?? []).forEach((tag) => tagSet.add(tag)));
+    return Array.from(tagSet).sort();
+  }, [positions]);
+
+  const filteredPositions = useMemo(
+    () => activeTagFilter
+      ? positions.filter((position) => (position.tags ?? []).includes(activeTagFilter))
+      : positions,
+    [activeTagFilter, positions],
+  );
+
+  const totalTrades = filteredPositions.length;
+  const wins = filteredPositions.filter((p) => (computeFinalR(p) ?? 0) > 0).length;
+  const losses = filteredPositions.filter((p) => (computeFinalR(p) ?? 0) < 0).length;
+  const finalRValues = filteredPositions.map(computeFinalR).filter((r): r is number => r !== null);
+  const maxRValues = filteredPositions.map(computeMaxR).filter((r): r is number => r !== null);
   const avgFinalR = finalRValues.length > 0 ? finalRValues.reduce((a, b) => a + b, 0) / finalRValues.length : null;
   const avgMaxR = maxRValues.length > 0 ? maxRValues.reduce((a, b) => a + b, 0) / maxRValues.length : null;
 
@@ -159,43 +205,71 @@ export default function Journal() {
       )}
 
       {!isLoading && !isError && positions.length > 0 && (
-        <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  {t('journalPage.columns.date')}
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  {t('journalPage.columns.ticker')}
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  {t('journalPage.columns.entry')}
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  {t('journalPage.columns.exit')}
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  {t('journalPage.columns.shares')}
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  {t('journalPage.columns.initialRisk')}
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  {t('journalPage.columns.finalR')}
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  {t('journalPage.columns.maxR')}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {positions.map((position) => (
-                <JournalRow key={position.positionId ?? `${position.ticker}-${position.exitDate}`} position={position} />
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          {allTags.length > 0 ? (
+            <div className="mb-3 flex flex-wrap gap-2">
+              {allTags.map((tag) => {
+                const active = activeTagFilter === tag;
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setActiveTagFilter(active ? null : tag)}
+                    className={cn(
+                      'rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+                      active
+                        ? 'border-blue-600 bg-blue-600 text-white'
+                        : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300',
+                    )}
+                  >
+                    {getTagLabel(tag)}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+          <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    {t('journalPage.columns.date')}
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    {t('journalPage.columns.ticker')}
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    {t('journalPage.columns.entry')}
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    {t('journalPage.columns.exit')}
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    {t('journalPage.columns.shares')}
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    {t('journalPage.columns.tags')}
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    {t('journalPage.columns.initialRisk')}
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    {t('journalPage.columns.finalR')}
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    {t('journalPage.columns.maxR')}
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                {filteredPositions.map((position) => (
+                  <JournalRow key={position.positionId ?? `${position.ticker}-${position.exitDate}`} position={position} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );
