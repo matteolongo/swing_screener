@@ -775,6 +775,7 @@ class PortfolioService:
                     pos["notes"] = f"{current_notes}\nClosed: {request.reason}".strip()
                 if request.lesson is not None:
                     pos["lesson"] = request.lesson
+                pos["tags"] = list(request.tags)
 
                 found = True
                 break

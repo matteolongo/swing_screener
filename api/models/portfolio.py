@@ -35,6 +35,7 @@ class Position(BaseModel):
     broker_synced_at: Optional[str] = None
     thesis: Optional[str] = None
     lesson: Optional[str] = None
+    tags: list[str] = Field(default_factory=list, description="Structured trade tags")
 
 
 class PositionUpdate(BaseModel):
@@ -75,6 +76,7 @@ class ClosePositionRequest(BaseModel):
     )
     reason: str = Field(default="", description="Reason for closing")
     lesson: Optional[str] = Field(default=None, description="Lesson / reflection (optional)")
+    tags: list[str] = Field(default_factory=list, description="Structured tags for this trade")
 
     @field_validator("exit_price")
     @classmethod
