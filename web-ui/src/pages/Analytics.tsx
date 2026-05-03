@@ -4,6 +4,7 @@ import type { Position } from '@/types/position';
 import { t } from '@/i18n/t';
 import { cn } from '@/utils/cn';
 import { formatNumber, formatCurrency } from '@/utils/formatters';
+import EdgeBreakdownTable from '@/components/domain/portfolio/EdgeBreakdownTable';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -458,6 +459,14 @@ export default function Analytics() {
 
           {/* How to read */}
           <HowToReadBox />
+
+          {/* Edge by setup type */}
+          <section>
+            <h2 className="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
+              {t('analyticsPage.edgeBreakdown.title')}
+            </h2>
+            <EdgeBreakdownTable positions={stats.sorted} />
+          </section>
 
           {/* Trade list table */}
           <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-x-auto">
