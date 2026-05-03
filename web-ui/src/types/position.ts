@@ -21,6 +21,7 @@ export interface Position {
   exitOrderIds?: string[];
   thesis?: string | null;
   lesson?: string | null;
+  tags?: string[];
 }
 
 export type ActionType = 'NO_ACTION' | 'MOVE_STOP_UP' | 'CLOSE_STOP_HIT' | 'CLOSE_TIME_EXIT';
@@ -61,6 +62,7 @@ export interface ClosePositionRequest {
   feeEur?: number;
   reason?: string;
   lesson?: string;
+  tags?: string[];
 }
 
 // Backend uses snake_case, transform to camelCase
@@ -83,6 +85,7 @@ export interface PositionApiResponse {
   exit_order_ids: string[] | null;
   thesis?: string | null;
   lesson?: string | null;
+  tags?: string[] | null;
 }
 
 export function transformPosition(apiPosition: PositionApiResponse): Position {
@@ -105,6 +108,7 @@ export function transformPosition(apiPosition: PositionApiResponse): Position {
     exitOrderIds: apiPosition.exit_order_ids ?? undefined,
     thesis: apiPosition.thesis ?? null,
     lesson: apiPosition.lesson ?? null,
+    tags: apiPosition.tags ?? [],
   };
 }
 
