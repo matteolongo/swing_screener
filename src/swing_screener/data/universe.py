@@ -461,6 +461,16 @@ def get_universe_benchmark(name: str) -> Optional[str]:
     return None
 
 
+def get_universe_currencies(name: str) -> list[str]:
+    """Return currency list from manifest entry, or empty list if not specified."""
+    for entry in _load_registry_manifest():
+        if entry.get("id") == name:
+            currencies = entry.get("currencies")
+            if currencies and isinstance(currencies, list):
+                return [str(c).upper() for c in currencies]
+    return []
+
+
 def get_universe_meta(name: str) -> Optional[dict]:
     """Return manifest entry for the given universe id."""
     for entry in _load_registry_manifest():

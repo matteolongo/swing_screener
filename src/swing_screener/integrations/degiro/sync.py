@@ -70,6 +70,99 @@ def _transaction_side(tx: dict) -> str:
     return ""
 
 
+def _ticker_variants(value: Any) -> set[str]:
+    text = _clean_text(value).upper()
+    if not text:
+        return set()
+    variants = {text}
+    base = text.split(".", 1)[0]
+    if base:
+        variants.add(base)
+    variants.add(text.replace(".", ""))
+    return {variant for variant in variants if variant}
+
+
+def _symbols_match(left: Any, right: Any) -> bool:
+    left_variants = _ticker_variants(left)
+    right_variants = _ticker_variants(right)
+    return bool(left_variants and right_variants and left_variants.intersection(right_variants))
+
+
+def _event_identity(event: dict) -> tuple[str, str, str, str]:
+    product_id = _clean_text(
+        event.get("productId")
+        or event.get("product_id")
+        or event.get("resolved_product_id")
+    )
+    isin = _clean_text(event.get("isin") or event.get("resolved_isin"))
+    symbol = _clean_text(
+        event.get("resolved_symbol")
+        or event.get("symbol")
+        or event.get("ticker")
+    )
+    name = _clean_text(
+        event.get("resolved_name")
+        or event.get("product")
+        or event.get("productName")
+        or event.get("name")
+    )
+    return product_id, isin, symbol, name
+
+
+def _event_key(event: dict) -> str:
+    product_id, isin, symbol, name = _event_identity(event)
+    raw_key = _clean_text(event.get("orderId") or event.get("transactionId") or event.get("id"))
+    if raw_key:
+        return raw_key
+    return "|".join((product_id, isin, symbol, name))
+
+
+def _event_matches_position(event: dict, local_position: dict) -> bool:
+    event_product_id, event_isin, event_symbol, _ = _event_identity(event)
+    local_product_id = _clean_text(local_position.get("broker_product_id"))
+    local_isin = _clean_text(local_position.get("isin"))
+    local_ticker = _clean_text(local_position.get("ticker"))
+
+    if event_product_id and local_product_id and event_product_id == local_product_id:
+        return True
+    if event_isin and local_isin and event_isin == local_isin:
+        return True
+    if event_symbol and _symbols_match(local_ticker, event_symbol):
+        return True
+    return False
+
+
+def _select_exit_event(
+    local_position: dict,
+    events: list[dict],
+    *,
+    used_event_keys: Optional[set[str]] = None,
+) -> Optional[dict]:
+    exit_event = None
+    for event in events:
+        event_key = _event_key(event)
+        if used_event_keys is not None and event_key in used_event_keys:
+            continue
+        if _transaction_side(event) != "sell":
+            continue
+        if not _event_matches_position(event, local_position):
+            continue
+        event_date = _date_only(
+            event.get("date")
+            or event.get("created")
+            or event.get("filledDate")
+            or event.get("orderDate")
+            or event.get("executionDate")
+        )
+        entry_date = _clean_text(local_position.get("entry_date"))
+        if event_date and entry_date and event_date < entry_date:
+            continue
+        candidate = (event_date or "", event)
+        if exit_event is None or candidate[0] >= exit_event[0]:
+            exit_event = candidate
+    return exit_event[1] if exit_event is not None else None
+
+
 def _is_broker_managed_order(local_order: dict) -> bool:
     broker = _clean_text(local_order.get("broker")).lower()
     return bool(
@@ -85,46 +178,37 @@ def _is_broker_managed_position(local_position: dict) -> bool:
     return bool(
         broker == "degiro"
         or _clean_text(local_position.get("broker_product_id"))
-        or _clean_text(local_position.get("isin"))
         or _clean_text(local_position.get("broker_synced_at"))
     )
 
 
-def _transaction_matches_position(tx: dict, local_position: dict) -> bool:
-    tx_product = _clean_text(tx.get("productId") or tx.get("product_id"))
-    pos_product = _clean_text(local_position.get("broker_product_id"))
-    if tx_product and pos_product and tx_product == pos_product:
-        return True
-
-    tx_isin = _clean_text(tx.get("isin"))
-    pos_isin = _clean_text(local_position.get("isin"))
-    return bool(tx_isin and pos_isin and tx_isin == pos_isin)
-
-
-def _stale_position_fields(local_position: dict, transactions: list[dict], sync_stamp: str) -> dict:
-    exit_tx = None
-    for tx in transactions:
-        if _transaction_side(tx) != "sell":
-            continue
-        if not _transaction_matches_position(tx, local_position):
-            continue
-        tx_date = _date_only(tx.get("date") or tx.get("created"))
-        candidate = (tx_date or "", tx)
-        if exit_tx is None or candidate[0] >= exit_tx[0]:
-            exit_tx = candidate
+def _stale_position_fields(
+    local_position: dict,
+    exit_event: Optional[dict],
+    sync_stamp: str,
+) -> dict:
 
     fields: dict[str, Any] = {
         "status": "closed",
         "broker": "degiro",
         "broker_synced_at": sync_stamp,
     }
-    if exit_tx is not None:
-        _, tx = exit_tx
-        fields["exit_date"] = _date_only(tx.get("date") or tx.get("created")) or sync_stamp[:10]
-        exit_price = _float_or_none(tx.get("price"))
+    if exit_event is not None:
+        fields["status"] = "closed"
+        exit_date = _date_only(
+            exit_event.get("date")
+            or exit_event.get("created")
+            or exit_event.get("filledDate")
+            or exit_event.get("orderDate")
+            or exit_event.get("executionDate")
+        )
+        fields["exit_date"] = exit_date or sync_stamp[:10]
+        exit_price = _float_or_none(exit_event.get("price"))
         if exit_price is not None:
             fields["exit_price"] = exit_price
-        exit_fee = _float_or_none(tx.get("feeInBaseCurrency") or tx.get("totalFeesInBaseCurrency"))
+        exit_fee = _float_or_none(
+            exit_event.get("feeInBaseCurrency") or exit_event.get("totalFeesInBaseCurrency")
+        )
         if exit_fee is not None:
             fields["exit_fee_eur"] = exit_fee
     else:
@@ -135,6 +219,45 @@ def _stale_position_fields(local_position: dict, transactions: list[dict], sync_
         "Closed via DeGiro sync: position no longer open at broker.",
     )
     return fields
+
+
+def _resolve_product_ids(client: Any, items: list[dict], *, product_id_keys: tuple[str, ...]) -> None:
+    try:
+        from swing_screener.integrations.degiro.resolver import resolve_by_product_id
+    except ImportError:
+        return
+
+    product_ids: set[str] = set()
+    for item in items:
+        for key in product_id_keys:
+            value = _clean_text(item.get(key))
+            if value:
+                product_ids.add(value)
+                break
+
+    if not product_ids:
+        return
+
+    for product_id in sorted(product_ids):
+        ref, _, _ = resolve_by_product_id(client, product_id)
+        if ref is None:
+            continue
+        for item in items:
+            item_product_id = _clean_text(
+                item.get("productId")
+                or item.get("product_id")
+                or item.get("id")
+                or item.get("resolved_product_id")
+            )
+            if item_product_id != product_id:
+                continue
+            item["resolved_product_id"] = ref.product_id
+            if ref.symbol:
+                item["resolved_symbol"] = ref.symbol
+            if ref.isin:
+                item["resolved_isin"] = ref.isin
+            if ref.name:
+                item["resolved_name"] = ref.name
 
 
 # ---------------------------------------------------------------------------
@@ -188,6 +311,7 @@ def fetch_live_data(
                     positions.append(vals)
             result["positions"] = positions
             result["cash"] = cash
+            _resolve_product_ids(client, positions, product_id_keys=("id", "productId", "product_id"))
         except Exception:
             logger.warning("Failed to fetch DeGiro portfolio", exc_info=True)
 
@@ -212,6 +336,11 @@ def fetch_live_data(
                 raw=True,
             ) or {}
             result["order_history"] = history.get("data", [])
+            _resolve_product_ids(
+                client,
+                result["order_history"],
+                product_id_keys=("productId", "product_id"),
+            )
         except Exception:
             logger.warning("Failed to fetch DeGiro orders history", exc_info=True)
 
@@ -224,6 +353,11 @@ def fetch_live_data(
             tx_request = TxHistoryRequest(from_date=from_dt, to_date=to_dt)
             tx = api.get_transactions_history(transaction_request=tx_request, raw=True) or {}
             result["transactions"] = tx.get("data", [])
+            _resolve_product_ids(
+                client,
+                result["transactions"],
+                product_id_keys=("productId", "product_id"),
+            )
         except Exception:
             logger.warning("Failed to fetch DeGiro transactions", exc_info=True)
 
@@ -318,10 +452,13 @@ def preview(
     positions_to_create: list[SyncDiff] = []
     positions_to_update: list[SyncDiff] = []
     matched_local_position_ids: set[str] = set()
+    exit_events = list(sync_raw.order_history) + list(sync_raw.transactions)
+    used_exit_event_keys: set[str] = set()
 
     for bp in sync_raw.positions:
-        product_id = str(bp.get("id", "") or "").strip()
-        isin = str(bp.get("isin", "") or "").strip() or None
+        product_id = _clean_text(bp.get("id") or bp.get("productId") or bp.get("product_id"))
+        isin = _clean_text(bp.get("isin") or bp.get("resolved_isin")) or None
+        symbol = _clean_text(bp.get("resolved_symbol") or bp.get("symbol")) or None
 
         local_pos = None
         pos_confidence = "unmatched"
@@ -334,12 +471,18 @@ def preview(
                 local_pos = lp
                 pos_confidence = "fuzzy"
                 break
+            if symbol and _symbols_match(lp.get("ticker"), symbol):
+                local_pos = lp
+                pos_confidence = "fuzzy"
+                break
 
         fields: dict = {}
         if product_id:
             fields["broker_product_id"] = product_id
         if isin:
             fields["isin"] = isin
+        if symbol:
+            fields["broker_symbol"] = symbol
         fields["broker"] = "degiro"
         fields["broker_synced_at"] = sync_stamp
         size = bp.get("size") or bp.get("quantity")
@@ -362,16 +505,26 @@ def preview(
         else:
             positions_to_create.append(diff)
 
-    # Mark locally-open broker-managed positions as stale if not found at DeGiro
-    stale_closed_position_ids: set[str] = set()
-    for lp in local_positions:
+    # Mark locally-open positions as stale if a matching DeGiro exit is present
+    stale_candidates = sorted(
+        local_positions,
+        key=lambda pos: (
+            _clean_text(pos.get("entry_date")),
+            _clean_text(pos.get("position_id")),
+        ),
+    )
+
+    for lp in stale_candidates:
         local_id = _clean_text(lp.get("position_id"))
         if not local_id or local_id in matched_local_position_ids:
             continue
         if _clean_text(lp.get("status")).lower() != "open":
             continue
-        if not _is_broker_managed_position(lp):
+        exit_event = _select_exit_event(lp, exit_events, used_event_keys=used_exit_event_keys)
+        if exit_event is None and not _is_broker_managed_position(lp):
             continue
+        if exit_event is not None:
+            used_exit_event_keys.add(_event_key(exit_event))
 
         broker_id = _clean_text(lp.get("broker_product_id")) or None
         diff = SyncDiff(
@@ -380,10 +533,9 @@ def preview(
             local_id=local_id,
             broker_id=broker_id,
             confidence="exact" if broker_id else "fuzzy",
-            fields=_stale_position_fields(lp, sync_raw.transactions, sync_stamp),
+            fields=_stale_position_fields(lp, exit_event, sync_stamp),
         )
         positions_to_update.append(diff)
-        stale_closed_position_ids.add(local_id)
 
     return DegiroSyncPreview(
         positions_to_create=tuple(positions_to_create),

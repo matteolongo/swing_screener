@@ -13,7 +13,12 @@ from api.models.portfolio import (
     PortfolioSummary,
     DegiroOrder,
     DegiroOrdersResponse,
+    CreateOrderRequest,
     CreatePositionRequest,
+    FillOrderRequest,
+    FillOrderResponse,
+    FillFromDegiroRequest,
+    FillFromDegiroResponse,
     UpdateStopRequest,
     ClosePositionRequest,
     StopSuggestionComputeRequest,
@@ -133,7 +138,16 @@ async def get_portfolio_summary(
     return service.get_portfolio_summary(account_size=account_size)
 
 
-# ===== Orders (live read from DeGiro) =====
+# ===== Orders =====
+
+@router.post("/orders", status_code=201)
+async def create_order(
+    request: CreateOrderRequest,
+    service: PortfolioService = Depends(get_portfolio_service),
+):
+    """Create a pending entry order."""
+    return service.create_order(request)
+
 
 @router.get("/orders", response_model=DegiroOrdersResponse)
 async def get_orders(
@@ -145,6 +159,59 @@ async def get_orders(
     """
     _check_degiro_available()
     return service.list_degiro_orders()
+
+
+@router.get("/degiro/order-history", response_model=DegiroOrdersResponse)
+async def get_degiro_order_history(
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+    service: PortfolioService = Depends(get_portfolio_service),
+):
+    """Fetch order history (filled/cancelled orders) from DeGiro.
+
+    Defaults to the last 30 days if from_date/to_date are not provided.
+    """
+    _check_degiro_available()
+    from datetime import date, timedelta
+    from api.utils.files import get_today_str
+
+    if to_date is None:
+        to_date = get_today_str()
+    if from_date is None:
+        from_dt = date.fromisoformat(to_date) - timedelta(days=30)
+        from_date = from_dt.isoformat()
+
+    return service.list_degiro_order_history(from_date=from_date, to_date=to_date)
+
+
+@router.get("/orders/local")
+async def list_local_orders(
+    status: Optional[str] = None,
+    service: PortfolioService = Depends(get_portfolio_service),
+):
+    """List locally stored pending/filled orders from orders.json."""
+    return service.list_local_orders(status=status)
+
+
+@router.post("/orders/{order_id}/fill", status_code=201, response_model=FillOrderResponse)
+async def fill_order(
+    order_id: str,
+    request: FillOrderRequest,
+    service: PortfolioService = Depends(get_portfolio_service),
+):
+    """Mark a pending order as filled and create an open position."""
+    return service.fill_order(order_id, request)
+
+
+@router.post("/orders/{order_id}/fill-from-degiro", status_code=201, response_model=FillFromDegiroResponse)
+async def fill_order_from_degiro(
+    order_id: str,
+    request: FillFromDegiroRequest,
+    service: PortfolioService = Depends(get_portfolio_service),
+):
+    """Fill a local pending order by linking it to a DeGiro order."""
+    _check_degiro_available()
+    return service.fill_order_from_degiro(order_id, request.degiro_order_id)
 
 
 # ===== DeGiro Integration =====
@@ -224,7 +291,7 @@ async def degiro_sync_preview(
             request.from_date,
             request.to_date,
             include_portfolio=request.include_portfolio,
-            include_orders_history=False,
+            include_orders_history=request.include_orders_history,
             include_transactions=request.include_transactions,
         )
 
@@ -283,7 +350,7 @@ async def degiro_sync_apply(
             request.from_date,
             request.to_date,
             include_portfolio=request.include_portfolio,
-            include_orders_history=False,
+            include_orders_history=request.include_orders_history,
             include_transactions=request.include_transactions,
         )
 

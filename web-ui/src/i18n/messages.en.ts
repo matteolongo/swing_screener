@@ -816,9 +816,9 @@ export const messagesEn = {
       rs: {
         label: 'RS',
         title: 'Relative Strength (RS)',
-        tooltip: 'How the stock performs versus the benchmark.',
-        explanation: 'RS tracks whether this symbol is outperforming the benchmark index.',
-        formula: 'RS = Stock return - Benchmark return',
+        tooltip: 'How the stock performs versus the benchmark over the past 6 months.',
+        explanation: 'RS tracks whether this symbol is outperforming the benchmark index. Benchmark is SPY for USD universes, AEX for EUR/Amsterdam universes.',
+        formula: 'RS = mom_6m(stock) − mom_6m(benchmark), where mom_6m = (close[t] / close[t − 126]) − 1 (126 trading days ≈ 6 months)',
         interpretation: 'Positive RS means leadership. Negative RS means lagging behavior.',
       },
       atr: {
@@ -834,6 +834,7 @@ export const messagesEn = {
         title: 'Composite Score',
         tooltip: 'Weighted rank score used to sort candidates.',
         explanation: 'Score combines momentum and relative-strength signals into one ranking number.',
+        formula: 'Score = 0.45 × percentile(mom_6m) + 0.35 × percentile(mom_12m) + 0.20 × percentile(rs_6m) − extension_penalty; result clamped to [0, 1], displayed as 0–100',
         interpretation: 'Higher score means stronger setup quality by the current ranking weights.',
       },
       confidence: {
@@ -848,7 +849,7 @@ export const messagesEn = {
         title: '6-Month Momentum',
         tooltip: 'Price return over the last 6 months.',
         explanation: 'Momentum captures medium-term trend persistence.',
-        formula: 'Mom 6M = return over lookback_6m',
+        formula: 'Mom 6M = (close[t] / close[t − 126]) − 1  (126 trading days ≈ 6 months)',
         interpretation: 'Positive values indicate upward trend persistence.',
       },
       mom12m: {
@@ -856,7 +857,7 @@ export const messagesEn = {
         title: '12-Month Momentum',
         tooltip: 'Price return over the last 12 months.',
         explanation: 'Momentum captures longer trend persistence.',
-        formula: 'Mom 12M = return over lookback_12m',
+        formula: 'Mom 12M = (close[t] / close[t − 252]) − 1  (252 trading days ≈ 12 months)',
         interpretation: 'Positive values show long-term strength.',
       },
       riskPct: {
@@ -1970,10 +1971,39 @@ export const messagesEn = {
     subtitle: 'Positions, trade history and performance.',
     tabs: {
       positions: 'Positions',
+      orders: 'Orders',
       journal: 'Journal',
       performance: 'Performance',
       review: 'Weekly Review',
     },
+  },
+  pendingOrdersTab: {
+    title: 'Pending Orders',
+    empty: 'No pending orders. Create one from the Today page when a candidate is ready.',
+    columnTicker: 'Ticker',
+    columnShares: 'Shares',
+    columnLimit: 'Limit',
+    columnStop: 'Stop',
+    columnDate: 'Created',
+    fillViaDegiro: 'Fill via DeGiro',
+    fillManually: 'Fill manually',
+    degiroNotConnected: 'DeGiro not connected',
+  },
+  fillViaDegiroModal: {
+    title: 'Link fill for {{ticker}}',
+    loading: 'Fetching recent DeGiro orders\u2026',
+    noOrders: 'No recent DeGiro orders found. Try filling manually.',
+    matchedSection: 'Matching orders',
+    otherSection: 'Other recent orders',
+    columnProduct: 'Product',
+    columnPrice: 'Fill price',
+    columnQty: 'Qty',
+    columnDate: 'Date',
+    quantityMismatch: 'Quantity mismatch: DeGiro filled {{degiroQty}} shares, local order is {{localQty}}.',
+    confirmButton: 'Confirm fill',
+    cancelButton: 'Cancel',
+    successToast: 'Position created for {{ticker}}',
+    errorFetch: 'Failed to load DeGiro orders.',
   },
   researchPage: {
     title: 'Research',
@@ -2007,6 +2037,11 @@ export const messagesEn = {
     },
     keyboard: {
       hint: 'j/k navigate · Enter select',
+    },
+    pendingBadge: {
+      singular: '{{count}} pending order',
+      plural: '{{count}} pending orders',
+      goToOrders: 'Go to Orders',
     },
   },
 } as const;

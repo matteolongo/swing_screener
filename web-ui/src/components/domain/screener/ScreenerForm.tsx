@@ -205,7 +205,7 @@ export default function ScreenerForm({
             >
               {universes.map((universe) => (
                 <option key={universe.id} value={universe.id}>
-                  {universe.description}
+                  {universe.description} ({universe.member_count})
                 </option>
               ))}
             </select>

@@ -195,16 +195,44 @@ def _market_effective_date(currency: str, now_utc: dt.datetime) -> tuple[dt.date
     return _previous_weekday(local_date), False
 
 
-def _infer_active_currencies(
+def _infer_currencies_from_tickers(tickers: list[str]) -> list[str]:
+    inferred: list[str] = []
+    for ticker in tickers:
+        rec = get_instrument_record(ticker)
+        if not rec:
+            continue
+        currency = str(rec.get("currency") or "").strip().upper()
+        if currency in SUPPORTED_CURRENCIES and currency not in inferred:
+            inferred.append(currency)
+    return inferred
+
+
+def _resolve_screening_currencies(
     request: ScreenerRequest,
+    *,
     strategy_currencies: list[str] | tuple[str, ...] | None,
+    tickers: list[str],
+    universe_id: str | None = None,
 ) -> list[str]:
     requested = _normalize_currency_codes(request.currencies)
     if requested:
         return requested
 
+    inferred = _infer_currencies_from_tickers(tickers)
+    if inferred:
+        return inferred
+
     strategy_defaults = _normalize_currency_codes(list(strategy_currencies or []))
-    return strategy_defaults or ["USD", "EUR"]
+    if strategy_defaults:
+        return strategy_defaults
+
+    if universe_id:
+        from swing_screener.data.universe import get_universe_currencies
+        universe_currencies = _normalize_currency_codes(get_universe_currencies(universe_id))
+        if universe_currencies:
+            return universe_currencies
+
+    return ["USD", "EUR"]
 
 
 def _resolve_default_asof_date(now_utc: dt.datetime, currencies: list[str]) -> dt.date:
@@ -672,7 +700,6 @@ class ScreenerService:
             fields_set = request.model_fields_set
             strategy = self._resolve_strategy(request.strategy_id, strategy_override)
             universe_cfg = build_universe_config(strategy)
-            active_currencies = _infer_active_currencies(request, universe_cfg.filt.currencies)
             now_utc = dt.datetime.now(dt.timezone.utc)
             benchmark = universe_cfg.mom.benchmark
             if request.universe:
@@ -697,11 +724,6 @@ class ScreenerService:
                         mom=replace(universe_cfg.mom, benchmark=uni_benchmark),
                     )
                     benchmark = uni_benchmark
-
-            if request.asof_date:
-                asof_str = request.asof_date
-            else:
-                asof_str = _resolve_default_asof_date(now_utc, active_currencies).isoformat()
 
             if request.tickers:
                 tickers = [t.upper() for t in request.tickers]
@@ -730,6 +752,19 @@ class ScreenerService:
                     f"Universe filters reduced the working list from {len(tickers)} to {len(filtered_tickers)} tickers."
                 )
             tickers = filtered_tickers
+
+            screening_tickers = [ticker for ticker in tickers if ticker != benchmark]
+            active_currencies = _resolve_screening_currencies(
+                request,
+                strategy_currencies=universe_cfg.filt.currencies,
+                tickers=screening_tickers,
+                universe_id=request.universe,
+            )
+            if request.asof_date:
+                asof_str = request.asof_date
+            else:
+                asof_str = _resolve_default_asof_date(now_utc, active_currencies).isoformat()
+
             if len(tickers) <= 1 and benchmark in tickers:
                 raise HTTPException(status_code=404, detail="No tickers left after applying screener filters")
 
@@ -767,6 +802,18 @@ class ScreenerService:
             last_bar_map = _last_bar_map(ohlcv)
             overall_last_bar = _to_iso(ohlcv.index.max())
             data_freshness = _resolve_data_freshness(asof_str, now_utc, active_currencies)
+
+            # Detect tickers that failed to download and surface them as warnings
+            if "Close" in ohlcv.columns.get_level_values(0):
+                present = set(ohlcv["Close"].columns.tolist())
+                requested_set = set(tickers) - {benchmark}
+                missing = sorted(requested_set - present)
+                if missing:
+                    warnings.append(
+                        f"{len(missing)} ticker{'s' if len(missing) != 1 else ''} could not be downloaded "
+                        f"and were excluded from screening (possibly delisted or renamed): "
+                        f"{', '.join(missing)}"
+                    )
 
             if "min_price" in fields_set or "max_price" in fields_set:
                 filt = universe_cfg.filt

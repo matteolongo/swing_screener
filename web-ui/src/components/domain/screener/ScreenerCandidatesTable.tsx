@@ -110,7 +110,7 @@ export default function ScreenerCandidatesTable({
             {t('screener.table.headers.close')}
           </th>
           <th className="py-2 px-3 text-xs font-semibold text-gray-700 text-right">
-            {`vs ${benchmarkTicker}`}
+            {`6M vs ${benchmarkTicker}`}
           </th>
           <th className="py-2 px-3 text-xs font-semibold text-gray-700 text-right">
             R:R
