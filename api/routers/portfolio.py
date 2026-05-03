@@ -123,6 +123,7 @@ async def get_portfolio_summary(
 ):
     """Get aggregated portfolio metrics for all open positions."""
     config_account_size = float(config_repo.get().risk.account_size)
+    account_size_mode = getattr(config_repo.get().risk, "account_size_mode", "equity")
     default_config_account_size = float(ConfigRepository.get_defaults().risk.account_size)
     account_size = config_account_size
 
@@ -132,10 +133,11 @@ async def get_portfolio_summary(
             strategy_account_size = float(active_strategy.get("risk", {}).get("account_size", 0.0))
             if strategy_account_size > 0:
                 account_size = strategy_account_size
+                account_size_mode = str(active_strategy.get("risk", {}).get("account_size_mode", account_size_mode))
         except (TypeError, ValueError):
             pass
 
-    return service.get_portfolio_summary(account_size=account_size)
+    return service.get_portfolio_summary(account_size=account_size, account_size_mode=account_size_mode)
 
 
 # ===== Orders =====

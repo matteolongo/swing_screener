@@ -1,6 +1,8 @@
 """Config models."""
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -12,6 +14,10 @@ class RiskConfig(BaseModel):
     k_atr: float = Field(gt=0, description="ATR multiplier for stops")
     min_rr: float = Field(gt=0, default=2.0, description="Minimum reward-to-risk required")
     max_fee_risk_pct: float = Field(ge=0, le=1, default=0.2, description="Max fees as % of planned risk")
+    account_size_mode: Literal["base", "equity"] = Field(
+        default="equity",
+        description="Whether risk calculations use base account size or equity adjusted for realized P&L",
+    )
 
 
 class IndicatorConfig(BaseModel):

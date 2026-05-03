@@ -1,6 +1,7 @@
 app_config:
   risk:
     account_size: 50000
+    account_size_mode: equity
     risk_pct: 0.01
     max_position_pct: 0.6
     min_shares: 1
@@ -64,6 +65,7 @@ strategy:
     min_history: 260
   risk:
     account_size: 50000.0
+    account_size_mode: equity
     risk_pct: 0.01
     max_position_pct: 0.6
     min_shares: 1

@@ -68,6 +68,7 @@ class StrategyRisk(BaseModel):
     rr_target: float = Field(gt=0, default=2.0)
     commission_pct: float = Field(ge=0, default=0.0)
     max_fee_risk_pct: float = Field(ge=0, le=1, default=0.2)
+    account_size_mode: Literal["base", "equity"] = "equity"
     regime_enabled: bool = False
     regime_trend_sma: int = Field(gt=1, default=200)
     regime_trend_multiplier: float = Field(gt=0, le=1, default=0.5)

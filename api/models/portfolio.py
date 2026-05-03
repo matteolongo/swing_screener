@@ -311,6 +311,11 @@ class PortfolioSummary(BaseModel):
     positions_profitable: int = Field(..., description="Number of positions in profit")
     positions_losing: int = Field(..., description="Number of positions at loss")
     win_rate: float = Field(..., description="Percentage of positions profitable")
+    realized_pnl: float = Field(default=0.0, description="Total realized P&L from closed positions")
+    effective_account_size: float = Field(
+        default=0.0,
+        description="Account size adjusted for realized P&L when mode=equity",
+    )
 
 
 # ---------------------------------------------------------------------------

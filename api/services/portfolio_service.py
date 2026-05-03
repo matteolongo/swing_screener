@@ -360,7 +360,25 @@ class PortfolioService:
             total_risk=per_share_risk * state_position.shares,
         )
 
-    def get_portfolio_summary(self, account_size: float) -> PortfolioSummary:
+    def _realized_pnl(self) -> float:
+        positions, _ = self._positions_repo.list_positions(status=None)
+        realized_pnl = 0.0
+        for position in positions:
+            if position.get("status") != "closed" or position.get("exit_price") is None:
+                continue
+
+            realized_pnl += (
+                (float(position.get("exit_price")) - float(position.get("entry_price", 0.0)))
+                * int(position.get("shares", 0))
+            )
+            exit_fee_eur = position.get("exit_fee_eur")
+            if exit_fee_eur is not None:
+                realized_pnl -= abs(float(exit_fee_eur))
+        return realized_pnl
+
+    def get_portfolio_summary(self, account_size: float, account_size_mode: str = "equity") -> PortfolioSummary:
+        realized_pnl = self._realized_pnl()
+        effective_account_size = account_size + realized_pnl if account_size_mode == "equity" else account_size
         positions_response = self.list_positions(status="open")
         positions = positions_response.positions
         if not positions:
@@ -374,7 +392,7 @@ class PortfolioService:
                 open_risk=0.0,
                 open_risk_percent=0.0,
                 account_size=account_size,
-                available_capital=account_size,
+                available_capital=effective_account_size,
                 largest_position_value=0.0,
                 largest_position_ticker="",
                 best_performer_ticker="",
@@ -385,6 +403,8 @@ class PortfolioService:
                 positions_profitable=0,
                 positions_losing=0,
                 win_rate=0.0,
+                realized_pnl=realized_pnl,
+                effective_account_size=effective_account_size,
             )
 
         total_value = 0.0
@@ -432,7 +452,7 @@ class PortfolioService:
                 positions_losing += 1
 
         total_pnl_percent = (total_pnl / total_cost_basis * 100.0) if total_cost_basis > 0 else 0.0
-        open_risk_percent = (open_risk / account_size * 100.0) if account_size > 0 else 0.0
+        open_risk_percent = (open_risk / effective_account_size * 100.0) if effective_account_size > 0 else 0.0
         avg_r_now = (total_r_now / r_count) if r_count > 0 else 0.0
         win_rate = (positions_profitable / len(positions) * 100.0) if positions else 0.0
 
@@ -446,7 +466,7 @@ class PortfolioService:
             open_risk=open_risk,
             open_risk_percent=open_risk_percent,
             account_size=account_size,
-            available_capital=account_size - total_value,
+            available_capital=effective_account_size - total_value,
             largest_position_value=largest_position_value,
             largest_position_ticker=largest_position_ticker,
             best_performer_ticker=best_performer_ticker,
@@ -457,6 +477,8 @@ class PortfolioService:
             positions_profitable=positions_profitable,
             positions_losing=positions_losing,
             win_rate=win_rate,
+            realized_pnl=realized_pnl,
+            effective_account_size=effective_account_size,
         )
 
     def create_order(self, request: CreateOrderRequest) -> dict:
