@@ -102,3 +102,30 @@ class DegiroClient:
             raw=True,
         ) or {}
         return update.get("orders", {}).get("value", [])
+
+    def get_order_history(self, from_date: str, to_date: str) -> list[dict]:
+        """Fetch order history (filled/cancelled) from DeGiro for the given date range.
+
+        Args:
+            from_date: Start date as ISO string (YYYY-MM-DD).
+            to_date: End date as ISO string (YYYY-MM-DD).
+
+        Returns:
+            List of raw order dicts from the DeGiro API.
+        """
+        try:
+            from datetime import date
+            from degiro_connector.trading.models.order import HistoryRequest
+        except ImportError as exc:
+            raise ImportError(
+                "degiro-connector is not installed. "
+                "Install it with: pip install -e '.[degiro]'"
+            ) from exc
+
+        from_dt = date.fromisoformat(from_date)
+        to_dt = date.fromisoformat(to_date)
+        result = self.api.get_orders_history(
+            history_request=HistoryRequest(from_date=from_dt, to_date=to_dt),
+            raw=True,
+        ) or {}
+        return result.get("data", [])

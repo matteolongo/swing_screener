@@ -15,6 +15,9 @@ from api.models.portfolio import (
     CreatePositionRequest,
     DegiroOrder,
     DegiroOrdersResponse,
+    FillOrderRequest,
+    FillOrderResponse,
+    FillFromDegiroResponse,
     Position,
     PositionUpdate,
     PositionWithMetrics,
@@ -45,6 +48,13 @@ from swing_screener.portfolio.metrics import (
     calculate_total_position_value,
 )
 from swing_screener.utils.date_helpers import get_default_history_start
+
+try:
+    from swing_screener.integrations.degiro.credentials import load_credentials
+    from swing_screener.integrations.degiro.client import DegiroClient
+except ImportError:
+    load_credentials = None  # type: ignore[assignment]
+    DegiroClient = None  # type: ignore[assignment,misc]
 
 logger = logging.getLogger(__name__)
 
@@ -512,6 +522,144 @@ class PortfolioService:
         self._orders_repo.append_order(order)
         return order
 
+    def list_local_orders(self, status: Optional[str] = None) -> dict:
+        """List locally stored orders from orders.json."""
+        if self._orders_repo is None:
+            raise HTTPException(status_code=503, detail="Orders repository not configured")
+        orders, asof = self._orders_repo.list_orders(status=status)
+        return {"orders": orders, "asof": asof}
+
+    def fill_order(self, order_id: str, request: FillOrderRequest) -> FillOrderResponse:
+        """Mark a pending order as filled and create the open position."""
+        if self._orders_repo is None:
+            raise HTTPException(status_code=503, detail="Orders repository not configured")
+
+        order = self._orders_repo.get_order(order_id)
+        if order is None:
+            raise HTTPException(status_code=404, detail=f"Order {order_id} not found")
+        if order.get("status") != "pending":
+            raise HTTPException(status_code=409, detail=f"Order {order_id} is already {order.get('status')}")
+
+        ticker = order["ticker"]
+        stop_price = request.stop_price if request.stop_price is not None else order.get("stop_price")
+        if not stop_price or stop_price <= 0:
+            raise HTTPException(status_code=422, detail=f"No valid stop price for order {order_id}")
+        if stop_price >= request.filled_price:
+            raise HTTPException(status_code=422, detail="stop_price must be below filled_price")
+
+        updates = {
+            "status": "filled",
+            "entry_price": request.filled_price,
+            "filled_date": request.filled_date,
+            "fee_eur": request.fee_eur,
+            "fill_fx_rate": request.fill_fx_rate,
+            "stop_price": stop_price,
+        }
+        self._orders_repo.update_order(order_id, updates)
+
+        isin = order.get("isin") or _resolve_isin(ticker)
+        position_id = f"POS-{uuid.uuid4().hex[:8].upper()}"
+        initial_risk = (request.filled_price - stop_price) * order["quantity"]
+
+        new_position: dict = {
+            "position_id": position_id,
+            "ticker": ticker,
+            "status": "open",
+            "entry_date": request.filled_date,
+            "entry_price": request.filled_price,
+            "stop_price": stop_price,
+            "shares": order["quantity"],
+            "initial_risk": initial_risk,
+            "source_order_id": order_id,
+            "isin": isin,
+            "thesis": order.get("thesis"),
+            "notes": order.get("notes", ""),
+            "entry_fee_eur": request.fee_eur,
+        }
+
+        data = self._positions_repo.read()
+        positions = data.get("positions", [])
+        positions.append(new_position)
+        data["positions"] = positions
+        data["asof"] = get_today_str()
+        self._positions_repo.write(data)
+
+        return FillOrderResponse(order_id=order_id, position=Position(**new_position))
+
+    def fill_order_from_degiro(self, order_id: str, degiro_order_id: str) -> FillFromDegiroResponse:
+        """Fill a local pending order using data from a specific DeGiro order."""
+        from datetime import date, timedelta
+
+        if self._orders_repo is None:
+            raise HTTPException(status_code=503, detail="Orders repository not configured")
+
+        order = self._orders_repo.get_order(order_id)
+        if order is None:
+            raise HTTPException(status_code=404, detail=f"Order {order_id} not found")
+        if order.get("status") != "pending":
+            raise HTTPException(status_code=409, detail=f"Order {order_id} is already {order.get('status')}")
+
+        # Fetch last 90 days of order history to cover older fills
+        to_date = get_today_str()
+        from_date = (date.fromisoformat(to_date) - timedelta(days=90)).isoformat()
+
+        credentials = load_credentials()
+        with DegiroClient(credentials) as client:
+            raw_orders = client.get_order_history(from_date=from_date, to_date=to_date)
+
+        degiro_order = next(
+            (o for o in raw_orders if str(o.get("orderId", "")) == degiro_order_id),
+            None,
+        )
+        if degiro_order is None:
+            raise HTTPException(
+                status_code=422,
+                detail=f"DeGiro order {degiro_order_id} not found in history (last 90 days)",
+            )
+
+        fill_price = float(degiro_order.get("price", 0))
+        fill_qty = int(float(degiro_order.get("size", 0) or degiro_order.get("quantity", 0) or 0))
+        fill_date_raw = str(degiro_order.get("date", "") or get_today_str())
+        fill_date = fill_date_raw[:10]  # YYYY-MM-DD
+        isin_from_degiro = str(degiro_order.get("isin", "") or "") or None
+        product_id = str(degiro_order.get("productId", "") or "") or None
+
+        quantity_mismatch = fill_qty != order.get("quantity", 0)
+
+        # Write broker fields to order before fill
+        broker_updates: dict = {
+            "broker_order_id": degiro_order_id,
+            "broker": "degiro",
+            "broker_synced_at": get_today_str(),
+        }
+        if isin_from_degiro and not order.get("isin"):
+            broker_updates["isin"] = isin_from_degiro
+        self._orders_repo.update_order(order_id, broker_updates)
+
+        fill_request = FillOrderRequest(
+            filled_price=fill_price,
+            filled_date=fill_date,
+            fee_eur=None,
+        )
+        fill_response = self.fill_order(order_id, fill_request)
+
+        # Stamp broker fields on the created position
+        if product_id:
+            data = self._positions_repo.read()
+            for pos in data.get("positions", []):
+                if pos.get("source_order_id") == order_id:
+                    pos["broker_product_id"] = product_id
+                    pos["broker"] = "degiro"
+                    pos["broker_synced_at"] = get_today_str()
+            self._positions_repo.write(data)
+
+        return FillFromDegiroResponse(
+            order_id=order_id,
+            broker_order_id=degiro_order_id,
+            quantity_mismatch=quantity_mismatch,
+            position=fill_response.position,
+        )
+
     def create_position(self, request: CreatePositionRequest) -> Position:
         """Register a position directly (after manual fill at DeGiro)."""
         data = self._positions_repo.read()
@@ -721,12 +869,18 @@ class PortfolioService:
 
     def list_degiro_orders(self) -> DegiroOrdersResponse:
         """Fetch live orders from DeGiro API."""
-        from swing_screener.integrations.degiro.credentials import load_credentials
-        from swing_screener.integrations.degiro.client import DegiroClient
-
         credentials = load_credentials()
         with DegiroClient(credentials) as client:
             raw_orders = client.get_orders()
+
+        orders = [_normalize_degiro_order(o) for o in raw_orders]
+        return DegiroOrdersResponse(orders=orders, asof=get_today_str())
+
+    def list_degiro_order_history(self, from_date: str, to_date: str) -> DegiroOrdersResponse:
+        """Fetch recent filled/cancelled orders from DeGiro order history."""
+        credentials = load_credentials()
+        with DegiroClient(credentials) as client:
+            raw_orders = client.get_order_history(from_date=from_date, to_date=to_date)
 
         orders = [_normalize_degiro_order(o) for o in raw_orders]
         return DegiroOrdersResponse(orders=orders, asof=get_today_str())

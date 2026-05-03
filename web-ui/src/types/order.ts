@@ -22,6 +22,9 @@ export interface Order {
   tif: string | null;
   feeEur?: number | null;
   fillFxRate?: number | null;
+  brokerOrderId?: string | null;
+  broker?: string | null;
+  brokerSyncedAt?: string | null;
 }
 
 export interface CreateOrderRequest {
@@ -65,6 +68,9 @@ export interface OrderApiResponse {
   tif: string | null;
   fee_eur?: number | null;
   fill_fx_rate?: number | null;
+  broker_order_id?: string | null;
+  broker?: string | null;
+  broker_synced_at?: string | null;
 }
 
 export interface OrderSnapshot {
@@ -121,6 +127,9 @@ export function transformOrder(apiOrder: OrderApiResponse): Order {
     tif: apiOrder.tif,
     feeEur: apiOrder.fee_eur ?? null,
     fillFxRate: apiOrder.fill_fx_rate ?? null,
+    brokerOrderId: apiOrder.broker_order_id ?? null,
+    broker: apiOrder.broker ?? null,
+    brokerSyncedAt: apiOrder.broker_synced_at ?? null,
   };
 }
 
@@ -139,6 +148,30 @@ export function transformOrderSnapshot(apiOrder: OrderSnapshotApiResponse): Orde
     pctToLimit: apiOrder.pct_to_limit !== null ? apiOrder.pct_to_limit : undefined,
     pctToStop: apiOrder.pct_to_stop !== null ? apiOrder.pct_to_stop : undefined,
   };
+}
+
+export interface DegiroOrder {
+  orderId: string;
+  productId?: string | null;
+  isin?: string | null;
+  productName?: string | null;
+  status: string;
+  price?: number | null;
+  quantity: number;
+  orderType?: string | null;
+  side?: string | null;
+  createdAt?: string | null;
+}
+
+export interface FillFromDegiroRequest {
+  degiroOrderId: string;
+}
+
+export interface FillFromDegiroResponse {
+  orderId: string;
+  brokerOrderId: string;
+  quantityMismatch: boolean;
+  position: Record<string, unknown>; // Position shape — used for cache invalidation only
 }
 
 export function transformCreateOrderRequest(req: CreateOrderRequest): any {

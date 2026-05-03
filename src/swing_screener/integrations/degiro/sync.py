@@ -154,6 +154,9 @@ def _select_exit_event(
             or event.get("orderDate")
             or event.get("executionDate")
         )
+        entry_date = _clean_text(local_position.get("entry_date"))
+        if event_date and entry_date and event_date < entry_date:
+            continue
         candidate = (event_date or "", event)
         if exit_event is None or candidate[0] >= exit_event[0]:
             exit_event = candidate
@@ -175,7 +178,6 @@ def _is_broker_managed_position(local_position: dict) -> bool:
     return bool(
         broker == "degiro"
         or _clean_text(local_position.get("broker_product_id"))
-        or _clean_text(local_position.get("isin"))
         or _clean_text(local_position.get("broker_synced_at"))
     )
 
