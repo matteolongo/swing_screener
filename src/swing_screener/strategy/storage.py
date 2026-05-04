@@ -135,6 +135,17 @@ def _normalize_document(doc: dict[str, Any]) -> tuple[dict[str, Any], bool]:
                 filt["currencies"] = ["USD", "EUR"]
                 dirty = True
 
+        manage = strategy.get("manage")
+        default_manage = defaults.get("manage", {})
+        if not isinstance(manage, dict):
+            strategy["manage"] = deepcopy(default_manage if isinstance(default_manage, dict) else {})
+            dirty = True
+        elif isinstance(default_manage, dict):
+            for key, value in default_manage.items():
+                if manage.get(key) is None:
+                    manage[key] = deepcopy(value)
+                    dirty = True
+
         market_intelligence = strategy.get("market_intelligence")
         if not isinstance(market_intelligence, dict):
             strategy["market_intelligence"] = deepcopy(market_intelligence_default)

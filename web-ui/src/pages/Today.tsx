@@ -29,6 +29,27 @@ import type {
 
 // ─── Action item row components ─────────────────────────────────────────────
 
+interface TimeStopBadgeProps {
+  daysOpen: number;
+  rNow: number;
+  show: boolean;
+}
+
+function TimeStopBadge({ daysOpen, rNow, show }: TimeStopBadgeProps) {
+  if (!show) return null;
+  return (
+    <span
+      className="text-xs font-medium px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+      title={t('todayPage.actionList.timeStopWarning')}
+    >
+      {t('todayPage.actionList.timeStopBadge', {
+        days: String(daysOpen),
+        r: `${rNow >= 0 ? '+' : ''}${formatNumber(rNow, 2)}`,
+      })}
+    </span>
+  );
+}
+
 interface CloseItemProps {
   item: DailyReviewPositionClose;
   onClick: (ticker: string) => void;
@@ -57,6 +78,7 @@ function CloseItem({ item, onClick, onAction, isDone, isFocused }: CloseItemProp
       <span className={cn('text-xs font-semibold tabular-nums', item.rNow >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400')}>
         {item.rNow >= 0 ? '+' : ''}{formatNumber(item.rNow, 2)}R
       </span>
+      <TimeStopBadge daysOpen={item.daysOpen} rNow={item.rNow} show={item.timeStopWarning} />
       <span className="text-xs text-gray-500 dark:text-gray-400 truncate flex-1">{item.reason}</span>
       {isDone ? (
         <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
@@ -103,6 +125,7 @@ function UpdateStopItem({ item, onClick, onAction, isDone, isFocused }: UpdateSt
       <span className={cn('text-xs font-semibold tabular-nums', item.rNow >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400')}>
         {item.rNow >= 0 ? '+' : ''}{formatNumber(item.rNow, 2)}R
       </span>
+      <TimeStopBadge daysOpen={item.daysOpen} rNow={item.rNow} show={item.timeStopWarning} />
       <span className="text-xs text-gray-500 dark:text-gray-400 truncate flex-1">{item.reason}</span>
       {isDone ? (
         <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
@@ -185,6 +208,7 @@ function HoldItem({ item, onClick, isFocused }: HoldItemProps) {
       <span className={cn('text-xs font-semibold tabular-nums', item.rNow >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400')}>
         {item.rNow >= 0 ? '+' : ''}{formatNumber(item.rNow, 2)}R
       </span>
+      <TimeStopBadge daysOpen={item.daysOpen} rNow={item.rNow} show={item.timeStopWarning} />
       <span className="text-xs text-gray-400 dark:text-gray-500 truncate flex-1">{item.reason}</span>
     </button>
   );

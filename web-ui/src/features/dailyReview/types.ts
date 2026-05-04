@@ -58,6 +58,8 @@ export interface DailyReviewPositionHoldAPI {
   stop_price: number;
   current_price: number;
   r_now: number;
+  days_open?: number;
+  time_stop_warning?: boolean;
   reason: string;
 }
 
@@ -69,6 +71,8 @@ export interface DailyReviewPositionUpdateAPI {
   stop_suggested: number;
   current_price: number;
   r_now: number;
+  days_open?: number;
+  time_stop_warning?: boolean;
   reason: string;
 }
 
@@ -79,6 +83,8 @@ export interface DailyReviewPositionCloseAPI {
   stop_price: number;
   current_price: number;
   r_now: number;
+  days_open?: number;
+  time_stop_warning?: boolean;
   reason: string;
 }
 
@@ -139,6 +145,8 @@ export interface DailyReviewPositionHold {
   stopPrice: number;
   currentPrice: number;
   rNow: number;
+  daysOpen: number;
+  timeStopWarning: boolean;
   reason: string;
 }
 
@@ -150,6 +158,8 @@ export interface DailyReviewPositionUpdate {
   stopSuggested: number;
   currentPrice: number;
   rNow: number;
+  daysOpen: number;
+  timeStopWarning: boolean;
   reason: string;
 }
 
@@ -160,6 +170,8 @@ export interface DailyReviewPositionClose {
   stopPrice: number;
   currentPrice: number;
   rNow: number;
+  daysOpen: number;
+  timeStopWarning: boolean;
   reason: string;
 }
 
@@ -273,6 +285,8 @@ export function transformPositionHold(api: DailyReviewPositionHoldAPI): DailyRev
     stopPrice: api.stop_price,
     currentPrice: api.current_price,
     rNow: api.r_now,
+    daysOpen: api.days_open ?? 0,
+    timeStopWarning: api.time_stop_warning ?? false,
     reason: api.reason,
   };
 }
@@ -286,6 +300,8 @@ export function transformPositionUpdate(api: DailyReviewPositionUpdateAPI): Dail
     stopSuggested: api.stop_suggested,
     currentPrice: api.current_price,
     rNow: api.r_now,
+    daysOpen: api.days_open ?? 0,
+    timeStopWarning: api.time_stop_warning ?? false,
     reason: api.reason,
   };
 }
@@ -298,6 +314,8 @@ export function transformPositionClose(api: DailyReviewPositionCloseAPI): DailyR
     stopPrice: api.stop_price,
     currentPrice: api.current_price,
     rNow: api.r_now,
+    daysOpen: api.days_open ?? 0,
+    timeStopWarning: api.time_stop_warning ?? false,
     reason: api.reason,
   };
 }

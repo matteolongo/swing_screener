@@ -1711,6 +1711,8 @@ export const messagesEn = {
         trailSma: 'Trail SMA',
         smaBuffer: 'SMA Buffer',
         maxHoldingDays: 'Max Holding Days',
+        timeStopDays: 'Time Stop Days',
+        timeStopMinR: 'Time Stop Min R',
         takeProfitR: 'Take Profit (R)',
         commission: 'Commission',
         minHistory: 'Min History',
@@ -2033,6 +2035,10 @@ export const messagesEn = {
       performance: 'Performance',
       review: 'Weekly Review',
     },
+    positions: {
+      timeStopBadge: '{{days}}d / {{r}}R',
+      timeStopWarning: 'Stale trade: consider closing or documenting a reason to hold.',
+    },
   },
   pendingOrdersTab: {
     title: 'Pending Orders',
@@ -2091,6 +2097,8 @@ export const messagesEn = {
       loading: "Loading today's review...",
       closeAction: 'Close →',
       updateAction: 'Update →',
+      timeStopBadge: '{{days}}d / {{r}}R',
+      timeStopWarning: 'Stale trade: consider closing or documenting a reason to hold.',
     },
     keyboard: {
       hint: 'j/k navigate · Enter select',

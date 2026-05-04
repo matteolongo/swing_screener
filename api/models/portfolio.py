@@ -109,6 +109,8 @@ class StopSuggestionManageConfig(BaseModel):
     trail_sma: int = Field(default=20, gt=0)
     sma_buffer_pct: float = Field(default=0.005, ge=0)
     max_holding_days: int = Field(default=20, gt=0)
+    time_stop_days: int = Field(default=15, gt=0)
+    time_stop_min_r: float = Field(default=0.5, ge=0)
 
 
 class StopSuggestionComputeRequest(BaseModel):
@@ -282,6 +284,11 @@ class PositionWithMetrics(Position):
     current_value: float = Field(..., description="Current market value (shares × current_price)")
     per_share_risk: float = Field(..., description="Risk per share in dollars")
     total_risk: float = Field(..., description="Total position risk (per_share_risk × shares)")
+    days_open: int = Field(default=0, description="Calendar days since entry date")
+    time_stop_warning: bool = Field(
+        default=False,
+        description="True when an open trade is stale and below the configured R threshold",
+    )
 
 
 class PositionsWithMetricsResponse(BaseModel):

@@ -53,6 +53,8 @@ interface PositionWithMetricsApiResponse extends PositionApiResponse {
   per_share_risk: number;
   total_risk: number;
   fees_eur: number;
+  days_open?: number;
+  time_stop_warning?: boolean;
 }
 
 interface PortfolioSummaryApiResponse {
@@ -108,6 +110,8 @@ export interface PositionWithMetrics extends Position {
   perShareRisk: number;
   totalRisk: number;
   feesEur: number;
+  daysOpen: number;
+  timeStopWarning: boolean;
 }
 
 export interface PortfolioSummary {
@@ -414,6 +418,8 @@ export async function fetchPositionStopSuggestion(positionId: string): Promise<P
           trail_sma: strategy.manage.trailSma,
           sma_buffer_pct: strategy.manage.smaBufferPct,
           max_holding_days: strategy.manage.maxHoldingDays,
+          time_stop_days: strategy.manage.timeStopDays,
+          time_stop_min_r: strategy.manage.timeStopMinR,
         },
       }),
     });
@@ -532,6 +538,8 @@ function transformPositionWithMetrics(data: PositionWithMetricsApiResponse): Pos
     perShareRisk: data.per_share_risk,
     totalRisk: data.total_risk,
     feesEur: data.fees_eur ?? 0,
+    daysOpen: data.days_open ?? 0,
+    timeStopWarning: data.time_stop_warning ?? false,
   };
 }
 

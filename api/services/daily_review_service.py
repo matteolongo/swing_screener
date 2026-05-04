@@ -95,7 +95,12 @@ class DailyReviewService:
         add_on_candidates = [_to_daily_candidate(c) for c in candidates if c.same_symbol is not None and c.same_symbol.mode == "ADD_ON"]
         
         # 2. Analyze all open positions
-        positions_response = self.portfolio.list_positions(status="open")
+        active_manage = self._active_manage_cfg_payload()
+        positions_response = self.portfolio.list_positions(
+            status="open",
+            time_stop_days=int(active_manage.get("time_stop_days", 15)),
+            time_stop_min_r=float(active_manage.get("time_stop_min_r", 0.5)),
+        )
         positions = positions_response.positions
         
         positions_hold: list[DailyReviewPositionHold] = []
@@ -121,6 +126,7 @@ class DailyReviewService:
                         stop_price=pos.stop_price,
                         current_price=pos.current_price or pos.entry_price,
                         r_now=0.0,
+                        **self._time_stop_payload_from_position(pos, 0.0, active_manage),
                         reason=f"Stop suggestion unavailable: {reason}",
                     )
                 )
@@ -138,6 +144,7 @@ class DailyReviewService:
                         stop_price=pos.stop_price,
                         current_price=pos.current_price or pos.entry_price,
                         r_now=0.0,
+                        **self._time_stop_payload_from_position(pos, 0.0, active_manage),
                         reason=f"Stop suggestion unavailable: {exc}",
                     )
                 )
@@ -153,6 +160,7 @@ class DailyReviewService:
                         stop_price=pos.stop_price,
                         current_price=suggestion.last,
                         r_now=suggestion.r_now,
+                        **self._time_stop_payload_from_position(pos, suggestion.r_now, active_manage),
                         reason=suggestion.reason,
                     )
                 )
@@ -167,6 +175,7 @@ class DailyReviewService:
                         stop_suggested=suggestion.stop_suggested,
                         current_price=suggestion.last,
                         r_now=suggestion.r_now,
+                        **self._time_stop_payload_from_position(pos, suggestion.r_now, active_manage),
                         reason=suggestion.reason,
                     )
                 )
@@ -180,6 +189,7 @@ class DailyReviewService:
                         stop_price=pos.stop_price,
                         current_price=suggestion.last,
                         r_now=suggestion.r_now,
+                        **self._time_stop_payload_from_position(pos, suggestion.r_now, active_manage),
                         reason=suggestion.reason,
                     )
                 )
@@ -209,6 +219,45 @@ class DailyReviewService:
         
         return review
 
+    def _active_manage_cfg_payload(self) -> dict:
+        strategy_repo = getattr(self.screener, "_strategy_repo", None)
+        if strategy_repo is None:
+            return {}
+        try:
+            strategy = strategy_repo.get_active_strategy()
+        except Exception:
+            logger.exception("Unable to resolve active strategy manage config for daily review")
+            return {}
+        manage = strategy.get("manage", {}) if isinstance(strategy, dict) else {}
+        return manage if isinstance(manage, dict) else {}
+
+    @staticmethod
+    def _time_stop_payload(position: dict, r_now: float, manage_payload: dict) -> dict:
+        try:
+            entry_dt = date.fromisoformat(str(position.get("entry_date") or ""))
+            days_open = max((date.today() - entry_dt).days, 0)
+        except ValueError:
+            days_open = 0
+        time_stop_days = int(manage_payload.get("time_stop_days", 15))
+        time_stop_min_r = float(manage_payload.get("time_stop_min_r", 0.5))
+        return {
+            "days_open": days_open,
+            "time_stop_warning": (
+                position.get("status") == "open"
+                and days_open >= time_stop_days
+                and r_now < time_stop_min_r
+            ),
+        }
+
+    def _time_stop_payload_from_position(self, position, r_now: float, manage_payload: dict) -> dict:
+        days_open = getattr(position, "days_open", None)
+        time_stop_warning = getattr(position, "time_stop_warning", None)
+        if days_open is not None and time_stop_warning is not None:
+            return {"days_open": int(days_open), "time_stop_warning": bool(time_stop_warning)}
+        model_dump = getattr(position, "model_dump", None)
+        payload = model_dump() if callable(model_dump) else dict(position)
+        return self._time_stop_payload(payload, r_now, manage_payload)
+
     @staticmethod
     def _manage_cfg_payload_from_strategy(strategy: dict) -> dict:
         manage = strategy.get("manage", {}) if isinstance(strategy, dict) else {}
@@ -218,6 +267,8 @@ class DailyReviewService:
             trail_after_R=float(manage.get("trail_after_r", 2.0)),
             sma_buffer_pct=float(manage.get("sma_buffer_pct", 0.005)),
             max_holding_days=int(manage.get("max_holding_days", 20)),
+            time_stop_days=int(manage.get("time_stop_days", 15)),
+            time_stop_min_r=float(manage.get("time_stop_min_r", 0.5)),
         )
         return {
             "breakeven_at_r": cfg.breakeven_at_R,
@@ -225,6 +276,8 @@ class DailyReviewService:
             "trail_sma": cfg.trail_sma,
             "sma_buffer_pct": cfg.sma_buffer_pct,
             "max_holding_days": cfg.max_holding_days,
+            "time_stop_days": cfg.time_stop_days,
+            "time_stop_min_r": cfg.time_stop_min_r,
         }
 
     def compute_daily_review_from_state(
@@ -314,6 +367,7 @@ class DailyReviewService:
                         stop_price=float(pos.get("stop_price", 0.0)),
                         current_price=float(pos.get("current_price") or pos.get("entry_price") or 0.0),
                         r_now=0.0,
+                        **self._time_stop_payload(pos, 0.0, manage_payload),
                         reason=f"Stop suggestion unavailable: {reason}",
                     )
                 )
@@ -331,6 +385,7 @@ class DailyReviewService:
                         stop_price=float(pos.get("stop_price", 0.0)),
                         current_price=float(pos.get("current_price") or pos.get("entry_price") or 0.0),
                         r_now=0.0,
+                        **self._time_stop_payload(pos, 0.0, manage_payload),
                         reason=f"Stop suggestion unavailable: {exc}",
                     )
                 )
@@ -345,6 +400,7 @@ class DailyReviewService:
                         stop_price=suggestion.stop_old,
                         current_price=suggestion.last,
                         r_now=suggestion.r_now,
+                        **self._time_stop_payload(pos, suggestion.r_now, manage_payload),
                         reason=suggestion.reason,
                     )
                 )
@@ -358,6 +414,7 @@ class DailyReviewService:
                         stop_suggested=suggestion.stop_suggested,
                         current_price=suggestion.last,
                         r_now=suggestion.r_now,
+                        **self._time_stop_payload(pos, suggestion.r_now, manage_payload),
                         reason=suggestion.reason,
                     )
                 )
@@ -370,6 +427,7 @@ class DailyReviewService:
                         stop_price=suggestion.stop_old,
                         current_price=suggestion.last,
                         r_now=suggestion.r_now,
+                        **self._time_stop_payload(pos, suggestion.r_now, manage_payload),
                         reason=suggestion.reason,
                     )
                 )

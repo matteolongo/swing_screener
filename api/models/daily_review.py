@@ -48,6 +48,8 @@ class DailyReviewPositionHold(BaseModel):
     stop_price: float
     current_price: float
     r_now: float
+    days_open: int = 0
+    time_stop_warning: bool = False
     reason: str = Field(..., description="Why no action is needed")
 
 
@@ -60,6 +62,8 @@ class DailyReviewPositionUpdate(BaseModel):
     stop_suggested: float
     current_price: float
     r_now: float
+    days_open: int = 0
+    time_stop_warning: bool = False
     reason: str = Field(..., description="Why stop should be updated")
 
 
@@ -71,6 +75,8 @@ class DailyReviewPositionClose(BaseModel):
     stop_price: float
     current_price: float
     r_now: float
+    days_open: int = 0
+    time_stop_warning: bool = False
     reason: str = Field(..., description="Why position should be closed")
 
 

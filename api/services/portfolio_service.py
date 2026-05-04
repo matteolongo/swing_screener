@@ -168,6 +168,8 @@ def _manage_cfg_from_app() -> ManageStateConfig:
         trail_after_R=manage.trail_after_r,
         sma_buffer_pct=manage.sma_buffer_pct,
         max_holding_days=manage.max_holding_days,
+        time_stop_days=manage.time_stop_days,
+        time_stop_min_r=manage.time_stop_min_r,
     )
 
 
@@ -316,6 +318,9 @@ class PortfolioService:
         position: dict,
         current_prices: dict[str, float],
         eurusd_rate: float,
+        *,
+        time_stop_days: int | None = None,
+        time_stop_min_r: float | None = None,
     ) -> PositionWithMetrics:
         state_position = _to_state_position(position)
         ticker = state_position.ticker.upper()
@@ -332,19 +337,46 @@ class PortfolioService:
         if state_position.status == "open" and live_price is not None:
             payload["current_price"] = live_price
 
+        days_open = self._days_open(state_position.entry_date)
+        r_now = calculate_r_now(state_position, current_price_for_metrics)
+        manage_defaults = ManageStateConfig()
+        stale_days = int(time_stop_days or manage_defaults.time_stop_days)
+        min_progress_r = float(time_stop_min_r if time_stop_min_r is not None else manage_defaults.time_stop_min_r)
+        time_stop_warning = (
+            state_position.status == "open"
+            and days_open >= stale_days
+            and r_now < min_progress_r
+        )
+
         return PositionWithMetrics(
             **payload,
             pnl=pnl,
             fees_eur=entry_fee_eur,
             pnl_percent=pnl_percent,
-            r_now=calculate_r_now(state_position, current_price_for_metrics),
+            r_now=r_now,
             entry_value=entry_value,
             current_value=calculate_current_position_value(current_price_for_metrics, state_position.shares),
             per_share_risk=per_share_risk,
             total_risk=per_share_risk * state_position.shares,
+            days_open=days_open,
+            time_stop_warning=time_stop_warning,
         )
 
-    def list_positions(self, status: Optional[str] = None) -> PositionsWithMetricsResponse:
+    @staticmethod
+    def _days_open(entry_date: str) -> int:
+        try:
+            entry_dt = dt.date.fromisoformat(str(entry_date))
+        except ValueError:
+            return 0
+        return max((dt.date.today() - entry_dt).days, 0)
+
+    def list_positions(
+        self,
+        status: Optional[str] = None,
+        *,
+        time_stop_days: int | None = None,
+        time_stop_min_r: float | None = None,
+    ) -> PositionsWithMetricsResponse:
         positions, asof = self._positions_repo.list_positions(status=status)
         current_prices = self._attach_live_prices(positions)
         has_usd_positions = any(
@@ -354,7 +386,13 @@ class PortfolioService:
         eurusd_rate = self._eurusd_rate() if has_usd_positions else 1.0
 
         positions_with_metrics = [
-            self._build_position_with_metrics(position, current_prices, eurusd_rate)
+            self._build_position_with_metrics(
+                position,
+                current_prices,
+                eurusd_rate,
+                time_stop_days=time_stop_days,
+                time_stop_min_r=time_stop_min_r,
+            )
             for position in positions
         ]
         return PositionsWithMetricsResponse(positions=positions_with_metrics, asof=asof)
@@ -937,6 +975,8 @@ class PortfolioService:
             trail_after_R=float(payload.get("trail_after_r", 2.0)),
             sma_buffer_pct=float(payload.get("sma_buffer_pct", 0.005)),
             max_holding_days=int(payload.get("max_holding_days", 20)),
+            time_stop_days=int(payload.get("time_stop_days", 15)),
+            time_stop_min_r=float(payload.get("time_stop_min_r", 0.5)),
         )
 
     def _suggest_position_stop_from_dict(
