@@ -258,6 +258,108 @@ class PortfolioService:
         prices, _ = _last_close_map(ohlcv)
         return prices
 
+    def _fetch_ohlcv_for_tickers(self, tickers: list[str]) -> "pd.DataFrame":
+        """Fetch OHLCV DataFrame for given tickers (testable seam)."""
+        if not tickers:
+            return pd.DataFrame()
+        start_date = get_default_history_start()
+        end_date = get_today_str()
+        return self._provider.fetch_ohlcv(tickers, start_date=start_date, end_date=end_date)
+
+    def compute_watchlist_pipeline(self, items: list) -> "WatchlistPipelineResponse":
+        """Enrich watchlist items with current price, signal, trigger, and sparkline."""
+        import math
+        from api.models.watchlist import WatchlistPipelineItem, WatchlistPipelineResponse
+        from swing_screener.selection.entries import build_signal_board, EntrySignalConfig
+
+        if not items:
+            return WatchlistPipelineResponse(items=[])
+
+        tickers = [item.ticker for item in items]
+        watch_price_map = {item.ticker: item.watch_price for item in items}
+
+        try:
+            ohlcv = self._fetch_ohlcv_for_tickers(tickers)
+        except Exception:
+            logger.exception("Failed to fetch OHLCV for watchlist pipeline")
+            return WatchlistPipelineResponse(items=[
+                WatchlistPipelineItem(ticker=t, watch_price=watch_price_map.get(t))
+                for t in tickers
+            ])
+
+        cfg = EntrySignalConfig()
+        board = build_signal_board(ohlcv, tickers, cfg)
+        ma_col = f"ma{cfg.pullback_ma}_level"
+
+        # Build Close matrix for sparklines
+        close_matrix = None
+        try:
+            if isinstance(ohlcv.columns, pd.MultiIndex):
+                level0 = ohlcv.columns.get_level_values(0)
+                for cand in ("Close", "close", "CLOSE"):
+                    if cand in level0:
+                        close_matrix = ohlcv[cand]
+                        break
+        except Exception:
+            pass
+
+        def _valid(v):
+            return v is not None and not (isinstance(v, float) and math.isnan(v))
+
+        pipeline_items = []
+        for ticker in tickers:
+            current_price = None
+            signal = None
+            trigger_price = None
+            trigger_type = None
+            distance_pct = None
+            sparkline = []
+
+            # board is indexed by ticker (build_signal_board uses set_index("ticker"))
+            row = None
+            if not board.empty and ticker in board.index:
+                row = board.loc[ticker]
+
+            if row is not None:
+                last = row["last"] if "last" in row.index else None
+                current_price = float(last) if _valid(last) else None
+                sig = row["signal"] if "signal" in row.index else None
+                signal = str(sig) if sig and not (isinstance(sig, float) and math.isnan(sig)) else "none"
+
+                brk_lvl = row["breakout_level"] if "breakout_level" in row.index else None
+                ma_lvl = row[ma_col] if ma_col in row.index else None
+
+                if signal in ("breakout", "both") and _valid(brk_lvl):
+                    trigger_price = float(brk_lvl)
+                    trigger_type = "breakout"
+                elif signal in ("pullback", "both") and _valid(ma_lvl):
+                    trigger_price = float(ma_lvl)
+                    trigger_type = "pullback"
+                elif _valid(brk_lvl):
+                    trigger_price = float(brk_lvl)
+                    trigger_type = "breakout"
+
+                if current_price and trigger_price and trigger_price > 0:
+                    distance_pct = round((current_price - trigger_price) / trigger_price * 100, 2)
+
+            if close_matrix is not None and ticker in close_matrix.columns:
+                closes = close_matrix[ticker].dropna().iloc[-5:]
+                sparkline = [round(float(v), 4) for v in closes]
+
+            pipeline_items.append(WatchlistPipelineItem(
+                ticker=ticker,
+                current_price=current_price,
+                watch_price=watch_price_map.get(ticker),
+                signal=signal,
+                trigger_price=trigger_price,
+                trigger_type=trigger_type,
+                distance_pct=distance_pct,
+                sparkline=sparkline,
+            ))
+
+        pipeline_items.sort(key=lambda x: (x.distance_pct is None, x.distance_pct or 0.0))
+        return WatchlistPipelineResponse(items=pipeline_items)
+
     @staticmethod
     def _fallback_price(position: dict) -> float:
         exit_price = position.get("exit_price")

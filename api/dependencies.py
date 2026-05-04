@@ -38,6 +38,7 @@ WATCHLIST_FILE = get_settings_manager().resolve_runtime_path("watchlist_file", D
 # Set to None to fall through to the module-level constants.
 _positions_path: Optional[Path] = None
 _orders_path: Optional[Path] = None
+_watchlist_path: Optional[Path] = None
 
 # Global singleton config repository (thread-safe)
 _config_repository: Optional[ConfigRepository] = None
@@ -52,7 +53,8 @@ def get_positions_path() -> Path:
 
 def get_watchlist_path() -> Path:
     """Get path to watchlist.json."""
-    return WATCHLIST_FILE
+    import api.dependencies as _self
+    return _self._watchlist_path if _self._watchlist_path is not None else WATCHLIST_FILE
 
 
 def get_positions_repo() -> PositionsRepository:

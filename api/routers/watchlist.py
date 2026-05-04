@@ -4,14 +4,16 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import ValidationError
 
-from api.dependencies import get_watchlist_repo, get_watchlist_service
+from api.dependencies import get_portfolio_service, get_watchlist_repo, get_watchlist_service
 from api.models.watchlist import (
     WatchItem,
     WatchItemUpsertRequest,
     WatchlistDeleteResponse,
+    WatchlistPipelineResponse,
     WatchlistResponse,
 )
 from api.repositories.watchlist_repo import WatchlistRepository
+from api.services.portfolio_service import PortfolioService
 from api.services.watchlist_service import WatchlistService
 
 router = APIRouter()
@@ -22,6 +24,16 @@ async def list_watchlist(
     service: WatchlistService = Depends(get_watchlist_service),
 ):
     return WatchlistResponse(items=service.list_items())
+
+
+@router.get("/pipeline", response_model=WatchlistPipelineResponse)
+async def get_watchlist_pipeline(
+    repo: WatchlistRepository = Depends(get_watchlist_repo),
+    service: PortfolioService = Depends(get_portfolio_service),
+):
+    """Return watchlist items enriched with current price and distance to trigger zone."""
+    items = repo.list_items()
+    return service.compute_watchlist_pipeline(items)
 
 
 @router.put("/{ticker}", response_model=WatchItem)

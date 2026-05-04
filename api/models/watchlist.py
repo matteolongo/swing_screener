@@ -92,3 +92,18 @@ class WatchlistResponse(BaseModel):
 
 class WatchlistDeleteResponse(BaseModel):
     deleted: bool
+
+
+class WatchlistPipelineItem(BaseModel):
+    ticker: str
+    current_price: Optional[float] = None
+    watch_price: Optional[float] = None
+    signal: Optional[str] = None
+    trigger_price: Optional[float] = None
+    trigger_type: Optional[str] = None
+    distance_pct: Optional[float] = None
+    sparkline: list[float] = Field(default_factory=list)
+
+
+class WatchlistPipelineResponse(BaseModel):
+    items: list[WatchlistPipelineItem] = Field(default_factory=list)
