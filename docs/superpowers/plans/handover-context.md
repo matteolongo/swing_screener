@@ -30,8 +30,8 @@ Validation already run during implementation:
 - Feature 1: backend trade tagging test, frontend typecheck, focused modal/journal tests, frontend suite during the feature work.
 - Feature 2: focused `EdgeBreakdownTable` test and frontend suite during the feature work.
 - Feature 3: `pytest tests/api/test_account_equity.py -v`, `pytest -q`, `cd web-ui && npm run typecheck`, `cd web-ui && npx vitest run`.
-- Feature 4: `pytest tests/api/test_earnings_proximity.py -v`, `pytest -q`, `cd web-ui && npm run typecheck`, `cd web-ui && npx vitest run`.
-- Feature 5: `pytest tests/api/test_concentration.py -v`, `pytest -q`, `cd web-ui && npm run typecheck`, `cd web-ui && npx vitest run`.
+- Feature 4: `pytest tests/api/test_earnings_proximity.py -v` including cache-hit coverage, `pytest -q`, `cd web-ui && npm run typecheck`, `cd web-ui && npx vitest run`.
+- Feature 5: `pytest tests/api/test_concentration.py -v`, focused concentration/order review frontend tests, `pytest -q`, `cd web-ui && npm run typecheck`, `cd web-ui && npx vitest run`.
 
 ## What this app is
 

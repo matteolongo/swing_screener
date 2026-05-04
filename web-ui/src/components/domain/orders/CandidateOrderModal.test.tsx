@@ -3,6 +3,7 @@ import { screen } from '@testing-library/react';
 import { renderWithProviders } from '@/test/utils';
 import userEvent from '@testing-library/user-event';
 import CandidateOrderModal from '@/components/domain/orders/CandidateOrderModal';
+import { t } from '@/i18n/t';
 
 const { createOrderMock } = vi.hoisted(() => ({
   createOrderMock: vi.fn(),
@@ -10,6 +11,34 @@ const { createOrderMock } = vi.hoisted(() => ({
 
 vi.mock('@/features/portfolio/api', () => ({
   createOrder: createOrderMock,
+  fetchPortfolioSummary: () =>
+    Promise.resolve({
+      totalPositions: 2,
+      totalValue: 0,
+      totalCostBasis: 0,
+      totalPnl: 0,
+      totalPnlPercent: 0,
+      openRisk: 50,
+      openRiskPercent: 0.1,
+      accountSize: 50000,
+      availableCapital: 50000,
+      largestPositionValue: 0,
+      largestPositionTicker: '',
+      bestPerformerTicker: '',
+      bestPerformerPnlPct: 0,
+      worstPerformerTicker: '',
+      worstPerformerPnlPct: 0,
+      avgRNow: 0,
+      positionsProfitable: 0,
+      positionsLosing: 0,
+      winRate: 0,
+      concentration: [
+        { country: 'NL', riskAmount: 25, riskPct: 50, positionCount: 1, warning: false },
+        { country: 'US', riskAmount: 25, riskPct: 50, positionCount: 1, warning: false },
+      ],
+      realizedPnl: 0,
+      effectiveAccountSize: 50000,
+    }),
 }));
 
 const risk = {
@@ -271,5 +300,35 @@ describe('CandidateOrderModal', () => {
 
     await user.click(screen.getByRole('tab', { name: 'Decision' }));
     expect((screen.getByLabelText('Notes') as HTMLTextAreaElement).value).toBe('Adjusted note');
+  });
+
+  it('shows a soft concentration warning when an order pushes country risk over threshold', async () => {
+    renderWithProviders(
+      <CandidateOrderModal
+        candidate={{
+          ticker: 'SBMO.AS',
+          entry: 10,
+          stop: 9,
+          shares: 30,
+          recommendation: {
+            ...recommendedRecommendation,
+            risk: {
+              ...recommendedRecommendation.risk,
+              entry: 10,
+              stop: 9,
+              shares: 30,
+            },
+          },
+        }}
+        risk={risk}
+        defaultNotes="From daily review"
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+    );
+
+    expect(
+      await screen.findByText(t('concentrationWarning.orderMessage', { country: 'NL', currentPct: '50', projectedPct: '69' })),
+    ).toBeInTheDocument();
   });
 });

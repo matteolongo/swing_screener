@@ -5,7 +5,7 @@
 
 **Goal:** Show the user when their open risk is over-concentrated in a single country/exchange, so they don't stack correlated bets unknowingly.
 
-**Architecture:** Country is derived from ticker suffix (`.AS` = NL, `.PA` = FR, `.DE` = DE, `.MC` = ES, `.MI` = IT, `.ST` = SE, no suffix = US). Concentration is `sum(initial_risk for positions in group) / total_open_risk * 100`. Added as a new field on `PortfolioSummary`. Frontend shows a concentration row on the portfolio summary; order creation modal warns if new order would push a group over 60%.
+**Architecture:** Country is derived from ticker suffix (`.AS` = NL, `.PA` = FR, `.DE` = DE, `.MC` = ES, `.MI` = IT, `.ST` = SE, no suffix = US). Concentration is `sum(open risk for positions in group) / total_open_risk * 100`. Added as a new field on `PortfolioSummary` using `risk_amount`, `risk_pct`, `position_count`, and `warning`. Frontend shows a concentration row on the portfolio summary; order creation surfaces warn if a new order would push a group over 60%.
 
 **Tech Stack:** Python backend (pure calculation, no new data source), React 18/TypeScript frontend, config for threshold
 
@@ -22,11 +22,13 @@
 - Backend `PortfolioSummary` now includes `concentration` groups sorted by open risk share.
 - Country/exchange grouping is derived from ticker suffixes and uses the configured `max_concentration_pct` threshold.
 - Book > Positions now shows a `ConcentrationBar` below the portfolio risk chips when open risk exists.
+- Shared order review surfaces now show a soft concentration warning when the proposed order pushes its country/exchange group above 60% of open risk.
 - Local persistence mode computes the same concentration summary shape as the API path.
 
 **Validation run:**
 - `pytest tests/api/test_concentration.py -v`
 - `cd web-ui && npx vitest run src/components/domain/portfolio/ConcentrationBar.test.tsx`
+- `cd web-ui && npx vitest run src/components/domain/orders/CandidateOrderModal.test.tsx src/components/domain/workspace/ActionPanel.test.tsx`
 - `cd web-ui && npm run typecheck`
 - `pytest -q`
 - `cd web-ui && npx vitest run`
@@ -44,6 +46,7 @@
 | `web-ui/src/features/portfolio/types.ts` | Add concentration types |
 | `web-ui/src/components/domain/portfolio/ConcentrationBar.tsx` | New — shows top concentration group |
 | `web-ui/src/components/domain/portfolio/ConcentrationBar.test.tsx` | Tests |
+| `web-ui/src/components/domain/orders/OrderReviewExperience.tsx` | Warn when projected order risk pushes concentration above threshold |
 | `web-ui/src/pages/Book.tsx` or portfolio summary area | Mount ConcentrationBar |
 
 ---

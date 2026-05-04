@@ -19,12 +19,13 @@ Branch stack:
 
 - Branch: `codex/earnings-warning`
 - Base: `codex/account-equity`
-- Head commit: `85abbefc`
+- Head commit: `59bbb0e4`
 
 Implemented commits:
 
 - `1f071301 feat: add earnings proximity endpoint`
 - `85abbefc feat: add earnings warning banner`
+- `59bbb0e4 test: cover earnings proximity cache hit`
 
 What changed:
 

@@ -2002,6 +2002,9 @@ export const messagesEn = {
     normalLabel: '{{country}} is {{pct}}% of open risk',
     detail: '{{count}} positions - {{amount}} risk',
   },
+  concentrationWarning: {
+    orderMessage: 'This order would move {{country}} concentration from {{currentPct}}% to {{projectedPct}}% of open risk.',
+  },
   portfolioHeader: {
     effectiveEquity: 'Equity',
     baseAccount: 'Base',
