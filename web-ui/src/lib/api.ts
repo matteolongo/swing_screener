@@ -48,6 +48,7 @@ export const API_ENDPOINTS = {
   // Watchlist
   watchlist: '/api/watchlist',
   watchlistItem: (ticker: string) => `/api/watchlist/${encodeURIComponent(ticker)}`,
+  watchlistPipeline: '/api/watchlist/pipeline',
 
   // Intelligence
   intelligenceConfig: '/api/intelligence/config',

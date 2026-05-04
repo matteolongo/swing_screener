@@ -8,10 +8,19 @@ import {
 import type {
   WatchItem,
   WatchItemAPI,
+  WatchlistPipelineItem,
+  WatchlistPipelineResponseAPI,
   WatchlistResponseAPI,
   WatchSymbolRequest,
 } from '@/features/watchlist/types';
-import { transformWatchItem } from '@/features/watchlist/types';
+import { transformWatchItem, transformWatchlistPipelineItem } from '@/features/watchlist/types';
+
+export async function fetchWatchlistPipeline(): Promise<WatchlistPipelineItem[]> {
+  const response = await fetch(apiUrl(API_ENDPOINTS.watchlistPipeline));
+  if (!response.ok) return [];
+  const data = (await response.json()) as WatchlistPipelineResponseAPI;
+  return (data.items ?? []).map(transformWatchlistPipelineItem);
+}
 
 export async function fetchWatchlist(): Promise<WatchItem[]> {
   if (isLocalPersistenceMode()) {

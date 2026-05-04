@@ -1,7 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { fetchWatchlist, unwatchSymbol, watchSymbol } from '@/features/watchlist/api';
+import { fetchWatchlist, fetchWatchlistPipeline, unwatchSymbol, watchSymbol } from '@/features/watchlist/api';
 import type { WatchSymbolRequest } from '@/features/watchlist/types';
 import { queryKeys } from '@/lib/queryKeys';
+
+export function useWatchlistPipeline() {
+  return useQuery({
+    queryKey: queryKeys.watchlistPipeline(),
+    queryFn: fetchWatchlistPipeline,
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
+  });
+}
 
 export function useWatchlist() {
   return useQuery({

@@ -39,6 +39,45 @@ export interface WatchSymbolRequest {
   source: string;
 }
 
+export interface WatchlistPipelineItemAPI {
+  ticker: string;
+  current_price: number | null;
+  watch_price: number | null;
+  signal: string | null;
+  trigger_price: number | null;
+  trigger_type: string | null;
+  distance_pct: number | null;
+  sparkline: number[];
+}
+
+export interface WatchlistPipelineResponseAPI {
+  items: WatchlistPipelineItemAPI[];
+}
+
+export interface WatchlistPipelineItem {
+  ticker: string;
+  currentPrice: number | null;
+  watchPrice: number | null;
+  signal: string | null;
+  triggerPrice: number | null;
+  triggerType: string | null;
+  distancePct: number | null;
+  sparkline: number[];
+}
+
+export function transformWatchlistPipelineItem(api: WatchlistPipelineItemAPI): WatchlistPipelineItem {
+  return {
+    ticker: api.ticker,
+    currentPrice: api.current_price,
+    watchPrice: api.watch_price,
+    signal: api.signal,
+    triggerPrice: api.trigger_price,
+    triggerType: api.trigger_type,
+    distancePct: api.distance_pct,
+    sparkline: api.sparkline,
+  };
+}
+
 export function transformWatchItem(api: WatchItemAPI): WatchItem {
   return {
     ticker: api.ticker.trim().toUpperCase(),

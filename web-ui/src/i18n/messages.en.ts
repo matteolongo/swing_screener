@@ -2102,6 +2102,23 @@ export const messagesEn = {
       search: 'Search',
     },
   },
+  watchlistPipeline: {
+    title: 'Watchlist Pipeline',
+    subtitle: 'Sorted by distance to trigger zone',
+    columns: {
+      ticker: 'Ticker',
+      signal: 'Signal',
+      currentPrice: 'Price',
+      triggerPrice: 'Trigger',
+      distance: 'Distance',
+      sparkline: 'Last 5',
+    },
+    empty: 'No watchlist items. Add symbols to your watchlist to see them here.',
+    nearingTrigger: '{{count}} watchlist names within 3% of trigger',
+    distanceAbove: '+{{pct}}% above trigger',
+    distanceBelow: '{{pct}}% below trigger',
+    signalNone: 'No signal',
+  },
   todayPage: {
     tabs: {
       today: 'Today',
