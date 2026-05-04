@@ -11,6 +11,7 @@ import pandas as pd
 from fastapi import HTTPException
 
 from api.models.portfolio import (
+    ConcentrationGroup,
     CreateOrderRequest,
     CreatePositionRequest,
     DegiroOrder,
@@ -93,6 +94,28 @@ def _parse_earnings_date(raw) -> Optional[dt.date]:
         return dt.date.fromisoformat(str(raw)[:10])
     except (TypeError, ValueError):
         return None
+
+
+def _country_from_ticker(ticker: str) -> str:
+    suffix_map = {
+        ".AS": "NL",
+        ".PA": "FR",
+        ".DE": "DE",
+        ".MC": "ES",
+        ".MI": "IT",
+        ".ST": "SE",
+        ".L": "UK",
+        ".BR": "BE",
+        ".LS": "PT",
+        ".HE": "FI",
+        ".CO": "DK",
+        ".OL": "NO",
+    }
+    upper = ticker.strip().upper()
+    for suffix, country in suffix_map.items():
+        if upper.endswith(suffix):
+            return country
+    return "US"
 
 
 def _to_iso(ts) -> Optional[str]:
@@ -420,6 +443,7 @@ class PortfolioService:
                 positions_profitable=0,
                 positions_losing=0,
                 win_rate=0.0,
+                concentration=[],
                 realized_pnl=realized_pnl,
                 effective_account_size=effective_account_size,
             )
@@ -472,6 +496,7 @@ class PortfolioService:
         open_risk_percent = (open_risk / effective_account_size * 100.0) if effective_account_size > 0 else 0.0
         avg_r_now = (total_r_now / r_count) if r_count > 0 else 0.0
         win_rate = (positions_profitable / len(positions) * 100.0) if positions else 0.0
+        concentration = self._concentration_groups(positions, open_risk)
 
         return PortfolioSummary(
             total_positions=len(positions),
@@ -494,9 +519,39 @@ class PortfolioService:
             positions_profitable=positions_profitable,
             positions_losing=positions_losing,
             win_rate=win_rate,
+            concentration=concentration,
             realized_pnl=realized_pnl,
             effective_account_size=effective_account_size,
         )
+
+    def _concentration_groups(
+        self,
+        positions: list[PositionWithMetrics],
+        open_risk: float,
+    ) -> list[ConcentrationGroup]:
+        country_risk: dict[str, float] = {}
+        country_count: dict[str, int] = {}
+        for position in positions:
+            if position.total_risk <= 0:
+                continue
+            country = _country_from_ticker(position.ticker)
+            country_risk[country] = country_risk.get(country, 0.0) + position.total_risk
+            country_count[country] = country_count.get(country, 0) + 1
+
+        threshold = float(getattr(ConfigRepository().get().risk, "max_concentration_pct", 60.0))
+        groups: list[ConcentrationGroup] = []
+        for country, risk_amount in sorted(country_risk.items(), key=lambda item: item[1], reverse=True):
+            risk_pct = (risk_amount / open_risk * 100.0) if open_risk > 0 else 0.0
+            groups.append(
+                ConcentrationGroup(
+                    country=country,
+                    risk_amount=risk_amount,
+                    risk_pct=risk_pct,
+                    position_count=country_count[country],
+                    warning=risk_pct >= threshold,
+                )
+            )
+        return groups
 
     def get_earnings_proximity(self, ticker: str) -> EarningsProximityResponse:
         normalized_ticker = ticker.strip().upper()

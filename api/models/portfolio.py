@@ -258,6 +258,14 @@ class EarningsProximityResponse(BaseModel):
     warning: bool = Field(default=False, description="True when earnings are within the warning window")
 
 
+class ConcentrationGroup(BaseModel):
+    country: str = Field(..., description="Derived country or market group")
+    risk_amount: float = Field(..., description="Open risk amount in this group")
+    risk_pct: float = Field(..., description="Share of total open risk as a percentage")
+    position_count: int = Field(..., description="Number of open positions in this group")
+    warning: bool = Field(..., description="True when concentration exceeds configured threshold")
+
+
 class PositionsResponse(BaseModel):
     positions: list[Position]
     asof: str
@@ -318,6 +326,7 @@ class PortfolioSummary(BaseModel):
     positions_profitable: int = Field(..., description="Number of positions in profit")
     positions_losing: int = Field(..., description="Number of positions at loss")
     win_rate: float = Field(..., description="Percentage of positions profitable")
+    concentration: list[ConcentrationGroup] = Field(default_factory=list)
     realized_pnl: float = Field(default=0.0, description="Total realized P&L from closed positions")
     effective_account_size: float = Field(
         default=0.0,

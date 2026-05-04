@@ -38,6 +38,14 @@ export interface LocalPositionWithMetrics extends Position {
   feesEur: number;
 }
 
+export interface LocalConcentrationGroup {
+  country: string;
+  riskAmount: number;
+  riskPct: number;
+  positionCount: number;
+  warning: boolean;
+}
+
 export interface LocalPortfolioSummary {
   totalPositions: number;
   totalValue: number;
@@ -58,6 +66,7 @@ export interface LocalPortfolioSummary {
   positionsProfitable: number;
   positionsLosing: number;
   winRate: number;
+  concentration: LocalConcentrationGroup[];
   realizedPnl: number;
   effectiveAccountSize: number;
 }
@@ -75,12 +84,58 @@ function normalizeTicker(value: string): string {
   return value.trim().toUpperCase();
 }
 
+function countryFromTicker(ticker: string): string {
+  const suffixMap: Record<string, string> = {
+    '.AS': 'NL',
+    '.PA': 'FR',
+    '.DE': 'DE',
+    '.MC': 'ES',
+    '.MI': 'IT',
+    '.ST': 'SE',
+    '.L': 'UK',
+    '.BR': 'BE',
+    '.LS': 'PT',
+    '.HE': 'FI',
+    '.CO': 'DK',
+    '.OL': 'NO',
+  };
+  const normalized = normalizeTicker(ticker);
+  for (const [suffix, country] of Object.entries(suffixMap)) {
+    if (normalized.endsWith(suffix)) return country;
+  }
+  return 'US';
+}
+
 function roundToCents(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
 function roundToFourDecimals(value: number): number {
   return Math.round((value + Number.EPSILON) * 10000) / 10000;
+}
+
+function concentrationGroups(positions: LocalPositionWithMetrics[], openRisk: number): LocalConcentrationGroup[] {
+  const countryRisk = new Map<string, number>();
+  const countryCount = new Map<string, number>();
+  for (const position of positions) {
+    if (position.totalRisk <= 0) continue;
+    const country = countryFromTicker(position.ticker);
+    countryRisk.set(country, (countryRisk.get(country) ?? 0) + position.totalRisk);
+    countryCount.set(country, (countryCount.get(country) ?? 0) + 1);
+  }
+
+  return Array.from(countryRisk.entries())
+    .sort((a, b) => b[1] - a[1])
+    .map(([country, riskAmount]) => {
+      const riskPct = openRisk > 0 ? (riskAmount / openRisk) * 100 : 0;
+      return {
+        country,
+        riskAmount,
+        riskPct,
+        positionCount: countryCount.get(country) ?? 0,
+        warning: riskPct >= 60,
+      };
+    });
 }
 
 function inferOrderKind(order: Pick<Order, 'orderKind' | 'orderType'>): LocalOrderKind | null {
@@ -505,6 +560,7 @@ export function portfolioSummaryLocal(): LocalPortfolioSummary {
       positionsProfitable: 0,
       positionsLosing: 0,
       winRate: 0,
+      concentration: [],
       realizedPnl,
       effectiveAccountSize,
     };
@@ -578,6 +634,7 @@ export function portfolioSummaryLocal(): LocalPortfolioSummary {
     positionsProfitable,
     positionsLosing,
     winRate: positions.length > 0 ? (positionsProfitable / positions.length) * 100 : 0,
+    concentration: concentrationGroups(positions, openRisk),
     realizedPnl,
     effectiveAccountSize,
   };

@@ -1996,6 +1996,12 @@ export const messagesEn = {
     portfolioHeat: 'Portfolio Heat',
     avgRNow: 'Avg R Now',
   },
+  concentrationBar: {
+    title: 'Concentration',
+    warningLabel: '{{country}} is {{pct}}% of open risk',
+    normalLabel: '{{country}} is {{pct}}% of open risk',
+    detail: '{{count}} positions - {{amount}} risk',
+  },
   portfolioHeader: {
     effectiveEquity: 'Equity',
     baseAccount: 'Base',

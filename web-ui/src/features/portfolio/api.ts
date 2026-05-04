@@ -75,8 +75,17 @@ interface PortfolioSummaryApiResponse {
   positions_profitable: number;
   positions_losing: number;
   win_rate: number;
+  concentration?: ConcentrationGroupApiResponse[];
   realized_pnl?: number;
   effective_account_size?: number;
+}
+
+interface ConcentrationGroupApiResponse {
+  country: string;
+  risk_amount: number;
+  risk_pct: number;
+  position_count: number;
+  warning: boolean;
 }
 
 export interface PositionMetrics {
@@ -121,8 +130,17 @@ export interface PortfolioSummary {
   positionsProfitable: number;
   positionsLosing: number;
   winRate: number;
+  concentration: ConcentrationGroup[];
   realizedPnl: number;
   effectiveAccountSize: number;
+}
+
+export interface ConcentrationGroup {
+  country: string;
+  riskAmount: number;
+  riskPct: number;
+  positionCount: number;
+  warning: boolean;
 }
 
 interface EarningsProximityApiResponse {
@@ -538,6 +556,13 @@ function transformPortfolioSummary(data: PortfolioSummaryApiResponse): Portfolio
     positionsProfitable: data.positions_profitable,
     positionsLosing: data.positions_losing,
     winRate: data.win_rate,
+    concentration: (data.concentration ?? []).map((group) => ({
+      country: group.country,
+      riskAmount: group.risk_amount,
+      riskPct: group.risk_pct,
+      positionCount: group.position_count,
+      warning: group.warning,
+    })),
     realizedPnl: data.realized_pnl ?? 0,
     effectiveAccountSize: data.effective_account_size ?? data.account_size,
   };
