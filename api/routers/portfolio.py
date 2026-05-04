@@ -26,6 +26,7 @@ from api.models.portfolio import (
     DegiroSyncPreviewResponse,
     DegiroApplyResponse,
     DegiroStatus,
+    EarningsProximityResponse,
 )
 from api.dependencies import get_config_repo, get_portfolio_service
 from api.dependencies import get_strategy_repo
@@ -138,6 +139,15 @@ async def get_portfolio_summary(
             pass
 
     return service.get_portfolio_summary(account_size=account_size, account_size_mode=account_size_mode)
+
+
+@router.get("/earnings-proximity/{ticker}", response_model=EarningsProximityResponse)
+async def get_earnings_proximity(
+    ticker: str,
+    service: PortfolioService = Depends(get_portfolio_service),
+):
+    """Check whether a ticker has earnings within the warning window."""
+    return service.get_earnings_proximity(ticker)
 
 
 # ===== Orders =====

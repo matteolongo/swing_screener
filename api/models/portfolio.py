@@ -251,6 +251,13 @@ class DegiroStatus(BaseModel):
     detail: str
 
 
+class EarningsProximityResponse(BaseModel):
+    ticker: str
+    next_earnings_date: Optional[str] = Field(default=None, description="Next earnings date as YYYY-MM-DD")
+    days_until: Optional[int] = Field(default=None, description="Calendar days until next earnings")
+    warning: bool = Field(default=False, description="True when earnings are within the warning window")
+
+
 class PositionsResponse(BaseModel):
     positions: list[Position]
     asof: str

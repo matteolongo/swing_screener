@@ -15,6 +15,7 @@ from api.models.portfolio import (
     CreatePositionRequest,
     DegiroOrder,
     DegiroOrdersResponse,
+    EarningsProximityResponse,
     FillOrderRequest,
     FillOrderResponse,
     FillFromDegiroResponse,
@@ -76,6 +77,22 @@ def _resolve_isin(ticker: str) -> Optional[str]:
 # Simple cache for EURUSD rate with 5-minute TTL
 _eurusd_cache: dict[str, tuple[float, float]] = {}  # {"eurusd": (rate, timestamp)}
 _CACHE_TTL_SECONDS = 300  # 5 minutes
+_earnings_cache: dict[str, tuple[str, EarningsProximityResponse]] = {}
+
+
+def _parse_earnings_date(raw) -> Optional[dt.date]:
+    if raw is None or pd.isna(raw):
+        return None
+    if isinstance(raw, pd.Timestamp):
+        raw = raw.to_pydatetime()
+    if isinstance(raw, dt.datetime):
+        return raw.date()
+    if isinstance(raw, dt.date):
+        return raw
+    try:
+        return dt.date.fromisoformat(str(raw)[:10])
+    except (TypeError, ValueError):
+        return None
 
 
 def _to_iso(ts) -> Optional[str]:
@@ -480,6 +497,47 @@ class PortfolioService:
             realized_pnl=realized_pnl,
             effective_account_size=effective_account_size,
         )
+
+    def get_earnings_proximity(self, ticker: str) -> EarningsProximityResponse:
+        normalized_ticker = ticker.strip().upper()
+        today = get_today_str()
+        cached = _earnings_cache.get(normalized_ticker)
+        if cached is not None:
+            cached_date, cached_response = cached
+            if cached_date == today:
+                return cached_response
+
+        try:
+            import yfinance
+
+            calendar = yfinance.Ticker(normalized_ticker).calendar or {}
+            earnings_dates = calendar.get("Earnings Date", [])
+            if not isinstance(earnings_dates, list):
+                earnings_dates = [earnings_dates]
+
+            today_dt = dt.date.fromisoformat(today)
+            upcoming = sorted(
+                parsed
+                for raw_date in earnings_dates
+                if (parsed := _parse_earnings_date(raw_date)) is not None and parsed >= today_dt
+            )
+            if not upcoming:
+                result = EarningsProximityResponse(ticker=normalized_ticker)
+            else:
+                next_date = upcoming[0]
+                days_until = (next_date - today_dt).days
+                result = EarningsProximityResponse(
+                    ticker=normalized_ticker,
+                    next_earnings_date=next_date.isoformat(),
+                    days_until=days_until,
+                    warning=days_until <= 10,
+                )
+        except Exception as exc:
+            logger.info("Failed to fetch earnings calendar for %s: %s", normalized_ticker, exc)
+            result = EarningsProximityResponse(ticker=normalized_ticker)
+
+        _earnings_cache[normalized_ticker] = (today, result)
+        return result
 
     def create_order(self, request: CreateOrderRequest) -> dict:
         """Create a pending entry order in orders.json."""
