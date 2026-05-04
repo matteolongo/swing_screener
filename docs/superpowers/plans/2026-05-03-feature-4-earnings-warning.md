@@ -11,6 +11,55 @@
 
 ---
 
+## Implementation status - 2026-05-04
+
+Status: implemented in draft PR https://github.com/matteolongo/swing_screener/pull/235.
+
+Branch stack:
+
+- Branch: `codex/earnings-warning`
+- Base: `codex/account-equity`
+- Head commit: `85abbefc`
+
+Implemented commits:
+
+- `1f071301 feat: add earnings proximity endpoint`
+- `85abbefc feat: add earnings warning banner`
+
+What changed:
+
+- Added `GET /api/portfolio/earnings-proximity/{ticker}`.
+- Added `EarningsProximityResponse` and `PortfolioService.get_earnings_proximity()`.
+- Fetches the next earnings date from `yfinance.Ticker(...).calendar`.
+- Caches earnings proximity responses in memory by ticker for the current calendar day.
+- Returns `warning: false` without blocking the workflow when earnings data cannot be fetched.
+- Added frontend endpoint mapping, `fetchEarningsProximity()`, and `useEarningsProximity()`.
+- Added `EarningsWarningBanner`.
+- Mounted the banner in the shared order review experience, so it appears in both the trade plan panel and candidate order modal.
+
+How to inspect in the UI:
+
+- Run the backend and frontend.
+- Open `http://localhost:5173/today`.
+- Select a screener candidate and open the order/trade plan surface.
+- If the selected ticker has earnings within 10 calendar days, an amber banner appears above the order review.
+- If earnings are unknown, farther away, or the provider fails, nothing is shown.
+
+Validation run:
+
+- `pytest tests/api/test_earnings_proximity.py -v`
+- `pytest -q`
+- `cd web-ui && npm run typecheck`
+- `cd web-ui && npx vitest run src/components/domain/screener/EarningsWarningBanner.test.tsx`
+- `cd web-ui && npx vitest run src/components/domain/orders/CandidateOrderModal.test.tsx src/components/domain/workspace/ActionPanel.test.tsx src/components/domain/screener/EarningsWarningBanner.test.tsx`
+- `cd web-ui && npx vitest run`
+
+Review notes:
+
+- Compare PR #235 against `codex/account-equity`.
+- The warning is informational only; order creation remains allowed.
+- The backend currently depends on Yahoo/yfinance calendar availability and intentionally degrades silently to avoid noisy false blockers.
+
 ## File map
 
 | File | Change |

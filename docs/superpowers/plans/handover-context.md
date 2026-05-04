@@ -12,7 +12,8 @@ The 2026-05-03 plan work is being shipped as sequential stacked PRs:
 |---|---|---|---|---|
 | Feature 1 - Trade tagging | `codex/trade-tagging` | `main` | https://github.com/matteolongo/swing_screener/pull/232 | Draft, implemented |
 | Feature 2 - Edge breakdown | `codex/edge-breakdown` | `codex/trade-tagging` | https://github.com/matteolongo/swing_screener/pull/233 | Draft, implemented |
-| Feature 3 - Account equity auto-update | `codex/account-equity` | `codex/edge-breakdown` | https://github.com/matteolongo/swing_screener/pull/234 | Draft, backend + UI implemented |
+| Feature 3 - Account equity auto-update | `codex/account-equity` | `codex/edge-breakdown` | https://github.com/matteolongo/swing_screener/pull/234 | Draft, implemented |
+| Feature 4 - Earnings proximity warning | `codex/earnings-warning` | `codex/account-equity` | https://github.com/matteolongo/swing_screener/pull/235 | Draft, implemented |
 
 Review agents should review the PRs in order. Each branch intentionally builds on the previous one, so diffs should be compared against the listed base branch, not always against `main`.
 
@@ -26,8 +27,7 @@ Validation already run during implementation:
 - Feature 1: backend trade tagging test, frontend typecheck, focused modal/journal tests, frontend suite during the feature work.
 - Feature 2: focused `EdgeBreakdownTable` test and frontend suite during the feature work.
 - Feature 3: `pytest tests/api/test_account_equity.py -v`, `pytest -q`, `cd web-ui && npm run typecheck`, `cd web-ui && npx vitest run`.
-
-Planning gap for upgrade: Feature 3 now exposes and displays effective equity, but the Settings UI toggle for switching base/equity mode is not yet implemented. The next planning pass should either add that as the next atomic task or explicitly defer it.
+- Feature 4: `pytest tests/api/test_earnings_proximity.py -v`, `pytest -q`, `cd web-ui && npm run typecheck`, `cd web-ui && npx vitest run`.
 
 ## What this app is
 

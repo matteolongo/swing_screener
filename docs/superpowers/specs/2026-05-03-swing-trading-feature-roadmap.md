@@ -16,6 +16,23 @@ Features are grouped into tiers. Ship all of Tier 1 before starting Tier 2.
 
 ---
 
+## Implementation status - 2026-05-04
+
+Tier 1 is being shipped as sequential stacked PRs:
+
+| # | Feature | Branch | Base | PR | Status |
+|---|---|---|---|---|---|
+| 1 | Trade tagging | `codex/trade-tagging` | `main` | https://github.com/matteolongo/swing_screener/pull/232 | Draft, implemented |
+| 2 | Performance breakdown | `codex/edge-breakdown` | `codex/trade-tagging` | https://github.com/matteolongo/swing_screener/pull/233 | Draft, implemented |
+| 3 | Account equity auto-update | `codex/account-equity` | `codex/edge-breakdown` | https://github.com/matteolongo/swing_screener/pull/234 | Draft, implemented |
+| 4 | Earnings warning | `codex/earnings-warning` | `codex/account-equity` | https://github.com/matteolongo/swing_screener/pull/235 | Draft, implemented |
+| 5 | Concentration warning | - | - | - | Plan exists, not implemented |
+| 6 | Time stop nudge | - | - | - | Plan exists, not implemented |
+
+Review stacked PRs in order and compare each PR against its listed base branch.
+
+---
+
 ## Tier 1 — Core feedback loop and risk hygiene
 *These features have the highest ratio of trading value to build effort. They make the existing workflow meaningfully safer and smarter.*
 
