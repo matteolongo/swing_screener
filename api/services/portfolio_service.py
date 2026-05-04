@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import datetime as dt
 import logging
+import math
 import uuid
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Optional
@@ -10,6 +11,7 @@ from typing import Optional
 import pandas as pd
 from fastapi import HTTPException
 
+from api.models.watchlist import WatchItem, WatchlistPipelineItem, WatchlistPipelineResponse
 from api.models.portfolio import (
     ConcentrationGroup,
     CreateOrderRequest,
@@ -49,6 +51,7 @@ from swing_screener.portfolio.metrics import (
     calculate_r_now,
     calculate_total_position_value,
 )
+from swing_screener.selection.entries import build_signal_board, EntrySignalConfig
 from swing_screener.utils.date_helpers import get_default_history_start
 
 try:
@@ -258,7 +261,7 @@ class PortfolioService:
         prices, _ = _last_close_map(ohlcv)
         return prices
 
-    def _fetch_ohlcv_for_tickers(self, tickers: list[str]) -> "pd.DataFrame":
+    def _fetch_ohlcv_for_tickers(self, tickers: list[str]) -> pd.DataFrame:
         """Fetch OHLCV DataFrame for given tickers (testable seam)."""
         if not tickers:
             return pd.DataFrame()
@@ -266,12 +269,8 @@ class PortfolioService:
         end_date = get_today_str()
         return self._provider.fetch_ohlcv(tickers, start_date=start_date, end_date=end_date)
 
-    def compute_watchlist_pipeline(self, items: list) -> "WatchlistPipelineResponse":
+    def compute_watchlist_pipeline(self, items: list[WatchItem]) -> WatchlistPipelineResponse:
         """Enrich watchlist items with current price, signal, trigger, and sparkline."""
-        import math
-        from api.models.watchlist import WatchlistPipelineItem, WatchlistPipelineResponse
-        from swing_screener.selection.entries import build_signal_board, EntrySignalConfig
-
         if not items:
             return WatchlistPipelineResponse(items=[])
 
@@ -301,7 +300,7 @@ class PortfolioService:
                         close_matrix = ohlcv[cand]
                         break
         except Exception:
-            pass
+            logger.debug("Could not extract close matrix for sparklines", exc_info=True)
 
         def _valid(v):
             return v is not None and not (isinstance(v, float) and math.isnan(v))
