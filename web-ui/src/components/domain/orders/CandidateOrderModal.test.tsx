@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import { renderWithProviders } from '@/test/utils';
 import userEvent from '@testing-library/user-event';
 import CandidateOrderModal from '@/components/domain/orders/CandidateOrderModal';
 
@@ -57,7 +58,7 @@ describe('CandidateOrderModal', () => {
   });
 
   it('disables create action for not recommended candidate', () => {
-    render(
+    renderWithProviders(
       <CandidateOrderModal
         candidate={{
           ticker: 'VALE',
@@ -107,7 +108,7 @@ describe('CandidateOrderModal', () => {
   });
 
   it('defaults to BUY_STOP when backend guidance suggests breakout stop entry', () => {
-    render(
+    renderWithProviders(
       <CandidateOrderModal
         candidate={{
           ticker: 'AAPL',
@@ -136,7 +137,7 @@ describe('CandidateOrderModal', () => {
   });
 
   it('shows pullback execution guidance when breakout signal is already passed and backend suggests BUY_LIMIT', () => {
-    render(
+    renderWithProviders(
       <CandidateOrderModal
         candidate={{
           ticker: 'AAPL',
@@ -165,7 +166,7 @@ describe('CandidateOrderModal', () => {
 
   it('requires override confirmation before submitting mismatch order type', async () => {
     const user = userEvent.setup();
-    render(
+    renderWithProviders(
       <CandidateOrderModal
         candidate={{
           ticker: 'AAPL',
@@ -197,7 +198,7 @@ describe('CandidateOrderModal', () => {
   });
 
   it('blocks BUY_STOP when trigger is not above current price', () => {
-    render(
+    renderWithProviders(
       <CandidateOrderModal
         candidate={{
           ticker: 'AAPL',
@@ -222,7 +223,7 @@ describe('CandidateOrderModal', () => {
   });
 
   it('renders fallback guidance when signal is missing', () => {
-    render(
+    renderWithProviders(
       <CandidateOrderModal
         candidate={{
           ticker: 'AAPL',
@@ -243,7 +244,7 @@ describe('CandidateOrderModal', () => {
 
   it('preserves entered values while moving between review sections', async () => {
     const user = userEvent.setup();
-    render(
+    renderWithProviders(
       <CandidateOrderModal
         candidate={{
           ticker: 'AAPL',

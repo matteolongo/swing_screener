@@ -125,6 +125,20 @@ export interface PortfolioSummary {
   effectiveAccountSize: number;
 }
 
+interface EarningsProximityApiResponse {
+  ticker: string;
+  next_earnings_date?: string | null;
+  days_until?: number | null;
+  warning: boolean;
+}
+
+export interface EarningsProximity {
+  ticker: string;
+  nextEarningsDate: string | null;
+  daysUntil: number | null;
+  warning: boolean;
+}
+
 export interface DegiroStatusApiResponse {
   installed: boolean;
   credentials_configured: boolean;
@@ -304,6 +318,26 @@ export async function fetchPortfolioSummary(): Promise<PortfolioSummary> {
   if (!response.ok) throw new Error('Failed to fetch portfolio summary');
   const data: PortfolioSummaryApiResponse = await response.json();
   return transformPortfolioSummary(data);
+}
+
+export async function fetchEarningsProximity(ticker: string): Promise<EarningsProximity> {
+  const normalizedTicker = ticker.trim().toUpperCase();
+  if (!normalizedTicker || isLocalPersistenceMode()) {
+    return { ticker: normalizedTicker, nextEarningsDate: null, daysUntil: null, warning: false };
+  }
+
+  const response = await fetch(apiUrl(API_ENDPOINTS.earningsProximity(normalizedTicker)));
+  if (!response.ok) {
+    return { ticker: normalizedTicker, nextEarningsDate: null, daysUntil: null, warning: false };
+  }
+
+  const data: EarningsProximityApiResponse = await response.json();
+  return {
+    ticker: data.ticker,
+    nextEarningsDate: data.next_earnings_date ?? null,
+    daysUntil: data.days_until ?? null,
+    warning: data.warning,
+  };
 }
 
 export async function updatePositionStop(

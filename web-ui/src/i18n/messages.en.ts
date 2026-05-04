@@ -2002,6 +2002,11 @@ export const messagesEn = {
     realizedPnl: 'Realized P&L',
     equityModeHint: 'Account size + realized P&L from closed trades',
   },
+  earningsWarning: {
+    message: 'Earnings in {{days}} days - gap risk is elevated',
+    messageToday: 'Earnings today - gap risk is elevated',
+    messageSingular: 'Earnings tomorrow - gap risk is elevated',
+  },
   dailyReviewBanner: {
     newCandidates: '{{n}} new candidates',
     addOns: '{{n}} add-ons',

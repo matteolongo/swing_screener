@@ -3,6 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import Button from '@/components/common/Button';
 import RecommendationBadge from '@/components/domain/recommendation/RecommendationBadge';
+import EarningsWarningBanner from '@/components/domain/screener/EarningsWarningBanner';
 import SetupExecutionGuide from '@/components/domain/orders/SetupExecutionGuide';
 import DegiroOrderConfigGuide from '@/components/domain/orders/DegiroOrderConfigGuide';
 import { useOrderRiskMetrics } from '@/components/domain/orders/useOrderRiskMetrics';
@@ -277,6 +278,8 @@ export default function OrderReviewExperience({
 
   return (
     <div className="space-y-4">
+      <EarningsWarningBanner ticker={normalizedTicker} />
+
       <section
         className="rounded-lg border border-gray-200 bg-slate-50/70 p-3 dark:border-gray-700 dark:bg-gray-900/50"
         aria-label={t('order.review.carouselLabel')}

@@ -10,6 +10,7 @@ import {
   fetchPositionStopSuggestion,
   fetchDegiroStatus,
   fetchDegiroOrderHistory,
+  fetchEarningsProximity,
   fillOrder,
   fillOrderFromDegiro,
   syncDegiroOrders,
@@ -119,6 +120,17 @@ export function usePortfolioSummary() {
     queryKey: queryKeys.portfolioSummary(),
     queryFn: fetchPortfolioSummary,
     staleTime: 30_000,
+  });
+}
+
+export function useEarningsProximity(ticker?: string) {
+  const normalizedTicker = ticker?.trim().toUpperCase();
+  return useQuery({
+    queryKey: ['earnings-proximity', normalizedTicker] as const,
+    queryFn: () => fetchEarningsProximity(normalizedTicker as string),
+    enabled: Boolean(normalizedTicker),
+    staleTime: 8 * 60 * 60 * 1000,
+    retry: false,
   });
 }
 
