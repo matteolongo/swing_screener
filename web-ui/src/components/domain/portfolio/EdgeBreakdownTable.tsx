@@ -16,7 +16,7 @@ const MIN_TRADES_FOR_DISPLAY = 5;
 
 function finalR(position: Position): number | null {
   if (!position.initialRisk || position.initialRisk <= 0 || position.exitPrice == null) return null;
-  return (position.exitPrice - position.entryPrice) / position.initialRisk;
+  return (position.exitPrice - position.entryPrice) * position.shares / position.initialRisk;
 }
 
 function tagLabel(tag: string): string {
