@@ -34,8 +34,9 @@ What changed:
 - Caches earnings proximity responses in memory by ticker for the current calendar day.
 - Returns `warning: false` without blocking the workflow when earnings data cannot be fetched.
 - Added frontend endpoint mapping, `fetchEarningsProximity()`, and `useEarningsProximity()`.
-- Added `EarningsWarningBanner`.
+- Added `EarningsWarningBanner` using the implemented `earningsWarning.message`, `earningsWarning.messageToday`, and `earningsWarning.messageSingular` i18n keys.
 - Mounted the banner in the shared order review experience, so it appears in both the trade plan panel and candidate order modal.
+- Added cache-hit test coverage proving `yfinance.Ticker` is called only once for the same ticker on the same day.
 
 How to inspect in the UI:
 
