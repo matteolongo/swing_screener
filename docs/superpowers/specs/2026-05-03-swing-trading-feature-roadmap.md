@@ -26,7 +26,7 @@ Tier 1 is being shipped as sequential stacked PRs:
 | 2 | Performance breakdown | `codex/edge-breakdown` | `codex/trade-tagging` | https://github.com/matteolongo/swing_screener/pull/233 | Draft, implemented |
 | 3 | Account equity auto-update | `codex/account-equity` | `codex/edge-breakdown` | https://github.com/matteolongo/swing_screener/pull/234 | Draft, implemented |
 | 4 | Earnings warning | `codex/earnings-warning` | `codex/account-equity` | https://github.com/matteolongo/swing_screener/pull/235 | Draft, implemented |
-| 5 | Concentration warning | - | - | - | Plan exists, not implemented |
+| 5 | Concentration warning | `codex/concentration-warning` | `codex/earnings-warning` | https://github.com/matteolongo/swing_screener/pull/236 | Draft, implemented |
 | 6 | Time stop nudge | - | - | - | Plan exists, not implemented |
 
 Review stacked PRs in order and compare each PR against its listed base branch.

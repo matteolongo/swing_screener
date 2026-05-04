@@ -14,6 +14,7 @@ The 2026-05-03 plan work is being shipped as sequential stacked PRs:
 | Feature 2 - Edge breakdown | `codex/edge-breakdown` | `codex/trade-tagging` | https://github.com/matteolongo/swing_screener/pull/233 | Draft, implemented |
 | Feature 3 - Account equity auto-update | `codex/account-equity` | `codex/edge-breakdown` | https://github.com/matteolongo/swing_screener/pull/234 | Draft, implemented |
 | Feature 4 - Earnings proximity warning | `codex/earnings-warning` | `codex/account-equity` | https://github.com/matteolongo/swing_screener/pull/235 | Draft, implemented |
+| Feature 5 - Concentration warning | `codex/concentration-warning` | `codex/earnings-warning` | https://github.com/matteolongo/swing_screener/pull/236 | Draft, implemented |
 
 Review agents should review the PRs in order. Each branch intentionally builds on the previous one, so diffs should be compared against the listed base branch, not always against `main`.
 
@@ -21,6 +22,8 @@ Known local dirty files that were not part of this work and should not be includ
 
 - `config/intelligence.yaml`
 - `data/screener_history.json`
+- `docs/superpowers/plans/2026-05-03-feature-3-account-equity-auto-update.md`
+- `docs/superpowers/plans/2026-05-03-feature-6-time-stop-nudge.md`
 
 Validation already run during implementation:
 
@@ -28,6 +31,7 @@ Validation already run during implementation:
 - Feature 2: focused `EdgeBreakdownTable` test and frontend suite during the feature work.
 - Feature 3: `pytest tests/api/test_account_equity.py -v`, `pytest -q`, `cd web-ui && npm run typecheck`, `cd web-ui && npx vitest run`.
 - Feature 4: `pytest tests/api/test_earnings_proximity.py -v`, `pytest -q`, `cd web-ui && npm run typecheck`, `cd web-ui && npx vitest run`.
+- Feature 5: `pytest tests/api/test_concentration.py -v`, `pytest -q`, `cd web-ui && npm run typecheck`, `cd web-ui && npx vitest run`.
 
 ## What this app is
 

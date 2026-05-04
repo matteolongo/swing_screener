@@ -11,6 +11,28 @@
 
 ---
 
+## Implementation Status - 2026-05-04
+
+**Branch:** `codex/concentration-warning`  
+**Base:** `codex/earnings-warning`  
+**PR:** https://github.com/matteolongo/swing_screener/pull/236  
+**Status:** Draft PR opened, implemented.
+
+**Implemented:**
+- Backend `PortfolioSummary` now includes `concentration` groups sorted by open risk share.
+- Country/exchange grouping is derived from ticker suffixes and uses the configured `max_concentration_pct` threshold.
+- Book > Positions now shows a `ConcentrationBar` below the portfolio risk chips when open risk exists.
+- Local persistence mode computes the same concentration summary shape as the API path.
+
+**Validation run:**
+- `pytest tests/api/test_concentration.py -v`
+- `cd web-ui && npx vitest run src/components/domain/portfolio/ConcentrationBar.test.tsx`
+- `cd web-ui && npm run typecheck`
+- `pytest -q`
+- `cd web-ui && npx vitest run`
+
+---
+
 ## File map
 
 | File | Change |
@@ -34,7 +56,7 @@
 - Modify: `config/defaults.yaml`
 - Test: `tests/api/test_concentration.py`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/api/test_concentration.py`:
 
@@ -96,14 +118,14 @@ def test_concentration_warning_flag_when_above_threshold(client_with_positions):
     assert groups["NL"]["warning"] is True  # 75% > 60% threshold
 ```
 
-- [ ] **Step 2: Run to confirm failure**
+- [x] **Step 2: Run to confirm failure**
 
 ```bash
 pytest tests/api/test_concentration.py -v
 ```
 Expected: FAIL — `concentration` not in response
 
-- [ ] **Step 3: Add models to `api/models/portfolio.py`**
+- [x] **Step 3: Add models to `api/models/portfolio.py`**
 
 After `EarningsProximityResponse`, add:
 ```python
@@ -118,7 +140,7 @@ class ConcentrationGroup(BaseModel):
 concentration: list[ConcentrationGroup] = Field(default_factory=list)
 ```
 
-- [ ] **Step 4: Add country derivation helper and concentration computation**
+- [x] **Step 4: Add country derivation helper and concentration computation**
 
 In `api/services/portfolio_service.py`, add module-level function:
 ```python
@@ -166,21 +188,21 @@ Add `concentration=concentration_groups` to the `PortfolioSummary(...)` return.
 
 Import `ConcentrationGroup` at top of service file.
 
-- [ ] **Step 5: Add config to `config/defaults.yaml`**
+- [x] **Step 5: Add config to `config/defaults.yaml`**
 
 Under `risk:`, add:
 ```yaml
 max_concentration_pct: 60
 ```
 
-- [ ] **Step 6: Run tests**
+- [x] **Step 6: Run tests**
 
 ```bash
 pytest tests/api/test_concentration.py -v
 ```
 Expected: 3 PASSED
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add api/models/portfolio.py api/services/portfolio_service.py config/defaults.yaml tests/api/test_concentration.py
@@ -197,7 +219,7 @@ git commit -m "feat: add portfolio concentration by country to portfolio summary
 - Create: `web-ui/src/components/domain/portfolio/ConcentrationBar.tsx`
 - Create: `web-ui/src/components/domain/portfolio/ConcentrationBar.test.tsx`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `web-ui/src/components/domain/portfolio/ConcentrationBar.test.tsx`:
 
@@ -244,14 +266,14 @@ describe('ConcentrationBar', () => {
 });
 ```
 
-- [ ] **Step 2: Run to confirm failure**
+- [x] **Step 2: Run to confirm failure**
 
 ```bash
 cd web-ui && npx vitest run src/components/domain/portfolio/ConcentrationBar.test.tsx
 ```
 Expected: FAIL
 
-- [ ] **Step 3: Add i18n strings**
+- [x] **Step 3: Add i18n strings**
 
 ```typescript
 // In messages.en.ts:
@@ -261,7 +283,7 @@ concentrationBar: {
 },
 ```
 
-- [ ] **Step 4: Add types to frontend portfolio types**
+- [x] **Step 4: Add types to frontend portfolio types**
 
 In `web-ui/src/features/portfolio/types.ts` or wherever `PortfolioSummary` frontend type lives:
 ```typescript
@@ -287,7 +309,7 @@ concentration: (api.concentration ?? []).map(g => ({
 })),
 ```
 
-- [ ] **Step 5: Implement ConcentrationBar**
+- [x] **Step 5: Implement ConcentrationBar**
 
 Create `web-ui/src/components/domain/portfolio/ConcentrationBar.tsx`:
 
@@ -324,14 +346,14 @@ export default function ConcentrationBar({ groups }: Props) {
 }
 ```
 
-- [ ] **Step 6: Run tests**
+- [x] **Step 6: Run tests**
 
 ```bash
 cd web-ui && npx vitest run src/components/domain/portfolio/ConcentrationBar.test.tsx
 ```
 Expected: 4 PASSED
 
-- [ ] **Step 7: Mount on portfolio summary**
+- [x] **Step 7: Mount on portfolio summary**
 
 Find where `PortfolioSummary` data is displayed (grep for `portfolioSummary` or `usePortfolioSummary` in `web-ui/src/components/domain/portfolio/`). Add:
 ```tsx
@@ -340,13 +362,13 @@ import ConcentrationBar from './ConcentrationBar';
 <ConcentrationBar groups={summary.concentration} />
 ```
 
-- [ ] **Step 8: Run full suite**
+- [x] **Step 8: Run full suite**
 
 ```bash
 pytest -q && cd web-ui && npx vitest run
 ```
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add api/ config/ tests/ web-ui/src/
