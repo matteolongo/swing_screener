@@ -8,6 +8,8 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
 
+from api.models.screener import PriceHistoryPoint
+
 
 class WatchItemUpsertRequest(BaseModel):
     watch_price: Optional[float] = Field(default=None, description="Price captured when watch is created.")
@@ -75,10 +77,18 @@ class WatchItem(BaseModel):
         return WatchItemUpsertRequest._normalize_source(value)
 
 
+class WatchlistItemView(WatchItem):
+    current_price: Optional[float] = None
+    last_bar: Optional[str] = None
+    signal: Optional[str] = None
+    signal_trigger_price: Optional[float] = None
+    distance_to_trigger_pct: Optional[float] = None
+    price_history: list[PriceHistoryPoint] = Field(default_factory=list)
+
+
 class WatchlistResponse(BaseModel):
-    items: list[WatchItem] = Field(default_factory=list)
+    items: list[WatchlistItemView] = Field(default_factory=list)
 
 
 class WatchlistDeleteResponse(BaseModel):
     deleted: bool
-

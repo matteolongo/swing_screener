@@ -8,6 +8,7 @@ import {
   type DecisionSummaryAPI,
   type SameSymbolCandidateContext,
 } from '@/features/screener/types';
+import { type WatchItem, type WatchItemAPI, transformWatchItem } from '@/features/watchlist/types';
 
 // API response types (snake_case from backend)
 export interface DailyReviewCandidateAPI {
@@ -95,10 +96,12 @@ export interface DailyReviewSummaryAPI {
   close_positions: number;
   new_candidates: number;
   add_on_candidates: number;
+  watchlist_near_trigger?: number;
   review_date: string;
 }
 
 export interface DailyReviewAPI {
+  watchlist_near_trigger?: WatchItemAPI[];
   new_candidates: DailyReviewCandidateAPI[];
   positions_add_on_candidates: DailyReviewCandidateAPI[];
   positions_hold: DailyReviewPositionHoldAPI[];
@@ -182,10 +185,12 @@ export interface DailyReviewSummary {
   closePositions: number;
   newCandidates: number;
   addOnCandidates: number;
+  watchlistNearTrigger: number;
   reviewDate: string;
 }
 
 export interface DailyReview {
+  watchlistNearTrigger: WatchItem[];
   newCandidates: DailyReviewCandidate[];
   positionsAddOnCandidates: DailyReviewCandidate[];
   positionsHold: DailyReviewPositionHold[];
@@ -328,12 +333,14 @@ export function transformSummary(api: DailyReviewSummaryAPI): DailyReviewSummary
     closePositions: api.close_positions,
     newCandidates: api.new_candidates,
     addOnCandidates: api.add_on_candidates,
+    watchlistNearTrigger: api.watchlist_near_trigger ?? 0,
     reviewDate: api.review_date,
   };
 }
 
 export function transformDailyReview(api: DailyReviewAPI): DailyReview {
   return {
+    watchlistNearTrigger: (api.watchlist_near_trigger ?? []).map(transformWatchItem),
     newCandidates: api.new_candidates.map(transformCandidate),
     positionsAddOnCandidates: (api.positions_add_on_candidates ?? []).map(transformCandidate),
     positionsHold: api.positions_hold.map(transformPositionHold),
