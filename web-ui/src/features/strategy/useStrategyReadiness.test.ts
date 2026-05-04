@@ -47,6 +47,7 @@ const createMockStrategy = (overrides?: Partial<Strategy>): Strategy => ({
     rrTarget: 2.0,
     commissionPct: 0.001,
     maxFeeRiskPct: 0.2,
+    accountSizeMode: 'equity',
     regimeEnabled: false,
     regimeTrendSma: 200,
     regimeTrendMultiplier: 0.5,

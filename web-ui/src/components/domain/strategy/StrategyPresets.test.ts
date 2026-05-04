@@ -52,6 +52,7 @@ function buildStrategy(): Strategy {
       rrTarget: 2.0,
       commissionPct: 0,
       maxFeeRiskPct: 0.2,
+      accountSizeMode: 'equity',
       regimeEnabled: false,
       regimeTrendSma: 200,
       regimeTrendMultiplier: 0.5,

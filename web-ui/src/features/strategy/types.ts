@@ -55,6 +55,7 @@ export interface StrategyRisk {
   rrTarget: number;
   commissionPct: number;
   maxFeeRiskPct: number;
+  accountSizeMode: 'base' | 'equity';
   regimeEnabled: boolean;
   regimeTrendSma: number;
   regimeTrendMultiplier: number;
@@ -188,6 +189,7 @@ export interface StrategyRiskAPI {
   rr_target?: number;
   commission_pct?: number;
   max_fee_risk_pct?: number;
+  account_size_mode?: 'base' | 'equity';
   regime_enabled?: boolean;
   regime_trend_sma?: number;
   regime_trend_multiplier?: number;
@@ -348,6 +350,7 @@ export function transformStrategy(api: StrategyAPI): Strategy {
       rrTarget: api.risk.rr_target ?? 2.0,
       commissionPct: api.risk.commission_pct ?? 0.0,
       maxFeeRiskPct: api.risk.max_fee_risk_pct ?? 0.2,
+      accountSizeMode: api.risk.account_size_mode ?? 'equity',
       regimeEnabled: api.risk.regime_enabled ?? false,
       regimeTrendSma: api.risk.regime_trend_sma ?? 200,
       regimeTrendMultiplier: api.risk.regime_trend_multiplier ?? 0.5,
@@ -461,6 +464,7 @@ export function toStrategyUpdateRequest(strategy: Strategy): StrategyUpdateReque
       rr_target: strategy.risk.rrTarget,
       commission_pct: strategy.risk.commissionPct,
       max_fee_risk_pct: strategy.risk.maxFeeRiskPct,
+      account_size_mode: strategy.risk.accountSizeMode,
       regime_enabled: strategy.risk.regimeEnabled,
       regime_trend_sma: strategy.risk.regimeTrendSma,
       regime_trend_multiplier: strategy.risk.regimeTrendMultiplier,
