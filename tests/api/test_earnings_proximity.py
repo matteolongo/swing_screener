@@ -60,3 +60,18 @@ def test_yfinance_failure_returns_no_warning():
     assert data["warning"] is False
     assert data["next_earnings_date"] is None
     assert data["days_until"] is None
+
+
+def test_earnings_result_cached_per_ticker_for_today():
+    near_date = (date.today() + timedelta(days=5)).isoformat()
+    mock_ticker = MagicMock()
+    mock_ticker.calendar = {"Earnings Date": [near_date]}
+
+    with patch("yfinance.Ticker", return_value=mock_ticker) as ticker_cls:
+        first_response = client.get("/api/portfolio/earnings-proximity/AAPL")
+        second_response = client.get("/api/portfolio/earnings-proximity/AAPL")
+
+    assert first_response.status_code == 200
+    assert second_response.status_code == 200
+    assert first_response.json() == second_response.json()
+    ticker_cls.assert_called_once_with("AAPL")
