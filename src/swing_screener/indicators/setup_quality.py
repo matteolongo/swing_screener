@@ -131,7 +131,7 @@ def compute_setup_quality(
                 avg_vol_20 = float(v.iloc[-21:-1].mean())
                 row["breakout_volume_confirmation"] = bool(today_vol > 1.5 * avg_vol_20)
                 if avg_vol_20 > 0:
-                    row["volume_ratio"] = round(today_vol / avg_vol_20, 2)
+                    row["volume_ratio"] = today_vol / avg_vol_20
 
         rows.append(row)
 

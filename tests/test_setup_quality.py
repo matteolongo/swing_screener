@@ -188,25 +188,20 @@ def test_volume_ratio_computed_when_volume_available() -> None:
 
 
 def test_volume_ratio_absent_when_no_volume() -> None:
-    """When volume column is absent, volume_ratio must not appear (or be NaN only)."""
+    """When volume column is absent, volume_ratio must not be in the result."""
     close = list(np.linspace(100.0, 110.0, 30))
     ohlcv = _make_ohlcv(close, ticker="NOVOL2")  # no volume
 
     result = compute_setup_quality(ohlcv, ["NOVOL2"])
 
     assert "NOVOL2" in result.index
-    if "volume_ratio" in result.columns:
-        assert math.isnan(result.loc["NOVOL2", "volume_ratio"])
+    assert "volume_ratio" not in result.columns, \
+        "volume_ratio should not appear when volume data is absent"
 
 
 def test_volume_ratio_absent_when_insufficient_volume_bars() -> None:
-    """Fewer than 21 volume bars → volume_ratio must be absent or NaN.
-
-    We need at least 14 bars of close for the ticker to appear in the result at
-    all (the function's minimum-history guard), but fewer than 21 volume bars
-    so the volume block is skipped.
-    """
-    n = 15  # 15 bars → passes close minimum (14), but only 15 < 21 volume bars
+    """Fewer than 21 volume bars → volume_ratio must not be in the result."""
+    n = 15  # only 15 bars total, < 21 required
     close = list(np.linspace(100.0, 110.0, n))
     volume = [1_000.0] * n
 
@@ -214,6 +209,5 @@ def test_volume_ratio_absent_when_insufficient_volume_bars() -> None:
     result = compute_setup_quality(ohlcv, ["SHORT"])
 
     assert "SHORT" in result.index
-    if "volume_ratio" in result.columns:
-        assert math.isnan(result.loc["SHORT", "volume_ratio"]), \
-            "volume_ratio must be NaN when fewer than 21 bars available"
+    assert "volume_ratio" not in result.columns, \
+        "volume_ratio should not appear when fewer than 21 volume bars available"
