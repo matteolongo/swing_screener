@@ -2,6 +2,7 @@ import { TrendingUp, PanelLeft, PanelLeftClose } from 'lucide-react';
 import { useI18n } from '@/i18n/I18nProvider';
 import Button from '@/components/common/Button';
 import StrategyCapitalRiskSummary from '@/components/domain/strategy/StrategyCapitalRiskSummary';
+import { usePortfolioSummary } from '@/features/portfolio/hooks';
 import {
   useActiveStrategyQuery,
   useSetActiveStrategyMutation,
@@ -19,6 +20,7 @@ export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: 
 
   const strategiesQuery = useStrategiesQuery();
   const activeStrategyQuery = useActiveStrategyQuery();
+  const portfolioSummaryQuery = usePortfolioSummary();
   const setActiveMutation = useSetActiveStrategyMutation();
   const strategies = strategiesQuery.data ?? [];
   const activeId = activeStrategyQuery.data?.id ?? '';
@@ -77,7 +79,15 @@ export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: 
 
       <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 shrink-0">
         <div className="hidden xl:block">
-          <StrategyCapitalRiskSummary strategy={activeStrategyQuery.data} variant="compact" className="max-w-[38rem]" />
+          <StrategyCapitalRiskSummary
+            strategy={activeStrategyQuery.data}
+            equitySnapshot={portfolioSummaryQuery.data ? {
+              effectiveAccountSize: portfolioSummaryQuery.data.effectiveAccountSize,
+              realizedPnl: portfolioSummaryQuery.data.realizedPnl,
+            } : undefined}
+            variant="compact"
+            className="max-w-[42rem]"
+          />
         </div>
         <span className="hidden md:block">{dateStr}</span>
         <span className="font-mono">{timeStr}</span>

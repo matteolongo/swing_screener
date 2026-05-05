@@ -501,6 +501,30 @@ export default function StrategyAdvancedSettingsCard({
                   step={1}
                   min={1}
                 />
+                <NumberInput
+                  label={t('strategyPage.advanced.fields.timeStopDays')}
+                  value={draft.manage.timeStopDays}
+                  onChange={(value) =>
+                    setDraft({
+                      ...draft,
+                      manage: { ...draft.manage, timeStopDays: value },
+                    })
+                  }
+                  step={1}
+                  min={1}
+                />
+                <NumberInput
+                  label={t('strategyPage.advanced.fields.timeStopMinR')}
+                  value={draft.manage.timeStopMinR}
+                  onChange={(value) =>
+                    setDraft({
+                      ...draft,
+                      manage: { ...draft.manage, timeStopMinR: value },
+                    })
+                  }
+                  step={0.1}
+                  min={0}
+                />
                 <TextInput
                   label={t('strategyPage.advanced.fields.benchmark')}
                   value={draft.manage.benchmark}

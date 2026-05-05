@@ -27,6 +27,8 @@ export interface ManageConfig {
   trailSma: number;
   smaBufferPct: number;
   maxHoldingDays: number;
+  timeStopDays: number;
+  timeStopMinR: number;
 }
 
 export interface AppConfig {
@@ -66,6 +68,8 @@ export interface ManageConfigAPI {
   trail_sma: number;
   sma_buffer_pct: number;
   max_holding_days: number;
+  time_stop_days?: number;
+  time_stop_min_r?: number;
 }
 
 export interface AppConfigAPI {
@@ -105,6 +109,8 @@ export function transformAppConfig(api: AppConfigAPI): AppConfig {
       trailSma: api.manage.trail_sma,
       smaBufferPct: api.manage.sma_buffer_pct,
       maxHoldingDays: api.manage.max_holding_days,
+      timeStopDays: api.manage.time_stop_days ?? 15,
+      timeStopMinR: api.manage.time_stop_min_r ?? 0.5,
     },
     positionsFile: api.positions_file,
     ordersFile: api.orders_file,
@@ -140,6 +146,8 @@ export function toAppConfigAPI(config: AppConfig): AppConfigAPI {
       trail_sma: config.manage.trailSma,
       sma_buffer_pct: config.manage.smaBufferPct,
       max_holding_days: config.manage.maxHoldingDays,
+      time_stop_days: config.manage.timeStopDays,
+      time_stop_min_r: config.manage.timeStopMinR,
     },
     positions_file: config.positionsFile,
     orders_file: config.ordersFile,

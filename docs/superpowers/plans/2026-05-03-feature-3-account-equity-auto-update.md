@@ -11,6 +11,54 @@
 
 ---
 
+## Implementation status - 2026-05-03
+
+Status: backend and display UI implemented in draft PR https://github.com/matteolongo/swing_screener/pull/234.
+
+Branch stack:
+
+- Branch: `codex/account-equity`
+- Base: `codex/edge-breakdown`
+- Head commit: `afeb7773`
+
+Implemented commits:
+
+- `ebcf54b9 feat: add realized P&L and effective account size to portfolio summary`
+- `afeb7773 feat: show effective account equity in portfolio UI`
+
+What changed:
+
+- Backend `PortfolioSummary` now includes `realized_pnl` and `effective_account_size`.
+- Realized P&L is computed from closed positions.
+- `account_size_mode` config support was added for base vs equity mode.
+- Open risk percentage and available capital use effective equity when equity mode is active.
+- Frontend portfolio summary types now expose `realizedPnl` and `effectiveAccountSize`.
+- The top header risk summary shows effective `Equity` and `Realized P&L`.
+- Book -> Positions shows `Equity` and `Realized P&L` chips, and portfolio heat uses effective equity.
+- Local persistence mirrors the same fields so frontend tests and local mode stay consistent.
+
+How to inspect in the UI:
+
+- Run the backend and frontend.
+- Open `http://localhost:5173/book`.
+- On wide screens, inspect the top-right header risk summary for `Equity` and `Realized P&L`.
+- In `Book -> Positions`, inspect the risk strip for the `Equity` and `Realized P&L` chips.
+- If there are no closed trades with realized P&L, effective equity will equal the base account and realized P&L will be zero.
+
+Validation run:
+
+- `pytest tests/api/test_account_equity.py -v`
+- `pytest -q`
+- `cd web-ui && npm run typecheck`
+- `cd web-ui && npx vitest run`
+
+Review notes:
+
+- Compare PR #234 against `codex/edge-breakdown`.
+- The Settings UI toggle mentioned in the original architecture is not implemented yet.
+- The next plan upgrade should add a dedicated atomic task for the Settings toggle, including persistence rules, i18n, and tests.
+- Review whether realized P&L should include all known transaction costs. The implemented logic subtracts exit fees where available.
+
 ## File map
 
 | File | Change |
