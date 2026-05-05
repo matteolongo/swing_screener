@@ -70,6 +70,8 @@ export interface StrategyManage {
   trailSma: number;
   smaBufferPct: number;
   maxHoldingDays: number;
+  timeStopDays: number;
+  timeStopMinR: number;
   benchmark: string;
 }
 
@@ -204,6 +206,8 @@ export interface StrategyManageAPI {
   trail_sma: number;
   sma_buffer_pct: number;
   max_holding_days: number;
+  time_stop_days?: number;
+  time_stop_min_r?: number;
   benchmark: string;
 }
 
@@ -364,6 +368,8 @@ export function transformStrategy(api: StrategyAPI): Strategy {
       trailSma: api.manage.trail_sma,
       smaBufferPct: api.manage.sma_buffer_pct,
       maxHoldingDays: api.manage.max_holding_days,
+      timeStopDays: api.manage.time_stop_days ?? 15,
+      timeStopMinR: api.manage.time_stop_min_r ?? 0.5,
       benchmark: api.manage.benchmark,
     },
     marketIntelligence: {
@@ -478,6 +484,8 @@ export function toStrategyUpdateRequest(strategy: Strategy): StrategyUpdateReque
       trail_sma: strategy.manage.trailSma,
       sma_buffer_pct: strategy.manage.smaBufferPct,
       max_holding_days: strategy.manage.maxHoldingDays,
+      time_stop_days: strategy.manage.timeStopDays,
+      time_stop_min_r: strategy.manage.timeStopMinR,
       benchmark: strategy.manage.benchmark,
     },
     market_intelligence: {

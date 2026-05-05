@@ -39,6 +39,12 @@ vi.mock('@/features/portfolio/hooks', () => ({
   useOpenPositions: () => ({
     data: openPositionsMock(),
   }),
+  usePortfolioSummary: () => ({
+    data: {
+      openRisk: 0,
+      concentration: [],
+    },
+  }),
 }));
 
 function setCandidate(overrides: Record<string, unknown> = {}) {

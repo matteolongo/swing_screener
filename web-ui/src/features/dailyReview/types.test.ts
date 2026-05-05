@@ -4,6 +4,19 @@ import { transformDailyReview, type DailyReviewAPI } from '@/features/dailyRevie
 describe('transformDailyReview', () => {
   it('maps candidate close and execution guidance fields', () => {
     const apiPayload: DailyReviewAPI = {
+      watchlist_near_trigger: [
+        {
+          ticker: 'ASML',
+          watched_at: '2026-05-01T10:00:00Z',
+          watch_price: 660,
+          currency: 'EUR',
+          source: 'screener',
+          current_price: 671,
+          signal_trigger_price: 680,
+          distance_to_trigger_pct: -1.3,
+          price_history: [],
+        },
+      ],
       new_candidates: [
         {
           ticker: 'AAPL',
@@ -67,11 +80,14 @@ describe('transformDailyReview', () => {
         close_positions: 0,
         new_candidates: 1,
         add_on_candidates: 0,
+        watchlist_near_trigger: 1,
         review_date: '2026-03-02',
       },
     };
 
     const result = transformDailyReview(apiPayload);
+    expect(result.watchlistNearTrigger[0].ticker).toBe('ASML');
+    expect(result.summary.watchlistNearTrigger).toBe(1);
     expect(result.newCandidates[0].close).toBe(100);
     expect(result.newCandidates[0].currency).toBe('USD');
     expect(result.newCandidates[0].score).toBe(83.2);

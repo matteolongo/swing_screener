@@ -14,6 +14,12 @@ class RiskConfig(BaseModel):
     k_atr: float = Field(gt=0, description="ATR multiplier for stops")
     min_rr: float = Field(gt=0, default=2.0, description="Minimum reward-to-risk required")
     max_fee_risk_pct: float = Field(ge=0, le=1, default=0.2, description="Max fees as % of planned risk")
+    max_concentration_pct: float = Field(
+        ge=0,
+        le=100,
+        default=60.0,
+        description="Warn when one country/exchange exceeds this share of open risk",
+    )
     account_size_mode: Literal["base", "equity"] = Field(
         default="equity",
         description="Whether risk calculations use base account size or equity adjusted for realized P&L",
@@ -39,6 +45,8 @@ class ManageConfig(BaseModel):
     trail_sma: int = Field(gt=0, description="SMA to trail under")
     sma_buffer_pct: float = Field(ge=0, description="Buffer below SMA (e.g., 0.005 = 0.5%)")
     max_holding_days: int = Field(gt=0, description="Max days to hold position")
+    time_stop_days: int = Field(default=15, gt=0, description="Days open before stale-trade nudge appears")
+    time_stop_min_r: float = Field(default=0.5, ge=0, description="Minimum R that suppresses stale-trade nudge")
 
 
 class AppConfig(BaseModel):

@@ -43,9 +43,25 @@ router = APIRouter()
 async def get_positions(
     status: Optional[str] = None,
     service: PortfolioService = Depends(get_portfolio_service),
+    config_repo: ConfigRepository = Depends(get_config_repo),
+    strategy_repo: StrategyRepository = Depends(get_strategy_repo),
 ):
     """Get all positions, optionally filtered by status."""
-    return service.list_positions(status=status)
+    manage = config_repo.get().manage
+    time_stop_days = int(manage.time_stop_days)
+    time_stop_min_r = float(manage.time_stop_min_r)
+    try:
+        active_strategy = strategy_repo.get_active_strategy()
+        strategy_manage = active_strategy.get("manage", {})
+        time_stop_days = int(strategy_manage.get("time_stop_days", time_stop_days))
+        time_stop_min_r = float(strategy_manage.get("time_stop_min_r", time_stop_min_r))
+    except (TypeError, ValueError):
+        pass
+    return service.list_positions(
+        status=status,
+        time_stop_days=time_stop_days,
+        time_stop_min_r=time_stop_min_r,
+    )
 
 
 @router.post("/positions", response_model=Position)

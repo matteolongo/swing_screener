@@ -22,6 +22,7 @@ from api.services.intelligence_service import IntelligenceService
 from api.services.portfolio_service import PortfolioService
 from api.services.screener_service import ScreenerService
 from api.services.strategy_service import StrategyService
+from api.services.watchlist_service import WatchlistService
 from api.services.workspace_context_service import WorkspaceContextService
 from api.utils.files import read_json_file, write_json_file, get_today_str
 from swing_screener.settings import data_dir, get_settings_manager, project_root
@@ -77,6 +78,13 @@ def get_watchlist_repo() -> WatchlistRepository:
 
 def get_strategy_repo() -> StrategyRepository:
     return StrategyRepository()
+
+
+def get_watchlist_service(
+    watchlist_repo: WatchlistRepository = Depends(get_watchlist_repo),
+    strategy_repo: StrategyRepository = Depends(get_strategy_repo),
+) -> WatchlistService:
+    return WatchlistService(repo=watchlist_repo, strategy_repo=strategy_repo)
 
 
 def get_intelligence_config_repo() -> IntelligenceConfigRepository:
