@@ -53,6 +53,8 @@ interface PositionWithMetricsApiResponse extends PositionApiResponse {
   per_share_risk: number;
   total_risk: number;
   fees_eur: number;
+  days_open?: number;
+  time_stop_warning?: boolean;
 }
 
 interface PortfolioSummaryApiResponse {
@@ -75,6 +77,17 @@ interface PortfolioSummaryApiResponse {
   positions_profitable: number;
   positions_losing: number;
   win_rate: number;
+  concentration?: ConcentrationGroupApiResponse[];
+  realized_pnl?: number;
+  effective_account_size?: number;
+}
+
+interface ConcentrationGroupApiResponse {
+  country: string;
+  risk_amount: number;
+  risk_pct: number;
+  position_count: number;
+  warning: boolean;
 }
 
 export interface PositionMetrics {
@@ -97,6 +110,8 @@ export interface PositionWithMetrics extends Position {
   perShareRisk: number;
   totalRisk: number;
   feesEur: number;
+  daysOpen: number;
+  timeStopWarning: boolean;
 }
 
 export interface PortfolioSummary {
@@ -119,6 +134,31 @@ export interface PortfolioSummary {
   positionsProfitable: number;
   positionsLosing: number;
   winRate: number;
+  concentration: ConcentrationGroup[];
+  realizedPnl: number;
+  effectiveAccountSize: number;
+}
+
+export interface ConcentrationGroup {
+  country: string;
+  riskAmount: number;
+  riskPct: number;
+  positionCount: number;
+  warning: boolean;
+}
+
+interface EarningsProximityApiResponse {
+  ticker: string;
+  next_earnings_date?: string | null;
+  days_until?: number | null;
+  warning: boolean;
+}
+
+export interface EarningsProximity {
+  ticker: string;
+  nextEarningsDate: string | null;
+  daysUntil: number | null;
+  warning: boolean;
 }
 
 export interface DegiroStatusApiResponse {
@@ -302,6 +342,26 @@ export async function fetchPortfolioSummary(): Promise<PortfolioSummary> {
   return transformPortfolioSummary(data);
 }
 
+export async function fetchEarningsProximity(ticker: string): Promise<EarningsProximity> {
+  const normalizedTicker = ticker.trim().toUpperCase();
+  if (!normalizedTicker || isLocalPersistenceMode()) {
+    return { ticker: normalizedTicker, nextEarningsDate: null, daysUntil: null, warning: false };
+  }
+
+  const response = await fetch(apiUrl(API_ENDPOINTS.earningsProximity(normalizedTicker)));
+  if (!response.ok) {
+    return { ticker: normalizedTicker, nextEarningsDate: null, daysUntil: null, warning: false };
+  }
+
+  const data: EarningsProximityApiResponse = await response.json();
+  return {
+    ticker: data.ticker,
+    nextEarningsDate: data.next_earnings_date ?? null,
+    daysUntil: data.days_until ?? null,
+    warning: data.warning,
+  };
+}
+
 export async function updatePositionStop(
   positionId: string,
   request: UpdateStopRequest,
@@ -358,6 +418,8 @@ export async function fetchPositionStopSuggestion(positionId: string): Promise<P
           trail_sma: strategy.manage.trailSma,
           sma_buffer_pct: strategy.manage.smaBufferPct,
           max_holding_days: strategy.manage.maxHoldingDays,
+          time_stop_days: strategy.manage.timeStopDays,
+          time_stop_min_r: strategy.manage.timeStopMinR,
         },
       }),
     });
@@ -476,6 +538,8 @@ function transformPositionWithMetrics(data: PositionWithMetricsApiResponse): Pos
     perShareRisk: data.per_share_risk,
     totalRisk: data.total_risk,
     feesEur: data.fees_eur ?? 0,
+    daysOpen: data.days_open ?? 0,
+    timeStopWarning: data.time_stop_warning ?? false,
   };
 }
 
@@ -500,5 +564,14 @@ function transformPortfolioSummary(data: PortfolioSummaryApiResponse): Portfolio
     positionsProfitable: data.positions_profitable,
     positionsLosing: data.positions_losing,
     winRate: data.win_rate,
+    concentration: (data.concentration ?? []).map((group) => ({
+      country: group.country,
+      riskAmount: group.risk_amount,
+      riskPct: group.risk_pct,
+      positionCount: group.position_count,
+      warning: group.warning,
+    })),
+    realizedPnl: data.realized_pnl ?? 0,
+    effectiveAccountSize: data.effective_account_size ?? data.account_size,
   };
 }

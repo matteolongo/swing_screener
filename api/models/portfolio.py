@@ -109,6 +109,8 @@ class StopSuggestionManageConfig(BaseModel):
     trail_sma: int = Field(default=20, gt=0)
     sma_buffer_pct: float = Field(default=0.005, ge=0)
     max_holding_days: int = Field(default=20, gt=0)
+    time_stop_days: int = Field(default=15, gt=0)
+    time_stop_min_r: float = Field(default=0.5, ge=0)
 
 
 class StopSuggestionComputeRequest(BaseModel):
@@ -251,6 +253,21 @@ class DegiroStatus(BaseModel):
     detail: str
 
 
+class EarningsProximityResponse(BaseModel):
+    ticker: str
+    next_earnings_date: Optional[str] = Field(default=None, description="Next earnings date as YYYY-MM-DD")
+    days_until: Optional[int] = Field(default=None, description="Calendar days until next earnings")
+    warning: bool = Field(default=False, description="True when earnings are within the warning window")
+
+
+class ConcentrationGroup(BaseModel):
+    country: str = Field(..., description="Derived country or market group")
+    risk_amount: float = Field(..., description="Open risk amount in this group")
+    risk_pct: float = Field(..., description="Share of total open risk as a percentage")
+    position_count: int = Field(..., description="Number of open positions in this group")
+    warning: bool = Field(..., description="True when concentration exceeds configured threshold")
+
+
 class PositionsResponse(BaseModel):
     positions: list[Position]
     asof: str
@@ -267,6 +284,11 @@ class PositionWithMetrics(Position):
     current_value: float = Field(..., description="Current market value (shares × current_price)")
     per_share_risk: float = Field(..., description="Risk per share in dollars")
     total_risk: float = Field(..., description="Total position risk (per_share_risk × shares)")
+    days_open: int = Field(default=0, description="Calendar days since entry date")
+    time_stop_warning: bool = Field(
+        default=False,
+        description="True when an open trade is stale and below the configured R threshold",
+    )
 
 
 class PositionsWithMetricsResponse(BaseModel):
@@ -311,6 +333,12 @@ class PortfolioSummary(BaseModel):
     positions_profitable: int = Field(..., description="Number of positions in profit")
     positions_losing: int = Field(..., description="Number of positions at loss")
     win_rate: float = Field(..., description="Percentage of positions profitable")
+    concentration: list[ConcentrationGroup] = Field(default_factory=list)
+    realized_pnl: float = Field(default=0.0, description="Total realized P&L from closed positions")
+    effective_account_size: float = Field(
+        default=0.0,
+        description="Account size adjusted for realized P&L when mode=equity",
+    )
 
 
 # ---------------------------------------------------------------------------

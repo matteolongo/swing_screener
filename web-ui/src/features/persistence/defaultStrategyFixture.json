@@ -60,6 +60,8 @@
     "trail_sma": 20,
     "sma_buffer_pct": 0.005,
     "max_holding_days": 20,
+    "time_stop_days": 15,
+    "time_stop_min_r": 0.5,
     "benchmark": "SPY"
   },
   "market_intelligence": {

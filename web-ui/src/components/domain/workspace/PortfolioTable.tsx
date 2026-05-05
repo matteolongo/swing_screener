@@ -44,6 +44,22 @@ function formatOptionalCurrency(value: number | null): string {
   return value == null ? t('common.placeholders.dash') : formatCurrency(value);
 }
 
+function TimeStopBadge({ position }: { position: PositionWithMetrics | null }) {
+  if (!position?.timeStopWarning) return null;
+  const label = t('bookPage.positions.timeStopBadge', {
+    days: String(position.daysOpen),
+    r: `${position.rNow >= 0 ? '+' : ''}${position.rNow.toFixed(2)}`,
+  });
+  return (
+    <span
+      className="inline-flex items-center rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
+      title={t('bookPage.positions.timeStopWarning')}
+    >
+      {label}
+    </span>
+  );
+}
+
 /** Compact actions dropdown using native <details> */
 function ActionsDropdown({ children }: { children: React.ReactNode }) {
   return (
@@ -242,6 +258,7 @@ export default function PortfolioTable() {
         <div className="flex items-center gap-1.5">
           <span className="font-semibold text-sm">{row.ticker}</span>
           <Badge variant={row.status === 'open' ? 'success' : 'warning'} >{row.status}</Badge>
+          <TimeStopBadge position={row.position} />
         </div>
       ),
     },

@@ -55,6 +55,7 @@ export interface StrategyRisk {
   rrTarget: number;
   commissionPct: number;
   maxFeeRiskPct: number;
+  accountSizeMode: 'base' | 'equity';
   regimeEnabled: boolean;
   regimeTrendSma: number;
   regimeTrendMultiplier: number;
@@ -69,6 +70,8 @@ export interface StrategyManage {
   trailSma: number;
   smaBufferPct: number;
   maxHoldingDays: number;
+  timeStopDays: number;
+  timeStopMinR: number;
   benchmark: string;
 }
 
@@ -188,6 +191,7 @@ export interface StrategyRiskAPI {
   rr_target?: number;
   commission_pct?: number;
   max_fee_risk_pct?: number;
+  account_size_mode?: 'base' | 'equity';
   regime_enabled?: boolean;
   regime_trend_sma?: number;
   regime_trend_multiplier?: number;
@@ -202,6 +206,8 @@ export interface StrategyManageAPI {
   trail_sma: number;
   sma_buffer_pct: number;
   max_holding_days: number;
+  time_stop_days?: number;
+  time_stop_min_r?: number;
   benchmark: string;
 }
 
@@ -348,6 +354,7 @@ export function transformStrategy(api: StrategyAPI): Strategy {
       rrTarget: api.risk.rr_target ?? 2.0,
       commissionPct: api.risk.commission_pct ?? 0.0,
       maxFeeRiskPct: api.risk.max_fee_risk_pct ?? 0.2,
+      accountSizeMode: api.risk.account_size_mode ?? 'equity',
       regimeEnabled: api.risk.regime_enabled ?? false,
       regimeTrendSma: api.risk.regime_trend_sma ?? 200,
       regimeTrendMultiplier: api.risk.regime_trend_multiplier ?? 0.5,
@@ -361,6 +368,8 @@ export function transformStrategy(api: StrategyAPI): Strategy {
       trailSma: api.manage.trail_sma,
       smaBufferPct: api.manage.sma_buffer_pct,
       maxHoldingDays: api.manage.max_holding_days,
+      timeStopDays: api.manage.time_stop_days ?? 15,
+      timeStopMinR: api.manage.time_stop_min_r ?? 0.5,
       benchmark: api.manage.benchmark,
     },
     marketIntelligence: {
@@ -461,6 +470,7 @@ export function toStrategyUpdateRequest(strategy: Strategy): StrategyUpdateReque
       rr_target: strategy.risk.rrTarget,
       commission_pct: strategy.risk.commissionPct,
       max_fee_risk_pct: strategy.risk.maxFeeRiskPct,
+      account_size_mode: strategy.risk.accountSizeMode,
       regime_enabled: strategy.risk.regimeEnabled,
       regime_trend_sma: strategy.risk.regimeTrendSma,
       regime_trend_multiplier: strategy.risk.regimeTrendMultiplier,
@@ -474,6 +484,8 @@ export function toStrategyUpdateRequest(strategy: Strategy): StrategyUpdateReque
       trail_sma: strategy.manage.trailSma,
       sma_buffer_pct: strategy.manage.smaBufferPct,
       max_holding_days: strategy.manage.maxHoldingDays,
+      time_stop_days: strategy.manage.timeStopDays,
+      time_stop_min_r: strategy.manage.timeStopMinR,
       benchmark: strategy.manage.benchmark,
     },
     market_intelligence: {

@@ -1,14 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
+import { AlertTriangle } from 'lucide-react';
 import Button from '@/components/common/Button';
 import RecommendationBadge from '@/components/domain/recommendation/RecommendationBadge';
+import EarningsWarningBanner from '@/components/domain/screener/EarningsWarningBanner';
 import SetupExecutionGuide from '@/components/domain/orders/SetupExecutionGuide';
 import DegiroOrderConfigGuide from '@/components/domain/orders/DegiroOrderConfigGuide';
 import { useOrderRiskMetrics } from '@/components/domain/orders/useOrderRiskMetrics';
 import { candidateOrderSchema, type CandidateOrderFormValues } from '@/components/domain/orders/schemas';
 import { getSetupExecutionGuidance, normalizeSetupSignal } from '@/features/orders/setupGuidance';
 import { normalizeSuggestedOrderType, resolveDefaultOrderType } from '@/features/orders/executionDefaults';
+import { usePortfolioSummary } from '@/features/portfolio/hooks';
 import type { CreateOrderRequest } from '@/features/portfolio/types';
 import type { SameSymbolCandidateContext } from '@/features/screener/types';
 import type { RiskConfig } from '@/types/config';
@@ -57,6 +60,22 @@ const REVIEW_SECTIONS: Array<{ id: ReviewSectionId; titleKey: string }> = [
   { id: 'risk', titleKey: 'order.review.sections.risk' },
 ];
 
+const CONCENTRATION_WARNING_THRESHOLD = 60;
+const COUNTRY_SUFFIXES: Record<string, string> = {
+  '.AS': 'NL',
+  '.PA': 'FR',
+  '.DE': 'DE',
+  '.MC': 'ES',
+  '.MI': 'IT',
+  '.ST': 'SE',
+  '.L': 'UK',
+  '.BR': 'BE',
+  '.LS': 'PT',
+  '.HE': 'FI',
+  '.CO': 'DK',
+  '.OL': 'NO',
+};
+
 function MetricTile({
   label,
   value,
@@ -95,6 +114,14 @@ function classifyInvalidationRule(condition: string) {
     return 'hard';
   }
   return 'soft';
+}
+
+function countryFromTicker(ticker: string): string {
+  const normalized = ticker.trim().toUpperCase();
+  for (const [suffix, country] of Object.entries(COUNTRY_SUFFIXES)) {
+    if (normalized.endsWith(suffix)) return country;
+  }
+  return 'US';
 }
 
 export default function OrderReviewExperience({
@@ -162,6 +189,7 @@ export default function OrderReviewExperience({
   const [submitSucceeded, setSubmitSucceeded] = useState(false);
   const [activeSection, setActiveSection] = useState<ReviewSectionId>('decision');
   const [tradeThesis, setTradeThesis] = useState('');
+  const portfolioSummaryQuery = usePortfolioSummary();
 
   useEffect(() => {
     form.reset({
@@ -195,6 +223,23 @@ export default function OrderReviewExperience({
     quantity,
     accountSize: risk.accountSize,
   });
+
+  const projectedConcentration = useMemo(() => {
+    const summary = portfolioSummaryQuery.data;
+    if (!summary || riskAmount <= 0) return null;
+    const country = countryFromTicker(normalizedTicker);
+    const currentGroup = summary.concentration.find((group) => group.country === country);
+    const currentRisk = currentGroup?.riskAmount ?? 0;
+    const projectedOpenRisk = summary.openRisk + riskAmount;
+    if (projectedOpenRisk <= 0) return null;
+    const projectedRiskPct = ((currentRisk + riskAmount) / projectedOpenRisk) * 100;
+    if (projectedRiskPct < CONCENTRATION_WARNING_THRESHOLD) return null;
+    return {
+      country,
+      currentRiskPct: currentGroup?.riskPct ?? 0,
+      projectedRiskPct,
+    };
+  }, [normalizedTicker, portfolioSummaryQuery.data, riskAmount]);
 
   const warnings = useMemo(() => {
     const nextWarnings: string[] = [];
@@ -277,6 +322,20 @@ export default function OrderReviewExperience({
 
   return (
     <div className="space-y-4">
+      <EarningsWarningBanner ticker={normalizedTicker} />
+      {projectedConcentration ? (
+        <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-100">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-300" aria-hidden="true" />
+          <span>
+            {t('concentrationWarning.orderMessage', {
+              country: projectedConcentration.country,
+              currentPct: formatNumber(projectedConcentration.currentRiskPct, 0),
+              projectedPct: formatNumber(projectedConcentration.projectedRiskPct, 0),
+            })}
+          </span>
+        </div>
+      ) : null}
+
       <section
         className="rounded-lg border border-gray-200 bg-slate-50/70 p-3 dark:border-gray-700 dark:bg-gray-900/50"
         aria-label={t('order.review.carouselLabel')}
