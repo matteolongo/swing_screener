@@ -1,7 +1,9 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import { renderWithProviders } from '@/test/utils';
 import userEvent from '@testing-library/user-event';
 import CandidateOrderModal from '@/components/domain/orders/CandidateOrderModal';
+import { t } from '@/i18n/t';
 
 const { createOrderMock } = vi.hoisted(() => ({
   createOrderMock: vi.fn(),
@@ -9,6 +11,34 @@ const { createOrderMock } = vi.hoisted(() => ({
 
 vi.mock('@/features/portfolio/api', () => ({
   createOrder: createOrderMock,
+  fetchPortfolioSummary: () =>
+    Promise.resolve({
+      totalPositions: 2,
+      totalValue: 0,
+      totalCostBasis: 0,
+      totalPnl: 0,
+      totalPnlPercent: 0,
+      openRisk: 50,
+      openRiskPercent: 0.1,
+      accountSize: 50000,
+      availableCapital: 50000,
+      largestPositionValue: 0,
+      largestPositionTicker: '',
+      bestPerformerTicker: '',
+      bestPerformerPnlPct: 0,
+      worstPerformerTicker: '',
+      worstPerformerPnlPct: 0,
+      avgRNow: 0,
+      positionsProfitable: 0,
+      positionsLosing: 0,
+      winRate: 0,
+      concentration: [
+        { country: 'NL', riskAmount: 25, riskPct: 50, positionCount: 1, warning: false },
+        { country: 'US', riskAmount: 25, riskPct: 50, positionCount: 1, warning: false },
+      ],
+      realizedPnl: 0,
+      effectiveAccountSize: 50000,
+    }),
 }));
 
 const risk = {
@@ -57,7 +87,7 @@ describe('CandidateOrderModal', () => {
   });
 
   it('disables create action for not recommended candidate', () => {
-    render(
+    renderWithProviders(
       <CandidateOrderModal
         candidate={{
           ticker: 'VALE',
@@ -107,7 +137,7 @@ describe('CandidateOrderModal', () => {
   });
 
   it('defaults to BUY_STOP when backend guidance suggests breakout stop entry', () => {
-    render(
+    renderWithProviders(
       <CandidateOrderModal
         candidate={{
           ticker: 'AAPL',
@@ -136,7 +166,7 @@ describe('CandidateOrderModal', () => {
   });
 
   it('shows pullback execution guidance when breakout signal is already passed and backend suggests BUY_LIMIT', () => {
-    render(
+    renderWithProviders(
       <CandidateOrderModal
         candidate={{
           ticker: 'AAPL',
@@ -165,7 +195,7 @@ describe('CandidateOrderModal', () => {
 
   it('requires override confirmation before submitting mismatch order type', async () => {
     const user = userEvent.setup();
-    render(
+    renderWithProviders(
       <CandidateOrderModal
         candidate={{
           ticker: 'AAPL',
@@ -197,7 +227,7 @@ describe('CandidateOrderModal', () => {
   });
 
   it('blocks BUY_STOP when trigger is not above current price', () => {
-    render(
+    renderWithProviders(
       <CandidateOrderModal
         candidate={{
           ticker: 'AAPL',
@@ -222,7 +252,7 @@ describe('CandidateOrderModal', () => {
   });
 
   it('renders fallback guidance when signal is missing', () => {
-    render(
+    renderWithProviders(
       <CandidateOrderModal
         candidate={{
           ticker: 'AAPL',
@@ -243,7 +273,7 @@ describe('CandidateOrderModal', () => {
 
   it('preserves entered values while moving between review sections', async () => {
     const user = userEvent.setup();
-    render(
+    renderWithProviders(
       <CandidateOrderModal
         candidate={{
           ticker: 'AAPL',
@@ -270,5 +300,35 @@ describe('CandidateOrderModal', () => {
 
     await user.click(screen.getByRole('tab', { name: 'Decision' }));
     expect((screen.getByLabelText('Notes') as HTMLTextAreaElement).value).toBe('Adjusted note');
+  });
+
+  it('shows a soft concentration warning when an order pushes country risk over threshold', async () => {
+    renderWithProviders(
+      <CandidateOrderModal
+        candidate={{
+          ticker: 'SBMO.AS',
+          entry: 10,
+          stop: 9,
+          shares: 30,
+          recommendation: {
+            ...recommendedRecommendation,
+            risk: {
+              ...recommendedRecommendation.risk,
+              entry: 10,
+              stop: 9,
+              shares: 30,
+            },
+          },
+        }}
+        risk={risk}
+        defaultNotes="From daily review"
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+    );
+
+    expect(
+      await screen.findByText(t('concentrationWarning.orderMessage', { country: 'NL', currentPct: '50', projectedPct: '69' })),
+    ).toBeInTheDocument();
   });
 });

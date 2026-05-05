@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import ConcentrationBar from '@/components/domain/portfolio/ConcentrationBar';
 import PortfolioRiskSummary from '@/components/domain/portfolio/PortfolioRiskSummary';
 import PortfolioPanel from '@/components/domain/workspace/PortfolioPanel';
 import { usePortfolioSummary, usePositions } from '@/features/portfolio/hooks';
@@ -26,6 +27,7 @@ function PositionsTab() {
   return (
     <div className="space-y-4">
       <PortfolioRiskSummary openPositions={openPositions} accountSize={accountSize} realizedPnl={realizedPnl} />
+      <ConcentrationBar groups={portfolioSummaryQuery.data?.concentration ?? []} />
       <PortfolioPanel />
     </div>
   );

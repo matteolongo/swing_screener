@@ -33,8 +33,17 @@ vi.mock('@/features/portfolio/hooks', () => ({
   useCreateOrderMutation: () => ({
     mutateAsync: mutateMock,
   }),
+  useEarningsProximity: () => ({
+    data: undefined,
+  }),
   useOpenPositions: () => ({
     data: openPositionsMock(),
+  }),
+  usePortfolioSummary: () => ({
+    data: {
+      openRisk: 0,
+      concentration: [],
+    },
   }),
 }));
 

@@ -8,6 +8,7 @@ import {
   type DecisionSummaryAPI,
   type SameSymbolCandidateContext,
 } from '@/features/screener/types';
+import { type WatchItem, type WatchItemAPI, transformWatchItem } from '@/features/watchlist/types';
 
 // API response types (snake_case from backend)
 export interface DailyReviewCandidateAPI {
@@ -58,6 +59,8 @@ export interface DailyReviewPositionHoldAPI {
   stop_price: number;
   current_price: number;
   r_now: number;
+  days_open?: number;
+  time_stop_warning?: boolean;
   reason: string;
 }
 
@@ -69,6 +72,8 @@ export interface DailyReviewPositionUpdateAPI {
   stop_suggested: number;
   current_price: number;
   r_now: number;
+  days_open?: number;
+  time_stop_warning?: boolean;
   reason: string;
 }
 
@@ -79,6 +84,8 @@ export interface DailyReviewPositionCloseAPI {
   stop_price: number;
   current_price: number;
   r_now: number;
+  days_open?: number;
+  time_stop_warning?: boolean;
   reason: string;
 }
 
@@ -89,10 +96,12 @@ export interface DailyReviewSummaryAPI {
   close_positions: number;
   new_candidates: number;
   add_on_candidates: number;
+  watchlist_near_trigger?: number;
   review_date: string;
 }
 
 export interface DailyReviewAPI {
+  watchlist_near_trigger?: WatchItemAPI[];
   new_candidates: DailyReviewCandidateAPI[];
   positions_add_on_candidates: DailyReviewCandidateAPI[];
   positions_hold: DailyReviewPositionHoldAPI[];
@@ -139,6 +148,8 @@ export interface DailyReviewPositionHold {
   stopPrice: number;
   currentPrice: number;
   rNow: number;
+  daysOpen: number;
+  timeStopWarning: boolean;
   reason: string;
 }
 
@@ -150,6 +161,8 @@ export interface DailyReviewPositionUpdate {
   stopSuggested: number;
   currentPrice: number;
   rNow: number;
+  daysOpen: number;
+  timeStopWarning: boolean;
   reason: string;
 }
 
@@ -160,6 +173,8 @@ export interface DailyReviewPositionClose {
   stopPrice: number;
   currentPrice: number;
   rNow: number;
+  daysOpen: number;
+  timeStopWarning: boolean;
   reason: string;
 }
 
@@ -170,10 +185,12 @@ export interface DailyReviewSummary {
   closePositions: number;
   newCandidates: number;
   addOnCandidates: number;
+  watchlistNearTrigger: number;
   reviewDate: string;
 }
 
 export interface DailyReview {
+  watchlistNearTrigger: WatchItem[];
   newCandidates: DailyReviewCandidate[];
   positionsAddOnCandidates: DailyReviewCandidate[];
   positionsHold: DailyReviewPositionHold[];
@@ -273,6 +290,8 @@ export function transformPositionHold(api: DailyReviewPositionHoldAPI): DailyRev
     stopPrice: api.stop_price,
     currentPrice: api.current_price,
     rNow: api.r_now,
+    daysOpen: api.days_open ?? 0,
+    timeStopWarning: api.time_stop_warning ?? false,
     reason: api.reason,
   };
 }
@@ -286,6 +305,8 @@ export function transformPositionUpdate(api: DailyReviewPositionUpdateAPI): Dail
     stopSuggested: api.stop_suggested,
     currentPrice: api.current_price,
     rNow: api.r_now,
+    daysOpen: api.days_open ?? 0,
+    timeStopWarning: api.time_stop_warning ?? false,
     reason: api.reason,
   };
 }
@@ -298,6 +319,8 @@ export function transformPositionClose(api: DailyReviewPositionCloseAPI): DailyR
     stopPrice: api.stop_price,
     currentPrice: api.current_price,
     rNow: api.r_now,
+    daysOpen: api.days_open ?? 0,
+    timeStopWarning: api.time_stop_warning ?? false,
     reason: api.reason,
   };
 }
@@ -310,12 +333,14 @@ export function transformSummary(api: DailyReviewSummaryAPI): DailyReviewSummary
     closePositions: api.close_positions,
     newCandidates: api.new_candidates,
     addOnCandidates: api.add_on_candidates,
+    watchlistNearTrigger: api.watchlist_near_trigger ?? 0,
     reviewDate: api.review_date,
   };
 }
 
 export function transformDailyReview(api: DailyReviewAPI): DailyReview {
   return {
+    watchlistNearTrigger: (api.watchlist_near_trigger ?? []).map(transformWatchItem),
     newCandidates: api.new_candidates.map(transformCandidate),
     positionsAddOnCandidates: (api.positions_add_on_candidates ?? []).map(transformCandidate),
     positionsHold: api.positions_hold.map(transformPositionHold),

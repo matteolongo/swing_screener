@@ -21,6 +21,7 @@ export async function fetchWatchlist(): Promise<WatchItem[]> {
       watchPrice: item.watchPrice ?? undefined,
       currency: item.currency ?? undefined,
       source: item.source,
+      priceHistory: [],
     }));
   }
 
@@ -51,6 +52,7 @@ export async function watchSymbol(request: WatchSymbolRequest): Promise<WatchIte
       watchPrice: saved.watchPrice ?? undefined,
       currency: saved.currency ?? undefined,
       source: saved.source,
+      priceHistory: [],
     };
   }
 
@@ -109,4 +111,3 @@ export async function unwatchSymbol(ticker: string): Promise<void> {
     throw new Error(message);
   }
 }
-

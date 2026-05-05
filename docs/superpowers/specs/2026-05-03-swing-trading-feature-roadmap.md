@@ -16,6 +16,24 @@ Features are grouped into tiers. Ship all of Tier 1 before starting Tier 2.
 
 ---
 
+## Implementation status - 2026-05-04
+
+Tier 1 is implemented locally and Tier 2 has started as sequential stacked PRs:
+
+| # | Feature | Branch | Base | PR | Status |
+|---|---|---|---|---|---|
+| 1 | Trade tagging | `codex/trade-tagging` | `main` | https://github.com/matteolongo/swing_screener/pull/232 | Draft, implemented |
+| 2 | Performance breakdown | `codex/edge-breakdown` | `codex/trade-tagging` | https://github.com/matteolongo/swing_screener/pull/233 | Draft, implemented |
+| 3 | Account equity auto-update | `codex/account-equity` | `codex/edge-breakdown` | https://github.com/matteolongo/swing_screener/pull/234 | Draft, implemented |
+| 4 | Earnings warning | `codex/earnings-warning` | `codex/account-equity` | https://github.com/matteolongo/swing_screener/pull/235 | Draft, implemented |
+| 5 | Concentration warning | `codex/concentration-warning` | `codex/earnings-warning` | https://github.com/matteolongo/swing_screener/pull/236 | Draft, implemented |
+| 6 | Time stop nudge | `codex/time-stop-nudge` | `codex/concentration-warning` | pending | Implemented locally |
+| 7 | Watchlist pipeline view | `codex/watchlist-pipeline` | `codex/time-stop-nudge` | pending | Implemented locally |
+
+Review stacked PRs in order and compare each PR against its listed base branch.
+
+---
+
 ## Tier 1 — Core feedback loop and risk hygiene
 *These features have the highest ratio of trading value to build effort. They make the existing workflow meaningfully safer and smarter.*
 
@@ -299,19 +317,21 @@ The screener works on daily bars. A daily breakout that contradicts the weekly t
 
 ## Implementation order summary
 
-| # | Feature | Tier | Designer | UX | Dev | Value delivered |
-|---|---------|------|----------|----|-----|----------------|
-| 1 | Trade tagging | 1 | Tag taxonomy | Close flow | Model + filter | Queryable journal |
-| 2 | Performance by setup | 1 | Stats layout | Empty state | Client aggregation | See your edge |
-| 3 | Account equity auto-update | 1 | Settings UI | Mode toggle | P&L calc | Accurate sizing |
-| 4 | Earnings warning | 1 | Warning banner | Non-blocking | yfinance fetch | Avoid earnings traps |
-| 5 | Concentration warning | 1 | Portfolio section | Order warning | Country grouping | Prevent correlated bets |
-| 6 | Time stop nudge | 1 | Badge design | Nudge copy | Metrics flag | Kill dead capital |
-| 7 | Watchlist pipeline | 2 | Table column | Sort + sparkline | Distance calc | Spot setups early |
-| 8 | Volume quality | 2 | Signal indicator | Caution note | Volume ratio | Better entry timing |
-| 9 | Liquidity filter | 2 | Settings field | Warning copy | Pipeline filter | Avoid illiquid names |
-| 10 | Partial exits | 2 | Close modal | Share picker | Position events | Scale-out capability |
-| 11 | Regime performance | 3 | Stats section | — | Regime backfill | Size to conditions |
-| 12 | FX-adjusted R | 3 | Secondary display | Tooltip | FX rate fetch | True R visibility |
-| 13 | Trail customization | 3 | Method selector | Live preview | Branch logic | Setup-specific trails |
-| 14 | MTF trend filter | 3 | Filter toggle | Indicator chip | Weekly resample | Fewer false signals |
+Last updated: 2026-05-04
+
+| # | Feature | Tier | Status | Value delivered |
+|---|---------|------|--------|----------------|
+| 1 | Trade tagging | 1 | ✅ Done — `codex/trade-tagging` / PR #232 | Queryable journal |
+| 2 | Performance by setup | 1 | ✅ Done — `codex/edge-breakdown` / PR #233 | See your edge |
+| 3 | Account equity auto-update | 1 | ✅ Done — `codex/account-equity` / PR #234 | Accurate sizing |
+| 4 | Earnings warning | 1 | ✅ Done — `codex/earnings-warning` / PR #235 | Avoid earnings traps |
+| 5 | Concentration warning | 1 | ✅ Done — `codex/concentration-warning` / PR #236 | Prevent correlated bets |
+| 6 | Time stop nudge | 1 | ✅ Done — `codex/time-stop-nudge` / PR pending | Kill dead capital |
+| 7 | Watchlist pipeline | 2 | 🔲 No plan yet | Spot setups early |
+| 8 | Volume quality | 2 | 🔲 No plan yet | Better entry timing |
+| 9 | Liquidity filter | 2 | 🔲 No plan yet | Avoid illiquid names |
+| 10 | Partial exits | 2 | 🔲 No plan yet | Scale-out capability |
+| 11 | Regime performance | 3 | 🔲 No plan yet | Size to conditions |
+| 12 | FX-adjusted R | 3 | 🔲 No plan yet | True R visibility |
+| 13 | Trail customization | 3 | 🔲 No plan yet | Setup-specific trails |
+| 14 | MTF trend filter | 3 | 🔲 No plan yet | Fewer false signals |

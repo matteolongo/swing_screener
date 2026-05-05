@@ -61,6 +61,8 @@ const createMockStrategy = (overrides?: Partial<Strategy>): Strategy => ({
     trailSma: 10,
     smaBufferPct: 0.5,
     maxHoldingDays: 90,
+    timeStopDays: 15,
+    timeStopMinR: 0.5,
     benchmark: 'SPY',
   },
   marketIntelligence: {

@@ -66,6 +66,8 @@ function buildStrategy(): Strategy {
       trailSma: 20,
       smaBufferPct: 0.005,
       maxHoldingDays: 20,
+      timeStopDays: 15,
+      timeStopMinR: 0.5,
       benchmark: 'SPY',
     },
     marketIntelligence: {

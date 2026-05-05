@@ -11,10 +11,12 @@ import pandas as pd
 from fastapi import HTTPException
 
 from api.models.portfolio import (
+    ConcentrationGroup,
     CreateOrderRequest,
     CreatePositionRequest,
     DegiroOrder,
     DegiroOrdersResponse,
+    EarningsProximityResponse,
     FillOrderRequest,
     FillOrderResponse,
     FillFromDegiroResponse,
@@ -76,6 +78,44 @@ def _resolve_isin(ticker: str) -> Optional[str]:
 # Simple cache for EURUSD rate with 5-minute TTL
 _eurusd_cache: dict[str, tuple[float, float]] = {}  # {"eurusd": (rate, timestamp)}
 _CACHE_TTL_SECONDS = 300  # 5 minutes
+_earnings_cache: dict[str, tuple[str, EarningsProximityResponse]] = {}
+
+
+def _parse_earnings_date(raw) -> Optional[dt.date]:
+    if raw is None or pd.isna(raw):
+        return None
+    if isinstance(raw, pd.Timestamp):
+        raw = raw.to_pydatetime()
+    if isinstance(raw, dt.datetime):
+        return raw.date()
+    if isinstance(raw, dt.date):
+        return raw
+    try:
+        return dt.date.fromisoformat(str(raw)[:10])
+    except (TypeError, ValueError):
+        return None
+
+
+def _country_from_ticker(ticker: str) -> str:
+    suffix_map = {
+        ".AS": "NL",
+        ".PA": "FR",
+        ".DE": "DE",
+        ".MC": "ES",
+        ".MI": "IT",
+        ".ST": "SE",
+        ".L": "UK",
+        ".BR": "BE",
+        ".LS": "PT",
+        ".HE": "FI",
+        ".CO": "DK",
+        ".OL": "NO",
+    }
+    upper = ticker.strip().upper()
+    for suffix, country in suffix_map.items():
+        if upper.endswith(suffix):
+            return country
+    return "US"
 
 
 def _to_iso(ts) -> Optional[str]:
@@ -128,6 +168,8 @@ def _manage_cfg_from_app() -> ManageStateConfig:
         trail_after_R=manage.trail_after_r,
         sma_buffer_pct=manage.sma_buffer_pct,
         max_holding_days=manage.max_holding_days,
+        time_stop_days=manage.time_stop_days,
+        time_stop_min_r=manage.time_stop_min_r,
     )
 
 
@@ -276,6 +318,9 @@ class PortfolioService:
         position: dict,
         current_prices: dict[str, float],
         eurusd_rate: float,
+        *,
+        time_stop_days: int | None = None,
+        time_stop_min_r: float | None = None,
     ) -> PositionWithMetrics:
         state_position = _to_state_position(position)
         ticker = state_position.ticker.upper()
@@ -292,19 +337,46 @@ class PortfolioService:
         if state_position.status == "open" and live_price is not None:
             payload["current_price"] = live_price
 
+        days_open = self._days_open(state_position.entry_date)
+        r_now = calculate_r_now(state_position, current_price_for_metrics)
+        manage_defaults = ManageStateConfig()
+        stale_days = int(time_stop_days or manage_defaults.time_stop_days)
+        min_progress_r = float(time_stop_min_r if time_stop_min_r is not None else manage_defaults.time_stop_min_r)
+        time_stop_warning = (
+            state_position.status == "open"
+            and days_open >= stale_days
+            and r_now < min_progress_r
+        )
+
         return PositionWithMetrics(
             **payload,
             pnl=pnl,
             fees_eur=entry_fee_eur,
             pnl_percent=pnl_percent,
-            r_now=calculate_r_now(state_position, current_price_for_metrics),
+            r_now=r_now,
             entry_value=entry_value,
             current_value=calculate_current_position_value(current_price_for_metrics, state_position.shares),
             per_share_risk=per_share_risk,
             total_risk=per_share_risk * state_position.shares,
+            days_open=days_open,
+            time_stop_warning=time_stop_warning,
         )
 
-    def list_positions(self, status: Optional[str] = None) -> PositionsWithMetricsResponse:
+    @staticmethod
+    def _days_open(entry_date: str) -> int:
+        try:
+            entry_dt = dt.date.fromisoformat(str(entry_date))
+        except ValueError:
+            return 0
+        return max((dt.date.today() - entry_dt).days, 0)
+
+    def list_positions(
+        self,
+        status: Optional[str] = None,
+        *,
+        time_stop_days: int | None = None,
+        time_stop_min_r: float | None = None,
+    ) -> PositionsWithMetricsResponse:
         positions, asof = self._positions_repo.list_positions(status=status)
         current_prices = self._attach_live_prices(positions)
         has_usd_positions = any(
@@ -314,7 +386,13 @@ class PortfolioService:
         eurusd_rate = self._eurusd_rate() if has_usd_positions else 1.0
 
         positions_with_metrics = [
-            self._build_position_with_metrics(position, current_prices, eurusd_rate)
+            self._build_position_with_metrics(
+                position,
+                current_prices,
+                eurusd_rate,
+                time_stop_days=time_stop_days,
+                time_stop_min_r=time_stop_min_r,
+            )
             for position in positions
         ]
         return PositionsWithMetricsResponse(positions=positions_with_metrics, asof=asof)
@@ -403,6 +481,7 @@ class PortfolioService:
                 positions_profitable=0,
                 positions_losing=0,
                 win_rate=0.0,
+                concentration=[],
                 realized_pnl=realized_pnl,
                 effective_account_size=effective_account_size,
             )
@@ -455,6 +534,7 @@ class PortfolioService:
         open_risk_percent = (open_risk / effective_account_size * 100.0) if effective_account_size > 0 else 0.0
         avg_r_now = (total_r_now / r_count) if r_count > 0 else 0.0
         win_rate = (positions_profitable / len(positions) * 100.0) if positions else 0.0
+        concentration = self._concentration_groups(positions, open_risk)
 
         return PortfolioSummary(
             total_positions=len(positions),
@@ -477,9 +557,80 @@ class PortfolioService:
             positions_profitable=positions_profitable,
             positions_losing=positions_losing,
             win_rate=win_rate,
+            concentration=concentration,
             realized_pnl=realized_pnl,
             effective_account_size=effective_account_size,
         )
+
+    def _concentration_groups(
+        self,
+        positions: list[PositionWithMetrics],
+        open_risk: float,
+    ) -> list[ConcentrationGroup]:
+        country_risk: dict[str, float] = {}
+        country_count: dict[str, int] = {}
+        for position in positions:
+            if position.total_risk <= 0:
+                continue
+            country = _country_from_ticker(position.ticker)
+            country_risk[country] = country_risk.get(country, 0.0) + position.total_risk
+            country_count[country] = country_count.get(country, 0) + 1
+
+        threshold = float(getattr(ConfigRepository().get().risk, "max_concentration_pct", 60.0))
+        groups: list[ConcentrationGroup] = []
+        for country, risk_amount in sorted(country_risk.items(), key=lambda item: item[1], reverse=True):
+            risk_pct = (risk_amount / open_risk * 100.0) if open_risk > 0 else 0.0
+            groups.append(
+                ConcentrationGroup(
+                    country=country,
+                    risk_amount=risk_amount,
+                    risk_pct=risk_pct,
+                    position_count=country_count[country],
+                    warning=risk_pct >= threshold,
+                )
+            )
+        return groups
+
+    def get_earnings_proximity(self, ticker: str) -> EarningsProximityResponse:
+        normalized_ticker = ticker.strip().upper()
+        today = get_today_str()
+        cached = _earnings_cache.get(normalized_ticker)
+        if cached is not None:
+            cached_date, cached_response = cached
+            if cached_date == today:
+                return cached_response
+
+        try:
+            import yfinance
+
+            calendar = yfinance.Ticker(normalized_ticker).calendar or {}
+            earnings_dates = calendar.get("Earnings Date", [])
+            if not isinstance(earnings_dates, list):
+                earnings_dates = [earnings_dates]
+
+            today_dt = dt.date.fromisoformat(today)
+            upcoming = sorted(
+                parsed
+                for raw_date in earnings_dates
+                if (parsed := _parse_earnings_date(raw_date)) is not None and parsed >= today_dt
+            )
+            if not upcoming:
+                result = EarningsProximityResponse(ticker=normalized_ticker)
+            else:
+                next_date = upcoming[0]
+                days_until = (next_date - today_dt).days
+                result = EarningsProximityResponse(
+                    ticker=normalized_ticker,
+                    next_earnings_date=next_date.isoformat(),
+                    days_until=days_until,
+                    warning=days_until <= 10,
+                )
+        except Exception as exc:
+            logger.info("Failed to fetch earnings calendar for %s: %s", normalized_ticker, exc)
+            result = EarningsProximityResponse(ticker=normalized_ticker)
+
+        _earnings_cache[normalized_ticker] = (today, result)
+        return result
 
     def create_order(self, request: CreateOrderRequest) -> dict:
         """Create a pending entry order in orders.json."""
@@ -824,6 +975,8 @@ class PortfolioService:
             trail_after_R=float(payload.get("trail_after_r", 2.0)),
             sma_buffer_pct=float(payload.get("sma_buffer_pct", 0.005)),
             max_holding_days=int(payload.get("max_holding_days", 20)),
+            time_stop_days=int(payload.get("time_stop_days", 15)),
+            time_stop_min_r=float(payload.get("time_stop_min_r", 0.5)),
         )
 
     def _suggest_position_stop_from_dict(
