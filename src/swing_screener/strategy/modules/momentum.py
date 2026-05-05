@@ -135,6 +135,7 @@ def build_momentum_report(
         "breakout_level", ma_col,
         "consolidation_tightness", "close_location_in_range",
         "above_breakout_extension", "breakout_volume_confirmation",
+        "volume_ratio",
         "entry", "stop", "shares", "position_value", "realized_risk",
     ]
     keep = [c for c in keep if c in report.columns]
