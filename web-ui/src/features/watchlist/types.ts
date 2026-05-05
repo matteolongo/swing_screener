@@ -1,9 +1,17 @@
+import type { PriceHistoryPoint } from '@/features/screener/types';
+
 export interface WatchItemAPI {
   ticker: string;
   watched_at: string;
   watch_price?: number | null;
   currency?: string | null;
   source: string;
+  current_price?: number | null;
+  last_bar?: string | null;
+  signal?: string | null;
+  signal_trigger_price?: number | null;
+  distance_to_trigger_pct?: number | null;
+  price_history?: PriceHistoryPoint[] | null;
 }
 
 export interface WatchlistResponseAPI {
@@ -16,6 +24,12 @@ export interface WatchItem {
   watchPrice?: number;
   currency?: string;
   source: string;
+  currentPrice?: number;
+  lastBar?: string;
+  signal?: string;
+  signalTriggerPrice?: number;
+  distanceToTriggerPct?: number;
+  priceHistory: PriceHistoryPoint[];
 }
 
 export interface WatchSymbolRequest {
@@ -32,6 +46,11 @@ export function transformWatchItem(api: WatchItemAPI): WatchItem {
     watchPrice: api.watch_price ?? undefined,
     currency: api.currency?.trim().toUpperCase() || undefined,
     source: api.source,
+    currentPrice: api.current_price ?? undefined,
+    lastBar: api.last_bar ?? undefined,
+    signal: api.signal ?? undefined,
+    signalTriggerPrice: api.signal_trigger_price ?? undefined,
+    distanceToTriggerPct: api.distance_to_trigger_pct ?? undefined,
+    priceHistory: api.price_history ?? [],
   };
 }
-

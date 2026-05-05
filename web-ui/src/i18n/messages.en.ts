@@ -53,6 +53,26 @@ export const messagesEn = {
       unavailable: '—',
       value: '{{abs}} ({{pct}})',
     },
+    pipeline: {
+      title: 'Watchlist Pipeline',
+      subtitle: 'Track which names are closest to their trigger zone.',
+      sortedByDistance: 'Closest first',
+      loading: 'Loading watchlist pipeline...',
+      error: 'Unable to load the watchlist pipeline.',
+      empty: 'No watchlist symbols yet.',
+      distanceToBuyZone: '{{value}} to buy zone',
+      aboveBuyZone: '{{value}} above buy zone',
+      triggerPrice: 'Trigger {{value}}',
+      columns: {
+        symbol: 'Symbol',
+        current: 'Current',
+        distance: 'Distance to Trigger',
+        sparkline: '5D',
+        status: 'Signal',
+      },
+      dailyReviewTitle: 'Watchlist nearing trigger',
+      dailyReviewSubtitle: '{{count}} names within 3% of the buy zone.',
+    },
   },
   modal: {
     closeAria: 'Close modal',
@@ -1711,6 +1731,8 @@ export const messagesEn = {
         trailSma: 'Trail SMA',
         smaBuffer: 'SMA Buffer',
         maxHoldingDays: 'Max Holding Days',
+        timeStopDays: 'Time Stop Days',
+        timeStopMinR: 'Time Stop Min R',
         takeProfitR: 'Take Profit (R)',
         commission: 'Commission',
         minHistory: 'Min History',
@@ -2033,6 +2055,10 @@ export const messagesEn = {
       performance: 'Performance',
       review: 'Weekly Review',
     },
+    positions: {
+      timeStopBadge: '{{days}}d / {{r}}R',
+      timeStopWarning: 'Stale trade: consider closing or documenting a reason to hold.',
+    },
   },
   pendingOrdersTab: {
     title: 'Pending Orders',
@@ -2068,6 +2094,7 @@ export const messagesEn = {
     tabs: {
       intelligence: 'Intelligence',
       fundamentals: 'Fundamentals',
+      watchlist: 'Watchlist',
       calendar: 'Calendar',
     },
     symbolSearch: {
@@ -2081,6 +2108,7 @@ export const messagesEn = {
       screener: 'Screener',
     },
     actionList: {
+      watchlistNearTrigger: 'Watchlist Near Trigger',
       requiresAction: 'Requires Action',
       opportunities: 'New Opportunities',
       holding: 'Holding',
@@ -2091,6 +2119,8 @@ export const messagesEn = {
       loading: "Loading today's review...",
       closeAction: 'Close →',
       updateAction: 'Update →',
+      timeStopBadge: '{{days}}d / {{r}}R',
+      timeStopWarning: 'Stale trade: consider closing or documenting a reason to hold.',
     },
     keyboard: {
       hint: 'j/k navigate · Enter select',

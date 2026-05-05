@@ -4,7 +4,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import ValidationError
 
-from api.dependencies import get_watchlist_repo
+from api.dependencies import get_watchlist_repo, get_watchlist_service
 from api.models.watchlist import (
     WatchItem,
     WatchItemUpsertRequest,
@@ -12,15 +12,16 @@ from api.models.watchlist import (
     WatchlistResponse,
 )
 from api.repositories.watchlist_repo import WatchlistRepository
+from api.services.watchlist_service import WatchlistService
 
 router = APIRouter()
 
 
 @router.get("", response_model=WatchlistResponse)
 async def list_watchlist(
-    repo: WatchlistRepository = Depends(get_watchlist_repo),
+    service: WatchlistService = Depends(get_watchlist_service),
 ):
-    return WatchlistResponse(items=repo.list_items())
+    return WatchlistResponse(items=service.list_items())
 
 
 @router.put("/{ticker}", response_model=WatchItem)

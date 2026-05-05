@@ -36,6 +36,8 @@ export interface LocalPositionWithMetrics extends Position {
   perShareRisk: number;
   totalRisk: number;
   feesEur: number;
+  daysOpen: number;
+  timeStopWarning: boolean;
 }
 
 export interface LocalConcentrationGroup {
@@ -183,6 +185,13 @@ function perShareRisk(position: Position): number {
   return computed > 0 ? computed : 0;
 }
 
+function daysBetween(startIso: string, endIso: string): number {
+  const start = new Date(`${startIso}T00:00:00`);
+  const end = new Date(`${endIso}T00:00:00`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 0;
+  return Math.max(Math.floor((end.getTime() - start.getTime()) / 86_400_000), 0);
+}
+
 function toPositionWithMetrics(position: Position, feesByPosition: Map<string, number>): LocalPositionWithMetrics {
   const currentPrice = currentPriceForPosition(position);
   const entryValue = position.entryPrice * position.shares;
@@ -191,18 +200,26 @@ function toPositionWithMetrics(position: Position, feesByPosition: Map<string, n
   const pnl = (currentPrice - position.entryPrice) * position.shares - fee;
   const riskPerShare = perShareRisk(position);
   const totalRisk = riskPerShare * position.shares;
+  const store = readTradingStore();
+  const active = store.strategies.find((strategy) => strategy.id === store.activeStrategyId);
+  const daysOpen = daysBetween(position.entryDate, currentDateIso());
+  const rNow = totalRisk > 0 ? pnl / totalRisk : 0;
+  const timeStopDays = active?.manage.timeStopDays ?? 15;
+  const timeStopMinR = active?.manage.timeStopMinR ?? 0.5;
 
   return {
     ...cloneValue(position),
     currentPrice: position.status === 'open' ? currentPrice : position.currentPrice,
     pnl,
     pnlPercent: entryValue > 0 ? (pnl / entryValue) * 100 : 0,
-    rNow: totalRisk > 0 ? pnl / totalRisk : 0,
+    rNow,
     entryValue,
     currentValue,
     perShareRisk: riskPerShare,
     totalRisk,
     feesEur: fee,
+    daysOpen,
+    timeStopWarning: position.status === 'open' && daysOpen >= timeStopDays && rNow < timeStopMinR,
   };
 }
 

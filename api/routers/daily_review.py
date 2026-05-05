@@ -5,7 +5,9 @@ from api.models.daily_review import DailyReview, DailyReviewComputeRequest
 from api.services.daily_review_service import DailyReviewService
 from api.services.screener_service import ScreenerService
 from api.services.portfolio_service import PortfolioService
+from api.services.watchlist_service import WatchlistService
 from api.dependencies import (
+    get_watchlist_service,
     get_screener_service,
     get_portfolio_service,
 )
@@ -24,9 +26,10 @@ def _dump_payload_item(item):
 def get_daily_review_service(
     screener_service: ScreenerService = Depends(get_screener_service),
     portfolio_service: PortfolioService = Depends(get_portfolio_service),
+    watchlist_service: WatchlistService = Depends(get_watchlist_service),
 ) -> DailyReviewService:
     """Dependency injection for DailyReviewService."""
-    return DailyReviewService(screener_service, portfolio_service)
+    return DailyReviewService(screener_service, portfolio_service, watchlist_service=watchlist_service)
 
 
 @router.get("", response_model=DailyReview)

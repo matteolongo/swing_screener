@@ -4,20 +4,23 @@ import { t } from '@/i18n/t';
 import IntelligencePage from './Intelligence';
 import FundamentalsPage from './Fundamentals';
 import EventsCalendar from '@/components/domain/calendar/EventsCalendar';
+import WatchlistPipelinePanel from '@/components/domain/watchlist/WatchlistPipelinePanel';
 import { usePositions } from '@/features/portfolio/hooks';
 import { useWatchlist } from '@/features/watchlist/hooks';
+import { useWorkspaceStore } from '@/stores/workspaceStore';
 
 const STORAGE_KEY = 'research.activeTab';
-type ResearchTab = 'intelligence' | 'fundamentals' | 'calendar';
+type ResearchTab = 'intelligence' | 'fundamentals' | 'watchlist' | 'calendar';
 
 export default function Research() {
   const [activeTab, setActiveTab] = useState<ResearchTab>(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === 'intelligence' || stored === 'fundamentals' || stored === 'calendar') {
+    if (stored === 'intelligence' || stored === 'fundamentals' || stored === 'watchlist' || stored === 'calendar') {
       return stored;
     }
     return 'intelligence';
   });
+  const setSelectedTicker = useWorkspaceStore((state) => state.setSelectedTicker);
 
   const openPositionsQuery = usePositions('open');
   const watchlistQuery = useWatchlist();
@@ -39,6 +42,7 @@ export default function Research() {
   const tabs: { key: ResearchTab; label: string }[] = [
     { key: 'intelligence', label: t('researchPage.tabs.intelligence') },
     { key: 'fundamentals', label: t('researchPage.tabs.fundamentals') },
+    { key: 'watchlist', label: t('researchPage.tabs.watchlist') },
     { key: 'calendar', label: t('researchPage.tabs.calendar') },
   ];
 
@@ -105,6 +109,16 @@ export default function Research() {
       <div>
         {activeTab === 'intelligence' && <IntelligencePage initialSymbol={committedSymbol} />}
         {activeTab === 'fundamentals' && <FundamentalsPage initialSymbol={committedSymbol} />}
+        {activeTab === 'watchlist' && (
+          <WatchlistPipelinePanel
+            onTickerSelect={(ticker) => {
+              setSharedSymbol(ticker);
+              setCommittedSymbol(ticker);
+              setSelectedTicker(ticker, 'screener');
+              setActiveTab('intelligence');
+            }}
+          />
+        )}
         {activeTab === 'calendar' && (
           <EventsCalendar symbols={calendarSymbols} daysAhead={30} />
         )}

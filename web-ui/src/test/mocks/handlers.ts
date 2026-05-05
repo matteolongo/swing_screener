@@ -602,6 +602,12 @@ type WatchlistItemPayload = {
   watch_price: number | null
   currency: string | null
   source: string
+  current_price?: number | null
+  last_bar?: string | null
+  signal?: string | null
+  signal_trigger_price?: number | null
+  distance_to_trigger_pct?: number | null
+  price_history?: Array<{ date: string; close: number }>
 }
 let watchlistItems: WatchlistItemPayload[] = []
 
@@ -982,6 +988,55 @@ export const handlers = [
       return HttpResponse.json({ detail: `Watch item not found: ${ticker}` }, { status: 404 })
     }
     return HttpResponse.json({ deleted: true })
+  }),
+
+  // Daily review endpoints
+  http.get(`${API_BASE_URL}/api/daily-review`, () => {
+    return HttpResponse.json({
+      watchlist_near_trigger: watchlistItems.filter((item) => {
+        const distance = item.distance_to_trigger_pct
+        return typeof distance === 'number' && distance >= -3 && distance <= 0
+      }),
+      new_candidates: [],
+      positions_add_on_candidates: [],
+      positions_hold: [],
+      positions_update_stop: [],
+      positions_close: [],
+      summary: {
+        total_positions: 0,
+        no_action: 0,
+        update_stop: 0,
+        close_positions: 0,
+        new_candidates: 0,
+        add_on_candidates: 0,
+        watchlist_near_trigger: watchlistItems.filter((item) => {
+          const distance = item.distance_to_trigger_pct
+          return typeof distance === 'number' && distance >= -3 && distance <= 0
+        }).length,
+        review_date: '2026-05-04',
+      },
+    })
+  }),
+
+  http.post(`${API_BASE_URL}/api/daily-review/compute`, () => {
+    return HttpResponse.json({
+      watchlist_near_trigger: [],
+      new_candidates: [],
+      positions_add_on_candidates: [],
+      positions_hold: [],
+      positions_update_stop: [],
+      positions_close: [],
+      summary: {
+        total_positions: 0,
+        no_action: 0,
+        update_stop: 0,
+        close_positions: 0,
+        new_candidates: 0,
+        add_on_candidates: 0,
+        watchlist_near_trigger: 0,
+        review_date: '2026-05-04',
+      },
+    })
   }),
 
   // Screener endpoints
