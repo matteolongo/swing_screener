@@ -7,6 +7,12 @@ interface ScreenerCandidateDetailsRowProps {
   candidate: CandidateViewModel;
 }
 
+function volumeLabel(ratio: number): string {
+  if (ratio >= 1.5) return t('screener.details.volumeRatio.strong', { value: ratio.toFixed(2) });
+  if (ratio < 0.9) return t('screener.details.volumeRatio.weak', { value: ratio.toFixed(2) });
+  return t('screener.details.volumeRatio.neutral', { value: ratio.toFixed(2) });
+}
+
 /**
  * Expandable detail row showing advanced metrics
  */
@@ -39,6 +45,24 @@ export default function ScreenerCandidateDetailsRow({ candidate }: ScreenerCandi
               <MetricHelpLabel metricKey="RS" className="text-gray-600 dark:text-gray-400" />
               <div className="font-mono mt-1 text-base">{candidate.relStrength != null ? formatPercent(candidate.relStrength * 100) : '—'}</div>
             </div>
+            {candidate.volumeRatio != null && (
+              <div className="rounded-md border border-gray-200 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-800">
+                <p className="text-[10px] font-medium uppercase tracking-wide text-gray-600 dark:text-gray-400">
+                  {t('screener.details.volumeRatio.label')}
+                </p>
+                <div
+                  className={`font-mono mt-1 text-base ${
+                    candidate.volumeRatio >= 1.5
+                      ? 'text-emerald-600 dark:text-emerald-400'
+                      : candidate.volumeRatio < 0.9
+                        ? 'text-amber-600 dark:text-amber-400'
+                        : 'text-gray-900 dark:text-gray-100'
+                  }`}
+                >
+                  {volumeLabel(candidate.volumeRatio)}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </td>
