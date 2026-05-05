@@ -17,6 +17,7 @@ from api.models.daily_review import (
 from api.models.screener import ScreenerRequest
 from api.services.screener_service import ScreenerService
 from api.services.portfolio_service import PortfolioService
+from api.services.watchlist_service import WatchlistService
 from swing_screener.portfolio.state import ManageConfig as ManageStateConfig
 
 logger = logging.getLogger(__name__)
@@ -29,10 +30,12 @@ class DailyReviewService:
         self,
         screener_service: ScreenerService,
         portfolio_service: PortfolioService,
+        watchlist_service: WatchlistService | None = None,
         data_dir: Path = Path("data"),
     ):
         self.screener = screener_service
         self.portfolio = portfolio_service
+        self.watchlist = watchlist_service
         self.data_dir = data_dir
         self.daily_reviews_dir = data_dir / "daily_reviews"
         self.daily_reviews_dir.mkdir(parents=True, exist_ok=True)
@@ -93,6 +96,7 @@ class DailyReviewService:
             )
         new_candidates = [_to_daily_candidate(c) for c in candidates if c.same_symbol is None or c.same_symbol.mode == "NEW_ENTRY"]
         add_on_candidates = [_to_daily_candidate(c) for c in candidates if c.same_symbol is not None and c.same_symbol.mode == "ADD_ON"]
+        watchlist_near_trigger = self._watchlist_near_trigger_items()
         
         # 2. Analyze all open positions
         active_manage = self._active_manage_cfg_payload()
@@ -202,10 +206,12 @@ class DailyReviewService:
             close_positions=len(positions_close),
             new_candidates=len(new_candidates),
             add_on_candidates=len(add_on_candidates),
+            watchlist_near_trigger=len(watchlist_near_trigger),
             review_date=date.today(),
         )
-        
+
         review = DailyReview(
+            watchlist_near_trigger=watchlist_near_trigger,
             new_candidates=new_candidates,
             positions_add_on_candidates=add_on_candidates,
             positions_hold=positions_hold,
@@ -218,6 +224,25 @@ class DailyReviewService:
         self._save_review(review, "default")
         
         return review
+
+    def _watchlist_near_trigger_items(self) -> list:
+        if self.watchlist is None:
+            return []
+        try:
+            items = self.watchlist.list_items()
+        except Exception:
+            logger.exception("Unable to build watchlist near-trigger section for daily review")
+            return []
+        near_trigger = []
+        for item in items:
+            distance = (
+                item.distance_to_trigger_pct
+                if hasattr(item, "distance_to_trigger_pct")
+                else item.get("distance_to_trigger_pct")
+            )
+            if distance is not None and -3.0 <= float(distance) <= 0.0:
+                near_trigger.append(item)
+        return near_trigger
 
     def _active_manage_cfg_payload(self) -> dict:
         strategy_repo = getattr(self.screener, "_strategy_repo", None)
@@ -433,6 +458,7 @@ class DailyReviewService:
                 )
 
         return DailyReview(
+            watchlist_near_trigger=[],
             new_candidates=new_candidates,
             positions_add_on_candidates=add_on_candidates,
             positions_hold=positions_hold,
@@ -445,6 +471,7 @@ class DailyReviewService:
                 close_positions=len(positions_close),
                 new_candidates=len(new_candidates),
                 add_on_candidates=len(add_on_candidates),
+                watchlist_near_trigger=0,
                 review_date=date.today(),
             ),
         )

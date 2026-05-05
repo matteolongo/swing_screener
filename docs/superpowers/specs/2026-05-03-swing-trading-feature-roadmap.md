@@ -18,7 +18,7 @@ Features are grouped into tiers. Ship all of Tier 1 before starting Tier 2.
 
 ## Implementation status - 2026-05-04
 
-Tier 1 is being shipped as sequential stacked PRs:
+Tier 1 is implemented locally and Tier 2 has started as sequential stacked PRs:
 
 | # | Feature | Branch | Base | PR | Status |
 |---|---|---|---|---|---|
@@ -28,6 +28,7 @@ Tier 1 is being shipped as sequential stacked PRs:
 | 4 | Earnings warning | `codex/earnings-warning` | `codex/account-equity` | https://github.com/matteolongo/swing_screener/pull/235 | Draft, implemented |
 | 5 | Concentration warning | `codex/concentration-warning` | `codex/earnings-warning` | https://github.com/matteolongo/swing_screener/pull/236 | Draft, implemented |
 | 6 | Time stop nudge | `codex/time-stop-nudge` | `codex/concentration-warning` | pending | Implemented locally |
+| 7 | Watchlist pipeline view | `codex/watchlist-pipeline` | `codex/time-stop-nudge` | pending | Implemented locally |
 
 Review stacked PRs in order and compare each PR against its listed base branch.
 

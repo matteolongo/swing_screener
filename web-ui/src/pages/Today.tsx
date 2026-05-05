@@ -5,6 +5,7 @@ import FloatingChatWidget from '@/components/domain/workspace/FloatingChatWidget
 import ScreenerInboxPanel from '@/components/domain/workspace/ScreenerInboxPanel';
 import ClosePositionModalForm from '@/components/domain/positions/ClosePositionModalForm';
 import UpdateStopModalForm from '@/components/domain/positions/UpdateStopModalForm';
+import WatchMetaInline from '@/components/domain/watchlist/WatchMetaInline';
 import { useSymbolIntelligenceRunner } from '@/features/intelligence/useSymbolIntelligenceRunner';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useDailyReview } from '@/features/dailyReview/api';
@@ -26,6 +27,7 @@ import type {
   DailyReviewPositionHold,
   DailyReviewPositionUpdate,
 } from '@/features/dailyReview/types';
+import type { WatchItem } from '@/features/watchlist/types';
 
 // ─── Action item row components ─────────────────────────────────────────────
 
@@ -214,6 +216,41 @@ function HoldItem({ item, onClick, isFocused }: HoldItemProps) {
   );
 }
 
+function WatchlistNearTriggerItem({ item, onClick, isFocused }: { item: WatchItem; onClick: (ticker: string) => void; isFocused?: boolean }) {
+  const distance = item.distanceToTriggerPct;
+  return (
+    <button
+      type="button"
+      onClick={() => onClick(item.ticker)}
+      className={cn(
+        'w-full text-left flex items-start gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-l-2 border-amber-400',
+        isFocused && 'ring-1 ring-primary',
+      )}
+    >
+      <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 min-w-[60px]">
+        {item.ticker}
+      </span>
+      <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+        {t('todayPage.actionList.watchlistNearTrigger')}
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="text-xs font-semibold tabular-nums text-amber-700 dark:text-amber-300">
+          {distance != null
+            ? t('watchlist.pipeline.distanceToBuyZone', { value: `${distance >= 0 ? '+' : ''}${formatNumber(distance, 1)}%` })
+            : '—'}
+        </div>
+        <WatchMetaInline
+          watchedAt={item.watchedAt}
+          watchPrice={item.watchPrice}
+          currentPrice={item.currentPrice}
+          currency={item.currency}
+          className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px]"
+        />
+      </div>
+    </button>
+  );
+}
+
 // ─── Section header ──────────────────────────────────────────────────────────
 
 interface SectionHeaderProps {
@@ -353,6 +390,7 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
   // Flat ordered list for keyboard navigation
   const flatItems = useMemo(
     () => [
+      ...(review?.watchlistNearTrigger.map((i) => ({ ticker: i.ticker, id: `watch-${i.ticker}` })) ?? []),
       ...(review?.positionsClose.map((i) => ({ ticker: i.ticker, id: i.positionId })) ?? []),
       ...(review?.positionsUpdateStop.map((i) => ({ ticker: i.ticker, id: i.positionId })) ?? []),
       ...filteredCandidates.map((i) => ({ ticker: i.ticker, id: i.ticker })),
@@ -387,6 +425,7 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
 
   const requiresActionCount =
     (review?.positionsClose.length ?? 0) + (review?.positionsUpdateStop.length ?? 0);
+  const watchlistNearTriggerCount = review?.watchlistNearTrigger.length ?? 0;
   const opportunitiesCount = filteredCandidates.length + filteredAddOns.length;
   const holdCount = review?.positionsHold.length ?? 0;
 
@@ -406,7 +445,7 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
     );
   }
 
-  const isEmpty = requiresActionCount === 0 && opportunitiesCount === 0 && holdCount === 0;
+  const isEmpty = requiresActionCount === 0 && watchlistNearTriggerCount === 0 && opportunitiesCount === 0 && holdCount === 0;
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -479,6 +518,31 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
           <p className="text-sm text-gray-500 dark:text-gray-400 px-2 py-4 text-center">
             {t('todayPage.actionList.empty')}
           </p>
+        )}
+
+        {/* Requires Action section */}
+        {watchlistNearTriggerCount > 0 && (
+          <div className="space-y-1">
+            <div className="px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded">
+              {t('watchlist.pipeline.dailyReviewTitle')} · {watchlistNearTriggerCount}
+            </div>
+            <p className="px-3 text-[11px] text-gray-500 dark:text-gray-400">
+              {t('watchlist.pipeline.dailyReviewSubtitle', { count: String(watchlistNearTriggerCount) })}
+            </p>
+            <div className="space-y-0.5">
+              {review?.watchlistNearTrigger.map((item) => {
+                const idx = flatItems.findIndex((fi) => fi.id === `watch-${item.ticker}`);
+                return (
+                  <WatchlistNearTriggerItem
+                    key={item.ticker}
+                    item={item}
+                    onClick={onTickerSelect}
+                    isFocused={focusedIndex === idx}
+                  />
+                );
+              })}
+            </div>
+          </div>
         )}
 
         {/* Requires Action section */}

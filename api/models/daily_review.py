@@ -6,6 +6,7 @@ from api.models.recommendation import Recommendation
 from api.models.portfolio import Position
 from api.models.screener import SameSymbolCandidateContext
 from api.models.strategy import Strategy
+from api.models.watchlist import WatchlistItemView
 from swing_screener.recommendation.models import DecisionSummary
 
 
@@ -88,11 +89,13 @@ class DailyReviewSummary(BaseModel):
     close_positions: int
     new_candidates: int
     add_on_candidates: int = 0
+    watchlist_near_trigger: int = 0
     review_date: date
 
 
 class DailyReview(BaseModel):
     """Complete daily review with action items."""
+    watchlist_near_trigger: list[WatchlistItemView] = Field(default_factory=list)
     new_candidates: list[DailyReviewCandidate]
     positions_add_on_candidates: list[DailyReviewCandidate] = Field(default_factory=list)
     positions_hold: list[DailyReviewPositionHold]

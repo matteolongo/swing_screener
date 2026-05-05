@@ -6,7 +6,7 @@ Read this before picking up any feature plan. It describes the codebase conventi
 
 ## Current implementation status - 2026-05-04
 
-Tier 1 (all 6 features) is in progress as sequential stacked PRs:
+Tier 1 is complete locally and Tier 2 has started as sequential stacked PRs:
 
 | Feature | Branch | Base | PR | Status |
 |---|---|---|---|---|
@@ -16,12 +16,15 @@ Tier 1 (all 6 features) is in progress as sequential stacked PRs:
 | Feature 4 - Earnings proximity warning | `codex/earnings-warning` | `codex/account-equity` | https://github.com/matteolongo/swing_screener/pull/235 | Draft, fully implemented (incl. cache-hit test) |
 | Feature 5 - Concentration warning | `codex/concentration-warning` | `codex/earnings-warning` | https://github.com/matteolongo/swing_screener/pull/236 | Draft, fully implemented (incl. order modal warning) |
 | Feature 6 - Time stop nudge | `codex/time-stop-nudge` | `codex/concentration-warning` | pending | Implemented locally |
+| Feature 7 - Watchlist pipeline | `codex/watchlist-pipeline` | `codex/time-stop-nudge` | pending | Implemented locally |
 
 Review agents should review the PRs in order. Each branch intentionally builds on the previous one, so diffs should be compared against the listed base branch, not always against `main`.
 
 Known local dirty files that were not part of this work and should not be included unless explicitly requested:
 
 - `config/intelligence.yaml`
+- `config/strategies.yaml`
+- `config/user.yaml`
 - `data/screener_history.json`
 
 Validation already run during implementation:
@@ -31,6 +34,8 @@ Validation already run during implementation:
 - Feature 3: `pytest tests/api/test_account_equity.py -v`, `pytest -q`, `cd web-ui && npm run typecheck`, `cd web-ui && npx vitest run src/components/domain/strategy/EnhancedRiskCard.test.tsx`, `cd web-ui && npx vitest run`.
 - Feature 4: `pytest tests/api/test_earnings_proximity.py -v` (includes cache-hit coverage), `pytest -q`, `cd web-ui && npm run typecheck`, `cd web-ui && npx vitest run`.
 - Feature 5: `pytest tests/api/test_concentration.py -v`, `cd web-ui && npx vitest run src/components/domain/portfolio/ConcentrationBar.test.tsx`, focused order review frontend tests, `pytest -q`, `cd web-ui && npm run typecheck`, `cd web-ui && npx vitest run`.
+- Feature 6: `pytest tests/api/test_time_stop_nudge.py -v`, `cd web-ui && npx vitest run src/components/domain/workspace/PortfolioTable.test.tsx`, `cd web-ui && npm run typecheck`.
+- Feature 7: `pytest tests/api/test_watchlist_service.py tests/api/test_daily_review_service.py tests/api/test_watchlist_endpoints.py`, `cd web-ui && npm test -- --run src/components/domain/watchlist/WatchlistPipelinePanel.test.tsx src/features/dailyReview/types.test.ts src/pages/Today.test.tsx src/features/watchlist/hooks.test.tsx`, `cd web-ui && npm run typecheck`.
 
 ## What this app is
 
@@ -132,6 +137,6 @@ Use `locked_read_json` / `locked_write_json` from `api/utils/file_lock.py` — n
 
 ## Active branch
 
-Current stacked feature work is on `codex/time-stop-nudge`. Tier 1 is complete once PR #6 is merged.
+Current stacked feature work is on `codex/watchlist-pipeline`. Tier 2 has started on top of the Tier 1 stack.
 
-Next work should start Tier 2 planning from Feature 7 — Watchlist pipeline.
+Next work should continue Tier 2 from Feature 8 — Volume quality signal.
