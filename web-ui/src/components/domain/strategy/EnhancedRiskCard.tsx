@@ -5,7 +5,9 @@
 import Card, { CardContent, CardHeader, CardTitle } from '@/components/common/Card';
 import { Strategy } from '@/features/strategy/types';
 import { EducationalNumberInput } from './EducationalFieldControls';
+import { SelectInput } from './StrategyFieldControls';
 import type { ValidationWarning } from '@/features/strategy/api';
+import { t } from '@/i18n/t';
 
 interface EnhancedRiskCardProps {
   draft: Strategy;
@@ -39,6 +41,26 @@ export default function EnhancedRiskCard({ draft, setDraft, warnings }: Enhanced
             }
             step={1000}
             min={0}
+          />
+
+          <SelectInput
+            label={t('strategyPage.core.fields.accountSizeMode')}
+            value={draft.risk.accountSizeMode ?? 'equity'}
+            onChange={(value) =>
+              setDraft({
+                ...draft,
+                risk: { ...draft.risk, accountSizeMode: value as Strategy['risk']['accountSizeMode'] },
+              })
+            }
+            options={[
+              { value: 'equity', label: t('strategyPage.core.fields.accountSizeModeEquity') },
+              { value: 'base', label: t('strategyPage.core.fields.accountSizeModeBase') },
+            ]}
+            help={{
+              title: t('strategyPage.core.fields.accountSizeMode'),
+              short: t('strategyPage.core.fields.accountSizeModeHint'),
+              content: <p>{t('strategyPage.core.fields.accountSizeModeHint')}</p>,
+            }}
           />
 
           {/* Risk Per Trade - CRITICAL */}

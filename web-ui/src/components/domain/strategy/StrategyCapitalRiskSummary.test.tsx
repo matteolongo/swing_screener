@@ -33,6 +33,7 @@ const strategy: Strategy = {
     rrTarget: 2,
     commissionPct: 0,
     maxFeeRiskPct: 0.2,
+    accountSizeMode: 'equity',
     regimeEnabled: false,
     regimeTrendSma: 200,
     regimeTrendMultiplier: 0.5,
@@ -46,6 +47,8 @@ const strategy: Strategy = {
     trailSma: 20,
     smaBufferPct: 0.005,
     maxHoldingDays: 20,
+    timeStopDays: 15,
+    timeStopMinR: 0.5,
     benchmark: 'SPY',
   },
   marketIntelligence: {
@@ -105,5 +108,19 @@ describe('StrategyCapitalRiskSummary', () => {
     expect(screen.getByText('Balanced')).toBeInTheDocument();
     expect(screen.getByText(/Account \$800.00/)).toBeInTheDocument();
     expect(screen.getByText(/Risk \/ trade \$20.00/)).toBeInTheDocument();
+  });
+
+  it('uses effective equity when a portfolio equity snapshot is provided', () => {
+    render(
+      <StrategyCapitalRiskSummary
+        strategy={strategy}
+        equitySnapshot={{ effectiveAccountSize: 925, realizedPnl: 125 }}
+        variant="compact"
+      />,
+    );
+
+    expect(screen.getByText(/Equity \$925.00/)).toBeInTheDocument();
+    expect(screen.getByText(/Realized P&L \+\$125.00/)).toBeInTheDocument();
+    expect(screen.getByText(/Risk \/ trade \$23.13/)).toBeInTheDocument();
   });
 });

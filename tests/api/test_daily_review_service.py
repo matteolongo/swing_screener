@@ -430,6 +430,50 @@ def test_generate_daily_review_no_candidates(mock_portfolio_service, tmp_path):
     assert review.summary.total_positions == 3
 
 
+def test_generate_daily_review_includes_watchlist_near_trigger(
+    mock_screener_service,
+    mock_portfolio_service,
+    tmp_path,
+):
+    watchlist_service = Mock()
+    watchlist_service.list_items.return_value = [
+        {
+            "ticker": "ASML",
+            "watched_at": "2026-05-01T10:00:00Z",
+            "watch_price": 660.0,
+            "currency": "EUR",
+            "source": "screener",
+            "current_price": 671.0,
+            "signal_trigger_price": 680.0,
+            "distance_to_trigger_pct": -1.32,
+            "price_history": [],
+        },
+        {
+            "ticker": "SAP",
+            "watched_at": "2026-05-01T10:00:00Z",
+            "watch_price": 250.0,
+            "currency": "EUR",
+            "source": "screener",
+            "current_price": 260.0,
+            "signal_trigger_price": 270.0,
+            "distance_to_trigger_pct": -3.7,
+            "price_history": [],
+        },
+    ]
+
+    service = DailyReviewService(
+        mock_screener_service,
+        mock_portfolio_service,
+        watchlist_service=watchlist_service,
+        data_dir=tmp_path,
+    )
+
+    review = service.generate_daily_review(top_n=10)
+
+    assert [item.ticker for item in review.watchlist_near_trigger] == ["ASML"]
+    assert review.summary.watchlist_near_trigger == 1
+
+
 def test_generate_daily_review_survives_stop_suggestion_error(
     mock_screener_service,
     mock_portfolio_service,

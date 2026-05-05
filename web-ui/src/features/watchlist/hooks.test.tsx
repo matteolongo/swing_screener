@@ -46,6 +46,7 @@ describe('watchlist hooks', () => {
         watchPrice: 180,
         currency: 'USD',
         source: 'screener',
+        priceHistory: [],
       },
     ]);
 
@@ -70,6 +71,7 @@ describe('watchlist hooks', () => {
       watchPrice: 180,
       currency: 'USD',
       source: 'screener',
+      priceHistory: [],
     });
 
     const { result } = renderHook(() => useWatchSymbolMutation(), {
@@ -111,4 +113,3 @@ describe('watchlist hooks', () => {
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.watchlist() });
   });
 });
-

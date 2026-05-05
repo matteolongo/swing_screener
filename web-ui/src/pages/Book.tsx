@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
+import ConcentrationBar from '@/components/domain/portfolio/ConcentrationBar';
 import PortfolioRiskSummary from '@/components/domain/portfolio/PortfolioRiskSummary';
 import PortfolioPanel from '@/components/domain/workspace/PortfolioPanel';
-import { usePositions } from '@/features/portfolio/hooks';
+import { usePortfolioSummary, usePositions } from '@/features/portfolio/hooks';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 import { useWeeklyReviews } from '@/features/weeklyReview/hooks';
 import { cn } from '@/utils/cn';
@@ -18,12 +19,15 @@ type BookTab = 'positions' | 'orders' | 'journal' | 'performance' | 'review';
 function PositionsTab() {
   const openPositionsQuery = usePositions('open');
   const activeStrategyQuery = useActiveStrategyQuery();
+  const portfolioSummaryQuery = usePortfolioSummary();
   const openPositions = openPositionsQuery.data ?? [];
-  const accountSize = activeStrategyQuery.data?.risk?.accountSize;
+  const accountSize = portfolioSummaryQuery.data?.effectiveAccountSize ?? activeStrategyQuery.data?.risk?.accountSize;
+  const realizedPnl = portfolioSummaryQuery.data?.realizedPnl;
 
   return (
     <div className="space-y-4">
-      <PortfolioRiskSummary openPositions={openPositions} accountSize={accountSize} />
+      <PortfolioRiskSummary openPositions={openPositions} accountSize={accountSize} realizedPnl={realizedPnl} />
+      <ConcentrationBar groups={portfolioSummaryQuery.data?.concentration ?? []} />
       <PortfolioPanel />
     </div>
   );

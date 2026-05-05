@@ -12,6 +12,34 @@
 
 ---
 
+## Implementation status - 2026-05-03
+
+Status: implemented in draft PR https://github.com/matteolongo/swing_screener/pull/233.
+
+Branch stack:
+
+- Branch: `codex/edge-breakdown`
+- Base: `codex/trade-tagging`
+- Head commit: `57fe1829`
+
+Implemented commits:
+
+- `980f192a feat: add edge breakdown i18n keys`
+- `7039f28a feat: add EdgeBreakdownTable component with tag aggregation`
+- `57fe1829 feat: mount EdgeBreakdownTable on Analytics page`
+
+What changed:
+
+- Added the `analyticsPage.edgeBreakdown.*` i18n keys.
+- Added `EdgeBreakdownTable` for client-side aggregation by trade tag.
+- Mounted the table on the Analytics page using closed positions from the existing portfolio positions hook.
+
+Review notes:
+
+- Compare PR #233 against `codex/trade-tagging`.
+- The component intentionally waits for at least 5 tagged closed trades before displaying stats.
+- The next planning upgrade should verify whether expectancy should remain the implemented R-based formula, and whether setup, exit reason, and market condition tags should be separated instead of aggregated together.
+
 ## File map
 
 | File | Change |

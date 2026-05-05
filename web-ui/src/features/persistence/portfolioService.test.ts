@@ -81,6 +81,8 @@ describe('portfolio local persistence service', () => {
 
     const summary = portfolioSummaryLocal();
     expect(summary.totalPositions).toBe(0);
+    expect(summary.realizedPnl).toBe(40.1);
+    expect(summary.effectiveAccountSize).toBe(summary.accountSize + 40.1);
   });
 
   it('auto-merges repeated entry fills into the existing open position', () => {

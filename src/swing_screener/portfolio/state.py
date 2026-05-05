@@ -48,6 +48,8 @@ class ManageConfig:
     trail_after_R: float = 2.0
     sma_buffer_pct: float = 0.005  # buffer under SMA (0.5%)
     max_holding_days: int = 20  # time exit
+    time_stop_days: int = 15  # soft stale-trade nudge threshold
+    time_stop_min_r: float = 0.5  # suppress nudge once trade has made this much progress
     benchmark: str = "SPY"
 
 

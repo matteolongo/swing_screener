@@ -68,6 +68,7 @@ class StrategyRisk(BaseModel):
     rr_target: float = Field(gt=0, default=2.0)
     commission_pct: float = Field(ge=0, default=0.0)
     max_fee_risk_pct: float = Field(ge=0, le=1, default=0.2)
+    account_size_mode: Literal["base", "equity"] = "equity"
     regime_enabled: bool = False
     regime_trend_sma: int = Field(gt=1, default=200)
     regime_trend_multiplier: float = Field(gt=0, le=1, default=0.5)
@@ -77,12 +78,14 @@ class StrategyRisk(BaseModel):
 
 
 class StrategyManage(BaseModel):
-    breakeven_at_r: float = Field(ge=0)
-    trail_after_r: float = Field(ge=0)
-    trail_sma: int = Field(gt=0)
-    sma_buffer_pct: float = Field(ge=0)
-    max_holding_days: int = Field(gt=0)
-    benchmark: str
+    breakeven_at_r: float = Field(default=1.0, ge=0)
+    trail_after_r: float = Field(default=2.0, ge=0)
+    trail_sma: int = Field(default=20, gt=0)
+    sma_buffer_pct: float = Field(default=0.005, ge=0)
+    max_holding_days: int = Field(default=20, gt=0)
+    time_stop_days: int = Field(default=15, gt=0)
+    time_stop_min_r: float = Field(default=0.5, ge=0)
+    benchmark: str = "SPY"
 
 
 class StrategyIntelligenceLLM(BaseModel):

@@ -4,6 +4,7 @@ import ModalShell from '@/components/common/ModalShell';
 import type { ClosePositionRequest, Position } from '@/features/portfolio/types';
 import { formatCurrency, formatPercent } from '@/utils/formatters';
 import { t } from '@/i18n/t';
+import { cn } from '@/utils/cn';
 
 interface ClosePositionModalFormProps {
   position: Position;
@@ -29,6 +30,36 @@ function parseNonNegativeNumber(value: string): number | null {
   return parsed;
 }
 
+const TAG_GROUPS = [
+  {
+    key: 'setup',
+    tags: [
+      { id: 'breakout', label: t('tradeTags.breakout') },
+      { id: 'pullback', label: t('tradeTags.pullback') },
+      { id: 'add_on', label: t('tradeTags.addOn') },
+    ],
+  },
+  {
+    key: 'exit',
+    tags: [
+      { id: 'stop_hit', label: t('tradeTags.stopHit') },
+      { id: 'target_reached', label: t('tradeTags.targetReached') },
+      { id: 'time_stop', label: t('tradeTags.timeStop') },
+      { id: 'manual_exit', label: t('tradeTags.manualExit') },
+    ],
+  },
+  {
+    key: 'condition',
+    tags: [
+      { id: 'trending', label: t('tradeTags.trending') },
+      { id: 'choppy', label: t('tradeTags.choppy') },
+      { id: 'news_driven', label: t('tradeTags.newsDriven') },
+    ],
+  },
+];
+
+const TRADE_TAGS = TAG_GROUPS.flatMap((group) => group.tags);
+
 export default function ClosePositionModalForm({
   position,
   isLoading,
@@ -40,16 +71,16 @@ export default function ClosePositionModalForm({
   const [feeEurValue, setFeeEurValue] = useState('');
   const [reasonValue, setReasonValue] = useState('');
   const [lessonValue, setLessonValue] = useState('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const handleSubmit = (event: React.FormEvent) => {
-    event.preventDefault();
+  const buildRequest = (tags: string[]): ClosePositionRequest | null => {
     setFormError(null);
 
     const exitPrice = parsePositiveNumber(exitPriceValue);
     if (exitPrice == null) {
       setFormError(t('order.fillModal.invalidNumber'));
-      return;
+      return null;
     }
 
     let feeEur: number | undefined;
@@ -57,17 +88,36 @@ export default function ClosePositionModalForm({
       const parsedFee = parseNonNegativeNumber(feeEurValue);
       if (parsedFee == null) {
         setFormError(t('order.fillModal.invalidNumber'));
-        return;
+        return null;
       }
       feeEur = parsedFee;
     }
 
-    onSubmit({
+    return {
       exitPrice,
       feeEur,
       reason: reasonValue,
       lesson: lessonValue.trim() || undefined,
-    });
+      tags,
+    };
+  };
+
+  const submitWithTags = (tags: string[]) => {
+    const request = buildRequest(tags);
+    if (request) {
+      onSubmit(request);
+    }
+  };
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    submitWithTags(selectedTags);
+  };
+
+  const toggleTag = (id: string) => {
+    setSelectedTags((current) =>
+      current.includes(id) ? current.filter((tag) => tag !== id) : [...current, id],
+    );
   };
 
   const parsedExitPrice = Number.parseFloat(exitPriceValue);
@@ -168,6 +218,32 @@ export default function ClosePositionModalForm({
           />
         </div>
 
+        {exitPriceValue ? (
+          <div className="mt-4">
+            <p className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+              {t('tradeTags.stepTitle')}
+            </p>
+            <p className="mb-3 text-xs text-gray-500">{t('tradeTags.stepHint')}</p>
+            <div className="flex flex-wrap gap-2">
+              {TRADE_TAGS.map((tag) => (
+                <button
+                  key={tag.id}
+                  type="button"
+                  onClick={() => toggleTag(tag.id)}
+                  className={cn(
+                    'rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+                    selectedTags.includes(tag.id)
+                      ? 'border-blue-600 bg-blue-600 text-white'
+                      : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300',
+                  )}
+                >
+                  {tag.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
         {formError ? (
           <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3">
             <p className="text-sm text-red-800 dark:text-red-200">{formError}</p>
@@ -184,8 +260,13 @@ export default function ClosePositionModalForm({
           <Button type="button" variant="secondary" onClick={onClose} disabled={isLoading}>
             {t('common.actions.cancel')}
           </Button>
-          <Button type="submit" variant="primary" disabled={isLoading}>
-            {isLoading ? t('positions.closeModal.closing') : t('positions.closeModal.action')}
+          {exitPriceValue ? (
+            <Button type="button" variant="secondary" onClick={() => submitWithTags([])} disabled={isLoading}>
+              {t('closePositionModal.skipTags')}
+            </Button>
+          ) : null}
+          <Button type="button" variant="primary" onClick={() => submitWithTags(selectedTags)} disabled={isLoading}>
+            {isLoading ? t('positions.closeModal.closing') : t('closePositionModal.confirmClose')}
           </Button>
         </div>
       </form>

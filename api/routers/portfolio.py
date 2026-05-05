@@ -26,6 +26,7 @@ from api.models.portfolio import (
     DegiroSyncPreviewResponse,
     DegiroApplyResponse,
     DegiroStatus,
+    EarningsProximityResponse,
 )
 from api.dependencies import get_config_repo, get_portfolio_service
 from api.dependencies import get_strategy_repo
@@ -42,9 +43,25 @@ router = APIRouter()
 async def get_positions(
     status: Optional[str] = None,
     service: PortfolioService = Depends(get_portfolio_service),
+    config_repo: ConfigRepository = Depends(get_config_repo),
+    strategy_repo: StrategyRepository = Depends(get_strategy_repo),
 ):
     """Get all positions, optionally filtered by status."""
-    return service.list_positions(status=status)
+    manage = config_repo.get().manage
+    time_stop_days = int(manage.time_stop_days)
+    time_stop_min_r = float(manage.time_stop_min_r)
+    try:
+        active_strategy = strategy_repo.get_active_strategy()
+        strategy_manage = active_strategy.get("manage", {})
+        time_stop_days = int(strategy_manage.get("time_stop_days", time_stop_days))
+        time_stop_min_r = float(strategy_manage.get("time_stop_min_r", time_stop_min_r))
+    except (TypeError, ValueError):
+        pass
+    return service.list_positions(
+        status=status,
+        time_stop_days=time_stop_days,
+        time_stop_min_r=time_stop_min_r,
+    )
 
 
 @router.post("/positions", response_model=Position)
@@ -123,6 +140,7 @@ async def get_portfolio_summary(
 ):
     """Get aggregated portfolio metrics for all open positions."""
     config_account_size = float(config_repo.get().risk.account_size)
+    account_size_mode = getattr(config_repo.get().risk, "account_size_mode", "equity")
     default_config_account_size = float(ConfigRepository.get_defaults().risk.account_size)
     account_size = config_account_size
 
@@ -132,10 +150,20 @@ async def get_portfolio_summary(
             strategy_account_size = float(active_strategy.get("risk", {}).get("account_size", 0.0))
             if strategy_account_size > 0:
                 account_size = strategy_account_size
+                account_size_mode = str(active_strategy.get("risk", {}).get("account_size_mode", account_size_mode))
         except (TypeError, ValueError):
             pass
 
-    return service.get_portfolio_summary(account_size=account_size)
+    return service.get_portfolio_summary(account_size=account_size, account_size_mode=account_size_mode)
+
+
+@router.get("/earnings-proximity/{ticker}", response_model=EarningsProximityResponse)
+async def get_earnings_proximity(
+    ticker: str,
+    service: PortfolioService = Depends(get_portfolio_service),
+):
+    """Check whether a ticker has earnings within the warning window."""
+    return service.get_earnings_proximity(ticker)
 
 
 # ===== Orders =====
