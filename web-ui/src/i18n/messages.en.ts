@@ -341,6 +341,7 @@ export const messagesEn = {
       skipSuggestedBody: 'You can still place an order, but this setup is currently not an actionable entry per strategy guidance.',
       orderTypeMismatchWarning:
         'Selected order type does not match strategy guidance (suggested: {{suggestedType}}).',
+      liquiditySlippageWarning: 'Order size is {{pct}}% of avg daily volume — expect slippage.',
       overrideConfirm: 'I understand this differs from guidance and want to continue.',
       overrideRequired: 'Please confirm the override before submitting this order.',
       buyStopHint: 'Degiro may label Buy Stop entries as "Stop Loss" on the buy side.',
