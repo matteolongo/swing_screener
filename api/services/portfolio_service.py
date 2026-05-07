@@ -20,6 +20,8 @@ from api.models.portfolio import (
     FillOrderRequest,
     FillOrderResponse,
     FillFromDegiroResponse,
+    PartialCloseEvent,
+    PartialCloseRequest,
     Position,
     PositionUpdate,
     PositionWithMetrics,
@@ -426,6 +428,23 @@ class PortfolioService:
         entry_value = calculate_total_position_value(state_position.entry_price, state_position.shares)
         pnl_percent = (pnl / entry_value * 100.0) if entry_value > 0 else 0.0
 
+        raw_events = position.get("partial_closes") or []
+        partial_close_events = [
+            PartialCloseEvent(
+                date=e["date"],
+                shares_closed=int(e["shares_closed"]),
+                price=float(e["price"]),
+                r_at_close=float(e["r_at_close"]),
+                fee_eur=e.get("fee_eur"),
+            )
+            for e in raw_events
+        ]
+
+        blended_r: Optional[float] = None
+        if partial_close_events:
+            total_shares = sum(e.shares_closed for e in partial_close_events)
+            blended_r = sum(e.shares_closed * e.r_at_close for e in partial_close_events) / total_shares
+
         return PositionMetrics(
             ticker=ticker,
             pnl=pnl,
@@ -436,6 +455,8 @@ class PortfolioService:
             current_value=calculate_current_position_value(current_price, state_position.shares),
             per_share_risk=per_share_risk,
             total_risk=per_share_risk * state_position.shares,
+            partial_closes=partial_close_events,
+            blended_r=blended_r,
         )
 
     def _realized_pnl(self) -> float:
@@ -964,6 +985,62 @@ class PortfolioService:
             "position_id": position_id,
             "exit_price": request.exit_price,
             "fee_eur": request.fee_eur,
+        }
+
+    def partial_close_position(self, position_id: str, request: PartialCloseRequest) -> dict:
+        """Close a subset of shares on an open position, recording a partial-close event."""
+        data = self._positions_repo.read()
+        positions = data.get("positions", [])
+        found = False
+        r_at_close = 0.0
+
+        for pos in positions:
+            if pos.get("position_id") != position_id:
+                continue
+
+            if pos.get("status") != "open":
+                raise HTTPException(status_code=400, detail="Position is not open")
+
+            current_shares = int(pos.get("shares", 0))
+            if request.shares_closed >= current_shares:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"shares_closed ({request.shares_closed}) must be less than current shares ({current_shares}); use close_position to fully close",
+                )
+
+            entry_price = float(pos.get("entry_price", 0.0))
+            stop_price = float(pos.get("stop_price", 0.0))
+            per_share_risk = entry_price - stop_price
+            r_at_close = (request.price - entry_price) / per_share_risk if per_share_risk != 0 else 0.0
+
+            event = {
+                "date": get_today_str(),
+                "shares_closed": request.shares_closed,
+                "price": request.price,
+                "r_at_close": round(r_at_close, 4),
+                "fee_eur": request.fee_eur,
+            }
+
+            if "partial_closes" not in pos or pos["partial_closes"] is None:
+                pos["partial_closes"] = []
+            pos["partial_closes"].append(event)
+            pos["shares"] = current_shares - request.shares_closed
+            found = True
+            break
+
+        if not found:
+            raise HTTPException(status_code=404, detail=f"Position not found: {position_id}")
+
+        data["asof"] = get_today_str()
+        self._positions_repo.write(data)
+
+        return {
+            "status": "ok",
+            "position_id": position_id,
+            "shares_closed": request.shares_closed,
+            "price": request.price,
+            "r_at_close": round(r_at_close, 4),
+            "shares_remaining": pos["shares"],
         }
 
     def _resolve_manage_cfg(self, payload: Optional[dict] = None) -> ManageStateConfig:
