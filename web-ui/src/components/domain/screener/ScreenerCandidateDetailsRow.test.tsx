@@ -50,6 +50,7 @@ function makeVm(volumeRatio: number | null): CandidateViewModel {
     fixes: [],
     sameSymbol: null,
     volumeRatio,
+    avgDailyVolumeEur: null,
     original,
   };
 }
