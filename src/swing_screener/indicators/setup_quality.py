@@ -123,13 +123,15 @@ def compute_setup_quality(
                 ext = max(0.0, (last_close / prior_high_50) - 1.0)
         row["above_breakout_extension"] = ext
 
-        # ── breakout_volume_confirmation (optional) ───────────────────────
+        # ── breakout_volume_confirmation + volume_ratio (optional) ────────
         if vol_m is not None and ticker in vol_m.columns:
             v = vol_m[ticker].dropna()
             if len(v) >= 21:
                 today_vol = float(v.iloc[-1])
                 avg_vol_20 = float(v.iloc[-21:-1].mean())
                 row["breakout_volume_confirmation"] = bool(today_vol > 1.5 * avg_vol_20)
+                if avg_vol_20 > 0:
+                    row["volume_ratio"] = today_vol / avg_vol_20
 
         rows.append(row)
 
