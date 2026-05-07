@@ -3,6 +3,7 @@ import {
   createOrder,
   cancelOrder,
   closePosition,
+  partialClosePosition,
   fetchOrders,
   fetchPortfolioSummary,
   fetchPositionMetrics,
@@ -24,6 +25,7 @@ import {
   FillOrderRequest,
   UpdateStopRequest,
   ClosePositionRequest,
+  PartialCloseRequest,
 } from './types';
 import { queryKeys } from '@/lib/queryKeys';
 import { invalidateOrderQueries, invalidatePositionQueries } from '@/lib/queryInvalidation';
@@ -172,6 +174,18 @@ export function useClosePositionMutation(onSuccess?: () => void) {
   return useMutation({
     mutationFn: ({ positionId, request }: { positionId: string; request: ClosePositionRequest }) =>
       closePosition(positionId, request),
+    onSuccess: async () => {
+      await invalidatePositionQueries(queryClient);
+      onSuccess?.();
+    },
+  });
+}
+
+export function usePartialClosePositionMutation(onSuccess?: () => void) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ positionId, request }: { positionId: string; request: PartialCloseRequest }) =>
+      partialClosePosition(positionId, request),
     onSuccess: async () => {
       await invalidatePositionQueries(queryClient);
       onSuccess?.();

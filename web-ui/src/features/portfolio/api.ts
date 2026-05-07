@@ -23,6 +23,7 @@ import {
   PositionStatus,
   UpdateStopRequest,
   ClosePositionRequest,
+  PartialCloseRequest,
   transformCreateOrderRequest,
   transformOrder,
   transformPosition,
@@ -462,6 +463,25 @@ export async function closePosition(
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.detail || 'Failed to close position');
+  }
+}
+
+export async function partialClosePosition(
+  positionId: string,
+  request: PartialCloseRequest,
+): Promise<void> {
+  const response = await fetch(apiUrl(API_ENDPOINTS.positionPartialClose(positionId)), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      shares_closed: request.sharesClosed,
+      price: request.price,
+      fee_eur: request.feeEur,
+    }),
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
+    throw new Error(error.detail ?? 'Failed to partial close position');
   }
 }
 

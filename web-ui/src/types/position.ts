@@ -2,6 +2,20 @@
 
 export type PositionStatus = 'open' | 'closed';
 
+export interface PartialCloseEvent {
+  date: string;
+  sharesClosed: number;
+  price: number;
+  rAtClose: number;
+  feeEur?: number | null;
+}
+
+export interface PartialCloseRequest {
+  sharesClosed: number;
+  price: number;
+  feeEur?: number;
+}
+
 export interface Position {
   ticker: string;
   status: PositionStatus;
@@ -22,6 +36,7 @@ export interface Position {
   thesis?: string | null;
   lesson?: string | null;
   tags?: string[];
+  partialCloses?: PartialCloseEvent[];
 }
 
 export type ActionType = 'NO_ACTION' | 'MOVE_STOP_UP' | 'CLOSE_STOP_HIT' | 'CLOSE_TIME_EXIT';
@@ -86,6 +101,13 @@ export interface PositionApiResponse {
   thesis?: string | null;
   lesson?: string | null;
   tags?: string[] | null;
+  partial_closes?: Array<{
+    date: string;
+    shares_closed: number;
+    price: number;
+    r_at_close: number;
+    fee_eur?: number | null;
+  }> | null;
 }
 
 export function transformPosition(apiPosition: PositionApiResponse): Position {
@@ -109,6 +131,13 @@ export function transformPosition(apiPosition: PositionApiResponse): Position {
     thesis: apiPosition.thesis ?? null,
     lesson: apiPosition.lesson ?? null,
     tags: apiPosition.tags ?? [],
+    partialCloses: (apiPosition.partial_closes ?? []).map((e) => ({
+      date: e.date,
+      sharesClosed: e.shares_closed,
+      price: e.price,
+      rAtClose: e.r_at_close,
+      feeEur: e.fee_eur ?? null,
+    })),
   };
 }
 
