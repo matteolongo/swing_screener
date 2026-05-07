@@ -178,13 +178,29 @@ export default function ScreenerCandidatesTable({
 
               {/* Signal */}
               <td className="py-1.5 px-3">
-                {badge ? (
-                  <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap ${badge.className}`}>
-                    {badge.label}
-                  </span>
-                ) : (
-                  <span className="text-xs text-gray-400">—</span>
-                )}
+                <div className="flex items-center gap-1">
+                  {badge ? (
+                    <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap ${badge.className}`}>
+                      {badge.label}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-gray-400">—</span>
+                  )}
+                  {vm.volumeRatio != null && vm.volumeRatio >= 1.5 && (
+                    <span
+                      className="inline-block w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0"
+                      title={t('screener.details.volumeRatio.dotStrongTitle')}
+                      aria-label={t('screener.details.volumeRatio.dotStrongTitle')}
+                    />
+                  )}
+                  {vm.volumeRatio != null && vm.volumeRatio < 0.9 && (
+                    <span
+                      className="inline-block w-2 h-2 rounded-full bg-amber-400 flex-shrink-0"
+                      title={t('screener.details.volumeRatio.dotWeakTitle')}
+                      aria-label={t('screener.details.volumeRatio.dotWeakTitle')}
+                    />
+                  )}
+                </div>
               </td>
 
               {/* Close */}

@@ -165,3 +165,49 @@ def test_extension_penalty_reduces_score() -> None:
     assert t0_clean > t0_ext, (
         f"Clean candidate score ({t0_clean:.4f}) should exceed extended ({t0_ext:.4f})"
     )
+
+
+# ── volume_ratio tests ────────────────────────────────────────────────────────
+
+def test_volume_ratio_computed_when_volume_available() -> None:
+    """When 21+ bars of volume are present, volume_ratio must equal today / avg_20."""
+    n = 30
+    close = list(np.linspace(100.0, 110.0, n))
+    # Avg of first 20 bars of volume = 1000. Today (bar 29) = 2000 → ratio = 2.0
+    volume = [1_000.0] * (n - 1) + [2_000.0]
+
+    ohlcv = _make_ohlcv(close, volume=volume, ticker="VOL")
+    result = compute_setup_quality(ohlcv, ["VOL"])
+
+    assert "VOL" in result.index
+    assert "volume_ratio" in result.columns
+    ratio = result.loc["VOL", "volume_ratio"]
+    assert not math.isnan(ratio)
+    # today_vol=2000, avg of previous 20 bars=1000 → ratio≈2.0
+    assert abs(ratio - 2.0) < 0.05, f"Expected ≈2.0 got {ratio}"
+
+
+def test_volume_ratio_absent_when_no_volume() -> None:
+    """When volume column is absent, volume_ratio must not be in the result."""
+    close = list(np.linspace(100.0, 110.0, 30))
+    ohlcv = _make_ohlcv(close, ticker="NOVOL2")  # no volume
+
+    result = compute_setup_quality(ohlcv, ["NOVOL2"])
+
+    assert "NOVOL2" in result.index
+    assert "volume_ratio" not in result.columns, \
+        "volume_ratio should not appear when volume data is absent"
+
+
+def test_volume_ratio_absent_when_insufficient_volume_bars() -> None:
+    """Fewer than 21 volume bars → volume_ratio must not be in the result."""
+    n = 15  # only 15 bars total, < 21 required
+    close = list(np.linspace(100.0, 110.0, n))
+    volume = [1_000.0] * n
+
+    ohlcv = _make_ohlcv(close, volume=volume, ticker="SHORT")
+    result = compute_setup_quality(ohlcv, ["SHORT"])
+
+    assert "SHORT" in result.index
+    assert "volume_ratio" not in result.columns, \
+        "volume_ratio should not appear when fewer than 21 volume bars available"

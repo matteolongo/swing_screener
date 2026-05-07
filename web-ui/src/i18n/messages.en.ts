@@ -1059,6 +1059,14 @@ export const messagesEn = {
       overlayInfo: 'Overlay Information',
       secondaryActions: 'More Analysis',
       noOverlayData: 'No overlay data available',
+      volumeRatio: {
+        label: 'Volume',
+        strong: '{{value}}× avg (strong)',
+        weak: '{{value}}× avg (weak)',
+        neutral: '{{value}}× avg',
+        dotStrongTitle: 'High-volume breakout — strong conviction',
+        dotWeakTitle: 'Low-volume breakout — higher failure rate',
+      },
     },
     symbolIntelligence: {
       runAction: 'Run Intelligence',

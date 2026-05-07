@@ -83,6 +83,7 @@ class ScreenerCandidate(BaseModel):
     close_location_in_range: Optional[float] = None
     above_breakout_extension: Optional[float] = None
     breakout_volume_confirmation: Optional[bool] = None
+    volume_ratio: Optional[float] = None
     symbol_change_pct: Optional[float] = None
     benchmark_outperformance_pct: Optional[float] = None
 
