@@ -39,6 +39,7 @@ export interface OrderReviewContext {
   executionNote?: string | null;
   positionId?: string | null;
   sameSymbol?: SameSymbolCandidateContext;
+  avgDailyVolumeEur?: number | null;
 }
 
 interface OrderReviewExperienceProps {
@@ -256,8 +257,19 @@ export default function OrderReviewExperience({
         }),
       );
     }
+    const adv = context.avgDailyVolumeEur;
+    if (adv != null && adv > 0 && quantity > 0 && limitPrice > 0) {
+      const notional = quantity * limitPrice;
+      const pct = (notional / adv) * 100;
+      if (pct > 5) {
+        nextWarnings.push(
+          t('order.candidateModal.liquiditySlippageWarning', { pct: pct.toFixed(1) }),
+        );
+      }
+    }
     return nextWarnings;
-  }, [enforceRecommendation, hasOrderTypeMismatch, hasSkipSuggestion, normalizedSuggestedOrderType, verdict]);
+  }, [enforceRecommendation, hasOrderTypeMismatch, hasSkipSuggestion, normalizedSuggestedOrderType, verdict,
+      context.avgDailyVolumeEur, quantity, limitPrice]);
   const invalidationRules = context.recommendation?.thesis?.invalidationRules ?? [];
   const hardInvalidations = invalidationRules.filter((rule) => classifyInvalidationRule(rule.condition) === 'hard');
   const softInvalidations = invalidationRules.filter((rule) => classifyInvalidationRule(rule.condition) === 'soft');

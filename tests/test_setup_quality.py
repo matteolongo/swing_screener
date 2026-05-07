@@ -211,3 +211,28 @@ def test_volume_ratio_absent_when_insufficient_volume_bars() -> None:
     assert "SHORT" in result.index
     assert "volume_ratio" not in result.columns, \
         "volume_ratio should not appear when fewer than 21 volume bars available"
+
+
+def test_avg_daily_volume_eur_present() -> None:
+    """avg_daily_volume_eur = close * avg_vol_20 when volume data is present."""
+    close_price = 20.0
+    avg_volume = 500_000.0
+    close = [close_price] * 30
+    volume = [avg_volume] * 30  # avg_vol_20 = 500_000; eur = 20 * 500_000 = 10_000_000
+
+    ohlcv = _make_ohlcv(close, volume=volume, ticker="LIQUID")
+    result = compute_setup_quality(ohlcv, ["LIQUID"])
+
+    assert "avg_daily_volume_eur" in result.columns
+    assert abs(result.loc["LIQUID", "avg_daily_volume_eur"] - 10_000_000.0) < 1.0
+
+
+def test_avg_daily_volume_eur_absent_when_no_volume() -> None:
+    """avg_daily_volume_eur absent when ohlcv has no Volume level."""
+    close = [20.0] * 30
+
+    ohlcv = _make_ohlcv(close, ticker="NOVOL3")  # no volume argument
+    result = compute_setup_quality(ohlcv, ["NOVOL3"])
+
+    assert "avg_daily_volume_eur" not in result.columns, \
+        "avg_daily_volume_eur should not appear when volume data is absent"

@@ -1008,6 +1008,7 @@ class ScreenerService:
                             else None
                         ),
                         volume_ratio=_safe_optional_float(row.get("volume_ratio")),
+                        avg_daily_volume_eur=_safe_optional_float(row.get("avg_daily_volume_eur")),
                         symbol_change_pct=symbol_change_pct,
                         benchmark_outperformance_pct=benchmark_outperformance_pct,
                         signal=str(signal) if not _is_na_scalar(signal) else None,

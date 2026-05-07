@@ -336,6 +336,7 @@ low_level:
       max_atr_pct: 10.0
       require_trend_ok: true
       require_rs_positive: false
+      min_avg_daily_volume_eur: 100000
       currencies:
         - USD
         - EUR

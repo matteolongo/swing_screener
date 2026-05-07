@@ -32,6 +32,7 @@ export interface CandidateViewModel {
   fundamentalsFreshnessStatus: string | null;
   fundamentalsSummary: string | null;
   volumeRatio: number | null;
+  avgDailyVolumeEur: number | null;
 
   // Fix recommendations
   fixes: string[];
@@ -87,6 +88,7 @@ export function toCandidateViewModel(candidate: ScreenerCandidate): CandidateVie
     fundamentalsFreshnessStatus: candidate.fundamentalsFreshnessStatus ?? null,
     fundamentalsSummary: candidate.fundamentalsSummary ?? null,
     volumeRatio: candidate.volumeRatio ?? null,
+    avgDailyVolumeEur: candidate.avgDailyVolumeEur ?? null,
 
     // Fix list
     fixes,

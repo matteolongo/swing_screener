@@ -137,6 +137,7 @@ export interface ScreenerCandidate {
   rawTechnicalRank?: number;
   combinedPriorityScore?: number;
   volumeRatio?: number;
+  avgDailyVolumeEur?: number;
 }
 
 export interface DecisionTradePlanAPI {
@@ -251,6 +252,7 @@ export interface ScreenerCandidateAPI {
   raw_technical_rank?: number;
   combined_priority_score?: number;
   volume_ratio?: number;
+  avg_daily_volume_eur?: number;
 }
 
 export interface ScreenerRequest {
@@ -464,6 +466,7 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
       rawTechnicalRank: c.raw_technical_rank ?? undefined,
       combinedPriorityScore: c.combined_priority_score ?? undefined,
       volumeRatio: c.volume_ratio ?? undefined,
+      avgDailyVolumeEur: c.avg_daily_volume_eur ?? undefined,
     })),
     asofDate: apiResponse.asof_date,
     totalScreened: apiResponse.total_screened,

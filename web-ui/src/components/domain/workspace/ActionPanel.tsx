@@ -127,6 +127,7 @@ export default function ActionPanel({ ticker }: ActionPanelProps) {
     executionNote: candidate?.executionNote,
     positionId: sameSymbol?.positionId,
     sameSymbol,
+    avgDailyVolumeEur: candidate?.avgDailyVolumeEur ?? null,
   };
 
   return (

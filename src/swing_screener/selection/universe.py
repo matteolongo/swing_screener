@@ -27,6 +27,9 @@ class UniverseFilterConfig:
     require_trend_ok: bool = field(default_factory=lambda: bool(_universe_defaults().get("require_trend_ok", True)))
     require_rs_positive: bool = field(default_factory=lambda: bool(_universe_defaults().get("require_rs_positive", False)))
     currencies: list[str] = field(default_factory=lambda: list(_universe_defaults().get("currencies", ["USD", "EUR"])))
+    min_avg_daily_volume_eur: float = field(
+        default_factory=lambda: float(_universe_defaults().get("min_avg_daily_volume_eur", 0.0))
+    )
 
 
 @dataclass(frozen=True)
@@ -95,7 +98,13 @@ def apply_universe_filters(
         else pd.Series(True, index=df.index)
     )
 
-    eligible = cond_price & cond_atr & cond_trend & cond_rs & cond_currency
+    # liquidity filter — skipped when column absent or threshold is 0
+    if cfg.min_avg_daily_volume_eur > 0 and "avg_daily_volume_eur" in df.columns:
+        cond_liquidity = df["avg_daily_volume_eur"] >= cfg.min_avg_daily_volume_eur
+    else:
+        cond_liquidity = pd.Series(True, index=df.index)
+
+    eligible = cond_price & cond_atr & cond_trend & cond_rs & cond_currency & cond_liquidity
     df["is_eligible"] = eligible
 
     # reason column (useful for debugging)
@@ -112,6 +121,8 @@ def apply_universe_filters(
             r.append("rs")
         if not bool(cond_currency.loc[t]):
             r.append("currency")
+        if not bool(cond_liquidity.loc[t]):
+            r.append("liquidity")
         reasons.append(",".join(r) if r else "ok")
 
     df["reason"] = reasons
