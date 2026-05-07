@@ -5,11 +5,13 @@ import Button from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
 import FillOrderModalForm from '@/components/domain/orders/FillOrderModalForm';
 import ClosePositionModalForm from '@/components/domain/positions/ClosePositionModalForm';
+import PartialCloseModalForm from '@/components/domain/positions/PartialCloseModalForm';
 import UpdateStopModalForm from '@/components/domain/positions/UpdateStopModalForm';
 import type { PositionWithMetrics } from '@/features/portfolio/api';
 import {
   useCancelOrderMutation,
   useClosePositionMutation,
+  usePartialClosePositionMutation,
   useFillOrderMutation,
   useOrders,
   usePositions,
@@ -110,6 +112,7 @@ export default function PortfolioTable() {
   const [selectedPendingOrder, setSelectedPendingOrder] = useState<Order | null>(null);
   const [showUpdateStopModal, setShowUpdateStopModal] = useState(false);
   const [showCloseModal, setShowCloseModal] = useState(false);
+  const [showPartialCloseModal, setShowPartialCloseModal] = useState(false);
   const [showFillOrderModal, setShowFillOrderModal] = useState(false);
 
   const updateStopMutation = useUpdateStopMutation(() => {
@@ -118,6 +121,10 @@ export default function PortfolioTable() {
   });
   const closePositionMutation = useClosePositionMutation(() => {
     setShowCloseModal(false);
+    setSelectedPosition(null);
+  });
+  const partialClosePositionMutation = usePartialClosePositionMutation(() => {
+    setShowPartialCloseModal(false);
     setSelectedPosition(null);
   });
   const fillOrderMutation = useFillOrderMutation(() => {
@@ -334,6 +341,13 @@ export default function PortfolioTable() {
                   }}
                 />
                 <DropdownItem
+                  label={t('positions.partialCloseModal.submit')}
+                  onClick={() => {
+                    setSelectedPosition(row.position);
+                    setShowPartialCloseModal(true);
+                  }}
+                />
+                <DropdownItem
                   label={t('positionsPage.closePosition')}
                   className="text-rose-700 dark:text-rose-400"
                   onClick={() => {
@@ -424,6 +438,18 @@ export default function PortfolioTable() {
           }
           isLoading={closePositionMutation.isPending}
           error={closePositionMutation.error?.message}
+        />
+      ) : null}
+
+      {showPartialCloseModal && selectedPosition ? (
+        <PartialCloseModalForm
+          position={selectedPosition}
+          onClose={() => { setShowPartialCloseModal(false); setSelectedPosition(null); }}
+          onSubmit={(request) =>
+            partialClosePositionMutation.mutate({ positionId: selectedPosition.positionId!, request })
+          }
+          isLoading={partialClosePositionMutation.isPending}
+          error={partialClosePositionMutation.error?.message}
         />
       ) : null}
 
