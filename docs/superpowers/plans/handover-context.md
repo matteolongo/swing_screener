@@ -4,9 +4,9 @@ Read this before picking up any feature plan. It describes the codebase conventi
 
 ---
 
-## Current implementation status - 2026-05-07
+## Current implementation status - 2026-05-08
 
-Tier 1 (F1-F5) merged to main. Tier 2 (F6-F8) implemented locally, PRs pending.
+Tier 1 (F1-F5) merged to main. Tier 2 (F6-F10) implemented locally, PRs pending.
 
 | Feature | Branch | Base | PR | Status |
 |---|---|---|---|---|
@@ -19,6 +19,7 @@ Tier 1 (F1-F5) merged to main. Tier 2 (F6-F8) implemented locally, PRs pending.
 | Feature 7 - Watchlist pipeline | `codex/watchlist-pipeline-v2` | `main` | pending | PR pending |
 | Feature 8 - Volume quality signal | `codex/volume-quality` | `main` | pending | PR pending |
 | Feature 9 - Liquidity filter | `codex/liquidity-filter` | `main` | pending | PR pending |
+| Feature 10 - Partial exits | `codex/partial-exits` | `main` | pending | PR pending |
 
 All branches now base off `main` (F1-F5 merged). Review each PR diff against `main`.
 
@@ -36,6 +37,7 @@ Validation already run during implementation:
 - Feature 6: `pytest tests/api/test_time_stop_nudge.py -v`, `cd web-ui && npx vitest run src/components/domain/workspace/PortfolioTable.test.tsx`, `cd web-ui && npm run typecheck`.
 - Feature 7: `pytest tests/api/test_watchlist_service.py tests/api/test_daily_review_service.py tests/api/test_watchlist_endpoints.py`, `cd web-ui && npm test -- --run src/components/domain/watchlist/WatchlistPipelinePanel.test.tsx src/features/dailyReview/types.test.ts src/pages/Today.test.tsx src/features/watchlist/hooks.test.tsx`, `cd web-ui && npm run typecheck`.
 - Feature 9: `pytest tests/test_universe_filter.py tests/api/test_liquidity.py -v`, `cd web-ui && npx vitest run src/components/domain/orders/OrderReviewExperience.test.tsx`, `pytest -q`, `cd web-ui && npm run typecheck`.
+- Feature 10: `pytest tests/api/test_partial_close.py -v`, `cd web-ui && npx vitest run src/components/domain/positions/PartialCloseModalForm.test.tsx`, `pytest -q`, `cd web-ui && npm run typecheck`, `cd web-ui && npx vitest run`.
 
 ## What this app is
 
@@ -137,6 +139,6 @@ Use `locked_read_json` / `locked_write_json` from `api/utils/file_lock.py` — n
 
 ## Active branch
 
-F6-F9 are implemented. PRs pending for F7 (`codex/watchlist-pipeline-v2`), F8 (`codex/volume-quality`), and F9 (`codex/liquidity-filter`).
+F6-F10 are implemented. PRs pending for F7 (`codex/watchlist-pipeline-v2`), F8 (`codex/volume-quality`), F9 (`codex/liquidity-filter`), and F10 (`codex/partial-exits`).
 
-Next work should continue Tier 2 with Feature 10 — Partial exits. Start new branch from `main`.
+Next work: Tier 3 features (F11 Regime performance, F12 FX-adjusted R, F13 Trail customization, F14 MTF trend filter). Start new branch from `main`.

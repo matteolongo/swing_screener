@@ -16,9 +16,9 @@ Features are grouped into tiers. Ship all of Tier 1 before starting Tier 2.
 
 ---
 
-## Implementation status - 2026-05-07
+## Implementation status - 2026-05-08
 
-Tier 1 and Tier 2 are implemented. PRs 1-5 merged to main. F6-F8 implemented locally with PRs pending.
+Tier 1 and Tier 2 fully implemented. F1-F5 merged to main. F6-F10 implemented locally with PRs pending.
 
 | # | Feature | Branch | Base | PR | Status |
 |---|---|---|---|---|---|
@@ -30,6 +30,8 @@ Tier 1 and Tier 2 are implemented. PRs 1-5 merged to main. F6-F8 implemented loc
 | 6 | Time stop nudge | `codex/time-stop-nudge` | `main` | pending | Implemented locally (squashed into main via #232) |
 | 7 | Watchlist pipeline view | `codex/watchlist-pipeline-v2` | `main` | pending | PR pending |
 | 8 | Volume quality signal | `codex/volume-quality` | `main` | pending | PR pending |
+| 9 | Liquidity filter | `codex/liquidity-filter` | `main` | pending | PR pending |
+| 10 | Partial exits | `codex/partial-exits` | `main` | pending | PR pending |
 
 Review each PR against `main` (all branches rebased after F1-F5 merge).
 
@@ -331,7 +333,7 @@ Last updated: 2026-05-07
 | 7 | Watchlist pipeline | 2 | ✅ Done — `codex/watchlist-pipeline-v2` / PR pending | Spot setups early |
 | 8 | Volume quality | 2 | ✅ Done — `codex/volume-quality` / PR pending | Better entry timing |
 | 9 | Liquidity filter | 2 | ✅ Done — `codex/liquidity-filter` / PR pending | Avoid illiquid names |
-| 10 | Partial exits | 2 | 🔲 No plan yet | Scale-out capability |
+| 10 | Partial exits | 2 | ✅ Done — `codex/partial-exits` / PR pending | Scale-out capability |
 | 11 | Regime performance | 3 | 🔲 No plan yet | Size to conditions |
 | 12 | FX-adjusted R | 3 | 🔲 No plan yet | True R visibility |
 | 13 | Trail customization | 3 | 🔲 No plan yet | Setup-specific trails |
