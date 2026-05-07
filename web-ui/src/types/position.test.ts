@@ -47,6 +47,7 @@ describe('Position Helper Functions', () => {
         thesis: null,
         lesson: null,
         tags: [],
+        partialCloses: [],
       })
     })
 
