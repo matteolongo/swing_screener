@@ -15,9 +15,9 @@ Tier 1 (F1-F5) merged to main. Tier 2 (F6-F8) implemented locally, PRs pending.
 | Feature 3 - Account equity auto-update | `codex/account-equity` | `main` | https://github.com/matteolongo/swing_screener/pull/234 | Merged to main |
 | Feature 4 - Earnings proximity warning | `codex/earnings-warning` | `main` | https://github.com/matteolongo/swing_screener/pull/235 | Merged to main |
 | Feature 5 - Concentration warning | `codex/concentration-warning` | `main` | https://github.com/matteolongo/swing_screener/pull/236 | Merged to main |
-| Feature 6 - Time stop nudge | `codex/time-stop-nudge` | `main` | pending | Implemented locally |
-| Feature 7 - Watchlist pipeline | `codex/watchlist-pipeline` | `main` | pending | Implemented locally |
-| Feature 8 - Volume quality signal | `codex/volume-quality` | `main` | pending | Implemented locally |
+| Feature 6 - Time stop nudge | `codex/time-stop-nudge` | `main` | pending | Squashed into main via #232; no standalone PR |
+| Feature 7 - Watchlist pipeline | `codex/watchlist-pipeline-v2` | `main` | pending | PR pending |
+| Feature 8 - Volume quality signal | `codex/volume-quality` | `main` | pending | PR pending |
 
 All branches now base off `main` (F1-F5 merged). Review each PR diff against `main`.
 
@@ -135,6 +135,6 @@ Use `locked_read_json` / `locked_write_json` from `api/utils/file_lock.py` — n
 
 ## Active branch
 
-Current stacked feature work is on `codex/watchlist-pipeline`. Tier 2 has started on top of the Tier 1 stack.
+F6-F8 are implemented. PRs pending for F7 (`codex/watchlist-pipeline-v2`) and F8 (`codex/volume-quality`).
 
-Next work should continue Tier 2 from Feature 8 — Volume quality signal.
+Next work should continue Tier 2 with Feature 9 — Liquidity filter (or Feature 10 — Partial exits). Start new branches from `main`.
