@@ -26,6 +26,7 @@ export function useWatchSymbolMutation() {
     mutationFn: (request: WatchSymbolRequest) => watchSymbol(request),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.watchlist() });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.watchlistPipeline() });
     },
   });
 }
@@ -36,7 +37,7 @@ export function useUnwatchSymbolMutation() {
     mutationFn: (ticker: string) => unwatchSymbol(ticker),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.watchlist() });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.watchlistPipeline() });
     },
   });
 }
-

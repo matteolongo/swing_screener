@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import Button from '@/components/common/Button';
 import CachedSymbolPriceChart from '@/components/domain/market/CachedSymbolPriceChart';
+import WatchToggleButton from '@/components/domain/watchlist/WatchToggleButton';
 import FundamentalsSnapshotCard from '@/components/domain/fundamentals/FundamentalsSnapshotCard';
 import IntelligenceOpportunityCard from '@/components/domain/intelligence/IntelligenceOpportunityCard';
 import AnalysisDecisionStrip from '@/components/domain/workspace/AnalysisDecisionStrip';
@@ -17,6 +18,7 @@ import {
 } from '@/features/intelligence/hooks';
 import type { IntelligenceUpcomingCatalyst } from '@/features/intelligence/types';
 import type { SymbolIntelligenceStatus } from '@/features/intelligence/useSymbolIntelligenceRunner';
+import { useUnwatchSymbolMutation, useWatchlist, useWatchSymbolMutation } from '@/features/watchlist/hooks';
 import { t } from '@/i18n/t';
 import { cn } from '@/utils/cn';
 import { formatDateTime } from '@/utils/formatters';
@@ -48,6 +50,9 @@ export default function SymbolAnalysisContent({
   onRunSymbolIntelligence,
   symbolIntelligenceStatus,
 }: SymbolAnalysisContentProps) {
+  const watchlistQuery = useWatchlist();
+  const watchSymbolMutation = useWatchSymbolMutation();
+  const unwatchSymbolMutation = useUnwatchSymbolMutation();
   const intelligenceAsofDate = symbolIntelligenceStatus?.asofDate;
   const fundamentalsQuery = useFundamentalSnapshotQuery(
     activeTab === 'fundamentals' ? ticker : undefined
@@ -93,6 +98,24 @@ export default function SymbolAnalysisContent({
     { id: 'intelligence', label: 'Intelligence' },
     { id: 'order', label: t('workspacePage.panels.analysis.tabs.order') },
   ];
+  const watchedTickers = new Set((watchlistQuery.data ?? []).map((item) => item.ticker.toUpperCase()));
+  const isWatched = watchedTickers.has(ticker.toUpperCase());
+  const isWatchPending =
+    (watchSymbolMutation.isPending &&
+      watchSymbolMutation.variables?.ticker?.toUpperCase() === ticker.toUpperCase()) ||
+    (unwatchSymbolMutation.isPending &&
+      unwatchSymbolMutation.variables?.toUpperCase() === ticker.toUpperCase());
+  const handleWatch = () => {
+    watchSymbolMutation.mutate({
+      ticker,
+      watchPrice: candidate?.close ?? null,
+      currency: candidate?.currency ?? null,
+      source: 'analysis',
+    });
+  };
+  const handleUnwatch = () => {
+    unwatchSymbolMutation.mutate(ticker);
+  };
 
   return (
     <>
@@ -122,6 +145,22 @@ export default function SymbolAnalysisContent({
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto space-y-3">
+        <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2 dark:border-gray-700 dark:bg-gray-900/40">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              {t('workspacePage.panels.analysis.title')}
+            </p>
+            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{ticker}</p>
+          </div>
+          <WatchToggleButton
+            ticker={ticker}
+            isWatched={isWatched}
+            isPending={isWatchPending}
+            onWatch={handleWatch}
+            onUnwatch={handleUnwatch}
+          />
+        </div>
+
         <AnalysisDecisionStrip ticker={ticker} candidate={candidate} />
 
         {activeTab === 'overview' && (
