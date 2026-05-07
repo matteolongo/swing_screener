@@ -96,7 +96,12 @@ class DailyReviewService:
             )
         new_candidates = [_to_daily_candidate(c) for c in candidates if c.same_symbol is None or c.same_symbol.mode == "NEW_ENTRY"]
         add_on_candidates = [_to_daily_candidate(c) for c in candidates if c.same_symbol is not None and c.same_symbol.mode == "ADD_ON"]
-        watchlist_near_trigger = self._watchlist_near_trigger_items()
+        screener_tickers = {c.ticker.upper() for c in candidates}
+        watchlist_near_trigger = [
+            item for item in self._watchlist_near_trigger_items()
+            if (item.ticker if hasattr(item, "ticker") else item.get("ticker", "")).upper()
+            not in screener_tickers
+        ]
         
         # 2. Analyze all open positions
         active_manage = self._active_manage_cfg_payload()

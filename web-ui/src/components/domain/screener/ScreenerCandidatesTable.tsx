@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, ListChecks } from 'lucide-react';
 import Button from '@/components/common/Button';
 import TableShell from '@/components/common/TableShell';
+import WatchToggleButton from '@/components/domain/watchlist/WatchToggleButton';
 import { ScreenerCandidate } from '@/features/screener/types';
 import { toCandidateViewModel } from '@/features/screener/viewModel';
 import { useScreenerRecurrence } from '@/features/screener/recurrenceHooks';
+import { useUnwatchSymbolMutation, useWatchlist, useWatchSymbolMutation } from '@/features/watchlist/hooks';
 import { useScreenerStore } from '@/stores/screenerStore';
 import ScreenerCandidateIdentityCell from './ScreenerCandidateIdentityCell';
 import ScreenerCandidateDetailsRow from './ScreenerCandidateDetailsRow';
@@ -54,10 +56,14 @@ export default function ScreenerCandidatesTable({
 }: ScreenerCandidatesTableProps) {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const recurrenceQuery = useScreenerRecurrence();
+  const watchlistQuery = useWatchlist();
+  const watchSymbolMutation = useWatchSymbolMutation();
+  const unwatchSymbolMutation = useUnwatchSymbolMutation();
   const benchmarkTicker = useScreenerStore((state) => state.lastResult?.benchmarkTicker ?? 'Benchmark');
   const recurrenceByTicker = new Map<string, number>(
     (recurrenceQuery.data ?? []).map((r) => [r.ticker, r.streak])
   );
+  const watchedTickers = new Set((watchlistQuery.data ?? []).map((item) => item.ticker.toUpperCase()));
 
   const toggleRow = (ticker: string) => {
     setExpandedRows((prev) => {
@@ -83,6 +89,19 @@ export default function ScreenerCandidatesTable({
     return candidate.sameSymbol?.mode === 'ADD_ON' || candidate.sameSymbol?.mode === 'MANAGE_ONLY'
       ? t('screener.table.addOnTitle')
       : t('screener.table.createOrderTitle');
+  };
+
+  const handleWatch = (candidate: ScreenerCandidate) => {
+    watchSymbolMutation.mutate({
+      ticker: candidate.ticker,
+      watchPrice: candidate.close,
+      currency: candidate.currency,
+      source: 'screener',
+    });
+  };
+
+  const handleUnwatch = (ticker: string) => {
+    unwatchSymbolMutation.mutate(ticker);
   };
 
   if (candidates.length === 0) {
@@ -126,6 +145,12 @@ export default function ScreenerCandidatesTable({
         const isExpanded = expandedRows.has(candidate.ticker);
         const isSelected = selectedTicker != null && selectedTicker.toUpperCase() === candidate.ticker.toUpperCase();
         const badge = signalBadge(candidate.decisionSummary?.action);
+        const isWatched = watchedTickers.has(candidate.ticker.toUpperCase());
+        const isWatchPending =
+          (watchSymbolMutation.isPending &&
+            watchSymbolMutation.variables?.ticker?.toUpperCase() === candidate.ticker.toUpperCase()) ||
+          (unwatchSymbolMutation.isPending &&
+            unwatchSymbolMutation.variables?.toUpperCase() === candidate.ticker.toUpperCase());
 
         return (
           <React.Fragment key={candidate.ticker}>
@@ -251,6 +276,14 @@ export default function ScreenerCandidatesTable({
                   >
                     {orderActionLabel(candidate)}
                   </Button>
+
+                  <WatchToggleButton
+                    ticker={candidate.ticker}
+                    isWatched={isWatched}
+                    isPending={isWatchPending}
+                    onWatch={() => handleWatch(candidate)}
+                    onUnwatch={handleUnwatch}
+                  />
                 </div>
               </td>
             </tr>
