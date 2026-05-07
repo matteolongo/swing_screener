@@ -330,7 +330,7 @@ Last updated: 2026-05-07
 | 6 | Time stop nudge | 2 | ✅ Done — `codex/time-stop-nudge` / PR pending | Kill dead capital |
 | 7 | Watchlist pipeline | 2 | ✅ Done — `codex/watchlist-pipeline-v2` / PR pending | Spot setups early |
 | 8 | Volume quality | 2 | ✅ Done — `codex/volume-quality` / PR pending | Better entry timing |
-| 9 | Liquidity filter | 2 | 🔲 No plan yet | Avoid illiquid names |
+| 9 | Liquidity filter | 2 | ✅ Done — `codex/liquidity-filter` / PR pending | Avoid illiquid names |
 | 10 | Partial exits | 2 | 🔲 No plan yet | Scale-out capability |
 | 11 | Regime performance | 3 | 🔲 No plan yet | Size to conditions |
 | 12 | FX-adjusted R | 3 | 🔲 No plan yet | True R visibility |
