@@ -84,6 +84,7 @@ class ScreenerCandidate(BaseModel):
     above_breakout_extension: Optional[float] = None
     breakout_volume_confirmation: Optional[bool] = None
     volume_ratio: Optional[float] = None
+    avg_daily_volume_eur: Optional[float] = None
     symbol_change_pct: Optional[float] = None
     benchmark_outperformance_pct: Optional[float] = None
 
