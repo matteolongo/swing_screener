@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AnalysisCanvasPanel from '@/components/domain/workspace/AnalysisCanvasPanel';
 import * as fundamentalsHooks from '@/features/fundamentals/hooks';
 import type { FundamentalSnapshot } from '@/features/fundamentals/types';
+import * as watchlistHooks from '@/features/watchlist/hooks';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { renderWithProviders } from '@/test/utils';
@@ -11,6 +12,12 @@ import { renderWithProviders } from '@/test/utils';
 vi.mock('@/features/fundamentals/hooks', () => ({
   useFundamentalSnapshotQuery: vi.fn(),
   useRefreshFundamentalSnapshotMutation: vi.fn(),
+}));
+
+vi.mock('@/features/watchlist/hooks', () => ({
+  useWatchlist: vi.fn(),
+  useWatchSymbolMutation: vi.fn(),
+  useUnwatchSymbolMutation: vi.fn(),
 }));
 
 vi.mock('@/components/domain/market/CachedSymbolPriceChart', () => ({
@@ -92,6 +99,21 @@ function buildSnapshot(): FundamentalSnapshot {
 describe('AnalysisCanvasPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(watchlistHooks.useWatchlist).mockReturnValue({
+      data: [],
+      isLoading: false,
+      isError: false,
+    } as never);
+    vi.mocked(watchlistHooks.useWatchSymbolMutation).mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+      variables: undefined,
+    } as never);
+    vi.mocked(watchlistHooks.useUnwatchSymbolMutation).mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+      variables: undefined,
+    } as never);
     useWorkspaceStore.setState({
       selectedTicker: 'AAPL',
       selectedTickerSource: 'screener',
@@ -278,5 +300,24 @@ describe('AnalysisCanvasPanel', () => {
       expect(candidate?.decisionSummary?.valuationContext.method).toBe('earnings_multiple');
       expect(candidate?.decisionSummary?.valuationContext.summary).toContain('Trailing PE is 24.6x');
     });
+  });
+
+  it('renders a watch toggle for the selected symbol', () => {
+    vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: undefined,
+    } as never);
+    vi.mocked(fundamentalsHooks.useRefreshFundamentalSnapshotMutation).mockReturnValue({
+      mutate: vi.fn(),
+      data: undefined,
+      isPending: false,
+      isError: false,
+      error: null,
+    } as never);
+
+    renderWithProviders(<AnalysisCanvasPanel />);
+
+    expect(screen.getByRole('button', { name: 'Watch AAPL' })).toBeInTheDocument();
   });
 });

@@ -4,27 +4,25 @@ Read this before picking up any feature plan. It describes the codebase conventi
 
 ---
 
-## Current implementation status - 2026-05-04
+## Current implementation status - 2026-05-07
 
-Tier 1 is complete locally and Tier 2 has started as sequential stacked PRs:
+Tier 1 (F1-F5) merged to main. Tier 2 (F6-F8) implemented locally, PRs pending.
 
 | Feature | Branch | Base | PR | Status |
 |---|---|---|---|---|
-| Feature 1 - Trade tagging | `codex/trade-tagging` | `main` | https://github.com/matteolongo/swing_screener/pull/232 | Draft, fully implemented |
-| Feature 2 - Edge breakdown | `codex/edge-breakdown` | `codex/trade-tagging` | https://github.com/matteolongo/swing_screener/pull/233 | Draft, fully implemented |
-| Feature 3 - Account equity auto-update | `codex/account-equity` | `codex/edge-breakdown` | https://github.com/matteolongo/swing_screener/pull/234 | Draft, fully implemented (incl. Settings toggle) |
-| Feature 4 - Earnings proximity warning | `codex/earnings-warning` | `codex/account-equity` | https://github.com/matteolongo/swing_screener/pull/235 | Draft, fully implemented (incl. cache-hit test) |
-| Feature 5 - Concentration warning | `codex/concentration-warning` | `codex/earnings-warning` | https://github.com/matteolongo/swing_screener/pull/236 | Draft, fully implemented (incl. order modal warning) |
-| Feature 6 - Time stop nudge | `codex/time-stop-nudge` | `codex/concentration-warning` | pending | Implemented locally |
-| Feature 7 - Watchlist pipeline | `codex/watchlist-pipeline` | `codex/time-stop-nudge` | pending | Implemented locally |
+| Feature 1 - Trade tagging | `codex/trade-tagging` | `main` | https://github.com/matteolongo/swing_screener/pull/232 | Merged to main |
+| Feature 2 - Edge breakdown | `codex/edge-breakdown` | `main` | https://github.com/matteolongo/swing_screener/pull/233 | Merged to main |
+| Feature 3 - Account equity auto-update | `codex/account-equity` | `main` | https://github.com/matteolongo/swing_screener/pull/234 | Merged to main |
+| Feature 4 - Earnings proximity warning | `codex/earnings-warning` | `main` | https://github.com/matteolongo/swing_screener/pull/235 | Merged to main |
+| Feature 5 - Concentration warning | `codex/concentration-warning` | `main` | https://github.com/matteolongo/swing_screener/pull/236 | Merged to main |
+| Feature 6 - Time stop nudge | `codex/time-stop-nudge` | `main` | pending | Implemented locally |
+| Feature 7 - Watchlist pipeline | `codex/watchlist-pipeline` | `main` | pending | Implemented locally |
+| Feature 8 - Volume quality signal | `codex/volume-quality` | `main` | pending | Implemented locally |
 
-Review agents should review the PRs in order. Each branch intentionally builds on the previous one, so diffs should be compared against the listed base branch, not always against `main`.
+All branches now base off `main` (F1-F5 merged). Review each PR diff against `main`.
 
-Known local dirty files that were not part of this work and should not be included unless explicitly requested:
+Known local files to exclude from commits:
 
-- `config/intelligence.yaml`
-- `config/strategies.yaml`
-- `config/user.yaml`
 - `data/screener_history.json`
 
 Validation already run during implementation:

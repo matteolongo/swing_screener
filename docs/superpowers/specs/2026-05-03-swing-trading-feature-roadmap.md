@@ -16,21 +16,22 @@ Features are grouped into tiers. Ship all of Tier 1 before starting Tier 2.
 
 ---
 
-## Implementation status - 2026-05-04
+## Implementation status - 2026-05-07
 
-Tier 1 is implemented locally and Tier 2 has started as sequential stacked PRs:
+Tier 1 and Tier 2 are implemented. PRs 1-5 merged to main. F6-F8 implemented locally with PRs pending.
 
 | # | Feature | Branch | Base | PR | Status |
 |---|---|---|---|---|---|
-| 1 | Trade tagging | `codex/trade-tagging` | `main` | https://github.com/matteolongo/swing_screener/pull/232 | Draft, implemented |
-| 2 | Performance breakdown | `codex/edge-breakdown` | `codex/trade-tagging` | https://github.com/matteolongo/swing_screener/pull/233 | Draft, implemented |
-| 3 | Account equity auto-update | `codex/account-equity` | `codex/edge-breakdown` | https://github.com/matteolongo/swing_screener/pull/234 | Draft, implemented |
-| 4 | Earnings warning | `codex/earnings-warning` | `codex/account-equity` | https://github.com/matteolongo/swing_screener/pull/235 | Draft, implemented |
-| 5 | Concentration warning | `codex/concentration-warning` | `codex/earnings-warning` | https://github.com/matteolongo/swing_screener/pull/236 | Draft, implemented |
-| 6 | Time stop nudge | `codex/time-stop-nudge` | `codex/concentration-warning` | pending | Implemented locally |
-| 7 | Watchlist pipeline view | `codex/watchlist-pipeline` | `codex/time-stop-nudge` | pending | Implemented locally |
+| 1 | Trade tagging | `codex/trade-tagging` | `main` | https://github.com/matteolongo/swing_screener/pull/232 | Merged to main |
+| 2 | Performance breakdown | `codex/edge-breakdown` | `codex/trade-tagging` | https://github.com/matteolongo/swing_screener/pull/233 | Merged to main |
+| 3 | Account equity auto-update | `codex/account-equity` | `codex/edge-breakdown` | https://github.com/matteolongo/swing_screener/pull/234 | Merged to main |
+| 4 | Earnings warning | `codex/earnings-warning` | `codex/account-equity` | https://github.com/matteolongo/swing_screener/pull/235 | Merged to main |
+| 5 | Concentration warning | `codex/concentration-warning` | `codex/earnings-warning` | https://github.com/matteolongo/swing_screener/pull/236 | Merged to main |
+| 6 | Time stop nudge | `codex/time-stop-nudge` | `main` | pending | Implemented locally |
+| 7 | Watchlist pipeline view | `codex/watchlist-pipeline` | `main` | pending | Implemented locally |
+| 8 | Volume quality signal | `codex/volume-quality` | `main` | pending | Implemented locally |
 
-Review stacked PRs in order and compare each PR against its listed base branch.
+Review each PR against `main` (all branches rebased after F1-F5 merge).
 
 ---
 
@@ -317,7 +318,7 @@ The screener works on daily bars. A daily breakout that contradicts the weekly t
 
 ## Implementation order summary
 
-Last updated: 2026-05-04
+Last updated: 2026-05-07
 
 | # | Feature | Tier | Status | Value delivered |
 |---|---------|------|--------|----------------|
@@ -327,8 +328,8 @@ Last updated: 2026-05-04
 | 4 | Earnings warning | 1 | ✅ Done — `codex/earnings-warning` / PR #235 | Avoid earnings traps |
 | 5 | Concentration warning | 1 | ✅ Done — `codex/concentration-warning` / PR #236 | Prevent correlated bets |
 | 6 | Time stop nudge | 1 | ✅ Done — `codex/time-stop-nudge` / PR pending | Kill dead capital |
-| 7 | Watchlist pipeline | 2 | 🔲 No plan yet | Spot setups early |
-| 8 | Volume quality | 2 | 🔲 No plan yet | Better entry timing |
+| 7 | Watchlist pipeline | 2 | ✅ Done — `codex/watchlist-pipeline` / PR pending | Spot setups early |
+| 8 | Volume quality | 2 | ✅ Done — `codex/volume-quality` / PR pending | Better entry timing |
 | 9 | Liquidity filter | 2 | 🔲 No plan yet | Avoid illiquid names |
 | 10 | Partial exits | 2 | 🔲 No plan yet | Scale-out capability |
 | 11 | Regime performance | 3 | 🔲 No plan yet | Size to conditions |

@@ -62,7 +62,7 @@ describe('watchlist hooks', () => {
     expect(result.current.data?.[0].ticker).toBe('AAPL');
   });
 
-  it('watches symbol and invalidates watchlist query', async () => {
+  it('watches symbol and invalidates watchlist queries', async () => {
     const queryClient = createQueryClient();
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
     mockedWatchSymbol.mockResolvedValue({
@@ -94,9 +94,10 @@ describe('watchlist hooks', () => {
       source: 'screener',
     });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.watchlist() });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.watchlistPipeline() });
   });
 
-  it('unwatches symbol and invalidates watchlist query', async () => {
+  it('unwatches symbol and invalidates watchlist queries', async () => {
     const queryClient = createQueryClient();
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
     mockedUnwatchSymbol.mockResolvedValue(undefined);
@@ -111,5 +112,6 @@ describe('watchlist hooks', () => {
 
     expect(mockedUnwatchSymbol).toHaveBeenCalledWith('AAPL');
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.watchlist() });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.watchlistPipeline() });
   });
 });
