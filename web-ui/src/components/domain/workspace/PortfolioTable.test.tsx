@@ -25,6 +25,7 @@ vi.mock('@/features/portfolio/hooks', () => ({
   }),
   useUpdateStopMutation: () => ({ mutate: vi.fn(), isPending: false, error: null }),
   useClosePositionMutation: () => ({ mutate: vi.fn(), isPending: false, error: null }),
+  usePartialClosePositionMutation: () => ({ mutate: vi.fn(), isPending: false, error: null }),
   useFillOrderMutation: () => ({ mutate: vi.fn(), isPending: false, error: null }),
   useCancelOrderMutation: () => ({ mutate: vi.fn(), isPending: false }),
 }));

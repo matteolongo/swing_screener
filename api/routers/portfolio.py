@@ -21,6 +21,7 @@ from api.models.portfolio import (
     FillFromDegiroResponse,
     UpdateStopRequest,
     ClosePositionRequest,
+    PartialCloseRequest,
     StopSuggestionComputeRequest,
     DegiroSyncRequest,
     DegiroSyncPreviewResponse,
@@ -130,6 +131,16 @@ async def close_position(
 ):
     """Close a position."""
     return service.close_position(position_id, request)
+
+
+@router.post("/positions/{position_id}/partial-close")
+async def partial_close_position(
+    position_id: str,
+    request: PartialCloseRequest,
+    service: PortfolioService = Depends(get_portfolio_service),
+):
+    """Partially close an open position by closing a subset of shares."""
+    return service.partial_close_position(position_id, request)
 
 
 @router.get("/summary", response_model=PortfolioSummary)

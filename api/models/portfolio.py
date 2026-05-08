@@ -36,6 +36,10 @@ class Position(BaseModel):
     thesis: Optional[str] = None
     lesson: Optional[str] = None
     tags: list[str] = Field(default_factory=list, description="Structured trade tags")
+    partial_closes: list[PartialCloseEvent] = Field(
+        default_factory=list,
+        description="Ordered list of partial-close events",
+    )
 
 
 class PositionUpdate(BaseModel):
@@ -65,6 +69,22 @@ class UpdateStopRequest(BaseModel):
         if v > 100000:  # Reasonable upper bound
             raise ValueError("Stop price exceeds reasonable maximum (100,000)")
         return v
+
+
+class PartialCloseEvent(BaseModel):
+    """A single partial-close event stored on the position."""
+    date: str = Field(..., description="Date of partial close (YYYY-MM-DD)")
+    shares_closed: int = Field(..., gt=0, description="Number of shares closed in this leg")
+    price: float = Field(..., gt=0, description="Exit price for this leg")
+    r_at_close: float = Field(..., description="R-multiple at the time of this partial close")
+    fee_eur: Optional[float] = Field(default=None, ge=0, description="Fee for this leg in EUR")
+
+
+class PartialCloseRequest(BaseModel):
+    """Request to partially close an open position."""
+    shares_closed: int = Field(..., gt=0, description="Number of shares to close")
+    price: float = Field(..., gt=0, description="Exit price for this leg")
+    fee_eur: Optional[float] = Field(default=None, ge=0, description="Fee in EUR (optional)")
 
 
 class ClosePositionRequest(BaseModel):
@@ -308,6 +328,14 @@ class PositionMetrics(BaseModel):
     current_value: float = Field(..., description="Current market value (shares × current_price)")
     per_share_risk: float = Field(..., description="Risk per share in dollars")
     total_risk: float = Field(..., description="Total position risk (per_share_risk × shares)")
+    partial_closes: list[PartialCloseEvent] = Field(
+        default_factory=list,
+        description="Partial-close events recorded on this position",
+    )
+    blended_r: Optional[float] = Field(
+        default=None,
+        description="Blended R across all partial closes (None when no partial closes exist)",
+    )
 
 
 class PortfolioSummary(BaseModel):

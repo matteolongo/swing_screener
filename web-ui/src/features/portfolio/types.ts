@@ -22,6 +22,8 @@ export type {
   PositionUpdate,
   UpdateStopRequest,
   ClosePositionRequest,
+  PartialCloseEvent,
+  PartialCloseRequest,
 } from '@/types/position';
 export {
   transformPosition,
