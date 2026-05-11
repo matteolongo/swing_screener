@@ -443,6 +443,8 @@ export const messagesEn = {
       action: 'Action',
       suggested: 'Suggested',
       rNow: 'R now',
+      rFxAdjusted: 'FX-adj. R',
+      rFxAdjustedTooltip: 'R in account currency (EUR), adjusted for FX movement since entry',
     },
     partialCloseModal: {
       title: 'Partial Close — {{ticker}}',
