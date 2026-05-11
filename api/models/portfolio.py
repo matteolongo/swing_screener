@@ -326,6 +326,10 @@ class PositionWithMetrics(Position):
         default=False,
         description="True when an open trade is stale and below the configured R threshold",
     )
+    r_fx_adjusted: Optional[float] = Field(
+        default=None,
+        description="R-multiple adjusted for FX movement since entry (null when currencies match or no entry rate stored)",
+    )
 
 
 class PositionsWithMetricsResponse(BaseModel):
@@ -352,6 +356,10 @@ class PositionMetrics(BaseModel):
     blended_r: Optional[float] = Field(
         default=None,
         description="Blended R across all partial closes (None when no partial closes exist)",
+    )
+    r_fx_adjusted: Optional[float] = Field(
+        default=None,
+        description="R-multiple adjusted for FX movement since entry",
     )
 
 
