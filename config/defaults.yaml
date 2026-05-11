@@ -2,6 +2,7 @@ app_config:
   risk:
     account_size: 50000
     account_size_mode: equity
+    account_currency: EUR
     risk_pct: 0.01
     max_position_pct: 0.6
     min_shares: 1
