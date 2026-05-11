@@ -314,6 +314,33 @@ export default function PortfolioTable() {
       ),
     },
     {
+      key: 'r',
+      header: 'R',
+      align: 'right' as const,
+      render: (row) => {
+        if (!row.position) return <span className="text-gray-400 text-xs">—</span>;
+        const { rNow, rFxAdjusted } = row.position;
+        const rSign = rNow >= 0 ? '+' : '';
+        const rLabel = `${rSign}${rNow.toFixed(2)}R`;
+        if (rFxAdjusted == null) {
+          return <span className="text-sm font-mono">{rLabel}</span>;
+        }
+        const fxSign = rFxAdjusted >= 0 ? '+' : '';
+        const fxLabel = `${fxSign}${rFxAdjusted.toFixed(2)}R`;
+        return (
+          <div className="text-right font-mono">
+            <div className="text-sm">{rLabel}</div>
+            <div
+              className="text-xs text-gray-500 dark:text-gray-400"
+              title={t('positions.rFxAdjustedTooltip')}
+            >
+              {t('positions.rFxAdjusted')}: {fxLabel}
+            </div>
+          </div>
+        );
+      },
+    },
+    {
       key: 'actions',
       header: '',
       align: 'right',
