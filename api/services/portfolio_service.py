@@ -158,6 +158,28 @@ def _pct_to_target(target: Optional[float], last_price: Optional[float]) -> Opti
     return (target - last_price) / last_price * 100.0
 
 
+def _compute_r_fx_adjusted(
+    entry_price: float,
+    stop_price: float,
+    current_price: float,
+    entry_eurusd: float,
+    current_eurusd: float,
+) -> Optional[float]:
+    """R adjusted for EURUSD movement. EURUSD = USD per 1 EUR (e.g. 1.10)."""
+    if entry_eurusd <= 0 or current_eurusd <= 0:
+        return None
+    per_share_risk = entry_price - stop_price
+    if per_share_risk <= 0:
+        return None
+    entry_eur = entry_price / entry_eurusd
+    current_eur = current_price / current_eurusd
+    stop_eur = stop_price / entry_eurusd
+    per_share_risk_eur = entry_eur - stop_eur
+    if per_share_risk_eur <= 0:
+        return None
+    return (current_eur - entry_eur) / per_share_risk_eur
+
+
 def _round_price(value: float) -> float:
     return float(Decimal(str(value)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
 
@@ -320,6 +342,7 @@ class PortfolioService:
         position: dict,
         current_prices: dict[str, float],
         eurusd_rate: float,
+        account_currency: str = "EUR",
         *,
         time_stop_days: int | None = None,
         time_stop_min_r: float | None = None,
@@ -350,6 +373,24 @@ class PortfolioService:
             and r_now < min_progress_r
         )
 
+        position_currency = detect_currency(ticker)
+        r_fx_adjusted: Optional[float] = None
+        entry_fx_rate_raw = position.get("entry_fx_rate")
+        if (
+            position_currency != account_currency
+            and position_currency == "USD"
+            and account_currency == "EUR"
+            and entry_fx_rate_raw
+            and eurusd_rate > 0
+        ):
+            r_fx_adjusted = _compute_r_fx_adjusted(
+                entry_price=state_position.entry_price,
+                stop_price=state_position.stop_price,
+                current_price=current_price_for_metrics,
+                entry_eurusd=float(entry_fx_rate_raw),
+                current_eurusd=eurusd_rate,
+            )
+
         return PositionWithMetrics(
             **payload,
             pnl=pnl,
@@ -362,6 +403,7 @@ class PortfolioService:
             total_risk=per_share_risk * state_position.shares,
             days_open=days_open,
             time_stop_warning=time_stop_warning,
+            r_fx_adjusted=r_fx_adjusted,
         )
 
     @staticmethod
@@ -386,12 +428,14 @@ class PortfolioService:
             for position in positions
         )
         eurusd_rate = self._eurusd_rate() if has_usd_positions else 1.0
+        account_currency = getattr(ConfigRepository().get().risk, "account_currency", "EUR")
 
         positions_with_metrics = [
             self._build_position_with_metrics(
                 position,
                 current_prices,
                 eurusd_rate,
+                account_currency,
                 time_stop_days=time_stop_days,
                 time_stop_min_r=time_stop_min_r,
             )
@@ -445,6 +489,25 @@ class PortfolioService:
             total_shares = sum(e.shares_closed for e in partial_close_events)
             blended_r = sum(e.shares_closed * e.r_at_close for e in partial_close_events) / total_shares
 
+        account_currency = getattr(ConfigRepository().get().risk, "account_currency", "EUR")
+        position_currency = detect_currency(ticker)
+        r_fx_adjusted: Optional[float] = None
+        entry_fx_rate_raw = position.get("entry_fx_rate")
+        if (
+            position_currency != account_currency
+            and position_currency == "USD"
+            and account_currency == "EUR"
+            and entry_fx_rate_raw
+        ):
+            current_eurusd = self._eurusd_rate()
+            r_fx_adjusted = _compute_r_fx_adjusted(
+                entry_price=state_position.entry_price,
+                stop_price=state_position.stop_price,
+                current_price=current_price,
+                entry_eurusd=float(entry_fx_rate_raw),
+                current_eurusd=current_eurusd,
+            )
+
         return PositionMetrics(
             ticker=ticker,
             pnl=pnl,
@@ -457,6 +520,7 @@ class PortfolioService:
             total_risk=per_share_risk * state_position.shares,
             partial_closes=partial_close_events,
             blended_r=blended_r,
+            r_fx_adjusted=r_fx_adjusted,
         )
 
     def _realized_pnl(self) -> float:
@@ -769,6 +833,7 @@ class PortfolioService:
             "thesis": order.get("thesis"),
             "notes": order.get("notes", ""),
             "entry_fee_eur": request.fee_eur,
+            "entry_fx_rate": request.fill_fx_rate,
         }
 
         data = self._positions_repo.read()

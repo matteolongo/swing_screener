@@ -24,6 +24,10 @@ class RiskConfig(BaseModel):
         default="equity",
         description="Whether risk calculations use base account size or equity adjusted for realized P&L",
     )
+    account_currency: Literal["EUR", "USD", "GBP", "CHF", "SEK", "DKK", "NOK"] = Field(
+        default="EUR",
+        description="Account base currency — used for FX-adjusted R display",
+    )
 
 
 class IndicatorConfig(BaseModel):

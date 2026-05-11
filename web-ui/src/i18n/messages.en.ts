@@ -424,6 +424,8 @@ export const messagesEn = {
     },
   },
   positions: {
+    rFxAdjusted: 'FX-adj. R',
+    rFxAdjustedTooltip: 'R in account currency (EUR), adjusted for FX movement since entry',
     updateStopModal: {
       title: 'Update Stop - {{ticker}}',
       currentPosition: 'Current Position:',

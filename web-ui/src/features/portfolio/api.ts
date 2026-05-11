@@ -39,6 +39,7 @@ interface PositionMetricsApiResponse {
   pnl: number;
   pnl_percent: number;
   r_now: number;
+  r_fx_adjusted?: number | null;
   entry_value: number;
   current_value: number;
   per_share_risk: number;
@@ -49,6 +50,7 @@ interface PositionWithMetricsApiResponse extends PositionApiResponse {
   pnl: number;
   pnl_percent: number;
   r_now: number;
+  r_fx_adjusted?: number | null;
   entry_value: number;
   current_value: number;
   per_share_risk: number;
@@ -96,6 +98,7 @@ export interface PositionMetrics {
   pnl: number;
   pnlPercent: number;
   rNow: number;
+  rFxAdjusted?: number | null;
   entryValue: number;
   currentValue: number;
   perShareRisk: number;
@@ -106,6 +109,7 @@ export interface PositionWithMetrics extends Position {
   pnl: number;
   pnlPercent: number;
   rNow: number;
+  rFxAdjusted?: number | null;
   entryValue: number;
   currentValue: number;
   perShareRisk: number;
@@ -540,6 +544,7 @@ function transformPositionMetrics(data: PositionMetricsApiResponse): PositionMet
     pnl: data.pnl,
     pnlPercent: data.pnl_percent,
     rNow: data.r_now,
+    rFxAdjusted: data.r_fx_adjusted ?? null,
     entryValue: data.entry_value,
     currentValue: data.current_value,
     perShareRisk: data.per_share_risk,
@@ -553,6 +558,7 @@ function transformPositionWithMetrics(data: PositionWithMetricsApiResponse): Pos
     pnl: data.pnl,
     pnlPercent: data.pnl_percent,
     rNow: data.r_now,
+    rFxAdjusted: data.r_fx_adjusted ?? null,
     entryValue: data.entry_value,
     currentValue: data.current_value,
     perShareRisk: data.per_share_risk,
