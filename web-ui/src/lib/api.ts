@@ -35,6 +35,7 @@ export const API_ENDPOINTS = {
   positionPartialClose: (id: string) => `/api/portfolio/positions/${id}/partial-close`,
   portfolioSummary: '/api/portfolio/summary',
   earningsProximity: (ticker: string) => `/api/portfolio/earnings-proximity/${encodeURIComponent(ticker)}`,
+  regimeBreakdown: '/api/portfolio/analytics/regime-breakdown',
   degiroStatus: '/api/portfolio/degiro/status',
   
   // Portfolio - Orders
