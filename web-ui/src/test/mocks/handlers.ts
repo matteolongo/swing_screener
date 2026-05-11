@@ -458,6 +458,7 @@ export const mockPositionMetrics = {
   current_value: 97.8,
   per_share_risk: 1.29,
   total_risk: 7.74,
+  r_fx_adjusted: null,
 }
 
 const buildPositionMetrics = (position: (typeof mockPositions)[number]) => {
@@ -477,6 +478,7 @@ const buildPositionMetrics = (position: (typeof mockPositions)[number]) => {
     current_value: referencePrice * position.shares,
     per_share_risk: perShareRisk,
     total_risk: totalRisk,
+    r_fx_adjusted: null,
   }
 }
 

@@ -77,3 +77,38 @@ describe('PortfolioTable time stop nudge', () => {
     expect(screen.queryByTitle(t('bookPage.positions.timeStopWarning'))).not.toBeInTheDocument();
   });
 });
+
+describe('PortfolioTable R column', () => {
+  it('shows native R for positions without FX adjustment', () => {
+    positionsMock.mockReturnValue([
+      makePosition({ rNow: 2.0, rFxAdjusted: null }),
+    ]);
+
+    renderWithProviders(<PortfolioTable />);
+
+    expect(screen.getByText('+2.00R')).toBeInTheDocument();
+    expect(screen.queryByTitle(t('positions.rFxAdjustedTooltip'))).not.toBeInTheDocument();
+  });
+
+  it('shows FX-adjusted R as secondary line when rFxAdjusted is set', () => {
+    positionsMock.mockReturnValue([
+      makePosition({ rNow: 2.0, rFxAdjusted: 1.4 }),
+    ]);
+
+    renderWithProviders(<PortfolioTable />);
+
+    expect(screen.getByText('+2.00R')).toBeInTheDocument();
+    expect(screen.getByTitle(t('positions.rFxAdjustedTooltip'))).toBeInTheDocument();
+  });
+
+  it('shows negative FX-adjusted R correctly', () => {
+    positionsMock.mockReturnValue([
+      makePosition({ rNow: -0.5, rFxAdjusted: -0.7 }),
+    ]);
+
+    renderWithProviders(<PortfolioTable />);
+
+    expect(screen.getByText('-0.50R')).toBeInTheDocument();
+    expect(screen.getByTitle(t('positions.rFxAdjustedTooltip'))).toBeInTheDocument();
+  });
+});
