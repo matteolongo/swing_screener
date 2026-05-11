@@ -5,6 +5,7 @@ import { t } from '@/i18n/t';
 import { cn } from '@/utils/cn';
 import { formatNumber, formatCurrency } from '@/utils/formatters';
 import EdgeBreakdownTable from '@/components/domain/portfolio/EdgeBreakdownTable';
+import RegimeBreakdownTable from '@/components/domain/portfolio/RegimeBreakdownTable';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -466,6 +467,17 @@ export default function Analytics() {
               {t('analyticsPage.edgeBreakdown.title')}
             </h2>
             <EdgeBreakdownTable positions={stats.sorted} />
+          </section>
+
+          {/* By market regime */}
+          <section>
+            <h2 className="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">
+              {t('analyticsPage.regimeBreakdown.title')}
+            </h2>
+            <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
+              {t('analyticsPage.regimeBreakdown.subtitle')}
+            </p>
+            <RegimeBreakdownTable />
           </section>
 
           {/* Trade list table */}
