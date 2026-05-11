@@ -40,6 +40,10 @@ class Position(BaseModel):
         default_factory=list,
         description="Ordered list of partial-close events",
     )
+    entry_fx_rate: Optional[float] = Field(
+        default=None,
+        description="FX rate (EURUSD) at position entry — used for FX-adjusted R display",
+    )
 
 
 class PositionUpdate(BaseModel):

@@ -769,6 +769,7 @@ class PortfolioService:
             "thesis": order.get("thesis"),
             "notes": order.get("notes", ""),
             "entry_fee_eur": request.fee_eur,
+            "entry_fx_rate": request.fill_fx_rate,
         }
 
         data = self._positions_repo.read()
