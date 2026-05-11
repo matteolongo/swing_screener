@@ -280,6 +280,19 @@ class EarningsProximityResponse(BaseModel):
     warning: bool = Field(default=False, description="True when earnings are within the warning window")
 
 
+class RegimeStats(BaseModel):
+    regime: str = Field(..., description="trending_up | trending_down | choppy")
+    count: int = Field(..., ge=0)
+    win_rate: float = Field(..., ge=0, le=100)
+    avg_r: float
+    expectancy: float
+
+
+class RegimeBreakdownResponse(BaseModel):
+    regimes: list[RegimeStats]
+    benchmark: str
+
+
 class ConcentrationGroup(BaseModel):
     country: str = Field(..., description="Derived country or market group")
     risk_amount: float = Field(..., description="Open risk amount in this group")

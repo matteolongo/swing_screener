@@ -20,6 +20,7 @@ from api.services.fundamentals_service import FundamentalsService
 from api.services.intelligence_config_service import IntelligenceConfigService
 from api.services.intelligence_service import IntelligenceService
 from api.services.portfolio_service import PortfolioService
+from api.services.regime_analytics import RegimeAnalyticsService
 from api.services.screener_service import ScreenerService
 from api.services.strategy_service import StrategyService
 from api.services.watchlist_service import WatchlistService
@@ -131,6 +132,12 @@ def get_portfolio_service(
     orders_repo: OrdersRepository = Depends(get_orders_repo),
 ) -> PortfolioService:
     return PortfolioService(positions_repo=positions_repo, orders_repo=orders_repo)
+
+
+def get_regime_analytics_service(
+    positions_repo: PositionsRepository = Depends(get_positions_repo),
+) -> RegimeAnalyticsService:
+    return RegimeAnalyticsService(positions_repo=positions_repo)
 
 
 def get_strategy_service(

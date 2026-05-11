@@ -28,12 +28,14 @@ from api.models.portfolio import (
     DegiroApplyResponse,
     DegiroStatus,
     EarningsProximityResponse,
+    RegimeBreakdownResponse,
 )
-from api.dependencies import get_config_repo, get_portfolio_service
+from api.dependencies import get_config_repo, get_portfolio_service, get_regime_analytics_service
 from api.dependencies import get_strategy_repo
 from api.repositories.config_repo import ConfigRepository
 from api.repositories.strategy_repo import StrategyRepository
 from api.services.portfolio_service import PortfolioService
+from api.services.regime_analytics import RegimeAnalyticsService
 
 router = APIRouter()
 
@@ -175,6 +177,15 @@ async def get_earnings_proximity(
 ):
     """Check whether a ticker has earnings within the warning window."""
     return service.get_earnings_proximity(ticker)
+
+
+@router.get("/analytics/regime-breakdown", response_model=RegimeBreakdownResponse)
+async def get_regime_breakdown(
+    service: RegimeAnalyticsService = Depends(get_regime_analytics_service),
+) -> RegimeBreakdownResponse:
+    """Return closed-position performance grouped by market regime at entry date."""
+    result = service.get_regime_breakdown()
+    return RegimeBreakdownResponse(**result)
 
 
 # ===== Orders =====

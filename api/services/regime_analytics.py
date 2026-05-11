@@ -115,9 +115,9 @@ class RegimeAnalyticsService:
         """
         import yfinance as yf
 
-        positions = self._repo.list()
+        all_positions, _ = self._repo.list_positions()
         closed = [
-            p for p in positions
+            p for p in all_positions
             if p.get("status") == "closed"
             and p.get("entry_date")
             and p.get("entry_price") is not None
