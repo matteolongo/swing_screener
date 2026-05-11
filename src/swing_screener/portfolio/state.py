@@ -38,6 +38,8 @@ class Position:
     broker_synced_at: Optional[str] = None
     thesis: Optional[str] = None
     lesson: Optional[str] = None
+    trail_method: str = "sma20"   # "sma20" | "atr" | "fixed_pct" | "manual"
+    trail_param: Optional[float] = None
 
 
 @dataclass
@@ -114,6 +116,12 @@ def load_positions(path: str | Path) -> list[Position]:
                 broker_synced_at=item.get("broker_synced_at", None),
                 thesis=item.get("thesis", None),
                 lesson=item.get("lesson", None),
+                trail_method=str(item.get("trail_method") or "sma20"),
+                trail_param=(
+                    float(item["trail_param"])
+                    if item.get("trail_param") is not None
+                    else None
+                ),
             )
         )
     return out
@@ -216,6 +224,21 @@ def _sma(s: pd.Series, window: int) -> float:
     if len(s) < window:
         return float("nan")
     return float(s.rolling(window).mean().iloc[-1])
+
+
+def _atr_stop(ohlcv: pd.DataFrame, ticker: str, last: float, multiplier: float, window: int = 14) -> float:
+    """Return ATR-based trail stop (last − ATR × multiplier), or NaN if data insufficient."""
+    try:
+        from swing_screener.indicators.volatility import compute_atr_per_ticker
+        high = ohlcv["High"][ticker].dropna()
+        low = ohlcv["Low"][ticker].dropna()
+        close = ohlcv["Close"][ticker].dropna()
+        atr_val = compute_atr_per_ticker(high, low, close, window)
+        if math.isnan(atr_val):
+            return float("nan")
+        return last - atr_val * multiplier
+    except (KeyError, Exception):
+        return float("nan")
 
 
 def _round_price(value: float) -> float:
@@ -331,13 +354,32 @@ def evaluate_positions(
             stop_suggested = max(stop_suggested, pos.entry_price)
             reason = f"Breakeven: R={r_now:.2f} >= {cfg.breakeven_at_R}"
 
-        # Rule 2: trail under SMA20 after +2R
+        # Rule 2: trail stop based on position's trail_method (after reaching trail_after_R)
         if r_now >= cfg.trail_after_R:
-            sma_val = _sma(s, cfg.trail_sma)
-            if not math.isnan(sma_val):
-                trail_stop = sma_val * (1.0 - cfg.sma_buffer_pct)
+            trail_method = pos.trail_method or "sma20"
+            trail_param = pos.trail_param
+
+            if trail_method == "sma20":
+                sma_val = _sma(s, cfg.trail_sma)
+                if not math.isnan(sma_val):
+                    trail_stop = sma_val * (1.0 - cfg.sma_buffer_pct)
+                    stop_suggested = max(stop_suggested, trail_stop)
+                    reason = f"Trail: R={r_now:.2f} >= {cfg.trail_after_R} and SMA{cfg.trail_sma} trail"
+
+            elif trail_method == "atr":
+                multiplier = trail_param if trail_param is not None else 2.0
+                trail_stop = _atr_stop(ohlcv, pos.ticker, last, multiplier)
+                if not math.isnan(trail_stop):
+                    stop_suggested = max(stop_suggested, trail_stop)
+                    reason = f"ATR trail: stop = last − ATR×{multiplier:.1f}"
+
+            elif trail_method == "fixed_pct":
+                param = trail_param if trail_param is not None else 5.0
+                trail_stop = last * (1.0 - param / 100.0)
                 stop_suggested = max(stop_suggested, trail_stop)
-                reason = f"Trail: R={r_now:.2f} >= {cfg.trail_after_R} and SMA{cfg.trail_sma} trail"
+                reason = f"Fixed % trail: stop = last × (1 − {param:.1f}%)"
+
+            # trail_method == "manual": no trail suggestion; only breakeven rule applies
 
         stop_old_rounded = _round_price(pos.stop_price)
         stop_suggested_rounded = _round_price(stop_suggested)
