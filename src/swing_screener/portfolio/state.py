@@ -155,6 +155,8 @@ def save_positions(
                 "broker_synced_at": pos.broker_synced_at,
                 "thesis": pos.thesis,
                 "lesson": pos.lesson,
+                "trail_method": pos.trail_method,
+                "trail_param": pos.trail_param,
             }
             for pos in positions
         ],
