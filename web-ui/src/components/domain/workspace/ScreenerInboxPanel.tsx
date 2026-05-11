@@ -36,10 +36,10 @@ const DECISION_ACTION_FILTERS: DecisionActionFilter[] = [
 ];
 
 
-const currencyFilterToRequest = (value: CurrencyFilter): string[] => {
+export const currencyFilterToRequest = (value: CurrencyFilter): string[] | undefined => {
   if (value === 'usd') return ['USD'];
   if (value === 'eur') return ['EUR'];
-  return ['USD', 'EUR'];
+  return undefined;
 };
 
 const exchangeFilterToRequest = (value: ExchangeFilter): string[] | undefined => {
