@@ -12,6 +12,7 @@ import {
   fetchDegiroStatus,
   fetchDegiroOrderHistory,
   fetchEarningsProximity,
+  fetchRegimeBreakdown,
   fillOrder,
   fillOrderFromDegiro,
   syncDegiroOrders,
@@ -203,5 +204,13 @@ export function useSyncDegiroOrdersMutation() {
         invalidatePositionQueries(queryClient),
       ]);
     },
+  });
+}
+
+export function useRegimeBreakdown() {
+  return useQuery({
+    queryKey: ['regime-breakdown'],
+    queryFn: fetchRegimeBreakdown,
+    staleTime: 5 * 60 * 1000,
   });
 }

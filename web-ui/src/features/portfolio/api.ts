@@ -595,3 +595,44 @@ function transformPortfolioSummary(data: PortfolioSummaryApiResponse): Portfolio
     effectiveAccountSize: data.effective_account_size ?? data.account_size,
   };
 }
+
+// ─── Regime breakdown ────────────────────────────────────────────────────────
+
+export interface RegimeStats {
+  regime: 'trending_up' | 'trending_down' | 'choppy';
+  count: number;
+  winRate: number;
+  avgR: number;
+  expectancy: number;
+}
+
+export interface RegimeBreakdownResponse {
+  regimes: RegimeStats[];
+  benchmark: string;
+}
+
+function transformRegimeStats(raw: {
+  regime: string;
+  count: number;
+  win_rate: number;
+  avg_r: number;
+  expectancy: number;
+}): RegimeStats {
+  return {
+    regime: raw.regime as RegimeStats['regime'],
+    count: raw.count,
+    winRate: raw.win_rate,
+    avgR: raw.avg_r,
+    expectancy: raw.expectancy,
+  };
+}
+
+export async function fetchRegimeBreakdown(): Promise<RegimeBreakdownResponse> {
+  const res = await fetch(apiUrl(API_ENDPOINTS.regimeBreakdown));
+  if (!res.ok) throw new Error('Failed to fetch regime breakdown');
+  const data = await res.json();
+  return {
+    regimes: (data.regimes ?? []).map(transformRegimeStats),
+    benchmark: data.benchmark,
+  };
+}
