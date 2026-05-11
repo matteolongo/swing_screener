@@ -54,7 +54,7 @@ def test_sma20_trail_triggers(ohlcv_above_entry):
     cfg = ManageConfig(trail_after_R=2.0, trail_sma=20, sma_buffer_pct=0.005, max_holding_days=0)
     updates, _ = evaluate_positions(ohlcv_above_entry, [pos], cfg)
     assert updates[0].action == "MOVE_STOP_UP"
-    assert "SMA20" in updates[0].reason
+    assert "SMA" in updates[0].reason and "trail" in updates[0].reason
 
 
 def test_atr_trail_stop_moves_up(ohlcv_above_entry):

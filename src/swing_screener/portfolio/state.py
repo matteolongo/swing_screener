@@ -239,7 +239,7 @@ def _atr_stop(ohlcv: pd.DataFrame, ticker: str, last: float, multiplier: float, 
         if math.isnan(atr_val):
             return float("nan")
         return last - atr_val * multiplier
-    except (KeyError, Exception):
+    except Exception:
         return float("nan")
 
 
@@ -369,14 +369,14 @@ def evaluate_positions(
                     reason = f"Trail: R={r_now:.2f} >= {cfg.trail_after_R} and SMA{cfg.trail_sma} trail"
 
             elif trail_method == "atr":
-                multiplier = trail_param if trail_param is not None else 2.0
+                multiplier = trail_param if trail_param is not None else 2.0  # 2× ATR is a common swing default
                 trail_stop = _atr_stop(ohlcv, pos.ticker, last, multiplier)
                 if not math.isnan(trail_stop):
                     stop_suggested = max(stop_suggested, trail_stop)
                     reason = f"ATR trail: stop = last − ATR×{multiplier:.1f}"
 
             elif trail_method == "fixed_pct":
-                param = trail_param if trail_param is not None else 5.0
+                param = trail_param if trail_param is not None else 5.0  # 5% is a conservative default
                 trail_stop = last * (1.0 - param / 100.0)
                 stop_suggested = max(stop_suggested, trail_stop)
                 reason = f"Fixed % trail: stop = last × (1 − {param:.1f}%)"
