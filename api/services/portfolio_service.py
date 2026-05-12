@@ -54,13 +54,6 @@ from swing_screener.portfolio.metrics import (
 )
 from swing_screener.utils.date_helpers import get_default_history_start
 
-try:
-    from swing_screener.integrations.degiro.credentials import load_credentials
-    from swing_screener.integrations.degiro.client import DegiroClient
-except ImportError:
-    load_credentials = None  # type: ignore[assignment]
-    DegiroClient = None  # type: ignore[assignment,misc]
-
 logger = logging.getLogger(__name__)
 
 
@@ -248,24 +241,6 @@ def _to_state_position(position: dict) -> StatePosition:
     )
 
 
-def _normalize_degiro_order(raw: dict) -> DegiroOrder:
-    """Convert a raw DeGiro order dict to DegiroOrder model."""
-    vals = {v["name"]: v.get("value") for v in raw.get("value", [])} if "value" in raw else raw
-    side_raw = str(vals.get("buysell", "") or "").upper()
-    side = "buy" if side_raw in ("B", "BUY", "1") else ("sell" if side_raw in ("S", "SELL", "2") else None)
-    order_type_raw = vals.get("orderTypeId") or vals.get("orderType")
-    return DegiroOrder(
-        order_id=str(vals.get("orderId", "") or raw.get("orderId", "")),
-        product_id=str(vals.get("productId", "") or "") or None,
-        isin=str(vals.get("isin", "") or "") or None,
-        product_name=str(vals.get("product", "") or vals.get("productName", "") or "") or None,
-        status=str(vals.get("status", "") or vals.get("orderStatus", "") or "").lower(),
-        price=float(vals["price"]) if vals.get("price") is not None else None,
-        quantity=int(float(vals.get("size", 0) or vals.get("quantity", 0) or 0)),
-        order_type=str(order_type_raw) if order_type_raw is not None else None,
-        side=side,
-        created_at=str(vals.get("date", "") or vals.get("created", "") or "") or None,
-    )
 
 
 class PortfolioService:
@@ -852,80 +827,6 @@ class PortfolioService:
 
         return FillOrderResponse(order_id=order_id, position=Position(**new_position))
 
-    def fill_order_from_degiro(self, order_id: str, degiro_order_id: str) -> FillFromDegiroResponse:
-        """Fill a local pending order using data from a specific DeGiro order."""
-        from datetime import date, timedelta
-
-        if self._orders_repo is None:
-            raise HTTPException(status_code=503, detail="Orders repository not configured")
-
-        order = self._orders_repo.get_order(order_id)
-        if order is None:
-            raise HTTPException(status_code=404, detail=f"Order {order_id} not found")
-        if order.get("status") != "pending":
-            raise HTTPException(status_code=409, detail=f"Order {order_id} is already {order.get('status')}")
-
-        # Fetch last 90 days of order history to cover older fills
-        to_date = get_today_str()
-        from_date = (date.fromisoformat(to_date) - timedelta(days=90)).isoformat()
-
-        credentials = load_credentials()
-        with DegiroClient(credentials) as client:
-            raw_orders = client.get_order_history(from_date=from_date, to_date=to_date)
-
-        degiro_order = next(
-            (o for o in raw_orders if str(o.get("orderId", "")) == degiro_order_id),
-            None,
-        )
-        if degiro_order is None:
-            raise HTTPException(
-                status_code=422,
-                detail=f"DeGiro order {degiro_order_id} not found in history (last 90 days)",
-            )
-
-        fill_price = float(degiro_order.get("price", 0))
-        fill_qty = int(float(degiro_order.get("size", 0) or degiro_order.get("quantity", 0) or 0))
-        fill_date_raw = str(degiro_order.get("date", "") or get_today_str())
-        fill_date = fill_date_raw[:10]  # YYYY-MM-DD
-        isin_from_degiro = str(degiro_order.get("isin", "") or "") or None
-        product_id = str(degiro_order.get("productId", "") or "") or None
-
-        quantity_mismatch = fill_qty != order.get("quantity", 0)
-
-        # Write broker fields to order before fill
-        broker_updates: dict = {
-            "broker_order_id": degiro_order_id,
-            "broker": "degiro",
-            "broker_synced_at": get_today_str(),
-        }
-        if isin_from_degiro and not order.get("isin"):
-            broker_updates["isin"] = isin_from_degiro
-        self._orders_repo.update_order(order_id, broker_updates)
-
-        fill_request = FillOrderRequest(
-            filled_price=fill_price,
-            filled_date=fill_date,
-            fee_eur=None,
-        )
-        fill_response = self.fill_order(order_id, fill_request)
-
-        # Stamp broker fields on the created position
-        if product_id:
-            data = self._positions_repo.read()
-            for pos in data.get("positions", []):
-                if pos.get("source_order_id") == order_id:
-                    pos["broker_product_id"] = product_id
-                    pos["broker"] = "degiro"
-                    pos["broker_synced_at"] = get_today_str()
-            self._positions_repo.write(data)
-
-        return FillFromDegiroResponse(
-            order_id=order_id,
-            broker_order_id=degiro_order_id,
-            quantity_mismatch=quantity_mismatch,
-            position=fill_response.position,
-        )
-
     def create_position(self, request: CreatePositionRequest) -> Position:
         """Register a position directly (after manual fill at DeGiro)."""
         data = self._positions_repo.read()
@@ -1213,21 +1114,3 @@ class PortfolioService:
                     "trail_param": request.trail_param,
                 }
         raise HTTPException(status_code=404, detail=f"Position {position_id} not found")
-
-    def list_degiro_orders(self) -> DegiroOrdersResponse:
-        """Fetch live orders from DeGiro API."""
-        credentials = load_credentials()
-        with DegiroClient(credentials) as client:
-            raw_orders = client.get_orders()
-
-        orders = [_normalize_degiro_order(o) for o in raw_orders]
-        return DegiroOrdersResponse(orders=orders, asof=get_today_str())
-
-    def list_degiro_order_history(self, from_date: str, to_date: str) -> DegiroOrdersResponse:
-        """Fetch recent filled/cancelled orders from DeGiro order history."""
-        credentials = load_credentials()
-        with DegiroClient(credentials) as client:
-            raw_orders = client.get_order_history(from_date=from_date, to_date=to_date)
-
-        orders = [_normalize_degiro_order(o) for o in raw_orders]
-        return DegiroOrdersResponse(orders=orders, asof=get_today_str())

@@ -9,8 +9,6 @@ from api.services.screener_service import (
 from swing_screener.fundamentals.models import FundamentalPillarScore
 from swing_screener.fundamentals.models import FundamentalSnapshot
 from swing_screener.fundamentals.storage import FundamentalsStorage
-from swing_screener.intelligence.models import Opportunity
-from swing_screener.intelligence.storage import IntelligenceStorage
 from swing_screener.recommendation.models import DecisionSummary
 
 
@@ -53,9 +51,8 @@ def test_apply_cached_fundamentals_context_uses_snapshot_summary(tmp_path):
     assert enriched[0].fundamentals_summary == "Growth metrics are supportive."
 
 
-def test_apply_decision_summary_context_combines_fundamentals_and_intelligence(tmp_path):
+def test_apply_decision_summary_context_uses_fundamentals(tmp_path):
     fundamentals_storage = FundamentalsStorage(tmp_path / "fundamentals")
-    intelligence_storage = IntelligenceStorage(tmp_path / "intelligence")
 
     fundamentals_storage.save_snapshot(
         FundamentalSnapshot(
@@ -77,30 +74,14 @@ def test_apply_decision_summary_context_combines_fundamentals_and_intelligence(t
             },
         )
     )
-    intelligence_storage.write_opportunities(
-        [
-            Opportunity(
-                symbol="AAPL",
-                technical_readiness=0.84,
-                catalyst_strength=0.74,
-                opportunity_score=0.81,
-                state="TRENDING",
-                explanations=["Catalyst support is active."],
-                evidence_quality_flag="high",
-            )
-        ],
-        "2026-03-19",
-    )
 
     enriched = _apply_decision_summary_context(
         [_candidate()],
         fundamentals_storage=fundamentals_storage,
-        intelligence_storage=intelligence_storage,
     )
 
     assert enriched[0].decision_summary is not None
     assert enriched[0].decision_summary.action == "BUY_NOW"
-    assert enriched[0].decision_summary.catalyst_label == "active"
     assert enriched[0].decision_summary.valuation_context.method == "earnings_multiple"
     assert enriched[0].decision_summary.valuation_context.fair_value_base is not None
     assert enriched[0].decision_summary.valuation_context.premium_discount_pct is not None

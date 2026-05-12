@@ -166,42 +166,6 @@ def main() -> None:
     uni_doctor = uni_sub.add_parser("doctor", help="Detailed validation for a single universe")
     uni_doctor.add_argument("--name", required=True, help="Universe id to inspect")
 
-    # -------------------------
-    # CLASSIFY NEWS (LLM event classification)
-    # -------------------------
-    classify = sub.add_parser("classify-news", help="Classify financial news using LLM")
-    classify.add_argument(
-        "--symbols",
-        nargs="+",
-        required=True,
-        help="Ticker symbols to fetch news for",
-    )
-    classify.add_argument(
-        "--mock",
-        action="store_true",
-        help="Use mock news data (no real API calls)",
-    )
-    classify.add_argument(
-        "--provider",
-        choices=["openai", "mock"],
-        default="openai",
-        help="LLM provider to use (default: openai)",
-    )
-    classify.add_argument(
-        "--model",
-        default="gpt-4.1-mini",
-        help="Model name for provider (default: gpt-4.1-mini)",
-    )
-    classify.add_argument(
-        "--base-url",
-        default=None,
-        help="Optional provider base URL override",
-    )
-    classify.add_argument(
-        "--output",
-        help="Optional output JSON file path",
-    )
-
     args = parser.parse_args()
 
     # -------------------------
@@ -283,19 +247,6 @@ def main() -> None:
             path.parent.mkdir(parents=True, exist_ok=True)
             report.to_csv(path)
             print(f"Saved report to {path.resolve()}")
-        return
-
-    if args.command == "classify-news":
-        from swing_screener.intelligence.llm.cli import classify_news_command
-        
-        classify_news_command(
-            symbols=args.symbols,
-            mock=args.mock,
-            provider=args.provider,
-            model=args.model,
-            base_url=args.base_url,
-            output=args.output,
-        )
         return
 
     if args.command == "manage":

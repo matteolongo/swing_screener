@@ -12,19 +12,13 @@ from api.repositories.fundamentals_config_repo import FundamentalsConfigReposito
 from api.repositories.orders_repo import OrdersRepository
 from api.repositories.positions_repo import PositionsRepository
 from api.repositories.strategy_repo import StrategyRepository
-from api.repositories.intelligence_config_repo import IntelligenceConfigRepository
-from api.repositories.intelligence_symbol_sets_repo import IntelligenceSymbolSetsRepository
 from api.repositories.watchlist_repo import WatchlistRepository
-from api.services.chat_service import ChatService
 from api.services.fundamentals_service import FundamentalsService
-from api.services.intelligence_config_service import IntelligenceConfigService
-from api.services.intelligence_service import IntelligenceService
 from api.services.portfolio_service import PortfolioService
 from api.services.regime_analytics import RegimeAnalyticsService
 from api.services.screener_service import ScreenerService
 from api.services.strategy_service import StrategyService
 from api.services.watchlist_service import WatchlistService
-from api.services.workspace_context_service import WorkspaceContextService
 from api.utils.files import read_json_file, write_json_file, get_today_str
 from swing_screener.settings import data_dir, get_settings_manager, project_root
 
@@ -88,28 +82,8 @@ def get_watchlist_service(
     return WatchlistService(repo=watchlist_repo, strategy_repo=strategy_repo)
 
 
-def get_intelligence_config_repo() -> IntelligenceConfigRepository:
-    return IntelligenceConfigRepository()
-
-
 def get_fundamentals_config_repo() -> FundamentalsConfigRepository:
     return FundamentalsConfigRepository()
-
-
-def get_intelligence_symbol_sets_repo() -> IntelligenceSymbolSetsRepository:
-    return IntelligenceSymbolSetsRepository()
-
-
-def get_intelligence_config_service(
-    strategy_repo: StrategyRepository = Depends(get_strategy_repo),
-    config_repo: IntelligenceConfigRepository = Depends(get_intelligence_config_repo),
-    symbol_sets_repo: IntelligenceSymbolSetsRepository = Depends(get_intelligence_symbol_sets_repo),
-) -> IntelligenceConfigService:
-    return IntelligenceConfigService(
-        strategy_repo=strategy_repo,
-        config_repo=config_repo,
-        symbol_sets_repo=symbol_sets_repo,
-    )
 
 
 def get_config_repo() -> ConfigRepository:
@@ -153,40 +127,11 @@ def get_screener_service(
     return ScreenerService(strategy_repo=strategy_repo, portfolio_service=portfolio_service)
 
 
-def get_intelligence_service(
-    strategy_repo: StrategyRepository = Depends(get_strategy_repo),
-    config_service: IntelligenceConfigService = Depends(get_intelligence_config_service),
-) -> IntelligenceService:
-    return IntelligenceService(strategy_repo=strategy_repo, config_service=config_service)
-
-
 def get_fundamentals_service(
     config_repo: FundamentalsConfigRepository = Depends(get_fundamentals_config_repo),
     watchlist_repo: WatchlistRepository = Depends(get_watchlist_repo),
 ) -> FundamentalsService:
     return FundamentalsService(config_repo=config_repo, watchlist_repo=watchlist_repo)
-
-
-def get_workspace_context_service(
-    portfolio_service: PortfolioService = Depends(get_portfolio_service),
-    strategy_service: StrategyService = Depends(get_strategy_service),
-    intelligence_service: IntelligenceService = Depends(get_intelligence_service),
-) -> WorkspaceContextService:
-    return WorkspaceContextService(
-        portfolio_service=portfolio_service,
-        strategy_service=strategy_service,
-        intelligence_service=intelligence_service,
-    )
-
-
-def get_chat_service(
-    workspace_context_service: WorkspaceContextService = Depends(get_workspace_context_service),
-    config_service: IntelligenceConfigService = Depends(get_intelligence_config_service),
-) -> ChatService:
-    return ChatService(
-        workspace_context_service=workspace_context_service,
-        config_service=config_service,
-    )
 
 
 
@@ -196,14 +141,6 @@ SCREENER_HISTORY_FILE = DATA_DIR / "screener_history.json"
 
 def get_screener_history_repo() -> ScreenerHistoryRepository:
     return ScreenerHistoryRepository(SCREENER_HISTORY_FILE)
-
-
-from api.repositories.symbol_notes_repo import SymbolNotesRepository
-
-SYMBOL_NOTES_FILE = DATA_DIR / "symbol_notes.json"
-
-def get_symbol_notes_repo() -> SymbolNotesRepository:
-    return SymbolNotesRepository(SYMBOL_NOTES_FILE)
 
 
 from api.repositories.weekly_reviews_repo import WeeklyReviewsRepository
