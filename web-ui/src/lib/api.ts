@@ -33,6 +33,7 @@ export const API_ENDPOINTS = {
   positionStopSuggestionCompute: '/api/portfolio/stop-suggestion/compute',
   positionClose: (id: string) => `/api/portfolio/positions/${id}/close`,
   positionPartialClose: (id: string) => `/api/portfolio/positions/${id}/partial-close`,
+  positionTrailMethod: (id: string) => `/api/portfolio/positions/${id}/trail-method`,
   portfolioSummary: '/api/portfolio/summary',
   earningsProximity: (ticker: string) => `/api/portfolio/earnings-proximity/${encodeURIComponent(ticker)}`,
   regimeBreakdown: '/api/portfolio/analytics/regime-breakdown',

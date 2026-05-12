@@ -24,6 +24,7 @@ import {
   UpdateStopRequest,
   ClosePositionRequest,
   PartialCloseRequest,
+  UpdateTrailMethodRequest,
   transformCreateOrderRequest,
   transformOrder,
   transformPosition,
@@ -443,6 +444,60 @@ export async function fetchPositionStopSuggestion(positionId: string): Promise<P
   }
   const data = await response.json();
   return transformPositionUpdate(data);
+}
+
+export async function updatePositionTrailMethod(
+  positionId: string,
+  request: UpdateTrailMethodRequest,
+): Promise<void> {
+  const response = await fetch(apiUrl(API_ENDPOINTS.positionTrailMethod(positionId)), {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      trail_method: request.trailMethod,
+      trail_param: request.trailParam ?? null,
+    }),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Failed to update trail method');
+  }
+}
+
+export async function computePositionStopSuggestion(
+  position: Position,
+): Promise<PositionUpdate> {
+  const response = await fetch(apiUrl(API_ENDPOINTS.positionStopSuggestionCompute), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      position: {
+        ticker: position.ticker,
+        status: position.status,
+        entry_date: position.entryDate,
+        entry_price: position.entryPrice,
+        stop_price: position.stopPrice,
+        shares: position.shares,
+        position_id: position.positionId ?? null,
+        source_order_id: position.sourceOrderId ?? null,
+        initial_risk: position.initialRisk ?? null,
+        max_favorable_price: position.maxFavorablePrice ?? null,
+        exit_date: position.exitDate ?? null,
+        exit_price: position.exitPrice ?? null,
+        current_price: position.currentPrice ?? null,
+        notes: position.notes ?? '',
+        exit_order_ids: position.exitOrderIds ?? null,
+        trail_method: position.trailMethod ?? 'sma20',
+        trail_param: position.trailParam ?? null,
+      },
+    }),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Failed to compute stop suggestion');
+  }
+  const raw = await response.json();
+  return transformPositionUpdate(raw);
 }
 
 export async function closePosition(
