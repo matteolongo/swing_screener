@@ -60,4 +60,10 @@ describe('TrailMethodSelector', () => {
     await user.selectOptions(screen.getByRole('combobox'), 'manual');
     expect(onChange).toHaveBeenCalledWith('manual', null);
   });
+
+  it('shows ATR default value when param is null', () => {
+    render(<TrailMethodSelector value="atr" param={null} onChange={vi.fn()} />);
+    const input = screen.getByRole('spinbutton') as HTMLInputElement;
+    expect(input.value).toBe('2');
+  });
 });
