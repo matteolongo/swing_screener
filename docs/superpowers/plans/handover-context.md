@@ -4,9 +4,9 @@ Read this before picking up any feature plan. It describes the codebase conventi
 
 ---
 
-## Current implementation status - 2026-05-08
+## Current implementation status - 2026-05-11
 
-Tier 1 (F1-F5) merged to main. Tier 2 (F6-F10) implemented locally, PRs pending.
+Tier 1 (F1-F5) and Tier 2 (F6-F11) all merged to main. Tier 3 (F12-F14) next.
 
 | Feature | Branch | Base | PR | Status |
 |---|---|---|---|---|
@@ -15,18 +15,20 @@ Tier 1 (F1-F5) merged to main. Tier 2 (F6-F10) implemented locally, PRs pending.
 | Feature 3 - Account equity auto-update | `codex/account-equity` | `main` | https://github.com/matteolongo/swing_screener/pull/234 | Merged to main |
 | Feature 4 - Earnings proximity warning | `codex/earnings-warning` | `main` | https://github.com/matteolongo/swing_screener/pull/235 | Merged to main |
 | Feature 5 - Concentration warning | `codex/concentration-warning` | `main` | https://github.com/matteolongo/swing_screener/pull/236 | Merged to main |
-| Feature 6 - Time stop nudge | `codex/time-stop-nudge` | `main` | pending | Squashed into main via #232; no standalone PR |
-| Feature 7 - Watchlist pipeline | `codex/watchlist-pipeline-v2` | `main` | pending | PR pending |
-| Feature 8 - Volume quality signal | `codex/volume-quality` | `main` | pending | PR pending |
-| Feature 9 - Liquidity filter | `codex/liquidity-filter` | `main` | pending | PR pending |
-| Feature 10 - Partial exits | `codex/partial-exits` | `main` | pending | PR pending |
-| Feature 11 - Regime performance | `codex/regime-performance` | `main` | pending | PR pending |
-
-All branches now base off `main` (F1-F5 merged). Review each PR diff against `main`.
+| Feature 6 - Time stop nudge | `codex/time-stop-nudge` | `main` | squashed into #232 | Merged to main |
+| Feature 7 - Watchlist pipeline | `codex/watchlist-pipeline-v2` | `main` | https://github.com/matteolongo/swing_screener/pull/240 | Merged to main |
+| Feature 8 - Volume quality signal | `codex/volume-quality` | `main` | https://github.com/matteolongo/swing_screener/pull/241 | Merged to main |
+| Feature 9 - Liquidity filter | `codex/liquidity-filter` | `main` | https://github.com/matteolongo/swing_screener/pull/242 | Merged to main |
+| Feature 10 - Partial exits | `codex/partial-exits` | `main` | https://github.com/matteolongo/swing_screener/pull/243 | Merged to main |
+| Feature 11 - Regime performance | `codex/regime-performance` | `main` | https://github.com/matteolongo/swing_screener/pull/245 | Merged to main |
+| Feature 12 - FX-adjusted R display | `codex/fx-adjusted-r` | `main` | #246 | Merged to main |
+| Feature 13 - Trail customization | `codex/trail-customization` | `main` | pending | PR pushed: https://github.com/matteolongo/swing_screener/compare/main...codex/trail-customization |
+| Feature 14 - Multi-timeframe trend filter | `codex/mtf-trend-filter` | `main` | pending | Not started |
 
 Known local files to exclude from commits:
 
 - `data/screener_history.json`
+- `config/intelligence.yaml`
 
 Validation already run during implementation:
 
@@ -141,6 +143,6 @@ Use `locked_read_json` / `locked_write_json` from `api/utils/file_lock.py` — n
 
 ## Active branch
 
-F6-F11 are implemented. PRs pending for F7 (`codex/watchlist-pipeline-v2`), F8 (`codex/volume-quality`), F9 (`codex/liquidity-filter`), F10 (`codex/partial-exits`), and F11 (`codex/regime-performance`).
+F1-F12 all merged to main. F13 PR pending. Working on Tier 3.
 
-Next work: Tier 3 remaining (F12 FX-adjusted R, F13 Trail customization, F14 MTF trend filter). Start new branch from `main`.
+F13 Trail customization: `codex/trail-customization`, PR pending. Next: F14 MTF trend filter. All branch from `main`.

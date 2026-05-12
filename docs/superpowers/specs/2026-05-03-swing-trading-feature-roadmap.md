@@ -320,7 +320,7 @@ The screener works on daily bars. A daily breakout that contradicts the weekly t
 
 ## Implementation order summary
 
-Last updated: 2026-05-07
+Last updated: 2026-05-12
 
 | # | Feature | Tier | Status | Value delivered |
 |---|---------|------|--------|----------------|
@@ -329,12 +329,12 @@ Last updated: 2026-05-07
 | 3 | Account equity auto-update | 1 | ✅ Done — `codex/account-equity` / PR #234 | Accurate sizing |
 | 4 | Earnings warning | 1 | ✅ Done — `codex/earnings-warning` / PR #235 | Avoid earnings traps |
 | 5 | Concentration warning | 1 | ✅ Done — `codex/concentration-warning` / PR #236 | Prevent correlated bets |
-| 6 | Time stop nudge | 2 | ✅ Done — `codex/time-stop-nudge` / PR pending | Kill dead capital |
-| 7 | Watchlist pipeline | 2 | ✅ Done — `codex/watchlist-pipeline-v2` / PR pending | Spot setups early |
-| 8 | Volume quality | 2 | ✅ Done — `codex/volume-quality` / PR pending | Better entry timing |
-| 9 | Liquidity filter | 2 | ✅ Done — `codex/liquidity-filter` / PR pending | Avoid illiquid names |
-| 10 | Partial exits | 2 | ✅ Done — `codex/partial-exits` / PR pending | Scale-out capability |
-| 11 | Regime performance | 3 | 🔲 No plan yet | Size to conditions |
-| 12 | FX-adjusted R | 3 | 🔲 No plan yet | True R visibility |
-| 13 | Trail customization | 3 | 🔲 No plan yet | Setup-specific trails |
+| 6 | Time stop nudge | 2 | ✅ Done — squashed into PR #232 | Kill dead capital |
+| 7 | Watchlist pipeline | 2 | ✅ Done — `codex/watchlist-pipeline-v2` / PR #240 | Spot setups early |
+| 8 | Volume quality | 2 | ✅ Done — `codex/volume-quality` / PR #241 | Better entry timing |
+| 9 | Liquidity filter | 2 | ✅ Done — `codex/liquidity-filter` / PR #242 | Avoid illiquid names |
+| 10 | Partial exits | 2 | ✅ Done — `codex/partial-exits` / PR #243 | Scale-out capability |
+| 11 | Regime performance | 3 | ✅ Done — `codex/regime-performance` / PR #245 | Size to conditions |
+| 12 | FX-adjusted R | 3 | ✅ Done — `codex/fx-adjusted-r` / PR #246 | True R visibility |
+| 13 | Trail customization | 3 | 🔲 PR pending — `codex/trail-customization` | Setup-specific trails |
 | 14 | MTF trend filter | 3 | 🔲 No plan yet | Fewer false signals |
