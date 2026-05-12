@@ -450,6 +450,9 @@ export async function updatePositionTrailMethod(
   positionId: string,
   request: UpdateTrailMethodRequest,
 ): Promise<void> {
+  if (isLocalPersistenceMode()) {
+    throw new Error('Trail method update is not supported in local persistence mode');
+  }
   const response = await fetch(apiUrl(API_ENDPOINTS.positionTrailMethod(positionId)), {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },

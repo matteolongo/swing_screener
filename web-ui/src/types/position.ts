@@ -142,7 +142,9 @@ export function transformPosition(apiPosition: PositionApiResponse): Position {
     thesis: apiPosition.thesis ?? null,
     lesson: apiPosition.lesson ?? null,
     tags: apiPosition.tags ?? [],
-    trailMethod: (apiPosition.trail_method as TrailMethod) ?? 'sma20',
+    trailMethod: (['sma20', 'atr', 'fixed_pct', 'manual'] as const).includes(apiPosition.trail_method as TrailMethod)
+      ? (apiPosition.trail_method as TrailMethod)
+      : 'sma20',
     trailParam: apiPosition.trail_param ?? null,
     partialCloses: (apiPosition.partial_closes ?? []).map((e) => ({
       date: e.date,
