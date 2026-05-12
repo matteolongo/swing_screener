@@ -20,6 +20,7 @@ from api.models.portfolio import (
     FillFromDegiroRequest,
     FillFromDegiroResponse,
     UpdateStopRequest,
+    UpdateTrailMethodRequest,
     ClosePositionRequest,
     PartialCloseRequest,
     StopSuggestionComputeRequest,
@@ -111,6 +112,16 @@ async def get_position_stop_suggestion(
 ):
     """Get suggested stop price for a position based on manage rules."""
     return service.suggest_position_stop(position_id)
+
+
+@router.patch("/positions/{position_id}/trail-method")
+async def update_position_trail_method(
+    position_id: str,
+    request: UpdateTrailMethodRequest,
+    service: PortfolioService = Depends(get_portfolio_service),
+):
+    """Update trail stop method for an open position."""
+    return service.update_trail_method(position_id, request)
 
 
 @router.post("/stop-suggestion/compute", response_model=PositionUpdate)

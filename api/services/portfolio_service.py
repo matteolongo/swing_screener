@@ -29,6 +29,7 @@ from api.models.portfolio import (
     PositionMetrics,
     PortfolioSummary,
     UpdateStopRequest,
+    UpdateTrailMethodRequest,
     ClosePositionRequest,
 )
 from api.repositories.config_repo import ConfigRepository
@@ -238,6 +239,12 @@ def _to_state_position(position: dict) -> StatePosition:
         ),
         notes=str(position.get("notes", "")),
         exit_order_ids=position.get("exit_order_ids"),
+        trail_method=str(position.get("trail_method") or "sma20"),
+        trail_param=(
+            float(position["trail_param"])
+            if position.get("trail_param") is not None
+            else None
+        ),
     )
 
 
@@ -1184,6 +1191,26 @@ class PortfolioService:
         if position is None:
             raise HTTPException(status_code=404, detail=f"Position not found: {position_id}")
         return self._suggest_position_stop_from_dict(position)
+
+    def update_trail_method(self, position_id: str, request: UpdateTrailMethodRequest) -> dict:
+        data = self._positions_repo.read()
+        positions = data.get("positions", [])
+        for pos in positions:
+            if pos.get("position_id") == position_id:
+                if pos.get("status") != "open":
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Cannot update trail method on a closed position",
+                    )
+                pos["trail_method"] = request.trail_method
+                pos["trail_param"] = request.trail_param
+                self._positions_repo.write(data)
+                return {
+                    "status": "ok",
+                    "position_id": position_id,
+                    "trail_method": request.trail_method,
+                }
+        raise HTTPException(status_code=404, detail=f"Position {position_id} not found")
 
     def list_degiro_orders(self) -> DegiroOrdersResponse:
         """Fetch live orders from DeGiro API."""
