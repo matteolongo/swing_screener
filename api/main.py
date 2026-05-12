@@ -16,16 +16,13 @@ from swing_screener.runtime_env import ensure_runtime_env_loaded
 
 # Import routers
 from api.routers import (
-    chat,
     config,
     daily_review,
     fundamentals,
-    intelligence,
     portfolio,
     screener,
     screener_history,
     strategy,
-    symbol_notes,
     universes,
     watchlist,
     weekly_reviews,
@@ -34,11 +31,6 @@ from api.routers import (
 LOG_FORMAT = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
 logging.basicConfig(level=logging.INFO, format=LOG_FORMAT, stream=sys.stdout)
 logger = logging.getLogger("swing_screener.api")
-
-# degiro_connector logs CRITICAL when the API returns {} for stocks without
-# profile/ratios data (pydantic validation failure). This is expected and
-# handled by our probe functions — suppress the noise.
-logging.getLogger("degiro_connector").setLevel(logging.ERROR)
 
 ensure_runtime_env_loaded()
 
@@ -295,11 +287,8 @@ app.include_router(screener_history.router, prefix="/api/screener", tags=["scree
 app.include_router(universes.router, prefix="/api/universes", tags=["universes"])
 app.include_router(portfolio.router, prefix="/api/portfolio", tags=["portfolio"])
 app.include_router(watchlist.router, prefix="/api/watchlist", tags=["watchlist"])
-app.include_router(intelligence.router, prefix="/api/intelligence", tags=["intelligence"])
 app.include_router(fundamentals.router, prefix="/api/fundamentals", tags=["fundamentals"])
-app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
 app.include_router(daily_review.router, prefix="/api", tags=["daily-review"])
-app.include_router(symbol_notes.router, prefix="/api/symbol-notes", tags=["symbol-notes"])
 app.include_router(weekly_reviews.router, prefix="/api/weekly-reviews", tags=["weekly-reviews"])
 
 

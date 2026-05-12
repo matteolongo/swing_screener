@@ -9,16 +9,6 @@ vi.mock('@/stores/onboardingStore', () => ({
   useOnboardingStore: vi.fn(),
 }));
 
-vi.mock('@/features/portfolio/hooks', () => ({
-  useDegiroStatusQuery: vi.fn(() => ({
-    data: {
-      available: false,
-      detail: 'DeGiro setup missing.',
-    },
-    isLoading: false,
-    isError: false,
-  })),
-}));
 
 // Mock useNavigate
 const mockNavigate = vi.fn();
@@ -176,7 +166,7 @@ describe('OnboardingModal', () => {
     expect(progressBars?.length).toBe(5);
   });
 
-  it('shows broker setup options on the verify step', () => {
+  it('shows broker setup card on the verify step', () => {
     (useOnboardingStore as any).mockReturnValue({
       currentStep: 4,
       executionSetup: 'manual',
@@ -189,7 +179,6 @@ describe('OnboardingModal', () => {
     renderModal(true);
 
     expect(screen.getByText('How will you reconcile broker execution?')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Manual broker workflow' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'I use DeGiro' })).toBeInTheDocument();
+    expect(screen.getByText(/Manual mode is fully supported/i)).toBeInTheDocument();
   });
 });

@@ -1,12 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCircle2, RefreshCw } from 'lucide-react';
 import AnalysisCanvasPanel from '@/components/domain/workspace/AnalysisCanvasPanel';
-import FloatingChatWidget from '@/components/domain/workspace/FloatingChatWidget';
 import ScreenerInboxPanel from '@/components/domain/workspace/ScreenerInboxPanel';
 import ClosePositionModalForm from '@/components/domain/positions/ClosePositionModalForm';
 import UpdateStopModalForm from '@/components/domain/positions/UpdateStopModalForm';
 import WatchMetaInline from '@/components/domain/watchlist/WatchMetaInline';
-import { useSymbolIntelligenceRunner } from '@/features/intelligence/useSymbolIntelligenceRunner';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useDailyReview } from '@/features/dailyReview/api';
 import { filterDailyReviewCandidates } from '@/features/dailyReview/prioritization';
@@ -683,8 +681,6 @@ type TabletTab = 'left' | 'analysis';
 export default function Today() {
   const setSelectedTicker = useWorkspaceStore((state) => state.setSelectedTicker);
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
-  const { runForTicker, getStatusForTicker } = useSymbolIntelligenceRunner();
-  const selectedTickerIntelligenceStatus = selectedTicker ? getStatusForTicker(selectedTicker) : undefined;
 
   const [leftTab, setLeftTab] = useState<LeftTab>('today');
   const [activeTablet, setActiveTablet] = useState<TabletTab>('left');
@@ -773,14 +769,9 @@ export default function Today() {
             activeTablet === 'analysis' ? 'w-full' : 'hidden xl:flex'
           )}
         >
-          <AnalysisCanvasPanel
-            onRunSymbolIntelligence={runForTicker}
-            symbolIntelligenceStatus={selectedTickerIntelligenceStatus}
-          />
+          <AnalysisCanvasPanel />
         </div>
       </div>
-
-      <FloatingChatWidget />
     </div>
   );
 }

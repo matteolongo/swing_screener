@@ -33,9 +33,6 @@ describe('PendingOrdersTab', () => {
     server.use(
       http.get('*/api/portfolio/orders/local', () =>
         HttpResponse.json({ orders: [pendingOrder], asof: '2026-04-27' })
-      ),
-      http.get('*/api/portfolio/degiro/status', () =>
-        HttpResponse.json({ available: true, installed: true, credentials_configured: true, mode: 'ready', detail: '' })
       )
     );
     renderWithProviders(<PendingOrdersTab />);
@@ -47,27 +44,21 @@ describe('PendingOrdersTab', () => {
     server.use(
       http.get('*/api/portfolio/orders/local', () =>
         HttpResponse.json({ orders: [], asof: '2026-04-27' })
-      ),
-      http.get('*/api/portfolio/degiro/status', () =>
-        HttpResponse.json({ available: false, installed: false, credentials_configured: false, mode: 'missing_credentials', detail: '' })
       )
     );
     renderWithProviders(<PendingOrdersTab />);
     expect(await screen.findByText(t('pendingOrdersTab.empty'))).toBeInTheDocument();
   });
 
-  it('shows fill-via-degiro button when DeGiro connected', async () => {
+  it('shows fill manually button', async () => {
     server.use(
       http.get('*/api/portfolio/orders/local', () =>
         HttpResponse.json({ orders: [pendingOrder], asof: '2026-04-27' })
-      ),
-      http.get('*/api/portfolio/degiro/status', () =>
-        HttpResponse.json({ available: true, installed: true, credentials_configured: true, mode: 'ready', detail: '' })
       )
     );
     renderWithProviders(<PendingOrdersTab />);
     expect(
-      await screen.findByRole('button', { name: t('pendingOrdersTab.fillViaDegiro') })
+      await screen.findByRole('button', { name: t('pendingOrdersTab.fillManually') })
     ).toBeInTheDocument();
   });
 });

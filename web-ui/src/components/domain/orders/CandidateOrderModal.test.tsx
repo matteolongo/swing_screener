@@ -162,7 +162,6 @@ describe('CandidateOrderModal', () => {
     expect(screen.getAllByText('Breakout setup').length).toBeGreaterThan(0);
     expect(screen.getAllByText(/BUY STOP/i).length).toBeGreaterThan(0);
     expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('BUY_STOP');
-    expect(screen.getByText('Exact Degiro setup')).toBeInTheDocument();
   });
 
   it('shows pullback execution guidance when breakout signal is already passed and backend suggests BUY_LIMIT', () => {

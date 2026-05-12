@@ -3,23 +3,13 @@ import { useEffect } from 'react';
 import Card from '@/components/common/Card';
 import ActionPanel from '@/components/domain/workspace/ActionPanel';
 import SymbolAnalysisContent from '@/components/domain/workspace/SymbolAnalysisContent';
-import SymbolNoteWidget from '@/components/domain/workspace/SymbolNoteWidget';
 import { syncCandidateWithFundamentals } from '@/features/screener/decisionSummary';
-import type { SymbolIntelligenceStatus } from '@/features/intelligence/useSymbolIntelligenceRunner';
 import { useFundamentalSnapshotQuery, useRefreshFundamentalSnapshotMutation } from '@/features/fundamentals/hooks';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { t } from '@/i18n/t';
 
-interface AnalysisCanvasPanelProps {
-  onRunSymbolIntelligence?: (ticker: string) => void;
-  symbolIntelligenceStatus?: SymbolIntelligenceStatus;
-}
-
-export default function AnalysisCanvasPanel({
-  onRunSymbolIntelligence,
-  symbolIntelligenceStatus,
-}: AnalysisCanvasPanelProps) {
+export default function AnalysisCanvasPanel() {
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
   const activeTab = useWorkspaceStore((state) => state.analysisTab);
   const setAnalysisTab = useWorkspaceStore((state) => state.setAnalysisTab);
@@ -75,10 +65,7 @@ export default function AnalysisCanvasPanel({
             activeTab={activeTab}
             onTabChange={setAnalysisTab}
             orderPanel={<ActionPanel ticker={selectedTicker} />}
-            onRunSymbolIntelligence={onRunSymbolIntelligence}
-            symbolIntelligenceStatus={symbolIntelligenceStatus}
           />
-          <SymbolNoteWidget ticker={selectedTicker} />
         </>
       )}
     </Card>

@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any
 
 from swing_screener.fundamentals.models import FundamentalPillarScore, FundamentalSnapshot
-from swing_screener.intelligence.models import Opportunity
 from swing_screener.recommendation.models import (
     CatalystLabel,
     DecisionAction,
@@ -399,7 +398,7 @@ def _fair_value_estimate(
     return method, low, base, high, premium_discount_pct
 
 
-def _technical_label(candidate: Any, opportunity: Opportunity | None) -> SignalLabel:
+def _technical_label(candidate: Any, opportunity: Any | None) -> SignalLabel:
     readiness = _safe_float(_get_value(opportunity, "technical_readiness"))
     if readiness is not None:
         if readiness >= 0.67:
@@ -538,7 +537,7 @@ def _valuation_context(
     )
 
 
-def _catalyst_label(opportunity: Opportunity | None) -> CatalystLabel:
+def _catalyst_label(opportunity: Any | None) -> CatalystLabel:
     if opportunity is None:
         return "weak"
     state = str(_get_value(opportunity, "state", "")).strip().upper()
@@ -556,7 +555,7 @@ def _conviction(
     fundamentals_label: SignalLabel,
     valuation_label: ValuationLabel,
     catalyst_label: CatalystLabel,
-    opportunity: Opportunity | None,
+    opportunity: Any | None,
     snapshot: FundamentalSnapshot | None,
     same_symbol_mode: str | None,
 ) -> DecisionConviction:
@@ -624,7 +623,7 @@ def _action(
 def _drivers(
     *,
     candidate: Any,
-    opportunity: Opportunity | None,
+    opportunity: Any | None,
     snapshot: FundamentalSnapshot | None,
     technical_label: SignalLabel,
     fundamentals_label: SignalLabel,
@@ -718,7 +717,7 @@ def _drivers(
 def _main_risk(
     *,
     snapshot: FundamentalSnapshot | None,
-    opportunity: Opportunity | None,
+    opportunity: Any | None,
     technical_label: SignalLabel,
     fundamentals_label: SignalLabel,
     valuation_label: ValuationLabel,
@@ -805,7 +804,7 @@ def _build_explanation_contract(
 
 def build_decision_summary(
     candidate: Any,
-    opportunity: Opportunity | None = None,
+    opportunity: Any | None = None,
     fundamentals: FundamentalSnapshot | None = None,
 ) -> DecisionSummary:
     symbol = str(_get_value(candidate, "ticker", "") or _get_value(candidate, "symbol", "")).strip().upper()
