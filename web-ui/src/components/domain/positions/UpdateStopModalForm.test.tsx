@@ -68,7 +68,7 @@ describe('UpdateStopModalForm', () => {
     const input = screen.getByRole('spinbutton') as HTMLInputElement;
     await user.clear(input);
     await user.type(input, '17.8');
-    await user.click(screen.getByRole('button', { name: 'Use Suggested' }));
+    await user.click(screen.getByRole('button', { name: t('positions.updateStopModal.useSuggested') }));
 
     await waitFor(() => {
       expect(input.value).toBe('17.75');

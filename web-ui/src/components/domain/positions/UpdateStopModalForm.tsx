@@ -34,6 +34,7 @@ export default function UpdateStopModalForm({
   const [trailParam, setTrailParam] = useState<number | null>(position.trailParam ?? null);
 
   const trailMethodMutation = useUpdateTrailMethodMutation();
+  const [trailError, setTrailError] = useState<string>('');
 
   const suggestion = liveSuggestion ?? suggestionQuery.data;
   const suggestionError = suggestionQuery.error instanceof Error ? suggestionQuery.error.message : '';
@@ -79,7 +80,7 @@ export default function UpdateStopModalForm({
         setLiveSuggestion(computed);
       }
     } catch {
-      // Silently ignore — stale suggestion remains shown
+      setLiveSuggestion(null);
     }
   };
 
@@ -89,16 +90,19 @@ export default function UpdateStopModalForm({
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    setTrailError('');
     if (trailMethodChanged && position.positionId) {
-      await trailMethodMutation.mutateAsync({
-        positionId: position.positionId,
-        request: { trailMethod, trailParam },
-      });
+      try {
+        await trailMethodMutation.mutateAsync({
+          positionId: position.positionId,
+          request: { trailMethod, trailParam },
+        });
+      } catch (err) {
+        setTrailError(err instanceof Error ? err.message : 'Failed to update trail method');
+        return;
+      }
     }
-    onSubmit({
-      ...formData,
-      newStop: roundToCents(formData.newStop),
-    });
+    onSubmit({ ...formData, newStop: roundToCents(formData.newStop) });
   };
 
   const handleUseSuggested = () => {
@@ -207,6 +211,12 @@ export default function UpdateStopModalForm({
         {error ? (
           <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3">
             <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+          </div>
+        ) : null}
+
+        {trailError ? (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3">
+            <p className="text-sm text-red-800 dark:text-red-200">{trailError}</p>
           </div>
         ) : null}
 
