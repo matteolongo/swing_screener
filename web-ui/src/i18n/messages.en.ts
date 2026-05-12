@@ -446,6 +446,16 @@ export const messagesEn = {
       suggested: 'Suggested',
       rNow: 'R now',
     },
+    trailMethod: {
+      label: 'Trail Method',
+      sma20: 'SMA20 (default)',
+      atr: 'ATR Multiple',
+      fixedPct: 'Fixed %',
+      manual: 'Manual only',
+      atrMultiplierLabel: 'ATR Multiplier (default: 2.0)',
+      fixedPctLabel: 'Trail % below current price',
+      manualNote: 'No automatic trail — stop suggestion uses current stop.',
+    },
     partialCloseModal: {
       title: 'Partial Close — {{ticker}}',
       sharesLabel: 'Shares to close',
