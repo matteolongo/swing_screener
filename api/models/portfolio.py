@@ -88,6 +88,7 @@ class UpdateTrailMethodRequest(BaseModel):
     trail_method: TrailMethod
     trail_param: Optional[float] = Field(
         default=None,
+        ge=0,
         description="ATR multiplier (atr) or percentage (fixed_pct); null for sma20/manual",
     )
 

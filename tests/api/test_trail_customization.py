@@ -73,6 +73,40 @@ def test_patch_trail_method_not_found(client):
     assert response.status_code == 404
 
 
+@pytest.fixture
+def client_closed(tmp_path, monkeypatch):
+    pos_file = tmp_path / "positions_closed.json"
+    ord_file = tmp_path / "orders_closed.json"
+    pos_file.write_text(json.dumps({
+        "asof": "2026-01-01",
+        "positions": [
+            {
+                "position_id": "POS-CLOSED",
+                "ticker": "AAPL",
+                "status": "closed",
+                "entry_date": "2025-10-01",
+                "entry_price": 150.0,
+                "stop_price": 140.0,
+                "shares": 10,
+                "exit_date": "2025-11-01",
+                "exit_price": 160.0,
+            }
+        ],
+    }))
+    ord_file.write_text(json.dumps({"orders": []}))
+    monkeypatch.setattr(deps, "_positions_path", pos_file)
+    monkeypatch.setattr(deps, "_orders_path", ord_file)
+    return TestClient(app)
+
+
+def test_patch_trail_method_closed_position_rejected(client_closed):
+    response = client_closed.patch(
+        "/api/portfolio/positions/POS-CLOSED/trail-method",
+        json={"trail_method": "atr", "trail_param": 2.0},
+    )
+    assert response.status_code == 400
+
+
 def test_positions_list_returns_trail_method(client):
     client.patch(
         "/api/portfolio/positions/POS-001/trail-method",

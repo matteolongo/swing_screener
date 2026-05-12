@@ -1204,11 +1204,13 @@ class PortfolioService:
                     )
                 pos["trail_method"] = request.trail_method
                 pos["trail_param"] = request.trail_param
+                data["asof"] = get_today_str()
                 self._positions_repo.write(data)
                 return {
                     "status": "ok",
                     "position_id": position_id,
                     "trail_method": request.trail_method,
+                    "trail_param": request.trail_param,
                 }
         raise HTTPException(status_code=404, detail=f"Position {position_id} not found")
 
