@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 PositionStatus = Literal["open", "closed"]
 ActionType = Literal["NO_ACTION", "MOVE_STOP_UP", "CLOSE_STOP_HIT", "CLOSE_TIME_EXIT"]
+TrailMethod = Literal["sma20", "atr", "fixed_pct", "manual"]
 
 
 class Position(BaseModel):
@@ -44,6 +45,14 @@ class Position(BaseModel):
         default=None,
         description="FX rate (EURUSD) at position entry — used for FX-adjusted R display",
     )
+    trail_method: TrailMethod = Field(
+        default="sma20",
+        description="Trail stop method: sma20 | atr | fixed_pct | manual",
+    )
+    trail_param: Optional[float] = Field(
+        default=None,
+        description="Trail method parameter (ATR multiplier or fixed % value)",
+    )
 
 
 class PositionUpdate(BaseModel):
@@ -73,6 +82,15 @@ class UpdateStopRequest(BaseModel):
         if v > 100000:  # Reasonable upper bound
             raise ValueError("Stop price exceeds reasonable maximum (100,000)")
         return v
+
+
+class UpdateTrailMethodRequest(BaseModel):
+    trail_method: TrailMethod
+    trail_param: Optional[float] = Field(
+        default=None,
+        ge=0,
+        description="ATR multiplier (atr) or percentage (fixed_pct); null for sma20/manual",
+    )
 
 
 class PartialCloseEvent(BaseModel):

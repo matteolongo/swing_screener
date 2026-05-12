@@ -47,6 +47,8 @@ describe('Position Helper Functions', () => {
         thesis: null,
         lesson: null,
         tags: [],
+        trailMethod: 'sma20',
+        trailParam: null,
         partialCloses: [],
       })
     })

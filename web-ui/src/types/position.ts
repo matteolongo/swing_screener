@@ -2,6 +2,13 @@
 
 export type PositionStatus = 'open' | 'closed';
 
+export type TrailMethod = 'sma20' | 'atr' | 'fixed_pct' | 'manual';
+
+export interface UpdateTrailMethodRequest {
+  trailMethod: TrailMethod;
+  trailParam?: number | null;
+}
+
 export interface PartialCloseEvent {
   date: string;
   sharesClosed: number;
@@ -36,6 +43,8 @@ export interface Position {
   thesis?: string | null;
   lesson?: string | null;
   tags?: string[];
+  trailMethod?: TrailMethod;
+  trailParam?: number | null;
   partialCloses?: PartialCloseEvent[];
 }
 
@@ -101,6 +110,8 @@ export interface PositionApiResponse {
   thesis?: string | null;
   lesson?: string | null;
   tags?: string[] | null;
+  trail_method?: string | null;
+  trail_param?: number | null;
   partial_closes?: Array<{
     date: string;
     shares_closed: number;
@@ -131,6 +142,10 @@ export function transformPosition(apiPosition: PositionApiResponse): Position {
     thesis: apiPosition.thesis ?? null,
     lesson: apiPosition.lesson ?? null,
     tags: apiPosition.tags ?? [],
+    trailMethod: (['sma20', 'atr', 'fixed_pct', 'manual'] as const).includes(apiPosition.trail_method as TrailMethod)
+      ? (apiPosition.trail_method as TrailMethod)
+      : 'sma20',
+    trailParam: apiPosition.trail_param ?? null,
     partialCloses: (apiPosition.partial_closes ?? []).map((e) => ({
       date: e.date,
       sharesClosed: e.shares_closed,

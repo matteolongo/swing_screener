@@ -24,6 +24,8 @@ export type {
   ClosePositionRequest,
   PartialCloseEvent,
   PartialCloseRequest,
+  TrailMethod,
+  UpdateTrailMethodRequest,
 } from '@/types/position';
 export {
   transformPosition,

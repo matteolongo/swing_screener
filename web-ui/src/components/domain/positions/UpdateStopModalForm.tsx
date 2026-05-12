@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import Button from '@/components/common/Button';
 import ModalShell from '@/components/common/ModalShell';
-import { usePositionStopSuggestion } from '@/features/portfolio/hooks';
-import type { Position, UpdateStopRequest } from '@/features/portfolio/types';
+import TrailMethodSelector from '@/components/domain/positions/TrailMethodSelector';
+import { computePositionStopSuggestion } from '@/features/portfolio/api';
+import { usePositionStopSuggestion, useUpdateTrailMethodMutation } from '@/features/portfolio/hooks';
+import type { Position, PositionUpdate, TrailMethod, UpdateStopRequest } from '@/features/portfolio/types';
 import { formatCurrency } from '@/utils/formatters';
 import { t } from '@/i18n/t';
 
@@ -26,7 +28,15 @@ export default function UpdateStopModalForm({
   onSubmit,
 }: UpdateStopModalFormProps) {
   const suggestionQuery = usePositionStopSuggestion(position.positionId);
-  const suggestion = suggestionQuery.data;
+  const [liveSuggestion, setLiveSuggestion] = useState<PositionUpdate | null>(null);
+
+  const [trailMethod, setTrailMethod] = useState<TrailMethod>(position.trailMethod ?? 'sma20');
+  const [trailParam, setTrailParam] = useState<number | null>(position.trailParam ?? null);
+
+  const trailMethodMutation = useUpdateTrailMethodMutation();
+  const [trailError, setTrailError] = useState<string>('');
+
+  const suggestion = liveSuggestion ?? suggestionQuery.data;
   const suggestionError = suggestionQuery.error instanceof Error ? suggestionQuery.error.message : '';
   const suggestedStop = suggestion?.stopSuggested;
   const suggestedStopRounded = suggestedStop != null ? roundToCents(suggestedStop) : null;
@@ -57,12 +67,42 @@ export default function UpdateStopModalForm({
     });
   }, [canApplySuggested, suggestedStopRounded, suggestion?.reason, initialStop, initialReason]);
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleTrailChange = async (method: TrailMethod, param: number | null) => {
+    setTrailMethod(method);
+    setTrailParam(param);
+    try {
+      const computed = await computePositionStopSuggestion({
+        ...position,
+        trailMethod: method,
+        trailParam: param,
+      });
+      if (computed) {
+        setLiveSuggestion(computed);
+      }
+    } catch {
+      setLiveSuggestion(null);
+    }
+  };
+
+  const trailMethodChanged =
+    trailMethod !== (position.trailMethod ?? 'sma20') ||
+    trailParam !== (position.trailParam ?? null);
+
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    onSubmit({
-      ...formData,
-      newStop: roundToCents(formData.newStop),
-    });
+    setTrailError('');
+    if (trailMethodChanged && position.positionId) {
+      try {
+        await trailMethodMutation.mutateAsync({
+          positionId: position.positionId,
+          request: { trailMethod, trailParam },
+        });
+      } catch (err) {
+        setTrailError(err instanceof Error ? err.message : 'Failed to update trail method');
+        return;
+      }
+    }
+    onSubmit({ ...formData, newStop: roundToCents(formData.newStop) });
   };
 
   const handleUseSuggested = () => {
@@ -91,6 +131,8 @@ export default function UpdateStopModalForm({
             <strong>{t('positions.updateStopModal.sharesLabel')}</strong> {position.shares}
           </p>
         </div>
+
+        <TrailMethodSelector value={trailMethod} param={trailParam} onChange={handleTrailChange} />
 
         <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded">
           <p className="text-sm text-blue-700 dark:text-blue-200 font-semibold">
@@ -169,6 +211,12 @@ export default function UpdateStopModalForm({
         {error ? (
           <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3">
             <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+          </div>
+        ) : null}
+
+        {trailError ? (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3">
+            <p className="text-sm text-red-800 dark:text-red-200">{trailError}</p>
           </div>
         ) : null}
 

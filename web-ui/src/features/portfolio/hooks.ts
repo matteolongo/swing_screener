@@ -17,6 +17,7 @@ import {
   fillOrderFromDegiro,
   syncDegiroOrders,
   updatePositionStop,
+  updatePositionTrailMethod,
   OrderFilterStatus,
   PositionFilterStatus,
   DegiroStatus,
@@ -27,6 +28,7 @@ import {
   UpdateStopRequest,
   ClosePositionRequest,
   PartialCloseRequest,
+  UpdateTrailMethodRequest,
 } from './types';
 import { queryKeys } from '@/lib/queryKeys';
 import { invalidateOrderQueries, invalidatePositionQueries } from '@/lib/queryInvalidation';
@@ -155,6 +157,23 @@ export function useUpdateStopMutation(onSuccess?: () => void) {
     onSuccess: async () => {
       await invalidatePositionQueries(queryClient);
       await invalidateOrderQueries(queryClient);
+      onSuccess?.();
+    },
+  });
+}
+
+export function useUpdateTrailMethodMutation(onSuccess?: () => void) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      positionId,
+      request,
+    }: {
+      positionId: string;
+      request: UpdateTrailMethodRequest;
+    }) => updatePositionTrailMethod(positionId, request),
+    onSuccess: async () => {
+      await invalidatePositionQueries(queryClient);
       onSuccess?.();
     },
   });
