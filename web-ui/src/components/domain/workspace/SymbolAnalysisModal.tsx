@@ -5,7 +5,6 @@ import type {
   SymbolAnalysisCandidate,
   WorkspaceAnalysisTab,
 } from '@/components/domain/workspace/types';
-import type { SymbolIntelligenceStatus } from '@/features/intelligence/useSymbolIntelligenceRunner';
 import { t } from '@/i18n/t';
 
 interface SymbolAnalysisModalProps {
@@ -15,8 +14,6 @@ interface SymbolAnalysisModalProps {
   onTabChange: (tab: WorkspaceAnalysisTab) => void;
   onClose: () => void;
   orderPanel?: ReactNode;
-  onRunSymbolIntelligence?: (ticker: string) => void;
-  symbolIntelligenceStatus?: SymbolIntelligenceStatus;
 }
 
 export default function SymbolAnalysisModal({
@@ -26,8 +23,6 @@ export default function SymbolAnalysisModal({
   onTabChange,
   onClose,
   orderPanel,
-  onRunSymbolIntelligence,
-  symbolIntelligenceStatus,
 }: SymbolAnalysisModalProps) {
   return (
     <ModalShell
@@ -43,8 +38,6 @@ export default function SymbolAnalysisModal({
           activeTab={activeTab}
           onTabChange={onTabChange}
           orderPanel={orderPanel}
-          onRunSymbolIntelligence={onRunSymbolIntelligence}
-          symbolIntelligenceStatus={symbolIntelligenceStatus}
         />
       </div>
     </ModalShell>

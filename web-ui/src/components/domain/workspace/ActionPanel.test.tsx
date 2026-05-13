@@ -125,9 +125,8 @@ describe('ActionPanel', () => {
     expect(screen.getByRole('tab', { name: 'Decision' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByText('Place Order')).toBeInTheDocument();
     expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('BUY_STOP');
-    expect(screen.getByText('Trigger Price (Buy Stop entry in Degiro)')).toBeInTheDocument();
+    expect(screen.getByText('Trigger Price (Buy Stop entry)')).toBeInTheDocument();
     expect(screen.getByText('Execution guide')).toBeInTheDocument();
-    expect(screen.getByText('Exact Degiro setup')).toBeInTheDocument();
   });
 
   it('uses pullback execution guidance when breakout signal already passed with BUY_LIMIT suggestion', () => {

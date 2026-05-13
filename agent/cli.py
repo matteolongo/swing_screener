@@ -8,7 +8,6 @@ Example usage:
     python -m agent.cli positions update-stop <position_id> <new_stop>
     python -m agent.cli orders list --status pending
     python -m agent.cli daily-review
-    python -m agent.cli chat "What orders are pending right now?"
 """
 import argparse
 import asyncio
@@ -56,40 +55,6 @@ def _screener_service():
     return ScreenerService(
         strategy_repo=StrategyRepository(),
         portfolio_service=_portfolio_service(),
-    )
-
-
-def _intelligence_config_service():
-    from api.repositories.strategy_repo import StrategyRepository
-    from api.repositories.intelligence_config_repo import IntelligenceConfigRepository
-    from api.repositories.intelligence_symbol_sets_repo import IntelligenceSymbolSetsRepository
-    from api.services.intelligence_config_service import IntelligenceConfigService
-    return IntelligenceConfigService(
-        strategy_repo=StrategyRepository(),
-        config_repo=IntelligenceConfigRepository(),
-        symbol_sets_repo=IntelligenceSymbolSetsRepository(),
-    )
-
-
-def _workspace_context_service():
-    from api.repositories.strategy_repo import StrategyRepository
-    from api.services.intelligence_service import IntelligenceService
-    from api.services.workspace_context_service import WorkspaceContextService
-    return WorkspaceContextService(
-        portfolio_service=_portfolio_service(),
-        strategy_service=_strategy_service(),
-        intelligence_service=IntelligenceService(
-            strategy_repo=StrategyRepository(),
-            config_service=_intelligence_config_service(),
-        ),
-    )
-
-
-def _chat_service():
-    from api.services.chat_service import ChatService
-    return ChatService(
-        workspace_context_service=_workspace_context_service(),
-        config_service=_intelligence_config_service(),
     )
 
 
@@ -252,30 +217,6 @@ def cmd_daily_review(args: argparse.Namespace) -> int:
         return 1
 
 
-def cmd_chat(args: argparse.Namespace) -> int:
-    from api.models.chat import ChatAnswerRequest
-    service = _chat_service()
-    try:
-        request = ChatAnswerRequest(
-            question=args.question,
-            selected_ticker=args.ticker,
-        )
-        result = service.answer(request)
-        print("\n" + "=" * 60)
-        print("WORKSPACE CHAT")
-        print("=" * 60)
-        print(result.answer)
-        if result.warnings:
-            print("\nWarnings:")
-            for w in result.warnings:
-                print(f"  - {w}")
-        print("=" * 60 + "\n")
-        return 0
-    except Exception as e:
-        logging.error(f"Chat failed: {e}", exc_info=True)
-        return 1
-
-
 # ---------------------------------------------------------------------------
 # Argument parser + router
 # ---------------------------------------------------------------------------
@@ -317,11 +258,6 @@ def main() -> int:
     # daily-review
     subparsers.add_parser("daily-review", help="Run daily review")
 
-    # chat
-    chat_parser = subparsers.add_parser("chat", help="Ask a workspace question")
-    chat_parser.add_argument("question")
-    chat_parser.add_argument("--ticker", help="Optional focused ticker")
-
     args = parser.parse_args()
     if not args.command:
         parser.print_help()
@@ -349,8 +285,6 @@ def main() -> int:
             return cmd_orders_list(args)
     elif args.command == "daily-review":
         return cmd_daily_review(args)
-    elif args.command == "chat":
-        return cmd_chat(args)
 
     parser.print_help()
     return 1

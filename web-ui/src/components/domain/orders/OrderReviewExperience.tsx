@@ -6,7 +6,7 @@ import Button from '@/components/common/Button';
 import RecommendationBadge from '@/components/domain/recommendation/RecommendationBadge';
 import EarningsWarningBanner from '@/components/domain/screener/EarningsWarningBanner';
 import SetupExecutionGuide from '@/components/domain/orders/SetupExecutionGuide';
-import DegiroOrderConfigGuide from '@/components/domain/orders/DegiroOrderConfigGuide';
+
 import { useOrderRiskMetrics } from '@/components/domain/orders/useOrderRiskMetrics';
 import { candidateOrderSchema, type CandidateOrderFormValues } from '@/components/domain/orders/schemas';
 import { getSetupExecutionGuidance, normalizeSetupSignal } from '@/features/orders/setupGuidance';
@@ -886,20 +886,7 @@ export default function OrderReviewExperience({
                 </div>
               </details>
 
-              <details className="rounded-lg border border-slate-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-950">
-                <summary className="cursor-pointer list-none text-sm font-semibold text-slate-900 dark:text-gray-100">
-                  {t('order.review.degiroSetupTitle' as any)}
-                </summary>
-                <div className="mt-3">
-                  <DegiroOrderConfigGuide
-                    orderType={orderType}
-                    entryPrice={limitPrice}
-                    stopPrice={stopPrice}
-                    quantity={quantity}
-                    currency={currency}
-                  />
-                </div>
-              </details>
+
             </div>
           </div>
         </form>

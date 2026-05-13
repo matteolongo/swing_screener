@@ -12,7 +12,7 @@ from api.models.recommendation import (
 )
 from api.models.screener import ScreenerCandidate
 from api.services.same_symbol_reentry import SameSymbolReentryEvaluator
-from tests.api._chat_test_helpers import make_order, make_position
+from tests.api._test_helpers import make_order, make_position
 
 
 def _make_recommendation(*, verdict: str = "RECOMMENDED", entry: float = 23.0, stop: float = 21.62, shares: int = 5) -> Recommendation:

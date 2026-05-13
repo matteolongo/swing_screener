@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 
 from api.models.screener import SameSymbolCandidateContext, ScreenerCandidate
 from swing_screener.fundamentals.models import FundamentalPillarScore, FundamentalSnapshot
-from swing_screener.intelligence.models import Opportunity
 from swing_screener.recommendation import DecisionSummary, build_decision_summary
 
 
@@ -97,13 +98,13 @@ def _opportunity(
     technical_readiness: float = 0.82,
     catalyst_strength: float = 0.76,
     state: str = "TRENDING",
-) -> Opportunity:
-    return Opportunity(
+) -> object:
+    return SimpleNamespace(
         symbol="AAPL",
         technical_readiness=technical_readiness,
         catalyst_strength=catalyst_strength,
         opportunity_score=0.8,
-        state=state,  # type: ignore[arg-type]
+        state=state,
         explanations=["Catalyst remains active."],
         evidence_quality_flag="high",
     )
