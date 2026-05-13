@@ -127,3 +127,57 @@ def compute_trend_features(
     
     feats = pd.DataFrame(results).set_index("ticker")
     return feats.sort_index()
+
+
+def compute_weekly_trend_features(ohlcv: pd.DataFrame) -> pd.DataFrame:
+    """
+    Compute weekly trend classification per ticker.
+
+    Resamples daily Close to weekly bars (Friday close), then computes
+    weekly SMA20 and SMA50 using the existing sma_per_ticker helper.
+
+    Classification:
+      "up"      — close > sma20 > sma50
+      "down"    — close < sma20 < sma50
+      "neutral" — mixed signals or fewer than 50 weekly bars
+
+    Returns DataFrame indexed by ticker with column "weekly_trend".
+    """
+    close = get_close_matrix(ohlcv)
+    if close.empty:
+        return pd.DataFrame(
+            {"weekly_trend": []}, index=pd.Index([], name="ticker")
+        )
+
+    results = []
+    for ticker in close.columns:
+        series = close[ticker].dropna()
+        weekly = series.resample("W").last().dropna()
+
+        if len(weekly) < 50:
+            results.append({"ticker": str(ticker), "weekly_trend": "neutral"})
+            continue
+
+        w20 = sma_per_ticker(weekly, 20)
+        w50 = sma_per_ticker(weekly, 50)
+        last = float(weekly.iloc[-1])
+
+        if pd.isna(w20) or pd.isna(w50):
+            results.append({"ticker": str(ticker), "weekly_trend": "neutral"})
+            continue
+
+        if last > w20 > w50:
+            trend = "up"
+        elif last < w20 < w50:
+            trend = "down"
+        else:
+            trend = "neutral"
+
+        results.append({"ticker": str(ticker), "weekly_trend": trend})
+
+    if not results:
+        return pd.DataFrame(
+            {"weekly_trend": []}, index=pd.Index([], name="ticker")
+        )
+
+    return pd.DataFrame(results).set_index("ticker").sort_index()
