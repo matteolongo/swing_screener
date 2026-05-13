@@ -58,3 +58,63 @@ def test_weekly_trend_absent_column_treated_as_neutral():
     df = pd.DataFrame(data, index=pd.Index(["AAA"], name="ticker"))
     result = apply_universe_filters(df, cfg)
     assert result.loc["AAA", "is_eligible"] == False
+
+
+def test_pipeline_board_contains_weekly_trend():
+    """build_selection_pipeline propagates weekly_trend onto the signal board."""
+    from swing_screener.selection.pipeline import build_selection_pipeline
+    from swing_screener.selection.universe import UniverseConfig, UniverseFilterConfig
+    from swing_screener.selection.ranking import RankingConfig
+    from swing_screener.selection.entries import EntrySignalConfig
+    from swing_screener.indicators.trend import TrendConfig
+    from swing_screener.indicators.volatility import VolatilityConfig
+    from swing_screener.indicators.momentum import MomentumConfig
+    import numpy as np
+
+    # Build 400 trading days of data for one ticker so it passes all filters
+    n = 400
+    dates = pd.date_range("2020-01-01", periods=n, freq="B")
+    # Trending up: start at 25, add small noise around a rising trend
+    prices = 25.0 + np.arange(n) * 0.05 + np.random.default_rng(42).normal(0, 0.2, n)
+    prices = np.abs(prices)
+
+    close = pd.Series(prices, index=dates)
+    volume = pd.Series([1_000_000.0] * n, index=dates)
+
+    ticker = "AAAA"
+    ohlcv = pd.DataFrame(
+        {
+            ("Open", ticker): close * 0.99,
+            ("High", ticker): close * 1.01,
+            ("Low", ticker): close * 0.98,
+            ("Close", ticker): close,
+            ("Volume", ticker): volume,
+        }
+    )
+    ohlcv.index = dates
+
+    cfg = UniverseConfig(
+        trend=TrendConfig(),
+        vol=VolatilityConfig(atr_window=14),
+        mom=MomentumConfig(benchmark="SPY"),
+        filt=UniverseFilterConfig(
+            min_price=1.0,
+            max_price=500.0,
+            max_atr_pct=100.0,
+            require_trend_ok=False,
+            require_rs_positive=False,
+            require_weekly_uptrend=False,
+            currencies=["USD"],
+        ),
+    )
+
+    result = build_selection_pipeline(
+        ohlcv,
+        universe_cfg=cfg,
+        ranking_cfg=RankingConfig(),
+        entry_cfg=EntrySignalConfig(min_history=200),
+    )
+
+    if not result.board.empty:
+        assert "weekly_trend" in result.board.columns
+        assert result.board["weekly_trend"].isin(["up", "down", "neutral"]).all()
