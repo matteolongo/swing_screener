@@ -819,6 +819,9 @@ class ScreenerService:
                 if not requested_currencies:
                     requested_currencies = ["USD", "EUR"]
                 universe_cfg = replace(universe_cfg, filt=replace(filt, currencies=requested_currencies))
+            if "require_weekly_uptrend" in fields_set and request.require_weekly_uptrend is not None:
+                filt = universe_cfg.filt
+                universe_cfg = replace(universe_cfg, filt=replace(filt, require_weekly_uptrend=request.require_weekly_uptrend))
 
             ranking_cfg = build_ranking_config(strategy)
             if ranking_cfg.top_n < requested_top:
@@ -994,6 +997,11 @@ class ScreenerService:
                         breakout_volume_confirmation=(
                             bool(row.get("breakout_volume_confirmation"))
                             if not _is_na_scalar(row.get("breakout_volume_confirmation"))
+                            else None
+                        ),
+                        weekly_trend=(
+                            str(row.get("weekly_trend"))
+                            if not _is_na_scalar(row.get("weekly_trend"))
                             else None
                         ),
                         volume_ratio=_safe_optional_float(row.get("volume_ratio")),

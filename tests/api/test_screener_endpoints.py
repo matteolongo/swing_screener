@@ -666,3 +666,37 @@ def test_screener_run_returns_422_for_unknown_universe():
     client = TestClient(app)
     res = client.post("/api/screener/run", json={"universe": "totally_unknown_id", "top": 20})
     assert res.status_code == 422
+
+
+def test_screener_candidate_has_weekly_trend_field():
+    """ScreenerCandidate model exposes weekly_trend field."""
+    from api.models.screener import ScreenerCandidate
+
+    c = ScreenerCandidate(
+        ticker="AAA",
+        close=30.0,
+        sma_20=28.0,
+        sma_50=25.0,
+        sma_200=22.0,
+        atr=1.5,
+        momentum_6m=0.1,
+        momentum_12m=0.2,
+        rel_strength=0.05,
+        score=0.75,
+        confidence=0.75,
+        rank=1,
+        weekly_trend="up",
+    )
+    assert c.weekly_trend == "up"
+    data = c.model_dump()
+    assert data["weekly_trend"] == "up"
+
+
+def test_screener_request_has_require_weekly_uptrend_field():
+    """ScreenerRequest model accepts require_weekly_uptrend."""
+    from api.models.screener import ScreenerRequest
+
+    req = ScreenerRequest(require_weekly_uptrend=True)
+    assert req.require_weekly_uptrend is True
+    req_default = ScreenerRequest()
+    assert req_default.require_weekly_uptrend is None

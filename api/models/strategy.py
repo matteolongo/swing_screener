@@ -27,6 +27,7 @@ class StrategyFilt(BaseModel):
     max_atr_pct: float = Field(gt=0)
     require_trend_ok: bool = True
     require_rs_positive: bool = False
+    require_weekly_uptrend: bool = False
     currencies: list[str] = Field(default_factory=lambda: ["USD", "EUR"])
 
     @field_validator("currencies")
