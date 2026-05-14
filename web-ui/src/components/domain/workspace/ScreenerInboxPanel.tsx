@@ -4,6 +4,7 @@ import Badge from '@/components/common/Badge';
 import Card from '@/components/common/Card';
 import ScreenerForm from '@/components/domain/screener/ScreenerForm';
 import ScreenerCandidatesTable from '@/components/domain/screener/ScreenerCandidatesTable';
+import BeginnerScreenerSummary from '@/components/domain/screener/BeginnerScreenerSummary';
 import { useConfigDefaultsQuery } from '@/features/config/hooks';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 import { useUniverses, useRunScreenerMutation } from '@/features/screener/hooks';
@@ -348,6 +349,10 @@ export default function ScreenerInboxPanel() {
               </Badge>
             </div>
           </div>
+          <BeginnerScreenerSummary
+            candidates={candidates}
+            onReviewCandidate={(ticker) => handleSelectCandidate(ticker, 'overview')}
+          />
           {result.sameSymbolSuppressedCount || result.sameSymbolAddOnCount ? (
             <div className="flex flex-wrap gap-2 text-xs">
               {result.sameSymbolSuppressedCount ? (

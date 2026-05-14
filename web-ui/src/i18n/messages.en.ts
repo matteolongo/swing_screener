@@ -1011,6 +1011,20 @@ export const messagesEn = {
         neutral: 'Neutral',
       },
     },
+    beginnerSummary: {
+      bestCandidate: 'Best candidate to review',
+      mainRisk: 'Main risk:',
+      reviewCandidate: 'Review candidate',
+      noCandidates: 'No candidates match the current filters.',
+      readiness: {
+        ready: 'Ready to act',
+        waitForPrice: 'Wait for price',
+        watchOnly: 'Watch only',
+        avoid: 'Skip',
+        manageExisting: 'Manage existing',
+        incomplete: 'Incomplete',
+      },
+    },
     defaultNotes: 'From screener: Score {{score}}, Confidence {{confidence}}%, Rank #{{rank}}',
     addOnNotes:
       'Same-symbol add-on: Score {{score}}, Confidence {{confidence}}%, Rank #{{rank}}, Live stop {{liveStop}}, Fresh setup stop {{freshStop}}',
