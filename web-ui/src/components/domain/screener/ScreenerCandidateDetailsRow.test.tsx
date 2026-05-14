@@ -51,6 +51,7 @@ function makeVm(volumeRatio: number | null): CandidateViewModel {
     sameSymbol: null,
     volumeRatio,
     avgDailyVolumeEur: null,
+    weeklyTrend: null,
     original,
   };
 }

@@ -33,6 +33,7 @@ export interface CandidateViewModel {
   fundamentalsSummary: string | null;
   volumeRatio: number | null;
   avgDailyVolumeEur: number | null;
+  weeklyTrend: 'up' | 'down' | 'neutral' | null;
 
   // Fix recommendations
   fixes: string[];
@@ -89,6 +90,7 @@ export function toCandidateViewModel(candidate: ScreenerCandidate): CandidateVie
     fundamentalsSummary: candidate.fundamentalsSummary ?? null,
     volumeRatio: candidate.volumeRatio ?? null,
     avgDailyVolumeEur: candidate.avgDailyVolumeEur ?? null,
+    weeklyTrend: candidate.weeklyTrend ?? null,
 
     // Fix list
     fixes,

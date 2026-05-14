@@ -138,6 +138,7 @@ export interface ScreenerCandidate {
   combinedPriorityScore?: number;
   volumeRatio?: number;
   avgDailyVolumeEur?: number;
+  weeklyTrend?: 'up' | 'down' | 'neutral';
 }
 
 export interface DecisionTradePlanAPI {
@@ -253,6 +254,7 @@ export interface ScreenerCandidateAPI {
   combined_priority_score?: number;
   volume_ratio?: number;
   avg_daily_volume_eur?: number;
+  weekly_trend?: 'up' | 'down' | 'neutral' | null;
 }
 
 export interface ScreenerRequest {
@@ -269,6 +271,7 @@ export interface ScreenerRequest {
   breakoutLookback?: number;
   pullbackMa?: number;
   minHistory?: number;
+  requireWeeklyUptrend?: boolean;
 }
 
 export interface ScreenerResponse {
@@ -467,6 +470,7 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
       combinedPriorityScore: c.combined_priority_score ?? undefined,
       volumeRatio: c.volume_ratio ?? undefined,
       avgDailyVolumeEur: c.avg_daily_volume_eur ?? undefined,
+      weeklyTrend: c.weekly_trend ?? undefined,
     })),
     asofDate: apiResponse.asof_date,
     totalScreened: apiResponse.total_screened,
