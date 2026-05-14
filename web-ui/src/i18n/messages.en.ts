@@ -1898,6 +1898,19 @@ export const messagesEn = {
       today: 'Today',
       screener: 'Screener',
     },
+    todayPriorityCard: {
+      title: "Today's Priority",
+      kinds: {
+        close_position: 'Close Position',
+        update_stop: 'Update Stop',
+        pending_orders: 'Pending Orders',
+        watchlist_near_trigger: 'Watchlist Alert',
+        best_candidate: 'Best Candidate',
+        run_screener: 'Run Screener',
+        no_action: 'No Action',
+      },
+      risk: 'Risk to check',
+    },
     actionList: {
       watchlistNearTrigger: 'Watchlist Near Trigger',
       requiresAction: 'Requires Action',

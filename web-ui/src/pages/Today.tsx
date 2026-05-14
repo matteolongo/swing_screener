@@ -5,6 +5,7 @@ import ScreenerInboxPanel from '@/components/domain/workspace/ScreenerInboxPanel
 import ClosePositionModalForm from '@/components/domain/positions/ClosePositionModalForm';
 import UpdateStopModalForm from '@/components/domain/positions/UpdateStopModalForm';
 import WatchMetaInline from '@/components/domain/watchlist/WatchMetaInline';
+import TodayPriorityCard from '@/components/domain/today/TodayPriorityCard';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useDailyReview } from '@/features/dailyReview/api';
 import { filterDailyReviewCandidates } from '@/features/dailyReview/prioritization';
@@ -14,6 +15,8 @@ import {
 } from '@/features/screener/universeStorage';
 import { useOrders, usePositions, useUpdateStopMutation, useClosePositionMutation } from '@/features/portfolio/hooks';
 import type { ClosePositionRequest, Position, UpdateStopRequest } from '@/features/portfolio/types';
+import { pickTodayPriority } from '@/features/dailyReview/beginnerPriority';
+import { toBeginnerDecisionFromDailyCandidate } from '@/features/screener/beginnerDecision';
 import { useNavigate } from 'react-router-dom';
 import { useLocalStorage } from '@/hooks';
 import { cn } from '@/utils/cn';
@@ -272,6 +275,58 @@ function SectionHeader({ label, count, colorClass, expanded, onToggle }: Section
       <span>{label}</span>
       <span className="font-bold">{count} {expanded ? '▲' : '▼'}</span>
     </button>
+  );
+}
+
+// ─── Today priority section ──────────────────────────────────────────────────
+
+interface TodayPrioritySectionProps {
+  onTickerSelect: (ticker: string) => void;
+  onSwitchToScreener: () => void;
+}
+
+function TodayPrioritySection({ onTickerSelect, onSwitchToScreener }: TodayPrioritySectionProps) {
+  const selectedUniverse = parseUniverseFromStorage(localStorage.getItem(SCREENER_UNIVERSE_STORAGE_KEY));
+  const { data: review } = useDailyReview(200, selectedUniverse);
+  const ordersQuery = useOrders('pending');
+  const navigate = useNavigate();
+
+  const pendingEntryOrderCount = (ordersQuery.data ?? []).filter((o) => o.orderKind === 'entry').length;
+
+  const firstCandidate = review?.newCandidates[0] ?? review?.positionsAddOnCandidates[0];
+  const bestDecision = firstCandidate ? toBeginnerDecisionFromDailyCandidate(firstCandidate) : undefined;
+
+  const priority = pickTodayPriority(review ?? null, pendingEntryOrderCount, bestDecision);
+
+  const handleAction = useCallback(() => {
+    switch (priority.kind) {
+      case 'close_position':
+        if (priority.ticker) onTickerSelect(priority.ticker);
+        break;
+      case 'update_stop':
+        if (priority.ticker) onTickerSelect(priority.ticker);
+        break;
+      case 'pending_orders':
+        navigate('/book', { state: { tab: 'orders' } });
+        break;
+      case 'watchlist_near_trigger':
+        if (priority.watchItem) onTickerSelect(priority.watchItem.ticker);
+        break;
+      case 'best_candidate':
+        if (priority.ticker) onTickerSelect(priority.ticker);
+        break;
+      case 'run_screener':
+        onSwitchToScreener();
+        break;
+      case 'no_action':
+        break;
+    }
+  }, [priority, onTickerSelect, onSwitchToScreener, navigate]);
+
+  return (
+    <div className="mb-3">
+      <TodayPriorityCard priority={priority} onAction={handleAction} />
+    </div>
   );
 }
 
@@ -751,6 +806,7 @@ export default function Today() {
             {leftTab === 'today' && (
               <>
                 <div className="px-3 pt-3">
+                  <TodayPrioritySection onTickerSelect={handleTickerSelect} onSwitchToScreener={() => setLeftTab('screener')} />
                   <PendingOrdersBadge />
                 </div>
                 <TodayActionList onTickerSelect={handleTickerSelect} />

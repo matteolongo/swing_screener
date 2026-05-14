@@ -248,6 +248,36 @@ export function toBeginnerDecision(candidate: ScreenerCandidate): BeginnerDecisi
   };
 }
 
+// ── toBeginnerDecisionFromDailyCandidate ────────────────────────────────────
+
+/**
+ * Adapts a DailyReviewCandidate to a BeginnerDecision.
+ * Supplies zero defaults for technical indicator fields that
+ * toSetupQuality/toOrderReadiness don't rely on.
+ */
+export function toBeginnerDecisionFromDailyCandidate(
+  candidate: import('@/features/dailyReview/types').DailyReviewCandidate
+): BeginnerDecision {
+  return toBeginnerDecision({
+    ticker: candidate.ticker,
+    close: candidate.close ?? 0,
+    sma20: 0,
+    sma50: 0,
+    sma200: 0,
+    atr: 0,
+    momentum6m: 0,
+    momentum12m: 0,
+    relStrength: 0,
+    score: candidate.score ?? 0,
+    confidence: candidate.confidence ?? 0,
+    rank: candidate.rank ?? 0,
+    currency: candidate.currency ?? 'USD',
+    recommendation: candidate.recommendation,
+    decisionSummary: candidate.decisionSummary,
+    weeklyTrend: undefined,
+  });
+}
+
 // ── pickBestBeginnerCandidate ───────────────────────────────────────────────
 
 /**
