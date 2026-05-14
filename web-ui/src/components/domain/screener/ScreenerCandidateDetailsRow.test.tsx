@@ -82,3 +82,24 @@ describe('ScreenerCandidateDetailsRow — volume ratio', () => {
     expect(screen.queryByText(t('screener.details.volumeRatio.label'))).not.toBeInTheDocument();
   });
 });
+
+describe('ScreenerCandidateDetailsRow — weekly trend', () => {
+  it('shows weekly trend label when weeklyTrend is "up"', () => {
+    const vm = { ...makeVm(null), weeklyTrend: 'up' as const };
+    renderWithProviders(<ScreenerCandidateDetailsRow candidate={vm} />);
+    expect(screen.getByText(t('screener.details.weeklyTrend.label'))).toBeInTheDocument();
+    expect(screen.getByText(t('screener.details.weeklyTrend.up'))).toBeInTheDocument();
+  });
+
+  it('shows weekly trend label when weeklyTrend is "down"', () => {
+    const vm = { ...makeVm(null), weeklyTrend: 'down' as const };
+    renderWithProviders(<ScreenerCandidateDetailsRow candidate={vm} />);
+    expect(screen.getByText(t('screener.details.weeklyTrend.label'))).toBeInTheDocument();
+    expect(screen.getByText(t('screener.details.weeklyTrend.down'))).toBeInTheDocument();
+  });
+
+  it('does not show weekly trend section when weeklyTrend is null', () => {
+    renderWithProviders(<ScreenerCandidateDetailsRow candidate={makeVm(null)} />);
+    expect(screen.queryByText(t('screener.details.weeklyTrend.label'))).not.toBeInTheDocument();
+  });
+});
