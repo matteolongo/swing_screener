@@ -863,6 +863,21 @@ export const messagesEn = {
       showAdvanced: 'Show advanced filters',
       hideAdvanced: 'Hide advanced filters',
       requireWeeklyUptrend: 'Weekly uptrend only',
+      adjustFilters: 'Adjust filters',
+      hideFilters: 'Hide filters',
+      members: 'members',
+      noOtc: 'No OTC',
+      weeklyUptrend: 'Weekly uptrend',
+      recommendedOnlyShort: 'Rec. only',
+    },
+    running: {
+      steps: {
+        preparingUniverse: 'Preparing universe',
+        downloadingPrices: 'Downloading prices',
+        scoringSetups: 'Scoring setups',
+        applyingRisk: 'Applying risk rules',
+        buildingPlans: 'Building trade plans',
+      },
     },
     currencyFilter: {
       all: 'All',

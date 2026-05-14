@@ -1,5 +1,5 @@
-import { useCallback, useEffect } from 'react';
-import { AlertCircle } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import Badge from '@/components/common/Badge';
 import Card from '@/components/common/Card';
 import ScreenerForm from '@/components/domain/screener/ScreenerForm';
@@ -67,6 +67,56 @@ const instrumentFilterToRequest = (value: InstrumentFilter): Array<'equity' | 'e
   if (value === 'all') return undefined;
   return [value];
 };
+
+const RUNNING_STEPS = [
+  'screener.running.steps.preparingUniverse',
+  'screener.running.steps.downloadingPrices',
+  'screener.running.steps.scoringSetups',
+  'screener.running.steps.applyingRisk',
+  'screener.running.steps.buildingPlans',
+] as const;
+
+export function ScreenerRunningPanel() {
+  const [currentStep, setCurrentStep] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentStep((prev) => Math.min(prev + 1, RUNNING_STEPS.length - 1));
+    }, 1500);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="rounded-lg border border-blue-200 bg-blue-50/60 p-4 space-y-2">
+      {RUNNING_STEPS.map((stepKey, index) => {
+        const isCompleted = index < currentStep;
+        const isCurrent = index === currentStep;
+        return (
+          <div key={stepKey} className="flex items-center gap-2 text-sm">
+            {isCompleted ? (
+              <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
+            ) : isCurrent ? (
+              <Loader2 className="w-4 h-4 text-blue-500 animate-spin flex-shrink-0" />
+            ) : (
+              <div className="w-4 h-4 rounded-full border border-gray-300 flex-shrink-0" />
+            )}
+            <span
+              className={
+                isCompleted
+                  ? 'text-gray-400 line-through'
+                  : isCurrent
+                    ? 'text-blue-800 font-medium'
+                    : 'text-gray-400'
+              }
+            >
+              {t(stepKey)}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function ScreenerInboxPanel() {
   const { lastResult, setLastResult } = useScreenerStore();
@@ -248,6 +298,8 @@ export default function ScreenerInboxPanel() {
         onToggleCollapsed={() => setIsFormCollapsed(!isFormCollapsed)}
       />
 
+      {screenerMutation.isPending && <ScreenerRunningPanel />}
+
       {screenerMutation.isError ? (
         <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
           <p className="text-xs md:text-sm text-red-800">
@@ -259,7 +311,7 @@ export default function ScreenerInboxPanel() {
         </div>
       ) : null}
 
-      {!screenerMutation.isPending && !result ? (
+      {!screenerMutation.isPending && !result && !screenerMutation.isError ? (
         <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-start">
           <AlertCircle className="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" />
           <div className="text-xs md:text-sm text-blue-800">

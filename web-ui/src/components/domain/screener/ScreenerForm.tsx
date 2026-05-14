@@ -1,4 +1,4 @@
-import { PlayCircle, RefreshCw, ChevronDown, ChevronUp, Settings2 } from 'lucide-react';
+import { PlayCircle, RefreshCw, ChevronUp, Settings2 } from 'lucide-react';
 import { useCallback, type ChangeEvent } from 'react';
 import Button from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
@@ -141,41 +141,79 @@ export default function ScreenerForm({
 
   if (isCollapsed) {
     return (
-      <div className="rounded-lg border border-gray-200 bg-gray-50/60 px-3 py-2 flex items-center gap-2 flex-wrap">
-        <Settings2 className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
-        <span className="text-xs text-gray-600 flex-1 min-w-0 truncate">
-          {selectedUniverseMeta?.description ?? selectedUniverse} · top {topN} · ${minPrice}–${maxPrice}
-          {selectedUniverseMeta ? ` · ${selectedUniverseMeta.member_count} members · ${universeSourceLabel(selectedUniverseMeta.source)} · ${universeFreshnessLabel(selectedUniverseMeta.freshness_status)}` : ''}
-          {currencyFilter !== 'all' ? ` · ${currencyFilter.toUpperCase()}` : ''}
-          {exchangeFilter !== 'all' ? ` · ${exchangeFilter}` : ''}
-          {instrumentFilter !== 'all' ? ` · ${instrumentFilter}` : ''}
-          {!includeOtc ? ' · no OTC' : ''}
-          {recommendedOnly ? ' · rec only' : ''}
-          {actionFilter !== 'all' ? ` · ${formatActionFilterLabel(actionFilter)}` : ''}
-        </span>
-        <Button onClick={onRun} disabled={isLoading} size="sm">
-          {isLoading ? (
-            <>
-              <RefreshCw className="w-3.5 h-3.5 mr-1 animate-spin" />
-              {t('screener.controls.running')}
-            </>
-          ) : (
-            <>
-              <PlayCircle className="w-3.5 h-3.5 mr-1" />
-              {t('screener.controls.run')}
-            </>
+      <div className="rounded-lg border border-gray-200 bg-gray-50/60 p-3 space-y-2">
+        {/* Row 1: Universe name + Run CTA */}
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+              {selectedUniverseMeta?.description ?? selectedUniverse}
+            </span>
+            {selectedUniverseMeta && (
+              <span className="ml-2 text-xs text-gray-500">
+                {selectedUniverseMeta.member_count} {t('screener.controls.members')}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button onClick={onRun} disabled={isLoading} size="sm">
+              {isLoading ? (
+                <><RefreshCw className="w-3.5 h-3.5 mr-1 animate-spin" />{t('screener.controls.running')}</>
+              ) : (
+                <><PlayCircle className="w-3.5 h-3.5 mr-1" />{t('screener.controls.run')}</>
+              )}
+            </Button>
+            {onToggleCollapsed && (
+              <button
+                type="button"
+                onClick={onToggleCollapsed}
+                className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 px-1"
+                aria-label={t('screener.controls.adjustFilters')}
+              >
+                <Settings2 className="w-3.5 h-3.5" />
+                {t('screener.controls.adjustFilters')}
+              </button>
+            )}
+          </div>
+        </div>
+        {/* Row 2: Key filter pills */}
+        <div className="flex flex-wrap gap-1.5">
+          <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+            {t('screener.controls.topN')}: {topN}
+          </span>
+          <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+            ${minPrice}–${maxPrice}
+          </span>
+          {currencyFilter !== 'all' && (
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+              {currencyFilter.toUpperCase()}
+            </span>
           )}
-        </Button>
-        {onToggleCollapsed && (
-          <button
-            type="button"
-            onClick={onToggleCollapsed}
-            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
-            aria-label="Expand screener form"
-          >
-            <ChevronDown className="w-4 h-4 text-gray-500" />
-          </button>
-        )}
+          {exchangeFilter !== 'all' && (
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+              {exchangeFilter}
+            </span>
+          )}
+          {instrumentFilter !== 'all' && (
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+              {instrumentFilter}
+            </span>
+          )}
+          {!includeOtc && (
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+              {t('screener.controls.noOtc')}
+            </span>
+          )}
+          {requireWeeklyUptrend && (
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+              {t('screener.controls.weeklyUptrend')}
+            </span>
+          )}
+          {recommendedOnly && (
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+              {t('screener.controls.recommendedOnlyShort')}
+            </span>
+          )}
+        </div>
       </div>
     );
   }
@@ -188,10 +226,10 @@ export default function ScreenerForm({
             type="button"
             onClick={onToggleCollapsed}
             className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 px-1"
-            aria-label="Collapse screener form"
+            aria-label={t('screener.controls.hideFilters')}
           >
             <ChevronUp className="w-3.5 h-3.5" />
-            Collapse
+            {t('screener.controls.hideFilters')}
           </button>
         </div>
       )}
