@@ -121,6 +121,7 @@ export default function ScreenerInboxPanel() {
   );
   const [includeOtc, setIncludeOtc] = useLocalStorage('screener.includeOtc', false);
   const [recommendedOnly, setRecommendedOnly] = useLocalStorage('screener.recommendedOnly', false);
+  const [requireWeeklyUptrend, setRequireWeeklyUptrend] = useLocalStorage('screener.requireWeeklyUptrend', false);
   const [actionFilter, setActionFilter] = useLocalStorage<DecisionActionFilter>(
     'screener.actionFilter',
     'all',
@@ -151,6 +152,7 @@ export default function ScreenerInboxPanel() {
       currencies: currencyFilterToRequest(currencyFilter),
       exchangeMics: exchangeFilterToRequest(exchangeFilter),
       includeOtc,
+      requireWeeklyUptrend: requireWeeklyUptrend || undefined,
       instrumentTypes: instrumentFilterToRequest(instrumentFilter),
       breakoutLookback: strategySignals?.breakoutLookback ?? defaultIndicators?.breakoutLookback ?? 50,
       pullbackMa: strategySignals?.pullbackMa ?? defaultIndicators?.pullbackMa ?? 20,
@@ -169,6 +171,7 @@ export default function ScreenerInboxPanel() {
     exchangeFilter,
     instrumentFilter,
     includeOtc,
+    requireWeeklyUptrend,
     strategySignals?.breakoutLookback,
     strategySignals?.pullbackMa,
     strategySignals?.minHistory,
@@ -234,6 +237,8 @@ export default function ScreenerInboxPanel() {
         setIncludeOtc={setIncludeOtc}
         recommendedOnly={recommendedOnly}
         setRecommendedOnly={setRecommendedOnly}
+        requireWeeklyUptrend={requireWeeklyUptrend}
+        setRequireWeeklyUptrend={setRequireWeeklyUptrend}
         actionFilter={actionFilter}
         setActionFilter={setActionFilter}
         universes={universesQuery.data?.universes ?? []}

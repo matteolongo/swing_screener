@@ -1,5 +1,6 @@
 import { CandidateViewModel } from '@/features/screener/viewModel';
 import MetricHelpLabel from '@/components/domain/education/MetricHelpLabel';
+import WeeklyTrendBadge from './WeeklyTrendBadge';
 import { formatPercent, formatScreenerScore } from '@/utils/formatters';
 import { t } from '@/i18n/t';
 
@@ -60,6 +61,16 @@ export default function ScreenerCandidateDetailsRow({ candidate }: ScreenerCandi
                   }`}
                 >
                   {volumeLabel(candidate.volumeRatio)}
+                </div>
+              </div>
+            )}
+            {candidate.weeklyTrend != null && (
+              <div className="rounded-md border border-gray-200 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-800">
+                <p className="text-[10px] font-medium uppercase tracking-wide text-gray-600 dark:text-gray-400">
+                  {t('screener.details.weeklyTrend.label')}
+                </p>
+                <div className="mt-1">
+                  <WeeklyTrendBadge trend={candidate.weeklyTrend} />
                 </div>
               </div>
             )}
