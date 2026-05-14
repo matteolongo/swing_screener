@@ -28,19 +28,19 @@ const universeFreshnessVariant = (status: UniverseSummary['freshness_status']): 
 const universeFreshnessLabel = (status: UniverseSummary['freshness_status']): string => {
   switch (status) {
     case 'fresh':
-      return 'Fresh';
+      return t('screener.universe.freshness.fresh');
     case 'review_due':
-      return 'Review due';
+      return t('screener.universe.freshness.reviewDue');
     case 'stale':
-      return 'Stale';
+      return t('screener.universe.freshness.stale');
     default:
-      return 'Unknown';
+      return t('screener.universe.freshness.unknown');
   }
 };
 
 const universeSourceLabel = (source: string): string => {
-  if (source === 'euronext_review') return 'Euronext review';
-  if (source === 'manual') return 'Manual';
+  if (source === 'euronext_review') return t('screener.universe.source.euronextReview');
+  if (source === 'manual') return t('screener.universe.source.manual');
   return source;
 };
 
@@ -150,7 +150,7 @@ export default function ScreenerForm({
             </span>
             {selectedUniverseMeta && (
               <span className="ml-2 text-xs text-gray-500">
-                {selectedUniverseMeta.member_count} {t('screener.controls.members')}
+                {t('screener.controls.memberCount', { count: String(selectedUniverseMeta.member_count) })}
               </span>
             )}
           </div>
@@ -311,37 +311,37 @@ export default function ScreenerForm({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Venue</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.venue.label')}</label>
             <select
               value={exchangeFilter}
               onChange={(e) => setExchangeFilter(e.target.value as ExchangeFilter)}
-              aria-label="Venue"
+              aria-label={t('screener.controls.venue.label')}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               disabled={isLoading}
             >
-              <option value="all">All venues</option>
-              <option value="us_primary">US primary</option>
-              <option value="europe_primary">Europe primary</option>
-              <option value="xams">Amsterdam</option>
-              <option value="xetr">Xetra</option>
-              <option value="xpar">Paris</option>
-              <option value="xmil">Milan</option>
-              <option value="xmad">Madrid</option>
+              <option value="all">{t('screener.controls.venue.all')}</option>
+              <option value="us_primary">{t('screener.controls.venue.usPrimary')}</option>
+              <option value="europe_primary">{t('screener.controls.venue.europePrimary')}</option>
+              <option value="xams">{t('screener.controls.venue.amsterdam')}</option>
+              <option value="xetr">{t('screener.controls.venue.xetra')}</option>
+              <option value="xpar">{t('screener.controls.venue.paris')}</option>
+              <option value="xmil">{t('screener.controls.venue.milan')}</option>
+              <option value="xmad">{t('screener.controls.venue.madrid')}</option>
             </select>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Instrument</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.instrument.label')}</label>
             <select
               value={instrumentFilter}
               onChange={(e) => setInstrumentFilter(e.target.value as InstrumentFilter)}
-              aria-label="Instrument"
+              aria-label={t('screener.controls.instrument.label')}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               disabled={isLoading}
             >
-              <option value="all">All instruments</option>
-              <option value="equity">Stocks</option>
-              <option value="etf">ETFs</option>
+              <option value="all">{t('screener.controls.instrument.all')}</option>
+              <option value="equity">{t('screener.controls.instrument.stocks')}</option>
+              <option value="etf">{t('screener.controls.instrument.etfs')}</option>
             </select>
           </div>
 
@@ -370,7 +370,7 @@ export default function ScreenerForm({
           <div className="rounded-lg border border-gray-200 bg-white px-3 py-2">
             <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
               <div className="text-xs text-gray-600">
-                <span className="font-medium text-gray-900">{selectedUniverseMeta.member_count}</span> members
+                {t('screener.controls.memberCount', { count: String(selectedUniverseMeta.member_count) })}
                 {' · '}
                 {universeSourceLabel(selectedUniverseMeta.source)}
                 {' · '}
@@ -395,11 +395,11 @@ export default function ScreenerForm({
                 type="checkbox"
                 checked={!includeOtc}
                 onChange={(e) => setIncludeOtc(!e.target.checked)}
-                aria-label="Exclude OTC"
+                aria-label={t('screener.controls.excludeOtc')}
                 className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                 disabled={isLoading}
               />
-              <span className="text-sm font-medium text-gray-700">Exclude OTC</span>
+              <span className="text-sm font-medium text-gray-700">{t('screener.controls.excludeOtc')}</span>
             </label>
             <label className="flex min-h-11 items-center gap-2 cursor-pointer">
               <input

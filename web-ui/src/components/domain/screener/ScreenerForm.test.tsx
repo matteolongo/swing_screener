@@ -64,10 +64,7 @@ describe('ScreenerForm - collapsed state', () => {
   it('shows universe description and member count in collapsed view', () => {
     renderWithProviders(<ScreenerForm {...defaultProps} isCollapsed={true} />);
     expect(screen.getByText('Broad Market Stocks')).toBeInTheDocument();
-    // Member count span contains "500 members" text
-    expect(screen.getByText((content, element) => {
-      return element?.tagName === 'SPAN' && /500/.test(content) && /members/i.test(content);
-    })).toBeInTheDocument();
+    expect(screen.getByText(t('screener.controls.memberCount', { count: '500' }))).toBeInTheDocument();
   });
 
   it('shows the Run button in collapsed view', () => {

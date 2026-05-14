@@ -866,9 +866,40 @@ export const messagesEn = {
       adjustFilters: 'Adjust filters',
       hideFilters: 'Hide filters',
       members: 'members',
+      memberCount: '{{count}} members',
       noOtc: 'No OTC',
       weeklyUptrend: 'Weekly uptrend',
       recommendedOnlyShort: 'Rec. only',
+      excludeOtc: 'Exclude OTC',
+      venue: {
+        label: 'Venue',
+        all: 'All venues',
+        usPrimary: 'US primary',
+        europePrimary: 'Europe primary',
+        amsterdam: 'Amsterdam',
+        xetra: 'Xetra',
+        paris: 'Paris',
+        milan: 'Milan',
+        madrid: 'Madrid',
+      },
+      instrument: {
+        label: 'Instrument',
+        all: 'All instruments',
+        stocks: 'Stocks',
+        etfs: 'ETFs',
+      },
+    },
+    universe: {
+      freshness: {
+        fresh: 'Fresh',
+        reviewDue: 'Review due',
+        stale: 'Stale',
+        unknown: 'Unknown',
+      },
+      source: {
+        euronextReview: 'Euronext review',
+        manual: 'Manual',
+      },
     },
     running: {
       steps: {
