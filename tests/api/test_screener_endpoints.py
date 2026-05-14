@@ -700,3 +700,41 @@ def test_screener_request_has_require_weekly_uptrend_field():
     assert req.require_weekly_uptrend is True
     req_default = ScreenerRequest()
     assert req_default.require_weekly_uptrend is None
+
+
+def test_screener_require_weekly_uptrend_overrides_strategy(monkeypatch):
+    """require_weekly_uptrend=True in request sets universe_cfg.filt.require_weekly_uptrend."""
+    ohlcv = _ohlcv_with_spy()
+    mock_provider = _create_mock_provider(ohlcv)
+    captured: list = []
+
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None):
+        captured.append(cfg)
+        idx = ["AAPL"]
+        data = {
+            "atr14": [1.2],
+            "mom_6m": [0.1],
+            "mom_12m": [0.2],
+            "rs_6m": [0.05],
+            "score": [0.55],
+            "confidence": [60.0],
+            "last": [50.0],
+            "ma20_level": [48.0],
+            "dist_sma50_pct": [5.0],
+            "dist_sma200_pct": [10.0],
+            "rank": [1],
+        }
+        return pd.DataFrame(data, index=idx)
+
+    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
+    monkeypatch.setattr(screener_service, "get_multiple_ticker_info", lambda tickers: {})
+
+    client = TestClient(app)
+    res = client.post(
+        "/api/screener/run",
+        json={"universe": "broad_market_stocks", "top": 5, "require_weekly_uptrend": True},
+    )
+    assert res.status_code == 200
+    assert captured, "build_daily_report was never called"
+    assert captured[0].universe.filt.require_weekly_uptrend is True
