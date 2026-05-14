@@ -83,6 +83,7 @@ class ScreenerCandidate(BaseModel):
     close_location_in_range: Optional[float] = None
     above_breakout_extension: Optional[float] = None
     breakout_volume_confirmation: Optional[bool] = None
+    weekly_trend: Optional[Literal["up", "down", "neutral"]] = None
     volume_ratio: Optional[float] = None
     avg_daily_volume_eur: Optional[float] = None
     symbol_change_pct: Optional[float] = None
@@ -116,6 +117,10 @@ class ScreenerRequest(BaseModel):
     breakout_lookback: Optional[int] = Field(default=None, gt=0, description="Breakout lookback window")
     pullback_ma: Optional[int] = Field(default=None, gt=0, description="Pullback MA window")
     min_history: Optional[int] = Field(default=None, gt=0, description="Minimum bars required for signals")
+    require_weekly_uptrend: Optional[bool] = Field(
+        default=None,
+        description="Require weekly uptrend (close > sma20 > sma50 on weekly bars)",
+    )
 
     @field_validator("currencies")
     @classmethod

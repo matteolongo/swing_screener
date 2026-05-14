@@ -4,9 +4,9 @@ Read this before picking up any feature plan. It describes the codebase conventi
 
 ---
 
-## Current implementation status - 2026-05-11
+## Current implementation status - 2026-05-14
 
-Tier 1 (F1-F5) and Tier 2 (F6-F11) all merged to main. Tier 3 (F12-F14) next.
+Tier 1 (F1-F5), Tier 2 (F6-F11), and Tier 3 (F12-F14) all implemented. F1-F13 merged to main. F14 PR open.
 
 | Feature | Branch | Base | PR | Status |
 |---|---|---|---|---|
@@ -22,8 +22,8 @@ Tier 1 (F1-F5) and Tier 2 (F6-F11) all merged to main. Tier 3 (F12-F14) next.
 | Feature 10 - Partial exits | `codex/partial-exits` | `main` | https://github.com/matteolongo/swing_screener/pull/243 | Merged to main |
 | Feature 11 - Regime performance | `codex/regime-performance` | `main` | https://github.com/matteolongo/swing_screener/pull/245 | Merged to main |
 | Feature 12 - FX-adjusted R display | `codex/fx-adjusted-r` | `main` | #246 | Merged to main |
-| Feature 13 - Trail customization | `codex/trail-customization` | `main` | pending | PR pushed: https://github.com/matteolongo/swing_screener/compare/main...codex/trail-customization |
-| Feature 14 - Multi-timeframe trend filter | `codex/mtf-trend-filter` | `main` | pending | Not started |
+| Feature 13 - Trail customization | `codex/trail-customization` | `main` | #247 | Merged to main |
+| Feature 14 - Multi-timeframe trend filter | `codex/f14-mtf-trend-filter` | `main` | #251 | PR open |
 
 Known local files to exclude from commits:
 

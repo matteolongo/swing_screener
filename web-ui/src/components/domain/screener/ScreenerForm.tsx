@@ -84,6 +84,8 @@ interface ScreenerFormProps {
   setIncludeOtc: (value: boolean) => void;
   recommendedOnly: boolean;
   setRecommendedOnly: (value: boolean) => void;
+  requireWeeklyUptrend: boolean;
+  setRequireWeeklyUptrend: (value: boolean) => void;
   actionFilter: DecisionActionFilter;
   setActionFilter: (value: DecisionActionFilter) => void;
   universes: UniverseSummary[];
@@ -112,6 +114,8 @@ export default function ScreenerForm({
   setIncludeOtc,
   recommendedOnly,
   setRecommendedOnly,
+  requireWeeklyUptrend,
+  setRequireWeeklyUptrend,
   actionFilter,
   setActionFilter,
   universes,
@@ -369,6 +373,17 @@ export default function ScreenerForm({
                 disabled={isLoading}
               />
               <span className="text-sm font-medium text-gray-700">{t('screener.controls.recommendedOnly')}</span>
+            </label>
+            <label className="flex min-h-11 items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={requireWeeklyUptrend}
+                onChange={(e) => setRequireWeeklyUptrend(e.target.checked)}
+                aria-label={t('screener.controls.requireWeeklyUptrend')}
+                className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                disabled={isLoading}
+              />
+              <span className="text-sm font-medium text-gray-700">{t('screener.controls.requireWeeklyUptrend')}</span>
             </label>
           </div>
 

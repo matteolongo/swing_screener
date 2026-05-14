@@ -44,4 +44,6 @@ def build_selection_pipeline(
         return SelectionResult(universe=univ, ranked=ranked, board=pd.DataFrame())
 
     board = build_signal_board(ohlcv, ranked.index.tolist(), entry_cfg)
+    board = board.join(univ[["weekly_trend"]], how="left")
+    board["weekly_trend"] = board["weekly_trend"].fillna("neutral")
     return SelectionResult(universe=univ, ranked=ranked, board=board)

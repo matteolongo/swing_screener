@@ -862,6 +862,7 @@ export const messagesEn = {
       allActions: 'All actions',
       showAdvanced: 'Show advanced filters',
       hideAdvanced: 'Hide advanced filters',
+      requireWeeklyUptrend: 'Weekly uptrend only',
     },
     currencyFilter: {
       all: 'All',
@@ -956,6 +957,12 @@ export const messagesEn = {
         neutral: '{{value}}× avg',
         dotStrongTitle: 'High-volume breakout — strong conviction',
         dotWeakTitle: 'Low-volume breakout — higher failure rate',
+      },
+      weeklyTrend: {
+        label: 'Weekly Trend',
+        up: 'Up',
+        down: 'Down',
+        neutral: 'Neutral',
       },
     },
     defaultNotes: 'From screener: Score {{score}}, Confidence {{confidence}}%, Rank #{{rank}}',

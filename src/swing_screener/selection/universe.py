@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 import pandas as pd
 
 from swing_screener.data.currency import detect_currency
-from swing_screener.indicators.trend import TrendConfig, compute_trend_features
+from swing_screener.indicators.trend import TrendConfig, compute_trend_features, compute_weekly_trend_features
 from swing_screener.indicators.volatility import (
     VolatilityConfig,
     compute_volatility_features,
@@ -26,6 +26,7 @@ class UniverseFilterConfig:
     max_atr_pct: float = field(default_factory=lambda: float(_universe_defaults().get("max_atr_pct", 10.0)))
     require_trend_ok: bool = field(default_factory=lambda: bool(_universe_defaults().get("require_trend_ok", True)))
     require_rs_positive: bool = field(default_factory=lambda: bool(_universe_defaults().get("require_rs_positive", False)))
+    require_weekly_uptrend: bool = field(default_factory=lambda: bool(_universe_defaults().get("require_weekly_uptrend", False)))
     currencies: list[str] = field(default_factory=lambda: list(_universe_defaults().get("currencies", ["USD", "EUR"])))
     min_avg_daily_volume_eur: float = field(
         default_factory=lambda: float(_universe_defaults().get("min_avg_daily_volume_eur", 0.0))
@@ -51,12 +52,17 @@ def build_feature_table(
       last, sma*, trend_ok, dist_sma*_pct
       atr{window}, atr_pct
       mom_6m, mom_12m, rs_6m
+      weekly_trend
     """
     trend_df = compute_trend_features(ohlcv, cfg.trend)
     vol_df = compute_volatility_features(ohlcv, cfg.vol)
     mom_df = compute_momentum_features(ohlcv, cfg.mom)
 
     feats = trend_df.join(vol_df, how="inner").join(mom_df, how="inner")
+
+    weekly_df = compute_weekly_trend_features(ohlcv)
+    feats = feats.join(weekly_df[["weekly_trend"]], how="left")
+    feats["weekly_trend"] = feats["weekly_trend"].fillna("neutral")
 
     return feats.sort_index()
 
@@ -104,7 +110,16 @@ def apply_universe_filters(
     else:
         cond_liquidity = pd.Series(True, index=df.index)
 
-    eligible = cond_price & cond_atr & cond_trend & cond_rs & cond_currency & cond_liquidity
+    # weekly trend filter — skipped when column absent or flag is False
+    if cfg.require_weekly_uptrend:
+        if "weekly_trend" in df.columns:
+            cond_weekly = df["weekly_trend"] == "up"
+        else:
+            cond_weekly = pd.Series(False, index=df.index)
+    else:
+        cond_weekly = pd.Series(True, index=df.index)
+
+    eligible = cond_price & cond_atr & cond_trend & cond_rs & cond_currency & cond_liquidity & cond_weekly
     df["is_eligible"] = eligible
 
     # reason column (useful for debugging)
@@ -123,6 +138,8 @@ def apply_universe_filters(
             r.append("currency")
         if not bool(cond_liquidity.loc[t]):
             r.append("liquidity")
+        if not bool(cond_weekly.loc[t]):
+            r.append("weekly_trend")
         reasons.append(",".join(r) if r else "ok")
 
     df["reason"] = reasons
