@@ -62,6 +62,7 @@ export default function AnalysisCanvasPanel() {
           <SymbolAnalysisContent
             ticker={selectedTicker}
             candidate={selectedCandidate}
+            screenerCandidate={selectedCandidate}
             activeTab={activeTab}
             onTabChange={setAnalysisTab}
             orderPanel={<ActionPanel ticker={selectedTicker} />}

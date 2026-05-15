@@ -502,6 +502,33 @@ export const messagesEn = {
     },
     disabledHint: 'Enable Advanced Mode to access',
   },
+  analysis: {
+    beginnerHeader: {
+      question: 'Should I place an order?',
+      answer: {
+        ready: 'Yes — setup is ready',
+        waitForPrice: 'Not yet — wait for better price',
+        watchOnly: 'Not yet — watch only',
+        avoid: 'No — skip this one',
+        manageExisting: 'No — manage existing position',
+        incomplete: 'Unclear — more data needed',
+      },
+      mainRisk: 'Main risk:',
+      invalidation: 'What would change this:',
+      action: {
+        prepare_order: 'Prepare order',
+        wait: 'Review price plan',
+        watch: 'Add to watchlist',
+        avoid: 'Skip',
+        review_candidate: 'Review fundamentals',
+        update_stop: 'Update stop',
+        close_position: 'Close position',
+        review_pending_order: 'Review pending order',
+        run_screener: 'Run screener',
+        no_action: 'No action needed',
+      },
+    },
+  },
   workspacePage: {
     title: 'Workspace',
     subtitle: 'Screen, analyze, act, and manage from one unified view.',
