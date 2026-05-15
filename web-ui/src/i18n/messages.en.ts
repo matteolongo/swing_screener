@@ -82,7 +82,14 @@ export const messagesEn = {
       recommended: 'Recommended',
       notRecommended: 'Not Recommended',
       unknown: 'No Verdict',
+      // Beginner-friendly labels (uppercase keys match backend enum values)
+      RECOMMENDED: 'Setup passes',
+      NOT_RECOMMENDED: 'Setup fails',
+      NO_VERDICT: 'Setup incomplete',
+      UNKNOWN: 'Setup incomplete',
+      INCOMPLETE: 'Setup incomplete',
     },
+    setupQualityExplanation: 'Setup quality: whether the trade passes checklist rules. Suggested action: what to do next.',
     details: {
       title: 'Recommendation — {{ticker}}',
     },

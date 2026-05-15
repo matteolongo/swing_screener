@@ -6,6 +6,7 @@ interface RecommendationBadgeProps {
   verdict?: RecommendationVerdict | 'UNKNOWN';
   reasonsDetailed?: RecommendationReason[];
   className?: string;
+  showExplanation?: boolean;
 }
 
 // When the only blocking reasons are parameter-completeness issues (not signal/quality
@@ -30,16 +31,17 @@ const VERDICT_STYLES: Record<string, string> = {
 };
 
 const VERDICT_LABELS: Record<string, string> = {
-  RECOMMENDED: t('recommendation.verdict.recommended' as any),
-  NOT_RECOMMENDED: t('recommendation.verdict.notRecommended' as any),
-  INCOMPLETE: 'Incomplete',
-  UNKNOWN: t('recommendation.verdict.unknown' as any),
+  RECOMMENDED: t('recommendation.verdict.RECOMMENDED' as any),
+  NOT_RECOMMENDED: t('recommendation.verdict.NOT_RECOMMENDED' as any),
+  INCOMPLETE: t('recommendation.verdict.INCOMPLETE' as any),
+  UNKNOWN: t('recommendation.verdict.UNKNOWN' as any),
 };
 
 export default function RecommendationBadge({
   verdict = 'UNKNOWN',
   reasonsDetailed,
   className,
+  showExplanation = false,
 }: RecommendationBadgeProps) {
   const displayKey =
     isIncomplete(verdict, reasonsDetailed)
@@ -49,14 +51,21 @@ export default function RecommendationBadge({
         : 'UNKNOWN';
 
   return (
-    <span
-      className={cn(
-        'text-xs px-2 py-1 rounded',
-        VERDICT_STYLES[displayKey],
-        className,
-      )}
-    >
-      {VERDICT_LABELS[displayKey]}
+    <span className="inline-flex flex-col gap-1">
+      <span
+        className={cn(
+          'text-xs px-2 py-1 rounded',
+          VERDICT_STYLES[displayKey],
+          className,
+        )}
+      >
+        {VERDICT_LABELS[displayKey]}
+      </span>
+      {showExplanation ? (
+        <span className="text-[11px] text-gray-500 leading-snug">
+          {t('recommendation.setupQualityExplanation' as any)}
+        </span>
+      ) : null}
     </span>
   );
 }
