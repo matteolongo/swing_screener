@@ -1025,6 +1025,28 @@ export const messagesEn = {
         incomplete: 'Incomplete',
       },
     },
+    viewToggle: {
+      guided: 'Guided',
+      advanced: 'Advanced table',
+    },
+    guidedList: {
+      empty: 'No candidates to review.',
+      review: 'Review',
+      quality: {
+        pass: 'Passes',
+        caution: 'Caution',
+        fail: 'Fails',
+        incomplete: 'Incomplete',
+      },
+      readiness: {
+        ready: 'Ready',
+        wait_for_price: 'Wait for price',
+        watch_only: 'Watch only',
+        avoid: 'Avoid',
+        manage_existing: 'Manage existing',
+        incomplete: 'Incomplete',
+      },
+    },
     defaultNotes: 'From screener: Score {{score}}, Confidence {{confidence}}%, Rank #{{rank}}',
     addOnNotes:
       'Same-symbol add-on: Score {{score}}, Confidence {{confidence}}%, Rank #{{rank}}, Live stop {{liveStop}}, Fresh setup stop {{freshStop}}',

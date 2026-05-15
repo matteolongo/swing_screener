@@ -4,6 +4,7 @@ import Badge from '@/components/common/Badge';
 import Card from '@/components/common/Card';
 import ScreenerForm from '@/components/domain/screener/ScreenerForm';
 import ScreenerCandidatesTable from '@/components/domain/screener/ScreenerCandidatesTable';
+import ScreenerCandidateReviewList from '@/components/domain/screener/ScreenerCandidateReviewList';
 import BeginnerScreenerSummary from '@/components/domain/screener/BeginnerScreenerSummary';
 import { useConfigDefaultsQuery } from '@/features/config/hooks';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
@@ -120,6 +121,7 @@ export function ScreenerRunningPanel() {
 }
 
 export default function ScreenerInboxPanel() {
+  const [viewMode, setViewMode] = useState<'guided' | 'advanced'>('guided');
   const { lastResult, setLastResult } = useScreenerStore();
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
   const selectedTickerSource = useWorkspaceStore((state) => state.selectedTickerSource);
@@ -385,16 +387,38 @@ export default function ScreenerInboxPanel() {
               ))}
             </div>
           ) : null}
-          <div className="flex-1 min-h-0 overflow-auto rounded-md border border-gray-200 dark:border-gray-700">
-            <ScreenerCandidatesTable
+          <div className="flex gap-1 rounded-lg border border-gray-200 p-0.5 w-fit self-start">
+            <button
+              onClick={() => setViewMode('guided')}
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${viewMode === 'guided' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              {t('screener.viewToggle.guided')}
+            </button>
+            <button
+              onClick={() => setViewMode('advanced')}
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${viewMode === 'advanced' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              {t('screener.viewToggle.advanced')}
+            </button>
+          </div>
+          {viewMode === 'guided' ? (
+            <ScreenerCandidateReviewList
               candidates={candidates}
               selectedTicker={selectedTicker}
-              onSymbolClick={(ticker) => handleSelectCandidate(ticker, 'overview')}
-              onRowClick={(candidate) => handleSelectCandidate(candidate.ticker, analysisTab === 'order' ? 'order' : 'overview')}
-              onCreateOrder={(candidate) => handleSelectCandidate(candidate.ticker, 'order')}
-              onRecommendationDetails={(candidate) => handleSelectCandidate(candidate.ticker, 'overview')}
+              onReview={(ticker) => handleSelectCandidate(ticker, 'overview')}
             />
-          </div>
+          ) : (
+            <div className="flex-1 min-h-0 overflow-auto rounded-md border border-gray-200 dark:border-gray-700">
+              <ScreenerCandidatesTable
+                candidates={candidates}
+                selectedTicker={selectedTicker}
+                onSymbolClick={(ticker) => handleSelectCandidate(ticker, 'overview')}
+                onRowClick={(candidate) => handleSelectCandidate(candidate.ticker, analysisTab === 'order' ? 'order' : 'overview')}
+                onCreateOrder={(candidate) => handleSelectCandidate(candidate.ticker, 'order')}
+                onRecommendationDetails={(candidate) => handleSelectCandidate(candidate.ticker, 'overview')}
+              />
+            </div>
+          )}
         </div>
       ) : null}
     </Card>
