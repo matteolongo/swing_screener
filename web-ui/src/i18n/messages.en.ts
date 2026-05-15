@@ -2015,6 +2015,11 @@ export const messagesEn = {
       search: 'Search',
     },
   },
+  orderGate: {
+    notReadyWarning: 'This setup is not yet ready to order. Review the analysis before placing an order.',
+    avoidWarning: 'This candidate does not meet order criteria.',
+    overrideLabel: 'I understand this setup is not order-ready and I am proceeding deliberately.',
+  },
   todayPage: {
     tabs: {
       today: 'Today',

@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import ActionPanel from '@/components/domain/workspace/ActionPanel';
 import { renderWithProviders } from '@/test/utils';
 import { useScreenerStore } from '@/stores/screenerStore';
+import type { DecisionSummary } from '@/features/screener/types';
 
 const { mutateMock } = vi.hoisted(() => ({
   mutateMock: vi.fn(),
@@ -72,6 +73,9 @@ function setCandidate(overrides: Record<string, unknown> = {}) {
           entry: 100.5,
           stop: 97,
           shares: 10,
+          // decisionSummary with BUY_NOW makes readiness = 'ready', so the gate is transparent.
+          // Tests only need `action` for gate logic; remaining fields use type cast.
+          decisionSummary: { action: 'BUY_NOW' } as unknown as DecisionSummary,
           recommendation: {
             verdict: 'RECOMMENDED',
             reasonsShort: [],
