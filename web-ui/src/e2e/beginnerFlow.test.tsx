@@ -212,7 +212,7 @@ describe('Scenario 1: TodayPriorityCard with close_position priority', () => {
       <TodayPriorityCard priority={priority} onAction={vi.fn()} />
     );
 
-    expect(screen.getByRole('button', { name: 'Close position' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: t('todayPage.todayPriorityCard.action.close_position') })).toBeInTheDocument();
   });
 
   it('calls onAction when action button is clicked', async () => {
@@ -224,7 +224,7 @@ describe('Scenario 1: TodayPriorityCard with close_position priority', () => {
       <TodayPriorityCard priority={priority} onAction={onAction} />
     );
 
-    await user.click(screen.getByRole('button', { name: 'Close position' }));
+    await user.click(screen.getByRole('button', { name: t('todayPage.todayPriorityCard.action.close_position') }));
     expect(onAction).toHaveBeenCalledOnce();
   });
 });
@@ -241,7 +241,7 @@ describe('Scenario 2: TodayPriorityCard with null review data', () => {
     );
 
     expect(screen.getByText(t('todayPage.todayPriorityCard.kinds.run_screener'))).toBeInTheDocument();
-    expect(screen.getByText('Run the screener to find opportunities')).toBeInTheDocument();
+    expect(screen.getByText(t('todayPage.todayPriorityCard.headline.run_screener'))).toBeInTheDocument();
   });
 
   it('shows run_screener action button', () => {
@@ -251,7 +251,7 @@ describe('Scenario 2: TodayPriorityCard with null review data', () => {
       <TodayPriorityCard priority={priority} onAction={vi.fn()} />
     );
 
-    expect(screen.getByRole('button', { name: 'Run screener' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: t('todayPage.todayPriorityCard.action.run_screener') })).toBeInTheDocument();
   });
 
   it('shows no_action kind when review is empty and no best candidate', () => {
@@ -356,9 +356,12 @@ describe('Scenario 4: ScreenerCandidateReviewList — guided view is default', (
 
 describe('Scenario 5: View toggle — guided and advanced labels', () => {
   it('guided view label matches i18n key screener.viewToggle.guided', () => {
-    // This test verifies the label text for the guided view toggle button.
-    // The toggle itself lives in ScreenerInboxPanel (which needs API mocks),
-    // so we verify the i18n value is meaningful and non-empty.
+    // Smoke-test: verifies the i18n key values resolve to the expected strings.
+    // The toggle buttons live in ScreenerInboxPanel, which requires heavy API
+    // mocks (universe list, screener results, store wiring) to render in
+    // isolation. Those integration concerns are covered by
+    // ScreenerInboxPanel.test.tsx. Here we only confirm that the key values
+    // are stable so renames surface as test failures.
     expect(t('screener.viewToggle.guided')).toBe('Guided');
     expect(t('screener.viewToggle.advanced')).toBe('Advanced table');
   });
@@ -504,7 +507,7 @@ describe('Scenario 8: ScreenerCandidateReviewList — candidate selection', () =
   it('highlights selected ticker row with bg-blue-50', () => {
     const candidates = [makeCandidate('NVDA'), makeCandidate('AMD')];
 
-    const { container } = renderWithProviders(
+    renderWithProviders(
       <ScreenerCandidateReviewList
         candidates={candidates}
         selectedTicker="NVDA"
@@ -512,9 +515,11 @@ describe('Scenario 8: ScreenerCandidateReviewList — candidate selection', () =
       />
     );
 
-    const rows = container.querySelectorAll('[class*="flex items-start"]');
-    const nvdaRow = Array.from(rows).find((el) => el.textContent?.includes('NVDA'));
-    const amdRow = Array.from(rows).find((el) => el.textContent?.includes('AMD'));
+    // Find each ticker button and check that the parent row div carries the selection class.
+    const nvdaBtn = screen.getByRole('button', { name: 'NVDA' });
+    const amdBtn = screen.getByRole('button', { name: 'AMD' });
+    const nvdaRow = nvdaBtn.closest('[class*="flex items-start"]');
+    const amdRow = amdBtn.closest('[class*="flex items-start"]');
 
     expect(nvdaRow?.className).toContain('bg-blue-50');
     expect(amdRow?.className).not.toContain('bg-blue-50');

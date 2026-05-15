@@ -2037,6 +2037,13 @@ export const messagesEn = {
         run_screener: 'Run Screener',
         no_action: 'No Action',
       },
+      action: {
+        close_position: 'Close position',
+        run_screener: 'Run screener',
+      },
+      headline: {
+        run_screener: 'Run the screener to find opportunities',
+      },
       risk: 'Risk to check',
     },
     actionList: {

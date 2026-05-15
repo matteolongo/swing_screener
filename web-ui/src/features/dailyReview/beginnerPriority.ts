@@ -43,7 +43,7 @@ export function pickTodayPriority(
       headline: `${item.ticker} needs to be closed`,
       reason: item.reason,
       risk: 'Holding past the exit signal increases loss risk.',
-      actionLabel: 'Close position',
+      actionLabel: t('todayPage.todayPriorityCard.action.close_position'),
       closeItem: item,
     };
   }
@@ -113,9 +113,9 @@ export function pickTodayPriority(
   if (review === null || review === undefined) {
     return {
       kind: 'run_screener',
-      headline: 'Run the screener to find opportunities',
+      headline: t('todayPage.todayPriorityCard.headline.run_screener'),
       reason: 'No screener results yet for today.',
-      actionLabel: 'Run screener',
+      actionLabel: t('todayPage.todayPriorityCard.action.run_screener'),
     };
   }
 
