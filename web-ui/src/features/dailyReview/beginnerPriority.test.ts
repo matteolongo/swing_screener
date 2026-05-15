@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { t } from '@/i18n/t';
 import { pickTodayPriority } from './beginnerPriority';
 import type { DailyReview, DailyReviewPositionClose, DailyReviewPositionUpdate, PendingOrderReview } from './types';
 import type { BeginnerDecision } from '@/features/screener/beginnerDecision';
@@ -232,7 +233,7 @@ describe('pickTodayPriority', () => {
     const review = makeEmptyReview();
     const result = pickTodayPriority(review, 1, undefined, [staleOrder]);
     expect(result.kind).toBe('pending_orders');
-    expect(result.reason).toContain('stale');
+    expect(result.reason).toBe(t('todayPage.todayPriorityCard.kinds.pending_orders_stale'));
   });
 
   it('pending_orders priority with all still_valid orders has normal reason', () => {

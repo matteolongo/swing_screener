@@ -3,7 +3,7 @@ import json
 import logging
 from datetime import date
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import HTTPException
 
@@ -262,7 +262,7 @@ class DailyReviewService:
             try:
                 order_date = date.fromisoformat(str(raw_date))
                 days_pending = max((today - order_date).days, 0)
-                category: str = "stale" if days_pending >= self.STALE_DAYS_THRESHOLD else "still_valid"
+                category: Literal['stale', 'still_valid', 'no_data'] = "stale" if days_pending >= self.STALE_DAYS_THRESHOLD else "still_valid"
             except (ValueError, TypeError):
                 days_pending = 0
                 category = "no_data"
@@ -270,7 +270,7 @@ class DailyReviewService:
                 PendingOrderReview(
                     order_id=order_id,
                     ticker=ticker,
-                    category=category,  # type: ignore[arg-type]
+                    category=category,
                     days_pending=days_pending,
                 )
             )
