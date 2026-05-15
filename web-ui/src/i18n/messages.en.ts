@@ -79,9 +79,6 @@ export const messagesEn = {
   },
   recommendation: {
     verdict: {
-      recommended: 'Recommended',
-      notRecommended: 'Not Recommended',
-      unknown: 'No Verdict',
       // Beginner-friendly labels (uppercase keys match backend enum values)
       RECOMMENDED: 'Setup passes',
       NOT_RECOMMENDED: 'Setup fails',

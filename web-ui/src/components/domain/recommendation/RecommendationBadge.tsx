@@ -1,6 +1,7 @@
 import { RecommendationReason, RecommendationVerdict } from '@/types/recommendation';
 import { cn } from '@/utils/cn';
 import { t } from '@/i18n/t';
+import type { MessageKey } from '@/i18n/types';
 
 interface RecommendationBadgeProps {
   verdict?: RecommendationVerdict | 'UNKNOWN';
@@ -30,11 +31,11 @@ const VERDICT_STYLES: Record<string, string> = {
   UNKNOWN: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
 };
 
-const VERDICT_LABELS: Record<string, string> = {
-  RECOMMENDED: t('recommendation.verdict.RECOMMENDED' as any),
-  NOT_RECOMMENDED: t('recommendation.verdict.NOT_RECOMMENDED' as any),
-  INCOMPLETE: t('recommendation.verdict.INCOMPLETE' as any),
-  UNKNOWN: t('recommendation.verdict.UNKNOWN' as any),
+const VERDICT_LABEL_KEY: Record<string, MessageKey> = {
+  RECOMMENDED: 'recommendation.verdict.RECOMMENDED',
+  NOT_RECOMMENDED: 'recommendation.verdict.NOT_RECOMMENDED',
+  INCOMPLETE: 'recommendation.verdict.INCOMPLETE',
+  UNKNOWN: 'recommendation.verdict.UNKNOWN',
 };
 
 export default function RecommendationBadge({
@@ -59,11 +60,11 @@ export default function RecommendationBadge({
           className,
         )}
       >
-        {VERDICT_LABELS[displayKey]}
+        {t(VERDICT_LABEL_KEY[displayKey] ?? 'recommendation.verdict.INCOMPLETE')}
       </span>
       {showExplanation ? (
         <span className="text-[11px] text-gray-500 leading-snug">
-          {t('recommendation.setupQualityExplanation' as any)}
+          {t('recommendation.setupQualityExplanation')}
         </span>
       ) : null}
     </span>

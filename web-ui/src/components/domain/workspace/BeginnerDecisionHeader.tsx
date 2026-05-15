@@ -119,7 +119,7 @@ export default function BeginnerDecisionHeader({ candidate, onAction }: Beginner
         {actionLabel(decision.nextStepKind)}
       </Button>
       <p className="mt-2 text-[11px] text-gray-400 leading-snug">
-        {t('recommendation.setupQualityExplanation' as any)}
+        {t('recommendation.setupQualityExplanation')}
       </p>
     </div>
   );
