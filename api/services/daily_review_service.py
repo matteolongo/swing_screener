@@ -3,6 +3,7 @@ import json
 import logging
 from datetime import date
 from pathlib import Path
+from typing import Optional
 
 from fastapi import HTTPException
 
@@ -13,8 +14,10 @@ from api.models.daily_review import (
     DailyReviewPositionUpdate,
     DailyReviewPositionClose,
     DailyReviewSummary,
+    PendingOrderReview,
 )
 from api.models.screener import ScreenerRequest
+from api.repositories.orders_repo import OrdersRepository
 from api.services.screener_service import ScreenerService
 from api.services.portfolio_service import PortfolioService
 from api.services.watchlist_service import WatchlistService
@@ -26,16 +29,21 @@ logger = logging.getLogger(__name__)
 class DailyReviewService:
     """Service for generating daily review with trade candidates and position actions."""
 
+    #: Orders older than this many days are flagged as stale.
+    STALE_DAYS_THRESHOLD: int = 5
+
     def __init__(
         self,
         screener_service: ScreenerService,
         portfolio_service: PortfolioService,
         watchlist_service: WatchlistService | None = None,
+        orders_repo: Optional[OrdersRepository] = None,
         data_dir: Path = Path("data"),
     ):
         self.screener = screener_service
         self.portfolio = portfolio_service
         self.watchlist = watchlist_service
+        self.orders_repo = orders_repo
         self.data_dir = data_dir
         self.daily_reviews_dir = data_dir / "daily_reviews"
         self.daily_reviews_dir.mkdir(parents=True, exist_ok=True)
@@ -215,6 +223,8 @@ class DailyReviewService:
             review_date=date.today(),
         )
 
+        pending_orders_review = self._build_pending_orders_review()
+
         review = DailyReview(
             watchlist_near_trigger=watchlist_near_trigger,
             new_candidates=new_candidates,
@@ -223,12 +233,48 @@ class DailyReviewService:
             positions_update_stop=positions_update,
             positions_close=positions_close,
             summary=summary,
+            pending_orders_review=pending_orders_review,
         )
-        
+
         # Save to historical file (use "default" as strategy name for now)
         self._save_review(review, "default")
         
         return review
+
+    def _build_pending_orders_review(self) -> list[PendingOrderReview]:
+        """Build PendingOrderReview items for all pending entry orders."""
+        if self.orders_repo is None:
+            return []
+        try:
+            orders, _ = self.orders_repo.list_orders(status="pending")
+        except Exception:
+            logger.exception("Unable to load pending orders for daily review")
+            return []
+
+        today = date.today()
+        result: list[PendingOrderReview] = []
+        for order in orders:
+            if order.get("order_kind") != "entry":
+                continue
+            order_id = str(order.get("order_id", ""))
+            ticker = str(order.get("ticker", ""))
+            raw_date = order.get("order_date")
+            try:
+                order_date = date.fromisoformat(str(raw_date))
+                days_pending = max((today - order_date).days, 0)
+                category: str = "stale" if days_pending >= self.STALE_DAYS_THRESHOLD else "still_valid"
+            except (ValueError, TypeError):
+                days_pending = 0
+                category = "no_data"
+            result.append(
+                PendingOrderReview(
+                    order_id=order_id,
+                    ticker=ticker,
+                    category=category,  # type: ignore[arg-type]
+                    days_pending=days_pending,
+                )
+            )
+        return result
 
     def _watchlist_near_trigger_items(self) -> list:
         if self.watchlist is None:

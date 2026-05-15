@@ -1,6 +1,6 @@
 """Data models for daily review endpoint."""
 from datetime import date
-from typing import Optional
+from typing import Literal, Optional
 from pydantic import BaseModel, Field
 from api.models.recommendation import Recommendation
 from api.models.portfolio import Position
@@ -93,6 +93,15 @@ class DailyReviewSummary(BaseModel):
     review_date: date
 
 
+class PendingOrderReview(BaseModel):
+    """Review item for a single pending entry order."""
+    order_id: str
+    ticker: str
+    category: Literal['stale', 'still_valid', 'no_data']
+    days_pending: int
+    note: Optional[str] = None
+
+
 class DailyReview(BaseModel):
     """Complete daily review with action items."""
     watchlist_near_trigger: list[WatchlistItemView] = Field(default_factory=list)
@@ -102,6 +111,7 @@ class DailyReview(BaseModel):
     positions_update_stop: list[DailyReviewPositionUpdate]
     positions_close: list[DailyReviewPositionClose]
     summary: DailyReviewSummary
+    pending_orders_review: list[PendingOrderReview] = Field(default_factory=list)
 
 
 class DailyReviewComputeRequest(BaseModel):

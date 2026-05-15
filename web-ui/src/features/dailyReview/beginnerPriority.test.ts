@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { pickTodayPriority } from './beginnerPriority';
-import type { DailyReview, DailyReviewPositionClose, DailyReviewPositionUpdate } from './types';
+import type { DailyReview, DailyReviewPositionClose, DailyReviewPositionUpdate, PendingOrderReview } from './types';
 import type { BeginnerDecision } from '@/features/screener/beginnerDecision';
 import type { WatchItem } from '@/features/watchlist/types';
 
@@ -218,5 +218,33 @@ describe('pickTodayPriority', () => {
     const decision = makeBeginnerDecision({ orderReadiness: 'ready' });
     const result = pickTodayPriority(review, 0, decision);
     expect(result.kind).toBe('watchlist_near_trigger');
+  });
+
+  // ── Pending orders review stale/valid reason ───────────────────────────────
+
+  it('pending_orders priority with stale orders has stale-specific reason', () => {
+    const staleOrder: PendingOrderReview = {
+      orderId: 'ORD-AAPL-001',
+      ticker: 'AAPL',
+      category: 'stale',
+      daysPending: 7,
+    };
+    const review = makeEmptyReview();
+    const result = pickTodayPriority(review, 1, undefined, [staleOrder]);
+    expect(result.kind).toBe('pending_orders');
+    expect(result.reason).toContain('stale');
+  });
+
+  it('pending_orders priority with all still_valid orders has normal reason', () => {
+    const validOrder: PendingOrderReview = {
+      orderId: 'ORD-MSFT-001',
+      ticker: 'MSFT',
+      category: 'still_valid',
+      daysPending: 2,
+    };
+    const review = makeEmptyReview();
+    const result = pickTodayPriority(review, 1, undefined, [validOrder]);
+    expect(result.kind).toBe('pending_orders');
+    expect(result.reason).not.toContain('stale');
   });
 });

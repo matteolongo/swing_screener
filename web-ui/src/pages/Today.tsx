@@ -296,7 +296,7 @@ function TodayPrioritySection({ onTickerSelect, onSwitchToScreener }: TodayPrior
   const firstCandidate = review?.newCandidates[0] ?? review?.positionsAddOnCandidates[0];
   const bestDecision = firstCandidate ? toBeginnerDecisionFromDailyCandidate(firstCandidate) : undefined;
 
-  const priority = pickTodayPriority(review ?? null, pendingEntryOrderCount, bestDecision);
+  const priority = pickTodayPriority(review ?? null, pendingEntryOrderCount, bestDecision, review?.pendingOrdersReview);
 
   const handleAction = useCallback(() => {
     switch (priority.kind) {

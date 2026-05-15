@@ -1,10 +1,10 @@
 """Tests for daily review service."""
-from datetime import date
+from datetime import date, timedelta
 from unittest.mock import Mock
 import pytest
 from fastapi import HTTPException
 
-from api.models.daily_review import DailyReview
+from api.models.daily_review import DailyReview, PendingOrderReview
 from api.models.screener import ScreenerResponse, ScreenerCandidate, SameSymbolCandidateContext
 from api.models.portfolio import Position, PositionUpdate, PositionsResponse
 from api.services.daily_review_service import DailyReviewService
@@ -546,3 +546,90 @@ def test_compute_daily_review_from_state_uses_client_payload(
     assert args[0].top == 5
     assert args[0].universe == "usd_all"
     assert kwargs["strategy_override"] == strategy
+
+
+# ── Pending orders review tests ──────────────────────────────────────────────
+
+def _make_mock_orders_repo(orders: list[dict]) -> Mock:
+    """Build a mock OrdersRepository returning the given orders."""
+    repo = Mock()
+    repo.list_orders.return_value = (orders, "2026-05-16")
+    return repo
+
+
+def test_pending_orders_review_empty_when_no_pending_entry_orders(
+    mock_screener_service, mock_portfolio_service, tmp_path
+):
+    """pending_orders_review is empty when no pending entry orders exist."""
+    orders_repo = _make_mock_orders_repo([])
+    service = DailyReviewService(
+        mock_screener_service,
+        mock_portfolio_service,
+        orders_repo=orders_repo,
+        data_dir=tmp_path,
+    )
+
+    review = service.generate_daily_review(top_n=10)
+
+    assert review.pending_orders_review == []
+
+
+def test_pending_orders_review_still_valid_for_recent_order(
+    mock_screener_service, mock_portfolio_service, tmp_path
+):
+    """A pending entry order created 2 days ago is categorised as still_valid."""
+    two_days_ago = (date.today() - timedelta(days=2)).isoformat()
+    orders_repo = _make_mock_orders_repo([
+        {
+            "order_id": "ORD-AAPL-001",
+            "ticker": "AAPL",
+            "status": "pending",
+            "order_kind": "entry",
+            "order_date": two_days_ago,
+        }
+    ])
+    service = DailyReviewService(
+        mock_screener_service,
+        mock_portfolio_service,
+        orders_repo=orders_repo,
+        data_dir=tmp_path,
+    )
+
+    review = service.generate_daily_review(top_n=10)
+
+    assert len(review.pending_orders_review) == 1
+    item = review.pending_orders_review[0]
+    assert isinstance(item, PendingOrderReview)
+    assert item.order_id == "ORD-AAPL-001"
+    assert item.ticker == "AAPL"
+    assert item.category == "still_valid"
+    assert item.days_pending == 2
+
+
+def test_pending_orders_review_stale_for_old_order(
+    mock_screener_service, mock_portfolio_service, tmp_path
+):
+    """A pending entry order created 7 days ago is categorised as stale."""
+    seven_days_ago = (date.today() - timedelta(days=7)).isoformat()
+    orders_repo = _make_mock_orders_repo([
+        {
+            "order_id": "ORD-MSFT-001",
+            "ticker": "MSFT",
+            "status": "pending",
+            "order_kind": "entry",
+            "order_date": seven_days_ago,
+        }
+    ])
+    service = DailyReviewService(
+        mock_screener_service,
+        mock_portfolio_service,
+        orders_repo=orders_repo,
+        data_dir=tmp_path,
+    )
+
+    review = service.generate_daily_review(top_n=10)
+
+    assert len(review.pending_orders_review) == 1
+    item = review.pending_orders_review[0]
+    assert item.category == "stale"
+    assert item.days_pending == 7

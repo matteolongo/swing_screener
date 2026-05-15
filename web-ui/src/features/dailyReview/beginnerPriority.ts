@@ -1,8 +1,9 @@
 // web-ui/src/features/dailyReview/beginnerPriority.ts
 
-import type { DailyReview, DailyReviewPositionClose, DailyReviewPositionUpdate } from '@/features/dailyReview/types';
+import type { DailyReview, DailyReviewPositionClose, DailyReviewPositionUpdate, PendingOrderReview } from '@/features/dailyReview/types';
 import type { BeginnerDecision } from '@/features/screener/beginnerDecision';
 import type { WatchItem } from '@/features/watchlist/types';
+import { t } from '@/i18n/t';
 
 export type TodayPriorityKind =
   | 'close_position'
@@ -31,6 +32,7 @@ export function pickTodayPriority(
   review: DailyReview | null | undefined,
   pendingEntryOrderCount: number,
   bestDecision: BeginnerDecision | undefined,
+  pendingOrdersReview?: PendingOrderReview[],
 ): TodayPriority {
   // 1. Positions to close
   if (review && review.positionsClose.length > 0) {
@@ -64,10 +66,14 @@ export function pickTodayPriority(
   if (pendingEntryOrderCount > 0) {
     const n = pendingEntryOrderCount;
     const s = n === 1 ? '' : 's';
+    const hasStale = (pendingOrdersReview ?? []).some((o) => o.category === 'stale');
+    const reason = hasStale
+      ? t('todayPage.todayPriorityCard.kinds.pending_orders_stale')
+      : 'Review whether conditions still match the original trade plan.';
     return {
       kind: 'pending_orders',
       headline: `${n} pending order${s} need review`,
-      reason: 'Review whether conditions still match the original trade plan.',
+      reason,
       actionLabel: 'Go to Orders',
       pendingOrderCount: n,
     };

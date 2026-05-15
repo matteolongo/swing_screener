@@ -2031,6 +2031,7 @@ export const messagesEn = {
         close_position: 'Close Position',
         update_stop: 'Update Stop',
         pending_orders: 'Pending Orders',
+        pending_orders_stale: 'You have stale pending orders that need review.',
         watchlist_near_trigger: 'Watchlist Alert',
         best_candidate: 'Best Candidate',
         run_screener: 'Run Screener',
