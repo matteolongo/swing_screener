@@ -1046,6 +1046,15 @@ export const messagesEn = {
         manage_existing: 'Manage existing',
         incomplete: 'Incomplete',
       },
+      action: {
+        BUY_NOW: 'Buy now',
+        BUY_ON_PULLBACK: 'Buy on pullback',
+        WAIT_FOR_BREAKOUT: 'Wait for breakout',
+        WATCH: 'Watch',
+        TACTICAL_ONLY: 'Tactical only',
+        AVOID: 'Avoid',
+        MANAGE_ONLY: 'Manage existing',
+      },
     },
     defaultNotes: 'From screener: Score {{score}}, Confidence {{confidence}}%, Rank #{{rank}}',
     addOnNotes:

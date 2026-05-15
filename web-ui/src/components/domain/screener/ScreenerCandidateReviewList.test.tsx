@@ -117,7 +117,7 @@ describe('ScreenerCandidateReviewList', () => {
     );
 
     expect(screen.getByText('AAPL')).toBeInTheDocument();
-    expect(screen.getByText('Buy now')).toBeInTheDocument();
+    expect(screen.getByText(t('screener.guidedList.action.BUY_NOW'))).toBeInTheDocument();
   });
 
   it('shows quality badge text for pass quality (BUY_NOW + RECOMMENDED)', () => {

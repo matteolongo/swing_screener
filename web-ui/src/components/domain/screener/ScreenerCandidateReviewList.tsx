@@ -2,11 +2,10 @@ import Button from '@/components/common/Button';
 import {
   toBeginnerDecision,
   toSetupQuality,
-  plainActionLabel,
   type BeginnerOrderReadiness,
   type BeginnerSetupQuality,
 } from '@/features/screener/beginnerDecision';
-import type { ScreenerCandidate } from '@/features/screener/types';
+import type { DecisionAction, ScreenerCandidate } from '@/features/screener/types';
 import { t } from '@/i18n/t';
 import type { MessageKey } from '@/i18n/types';
 
@@ -46,6 +45,16 @@ const READINESS_LABEL_KEY: Record<BeginnerOrderReadiness, MessageKey> = {
   avoid: 'screener.guidedList.readiness.avoid',
   manage_existing: 'screener.guidedList.readiness.manage_existing',
   incomplete: 'screener.guidedList.readiness.incomplete',
+};
+
+const ACTION_LABEL_KEY: Record<DecisionAction, MessageKey> = {
+  BUY_NOW: 'screener.guidedList.action.BUY_NOW',
+  BUY_ON_PULLBACK: 'screener.guidedList.action.BUY_ON_PULLBACK',
+  WAIT_FOR_BREAKOUT: 'screener.guidedList.action.WAIT_FOR_BREAKOUT',
+  WATCH: 'screener.guidedList.action.WATCH',
+  TACTICAL_ONLY: 'screener.guidedList.action.TACTICAL_ONLY',
+  AVOID: 'screener.guidedList.action.AVOID',
+  MANAGE_ONLY: 'screener.guidedList.action.MANAGE_ONLY',
 };
 
 export default function ScreenerCandidateReviewList({
@@ -96,7 +105,7 @@ export default function ScreenerCandidateReviewList({
                 </span>
               </div>
               <p className="text-xs text-gray-500 mt-0.5">
-                {plainActionLabel(decision.suggestedAction)}
+                {t(ACTION_LABEL_KEY[decision.suggestedAction])}
               </p>
               <p className="text-xs text-gray-600 mt-0.5 truncate">{decision.plainReason}</p>
             </div>
