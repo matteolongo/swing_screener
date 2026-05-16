@@ -1,7 +1,29 @@
 # Swing Screener - Roadmap
 
 > **Status: Current snapshot based on repo state.**  
-> **Last Reviewed:** March 17, 2026.
+> **Last Reviewed:** May 16, 2026.
+
+## Completed Features
+
+All 14 planned features (F1–F14) are merged to main. The beginner UX layer is implemented on `codex/beginner-screener-plan` (PR pending).
+
+| # | Feature | PR | Status |
+|---|---|---|---|
+| F1 | Trade tagging | #232 | ✅ Merged |
+| F2 | Performance breakdown by setup | #233 | ✅ Merged |
+| F3 | Account equity auto-update | #234 | ✅ Merged |
+| F4 | Earnings warning | #235 | ✅ Merged |
+| F5 | Concentration warning | #236 | ✅ Merged |
+| F6 | Time stop nudge | #232 (squashed) | ✅ Merged |
+| F7 | Watchlist pipeline view | #240 | ✅ Merged |
+| F8 | Volume quality signal | #241 | ✅ Merged |
+| F9 | Liquidity filter | #242 | ✅ Merged |
+| F10 | Partial exits | #243 | ✅ Merged |
+| F11 | Regime-conditional performance | #245 | ✅ Merged |
+| F12 | FX-adjusted R display | #246 | ✅ Merged |
+| F13 | Trail customization per position | #247 | ✅ Merged |
+| F14 | Multi-timeframe trend filter | #251 | ✅ Merged |
+| — | Beginner UX layer (10-PR plan) | pending | 🔲 PR open |
 
 ## Current State (Observed in Code)
 
@@ -13,6 +35,7 @@
 - Market data providers include yfinance (default) and Alpaca.
 - Intelligence stack includes event ingestion, optional LLM classification, education generation, and shared provider configuration.
 - Education and onboarding content is present in the Web UI docs and components.
+- Beginner UX layer adds a decision-first view over screener results, today priority card, guided candidate list, order readiness gate, and beginner-friendly recommendation language.
 
 ## Near-Term Focus (High-Level)
 

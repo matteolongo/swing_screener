@@ -320,7 +320,7 @@ The screener works on daily bars. A daily breakout that contradicts the weekly t
 
 ## Implementation order summary
 
-Last updated: 2026-05-12
+Last updated: 2026-05-16
 
 | # | Feature | Tier | Status | Value delivered |
 |---|---------|------|--------|----------------|
@@ -336,5 +336,5 @@ Last updated: 2026-05-12
 | 10 | Partial exits | 2 | ✅ Done — `codex/partial-exits` / PR #243 | Scale-out capability |
 | 11 | Regime performance | 3 | ✅ Done — `codex/regime-performance` / PR #245 | Size to conditions |
 | 12 | FX-adjusted R | 3 | ✅ Done — `codex/fx-adjusted-r` / PR #246 | True R visibility |
-| 13 | Trail customization | 3 | 🔲 PR pending — `codex/trail-customization` | Setup-specific trails |
-| 14 | MTF trend filter | 3 | 🔲 No plan yet | Fewer false signals |
+| 13 | Trail customization | 3 | ✅ Done — `codex/trail-customization` / PR #247 | Setup-specific trails |
+| 14 | MTF trend filter | 3 | ✅ Done — `codex/f14-mtf-trend-filter` / PR #251 | Fewer false signals |

@@ -1,11 +1,13 @@
 import { RecommendationReason, RecommendationVerdict } from '@/types/recommendation';
 import { cn } from '@/utils/cn';
 import { t } from '@/i18n/t';
+import type { MessageKey } from '@/i18n/types';
 
 interface RecommendationBadgeProps {
   verdict?: RecommendationVerdict | 'UNKNOWN';
   reasonsDetailed?: RecommendationReason[];
   className?: string;
+  showExplanation?: boolean;
 }
 
 // When the only blocking reasons are parameter-completeness issues (not signal/quality
@@ -29,17 +31,18 @@ const VERDICT_STYLES: Record<string, string> = {
   UNKNOWN: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
 };
 
-const VERDICT_LABELS: Record<string, string> = {
-  RECOMMENDED: t('recommendation.verdict.recommended' as any),
-  NOT_RECOMMENDED: t('recommendation.verdict.notRecommended' as any),
-  INCOMPLETE: 'Incomplete',
-  UNKNOWN: t('recommendation.verdict.unknown' as any),
+const VERDICT_LABEL_KEY: Record<string, MessageKey> = {
+  RECOMMENDED: 'recommendation.verdict.RECOMMENDED',
+  NOT_RECOMMENDED: 'recommendation.verdict.NOT_RECOMMENDED',
+  INCOMPLETE: 'recommendation.verdict.INCOMPLETE',
+  UNKNOWN: 'recommendation.verdict.UNKNOWN',
 };
 
 export default function RecommendationBadge({
   verdict = 'UNKNOWN',
   reasonsDetailed,
   className,
+  showExplanation = false,
 }: RecommendationBadgeProps) {
   const displayKey =
     isIncomplete(verdict, reasonsDetailed)
@@ -49,14 +52,21 @@ export default function RecommendationBadge({
         : 'UNKNOWN';
 
   return (
-    <span
-      className={cn(
-        'text-xs px-2 py-1 rounded',
-        VERDICT_STYLES[displayKey],
-        className,
-      )}
-    >
-      {VERDICT_LABELS[displayKey]}
+    <span className="inline-flex flex-col gap-1">
+      <span
+        className={cn(
+          'text-xs px-2 py-1 rounded',
+          VERDICT_STYLES[displayKey],
+          className,
+        )}
+      >
+        {t(VERDICT_LABEL_KEY[displayKey] ?? 'recommendation.verdict.INCOMPLETE')}
+      </span>
+      {showExplanation ? (
+        <span className="text-[11px] text-gray-500 leading-snug">
+          {t('recommendation.setupQualityExplanation')}
+        </span>
+      ) : null}
     </span>
   );
 }

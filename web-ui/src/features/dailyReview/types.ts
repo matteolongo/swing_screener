@@ -100,6 +100,14 @@ export interface DailyReviewSummaryAPI {
   review_date: string;
 }
 
+export interface PendingOrderReviewAPI {
+  order_id: string;
+  ticker: string;
+  category: 'stale' | 'still_valid' | 'no_data';
+  days_pending: number;
+  note?: string;
+}
+
 export interface DailyReviewAPI {
   watchlist_near_trigger?: WatchItemAPI[];
   new_candidates: DailyReviewCandidateAPI[];
@@ -108,6 +116,7 @@ export interface DailyReviewAPI {
   positions_update_stop: DailyReviewPositionUpdateAPI[];
   positions_close: DailyReviewPositionCloseAPI[];
   summary: DailyReviewSummaryAPI;
+  pending_orders_review?: PendingOrderReviewAPI[];
 }
 
 // Frontend types (camelCase)
@@ -189,6 +198,14 @@ export interface DailyReviewSummary {
   reviewDate: string;
 }
 
+export interface PendingOrderReview {
+  orderId: string;
+  ticker: string;
+  category: 'stale' | 'still_valid' | 'no_data';
+  daysPending: number;
+  note?: string;
+}
+
 export interface DailyReview {
   watchlistNearTrigger: WatchItem[];
   newCandidates: DailyReviewCandidate[];
@@ -197,6 +214,7 @@ export interface DailyReview {
   positionsUpdateStop: DailyReviewPositionUpdate[];
   positionsClose: DailyReviewPositionClose[];
   summary: DailyReviewSummary;
+  pendingOrdersReview?: PendingOrderReview[];
 }
 
 // Transform functions
@@ -338,6 +356,16 @@ export function transformSummary(api: DailyReviewSummaryAPI): DailyReviewSummary
   };
 }
 
+export function transformPendingOrderReview(api: PendingOrderReviewAPI): PendingOrderReview {
+  return {
+    orderId: api.order_id,
+    ticker: api.ticker,
+    category: api.category,
+    daysPending: api.days_pending,
+    note: api.note,
+  };
+}
+
 export function transformDailyReview(api: DailyReviewAPI): DailyReview {
   return {
     watchlistNearTrigger: (api.watchlist_near_trigger ?? []).map(transformWatchItem),
@@ -347,5 +375,6 @@ export function transformDailyReview(api: DailyReviewAPI): DailyReview {
     positionsUpdateStop: api.positions_update_stop.map(transformPositionUpdate),
     positionsClose: api.positions_close.map(transformPositionClose),
     summary: transformSummary(api.summary),
+    pendingOrdersReview: (api.pending_orders_review ?? []).map(transformPendingOrderReview),
   };
 }

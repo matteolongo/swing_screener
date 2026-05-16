@@ -32,6 +32,11 @@ LOG_FORMAT = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
 logging.basicConfig(level=logging.INFO, format=LOG_FORMAT, stream=sys.stdout)
 logger = logging.getLogger("swing_screener.api")
 
+# yfinance logs ERROR for expected "ticker not found" situations (delisted symbols,
+# missing timezone). Our provider already logs these as WARNING with a useful summary.
+# Silence yfinance below CRITICAL to avoid duplicate noise in the output.
+logging.getLogger("yfinance").setLevel(logging.CRITICAL)
+
 ensure_runtime_env_loaded()
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]

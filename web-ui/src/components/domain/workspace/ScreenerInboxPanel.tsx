@@ -1,9 +1,11 @@
-import { useCallback, useEffect } from 'react';
-import { AlertCircle } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import Badge from '@/components/common/Badge';
 import Card from '@/components/common/Card';
 import ScreenerForm from '@/components/domain/screener/ScreenerForm';
 import ScreenerCandidatesTable from '@/components/domain/screener/ScreenerCandidatesTable';
+import ScreenerCandidateReviewList from '@/components/domain/screener/ScreenerCandidateReviewList';
+import BeginnerScreenerSummary from '@/components/domain/screener/BeginnerScreenerSummary';
 import { useConfigDefaultsQuery } from '@/features/config/hooks';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 import { useUniverses, useRunScreenerMutation } from '@/features/screener/hooks';
@@ -68,7 +70,58 @@ const instrumentFilterToRequest = (value: InstrumentFilter): Array<'equity' | 'e
   return [value];
 };
 
+const RUNNING_STEPS = [
+  'screener.running.steps.preparingUniverse',
+  'screener.running.steps.downloadingPrices',
+  'screener.running.steps.scoringSetups',
+  'screener.running.steps.applyingRisk',
+  'screener.running.steps.buildingPlans',
+] as const;
+
+export function ScreenerRunningPanel() {
+  const [currentStep, setCurrentStep] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentStep((prev) => Math.min(prev + 1, RUNNING_STEPS.length - 1));
+    }, 1500);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="rounded-lg border border-blue-200 bg-blue-50/60 p-4 space-y-2">
+      {RUNNING_STEPS.map((stepKey, index) => {
+        const isCompleted = index < currentStep;
+        const isCurrent = index === currentStep;
+        return (
+          <div key={stepKey} className="flex items-center gap-2 text-sm">
+            {isCompleted ? (
+              <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
+            ) : isCurrent ? (
+              <Loader2 className="w-4 h-4 text-blue-500 animate-spin flex-shrink-0" />
+            ) : (
+              <div className="w-4 h-4 rounded-full border border-gray-300 flex-shrink-0" />
+            )}
+            <span
+              className={
+                isCompleted
+                  ? 'text-gray-400 line-through'
+                  : isCurrent
+                    ? 'text-blue-800 font-medium'
+                    : 'text-gray-400'
+              }
+            >
+              {t(stepKey)}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function ScreenerInboxPanel() {
+  const [viewMode, setViewMode] = useState<'guided' | 'advanced'>('guided');
   const { lastResult, setLastResult } = useScreenerStore();
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
   const selectedTickerSource = useWorkspaceStore((state) => state.selectedTickerSource);
@@ -248,6 +301,8 @@ export default function ScreenerInboxPanel() {
         onToggleCollapsed={() => setIsFormCollapsed(!isFormCollapsed)}
       />
 
+      {screenerMutation.isPending && <ScreenerRunningPanel />}
+
       {screenerMutation.isError ? (
         <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
           <p className="text-xs md:text-sm text-red-800">
@@ -259,7 +314,7 @@ export default function ScreenerInboxPanel() {
         </div>
       ) : null}
 
-      {!screenerMutation.isPending && !result ? (
+      {!screenerMutation.isPending && !result && !screenerMutation.isError ? (
         <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-start">
           <AlertCircle className="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" />
           <div className="text-xs md:text-sm text-blue-800">
@@ -296,6 +351,10 @@ export default function ScreenerInboxPanel() {
               </Badge>
             </div>
           </div>
+          <BeginnerScreenerSummary
+            candidates={candidates}
+            onReviewCandidate={(ticker) => handleSelectCandidate(ticker, 'overview')}
+          />
           {result.sameSymbolSuppressedCount || result.sameSymbolAddOnCount ? (
             <div className="flex flex-wrap gap-2 text-xs">
               {result.sameSymbolSuppressedCount ? (
@@ -328,16 +387,38 @@ export default function ScreenerInboxPanel() {
               ))}
             </div>
           ) : null}
-          <div className="flex-1 min-h-0 overflow-auto rounded-md border border-gray-200 dark:border-gray-700">
-            <ScreenerCandidatesTable
+          <div className="flex gap-1 rounded-lg border border-gray-200 p-0.5 w-fit self-start">
+            <button
+              onClick={() => setViewMode('guided')}
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${viewMode === 'guided' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              {t('screener.viewToggle.guided')}
+            </button>
+            <button
+              onClick={() => setViewMode('advanced')}
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${viewMode === 'advanced' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              {t('screener.viewToggle.advanced')}
+            </button>
+          </div>
+          {viewMode === 'guided' ? (
+            <ScreenerCandidateReviewList
               candidates={candidates}
               selectedTicker={selectedTicker}
-              onSymbolClick={(ticker) => handleSelectCandidate(ticker, 'overview')}
-              onRowClick={(candidate) => handleSelectCandidate(candidate.ticker, analysisTab === 'order' ? 'order' : 'overview')}
-              onCreateOrder={(candidate) => handleSelectCandidate(candidate.ticker, 'order')}
-              onRecommendationDetails={(candidate) => handleSelectCandidate(candidate.ticker, 'overview')}
+              onReview={(ticker) => handleSelectCandidate(ticker, 'overview')}
             />
-          </div>
+          ) : (
+            <div className="flex-1 min-h-0 overflow-auto rounded-md border border-gray-200 dark:border-gray-700">
+              <ScreenerCandidatesTable
+                candidates={candidates}
+                selectedTicker={selectedTicker}
+                onSymbolClick={(ticker) => handleSelectCandidate(ticker, 'overview')}
+                onRowClick={(candidate) => handleSelectCandidate(candidate.ticker, analysisTab === 'order' ? 'order' : 'overview')}
+                onCreateOrder={(candidate) => handleSelectCandidate(candidate.ticker, 'order')}
+                onRecommendationDetails={(candidate) => handleSelectCandidate(candidate.ticker, 'overview')}
+              />
+            </div>
+          )}
         </div>
       ) : null}
     </Card>

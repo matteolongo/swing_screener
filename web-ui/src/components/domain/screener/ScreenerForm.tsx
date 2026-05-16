@@ -1,4 +1,4 @@
-import { PlayCircle, RefreshCw, ChevronDown, ChevronUp, Settings2 } from 'lucide-react';
+import { PlayCircle, RefreshCw, ChevronUp, Settings2 } from 'lucide-react';
 import { useCallback, type ChangeEvent } from 'react';
 import Button from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
@@ -28,19 +28,19 @@ const universeFreshnessVariant = (status: UniverseSummary['freshness_status']): 
 const universeFreshnessLabel = (status: UniverseSummary['freshness_status']): string => {
   switch (status) {
     case 'fresh':
-      return 'Fresh';
+      return t('screener.universe.freshness.fresh');
     case 'review_due':
-      return 'Review due';
+      return t('screener.universe.freshness.reviewDue');
     case 'stale':
-      return 'Stale';
+      return t('screener.universe.freshness.stale');
     default:
-      return 'Unknown';
+      return t('screener.universe.freshness.unknown');
   }
 };
 
 const universeSourceLabel = (source: string): string => {
-  if (source === 'euronext_review') return 'Euronext review';
-  if (source === 'manual') return 'Manual';
+  if (source === 'euronext_review') return t('screener.universe.source.euronextReview');
+  if (source === 'manual') return t('screener.universe.source.manual');
   return source;
 };
 
@@ -141,41 +141,79 @@ export default function ScreenerForm({
 
   if (isCollapsed) {
     return (
-      <div className="rounded-lg border border-gray-200 bg-gray-50/60 px-3 py-2 flex items-center gap-2 flex-wrap">
-        <Settings2 className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
-        <span className="text-xs text-gray-600 flex-1 min-w-0 truncate">
-          {selectedUniverseMeta?.description ?? selectedUniverse} · top {topN} · ${minPrice}–${maxPrice}
-          {selectedUniverseMeta ? ` · ${selectedUniverseMeta.member_count} members · ${universeSourceLabel(selectedUniverseMeta.source)} · ${universeFreshnessLabel(selectedUniverseMeta.freshness_status)}` : ''}
-          {currencyFilter !== 'all' ? ` · ${currencyFilter.toUpperCase()}` : ''}
-          {exchangeFilter !== 'all' ? ` · ${exchangeFilter}` : ''}
-          {instrumentFilter !== 'all' ? ` · ${instrumentFilter}` : ''}
-          {!includeOtc ? ' · no OTC' : ''}
-          {recommendedOnly ? ' · rec only' : ''}
-          {actionFilter !== 'all' ? ` · ${formatActionFilterLabel(actionFilter)}` : ''}
-        </span>
-        <Button onClick={onRun} disabled={isLoading} size="sm">
-          {isLoading ? (
-            <>
-              <RefreshCw className="w-3.5 h-3.5 mr-1 animate-spin" />
-              {t('screener.controls.running')}
-            </>
-          ) : (
-            <>
-              <PlayCircle className="w-3.5 h-3.5 mr-1" />
-              {t('screener.controls.run')}
-            </>
+      <div className="rounded-lg border border-gray-200 bg-gray-50/60 p-3 space-y-2">
+        {/* Row 1: Universe name + Run CTA */}
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+              {selectedUniverseMeta?.description ?? selectedUniverse}
+            </span>
+            {selectedUniverseMeta && (
+              <span className="ml-2 text-xs text-gray-500">
+                {t('screener.controls.memberCount', { count: String(selectedUniverseMeta.member_count) })}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button onClick={onRun} disabled={isLoading} size="sm">
+              {isLoading ? (
+                <><RefreshCw className="w-3.5 h-3.5 mr-1 animate-spin" />{t('screener.controls.running')}</>
+              ) : (
+                <><PlayCircle className="w-3.5 h-3.5 mr-1" />{t('screener.controls.run')}</>
+              )}
+            </Button>
+            {onToggleCollapsed && (
+              <button
+                type="button"
+                onClick={onToggleCollapsed}
+                className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 px-1"
+                aria-label={t('screener.controls.adjustFilters')}
+              >
+                <Settings2 className="w-3.5 h-3.5" />
+                {t('screener.controls.adjustFilters')}
+              </button>
+            )}
+          </div>
+        </div>
+        {/* Row 2: Key filter pills */}
+        <div className="flex flex-wrap gap-1.5">
+          <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+            {t('screener.controls.topN')}: {topN}
+          </span>
+          <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+            ${minPrice}–${maxPrice}
+          </span>
+          {currencyFilter !== 'all' && (
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+              {currencyFilter.toUpperCase()}
+            </span>
           )}
-        </Button>
-        {onToggleCollapsed && (
-          <button
-            type="button"
-            onClick={onToggleCollapsed}
-            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
-            aria-label="Expand screener form"
-          >
-            <ChevronDown className="w-4 h-4 text-gray-500" />
-          </button>
-        )}
+          {exchangeFilter !== 'all' && (
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+              {exchangeFilter}
+            </span>
+          )}
+          {instrumentFilter !== 'all' && (
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+              {instrumentFilter}
+            </span>
+          )}
+          {!includeOtc && (
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+              {t('screener.controls.noOtc')}
+            </span>
+          )}
+          {requireWeeklyUptrend && (
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+              {t('screener.controls.weeklyUptrend')}
+            </span>
+          )}
+          {recommendedOnly && (
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+              {t('screener.controls.recommendedOnlyShort')}
+            </span>
+          )}
+        </div>
       </div>
     );
   }
@@ -188,10 +226,10 @@ export default function ScreenerForm({
             type="button"
             onClick={onToggleCollapsed}
             className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 px-1"
-            aria-label="Collapse screener form"
+            aria-label={t('screener.controls.hideFilters')}
           >
             <ChevronUp className="w-3.5 h-3.5" />
-            Collapse
+            {t('screener.controls.hideFilters')}
           </button>
         </div>
       )}
@@ -273,37 +311,37 @@ export default function ScreenerForm({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Venue</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.venue.label')}</label>
             <select
               value={exchangeFilter}
               onChange={(e) => setExchangeFilter(e.target.value as ExchangeFilter)}
-              aria-label="Venue"
+              aria-label={t('screener.controls.venue.label')}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               disabled={isLoading}
             >
-              <option value="all">All venues</option>
-              <option value="us_primary">US primary</option>
-              <option value="europe_primary">Europe primary</option>
-              <option value="xams">Amsterdam</option>
-              <option value="xetr">Xetra</option>
-              <option value="xpar">Paris</option>
-              <option value="xmil">Milan</option>
-              <option value="xmad">Madrid</option>
+              <option value="all">{t('screener.controls.venue.all')}</option>
+              <option value="us_primary">{t('screener.controls.venue.usPrimary')}</option>
+              <option value="europe_primary">{t('screener.controls.venue.europePrimary')}</option>
+              <option value="xams">{t('screener.controls.venue.amsterdam')}</option>
+              <option value="xetr">{t('screener.controls.venue.xetra')}</option>
+              <option value="xpar">{t('screener.controls.venue.paris')}</option>
+              <option value="xmil">{t('screener.controls.venue.milan')}</option>
+              <option value="xmad">{t('screener.controls.venue.madrid')}</option>
             </select>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Instrument</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.instrument.label')}</label>
             <select
               value={instrumentFilter}
               onChange={(e) => setInstrumentFilter(e.target.value as InstrumentFilter)}
-              aria-label="Instrument"
+              aria-label={t('screener.controls.instrument.label')}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               disabled={isLoading}
             >
-              <option value="all">All instruments</option>
-              <option value="equity">Stocks</option>
-              <option value="etf">ETFs</option>
+              <option value="all">{t('screener.controls.instrument.all')}</option>
+              <option value="equity">{t('screener.controls.instrument.stocks')}</option>
+              <option value="etf">{t('screener.controls.instrument.etfs')}</option>
             </select>
           </div>
 
@@ -332,7 +370,7 @@ export default function ScreenerForm({
           <div className="rounded-lg border border-gray-200 bg-white px-3 py-2">
             <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
               <div className="text-xs text-gray-600">
-                <span className="font-medium text-gray-900">{selectedUniverseMeta.member_count}</span> members
+                {t('screener.controls.memberCount', { count: String(selectedUniverseMeta.member_count) })}
                 {' · '}
                 {universeSourceLabel(selectedUniverseMeta.source)}
                 {' · '}
@@ -357,11 +395,11 @@ export default function ScreenerForm({
                 type="checkbox"
                 checked={!includeOtc}
                 onChange={(e) => setIncludeOtc(!e.target.checked)}
-                aria-label="Exclude OTC"
+                aria-label={t('screener.controls.excludeOtc')}
                 className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                 disabled={isLoading}
               />
-              <span className="text-sm font-medium text-gray-700">Exclude OTC</span>
+              <span className="text-sm font-medium text-gray-700">{t('screener.controls.excludeOtc')}</span>
             </label>
             <label className="flex min-h-11 items-center gap-2 cursor-pointer">
               <input

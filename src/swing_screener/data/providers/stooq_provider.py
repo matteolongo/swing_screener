@@ -168,10 +168,11 @@ class StooqDataProvider(MarketDataProvider):
                     params={"s": query_symbol, "i": "d"},
                 )
                 response.raise_for_status()
-                frame = pd.read_csv(io.StringIO(response.text), parse_dates=["Date"])
+                frame = pd.read_csv(io.StringIO(response.text))
+                frame = frame.rename(columns={col: str(col).strip() for col in frame.columns})
                 if frame.empty or "Date" not in frame.columns:
                     continue
-                frame = frame.rename(columns={column: str(column).strip() for column in frame.columns})
+                frame["Date"] = pd.to_datetime(frame["Date"], errors="coerce")
                 frame = frame.set_index("Date").sort_index()
                 frame = frame[
                     (frame.index >= pd.Timestamp(start_dt)) & (frame.index <= pd.Timestamp(end_dt))
