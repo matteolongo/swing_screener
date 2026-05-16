@@ -6,6 +6,7 @@ import { cn } from '@/utils/cn';
 import { formatNumber, formatCurrency } from '@/utils/formatters';
 import EdgeBreakdownTable from '@/components/domain/portfolio/EdgeBreakdownTable';
 import RegimeBreakdownTable from '@/components/domain/portfolio/RegimeBreakdownTable';
+import { pickEdgeInsight, type EdgeVerdict } from '@/features/analytics/edgeInsight';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -254,9 +255,55 @@ function RDistributionChart({ values }: { values: number[] }) {
 
 // ─── how to read explainer ───────────────────────────────────────────────────
 
+const VERDICT_STYLES: Record<EdgeVerdict, { border: string; bg: string; label: string; labelClass: string }> = {
+  positive: {
+    border: 'border-green-200 dark:border-green-700',
+    bg: 'bg-green-50 dark:bg-green-900/20',
+    label: t('analyticsPage.insight.verdictLabel.positive'),
+    labelClass: 'text-green-700 dark:text-green-300',
+  },
+  developing: {
+    border: 'border-amber-200 dark:border-amber-700',
+    bg: 'bg-amber-50 dark:bg-amber-900/20',
+    label: t('analyticsPage.insight.verdictLabel.developing'),
+    labelClass: 'text-amber-700 dark:text-amber-300',
+  },
+  negative: {
+    border: 'border-red-200 dark:border-red-700',
+    bg: 'bg-red-50 dark:bg-red-900/20',
+    label: t('analyticsPage.insight.verdictLabel.negative'),
+    labelClass: 'text-red-700 dark:text-red-400',
+  },
+};
+
+interface EdgeInsightCardProps {
+  totalTrades: number;
+  avgR: number | null;
+  profitFactor: number | null;
+  winRate: number | null;
+}
+
+function EdgeInsightCard({ totalTrades, avgR, profitFactor, winRate }: EdgeInsightCardProps) {
+  const insight = pickEdgeInsight({ totalTrades, avgR, profitFactor, winRate });
+  const styles = VERDICT_STYLES[insight.verdict];
+  return (
+    <div className={cn('rounded-lg border px-4 py-3', styles.border, styles.bg)}>
+      <div className="flex items-baseline gap-2 mb-1">
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+          {t('analyticsPage.insight.title')}
+        </span>
+        <span className={cn('text-xs font-bold uppercase tracking-wide', styles.labelClass)}>
+          {styles.label}
+        </span>
+      </div>
+      <p className="text-sm text-gray-700 dark:text-gray-300">{insight.message}</p>
+    </div>
+  );
+}
+
 function HowToReadBox() {
   return (
-    <details className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 px-4 py-3 text-sm">
+    <details open className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 px-4 py-3 text-sm">
       <summary className="cursor-pointer font-medium text-gray-700 dark:text-gray-300 select-none">
         How to read this page
       </summary>
@@ -382,6 +429,14 @@ export default function Analytics() {
         <p className="text-sm text-gray-500 dark:text-gray-400">{t('analyticsPage.empty')}</p>
       ) : (
         <>
+          {/* Edge insight — computed verdict above stat cards */}
+          <EdgeInsightCard
+            totalTrades={stats.totalTrades}
+            avgR={stats.avgR}
+            profitFactor={stats.profitFactor}
+            winRate={stats.winRate}
+          />
+
           {/* Stat cards */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             <StatCard
