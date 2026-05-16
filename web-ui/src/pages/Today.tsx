@@ -453,6 +453,16 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
     [review, filteredCandidates, filteredAddOns],
   );
 
+  // Syncs focusedIndex when the user clicks an item so the next j/k press
+  // continues from the clicked position rather than from the last keyboard position.
+  const handleItemClick = useCallback((ticker: string) => {
+    setFocusedIndex((prev) => {
+      const idx = flatItems.findIndex((fi) => fi.ticker === ticker);
+      return idx !== -1 ? idx : prev;
+    });
+    onTickerSelect(ticker);
+  }, [flatItems, onTickerSelect]);
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement)?.tagName)) return;
@@ -516,9 +526,10 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
           onClick={() => refetch()}
           disabled={isFetching}
           title={t('dailyReview.header.refreshTitle')}
+          aria-label={t('dailyReview.header.refreshTitle')}
           className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 disabled:opacity-50"
         >
-          <RefreshCw className={cn('h-3.5 w-3.5', isFetching && 'animate-spin')} />
+          <RefreshCw className={cn('h-3.5 w-3.5', isFetching && 'animate-spin')} aria-hidden="true" />
         </button>
       </div>
 
@@ -596,7 +607,7 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
                   <CloseItem
                     key={item.positionId}
                     item={item}
-                    onClick={onTickerSelect}
+                    onClick={handleItemClick}
                     onAction={position ? () => setCloseTarget(position) : undefined}
                     isDone={doneIds.has(item.positionId)}
                     isFocused={focusedIndex === idx}
@@ -610,7 +621,7 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
                   <UpdateStopItem
                     key={item.positionId}
                     item={item}
-                    onClick={onTickerSelect}
+                    onClick={handleItemClick}
                     onAction={position ? () => setUpdateStopTarget(position) : undefined}
                     isDone={doneIds.has(item.positionId)}
                     isFocused={focusedIndex === idx}
@@ -637,7 +648,7 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
                   <WatchlistNearTriggerItem
                     key={item.ticker}
                     item={item}
-                    onClick={onTickerSelect}
+                    onClick={handleItemClick}
                     isFocused={focusedIndex === idx}
                   />
                 );
@@ -659,7 +670,7 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
                   <CandidateItem
                     key={item.ticker}
                     item={item}
-                    onClick={onTickerSelect}
+                    onClick={handleItemClick}
                     isFocused={focusedIndex === idx}
                   />
                 );
@@ -671,7 +682,7 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
                     key={item.ticker}
                     item={item}
                     isAddOn
-                    onClick={onTickerSelect}
+                    onClick={handleItemClick}
                     isFocused={focusedIndex === idx}
                   />
                 );
@@ -698,7 +709,7 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
                     <HoldItem
                       key={item.positionId}
                       item={item}
-                      onClick={onTickerSelect}
+                      onClick={handleItemClick}
                       isFocused={focusedIndex === idx}
                     />
                   );

@@ -1,10 +1,87 @@
 import { describe, it, expect } from 'vitest';
-import { screen, within } from '@testing-library/react';
+import { screen, within, fireEvent } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/test/mocks/server';
 import { renderWithProviders } from '@/test/utils';
 import { t } from '@/i18n/t';
 import Today from './Today';
+
+function makeCloseItem(ticker: string, positionId: string) {
+  return {
+    position_id: positionId,
+    ticker,
+    entry_price: 100,
+    stop_price: 90,
+    current_price: 88,
+    r_now: -1.2,
+    days_open: 3,
+    time_stop_warning: false,
+    reason: 'Below stop',
+  };
+}
+
+const threeCloseItemReview = {
+  watchlist_near_trigger: [],
+  positions_add_on_candidates: [],
+  positions_hold: [],
+  positions_update_stop: [],
+  new_candidates: [],
+  positions_close: [
+    makeCloseItem('AMAT', 'pos-amat'),
+    makeCloseItem('NVDA', 'pos-nvda'),
+    makeCloseItem('MSFT', 'pos-msft'),
+  ],
+  summary: {
+    total_positions: 3,
+    no_action: 0,
+    update_stop: 0,
+    close_positions: 3,
+    new_candidates: 0,
+    add_on_candidates: 0,
+    watchlist_near_trigger: 0,
+    review_date: '2026-05-16',
+  },
+};
+
+describe('Today page — keyboard navigation syncs with click', () => {
+  it('pressing j after clicking the second item advances to the third, not from keyboard position 0', async () => {
+    server.use(
+      http.get('*/api/portfolio/orders/local', () =>
+        HttpResponse.json({ orders: [], asof: '2026-05-16' })
+      ),
+      http.get('*/api/daily-review', () =>
+        HttpResponse.json(threeCloseItemReview)
+      )
+    );
+
+    renderWithProviders(<Today />);
+
+    // Wait for all three rows to appear
+    const nvdaButton = await screen.findByRole('button', { name: /NVDA/i });
+    const msftButton = screen.getByRole('button', { name: /MSFT/i });
+
+    // Click the second item (NVDA, flat-list index 1)
+    fireEvent.click(nvdaButton);
+
+    // Pressing j should advance from NVDA (index 1) → MSFT (index 2)
+    // Without the fix, j moves from focusedIndex -1 → 0 (AMAT), not NVDA → MSFT
+    fireEvent.keyDown(window, { key: 'j' });
+
+    expect(msftButton).toHaveClass('ring-1');
+  });
+});
+
+describe('Today page — accessibility', () => {
+  it('refresh button has an explicit aria-label, not just a title attribute', async () => {
+    renderWithProviders(<Today />);
+    // title alone is ignored by screen readers on buttons in many browsers;
+    // aria-label is required for reliable accessible name announcement
+    const refreshButton = await screen.findByRole('button', {
+      name: t('dailyReview.header.refreshTitle'),
+    });
+    expect(refreshButton).toHaveAttribute('aria-label', t('dailyReview.header.refreshTitle'));
+  });
+});
 
 describe('Today page — pending orders badge', () => {
   it('shows pending orders badge when orders exist', async () => {
