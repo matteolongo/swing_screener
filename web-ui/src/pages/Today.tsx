@@ -27,6 +27,7 @@ import type {
   DailyReviewPositionClose,
   DailyReviewPositionHold,
   DailyReviewPositionUpdate,
+  PendingOrderReview,
 } from '@/features/dailyReview/types';
 import type { WatchItem } from '@/features/watchlist/types';
 
@@ -252,6 +253,47 @@ function WatchlistNearTriggerItem({ item, onClick, isFocused }: { item: WatchIte
   );
 }
 
+interface PendingOrderItemProps {
+  item: PendingOrderReview;
+  onClick: (ticker: string) => void;
+  isFocused?: boolean;
+}
+
+function PendingOrderItem({ item, onClick, isFocused }: PendingOrderItemProps) {
+  const isStale = item.category === 'stale';
+  return (
+    <button
+      type="button"
+      onClick={() => onClick(item.ticker)}
+      className={cn(
+        'w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-l-2',
+        isStale ? 'border-amber-500' : 'border-gray-300 dark:border-gray-600',
+        isFocused && 'ring-1 ring-primary',
+      )}
+    >
+      <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 min-w-[60px]">
+        {item.ticker}
+      </span>
+      <span className={cn(
+        'text-xs font-medium px-1.5 py-0.5 rounded',
+        isStale
+          ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+          : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+      )}>
+        {t(`todayPage.actionList.pendingOrdersCategory.${item.category}`)}
+      </span>
+      <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">
+        {t('todayPage.actionList.pendingOrdersDaysPending', { n: String(item.daysPending) })}
+      </span>
+      {item.note && (
+        <span className="text-xs text-gray-400 dark:text-gray-500 truncate flex-1">
+          {item.note}
+        </span>
+      )}
+    </button>
+  );
+}
+
 // ─── Section header ──────────────────────────────────────────────────────────
 
 interface SectionHeaderProps {
@@ -446,6 +488,7 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
       ...(review?.watchlistNearTrigger.map((i) => ({ ticker: i.ticker, id: `watch-${i.ticker}` })) ?? []),
       ...(review?.positionsClose.map((i) => ({ ticker: i.ticker, id: i.positionId })) ?? []),
       ...(review?.positionsUpdateStop.map((i) => ({ ticker: i.ticker, id: i.positionId })) ?? []),
+      ...(review?.pendingOrdersReview?.map((i) => ({ ticker: i.ticker, id: `pending-${i.orderId}` })) ?? []),
       ...filteredCandidates.map((i) => ({ ticker: i.ticker, id: i.ticker })),
       ...filteredAddOns.map((i) => ({ ticker: i.ticker, id: i.ticker + '-addon' })),
       ...(review?.positionsHold.map((i) => ({ ticker: i.ticker, id: i.positionId })) ?? []),
@@ -624,6 +667,28 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
                     onClick={handleItemClick}
                     onAction={position ? () => setUpdateStopTarget(position) : undefined}
                     isDone={doneIds.has(item.positionId)}
+                    isFocused={focusedIndex === idx}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Pending Orders section — individual order rows between requires-action and watchlist */}
+        {(review?.pendingOrdersReview ?? []).length > 0 && (
+          <div className="space-y-1">
+            <div className="px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded">
+              {t('todayPage.actionList.pendingOrdersSection')} · {review!.pendingOrdersReview!.length}
+            </div>
+            <div className="space-y-0.5">
+              {review!.pendingOrdersReview!.map((item) => {
+                const idx = flatItems.findIndex((fi) => fi.id === `pending-${item.orderId}`);
+                return (
+                  <PendingOrderItem
+                    key={item.orderId}
+                    item={item}
+                    onClick={handleItemClick}
                     isFocused={focusedIndex === idx}
                   />
                 );

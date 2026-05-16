@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { screen, within, fireEvent } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/test/mocks/server';
@@ -261,5 +261,119 @@ describe('Today page — pending orders badge', () => {
     renderWithProviders(<Today />);
     expect(await screen.findByText(new RegExp(t('watchlist.pipeline.dailyReviewTitle'), 'i'))).toBeInTheDocument();
     expect(screen.getByText('ASML')).toBeInTheDocument();
+  });
+});
+
+// ── Pending orders review section ─────────────────────────────────────────────
+
+function makePendingOrderReview(
+  ticker: string,
+  orderId: string,
+  category: 'stale' | 'still_valid' | 'no_data' = 'stale',
+  daysPending = 7,
+) {
+  return { order_id: orderId, ticker, category, days_pending: daysPending };
+}
+
+const reviewWithPendingOrders = {
+  watchlist_near_trigger: [],
+  positions_add_on_candidates: [],
+  positions_hold: [],
+  positions_update_stop: [],
+  new_candidates: [],
+  positions_close: [],
+  pending_orders_review: [
+    makePendingOrderReview('TSLA', 'ORD-TSLA-001', 'stale', 8),
+    makePendingOrderReview('AMD', 'ORD-AMD-001', 'still_valid', 2),
+  ],
+  summary: {
+    total_positions: 0,
+    no_action: 0,
+    update_stop: 0,
+    close_positions: 0,
+    new_candidates: 0,
+    add_on_candidates: 0,
+    watchlist_near_trigger: 0,
+    review_date: '2026-05-16',
+  },
+};
+
+describe('Today page — pending orders review section', () => {
+  beforeEach(() => {
+    server.use(
+      http.get('*/api/portfolio/orders/local', () =>
+        HttpResponse.json({ orders: [], asof: '2026-05-16' })
+      ),
+      http.get('*/api/daily-review', () =>
+        HttpResponse.json(reviewWithPendingOrders)
+      )
+    );
+  });
+
+  it('renders a pending orders section when pendingOrdersReview has items', async () => {
+    renderWithProviders(<Today />);
+    expect(
+      await screen.findByText(new RegExp(t('todayPage.actionList.pendingOrdersSection'), 'i'))
+    ).toBeInTheDocument();
+  });
+
+  it('renders one row per pending order', async () => {
+    renderWithProviders(<Today />);
+    await screen.findByText(new RegExp(t('todayPage.actionList.pendingOrdersSection'), 'i'));
+    expect(screen.getByText('TSLA')).toBeInTheDocument();
+    expect(screen.getByText('AMD')).toBeInTheDocument();
+  });
+
+  it('shows stale badge for a stale order', async () => {
+    renderWithProviders(<Today />);
+    await screen.findByText(new RegExp(t('todayPage.actionList.pendingOrdersSection'), 'i'));
+    expect(
+      screen.getByText(t('todayPage.actionList.pendingOrdersCategory.stale'))
+    ).toBeInTheDocument();
+  });
+
+  it('shows active badge for a still_valid order', async () => {
+    renderWithProviders(<Today />);
+    await screen.findByText(new RegExp(t('todayPage.actionList.pendingOrdersSection'), 'i'));
+    expect(
+      screen.getByText(t('todayPage.actionList.pendingOrdersCategory.still_valid'))
+    ).toBeInTheDocument();
+  });
+
+  it('pending orders section appears before watchlist near-trigger in the DOM', async () => {
+    server.use(
+      http.get('*/api/daily-review', () =>
+        HttpResponse.json({
+          ...reviewWithPendingOrders,
+          watchlist_near_trigger: [
+            {
+              ticker: 'ASML',
+              watched_at: '2026-05-01T10:00:00Z',
+              watch_price: 660,
+              currency: 'EUR',
+              source: 'screener',
+              current_price: 671,
+              signal_trigger_price: 680,
+              distance_to_trigger_pct: -1.3,
+              price_history: [],
+            },
+          ],
+          summary: { ...reviewWithPendingOrders.summary, watchlist_near_trigger: 1 },
+        })
+      )
+    );
+
+    renderWithProviders(<Today />);
+
+    const pendingEl = await screen.findByText(
+      new RegExp(t('todayPage.actionList.pendingOrdersSection'), 'i')
+    );
+    const watchlistEl = screen.getByText(
+      new RegExp(t('watchlist.pipeline.dailyReviewTitle'), 'i')
+    );
+
+    expect(
+      pendingEl.compareDocumentPosition(watchlistEl) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 });
