@@ -559,8 +559,17 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
           onChange={(e) => setActionFilter(e.target.value)}
           className="text-xs border border-border rounded px-1.5 py-1 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
         >
-          {['all', 'BUY_NOW', 'BUY_ON_PULLBACK', 'WAIT_FOR_BREAKOUT', 'WATCH', 'TACTICAL_ONLY', 'AVOID', 'MANAGE_ONLY'].map((v) => (
-            <option key={v} value={v}>{v === 'all' ? t('dailyReview.filter.all') : v}</option>
+          {([
+            ['all',               t('dailyReview.filter.all')],
+            ['BUY_NOW',          t('screener.guidedList.action.BUY_NOW')],
+            ['BUY_ON_PULLBACK',  t('screener.guidedList.action.BUY_ON_PULLBACK')],
+            ['WAIT_FOR_BREAKOUT',t('screener.guidedList.action.WAIT_FOR_BREAKOUT')],
+            ['WATCH',            t('screener.guidedList.action.WATCH')],
+            ['TACTICAL_ONLY',    t('screener.guidedList.action.TACTICAL_ONLY')],
+            ['AVOID',            t('screener.guidedList.action.AVOID')],
+            ['MANAGE_ONLY',      t('screener.guidedList.action.MANAGE_ONLY')],
+          ] as [string, string][]).map(([value, label]) => (
+            <option key={value} value={value}>{label}</option>
           ))}
         </select>
       </div>
@@ -573,32 +582,7 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
           </p>
         )}
 
-        {/* Requires Action section */}
-        {watchlistNearTriggerCount > 0 && (
-          <div className="space-y-1">
-            <div className="px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded">
-              {t('watchlist.pipeline.dailyReviewTitle')} · {watchlistNearTriggerCount}
-            </div>
-            <p className="px-3 text-[11px] text-gray-500 dark:text-gray-400">
-              {t('watchlist.pipeline.dailyReviewSubtitle', { count: String(watchlistNearTriggerCount) })}
-            </p>
-            <div className="space-y-0.5">
-              {review?.watchlistNearTrigger.map((item) => {
-                const idx = flatItems.findIndex((fi) => fi.id === `watch-${item.ticker}`);
-                return (
-                  <WatchlistNearTriggerItem
-                    key={item.ticker}
-                    item={item}
-                    onClick={onTickerSelect}
-                    isFocused={focusedIndex === idx}
-                  />
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Requires Action section */}
+        {/* Requires Action section — close and update-stop before watchlist triggers */}
         {requiresActionCount > 0 && (
           <div className="space-y-1">
             <div className="px-3 py-1 text-xs font-semibold uppercase tracking-wide text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded">
@@ -629,6 +613,31 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
                     onClick={onTickerSelect}
                     onAction={position ? () => setUpdateStopTarget(position) : undefined}
                     isDone={doneIds.has(item.positionId)}
+                    isFocused={focusedIndex === idx}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Watchlist near-trigger section — below required position actions */}
+        {watchlistNearTriggerCount > 0 && (
+          <div className="space-y-1">
+            <div className="px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded">
+              {t('watchlist.pipeline.dailyReviewTitle')} · {watchlistNearTriggerCount}
+            </div>
+            <p className="px-3 text-[11px] text-gray-500 dark:text-gray-400">
+              {t('watchlist.pipeline.dailyReviewSubtitle', { count: String(watchlistNearTriggerCount) })}
+            </p>
+            <div className="space-y-0.5">
+              {review?.watchlistNearTrigger.map((item) => {
+                const idx = flatItems.findIndex((fi) => fi.id === `watch-${item.ticker}`);
+                return (
+                  <WatchlistNearTriggerItem
+                    key={item.ticker}
+                    item={item}
+                    onClick={onTickerSelect}
                     isFocused={focusedIndex === idx}
                   />
                 );
