@@ -648,7 +648,7 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
                   <WatchlistNearTriggerItem
                     key={item.ticker}
                     item={item}
-                    onClick={handleItemClick}
+                    onClick={onTickerSelect}
                     isFocused={focusedIndex === idx}
                   />
                 );
