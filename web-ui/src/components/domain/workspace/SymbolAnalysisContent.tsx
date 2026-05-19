@@ -8,12 +8,14 @@ import BeginnerDecisionHeader from '@/components/domain/workspace/BeginnerDecisi
 import DecisionSummaryCard from '@/components/domain/workspace/DecisionSummaryCard';
 import TechnicalMetricsGrid from '@/components/domain/workspace/TechnicalMetricsGrid';
 import type { SymbolAnalysisCandidate, WorkspaceAnalysisTab } from '@/components/domain/workspace/types';
-import type { ScreenerCandidate } from '@/features/screener/types';
+import type { ScreenerCandidate, ScreenerResponse } from '@/features/screener/types';
+import { useRunScreenerMutation } from '@/features/screener/hooks';
 import {
   useFundamentalSnapshotQuery,
   useRefreshFundamentalSnapshotMutation,
 } from '@/features/fundamentals/hooks';
 import { useUnwatchSymbolMutation, useWatchlist, useWatchSymbolMutation } from '@/features/watchlist/hooks';
+import { useScreenerStore } from '@/stores/screenerStore';
 import { t } from '@/i18n/t';
 import { cn } from '@/utils/cn';
 import { formatDateTime } from '@/utils/formatters';
@@ -50,6 +52,24 @@ export default function SymbolAnalysisContent({
     activeTab === 'fundamentals' ? ticker : undefined
   );
   const refreshFundamentalsMutation = useRefreshFundamentalSnapshotMutation();
+  const computeAnalysisMutation = useRunScreenerMutation((result) => {
+    const newCandidate = result.candidates[0];
+    if (!newCandidate) return;
+    const current = useScreenerStore.getState().lastResult;
+    const target = newCandidate.ticker.toUpperCase();
+    if (!current) {
+      useScreenerStore.getState().setLastResult(result);
+      return;
+    }
+    const exists = current.candidates.some((c) => c.ticker.toUpperCase() === target);
+    const merged: ScreenerResponse = {
+      ...current,
+      candidates: exists
+        ? current.candidates.map((c) => (c.ticker.toUpperCase() === target ? newCandidate : c))
+        : [...current.candidates, newCandidate],
+    };
+    useScreenerStore.getState().setLastResult(merged);
+  });
 
   const tabs: Array<{ id: WorkspaceAnalysisTab; label: string }> = [
     { id: 'overview', label: t('workspacePage.panels.analysis.tabs.overview') },
@@ -131,6 +151,33 @@ export default function SymbolAnalysisContent({
 
         {activeTab === 'overview' && (
           <>
+            {!candidate && (
+              <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 flex flex-col gap-3">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {t('workspacePage.panels.analysis.computeAnalysis.description', { ticker })}
+                </p>
+                <div className="flex items-center gap-3">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => computeAnalysisMutation.mutate({ tickers: [ticker], top: 1 })}
+                    disabled={computeAnalysisMutation.isPending}
+                  >
+                    {computeAnalysisMutation.isPending
+                      ? t('workspacePage.panels.analysis.computeAnalysis.runningAction')
+                      : t('workspacePage.panels.analysis.computeAnalysis.runAction')}
+                  </Button>
+                </div>
+                {computeAnalysisMutation.isError && (
+                  <p className="text-sm text-rose-600">
+                    {computeAnalysisMutation.error instanceof Error
+                      ? computeAnalysisMutation.error.message
+                      : t('workspacePage.panels.analysis.computeAnalysis.runError')}
+                  </p>
+                )}
+              </div>
+            )}
             {candidate?.decisionSummary ? (
               <DecisionSummaryCard summary={candidate.decisionSummary} currency={candidate.currency} />
             ) : null}

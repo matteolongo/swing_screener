@@ -577,6 +577,12 @@ export const messagesEn = {
           loadError: 'Failed to load fundamentals',
           noSnapshot: 'No fundamentals snapshot available yet.',
         },
+        computeAnalysis: {
+          description: 'No screener analysis is cached for {{ticker}} yet.',
+          runAction: 'Compute analysis',
+          runningAction: 'Computing...',
+          runError: 'Failed to compute analysis',
+        },
         decisionSummary: {
           title: '{{ticker}} Decision Summary',
           subtitle: 'Combined technical, business-quality, valuation, and catalyst read.',
