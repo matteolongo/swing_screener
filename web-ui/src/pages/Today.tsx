@@ -25,6 +25,7 @@ import { formatNumber } from '@/utils/formatters';
 import type {
   DailyReviewCandidate,
   DailyReviewPositionClose,
+  DailyReviewPositionExitSignal,
   DailyReviewPositionHold,
   DailyReviewPositionUpdate,
   PendingOrderReview,
@@ -214,6 +215,36 @@ function HoldItem({ item, onClick, isFocused }: HoldItemProps) {
       </span>
       <TimeStopBadge daysOpen={item.daysOpen} rNow={item.rNow} show={item.timeStopWarning} />
       <span className="text-xs text-gray-400 dark:text-gray-500 truncate flex-1">{item.reason}</span>
+    </button>
+  );
+}
+
+interface ExitSignalItemProps {
+  item: DailyReviewPositionExitSignal;
+  onClick: (ticker: string) => void;
+  isFocused?: boolean;
+}
+
+function ExitSignalItem({ item, onClick, isFocused }: ExitSignalItemProps) {
+  return (
+    <button
+      type="button"
+      onClick={() => onClick(item.ticker)}
+      className={cn(
+        'w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-l-2 border-orange-400',
+        isFocused && 'ring-1 ring-primary',
+      )}
+    >
+      <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 min-w-[60px]">
+        {item.ticker}
+      </span>
+      <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
+        {t('todayPage.actionList.exitSignal')}
+      </span>
+      <span className={cn('text-xs font-semibold tabular-nums', item.rNow >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400')}>
+        {item.rNow >= 0 ? '+' : ''}{formatNumber(item.rNow, 2)}R
+      </span>
+      <span className="text-xs text-gray-500 dark:text-gray-400 truncate flex-1">{item.reason}</span>
     </button>
   );
 }
@@ -488,6 +519,7 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
       ...(review?.watchlistNearTrigger.map((i) => ({ ticker: i.ticker, id: `watch-${i.ticker}` })) ?? []),
       ...(review?.positionsClose.map((i) => ({ ticker: i.ticker, id: i.positionId })) ?? []),
       ...(review?.positionsUpdateStop.map((i) => ({ ticker: i.ticker, id: i.positionId })) ?? []),
+      ...(review?.positionsExitSignal.map((i) => ({ ticker: i.ticker, id: i.positionId })) ?? []),
       ...(review?.pendingOrdersReview?.map((i) => ({ ticker: i.ticker, id: `pending-${i.orderId}` })) ?? []),
       ...filteredCandidates.map((i) => ({ ticker: i.ticker, id: i.ticker })),
       ...filteredAddOns.map((i) => ({ ticker: i.ticker, id: i.ticker + '-addon' })),
@@ -531,6 +563,7 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
 
   const requiresActionCount =
     (review?.positionsClose.length ?? 0) + (review?.positionsUpdateStop.length ?? 0);
+  const exitSignalCount = review?.positionsExitSignal.length ?? 0;
   const watchlistNearTriggerCount = review?.watchlistNearTrigger.length ?? 0;
   const opportunitiesCount = filteredCandidates.length + filteredAddOns.length;
   const holdCount = review?.positionsHold.length ?? 0;
@@ -551,7 +584,7 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
     );
   }
 
-  const isEmpty = requiresActionCount === 0 && watchlistNearTriggerCount === 0 && opportunitiesCount === 0 && holdCount === 0;
+  const isEmpty = requiresActionCount === 0 && exitSignalCount === 0 && watchlistNearTriggerCount === 0 && opportunitiesCount === 0 && holdCount === 0;
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -667,6 +700,28 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
                     onClick={handleItemClick}
                     onAction={position ? () => setUpdateStopTarget(position) : undefined}
                     isDone={doneIds.has(item.positionId)}
+                    isFocused={focusedIndex === idx}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Exit Signal section — advisory, below hard requires-action */}
+        {exitSignalCount > 0 && (
+          <div className="space-y-1">
+            <div className="px-3 py-1 text-xs font-semibold uppercase tracking-wide text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 rounded">
+              {t('todayPage.actionList.exitSignal')} · {exitSignalCount}
+            </div>
+            <div className="space-y-0.5">
+              {review?.positionsExitSignal.map((item) => {
+                const idx = flatItems.findIndex((fi) => fi.id === item.positionId);
+                return (
+                  <ExitSignalItem
+                    key={item.positionId}
+                    item={item}
+                    onClick={handleItemClick}
                     isFocused={focusedIndex === idx}
                   />
                 );

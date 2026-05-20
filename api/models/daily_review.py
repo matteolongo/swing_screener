@@ -81,12 +81,25 @@ class DailyReviewPositionClose(BaseModel):
     reason: str = Field(..., description="Why position should be closed")
 
 
+class DailyReviewPositionExitSignal(BaseModel):
+    """A position with a technical deterioration signal (advisory, not a forced close)."""
+    position_id: str
+    ticker: str
+    entry_price: float
+    stop_price: float
+    current_price: float
+    r_now: float
+    days_open: int = 0
+    reason: str = Field(..., description="Human-readable reason for the signal")
+
+
 class DailyReviewSummary(BaseModel):
     """Summary statistics for the daily review."""
     total_positions: int
     no_action: int
     update_stop: int
     close_positions: int
+    exit_signal: int = 0
     new_candidates: int
     add_on_candidates: int = 0
     watchlist_near_trigger: int = 0
@@ -110,6 +123,7 @@ class DailyReview(BaseModel):
     positions_hold: list[DailyReviewPositionHold]
     positions_update_stop: list[DailyReviewPositionUpdate]
     positions_close: list[DailyReviewPositionClose]
+    positions_exit_signal: list[DailyReviewPositionExitSignal] = Field(default_factory=list)
     summary: DailyReviewSummary
     pending_orders_review: list[PendingOrderReview] = Field(default_factory=list)
 

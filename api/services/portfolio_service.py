@@ -188,6 +188,7 @@ def _manage_cfg_from_app() -> ManageStateConfig:
         max_holding_days=manage.max_holding_days,
         time_stop_days=manage.time_stop_days,
         time_stop_min_r=manage.time_stop_min_r,
+        exit_signal_days=getattr(manage, "exit_signal_days", 2),
     )
 
 
@@ -1027,6 +1028,7 @@ class PortfolioService:
             max_holding_days=int(payload.get("max_holding_days", 20)),
             time_stop_days=int(payload.get("time_stop_days", 15)),
             time_stop_min_r=float(payload.get("time_stop_min_r", 0.5)),
+            exit_signal_days=int(payload.get("exit_signal_days", 2)),
         )
 
     def _suggest_position_stop_from_dict(

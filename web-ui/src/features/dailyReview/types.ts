@@ -89,11 +89,23 @@ export interface DailyReviewPositionCloseAPI {
   reason: string;
 }
 
+export interface DailyReviewPositionExitSignalAPI {
+  position_id: string;
+  ticker: string;
+  entry_price: number;
+  stop_price: number;
+  current_price: number;
+  r_now: number;
+  days_open?: number;
+  reason: string;
+}
+
 export interface DailyReviewSummaryAPI {
   total_positions: number;
   no_action: number;
   update_stop: number;
   close_positions: number;
+  exit_signal?: number;
   new_candidates: number;
   add_on_candidates: number;
   watchlist_near_trigger?: number;
@@ -115,6 +127,7 @@ export interface DailyReviewAPI {
   positions_hold: DailyReviewPositionHoldAPI[];
   positions_update_stop: DailyReviewPositionUpdateAPI[];
   positions_close: DailyReviewPositionCloseAPI[];
+  positions_exit_signal?: DailyReviewPositionExitSignalAPI[];
   summary: DailyReviewSummaryAPI;
   pending_orders_review?: PendingOrderReviewAPI[];
 }
@@ -187,11 +200,23 @@ export interface DailyReviewPositionClose {
   reason: string;
 }
 
+export interface DailyReviewPositionExitSignal {
+  positionId: string;
+  ticker: string;
+  entryPrice: number;
+  stopPrice: number;
+  currentPrice: number;
+  rNow: number;
+  daysOpen: number;
+  reason: string;
+}
+
 export interface DailyReviewSummary {
   totalPositions: number;
   noAction: number;
   updateStop: number;
   closePositions: number;
+  exitSignal: number;
   newCandidates: number;
   addOnCandidates: number;
   watchlistNearTrigger: number;
@@ -213,6 +238,7 @@ export interface DailyReview {
   positionsHold: DailyReviewPositionHold[];
   positionsUpdateStop: DailyReviewPositionUpdate[];
   positionsClose: DailyReviewPositionClose[];
+  positionsExitSignal: DailyReviewPositionExitSignal[];
   summary: DailyReviewSummary;
   pendingOrdersReview?: PendingOrderReview[];
 }
@@ -343,12 +369,26 @@ export function transformPositionClose(api: DailyReviewPositionCloseAPI): DailyR
   };
 }
 
+export function transformPositionExitSignal(api: DailyReviewPositionExitSignalAPI): DailyReviewPositionExitSignal {
+  return {
+    positionId: api.position_id,
+    ticker: api.ticker,
+    entryPrice: api.entry_price,
+    stopPrice: api.stop_price,
+    currentPrice: api.current_price,
+    rNow: api.r_now,
+    daysOpen: api.days_open ?? 0,
+    reason: api.reason,
+  };
+}
+
 export function transformSummary(api: DailyReviewSummaryAPI): DailyReviewSummary {
   return {
     totalPositions: api.total_positions,
     noAction: api.no_action,
     updateStop: api.update_stop,
     closePositions: api.close_positions,
+    exitSignal: api.exit_signal ?? 0,
     newCandidates: api.new_candidates,
     addOnCandidates: api.add_on_candidates,
     watchlistNearTrigger: api.watchlist_near_trigger ?? 0,
@@ -374,6 +414,7 @@ export function transformDailyReview(api: DailyReviewAPI): DailyReview {
     positionsHold: api.positions_hold.map(transformPositionHold),
     positionsUpdateStop: api.positions_update_stop.map(transformPositionUpdate),
     positionsClose: api.positions_close.map(transformPositionClose),
+    positionsExitSignal: (api.positions_exit_signal ?? []).map(transformPositionExitSignal),
     summary: transformSummary(api.summary),
     pendingOrdersReview: (api.pending_orders_review ?? []).map(transformPendingOrderReview),
   };

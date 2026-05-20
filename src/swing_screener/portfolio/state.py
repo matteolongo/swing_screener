@@ -53,6 +53,7 @@ class ManageConfig:
     time_stop_days: int = 15  # soft stale-trade nudge threshold
     time_stop_min_r: float = 0.5  # suppress nudge once trade has made this much progress
     benchmark: str = "SPY"
+    exit_signal_days: int = 2  # N consecutive closes below SMA → advisory exit signal (0 = disabled)
 
 
 @dataclass
@@ -65,7 +66,7 @@ class PositionUpdate:
     stop_suggested: float
     shares: int
     r_now: float
-    action: Literal["NO_ACTION", "MOVE_STOP_UP", "CLOSE_STOP_HIT", "CLOSE_TIME_EXIT"]
+    action: Literal["NO_ACTION", "MOVE_STOP_UP", "CLOSE_STOP_HIT", "CLOSE_TIME_EXIT", "CLOSE_EXIT_SIGNAL"]
     reason: str
 
 
@@ -248,6 +249,18 @@ def _round_price(value: float) -> float:
     return float(Decimal(str(value)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
 
 
+def _sma_break_signal(s: pd.Series, sma_window: int, n_days: int) -> tuple[bool, float]:
+    """Return (is_break, current_sma). is_break = last n_days closes all below their SMA."""
+    if len(s) < sma_window + n_days - 1:
+        return False, float("nan")
+    sma = s.rolling(sma_window).mean()
+    recent_close = s.iloc[-n_days:]
+    recent_sma = sma.iloc[-n_days:]
+    if recent_sma.isna().any():
+        return False, float("nan")
+    return bool((recent_close < recent_sma).all()), float(sma.iloc[-1])
+
+
 def evaluate_positions(
     ohlcv: pd.DataFrame,
     positions: list[Position],
@@ -310,10 +323,7 @@ def evaluate_positions(
             )
             continue
 
-        # time exit (approx days using bars; assumes daily data)
-        # we don’t have entry index here reliably without storing it; so we approximate by calendar string not ideal.
-        # Practical: treat max_holding_days as optional until you store entry_index or entry_date alignment.
-        # We'll still provide a conservative check if enough data exists after entry_date.
+        # bars_since entry (used by both time exit and exit signal reason)
         try:
             entry_dt = pd.to_datetime(pos.entry_date)
             bars_since = int((s.index >= entry_dt).sum())
@@ -346,6 +356,35 @@ def evaluate_positions(
                 Position(**{**pos.__dict__, "max_favorable_price": mfp_new})
             )
             continue
+
+        # exit signal: N consecutive closes below SMA (advisory, overrides MOVE_STOP_UP)
+        if cfg.exit_signal_days > 0:
+            is_break, sma20_val = _sma_break_signal(s, cfg.trail_sma, cfg.exit_signal_days)
+            if is_break and not math.isnan(sma20_val):
+                pct_below = (sma20_val - last) / sma20_val * 100
+                stop_dist = (last - pos.stop_price) / last * 100
+                reason = (
+                    f"{pos.ticker} below SMA{cfg.trail_sma} for {cfg.exit_signal_days}d "
+                    f"({pct_below:.1f}% below). "
+                    f"{r_now:+.2f}R, {bars_since}d held. "
+                    f"Stop {stop_dist:.1f}% away."
+                )
+                updates.append(PositionUpdate(
+                    ticker=pos.ticker,
+                    status=pos.status,
+                    last=last,
+                    entry=pos.entry_price,
+                    stop_old=pos.stop_price,
+                    stop_suggested=pos.stop_price,
+                    shares=pos.shares,
+                    r_now=float(r_now),
+                    action="CLOSE_EXIT_SIGNAL",
+                    reason=reason,
+                ))
+                new_positions.append(
+                    Position(**{**pos.__dict__, "max_favorable_price": mfp_new})
+                )
+                continue
 
         # suggested stop rules (only ever move UP)
         stop_suggested = pos.stop_price

@@ -13,6 +13,7 @@ from api.models.daily_review import (
     DailyReviewPositionHold,
     DailyReviewPositionUpdate,
     DailyReviewPositionClose,
+    DailyReviewPositionExitSignal,
     DailyReviewSummary,
     PendingOrderReview,
 )
@@ -123,7 +124,8 @@ class DailyReviewService:
         positions_hold: list[DailyReviewPositionHold] = []
         positions_update: list[DailyReviewPositionUpdate] = []
         positions_close: list[DailyReviewPositionClose] = []
-        
+        positions_exit_signal: list[DailyReviewPositionExitSignal] = []
+
         for pos in positions:
             # Get stop suggestion for this position
             try:
@@ -166,7 +168,7 @@ class DailyReviewService:
                     )
                 )
                 continue
-            
+
             # Categorize based on action
             if suggestion.action == "NO_ACTION":
                 positions_hold.append(
@@ -181,7 +183,7 @@ class DailyReviewService:
                         reason=suggestion.reason,
                     )
                 )
-            
+
             elif suggestion.action == "MOVE_STOP_UP":
                 positions_update.append(
                     DailyReviewPositionUpdate(
@@ -196,7 +198,7 @@ class DailyReviewService:
                         reason=suggestion.reason,
                     )
                 )
-            
+
             elif suggestion.action in ["CLOSE_STOP_HIT", "CLOSE_TIME_EXIT"]:
                 positions_close.append(
                     DailyReviewPositionClose(
@@ -210,13 +212,29 @@ class DailyReviewService:
                         reason=suggestion.reason,
                     )
                 )
-        
+
+            elif suggestion.action == "CLOSE_EXIT_SIGNAL":
+                days_open = self._time_stop_payload_from_position(pos, suggestion.r_now, active_manage).get("days_open", 0)
+                positions_exit_signal.append(
+                    DailyReviewPositionExitSignal(
+                        position_id=pos.position_id,
+                        ticker=pos.ticker,
+                        entry_price=pos.entry_price,
+                        stop_price=pos.stop_price,
+                        current_price=suggestion.last,
+                        r_now=suggestion.r_now,
+                        days_open=days_open,
+                        reason=suggestion.reason,
+                    )
+                )
+
         # 3. Build summary
         summary = DailyReviewSummary(
             total_positions=len(positions),
             no_action=len(positions_hold),
             update_stop=len(positions_update),
             close_positions=len(positions_close),
+            exit_signal=len(positions_exit_signal),
             new_candidates=len(new_candidates),
             add_on_candidates=len(add_on_candidates),
             watchlist_near_trigger=len(watchlist_near_trigger),
@@ -232,6 +250,7 @@ class DailyReviewService:
             positions_hold=positions_hold,
             positions_update_stop=positions_update,
             positions_close=positions_close,
+            positions_exit_signal=positions_exit_signal,
             summary=summary,
             pending_orders_review=pending_orders_review,
         )
@@ -345,6 +364,7 @@ class DailyReviewService:
             max_holding_days=int(manage.get("max_holding_days", 20)),
             time_stop_days=int(manage.get("time_stop_days", 15)),
             time_stop_min_r=float(manage.get("time_stop_min_r", 0.5)),
+            exit_signal_days=int(manage.get("exit_signal_days", 2)),
         )
         return {
             "breakeven_at_r": cfg.breakeven_at_R,
@@ -354,6 +374,7 @@ class DailyReviewService:
             "max_holding_days": cfg.max_holding_days,
             "time_stop_days": cfg.time_stop_days,
             "time_stop_min_r": cfg.time_stop_min_r,
+            "exit_signal_days": cfg.exit_signal_days,
         }
 
     def compute_daily_review_from_state(
@@ -419,6 +440,7 @@ class DailyReviewService:
         positions_hold: list[DailyReviewPositionHold] = []
         positions_update: list[DailyReviewPositionUpdate] = []
         positions_close: list[DailyReviewPositionClose] = []
+        positions_exit_signal: list[DailyReviewPositionExitSignal] = []
         manage_payload = self._manage_cfg_payload_from_strategy(strategy)
 
         for pos in positions:
@@ -508,6 +530,21 @@ class DailyReviewService:
                     )
                 )
 
+            elif suggestion.action == "CLOSE_EXIT_SIGNAL":
+                days_open = self._time_stop_payload(pos, suggestion.r_now, manage_payload).get("days_open", 0)
+                positions_exit_signal.append(
+                    DailyReviewPositionExitSignal(
+                        position_id=position_id,
+                        ticker=suggestion.ticker,
+                        entry_price=suggestion.entry,
+                        stop_price=suggestion.stop_old,
+                        current_price=suggestion.last,
+                        r_now=suggestion.r_now,
+                        days_open=days_open,
+                        reason=suggestion.reason,
+                    )
+                )
+
         return DailyReview(
             watchlist_near_trigger=[],
             new_candidates=new_candidates,
@@ -515,11 +552,13 @@ class DailyReviewService:
             positions_hold=positions_hold,
             positions_update_stop=positions_update,
             positions_close=positions_close,
+            positions_exit_signal=positions_exit_signal,
             summary=DailyReviewSummary(
                 total_positions=len([position for position in positions if position.get("status") == "open"]),
                 no_action=len(positions_hold),
                 update_stop=len(positions_update),
                 close_positions=len(positions_close),
+                exit_signal=len(positions_exit_signal),
                 new_candidates=len(new_candidates),
                 add_on_candidates=len(add_on_candidates),
                 watchlist_near_trigger=0,

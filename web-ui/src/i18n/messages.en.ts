@@ -2066,6 +2066,7 @@ export const messagesEn = {
       updateAction: 'Update →',
       timeStopBadge: '{{days}}d / {{r}}R',
       timeStopWarning: 'Stale trade: consider closing or documenting a reason to hold.',
+      exitSignal: 'Consider Exit',
       pendingOrdersSection: 'Pending Orders',
       pendingOrdersCategory: {
         stale: 'Stale',
