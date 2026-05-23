@@ -1910,6 +1910,14 @@ export const messagesEn = {
       losses: 'Losses',
       breakeven: 'Breakeven',
     },
+    insight: {
+      title: 'Performance Insight',
+      verdictLabel: {
+        positive: 'Positive Edge',
+        developing: 'Developing',
+        negative: 'Needs Work',
+      },
+    },
     table: {
       date: 'Date',
       ticker: 'Ticker',
