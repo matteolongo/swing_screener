@@ -2,9 +2,6 @@ from __future__ import annotations
 
 import json
 from datetime import date
-from pathlib import Path
-
-import pytest
 
 from swing_screener.intelligence.cache import read_from_cache, write_to_cache
 from swing_screener.intelligence.models import SymbolIntelligence
