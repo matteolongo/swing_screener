@@ -1,4 +1,3 @@
-import ReactMarkdown from 'react-markdown';
 import Badge from '@/components/common/Badge';
 import type { SymbolIntelligence, DecisionAction, DecisionConviction } from '@/features/intelligence/types';
 import { t } from '@/i18n/t';
@@ -50,9 +49,7 @@ export default function IntelligenceCard({ intelligence }: IntelligenceCardProps
 
       <hr className="border-slate-100" />
 
-      <div className="prose prose-sm max-w-none text-slate-800">
-        <ReactMarkdown>{narrative}</ReactMarkdown>
-      </div>
+      <p className="text-sm text-slate-800 whitespace-pre-wrap">{narrative}</p>
 
       {sources.length > 0 && (
         <>

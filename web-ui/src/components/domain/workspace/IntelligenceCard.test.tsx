@@ -26,9 +26,9 @@ describe('IntelligenceCard', () => {
     expect(screen.getByText('Cyclical recovery with improving EBITDA.')).toBeInTheDocument();
   });
 
-  it('renders the narrative as markdown', () => {
+  it('renders the narrative text', () => {
     render(<IntelligenceCard intelligence={baseIntel} />);
-    expect(screen.getByText("Why it's moving")).toBeInTheDocument();
+    expect(screen.getByText(/Why it's moving/)).toBeInTheDocument();
   });
 
   it('shows sources count and URL when expanded', async () => {
