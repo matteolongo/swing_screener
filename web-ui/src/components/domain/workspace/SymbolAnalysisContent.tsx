@@ -1,5 +1,8 @@
-import type { ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import Button from '@/components/common/Button';
+import IntelligenceCard from '@/components/domain/workspace/IntelligenceCard';
+import { useIntelligenceAnalysisMutation } from '@/features/intelligence/hooks';
+import type { SymbolIntelligence } from '@/features/intelligence/types';
 import CachedSymbolPriceChart from '@/components/domain/market/CachedSymbolPriceChart';
 import WatchToggleButton from '@/components/domain/watchlist/WatchToggleButton';
 import FundamentalsSnapshotCard from '@/components/domain/fundamentals/FundamentalsSnapshotCard';
@@ -8,12 +11,14 @@ import BeginnerDecisionHeader from '@/components/domain/workspace/BeginnerDecisi
 import DecisionSummaryCard from '@/components/domain/workspace/DecisionSummaryCard';
 import TechnicalMetricsGrid from '@/components/domain/workspace/TechnicalMetricsGrid';
 import type { SymbolAnalysisCandidate, WorkspaceAnalysisTab } from '@/components/domain/workspace/types';
-import type { ScreenerCandidate } from '@/features/screener/types';
+import type { ScreenerCandidate, ScreenerResponse } from '@/features/screener/types';
+import { useRunScreenerMutation } from '@/features/screener/hooks';
 import {
   useFundamentalSnapshotQuery,
   useRefreshFundamentalSnapshotMutation,
 } from '@/features/fundamentals/hooks';
 import { useUnwatchSymbolMutation, useWatchlist, useWatchSymbolMutation } from '@/features/watchlist/hooks';
+import { useScreenerStore } from '@/stores/screenerStore';
 import { t } from '@/i18n/t';
 import { cn } from '@/utils/cn';
 import { formatDateTime } from '@/utils/formatters';
@@ -50,11 +55,38 @@ export default function SymbolAnalysisContent({
     activeTab === 'fundamentals' ? ticker : undefined
   );
   const refreshFundamentalsMutation = useRefreshFundamentalSnapshotMutation();
+  const computeAnalysisMutation = useRunScreenerMutation((result) => {
+    const newCandidate = result.candidates[0];
+    if (!newCandidate) return;
+    const current = useScreenerStore.getState().lastResult;
+    const target = newCandidate.ticker.toUpperCase();
+    if (!current) {
+      useScreenerStore.getState().setLastResult(result);
+      return;
+    }
+    const exists = current.candidates.some((c) => c.ticker.toUpperCase() === target);
+    const merged: ScreenerResponse = {
+      ...current,
+      candidates: exists
+        ? current.candidates.map((c) => (c.ticker.toUpperCase() === target ? newCandidate : c))
+        : [...current.candidates, newCandidate],
+    };
+    useScreenerStore.getState().setLastResult(merged);
+  });
+
+  const intelligenceMutation = useIntelligenceAnalysisMutation();
+  const [intelligenceResult, setIntelligenceResult] = useState<SymbolIntelligence | null>(null);
+
+  useEffect(() => {
+    setIntelligenceResult(null);
+    intelligenceMutation.reset();
+  }, [ticker]);
 
   const tabs: Array<{ id: WorkspaceAnalysisTab; label: string }> = [
     { id: 'overview', label: t('workspacePage.panels.analysis.tabs.overview') },
     { id: 'fundamentals', label: t('workspacePage.panels.analysis.tabs.fundamentals') },
     { id: 'order', label: t('workspacePage.panels.analysis.tabs.order') },
+    { id: 'intelligence', label: t('workspacePage.panels.analysis.tabs.intelligence') },
   ];
   const watchedTickers = new Set((watchlistQuery.data ?? []).map((item) => item.ticker.toUpperCase()));
   const isWatched = watchedTickers.has(ticker.toUpperCase());
@@ -131,6 +163,33 @@ export default function SymbolAnalysisContent({
 
         {activeTab === 'overview' && (
           <>
+            {!candidate && (
+              <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 flex flex-col gap-3">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {t('workspacePage.panels.analysis.computeAnalysis.description', { ticker })}
+                </p>
+                <div className="flex items-center gap-3">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => computeAnalysisMutation.mutate({ tickers: [ticker], top: 1 })}
+                    disabled={computeAnalysisMutation.isPending}
+                  >
+                    {computeAnalysisMutation.isPending
+                      ? t('workspacePage.panels.analysis.computeAnalysis.runningAction')
+                      : t('workspacePage.panels.analysis.computeAnalysis.runAction')}
+                  </Button>
+                </div>
+                {computeAnalysisMutation.isError && (
+                  <p className="text-sm text-rose-600">
+                    {computeAnalysisMutation.error instanceof Error
+                      ? computeAnalysisMutation.error.message
+                      : t('workspacePage.panels.analysis.computeAnalysis.runError')}
+                  </p>
+                )}
+              </div>
+            )}
             {candidate?.decisionSummary ? (
               <DecisionSummaryCard summary={candidate.decisionSummary} currency={candidate.currency} />
             ) : null}
@@ -148,6 +207,47 @@ export default function SymbolAnalysisContent({
         )}
 
         {activeTab === 'order' ? orderPanel : null}
+
+        {activeTab === 'intelligence' && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-3">
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                disabled={intelligenceMutation.isPending}
+                onClick={() => {
+                  intelligenceMutation.mutate(
+                    { ticker, candidate },
+                    {
+                      onSuccess: (result) => setIntelligenceResult(result),
+                    }
+                  );
+                }}
+              >
+                {intelligenceMutation.isPending
+                  ? t('workspacePage.panels.analysis.intelligence.analyzingAction')
+                  : t('workspacePage.panels.analysis.intelligence.analyzeAction')}
+              </Button>
+            </div>
+
+            {intelligenceMutation.isError && (
+              <p className="text-sm text-rose-600">
+                {intelligenceMutation.error instanceof Error
+                  ? intelligenceMutation.error.message
+                  : t('workspacePage.panels.analysis.intelligence.analyzeError')}
+              </p>
+            )}
+
+            {intelligenceResult ? (
+              <IntelligenceCard intelligence={intelligenceResult} />
+            ) : !intelligenceMutation.isPending && !intelligenceMutation.isError ? (
+              <p className="text-sm text-gray-500">
+                {t('workspacePage.panels.analysis.intelligence.emptyState')}
+              </p>
+            ) : null}
+          </div>
+        )}
 
         {activeTab === 'fundamentals' && (
           <>

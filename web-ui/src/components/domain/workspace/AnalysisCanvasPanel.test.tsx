@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AnalysisCanvasPanel from '@/components/domain/workspace/AnalysisCanvasPanel';
 import * as fundamentalsHooks from '@/features/fundamentals/hooks';
 import type { FundamentalSnapshot } from '@/features/fundamentals/types';
+import * as screenerHooks from '@/features/screener/hooks';
 import * as watchlistHooks from '@/features/watchlist/hooks';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
@@ -12,6 +13,11 @@ import { renderWithProviders } from '@/test/utils';
 vi.mock('@/features/fundamentals/hooks', () => ({
   useFundamentalSnapshotQuery: vi.fn(),
   useRefreshFundamentalSnapshotMutation: vi.fn(),
+}));
+
+vi.mock('@/features/screener/hooks', () => ({
+  useUniverses: vi.fn(),
+  useRunScreenerMutation: vi.fn(),
 }));
 
 vi.mock('@/features/watchlist/hooks', () => ({
@@ -105,6 +111,12 @@ describe('AnalysisCanvasPanel', () => {
       mutate: vi.fn(),
       isPending: false,
       variables: undefined,
+    } as never);
+    vi.mocked(screenerHooks.useRunScreenerMutation).mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+      isError: false,
+      error: null,
     } as never);
     useWorkspaceStore.setState({
       selectedTicker: 'AAPL',
@@ -311,5 +323,98 @@ describe('AnalysisCanvasPanel', () => {
     renderWithProviders(<AnalysisCanvasPanel />);
 
     expect(screen.getByRole('button', { name: 'Watch AAPL' })).toBeInTheDocument();
+  });
+});
+
+function mockFundamentalsIdle() {
+  vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
+    isLoading: false,
+    isError: false,
+    data: undefined,
+  } as never);
+  vi.mocked(fundamentalsHooks.useRefreshFundamentalSnapshotMutation).mockReturnValue({
+    mutate: vi.fn(),
+    data: undefined,
+    isPending: false,
+    isError: false,
+    error: null,
+  } as never);
+}
+
+describe('AnalysisCanvasPanel — compute analysis button', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(watchlistHooks.useWatchlist).mockReturnValue({ data: [], isLoading: false, isError: false } as never);
+    vi.mocked(watchlistHooks.useWatchSymbolMutation).mockReturnValue({ mutate: vi.fn(), isPending: false, variables: undefined } as never);
+    vi.mocked(watchlistHooks.useUnwatchSymbolMutation).mockReturnValue({ mutate: vi.fn(), isPending: false, variables: undefined } as never);
+    vi.mocked(screenerHooks.useRunScreenerMutation).mockReturnValue({ mutate: vi.fn(), isPending: false, isError: false, error: null } as never);
+    mockFundamentalsIdle();
+    useWorkspaceStore.setState({ selectedTicker: 'ENI.MI', selectedTickerSource: null, analysisTab: 'overview' });
+    useScreenerStore.setState({ lastResult: null });
+  });
+
+  it('shows compute button when ticker has no screener data at all', () => {
+    renderWithProviders(<AnalysisCanvasPanel />);
+    expect(screen.getByRole('button', { name: 'Compute analysis' })).toBeInTheDocument();
+    expect(screen.getByText(/No screener analysis is cached for ENI.MI yet/)).toBeInTheDocument();
+  });
+
+  it('shows compute button when screener result exists but does not include the selected ticker', () => {
+    useScreenerStore.setState({
+      lastResult: {
+        asofDate: '2026-05-18',
+        totalScreened: 1,
+        dataFreshness: 'final_close',
+        candidates: [{ ticker: 'AAPL', currency: 'USD', close: 180, sma20: 175, sma50: 170, sma200: 160, atr: 3, momentum6m: 0.1, momentum12m: 0.2, relStrength: 0.05, score: 0.7, confidence: 65, rank: 1 }],
+      },
+    });
+    renderWithProviders(<AnalysisCanvasPanel />);
+    expect(screen.getByRole('button', { name: 'Compute analysis' })).toBeInTheDocument();
+  });
+
+  it('does not show compute button when the ticker is already in the screener result', () => {
+    useWorkspaceStore.setState({ selectedTicker: 'AAPL', selectedTickerSource: 'screener', analysisTab: 'overview' });
+    useScreenerStore.setState({
+      lastResult: {
+        asofDate: '2026-05-18',
+        totalScreened: 1,
+        dataFreshness: 'final_close',
+        candidates: [{ ticker: 'AAPL', currency: 'USD', close: 180, sma20: 175, sma50: 170, sma200: 160, atr: 3, momentum6m: 0.1, momentum12m: 0.2, relStrength: 0.05, score: 0.7, confidence: 65, rank: 1 }],
+      },
+    });
+    renderWithProviders(<AnalysisCanvasPanel />);
+    expect(screen.queryByRole('button', { name: 'Compute analysis' })).not.toBeInTheDocument();
+  });
+
+  it('calls screener mutation with the selected ticker when compute button is clicked', async () => {
+    const mutate = vi.fn();
+    vi.mocked(screenerHooks.useRunScreenerMutation).mockReturnValue({ mutate, isPending: false, isError: false, error: null } as never);
+
+    const { user } = renderWithProviders(<AnalysisCanvasPanel />);
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Compute analysis' }));
+    });
+
+    expect(mutate).toHaveBeenCalledWith({ tickers: ['ENI.MI'], top: 1 });
+  });
+
+  it('shows loading text and disables button while the mutation is pending', () => {
+    vi.mocked(screenerHooks.useRunScreenerMutation).mockReturnValue({ mutate: vi.fn(), isPending: true, isError: false, error: null } as never);
+
+    renderWithProviders(<AnalysisCanvasPanel />);
+    expect(screen.getByRole('button', { name: 'Computing...' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Compute analysis' })).not.toBeInTheDocument();
+  });
+
+  it('shows error message when the mutation fails', () => {
+    vi.mocked(screenerHooks.useRunScreenerMutation).mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+      isError: true,
+      error: new Error('network error'),
+    } as never);
+
+    renderWithProviders(<AnalysisCanvasPanel />);
+    expect(screen.getByText('network error')).toBeInTheDocument();
   });
 });

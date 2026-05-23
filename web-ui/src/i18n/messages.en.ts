@@ -564,6 +564,7 @@ export const messagesEn = {
           overview: 'Overview',
           order: 'Order',
           fundamentals: 'Fundamentals',
+          intelligence: 'Intelligence',
         },
         fundamentals: {
           descriptionHasSnapshot: 'Refresh the cached fundamentals snapshot for this symbol.',
@@ -576,6 +577,19 @@ export const messagesEn = {
           loading: 'Loading fundamentals...',
           loadError: 'Failed to load fundamentals',
           noSnapshot: 'No fundamentals snapshot available yet.',
+        },
+        computeAnalysis: {
+          description: 'No screener analysis is cached for {{ticker}} yet.',
+          runAction: 'Compute analysis',
+          runningAction: 'Computing...',
+          runError: 'Failed to compute analysis',
+        },
+        intelligence: {
+          analyzeAction: 'Analyze with AI',
+          analyzingAction: 'Analyzing...',
+          emptyState: 'Click "Analyze with AI" to generate a web-search-grounded analysis for this symbol.',
+          sources: 'Sources',
+          analyzeError: 'Failed to generate analysis',
         },
         decisionSummary: {
           title: '{{ticker}} Decision Summary',
@@ -2068,6 +2082,7 @@ export const messagesEn = {
       updateAction: 'Update →',
       timeStopBadge: '{{days}}d / {{r}}R',
       timeStopWarning: 'Stale trade: consider closing or documenting a reason to hold.',
+      exitSignal: 'Consider Exit',
       pendingOrdersSection: 'Pending Orders',
       pendingOrdersCategory: {
         stale: 'Stale',

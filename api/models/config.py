@@ -51,6 +51,7 @@ class ManageConfig(BaseModel):
     max_holding_days: int = Field(gt=0, description="Max days to hold position")
     time_stop_days: int = Field(default=15, gt=0, description="Days open before stale-trade nudge appears")
     time_stop_min_r: float = Field(default=0.5, ge=0, description="Minimum R that suppresses stale-trade nudge")
+    exit_signal_days: int = Field(default=2, ge=0, description="N consecutive closes below SMA triggers advisory exit (0 = disabled)")
 
 
 class AppConfig(BaseModel):
