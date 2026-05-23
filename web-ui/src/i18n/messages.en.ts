@@ -590,6 +590,20 @@ export const messagesEn = {
           emptyState: 'Click "Analyze with AI" to generate a web-search-grounded analysis for this symbol.',
           sources: 'Sources',
           analyzeError: 'Failed to generate analysis',
+          refreshAction: 'Refresh',
+          lastAnalyzed: 'Last analyzed',
+          catalystUrgency: {
+            high: 'High urgency',
+            medium: 'Medium urgency',
+            low: 'Low urgency',
+            none: '',
+          },
+          upcomingEvents: 'Upcoming Events',
+          positionSignal: {
+            hold: 'Hold',
+            trim: 'Trim',
+            exit: 'Exit',
+          },
         },
         decisionSummary: {
           title: '{{ticker}} Decision Summary',
@@ -2090,6 +2104,10 @@ export const messagesEn = {
         no_data: 'Unknown',
       },
       pendingOrdersDaysPending: '{{n}}d pending',
+      intelligenceSweep: 'Run Intelligence Sweep',
+      intelligenceSweepRunning: 'Running sweep...',
+      intelligenceSweepDone: 'Sweep complete — {{analyzed}} analyzed{{failed}}',
+      intelligenceSweepFailed: ', {{n}} failed',
     },
     keyboard: {
       hint: 'j/k navigate · Enter select',

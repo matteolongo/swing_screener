@@ -1,5 +1,5 @@
 import { API_ENDPOINTS, apiUrl } from '@/lib/api';
-import type { SymbolIntelligenceAPI } from '@/features/intelligence/types';
+import type { SymbolIntelligenceAPI, SweepSymbolPayload, SweepResponseAPI } from '@/features/intelligence/types';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
 
 export interface IntelligenceRequestPayload {
@@ -47,4 +47,26 @@ export async function postIntelligenceAnalysis(
     throw new Error(error.detail || `Failed to analyze ${ticker}`);
   }
   return response.json() as Promise<SymbolIntelligenceAPI>;
+}
+
+export async function getIntelligenceLatest(ticker: string): Promise<SymbolIntelligenceAPI> {
+  const response = await fetch(apiUrl(API_ENDPOINTS.intelligenceLatest(ticker)));
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error((error as { detail?: string }).detail || `No cached analysis for ${ticker}`);
+  }
+  return response.json() as Promise<SymbolIntelligenceAPI>;
+}
+
+export async function postIntelligenceSweep(symbols: SweepSymbolPayload[]): Promise<SweepResponseAPI> {
+  const response = await fetch(apiUrl(API_ENDPOINTS.intelligenceSweep), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ symbols }),
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error((error as { detail?: string }).detail || 'Intelligence sweep failed');
+  }
+  return response.json() as Promise<SweepResponseAPI>;
 }

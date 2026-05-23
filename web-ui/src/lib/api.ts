@@ -68,6 +68,8 @@ export const API_ENDPOINTS = {
   intelligenceEducationGenerate: '/api/intelligence/education/generate',
   intelligenceEducationBySymbol: (symbol: string) => `/api/intelligence/education/${encodeURIComponent(symbol)}`,
   intelligenceAnalyze: (ticker: string) => `/api/intelligence/${encodeURIComponent(ticker)}`,
+  intelligenceLatest: (ticker: string) => `/api/intelligence/${encodeURIComponent(ticker)}/latest`,
+  intelligenceSweep: '/api/intelligence/sweep',
 
   // Fundamentals
   fundamentalsConfig: '/api/fundamentals/config',

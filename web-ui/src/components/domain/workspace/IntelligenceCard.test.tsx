@@ -9,8 +9,11 @@ const baseIntel: SymbolIntelligence = {
   generatedAt: '2026-05-23T10:00:00Z',
   action: 'BUY_NOW',
   conviction: 'high',
+  catalystUrgency: 'none',
   summaryLine: 'Cyclical recovery with improving EBITDA.',
   narrative: "## Why it's moving\nAperam Q1 2026 beat.",
+  upcomingEvents: [],
+  positionSignal: null,
   sources: ['https://aperam.com/q1-2026'],
 };
 
