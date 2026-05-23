@@ -47,6 +47,7 @@ function makeEmptyReview(): DailyReview {
     positionsHold: [],
     positionsUpdateStop: [],
     positionsClose: [],
+    positionsExitSignal: [],
     summary: {
       totalPositions: 0,
       noAction: 0,
@@ -55,6 +56,7 @@ function makeEmptyReview(): DailyReview {
       newCandidates: 0,
       addOnCandidates: 0,
       watchlistNearTrigger: 0,
+      exitSignal: 0,
       reviewDate: '2026-05-15',
     },
   };
@@ -84,6 +86,7 @@ function makeReviewWithClose(): DailyReview {
       newCandidates: 0,
       addOnCandidates: 0,
       watchlistNearTrigger: 0,
+      exitSignal: 0,
       reviewDate: '2026-05-15',
     },
   };
