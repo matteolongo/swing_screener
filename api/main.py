@@ -19,6 +19,7 @@ from api.routers import (
     config,
     daily_review,
     fundamentals,
+    intelligence,
     portfolio,
     screener,
     screener_history,
@@ -293,6 +294,7 @@ app.include_router(universes.router, prefix="/api/universes", tags=["universes"]
 app.include_router(portfolio.router, prefix="/api/portfolio", tags=["portfolio"])
 app.include_router(watchlist.router, prefix="/api/watchlist", tags=["watchlist"])
 app.include_router(fundamentals.router, prefix="/api/fundamentals", tags=["fundamentals"])
+app.include_router(intelligence.router, prefix="/api", tags=["intelligence"])
 app.include_router(daily_review.router, prefix="/api", tags=["daily-review"])
 app.include_router(weekly_reviews.router, prefix="/api/weekly-reviews", tags=["weekly-reviews"])
 
