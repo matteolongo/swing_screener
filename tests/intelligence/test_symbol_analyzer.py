@@ -30,8 +30,11 @@ def test_extract_json_raises_when_missing():
 _FAKE_RESPONSE_JSON = {
     "action": "BUY_NOW",
     "conviction": "high",
+    "catalyst_urgency": "medium",
     "summary_line": "Cyclical recovery with strong EBITDA momentum.",
     "narrative": "## Why it's moving\nAperam Q1 2026 beat on EBITDA.",
+    "upcoming_events": [],
+    "position_signal": None,
     "sources": ["https://aperam.com/q1-2026"],
 }
 
