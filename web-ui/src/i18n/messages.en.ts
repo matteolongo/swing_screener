@@ -564,6 +564,7 @@ export const messagesEn = {
           overview: 'Overview',
           order: 'Order',
           fundamentals: 'Fundamentals',
+          intelligence: 'Intelligence',
         },
         fundamentals: {
           descriptionHasSnapshot: 'Refresh the cached fundamentals snapshot for this symbol.',
@@ -582,6 +583,13 @@ export const messagesEn = {
           runAction: 'Compute analysis',
           runningAction: 'Computing...',
           runError: 'Failed to compute analysis',
+        },
+        intelligence: {
+          analyzeAction: 'Analyze with AI',
+          analyzingAction: 'Analyzing...',
+          emptyState: 'Click "Analyze with AI" to generate a web-search-grounded analysis for this symbol.',
+          sources: 'Sources',
+          analyzeError: 'Failed to generate analysis',
         },
         decisionSummary: {
           title: '{{ticker}} Decision Summary',

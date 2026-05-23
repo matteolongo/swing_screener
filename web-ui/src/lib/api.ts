@@ -67,6 +67,7 @@ export const API_ENDPOINTS = {
   intelligenceMetrics: '/api/intelligence/metrics',
   intelligenceEducationGenerate: '/api/intelligence/education/generate',
   intelligenceEducationBySymbol: (symbol: string) => `/api/intelligence/education/${encodeURIComponent(symbol)}`,
+  intelligenceAnalyze: (ticker: string) => `/api/intelligence/${encodeURIComponent(ticker)}`,
 
   // Fundamentals
   fundamentalsConfig: '/api/fundamentals/config',
