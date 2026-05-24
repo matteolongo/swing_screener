@@ -79,17 +79,17 @@ def test_catalyst_opportunity_active_states():
 def test_catalyst_opportunity_quiet_maps_to_weak():
     """QUIET state should be accepted as a valid enum value."""
     opp = CatalystOpportunity(
-        ticker="MSFT", state=CatalystOpportunityState.QUIET, catalyst_strength=0.3,
+        ticker="MSFT", state=CatalystOpportunityState.QUIET, catalyst_strength=2.0,
         thesis="No catalyst.", sources=[], report_id="r1",
         generated_at="2026-05-24T10:00:00Z",
     )
     assert opp.state == CatalystOpportunityState.QUIET
-    # Verify the existing _catalyst_label maps QUIET → "weak"
     from swing_screener.recommendation.decision_summary import _catalyst_label  # type: ignore[attr-defined]
     label = _catalyst_label(opp)
     assert label == "weak"
 
 
-def test_company_catalyst_requires_evidence_list():
+def test_company_catalyst_evidence_stored_correctly():
     c = _company()
-    assert len(c.evidence) >= 1
+    assert len(c.evidence) == 1
+    assert c.evidence[0].url == "https://example.com/1"

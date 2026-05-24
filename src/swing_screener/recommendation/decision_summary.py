@@ -542,9 +542,9 @@ def _catalyst_label(opportunity: Any | None) -> CatalystLabel:
         return "weak"
     state = str(_get_value(opportunity, "state", "")).strip().upper()
     strength = _safe_float(_get_value(opportunity, "catalyst_strength"))
-    if state in {"CATALYST_ACTIVE", "TRENDING"} or (strength is not None and strength >= 0.67):
+    if state in {"CATALYST_ACTIVE", "TRENDING"} or (strength is not None and strength >= 6.7):
         return "active"
-    if state in {"WATCH", "COOLING_OFF"} or (strength is not None and strength >= 0.4):
+    if state in {"WATCH", "COOLING_OFF"} or (strength is not None and strength >= 4.0):
         return "neutral"
     return "weak"
 
