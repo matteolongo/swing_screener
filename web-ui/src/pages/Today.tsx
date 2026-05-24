@@ -6,6 +6,7 @@ import ClosePositionModalForm from '@/components/domain/positions/ClosePositionM
 import UpdateStopModalForm from '@/components/domain/positions/UpdateStopModalForm';
 import WatchMetaInline from '@/components/domain/watchlist/WatchMetaInline';
 import TodayPriorityCard from '@/components/domain/today/TodayPriorityCard';
+import Button from '@/components/common/Button';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useDailyReview } from '@/features/dailyReview/api';
 import { filterDailyReviewCandidates } from '@/features/dailyReview/prioritization';
@@ -17,6 +18,8 @@ import { useOrders, usePositions, useUpdateStopMutation, useClosePositionMutatio
 import type { ClosePositionRequest, Position, UpdateStopRequest } from '@/features/portfolio/types';
 import { pickTodayPriority } from '@/features/dailyReview/beginnerPriority';
 import { toBeginnerDecisionFromDailyCandidate } from '@/features/screener/beginnerDecision';
+import { useIntelligenceSweepMutation } from '@/features/intelligence/hooks';
+import type { SweepSymbolPayload } from '@/features/intelligence/types';
 import { useNavigate } from 'react-router-dom';
 import { useLocalStorage } from '@/hooks';
 import { cn } from '@/utils/cn';
@@ -464,6 +467,53 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
   // Mutations (no built-in onSuccess — we use per-call callbacks)
   const updateStopMutation = useUpdateStopMutation();
   const closePositionMutation = useClosePositionMutation();
+  const sweepMutation = useIntelligenceSweepMutation();
+
+  function handleSweep() {
+    if (!review) return;
+    const symbols: SweepSymbolPayload[] = [];
+
+    // Watchlist symbols near trigger (technical context only)
+    for (const item of review.watchlistNearTrigger ?? []) {
+      symbols.push({
+        ticker: item.ticker,
+        request: { close: item.watchPrice ?? 0, signal: 'watchlist' },
+      });
+    }
+
+    // New candidates
+    for (const c of review.newCandidates ?? []) {
+      symbols.push({
+        ticker: c.ticker,
+        request: {
+          close: c.close, signal: c.signal,
+          entry: c.entry, stop: c.stop,
+          sma_20: c.sma20 ?? null, sma_50: c.sma50 ?? null, sma_200: c.sma200 ?? null,
+          momentum_6m: c.momentum6m ?? null, momentum_12m: c.momentum12m ?? null,
+          sector: c.sector ?? null, currency: c.currency ?? 'USD',
+        },
+      });
+    }
+
+    // Positions (with position context)
+    const allPositions = [
+      ...(review.positionsHold ?? []),
+      ...(review.positionsUpdateStop ?? []),
+      ...(review.positionsClose ?? []),
+      ...(review.positionsExitSignal ?? []),
+    ];
+    for (const p of allPositions) {
+      symbols.push({
+        ticker: p.ticker,
+        request: {
+          close: p.currentPrice, signal: 'position',
+          entry_price: p.entryPrice, r_now: p.rNow, days_open: p.daysOpen,
+        },
+      });
+    }
+
+    if (symbols.length > 0) sweepMutation.mutate(symbols);
+  }
 
   const handleUpdateStop = useCallback((position: Position, req: UpdateStopRequest) => {
     updateStopMutation.mutate(
@@ -659,6 +709,31 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
             <option key={value} value={value}>{label}</option>
           ))}
         </select>
+      </div>
+
+      {/* Intelligence Sweep bar */}
+      <div className="flex items-center gap-3 px-3 py-2 border-b border-border shrink-0">
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          disabled={sweepMutation.isPending || !review}
+          onClick={handleSweep}
+        >
+          {sweepMutation.isPending
+            ? t('todayPage.actionList.intelligenceSweepRunning')
+            : t('todayPage.actionList.intelligenceSweep')}
+        </Button>
+        {sweepMutation.isSuccess && (
+          <span className="text-xs text-gray-500">
+            {t('todayPage.actionList.intelligenceSweepDone', {
+              analyzed: String(sweepMutation.data.analyzed.length),
+              failed: sweepMutation.data.failed.length > 0
+                ? t('todayPage.actionList.intelligenceSweepFailed', { n: String(sweepMutation.data.failed.length) })
+                : '',
+            })}
+          </span>
+        )}
       </div>
 
       {/* Action list */}
