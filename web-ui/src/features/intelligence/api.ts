@@ -14,6 +14,9 @@ export interface IntelligenceRequestPayload {
   momentum_12m?: number | null;
   sector?: string | null;
   currency?: string;
+  entry_price?: number | null;
+  r_now?: number | null;
+  days_open?: number | null;
 }
 
 export function candidateToPayload(candidate: SymbolAnalysisCandidate | null | undefined): IntelligenceRequestPayload | null {

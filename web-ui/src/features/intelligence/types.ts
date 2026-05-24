@@ -1,4 +1,5 @@
 import type { DecisionAction, DecisionConviction } from '@/features/screener/types';
+import type { IntelligenceRequestPayload } from '@/features/intelligence/api';
 
 export type { DecisionAction, DecisionConviction };
 
@@ -60,24 +61,11 @@ export function transformIntelligence(api: SymbolIntelligenceAPI): SymbolIntelli
   };
 }
 
+export type { IntelligenceRequestPayload };
+
 export interface SweepSymbolPayload {
   ticker: string;
-  request: {
-    close: number;
-    signal: string;
-    entry?: number | null;
-    stop?: number | null;
-    sma_20?: number | null;
-    sma_50?: number | null;
-    sma_200?: number | null;
-    momentum_6m?: number | null;
-    momentum_12m?: number | null;
-    sector?: string | null;
-    currency?: string;
-    entry_price?: number | null;
-    r_now?: number | null;
-    days_open?: number | null;
-  };
+  request: IntelligenceRequestPayload;
 }
 
 export interface SweepResponseAPI {
