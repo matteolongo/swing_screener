@@ -61,7 +61,13 @@ def test_company_catalyst_strength_out_of_range_fails():
 
 
 def test_catalyst_opportunity_active_states():
-    for state in [CatalystOpportunityState.CATALYST_ACTIVE, CatalystOpportunityState.TRENDING]:
+    for state in [
+        CatalystOpportunityState.CATALYST_ACTIVE,
+        CatalystOpportunityState.TRENDING,
+        CatalystOpportunityState.WATCH,
+        CatalystOpportunityState.COOLING_OFF,
+        CatalystOpportunityState.QUIET,
+    ]:
         opp = CatalystOpportunity(
             ticker="AAPL", state=state, catalyst_strength=8.0,
             thesis="Strong AI demand.", sources=[], report_id="r1",
