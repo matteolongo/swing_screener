@@ -13,6 +13,13 @@ logger = logging.getLogger(__name__)
 class CatalystStore:
     """Persist and retrieve catalyst reports and symbol opportunity index."""
 
+    def _safe_report_filename(self, report_id: str) -> str:
+        """Sanitize report_id for filesystem use; strips directory traversal attempts."""
+        safe = Path(report_id).name  # strips any ../ components
+        if not safe or safe == ".":
+            raise ValueError(f"Invalid report_id for filesystem use: {report_id!r}")
+        return f"{safe}.json"
+
     def _reports_dir(self, for_date: date) -> Path:
         d = data_dir() / "intelligence" / "catalyst_reports" / for_date.isoformat()
         d.mkdir(parents=True, exist_ok=True)
@@ -30,13 +37,17 @@ class CatalystStore:
 
     def save_report(self, report: CatalystReport) -> None:
         today = datetime.now(timezone.utc).date()
-        report_path = self._reports_dir(today) / f"{report.report_id}.json"
+        report_path = self._reports_dir(today) / self._safe_report_filename(report.report_id)
         report_path.write_text(report.model_dump_json(indent=2))
         self._latest_ptr().write_text(json.dumps({"report_id": report.report_id, "date": today.isoformat()}))
 
     def load_report(self, report_id: str, for_date: date | None = None) -> CatalystReport | None:
         search_date = for_date or datetime.now(timezone.utc).date()
-        report_path = self._reports_dir(search_date) / f"{report_id}.json"
+        # Build path without mkdir — we're reading, not writing
+        report_path = (
+            data_dir() / "intelligence" / "catalyst_reports" / search_date.isoformat()
+            / self._safe_report_filename(report_id)
+        )
         if not report_path.exists():
             return None
         try:
