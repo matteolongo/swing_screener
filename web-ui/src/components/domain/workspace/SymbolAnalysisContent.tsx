@@ -1,7 +1,7 @@
 import { useState, useEffect, type ReactNode } from 'react';
 import Button from '@/components/common/Button';
 import IntelligenceCard from '@/components/domain/workspace/IntelligenceCard';
-import { useIntelligenceAnalysisMutation } from '@/features/intelligence/hooks';
+import { useIntelligenceAnalysisMutation, useIntelligenceLatestQuery } from '@/features/intelligence/hooks';
 import type { SymbolIntelligence } from '@/features/intelligence/types';
 import CachedSymbolPriceChart from '@/components/domain/market/CachedSymbolPriceChart';
 import WatchToggleButton from '@/components/domain/watchlist/WatchToggleButton';
@@ -75,6 +75,7 @@ export default function SymbolAnalysisContent({
   });
 
   const intelligenceMutation = useIntelligenceAnalysisMutation();
+  const intelligenceLatest = useIntelligenceLatestQuery(ticker, activeTab === 'intelligence');
   const [intelligenceResult, setIntelligenceResult] = useState<SymbolIntelligence | null>(null);
 
   useEffect(() => {
@@ -219,16 +220,22 @@ export default function SymbolAnalysisContent({
                 onClick={() => {
                   intelligenceMutation.mutate(
                     { ticker, candidate },
-                    {
-                      onSuccess: (result) => setIntelligenceResult(result),
-                    }
+                    { onSuccess: (result) => setIntelligenceResult(result) }
                   );
                 }}
               >
                 {intelligenceMutation.isPending
                   ? t('workspacePage.panels.analysis.intelligence.analyzingAction')
-                  : t('workspacePage.panels.analysis.intelligence.analyzeAction')}
+                  : (intelligenceResult ?? intelligenceLatest.data)
+                    ? t('workspacePage.panels.analysis.intelligence.refreshAction')
+                    : t('workspacePage.panels.analysis.intelligence.analyzeAction')}
               </Button>
+              {(intelligenceResult ?? intelligenceLatest.data) && !intelligenceMutation.isPending && (
+                <span className="text-xs text-gray-400">
+                  {t('workspacePage.panels.analysis.intelligence.lastAnalyzed')}:{' '}
+                  {new Date((intelligenceResult ?? intelligenceLatest.data)!.generatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              )}
             </div>
 
             {intelligenceMutation.isError && (
@@ -239,13 +246,16 @@ export default function SymbolAnalysisContent({
               </p>
             )}
 
-            {intelligenceResult ? (
-              <IntelligenceCard intelligence={intelligenceResult} />
-            ) : !intelligenceMutation.isPending && !intelligenceMutation.isError ? (
-              <p className="text-sm text-gray-500">
-                {t('workspacePage.panels.analysis.intelligence.emptyState')}
-              </p>
-            ) : null}
+            {(() => {
+              const displayed = intelligenceResult ?? intelligenceLatest.data ?? null;
+              if (displayed) return <IntelligenceCard intelligence={displayed} />;
+              if (intelligenceMutation.isPending || intelligenceLatest.isLoading) return null;
+              return (
+                <p className="text-sm text-gray-500">
+                  {t('workspacePage.panels.analysis.intelligence.emptyState')}
+                </p>
+              );
+            })()}
           </div>
         )}
 
