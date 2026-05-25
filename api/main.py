@@ -16,6 +16,7 @@ from swing_screener.runtime_env import ensure_runtime_env_loaded
 
 # Import routers
 from api.routers import (
+    catalysts,
     config,
     daily_review,
     fundamentals,
@@ -295,6 +296,7 @@ app.include_router(portfolio.router, prefix="/api/portfolio", tags=["portfolio"]
 app.include_router(watchlist.router, prefix="/api/watchlist", tags=["watchlist"])
 app.include_router(fundamentals.router, prefix="/api/fundamentals", tags=["fundamentals"])
 app.include_router(intelligence.router, prefix="/api", tags=["intelligence"])
+app.include_router(catalysts.router, prefix="/api", tags=["catalysts"])
 app.include_router(daily_review.router, prefix="/api", tags=["daily-review"])
 app.include_router(weekly_reviews.router, prefix="/api/weekly-reviews", tags=["weekly-reviews"])
 

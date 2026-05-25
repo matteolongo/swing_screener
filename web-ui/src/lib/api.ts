@@ -71,6 +71,12 @@ export const API_ENDPOINTS = {
   intelligenceLatest: (ticker: string) => `/api/intelligence/${encodeURIComponent(ticker)}/latest`,
   intelligenceSweep: '/api/intelligence/sweep',
 
+  // Catalysts
+  catalystsManual: '/api/catalysts/manual',
+  catalystsDailyScan: '/api/catalysts/daily-scan',
+  catalystsLatest: '/api/catalysts/latest',
+  catalystsSymbol: (ticker: string) => `/api/catalysts/symbol/${encodeURIComponent(ticker)}`,
+
   // Fundamentals
   fundamentalsConfig: '/api/fundamentals/config',
   fundamentalsSnapshot: (symbol: string) => `/api/fundamentals/snapshot/${encodeURIComponent(symbol)}`,
