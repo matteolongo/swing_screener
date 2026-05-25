@@ -1,7 +1,9 @@
 import { useState, useEffect, type ReactNode } from 'react';
 import Button from '@/components/common/Button';
 import IntelligenceCard from '@/components/domain/workspace/IntelligenceCard';
+import CatalystContextCard from '@/components/domain/workspace/CatalystContextCard';
 import { useIntelligenceAnalysisMutation, useIntelligenceLatestQuery } from '@/features/intelligence/hooks';
+import { useSymbolCatalystQuery } from '@/features/intelligence/catalysts/hooks';
 import type { SymbolIntelligence } from '@/features/intelligence/types';
 import CachedSymbolPriceChart from '@/components/domain/market/CachedSymbolPriceChart';
 import WatchToggleButton from '@/components/domain/watchlist/WatchToggleButton';
@@ -76,6 +78,7 @@ export default function SymbolAnalysisContent({
 
   const intelligenceMutation = useIntelligenceAnalysisMutation();
   const intelligenceLatest = useIntelligenceLatestQuery(ticker, activeTab === 'intelligence');
+  const catalystQuery = useSymbolCatalystQuery(ticker, activeTab === 'intelligence');
   const [intelligenceResult, setIntelligenceResult] = useState<SymbolIntelligence | null>(null);
 
   useEffect(() => {
@@ -244,6 +247,10 @@ export default function SymbolAnalysisContent({
                   ? intelligenceMutation.error.message
                   : t('workspacePage.panels.analysis.intelligence.analyzeError')}
               </p>
+            )}
+
+            {catalystQuery.data && (
+              <CatalystContextCard opportunity={catalystQuery.data} />
             )}
 
             {(() => {

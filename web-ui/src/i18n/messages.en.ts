@@ -588,6 +588,8 @@ export const messagesEn = {
           analyzeAction: 'Analyze with AI',
           analyzingAction: 'Analyzing...',
           emptyState: 'Click "Analyze with AI" to generate a web-search-grounded analysis for this symbol.',
+          marketCatalyst: 'Market catalyst context',
+          keyRisks: 'Key risks',
           sources: 'Sources',
           analyzeError: 'Failed to generate analysis',
           refreshAction: 'Refresh',
