@@ -94,3 +94,15 @@ def test_corrupt_json_handled_safely(tmp_path, monkeypatch):
     corrupt_path = tmp_path / "intelligence" / "catalyst_reports" / "by_symbol" / "2026-05-24.json"
     corrupt_path.write_text("{bad json}")
     assert store.load_symbol_opportunity("AAPL", date(2026, 5, 24)) is None
+
+
+def test_load_symbol_opportunity_returns_none_for_stale(tmp_path, monkeypatch):
+    """An opportunity older than the stale threshold returns None."""
+    monkeypatch.setenv("SWING_SCREENER_DATA_DIR", str(tmp_path))
+    from datetime import timedelta
+    store = CatalystStore()
+    stale_date = date.today() - timedelta(days=4)
+    store.save_symbol_index(stale_date, [_make_opportunity("AAPL")])
+    # load without specifying a date → uses today → stale entry not returned
+    result = store.load_symbol_opportunity("AAPL")
+    assert result is None  # today's index is empty
