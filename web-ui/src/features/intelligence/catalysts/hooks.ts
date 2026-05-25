@@ -39,6 +39,7 @@ export function useDailyCatalystScanMutation() {
     mutationFn: async () => transformCatalystReport(await postCatalystDailyScan()),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['catalysts', 'latest'] });
+      queryClient.invalidateQueries({ queryKey: ['catalysts', 'symbol'] });
     },
   });
 }

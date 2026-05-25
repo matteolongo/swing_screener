@@ -496,8 +496,8 @@ def _apply_decision_summary_context(
     try:
         from swing_screener.intelligence.catalysts.store import CatalystStore
         catalyst_index = CatalystStore().load_symbol_index()
-    except Exception:
-        pass  # catalyst data is optional — never block the screener
+    except Exception as exc:
+        logger.warning("Failed to load catalyst index: %s", exc)
 
     unique_tickers = {candidate.ticker for candidate in candidates}
     snapshot_cache = {ticker: fundamentals.load_snapshot(ticker) for ticker in unique_tickers}
