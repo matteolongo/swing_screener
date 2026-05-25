@@ -585,7 +585,7 @@ def _conviction(
 
     if opportunity is None:
         score -= 0.25
-    elif str(opportunity.evidence_quality_flag or "").strip().lower() == "low":
+    elif str(_get_value(opportunity, "evidence_quality_flag", "") or "").strip().lower() == "low":
         score -= 0.25
 
     if score >= 4.0:
@@ -816,6 +816,12 @@ def build_decision_summary(
     valuation_label = _valuation_label(candidate, fundamentals)
     valuation_context = _valuation_context(candidate, fundamentals, valuation_label)
     catalyst_label = _catalyst_label(opportunity)
+    catalyst_summary: str | None = None
+    catalyst_sources: list[str] = []
+    if opportunity is not None:
+        catalyst_summary = _get_value(opportunity, "thesis", None)
+        raw_sources = _get_value(opportunity, "sources", [])
+        catalyst_sources = list(raw_sources) if raw_sources else []
     action = _action(
         technical_label=technical_label,
         fundamentals_label=fundamentals_label,
@@ -889,4 +895,6 @@ def build_decision_summary(
             warnings=drivers.warnings,
         ),
         explanation=explanation,
+        catalyst_summary=catalyst_summary,
+        catalyst_sources=catalyst_sources,
     )

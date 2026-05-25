@@ -475,6 +475,14 @@ def _apply_decision_summary_context(
 
     fundamentals = fundamentals_storage or FundamentalsStorage()
 
+    # Load today's catalyst opportunity index once for all candidates
+    catalyst_index: dict = {}
+    try:
+        from swing_screener.intelligence.catalysts.store import CatalystStore
+        catalyst_index = CatalystStore().load_symbol_index()
+    except Exception:
+        pass  # catalyst data is optional — never block the screener
+
     unique_tickers = {candidate.ticker for candidate in candidates}
     snapshot_cache = {ticker: fundamentals.load_snapshot(ticker) for ticker in unique_tickers}
 
@@ -482,17 +490,18 @@ def _apply_decision_summary_context(
     for candidate in candidates:
         fund_snap = snapshot_cache.get(candidate.ticker)
         fund_asof = getattr(fund_snap, "asof_date", None) if fund_snap is not None else None
+        opportunity = catalyst_index.get(candidate.ticker.upper())
         enriched.append(
             candidate.model_copy(
                 update={
                     "decision_summary": build_decision_summary(
                         candidate,
-                        opportunity=None,
+                        opportunity=opportunity,
                         fundamentals=fund_snap,
                     ),
                     "fundamentals_snapshot": fund_snap,
                     "fundamentals_asof": str(fund_asof) if fund_asof else None,
-                    "intelligence_asof": None,
+                    "intelligence_asof": opportunity.generated_at if opportunity else None,
                 }
             )
         )
