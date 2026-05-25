@@ -58,6 +58,7 @@ export interface CatalystReportAPI {
   report_id: string;
   event_summary: string;
   themes: MarketThemeAPI[];
+  // TODO(Task 9): type CausalChainStep and CompanyCatalyst when rendering beneficiaries/losers
   causal_chains: unknown[];
   beneficiaries: unknown[];
   losers: unknown[];

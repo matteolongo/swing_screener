@@ -1435,6 +1435,14 @@ export const handlers = [
     })
   ),
 
+  http.post(`${API_BASE_URL}/api/catalysts/manual`, () =>
+    HttpResponse.json({
+      report_id: 'mock-r1', event_summary: 'Mock manual catalyst.', themes: [],
+      causal_chains: [], beneficiaries: [], losers: [], hidden_opportunities: [],
+      non_actionable_notes: [], generated_at: '2026-05-24T10:00:00Z',
+    })
+  ),
+
   // Fundamentals snapshot mock
   http.get(`${API_BASE_URL}/api/fundamentals/snapshot/:symbol`, ({ params }) => {
     const symbol = String(params.symbol ?? 'AAPL').toUpperCase()
