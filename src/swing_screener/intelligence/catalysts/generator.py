@@ -65,6 +65,7 @@ class CatalystReportGenerator:
         response = self._client.responses.create(
             model=_MODEL,
             tools=[{"type": "web_search_preview"}],
+            instructions=SYSTEM_PROMPT,
             input=[{"role": "user", "content": user_prompt}],
         )
         raw = _extract_json(response.output_text)
@@ -84,7 +85,6 @@ class CatalystReportGenerator:
         return self._generate(WEB_SEARCH_USER_PROMPT)
 
     def _persist(self, report: CatalystReport) -> None:
-        from datetime import datetime, timezone
         try:
             self._store.save_report(report)
             opportunities = _opportunities_from_report(report)

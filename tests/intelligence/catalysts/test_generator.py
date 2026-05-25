@@ -39,6 +39,10 @@ def test_generate_from_url_returns_valid_report(tmp_path, monkeypatch):
     assert isinstance(report, CatalystReport)
     assert report.event_summary == "US steel tariffs at 25%."
     assert len(report.beneficiaries) == 1
+    # Verify system prompt is always passed
+    call_kwargs = client.responses.create.call_args.kwargs
+    from swing_screener.intelligence.catalysts.prompts import SYSTEM_PROMPT
+    assert call_kwargs.get("instructions") == SYSTEM_PROMPT
 
 
 def test_generate_from_url_writes_to_store(tmp_path, monkeypatch):
