@@ -161,34 +161,70 @@ interface CandidateItemProps {
 }
 
 function CandidateItem({ item, isAddOn, onClick, isFocused }: CandidateItemProps) {
+  const showCatalyst =
+    !isAddOn &&
+    item.decisionSummary?.catalystLabel === 'active' &&
+    !!item.decisionSummary.catalystSummary;
+
   return (
-    <button
-      type="button"
-      onClick={() => onClick(item.ticker)}
-      className={cn(
-        'w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-l-2 border-blue-500',
-        isFocused && 'ring-1 ring-primary',
-      )}
-    >
-      <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 min-w-[60px]">
-        {item.ticker}
-      </span>
-      {isAddOn ? (
-        <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
-          {t('todayPage.actionList.addOn')}
+    <div>
+      <button
+        type="button"
+        onClick={() => onClick(item.ticker)}
+        className={cn(
+          'w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-l-2 border-blue-500',
+          isFocused && 'ring-1 ring-primary',
+        )}
+      >
+        <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 min-w-[60px]">
+          {item.ticker}
         </span>
-      ) : (
-        <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-          {item.decisionSummary?.action ?? item.signal}
+        {isAddOn ? (
+          <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
+            {t('todayPage.actionList.addOn')}
+          </span>
+        ) : (
+          <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+            {item.decisionSummary?.action ?? item.signal}
+          </span>
+        )}
+        <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">
+          r/r: {formatNumber(item.rReward, 2)}R
         </span>
+        {item.name && (
+          <span className="text-xs text-gray-400 dark:text-gray-500 truncate flex-1">{item.name}</span>
+        )}
+      </button>
+      {showCatalyst && (
+        <div className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm">
+          <p className="font-semibold text-emerald-800 text-xs uppercase tracking-wide mb-1">
+            {t('todayPage.candidateCard.catalystContext')}
+          </p>
+          <p className="text-emerald-900">{item.decisionSummary!.catalystSummary}</p>
+          {item.decisionSummary!.catalystSources.length > 0 && (
+            <details className="mt-1">
+              <summary className="text-xs text-emerald-700 cursor-pointer select-none">
+                {t('todayPage.candidateCard.catalystSources')} ({item.decisionSummary!.catalystSources.length})
+              </summary>
+              <ul className="mt-1 space-y-0.5">
+                {item.decisionSummary!.catalystSources.map((url) => (
+                  <li key={url}>
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-emerald-700 hover:underline break-all"
+                    >
+                      {url}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
+        </div>
       )}
-      <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">
-        r/r: {formatNumber(item.rReward, 2)}R
-      </span>
-      {item.name && (
-        <span className="text-xs text-gray-400 dark:text-gray-500 truncate flex-1">{item.name}</span>
-      )}
-    </button>
+    </div>
   );
 }
 

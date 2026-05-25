@@ -138,6 +138,8 @@ function makeCandidate(ticker: string, action: DecisionAction = 'BUY_NOW'): Scre
         negatives: [],
         warnings: [],
       },
+      catalystSummary: null,
+      catalystSources: [],
     },
   };
 }

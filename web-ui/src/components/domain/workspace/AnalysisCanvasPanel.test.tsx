@@ -197,6 +197,8 @@ describe('AnalysisCanvasPanel', () => {
                 negatives: [],
                 warnings: ['No cached catalyst snapshot is available yet.'],
               },
+              catalystSummary: null,
+              catalystSources: [],
             },
           },
         ],

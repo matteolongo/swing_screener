@@ -94,6 +94,8 @@ function makeCandidate(
                     confidenceNotes: [],
                   }
                 : undefined,
+            catalystSummary: null,
+            catalystSources: [],
           }
         : undefined,
   };

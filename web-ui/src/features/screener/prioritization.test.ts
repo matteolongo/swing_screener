@@ -58,6 +58,8 @@ function buildCandidate(
       tradePlan: {},
       valuationContext: { method: 'not_available' },
       drivers: { positives: [], negatives: [], warnings: [] },
+      catalystSummary: null,
+      catalystSources: [],
     },
   };
 }

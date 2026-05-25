@@ -89,6 +89,8 @@ export interface DecisionSummary {
   valuationContext: DecisionValuationContext;
   drivers: DecisionDrivers;
   explanation?: ExplanationContract;
+  catalystSummary: string | null;
+  catalystSources: string[];
 }
 
 export interface ScreenerCandidate {
@@ -193,6 +195,8 @@ export interface DecisionSummaryAPI {
   valuation_context: DecisionValuationContextAPI;
   drivers: DecisionDriversAPI;
   explanation?: ExplanationContractAPI | null;
+  catalyst_summary?: string | null;
+  catalyst_sources?: string[];
 }
 
 // API response format (snake_case)
@@ -404,6 +408,8 @@ function transformDecisionSummary(apiSummary: DecisionSummaryAPI): DecisionSumma
           confidenceNotes: apiSummary.explanation.confidence_notes,
         }
       : undefined,
+    catalystSummary: apiSummary.catalyst_summary ?? null,
+    catalystSources: apiSummary.catalyst_sources ?? [],
   };
 }
 

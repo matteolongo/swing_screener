@@ -631,6 +631,8 @@ export function rebuildDecisionSummaryWithFundamentals(
     },
     valuationContext,
     drivers,
+    catalystSummary: candidate.decisionSummary?.catalystSummary ?? null,
+    catalystSources: candidate.decisionSummary?.catalystSources ?? [],
   };
 }
 

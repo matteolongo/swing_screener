@@ -2082,6 +2082,10 @@ export const messagesEn = {
       },
       risk: 'Risk to check',
     },
+    candidateCard: {
+      catalystContext: 'Market catalyst context',
+      catalystSources: 'Sources',
+    },
     actionList: {
       watchlistNearTrigger: 'Watchlist Near Trigger',
       requiresAction: 'Requires Action',
