@@ -762,7 +762,7 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
         {catalystScanMutation.isError && (
           <span className="text-xs text-rose-600">{t('todayPage.actionList.catalystScanError')}</span>
         )}
-        {!catalystScanMutation.isPending && !catalystScanMutation.isSuccess && latestCatalystQuery.data && (
+        {!catalystScanMutation.isPending && !catalystScanMutation.isSuccess && !catalystScanMutation.isError && latestCatalystQuery.data && (
           <span className="text-xs text-gray-400">
             {t('todayPage.actionList.catalystScanLastRun')}:{' '}
             {new Date(latestCatalystQuery.data.generatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

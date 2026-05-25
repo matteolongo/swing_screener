@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   getCatalystsLatest,
   getCatalystSymbol,
@@ -34,7 +34,11 @@ export function useManualCatalystReportMutation() {
 }
 
 export function useDailyCatalystScanMutation() {
+  const queryClient = useQueryClient();
   return useMutation<CatalystReport, Error, void>({
     mutationFn: async () => transformCatalystReport(await postCatalystDailyScan()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['catalysts', 'latest'] });
+    },
   });
 }

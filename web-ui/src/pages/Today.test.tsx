@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { screen, within, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/test/mocks/server';
 import { renderWithProviders } from '@/test/utils';
@@ -261,6 +262,34 @@ describe('Today page — pending orders badge', () => {
     renderWithProviders(<Today />);
     expect(await screen.findByText(new RegExp(t('watchlist.pipeline.dailyReviewTitle'), 'i'))).toBeInTheDocument();
     expect(screen.getByText('ASML')).toBeInTheDocument();
+  });
+});
+
+// ── Catalyst scan button ───────────────────────────────────────────────────────
+
+describe('Today page — catalyst scan button', () => {
+  it('shows catalyst scan button', async () => {
+    renderWithProviders(<Today />);
+    expect(
+      await screen.findByRole('button', { name: t('todayPage.actionList.catalystScan') })
+    ).toBeInTheDocument();
+  });
+
+  it('catalyst scan button calls daily-scan endpoint on click', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<Today />);
+
+    const scanButton = await screen.findByRole('button', {
+      name: t('todayPage.actionList.catalystScan'),
+    });
+    await user.click(scanButton);
+
+    // MSW handler returns success; the done message should appear
+    expect(
+      await screen.findByText(
+        t('todayPage.actionList.catalystScanDone', { count: '0' })
+      )
+    ).toBeInTheDocument();
   });
 });
 
