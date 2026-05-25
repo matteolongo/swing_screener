@@ -2108,6 +2108,11 @@ export const messagesEn = {
       intelligenceSweepRunning: 'Running sweep...',
       intelligenceSweepDone: 'Sweep complete — {{analyzed}} analyzed{{failed}}',
       intelligenceSweepFailed: ', {{n}} failed',
+      catalystScan: 'Run market catalyst scan',
+      catalystScanRunning: 'Scanning...',
+      catalystScanDone: 'Catalyst scan complete — {{count}} themes found',
+      catalystScanError: 'Catalyst scan failed',
+      catalystScanLastRun: 'Last run',
     },
     keyboard: {
       hint: 'j/k navigate · Enter select',

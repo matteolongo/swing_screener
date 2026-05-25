@@ -19,6 +19,7 @@ import type { ClosePositionRequest, Position, UpdateStopRequest } from '@/featur
 import { pickTodayPriority } from '@/features/dailyReview/beginnerPriority';
 import { toBeginnerDecisionFromDailyCandidate } from '@/features/screener/beginnerDecision';
 import { useIntelligenceSweepMutation } from '@/features/intelligence/hooks';
+import { useDailyCatalystScanMutation, useLatestCatalystReportQuery } from '@/features/intelligence/catalysts/hooks';
 import type { SweepSymbolPayload } from '@/features/intelligence/types';
 import { useNavigate } from 'react-router-dom';
 import { useLocalStorage } from '@/hooks';
@@ -468,6 +469,8 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
   const updateStopMutation = useUpdateStopMutation();
   const closePositionMutation = useClosePositionMutation();
   const sweepMutation = useIntelligenceSweepMutation();
+  const catalystScanMutation = useDailyCatalystScanMutation();
+  const latestCatalystQuery = useLatestCatalystReportQuery();
 
   function handleSweep() {
     if (!review) return;
@@ -732,6 +735,37 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
                 ? t('todayPage.actionList.intelligenceSweepFailed', { n: String(sweepMutation.data.failed.length) })
                 : '',
             })}
+          </span>
+        )}
+      </div>
+
+      {/* Catalyst Scan bar */}
+      <div className="flex items-center gap-3 px-3 py-2 border-b border-border shrink-0">
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          disabled={catalystScanMutation.isPending}
+          onClick={() => catalystScanMutation.mutate()}
+        >
+          {catalystScanMutation.isPending
+            ? t('todayPage.actionList.catalystScanRunning')
+            : t('todayPage.actionList.catalystScan')}
+        </Button>
+        {catalystScanMutation.isSuccess && (
+          <span className="text-xs text-gray-500">
+            {t('todayPage.actionList.catalystScanDone', {
+              count: String(catalystScanMutation.data.themes.length),
+            })}
+          </span>
+        )}
+        {catalystScanMutation.isError && (
+          <span className="text-xs text-rose-600">{t('todayPage.actionList.catalystScanError')}</span>
+        )}
+        {!catalystScanMutation.isPending && !catalystScanMutation.isSuccess && latestCatalystQuery.data && (
+          <span className="text-xs text-gray-400">
+            {t('todayPage.actionList.catalystScanLastRun')}:{' '}
+            {new Date(latestCatalystQuery.data.generatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </span>
         )}
       </div>
