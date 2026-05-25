@@ -287,7 +287,7 @@ describe('Today page — catalyst scan button', () => {
     // MSW handler returns success; the done message should appear
     expect(
       await screen.findByText(
-        t('todayPage.actionList.catalystScanDone', { count: '0' })
+        t('todayPage.actionList.catalystScanDone', { count: '2' })
       )
     ).toBeInTheDocument();
   });

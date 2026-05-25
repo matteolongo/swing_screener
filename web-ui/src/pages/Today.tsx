@@ -760,7 +760,12 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
           </span>
         )}
         {catalystScanMutation.isError && (
-          <span className="text-xs text-rose-600">{t('todayPage.actionList.catalystScanError')}</span>
+          <span className="text-xs text-rose-600">
+            {t('todayPage.actionList.catalystScanError')}
+            {catalystScanMutation.error instanceof Error && catalystScanMutation.error.message
+              ? `: ${catalystScanMutation.error.message}`
+              : null}
+          </span>
         )}
         {!catalystScanMutation.isPending && !catalystScanMutation.isSuccess && !catalystScanMutation.isError && latestCatalystQuery.data && (
           <span className="text-xs text-gray-400">

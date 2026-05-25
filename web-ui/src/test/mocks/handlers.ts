@@ -1414,7 +1414,10 @@ export const handlers = [
   // Catalyst endpoints
   http.post(`${API_BASE_URL}/api/catalysts/daily-scan`, () =>
     HttpResponse.json({
-      report_id: 'mock-r1', event_summary: 'Mock catalyst.', themes: [],
+      report_id: 'mock-r1', event_summary: 'Mock catalyst.', themes: [
+        { name: 'Theme A', summary: 'Summary A', time_horizon: 'short_term', confidence: 0.8 },
+        { name: 'Theme B', summary: 'Summary B', time_horizon: 'medium_term', confidence: 0.6 },
+      ],
       causal_chains: [], beneficiaries: [], losers: [], hidden_opportunities: [],
       non_actionable_notes: [], generated_at: '2026-05-24T10:00:00Z',
     })
