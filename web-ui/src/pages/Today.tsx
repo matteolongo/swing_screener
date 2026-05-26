@@ -6,10 +6,8 @@ import ClosePositionModalForm from '@/components/domain/positions/ClosePositionM
 import UpdateStopModalForm from '@/components/domain/positions/UpdateStopModalForm';
 import WatchMetaInline from '@/components/domain/watchlist/WatchMetaInline';
 import TodayPriorityCard from '@/components/domain/today/TodayPriorityCard';
-import Button from '@/components/common/Button';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useDailyReview } from '@/features/dailyReview/api';
-import { filterDailyReviewCandidates } from '@/features/dailyReview/prioritization';
 import {
   parseUniverseFromStorage,
   SCREENER_UNIVERSE_STORAGE_KEY,
@@ -18,11 +16,7 @@ import { useOrders, usePositions, useUpdateStopMutation, useClosePositionMutatio
 import type { ClosePositionRequest, Position, UpdateStopRequest } from '@/features/portfolio/types';
 import { pickTodayPriority } from '@/features/dailyReview/beginnerPriority';
 import { toBeginnerDecisionFromDailyCandidate } from '@/features/screener/beginnerDecision';
-import { useIntelligenceSweepMutation } from '@/features/intelligence/hooks';
-import { useDailyCatalystScanMutation, useLatestCatalystReportQuery } from '@/features/intelligence/catalysts/hooks';
-import type { SweepSymbolPayload } from '@/features/intelligence/types';
 import { useNavigate } from 'react-router-dom';
-import { useLocalStorage } from '@/hooks';
 import { cn } from '@/utils/cn';
 import { t } from '@/i18n/t';
 import { formatNumber } from '@/utils/formatters';
@@ -490,10 +484,6 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
     [openPositionsQuery.data],
   );
 
-  // Filter state (persisted)
-  const [recommendedOnly, setRecommendedOnly] = useLocalStorage('today.recommendedOnly', false);
-  const [actionFilter, setActionFilter] = useLocalStorage<string>('today.actionFilter', 'all');
-
   // Done state after executing actions
   const [doneIds, setDoneIds] = useState<Set<string>>(() => new Set());
 
@@ -504,55 +494,6 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
   // Mutations (no built-in onSuccess — we use per-call callbacks)
   const updateStopMutation = useUpdateStopMutation();
   const closePositionMutation = useClosePositionMutation();
-  const sweepMutation = useIntelligenceSweepMutation();
-  const catalystScanMutation = useDailyCatalystScanMutation();
-  const latestCatalystQuery = useLatestCatalystReportQuery();
-
-  function handleSweep() {
-    if (!review) return;
-    const symbols: SweepSymbolPayload[] = [];
-
-    // Watchlist symbols near trigger (technical context only)
-    for (const item of review.watchlistNearTrigger ?? []) {
-      symbols.push({
-        ticker: item.ticker,
-        request: { close: item.watchPrice ?? 0, signal: 'watchlist' },
-      });
-    }
-
-    // New candidates
-    for (const c of review.newCandidates ?? []) {
-      symbols.push({
-        ticker: c.ticker,
-        request: {
-          close: c.close, signal: c.signal,
-          entry: c.entry, stop: c.stop,
-          sma_20: c.sma20 ?? null, sma_50: c.sma50 ?? null, sma_200: c.sma200 ?? null,
-          momentum_6m: c.momentum6m ?? null, momentum_12m: c.momentum12m ?? null,
-          sector: c.sector ?? null, currency: c.currency ?? 'USD',
-        },
-      });
-    }
-
-    // Positions (with position context)
-    const allPositions = [
-      ...(review.positionsHold ?? []),
-      ...(review.positionsUpdateStop ?? []),
-      ...(review.positionsClose ?? []),
-      ...(review.positionsExitSignal ?? []),
-    ];
-    for (const p of allPositions) {
-      symbols.push({
-        ticker: p.ticker,
-        request: {
-          close: p.currentPrice, signal: 'position',
-          entry_price: p.entryPrice, r_now: p.rNow, days_open: p.daysOpen,
-        },
-      });
-    }
-
-    if (symbols.length > 0) sweepMutation.mutate(symbols);
-  }
 
   const handleUpdateStop = useCallback((position: Position, req: UpdateStopRequest) => {
     updateStopMutation.mutate(
@@ -583,25 +524,6 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
   // Keyboard navigation
   const [focusedIndex, setFocusedIndex] = useState(-1);
 
-  // Apply filters to candidates
-  const filteredCandidates = useMemo(
-    () =>
-      filterDailyReviewCandidates(review?.newCandidates ?? [], {
-        recommendedOnly,
-        actionFilter: actionFilter as Parameters<typeof filterDailyReviewCandidates>[1]['actionFilter'],
-      }),
-    [review?.newCandidates, recommendedOnly, actionFilter],
-  );
-
-  const filteredAddOns = useMemo(
-    () =>
-      filterDailyReviewCandidates(review?.positionsAddOnCandidates ?? [], {
-        recommendedOnly,
-        actionFilter: actionFilter as Parameters<typeof filterDailyReviewCandidates>[1]['actionFilter'],
-      }),
-    [review?.positionsAddOnCandidates, recommendedOnly, actionFilter],
-  );
-
   // Flat ordered list for keyboard navigation
   const flatItems = useMemo(
     () => [
@@ -610,11 +532,11 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
       ...(review?.positionsUpdateStop.map((i) => ({ ticker: i.ticker, id: i.positionId })) ?? []),
       ...(review?.positionsExitSignal.map((i) => ({ ticker: i.ticker, id: i.positionId })) ?? []),
       ...(review?.pendingOrdersReview?.map((i) => ({ ticker: i.ticker, id: `pending-${i.orderId}` })) ?? []),
-      ...filteredCandidates.map((i) => ({ ticker: i.ticker, id: i.ticker })),
-      ...filteredAddOns.map((i) => ({ ticker: i.ticker, id: i.ticker + '-addon' })),
+      ...(review?.newCandidates.map((i) => ({ ticker: i.ticker, id: i.ticker })) ?? []),
+      ...(review?.positionsAddOnCandidates.map((i) => ({ ticker: i.ticker, id: i.ticker + '-addon' })) ?? []),
       ...(review?.positionsHold.map((i) => ({ ticker: i.ticker, id: i.positionId })) ?? []),
     ],
-    [review, filteredCandidates, filteredAddOns],
+    [review],
   );
 
   // Syncs focusedIndex when the user clicks an item so the next j/k press
@@ -654,7 +576,7 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
     (review?.positionsClose.length ?? 0) + (review?.positionsUpdateStop.length ?? 0);
   const exitSignalCount = review?.positionsExitSignal.length ?? 0;
   const watchlistNearTriggerCount = review?.watchlistNearTrigger.length ?? 0;
-  const opportunitiesCount = filteredCandidates.length + filteredAddOns.length;
+  const opportunitiesCount = (review?.newCandidates.length ?? 0) + (review?.positionsAddOnCandidates.length ?? 0);
   const holdCount = review?.positionsHold.length ?? 0;
 
   if (isLoading) {
@@ -718,98 +640,6 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
           )}
         </div>
       )}
-
-      {/* Filter bar */}
-      <div className="flex items-center gap-3 px-3 py-2 border-b border-border shrink-0">
-        <label className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={recommendedOnly}
-            onChange={(e) => setRecommendedOnly(e.target.checked)}
-            className="rounded"
-          />
-          {t('dailyReview.filter.recommendedOnly')}
-        </label>
-        <select
-          value={actionFilter}
-          onChange={(e) => setActionFilter(e.target.value)}
-          className="text-xs border border-border rounded px-1.5 py-1 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
-        >
-          {([
-            ['all',               t('dailyReview.filter.all')],
-            ['BUY_NOW',          t('screener.guidedList.action.BUY_NOW')],
-            ['BUY_ON_PULLBACK',  t('screener.guidedList.action.BUY_ON_PULLBACK')],
-            ['WAIT_FOR_BREAKOUT',t('screener.guidedList.action.WAIT_FOR_BREAKOUT')],
-            ['WATCH',            t('screener.guidedList.action.WATCH')],
-            ['TACTICAL_ONLY',    t('screener.guidedList.action.TACTICAL_ONLY')],
-            ['AVOID',            t('screener.guidedList.action.AVOID')],
-            ['MANAGE_ONLY',      t('screener.guidedList.action.MANAGE_ONLY')],
-          ] as [string, string][]).map(([value, label]) => (
-            <option key={value} value={value}>{label}</option>
-          ))}
-        </select>
-      </div>
-
-      {/* Intelligence Sweep bar */}
-      <div className="flex items-center gap-3 px-3 py-2 border-b border-border shrink-0">
-        <Button
-          type="button"
-          size="sm"
-          variant="secondary"
-          disabled={sweepMutation.isPending || !review}
-          onClick={handleSweep}
-        >
-          {sweepMutation.isPending
-            ? t('todayPage.actionList.intelligenceSweepRunning')
-            : t('todayPage.actionList.intelligenceSweep')}
-        </Button>
-        {sweepMutation.isSuccess && (
-          <span className="text-xs text-gray-500">
-            {t('todayPage.actionList.intelligenceSweepDone', {
-              analyzed: String(sweepMutation.data.analyzed.length),
-              failed: sweepMutation.data.failed.length > 0
-                ? t('todayPage.actionList.intelligenceSweepFailed', { n: String(sweepMutation.data.failed.length) })
-                : '',
-            })}
-          </span>
-        )}
-      </div>
-
-      {/* Catalyst Scan bar */}
-      <div className="flex items-center gap-3 px-3 py-2 border-b border-border shrink-0">
-        <Button
-          type="button"
-          size="sm"
-          variant="secondary"
-          disabled={catalystScanMutation.isPending}
-          onClick={() => catalystScanMutation.mutate()}
-        >
-          {catalystScanMutation.isPending
-            ? t('todayPage.actionList.catalystScanRunning')
-            : t('todayPage.actionList.catalystScan')}
-        </Button>
-        {catalystScanMutation.isSuccess && (
-          <span className="text-xs text-gray-500">
-            {t('todayPage.actionList.catalystScanDone', {
-              count: String(catalystScanMutation.data.themes.length),
-            })}
-          </span>
-        )}
-        {catalystScanMutation.isError && (
-          <span className="text-xs text-rose-600">
-            {t('todayPage.actionList.catalystScanError')}
-            {catalystScanMutation.error instanceof Error && catalystScanMutation.error.message
-              ? `: ${catalystScanMutation.error.message}`
-              : null}
-          </span>
-        )}
-        {!catalystScanMutation.isPending && !catalystScanMutation.isSuccess && !catalystScanMutation.isError && latestCatalystQuery.data && (
-          <span className="text-xs text-gray-400">
-            {t('todayPage.actionList.catalystScanLastRun')}:{' '}
-            {new Date(latestCatalystQuery.data.generatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </span>
-        )}
-      </div>
 
       {/* Action list */}
       <div className="flex-1 overflow-y-auto px-2 py-2 space-y-3">
@@ -934,7 +764,7 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
               {t('todayPage.actionList.opportunities')} · {opportunitiesCount}
             </div>
             <div className="space-y-0.5">
-              {filteredCandidates.map((item) => {
+              {review?.newCandidates.map((item) => {
                 const idx = flatItems.findIndex((fi) => fi.id === item.ticker);
                 return (
                   <CandidateItem
@@ -945,7 +775,7 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
                   />
                 );
               })}
-              {filteredAddOns.map((item) => {
+              {review?.positionsAddOnCandidates.map((item) => {
                 const idx = flatItems.findIndex((fi) => fi.id === item.ticker + '-addon');
                 return (
                   <CandidateItem
@@ -988,11 +818,6 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
             )}
           </div>
         )}
-      </div>
-
-      {/* Keyboard hint */}
-      <div className="px-3 py-1.5 border-t border-border shrink-0">
-        <p className="text-[10px] text-gray-400 dark:text-gray-600">{t('todayPage.keyboard.hint')}</p>
       </div>
 
       {/* Modals */}

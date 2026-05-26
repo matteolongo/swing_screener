@@ -8,6 +8,7 @@ import {
   useSetActiveStrategyMutation,
   useStrategiesQuery,
 } from '@/features/strategy/hooks';
+import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 
 interface HeaderProps {
   isSidebarCollapsed?: boolean;
@@ -22,6 +23,7 @@ export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: 
   const activeStrategyQuery = useActiveStrategyQuery();
   const portfolioSummaryQuery = usePortfolioSummary();
   const setActiveMutation = useSetActiveStrategyMutation();
+  const isBeginnerMode = useBeginnerModeStore((state) => state.isBeginnerMode);
   const strategies = strategiesQuery.data ?? [];
   const activeId = activeStrategyQuery.data?.id ?? '';
   const isLoading = strategiesQuery.isLoading || activeStrategyQuery.isLoading;
@@ -78,17 +80,19 @@ export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: 
       </div>
 
       <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 shrink-0">
-        <div className="hidden xl:block">
-          <StrategyCapitalRiskSummary
-            strategy={activeStrategyQuery.data}
-            equitySnapshot={portfolioSummaryQuery.data ? {
-              effectiveAccountSize: portfolioSummaryQuery.data.effectiveAccountSize,
-              realizedPnl: portfolioSummaryQuery.data.realizedPnl,
-            } : undefined}
-            variant="compact"
-            className="max-w-[42rem]"
-          />
-        </div>
+        {!isBeginnerMode && (
+          <div className="hidden xl:block">
+            <StrategyCapitalRiskSummary
+              strategy={activeStrategyQuery.data}
+              equitySnapshot={portfolioSummaryQuery.data ? {
+                effectiveAccountSize: portfolioSummaryQuery.data.effectiveAccountSize,
+                realizedPnl: portfolioSummaryQuery.data.realizedPnl,
+              } : undefined}
+              variant="compact"
+              className="max-w-[42rem]"
+            />
+          </div>
+        )}
         <span className="hidden md:block">{dateStr}</span>
         <span className="font-mono">{timeStr}</span>
       </div>
