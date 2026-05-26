@@ -594,6 +594,7 @@ export const messagesEn = {
           analyzeError: 'Failed to generate analysis',
           refreshAction: 'Refresh',
           lastAnalyzed: 'Last analyzed',
+          signalsDetail: 'Signal details',
           catalystUrgency: {
             high: 'High urgency',
             medium: 'Medium urgency',
