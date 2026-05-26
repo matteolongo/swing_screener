@@ -72,3 +72,5 @@ class DecisionSummary(BaseModel):
     valuation_context: DecisionValuationContext = Field(default_factory=DecisionValuationContext)
     drivers: DecisionDrivers = Field(default_factory=DecisionDrivers)
     explanation: ExplanationContract | None = None
+    catalyst_summary: str | None = None
+    catalyst_sources: list[str] = Field(default_factory=list)

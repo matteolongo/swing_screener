@@ -68,6 +68,14 @@ export const API_ENDPOINTS = {
   intelligenceEducationGenerate: '/api/intelligence/education/generate',
   intelligenceEducationBySymbol: (symbol: string) => `/api/intelligence/education/${encodeURIComponent(symbol)}`,
   intelligenceAnalyze: (ticker: string) => `/api/intelligence/${encodeURIComponent(ticker)}`,
+  intelligenceLatest: (ticker: string) => `/api/intelligence/${encodeURIComponent(ticker)}/latest`,
+  intelligenceSweep: '/api/intelligence/sweep',
+
+  // Catalysts
+  catalystsManual: '/api/catalysts/manual',
+  catalystsDailyScan: '/api/catalysts/daily-scan',
+  catalystsLatest: '/api/catalysts/latest',
+  catalystsSymbol: (ticker: string) => `/api/catalysts/symbol/${encodeURIComponent(ticker)}`,
 
   // Fundamentals
   fundamentalsConfig: '/api/fundamentals/config',

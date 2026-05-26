@@ -542,9 +542,9 @@ def _catalyst_label(opportunity: Any | None) -> CatalystLabel:
         return "weak"
     state = str(_get_value(opportunity, "state", "")).strip().upper()
     strength = _safe_float(_get_value(opportunity, "catalyst_strength"))
-    if state in {"CATALYST_ACTIVE", "TRENDING"} or (strength is not None and strength >= 0.67):
+    if state in {"CATALYST_ACTIVE", "TRENDING"} or (strength is not None and strength >= 6.7):
         return "active"
-    if state in {"WATCH", "COOLING_OFF"} or (strength is not None and strength >= 0.4):
+    if state in {"WATCH", "COOLING_OFF"} or (strength is not None and strength >= 4.0):
         return "neutral"
     return "weak"
 
@@ -585,7 +585,7 @@ def _conviction(
 
     if opportunity is None:
         score -= 0.25
-    elif str(opportunity.evidence_quality_flag or "").strip().lower() == "low":
+    elif str(_get_value(opportunity, "evidence_quality_flag", "") or "").strip().lower() == "low":
         score -= 0.25
 
     if score >= 4.0:
@@ -816,6 +816,12 @@ def build_decision_summary(
     valuation_label = _valuation_label(candidate, fundamentals)
     valuation_context = _valuation_context(candidate, fundamentals, valuation_label)
     catalyst_label = _catalyst_label(opportunity)
+    catalyst_summary: str | None = None
+    catalyst_sources: list[str] = []
+    if opportunity is not None:
+        catalyst_summary = _get_value(opportunity, "thesis", None)
+        raw_sources = _get_value(opportunity, "sources", [])
+        catalyst_sources = list(raw_sources) if raw_sources else []
     action = _action(
         technical_label=technical_label,
         fundamentals_label=fundamentals_label,
@@ -889,4 +895,6 @@ def build_decision_summary(
             warnings=drivers.warnings,
         ),
         explanation=explanation,
+        catalyst_summary=catalyst_summary,
+        catalyst_sources=catalyst_sources,
     )

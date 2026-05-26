@@ -9,8 +9,11 @@ describe('transformIntelligence', () => {
       generated_at: '2026-05-23T10:00:00Z',
       action: 'BUY_NOW',
       conviction: 'high',
+      catalyst_urgency: 'none',
       summary_line: 'Cyclical recovery.',
       narrative: '## Why\n...',
+      upcoming_events: [],
+      position_signal: null,
       sources: ['https://example.com'],
     };
     const result = transformIntelligence(api);
@@ -18,5 +21,47 @@ describe('transformIntelligence', () => {
     expect(result.generatedAt).toBe('2026-05-23T10:00:00Z');
     expect(result.summaryLine).toBe('Cyclical recovery.');
     expect(result.sources).toHaveLength(1);
+  });
+});
+
+describe('transformIntelligence with new fields', () => {
+  it('maps catalyst_urgency, upcoming_events, position_signal', () => {
+    const api: SymbolIntelligenceAPI = {
+      symbol: 'AAPL',
+      generated_at: '2026-05-24T10:00:00Z',
+      action: 'BUY_NOW',
+      conviction: 'high',
+      catalyst_urgency: 'high',
+      summary_line: 'Strong.',
+      narrative: 'Text.',
+      upcoming_events: [
+        { type: 'earnings', date: '2026-05-28', direction: 'bullish', summary: 'Q2 beat expected.' }
+      ],
+      position_signal: { action: 'HOLD', reason: 'Thesis intact.' },
+      sources: [],
+    };
+    const result = transformIntelligence(api);
+    expect(result.catalystUrgency).toBe('high');
+    expect(result.upcomingEvents).toHaveLength(1);
+    expect(result.upcomingEvents[0].type).toBe('earnings');
+    expect(result.positionSignal).toEqual({ action: 'HOLD', reason: 'Thesis intact.' });
+  });
+
+  it('defaults upcoming_events to [] and position_signal to null', () => {
+    const api: SymbolIntelligenceAPI = {
+      symbol: 'MSFT',
+      generated_at: '2026-05-24T10:00:00Z',
+      action: 'WATCH',
+      conviction: 'low',
+      catalyst_urgency: 'none',
+      summary_line: 'Flat.',
+      narrative: 'Text.',
+      upcoming_events: [],
+      position_signal: null,
+      sources: [],
+    };
+    const result = transformIntelligence(api);
+    expect(result.upcomingEvents).toEqual([]);
+    expect(result.positionSignal).toBeNull();
   });
 });

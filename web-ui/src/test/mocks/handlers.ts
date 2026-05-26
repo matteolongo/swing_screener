@@ -1411,6 +1411,41 @@ export const handlers = [
     })
   }),
 
+  // Catalyst endpoints
+  http.post(`${API_BASE_URL}/api/catalysts/daily-scan`, () =>
+    HttpResponse.json({
+      report_id: 'mock-r1', event_summary: 'Mock catalyst.', themes: [
+        { name: 'Theme A', summary: 'Summary A', time_horizon: 'short_term', confidence: 0.8 },
+        { name: 'Theme B', summary: 'Summary B', time_horizon: 'medium_term', confidence: 0.6 },
+      ],
+      causal_chains: [], beneficiaries: [], losers: [], hidden_opportunities: [],
+      non_actionable_notes: [], generated_at: '2026-05-24T10:00:00Z',
+    })
+  ),
+
+  http.get(`${API_BASE_URL}/api/catalysts/latest`, () => HttpResponse.json({
+    report_id: 'mock-r1', event_summary: 'Mock catalyst.', themes: [],
+    causal_chains: [], beneficiaries: [], losers: [], hidden_opportunities: [],
+    non_actionable_notes: [], generated_at: '2026-05-24T10:00:00Z',
+  })),
+
+  http.get(`${API_BASE_URL}/api/catalysts/symbol/:ticker`, ({ params }) =>
+    HttpResponse.json({
+      ticker: (params.ticker as string).toUpperCase(),
+      state: 'CATALYST_ACTIVE', catalyst_strength: 8.0,
+      thesis: 'Mock thesis.', key_risks: [], sources: [],
+      report_id: 'mock-r1', generated_at: '2026-05-24T10:00:00Z',
+    })
+  ),
+
+  http.post(`${API_BASE_URL}/api/catalysts/manual`, () =>
+    HttpResponse.json({
+      report_id: 'mock-r1', event_summary: 'Mock manual catalyst.', themes: [],
+      causal_chains: [], beneficiaries: [], losers: [], hidden_opportunities: [],
+      non_actionable_notes: [], generated_at: '2026-05-24T10:00:00Z',
+    })
+  ),
+
   // Fundamentals snapshot mock
   http.get(`${API_BASE_URL}/api/fundamentals/snapshot/:symbol`, ({ params }) => {
     const symbol = String(params.symbol ?? 'AAPL').toUpperCase()

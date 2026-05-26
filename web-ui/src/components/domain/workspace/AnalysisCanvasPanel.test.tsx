@@ -4,6 +4,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AnalysisCanvasPanel from '@/components/domain/workspace/AnalysisCanvasPanel';
 import * as fundamentalsHooks from '@/features/fundamentals/hooks';
 import type { FundamentalSnapshot } from '@/features/fundamentals/types';
+import * as catalystHooks from '@/features/intelligence/catalysts/hooks';
+import * as intelligenceHooks from '@/features/intelligence/hooks';
+import type { SymbolIntelligence } from '@/features/intelligence/types';
 import * as screenerHooks from '@/features/screener/hooks';
 import * as watchlistHooks from '@/features/watchlist/hooks';
 import { useScreenerStore } from '@/stores/screenerStore';
@@ -13,6 +16,15 @@ import { renderWithProviders } from '@/test/utils';
 vi.mock('@/features/fundamentals/hooks', () => ({
   useFundamentalSnapshotQuery: vi.fn(),
   useRefreshFundamentalSnapshotMutation: vi.fn(),
+}));
+
+vi.mock('@/features/intelligence/hooks', () => ({
+  useIntelligenceAnalysisMutation: vi.fn(),
+  useIntelligenceLatestQuery: vi.fn(),
+}));
+
+vi.mock('@/features/intelligence/catalysts/hooks', () => ({
+  useSymbolCatalystQuery: vi.fn(),
 }));
 
 vi.mock('@/features/screener/hooks', () => ({
@@ -118,6 +130,23 @@ describe('AnalysisCanvasPanel', () => {
       isError: false,
       error: null,
     } as never);
+    vi.mocked(intelligenceHooks.useIntelligenceAnalysisMutation).mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+      isError: false,
+      error: null,
+      reset: vi.fn(),
+    } as never);
+    vi.mocked(intelligenceHooks.useIntelligenceLatestQuery).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: false,
+    } as never);
+    vi.mocked(catalystHooks.useSymbolCatalystQuery).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: false,
+    } as never);
     useWorkspaceStore.setState({
       selectedTicker: 'AAPL',
       selectedTickerSource: 'screener',
@@ -151,6 +180,55 @@ describe('AnalysisCanvasPanel', () => {
     });
 
     expect(mutate).toHaveBeenCalledWith('AAPL');
+  });
+
+  it('renders NarrativeAnalysisCard in overview when intelligence latest has a narrative', () => {
+    useWorkspaceStore.setState({
+      selectedTicker: 'AAPL',
+      selectedTickerSource: 'screener',
+      analysisTab: 'overview',
+    });
+    const mockIntelligence: SymbolIntelligence = {
+      symbol: 'AAPL',
+      generatedAt: '2026-05-26T10:00:00',
+      action: 'BUY_NOW',
+      conviction: 'high',
+      catalystUrgency: 'medium',
+      summaryLine: 'AAPL is showing strong momentum with a confirmed breakout.',
+      narrative: 'The technical setup is aligned with the trend.',
+      upcomingEvents: [
+        {
+          type: 'earnings',
+          date: '2026-07-24',
+          direction: 'bullish',
+          summary: 'Upcoming earnings may confirm the setup.',
+        },
+      ],
+      positionSignal: null,
+      sources: ['yahoo_finance'],
+    };
+    vi.mocked(intelligenceHooks.useIntelligenceLatestQuery).mockReturnValue({
+      data: mockIntelligence,
+      isLoading: false,
+      isError: false,
+    } as never);
+    vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
+      isLoading: false, isError: false, data: undefined,
+    } as never);
+    vi.mocked(fundamentalsHooks.useRefreshFundamentalSnapshotMutation).mockReturnValue({
+      mutate: vi.fn(), data: undefined, isPending: false, isError: false, error: null,
+    } as never);
+
+    renderWithProviders(<AnalysisCanvasPanel />);
+
+    expect(screen.queryByRole('tab', { name: 'Intelligence' })).toBeNull();
+    // NarrativeAnalysisCard shows the summaryLine
+    expect(screen.getByText('AAPL is showing strong momentum with a confirmed breakout.')).toBeInTheDocument();
+    expect(screen.getByText('Upcoming Events')).toBeInTheDocument();
+    expect(screen.getByText('Upcoming earnings may confirm the setup.')).toBeInTheDocument();
+    expect(screen.getByText(/Sources \(1\)/)).toBeInTheDocument();
+    // DecisionSummaryCard heading should NOT appear
+    expect(screen.queryByText(/AAPL Decision Summary/)).not.toBeInTheDocument();
   });
 
   it('renders the decision summary card in overview for the selected screener candidate', () => {
@@ -197,6 +275,8 @@ describe('AnalysisCanvasPanel', () => {
                 negatives: [],
                 warnings: ['No cached catalyst snapshot is available yet.'],
               },
+              catalystSummary: null,
+              catalystSources: [],
             },
           },
         ],
@@ -219,6 +299,106 @@ describe('AnalysisCanvasPanel', () => {
 
     expect(screen.getByText(/AAPL Decision Summary/)).toBeInTheDocument();
     expect(screen.getAllByText(/Buy Now/).length).toBeGreaterThan(0);
+  });
+
+  it('can run AI analysis from the overview tab', async () => {
+    const mockIntelligence: SymbolIntelligence = {
+      symbol: 'AAPL',
+      generatedAt: '2026-05-26T10:00:00',
+      action: 'BUY_NOW',
+      conviction: 'high',
+      catalystUrgency: 'medium',
+      summaryLine: 'AAPL is showing strong momentum with a confirmed breakout.',
+      narrative: '**What to do:** Buy near the planned entry. **Watch for:** Failed follow-through.',
+      upcomingEvents: [],
+      positionSignal: null,
+      sources: ['yahoo_finance'],
+    };
+    const mutate = vi.fn((_variables: unknown, options?: { onSuccess?: (result: SymbolIntelligence) => void }) => {
+      options?.onSuccess?.(mockIntelligence);
+    });
+    vi.mocked(intelligenceHooks.useIntelligenceAnalysisMutation).mockReturnValue({
+      mutate,
+      isPending: false,
+      isError: false,
+      error: null,
+      reset: vi.fn(),
+    } as never);
+    useWorkspaceStore.setState({
+      selectedTicker: 'AAPL',
+      selectedTickerSource: 'screener',
+      analysisTab: 'overview',
+    });
+    useScreenerStore.setState({
+      lastResult: {
+        asofDate: '2026-03-19',
+        totalScreened: 1,
+        dataFreshness: 'final_close',
+        candidates: [
+          {
+            ticker: 'AAPL',
+            currency: 'USD',
+            close: 180,
+            sma20: 175,
+            sma50: 170,
+            sma200: 160,
+            atr: 3,
+            momentum6m: 0.18,
+            momentum12m: 0.27,
+            relStrength: 0.09,
+            score: 0.82,
+            confidence: 79,
+            rank: 1,
+            decisionSummary: {
+              symbol: 'AAPL',
+              action: 'BUY_NOW',
+              conviction: 'high',
+              technicalLabel: 'strong',
+              fundamentalsLabel: 'strong',
+              valuationLabel: 'fair',
+              catalystLabel: 'active',
+              whyNow: 'Setup timing is ready and business quality supports conviction.',
+              whatToDo: 'Use the current trade plan and keep sizing disciplined.',
+              mainRisk: 'Valuation remains acceptable, but risk still matters.',
+              tradePlan: { entry: 180, stop: 171, target: 198, rr: 2 },
+              valuationContext: { method: 'not_available' },
+              drivers: {
+                positives: [],
+                negatives: [],
+                warnings: ['No cached catalyst snapshot is available yet.'],
+              },
+              catalystSummary: null,
+              catalystSources: [],
+            },
+          },
+        ],
+      },
+    });
+    vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: undefined,
+    } as never);
+    vi.mocked(fundamentalsHooks.useRefreshFundamentalSnapshotMutation).mockReturnValue({
+      mutate: vi.fn(),
+      data: undefined,
+      isPending: false,
+      isError: false,
+      error: null,
+    } as never);
+
+    const { user } = renderWithProviders(<AnalysisCanvasPanel />);
+
+    expect(screen.getByText('AI narrative summary')).toBeInTheDocument();
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Analyze with AI' }));
+    });
+
+    expect(mutate).toHaveBeenCalledWith(
+      expect.objectContaining({ ticker: 'AAPL' }),
+      expect.objectContaining({ onSuccess: expect.any(Function) })
+    );
+    expect(screen.getByText('AAPL is showing strong momentum with a confirmed breakout.')).toBeInTheDocument();
   });
 
   it('labels the fundamentals summary strip by metric horizon', () => {
@@ -306,6 +486,80 @@ describe('AnalysisCanvasPanel', () => {
     });
   });
 
+  it('shows DecisionSummaryCard in overview while intelligence is loading', () => {
+    useWorkspaceStore.setState({
+      selectedTicker: 'AAPL',
+      selectedTickerSource: 'screener',
+      analysisTab: 'overview',
+    });
+    useScreenerStore.setState({
+      lastResult: {
+        asofDate: '2026-03-19',
+        totalScreened: 1,
+        dataFreshness: 'final_close',
+        candidates: [
+          {
+            ticker: 'AAPL',
+            currency: 'USD',
+            close: 180,
+            sma20: 175,
+            sma50: 170,
+            sma200: 160,
+            atr: 3,
+            momentum6m: 0.18,
+            momentum12m: 0.27,
+            relStrength: 0.09,
+            score: 0.82,
+            confidence: 79,
+            rank: 1,
+            decisionSummary: {
+              symbol: 'AAPL',
+              action: 'BUY_NOW',
+              conviction: 'high',
+              technicalLabel: 'strong',
+              fundamentalsLabel: 'strong',
+              valuationLabel: 'fair',
+              catalystLabel: 'active',
+              whyNow: 'Setup timing is ready and business quality supports conviction.',
+              whatToDo: 'Use the current trade plan and keep sizing disciplined.',
+              mainRisk: 'Valuation remains acceptable, but risk still matters.',
+              tradePlan: { entry: 180, stop: 171, target: 198, rr: 2 },
+              valuationContext: { method: 'not_available' },
+              drivers: {
+                positives: [],
+                negatives: [],
+                warnings: ['No cached catalyst snapshot is available yet.'],
+              },
+              catalystSummary: null,
+              catalystSources: [],
+            },
+          },
+        ],
+      },
+    });
+    vi.mocked(intelligenceHooks.useIntelligenceLatestQuery).mockReturnValue({
+      data: null,
+      isLoading: true,
+      isError: false,
+    } as never);
+    vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: undefined,
+    } as never);
+    vi.mocked(fundamentalsHooks.useRefreshFundamentalSnapshotMutation).mockReturnValue({
+      mutate: vi.fn(),
+      data: undefined,
+      isPending: false,
+      isError: false,
+      error: null,
+    } as never);
+
+    renderWithProviders(<AnalysisCanvasPanel />);
+
+    expect(screen.getByText(/AAPL Decision Summary/)).toBeInTheDocument();
+  });
+
   it('renders a watch toggle for the selected symbol', () => {
     vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
       isLoading: false,
@@ -348,6 +602,12 @@ describe('AnalysisCanvasPanel — compute analysis button', () => {
     vi.mocked(watchlistHooks.useWatchSymbolMutation).mockReturnValue({ mutate: vi.fn(), isPending: false, variables: undefined } as never);
     vi.mocked(watchlistHooks.useUnwatchSymbolMutation).mockReturnValue({ mutate: vi.fn(), isPending: false, variables: undefined } as never);
     vi.mocked(screenerHooks.useRunScreenerMutation).mockReturnValue({ mutate: vi.fn(), isPending: false, isError: false, error: null } as never);
+    vi.mocked(intelligenceHooks.useIntelligenceAnalysisMutation).mockReturnValue({
+      mutate: vi.fn(), isPending: false, isError: false, error: null, reset: vi.fn(),
+    } as never);
+    vi.mocked(intelligenceHooks.useIntelligenceLatestQuery).mockReturnValue({
+      data: undefined, isLoading: false, isError: false,
+    } as never);
     mockFundamentalsIdle();
     useWorkspaceStore.setState({ selectedTicker: 'ENI.MI', selectedTickerSource: null, analysisTab: 'overview' });
     useScreenerStore.setState({ lastResult: null });

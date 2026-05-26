@@ -44,6 +44,8 @@ function buildCandidate(): ScreenerCandidate {
         summary: 'Valuation context is limited because no cached fundamentals snapshot is available yet.',
       },
       drivers: { positives: [], negatives: [], warnings: ['No cached fundamentals snapshot is available yet.'] },
+      catalystSummary: null,
+      catalystSources: [],
     },
   };
 }

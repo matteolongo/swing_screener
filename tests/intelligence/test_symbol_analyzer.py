@@ -30,8 +30,11 @@ def test_extract_json_raises_when_missing():
 _FAKE_RESPONSE_JSON = {
     "action": "BUY_NOW",
     "conviction": "high",
+    "catalyst_urgency": "medium",
     "summary_line": "Cyclical recovery with strong EBITDA momentum.",
     "narrative": "## Why it's moving\nAperam Q1 2026 beat on EBITDA.",
+    "upcoming_events": [],
+    "position_signal": None,
     "sources": ["https://aperam.com/q1-2026"],
 }
 
@@ -100,3 +103,63 @@ def test_symbol_analyzer_raises_on_invalid_action():
         analyzer = SymbolAnalyzer()
         with pytest.raises(Exception):
             analyzer.analyze("XYZ", request)
+
+
+# --- tests for extended prompt and cache ---
+
+
+def test_prompt_omits_position_section_without_context():
+    from swing_screener.intelligence.symbol_analyzer import _build_user_prompt
+    req = SymbolIntelligenceRequest(close=50.0, signal="breakout")
+    prompt = _build_user_prompt("AAPL", req)
+    assert "Position context" not in prompt
+    assert "position_signal" not in prompt
+
+
+def test_prompt_includes_position_section_with_context():
+    from swing_screener.intelligence.symbol_analyzer import _build_user_prompt
+    req = SymbolIntelligenceRequest(
+        close=50.0, signal="breakout",
+        entry_price=48.0, r_now=1.5, days_open=7,
+    )
+    prompt = _build_user_prompt("AAPL", req)
+    assert "Position context" in prompt
+    assert "48.00" in prompt
+    assert "1.50" in prompt
+    assert "7 days" in prompt
+    assert "position_signal" in prompt
+
+
+def test_analyze_writes_to_cache(tmp_path, monkeypatch):
+    import json
+    from unittest.mock import MagicMock, patch
+    from swing_screener.intelligence.models import SymbolIntelligenceRequest
+
+    monkeypatch.setenv("SWING_SCREENER_DATA_DIR", str(tmp_path))
+
+    fake_json = {
+        "action": "BUY_NOW", "conviction": "high",
+        "catalyst_urgency": "medium",
+        "summary_line": "Strong setup.",
+        "narrative": "## Why\nText.",
+        "upcoming_events": [],
+        "position_signal": None,
+        "sources": [],
+    }
+    fake_text = "```json\n" + json.dumps(fake_json) + "\n```"
+    resp = MagicMock()
+    resp.output_text = fake_text
+
+    req = SymbolIntelligenceRequest(close=50.0, signal="breakout")
+    with patch("swing_screener.intelligence.symbol_analyzer.OpenAI") as MockOpenAI:
+        mock_client = MagicMock()
+        MockOpenAI.return_value = mock_client
+        mock_client.responses.create.return_value = resp
+        analyzer = SymbolAnalyzer()
+        analyzer.analyze("AAPL", req)
+
+    cache_files = list((tmp_path / "intelligence").glob("sweep_*.json"))
+    assert len(cache_files) == 1
+    data = json.loads(cache_files[0].read_text())
+    assert "AAPL" in data
+    assert data["AAPL"]["action"] == "BUY_NOW"

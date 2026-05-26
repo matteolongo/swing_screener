@@ -50,6 +50,8 @@ function buildBuyNowCandidate(): ScreenerCandidate {
         nextBestAction: 'Prepare order',
         confidenceNotes: [],
       },
+      catalystSummary: null,
+      catalystSources: [],
     },
   });
 }
@@ -70,6 +72,8 @@ function buildWatchCandidate(): ScreenerCandidate {
       tradePlan: {},
       valuationContext: { method: 'not_available' },
       drivers: { positives: [], negatives: [], warnings: [] },
+      catalystSummary: null,
+      catalystSources: [],
     },
     ticker: 'MSFT',
   });

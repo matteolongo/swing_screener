@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 
 from openai import OpenAI
 
+from swing_screener.intelligence.cache import write_to_cache
 from swing_screener.intelligence.models import SymbolIntelligence, SymbolIntelligenceRequest
 from swing_screener.settings import get_settings_manager
 
@@ -17,9 +18,19 @@ produce a structured analysis for the symbol in English.
 Return ONLY a JSON block (fenced with ```json) with exactly these fields:
 - action: one of BUY_NOW | BUY_ON_PULLBACK | WAIT_FOR_BREAKOUT | WATCH | TACTICAL_ONLY | AVOID | MANAGE_ONLY
 - conviction: one of high | medium | low
+- catalyst_urgency: one of high | medium | low | none
 - summary_line: one sentence synthetic read (max 120 chars)
-- narrative: full Markdown string with sections ## Why it's moving, ## Key risks, ## Synthetic read
-- sources: list of URLs you cited (may be empty if no relevant sources found)
+- narrative: flowing prose in Markdown. Start with the actionable read: **What to do:** and **Watch for:** in the first two short paragraphs. Then add the supporting technical, fundamental, and catalyst rationale. No H1/H2 headings. Max 300 words.
+- upcoming_events: array of objects {type, date, direction, summary} for events that could move the price.
+  type: earnings | macro | dividend | product_launch | regulatory | other
+  date: ISO date string or null if unknown
+  direction: bullish | bearish | neutral
+  summary: one sentence description
+- position_signal: null unless position context is provided — then {action: HOLD | TRIM | EXIT, reason: one sentence}
+  HOLD = thesis intact, no change needed
+  TRIM = take partial profit or reduce risk, thesis weakening
+  EXIT = thesis broken or clearly better use of capital
+- sources: list of URLs you cited (may be empty)
 
 Do not include any text outside the JSON block.\
 """
@@ -39,17 +50,30 @@ def _build_user_prompt(ticker: str, req: SymbolIntelligenceRequest) -> str:
     def fmt(v: float | None) -> str:
         return f"{v:.2f}" if v is not None else "N/A"
 
-    return (
-        f"Symbol: {ticker}\n"
-        f"Signal: {req.signal}\n"
-        f"Close: {fmt(req.close)} {req.currency}\n"
-        f"SMA20: {fmt(req.sma_20)} | SMA50: {fmt(req.sma_50)} | SMA200: {fmt(req.sma_200)}\n"
-        f"Momentum 6m: {fmt(req.momentum_6m)}% | 12m: {fmt(req.momentum_12m)}%\n"
-        f"Entry: {fmt(req.entry)} | Stop: {fmt(req.stop)}\n"
-        f"Sector: {req.sector or 'Unknown'}\n\n"
-        f"Search for recent news, earnings results, catalysts, and analyst views for {ticker}. "
-        f"Then produce the structured JSON analysis."
+    lines = [
+        f"Symbol: {ticker}",
+        f"Signal: {req.signal}",
+        f"Close: {fmt(req.close)} {req.currency}",
+        f"SMA20: {fmt(req.sma_20)} | SMA50: {fmt(req.sma_50)} | SMA200: {fmt(req.sma_200)}",
+        f"Momentum 6m: {fmt(req.momentum_6m)}% | 12m: {fmt(req.momentum_12m)}%",
+        f"Entry: {fmt(req.entry)} | Stop: {fmt(req.stop)}",
+        f"Sector: {req.sector or 'Unknown'}",
+    ]
+
+    if req.entry_price is not None and req.r_now is not None and req.days_open is not None:
+        lines.append(
+            f"Position context: entry={fmt(req.entry_price)}, "
+            f"current R={req.r_now:.2f}R, held {req.days_open} days"
+        )
+        lines.append(
+            "Include position_signal (HOLD / TRIM / EXIT) with a one-sentence reason."
+        )
+
+    lines.append(
+        f"\nSearch for recent news, earnings results, catalysts, and analyst views for {ticker}. "
+        "Then produce the structured JSON analysis."
     )
+    return "\n".join(lines)
 
 
 class SymbolAnalyzer:
@@ -70,12 +94,20 @@ class SymbolAnalyzer:
             max_output_tokens=self._max_tokens,
         )
         raw = _extract_json(response.output_text)
-        return SymbolIntelligence(
+        result = SymbolIntelligence(
             symbol=ticker,
             generated_at=datetime.now(timezone.utc).isoformat(),
             action=raw["action"],
             conviction=raw["conviction"],
+            catalyst_urgency=raw.get("catalyst_urgency", "none"),
             summary_line=raw["summary_line"],
             narrative=raw["narrative"],
+            upcoming_events=raw.get("upcoming_events", []),
+            position_signal=raw.get("position_signal"),
             sources=raw.get("sources", []),
         )
+        try:
+            write_to_cache(ticker, result)
+        except Exception:
+            pass
+        return result

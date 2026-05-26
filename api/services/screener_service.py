@@ -4,6 +4,7 @@ from __future__ import annotations
 from dataclasses import replace, asdict
 from typing import Optional
 import datetime as dt
+from datetime import datetime, timezone, timedelta
 import logging
 import math
 from zoneinfo import ZoneInfo
@@ -117,6 +118,21 @@ MARKET_CLOSE_BY_CURRENCY: dict[str, tuple[str, int, int]] = {
     "USD": ("America/New_York", 16, 10),
     "EUR": ("Europe/Amsterdam", 17, 40),
 }
+
+
+_CATALYST_STALE_DAYS = 2
+
+
+def _is_stale(opportunity: object | None) -> bool:
+    if opportunity is None:
+        return True
+    try:
+        generated_at = datetime.fromisoformat(str(getattr(opportunity, "generated_at", "")))
+        if generated_at.tzinfo is None:
+            generated_at = generated_at.replace(tzinfo=timezone.utc)
+        return (datetime.now(timezone.utc) - generated_at).days > _CATALYST_STALE_DAYS
+    except (ValueError, TypeError):
+        return True
 
 
 def _merge_ohlcv(base: pd.DataFrame, extra: pd.DataFrame) -> pd.DataFrame:
@@ -475,6 +491,14 @@ def _apply_decision_summary_context(
 
     fundamentals = fundamentals_storage or FundamentalsStorage()
 
+    # Load today's catalyst opportunity index once for all candidates
+    catalyst_index: dict = {}
+    try:
+        from swing_screener.intelligence.catalysts.store import CatalystStore
+        catalyst_index = CatalystStore().load_symbol_index()
+    except Exception as exc:
+        logger.warning("Failed to load catalyst index: %s", exc)
+
     unique_tickers = {candidate.ticker for candidate in candidates}
     snapshot_cache = {ticker: fundamentals.load_snapshot(ticker) for ticker in unique_tickers}
 
@@ -482,17 +506,19 @@ def _apply_decision_summary_context(
     for candidate in candidates:
         fund_snap = snapshot_cache.get(candidate.ticker)
         fund_asof = getattr(fund_snap, "asof_date", None) if fund_snap is not None else None
+        raw_opportunity = catalyst_index.get(candidate.ticker.upper())
+        opportunity = None if _is_stale(raw_opportunity) else raw_opportunity
         enriched.append(
             candidate.model_copy(
                 update={
                     "decision_summary": build_decision_summary(
                         candidate,
-                        opportunity=None,
+                        opportunity=opportunity,
                         fundamentals=fund_snap,
                     ),
                     "fundamentals_snapshot": fund_snap,
                     "fundamentals_asof": str(fund_asof) if fund_asof else None,
-                    "intelligence_asof": None,
+                    "intelligence_asof": opportunity.generated_at if opportunity else None,
                 }
             )
         )

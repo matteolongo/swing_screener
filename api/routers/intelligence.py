@@ -1,21 +1,74 @@
-"""API endpoint for on-demand symbol intelligence analysis."""
+"""API endpoints for on-demand and batch symbol intelligence analysis."""
 from __future__ import annotations
 
+import logging
 import os
 
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 
+from swing_screener.intelligence.cache import read_from_cache
 from swing_screener.intelligence.models import SymbolIntelligence, SymbolIntelligenceRequest
 from swing_screener.intelligence.symbol_analyzer import SymbolAnalyzer
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/intelligence", tags=["intelligence"])
+
+
+def _require_api_key() -> None:
+    if not os.environ.get("OPENAI_API_KEY"):
+        raise HTTPException(status_code=503, detail="OPENAI_API_KEY is not configured")
+
+
+class SweepSymbol(BaseModel):
+    ticker: str
+    request: SymbolIntelligenceRequest
+
+
+class SweepRequest(BaseModel):
+    symbols: list[SweepSymbol]
+
+
+class SweepFailure(BaseModel):
+    ticker: str
+    error: str
+
+
+class SweepResponse(BaseModel):
+    analyzed: list[str]
+    failed: list[SweepFailure]
+
+
+@router.post("/sweep", response_model=SweepResponse)
+def sweep(request: SweepRequest) -> SweepResponse:
+    """Run intelligence analysis for a batch of symbols, caching each result."""
+    _require_api_key()
+    analyzer = SymbolAnalyzer()
+    analyzed: list[str] = []
+    failed: list[SweepFailure] = []
+    for item in request.symbols:
+        try:
+            analyzer.analyze(item.ticker.upper(), item.request)
+            analyzed.append(item.ticker.upper())
+        except Exception as exc:
+            logger.warning("Sweep failed for %s: %s", item.ticker, exc)
+            failed.append(SweepFailure(ticker=item.ticker.upper(), error=str(exc)))
+    return SweepResponse(analyzed=analyzed, failed=failed)
+
+
+@router.get("/{ticker}/latest", response_model=SymbolIntelligence)
+def get_latest(ticker: str) -> SymbolIntelligence:
+    """Return today's cached intelligence result for a symbol, or 404."""
+    result = read_from_cache(ticker.upper())
+    if result is None:
+        raise HTTPException(status_code=404, detail=f"No cached analysis for {ticker} today")
+    return result
 
 
 @router.post("/{ticker}", response_model=SymbolIntelligence)
 def analyze_symbol(ticker: str, request: SymbolIntelligenceRequest) -> SymbolIntelligence:
     """Generate a web-search-grounded LLM analysis for a symbol."""
-    if not os.environ.get("OPENAI_API_KEY"):
-        raise HTTPException(status_code=503, detail="OPENAI_API_KEY is not configured")
+    _require_api_key()
     try:
         analyzer = SymbolAnalyzer()
         return analyzer.analyze(ticker.upper(), request)

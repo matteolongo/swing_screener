@@ -73,6 +73,8 @@ data/intelligence/signals_*.json
 data/intelligence/opportunities_*.json
 data/intelligence/themes_*.json
 data/intelligence/education_*.json
+data/intelligence/sweep_*.json
+data/screener_history.json
 
 # =========================
 # Logs
@@ -110,3 +112,6 @@ config/intelligence.lock
 
 # Git worktrees
 .worktrees/
+
+# Superpowers tooling
+.superpowers/

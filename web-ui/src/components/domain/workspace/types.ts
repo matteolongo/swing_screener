@@ -1,7 +1,7 @@
 import type { Recommendation } from '@/types/recommendation';
 import type { DecisionSummary, SameSymbolCandidateContext } from '@/features/screener/types';
 
-export type WorkspaceAnalysisTab = 'overview' | 'fundamentals' | 'order' | 'intelligence';
+export type WorkspaceAnalysisTab = 'overview' | 'fundamentals' | 'order';
 
 export interface SymbolAnalysisCandidate {
   ticker: string;
