@@ -1095,6 +1095,76 @@ class PortfolioService:
             raise HTTPException(status_code=404, detail=f"Position not found: {position_id}")
         return self._suggest_position_stop_from_dict(position)
 
+    def suggest_stop_intraday(
+        self,
+        position_id: str,
+        price: Optional[float] = None,
+    ) -> PositionUpdate:
+        position = self._positions_repo.get_position(position_id)
+        if position is None:
+            raise HTTPException(status_code=404, detail=f"Position not found: {position_id}")
+        if position.get("status") != "open":
+            raise HTTPException(status_code=400, detail="Position is not open")
+
+        ticker = position.get("ticker")
+        if not ticker:
+            raise HTTPException(status_code=400, detail="Position ticker is missing")
+
+        manage_cfg = self._resolve_manage_cfg(None)
+        start_date = _calc_start_date(position.get("entry_date"), manage_cfg.trail_sma)
+        yesterday = (dt.date.today() - dt.timedelta(days=1)).isoformat()
+
+        try:
+            ohlcv = self._provider.fetch_ohlcv([ticker], start_date=start_date, end_date=yesterday)
+        except Exception as exc:
+            raise HTTPException(
+                status_code=502,
+                detail=f"Failed to fetch market data: {exc}",
+            ) from exc
+
+        if price is None:
+            try:
+                price = self._provider.fetch_latest_price(ticker)
+            except Exception as exc:
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"Failed to fetch live price for {ticker}: {exc}",
+                ) from exc
+
+        today_idx = pd.Timestamp(dt.date.today())
+        for field in ["Open", "High", "Low", "Close", "Volume"]:
+            col = (field, ticker)
+            if col in ohlcv.columns:
+                val = price if field != "Volume" else 0.0
+                ohlcv.loc[today_idx, col] = val
+
+        try:
+            updates, _ = evaluate_positions(ohlcv, [_to_state_position(position)], manage_cfg)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except Exception as exc:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to compute stop preview: {exc}",
+            ) from exc
+
+        if not updates:
+            raise HTTPException(status_code=500, detail="No stop preview available")
+
+        update = updates[0]
+        return PositionUpdate(
+            ticker=update.ticker,
+            status=update.status,
+            last=update.last,
+            entry=update.entry,
+            stop_old=update.stop_old,
+            stop_suggested=update.stop_suggested,
+            shares=update.shares,
+            r_now=update.r_now,
+            action=update.action,
+            reason=update.reason,
+        )
+
     def update_trail_method(self, position_id: str, request: UpdateTrailMethodRequest) -> dict:
         data = self._positions_repo.read()
         positions = data.get("positions", [])

@@ -20,6 +20,8 @@ export const queryKeys = {
   degiroStatus: () => ['degiro-status'] as const,
   positionStopSuggestion: (positionId?: string) =>
     ['positions', positionId, 'stop-suggestion'] as const,
+  positionStopPreview: (positionId: string) =>
+    ['positions', positionId, 'stop-preview'] as const,
   intelligenceConfig: () => ['intelligence-config'] as const,
   intelligenceProviders: () => ['intelligence-providers'] as const,
   intelligenceSymbolSets: () => ['intelligence-symbol-sets'] as const,

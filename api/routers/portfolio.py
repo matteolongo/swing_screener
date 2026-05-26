@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from api.models.portfolio import (
     Position,
@@ -104,6 +104,16 @@ async def get_position_stop_suggestion(
 ):
     """Get suggested stop price for a position based on manage rules."""
     return service.suggest_position_stop(position_id)
+
+
+@router.get("/positions/{position_id}/stop-preview", response_model=PositionUpdate)
+async def get_position_stop_preview(
+    position_id: str,
+    price: Optional[float] = Query(default=None, gt=0),
+    service: PortfolioService = Depends(get_portfolio_service),
+):
+    """Intraday stop rule preview using live or user-supplied price."""
+    return service.suggest_stop_intraday(position_id, price=price)
 
 
 @router.patch("/positions/{position_id}/trail-method")

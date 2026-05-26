@@ -446,6 +446,20 @@ export async function fetchPositionStopSuggestion(positionId: string): Promise<P
   return transformPositionUpdate(data);
 }
 
+export async function fetchPositionStopPreview(
+  positionId: string,
+  price: number | null,
+): Promise<PositionUpdate> {
+  const params = price != null ? `?price=${price}` : '';
+  const response = await fetch(apiUrl(`${API_ENDPOINTS.positionStopPreview(positionId)}${params}`));
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.detail || 'Failed to fetch stop preview');
+  }
+  const data = await response.json();
+  return transformPositionUpdate(data);
+}
+
 export async function updatePositionTrailMethod(
   positionId: string,
   request: UpdateTrailMethodRequest,

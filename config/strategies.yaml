@@ -57,6 +57,7 @@ strategies:
     benchmark: SPY
     time_stop_days: 15
     time_stop_min_r: 0.5
+    exit_signal_days: 2
   market_intelligence:
     enabled: true
     providers:
@@ -202,6 +203,7 @@ strategies:
     benchmark: SPY
     time_stop_days: 15
     time_stop_min_r: 0.5
+    exit_signal_days: 2
   id: streategy-1000
   is_default: false
   created_at: '2026-02-09T01:11:01'
@@ -350,6 +352,7 @@ strategies:
     benchmark: SPY
     time_stop_days: 15
     time_stop_min_r: 0.5
+    exit_signal_days: 2
   id: 2RISK-2ATR-EUR
   is_default: false
   created_at: '2026-02-12T02:17:02'
@@ -499,6 +502,7 @@ strategies:
     benchmark: SPY
     time_stop_days: 15
     time_stop_min_r: 0.5
+    exit_signal_days: 2
   market_intelligence:
     enabled: true
     providers:
