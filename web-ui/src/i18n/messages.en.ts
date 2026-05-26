@@ -559,7 +559,7 @@ export const messagesEn = {
         placeholder: 'Screener controls and candidates will appear here.',
       },
       analysis: {
-        title: 'Analysis Canvas',
+        title: 'Stock Analysis',
         description: 'Review the selected ticker before creating an order.',
         tabs: {
           overview: 'Overview',
