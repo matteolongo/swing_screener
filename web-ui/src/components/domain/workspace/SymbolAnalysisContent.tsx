@@ -9,7 +9,6 @@ import CachedSymbolPriceChart from '@/components/domain/market/CachedSymbolPrice
 import WatchToggleButton from '@/components/domain/watchlist/WatchToggleButton';
 import FundamentalsSnapshotCard from '@/components/domain/fundamentals/FundamentalsSnapshotCard';
 import AnalysisDecisionStrip from '@/components/domain/workspace/AnalysisDecisionStrip';
-import BeginnerDecisionHeader from '@/components/domain/workspace/BeginnerDecisionHeader';
 import DecisionSummaryCard from '@/components/domain/workspace/DecisionSummaryCard';
 import NarrativeAnalysisCard from '@/components/domain/workspace/NarrativeAnalysisCard';
 import TechnicalMetricsGrid from '@/components/domain/workspace/TechnicalMetricsGrid';
@@ -46,7 +45,6 @@ function provenanceLegendItems() {
 export default function SymbolAnalysisContent({
   ticker,
   candidate,
-  screenerCandidate,
   activeTab,
   onTabChange,
   orderPanel = null,
@@ -164,15 +162,11 @@ export default function SymbolAnalysisContent({
           />
         </div>
 
-        {screenerCandidate ? (
-          <BeginnerDecisionHeader
-            candidate={screenerCandidate}
-            onAction={(kind) => {
-              if (kind === 'prepare_order') onTabChange('order');
-            }}
-          />
-        ) : null}
-        <AnalysisDecisionStrip ticker={ticker} candidate={candidate} />
+        <AnalysisDecisionStrip
+          ticker={ticker}
+          candidate={candidate}
+          onPrepareOrder={() => onTabChange('order')}
+        />
 
         {activeTab === 'overview' && (
           <>

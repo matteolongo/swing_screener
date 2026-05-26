@@ -13,6 +13,7 @@ import { formatCurrency, formatNumber } from '@/utils/formatters';
 interface AnalysisDecisionStripProps {
   ticker: string;
   candidate?: SymbolAnalysisCandidate | null;
+  onPrepareOrder?: () => void;
 }
 
 function actionLabel(action: DecisionAction): string {
@@ -94,7 +95,7 @@ function compactValue(label: string, value: string) {
   );
 }
 
-export default function AnalysisDecisionStrip({ ticker, candidate }: AnalysisDecisionStripProps) {
+export default function AnalysisDecisionStrip({ ticker, candidate, onPrepareOrder }: AnalysisDecisionStripProps) {
   const summary = candidate?.decisionSummary;
   const currency = candidate?.currency ?? 'USD';
   const entry = summary?.tradePlan.entry ?? candidate?.recommendation?.risk?.entry ?? candidate?.entry;
@@ -150,6 +151,17 @@ export default function AnalysisDecisionStrip({ ticker, candidate }: AnalysisDec
             </span>
           ))}
         </div>
+        {summary?.action === 'BUY_NOW' && onPrepareOrder && (
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={onPrepareOrder}
+              className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
+            >
+              {t('analysis.beginnerHeader.action.prepare_order')}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
