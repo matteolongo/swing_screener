@@ -30,6 +30,7 @@ export const API_ENDPOINTS = {
   positionMetrics: (id: string) => `/api/portfolio/positions/${id}/metrics`,
   positionStop: (id: string) => `/api/portfolio/positions/${id}/stop`,
   positionStopSuggestion: (id: string) => `/api/portfolio/positions/${id}/stop-suggestion`,
+  positionStopPreview: (id: string) => `/api/portfolio/positions/${id}/stop-preview`,
   positionStopSuggestionCompute: '/api/portfolio/stop-suggestion/compute',
   positionClose: (id: string) => `/api/portfolio/positions/${id}/close`,
   positionPartialClose: (id: string) => `/api/portfolio/positions/${id}/partial-close`,

@@ -9,6 +9,7 @@ import {
   fetchPositionMetrics,
   fetchPositions,
   fetchPositionStopSuggestion,
+  fetchPositionStopPreview,
   fetchDegiroStatus,
   fetchDegiroOrderHistory,
   fetchEarningsProximity,
@@ -186,6 +187,20 @@ export function usePositionStopSuggestion(positionId?: string) {
     enabled: Boolean(positionId),
     refetchOnWindowFocus: false,
     retry: false,
+  });
+}
+
+export function usePositionStopPreviewQuery(
+  positionId: string,
+  price: number | null,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: [...queryKeys.positionStopPreview(positionId), price],
+    queryFn: () => fetchPositionStopPreview(positionId, price),
+    enabled,
+    retry: false,
+    staleTime: 0,
   });
 }
 

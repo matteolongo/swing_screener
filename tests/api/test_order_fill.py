@@ -51,7 +51,7 @@ def test_fill_order_creates_position(client_with_pending_order):
     assert pos["stop_price"] == 11.20
     assert pos["status"] == "open"
     assert pos["source_order_id"] == "ORD-SBMO-001"
-    assert abs(pos["initial_risk"] - (12.34 - 11.20) * 200) < 0.01  # 228.0
+    assert abs(pos["initial_risk"] - (12.34 - 11.20)) < 0.01  # per-share: 1.14
 
 def test_fill_order_already_filled_returns_409(client_with_pending_order):
     first = client_with_pending_order.post(

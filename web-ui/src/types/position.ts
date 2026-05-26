@@ -48,7 +48,7 @@ export interface Position {
   partialCloses?: PartialCloseEvent[];
 }
 
-export type ActionType = 'NO_ACTION' | 'MOVE_STOP_UP' | 'CLOSE_STOP_HIT' | 'CLOSE_TIME_EXIT';
+export type ActionType = 'NO_ACTION' | 'MOVE_STOP_UP' | 'CLOSE_STOP_HIT' | 'CLOSE_TIME_EXIT' | 'CLOSE_EXIT_SIGNAL';
 
 export interface PositionUpdate {
   ticker: string;

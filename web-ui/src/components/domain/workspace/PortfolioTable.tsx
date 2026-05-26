@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import DataTable, { type DataTableColumn } from '@/components/common/DataTable';
 import Button from '@/components/common/Button';
@@ -7,6 +7,7 @@ import FillOrderModalForm from '@/components/domain/orders/FillOrderModalForm';
 import ClosePositionModalForm from '@/components/domain/positions/ClosePositionModalForm';
 import PartialCloseModalForm from '@/components/domain/positions/PartialCloseModalForm';
 import UpdateStopModalForm from '@/components/domain/positions/UpdateStopModalForm';
+import WorkspaceSymbolModal from '@/components/domain/workspace/WorkspaceSymbolModal';
 import type { PositionWithMetrics } from '@/features/portfolio/api';
 import {
   useCancelOrderMutation,
@@ -15,6 +16,7 @@ import {
   useFillOrderMutation,
   useOrders,
   usePositions,
+  usePositionStopPreviewQuery,
   useUpdateStopMutation,
 } from '@/features/portfolio/hooks';
 import { type Order } from '@/features/portfolio/types';
@@ -94,6 +96,85 @@ function DropdownItem({ onClick, label, className }: { onClick: () => void; labe
   );
 }
 
+interface StopPreviewPanelProps {
+  positionId: string;
+  ticker: string;
+  price: number | null;
+  onClose: () => void;
+}
+
+function StopPreviewPanel({ positionId, ticker, price, onClose }: StopPreviewPanelProps) {
+  const { data, isLoading, error } = usePositionStopPreviewQuery(positionId, price, true);
+
+  let message = '';
+  let messageClass = 'text-gray-700 dark:text-gray-300';
+
+  if (data) {
+    switch (data.action) {
+      case 'MOVE_STOP_UP':
+        message = `${t('workspacePage.panels.portfolio.intradayPreview.stopCanRaise')} ${formatCurrency(data.stopSuggested)}`;
+        messageClass = 'text-emerald-700 dark:text-emerald-400 font-semibold';
+        break;
+      case 'CLOSE_STOP_HIT':
+        message = t('workspacePage.panels.portfolio.intradayPreview.stopHit');
+        messageClass = 'text-rose-700 dark:text-rose-400 font-semibold';
+        break;
+      case 'CLOSE_EXIT_SIGNAL':
+        message = t('workspacePage.panels.portfolio.intradayPreview.exitSignal');
+        messageClass = 'text-amber-700 dark:text-amber-400 font-semibold';
+        break;
+      case 'CLOSE_TIME_EXIT':
+        message = t('workspacePage.panels.portfolio.intradayPreview.timeExit');
+        messageClass = 'text-amber-700 dark:text-amber-400 font-semibold';
+        break;
+      default:
+        message = t('workspacePage.panels.portfolio.intradayPreview.noChange');
+    }
+  }
+
+  return (
+    <div className="mt-2 rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/30 p-3 text-sm">
+      <div className="flex items-start justify-between gap-2">
+        <div className="font-medium text-blue-900 dark:text-blue-200">
+          {ticker} — {t('workspacePage.panels.portfolio.intradayPreview.checkLive')}
+          {price != null && (
+            <span className="ml-1 font-mono text-xs text-blue-700 dark:text-blue-400">
+              @ {formatCurrency(price)}
+            </span>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="text-blue-500 hover:text-blue-700 dark:hover:text-blue-300 text-xs"
+          aria-label="Close preview"
+        >
+          ✕
+        </button>
+      </div>
+      {isLoading && (
+        <p className="mt-1 text-blue-600 dark:text-blue-400 text-xs">
+          {t('workspacePage.panels.portfolio.intradayPreview.loading')}
+        </p>
+      )}
+      {error && (
+        <p className="mt-1 text-rose-600 dark:text-rose-400 text-xs">{error.message}</p>
+      )}
+      {data && !isLoading && (
+        <div className="mt-1 space-y-0.5">
+          <p className={messageClass}>{message}</p>
+          {data.reason && (
+            <p className="text-xs text-gray-500 dark:text-gray-400">{data.reason}</p>
+          )}
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+            R: {data.rNow >= 0 ? '+' : ''}{data.rNow.toFixed(2)} · live {formatCurrency(data.last)}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function PortfolioTable() {
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
   const setSelectedTicker = useWorkspaceStore((state) => state.setSelectedTicker);
@@ -114,6 +195,15 @@ export default function PortfolioTable() {
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [showPartialCloseModal, setShowPartialCloseModal] = useState(false);
   const [showFillOrderModal, setShowFillOrderModal] = useState(false);
+
+  const [analyzeTicker, setAnalyzeTicker] = useState<string | null>(null);
+
+  const [previewPositionId, setPreviewPositionId] = useState<string | null>(null);
+  const [previewTicker, setPreviewTicker] = useState<string>('');
+  const [hypotheticalPriceInput, setHypotheticalPriceInput] = useState<string>('');
+  const hypotheticalPrice = hypotheticalPriceInput !== '' ? parseFloat(hypotheticalPriceInput) : null;
+  const priceForQuery = hypotheticalPrice != null && hypotheticalPrice > 0 ? hypotheticalPrice : null;
+  const previewInputRef = useRef<HTMLInputElement>(null);
 
   const updateStopMutation = useUpdateStopMutation(() => {
     setShowUpdateStopModal(false);
@@ -350,6 +440,19 @@ export default function PortfolioTable() {
             <div className="flex justify-end items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
               <Button
                 size="sm"
+                variant="secondary"
+                onClick={() => {
+                  setPreviewPositionId(row.position!.positionId!);
+                  setPreviewTicker(row.ticker);
+                  setHypotheticalPriceInput('');
+                  setTimeout(() => previewInputRef.current?.focus(), 50);
+                }}
+                title={t('workspacePage.panels.portfolio.intradayPreview.checkLive')}
+              >
+                {t('workspacePage.panels.portfolio.intradayPreview.checkLive')}
+              </Button>
+              <Button
+                size="sm"
                 variant="primary"
                 onClick={() => {
                   setSelectedPosition(row.position);
@@ -360,6 +463,10 @@ export default function PortfolioTable() {
                 {t('positionsPage.updateStop')}
               </Button>
               <ActionsDropdown>
+                <DropdownItem
+                  label={t('workspacePage.panels.portfolio.analyze')}
+                  onClick={() => setAnalyzeTicker(row.ticker)}
+                />
                 <DropdownItem
                   label={t('workspacePage.panels.portfolio.addOnEntry')}
                   onClick={() => {
@@ -443,6 +550,40 @@ export default function PortfolioTable() {
         }}
         onRowClick={(row) => setSelectedTicker(row.ticker)}
       />
+
+      {previewPositionId && (
+        <div className="mt-2 space-y-1">
+          <div className="flex items-center gap-2">
+            <label htmlFor="hypothetical-price" className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+              {t('workspacePage.panels.portfolio.intradayPreview.hypotheticalPrice')}
+            </label>
+            <input
+              id="hypothetical-price"
+              ref={previewInputRef}
+              type="number"
+              min="0.01"
+              step="0.01"
+              value={hypotheticalPriceInput}
+              onChange={(e) => setHypotheticalPriceInput(e.target.value)}
+              placeholder="live"
+              className="w-24 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-0.5 text-xs font-mono"
+            />
+          </div>
+          <StopPreviewPanel
+            positionId={previewPositionId}
+            ticker={previewTicker}
+            price={priceForQuery}
+            onClose={() => { setPreviewPositionId(null); setHypotheticalPriceInput(''); }}
+          />
+        </div>
+      )}
+
+      {analyzeTicker && (
+        <WorkspaceSymbolModal
+          ticker={analyzeTicker}
+          onBack={() => setAnalyzeTicker(null)}
+        />
+      )}
 
       {showUpdateStopModal && selectedPosition ? (
         <UpdateStopModalForm
