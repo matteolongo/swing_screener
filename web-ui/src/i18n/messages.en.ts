@@ -86,7 +86,7 @@ export const messagesEn = {
       UNKNOWN: 'Setup incomplete',
       INCOMPLETE: 'Setup incomplete',
     },
-    setupQualityExplanation: 'Setup quality: whether the trade passes checklist rules. Suggested action: what to do next.',
+    setupQualityExplanation: 'Setup quality · Suggested action',
     details: {
       title: 'Recommendation — {{ticker}}',
     },
@@ -519,6 +519,7 @@ export const messagesEn = {
       },
       mainRisk: 'Main risk:',
       invalidation: 'What would change this:',
+      weakCatalystNote: 'Acting despite weak catalyst: technical and fundamental strength meet the entry threshold.',
       action: {
         prepare_order: 'Prepare order',
         wait: 'Review price plan',
@@ -558,7 +559,7 @@ export const messagesEn = {
         placeholder: 'Screener controls and candidates will appear here.',
       },
       analysis: {
-        title: 'Analysis Canvas',
+        title: 'Stock Analysis',
         description: 'Review the selected ticker before creating an order.',
         tabs: {
           overview: 'Overview',
@@ -568,7 +569,7 @@ export const messagesEn = {
         },
         fundamentals: {
           descriptionHasSnapshot: 'Refresh the cached fundamentals snapshot for this symbol.',
-          descriptionNoSnapshot: 'Run fundamentals analysis for this symbol and cache the snapshot.',
+          descriptionNoSnapshot: 'No cached snapshot yet — click below to fetch and store fundamentals for this symbol.',
           refreshingAction: 'Refreshing fundamentals...',
           runningAction: 'Running fundamentals...',
           refreshAction: 'Refresh fundamentals',
@@ -576,7 +577,7 @@ export const messagesEn = {
           refreshError: 'Failed to refresh fundamentals',
           loading: 'Loading fundamentals...',
           loadError: 'Failed to load fundamentals',
-          noSnapshot: 'No fundamentals snapshot available yet.',
+          noSnapshot: 'No fundamentals snapshot cached. Use the button above to run analysis for this symbol.',
         },
         computeAnalysis: {
           description: 'No screener analysis is cached for {{ticker}} yet.',
@@ -608,6 +609,7 @@ export const messagesEn = {
             low: 'Low urgency',
             none: '',
           },
+          aiActionMismatch: 'AI summary reflects {{aiAction}} — screener decision is {{screenerAction}}. Context may differ.',
           upcomingEvents: 'Upcoming Events',
           positionSignal: {
             hold: 'Hold',
@@ -679,6 +681,8 @@ export const messagesEn = {
             stop: 'Stop',
             target: 'Target',
             rr: 'R/R',
+            entryClose: 'Entry (close)',
+            oneR: '1R',
           },
           copy: {
             whyItQualified: 'Why It Qualified',
@@ -1106,7 +1110,7 @@ export const messagesEn = {
       },
     },
     viewToggle: {
-      guided: 'Guided',
+      guided: 'Cards',
       advanced: 'Advanced table',
     },
     guidedList: {

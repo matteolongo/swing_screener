@@ -93,11 +93,13 @@ export default function ScreenerCandidateReviewList({
                 >
                   {candidate.ticker}
                 </button>
-                <span
-                  className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${QUALITY_BADGE_CLASS[quality]}`}
-                >
-                  {t(QUALITY_LABEL_KEY[quality])}
-                </span>
+                {!(quality === 'fail' && decision.orderReadiness === 'ready') && (
+                  <span
+                    className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${QUALITY_BADGE_CLASS[quality]}`}
+                  >
+                    {t(QUALITY_LABEL_KEY[quality])}
+                  </span>
+                )}
                 <span
                   className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${READINESS_CHIP_CLASS[decision.orderReadiness]}`}
                 >

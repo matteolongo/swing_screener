@@ -367,7 +367,7 @@ describe('Scenario 5: View toggle — guided and advanced labels', () => {
     // isolation. Those integration concerns are covered by
     // ScreenerInboxPanel.test.tsx. Here we only confirm that the key values
     // are stable so renames surface as test failures.
-    expect(t('screener.viewToggle.guided')).toBe('Guided');
+    expect(t('screener.viewToggle.guided')).toBe('Cards');
     expect(t('screener.viewToggle.advanced')).toBe('Advanced table');
   });
 

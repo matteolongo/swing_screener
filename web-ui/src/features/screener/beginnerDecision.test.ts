@@ -400,6 +400,19 @@ describe('toBeginnerDecision', () => {
     expect(decision.invalidation).toBe('Price closes below the 50-day MA.');
   });
 
+  it('formats long stop decimal in invalidation text', () => {
+    const candidate = makeCandidate('AAPL', {
+      action: 'BUY_NOW',
+      verdict: 'RECOMMENDED',
+      whatInvalidatesIt: ['Price closing below the stop at 396.9259 invalidates the setup.'],
+    });
+    candidate.decisionSummary!.tradePlan = { entry: 400, stop: 396.9259, target: 420, rr: 3 };
+    const decision = toBeginnerDecision(candidate);
+
+    expect(decision.invalidation).toContain('$396.93');
+    expect(decision.invalidation).not.toContain('396.9259');
+  });
+
   it('has no invalidation when whatInvalidatesIt is empty', () => {
     const candidate = makeCandidate('AAPL', {
       action: 'BUY_NOW',
