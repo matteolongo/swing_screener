@@ -133,7 +133,7 @@ describe('CandidateOrderModal', () => {
     const button = screen.getByRole('button', { name: 'Create Order' });
     expect(button).toBeDisabled();
     expect(screen.getByRole('tab', { name: 'Decision' })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByText('Place Order')).toBeInTheDocument();
+    expect(screen.getByText('Order ticket')).toBeInTheDocument();
   });
 
   it('defaults to BUY_STOP when backend guidance suggests breakout stop entry', () => {

@@ -45,8 +45,12 @@ describe('Strategy Page', () => {
   });
 
   it('disables delete for default strategy', async () => {
-    const { queryClient } = renderWithProviders(<StrategyPage />);
+    const { user, queryClient } = renderWithProviders(<StrategyPage />);
 
+    const manageButton = await screen.findByRole('button', { name: /manage strategies/i });
+    await act(async () => {
+      await user.click(manageButton);
+    });
     const deleteButton = await screen.findByRole('button', { name: /delete/i });
     expect(deleteButton).toBeDisabled();
     await waitForQueriesToSettle(queryClient);
@@ -55,6 +59,10 @@ describe('Strategy Page', () => {
   it('can save a strategy as new', async () => {
     const { user, queryClient } = renderWithProviders(<StrategyPage />);
 
+    const manageButton = await screen.findByRole('button', { name: /manage strategies/i });
+    await act(async () => {
+      await user.click(manageButton);
+    });
     const idInput = await screen.findByLabelText(/new id/i);
     const nameInput = screen.getByLabelText(/new name/i);
 
@@ -80,10 +88,24 @@ describe('Strategy Page', () => {
     await waitForQueriesToSettle(queryClient);
   });
 
-  it('keeps strategy management controls visible', async () => {
-    renderWithProviders(<StrategyPage />);
+  it('keeps lifecycle controls behind Manage strategies in beginner mode', async () => {
+    const { user } = renderWithProviders(<StrategyPage />);
 
     expect(await screen.findByLabelText(/choose strategy/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /save as new/i })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/new id/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/new name/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/new description/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /delete/i })).not.toBeInTheDocument();
+
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: /manage strategies/i }));
+    });
+
     expect(screen.getByRole('button', { name: /save as new/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/new id/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/new name/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/new description/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /delete/i })).toBeInTheDocument();
   });
 });

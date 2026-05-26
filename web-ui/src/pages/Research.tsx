@@ -91,7 +91,7 @@ export default function Research() {
 
       {/* Tab content */}
       <div>
-        {activeTab === 'fundamentals' && <FundamentalsPage initialSymbol={committedSymbol} />}
+        {activeTab === 'fundamentals' && <FundamentalsPage initialSymbol={committedSymbol} defaultSimple />}
         {activeTab === 'watchlist' && (
           <WatchlistPipelinePanel
             onTickerSelect={(ticker) => {

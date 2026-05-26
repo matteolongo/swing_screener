@@ -119,4 +119,49 @@ describe('FundamentalsPage', () => {
       });
     });
   });
+
+  it('hides provider cache and warmup tools behind advanced research tools in simple mode', async () => {
+    vi.mocked(fundamentalsHooks.useFundamentalsConfigQuery).mockReturnValue({
+      data: {
+        enabled: true,
+        providers: ['yfinance'],
+        cacheTtlHours: 24,
+        staleAfterDays: 120,
+        compareLimit: 5,
+      },
+    } as never);
+
+    vi.mocked(fundamentalsHooks.useCompareFundamentalsMutation).mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+      isError: false,
+      data: undefined,
+      error: null,
+    } as never);
+    vi.mocked(fundamentalsHooks.useFundamentalsWarmupStatus).mockReturnValue({
+      data: undefined,
+      isError: false,
+    } as never);
+    vi.mocked(fundamentalsHooks.useStartFundamentalsWarmupMutation).mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+      isError: false,
+      error: null,
+    } as never);
+
+    const { user } = renderWithProviders(<FundamentalsPage defaultSimple />, { route: '/fundamentals' });
+
+    expect(screen.getByRole('button', { name: 'Compare fundamentals' })).toBeInTheDocument();
+    expect(screen.queryByText(/Provider/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Warm listed symbols' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Warm watchlist' })).not.toBeInTheDocument();
+
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Advanced research tools' }));
+    });
+
+    expect(screen.getByText(/Provider/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Warm listed symbols' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Warm watchlist' })).toBeInTheDocument();
+  });
 });

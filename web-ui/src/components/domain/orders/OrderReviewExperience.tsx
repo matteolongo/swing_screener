@@ -604,22 +604,6 @@ export default function OrderReviewExperience({
                   </div>
                 ) : null}
 
-                <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/20">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
-                    {t('order.review.executionCautionTitle' as any)}
-                  </p>
-                  <p className="mt-2 text-sm text-amber-950 dark:text-amber-100">
-                    {context.recommendation?.education.commonBiasWarning || t(guidance.cautionKey)}
-                  </p>
-                  {context.recommendation?.education.whatWouldMakeValid.length ? (
-                    <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-amber-900 dark:text-amber-100">
-                      {context.recommendation.education.whatWouldMakeValid.map((item) => (
-                        <li key={item}>{item}</li>
-                      ))}
-                    </ul>
-                  ) : null}
-                </div>
-
                 {!context.recommendation?.thesis?.explanation.whatCouldGoWrong.length &&
                 !invalidationRules.length ? (
                   <EmptySection body={t('order.review.riskFallback')} />

@@ -24,10 +24,12 @@ function normalizeSymbols(input: string): string[] {
 
 interface FundamentalsPageProps {
   initialSymbol?: string;
+  defaultSimple?: boolean;
 }
 
-export default function FundamentalsPage({ initialSymbol }: FundamentalsPageProps) {
+export default function FundamentalsPage({ initialSymbol, defaultSimple = false }: FundamentalsPageProps) {
   const [symbolsInput, setSymbolsInput] = useState('AAPL, MSFT');
+  const [showAdvancedTools, setShowAdvancedTools] = useState(!defaultSimple);
   const [warmupJobId, setWarmupJobId] = useState<string | undefined>(undefined);
   const [syncedWarmupJobId, setSyncedWarmupJobId] = useState<string | undefined>(undefined);
   useEffect(() => {
@@ -81,7 +83,7 @@ export default function FundamentalsPage({ initialSymbol }: FundamentalsPageProp
         </p>
       </div>
 
-      {configQuery.data ? (
+      {showAdvancedTools && configQuery.data ? (
         <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
           {t('fundamentalsPage.config.providerInfo', {
             provider: configQuery.data.providers.join(', '),
@@ -106,13 +108,22 @@ export default function FundamentalsPage({ initialSymbol }: FundamentalsPageProp
           <Button type="button" onClick={runCompare} disabled={symbols.length < 2 || compareMutation.isPending}>
             {compareMutation.isPending ? t('fundamentalsPage.comparingAction') : t('fundamentalsPage.compareAction')}
           </Button>
-          <Button type="button" onClick={warmupSymbols} disabled={symbols.length < 1 || warmupMutation.isPending}>
-            {warmupMutation.isPending ? t('fundamentalsPage.queueingAction') : t('fundamentalsPage.warmupSymbolsAction')}
+          <Button type="button" variant="secondary" onClick={() => setShowAdvancedTools((value) => !value)}>
+            {showAdvancedTools
+              ? t('fundamentalsPage.hideAdvancedToolsAction')
+              : t('fundamentalsPage.advancedToolsAction')}
           </Button>
-          <Button type="button" onClick={warmupWatchlist} disabled={warmupMutation.isPending}>
-            {t('fundamentalsPage.warmupWatchlistAction')}
-          </Button>
-          <span className="text-xs text-gray-500">{t('fundamentalsPage.hint')}</span>
+          {showAdvancedTools ? (
+            <>
+              <Button type="button" onClick={warmupSymbols} disabled={symbols.length < 1 || warmupMutation.isPending}>
+                {warmupMutation.isPending ? t('fundamentalsPage.queueingAction') : t('fundamentalsPage.warmupSymbolsAction')}
+              </Button>
+              <Button type="button" onClick={warmupWatchlist} disabled={warmupMutation.isPending}>
+                {t('fundamentalsPage.warmupWatchlistAction')}
+              </Button>
+              <span className="text-xs text-gray-500">{t('fundamentalsPage.hint')}</span>
+            </>
+          ) : null}
         </div>
         <div className="mt-3 space-y-1">
           {compareMutation.isError ? (
