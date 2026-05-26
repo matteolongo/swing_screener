@@ -1,41 +1,9 @@
-import Badge from '@/components/common/Badge';
 import type {
   CatalystUrgency,
-  DecisionAction,
-  DecisionConviction,
   PositionSignalAction,
   SymbolIntelligence,
 } from '@/features/intelligence/types';
 import { t } from '@/i18n/t';
-
-function actionLabel(action: DecisionAction): string {
-  const map: Record<DecisionAction, string> = {
-    BUY_NOW: t('workspacePage.panels.analysis.decisionSummary.actions.buyNow'),
-    BUY_ON_PULLBACK: t('workspacePage.panels.analysis.decisionSummary.actions.buyOnPullback'),
-    WAIT_FOR_BREAKOUT: t('workspacePage.panels.analysis.decisionSummary.actions.waitForBreakout'),
-    WATCH: t('workspacePage.panels.analysis.decisionSummary.actions.watch'),
-    TACTICAL_ONLY: t('workspacePage.panels.analysis.decisionSummary.actions.tacticalOnly'),
-    AVOID: t('workspacePage.panels.analysis.decisionSummary.actions.avoid'),
-    MANAGE_ONLY: t('workspacePage.panels.analysis.decisionSummary.actions.manageOnly'),
-  };
-  return map[action];
-}
-
-function convictionLabel(conviction: DecisionConviction): string {
-  const map: Record<DecisionConviction, string> = {
-    high: t('workspacePage.panels.analysis.decisionSummary.conviction.high'),
-    medium: t('workspacePage.panels.analysis.decisionSummary.conviction.medium'),
-    low: t('workspacePage.panels.analysis.decisionSummary.conviction.low'),
-  };
-  return map[conviction];
-}
-
-function actionVariant(action: DecisionAction): 'primary' | 'success' | 'warning' | 'error' | 'default' {
-  if (action === 'BUY_NOW') return 'success';
-  if (action === 'AVOID') return 'error';
-  if (action === 'BUY_ON_PULLBACK' || action === 'WAIT_FOR_BREAKOUT') return 'primary';
-  return 'default';
-}
 
 function urgencyBadgeClass(urgency: CatalystUrgency): string {
   switch (urgency) {
@@ -74,29 +42,20 @@ interface IntelligenceCardProps {
 
 export default function IntelligenceCard({ intelligence }: IntelligenceCardProps) {
   const {
-    action, conviction, catalystUrgency, summaryLine,
-    narrative, upcomingEvents, positionSignal, sources,
+    catalystUrgency, upcomingEvents, positionSignal, sources,
   } = intelligence;
 
   const urgencyLabel = t(`workspacePage.panels.analysis.intelligence.catalystUrgency.${catalystUrgency}`);
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge variant={actionVariant(action)}>{actionLabel(action)}</Badge>
-        <Badge variant="default">{convictionLabel(conviction)}</Badge>
-        {catalystUrgency !== 'none' && (
+      {catalystUrgency !== 'none' && (
+        <div className="flex flex-wrap items-center gap-2">
           <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${urgencyBadgeClass(catalystUrgency)}`}>
             {urgencyLabel}
           </span>
-        )}
-      </div>
-
-      <p className="text-sm text-slate-700 font-medium">{summaryLine}</p>
-
-      <hr className="border-slate-100" />
-
-      <p className="text-sm text-slate-800 whitespace-pre-wrap">{narrative}</p>
+        </div>
+      )}
 
       {positionSignal && (
         <>

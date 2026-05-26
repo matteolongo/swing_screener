@@ -11,29 +11,13 @@ const baseIntel: SymbolIntelligence = {
   conviction: 'high',
   catalystUrgency: 'none',
   summaryLine: 'Cyclical recovery with improving EBITDA.',
-  narrative: "## Why it's moving\nAperam Q1 2026 beat.",
+  narrative: 'Aperam Q1 2026 beat consensus on EBITDA. Margins expanding into H2.',
   upcomingEvents: [],
   positionSignal: null,
   sources: ['https://aperam.com/q1-2026'],
 };
 
 describe('IntelligenceCard', () => {
-  it('renders action and conviction badges', () => {
-    render(<IntelligenceCard intelligence={baseIntel} />);
-    expect(screen.getByText('Buy Now')).toBeInTheDocument();
-    expect(screen.getByText('High')).toBeInTheDocument();
-  });
-
-  it('renders the summary line', () => {
-    render(<IntelligenceCard intelligence={baseIntel} />);
-    expect(screen.getByText('Cyclical recovery with improving EBITDA.')).toBeInTheDocument();
-  });
-
-  it('renders the narrative text', () => {
-    render(<IntelligenceCard intelligence={baseIntel} />);
-    expect(screen.getByText(/Why it's moving/)).toBeInTheDocument();
-  });
-
   it('shows sources count and URL when expanded', async () => {
     render(<IntelligenceCard intelligence={baseIntel} />);
     const summary = screen.getByText(/Sources \(1\)/);
