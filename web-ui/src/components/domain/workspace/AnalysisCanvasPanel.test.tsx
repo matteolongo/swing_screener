@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AnalysisCanvasPanel from '@/components/domain/workspace/AnalysisCanvasPanel';
 import * as fundamentalsHooks from '@/features/fundamentals/hooks';
 import type { FundamentalSnapshot } from '@/features/fundamentals/types';
+import * as catalystHooks from '@/features/intelligence/catalysts/hooks';
 import * as intelligenceHooks from '@/features/intelligence/hooks';
 import type { SymbolIntelligence } from '@/features/intelligence/types';
 import * as screenerHooks from '@/features/screener/hooks';
@@ -20,6 +21,10 @@ vi.mock('@/features/fundamentals/hooks', () => ({
 vi.mock('@/features/intelligence/hooks', () => ({
   useIntelligenceAnalysisMutation: vi.fn(),
   useIntelligenceLatestQuery: vi.fn(),
+}));
+
+vi.mock('@/features/intelligence/catalysts/hooks', () => ({
+  useSymbolCatalystQuery: vi.fn(),
 }));
 
 vi.mock('@/features/screener/hooks', () => ({
@@ -137,6 +142,11 @@ describe('AnalysisCanvasPanel', () => {
       isLoading: false,
       isError: false,
     } as never);
+    vi.mocked(catalystHooks.useSymbolCatalystQuery).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: false,
+    } as never);
     useWorkspaceStore.setState({
       selectedTicker: 'AAPL',
       selectedTickerSource: 'screener',
@@ -186,7 +196,14 @@ describe('AnalysisCanvasPanel', () => {
       catalystUrgency: 'medium',
       summaryLine: 'AAPL is showing strong momentum with a confirmed breakout.',
       narrative: 'The technical setup is aligned with the trend.',
-      upcomingEvents: [],
+      upcomingEvents: [
+        {
+          type: 'earnings',
+          date: '2026-07-24',
+          direction: 'bullish',
+          summary: 'Upcoming earnings may confirm the setup.',
+        },
+      ],
       positionSignal: null,
       sources: ['yahoo_finance'],
     };
@@ -204,8 +221,12 @@ describe('AnalysisCanvasPanel', () => {
 
     renderWithProviders(<AnalysisCanvasPanel />);
 
+    expect(screen.queryByRole('tab', { name: 'Intelligence' })).toBeNull();
     // NarrativeAnalysisCard shows the summaryLine
     expect(screen.getByText('AAPL is showing strong momentum with a confirmed breakout.')).toBeInTheDocument();
+    expect(screen.getByText('Upcoming Events')).toBeInTheDocument();
+    expect(screen.getByText('Upcoming earnings may confirm the setup.')).toBeInTheDocument();
+    expect(screen.getByText(/Sources \(1\)/)).toBeInTheDocument();
     // DecisionSummaryCard heading should NOT appear
     expect(screen.queryByText(/AAPL Decision Summary/)).not.toBeInTheDocument();
   });

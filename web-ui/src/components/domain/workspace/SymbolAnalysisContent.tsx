@@ -78,8 +78,8 @@ export default function SymbolAnalysisContent({
   });
 
   const intelligenceMutation = useIntelligenceAnalysisMutation();
-  const intelligenceLatest = useIntelligenceLatestQuery(ticker, activeTab === 'overview' || activeTab === 'intelligence');
-  const catalystQuery = useSymbolCatalystQuery(ticker, activeTab === 'intelligence');
+  const intelligenceLatest = useIntelligenceLatestQuery(ticker, activeTab === 'overview');
+  const catalystQuery = useSymbolCatalystQuery(ticker, activeTab === 'overview');
   const [intelligenceResult, setIntelligenceResult] = useState<SymbolIntelligence | null>(null);
   const displayedIntelligence = intelligenceResult ?? intelligenceLatest.data ?? null;
   const hasNarrative = Boolean(!intelligenceLatest.isLoading && displayedIntelligence?.narrative?.trim());
@@ -100,7 +100,6 @@ export default function SymbolAnalysisContent({
     { id: 'overview', label: t('workspacePage.panels.analysis.tabs.overview') },
     { id: 'fundamentals', label: t('workspacePage.panels.analysis.tabs.fundamentals') },
     { id: 'order', label: t('workspacePage.panels.analysis.tabs.order') },
-    { id: 'intelligence', label: t('workspacePage.panels.analysis.tabs.intelligence') },
   ];
   const watchedTickers = new Set((watchlistQuery.data ?? []).map((item) => item.ticker.toUpperCase()));
   const isWatched = watchedTickers.has(ticker.toUpperCase());
@@ -256,6 +255,31 @@ export default function SymbolAnalysisContent({
                 )}
               </div>
             )}
+            {hasNarrative && (
+              <div className="flex flex-wrap items-center gap-3 rounded-lg border border-gray-200 bg-white p-3">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  disabled={intelligenceMutation.isPending}
+                  onClick={handleAnalyzeWithAi}
+                >
+                  {intelligenceMutation.isPending
+                    ? t('workspacePage.panels.analysis.intelligence.analyzingAction')
+                    : t('workspacePage.panels.analysis.intelligence.refreshAction')}
+                </Button>
+                {displayedIntelligence && !intelligenceMutation.isPending && (
+                  <span className="text-xs text-gray-400">
+                    {t('workspacePage.panels.analysis.intelligence.lastAnalyzed')}:{' '}
+                    {new Date(displayedIntelligence.generatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                )}
+              </div>
+            )}
+            {catalystQuery.data && (
+              <CatalystContextCard opportunity={catalystQuery.data} />
+            )}
+            {displayedIntelligence ? <IntelligenceCard intelligence={displayedIntelligence} /> : null}
             <div className="rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700">
               <CachedSymbolPriceChart
                 ticker={ticker}
@@ -270,54 +294,6 @@ export default function SymbolAnalysisContent({
         )}
 
         {activeTab === 'order' ? orderPanel : null}
-
-        {activeTab === 'intelligence' && (
-          <div className="space-y-3">
-            <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-3">
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                disabled={intelligenceMutation.isPending}
-                onClick={handleAnalyzeWithAi}
-              >
-                {intelligenceMutation.isPending
-                  ? t('workspacePage.panels.analysis.intelligence.analyzingAction')
-                  : displayedIntelligence
-                    ? t('workspacePage.panels.analysis.intelligence.refreshAction')
-                    : t('workspacePage.panels.analysis.intelligence.analyzeAction')}
-              </Button>
-              {displayedIntelligence && !intelligenceMutation.isPending && (
-                <span className="text-xs text-gray-400">
-                  {t('workspacePage.panels.analysis.intelligence.lastAnalyzed')}:{' '}
-                  {new Date(displayedIntelligence.generatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </span>
-              )}
-            </div>
-
-            {intelligenceMutation.isError && (
-              <p className="text-sm text-rose-600">
-                {intelligenceMutation.error instanceof Error
-                  ? intelligenceMutation.error.message
-                  : t('workspacePage.panels.analysis.intelligence.analyzeError')}
-              </p>
-            )}
-
-            {catalystQuery.data && (
-              <CatalystContextCard opportunity={catalystQuery.data} />
-            )}
-
-            {(() => {
-              if (displayedIntelligence) return <IntelligenceCard intelligence={displayedIntelligence} />;
-              if (intelligenceMutation.isPending || intelligenceLatest.isLoading) return null;
-              return (
-                <p className="text-sm text-gray-500">
-                  {t('workspacePage.panels.analysis.intelligence.emptyState')}
-                </p>
-              );
-            })()}
-          </div>
-        )}
 
         {activeTab === 'fundamentals' && (
           <>
