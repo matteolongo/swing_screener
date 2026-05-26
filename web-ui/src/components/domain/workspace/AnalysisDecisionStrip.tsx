@@ -130,7 +130,7 @@ export default function AnalysisDecisionStrip({ ticker, candidate, onPrepareOrde
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            {compactValue('Entry', entry != null ? formatCurrency(entry, currency) : '—')}
+            {compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.entryClose'), entry != null ? formatCurrency(entry, currency) : '—')}
             {compactValue('Stop', stop != null ? formatCurrency(stop, currency) : '—')}
             {compactValue('Target', target != null ? formatCurrency(target, currency) : '—')}
             {compactValue('R/R', rr != null ? `${formatNumber(rr, 1)}x` : '—')}
