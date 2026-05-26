@@ -483,6 +483,7 @@ export const messagesEn = {
       fundamentals: 'Fundamentals',
       journal: 'Journal',
       analytics: 'Analytics',
+      calendar: 'Calendar',
       today: 'Today',
       book: 'Book',
       research: 'Research',
@@ -2019,6 +2020,18 @@ export const messagesEn = {
         choppy: 'Choppy / Range',
       },
     },
+  },
+  calendarPage: {
+    title: 'Events Calendar',
+    subtitle: 'Upcoming earnings and economic events for your positions and screener hits',
+    empty: 'No upcoming events found in the next {{days}} days.',
+    legend: {
+      position: 'Position',
+      screener: 'Screener hit',
+      economic: 'Economic event',
+    },
+    loadingText: 'Fetching events…',
+    errorText: 'Could not load events. Check the API server.',
   },
   portfolioRisk: {
     openPositions: 'Open Positions',
