@@ -59,7 +59,7 @@ export default function NarrativeAnalysisCard({
 }: NarrativeAnalysisCardProps) {
   const { action, conviction, summaryLine, narrative } = intelligence;
   const summary = candidate?.decisionSummary;
-  const warnings = summary?.explanation?.confidenceNotes ?? summary?.drivers.warnings ?? [];
+  const warnings = (summary?.explanation?.confidenceNotes ?? summary?.drivers.warnings ?? []).filter(Boolean);
 
   const tradePlanItems = summary?.tradePlan
     ? [
@@ -126,7 +126,7 @@ export default function NarrativeAnalysisCard({
               <Badge variant={summary.fundamentalsLabel === 'strong' ? 'success' : summary.fundamentalsLabel === 'weak' ? 'error' : 'warning'}>
                 {t('workspacePage.panels.analysis.decisionSummary.labels.fundamentals')}: {summary.fundamentalsLabel}
               </Badge>
-              <Badge variant={summary.valuationLabel === 'cheap' ? 'success' : summary.valuationLabel === 'expensive' ? 'error' : 'default'}>
+              <Badge variant={summary.valuationLabel === 'cheap' ? 'success' : summary.valuationLabel === 'expensive' ? 'error' : 'warning'}>
                 {t('workspacePage.panels.analysis.decisionSummary.labels.valuation')}: {summary.valuationLabel}
               </Badge>
               <Badge variant={summary.catalystLabel === 'active' ? 'success' : summary.catalystLabel === 'weak' ? 'error' : 'warning'}>

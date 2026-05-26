@@ -88,4 +88,18 @@ describe('NarrativeAnalysisCard', () => {
     render(<NarrativeAnalysisCard intelligence={baseIntelligence} candidate={candidateNoWarnings} />);
     expect(screen.queryByText('Watch China exposure')).toBeNull();
   });
+
+  it('renders confidenceNotes from explanation when present, not drivers.warnings', () => {
+    const candidateWithNotes: SymbolAnalysisCandidate = {
+      ...baseCandidate,
+      decisionSummary: {
+        ...baseCandidate.decisionSummary!,
+        drivers: { positives: [], negatives: [], warnings: ['Should not appear'] },
+        explanation: { confidenceNotes: ['Confidence note shown'] },
+      },
+    };
+    render(<NarrativeAnalysisCard intelligence={baseIntelligence} candidate={candidateWithNotes} />);
+    expect(screen.getByText('Confidence note shown')).toBeInTheDocument();
+    expect(screen.queryByText('Should not appear')).toBeNull();
+  });
 });
