@@ -587,6 +587,8 @@ export const messagesEn = {
         intelligence: {
           analyzeAction: 'Analyze with AI',
           analyzingAction: 'Analyzing...',
+          overviewPromptTitle: 'AI narrative summary',
+          overviewPromptDescription: 'Generate a web-search-grounded summary for this symbol without leaving Overview.',
           emptyState: 'Click "Analyze with AI" to generate a web-search-grounded analysis for this symbol.',
           marketCatalyst: 'Market catalyst context',
           keyRisks: 'Key risks',
@@ -595,6 +597,11 @@ export const messagesEn = {
           refreshAction: 'Refresh',
           lastAnalyzed: 'Last analyzed',
           signalsDetail: 'Signals & detail',
+          decisionFocus: 'Decision focus',
+          whyNow: 'Why now',
+          whatToDo: 'What to do',
+          watchFor: 'Watch for',
+          aiRationale: 'AI rationale',
           catalystUrgency: {
             high: 'High urgency',
             medium: 'Medium urgency',

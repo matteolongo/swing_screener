@@ -31,6 +31,19 @@ describe('IntelligenceCard', () => {
     expect(screen.queryByText(/Sources/)).toBeNull();
   });
 
+  it('does not render fields moved to the overview narrative card', () => {
+    render(<IntelligenceCard intelligence={baseIntel} />);
+    expect(screen.queryByText('BUY_NOW')).toBeNull();
+    expect(screen.queryByText('high')).toBeNull();
+    expect(screen.queryByText('Cyclical recovery with improving EBITDA.')).toBeNull();
+    expect(screen.queryByText('Aperam Q1 2026 beat consensus on EBITDA. Margins expanding into H2.')).toBeNull();
+  });
+
+  it('does not render an empty shell when there are no remaining detail sections', () => {
+    const { container } = render(<IntelligenceCard intelligence={{ ...baseIntel, sources: [] }} />);
+    expect(container.firstChild).toBeNull();
+  });
+
   const baseIntelExtended = {
     ...baseIntel,
     catalystUrgency: 'high' as const,

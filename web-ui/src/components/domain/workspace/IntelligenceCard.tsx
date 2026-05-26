@@ -44,12 +44,19 @@ export default function IntelligenceCard({ intelligence }: IntelligenceCardProps
   const {
     catalystUrgency, upcomingEvents, positionSignal, sources,
   } = intelligence;
+  const hasUrgency = catalystUrgency !== 'none';
+  const hasEvents = upcomingEvents.length > 0;
+  const hasSources = sources.length > 0;
+
+  if (!hasUrgency && !positionSignal && !hasEvents && !hasSources) {
+    return null;
+  }
 
   const urgencyLabel = t(`workspacePage.panels.analysis.intelligence.catalystUrgency.${catalystUrgency}`);
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
-      {catalystUrgency !== 'none' && (
+      {hasUrgency && (
         <div className="flex flex-wrap items-center gap-2">
           <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${urgencyBadgeClass(catalystUrgency)}`}>
             {urgencyLabel}
@@ -69,7 +76,7 @@ export default function IntelligenceCard({ intelligence }: IntelligenceCardProps
         </>
       )}
 
-      {upcomingEvents.length > 0 && (
+      {hasEvents && (
         <>
           <hr className="border-slate-100" />
           <div>
@@ -96,7 +103,7 @@ export default function IntelligenceCard({ intelligence }: IntelligenceCardProps
         </>
       )}
 
-      {sources.length > 0 && (
+      {hasSources && (
         <>
           <hr className="border-slate-100" />
           <details className="text-sm">

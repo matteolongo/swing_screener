@@ -96,6 +96,20 @@ export default function NarrativeAnalysisCard({
   const { action, conviction, summaryLine, narrative } = intelligence;
   const summary = candidate?.decisionSummary;
   const warnings = (summary?.explanation?.confidenceNotes ?? summary?.drivers.warnings ?? []).filter(Boolean);
+  const decisionHighlights = [
+    {
+      label: t('workspacePage.panels.analysis.intelligence.whyNow'),
+      value: summary?.whyNow,
+    },
+    {
+      label: t('workspacePage.panels.analysis.intelligence.whatToDo'),
+      value: summary?.whatToDo,
+    },
+    {
+      label: t('workspacePage.panels.analysis.intelligence.watchFor'),
+      value: summary?.mainRisk || warnings[0],
+    },
+  ].filter((item) => item.value);
 
   const tradePlanItems = summary?.tradePlan
     ? [
@@ -117,12 +131,24 @@ export default function NarrativeAnalysisCard({
       </div>
 
       <div className="bg-slate-50 p-3 space-y-3">
-        {/* Narrative */}
+        {/* Decision first, rationale after. */}
         <div className="rounded-md bg-white border border-slate-200 p-3">
-          <p className="text-sm font-semibold text-slate-900 mb-2">{summaryLine}</p>
-          <div className="prose prose-sm prose-slate max-w-none">
-            <ReactMarkdown>{narrative}</ReactMarkdown>
+          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            {t('workspacePage.panels.analysis.intelligence.decisionFocus')}
           </div>
+          <p className="mt-2 text-base font-semibold text-slate-950">{summaryLine}</p>
+          {decisionHighlights.length > 0 && (
+            <dl className="mt-3 grid gap-2">
+              {decisionHighlights.map((item) => (
+                <div key={item.label} className="rounded-md bg-slate-50 px-3 py-2">
+                  <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                    {item.label}
+                  </dt>
+                  <dd className="mt-1 text-sm text-slate-800">{item.value}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
         </div>
 
         {/* Compact trade plan */}
@@ -148,6 +174,16 @@ export default function NarrativeAnalysisCard({
             </ul>
           </div>
         )}
+
+        {/* Narrative */}
+        <div className="rounded-md bg-white border border-slate-200 p-3">
+          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            {t('workspacePage.panels.analysis.intelligence.aiRationale')}
+          </div>
+          <div className="prose prose-sm prose-slate mt-2 max-w-none">
+            <ReactMarkdown>{narrative}</ReactMarkdown>
+          </div>
+        </div>
 
         {/* Collapsed signals + valuation detail */}
         {summary && (
