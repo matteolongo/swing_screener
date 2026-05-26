@@ -616,6 +616,17 @@ export const messagesEn = {
             trim: 'Trim',
             exit: 'Exit',
           },
+          positionOutlook: {
+            title: 'Position Outlook',
+            expectedHoldingPeriod: 'Expected hold',
+            thesisStatus: 'Thesis',
+            profitManagement: 'Profit management',
+            opportunityCost: 'Opportunity cost',
+            holdUntil: 'Hold until',
+            nextReviewTrigger: 'Next review trigger',
+            confidenceDecay: 'Confidence decay',
+            invalidationSignals: 'Invalidation signals',
+          },
         },
         decisionSummary: {
           title: '{{ticker}} Decision Summary',

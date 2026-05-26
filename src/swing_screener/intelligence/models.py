@@ -3,7 +3,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from swing_screener.recommendation.models import DecisionAction, DecisionConviction
 
@@ -41,6 +41,17 @@ class PositionSignal(BaseModel):
     reason: str
 
 
+class PositionOutlook(BaseModel):
+    expected_holding_period: Literal["days", "1-2_weeks", "2-6_weeks", "unknown"]
+    hold_until: str
+    next_review_trigger: str
+    thesis_status: Literal["intact", "weakening", "broken", "unclear"]
+    invalidation_signals: list[str] = Field(default_factory=list)
+    profit_management: Literal["hold_full", "consider_trim", "trail_stop", "protect_breakeven", "exit"]
+    opportunity_cost: Literal["low", "medium", "high"]
+    confidence_decay: str
+
+
 class SymbolIntelligenceRequest(BaseModel):
     close: float
     signal: str
@@ -68,4 +79,5 @@ class SymbolIntelligence(BaseModel):
     narrative: str
     upcoming_events: list[IntelligenceEvent] = []
     position_signal: PositionSignal | None = None
+    position_outlook: PositionOutlook | None = None
     sources: list[str] = []

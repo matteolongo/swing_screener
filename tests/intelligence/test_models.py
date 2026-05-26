@@ -2,7 +2,7 @@ import pytest
 from pydantic import ValidationError
 from swing_screener.intelligence.models import (
     IntelligenceEvent, IntelligenceEventDirection, IntelligenceEventType,
-    PositionSignal, PositionSignalAction, SymbolIntelligence, SymbolIntelligenceRequest,
+    PositionOutlook, PositionSignal, PositionSignalAction, SymbolIntelligence, SymbolIntelligenceRequest,
 )
 
 
@@ -91,6 +91,16 @@ def test_symbol_intelligence_has_new_fields():
             )
         ],
         position_signal=PositionSignal(action=PositionSignalAction.HOLD, reason="Thesis intact."),
+        position_outlook=PositionOutlook(
+            expected_holding_period="1-2_weeks",
+            hold_until="Hold while price stays above SMA20 and catalyst momentum persists.",
+            next_review_trigger="Reassess after earnings or a close below SMA20.",
+            thesis_status="intact",
+            invalidation_signals=["Close below SMA20", "Earnings guide-down"],
+            profit_management="trail_stop",
+            opportunity_cost="medium",
+            confidence_decay="If no breakout occurs within two weeks, confidence fades.",
+        ),
         sources=[],
     )
     assert intel.catalyst_urgency == "high"
@@ -98,6 +108,10 @@ def test_symbol_intelligence_has_new_fields():
     assert intel.upcoming_events[0].type == "earnings"
     assert intel.position_signal is not None
     assert intel.position_signal.action == "HOLD"
+    assert intel.position_outlook is not None
+    assert intel.position_outlook.expected_holding_period == "1-2_weeks"
+    assert intel.position_outlook.thesis_status == "intact"
+    assert intel.position_outlook.profit_management == "trail_stop"
 
 
 def test_symbol_intelligence_defaults():
@@ -109,3 +123,4 @@ def test_symbol_intelligence_defaults():
     )
     assert intel.upcoming_events == []
     assert intel.position_signal is None
+    assert intel.position_outlook is None
