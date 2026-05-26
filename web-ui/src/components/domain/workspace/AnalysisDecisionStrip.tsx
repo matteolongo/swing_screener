@@ -134,7 +134,7 @@ export default function AnalysisDecisionStrip({ ticker, candidate, onPrepareOrde
             {compactValue('Stop', stop != null ? formatCurrency(stop, currency) : '—')}
             {compactValue('Target', target != null ? formatCurrency(target, currency) : '—')}
             {compactValue('R/R', rr != null ? `${formatNumber(rr, 1)}x` : '—')}
-            {compactValue('Risk %', riskPct != null ? `${formatNumber(riskPct * 100, 2)}%` : '—')}
+            {compactValue('Risk %', riskPct != null && riskPct > 0 ? `${formatNumber(riskPct * 100, 2)}%` : '—')}
           </div>
         </div>
 
