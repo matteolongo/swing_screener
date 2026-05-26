@@ -800,7 +800,7 @@ class PortfolioService:
 
         isin = order.get("isin") or _resolve_isin(ticker)
         position_id = f"POS-{uuid.uuid4().hex[:8].upper()}"
-        initial_risk = (request.filled_price - stop_price) * order["quantity"]
+        initial_risk = round(request.filled_price - stop_price, 4)
 
         new_position: dict = {
             "position_id": position_id,
@@ -835,7 +835,7 @@ class PortfolioService:
 
         ticker = request.ticker.upper()
         position_id = f"POS-{uuid.uuid4().hex[:8].upper()}"
-        initial_risk = (request.entry_price - request.stop_price) * request.shares
+        initial_risk = round(request.entry_price - request.stop_price, 4)
         isin = request.isin or _resolve_isin(ticker)
 
         new_position: dict = {
