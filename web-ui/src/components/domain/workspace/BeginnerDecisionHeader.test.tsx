@@ -127,6 +127,42 @@ describe('BeginnerDecisionHeader', () => {
     expect(screen.getByText('Close below 171')).toBeInTheDocument();
   });
 
+  it('shows weak catalyst note when action is BUY_NOW and catalystLabel is weak', () => {
+    const candidate = buildCandidate({
+      decisionSummary: {
+        symbol: 'AAPL',
+        action: 'BUY_NOW',
+        conviction: 'high',
+        technicalLabel: 'strong',
+        fundamentalsLabel: 'strong',
+        valuationLabel: 'fair',
+        catalystLabel: 'weak',
+        whyNow: 'Setup timing is ready.',
+        whatToDo: 'Use the current trade plan.',
+        mainRisk: 'Valuation risk remains.',
+        tradePlan: { entry: 180, stop: 171, target: 198, rr: 2 },
+        valuationContext: { method: 'not_available' },
+        drivers: { positives: [], negatives: [], warnings: [] },
+        catalystSummary: null,
+        catalystSources: [],
+      },
+    });
+    renderWithProviders(
+      <BeginnerDecisionHeader candidate={candidate} onAction={vi.fn()} />
+    );
+
+    expect(screen.getByText(t('analysis.beginnerHeader.weakCatalystNote'))).toBeInTheDocument();
+  });
+
+  it('does not show weak catalyst note when catalystLabel is active', () => {
+    const candidate = buildBuyNowCandidate();
+    renderWithProviders(
+      <BeginnerDecisionHeader candidate={candidate} onAction={vi.fn()} />
+    );
+
+    expect(screen.queryByText(t('analysis.beginnerHeader.weakCatalystNote'))).not.toBeInTheDocument();
+  });
+
   it('calls onAction with the correct nextStepKind when action button is clicked', async () => {
     const onAction = vi.fn();
     const candidate = buildBuyNowCandidate();

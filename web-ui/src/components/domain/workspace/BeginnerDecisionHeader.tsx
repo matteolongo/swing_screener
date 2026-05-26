@@ -110,6 +110,12 @@ export default function BeginnerDecisionHeader({ candidate, onAction }: Beginner
           {decision.invalidation}
         </p>
       ) : null}
+      {decision.suggestedAction === 'BUY_NOW' &&
+        candidate.decisionSummary?.catalystLabel === 'weak' && (
+          <p className="text-sm text-blue-700 mb-1">
+            {t('analysis.beginnerHeader.weakCatalystNote')}
+          </p>
+        )}
       <Button
         type="button"
         variant="primary"

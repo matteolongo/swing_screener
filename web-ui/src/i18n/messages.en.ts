@@ -519,6 +519,7 @@ export const messagesEn = {
       },
       mainRisk: 'Main risk:',
       invalidation: 'What would change this:',
+      weakCatalystNote: 'Acting despite weak catalyst: technical and fundamental strength meet the entry threshold.',
       action: {
         prepare_order: 'Prepare order',
         wait: 'Review price plan',
