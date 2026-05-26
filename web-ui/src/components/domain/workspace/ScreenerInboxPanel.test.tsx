@@ -3,7 +3,7 @@ import { screen, act } from '@testing-library/react';
 import { renderWithProviders } from '@/test/utils';
 import { t } from '@/i18n/t';
 
-import { currencyFilterToRequest, ScreenerRunningPanel } from './ScreenerInboxPanel';
+import ScreenerInboxPanel, { currencyFilterToRequest, ScreenerRunningPanel } from './ScreenerInboxPanel';
 
 describe('currencyFilterToRequest', () => {
   it('does not force currencies when the filter is all', () => {
@@ -54,5 +54,14 @@ describe('ScreenerRunningPanel', () => {
     });
     // All steps should still be in the document
     expect(screen.getByText(t('screener.running.steps.buildingPlans'))).toBeInTheDocument();
+  });
+});
+
+describe('ScreenerInboxPanel', () => {
+  it('defaults to the collapsed beginner run summary instead of the full advanced filter form', async () => {
+    renderWithProviders(<ScreenerInboxPanel />);
+
+    expect(await screen.findByRole('button', { name: 'Advanced filters' })).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: t('screener.controls.actionFilter') })).not.toBeInTheDocument();
   });
 });
