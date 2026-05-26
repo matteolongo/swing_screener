@@ -86,7 +86,7 @@ export const messagesEn = {
       UNKNOWN: 'Setup incomplete',
       INCOMPLETE: 'Setup incomplete',
     },
-    setupQualityExplanation: 'Setup quality: whether the trade passes checklist rules. Suggested action: what to do next.',
+    setupQualityExplanation: 'Setup quality · Suggested action',
     details: {
       title: 'Recommendation — {{ticker}}',
     },
