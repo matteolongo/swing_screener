@@ -721,6 +721,7 @@ export const messagesEn = {
           commissions: 'Commission',
           actions: 'Actions',
         },
+        analyze: 'Analyze',
         pendingOnly: 'Pending order',
         addOnEntry: 'Add-on Entry',
         empty: 'No open positions or pending orders.',

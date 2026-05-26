@@ -7,6 +7,7 @@ import FillOrderModalForm from '@/components/domain/orders/FillOrderModalForm';
 import ClosePositionModalForm from '@/components/domain/positions/ClosePositionModalForm';
 import PartialCloseModalForm from '@/components/domain/positions/PartialCloseModalForm';
 import UpdateStopModalForm from '@/components/domain/positions/UpdateStopModalForm';
+import WorkspaceSymbolModal from '@/components/domain/workspace/WorkspaceSymbolModal';
 import type { PositionWithMetrics } from '@/features/portfolio/api';
 import {
   useCancelOrderMutation,
@@ -194,6 +195,8 @@ export default function PortfolioTable() {
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [showPartialCloseModal, setShowPartialCloseModal] = useState(false);
   const [showFillOrderModal, setShowFillOrderModal] = useState(false);
+
+  const [analyzeTicker, setAnalyzeTicker] = useState<string | null>(null);
 
   const [previewPositionId, setPreviewPositionId] = useState<string | null>(null);
   const [previewTicker, setPreviewTicker] = useState<string>('');
@@ -461,6 +464,10 @@ export default function PortfolioTable() {
               </Button>
               <ActionsDropdown>
                 <DropdownItem
+                  label={t('workspacePage.panels.portfolio.analyze')}
+                  onClick={() => setAnalyzeTicker(row.ticker)}
+                />
+                <DropdownItem
                   label={t('workspacePage.panels.portfolio.addOnEntry')}
                   onClick={() => {
                     setSelectedTicker(row.ticker, 'portfolio');
@@ -569,6 +576,13 @@ export default function PortfolioTable() {
             onClose={() => { setPreviewPositionId(null); setHypotheticalPriceInput(''); }}
           />
         </div>
+      )}
+
+      {analyzeTicker && (
+        <WorkspaceSymbolModal
+          ticker={analyzeTicker}
+          onBack={() => setAnalyzeTicker(null)}
+        />
       )}
 
       {showUpdateStopModal && selectedPosition ? (
