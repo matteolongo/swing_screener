@@ -42,4 +42,6 @@ export const queryKeys = {
   fundamentalsSnapshot: (symbol?: string, refresh?: boolean) =>
     ['fundamentals-snapshot', symbol ?? null, refresh ?? false] as const,
   fundamentalsWarmupStatus: (jobId?: string) => ['fundamentals-warmup-status', jobId] as const,
+  calendarEvents: (daysAhead?: number) =>
+    ['calendar-events', daysAhead ?? 30] as const,
 };

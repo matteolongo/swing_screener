@@ -94,6 +94,9 @@ export const API_ENDPOINTS = {
   // Daily Review
   dailyReview: '/api/daily-review',
   dailyReviewCompute: '/api/daily-review/compute',
+
+  // Calendar
+  calendarEvents: '/api/calendar/events',
 } as const;
 
 // Helper to build full URL
