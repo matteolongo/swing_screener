@@ -1,6 +1,7 @@
 import { API_ENDPOINTS, apiUrl } from '@/lib/api';
 import type { SymbolIntelligenceAPI, SweepSymbolPayload, SweepResponseAPI } from '@/features/intelligence/types';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
+import type { PositionWithMetrics } from '@/features/portfolio/api';
 
 export interface IntelligenceRequestPayload {
   close: number;
@@ -14,14 +15,17 @@ export interface IntelligenceRequestPayload {
   momentum_12m?: number | null;
   sector?: string | null;
   currency?: string;
-  entry_price?: number | null;
-  r_now?: number | null;
-  days_open?: number | null;
+  entry_price?: number;
+  r_now?: number;
+  days_open?: number;
 }
 
-export function candidateToPayload(candidate: SymbolAnalysisCandidate | null | undefined): IntelligenceRequestPayload | null {
+export function candidateToPayload(
+  candidate: SymbolAnalysisCandidate | null | undefined,
+  position?: PositionWithMetrics | null,
+): IntelligenceRequestPayload | null {
   if (!candidate?.close) return null;
-  return {
+  const payload: IntelligenceRequestPayload = {
     close: candidate.close,
     signal: candidate.signal ?? 'unknown',
     entry: candidate.entry ?? null,
@@ -34,6 +38,12 @@ export function candidateToPayload(candidate: SymbolAnalysisCandidate | null | u
     sector: candidate.sector ?? null,
     currency: candidate.currency ?? 'USD',
   };
+  if (position != null) {
+    payload.entry_price = position.entryPrice;
+    payload.r_now = position.rNow;
+    payload.days_open = position.daysOpen;
+  }
+  return payload;
 }
 
 export async function postIntelligenceAnalysis(

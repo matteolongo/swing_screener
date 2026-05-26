@@ -196,7 +196,7 @@ export default function PortfolioTable() {
   const [showPartialCloseModal, setShowPartialCloseModal] = useState(false);
   const [showFillOrderModal, setShowFillOrderModal] = useState(false);
 
-  const [analyzeTicker, setAnalyzeTicker] = useState<string | null>(null);
+  const [analyzeTarget, setAnalyzeTarget] = useState<{ ticker: string; position: PositionWithMetrics | null } | null>(null);
 
   const [previewPositionId, setPreviewPositionId] = useState<string | null>(null);
   const [previewTicker, setPreviewTicker] = useState<string>('');
@@ -465,7 +465,7 @@ export default function PortfolioTable() {
               <ActionsDropdown>
                 <DropdownItem
                   label={t('workspacePage.panels.portfolio.analyze')}
-                  onClick={() => setAnalyzeTicker(row.ticker)}
+                  onClick={() => setAnalyzeTarget({ ticker: row.ticker, position: row.position })}
                 />
                 <DropdownItem
                   label={t('workspacePage.panels.portfolio.addOnEntry')}
@@ -578,10 +578,11 @@ export default function PortfolioTable() {
         </div>
       )}
 
-      {analyzeTicker && (
+      {analyzeTarget && (
         <WorkspaceSymbolModal
-          ticker={analyzeTicker}
-          onBack={() => setAnalyzeTicker(null)}
+          ticker={analyzeTarget.ticker}
+          position={analyzeTarget.position}
+          onBack={() => setAnalyzeTarget(null)}
         />
       )}
 

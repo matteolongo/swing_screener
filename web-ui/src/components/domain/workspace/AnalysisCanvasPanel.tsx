@@ -5,6 +5,7 @@ import ActionPanel from '@/components/domain/workspace/ActionPanel';
 import SymbolAnalysisContent from '@/components/domain/workspace/SymbolAnalysisContent';
 import { syncCandidateWithFundamentals } from '@/features/screener/decisionSummary';
 import { useFundamentalSnapshotQuery, useRefreshFundamentalSnapshotMutation } from '@/features/fundamentals/hooks';
+import { useOpenPositions } from '@/features/portfolio/hooks';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { t } from '@/i18n/t';
@@ -18,6 +19,10 @@ export default function AnalysisCanvasPanel() {
   const selectedCandidate = lastScreenerResult?.candidates.find(
     (candidate) => candidate.ticker.toUpperCase() === selectedTicker?.toUpperCase()
   );
+  const openPositionsQuery = useOpenPositions();
+  const openPosition = openPositionsQuery.data?.find(
+    (p) => p.ticker.toUpperCase() === selectedTicker?.toUpperCase()
+  ) ?? null;
 
   const fundamentalsQuery = useFundamentalSnapshotQuery(
     activeTab === 'fundamentals' ? selectedTicker ?? undefined : undefined
@@ -62,6 +67,7 @@ export default function AnalysisCanvasPanel() {
           <SymbolAnalysisContent
             ticker={selectedTicker}
             candidate={selectedCandidate}
+            position={openPosition}
             activeTab={activeTab}
             onTabChange={setAnalysisTab}
             orderPanel={<ActionPanel ticker={selectedTicker} />}

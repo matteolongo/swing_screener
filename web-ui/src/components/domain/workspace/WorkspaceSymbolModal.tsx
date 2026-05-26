@@ -1,22 +1,45 @@
+import { useState, useEffect } from 'react';
 import { ArrowLeft, ExternalLink, ShoppingCart } from 'lucide-react';
 import Button from '@/components/common/Button';
 import ModalShell from '@/components/common/ModalShell';
 import CachedSymbolPriceChart from '@/components/domain/market/CachedSymbolPriceChart';
 import KeyMetrics from '@/components/domain/workspace/KeyMetrics';
 import ActionPanel from '@/components/domain/workspace/ActionPanel';
+import IntelligenceCard from '@/components/domain/workspace/IntelligenceCard';
 import WorkspaceFundamentalsPanel from '@/components/domain/workspace/WorkspaceFundamentalsPanel';
+import { useIntelligenceAnalysisMutation, useIntelligenceLatestQuery } from '@/features/intelligence/hooks';
+import type { SymbolIntelligence } from '@/features/intelligence/types';
+import type { PositionWithMetrics } from '@/features/portfolio/api';
 import { t } from '@/i18n/t';
 import { cn } from '@/utils/cn';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 
 interface WorkspaceSymbolModalProps {
   ticker: string;
+  position?: PositionWithMetrics | null;
   onBack: () => void;
 }
 
-export default function WorkspaceSymbolModal({ ticker, onBack }: WorkspaceSymbolModalProps) {
+export default function WorkspaceSymbolModal({ ticker, position = null, onBack }: WorkspaceSymbolModalProps) {
   const activeTab = useWorkspaceStore((state) => state.analysisTab);
   const setAnalysisTab = useWorkspaceStore((state) => state.setAnalysisTab);
+  const intelligenceMutation = useIntelligenceAnalysisMutation();
+  const intelligenceLatest = useIntelligenceLatestQuery(ticker, activeTab === 'overview');
+  const [intelligenceResult, setIntelligenceResult] = useState<SymbolIntelligence | null>(null);
+  const displayedIntelligence = intelligenceResult ?? intelligenceLatest.data ?? null;
+  const hasNarrative = Boolean(!intelligenceLatest.isLoading && displayedIntelligence?.narrative?.trim());
+
+  useEffect(() => {
+    setIntelligenceResult(null);
+    intelligenceMutation.reset();
+  }, [ticker]);
+
+  const handleAnalyzeWithAi = () => {
+    intelligenceMutation.mutate(
+      { ticker, candidate: null, position },
+      { onSuccess: (result) => setIntelligenceResult(result) },
+    );
+  };
 
   const tabs = [
     { id: 'overview', label: t('workspacePage.panels.analysis.tabs.overview') },
@@ -101,6 +124,41 @@ export default function WorkspaceSymbolModal({ ticker, onBack }: WorkspaceSymbol
                 <CachedSymbolPriceChart ticker={ticker} className="mt-2" />
               </div>
               <KeyMetrics ticker={ticker} />
+              <div className="rounded-lg border border-slate-200 bg-white p-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">
+                      {t('workspacePage.panels.analysis.intelligence.overviewPromptTitle')}
+                    </p>
+                    {position && (
+                      <p className="mt-0.5 text-xs text-slate-500">
+                        {t('workspacePage.panels.analysis.intelligence.overviewPromptDescription')}
+                      </p>
+                    )}
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    disabled={intelligenceMutation.isPending}
+                    onClick={handleAnalyzeWithAi}
+                  >
+                    {intelligenceMutation.isPending
+                      ? t('workspacePage.panels.analysis.intelligence.analyzingAction')
+                      : hasNarrative
+                        ? t('workspacePage.panels.analysis.intelligence.refreshAction')
+                        : t('workspacePage.panels.analysis.intelligence.analyzeAction')}
+                  </Button>
+                </div>
+                {intelligenceMutation.isError && (
+                  <p className="mt-2 text-sm text-rose-600">
+                    {intelligenceMutation.error instanceof Error
+                      ? intelligenceMutation.error.message
+                      : t('workspacePage.panels.analysis.intelligence.analyzeError')}
+                  </p>
+                )}
+              </div>
+              {displayedIntelligence ? <IntelligenceCard intelligence={displayedIntelligence} /> : null}
             </>
           ) : null}
 
