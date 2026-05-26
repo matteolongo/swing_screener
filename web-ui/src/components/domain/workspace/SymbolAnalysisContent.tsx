@@ -13,7 +13,7 @@ import DecisionSummaryCard from '@/components/domain/workspace/DecisionSummaryCa
 import NarrativeAnalysisCard from '@/components/domain/workspace/NarrativeAnalysisCard';
 import TechnicalMetricsGrid from '@/components/domain/workspace/TechnicalMetricsGrid';
 import type { SymbolAnalysisCandidate, WorkspaceAnalysisTab } from '@/components/domain/workspace/types';
-import type { ScreenerCandidate, ScreenerResponse } from '@/features/screener/types';
+import type { ScreenerResponse } from '@/features/screener/types';
 import { useRunScreenerMutation } from '@/features/screener/hooks';
 import {
   useFundamentalSnapshotQuery,
@@ -28,7 +28,6 @@ import { formatDateTime } from '@/utils/formatters';
 interface SymbolAnalysisContentProps {
   ticker: string;
   candidate?: SymbolAnalysisCandidate | null;
-  screenerCandidate?: ScreenerCandidate | null;
   activeTab: WorkspaceAnalysisTab;
   onTabChange: (tab: WorkspaceAnalysisTab) => void;
   orderPanel?: ReactNode;
