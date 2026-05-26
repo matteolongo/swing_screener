@@ -1108,7 +1108,7 @@ export const messagesEn = {
       },
     },
     viewToggle: {
-      guided: 'Guided',
+      guided: 'Cards',
       advanced: 'Advanced table',
     },
     guidedList: {
