@@ -263,4 +263,24 @@ describe('ScreenerCandidateReviewList', () => {
 
     expect(screen.getByText(t('screener.guidedList.quality.fail'))).toBeInTheDocument();
   });
+
+  it('shows Passes quality badge when quality is pass and readiness is ready', () => {
+    const candidate = makeCandidate('NVDA', {
+      action: 'BUY_NOW',
+      verdict: 'RECOMMENDED',
+      warnings: [],
+      weeklyTrend: 'up',
+    });
+
+    renderWithProviders(
+      <ScreenerCandidateReviewList
+        candidates={[candidate]}
+        selectedTicker={null}
+        onReview={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText(t('screener.guidedList.quality.pass'))).toBeInTheDocument();
+    expect(screen.getByText(t('screener.guidedList.readiness.ready'))).toBeInTheDocument();
+  });
 });
