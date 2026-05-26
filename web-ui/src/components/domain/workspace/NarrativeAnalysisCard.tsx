@@ -1,6 +1,7 @@
 import ReactMarkdown from 'react-markdown';
 import Badge from '@/components/common/Badge';
 import type { SymbolIntelligence, DecisionAction, DecisionConviction } from '@/features/intelligence/types';
+import type { DecisionCatalystLabel, DecisionSignalLabel, DecisionValuationLabel } from '@/features/screener/types';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
 import { t } from '@/i18n/t';
 import { formatCurrency, formatNumber } from '@/utils/formatters';
@@ -31,6 +32,41 @@ function convictionLabel(conviction: DecisionConviction): string {
     low: t('workspacePage.panels.analysis.decisionSummary.conviction.low'),
   };
   return map[conviction];
+}
+
+function signalLabel(label: DecisionSignalLabel): string {
+  switch (label) {
+    case 'strong':
+      return t('workspacePage.panels.analysis.decisionSummary.signal.strong');
+    case 'neutral':
+      return t('workspacePage.panels.analysis.decisionSummary.signal.neutral');
+    case 'weak':
+      return t('workspacePage.panels.analysis.decisionSummary.signal.weak');
+  }
+}
+
+function valuationLabel(label: DecisionValuationLabel): string {
+  switch (label) {
+    case 'cheap':
+      return t('workspacePage.panels.analysis.decisionSummary.valuation.cheap');
+    case 'fair':
+      return t('workspacePage.panels.analysis.decisionSummary.valuation.fair');
+    case 'expensive':
+      return t('workspacePage.panels.analysis.decisionSummary.valuation.expensive');
+    case 'unknown':
+      return t('workspacePage.panels.analysis.decisionSummary.valuation.unknown');
+  }
+}
+
+function catalystLabel(label: DecisionCatalystLabel): string {
+  switch (label) {
+    case 'active':
+      return t('workspacePage.panels.analysis.decisionSummary.catalyst.active');
+    case 'neutral':
+      return t('workspacePage.panels.analysis.decisionSummary.catalyst.neutral');
+    case 'weak':
+      return t('workspacePage.panels.analysis.decisionSummary.catalyst.weak');
+  }
 }
 
 function bannerClass(action: DecisionAction): string {
@@ -121,16 +157,16 @@ export default function NarrativeAnalysisCard({
             </summary>
             <div className="mt-2 flex flex-wrap gap-2">
               <Badge variant={summary.technicalLabel === 'strong' ? 'success' : summary.technicalLabel === 'weak' ? 'error' : 'warning'}>
-                {t('workspacePage.panels.analysis.decisionSummary.labels.technical')}: {summary.technicalLabel}
+                {t('workspacePage.panels.analysis.decisionSummary.labels.technical')}: {signalLabel(summary.technicalLabel)}
               </Badge>
               <Badge variant={summary.fundamentalsLabel === 'strong' ? 'success' : summary.fundamentalsLabel === 'weak' ? 'error' : 'warning'}>
-                {t('workspacePage.panels.analysis.decisionSummary.labels.fundamentals')}: {summary.fundamentalsLabel}
+                {t('workspacePage.panels.analysis.decisionSummary.labels.fundamentals')}: {signalLabel(summary.fundamentalsLabel)}
               </Badge>
               <Badge variant={summary.valuationLabel === 'cheap' ? 'success' : summary.valuationLabel === 'expensive' ? 'error' : 'warning'}>
-                {t('workspacePage.panels.analysis.decisionSummary.labels.valuation')}: {summary.valuationLabel}
+                {t('workspacePage.panels.analysis.decisionSummary.labels.valuation')}: {valuationLabel(summary.valuationLabel)}
               </Badge>
               <Badge variant={summary.catalystLabel === 'active' ? 'success' : summary.catalystLabel === 'weak' ? 'error' : 'warning'}>
-                {t('workspacePage.panels.analysis.decisionSummary.labels.catalyst')}: {summary.catalystLabel}
+                {t('workspacePage.panels.analysis.decisionSummary.labels.catalyst')}: {catalystLabel(summary.catalystLabel)}
               </Badge>
             </div>
             {summary.valuationContext.summary && (
