@@ -95,7 +95,15 @@ describe('NarrativeAnalysisCard', () => {
       decisionSummary: {
         ...baseCandidate.decisionSummary!,
         drivers: { positives: [], negatives: [], warnings: ['Should not appear'] },
-        explanation: { confidenceNotes: ['Confidence note shown'] },
+        explanation: {
+          summaryLine: 'Test summary',
+          whyItQualified: ['Qualified reason'],
+          whyNow: ['Timing reason'],
+          mainRisks: ['Risk item'],
+          whatInvalidatesIt: ['Invalidation scenario'],
+          nextBestAction: 'Next action',
+          confidenceNotes: ['Confidence note shown'],
+        },
       },
     };
     render(<NarrativeAnalysisCard intelligence={baseIntelligence} candidate={candidateWithNotes} />);
