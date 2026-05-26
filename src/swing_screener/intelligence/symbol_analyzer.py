@@ -30,6 +30,15 @@ Return ONLY a JSON block (fenced with ```json) with exactly these fields:
   HOLD = thesis intact, no change needed
   TRIM = take partial profit or reduce risk, thesis weakening
   EXIT = thesis broken or clearly better use of capital
+- position_outlook: null unless position context is provided — then an object with:
+  expected_holding_period: days | 1-2_weeks | 2-6_weeks | unknown
+  hold_until: plain-English condition for staying in the trade, not a guaranteed date
+  next_review_trigger: the next event, price action, or time condition that should force reassessment
+  thesis_status: intact | weakening | broken | unclear
+  invalidation_signals: 2-4 concrete price/news/catalyst signals that would weaken or break the trade
+  profit_management: hold_full | consider_trim | trail_stop | protect_breakeven | exit
+  opportunity_cost: low | medium | high
+  confidence_decay: one sentence explaining when the idea becomes stale if nothing changes
 - sources: list of URLs you cited (may be empty)
 
 Do not include any text outside the JSON block.\
@@ -68,6 +77,12 @@ def _build_user_prompt(ticker: str, req: SymbolIntelligenceRequest) -> str:
         lines.append(
             "Include position_signal (HOLD / TRIM / EXIT) with a one-sentence reason."
         )
+        lines.append(
+            "Also include position_outlook with expected_holding_period, hold_until, "
+            "next_review_trigger, thesis_status, invalidation_signals, profit_management, "
+            "opportunity_cost, and confidence_decay. Focus on how long the position is still "
+            "worth keeping open and what would make that patience invalid."
+        )
 
     lines.append(
         f"\nSearch for recent news, earnings results, catalysts, and analyst views for {ticker}. "
@@ -104,6 +119,7 @@ class SymbolAnalyzer:
             narrative=raw["narrative"],
             upcoming_events=raw.get("upcoming_events", []),
             position_signal=raw.get("position_signal"),
+            position_outlook=raw.get("position_outlook"),
             sources=raw.get("sources", []),
         )
         try:

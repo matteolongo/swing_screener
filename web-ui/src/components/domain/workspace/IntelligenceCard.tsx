@@ -30,6 +30,10 @@ function positionSignalLabel(action: PositionSignalAction): string {
   }
 }
 
+function humanizeToken(value: string): string {
+  return value.replace(/_/g, ' ');
+}
+
 const DIRECTION_ARROW: Record<string, string> = {
   bullish: '↑',
   bearish: '↓',
@@ -42,13 +46,14 @@ interface IntelligenceCardProps {
 
 export default function IntelligenceCard({ intelligence }: IntelligenceCardProps) {
   const {
-    catalystUrgency, upcomingEvents, positionSignal, sources,
+    catalystUrgency, upcomingEvents, positionSignal, positionOutlook, sources,
   } = intelligence;
   const hasUrgency = catalystUrgency !== 'none';
   const hasEvents = upcomingEvents.length > 0;
   const hasSources = sources.length > 0;
+  const hasPositionOutlook = Boolean(positionOutlook);
 
-  if (!hasUrgency && !positionSignal && !hasEvents && !hasSources) {
+  if (!hasUrgency && !positionSignal && !hasPositionOutlook && !hasEvents && !hasSources) {
     return null;
   }
 
@@ -72,6 +77,75 @@ export default function IntelligenceCard({ intelligence }: IntelligenceCardProps
               {positionSignalLabel(positionSignal.action)}
             </span>
             <span className="text-sm">{positionSignal.reason}</span>
+          </div>
+        </>
+      )}
+
+      {positionOutlook && (
+        <>
+          <hr className="border-slate-100" />
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              {t('workspacePage.panels.analysis.intelligence.positionOutlook.title')}
+            </p>
+            <div className="grid gap-2 text-sm text-slate-700 sm:grid-cols-2">
+              <div>
+                <span className="text-xs font-medium text-slate-500">
+                  {t('workspacePage.panels.analysis.intelligence.positionOutlook.expectedHoldingPeriod')}
+                </span>
+                <p className="font-medium text-slate-900">{humanizeToken(positionOutlook.expectedHoldingPeriod)}</p>
+              </div>
+              <div>
+                <span className="text-xs font-medium text-slate-500">
+                  {t('workspacePage.panels.analysis.intelligence.positionOutlook.thesisStatus')}
+                </span>
+                <p className="font-medium text-slate-900">{humanizeToken(positionOutlook.thesisStatus)}</p>
+              </div>
+              <div>
+                <span className="text-xs font-medium text-slate-500">
+                  {t('workspacePage.panels.analysis.intelligence.positionOutlook.profitManagement')}
+                </span>
+                <p className="font-medium text-slate-900">{humanizeToken(positionOutlook.profitManagement)}</p>
+              </div>
+              <div>
+                <span className="text-xs font-medium text-slate-500">
+                  {t('workspacePage.panels.analysis.intelligence.positionOutlook.opportunityCost')}
+                </span>
+                <p className="font-medium text-slate-900">{humanizeToken(positionOutlook.opportunityCost)}</p>
+              </div>
+            </div>
+            <dl className="space-y-2 text-sm">
+              <div>
+                <dt className="text-xs font-medium text-slate-500">
+                  {t('workspacePage.panels.analysis.intelligence.positionOutlook.holdUntil')}
+                </dt>
+                <dd className="text-slate-700">{positionOutlook.holdUntil}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-medium text-slate-500">
+                  {t('workspacePage.panels.analysis.intelligence.positionOutlook.nextReviewTrigger')}
+                </dt>
+                <dd className="text-slate-700">{positionOutlook.nextReviewTrigger}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-medium text-slate-500">
+                  {t('workspacePage.panels.analysis.intelligence.positionOutlook.confidenceDecay')}
+                </dt>
+                <dd className="text-slate-700">{positionOutlook.confidenceDecay}</dd>
+              </div>
+            </dl>
+            {positionOutlook.invalidationSignals.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-slate-500">
+                  {t('workspacePage.panels.analysis.intelligence.positionOutlook.invalidationSignals')}
+                </p>
+                <ul className="mt-1 list-disc space-y-1 pl-4 text-sm text-slate-700">
+                  {positionOutlook.invalidationSignals.map((signal) => (
+                    <li key={signal}>{signal}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         </>
       )}

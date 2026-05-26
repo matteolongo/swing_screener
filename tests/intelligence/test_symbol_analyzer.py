@@ -35,6 +35,7 @@ _FAKE_RESPONSE_JSON = {
     "narrative": "## Why it's moving\nAperam Q1 2026 beat on EBITDA.",
     "upcoming_events": [],
     "position_signal": None,
+    "position_outlook": None,
     "sources": ["https://aperam.com/q1-2026"],
 }
 
@@ -114,6 +115,7 @@ def test_prompt_omits_position_section_without_context():
     prompt = _build_user_prompt("AAPL", req)
     assert "Position context" not in prompt
     assert "position_signal" not in prompt
+    assert "position_outlook" not in prompt
 
 
 def test_prompt_includes_position_section_with_context():
@@ -128,6 +130,53 @@ def test_prompt_includes_position_section_with_context():
     assert "1.50" in prompt
     assert "7 days" in prompt
     assert "position_signal" in prompt
+    assert "position_outlook" in prompt
+    assert "expected_holding_period" in prompt
+    assert "hold_until" in prompt
+    assert "next_review_trigger" in prompt
+
+
+def test_symbol_analyzer_maps_position_outlook():
+    import json
+
+    fake_json = {
+        "action": "MANAGE_ONLY",
+        "conviction": "medium",
+        "catalyst_urgency": "low",
+        "summary_line": "Manage the open position around catalyst follow-through.",
+        "narrative": "Text.",
+        "upcoming_events": [],
+        "position_signal": {"action": "HOLD", "reason": "Thesis remains intact."},
+        "position_outlook": {
+            "expected_holding_period": "2-6_weeks",
+            "hold_until": "Hold while price remains above SMA20 and catalyst evidence improves.",
+            "next_review_trigger": "Reassess on earnings or a close below SMA20.",
+            "thesis_status": "intact",
+            "invalidation_signals": ["Close below SMA20", "Catalyst fails to confirm"],
+            "profit_management": "trail_stop",
+            "opportunity_cost": "low",
+            "confidence_decay": "Confidence decays if the trade stalls for two more weeks.",
+        },
+        "sources": [],
+    }
+    fake_response = _make_fake_openai_response(f"```json\n{json.dumps(fake_json)}\n```")
+    request = SymbolIntelligenceRequest(
+        close=50.0, signal="position",
+        entry_price=48.0, r_now=1.5, days_open=7,
+    )
+
+    with patch("swing_screener.intelligence.symbol_analyzer.OpenAI") as MockOpenAI:
+        mock_client = MagicMock()
+        MockOpenAI.return_value = mock_client
+        mock_client.responses.create.return_value = fake_response
+
+        analyzer = SymbolAnalyzer()
+        result = analyzer.analyze("AAPL", request)
+
+    assert result.position_outlook is not None
+    assert result.position_outlook.expected_holding_period == "2-6_weeks"
+    assert result.position_outlook.thesis_status == "intact"
+    assert result.position_outlook.profit_management == "trail_stop"
 
 
 def test_analyze_writes_to_cache(tmp_path, monkeypatch):
@@ -144,6 +193,7 @@ def test_analyze_writes_to_cache(tmp_path, monkeypatch):
         "narrative": "## Why\nText.",
         "upcoming_events": [],
         "position_signal": None,
+        "position_outlook": None,
         "sources": [],
     }
     fake_text = "```json\n" + json.dumps(fake_json) + "\n```"

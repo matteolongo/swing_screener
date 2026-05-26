@@ -2,7 +2,12 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import IntelligenceCard from './IntelligenceCard';
-import type { SymbolIntelligence, IntelligenceEvent, PositionSignal } from '@/features/intelligence/types';
+import type {
+  SymbolIntelligence,
+  IntelligenceEvent,
+  PositionOutlook,
+  PositionSignal,
+} from '@/features/intelligence/types';
 
 const baseIntel: SymbolIntelligence = {
   symbol: 'APAM',
@@ -14,6 +19,7 @@ const baseIntel: SymbolIntelligence = {
   narrative: 'Aperam Q1 2026 beat consensus on EBITDA. Margins expanding into H2.',
   upcomingEvents: [],
   positionSignal: null,
+  positionOutlook: null,
   sources: ['https://aperam.com/q1-2026'],
 };
 
@@ -56,6 +62,16 @@ describe('IntelligenceCard', () => {
       },
     ] satisfies IntelligenceEvent[],
     positionSignal: { action: 'HOLD' as const, reason: 'Thesis intact.' } satisfies PositionSignal,
+    positionOutlook: {
+      expectedHoldingPeriod: '1-2_weeks',
+      holdUntil: 'Hold while price remains above SMA20.',
+      nextReviewTrigger: 'Reassess after earnings.',
+      thesisStatus: 'intact',
+      invalidationSignals: ['Close below SMA20', 'Catalyst fails to confirm'],
+      profitManagement: 'trail_stop',
+      opportunityCost: 'medium',
+      confidenceDecay: 'Confidence fades if price stalls for two weeks.',
+    } satisfies PositionOutlook,
   };
 
   it('renders catalyst_urgency badge when high', () => {
@@ -90,5 +106,14 @@ describe('IntelligenceCard', () => {
     expect(screen.queryByText('Hold')).toBeNull();
     expect(screen.queryByText('Trim')).toBeNull();
     expect(screen.queryByText('Exit')).toBeNull();
+  });
+
+  it('renders position outlook when present', () => {
+    render(<IntelligenceCard intelligence={baseIntelExtended} />);
+    expect(screen.getByText('Position Outlook')).toBeInTheDocument();
+    expect(screen.getByText('1-2 weeks')).toBeInTheDocument();
+    expect(screen.getByText('Hold while price remains above SMA20.')).toBeInTheDocument();
+    expect(screen.getByText('Reassess after earnings.')).toBeInTheDocument();
+    expect(screen.getByText('Close below SMA20')).toBeInTheDocument();
   });
 });
