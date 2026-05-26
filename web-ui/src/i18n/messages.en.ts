@@ -608,6 +608,7 @@ export const messagesEn = {
             low: 'Low urgency',
             none: '',
           },
+          aiActionMismatch: 'AI summary reflects {{aiAction}} — screener decision is {{screenerAction}}. Context may differ.',
           upcomingEvents: 'Upcoming Events',
           positionSignal: {
             hold: 'Hold',

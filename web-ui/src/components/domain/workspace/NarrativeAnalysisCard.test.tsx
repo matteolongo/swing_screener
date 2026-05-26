@@ -89,6 +89,27 @@ describe('NarrativeAnalysisCard', () => {
     expect(screen.queryByText('Watch China exposure')).toBeNull();
   });
 
+  it('shows mismatch banner when intelligence action differs from candidate decisionSummary action', () => {
+    const watchIntelligence: SymbolIntelligence = {
+      ...baseIntelligence,
+      action: 'WATCH',
+    };
+    const buyNowCandidate: SymbolAnalysisCandidate = {
+      ...baseCandidate,
+      decisionSummary: {
+        ...baseCandidate.decisionSummary!,
+        action: 'BUY_NOW',
+      },
+    };
+    render(<NarrativeAnalysisCard intelligence={watchIntelligence} candidate={buyNowCandidate} />);
+    expect(screen.getByText(/AI summary reflects/)).toBeInTheDocument();
+  });
+
+  it('does not show mismatch banner when actions match', () => {
+    render(<NarrativeAnalysisCard intelligence={baseIntelligence} candidate={baseCandidate} />);
+    expect(screen.queryByText(/AI summary reflects/)).toBeNull();
+  });
+
   it('renders confidenceNotes from explanation when present, not drivers.warnings', () => {
     const candidateWithNotes: SymbolAnalysisCandidate = {
       ...baseCandidate,

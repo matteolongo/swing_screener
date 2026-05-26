@@ -131,6 +131,14 @@ export default function NarrativeAnalysisCard({
       </div>
 
       <div className="bg-slate-50 p-3 space-y-3">
+        {candidate?.decisionSummary?.action && action !== candidate.decisionSummary.action && (
+          <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            {t('workspacePage.panels.analysis.intelligence.aiActionMismatch', {
+              aiAction: actionLabel(action),
+              screenerAction: actionLabel(candidate.decisionSummary.action),
+            })}
+          </div>
+        )}
         {/* Decision first, rationale after. */}
         <div className="rounded-md bg-white border border-slate-200 p-3">
           <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
