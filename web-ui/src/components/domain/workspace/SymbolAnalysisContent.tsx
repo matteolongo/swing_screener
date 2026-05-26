@@ -195,9 +195,9 @@ export default function SymbolAnalysisContent({
                 )}
               </div>
             )}
-            {!intelligenceLatest.isLoading && (() => {
+            {(() => {
               const intel = intelligenceResult ?? intelligenceLatest.data ?? null;
-              if (intel?.narrative?.trim()) {
+              if (!intelligenceLatest.isLoading && intel?.narrative?.trim()) {
                 return (
                   <NarrativeAnalysisCard
                     intelligence={intel}
