@@ -682,6 +682,7 @@ export const messagesEn = {
             target: 'Target',
             rr: 'R/R',
             entryClose: 'Entry (close)',
+            oneR: '1R',
           },
           copy: {
             whyItQualified: 'Why It Qualified',

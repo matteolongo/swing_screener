@@ -102,6 +102,7 @@ export default function AnalysisDecisionStrip({ ticker, candidate, onPrepareOrde
   const stop = summary?.tradePlan.stop ?? candidate?.recommendation?.risk?.stop ?? candidate?.stop;
   const target = summary?.tradePlan.target ?? candidate?.recommendation?.risk?.target;
   const rr = summary?.tradePlan.rr ?? candidate?.recommendation?.risk?.rr ?? candidate?.rr;
+  const oneR = entry != null && stop != null ? entry - stop : null;
   const riskPct = candidate?.recommendation?.risk?.riskPct;
   const badges = summary
     ? [
@@ -135,6 +136,7 @@ export default function AnalysisDecisionStrip({ ticker, candidate, onPrepareOrde
             {compactValue('Target', target != null ? formatCurrency(target, currency) : '—')}
             {compactValue('R/R', rr != null ? `${formatNumber(rr, 1)}x` : '—')}
             {compactValue('Risk %', riskPct != null && riskPct > 0 ? `${formatNumber(riskPct * 100, 2)}%` : '—')}
+            {compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.oneR'), oneR != null ? formatCurrency(oneR, currency) : '—')}
           </div>
         </div>
 
