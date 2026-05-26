@@ -569,7 +569,7 @@ export const messagesEn = {
         },
         fundamentals: {
           descriptionHasSnapshot: 'Refresh the cached fundamentals snapshot for this symbol.',
-          descriptionNoSnapshot: 'Run fundamentals analysis for this symbol and cache the snapshot.',
+          descriptionNoSnapshot: 'No cached snapshot yet — click below to fetch and store fundamentals for this symbol.',
           refreshingAction: 'Refreshing fundamentals...',
           runningAction: 'Running fundamentals...',
           refreshAction: 'Refresh fundamentals',
@@ -577,7 +577,7 @@ export const messagesEn = {
           refreshError: 'Failed to refresh fundamentals',
           loading: 'Loading fundamentals...',
           loadError: 'Failed to load fundamentals',
-          noSnapshot: 'No fundamentals snapshot available yet.',
+          noSnapshot: 'No fundamentals snapshot cached. Use the button above to run analysis for this symbol.',
         },
         computeAnalysis: {
           description: 'No screener analysis is cached for {{ticker}} yet.',

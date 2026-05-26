@@ -11,6 +11,7 @@ import * as screenerHooks from '@/features/screener/hooks';
 import * as watchlistHooks from '@/features/watchlist/hooks';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
+import { t } from '@/i18n/t';
 import { renderWithProviders } from '@/test/utils';
 
 vi.mock('@/features/fundamentals/hooks', () => ({
@@ -173,7 +174,7 @@ describe('AnalysisCanvasPanel', () => {
 
     const { user } = renderWithProviders(<AnalysisCanvasPanel />);
 
-    expect(screen.getByText('No fundamentals snapshot available yet.')).toBeInTheDocument();
+    expect(screen.getByText(t('workspacePage.panels.analysis.fundamentals.noSnapshot'))).toBeInTheDocument();
 
     await act(async () => {
       await user.click(screen.getByRole('button', { name: 'Run fundamentals analysis' }));
