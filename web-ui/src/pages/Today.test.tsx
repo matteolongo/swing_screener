@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { screen, within, fireEvent } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { screen, fireEvent } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/test/mocks/server';
 import { renderWithProviders } from '@/test/utils';
@@ -194,7 +193,7 @@ describe('Today page — pending orders badge', () => {
     ).toBeTruthy();
   });
 
-  it('action filter dropdown shows human-readable labels, not raw enum strings', async () => {
+  it('does not show daily-review filters in the beginner-default action list', async () => {
     server.use(
       http.get('*/api/portfolio/orders/local', () =>
         HttpResponse.json({ orders: [], asof: '2026-05-04' })
@@ -203,21 +202,10 @@ describe('Today page — pending orders badge', () => {
 
     renderWithProviders(<Today />);
 
-    // Wait for the filter bar to render (it renders once daily-review responds)
-    await screen.findByRole('combobox');
-    const select = screen.getByRole('combobox');
-    const options = within(select).getAllByRole('option');
-    const labels = options.map((o) => o.textContent ?? '');
+    await screen.findByText(t('todayPage.actionList.empty'));
 
-    // Should use readable labels from i18n
-    expect(labels).toContain(t('screener.guidedList.action.BUY_NOW'));
-    expect(labels).toContain(t('screener.guidedList.action.BUY_ON_PULLBACK'));
-    expect(labels).toContain(t('screener.guidedList.action.WATCH'));
-
-    // Must NOT leak raw enum strings
-    expect(labels).not.toContain('BUY_NOW');
-    expect(labels).not.toContain('BUY_ON_PULLBACK');
-    expect(labels).not.toContain('WATCH');
+    expect(screen.queryByLabelText(t('dailyReview.filter.recommendedOnly'))).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(t('screener.controls.actionFilter'))).not.toBeInTheDocument();
   });
 
   it('shows watchlist near-trigger section when daily review returns matches', async () => {
@@ -265,31 +253,16 @@ describe('Today page — pending orders badge', () => {
   });
 });
 
-// ── Catalyst scan button ───────────────────────────────────────────────────────
+// ── Advanced scan controls ─────────────────────────────────────────────────────
 
-describe('Today page — catalyst scan button', () => {
-  it('shows catalyst scan button', async () => {
-    renderWithProviders(<Today />);
-    expect(
-      await screen.findByRole('button', { name: t('todayPage.actionList.catalystScan') })
-    ).toBeInTheDocument();
-  });
-
-  it('catalyst scan button calls daily-scan endpoint on click', async () => {
-    const user = userEvent.setup();
+describe('Today page — advanced scan controls', () => {
+  it('does not show catalyst scan or intelligence sweep controls in the beginner-default action list', async () => {
     renderWithProviders(<Today />);
 
-    const scanButton = await screen.findByRole('button', {
-      name: t('todayPage.actionList.catalystScan'),
-    });
-    await user.click(scanButton);
+    await screen.findByText(t('todayPage.actionList.empty'));
 
-    // MSW handler returns success; the done message should appear
-    expect(
-      await screen.findByText(
-        t('todayPage.actionList.catalystScanDone', { count: '2' })
-      )
-    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: t('todayPage.actionList.catalystScan') })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: t('todayPage.actionList.intelligenceSweep') })).not.toBeInTheDocument();
   });
 });
 
