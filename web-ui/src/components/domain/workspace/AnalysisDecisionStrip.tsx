@@ -13,6 +13,7 @@ import { formatCurrency, formatNumber } from '@/utils/formatters';
 interface AnalysisDecisionStripProps {
   ticker: string;
   candidate?: SymbolAnalysisCandidate | null;
+  onPrepareOrder?: () => void;
 }
 
 function actionLabel(action: DecisionAction): string {
@@ -94,13 +95,14 @@ function compactValue(label: string, value: string) {
   );
 }
 
-export default function AnalysisDecisionStrip({ ticker, candidate }: AnalysisDecisionStripProps) {
+export default function AnalysisDecisionStrip({ ticker, candidate, onPrepareOrder }: AnalysisDecisionStripProps) {
   const summary = candidate?.decisionSummary;
   const currency = candidate?.currency ?? 'USD';
   const entry = summary?.tradePlan.entry ?? candidate?.recommendation?.risk?.entry ?? candidate?.entry;
   const stop = summary?.tradePlan.stop ?? candidate?.recommendation?.risk?.stop ?? candidate?.stop;
   const target = summary?.tradePlan.target ?? candidate?.recommendation?.risk?.target;
   const rr = summary?.tradePlan.rr ?? candidate?.recommendation?.risk?.rr ?? candidate?.rr;
+  const oneR = entry != null && stop != null ? entry - stop : null;
   const riskPct = candidate?.recommendation?.risk?.riskPct;
   const badges = summary
     ? [
@@ -129,11 +131,12 @@ export default function AnalysisDecisionStrip({ ticker, candidate }: AnalysisDec
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            {compactValue('Entry', entry != null ? formatCurrency(entry, currency) : '—')}
+            {compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.entryClose'), entry != null ? formatCurrency(entry, currency) : '—')}
             {compactValue('Stop', stop != null ? formatCurrency(stop, currency) : '—')}
             {compactValue('Target', target != null ? formatCurrency(target, currency) : '—')}
             {compactValue('R/R', rr != null ? `${formatNumber(rr, 1)}x` : '—')}
-            {compactValue('Risk %', riskPct != null ? `${formatNumber(riskPct * 100, 2)}%` : '—')}
+            {compactValue('Risk %', riskPct != null && riskPct > 0 ? `${formatNumber(riskPct * 100, 2)}%` : '—')}
+            {compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.oneR'), oneR != null ? formatCurrency(oneR, currency) : '—')}
           </div>
         </div>
 
@@ -150,6 +153,17 @@ export default function AnalysisDecisionStrip({ ticker, candidate }: AnalysisDec
             </span>
           ))}
         </div>
+        {summary?.action === 'BUY_NOW' && onPrepareOrder && (
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={onPrepareOrder}
+              className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
+            >
+              {t('analysis.beginnerHeader.action.prepare_order')}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

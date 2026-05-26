@@ -228,4 +228,59 @@ describe('ScreenerCandidateReviewList', () => {
 
     expect(screen.getByText(t('screener.guidedList.empty'))).toBeInTheDocument();
   });
+
+  it('suppresses Fails quality badge when orderReadiness is ready (BUY_NOW)', () => {
+    const candidate = makeCandidate('AMAT', {
+      action: 'BUY_NOW',
+      verdict: 'NOT_RECOMMENDED',
+    });
+
+    renderWithProviders(
+      <ScreenerCandidateReviewList
+        candidates={[candidate]}
+        selectedTicker={null}
+        onReview={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByText(t('screener.guidedList.quality.fail'))).not.toBeInTheDocument();
+    expect(screen.getByText(t('screener.guidedList.readiness.ready'))).toBeInTheDocument();
+  });
+
+  it('shows Fails quality badge when quality is fail and readiness is not ready (WATCH_ONLY)', () => {
+    const candidate = makeCandidate('AMAT', {
+      action: 'WATCH',
+      verdict: 'NOT_RECOMMENDED',
+    });
+
+    renderWithProviders(
+      <ScreenerCandidateReviewList
+        candidates={[candidate]}
+        selectedTicker={null}
+        onReview={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText(t('screener.guidedList.quality.fail'))).toBeInTheDocument();
+  });
+
+  it('shows Passes quality badge when quality is pass and readiness is ready', () => {
+    const candidate = makeCandidate('NVDA', {
+      action: 'BUY_NOW',
+      verdict: 'RECOMMENDED',
+      warnings: [],
+      weeklyTrend: 'up',
+    });
+
+    renderWithProviders(
+      <ScreenerCandidateReviewList
+        candidates={[candidate]}
+        selectedTicker={null}
+        onReview={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText(t('screener.guidedList.quality.pass'))).toBeInTheDocument();
+    expect(screen.getByText(t('screener.guidedList.readiness.ready'))).toBeInTheDocument();
+  });
 });
