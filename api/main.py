@@ -16,6 +16,7 @@ from swing_screener.runtime_env import ensure_runtime_env_loaded
 
 # Import routers
 from api.routers import (
+    calendar,
     catalysts,
     config,
     daily_review,
@@ -287,6 +288,7 @@ async def metrics():
 
 
 # Include routers
+app.include_router(calendar.router, prefix="/api", tags=["calendar"])
 app.include_router(config.router, prefix="/api/config", tags=["config"])
 app.include_router(strategy.router, prefix="/api/strategy", tags=["strategy"])
 app.include_router(screener.router, prefix="/api/screener", tags=["screener"])
