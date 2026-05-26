@@ -11,6 +11,7 @@ import FundamentalsSnapshotCard from '@/components/domain/fundamentals/Fundament
 import AnalysisDecisionStrip from '@/components/domain/workspace/AnalysisDecisionStrip';
 import BeginnerDecisionHeader from '@/components/domain/workspace/BeginnerDecisionHeader';
 import DecisionSummaryCard from '@/components/domain/workspace/DecisionSummaryCard';
+import NarrativeAnalysisCard from '@/components/domain/workspace/NarrativeAnalysisCard';
 import TechnicalMetricsGrid from '@/components/domain/workspace/TechnicalMetricsGrid';
 import type { SymbolAnalysisCandidate, WorkspaceAnalysisTab } from '@/components/domain/workspace/types';
 import type { ScreenerCandidate, ScreenerResponse } from '@/features/screener/types';
@@ -77,7 +78,7 @@ export default function SymbolAnalysisContent({
   });
 
   const intelligenceMutation = useIntelligenceAnalysisMutation();
-  const intelligenceLatest = useIntelligenceLatestQuery(ticker, activeTab === 'intelligence');
+  const intelligenceLatest = useIntelligenceLatestQuery(ticker, activeTab === 'overview' || activeTab === 'intelligence');
   const catalystQuery = useSymbolCatalystQuery(ticker, activeTab === 'intelligence');
   const [intelligenceResult, setIntelligenceResult] = useState<SymbolIntelligence | null>(null);
 
@@ -194,9 +195,27 @@ export default function SymbolAnalysisContent({
                 )}
               </div>
             )}
-            {candidate?.decisionSummary ? (
-              <DecisionSummaryCard summary={candidate.decisionSummary} currency={candidate.currency} />
-            ) : null}
+            {(() => {
+              const intel = intelligenceResult ?? intelligenceLatest.data ?? null;
+              if (intel?.narrative) {
+                return (
+                  <NarrativeAnalysisCard
+                    intelligence={intel}
+                    candidate={candidate}
+                    currency={candidate?.currency}
+                  />
+                );
+              }
+              if (candidate?.decisionSummary) {
+                return (
+                  <DecisionSummaryCard
+                    summary={candidate.decisionSummary}
+                    currency={candidate.currency}
+                  />
+                );
+              }
+              return null;
+            })()}
             <div className="rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700">
               <CachedSymbolPriceChart
                 ticker={ticker}
