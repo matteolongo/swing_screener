@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AnalysisCanvasPanel from '@/components/domain/workspace/AnalysisCanvasPanel';
 import * as fundamentalsHooks from '@/features/fundamentals/hooks';
 import type { FundamentalSnapshot } from '@/features/fundamentals/types';
+import * as intelligenceHooks from '@/features/intelligence/hooks';
+import type { SymbolIntelligence } from '@/features/intelligence/types';
 import * as screenerHooks from '@/features/screener/hooks';
 import * as watchlistHooks from '@/features/watchlist/hooks';
 import { useScreenerStore } from '@/stores/screenerStore';
@@ -13,6 +15,11 @@ import { renderWithProviders } from '@/test/utils';
 vi.mock('@/features/fundamentals/hooks', () => ({
   useFundamentalSnapshotQuery: vi.fn(),
   useRefreshFundamentalSnapshotMutation: vi.fn(),
+}));
+
+vi.mock('@/features/intelligence/hooks', () => ({
+  useIntelligenceAnalysisMutation: vi.fn(),
+  useIntelligenceLatestQuery: vi.fn(),
 }));
 
 vi.mock('@/features/screener/hooks', () => ({
@@ -118,6 +125,18 @@ describe('AnalysisCanvasPanel', () => {
       isError: false,
       error: null,
     } as never);
+    vi.mocked(intelligenceHooks.useIntelligenceAnalysisMutation).mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+      isError: false,
+      error: null,
+      reset: vi.fn(),
+    } as never);
+    vi.mocked(intelligenceHooks.useIntelligenceLatestQuery).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: false,
+    } as never);
     useWorkspaceStore.setState({
       selectedTicker: 'AAPL',
       selectedTickerSource: 'screener',
@@ -151,6 +170,44 @@ describe('AnalysisCanvasPanel', () => {
     });
 
     expect(mutate).toHaveBeenCalledWith('AAPL');
+  });
+
+  it('renders NarrativeAnalysisCard in overview when intelligence latest has a narrative', () => {
+    useWorkspaceStore.setState({
+      selectedTicker: 'AAPL',
+      selectedTickerSource: 'screener',
+      analysisTab: 'overview',
+    });
+    const mockIntelligence: SymbolIntelligence = {
+      symbol: 'AAPL',
+      generatedAt: '2026-05-26T10:00:00',
+      action: 'BUY_NOW',
+      conviction: 'high',
+      catalystUrgency: 'medium',
+      summaryLine: 'AAPL is showing strong momentum with a confirmed breakout.',
+      narrative: 'The technical setup is aligned with the trend.',
+      upcomingEvents: [],
+      positionSignal: null,
+      sources: ['yahoo_finance'],
+    };
+    vi.mocked(intelligenceHooks.useIntelligenceLatestQuery).mockReturnValue({
+      data: mockIntelligence,
+      isLoading: false,
+      isError: false,
+    } as never);
+    vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
+      isLoading: false, isError: false, data: undefined,
+    } as never);
+    vi.mocked(fundamentalsHooks.useRefreshFundamentalSnapshotMutation).mockReturnValue({
+      mutate: vi.fn(), data: undefined, isPending: false, isError: false, error: null,
+    } as never);
+
+    renderWithProviders(<AnalysisCanvasPanel />);
+
+    // NarrativeAnalysisCard shows the summaryLine
+    expect(screen.getByText('AAPL is showing strong momentum with a confirmed breakout.')).toBeInTheDocument();
+    // DecisionSummaryCard heading should NOT appear
+    expect(screen.queryByText(/AAPL Decision Summary/)).not.toBeInTheDocument();
   });
 
   it('renders the decision summary card in overview for the selected screener candidate', () => {
@@ -350,6 +407,12 @@ describe('AnalysisCanvasPanel — compute analysis button', () => {
     vi.mocked(watchlistHooks.useWatchSymbolMutation).mockReturnValue({ mutate: vi.fn(), isPending: false, variables: undefined } as never);
     vi.mocked(watchlistHooks.useUnwatchSymbolMutation).mockReturnValue({ mutate: vi.fn(), isPending: false, variables: undefined } as never);
     vi.mocked(screenerHooks.useRunScreenerMutation).mockReturnValue({ mutate: vi.fn(), isPending: false, isError: false, error: null } as never);
+    vi.mocked(intelligenceHooks.useIntelligenceAnalysisMutation).mockReturnValue({
+      mutate: vi.fn(), isPending: false, isError: false, error: null, reset: vi.fn(),
+    } as never);
+    vi.mocked(intelligenceHooks.useIntelligenceLatestQuery).mockReturnValue({
+      data: undefined, isLoading: false, isError: false,
+    } as never);
     mockFundamentalsIdle();
     useWorkspaceStore.setState({ selectedTicker: 'ENI.MI', selectedTickerSource: null, analysisTab: 'overview' });
     useScreenerStore.setState({ lastResult: null });
