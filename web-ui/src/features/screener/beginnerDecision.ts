@@ -1,5 +1,6 @@
 import type { ScreenerCandidate, DecisionAction } from '@/features/screener/types';
 import { prioritizeCandidates } from '@/features/screener/prioritization';
+import { formatCurrency } from '@/utils/formatters';
 
 // ── Public types ────────────────────────────────────────────────────────────
 
@@ -230,7 +231,12 @@ export function toBeginnerDecision(candidate: ScreenerCandidate): BeginnerDecisi
 
   const mainRisk = deriveMainRisk(candidate);
 
-  const invalidation = candidate.decisionSummary?.explanation?.whatInvalidatesIt?.[0];
+  const rawInvalidation = candidate.decisionSummary?.explanation?.whatInvalidatesIt?.[0];
+  const stopValue = candidate.decisionSummary?.tradePlan?.stop;
+  const invalidation =
+    rawInvalidation && stopValue != null
+      ? rawInvalidation.replace(/\d+\.\d{4,}/g, formatCurrency(stopValue, candidate.currency ?? 'USD'))
+      : rawInvalidation;
 
   const { kind: nextStepKind, label: nextStepLabel } = nextStepForReadiness(readiness);
 
