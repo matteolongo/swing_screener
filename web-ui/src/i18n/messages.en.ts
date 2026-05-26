@@ -958,7 +958,7 @@ export const messagesEn = {
       showAdvanced: 'Show advanced filters',
       hideAdvanced: 'Hide advanced filters',
       requireWeeklyUptrend: 'Weekly uptrend only',
-      adjustFilters: 'Adjust filters',
+      adjustFilters: 'Advanced filters',
       hideFilters: 'Hide filters',
       members: 'members',
       memberCount: '{{count}} members',

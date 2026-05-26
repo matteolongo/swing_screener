@@ -185,7 +185,7 @@ export default function ScreenerInboxPanel() {
       return 'all';
     }
   );
-  const [isFormCollapsed, setIsFormCollapsed] = useLocalStorage('screener-form-collapsed', false);
+  const [isFormCollapsed, setIsFormCollapsed] = useLocalStorage('screener-form-collapsed', true);
 
   const universesQuery = useUniverses();
   const screenerMutation = useRunScreenerMutation((data) => {
