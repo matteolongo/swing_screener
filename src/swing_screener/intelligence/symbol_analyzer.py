@@ -20,7 +20,7 @@ Return ONLY a JSON block (fenced with ```json) with exactly these fields:
 - conviction: one of high | medium | low
 - catalyst_urgency: one of high | medium | low | none
 - summary_line: one sentence synthetic read (max 120 chars)
-- narrative: full Markdown string with sections ## Why it's moving, ## Key risks, ## Synthetic read
+- narrative: flowing prose in Markdown. Use **bold** for key terms and callouts like **What to do:** and **Watch for:** inline. No H1/H2 headings. 3–5 short paragraphs. Max 300 words.
 - upcoming_events: array of objects {type, date, direction, summary} for events that could move the price.
   type: earnings | macro | dividend | product_launch | regulatory | other
   date: ISO date string or null if unknown
