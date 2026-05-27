@@ -1466,6 +1466,18 @@ export const handlers = [
     })
   ),
 
+  // Calendar events mock
+  http.get(`${API_BASE_URL}/api/calendar/events`, () => {
+    return HttpResponse.json({
+      events: [
+        { date: '2026-06-10', ticker: 'AAPL', event_type: 'earnings', title: 'AAPL Earnings', source_tag: 'position' },
+        { date: '2026-06-12', ticker: 'MSFT', event_type: 'earnings', title: 'MSFT Earnings', source_tag: 'screener' },
+        { date: '2026-06-14', ticker: null, event_type: 'economic', title: 'US CPI Release', source_tag: 'economic' },
+      ],
+      days_ahead: 30,
+    })
+  }),
+
   // Fundamentals snapshot mock
   http.get(`${API_BASE_URL}/api/fundamentals/snapshot/:symbol`, ({ params }) => {
     const symbol = String(params.symbol ?? 'AAPL').toUpperCase()
