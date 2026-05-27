@@ -3,6 +3,7 @@ from swing_screener.fundamentals.config import (
     FundamentalsConfig,
     build_fundamentals_config,
 )
+from swing_screener.fundamentals.finnhub_client import FinnhubEnrichmentClient
 from swing_screener.fundamentals.models import (
     FundamentalMetricContext,
     FundamentalMetricSeries,
@@ -17,6 +18,7 @@ from swing_screener.fundamentals.storage import FundamentalsStorage
 
 __all__ = [
     "SUPPORTED_FUNDAMENTAL_PROVIDERS",
+    "FinnhubEnrichmentClient",
     "FundamentalMetricContext",
     "FundamentalMetricSeries",
     "FundamentalPillarScore",
