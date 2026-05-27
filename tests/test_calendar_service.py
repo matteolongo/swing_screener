@@ -114,3 +114,56 @@ def test_get_events_position_beats_screener_tag(tmp_path):
     earnings = [e for e in events if e.ticker == "AAPL"]
     assert len(earnings) == 1
     assert earnings[0].source_tag == "position"
+
+
+def test_calendar_event_accepts_ipo_event_type(tmp_path):
+    from api.models.calendar import CalendarEvent
+    event = CalendarEvent(
+        date="2026-06-05",
+        ticker="ACME",
+        event_type="ipo",
+        title="ACME IPO",
+        source_tag="ipo",
+    )
+    assert event.event_type == "ipo"
+    assert event.source_tag == "ipo"
+
+
+def test_calendar_event_accepts_dividend_event_type(tmp_path):
+    from api.models.calendar import CalendarEvent
+    event = CalendarEvent(
+        date="2026-06-01",
+        ticker="AAPL",
+        event_type="dividend",
+        title="AAPL Dividend",
+        source_tag="position",
+    )
+    assert event.event_type == "dividend"
+
+
+def test_calendar_event_accepts_eps_estimate():
+    from api.models.calendar import CalendarEvent
+    event = CalendarEvent(
+        date="2026-07-31",
+        ticker="AAPL",
+        event_type="earnings",
+        title="AAPL Earnings",
+        source_tag="position",
+        eps_estimate=1.72,
+        eps_actual=None,
+    )
+    assert event.eps_estimate == 1.72
+    assert event.eps_actual is None
+
+
+def test_calendar_event_eps_fields_default_to_none():
+    from api.models.calendar import CalendarEvent
+    event = CalendarEvent(
+        date="2026-07-31",
+        ticker="AAPL",
+        event_type="earnings",
+        title="AAPL Earnings",
+        source_tag="position",
+    )
+    assert event.eps_estimate is None
+    assert event.eps_actual is None
