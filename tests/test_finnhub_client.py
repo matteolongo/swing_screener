@@ -107,3 +107,149 @@ def test_enrich_returns_same_record_when_no_updates():
                     enriched = client.enrich(record)
 
     assert enriched is record
+
+
+def test_fetch_recommendation_score_net_bull():
+    from swing_screener.fundamentals.finnhub_client import FinnhubEnrichmentClient
+    client = FinnhubEnrichmentClient(api_key="test_key")
+
+    resp = MagicMock()
+    resp.json.return_value = [
+        {"period": "2026-05-01", "strongBuy": 15, "buy": 20, "hold": 7, "sell": 2, "strongSell": 0}
+    ]
+    resp.raise_for_status = MagicMock()
+
+    with patch("swing_screener.fundamentals.finnhub_client.httpx.get", return_value=resp):
+        score = client._fetch_recommendation_score("AAPL")
+
+    assert score == pytest.approx(33.0)  # 15 + 20 - 2 - 0
+
+
+def test_fetch_recommendation_score_returns_none_on_empty():
+    from swing_screener.fundamentals.finnhub_client import FinnhubEnrichmentClient
+    client = FinnhubEnrichmentClient(api_key="test_key")
+
+    resp = MagicMock()
+    resp.json.return_value = []
+    resp.raise_for_status = MagicMock()
+
+    with patch("swing_screener.fundamentals.finnhub_client.httpx.get", return_value=resp):
+        score = client._fetch_recommendation_score("AAPL")
+
+    assert score is None
+
+
+def test_fetch_recommendation_score_returns_none_on_error():
+    from swing_screener.fundamentals.finnhub_client import FinnhubEnrichmentClient
+    client = FinnhubEnrichmentClient(api_key="test_key")
+
+    with patch("swing_screener.fundamentals.finnhub_client.httpx.get",
+               side_effect=Exception("network")):
+        score = client._fetch_recommendation_score("AAPL")
+
+    assert score is None
+
+
+def test_fetch_price_target_returns_median():
+    from swing_screener.fundamentals.finnhub_client import FinnhubEnrichmentClient
+    client = FinnhubEnrichmentClient(api_key="test_key")
+
+    resp = MagicMock()
+    resp.json.return_value = {"targetHigh": 300.0, "targetLow": 180.0, "targetMedian": 235.0}
+    resp.raise_for_status = MagicMock()
+
+    with patch("swing_screener.fundamentals.finnhub_client.httpx.get", return_value=resp):
+        target = client._fetch_price_target("AAPL")
+
+    assert target == pytest.approx(235.0)
+
+
+def test_fetch_price_target_returns_none_on_error():
+    from swing_screener.fundamentals.finnhub_client import FinnhubEnrichmentClient
+    client = FinnhubEnrichmentClient(api_key="test_key")
+
+    with patch("swing_screener.fundamentals.finnhub_client.httpx.get",
+               side_effect=Exception("timeout")):
+        target = client._fetch_price_target("AAPL")
+
+    assert target is None
+
+
+def test_fetch_beat_streak_counts_consecutive_beats():
+    from swing_screener.fundamentals.finnhub_client import FinnhubEnrichmentClient
+    client = FinnhubEnrichmentClient(api_key="test_key")
+
+    resp = MagicMock()
+    resp.json.return_value = [
+        {"period": "2026-03-31", "actual": 1.65, "estimate": 1.62},
+        {"period": "2025-12-31", "actual": 2.40, "estimate": 2.35},
+        {"period": "2025-09-30", "actual": 1.50, "estimate": 1.55},  # miss
+        {"period": "2025-06-30", "actual": 1.30, "estimate": 1.20},
+    ]
+    resp.raise_for_status = MagicMock()
+
+    with patch("swing_screener.fundamentals.finnhub_client.httpx.get", return_value=resp):
+        streak = client._fetch_beat_streak("AAPL")
+
+    assert streak == 2  # stops at the miss in Q3 2025
+
+
+def test_fetch_beat_streak_zero_on_first_miss():
+    from swing_screener.fundamentals.finnhub_client import FinnhubEnrichmentClient
+    client = FinnhubEnrichmentClient(api_key="test_key")
+
+    resp = MagicMock()
+    resp.json.return_value = [
+        {"period": "2026-03-31", "actual": 1.50, "estimate": 1.62},  # miss
+        {"period": "2025-12-31", "actual": 2.40, "estimate": 2.35},
+    ]
+    resp.raise_for_status = MagicMock()
+
+    with patch("swing_screener.fundamentals.finnhub_client.httpx.get", return_value=resp):
+        streak = client._fetch_beat_streak("AAPL")
+
+    assert streak == 0
+
+
+def test_fetch_beat_streak_returns_none_on_error():
+    from swing_screener.fundamentals.finnhub_client import FinnhubEnrichmentClient
+    client = FinnhubEnrichmentClient(api_key="test_key")
+
+    with patch("swing_screener.fundamentals.finnhub_client.httpx.get",
+               side_effect=Exception("network")):
+        streak = client._fetch_beat_streak("AAPL")
+
+    assert streak is None
+
+
+def test_enrich_applies_all_signals():
+    from swing_screener.fundamentals.finnhub_client import FinnhubEnrichmentClient
+    client = FinnhubEnrichmentClient(api_key="test_key")
+    record = _make_record()
+
+    with patch.object(client, "_fetch_metric_supplement", return_value={"gross_margin": 0.46}):
+        with patch.object(client, "_fetch_recommendation_score", return_value=33.0):
+            with patch.object(client, "_fetch_price_target", return_value=235.0):
+                with patch.object(client, "_fetch_beat_streak", return_value=4):
+                    enriched = client.enrich(record)
+
+    assert enriched.gross_margin == pytest.approx(0.46)
+    assert enriched.analyst_recommendation_score == pytest.approx(33.0)
+    assert enriched.analyst_price_target == pytest.approx(235.0)
+    assert enriched.earnings_beat_streak == 4
+
+
+def test_enrich_one_failed_signal_does_not_block_others():
+    """Price target failure must not prevent recommendation score from being applied."""
+    from swing_screener.fundamentals.finnhub_client import FinnhubEnrichmentClient
+    client = FinnhubEnrichmentClient(api_key="test_key")
+    record = _make_record()
+
+    with patch.object(client, "_fetch_metric_supplement", return_value={}):
+        with patch.object(client, "_fetch_recommendation_score", return_value=33.0):
+            with patch.object(client, "_fetch_price_target", return_value=None):
+                with patch.object(client, "_fetch_beat_streak", return_value=None):
+                    enriched = client.enrich(record)
+
+    assert enriched.analyst_recommendation_score == pytest.approx(33.0)
+    assert enriched.analyst_price_target is None
