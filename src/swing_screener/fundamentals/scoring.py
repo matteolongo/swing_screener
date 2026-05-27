@@ -821,6 +821,10 @@ def build_snapshot(record: ProviderFundamentalsRecord, cfg: FundamentalsConfig) 
         coverage_penalty=coverage_pen,
         business_quality_score=bqs,
         valuation_attractiveness=val_attract,
+        net_margin=resolved_record.net_margin,
+        analyst_recommendation_score=resolved_record.analyst_recommendation_score,
+        analyst_price_target=resolved_record.analyst_price_target,
+        earnings_beat_streak=resolved_record.earnings_beat_streak,
     )
 
 

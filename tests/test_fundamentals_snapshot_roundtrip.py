@@ -121,3 +121,63 @@ def test_fundamentals_snapshot_roundtrip_keeps_new_fields_optional_for_legacy_pa
     assert loaded.book_value_per_share is None
     assert loaded.price_to_book is None
     assert loaded.book_to_price is None
+
+
+def test_provider_record_has_new_finnhub_fields():
+    from swing_screener.fundamentals.models import ProviderFundamentalsRecord
+    record = ProviderFundamentalsRecord(
+        symbol="AAPL",
+        asof_date="2026-05-27",
+        provider="yfinance",
+        net_margin=0.22,
+        analyst_recommendation_score=15.0,
+        analyst_price_target=235.0,
+        earnings_beat_streak=4,
+    )
+    assert record.net_margin == 0.22
+    assert record.analyst_recommendation_score == 15.0
+    assert record.analyst_price_target == 235.0
+    assert record.earnings_beat_streak == 4
+
+
+def test_snapshot_new_fields_default_to_none():
+    from swing_screener.fundamentals.models import ProviderFundamentalsRecord
+    record = ProviderFundamentalsRecord(symbol="AAPL", asof_date="2026-05-27", provider="yfinance")
+    assert record.net_margin is None
+    assert record.analyst_recommendation_score is None
+    assert record.analyst_price_target is None
+    assert record.earnings_beat_streak is None
+
+
+def test_snapshot_from_dict_roundtrips_new_fields():
+    from swing_screener.fundamentals.models import FundamentalSnapshot
+    payload = {
+        "symbol": "AAPL",
+        "asof_date": "2026-05-27",
+        "provider": "yfinance",
+        "updated_at": "2026-05-27T10:00:00",
+        "net_margin": 0.22,
+        "analyst_recommendation_score": 15.0,
+        "analyst_price_target": 235.0,
+        "earnings_beat_streak": 4,
+    }
+    snapshot = FundamentalSnapshot.from_dict(payload)
+    assert snapshot.net_margin == 0.22
+    assert snapshot.analyst_recommendation_score == 15.0
+    assert snapshot.analyst_price_target == 235.0
+    assert snapshot.earnings_beat_streak == 4
+
+
+def test_snapshot_from_dict_new_fields_default_to_none_when_absent():
+    from swing_screener.fundamentals.models import FundamentalSnapshot
+    payload = {
+        "symbol": "AAPL",
+        "asof_date": "2026-05-27",
+        "provider": "yfinance",
+        "updated_at": "2026-05-27T10:00:00",
+    }
+    snapshot = FundamentalSnapshot.from_dict(payload)
+    assert snapshot.net_margin is None
+    assert snapshot.analyst_recommendation_score is None
+    assert snapshot.analyst_price_target is None
+    assert snapshot.earnings_beat_streak is None
