@@ -16,6 +16,7 @@ const Today = lazy(() => import('./pages/Today'));
 const Book = lazy(() => import('./pages/Book'));
 const Research = lazy(() => import('./pages/Research'));
 const Universes = lazy(() => import('./pages/Universes'));
+const Calendar = lazy(() => import('./pages/Calendar'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -44,6 +45,7 @@ function App() {
                 {/* New primary destinations */}
                 <Route index element={<Navigate to="/today" replace />} />
                 <Route path="today" element={<ErrorBoundary><Today /></ErrorBoundary>} />
+                <Route path="calendar" element={<ErrorBoundary><Calendar /></ErrorBoundary>} />
                 <Route path="book" element={<ErrorBoundary><Book /></ErrorBoundary>} />
                 <Route path="research" element={<ErrorBoundary><Research /></ErrorBoundary>} />
                 <Route path="universes" element={<ErrorBoundary><Universes /></ErrorBoundary>} />

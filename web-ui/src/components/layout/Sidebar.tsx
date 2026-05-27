@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import {
   CalendarCheck,
+  CalendarDays,
   BookMarked,
   FlaskConical,
   Database,
@@ -21,6 +22,11 @@ const primaryNav: NavigationItem[] = [
     labelKey: 'sidebar.nav.today',
     href: '/today',
     icon: CalendarCheck,
+  },
+  {
+    labelKey: 'sidebar.nav.calendar',
+    href: '/calendar',
+    icon: CalendarDays,
   },
   {
     labelKey: 'sidebar.nav.book',
