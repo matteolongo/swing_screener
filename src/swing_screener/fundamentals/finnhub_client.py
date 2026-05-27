@@ -125,15 +125,15 @@ class FinnhubEnrichmentClient:
                 updates[field_name] = value
 
         score = self._fetch_recommendation_score(record.symbol)
-        if score is not None:
+        if score is not None and record.analyst_recommendation_score is None:
             updates["analyst_recommendation_score"] = score
 
         target = self._fetch_price_target(record.symbol)
-        if target is not None:
+        if target is not None and record.analyst_price_target is None:
             updates["analyst_price_target"] = target
 
         streak = self._fetch_beat_streak(record.symbol)
-        if streak is not None:
+        if streak is not None and record.earnings_beat_streak is None:
             updates["earnings_beat_streak"] = streak
 
         if not updates:
