@@ -90,21 +90,23 @@ class CalendarService:
                 }
                 for future in as_completed(futures):
                     ticker = futures[future]
-                    # Re-raise so the outer except can trigger the yfinance fallback
-                    result = future.result()
-                    if result is None:
-                        continue
-                    earnings_date, eps_estimate, eps_actual = result
-                    source_tag = "position" if ticker in position_tickers else "screener"
-                    events.append(CalendarEvent(
-                        date=earnings_date.isoformat(),
-                        ticker=ticker,
-                        event_type="earnings",
-                        title=f"{ticker} Earnings",
-                        source_tag=source_tag,
-                        eps_estimate=eps_estimate,
-                        eps_actual=eps_actual,
-                    ))
+                    try:
+                        result = future.result()
+                        if result is None:
+                            continue
+                        earnings_date, eps_estimate, eps_actual = result
+                        source_tag = "position" if ticker in position_tickers else "screener"
+                        events.append(CalendarEvent(
+                            date=earnings_date.isoformat(),
+                            ticker=ticker,
+                            event_type="earnings",
+                            title=f"{ticker} Earnings",
+                            source_tag=source_tag,
+                            eps_estimate=eps_estimate,
+                            eps_actual=eps_actual,
+                        ))
+                    except Exception as exc:
+                        logger.debug("Finnhub earnings failed for %s: %s", ticker, exc)
         except Exception as exc:
             logger.info("Finnhub earnings batch failed, falling back to yfinance: %s", exc)
             return self._batch_fetch_earnings_yfinance(all_tickers, position_tickers, start, end)
@@ -131,8 +133,8 @@ class CalendarService:
         today = dt.date.today()
         upcoming = [
             item for item in items
-            if item.get("date") and _parse_date(item["date"]) is not None
-            and _parse_date(item["date"]) >= today
+            if item.get("date") and (d := _parse_date(item["date"])) is not None
+            and d >= today
         ]
         if not upcoming:
             return None

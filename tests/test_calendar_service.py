@@ -226,7 +226,8 @@ def test_earnings_falls_back_to_yfinance_when_no_finnhub_key(tmp_path):
     assert len(earnings) == 1
 
 
-def test_earnings_finnhub_failure_falls_back_to_yfinance(tmp_path):
+def test_earnings_finnhub_per_ticker_failure_is_skipped(tmp_path):
+    """A per-ticker Finnhub failure is silently skipped; no pool-wide yfinance fallback."""
     import datetime as dt
     from api.services.calendar_service import CalendarService
 
@@ -237,10 +238,14 @@ def test_earnings_finnhub_failure_falls_back_to_yfinance(tmp_path):
         finnhub_api_key="test_key",
     )
 
-    fake_date = dt.date.today() + dt.timedelta(days=10)
     with patch("api.services.calendar_service.httpx.get", side_effect=Exception("network")):
-        with patch.object(svc, "_fetch_earnings_for", return_value=fake_date) as mock_yf:
+        with patch.object(svc, "_fetch_earnings_for") as mock_yf:
             with patch.object(svc, "_fetch_economic_events", return_value=[]):
-                events = svc.get_events(days_ahead=30)
+                with patch.object(svc, "_fetch_ipo_events", return_value=[]):
+                    with patch.object(svc, "_fetch_dividend_events", return_value=[]):
+                        events = svc.get_events(days_ahead=30)
 
-    mock_yf.assert_called()
+    # Per-ticker failure is swallowed — no fallback to yfinance, no crash
+    mock_yf.assert_not_called()
+    assert isinstance(events, list)
+    assert not any(e.event_type == "earnings" for e in events)
