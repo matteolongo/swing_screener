@@ -249,3 +249,113 @@ def test_earnings_finnhub_per_ticker_failure_is_skipped(tmp_path):
     mock_yf.assert_not_called()
     assert isinstance(events, list)
     assert not any(e.event_type == "earnings" for e in events)
+
+
+def test_ipo_events_returned_when_finnhub_key_set(tmp_path):
+    import datetime as dt
+    from unittest.mock import MagicMock, patch
+    from api.services.calendar_service import CalendarService
+
+    repo = _make_positions_repo([])
+    svc = CalendarService(positions_repo=repo, data_dir=tmp_path, finnhub_api_key="test_key")
+
+    ipo_date = (dt.date.today() + dt.timedelta(days=5)).isoformat()
+    resp = MagicMock()
+    resp.json.return_value = {
+        "ipoCalendar": [
+            {"date": ipo_date, "symbol": "ACME", "name": "Acme Corp", "status": "priced"}
+        ]
+    }
+    resp.raise_for_status = MagicMock()
+
+    with patch("api.services.calendar_service.httpx.get", return_value=resp):
+        with patch.object(svc, "_batch_fetch_earnings", return_value=[]):
+            with patch.object(svc, "_fetch_economic_events", return_value=[]):
+                with patch.object(svc, "_fetch_dividend_events", return_value=[]):
+                    events = svc.get_events(days_ahead=30)
+
+    ipos = [e for e in events if e.event_type == "ipo"]
+    assert len(ipos) == 1
+    assert ipos[0].ticker == "ACME"
+    assert ipos[0].source_tag == "ipo"
+
+
+def test_ipo_events_skipped_when_no_finnhub_key(tmp_path):
+    from api.services.calendar_service import CalendarService
+
+    repo = _make_positions_repo([])
+    svc = CalendarService(positions_repo=repo, data_dir=tmp_path, finnhub_api_key=None)
+
+    with patch.object(svc, "_batch_fetch_earnings", return_value=[]):
+        with patch.object(svc, "_fetch_economic_events", return_value=[]):
+            with patch.object(svc, "_fetch_dividend_events", return_value=[]):
+                events = svc.get_events(days_ahead=30)
+
+    assert not any(e.event_type == "ipo" for e in events)
+
+
+def test_ipo_speculative_status_excluded(tmp_path):
+    import datetime as dt
+    from unittest.mock import MagicMock, patch
+    from api.services.calendar_service import CalendarService
+
+    repo = _make_positions_repo([])
+    svc = CalendarService(positions_repo=repo, data_dir=tmp_path, finnhub_api_key="test_key")
+
+    ipo_date = (dt.date.today() + dt.timedelta(days=5)).isoformat()
+    resp = MagicMock()
+    resp.json.return_value = {
+        "ipoCalendar": [
+            {"date": ipo_date, "symbol": "SPEC", "name": "Speculative Co", "status": "expected"}
+        ]
+    }
+    resp.raise_for_status = MagicMock()
+
+    with patch("api.services.calendar_service.httpx.get", return_value=resp):
+        with patch.object(svc, "_batch_fetch_earnings", return_value=[]):
+            with patch.object(svc, "_fetch_economic_events", return_value=[]):
+                with patch.object(svc, "_fetch_dividend_events", return_value=[]):
+                    events = svc.get_events(days_ahead=30)
+
+    assert not any(e.event_type == "ipo" for e in events)
+
+
+def test_dividend_events_only_for_position_tickers(tmp_path):
+    import datetime as dt
+    from unittest.mock import MagicMock, patch
+    from api.services.calendar_service import CalendarService
+
+    repo = _make_positions_repo(["AAPL"])
+    svc = CalendarService(positions_repo=repo, data_dir=tmp_path, finnhub_api_key="test_key")
+
+    div_date = (dt.date.today() + dt.timedelta(days=7)).isoformat()
+    resp = MagicMock()
+    resp.json.return_value = {
+        "dividendCalendar": [{"date": div_date, "amount": 0.25}]
+    }
+    resp.raise_for_status = MagicMock()
+
+    with patch("api.services.calendar_service.httpx.get", return_value=resp):
+        with patch.object(svc, "_batch_fetch_earnings", return_value=[]):
+            with patch.object(svc, "_fetch_economic_events", return_value=[]):
+                with patch.object(svc, "_fetch_ipo_events", return_value=[]):
+                    events = svc.get_events(days_ahead=30)
+
+    divs = [e for e in events if e.event_type == "dividend"]
+    assert len(divs) == 1
+    assert divs[0].ticker == "AAPL"
+    assert divs[0].source_tag == "position"
+
+
+def test_dividend_events_skipped_when_no_finnhub_key(tmp_path):
+    from api.services.calendar_service import CalendarService
+
+    repo = _make_positions_repo(["AAPL"])
+    svc = CalendarService(positions_repo=repo, data_dir=tmp_path, finnhub_api_key=None)
+
+    with patch.object(svc, "_batch_fetch_earnings", return_value=[]):
+        with patch.object(svc, "_fetch_economic_events", return_value=[]):
+            with patch.object(svc, "_fetch_ipo_events", return_value=[]):
+                events = svc.get_events(days_ahead=30)
+
+    assert not any(e.event_type == "dividend" for e in events)
