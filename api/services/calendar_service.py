@@ -8,6 +8,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Optional
 
+import httpx
+
 from api.models.calendar import CalendarEvent
 from api.repositories.positions_repo import PositionsRepository
 
@@ -36,6 +38,8 @@ class CalendarService:
         events: list[CalendarEvent] = []
         events.extend(self._batch_fetch_earnings(all_tickers, position_tickers, today, end))
         events.extend(self._fetch_economic_events(today, end))
+        events.extend(self._fetch_ipo_events(today, end))
+        events.extend(self._fetch_dividend_events(position_tickers, today, end))
 
         return sorted(events, key=lambda e: e.date)
 
@@ -66,6 +70,85 @@ class CalendarService:
         start: dt.date,
         end: dt.date,
     ) -> list[CalendarEvent]:
+        if self._finnhub_api_key:
+            return self._batch_fetch_earnings_finnhub(all_tickers, position_tickers, start, end)
+        return self._batch_fetch_earnings_yfinance(all_tickers, position_tickers, start, end)
+
+    def _batch_fetch_earnings_finnhub(
+        self,
+        all_tickers: set[str],
+        position_tickers: set[str],
+        start: dt.date,
+        end: dt.date,
+    ) -> list[CalendarEvent]:
+        events: list[CalendarEvent] = []
+        try:
+            with ThreadPoolExecutor(max_workers=12) as pool:
+                futures = {
+                    pool.submit(self._fetch_earnings_for_finnhub, t, start, end): t
+                    for t in all_tickers
+                }
+                for future in as_completed(futures):
+                    ticker = futures[future]
+                    # Re-raise so the outer except can trigger the yfinance fallback
+                    result = future.result()
+                    if result is None:
+                        continue
+                    earnings_date, eps_estimate, eps_actual = result
+                    source_tag = "position" if ticker in position_tickers else "screener"
+                    events.append(CalendarEvent(
+                        date=earnings_date.isoformat(),
+                        ticker=ticker,
+                        event_type="earnings",
+                        title=f"{ticker} Earnings",
+                        source_tag=source_tag,
+                        eps_estimate=eps_estimate,
+                        eps_actual=eps_actual,
+                    ))
+        except Exception as exc:
+            logger.info("Finnhub earnings batch failed, falling back to yfinance: %s", exc)
+            return self._batch_fetch_earnings_yfinance(all_tickers, position_tickers, start, end)
+        return events
+
+    def _fetch_earnings_for_finnhub(
+        self,
+        ticker: str,
+        start: dt.date,
+        end: dt.date,
+    ) -> Optional[tuple[dt.date, Optional[float], Optional[float]]]:
+        resp = httpx.get(
+            "https://finnhub.io/api/v1/calendar/earnings",
+            params={
+                "symbol": ticker,
+                "from": start.isoformat(),
+                "to": end.isoformat(),
+                "token": self._finnhub_api_key,
+            },
+            timeout=10.0,
+        )
+        resp.raise_for_status()
+        items = resp.json().get("earningsCalendar", [])
+        today = dt.date.today()
+        upcoming = [
+            item for item in items
+            if item.get("date") and _parse_date(item["date"]) is not None
+            and _parse_date(item["date"]) >= today
+        ]
+        if not upcoming:
+            return None
+        item = upcoming[0]
+        earnings_date = _parse_date(item["date"])
+        eps_estimate = _safe_float(item.get("epsEstimate"))
+        eps_actual = _safe_float(item.get("epsActual"))
+        return earnings_date, eps_estimate, eps_actual
+
+    def _batch_fetch_earnings_yfinance(
+        self,
+        all_tickers: set[str],
+        position_tickers: set[str],
+        start: dt.date,
+        end: dt.date,
+    ) -> list[CalendarEvent]:
         events: list[CalendarEvent] = []
         with ThreadPoolExecutor(max_workers=12) as pool:
             futures = {pool.submit(self._fetch_earnings_for, t): t for t in all_tickers}
@@ -75,15 +158,13 @@ class CalendarService:
                     earnings_date = future.result()
                     if earnings_date and start <= earnings_date <= end:
                         source_tag = "position" if ticker in position_tickers else "screener"
-                        events.append(
-                            CalendarEvent(
-                                date=earnings_date.isoformat(),
-                                ticker=ticker,
-                                event_type="earnings",
-                                title=f"{ticker} Earnings",
-                                source_tag=source_tag,
-                            )
-                        )
+                        events.append(CalendarEvent(
+                            date=earnings_date.isoformat(),
+                            ticker=ticker,
+                            event_type="earnings",
+                            title=f"{ticker} Earnings",
+                            source_tag=source_tag,
+                        ))
                 except Exception as exc:
                     logger.debug("Earnings fetch failed for %s: %s", ticker, exc)
         return events
@@ -107,8 +188,6 @@ class CalendarService:
         if not self._finnhub_api_key:
             return []
         try:
-            import httpx
-
             resp = httpx.get(
                 "https://finnhub.io/api/v1/calendar/economic",
                 params={
@@ -134,6 +213,97 @@ class CalendarService:
         except Exception as exc:
             logger.info("Economic events fetch skipped: %s", exc)
             return []
+
+    def _fetch_ipo_events(self, start: dt.date, end: dt.date) -> list[CalendarEvent]:
+        if not self._finnhub_api_key:
+            return []
+        try:
+            resp = httpx.get(
+                "https://finnhub.io/api/v1/calendar/ipo",
+                params={
+                    "from": start.isoformat(),
+                    "to": end.isoformat(),
+                    "token": self._finnhub_api_key,
+                },
+                timeout=10.0,
+            )
+            resp.raise_for_status()
+            items = resp.json().get("ipoCalendar", [])
+            return [
+                CalendarEvent(
+                    date=item["date"],
+                    ticker=item.get("symbol"),
+                    event_type="ipo",
+                    title=f"{item.get('name', item.get('symbol', 'IPO'))} IPO",
+                    source_tag="ipo",
+                )
+                for item in items
+                if item.get("date") and item.get("status") in {"priced", "filed"}
+            ]
+        except Exception as exc:
+            logger.info("IPO calendar fetch skipped: %s", exc)
+            return []
+
+    def _fetch_dividend_events(
+        self,
+        position_tickers: set[str],
+        start: dt.date,
+        end: dt.date,
+    ) -> list[CalendarEvent]:
+        if not self._finnhub_api_key or not position_tickers:
+            return []
+        events: list[CalendarEvent] = []
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            futures = {
+                pool.submit(self._fetch_dividends_for, t, start, end): t
+                for t in position_tickers
+            }
+            for future in as_completed(futures):
+                ticker = futures[future]
+                try:
+                    events.extend(future.result())
+                except Exception as exc:
+                    logger.debug("Dividend fetch failed for %s: %s", ticker, exc)
+        return events
+
+    def _fetch_dividends_for(
+        self,
+        ticker: str,
+        start: dt.date,
+        end: dt.date,
+    ) -> list[CalendarEvent]:
+        resp = httpx.get(
+            "https://finnhub.io/api/v1/calendar/dividend",
+            params={
+                "symbol": ticker,
+                "from": start.isoformat(),
+                "to": end.isoformat(),
+                "token": self._finnhub_api_key,
+            },
+            timeout=10.0,
+        )
+        resp.raise_for_status()
+        items = resp.json().get("dividendCalendar", [])
+        return [
+            CalendarEvent(
+                date=item["date"],
+                ticker=ticker,
+                event_type="dividend",
+                title=f"{ticker} Dividend",
+                source_tag="position",
+            )
+            for item in items
+            if item.get("date")
+        ]
+
+
+def _safe_float(value: object) -> Optional[float]:
+    try:
+        if value is None:
+            return None
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _parse_date(raw: object) -> Optional[dt.date]:

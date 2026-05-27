@@ -167,3 +167,80 @@ def test_calendar_event_eps_fields_default_to_none():
     )
     assert event.eps_estimate is None
     assert event.eps_actual is None
+
+
+def test_earnings_from_finnhub_includes_eps_estimate(tmp_path):
+    import datetime as dt
+    from unittest.mock import MagicMock, patch
+    from api.services.calendar_service import CalendarService
+
+    repo = _make_positions_repo(["AAPL"])
+    svc = CalendarService(
+        positions_repo=repo,
+        data_dir=tmp_path,
+        finnhub_api_key="test_key",
+    )
+
+    fake_date = dt.date.today() + dt.timedelta(days=10)
+
+    resp = MagicMock()
+    resp.json.return_value = {
+        "earningsCalendar": [
+            {
+                "symbol": "AAPL",
+                "date": fake_date.isoformat(),
+                "epsEstimate": 1.72,
+                "epsActual": None,
+                "dateConfirmed": True,
+            }
+        ]
+    }
+    resp.raise_for_status = MagicMock()
+
+    with patch("api.services.calendar_service.httpx.get", return_value=resp):
+        with patch.object(svc, "_fetch_economic_events", return_value=[]):
+            with patch.object(svc, "_fetch_ipo_events", return_value=[]):
+                with patch.object(svc, "_fetch_dividend_events", return_value=[]):
+                    events = svc.get_events(days_ahead=30)
+
+    earnings = [e for e in events if e.event_type == "earnings"]
+    assert len(earnings) == 1
+    assert earnings[0].eps_estimate == pytest.approx(1.72)
+    assert earnings[0].ticker == "AAPL"
+
+
+def test_earnings_falls_back_to_yfinance_when_no_finnhub_key(tmp_path):
+    import datetime as dt
+    from api.services.calendar_service import CalendarService
+
+    repo = _make_positions_repo(["AAPL"])
+    svc = CalendarService(positions_repo=repo, data_dir=tmp_path, finnhub_api_key=None)
+
+    fake_date = dt.date.today() + dt.timedelta(days=10)
+    with patch.object(svc, "_fetch_earnings_for", return_value=fake_date) as mock_yf:
+        with patch.object(svc, "_fetch_economic_events", return_value=[]):
+            events = svc.get_events(days_ahead=30)
+
+    mock_yf.assert_called()
+    earnings = [e for e in events if e.event_type == "earnings"]
+    assert len(earnings) == 1
+
+
+def test_earnings_finnhub_failure_falls_back_to_yfinance(tmp_path):
+    import datetime as dt
+    from api.services.calendar_service import CalendarService
+
+    repo = _make_positions_repo(["AAPL"])
+    svc = CalendarService(
+        positions_repo=repo,
+        data_dir=tmp_path,
+        finnhub_api_key="test_key",
+    )
+
+    fake_date = dt.date.today() + dt.timedelta(days=10)
+    with patch("api.services.calendar_service.httpx.get", side_effect=Exception("network")):
+        with patch.object(svc, "_fetch_earnings_for", return_value=fake_date) as mock_yf:
+            with patch.object(svc, "_fetch_economic_events", return_value=[]):
+                events = svc.get_events(days_ahead=30)
+
+    mock_yf.assert_called()
