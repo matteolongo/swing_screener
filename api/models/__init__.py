@@ -32,7 +32,7 @@ from api.models.portfolio import (
     PositionMetrics,
     PortfolioSummary,
 )
-from api.models.screener import ScreenerCandidate, ScreenerRequest, ScreenerResponse, OrderPreview
+from api.models.screener import ScreenerCandidate, ScreenerRequest, ScreenerResponse
 from api.models.recommendation import (
     Recommendation,
     RecommendationReason,
@@ -84,7 +84,6 @@ __all__ = [
     "ScreenerCandidate",
     "ScreenerRequest",
     "ScreenerResponse",
-    "OrderPreview",
     "Recommendation",
     "RecommendationReason",
     "RecommendationRisk",

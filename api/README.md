@@ -25,7 +25,6 @@ Health:
 Config (`/api/config`):
 - `GET /api/config`
 - `PUT /api/config`
-- `POST /api/config/reset`
 - `GET /api/config/defaults`
 
 Strategy (`/api/strategy`):

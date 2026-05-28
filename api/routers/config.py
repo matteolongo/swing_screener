@@ -24,12 +24,6 @@ async def update_config(
     return repo.update(config)
 
 
-@router.post("/reset", response_model=AppConfig)
-async def reset_config(repo: ConfigRepository = Depends(get_config_repo)):
-    """Reset configuration to defaults."""
-    return repo.reset()
-
-
 @router.get("/defaults", response_model=AppConfig)
 async def get_defaults():
     """Get default configuration."""

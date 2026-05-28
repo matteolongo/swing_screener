@@ -635,11 +635,15 @@ def test_screener_async_mode_returns_job_and_status(monkeypatch):
     assert final_payload["result"]["total_screened"] == 0
 
 
-def test_list_universes_returns_metadata_objects():
+def test_screener_universes_route_removed_in_favor_of_canonical_universes():
     client = TestClient(app)
-    res = client.get("/api/screener/universes")
-    assert res.status_code == 200
-    body = res.json()
+
+    removed = client.get("/api/screener/universes")
+    assert removed.status_code == 404
+
+    canonical = client.get("/api/universes")
+    assert canonical.status_code == 200
+    body = canonical.json()
     assert isinstance(body["universes"], list)
     assert body["universes"][0]["id"]
     assert "member_count" in body["universes"][0]
@@ -757,3 +761,19 @@ def test_screener_candidate_does_not_use_stale_catalyst(tmp_path, monkeypatch):
     # Today's index is empty — load_symbol_index() returns {} → opportunity=None
     today_index = CatalystStore().load_symbol_index()  # defaults to today
     assert "AAPL" not in today_index
+
+
+def test_screener_preview_order_route_removed():
+    client = TestClient(app)
+    response = client.post(
+        "/api/screener/preview-order",
+        json={
+            "ticker": "AAPL",
+            "entry_price": 200,
+            "stop_price": 190,
+            "account_size": 50_000,
+            "risk_pct": 0.01,
+        },
+    )
+
+    assert response.status_code == 404

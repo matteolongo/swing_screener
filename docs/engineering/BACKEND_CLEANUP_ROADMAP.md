@@ -37,21 +37,24 @@ Known follow-up:
 - Legacy intelligence MSW handlers still exist in `web-ui/src/test/mocks/handlers.ts`; they are no longer exposed through public API constants, but can be removed in the route-consolidation PR after checking older tests.
 - UI copy still mentions DeGiro as manual broker guidance. This PR removes DeGiro integration/API contracts, not broker-specific educational copy.
 
-## Next PR: Phase 2 Route Consolidation
+## PR 2: Phase 2 Route Consolidation
 
-Agent handover: `docs/superpowers/plans/2026-05-28-backend-cleanup-agent-handover.md`
-Handoff plan: `docs/superpowers/plans/2026-05-28-backend-cleanup-phase-2-handoff.md`
+Branch: `codex/phase-one-backend-cleanup`
 
-Planned:
+Completed:
 
-- Make `/api/universes` the only universe-list route.
-- Remove or deprecate `GET /api/screener/universes`.
-- Remove or relocate `POST /api/screener/preview-order`.
-- Decide whether `POST /api/config/reset` should remain as an admin/dev-only route or be removed.
-- Remove the legacy intelligence MSW handlers if no current tests need them.
-- Update `api/README.md` and endpoint tests after route changes.
+- Made `/api/universes` the only universe-list route.
+- Removed `GET /api/screener/universes` (duplicate).
+- Removed `POST /api/screener/preview-order`.
+- Removed `POST /api/config/reset`.
+- Removed legacy intelligence MSW mock handlers from `web-ui/src/test/mocks/handlers.ts`.
+- Updated `api/README.md` to reflect current registered API surface.
 
-## Later PR: Service Boundary Refactor
+Known follow-up:
+
+- Screener stale MSW handlers may need further cleanup if additional tests reference them.
+
+## Next PR: Service Boundary Refactor
 
 Planned:
 

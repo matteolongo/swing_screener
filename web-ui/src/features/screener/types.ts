@@ -321,17 +321,6 @@ export interface ScreenerRunStatusResponseAPI {
   updated_at: string;
 }
 
-export interface OrderPreview {
-  ticker: string;
-  entryPrice: number;
-  stopPrice: number;
-  atr: number;
-  shares: number;
-  positionSizeUsd: number;
-  riskUsd: number;
-  riskPct: number;
-}
-
 export interface UniverseSummary {
   id: string;
   description: string;
