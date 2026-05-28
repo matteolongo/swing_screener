@@ -248,6 +248,17 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {snapshot.dataQualityFlags.length > 0 ? (
+          <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
+            <h4 className="text-sm font-semibold text-amber-700 dark:text-amber-300">Data quality</h4>
+            <ul className="mt-2 space-y-1 text-sm text-amber-800 dark:text-amber-200">
+              {snapshot.dataQualityFlags.map((item) => (
+                <li key={item}>• {item}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-4">
           <div className="rounded-md border border-gray-200 bg-white p-3">
             <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Overall read</div>
@@ -324,17 +335,6 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
             );
           })}
         </div>
-
-        {snapshot.dataQualityFlags.length > 0 ? (
-          <div>
-            <h4 className="text-sm font-semibold text-amber-700 dark:text-amber-300">Data quality</h4>
-            <ul className="mt-2 space-y-1 text-sm text-amber-800 dark:text-amber-200">
-              {snapshot.dataQualityFlags.map((item) => (
-                <li key={item}>• {item}</li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
 
         {(safeHighlights.length > 0 || safeRedFlags.length > 0) ? (
           <div className="grid gap-4 md:grid-cols-2">

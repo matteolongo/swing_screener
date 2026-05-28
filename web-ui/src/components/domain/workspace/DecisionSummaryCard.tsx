@@ -236,6 +236,19 @@ export default function DecisionSummaryCard({
         </Badge>
       </div>
 
+      {warningItems.length ? (
+        <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
+          <div className="text-xs font-medium uppercase tracking-wide text-amber-800">
+            {t('workspacePage.panels.analysis.decisionSummary.warningsTitle')}
+          </div>
+          <ul className="mt-2 space-y-1 text-sm text-amber-900">
+            {warningItems.map((warning) => (
+              <li key={warning}>{warning}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
       {summary.explanation ? (
         <div className="mt-3 grid gap-3 md:grid-cols-2">
           {summary.explanation.whyItQualified.length > 0 && (
@@ -352,18 +365,6 @@ export default function DecisionSummaryCard({
         </details>
       ) : null}
 
-      {warningItems.length ? (
-        <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
-          <div className="text-xs font-medium uppercase tracking-wide text-amber-800">
-            {t('workspacePage.panels.analysis.decisionSummary.warningsTitle')}
-          </div>
-          <ul className="mt-2 space-y-1 text-sm text-amber-900">
-            {warningItems.map((warning) => (
-              <li key={warning}>{warning}</li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
       </div>
     </div>
   );
