@@ -765,6 +765,27 @@ describe('AnalysisCanvasPanel', () => {
       screen.getByText('multiple or ratio that moves with the stock price')
     ).not.toBeVisible();
   });
+
+  it('fundamentals tab: metric labels glossary details has no open attribute', () => {
+    vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: buildSnapshot(),
+    } as never);
+    vi.mocked(fundamentalsHooks.useRefreshFundamentalSnapshotMutation).mockReturnValue({
+      mutate: vi.fn(),
+      data: undefined,
+      isPending: false,
+      isError: false,
+      error: null,
+    } as never);
+
+    renderWithProviders(<AnalysisCanvasPanel />);
+
+    const details = screen.getByText('About metric labels').closest('details');
+    expect(details).not.toBeNull();
+    expect(details).not.toHaveAttribute('open');
+  });
 });
 
 function mockFundamentalsIdle() {
