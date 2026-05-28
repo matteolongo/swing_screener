@@ -798,30 +798,13 @@ export default function OrderReviewExperience({
                 </div>
               ) : null}
 
-              {submitSucceeded ? (
-                <div className="rounded border border-green-300 bg-green-50 p-2 text-xs text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-200">
-                  {successMessage}
-                </div>
-              ) : null}
-
               <div className="sticky bottom-0 z-10 -mx-1 rounded-xl border border-slate-200 bg-white/95 p-3 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-white/90">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="grid grid-cols-3 gap-2 text-xs text-slate-600">
-                    <div>
-                      <div className="uppercase tracking-wide text-slate-500">{t('order.review.summaryPosition' as any)}</div>
-                      <div className="mt-1 font-semibold text-slate-900">{formatCurrency(positionSize, currency)}</div>
-                    </div>
-                    <div>
-                      <div className="uppercase tracking-wide text-slate-500">{t('order.review.summaryRisk' as any)}</div>
-                      <div className="mt-1 font-semibold text-slate-900">{formatCurrency(riskAmount, currency)}</div>
-                    </div>
-                    <div>
-                      <div className="uppercase tracking-wide text-slate-500">{t('order.review.summaryRiskPct' as any)}</div>
-                      <div className={`mt-1 font-semibold ${riskPercent > risk.riskPct * 100 ? 'text-red-600' : 'text-emerald-600'}`}>
-                        {riskPercent.toFixed(2)}%
-                      </div>
-                    </div>
+                {submitSucceeded ? (
+                  <div className="mb-3 rounded border border-green-300 bg-green-50 p-2 text-xs text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-200">
+                    {successMessage}
                   </div>
+                ) : null}
+                <div className="flex justify-end">
                   <Button
                     type="submit"
                     disabled={
