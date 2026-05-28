@@ -28,7 +28,7 @@ Return ONLY a JSON block (fenced with ```json) with exactly these fields:
 - conviction: one of high | medium | low
 - catalyst_urgency: one of high | medium | low | none
 - summary_line: one sentence synthetic read (max 120 chars)
-- narrative: flowing prose in Markdown. Start with the actionable read: **What to do:** and **Watch for:** in the first two short paragraphs. Then add the supporting technical, fundamental, and catalyst rationale. No H1/H2 headings. Max 300 words.
+- narrative: flowing prose in Markdown. Start with the actionable read: **What to do:** and **Watch for:** in the first two short paragraphs. Then add the supporting technical, fundamental, and catalyst rationale. No H1/H2 headings. Max 400 words.
   When writing the narrative, always include:
   - **When to act:** Explain the specific timing for order placement — after market close today, on a confirmed pullback to the entry level, or on a breakout above a key level. Be concrete about the condition.
   - **Expected growth:** Using the target price and fair value context, state the expected upside as a percentage and how long it might take to play out (days/weeks).
@@ -109,10 +109,8 @@ def _build_user_prompt(ticker: str, req: SymbolIntelligenceRequest) -> str:
     ]
 
     if not has_position:
-        lines.append(f"Suggested entry: {fmt(req.entry)} | Suggested stop: {fmt(req.stop)}")
-
         # Trade plan block
-        if any(x is not None for x in (req.target, req.rr)):
+        if any(x is not None for x in (req.entry, req.stop, req.target, req.rr)):
             currency = req.currency or ""
             plan_lines: list[str] = [
                 "",
@@ -158,7 +156,7 @@ def _build_user_prompt(ticker: str, req: SymbolIntelligenceRequest) -> str:
             label_parts = [p for p in (tech_str, fund_str, val_str) if p]
             if label_parts:
                 lines.append(" | ".join(label_parts))
-            if any(x is not None for x in (req.fair_value_low, req.fair_value_base, req.fair_value_high)):
+            if all(x is not None for x in (req.fair_value_low, req.fair_value_base, req.fair_value_high)):
                 fv_low = fmt(req.fair_value_low)
                 fv_high = fmt(req.fair_value_high)
                 fv_base = fmt(req.fair_value_base)
@@ -212,7 +210,7 @@ class SymbolAnalyzer:
             trade_plan["target"] = req.target
         if req.rr is not None:
             trade_plan["rr"] = req.rr
-        if req.target and req.close:
+        if req.target is not None and req.close is not None:
             trade_plan["upside_pct"] = round((req.target - req.close) / req.close * 100, 1)
         if trade_plan:
             inputs_used["trade_plan"] = trade_plan
