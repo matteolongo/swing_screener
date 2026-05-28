@@ -120,3 +120,22 @@ describe('OrderReviewExperience — liquidity slippage warning', () => {
     }
   });
 });
+
+describe('OrderReviewExperience — bottom sticky bar', () => {
+  it('does not repeat the position/risk summary in the sticky bar', async () => {
+    renderWithProviders(
+      <OrderReviewExperience
+        context={makeContext()}
+        risk={risk}
+        defaultNotes=""
+        onSubmitOrder={vi.fn()}
+      />
+    );
+
+    await screen.findByRole('region', { name: /Order review sections/i });
+
+    const stickyBars = document.querySelectorAll('[class*="sticky"][class*="bottom-0"]');
+    expect(stickyBars.length).toBe(1);
+    expect(stickyBars[0].textContent ?? '').not.toMatch(/position/i);
+  });
+});

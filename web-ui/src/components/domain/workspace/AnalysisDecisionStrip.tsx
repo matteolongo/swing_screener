@@ -2,10 +2,7 @@ import Badge from '@/components/common/Badge';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
 import type {
   DecisionAction,
-  DecisionCatalystLabel,
   DecisionConviction,
-  DecisionSignalLabel,
-  DecisionValuationLabel,
 } from '@/features/screener/types';
 import { t } from '@/i18n/t';
 import { formatCurrency, formatNumber } from '@/utils/formatters';
@@ -50,46 +47,6 @@ function convictionLabel(conviction: DecisionConviction): string {
   }
 }
 
-function signalLabel(label: DecisionSignalLabel): string {
-  switch (label) {
-    case 'strong':
-      return t('workspacePage.panels.analysis.decisionSummary.signal.strong');
-    case 'neutral':
-      return t('workspacePage.panels.analysis.decisionSummary.signal.neutral');
-    case 'weak':
-      return t('workspacePage.panels.analysis.decisionSummary.signal.weak');
-  }
-}
-
-function valuationLabel(label: DecisionValuationLabel): string {
-  switch (label) {
-    case 'cheap':
-      return t('workspacePage.panels.analysis.decisionSummary.valuation.cheap');
-    case 'fair':
-      return t('workspacePage.panels.analysis.decisionSummary.valuation.fair');
-    case 'expensive':
-      return t('workspacePage.panels.analysis.decisionSummary.valuation.expensive');
-    case 'unknown':
-      return t('workspacePage.panels.analysis.decisionSummary.valuation.unknown');
-  }
-}
-
-function catalystLabel(label: DecisionCatalystLabel): string {
-  switch (label) {
-    case 'active':
-      return t('workspacePage.panels.analysis.decisionSummary.catalyst.active');
-    case 'neutral':
-      return t('workspacePage.panels.analysis.decisionSummary.catalyst.neutral');
-    case 'weak':
-      return t('workspacePage.panels.analysis.decisionSummary.catalyst.weak');
-  }
-}
-
-function setupTypeLabel(candidate?: SymbolAnalysisCandidate | null) {
-  const explanation = candidate?.recommendation?.thesis?.explanation;
-  return explanation?.setupType ?? candidate?.signal?.replace(/_/g, ' ') ?? 'Manual';
-}
-
 function compactValue(label: string, value: string) {
   return (
     <div className="min-w-[88px] rounded-md border border-slate-200 bg-white/90 px-2.5 py-2">
@@ -117,14 +74,6 @@ export default function AnalysisDecisionStrip({
   const oneR = entry != null && stop != null ? entry - stop : null;
   const pctToTarget = target != null && entry != null && entry > 0 ? (target - entry) / entry * 100 : null;
   const riskPct = candidate?.recommendation?.risk?.riskPct;
-  const badges = summary
-    ? [
-        `Technical: ${signalLabel(summary.technicalLabel)}`,
-        `Fundamentals: ${signalLabel(summary.fundamentalsLabel)}`,
-        `Valuation: ${valuationLabel(summary.valuationLabel)}`,
-        `Catalyst: ${catalystLabel(summary.catalystLabel)}`,
-      ]
-    : [];
 
   return (
     <div className="sticky top-0 z-10 rounded-xl border border-slate-200 bg-slate-50/95 p-3 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-slate-50/85">
@@ -166,19 +115,6 @@ export default function AnalysisDecisionStrip({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-full bg-slate-200 px-2.5 py-1 text-[11px] font-medium text-slate-700">
-            Setup: {setupTypeLabel(candidate)}
-          </span>
-          {badges.map((label) => (
-            <span
-              key={label}
-              className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] text-slate-600"
-            >
-              {label}
-            </span>
-          ))}
-        </div>
         {summary?.action === 'BUY_NOW' && onPrepareOrder && (
           <div className="flex justify-end">
             <button

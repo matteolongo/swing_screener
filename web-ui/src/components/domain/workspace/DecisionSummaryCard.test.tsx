@@ -118,3 +118,25 @@ describe('DecisionSummaryCard — no trade plan metric grid', () => {
     expect(screen.queryByText('$180.00')).not.toBeInTheDocument();
   });
 });
+describe('DecisionSummaryCard — warning position', () => {
+  it('renders coverage warnings before the explanation grid', () => {
+    const summary = buildSummary({
+      explanation: {
+        summaryLine: 'Medium conviction setup.',
+        whyItQualified: ['Setup quality is ready.'],
+        whyNow: ['Valuation pressure argues against chasing.'],
+        mainRisks: ['Valuation demanding.'],
+        whatInvalidatesIt: ['Price below 274.03.'],
+        nextBestAction: 'Wait for a pullback toward the stop.',
+        confidenceNotes: ['No cached catalyst snapshot is available yet.'],
+      },
+    });
+    render(<DecisionSummaryCard summary={summary} currency="USD" />);
+
+    const warning = screen.getByText('No cached catalyst snapshot is available yet.');
+    const whyItQualified = screen.getByText('Why It Qualified');
+    expect(
+      warning.compareDocumentPosition(whyItQualified) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+  });
+});

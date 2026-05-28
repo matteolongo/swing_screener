@@ -105,4 +105,16 @@ describe('FundamentalsSnapshotCard', () => {
     expect(screen.queryByText('Operating margin is deteriorating.')).not.toBeInTheDocument();
     expect(screen.getAllByText(/Profitability profile looks healthy\./i).length).toBeGreaterThan(0);
   });
+
+  it('renders the data quality flags before the pillar scores', () => {
+    render(<FundamentalsSnapshotCard snapshot={snapshot} />);
+
+    const flag = screen.getByText(
+      /Operating margin history is too sparse for a reliable trend signal\./
+    );
+    const pillars = screen.getByText('Pillar scores');
+    expect(
+      flag.compareDocumentPosition(pillars) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+  });
 });
