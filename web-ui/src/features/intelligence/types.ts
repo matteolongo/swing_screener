@@ -58,6 +58,7 @@ export interface SymbolIntelligenceAPI {
   position_signal: PositionSignal | null;
   position_outlook?: PositionOutlookAPI | null;
   sources: string[];
+  inputs_used?: Record<string, Record<string, unknown>>;
 }
 
 export interface SymbolIntelligence {
@@ -72,6 +73,7 @@ export interface SymbolIntelligence {
   positionSignal: PositionSignal | null;
   positionOutlook?: PositionOutlook | null;
   sources: string[];
+  inputsUsed?: Record<string, Record<string, unknown>>;
 }
 
 function transformPositionOutlook(api: PositionOutlookAPI | null | undefined): PositionOutlook | null {
@@ -101,6 +103,7 @@ export function transformIntelligence(api: SymbolIntelligenceAPI): SymbolIntelli
     positionSignal: api.position_signal ?? null,
     positionOutlook: transformPositionOutlook(api.position_outlook),
     sources: api.sources ?? [],
+    inputsUsed: api.inputs_used ?? {},
   };
 }
 

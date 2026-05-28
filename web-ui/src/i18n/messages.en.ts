@@ -599,6 +599,7 @@ export const messagesEn = {
           refreshAction: 'Refresh',
           lastAnalyzed: 'Last analyzed',
           signalsDetail: 'Signals & detail',
+          dataInputs: 'Data used by AI',
           decisionFocus: 'Decision focus',
           whyNow: 'Why now',
           whatToDo: 'What to do',
