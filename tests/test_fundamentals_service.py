@@ -565,3 +565,69 @@ def test_fundamentals_service_falls_back_to_yfinance_when_sec_provider_fails(tmp
 
     assert snapshot.provider == "yfinance"
     assert snapshot.symbol == "AAPL"
+
+
+def test_get_snapshot_calls_enrich_when_client_present(tmp_path):
+    from unittest.mock import MagicMock
+    from swing_screener.fundamentals.config import FundamentalsConfig
+    from swing_screener.fundamentals.service import FundamentalsAnalysisService
+    from swing_screener.fundamentals.storage import FundamentalsStorage
+
+    fake_provider = _FakeQuarterlyProvider()
+    mock_client = MagicMock()
+    mock_client.enrich.side_effect = lambda record: record  # pass-through
+
+    svc = FundamentalsAnalysisService(
+        storage=FundamentalsStorage(tmp_path / "snapshots"),
+        yfinance_provider=fake_provider,
+        finnhub_client=mock_client,
+    )
+    cfg = FundamentalsConfig(providers=("yfinance",))
+    svc.get_snapshot("AAPL", cfg=cfg)
+
+    mock_client.enrich.assert_called_once()
+
+
+def test_get_snapshot_skips_enrich_when_no_client(tmp_path):
+    from swing_screener.fundamentals.config import FundamentalsConfig
+    from swing_screener.fundamentals.service import FundamentalsAnalysisService
+    from swing_screener.fundamentals.storage import FundamentalsStorage
+
+    fake_provider = _FakeQuarterlyProvider()
+    svc = FundamentalsAnalysisService(
+        storage=FundamentalsStorage(tmp_path / "snapshots"),
+        yfinance_provider=fake_provider,
+        finnhub_client=None,
+    )
+    cfg = FundamentalsConfig(providers=("yfinance",))
+    snapshot = svc.get_snapshot("AAPL", cfg=cfg)
+    # No error = enrich was safely skipped
+    assert snapshot.symbol == "AAPL"
+
+
+def test_enriched_fields_appear_in_snapshot(tmp_path):
+    from unittest.mock import MagicMock
+    from swing_screener.fundamentals.config import FundamentalsConfig
+    from swing_screener.fundamentals.models import ProviderFundamentalsRecord
+    from swing_screener.fundamentals.service import FundamentalsAnalysisService
+    from swing_screener.fundamentals.storage import FundamentalsStorage
+
+    fake_provider = _FakeQuarterlyProvider()
+
+    def _enrich(record: ProviderFundamentalsRecord) -> ProviderFundamentalsRecord:
+        from dataclasses import replace
+        return replace(record, analyst_recommendation_score=25.0, earnings_beat_streak=3)
+
+    mock_client = MagicMock()
+    mock_client.enrich.side_effect = _enrich
+
+    svc = FundamentalsAnalysisService(
+        storage=FundamentalsStorage(tmp_path / "snapshots"),
+        yfinance_provider=fake_provider,
+        finnhub_client=mock_client,
+    )
+    cfg = FundamentalsConfig(providers=("yfinance",))
+    snapshot = svc.get_snapshot("AAPL", cfg=cfg)
+
+    assert snapshot.analyst_recommendation_score == 25.0
+    assert snapshot.earnings_beat_streak == 3

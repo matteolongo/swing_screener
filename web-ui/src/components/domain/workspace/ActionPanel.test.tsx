@@ -127,7 +127,7 @@ describe('ActionPanel', () => {
     renderWithProviders(<ActionPanel ticker="AAPL" />);
 
     expect(screen.getByRole('tab', { name: 'Decision' })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByText('Place Order')).toBeInTheDocument();
+    expect(screen.getByText('Order ticket')).toBeInTheDocument();
     expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('BUY_STOP');
     expect(screen.getByText('Trigger Price (Buy Stop entry)')).toBeInTheDocument();
     expect(screen.getByText('Execution guide')).toBeInTheDocument();
@@ -196,7 +196,7 @@ describe('ActionPanel', () => {
     renderWithProviders(<ActionPanel ticker="AAPL" />);
 
     const tablist = screen.getByRole('tablist', { name: 'Order review sections' });
-    const formTitle = screen.getByText('Place Order');
+    const formTitle = screen.getByText('Order ticket');
 
     expect(Boolean(tablist.compareDocumentPosition(formTitle) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
   });

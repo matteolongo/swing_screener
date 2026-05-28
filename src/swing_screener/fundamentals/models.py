@@ -125,6 +125,10 @@ class ProviderFundamentalsRecord:
     book_value_per_share: float | None = None
     price_to_book: float | None = None
     book_to_price: float | None = None
+    net_margin: float | None = None
+    analyst_recommendation_score: float | None = None
+    analyst_price_target: float | None = None
+    earnings_beat_streak: int | None = None
     data_region: str | None = None
     historical_series: dict[str, FundamentalMetricSeries] = field(default_factory=dict)
     metric_context: dict[str, FundamentalMetricContext] = field(default_factory=dict)
@@ -183,6 +187,11 @@ class FundamentalSnapshot:
     # Separate quality vs valuation
     business_quality_score: float | None = None    # growth + profitability + balance sheet + FCF only
     valuation_attractiveness: float | None = None  # valuation pillar only, separate from quality
+    # Finnhub enrichment fields
+    net_margin: float | None = None
+    analyst_recommendation_score: float | None = None
+    analyst_price_target: float | None = None
+    earnings_beat_streak: int | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -316,4 +325,8 @@ class FundamentalSnapshot:
                 if str(key).strip() and str(value).strip()
             },
             error=(str(payload.get("error")) if payload.get("error") else None),
+            net_margin=(float(payload["net_margin"]) if payload.get("net_margin") is not None else None),
+            analyst_recommendation_score=(float(payload["analyst_recommendation_score"]) if payload.get("analyst_recommendation_score") is not None else None),
+            analyst_price_target=(float(payload["analyst_price_target"]) if payload.get("analyst_price_target") is not None else None),
+            earnings_beat_streak=(int(payload["earnings_beat_streak"]) if payload.get("earnings_beat_streak") is not None else None),
         )

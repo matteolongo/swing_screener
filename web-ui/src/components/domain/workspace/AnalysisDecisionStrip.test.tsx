@@ -12,6 +12,51 @@ function buildCandidate(overrides: Partial<SymbolAnalysisCandidate> = {}): Symbo
   };
 }
 
+describe('AnalysisDecisionStrip — % to target cell', () => {
+  it('shows % to target when entry and target are available', () => {
+    const candidate = buildCandidate({ entry: 200, stop: 190 });
+    const decisionSummary = {
+      symbol: 'AAPL',
+      action: 'BUY_NOW' as const,
+      conviction: 'high' as const,
+      technicalLabel: 'strong' as const,
+      fundamentalsLabel: 'strong' as const,
+      valuationLabel: 'fair' as const,
+      catalystLabel: 'active' as const,
+      catalystSummary: null,
+      catalystSources: [],
+      whyNow: '',
+      whatToDo: '',
+      mainRisk: '',
+      tradePlan: { entry: 200, stop: 190, target: 220, rr: 2 },
+      drivers: { positives: [], negatives: [], warnings: [] },
+      valuationContext: {
+        method: 'not_available' as const,
+        summary: '',
+        trailingPe: undefined,
+        priceToSales: undefined,
+        bookValuePerShare: undefined,
+        priceToBook: undefined,
+        bookToPrice: undefined,
+        fairValueLow: undefined,
+        fairValueBase: undefined,
+        fairValueHigh: undefined,
+        premiumDiscountPct: undefined,
+      },
+    };
+    render(<AnalysisDecisionStrip ticker="AAPL" candidate={{ ...candidate, decisionSummary }} />);
+    expect(screen.getByText('10.00%')).toBeInTheDocument();
+  });
+
+  it('shows dash when target is missing', () => {
+    const candidate = buildCandidate({ entry: 200, stop: 190 });
+    render(<AnalysisDecisionStrip ticker="AAPL" candidate={candidate} />);
+    const toTargetLabel = screen.getByText('To Target');
+    const cell = toTargetLabel.closest('div[class*="min-w"]');
+    expect(cell?.textContent).toContain('—');
+  });
+});
+
 describe('AnalysisDecisionStrip — Risk % cell', () => {
   it('shows dash when riskPct is 0', () => {
     const candidate = buildCandidate({

@@ -8,15 +8,16 @@ import {
 import { transformIntelligence } from '@/features/intelligence/types';
 import type { SymbolIntelligence, SweepResponseAPI, SweepSymbolPayload } from '@/features/intelligence/types';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
+import type { PositionWithMetrics } from '@/features/portfolio/api';
 
 export function useIntelligenceAnalysisMutation() {
   return useMutation<
     SymbolIntelligence,
     Error,
-    { ticker: string; candidate: SymbolAnalysisCandidate | null | undefined }
+    { ticker: string; candidate: SymbolAnalysisCandidate | null | undefined; position?: PositionWithMetrics | null }
   >({
-    mutationFn: async ({ ticker, candidate }) => {
-      const payload = candidateToPayload(candidate);
+    mutationFn: async ({ ticker, candidate, position }) => {
+      const payload = candidateToPayload(candidate, position);
       if (!payload) throw new Error('No technical context available for this symbol');
       const api = await postIntelligenceAnalysis(ticker, payload);
       return transformIntelligence(api);

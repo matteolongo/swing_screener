@@ -57,16 +57,16 @@ export default function MainLayout() {
   ]);
 
   return (
-    <div className="min-h-dvh flex flex-col bg-gray-50">
+    <div className="min-h-dvh flex flex-col bg-background">
       <Header
         isSidebarCollapsed={isSidebarCollapsed}
         onToggleSidebar={() => setIsSidebarCollapsed((current) => !current)}
       />
       <div className="flex flex-1 min-h-0 overflow-hidden">
-        {!isSidebarCollapsed ? <Sidebar className="w-64 shrink-0" /> : null}
+        {!isSidebarCollapsed ? <Sidebar className="w-56 shrink-0" /> : null}
         <main
           className={cn(
-            'flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900',
+            'flex-1 overflow-y-auto bg-background',
             isWorkspaceRoute ? 'p-5' : 'p-6'
           )}
         >

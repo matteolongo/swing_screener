@@ -100,4 +100,23 @@ describe('OrderReviewExperience — liquidity slippage warning', () => {
     await screen.findByRole('region', { name: /Order review sections/i });
     expect(screen.queryByText(/avg daily volume/i)).toBeNull();
   });
+
+  it('shows one clear order ticket heading and keeps broker details collapsed', async () => {
+    renderWithProviders(
+      <OrderReviewExperience
+        context={makeContext()}
+        risk={risk}
+        defaultNotes=""
+        onSubmitOrder={vi.fn()}
+      />
+    );
+
+    expect(await screen.findByRole('heading', { name: 'Order ticket' })).toBeInTheDocument();
+    expect(screen.getAllByText('Execution caution')).toHaveLength(1);
+
+    const brokerStep = screen.queryByText(/In Degiro Acquisto/i);
+    if (brokerStep) {
+      expect(brokerStep).not.toBeVisible();
+    }
+  });
 });

@@ -15,6 +15,14 @@ _SYSTEM_PROMPT = """\
 You are a swing-trading analyst. Given the technical context below and live web search results, \
 produce a structured analysis for the symbol in English.
 
+IMPORTANT RULE — EXISTING POSITION MODE:
+If the input contains an "OPEN POSITION" block, the user already holds this stock.
+In that case you MUST:
+  • Set action = MANAGE_ONLY (never BUY_NOW / BUY_ON_PULLBACK / etc.)
+  • Write the narrative from a position-management perspective — do NOT suggest initiating an entry.
+  • Frame **What to do:** around holding, trimming, or exiting the current position.
+  • Frame **Watch for:** around signals that would change your hold/trim/exit recommendation.
+
 Return ONLY a JSON block (fenced with ```json) with exactly these fields:
 - action: one of BUY_NOW | BUY_ON_PULLBACK | WAIT_FOR_BREAKOUT | WATCH | TACTICAL_ONLY | AVOID | MANAGE_ONLY
 - conviction: one of high | medium | low
@@ -59,30 +67,44 @@ def _build_user_prompt(ticker: str, req: SymbolIntelligenceRequest) -> str:
     def fmt(v: float | None) -> str:
         return f"{v:.2f}" if v is not None else "N/A"
 
-    lines = [
-        f"Symbol: {ticker}",
-        f"Signal: {req.signal}",
-        f"Close: {fmt(req.close)} {req.currency}",
+    has_position = (
+        req.entry_price is not None
+        and req.r_now is not None
+        and req.days_open is not None
+    )
+
+    lines: list[str] = []
+
+    if has_position:
+        r_sign = "+" if req.r_now >= 0 else ""  # type: ignore[operator]
+        lines += [
+            "⚠️  OPEN POSITION — the user already holds this stock. Do NOT suggest initiating.",
+            f"  Filled entry:  {fmt(req.entry_price)} {req.currency}",
+            f"  Current price: {fmt(req.close)} {req.currency}",
+            f"  Current P&L:   {r_sign}{req.r_now:.2f}R",
+            f"  Days held:     {req.days_open}",
+            f"  Current stop:  {fmt(req.stop)} {req.currency}",
+            "",
+            "Focus on whether to HOLD, TRIM, or EXIT. Set action = MANAGE_ONLY.",
+            "Include position_signal and position_outlook in your JSON output.",
+        ]
+    else:
+        lines += [
+            f"Symbol: {ticker}",
+            f"Signal: {req.signal}",
+            f"Close: {fmt(req.close)} {req.currency}",
+        ]
+
+    lines += [
+        "",
+        "--- Technical context ---",
         f"SMA20: {fmt(req.sma_20)} | SMA50: {fmt(req.sma_50)} | SMA200: {fmt(req.sma_200)}",
         f"Momentum 6m: {fmt(req.momentum_6m)}% | 12m: {fmt(req.momentum_12m)}%",
-        f"Entry: {fmt(req.entry)} | Stop: {fmt(req.stop)}",
         f"Sector: {req.sector or 'Unknown'}",
     ]
 
-    if req.entry_price is not None and req.r_now is not None and req.days_open is not None:
-        lines.append(
-            f"Position context: entry={fmt(req.entry_price)}, "
-            f"current R={req.r_now:.2f}R, held {req.days_open} days"
-        )
-        lines.append(
-            "Include position_signal (HOLD / TRIM / EXIT) with a one-sentence reason."
-        )
-        lines.append(
-            "Also include position_outlook with expected_holding_period, hold_until, "
-            "next_review_trigger, thesis_status, invalidation_signals, profit_management, "
-            "opportunity_cost, and confidence_decay. Focus on how long the position is still "
-            "worth keeping open and what would make that patience invalid."
-        )
+    if not has_position:
+        lines.append(f"Suggested entry: {fmt(req.entry)} | Suggested stop: {fmt(req.stop)}")
 
     lines.append(
         f"\nSearch for recent news, earnings results, catalysts, and analyst views for {ticker}. "

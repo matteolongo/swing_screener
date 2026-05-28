@@ -7,6 +7,7 @@ from swing_screener.fundamentals.providers import (
     SecEdgarFundamentalsProvider,
     YfinanceFundamentalsProvider,
 )
+from swing_screener.fundamentals.finnhub_client import FinnhubEnrichmentClient
 from swing_screener.fundamentals.scoring import build_provider_error_snapshot, build_snapshot
 from swing_screener.fundamentals.storage import FundamentalsStorage
 
@@ -26,11 +27,13 @@ class FundamentalsAnalysisService:
         sec_edgar_provider: SecEdgarFundamentalsProvider | None = None,
         yfinance_provider: YfinanceFundamentalsProvider | None = None,
         degiro_provider: DegiroFundamentalsProvider | None = None,
+        finnhub_client: FinnhubEnrichmentClient | None = None,
     ) -> None:
         self._storage = storage or FundamentalsStorage()
         self._sec_edgar_provider = sec_edgar_provider or SecEdgarFundamentalsProvider()
         self._yfinance_provider = yfinance_provider or YfinanceFundamentalsProvider()
         self._degiro_provider = degiro_provider or DegiroFundamentalsProvider()
+        self._finnhub_client = finnhub_client
 
     def _providers_for(self, cfg: FundamentalsConfig):
         provider_map = {
@@ -78,6 +81,8 @@ class FundamentalsAnalysisService:
             last_provider_name = provider.name
             try:
                 record = provider.fetch_record(normalized_symbol)
+                if self._finnhub_client is not None:
+                    record = self._finnhub_client.enrich(record)
                 snapshot = build_snapshot(record, cfg)
                 break
             except Exception as exc:

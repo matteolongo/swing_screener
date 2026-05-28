@@ -1,6 +1,7 @@
 """Shared dependencies for API routers."""
 from __future__ import annotations
 
+import os
 import threading
 from pathlib import Path
 from typing import Optional
@@ -21,6 +22,13 @@ from api.services.strategy_service import StrategyService
 from api.services.watchlist_service import WatchlistService
 from api.utils.files import read_json_file, write_json_file, get_today_str
 from swing_screener.settings import data_dir, get_settings_manager, project_root
+from swing_screener.fundamentals.finnhub_client import FinnhubEnrichmentClient
+from swing_screener.fundamentals import FundamentalsAnalysisService as _FundamentalsAnalysisService
+
+_finnhub_api_key: str | None = os.environ.get("FINNHUB_API_KEY")
+_finnhub_client: FinnhubEnrichmentClient | None = (
+    FinnhubEnrichmentClient(_finnhub_api_key) if _finnhub_api_key else None
+)
 
 # Repository root
 ROOT_DIR = project_root()
@@ -131,7 +139,11 @@ def get_fundamentals_service(
     config_repo: FundamentalsConfigRepository = Depends(get_fundamentals_config_repo),
     watchlist_repo: WatchlistRepository = Depends(get_watchlist_repo),
 ) -> FundamentalsService:
-    return FundamentalsService(config_repo=config_repo, watchlist_repo=watchlist_repo)
+    return FundamentalsService(
+        config_repo=config_repo,
+        watchlist_repo=watchlist_repo,
+        analysis_service=_FundamentalsAnalysisService(finnhub_client=_finnhub_client),
+    )
 
 
 

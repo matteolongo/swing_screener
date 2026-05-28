@@ -14,6 +14,7 @@ import NarrativeAnalysisCard from '@/components/domain/workspace/NarrativeAnalys
 import TechnicalMetricsGrid from '@/components/domain/workspace/TechnicalMetricsGrid';
 import type { SymbolAnalysisCandidate, WorkspaceAnalysisTab } from '@/components/domain/workspace/types';
 import type { ScreenerResponse } from '@/features/screener/types';
+import type { PositionWithMetrics } from '@/features/portfolio/api';
 import { useRunScreenerMutation } from '@/features/screener/hooks';
 import {
   useFundamentalSnapshotQuery,
@@ -28,6 +29,7 @@ import { formatDateTime } from '@/utils/formatters';
 interface SymbolAnalysisContentProps {
   ticker: string;
   candidate?: SymbolAnalysisCandidate | null;
+  position?: PositionWithMetrics | null;
   activeTab: WorkspaceAnalysisTab;
   onTabChange: (tab: WorkspaceAnalysisTab) => void;
   orderPanel?: ReactNode;
@@ -44,6 +46,7 @@ function provenanceLegendItems() {
 export default function SymbolAnalysisContent({
   ticker,
   candidate,
+  position = null,
   activeTab,
   onTabChange,
   orderPanel = null,
@@ -83,7 +86,7 @@ export default function SymbolAnalysisContent({
 
   const handleAnalyzeWithAi = () => {
     intelligenceMutation.mutate(
-      { ticker, candidate },
+      { ticker, candidate, position },
       { onSuccess: (result) => setIntelligenceResult(result) }
     );
   };

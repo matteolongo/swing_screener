@@ -113,9 +113,8 @@ def test_prompt_omits_position_section_without_context():
     from swing_screener.intelligence.symbol_analyzer import _build_user_prompt
     req = SymbolIntelligenceRequest(close=50.0, signal="breakout")
     prompt = _build_user_prompt("AAPL", req)
-    assert "Position context" not in prompt
-    assert "position_signal" not in prompt
-    assert "position_outlook" not in prompt
+    assert "OPEN POSITION" not in prompt
+    assert "MANAGE_ONLY" not in prompt
 
 
 def test_prompt_includes_position_section_with_context():
@@ -125,15 +124,13 @@ def test_prompt_includes_position_section_with_context():
         entry_price=48.0, r_now=1.5, days_open=7,
     )
     prompt = _build_user_prompt("AAPL", req)
-    assert "Position context" in prompt
+    assert "OPEN POSITION" in prompt
     assert "48.00" in prompt
-    assert "1.50" in prompt
-    assert "7 days" in prompt
+    assert "+1.50R" in prompt
+    assert "Days held:     7" in prompt
+    assert "MANAGE_ONLY" in prompt
     assert "position_signal" in prompt
     assert "position_outlook" in prompt
-    assert "expected_holding_period" in prompt
-    assert "hold_until" in prompt
-    assert "next_review_trigger" in prompt
 
 
 def test_symbol_analyzer_maps_position_outlook():
