@@ -39,6 +39,8 @@ Known follow-up:
 
 ## Next PR: Phase 2 Route Consolidation
 
+Handoff plan: `docs/superpowers/plans/2026-05-28-backend-cleanup-phase-2-handoff.md`
+
 Planned:
 
 - Make `/api/universes` the only universe-list route.
