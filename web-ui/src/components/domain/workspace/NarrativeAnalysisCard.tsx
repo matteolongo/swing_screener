@@ -4,12 +4,10 @@ import type { SymbolIntelligence, DecisionAction, DecisionConviction } from '@/f
 import type { DecisionCatalystLabel, DecisionSignalLabel, DecisionValuationLabel } from '@/features/screener/types';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
 import { t } from '@/i18n/t';
-import { formatCurrency, formatNumber } from '@/utils/formatters';
 
 interface NarrativeAnalysisCardProps {
   intelligence: SymbolIntelligence;
   candidate?: SymbolAnalysisCandidate | null;
-  currency?: string;
 }
 
 function actionLabel(action: DecisionAction): string {
@@ -91,7 +89,6 @@ function convictionVariant(conviction: DecisionConviction): 'default' | 'success
 export default function NarrativeAnalysisCard({
   intelligence,
   candidate,
-  currency = 'USD',
 }: NarrativeAnalysisCardProps) {
   const { action, conviction, summaryLine, narrative } = intelligence;
   const summary = candidate?.decisionSummary;
@@ -111,14 +108,6 @@ export default function NarrativeAnalysisCard({
     },
   ].filter((item) => item.value);
 
-  const tradePlanItems = summary?.tradePlan
-    ? [
-        { label: t('workspacePage.panels.analysis.decisionSummary.tradePlan.entry'), value: summary.tradePlan.entry, fmt: (v: number) => formatCurrency(v, currency) },
-        { label: t('workspacePage.panels.analysis.decisionSummary.tradePlan.stop'), value: summary.tradePlan.stop, fmt: (v: number) => formatCurrency(v, currency) },
-        { label: t('workspacePage.panels.analysis.decisionSummary.tradePlan.target'), value: summary.tradePlan.target, fmt: (v: number) => formatCurrency(v, currency) },
-        { label: t('workspacePage.panels.analysis.decisionSummary.tradePlan.rr'), value: summary.tradePlan.rr, fmt: (v: number) => `${formatNumber(v, 2)}x` },
-      ].filter((item) => item.value != null)
-    : [];
 
   return (
     <div className="rounded-lg border border-slate-200 overflow-hidden">
@@ -158,18 +147,6 @@ export default function NarrativeAnalysisCard({
             </dl>
           )}
         </div>
-
-        {/* Compact trade plan */}
-        {tradePlanItems.length > 0 && (
-          <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-            {tradePlanItems.map((item) => (
-              <div key={item.label} className="rounded-md border border-slate-200 bg-white px-3 py-2">
-                <div className="text-[11px] uppercase tracking-wide text-gray-500">{item.label}</div>
-                <div className="mt-1 text-sm font-semibold text-slate-900">{item.fmt(item.value as number)}</div>
-              </div>
-            ))}
-          </div>
-        )}
 
         {/* Warnings — always visible, never collapsed */}
         {warnings.length > 0 && (

@@ -52,17 +52,10 @@ describe('NarrativeAnalysisCard', () => {
     expect(screen.getByText(/Watch for:/)).toBeInTheDocument();
   });
 
-  it('renders trade plan tiles when candidate has decisionSummary', () => {
-    render(<NarrativeAnalysisCard intelligence={baseIntelligence} candidate={baseCandidate} currency="USD" />);
-    expect(screen.getByText('$182.40')).toBeInTheDocument();
-    expect(screen.getByText('$174.20')).toBeInTheDocument();
-    expect(screen.getByText('$204.00')).toBeInTheDocument();
-    expect(screen.getByText('2.60x')).toBeInTheDocument();
-  });
-
-  it('does not render trade plan when no candidate', () => {
-    render(<NarrativeAnalysisCard intelligence={baseIntelligence} />);
-    expect(screen.queryByText('$182.40')).toBeNull();
+  it('does not render a duplicate trade plan grid', () => {
+    render(<NarrativeAnalysisCard intelligence={baseIntelligence} candidate={baseCandidate} />);
+    // Trade plan is shown in the workspace header, not inside this card
+    expect(screen.queryByText('2.60x')).toBeNull();
   });
 
   it('signals detail section is collapsed by default', () => {

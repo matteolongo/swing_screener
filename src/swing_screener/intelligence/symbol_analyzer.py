@@ -116,9 +116,9 @@ def _build_user_prompt(ticker: str, req: SymbolIntelligenceRequest) -> str:
                 "",
                 "--- Trade plan ---",
             ]
-            entry_str = f"Entry: {fmt(req.entry)} {currency}" if req.entry is not None else ""
-            stop_str = f"Stop: {fmt(req.stop)} {currency}" if req.stop is not None else ""
-            target_str = f"Target: {fmt(req.target)} {currency}" if req.target is not None else ""
+            entry_str = f"Planned entry (pullback level): {fmt(req.entry)} {currency}" if req.entry is not None else ""
+            stop_str = f"Stop loss (invalidation level): {fmt(req.stop)} {currency}" if req.stop is not None else ""
+            target_str = f"Price target: {fmt(req.target)} {currency}" if req.target is not None else ""
             price_parts = [p for p in (entry_str, stop_str, target_str) if p]
             if price_parts:
                 plan_lines.append(" | ".join(price_parts))
