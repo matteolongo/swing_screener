@@ -5,6 +5,8 @@ from abc import ABC, abstractmethod
 from typing import Optional
 import pandas as pd
 
+from swing_screener.data.source_health import DataSourceHealth
+
 
 class MarketDataProvider(ABC):
     """
@@ -115,3 +117,7 @@ class MarketDataProvider(ABC):
             Provider name (e.g., "yfinance", "alpaca", "ib")
         """
         pass
+
+    def get_source_health(self) -> DataSourceHealth:
+        """Return conservative source health metadata for this provider."""
+        return DataSourceHealth(provider=self.get_provider_name(), domain="market_data")

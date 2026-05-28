@@ -754,6 +754,7 @@ class ScreenerService:
                     f"Universe filters reduced the working list from {len(tickers)} to {len(filtered_tickers)} tickers."
                 )
             tickers = filtered_tickers
+            market_health = self._provider.get_source_health().to_dict()
 
             screening_tickers = [ticker for ticker in tickers if ticker != benchmark]
             active_currencies = _resolve_screening_currencies(
@@ -1021,6 +1022,7 @@ class ScreenerService:
                         avg_daily_volume_eur=_safe_optional_float(row.get("avg_daily_volume_eur")),
                         symbol_change_pct=symbol_change_pct,
                         benchmark_outperformance_pct=benchmark_outperformance_pct,
+                        data_source_summary={"market_data": market_health},
                         signal=str(signal) if not _is_na_scalar(signal) else None,
                         entry=rec_risk.entry,
                         stop=rec_risk.stop if stop_val is not None else None,
@@ -1150,4 +1152,3 @@ class ScreenerService:
             created_at=job.created_at,
             updated_at=job.updated_at,
         )
-

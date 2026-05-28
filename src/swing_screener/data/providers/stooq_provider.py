@@ -11,6 +11,7 @@ import httpx
 import pandas as pd
 
 from .base import MarketDataProvider
+from swing_screener.data.source_health import DataSourceHealth
 from swing_screener.utils import normalize_tickers
 
 _INSTRUMENT_MASTER_PATH = Path("data/intelligence/instrument_master.json")
@@ -93,6 +94,16 @@ class StooqDataProvider(MarketDataProvider):
         return httpx.Client(
             timeout=self._timeout_sec,
             headers={"User-Agent": "swing-screener/1.0 (stooq fallback)"},
+        )
+
+    def get_source_health(self) -> DataSourceHealth:
+        return DataSourceHealth(
+            provider="stooq",
+            domain="market_data",
+            status="ok",
+            quality_score=0.6,
+            delay_policy="daily_eod",
+            warnings=["daily_only"],
         )
 
     def _load_stooq_symbol_map(self) -> dict[str, str]:

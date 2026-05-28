@@ -13,6 +13,7 @@ import yfinance as yf
 from .base import MarketDataProvider
 from .stooq_provider import StooqDataProvider
 from ..market_data import fetch_ticker_metadata
+from swing_screener.data.source_health import DataSourceHealth
 from swing_screener.utils import normalize_tickers
 
 logger = logging.getLogger(__name__)
@@ -84,6 +85,16 @@ class YfinanceProvider(MarketDataProvider):
             yf.set_tz_cache_location(str(tz_cache_dir))
         except Exception as exc:  # pragma: no cover - defensive, depends on host FS perms
             logger.warning("Failed to configure yfinance tz cache at %s: %s", tz_cache_dir, exc)
+
+    def get_source_health(self) -> DataSourceHealth:
+        return DataSourceHealth(
+            provider="yfinance",
+            domain="market_data",
+            status="ok",
+            quality_score=0.65,
+            delay_policy="delayed_or_eod",
+            warnings=["unofficial_provider"],
+        )
 
     def _read_cached_ohlcv(self, cache_file: Path, tickers: list[str]) -> pd.DataFrame | None:
         """
