@@ -1,4 +1,4 @@
-"""Portfolio service - positions and live DeGiro order reads."""
+"""Portfolio service - positions and local order management."""
 from __future__ import annotations
 
 import datetime as dt
@@ -14,12 +14,9 @@ from api.models.portfolio import (
     ConcentrationGroup,
     CreateOrderRequest,
     CreatePositionRequest,
-    DegiroOrder,
-    DegiroOrdersResponse,
     EarningsProximityResponse,
     FillOrderRequest,
     FillOrderResponse,
-    FillFromDegiroResponse,
     PartialCloseEvent,
     PartialCloseRequest,
     Position,
@@ -40,8 +37,6 @@ from swing_screener.portfolio.state import (
     ManageConfig as ManageStateConfig,
     Position as StatePosition,
     evaluate_positions,
-    load_positions,
-    save_positions,
 )
 from swing_screener.data.providers import MarketDataProvider, get_default_provider
 from swing_screener.data.currency import detect_currency
@@ -58,17 +53,8 @@ logger = logging.getLogger(__name__)
 
 
 def _resolve_isin(ticker: str) -> Optional[str]:
-    """Look up ISIN from the DeGiro ISIN map for a given ticker."""
-    try:
-        from swing_screener.fundamentals.providers.degiro import _load_isin_map
-        isin_map = _load_isin_map()
-        isin = isin_map.get(ticker)
-        if not isin:
-            root = ticker.split(".")[0]
-            isin = isin_map.get(root)
-        return isin or None
-    except Exception:
-        return None
+    """Return an ISIN when one is provided by supported static metadata."""
+    return None
 
 
 # Simple cache for EURUSD rate with 5-minute TTL
@@ -770,6 +756,19 @@ class PortfolioService:
         orders, asof = self._orders_repo.list_orders(status=status)
         return {"orders": orders, "asof": asof}
 
+    def cancel_order(self, order_id: str) -> dict:
+        """Cancel a pending local order."""
+        if self._orders_repo is None:
+            raise HTTPException(status_code=503, detail="Orders repository not configured")
+
+        order = self._orders_repo.cancel_order(order_id)
+        if order is None:
+            raise HTTPException(status_code=404, detail=f"Order {order_id} not found")
+        if order.get("status") != "cancelled":
+            raise HTTPException(status_code=409, detail=f"Order {order_id} is already {order.get('status')}")
+
+        return {"order_id": order_id, "status": "cancelled"}
+
     def fill_order(self, order_id: str, request: FillOrderRequest) -> FillOrderResponse:
         """Mark a pending order as filled and create the open position."""
         if self._orders_repo is None:
@@ -850,7 +849,7 @@ class PortfolioService:
             "thesis": request.thesis,
             "isin": isin,
             "notes": request.notes,
-            "broker": "degiro",
+            "broker": "manual",
             "entry_fee_eur": request.fee_eur,
         }
 

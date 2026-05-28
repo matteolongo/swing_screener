@@ -217,3 +217,16 @@ def test_fundamentals_warmup_status_endpoint():
     assert payload["last_completed_symbol"] == "AAPL"
 
     app.dependency_overrides.clear()
+
+
+def test_removed_degiro_fundamentals_endpoints_are_not_registered():
+    client = TestClient(app)
+
+    capability = client.post(
+        "/api/fundamentals/degiro/capability-audit",
+        json={"symbols": ["AAPL"]},
+    )
+    portfolio = client.post("/api/fundamentals/degiro/portfolio-audit")
+
+    assert capability.status_code in {404, 405}
+    assert portfolio.status_code in {404, 405}

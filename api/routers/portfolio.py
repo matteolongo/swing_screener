@@ -221,6 +221,15 @@ async def list_local_orders(
     return service.list_local_orders(status=status)
 
 
+@router.delete("/orders/{order_id}")
+async def cancel_order(
+    order_id: str,
+    service: PortfolioService = Depends(get_portfolio_service),
+):
+    """Cancel a pending local order."""
+    return service.cancel_order(order_id)
+
+
 @router.post("/orders/{order_id}/fill", status_code=201, response_model=FillOrderResponse)
 async def fill_order(
     order_id: str,
@@ -229,7 +238,6 @@ async def fill_order(
 ):
     """Mark a pending order as filled and create an open position."""
     return service.fill_order(order_id, request)
-
 
 
 

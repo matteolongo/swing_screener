@@ -1,6 +1,5 @@
 import { API_ENDPOINTS, apiUrl } from '@/lib/api';
 import {
-  DegiroAuditRun,
   FundamentalSnapshot,
   FundamentalSnapshotAPI,
   FundamentalsCompareRequest,
@@ -15,7 +14,6 @@ import {
   FundamentalsWarmupStatus,
   FundamentalsWarmupStatusAPI,
   toFundamentalsWarmupRequestAPI,
-  transformDegiroAuditRun,
   transformFundamentalSnapshot,
   transformFundamentalsCompareResponse,
   transformFundamentalsConfig,
@@ -87,30 +85,6 @@ export async function startFundamentalsWarmup(
   }
   const payload: FundamentalsWarmupLaunchResponseAPI = await response.json();
   return transformFundamentalsWarmupLaunchResponse(payload);
-}
-
-export async function fetchDegiroCapabilityAudit(symbols: string[]): Promise<DegiroAuditRun> {
-  const response = await fetch(apiUrl(API_ENDPOINTS.degiroCapabilityAudit), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ symbols, include_quotes: true, include_news: true, include_agenda: true }),
-  });
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.detail || 'DeGiro capability audit failed');
-  }
-  const payload = await response.json();
-  return transformDegiroAuditRun(payload);
-}
-
-export async function fetchDegiroPortfolioAudit(): Promise<DegiroAuditRun> {
-  const response = await fetch(apiUrl(API_ENDPOINTS.degiroPortfolioAudit), { method: 'POST' });
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.detail || 'DeGiro portfolio audit failed');
-  }
-  const payload = await response.json();
-  return transformDegiroAuditRun(payload);
 }
 
 export async function fetchFundamentalsWarmupStatus(jobId: string): Promise<FundamentalsWarmupStatus> {

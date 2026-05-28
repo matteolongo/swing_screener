@@ -17,27 +17,12 @@ export const queryKeys = {
   positionMetrics: (positionId?: string) =>
     positionId == null ? (['position-metrics'] as const) : (['position-metrics', positionId] as const),
   portfolioSummary: () => ['portfolio-summary'] as const,
-  degiroStatus: () => ['degiro-status'] as const,
   positionStopSuggestion: (positionId?: string) =>
     ['positions', positionId, 'stop-suggestion'] as const,
   positionStopPreview: (positionId: string) =>
     ['positions', positionId, 'stop-preview'] as const,
-  intelligenceConfig: () => ['intelligence-config'] as const,
-  intelligenceProviders: () => ['intelligence-providers'] as const,
-  intelligenceSymbolSets: () => ['intelligence-symbol-sets'] as const,
   watchlist: () => ['watchlist'] as const,
   watchlistPipeline: () => ['watchlist-pipeline'] as const,
-  intelligenceRunStatus: (jobId?: string) => ['intelligence-run-status', jobId] as const,
-  intelligenceOpportunities: (asofDate?: string, symbolScope?: string) =>
-    ['intelligence-opportunities', asofDate, symbolScope] as const,
-  intelligenceEvents: (asofDate?: string, symbolScope?: string, eventScope?: string, minMateriality?: number) =>
-    ['intelligence-events', asofDate, symbolScope, eventScope, minMateriality ?? null] as const,
-  intelligenceUpcomingCatalysts: (asofDate?: string, symbolScope?: string, daysAhead?: number) =>
-    ['intelligence-upcoming-catalysts', asofDate, symbolScope, daysAhead ?? 14] as const,
-  intelligenceSourcesHealth: () => ['intelligence-sources-health'] as const,
-  intelligenceMetrics: (asofDate?: string) => ['intelligence-metrics', asofDate] as const,
-  intelligenceEducation: (symbol?: string, asofDate?: string) =>
-    ['intelligence-education', symbol, asofDate] as const,
   fundamentalsConfig: () => ['fundamentals-config'] as const,
   fundamentalsSnapshot: (symbol?: string, refresh?: boolean) =>
     ['fundamentals-snapshot', symbol ?? null, refresh ?? false] as const,

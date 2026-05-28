@@ -53,3 +53,18 @@ class OrdersRepository:
                 self.write(data)
                 return order
         return None
+
+    def cancel_order(self, order_id: str) -> dict | None:
+        """Mark a pending order as cancelled. Returns updated order or None if not found."""
+        data = self.read()
+        orders = data.get("orders", [])
+        for order in orders:
+            if order.get("order_id") == order_id:
+                if order.get("status") != "pending":
+                    return order
+                order["status"] = "cancelled"
+                data["orders"] = orders
+                data["asof"] = get_today_str()
+                self.write(data)
+                return order
+        return None

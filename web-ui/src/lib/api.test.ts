@@ -18,11 +18,9 @@ describe('API Client', () => {
       expect(API_ENDPOINTS.strategyById('strat-1')).toBe('/api/strategy/strat-1')
     })
 
-    it('has all screener endpoints', () => {
+    it('has active screener endpoints', () => {
       expect(API_ENDPOINTS.screenerRun).toBe('/api/screener/run')
       expect(API_ENDPOINTS.screenerRunStatus('job-1')).toBe('/api/screener/run/job-1')
-      expect(API_ENDPOINTS.screenerUniverses).toBe('/api/screener/universes')
-      expect(API_ENDPOINTS.screenerPreview).toBe('/api/screener/preview-order')
     })
 
     it('has all portfolio endpoints', () => {
@@ -53,6 +51,22 @@ describe('API Client', () => {
       expect(API_ENDPOINTS.fundamentalsSnapshot('AAPL')).toBe('/api/fundamentals/snapshot/AAPL')
       expect(API_ENDPOINTS.fundamentalsWarmup).toBe('/api/fundamentals/warmup')
       expect(API_ENDPOINTS.fundamentalsWarmupStatus('job-1')).toBe('/api/fundamentals/warmup/job-1')
+    })
+
+    it('does not expose removed backend contracts', () => {
+      expect('chatAnswer' in API_ENDPOINTS).toBe(false)
+      expect('screenerUniverses' in API_ENDPOINTS).toBe(false)
+      expect('screenerPreview' in API_ENDPOINTS).toBe(false)
+      expect('degiroStatus' in API_ENDPOINTS).toBe(false)
+      expect('degiroOrderHistory' in API_ENDPOINTS).toBe(false)
+      expect('orderFillFromDegiro' in API_ENDPOINTS).toBe(false)
+      expect('degiroOrderSyncApply' in API_ENDPOINTS).toBe(false)
+      expect('degiroCapabilityAudit' in API_ENDPOINTS).toBe(false)
+      expect('degiroPortfolioAudit' in API_ENDPOINTS).toBe(false)
+      expect('intelligenceConfig' in API_ENDPOINTS).toBe(false)
+      expect('intelligenceProviders' in API_ENDPOINTS).toBe(false)
+      expect('intelligenceRun' in API_ENDPOINTS).toBe(false)
+      expect('intelligenceOpportunities' in API_ENDPOINTS).toBe(false)
     })
   })
 
