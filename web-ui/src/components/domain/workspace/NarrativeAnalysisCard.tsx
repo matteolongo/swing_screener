@@ -4,12 +4,10 @@ import type { SymbolIntelligence, DecisionAction, DecisionConviction } from '@/f
 import type { DecisionCatalystLabel, DecisionSignalLabel, DecisionValuationLabel } from '@/features/screener/types';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
 import { t } from '@/i18n/t';
-import { formatCurrency, formatNumber } from '@/utils/formatters';
 
 interface NarrativeAnalysisCardProps {
   intelligence: SymbolIntelligence;
   candidate?: SymbolAnalysisCandidate | null;
-  currency?: string;
 }
 
 function actionLabel(action: DecisionAction): string {
@@ -91,7 +89,6 @@ function convictionVariant(conviction: DecisionConviction): 'default' | 'success
 export default function NarrativeAnalysisCard({
   intelligence,
   candidate,
-  currency = 'USD',
 }: NarrativeAnalysisCardProps) {
   const { action, conviction, summaryLine, narrative } = intelligence;
   const summary = candidate?.decisionSummary;
@@ -111,14 +108,6 @@ export default function NarrativeAnalysisCard({
     },
   ].filter((item) => item.value);
 
-  const tradePlanItems = summary?.tradePlan
-    ? [
-        { label: t('workspacePage.panels.analysis.decisionSummary.tradePlan.entry'), value: summary.tradePlan.entry, fmt: (v: number) => formatCurrency(v, currency) },
-        { label: t('workspacePage.panels.analysis.decisionSummary.tradePlan.stop'), value: summary.tradePlan.stop, fmt: (v: number) => formatCurrency(v, currency) },
-        { label: t('workspacePage.panels.analysis.decisionSummary.tradePlan.target'), value: summary.tradePlan.target, fmt: (v: number) => formatCurrency(v, currency) },
-        { label: t('workspacePage.panels.analysis.decisionSummary.tradePlan.rr'), value: summary.tradePlan.rr, fmt: (v: number) => `${formatNumber(v, 2)}x` },
-      ].filter((item) => item.value != null)
-    : [];
 
   return (
     <div className="rounded-lg border border-slate-200 overflow-hidden">
@@ -159,18 +148,6 @@ export default function NarrativeAnalysisCard({
           )}
         </div>
 
-        {/* Compact trade plan */}
-        {tradePlanItems.length > 0 && (
-          <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-            {tradePlanItems.map((item) => (
-              <div key={item.label} className="rounded-md border border-slate-200 bg-white px-3 py-2">
-                <div className="text-[11px] uppercase tracking-wide text-gray-500">{item.label}</div>
-                <div className="mt-1 text-sm font-semibold text-slate-900">{item.fmt(item.value as number)}</div>
-              </div>
-            ))}
-          </div>
-        )}
-
         {/* Warnings — always visible, never collapsed */}
         {warnings.length > 0 && (
           <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
@@ -192,6 +169,35 @@ export default function NarrativeAnalysisCard({
             <ReactMarkdown>{narrative}</ReactMarkdown>
           </div>
         </div>
+
+        {/* Data inputs used by AI */}
+        {intelligence.inputsUsed && Object.keys(intelligence.inputsUsed).length > 0 && (
+          <details className="rounded-md border border-slate-200 bg-white p-3">
+            <summary className="cursor-pointer text-xs font-medium text-slate-500 select-none">
+              {t('workspacePage.panels.analysis.intelligence.dataInputs')}
+            </summary>
+            <div className="mt-3 space-y-2">
+              {Object.entries(intelligence.inputsUsed).map(([group, fields]) => (
+                <div key={group}>
+                  <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-1">
+                    {group.replace(/_/g, ' ')}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {Object.entries(fields as Record<string, unknown>).filter(([, v]) => v != null).map(([key, value]) => (
+                      <span
+                        key={key}
+                        className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs text-slate-700"
+                      >
+                        <span className="font-medium text-slate-500">{key.replace(/_/g, ' ')}:</span>
+                        <span>{typeof value === 'number' ? (Number.isInteger(value) ? value : value.toFixed(2)) : String(value)}</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
 
         {/* Collapsed signals + valuation detail */}
         {summary && (

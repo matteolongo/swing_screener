@@ -18,6 +18,19 @@ export interface IntelligenceRequestPayload {
   entry_price?: number;
   r_now?: number;
   days_open?: number;
+  rr?: number | null;
+  target?: number | null;
+  rel_strength?: number | null;
+  atr?: number | null;
+  fair_value_low?: number | null;
+  fair_value_base?: number | null;
+  fair_value_high?: number | null;
+  valuation_label?: string | null;
+  decision_action?: string | null;
+  decision_conviction?: string | null;
+  technical_label?: string | null;
+  fundamentals_label?: string | null;
+  catalyst_summary?: string | null;
 }
 
 export function candidateToPayload(
@@ -38,6 +51,19 @@ export function candidateToPayload(
     sector: candidate.sector ?? null,
     currency: candidate.currency ?? 'USD',
   };
+  payload.rr = candidate.rr ?? null;
+  payload.rel_strength = candidate.relStrength ?? null;
+  payload.atr = candidate.atr ?? null;
+  payload.target = candidate.decisionSummary?.tradePlan?.target ?? null;
+  payload.fair_value_low = candidate.decisionSummary?.valuationContext?.fairValueLow ?? null;
+  payload.fair_value_base = candidate.decisionSummary?.valuationContext?.fairValueBase ?? null;
+  payload.fair_value_high = candidate.decisionSummary?.valuationContext?.fairValueHigh ?? null;
+  payload.valuation_label = candidate.decisionSummary?.valuationLabel ?? null;
+  payload.decision_action = candidate.decisionSummary?.action ?? null;
+  payload.decision_conviction = candidate.decisionSummary?.conviction ?? null;
+  payload.technical_label = candidate.decisionSummary?.technicalLabel ?? null;
+  payload.fundamentals_label = candidate.decisionSummary?.fundamentalsLabel ?? null;
+  payload.catalyst_summary = candidate.decisionSummary?.catalystSummary ?? null;
   if (position != null) {
     payload.entry_price = position.entryPrice;
     payload.r_now = position.rNow;

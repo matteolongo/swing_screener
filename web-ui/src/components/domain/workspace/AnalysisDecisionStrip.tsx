@@ -47,11 +47,16 @@ function convictionLabel(conviction: DecisionConviction): string {
   }
 }
 
-function compactValue(label: string, value: string) {
+function isPositiveNumber(value: number | null | undefined): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0;
+}
+
+function compactValue(label: string, value: string, secondary?: string) {
   return (
     <div className="min-w-[88px] rounded-md border border-slate-200 bg-white/90 px-2.5 py-2">
       <div className="text-[10px] uppercase tracking-wide text-slate-500">{label}</div>
       <div className="mt-1 text-sm font-semibold text-slate-900">{value}</div>
+      {secondary ? <div className="mt-0.5 text-[10px] text-slate-500">{secondary}</div> : null}
     </div>
   );
 }
@@ -67,13 +72,27 @@ export default function AnalysisDecisionStrip({
 }: AnalysisDecisionStripProps) {
   const summary = candidate?.decisionSummary;
   const currency = candidate?.currency ?? 'USD';
-  const entry = summary?.tradePlan.entry ?? candidate?.recommendation?.risk?.entry ?? candidate?.entry;
+  const closeEntry = summary?.tradePlan.entry ?? candidate?.recommendation?.risk?.entry ?? candidate?.entry;
+  const suggestedOrderEntry = isPositiveNumber(candidate?.suggestedOrderPrice) ? candidate.suggestedOrderPrice : null;
+  const usesSuggestedEntry =
+    suggestedOrderEntry != null &&
+    (!isPositiveNumber(closeEntry) || Math.abs(suggestedOrderEntry - closeEntry) >= 0.005);
+  const entry = usesSuggestedEntry ? suggestedOrderEntry : closeEntry;
   const stop = summary?.tradePlan.stop ?? candidate?.recommendation?.risk?.stop ?? candidate?.stop;
   const target = summary?.tradePlan.target ?? candidate?.recommendation?.risk?.target;
-  const rr = summary?.tradePlan.rr ?? candidate?.recommendation?.risk?.rr ?? candidate?.rr;
+  const computedRr = target != null && entry != null && stop != null && entry > stop
+    ? (target - entry) / (entry - stop)
+    : null;
+  const rr = computedRr ?? summary?.tradePlan.rr ?? candidate?.recommendation?.risk?.rr ?? candidate?.rr;
   const oneR = entry != null && stop != null ? entry - stop : null;
   const pctToTarget = target != null && entry != null && entry > 0 ? (target - entry) / entry * 100 : null;
   const riskPct = candidate?.recommendation?.risk?.riskPct;
+  const entryLabel = usesSuggestedEntry
+    ? t('workspacePage.panels.analysis.decisionSummary.tradePlan.plannedEntry')
+    : t('workspacePage.panels.analysis.decisionSummary.tradePlan.entryClose');
+  const closeSecondary = usesSuggestedEntry && isPositiveNumber(closeEntry)
+    ? `${t('workspacePage.panels.analysis.decisionSummary.tradePlan.close')} ${formatCurrency(closeEntry, currency)}`
+    : undefined;
 
   return (
     <div className="sticky top-0 z-10 rounded-xl border border-slate-200 bg-slate-50/95 p-3 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-slate-50/85">
@@ -104,7 +123,7 @@ export default function AnalysisDecisionStrip({
               </button>
             )}
             <div className="grid grid-cols-4 gap-2 md:grid-cols-7">
-              {compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.entryClose'), entry != null ? formatCurrency(entry, currency) : '—')}
+              {compactValue(entryLabel, entry != null ? formatCurrency(entry, currency) : '—', closeSecondary)}
               {compactValue('Stop', stop != null ? formatCurrency(stop, currency) : '—')}
               {compactValue('Target', target != null ? formatCurrency(target, currency) : '—')}
               {compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.toTarget'), pctToTarget != null ? `${formatNumber(pctToTarget, 2)}%` : '—')}

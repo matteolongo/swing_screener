@@ -25,6 +25,38 @@ describe('transformIntelligence', () => {
   });
 });
 
+function makeBase(): SymbolIntelligenceAPI {
+  return {
+    symbol: 'BASE',
+    generated_at: '2026-05-28T00:00:00Z',
+    action: 'WATCH',
+    conviction: 'medium',
+    catalyst_urgency: 'none',
+    summary_line: 'Base.',
+    narrative: 'Text.',
+    upcoming_events: [],
+    position_signal: null,
+    position_outlook: null,
+    sources: [],
+  };
+}
+
+describe('transformIntelligence inputs_used', () => {
+  it('maps inputs_used to inputsUsed', () => {
+    const api = makeBase();
+    api.inputs_used = { trade_plan: { entry: 100, rr: 2.5 } };
+    const result = transformIntelligence(api);
+    expect(result.inputsUsed).toEqual({ trade_plan: { entry: 100, rr: 2.5 } });
+  });
+
+  it('defaults inputsUsed to empty object when inputs_used absent', () => {
+    const api = makeBase();
+    delete (api as unknown as Record<string, unknown>).inputs_used;
+    const result = transformIntelligence(api);
+    expect(result.inputsUsed).toEqual({});
+  });
+});
+
 describe('transformIntelligence with new fields', () => {
   it('maps catalyst_urgency, upcoming_events, position_signal', () => {
     const api: SymbolIntelligenceAPI = {
