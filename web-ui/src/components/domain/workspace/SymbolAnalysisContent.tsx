@@ -278,7 +278,7 @@ export default function SymbolAnalysisContent({
 
         {activeTab === 'fundamentals' && (
           <>
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center justify-between gap-3 py-1">
               <Button
                 type="button"
                 size="sm"
@@ -295,7 +295,7 @@ export default function SymbolAnalysisContent({
                     : t('workspacePage.panels.analysis.fundamentals.runAction')}
               </Button>
               {fundamentalsQuery.data && (
-                <span className="text-xs text-slate-500">
+                <span className="text-xs text-slate-400">
                   Updated {formatDateTime(fundamentalsQuery.data.updatedAt)}
                 </span>
               )}

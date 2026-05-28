@@ -765,6 +765,65 @@ describe('AnalysisCanvasPanel', () => {
       screen.getByText('multiple or ratio that moves with the stock price')
     ).not.toBeVisible();
   });
+
+  it('fundamentals tab: metric labels glossary details has no open attribute', () => {
+    vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: buildSnapshot(),
+    } as never);
+    vi.mocked(fundamentalsHooks.useRefreshFundamentalSnapshotMutation).mockReturnValue({
+      mutate: vi.fn(),
+      data: undefined,
+      isPending: false,
+      isError: false,
+      error: null,
+    } as never);
+
+    renderWithProviders(<AnalysisCanvasPanel />);
+
+    const details = screen.getByText('About metric labels').closest('details');
+    expect(details).not.toBeNull();
+    expect(details).not.toHaveAttribute('open');
+  });
+
+  it('fundamentals tab: shows a refresh button in the compact row', () => {
+    vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: buildSnapshot(),
+    } as never);
+    vi.mocked(fundamentalsHooks.useRefreshFundamentalSnapshotMutation).mockReturnValue({
+      mutate: vi.fn(),
+      data: undefined,
+      isPending: false,
+      isError: false,
+      error: null,
+    } as never);
+
+    renderWithProviders(<AnalysisCanvasPanel />);
+
+    expect(screen.getByRole('button', { name: /refresh/i })).toBeInTheDocument();
+  });
+
+  it('fundamentals tab: shows updated timestamp when snapshot exists', () => {
+    vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: buildSnapshot(),
+    } as never);
+    vi.mocked(fundamentalsHooks.useRefreshFundamentalSnapshotMutation).mockReturnValue({
+      mutate: vi.fn(),
+      data: undefined,
+      isPending: false,
+      isError: false,
+      error: null,
+    } as never);
+
+    renderWithProviders(<AnalysisCanvasPanel />);
+
+    expect(screen.getByText(/Updated/i)).toBeInTheDocument();
+  });
 });
 
 function mockFundamentalsIdle() {
