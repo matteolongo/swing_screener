@@ -118,7 +118,6 @@ describe('DecisionSummaryCard — no trade plan metric grid', () => {
     expect(screen.queryByText('$180.00')).not.toBeInTheDocument();
   });
 });
-
 describe('DecisionSummaryCard — warning position', () => {
   it('renders coverage warnings before the explanation grid', () => {
     const summary = buildSummary({

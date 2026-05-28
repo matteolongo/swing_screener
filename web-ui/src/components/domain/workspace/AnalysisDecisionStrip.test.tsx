@@ -129,7 +129,6 @@ describe('AnalysisDecisionStrip — watch button', () => {
     expect(screen.getByRole('button', { name: /unwatch/i })).toBeInTheDocument();
   });
 });
-
 describe('AnalysisDecisionStrip — no signal pills row', () => {
   const decisionSummary = {
     symbol: 'BESI.AS',
