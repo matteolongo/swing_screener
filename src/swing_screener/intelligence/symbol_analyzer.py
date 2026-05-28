@@ -100,30 +100,18 @@ def _build_user_prompt(ticker: str, req: SymbolIntelligenceRequest) -> str:
             "Include position_signal and position_outlook in your JSON output.",
         ]
     else:
+        currency = req.currency or ""
         lines += [
             f"Symbol: {ticker}",
             f"Signal: {req.signal}",
-            f"Current market price (NOT the entry): {fmt(req.close)} {req.currency}",
         ]
 
-    lines += [
-        "",
-        "--- Technical context ---",
-        f"SMA20: {fmt(req.sma_20)} | SMA50: {fmt(req.sma_50)} | SMA200: {fmt(req.sma_200)}",
-        f"Momentum 6m: {fmt(req.momentum_6m)}% | 12m: {fmt(req.momentum_12m)}%",
-        f"Sector: {req.sector or 'Unknown'}",
-    ]
-
-    if not has_position:
-        # Trade plan block
-        if any(x is not None for x in (req.entry, req.stop, req.target, req.rr)):
-            currency = req.currency or ""
-            plan_lines: list[str] = [
-                "",
-                "--- Trade plan ---",
-            ]
-            entry_str = f"Planned entry (pullback level): {fmt(req.entry)} {currency}" if req.entry is not None else ""
-            stop_str = f"Stop loss (invalidation level): {fmt(req.stop)} {currency}" if req.stop is not None else ""
+        # Trade plan block — placed FIRST so the planned entry is the dominant price.
+        # The current market price follows below as context only.
+        if not has_position and any(x is not None for x in (req.entry, req.stop, req.target, req.rr)):
+            plan_lines: list[str] = ["", "--- Trade plan (use these prices in the narrative) ---"]
+            entry_str = f"Planned entry: {fmt(req.entry)} {currency}" if req.entry is not None else ""
+            stop_str = f"Stop loss: {fmt(req.stop)} {currency}" if req.stop is not None else ""
             target_str = f"Price target: {fmt(req.target)} {currency}" if req.target is not None else ""
             price_parts = [p for p in (entry_str, stop_str, target_str) if p]
             if price_parts:
@@ -137,12 +125,19 @@ def _build_user_prompt(ticker: str, req: SymbolIntelligenceRequest) -> str:
             rr_parts = [p for p in (rr_str, upside_str) if p]
             if rr_parts:
                 plan_lines.append(" | ".join(rr_parts))
-            if req.entry is not None and req.rr is not None:
-                plan_lines.append(
-                    f"⚠ Use these exact numbers in the narrative: entry={fmt(req.entry)} {currency}, "
-                    f"R/R={req.rr}x. Do NOT use the current market price as the entry."
-                )
             lines += plan_lines
+
+        lines.append(f"Current market price (context only, NOT the entry): {fmt(req.close)} {currency}")
+
+    lines += [
+        "",
+        "--- Technical context ---",
+        f"SMA20: {fmt(req.sma_20)} | SMA50: {fmt(req.sma_50)} | SMA200: {fmt(req.sma_200)}",
+        f"Momentum 6m: {fmt(req.momentum_6m)}% | 12m: {fmt(req.momentum_12m)}%",
+        f"Sector: {req.sector or 'Unknown'}",
+    ]
+
+    if not has_position:
 
         # Decision context block
         has_decision = any(
