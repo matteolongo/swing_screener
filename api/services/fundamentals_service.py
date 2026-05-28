@@ -148,10 +148,3 @@ class FundamentalsService:
         if job is None:
             raise HTTPException(status_code=404, detail="Fundamentals warmup job not found.")
         return self._serialize_warmup_job_status(job)
-
-    def run_degiro_capability_audit(self, request) -> None:  # type: ignore[return]
-        raise HTTPException(status_code=503, detail="DeGiro integration has been removed.")
-
-    def run_degiro_portfolio_audit(self, **_kwargs) -> None:  # type: ignore[return]
-        raise HTTPException(status_code=503, detail="DeGiro integration has been removed.")
-

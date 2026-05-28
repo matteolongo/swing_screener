@@ -15,6 +15,7 @@ from api.repositories.positions_repo import PositionsRepository
 from api.repositories.strategy_repo import StrategyRepository
 from api.repositories.watchlist_repo import WatchlistRepository
 from api.services.fundamentals_service import FundamentalsService
+from api.services.orders_service import OrdersService
 from api.services.portfolio_service import PortfolioService
 from api.services.regime_analytics import RegimeAnalyticsService
 from api.services.screener_service import ScreenerService
@@ -109,11 +110,18 @@ def get_config_repo() -> ConfigRepository:
     return _config_repository
 
 
+def get_orders_service(
+    orders_repo: OrdersRepository = Depends(get_orders_repo),
+    positions_repo: PositionsRepository = Depends(get_positions_repo),
+) -> OrdersService:
+    return OrdersService(orders_repo=orders_repo, positions_repo=positions_repo)
+
+
 def get_portfolio_service(
     positions_repo: PositionsRepository = Depends(get_positions_repo),
-    orders_repo: OrdersRepository = Depends(get_orders_repo),
+    config_repo: ConfigRepository = Depends(get_config_repo),
 ) -> PortfolioService:
-    return PortfolioService(positions_repo=positions_repo, orders_repo=orders_repo)
+    return PortfolioService(positions_repo=positions_repo, config_repo=config_repo)
 
 
 def get_regime_analytics_service(

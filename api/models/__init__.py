@@ -26,15 +26,13 @@ from api.models.portfolio import (
     UpdateStopRequest,
     ClosePositionRequest,
     CreatePositionRequest,
-    DegiroOrder,
-    DegiroOrdersResponse,
     PositionsResponse,
     PositionWithMetrics,
     PositionsWithMetricsResponse,
     PositionMetrics,
     PortfolioSummary,
 )
-from api.models.screener import ScreenerCandidate, ScreenerRequest, ScreenerResponse, OrderPreview
+from api.models.screener import ScreenerCandidate, ScreenerRequest, ScreenerResponse
 from api.models.recommendation import (
     Recommendation,
     RecommendationReason,
@@ -78,8 +76,6 @@ __all__ = [
     "UpdateStopRequest",
     "ClosePositionRequest",
     "CreatePositionRequest",
-    "DegiroOrder",
-    "DegiroOrdersResponse",
     "PositionsResponse",
     "PositionWithMetrics",
     "PositionsWithMetricsResponse",
@@ -88,7 +84,6 @@ __all__ = [
     "ScreenerCandidate",
     "ScreenerRequest",
     "ScreenerResponse",
-    "OrderPreview",
     "Recommendation",
     "RecommendationReason",
     "RecommendationRisk",

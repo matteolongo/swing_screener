@@ -80,3 +80,12 @@ def test_list_local_orders_returns_pending(client_with_pending_order):
     assert data["orders"][0]["order_id"] == "ORD-SBMO-001"
 
 
+def test_cancel_pending_order_marks_cancelled(client_with_pending_order):
+    resp = client_with_pending_order.delete("/api/portfolio/orders/ORD-SBMO-001")
+    assert resp.status_code == 200
+    assert resp.json() == {"order_id": "ORD-SBMO-001", "status": "cancelled"}
+
+    orders_resp = client_with_pending_order.get("/api/portfolio/orders/local")
+    assert orders_resp.status_code == 200
+    assert orders_resp.json()["orders"][0]["status"] == "cancelled"
+

@@ -18,7 +18,6 @@ from api.models.screener import (
     ScreenerRunStatusResponse,
     ScreenerResponse,
     ScreenerCandidate,
-    OrderPreview,
 )
 from api.models.recommendation import Recommendation
 from api.services.portfolio_service import PortfolioService
@@ -29,7 +28,6 @@ from swing_screener.data.universe import (
     filter_tickers_by_metadata,
     get_instrument_record,
     load_universe_from_package,
-    list_package_universe_entries,
     list_package_universes,
     UniverseConfig as DataUniverseConfig,
     get_universe_benchmark,
@@ -693,17 +691,6 @@ class ScreenerService:
             return strategy
         return self._strategy_repo.get_active_strategy()
 
-    def list_universes(self) -> dict:
-        try:
-            universes = list_package_universe_entries()
-            return {"universes": universes}
-        except (FileNotFoundError, PermissionError) as exc:
-            logger.error("Failed to access universe files: %s", exc)
-            raise HTTPException(status_code=500, detail="Failed to list universes (file access error)")
-        except Exception as exc:
-            logger.exception("Unexpected error listing universes")
-            raise HTTPException(status_code=500, detail="Failed to list universes")
-
     def run_screener(self, request: ScreenerRequest, strategy_override: Optional[dict] = None) -> ScreenerResponse:
         try:
             requested_top = request.top or 20
@@ -1164,42 +1151,3 @@ class ScreenerService:
             updated_at=job.updated_at,
         )
 
-    def preview_order(
-        self,
-        ticker: str,
-        entry_price: float,
-        stop_price: float,
-        account_size: float = 50000,
-        risk_pct: float = 0.01,
-    ) -> OrderPreview:
-        try:
-            if stop_price >= entry_price:
-                raise HTTPException(status_code=400, detail="Stop price must be below entry price")
-
-            r = entry_price - stop_price
-            risk_dollars = account_size * risk_pct
-            shares = max(1, math.floor(risk_dollars / r))
-
-            position_size = shares * entry_price
-            actual_risk = shares * r
-            actual_risk_pct = actual_risk / account_size
-
-            return OrderPreview(
-                ticker=ticker.upper(),
-                entry_price=entry_price,
-                stop_price=stop_price,
-                atr=r,
-                shares=shares,
-                position_size_usd=position_size,
-                risk_usd=actual_risk,
-                risk_pct=actual_risk_pct,
-            )
-
-        except HTTPException:
-            raise
-        except ValueError as exc:
-            logger.error("Preview configuration error: %s", exc)
-            raise HTTPException(status_code=400, detail=f"Invalid preview request: {str(exc)}")
-        except Exception as exc:
-            logger.exception("Unexpected preview error")
-            raise HTTPException(status_code=500, detail="Preview failed unexpectedly")

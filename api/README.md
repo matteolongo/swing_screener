@@ -25,7 +25,6 @@ Health:
 Config (`/api/config`):
 - `GET /api/config`
 - `PUT /api/config`
-- `POST /api/config/reset`
 - `GET /api/config/defaults`
 
 Strategy (`/api/strategy`):
@@ -39,10 +38,15 @@ Strategy (`/api/strategy`):
 - `DELETE /api/strategy/{strategy_id}`
 
 Screener (`/api/screener`):
-- `GET /api/screener/universes`
 - `POST /api/screener/run` (sync locally, async job launch on dyno by default)
 - `GET /api/screener/run/{job_id}` (poll async screener status/result)
-- `POST /api/screener/preview-order`
+- `GET /api/screener/recurrence`
+
+Universes (`/api/universes`):
+- `GET /api/universes`
+- `GET /api/universes/{universe_id}`
+- `POST /api/universes/{universe_id}/refresh`
+- `POST /api/universes/{universe_id}/benchmark`
 
 Portfolio (`/api/portfolio`):
 - `GET /api/portfolio/positions`
@@ -50,41 +54,55 @@ Portfolio (`/api/portfolio`):
 - `GET /api/portfolio/positions/{position_id}/metrics`
 - `PUT /api/portfolio/positions/{position_id}/stop`
 - `GET /api/portfolio/positions/{position_id}/stop-suggestion`
+- `GET /api/portfolio/positions/{position_id}/stop-preview`
+- `PATCH /api/portfolio/positions/{position_id}/trail-method`
+- `POST /api/portfolio/stop-suggestion/compute`
 - `POST /api/portfolio/positions/{position_id}/close`
+- `POST /api/portfolio/positions/{position_id}/partial-close`
 - `GET /api/portfolio/summary`
-- `GET /api/portfolio/orders`
-- `GET /api/portfolio/orders/snapshot`
-- `GET /api/portfolio/orders/{order_id}`
+- `GET /api/portfolio/earnings-proximity/{ticker}`
+- `GET /api/portfolio/analytics/regime-breakdown`
 - `POST /api/portfolio/orders`
+- `GET /api/portfolio/orders/local`
 - `POST /api/portfolio/orders/{order_id}/fill`
 - `DELETE /api/portfolio/orders/{order_id}`
 
 Daily Review (`/api/daily-review`):
 - `GET /api/daily-review`
+- `POST /api/daily-review/compute`
 
 Intelligence (`/api/intelligence`):
-- `GET /api/intelligence/config`
-- `PUT /api/intelligence/config`
-- `GET /api/intelligence/providers`
-- `POST /api/intelligence/providers/test`
-- `GET /api/intelligence/symbol-sets`
-- `POST /api/intelligence/symbol-sets`
-- `PUT /api/intelligence/symbol-sets/{symbol_set_id}`
-- `DELETE /api/intelligence/symbol-sets/{symbol_set_id}`
-- `POST /api/intelligence/run`
-- `GET /api/intelligence/run/{job_id}`
-- `GET /api/intelligence/opportunities`
-- `GET /api/intelligence/events`
-- `GET /api/intelligence/upcoming-catalysts`
-- `GET /api/intelligence/sources/health`
-- `GET /api/intelligence/metrics`
-- `POST /api/intelligence/education/generate`
-- `GET /api/intelligence/education/{symbol}`
+- `POST /api/intelligence/{ticker}`
+- `GET /api/intelligence/{ticker}/latest`
+- `POST /api/intelligence/sweep`
 
-Chat (`/api/chat`):
-- `POST /api/chat/answer`
-- `POST /api/chat/answer` routes through `AgentChatService` -> self-healing persistent `AgentRuntime` -> `agent` -> MCP `chat_answer` -> `ChatService`
-- `/health` and `/metrics` expose agent runtime status and restart counters
+Fundamentals (`/api/fundamentals`):
+- `GET /api/fundamentals/config`
+- `PUT /api/fundamentals/config`
+- `GET /api/fundamentals/snapshot/{symbol}`
+- `POST /api/fundamentals/refresh`
+- `POST /api/fundamentals/compare`
+- `POST /api/fundamentals/warmup`
+- `GET /api/fundamentals/warmup/{job_id}`
+
+Watchlist (`/api/watchlist`):
+- `GET /api/watchlist`
+- `PUT /api/watchlist/{ticker}`
+- `DELETE /api/watchlist/{ticker}`
+
+Calendar:
+- `GET /api/calendar/events`
+
+Weekly Reviews (`/api/weekly-reviews`):
+- `GET /api/weekly-reviews`
+- `GET /api/weekly-reviews/{week_id}`
+- `PUT /api/weekly-reviews/{week_id}`
+
+Catalysts (`/api/catalysts`):
+- `POST /api/catalysts/manual`
+- `POST /api/catalysts/daily-scan`
+- `GET /api/catalysts/latest`
+- `GET /api/catalysts/symbol/{ticker}`
 
 ## Ownership
 Routers live in `api/routers/` and call services in `api/services/`.

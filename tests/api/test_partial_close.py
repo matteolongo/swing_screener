@@ -12,7 +12,6 @@ from api.models.portfolio import (
 )
 from api.services.portfolio_service import PortfolioService
 from api.repositories.positions_repo import PositionsRepository
-from api.repositories.orders_repo import OrdersRepository
 
 
 def test_partial_close_request_valid():
@@ -89,12 +88,7 @@ def _make_service_simple(tmp_path: Path) -> PortfolioService:
     pos = _open_position()
     pos_file = tmp_path / "positions.json"
     pos_file.write_text(json.dumps({"positions": [pos], "asof": "2026-01-01"}))
-    ord_file = tmp_path / "orders.json"
-    ord_file.write_text(json.dumps({"orders": [], "asof": "2026-01-01"}))
-    return PortfolioService(
-        positions_repo=PositionsRepository(pos_file),
-        orders_repo=OrdersRepository(ord_file),
-    )
+    return PortfolioService(positions_repo=PositionsRepository(pos_file))
 
 
 def test_partial_close_reduces_shares(tmp_path):
@@ -142,12 +136,7 @@ def test_partial_close_rejects_closed_position(tmp_path):
     pos["exit_price"] = 22.0
     pos_file = tmp_path / "positions.json"
     pos_file.write_text(json.dumps({"positions": [pos], "asof": "2026-01-01"}))
-    ord_file = tmp_path / "orders.json"
-    ord_file.write_text(json.dumps({"orders": [], "asof": "2026-01-01"}))
-    svc = PortfolioService(
-        positions_repo=PositionsRepository(pos_file),
-        orders_repo=OrdersRepository(ord_file),
-    )
+    svc = PortfolioService(positions_repo=PositionsRepository(pos_file))
     req = PartialCloseRequest(shares_closed=5, price=22.0)
     with pytest.raises(HTTPException) as exc_info:
         svc.partial_close_position("POS-001", req)

@@ -16,8 +16,6 @@ export const API_ENDPOINTS = {
   // Screener
   screenerRun: '/api/screener/run',
   screenerRunStatus: (jobId: string) => `/api/screener/run/${jobId}`,
-  screenerUniverses: '/api/screener/universes',
-  screenerPreview: '/api/screener/preview-order',
 
   // Universe management
   universes: '/api/universes',
@@ -38,36 +36,18 @@ export const API_ENDPOINTS = {
   portfolioSummary: '/api/portfolio/summary',
   earningsProximity: (ticker: string) => `/api/portfolio/earnings-proximity/${encodeURIComponent(ticker)}`,
   regimeBreakdown: '/api/portfolio/analytics/regime-breakdown',
-  degiroStatus: '/api/portfolio/degiro/status',
   
   // Portfolio - Orders
   orders: '/api/portfolio/orders',
   order: (id: string) => `/api/portfolio/orders/${id}`,
   orderFill: (id: string) => `/api/portfolio/orders/${id}/fill`,
-  degiroOrderHistory: '/api/portfolio/degiro/order-history',
-  orderFillFromDegiro: (id: string) => `/api/portfolio/orders/${id}/fill-from-degiro`,
   localOrders: '/api/portfolio/orders/local',
-  degiroOrderSyncApply: '/api/portfolio/sync/degiro/apply',
 
   // Watchlist
   watchlist: '/api/watchlist',
   watchlistItem: (ticker: string) => `/api/watchlist/${encodeURIComponent(ticker)}`,
 
   // Intelligence
-  intelligenceConfig: '/api/intelligence/config',
-  intelligenceProviders: '/api/intelligence/providers',
-  intelligenceProviderTest: '/api/intelligence/providers/test',
-  intelligenceSymbolSets: '/api/intelligence/symbol-sets',
-  intelligenceSymbolSetById: (id: string) => `/api/intelligence/symbol-sets/${id}`,
-  intelligenceRun: '/api/intelligence/run',
-  intelligenceRunStatus: (jobId: string) => `/api/intelligence/run/${jobId}`,
-  intelligenceOpportunities: '/api/intelligence/opportunities',
-  intelligenceEvents: '/api/intelligence/events',
-  intelligenceUpcomingCatalysts: '/api/intelligence/upcoming-catalysts',
-  intelligenceSourcesHealth: '/api/intelligence/sources/health',
-  intelligenceMetrics: '/api/intelligence/metrics',
-  intelligenceEducationGenerate: '/api/intelligence/education/generate',
-  intelligenceEducationBySymbol: (symbol: string) => `/api/intelligence/education/${encodeURIComponent(symbol)}`,
   intelligenceAnalyze: (ticker: string) => `/api/intelligence/${encodeURIComponent(ticker)}`,
   intelligenceLatest: (ticker: string) => `/api/intelligence/${encodeURIComponent(ticker)}/latest`,
   intelligenceSweep: '/api/intelligence/sweep',
@@ -81,15 +61,9 @@ export const API_ENDPOINTS = {
   // Fundamentals
   fundamentalsConfig: '/api/fundamentals/config',
   fundamentalsSnapshot: (symbol: string) => `/api/fundamentals/snapshot/${encodeURIComponent(symbol)}`,
-  fundamentalsRefresh: '/api/fundamentals/refresh',
   fundamentalsCompare: '/api/fundamentals/compare',
   fundamentalsWarmup: '/api/fundamentals/warmup',
   fundamentalsWarmupStatus: (jobId: string) => `/api/fundamentals/warmup/${jobId}`,
-  degiroPortfolioAudit: '/api/fundamentals/degiro/portfolio-audit',
-  degiroCapabilityAudit: '/api/fundamentals/degiro/capability-audit',
-
-  // Chat
-  chatAnswer: '/api/chat/answer',
 
   // Daily Review
   dailyReview: '/api/daily-review',

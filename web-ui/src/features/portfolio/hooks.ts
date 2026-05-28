@@ -10,18 +10,13 @@ import {
   fetchPositions,
   fetchPositionStopSuggestion,
   fetchPositionStopPreview,
-  fetchDegiroStatus,
-  fetchDegiroOrderHistory,
   fetchEarningsProximity,
   fetchRegimeBreakdown,
   fillOrder,
-  fillOrderFromDegiro,
-  syncDegiroOrders,
   updatePositionStop,
   updatePositionTrailMethod,
   OrderFilterStatus,
   PositionFilterStatus,
-  DegiroStatus,
 } from './api';
 import {
   CreateOrderRequest,
@@ -62,27 +57,6 @@ export function useFillOrderMutation(onSuccess?: () => void) {
         invalidateOrderQueries(queryClient),
         invalidatePositionQueries(queryClient),
       ]);
-      onSuccess?.();
-    },
-  });
-}
-
-export function useDegiroOrderHistory() {
-  return useQuery({
-    queryKey: ['degiro-order-history'] as const,
-    queryFn: () => fetchDegiroOrderHistory(),
-    staleTime: 2 * 60 * 1000,
-  });
-}
-
-export function useFillFromDegiroMutation(onSuccess?: () => void) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ orderId, degiroOrderId }: { orderId: string; degiroOrderId: string }) =>
-      fillOrderFromDegiro(orderId, { degiroOrderId }),
-    onSuccess: async () => {
-      await invalidateOrderQueries(queryClient);
-      await queryClient.invalidateQueries({ queryKey: queryKeys.positions('open') });
       onSuccess?.();
     },
   });
@@ -137,16 +111,6 @@ export function useEarningsProximity(ticker?: string) {
     enabled: Boolean(normalizedTicker),
     staleTime: 8 * 60 * 60 * 1000,
     retry: false,
-  });
-}
-
-export function useDegiroStatusQuery() {
-  return useQuery<DegiroStatus>({
-    queryKey: queryKeys.degiroStatus(),
-    queryFn: fetchDegiroStatus,
-    staleTime: 60_000,
-    retry: false,
-    refetchOnWindowFocus: false,
   });
 }
 
@@ -224,19 +188,6 @@ export function usePartialClosePositionMutation(onSuccess?: () => void) {
     onSuccess: async () => {
       await invalidatePositionQueries(queryClient);
       onSuccess?.();
-    },
-  });
-}
-
-export function useSyncDegiroOrdersMutation() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: syncDegiroOrders,
-    onSuccess: async () => {
-      await Promise.all([
-        invalidateOrderQueries(queryClient),
-        invalidatePositionQueries(queryClient),
-      ]);
     },
   });
 }

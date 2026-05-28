@@ -150,30 +150,6 @@ export function transformOrderSnapshot(apiOrder: OrderSnapshotApiResponse): Orde
   };
 }
 
-export interface DegiroOrder {
-  orderId: string;
-  productId?: string | null;
-  isin?: string | null;
-  productName?: string | null;
-  status: string;
-  price?: number | null;
-  quantity: number;
-  orderType?: string | null;
-  side?: string | null;
-  createdAt?: string | null;
-}
-
-export interface FillFromDegiroRequest {
-  degiroOrderId: string;
-}
-
-export interface FillFromDegiroResponse {
-  orderId: string;
-  brokerOrderId: string;
-  quantityMismatch: boolean;
-  position: Record<string, unknown>; // Position shape — used for cache invalidation only
-}
-
 export function transformCreateOrderRequest(req: CreateOrderRequest): any {
   return {
     ticker: req.ticker,

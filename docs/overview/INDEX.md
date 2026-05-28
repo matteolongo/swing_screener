@@ -14,6 +14,8 @@
 - `/src/swing_screener/intelligence/README.md`
 
 ## Engineering
+- `/docs/engineering/BACKEND_CLEANUP_AUDIT.md`
+- `/docs/engineering/BACKEND_CLEANUP_ROADMAP.md`
 - `/docs/engineering/COMBINED_ANALYSIS_IMPLEMENTATION_PLAN.md`
 - `/docs/engineering/ROADMAP.md`
 - `/docs/engineering/MODULE_ARCHITECTURE.md`

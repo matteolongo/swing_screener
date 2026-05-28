@@ -303,7 +303,11 @@ app.include_router(daily_review.router, prefix="/api", tags=["daily-review"])
 app.include_router(weekly_reviews.router, prefix="/api/weekly-reviews", tags=["weekly-reviews"])
 
 
-@app.get("/{full_path:path}", include_in_schema=False)
+@app.api_route(
+    "/{full_path:path}",
+    methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+    include_in_schema=False,
+)
 async def spa_fallback(full_path: str):
     """Serve SPA routes from the built web UI in single-app deployments."""
     if full_path == "api" or full_path.startswith("api/"):
