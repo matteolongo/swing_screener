@@ -137,6 +137,11 @@ def _build_user_prompt(ticker: str, req: SymbolIntelligenceRequest) -> str:
             rr_parts = [p for p in (rr_str, upside_str) if p]
             if rr_parts:
                 plan_lines.append(" | ".join(rr_parts))
+            if req.entry is not None and req.rr is not None:
+                plan_lines.append(
+                    f"⚠ Use these exact numbers in the narrative: entry={fmt(req.entry)} {currency}, "
+                    f"R/R={req.rr}x. Do NOT use the current market price as the entry."
+                )
             lines += plan_lines
 
         # Decision context block
