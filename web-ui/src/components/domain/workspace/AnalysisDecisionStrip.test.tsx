@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
 
 import AnalysisDecisionStrip from '@/components/domain/workspace/AnalysisDecisionStrip';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
@@ -95,5 +96,36 @@ describe('AnalysisDecisionStrip — Risk % cell', () => {
     render(<AnalysisDecisionStrip ticker="AAPL" candidate={candidate} />);
 
     expect(screen.getByText('2.50%')).toBeInTheDocument();
+  });
+});
+
+describe('AnalysisDecisionStrip — watch button', () => {
+  it('renders Watch button when isWatched=false and calls onWatch on click', async () => {
+    const onWatch = vi.fn();
+    render(
+      <AnalysisDecisionStrip
+        ticker="BESI.AS"
+        isWatched={false}
+        isPendingWatch={false}
+        onWatch={onWatch}
+        onUnwatch={vi.fn()}
+      />
+    );
+    const btn = screen.getByRole('button', { name: /watch/i });
+    await userEvent.click(btn);
+    expect(onWatch).toHaveBeenCalledOnce();
+  });
+
+  it('renders Unwatch button when isWatched=true', () => {
+    render(
+      <AnalysisDecisionStrip
+        ticker="BESI.AS"
+        isWatched={true}
+        isPendingWatch={false}
+        onWatch={vi.fn()}
+        onUnwatch={vi.fn()}
+      />
+    );
+    expect(screen.getByRole('button', { name: /unwatch/i })).toBeInTheDocument();
   });
 });

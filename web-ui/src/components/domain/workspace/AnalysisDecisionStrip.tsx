@@ -14,6 +14,10 @@ interface AnalysisDecisionStripProps {
   ticker: string;
   candidate?: SymbolAnalysisCandidate | null;
   onPrepareOrder?: () => void;
+  isWatched?: boolean;
+  isPendingWatch?: boolean;
+  onWatch?: () => void;
+  onUnwatch?: () => void;
 }
 
 function actionLabel(action: DecisionAction): string {
@@ -95,7 +99,15 @@ function compactValue(label: string, value: string) {
   );
 }
 
-export default function AnalysisDecisionStrip({ ticker, candidate, onPrepareOrder }: AnalysisDecisionStripProps) {
+export default function AnalysisDecisionStrip({
+  ticker,
+  candidate,
+  onPrepareOrder,
+  isWatched,
+  isPendingWatch,
+  onWatch,
+  onUnwatch,
+}: AnalysisDecisionStripProps) {
   const summary = candidate?.decisionSummary;
   const currency = candidate?.currency ?? 'USD';
   const entry = summary?.tradePlan.entry ?? candidate?.recommendation?.risk?.entry ?? candidate?.entry;
@@ -131,14 +143,26 @@ export default function AnalysisDecisionStrip({ ticker, candidate, onPrepareOrde
                 ?? 'Review the current setup, risk, and execution plan before acting.'}
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.entryClose'), entry != null ? formatCurrency(entry, currency) : '—')}
-            {compactValue('Stop', stop != null ? formatCurrency(stop, currency) : '—')}
-            {compactValue('Target', target != null ? formatCurrency(target, currency) : '—')}
-            {compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.toTarget'), pctToTarget != null ? `${formatNumber(pctToTarget, 2)}%` : '—')}
-            {compactValue('R/R', rr != null ? `${formatNumber(rr, 1)}x` : '—')}
-            {compactValue('Risk %', riskPct != null && riskPct > 0 ? `${formatNumber(riskPct * 100, 2)}%` : '—')}
-            {compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.oneR'), oneR != null ? formatCurrency(oneR, currency) : '—')}
+          <div className="flex flex-col items-end gap-2">
+            {(onWatch || onUnwatch) && (
+              <button
+                type="button"
+                onClick={isWatched ? onUnwatch : onWatch}
+                disabled={isPendingWatch}
+                className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+              >
+                {isPendingWatch ? '…' : isWatched ? 'Unwatch' : 'Watch'}
+              </button>
+            )}
+            <div className="flex flex-wrap gap-2">
+              {compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.entryClose'), entry != null ? formatCurrency(entry, currency) : '—')}
+              {compactValue('Stop', stop != null ? formatCurrency(stop, currency) : '—')}
+              {compactValue('Target', target != null ? formatCurrency(target, currency) : '—')}
+              {compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.toTarget'), pctToTarget != null ? `${formatNumber(pctToTarget, 2)}%` : '—')}
+              {compactValue('R/R', rr != null ? `${formatNumber(rr, 1)}x` : '—')}
+              {compactValue('Risk %', riskPct != null && riskPct > 0 ? `${formatNumber(riskPct * 100, 2)}%` : '—')}
+              {compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.oneR'), oneR != null ? formatCurrency(oneR, currency) : '—')}
+            </div>
           </div>
         </div>
 

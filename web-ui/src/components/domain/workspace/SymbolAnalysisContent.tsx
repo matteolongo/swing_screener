@@ -1,12 +1,10 @@
 import { useState, useEffect, type ReactNode } from 'react';
 import Button from '@/components/common/Button';
-import IntelligenceCard from '@/components/domain/workspace/IntelligenceCard';
 import CatalystContextCard from '@/components/domain/workspace/CatalystContextCard';
 import { useIntelligenceAnalysisMutation, useIntelligenceLatestQuery } from '@/features/intelligence/hooks';
 import { useSymbolCatalystQuery } from '@/features/intelligence/catalysts/hooks';
 import type { SymbolIntelligence } from '@/features/intelligence/types';
 import CachedSymbolPriceChart from '@/components/domain/market/CachedSymbolPriceChart';
-import WatchToggleButton from '@/components/domain/watchlist/WatchToggleButton';
 import FundamentalsSnapshotCard from '@/components/domain/fundamentals/FundamentalsSnapshotCard';
 import AnalysisDecisionStrip from '@/components/domain/workspace/AnalysisDecisionStrip';
 import DecisionSummaryCard from '@/components/domain/workspace/DecisionSummaryCard';
@@ -148,26 +146,14 @@ export default function SymbolAnalysisContent({
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto space-y-3">
-        <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2 dark:border-gray-700 dark:bg-gray-900/40">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
-              {t('workspacePage.panels.analysis.title')}
-            </p>
-            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{ticker}</p>
-          </div>
-          <WatchToggleButton
-            ticker={ticker}
-            isWatched={isWatched}
-            isPending={isWatchPending}
-            onWatch={handleWatch}
-            onUnwatch={handleUnwatch}
-          />
-        </div>
-
         <AnalysisDecisionStrip
           ticker={ticker}
           candidate={candidate}
           onPrepareOrder={() => onTabChange('order')}
+          isWatched={isWatched}
+          isPendingWatch={isWatchPending}
+          onWatch={handleWatch}
+          onUnwatch={handleUnwatch}
         />
 
         {activeTab === 'overview' && (
@@ -219,6 +205,19 @@ export default function SymbolAnalysisContent({
               }
               return null;
             })()}
+            <div className="rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700">
+              <CachedSymbolPriceChart
+                ticker={ticker}
+                defaultOpen
+                showToggle={false}
+                width={820}
+                height={200}
+              />
+            </div>
+            {catalystQuery.data && (
+              <CatalystContextCard opportunity={catalystQuery.data} />
+            )}
+            {candidate ? <TechnicalMetricsGrid candidate={candidate} /> : null}
             {!hasNarrative && candidate && (
               <div className="rounded-lg border border-slate-200 bg-white p-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -272,20 +271,6 @@ export default function SymbolAnalysisContent({
                 )}
               </div>
             )}
-            {catalystQuery.data && (
-              <CatalystContextCard opportunity={catalystQuery.data} />
-            )}
-            {displayedIntelligence ? <IntelligenceCard intelligence={displayedIntelligence} /> : null}
-            <div className="rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700">
-              <CachedSymbolPriceChart
-                ticker={ticker}
-                defaultOpen
-                showToggle={false}
-                width={820}
-                height={200}
-              />
-            </div>
-            {candidate ? <TechnicalMetricsGrid candidate={candidate} /> : null}
           </>
         )}
 
@@ -293,15 +278,7 @@ export default function SymbolAnalysisContent({
 
         {activeTab === 'fundamentals' && (
           <>
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white p-3">
-              <div>
-                <h3 className="text-base font-semibold">{ticker}</h3>
-                <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                  {fundamentalsQuery.data
-                    ? t('workspacePage.panels.analysis.fundamentals.descriptionHasSnapshot')
-                    : t('workspacePage.panels.analysis.fundamentals.descriptionNoSnapshot')}
-                </p>
-              </div>
+            <div className="flex items-center justify-between gap-2">
               <Button
                 type="button"
                 size="sm"
@@ -317,21 +294,18 @@ export default function SymbolAnalysisContent({
                     ? t('workspacePage.panels.analysis.fundamentals.refreshAction')
                     : t('workspacePage.panels.analysis.fundamentals.runAction')}
               </Button>
+              {fundamentalsQuery.data && (
+                <span className="text-xs text-slate-500">
+                  Updated {formatDateTime(fundamentalsQuery.data.updatedAt)}
+                </span>
+              )}
             </div>
 
             {fundamentalsQuery.data ? (
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Metric labels</p>
-                    <p className="mt-1 text-sm text-slate-600">
-                      Read horizon pills as source context, not as another scorecard.
-                    </p>
-                  </div>
-                  <div className="text-xs text-slate-500">
-                    Updated {formatDateTime(fundamentalsQuery.data.updatedAt)}
-                  </div>
-                </div>
+              <details className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <summary className="cursor-pointer text-xs font-medium uppercase tracking-wide text-slate-500">
+                  About metric labels
+                </summary>
                 <div className="mt-3 grid gap-2 md:grid-cols-3">
                   {provenanceLegendItems().map((item) => (
                     <div key={item.label} className="rounded-md border border-slate-200 bg-white px-3 py-2">
@@ -340,7 +314,7 @@ export default function SymbolAnalysisContent({
                     </div>
                   ))}
                 </div>
-              </div>
+              </details>
             ) : null}
 
             {refreshFundamentalsMutation.isError ? (
