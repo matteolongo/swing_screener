@@ -1,6 +1,5 @@
 import { useState, useEffect, type ReactNode } from 'react';
 import Button from '@/components/common/Button';
-import IntelligenceCard from '@/components/domain/workspace/IntelligenceCard';
 import CatalystContextCard from '@/components/domain/workspace/CatalystContextCard';
 import { useIntelligenceAnalysisMutation, useIntelligenceLatestQuery } from '@/features/intelligence/hooks';
 import { useSymbolCatalystQuery } from '@/features/intelligence/catalysts/hooks';
@@ -206,6 +205,19 @@ export default function SymbolAnalysisContent({
               }
               return null;
             })()}
+            <div className="rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700">
+              <CachedSymbolPriceChart
+                ticker={ticker}
+                defaultOpen
+                showToggle={false}
+                width={820}
+                height={200}
+              />
+            </div>
+            {catalystQuery.data && (
+              <CatalystContextCard opportunity={catalystQuery.data} />
+            )}
+            {candidate ? <TechnicalMetricsGrid candidate={candidate} /> : null}
             {!hasNarrative && candidate && (
               <div className="rounded-lg border border-slate-200 bg-white p-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -259,20 +271,6 @@ export default function SymbolAnalysisContent({
                 )}
               </div>
             )}
-            {catalystQuery.data && (
-              <CatalystContextCard opportunity={catalystQuery.data} />
-            )}
-            {displayedIntelligence ? <IntelligenceCard intelligence={displayedIntelligence} /> : null}
-            <div className="rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700">
-              <CachedSymbolPriceChart
-                ticker={ticker}
-                defaultOpen
-                showToggle={false}
-                width={820}
-                height={200}
-              />
-            </div>
-            {candidate ? <TechnicalMetricsGrid candidate={candidate} /> : null}
           </>
         )}
 

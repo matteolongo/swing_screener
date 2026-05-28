@@ -225,9 +225,6 @@ describe('AnalysisCanvasPanel', () => {
     expect(screen.queryByRole('tab', { name: 'Intelligence' })).toBeNull();
     // NarrativeAnalysisCard shows the summaryLine
     expect(screen.getByText('AAPL is showing strong momentum with a confirmed breakout.')).toBeInTheDocument();
-    expect(screen.getByText('Upcoming Events')).toBeInTheDocument();
-    expect(screen.getByText('Upcoming earnings may confirm the setup.')).toBeInTheDocument();
-    expect(screen.getByText(/Sources \(1\)/)).toBeInTheDocument();
     // DecisionSummaryCard heading should NOT appear
     expect(screen.queryByText(/AAPL Decision Summary/)).not.toBeInTheDocument();
   });
@@ -300,6 +297,86 @@ describe('AnalysisCanvasPanel', () => {
 
     expect(screen.getByText(/AAPL Decision Summary/)).toBeInTheDocument();
     expect(screen.getAllByText(/Buy Now/).length).toBeGreaterThan(0);
+  });
+
+  it('renders the price chart before the catalyst card in overview', () => {
+    useWorkspaceStore.setState({
+      selectedTicker: 'AAPL',
+      selectedTickerSource: 'screener',
+      analysisTab: 'overview',
+    });
+    useScreenerStore.setState({
+      lastResult: {
+        asofDate: '2026-03-19',
+        totalScreened: 1,
+        dataFreshness: 'final_close',
+        candidates: [
+          {
+            ticker: 'AAPL',
+            currency: 'USD',
+            close: 180,
+            sma20: 175,
+            sma50: 170,
+            sma200: 160,
+            atr: 3,
+            momentum6m: 0.18,
+            momentum12m: 0.27,
+            relStrength: 0.09,
+            score: 0.82,
+            confidence: 79,
+            rank: 1,
+            decisionSummary: {
+              symbol: 'AAPL',
+              action: 'BUY_NOW',
+              conviction: 'high',
+              technicalLabel: 'strong',
+              fundamentalsLabel: 'strong',
+              valuationLabel: 'fair',
+              catalystLabel: 'active',
+              whyNow: 'Setup timing is ready.',
+              whatToDo: 'Use the current trade plan.',
+              mainRisk: 'Risk still matters.',
+              tradePlan: { entry: 180, stop: 171, target: 198, rr: 2 },
+              valuationContext: { method: 'not_available' },
+              drivers: { positives: [], negatives: [], warnings: [] },
+              catalystSummary: null,
+              catalystSources: [],
+            },
+          },
+        ],
+      },
+    });
+    vi.mocked(catalystHooks.useSymbolCatalystQuery).mockReturnValue({
+      data: {
+        symbol: 'AAPL',
+        state: 'CATALYST_ACTIVE',
+        thesis: 'Unique catalyst thesis marker for ordering',
+        keyRisks: [],
+        sources: [],
+      },
+      isLoading: false,
+      isError: false,
+    } as never);
+    vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: undefined,
+    } as never);
+    vi.mocked(fundamentalsHooks.useRefreshFundamentalSnapshotMutation).mockReturnValue({
+      mutate: vi.fn(),
+      data: undefined,
+      isPending: false,
+      isError: false,
+      error: null,
+    } as never);
+
+    renderWithProviders(<AnalysisCanvasPanel />);
+
+    const chart = screen.getByText('Chart AAPL');
+    const catalyst = screen.getByText('Unique catalyst thesis marker for ordering');
+    expect(
+      chart.compareDocumentPosition(catalyst) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
   });
 
   it('can run AI analysis from the overview tab', async () => {
