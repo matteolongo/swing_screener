@@ -110,6 +110,25 @@ describe('NarrativeAnalysisCard', () => {
     expect(screen.queryByText(/AI summary reflects/)).toBeNull();
   });
 
+  it('renders "Data used by AI" panel with chips when inputsUsed has content', () => {
+    const intelligenceWithInputs: SymbolIntelligence = {
+      ...baseIntelligence,
+      inputsUsed: { trade_plan: { entry: 285, rr: 2.5 } },
+    };
+    render(<NarrativeAnalysisCard intelligence={intelligenceWithInputs} />);
+    expect(screen.getByText('Data used by AI')).toBeInTheDocument();
+    expect(screen.getByText('entry:')).toBeInTheDocument();
+  });
+
+  it('does not render "Data used by AI" panel when inputsUsed is empty', () => {
+    const intelligenceEmptyInputs: SymbolIntelligence = {
+      ...baseIntelligence,
+      inputsUsed: {},
+    };
+    render(<NarrativeAnalysisCard intelligence={intelligenceEmptyInputs} />);
+    expect(screen.queryByText('Data used by AI')).toBeNull();
+  });
+
   it('renders confidenceNotes from explanation when present, not drivers.warnings', () => {
     const candidateWithNotes: SymbolAnalysisCandidate = {
       ...baseCandidate,

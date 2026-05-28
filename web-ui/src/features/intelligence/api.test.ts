@@ -73,4 +73,92 @@ describe('candidateToPayload', () => {
     expect(payload!.stop).toBe(143);
     expect(payload!.entry_price).toBe(140);
   });
+
+  it('maps rr, atr, rel_strength from candidate fields', () => {
+    const payload = candidateToPayload({
+      ...baseCandidate,
+      rr: 2.5,
+      atr: 3.2,
+      relStrength: 15.4,
+    });
+    expect(payload!.rr).toBe(2.5);
+    expect(payload!.atr).toBe(3.2);
+    expect(payload!.rel_strength).toBe(15.4);
+  });
+
+  it('maps decision_action, decision_conviction, valuation_label, technical_label, fundamentals_label from decisionSummary', () => {
+    const payload = candidateToPayload({
+      ...baseCandidate,
+      decisionSummary: {
+        symbol: 'AAPL',
+        action: 'BUY_NOW',
+        conviction: 'high',
+        technicalLabel: 'strong',
+        fundamentalsLabel: 'neutral',
+        valuationLabel: 'fair',
+        catalystLabel: 'active',
+        whyNow: 'Breakout.',
+        whatToDo: 'Buy.',
+        mainRisk: 'Risk.',
+        tradePlan: { entry: 152, stop: 143, target: 170, rr: 2.5 },
+        valuationContext: { method: 'earnings_multiple' },
+        drivers: { positives: [], negatives: [], warnings: [] },
+        catalystSummary: null,
+        catalystSources: [],
+      },
+    });
+    expect(payload!.decision_action).toBe('BUY_NOW');
+    expect(payload!.decision_conviction).toBe('high');
+    expect(payload!.valuation_label).toBe('fair');
+    expect(payload!.technical_label).toBe('strong');
+    expect(payload!.fundamentals_label).toBe('neutral');
+  });
+
+  it('maps target and fair_value_* from decisionSummary.tradePlan and valuationContext', () => {
+    const payload = candidateToPayload({
+      ...baseCandidate,
+      decisionSummary: {
+        symbol: 'AAPL',
+        action: 'BUY_NOW',
+        conviction: 'high',
+        technicalLabel: 'strong',
+        fundamentalsLabel: 'neutral',
+        valuationLabel: 'fair',
+        catalystLabel: 'active',
+        whyNow: 'Breakout.',
+        whatToDo: 'Buy.',
+        mainRisk: 'Risk.',
+        tradePlan: { entry: 152, stop: 143, target: 170, rr: 2.5 },
+        valuationContext: {
+          method: 'earnings_multiple',
+          fairValueLow: 140,
+          fairValueBase: 160,
+          fairValueHigh: 180,
+        },
+        drivers: { positives: [], negatives: [], warnings: [] },
+        catalystSummary: null,
+        catalystSources: [],
+      },
+    });
+    expect(payload!.target).toBe(170);
+    expect(payload!.fair_value_low).toBe(140);
+    expect(payload!.fair_value_base).toBe(160);
+    expect(payload!.fair_value_high).toBe(180);
+  });
+
+  it('all new fields are null when candidate has no decisionSummary', () => {
+    const payload = candidateToPayload(baseCandidate);
+    expect(payload!.rr).toBeNull();
+    expect(payload!.atr).toBeNull();
+    expect(payload!.rel_strength).toBeNull();
+    expect(payload!.target).toBeNull();
+    expect(payload!.fair_value_low).toBeNull();
+    expect(payload!.fair_value_base).toBeNull();
+    expect(payload!.fair_value_high).toBeNull();
+    expect(payload!.valuation_label).toBeNull();
+    expect(payload!.decision_action).toBeNull();
+    expect(payload!.decision_conviction).toBeNull();
+    expect(payload!.technical_label).toBeNull();
+    expect(payload!.fundamentals_label).toBeNull();
+  });
 });

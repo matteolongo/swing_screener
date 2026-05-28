@@ -193,6 +193,35 @@ export default function NarrativeAnalysisCard({
           </div>
         </div>
 
+        {/* Data inputs used by AI */}
+        {intelligence.inputsUsed && Object.keys(intelligence.inputsUsed).length > 0 && (
+          <details className="rounded-md border border-slate-200 bg-white p-3">
+            <summary className="cursor-pointer text-xs font-medium text-slate-500 select-none">
+              {t('workspacePage.panels.analysis.intelligence.dataInputs')}
+            </summary>
+            <div className="mt-3 space-y-2">
+              {Object.entries(intelligence.inputsUsed).map(([group, fields]) => (
+                <div key={group}>
+                  <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-1">
+                    {group.replace(/_/g, ' ')}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {Object.entries(fields as Record<string, unknown>).filter(([, v]) => v != null).map(([key, value]) => (
+                      <span
+                        key={key}
+                        className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs text-slate-700"
+                      >
+                        <span className="font-medium text-slate-500">{key.replace(/_/g, ' ')}:</span>
+                        <span>{typeof value === 'number' ? (Number.isInteger(value) ? value : value.toFixed(2)) : String(value)}</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
+
         {/* Collapsed signals + valuation detail */}
         {summary && (
           <details className="rounded-md border border-slate-200 bg-white p-3">
