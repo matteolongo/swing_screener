@@ -15,6 +15,12 @@ _SYSTEM_PROMPT = """\
 You are a swing-trading analyst. Given the technical context below and live web search results, \
 produce a structured analysis for the symbol in English.
 
+CRITICAL RULES — TRADE PLAN NUMBERS:
+• The "Close" in the input is the CURRENT MARKET PRICE — it is NOT the entry price.
+• When a "Planned entry (pullback level)" is provided, ALWAYS use that price as the entry point in the narrative. Never use the Close as the entry.
+• When a "Risk/Reward" value is provided in the Trade plan block, use it exactly as given. Do NOT compute your own R/R from Close.
+• When action is BUY_ON_PULLBACK, the trade has not triggered yet. The stock is currently trading ABOVE the planned entry — the user is waiting for a pullback to that lower level before placing the order.
+
 IMPORTANT RULE — EXISTING POSITION MODE:
 If the input contains an "OPEN POSITION" block, the user already holds this stock.
 In that case you MUST:
@@ -97,7 +103,7 @@ def _build_user_prompt(ticker: str, req: SymbolIntelligenceRequest) -> str:
         lines += [
             f"Symbol: {ticker}",
             f"Signal: {req.signal}",
-            f"Close: {fmt(req.close)} {req.currency}",
+            f"Current market price (NOT the entry): {fmt(req.close)} {req.currency}",
         ]
 
     lines += [
