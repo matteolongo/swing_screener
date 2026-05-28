@@ -173,7 +173,6 @@ describe('AnalysisDecisionStrip — no signal pills row', () => {
     expect(screen.queryByText(/Setup:/)).not.toBeInTheDocument();
   });
 });
-
 describe('AnalysisDecisionStrip — metric grid layout', () => {
   it('renders exactly 7 metric cells', () => {
     const { container } = render(<AnalysisDecisionStrip ticker="BESI.AS" />);
