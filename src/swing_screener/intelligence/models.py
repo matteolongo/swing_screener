@@ -67,6 +67,23 @@ class SymbolIntelligenceRequest(BaseModel):
     entry_price: float | None = None
     r_now: float | None = None
     days_open: int | None = None
+    # Extended context — decision summary + chart quality + fundamentals
+    rr: float | None = None
+    target: float | None = None
+    rel_strength: float | None = None
+    atr: float | None = None
+    consolidation_tightness: float | None = None
+    breakout_volume_confirmation: bool | None = None
+    above_breakout_extension: float | None = None
+    fair_value_low: float | None = None
+    fair_value_base: float | None = None
+    fair_value_high: float | None = None
+    valuation_label: Literal["cheap", "fair", "expensive", "unknown"] | None = None
+    decision_action: str | None = None
+    decision_conviction: str | None = None
+    technical_label: str | None = None
+    fundamentals_label: str | None = None
+    catalyst_summary: str | None = None
 
 
 class SymbolIntelligence(BaseModel):
@@ -81,3 +98,4 @@ class SymbolIntelligence(BaseModel):
     position_signal: PositionSignal | None = None
     position_outlook: PositionOutlook | None = None
     sources: list[str] = []
+    inputs_used: dict = Field(default_factory=dict)
