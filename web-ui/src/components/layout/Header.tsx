@@ -1,6 +1,5 @@
-import { TrendingUp, PanelLeft, PanelLeftClose } from 'lucide-react';
+import { PanelLeft, PanelLeftClose } from 'lucide-react';
 import { useI18n } from '@/i18n/I18nProvider';
-import Button from '@/components/common/Button';
 import StrategyCapitalRiskSummary from '@/components/domain/strategy/StrategyCapitalRiskSummary';
 import { usePortfolioSummary } from '@/features/portfolio/hooks';
 import {
@@ -9,10 +8,27 @@ import {
   useStrategiesQuery,
 } from '@/features/strategy/hooks';
 import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
+import { cn } from '@/utils/cn';
 
 interface HeaderProps {
   isSidebarCollapsed?: boolean;
   onToggleSidebar?: () => void;
+}
+
+function BrandMark() {
+  return (
+    <div className="flex items-center justify-center w-5 h-5 rounded bg-primary shrink-0">
+      <svg width="10" height="10" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+        <polyline
+          points="1,11 4.5,6.5 8,8.5 13,3"
+          stroke="white"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </div>
+  );
 }
 
 export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: HeaderProps) {
@@ -29,35 +45,47 @@ export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: 
   const isLoading = strategiesQuery.isLoading || activeStrategyQuery.isLoading;
 
   const dateStr = now.toLocaleDateString(locale, {
+    weekday: 'short',
     month: 'short',
     day: 'numeric',
-    year: 'numeric',
   });
   const timeStr = now.toLocaleTimeString(locale, {
     hour: '2-digit',
     minute: '2-digit',
+    hour12: false,
   });
 
   return (
-    <header className="h-12 px-5 border-b border-border bg-white dark:bg-gray-800 flex items-center justify-between gap-4">
-      <div className="flex items-center gap-3 shrink-0">
+    <header className="h-12 px-4 border-b border-border bg-white flex items-center justify-between gap-4 shrink-0">
+      {/* Left: toggle + collapsed brand */}
+      <div className="flex items-center gap-2 shrink-0">
         {onToggleSidebar && (
-          <Button
-            variant="ghost"
-            size="sm"
+          <button
+            type="button"
             onClick={onToggleSidebar}
-            className="gap-2 px-3"
+            className={cn(
+              'flex items-center justify-center w-7 h-7 rounded transition-colors',
+              'text-muted hover:text-foreground hover:bg-gray-100'
+            )}
             title={isSidebarCollapsed ? t('header.showNavigation') : t('header.hideNavigation')}
             aria-label={isSidebarCollapsed ? t('header.showNavigation') : t('header.hideNavigation')}
           >
-            {isSidebarCollapsed ? <PanelLeft className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
-          </Button>
+            {isSidebarCollapsed
+              ? <PanelLeft className="w-4 h-4" />
+              : <PanelLeftClose className="w-4 h-4" />}
+          </button>
         )}
-        <TrendingUp className="w-5 h-5 text-primary" />
-        <h1 className="text-base font-bold leading-tight hidden sm:block">{t('header.brand')}</h1>
+        {isSidebarCollapsed && (
+          <div className="flex items-center gap-2">
+            <BrandMark />
+            <span className="text-[13px] font-semibold text-foreground hidden sm:block">
+              {t('header.brand')}
+            </span>
+          </div>
+        )}
       </div>
 
-      {/* Strategy selector — always accessible even when sidebar is collapsed */}
+      {/* Center: strategy selector */}
       <div className="flex-1 max-w-xs">
         <select
           value={activeId}
@@ -67,7 +95,12 @@ export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: 
             }
           }}
           aria-label={t('sidebar.activeStrategy')}
-          className="w-full h-8 px-2 text-sm border border-border rounded-md bg-white dark:bg-gray-800 focus:ring-1 focus:ring-primary focus:border-primary"
+          className={cn(
+            'w-full h-7 px-2 text-[13px] border border-border rounded',
+            'bg-white text-foreground',
+            'focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary',
+            'disabled:opacity-50'
+          )}
           disabled={isLoading || setActiveMutation.isPending}
         >
           {isLoading && <option value="">{t('sidebar.loadingStrategies')}</option>}
@@ -79,7 +112,8 @@ export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: 
         </select>
       </div>
 
-      <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 shrink-0">
+      {/* Right: risk summary + clock */}
+      <div className="flex items-center gap-3 shrink-0">
         {!isBeginnerMode && (
           <div className="hidden xl:block">
             <StrategyCapitalRiskSummary
@@ -93,8 +127,11 @@ export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: 
             />
           </div>
         )}
-        <span className="hidden md:block">{dateStr}</span>
-        <span className="font-mono">{timeStr}</span>
+        <div className="hidden md:flex items-center gap-1.5 text-[12px] text-muted">
+          <span>{dateStr}</span>
+          <span className="font-mono">{timeStr}</span>
+        </div>
+        <span className="font-mono text-[12px] text-muted md:hidden">{timeStr}</span>
       </div>
     </header>
   );

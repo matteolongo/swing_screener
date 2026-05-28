@@ -69,7 +69,7 @@ export default function MobileBottomNav() {
                   cn(
                     'flex min-h-11 flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[11px] font-medium transition-colors',
                     isActive
-                      ? 'bg-emerald-500 text-zinc-950'
+                      ? 'bg-primary text-white'
                       : 'text-zinc-300 hover:bg-zinc-800 hover:text-white'
                   )
                 }
