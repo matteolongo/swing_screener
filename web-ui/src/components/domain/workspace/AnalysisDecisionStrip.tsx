@@ -103,7 +103,7 @@ export default function AnalysisDecisionStrip({
                 {isPendingWatch ? '…' : isWatched ? 'Unwatch' : 'Watch'}
               </button>
             )}
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-4 gap-2 md:grid-cols-7">
               {compactValue(t('workspacePage.panels.analysis.decisionSummary.tradePlan.entryClose'), entry != null ? formatCurrency(entry, currency) : '—')}
               {compactValue('Stop', stop != null ? formatCurrency(stop, currency) : '—')}
               {compactValue('Target', target != null ? formatCurrency(target, currency) : '—')}

@@ -174,3 +174,17 @@ describe('AnalysisDecisionStrip — no signal pills row', () => {
     expect(screen.queryByText(/Setup:/)).not.toBeInTheDocument();
   });
 });
+
+describe('AnalysisDecisionStrip — metric grid layout', () => {
+  it('renders exactly 7 metric cells', () => {
+    const { container } = render(<AnalysisDecisionStrip ticker="BESI.AS" />);
+    const cells = container.querySelectorAll('[class*="min-w-"]');
+    expect(cells.length).toBe(7);
+  });
+
+  it('metric cell container uses a grid class, not flex', () => {
+    const { container } = render(<AnalysisDecisionStrip ticker="BESI.AS" />);
+    const gridWrapper = container.querySelector('[class*="grid"][class*="grid-cols"]');
+    expect(gridWrapper).not.toBeNull();
+  });
+});
