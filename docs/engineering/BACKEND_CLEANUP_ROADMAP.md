@@ -39,6 +39,7 @@ Known follow-up:
 
 ## Next PR: Phase 2 Route Consolidation
 
+Agent handover: `docs/superpowers/plans/2026-05-28-backend-cleanup-agent-handover.md`
 Handoff plan: `docs/superpowers/plans/2026-05-28-backend-cleanup-phase-2-handoff.md`
 
 Planned:
