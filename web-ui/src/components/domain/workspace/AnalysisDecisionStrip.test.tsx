@@ -129,3 +129,48 @@ describe('AnalysisDecisionStrip — watch button', () => {
     expect(screen.getByRole('button', { name: /unwatch/i })).toBeInTheDocument();
   });
 });
+
+describe('AnalysisDecisionStrip — no signal pills row', () => {
+  const decisionSummary = {
+    symbol: 'BESI.AS',
+    action: 'BUY_ON_PULLBACK' as const,
+    conviction: 'medium' as const,
+    technicalLabel: 'strong' as const,
+    fundamentalsLabel: 'strong' as const,
+    valuationLabel: 'expensive' as const,
+    catalystLabel: 'weak' as const,
+    catalystSummary: null,
+    catalystSources: [],
+    whyNow: '',
+    whatToDo: '',
+    mainRisk: '',
+    tradePlan: { entry: 284, stop: 274.03, target: 303.94, rr: 2 },
+    drivers: { positives: [], negatives: [], warnings: [] },
+    valuationContext: {
+      method: 'not_available' as const,
+      summary: '',
+      trailingPe: undefined,
+      priceToSales: undefined,
+      bookValuePerShare: undefined,
+      priceToBook: undefined,
+      bookToPrice: undefined,
+      fairValueLow: undefined,
+      fairValueBase: undefined,
+      fairValueHigh: undefined,
+      premiumDiscountPct: undefined,
+    },
+  };
+
+  it('does not render Technical / Fundamentals signal pills', () => {
+    const candidate = buildCandidate({ entry: 284, stop: 274.03, decisionSummary });
+    render(<AnalysisDecisionStrip ticker="BESI.AS" candidate={candidate} />);
+    expect(screen.queryByText('Technical: Strong')).not.toBeInTheDocument();
+    expect(screen.queryByText('Fundamentals: Strong')).not.toBeInTheDocument();
+  });
+
+  it('does not render Setup pill', () => {
+    const candidate = buildCandidate({ entry: 284, stop: 274.03, decisionSummary });
+    render(<AnalysisDecisionStrip ticker="BESI.AS" candidate={candidate} />);
+    expect(screen.queryByText(/Setup:/)).not.toBeInTheDocument();
+  });
+});
