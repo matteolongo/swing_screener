@@ -694,6 +694,8 @@ export const messagesEn = {
             target: 'Target',
             rr: 'R/R',
             entryClose: 'Entry (close)',
+            plannedEntry: 'Planned entry',
+            close: 'Close',
             oneR: '1R',
             toTarget: 'To Target',
           },

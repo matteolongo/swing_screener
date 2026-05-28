@@ -99,6 +99,62 @@ describe('AnalysisDecisionStrip — Risk % cell', () => {
   });
 });
 
+describe('AnalysisDecisionStrip — planned pullback entry', () => {
+  it('uses the suggested order price as planned entry and shows close as secondary context', () => {
+    const decisionSummary = {
+      symbol: 'BESI.AS',
+      action: 'BUY_ON_PULLBACK' as const,
+      conviction: 'medium' as const,
+      technicalLabel: 'strong' as const,
+      fundamentalsLabel: 'strong' as const,
+      valuationLabel: 'expensive' as const,
+      catalystLabel: 'weak' as const,
+      catalystSummary: null,
+      catalystSources: [],
+      whyNow: '',
+      whatToDo: '',
+      mainRisk: '',
+      tradePlan: { entry: 287.6, stop: 277.37, target: 308.06, rr: 2 },
+      drivers: { positives: [], negatives: [], warnings: [] },
+      valuationContext: {
+        method: 'not_available' as const,
+        summary: '',
+        trailingPe: undefined,
+        priceToSales: undefined,
+        bookValuePerShare: undefined,
+        priceToBook: undefined,
+        bookToPrice: undefined,
+        fairValueLow: undefined,
+        fairValueBase: undefined,
+        fairValueHigh: undefined,
+        premiumDiscountPct: undefined,
+      },
+    };
+    const candidate = buildCandidate({
+      ticker: 'BESI.AS',
+      currency: 'EUR',
+      close: 287.6,
+      entry: 287.6,
+      stop: 277.37,
+      suggestedOrderType: 'BUY_LIMIT',
+      suggestedOrderPrice: 285.04,
+      decisionSummary,
+    });
+
+    render(<AnalysisDecisionStrip ticker="BESI.AS" candidate={candidate} />);
+
+    const entryLabel = screen.getByText('Planned entry');
+    const entryCell = entryLabel.closest('div[class*="min-w"]');
+    expect(entryCell?.textContent).toContain('€285.04');
+    expect(entryCell?.textContent).toContain('Close €287.60');
+    expect(entryCell?.textContent).not.toContain('Entry (close)');
+
+    const oneRLabel = screen.getByText('1R');
+    const oneRCell = oneRLabel.closest('div[class*="min-w"]');
+    expect(oneRCell?.textContent).toContain('€7.67');
+  });
+});
+
 describe('AnalysisDecisionStrip — watch button', () => {
   it('renders Watch button when isWatched=false and calls onWatch on click', async () => {
     const onWatch = vi.fn();
