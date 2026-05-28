@@ -127,29 +127,6 @@ export default function DecisionSummaryCard({
   summary,
   currency = 'USD',
 }: DecisionSummaryCardProps) {
-  const tradePlanItems = [
-    {
-      label: t('workspacePage.panels.analysis.decisionSummary.tradePlan.entry'),
-      value: summary.tradePlan.entry,
-      formatter: (value: number) => formatCurrency(value, currency),
-    },
-    {
-      label: t('workspacePage.panels.analysis.decisionSummary.tradePlan.stop'),
-      value: summary.tradePlan.stop,
-      formatter: (value: number) => formatCurrency(value, currency),
-    },
-    {
-      label: t('workspacePage.panels.analysis.decisionSummary.tradePlan.target'),
-      value: summary.tradePlan.target,
-      formatter: (value: number) => formatCurrency(value, currency),
-    },
-    {
-      label: t('workspacePage.panels.analysis.decisionSummary.tradePlan.rr'),
-      value: summary.tradePlan.rr,
-      formatter: (value: number) => `${formatNumber(value, 2)}x`,
-    },
-  ].filter((item) => item.value != null);
-
   const warningItems = (summary.explanation?.confidenceNotes ?? summary.drivers.warnings).filter(Boolean);
   const hasFairValue =
     summary.valuationContext.fairValueLow != null &&
@@ -258,17 +235,6 @@ export default function DecisionSummaryCard({
           {t('workspacePage.panels.analysis.decisionSummary.labels.catalyst')}: {catalystLabel(summary.catalystLabel)}
         </Badge>
       </div>
-
-      {tradePlanItems.length ? (
-        <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4">
-          {tradePlanItems.map((item) => (
-            <div key={item.label} className="rounded-md border border-slate-200 bg-white px-3 py-2">
-              <div className="text-[11px] uppercase tracking-wide text-gray-500">{item.label}</div>
-              <div className="mt-1 text-sm font-semibold text-slate-900">{item.formatter(item.value as number)}</div>
-            </div>
-          ))}
-        </div>
-      ) : null}
 
       {summary.explanation ? (
         <div className="mt-3 grid gap-3 md:grid-cols-2">

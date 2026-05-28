@@ -55,7 +55,6 @@ describe('DecisionSummaryCard', () => {
     expect(screen.getByText(/Buy Now/)).toBeInTheDocument();
     expect(screen.getByText('High')).toBeInTheDocument();
     expect(screen.getByText('Coverage Warnings')).toBeInTheDocument();
-    expect(screen.getByText('$180.00')).toBeInTheDocument();
     expect(screen.getByText('No cached catalyst snapshot is available yet.')).toBeInTheDocument();
     expect(screen.getByText('Valuation Context')).toBeInTheDocument();
     expect(screen.getByText('Method: Earnings multiple')).toBeInTheDocument();
@@ -108,5 +107,14 @@ describe('DecisionSummaryCard', () => {
     expect(screen.getByText('Method: Book multiple')).toBeInTheDocument();
     expect(screen.getByText('Book Value / Share')).toBeInTheDocument();
     expect(screen.getByText('40.0%')).toBeInTheDocument();
+  });
+});
+
+describe('DecisionSummaryCard — no trade plan metric grid', () => {
+  it('does not render the Entry / Stop grid cells even when trade values exist', () => {
+    render(<DecisionSummaryCard summary={buildSummary()} currency="USD" />);
+    expect(screen.queryByText('Entry')).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Stop$/)).not.toBeInTheDocument();
+    expect(screen.queryByText('$180.00')).not.toBeInTheDocument();
   });
 });
