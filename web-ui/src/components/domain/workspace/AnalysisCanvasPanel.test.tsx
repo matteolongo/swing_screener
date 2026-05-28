@@ -646,7 +646,7 @@ describe('AnalysisCanvasPanel', () => {
 
     renderWithProviders(<AnalysisCanvasPanel />);
 
-    expect(screen.getByRole('button', { name: 'Watch AAPL' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Watch' })).toBeInTheDocument();
   });
 });
 
