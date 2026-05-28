@@ -495,7 +495,7 @@ describe('AnalysisCanvasPanel', () => {
 
     renderWithProviders(<AnalysisCanvasPanel />);
 
-    expect(screen.getByText(/Read horizon pills as source context/i)).toBeInTheDocument();
+    expect(screen.getByText('About metric labels')).toBeInTheDocument();
     expect(screen.getByText('Live price')).toBeInTheDocument();
     expect(screen.getByText('Reported')).toBeInTheDocument();
     expect(screen.getByText('Latest FY / quarter')).toBeInTheDocument();
@@ -724,6 +724,46 @@ describe('AnalysisCanvasPanel', () => {
     renderWithProviders(<AnalysisCanvasPanel />);
 
     expect(screen.getByRole('button', { name: 'Watch' })).toBeInTheDocument();
+  });
+
+  it('fundamentals tab: does not render a standalone refresh card with ticker heading', () => {
+    vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: buildSnapshot(),
+    } as never);
+    vi.mocked(fundamentalsHooks.useRefreshFundamentalSnapshotMutation).mockReturnValue({
+      mutate: vi.fn(),
+      data: undefined,
+      isPending: false,
+      isError: false,
+      error: null,
+    } as never);
+
+    renderWithProviders(<AnalysisCanvasPanel />);
+
+    expect(screen.queryByRole('heading', { name: 'AAPL', level: 3 })).not.toBeInTheDocument();
+  });
+
+  it('fundamentals tab: metric labels glossary is collapsed by default', () => {
+    vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: buildSnapshot(),
+    } as never);
+    vi.mocked(fundamentalsHooks.useRefreshFundamentalSnapshotMutation).mockReturnValue({
+      mutate: vi.fn(),
+      data: undefined,
+      isPending: false,
+      isError: false,
+      error: null,
+    } as never);
+
+    renderWithProviders(<AnalysisCanvasPanel />);
+
+    expect(
+      screen.getByText('multiple or ratio that moves with the stock price')
+    ).not.toBeVisible();
   });
 });
 

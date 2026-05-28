@@ -278,15 +278,7 @@ export default function SymbolAnalysisContent({
 
         {activeTab === 'fundamentals' && (
           <>
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white p-3">
-              <div>
-                <h3 className="text-base font-semibold">{ticker}</h3>
-                <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                  {fundamentalsQuery.data
-                    ? t('workspacePage.panels.analysis.fundamentals.descriptionHasSnapshot')
-                    : t('workspacePage.panels.analysis.fundamentals.descriptionNoSnapshot')}
-                </p>
-              </div>
+            <div className="flex items-center justify-between gap-2">
               <Button
                 type="button"
                 size="sm"
@@ -302,21 +294,18 @@ export default function SymbolAnalysisContent({
                     ? t('workspacePage.panels.analysis.fundamentals.refreshAction')
                     : t('workspacePage.panels.analysis.fundamentals.runAction')}
               </Button>
+              {fundamentalsQuery.data && (
+                <span className="text-xs text-slate-500">
+                  Updated {formatDateTime(fundamentalsQuery.data.updatedAt)}
+                </span>
+              )}
             </div>
 
             {fundamentalsQuery.data ? (
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Metric labels</p>
-                    <p className="mt-1 text-sm text-slate-600">
-                      Read horizon pills as source context, not as another scorecard.
-                    </p>
-                  </div>
-                  <div className="text-xs text-slate-500">
-                    Updated {formatDateTime(fundamentalsQuery.data.updatedAt)}
-                  </div>
-                </div>
+              <details className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <summary className="cursor-pointer text-xs font-medium uppercase tracking-wide text-slate-500">
+                  About metric labels
+                </summary>
                 <div className="mt-3 grid gap-2 md:grid-cols-3">
                   {provenanceLegendItems().map((item) => (
                     <div key={item.label} className="rounded-md border border-slate-200 bg-white px-3 py-2">
@@ -325,7 +314,7 @@ export default function SymbolAnalysisContent({
                     </div>
                   ))}
                 </div>
-              </div>
+              </details>
             ) : null}
 
             {refreshFundamentalsMutation.isError ? (
