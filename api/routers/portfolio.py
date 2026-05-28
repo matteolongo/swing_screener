@@ -23,10 +23,11 @@ from api.models.portfolio import (
     EarningsProximityResponse,
     RegimeBreakdownResponse,
 )
-from api.dependencies import get_config_repo, get_portfolio_service, get_regime_analytics_service
+from api.dependencies import get_config_repo, get_orders_service, get_portfolio_service, get_regime_analytics_service
 from api.dependencies import get_strategy_repo
 from api.repositories.config_repo import ConfigRepository
 from api.repositories.strategy_repo import StrategyRepository
+from api.services.orders_service import OrdersService
 from api.services.portfolio_service import PortfolioService
 from api.services.regime_analytics import RegimeAnalyticsService
 
@@ -206,7 +207,7 @@ async def get_regime_breakdown(
 @router.post("/orders", status_code=201)
 async def create_order(
     request: CreateOrderRequest,
-    service: PortfolioService = Depends(get_portfolio_service),
+    service: OrdersService = Depends(get_orders_service),
 ):
     """Create a pending entry order."""
     return service.create_order(request)
@@ -215,7 +216,7 @@ async def create_order(
 @router.get("/orders/local")
 async def list_local_orders(
     status: Optional[str] = None,
-    service: PortfolioService = Depends(get_portfolio_service),
+    service: OrdersService = Depends(get_orders_service),
 ):
     """List locally stored pending/filled orders from orders.json."""
     return service.list_local_orders(status=status)
@@ -224,7 +225,7 @@ async def list_local_orders(
 @router.delete("/orders/{order_id}")
 async def cancel_order(
     order_id: str,
-    service: PortfolioService = Depends(get_portfolio_service),
+    service: OrdersService = Depends(get_orders_service),
 ):
     """Cancel a pending local order."""
     return service.cancel_order(order_id)
@@ -234,7 +235,7 @@ async def cancel_order(
 async def fill_order(
     order_id: str,
     request: FillOrderRequest,
-    service: PortfolioService = Depends(get_portfolio_service),
+    service: OrdersService = Depends(get_orders_service),
 ):
     """Mark a pending order as filled and create an open position."""
     return service.fill_order(order_id, request)
