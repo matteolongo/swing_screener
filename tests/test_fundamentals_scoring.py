@@ -263,3 +263,68 @@ def test_build_snapshot_propagates_confidence_health_and_sec_balance_sheet_field
     assert 0.0 <= snapshot.data_confidence_score <= 1.0
     assert snapshot.source_health["provider"] == "sec_edgar"
     assert snapshot.source_health["quality_score"] == snapshot.data_confidence_score
+
+
+def _make_record_with_balance_sheet(
+    *,
+    total_assets: float | None,
+    total_liabilities: float | None,
+    cash_and_equivalents: float | None,
+    debt_to_equity: float | None = None,
+    current_ratio: float | None = None,
+) -> ProviderFundamentalsRecord:
+    return ProviderFundamentalsRecord(
+        symbol="TEST",
+        asof_date="2026-03-31",
+        provider="test",
+        total_assets=total_assets,
+        total_liabilities=total_liabilities,
+        cash_and_equivalents=cash_and_equivalents,
+        debt_to_equity=debt_to_equity,
+        current_ratio=current_ratio,
+    )
+
+
+def test_net_cash_position_improves_balance_sheet_score():
+    record_net_cash = _make_record_with_balance_sheet(
+        total_assets=100.0,
+        total_liabilities=30.0,
+        cash_and_equivalents=40.0,
+    )
+    record_net_debt = _make_record_with_balance_sheet(
+        total_assets=100.0,
+        total_liabilities=80.0,
+        cash_and_equivalents=10.0,
+    )
+
+    snap_cash = build_snapshot(record_net_cash, FundamentalsConfig())
+    snap_debt = build_snapshot(record_net_debt, FundamentalsConfig())
+
+    bs_cash = snap_cash.pillars.get("balance_sheet")
+    bs_debt = snap_debt.pillars.get("balance_sheet")
+
+    assert bs_cash is not None and bs_debt is not None
+    assert bs_cash.score is not None and bs_debt.score is not None
+    assert bs_cash.score > bs_debt.score
+
+
+def test_heavy_net_debt_triggers_red_flag():
+    record = _make_record_with_balance_sheet(
+        total_assets=100.0,
+        total_liabilities=90.0,
+        cash_and_equivalents=5.0,
+    )
+    snap = build_snapshot(record, FundamentalsConfig())
+    red_flag_texts = " ".join(snap.red_flags).lower()
+    assert "net debt" in red_flag_texts or "debt" in red_flag_texts
+
+
+def test_no_red_flag_when_net_cash_positive():
+    record = _make_record_with_balance_sheet(
+        total_assets=100.0,
+        total_liabilities=30.0,
+        cash_and_equivalents=40.0,
+    )
+    snap = build_snapshot(record, FundamentalsConfig())
+    red_flag_texts = " ".join(snap.red_flags).lower()
+    assert "net debt" not in red_flag_texts

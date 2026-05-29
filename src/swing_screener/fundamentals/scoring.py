@@ -440,9 +440,19 @@ def _build_pillars(record: ProviderFundamentalsRecord) -> dict[str, FundamentalP
         _score_higher(record.operating_margin, weak=0.05, strong=0.22),
         _score_higher(record.return_on_equity, weak=0.05, strong=0.2),
     )
+    net_cash_ratio: float | None = None
+    if (
+        record.total_assets is not None
+        and record.total_assets > 0
+        and record.cash_and_equivalents is not None
+        and record.total_liabilities is not None
+    ):
+        net_cash_ratio = (record.cash_and_equivalents - record.total_liabilities) / record.total_assets
+
     balance_sheet_score = _blend_scores(
         _score_lower(record.debt_to_equity, strong=60.0, weak=220.0),
         _score_higher(record.current_ratio, weak=0.9, strong=1.8),
+        _score_higher(net_cash_ratio, weak=-0.5, strong=0.0) if net_cash_ratio is not None else None,
     )
     cash_flow_score = _score_higher(record.free_cash_flow_margin, weak=0.0, strong=0.15)
     valuation_score = _blend_scores(
@@ -504,6 +514,15 @@ def _build_red_flags(
         flags.append("Leverage is elevated.")
     if record.current_ratio is not None and record.current_ratio < 1.0:
         flags.append("Current ratio is below 1.0.")
+    if (
+        record.total_assets is not None
+        and record.total_assets > 0
+        and record.cash_and_equivalents is not None
+        and record.total_liabilities is not None
+    ):
+        net_debt = record.total_liabilities - record.cash_and_equivalents
+        if net_debt / record.total_assets > 0.5:
+            flags.append("Net debt exceeds 50% of total assets - high leverage risk.")
     if freshness_status == "stale":
         flags.append("Latest reported quarter looks stale.")
 
