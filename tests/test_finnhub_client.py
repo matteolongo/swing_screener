@@ -350,3 +350,58 @@ def test_fetch_upgrade_downgrade_returns_none_when_only_init_actions():
         result = client._fetch_upgrade_downgrade_net("AAPL")
 
     assert result is None
+
+
+def test_enrich_populates_insider_and_estimate_fields():
+    from swing_screener.fundamentals.finnhub_client import FinnhubEnrichmentClient
+    client = FinnhubEnrichmentClient(api_key="test")
+    record = _make_record()
+
+    insider_resp = _mock_http({"data": [{"change": 1000, "transactionCode": "P", "transactionDate": "2026-05-01"}]})
+    eps_resp = _mock_http({"data": [{"eps": 1.55, "period": "2026Q2"}]})
+    upgrade_resp = _mock_http([{"action": "up", "gradeTime": 1000000}, {"action": "down", "gradeTime": 1000001}])
+
+    def side_effect(url, **kwargs):
+        if "metric" in url:
+            return _mock_metric_response({})
+        if "recommendation" in url:
+            rec = MagicMock(); rec.json.return_value = []; rec.raise_for_status = MagicMock()
+            return rec
+        if "price-target" in url:
+            pt = MagicMock(); pt.json.return_value = {}; pt.raise_for_status = MagicMock()
+            return pt
+        if "earnings" in url and "calendar" not in url and "eps-estimate" not in url:
+            earn = MagicMock(); earn.json.return_value = []; earn.raise_for_status = MagicMock()
+            return earn
+        if "insider" in url:
+            return insider_resp
+        if "eps-estimate" in url:
+            return eps_resp
+        if "upgrade-downgrade" in url:
+            return upgrade_resp
+        raise ValueError(f"unexpected url: {url}")
+
+    with patch("swing_screener.fundamentals.finnhub_client.httpx.get", side_effect=side_effect):
+        enriched = client.enrich(record)
+
+    assert enriched.insider_net_shares_90d == 1000
+    assert enriched.insider_transaction_count_90d == 1
+    assert enriched.forward_eps_estimate == pytest.approx(1.55)
+    assert enriched.analyst_upgrade_downgrade_net_30d == 0  # 1 up - 1 down
+
+
+def test_enrich_skips_populated_insider_fields():
+    from swing_screener.fundamentals.finnhub_client import FinnhubEnrichmentClient
+    client = FinnhubEnrichmentClient(api_key="test")
+    record = _make_record(insider_net_shares_90d=999)
+
+    with patch.object(client, "_fetch_insider_transactions") as mock_fetch:
+        with patch.object(client, "_fetch_metric_supplement", return_value={}):
+            with patch.object(client, "_fetch_recommendation_score", return_value=None):
+                with patch.object(client, "_fetch_price_target", return_value=None):
+                    with patch.object(client, "_fetch_beat_streak", return_value=None):
+                        with patch.object(client, "_fetch_forward_eps_estimate", return_value=None):
+                            with patch.object(client, "_fetch_upgrade_downgrade_net", return_value=None):
+                                client.enrich(record)
+
+    mock_fetch.assert_not_called()

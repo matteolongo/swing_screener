@@ -193,6 +193,20 @@ class FinnhubEnrichmentClient:
         if streak is not None and record.earnings_beat_streak is None:
             updates["earnings_beat_streak"] = streak
 
+        net_shares, txn_count = self._fetch_insider_transactions(record.symbol) if record.insider_net_shares_90d is None else (None, None)
+        if net_shares is not None and record.insider_net_shares_90d is None:
+            updates["insider_net_shares_90d"] = net_shares
+        if txn_count is not None and record.insider_transaction_count_90d is None:
+            updates["insider_transaction_count_90d"] = txn_count
+
+        fwd_eps = self._fetch_forward_eps_estimate(record.symbol) if record.forward_eps_estimate is None else None
+        if fwd_eps is not None and record.forward_eps_estimate is None:
+            updates["forward_eps_estimate"] = fwd_eps
+
+        updown_net = self._fetch_upgrade_downgrade_net(record.symbol) if record.analyst_upgrade_downgrade_net_30d is None else None
+        if updown_net is not None and record.analyst_upgrade_downgrade_net_30d is None:
+            updates["analyst_upgrade_downgrade_net_30d"] = updown_net
+
         if not updates:
             return record
         return replace(record, **updates)

@@ -896,6 +896,10 @@ def build_snapshot(record: ProviderFundamentalsRecord, cfg: FundamentalsConfig) 
         analyst_recommendation_score=resolved_record.analyst_recommendation_score,
         analyst_price_target=resolved_record.analyst_price_target,
         earnings_beat_streak=resolved_record.earnings_beat_streak,
+        insider_net_shares_90d=resolved_record.insider_net_shares_90d,
+        insider_transaction_count_90d=resolved_record.insider_transaction_count_90d,
+        forward_eps_estimate=resolved_record.forward_eps_estimate,
+        analyst_upgrade_downgrade_net_30d=resolved_record.analyst_upgrade_downgrade_net_30d,
     )
 
 
