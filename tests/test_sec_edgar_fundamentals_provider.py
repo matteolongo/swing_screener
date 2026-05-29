@@ -293,3 +293,60 @@ def test_sec_edgar_provider_builds_quarterly_record(monkeypatch):
     assert record.historical_series["revenue"].frequency == "quarterly"
     assert record.historical_series["free_cash_flow"].points[-1].value == 200.0
     assert record.historical_series["free_cash_flow_margin"].points[-1].value == 200.0 / 1200.0
+
+
+def test_sec_edgar_cash_falls_back_to_cash_and_short_term_investments(monkeypatch):
+    facts = {
+        "entityName": "Apple Inc.",
+        "facts": {
+            "us-gaap": {
+                "Revenues": {
+                    "units": {
+                        "USD": [
+                            {
+                                "start": "2026-01-01",
+                                "end": "2026-03-31",
+                                "val": 90_000_000_000,
+                                "fy": 2026,
+                                "fp": "Q1",
+                                "form": "10-Q",
+                                "filed": "2026-04-30",
+                            }
+                        ]
+                    }
+                },
+                "NetIncomeLoss": {
+                    "units": {
+                        "USD": [
+                            {
+                                "start": "2026-01-01",
+                                "end": "2026-03-31",
+                                "val": 20_000_000_000,
+                                "fy": 2026,
+                                "fp": "Q1",
+                                "form": "10-Q",
+                                "filed": "2026-04-30",
+                            }
+                        ]
+                    }
+                },
+                "Assets": {"units": {"USD": [{"end": "2026-03-31", "val": 200_000_000_000, "form": "10-Q", "filed": "2026-04-30"}]}},
+                "Liabilities": {"units": {"USD": [{"end": "2026-03-31", "val": 120_000_000_000, "form": "10-Q", "filed": "2026-04-30"}]}},
+                "CashCashEquivalentsAndShortTermInvestments": {
+                    "units": {"USD": [{"end": "2026-03-31", "val": 40_000_000_000, "form": "10-Q", "filed": "2026-04-30"}]}
+                },
+            }
+        },
+    }
+
+    provider = SecEdgarFundamentalsProvider()
+    monkeypatch.setattr(provider, "_load_ticker_map", lambda: {"AAPL": ("0000320193", "Apple Inc.")})
+    monkeypatch.setattr(provider, "_get_json", lambda url: facts)
+
+    record = provider.fetch_record("AAPL")
+
+    assert record.cash_and_equivalents == 40_000_000_000
+    assert (
+        record.metric_sources["cash_and_equivalents"]
+        == "sec_edgar.us-gaap.CashCashEquivalentsAndShortTermInvestments"
+    )

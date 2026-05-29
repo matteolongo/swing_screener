@@ -171,18 +171,42 @@ def _build_user_prompt(ticker: str, req: SymbolIntelligenceRequest) -> str:
                 )
 
         # Chart quality block
-        has_chart_quality = any(x is not None for x in (req.atr, req.rel_strength, req.dist_52w_high_pct, req.near_52w_high))
+        has_chart_quality = any(
+            x is not None
+            for x in (
+                req.atr,
+                req.rel_strength,
+                req.sector_rs,
+                req.dist_52w_high_pct,
+                req.near_52w_high,
+                req.sector_rotation_context,
+            )
+        )
         if has_chart_quality:
             lines += ["", "--- Chart quality ---"]
             atr_str = f"ATR: {fmt(req.atr)}" if req.atr is not None else ""
             rs_str = f"Relative strength vs benchmark: {req.rel_strength}%" if req.rel_strength is not None else ""
-            cq_parts = [p for p in (atr_str, rs_str) if p]
+            sector_rs_str = f"Relative strength vs sector ETF: {req.sector_rs}%" if req.sector_rs is not None else ""
+            cq_parts = [p for p in (atr_str, rs_str, sector_rs_str) if p]
             if cq_parts:
                 lines.append(" | ".join(cq_parts))
             if req.dist_52w_high_pct is not None:
                 pct = round(req.dist_52w_high_pct * 100, 1)
                 near_str = " (near 52w high)" if req.near_52w_high else ""
                 lines.append(f"Distance from 52w high: {pct:+.1f}%{near_str}")
+            if req.sector_rotation_context:
+                fast = req.sector_rotation_context.get("fast_rs")
+                slow = req.sector_rotation_context.get("slow_rs")
+                in_rotation = req.sector_rotation_context.get("in_rotation")
+                parts = []
+                if fast is not None:
+                    parts.append(f"4w sector ETF RS: {fmt(fast)}")
+                if slow is not None:
+                    parts.append(f"13w sector ETF RS: {fmt(slow)}")
+                if in_rotation is not None:
+                    parts.append(f"in rotation: {bool(in_rotation)}")
+                if parts:
+                    lines.append("Sector rotation: " + " | ".join(parts))
 
     # Finnhub enrichment signals block
     has_finnhub = any(x is not None for x in (
@@ -254,12 +278,16 @@ class SymbolAnalyzer:
             technical["momentum_12m"] = req.momentum_12m
         if req.rel_strength is not None:
             technical["rel_strength"] = req.rel_strength
+        if req.sector_rs is not None:
+            technical["sector_rs"] = req.sector_rs
         if req.atr is not None:
             technical["atr"] = req.atr
         if req.dist_52w_high_pct is not None:
             technical["dist_52w_high_pct"] = round(req.dist_52w_high_pct * 100, 1)
         if req.near_52w_high is not None:
             technical["near_52w_high"] = req.near_52w_high
+        if req.sector_rotation_context:
+            technical["sector_rotation_context"] = req.sector_rotation_context
         if req.signal:
             technical["signal"] = req.signal
         if technical:

@@ -11,9 +11,10 @@ logger = logging.getLogger(__name__)
 
 _FINNHUB_EARNINGS_URL = "https://finnhub.io/api/v1/calendar/earnings"
 _TIMEOUT = 10.0
+_UNAVAILABLE = object()
 
 
-def _fetch_via_finnhub(ticker: str, api_key: str, asof_date: dt.date) -> int | None:
+def _fetch_via_finnhub(ticker: str, api_key: str, asof_date: dt.date) -> int | None | object:
     end = asof_date + dt.timedelta(days=90)
     try:
         resp = httpx.get(
@@ -30,7 +31,10 @@ def _fetch_via_finnhub(ticker: str, api_key: str, asof_date: dt.date) -> int | N
         items = resp.json().get("earningsCalendar") or []
     except Exception as exc:
         logger.debug("Finnhub earnings lookup failed for %s: %s", ticker, exc)
-        return None
+        return _UNAVAILABLE
+
+    if not items:
+        return _UNAVAILABLE
 
     for item in items:
         raw_date = item.get("date") or ""
@@ -74,9 +78,11 @@ def fetch_next_earnings_days(
     def _fetch_one(ticker: str) -> tuple[str, int | None]:
         if finnhub_api_key:
             days = _fetch_via_finnhub(ticker, finnhub_api_key, asof_date)
+            if days is _UNAVAILABLE:
+                days = _fetch_via_yfinance(ticker, asof_date)
         else:
             days = _fetch_via_yfinance(ticker, asof_date)
-        return ticker, days
+        return ticker, days if isinstance(days, int) else None
 
     with ThreadPoolExecutor(max_workers=max_workers) as pool:
         futures = {pool.submit(_fetch_one, ticker): ticker for ticker in tickers}

@@ -74,16 +74,24 @@ describe('candidateToPayload', () => {
     expect(payload!.entry_price).toBe(140);
   });
 
-  it('maps rr, atr, rel_strength from candidate fields', () => {
+  it('maps rr, atr, rel_strength and sector rotation fields from candidate fields', () => {
     const payload = candidateToPayload({
       ...baseCandidate,
       rr: 2.5,
       atr: 3.2,
       relStrength: 15.4,
+      sectorRs: 3.1,
+      sectorRotationContext: { fast_rs: 0.04, slow_rs: 0.02, in_rotation: true },
+      dist52wHighPct: -0.03,
+      near52wHigh: true,
     });
     expect(payload!.rr).toBe(2.5);
     expect(payload!.atr).toBe(3.2);
     expect(payload!.rel_strength).toBe(15.4);
+    expect(payload!.sector_rs).toBe(3.1);
+    expect(payload!.sector_rotation_context).toEqual({ fast_rs: 0.04, slow_rs: 0.02, in_rotation: true });
+    expect(payload!.dist_52w_high_pct).toBe(-0.03);
+    expect(payload!.near_52w_high).toBe(true);
   });
 
   it('maps decision_action, decision_conviction, valuation_label, technical_label, fundamentals_label from decisionSummary', () => {

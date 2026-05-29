@@ -85,6 +85,13 @@ def _bounded_float(value: Any, fallback: float) -> float:
     return max(0.0, min(1.0, parsed))
 
 
+def _optional_int(value: Any) -> int | None:
+    parsed = _optional_float(value)
+    if parsed is None:
+        return None
+    return int(parsed)
+
+
 @dataclass(frozen=True)
 class FundamentalPillarScore:
     score: float | None = None
@@ -376,12 +383,19 @@ class FundamentalSnapshot:
                 if str(key).strip() and str(value).strip()
             },
             error=(str(payload.get("error")) if payload.get("error") else None),
-            net_margin=(float(payload["net_margin"]) if payload.get("net_margin") is not None else None),
-            analyst_recommendation_score=(float(payload["analyst_recommendation_score"]) if payload.get("analyst_recommendation_score") is not None else None),
-            analyst_price_target=(float(payload["analyst_price_target"]) if payload.get("analyst_price_target") is not None else None),
-            earnings_beat_streak=(int(payload["earnings_beat_streak"]) if payload.get("earnings_beat_streak") is not None else None),
-            insider_net_shares_90d=(int(payload["insider_net_shares_90d"]) if payload.get("insider_net_shares_90d") is not None else None),
-            insider_transaction_count_90d=(int(payload["insider_transaction_count_90d"]) if payload.get("insider_transaction_count_90d") is not None else None),
+            revenue_acceleration=_optional_float(payload.get("revenue_acceleration")),
+            margin_trend_slope=_optional_float(payload.get("margin_trend_slope")),
+            fcf_margin_trend=_optional_float(payload.get("fcf_margin_trend")),
+            freshness_penalty=_bounded_float(payload.get("freshness_penalty"), 0.0),
+            coverage_penalty=_bounded_float(payload.get("coverage_penalty"), 0.0),
+            business_quality_score=_optional_float(payload.get("business_quality_score")),
+            valuation_attractiveness=_optional_float(payload.get("valuation_attractiveness")),
+            net_margin=_optional_float(payload.get("net_margin")),
+            analyst_recommendation_score=_optional_float(payload.get("analyst_recommendation_score")),
+            analyst_price_target=_optional_float(payload.get("analyst_price_target")),
+            earnings_beat_streak=_optional_int(payload.get("earnings_beat_streak")),
+            insider_net_shares_90d=_optional_int(payload.get("insider_net_shares_90d")),
+            insider_transaction_count_90d=_optional_int(payload.get("insider_transaction_count_90d")),
             forward_eps_estimate=_optional_float(payload.get("forward_eps_estimate")),
-            analyst_upgrade_downgrade_net_30d=(int(payload["analyst_upgrade_downgrade_net_30d"]) if payload.get("analyst_upgrade_downgrade_net_30d") is not None else None),
+            analyst_upgrade_downgrade_net_30d=_optional_int(payload.get("analyst_upgrade_downgrade_net_30d")),
         )

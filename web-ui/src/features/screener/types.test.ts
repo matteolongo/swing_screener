@@ -18,6 +18,7 @@ describe('transformScreenerResponse', () => {
           momentum_6m: 0.2,
           momentum_12m: 0.3,
           rel_strength: 1.1,
+          sector_rs: 0.04,
           score: 0.8,
           confidence: 78,
           rank: 1,
@@ -26,6 +27,10 @@ describe('transformScreenerResponse', () => {
           fundamentals_freshness_status: 'current',
           fundamentals_summary: 'Growth metrics are supportive.',
           signal: 'breakout',
+          days_to_earnings: 12,
+          dist_52w_high_pct: -0.03,
+          near_52w_high: true,
+          sector_rotation_context: { fast_rs: 0.04, slow_rs: 0.02, in_rotation: true },
           suggested_order_type: 'BUY_STOP',
           suggested_order_price: 101.2,
           execution_note: 'Breakout not triggered yet. Place BUY STOP slightly above breakout_level.',
@@ -77,6 +82,11 @@ describe('transformScreenerResponse', () => {
     expect(result.candidates[0].priorityRank).toBe(1);
     expect(result.candidates[0].fundamentalsCoverageStatus).toBe('supported');
     expect(result.candidates[0].fundamentalsSummary).toBe('Growth metrics are supportive.');
+    expect(result.candidates[0].sectorRs).toBe(0.04);
+    expect(result.candidates[0].daysToEarnings).toBe(12);
+    expect(result.candidates[0].dist52wHighPct).toBe(-0.03);
+    expect(result.candidates[0].near52wHigh).toBe(true);
+    expect(result.candidates[0].sectorRotationContext).toEqual({ fast_rs: 0.04, slow_rs: 0.02, in_rotation: true });
     expect(result.candidates[0].decisionSummary?.action).toBe('BUY_NOW');
     expect(result.candidates[0].decisionSummary?.tradePlan.rr).toBe(2);
     expect(result.candidates[0].decisionSummary?.valuationContext.method).toBe('earnings_multiple');

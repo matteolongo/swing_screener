@@ -23,6 +23,9 @@ export interface SymbolAnalysisCandidate {
   momentum6m?: number;
   momentum12m?: number;
   relStrength?: number;
+  sectorRs?: number;
+  dist52wHighPct?: number | null;
+  near52wHigh?: boolean | null;
   signal?: string;
   entry?: number;
   stop?: number;
@@ -35,5 +38,6 @@ export interface SymbolAnalysisCandidate {
   executionNote?: string;
   sameSymbol?: SameSymbolCandidateContext;
   decisionSummary?: DecisionSummary;
+  sectorRotationContext?: Record<string, unknown> | null;
   dataSourceSummary?: CandidateDataSourceSummary;
 }

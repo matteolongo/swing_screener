@@ -40,6 +40,28 @@ def _safe_float(value: Any) -> float | None:
         return None
 
 
+def _safe_date_from_grade_time(value: Any) -> dt.date | None:
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        try:
+            return dt.datetime.fromtimestamp(float(value), tz=dt.timezone.utc).date()
+        except (OverflowError, OSError, ValueError):
+            return None
+    text = str(value).strip()
+    if not text:
+        return None
+    if text.isdigit():
+        try:
+            return dt.datetime.fromtimestamp(float(text), tz=dt.timezone.utc).date()
+        except (OverflowError, OSError, ValueError):
+            return None
+    try:
+        return dt.date.fromisoformat(text[:10])
+    except ValueError:
+        return None
+
+
 class FinnhubEnrichmentClient:
     def __init__(self, api_key: str) -> None:
         self._api_key = api_key
@@ -143,14 +165,15 @@ class FinnhubEnrichmentClient:
             rows = data.get("data") or []
             if not rows:
                 return None
-            return _safe_float(rows[0].get("eps"))
+            return _safe_float(rows[0].get("epsAvg", rows[0].get("eps")))
         except Exception as exc:
             logger.debug("Finnhub /stock/eps-estimate failed for %s: %s", symbol, exc)
             return None
 
     def _fetch_upgrade_downgrade_net(self, symbol: str) -> int | None:
         """Net analyst actions (upgrades minus downgrades) in the last 30 days."""
-        from_date = (dt.date.today() - dt.timedelta(days=30)).isoformat()
+        cutoff = dt.date.today() - dt.timedelta(days=30)
+        from_date = cutoff.isoformat()
         try:
             items = self._get("/stock/upgrade-downgrade", {"symbol": symbol, "from": from_date})
             if not items:
@@ -162,6 +185,9 @@ class FinnhubEnrichmentClient:
         upgrades = 0
         downgrades = 0
         for item in items:
+            grade_date = _safe_date_from_grade_time(item.get("gradeTime") or item.get("gradeTimeString"))
+            if grade_date is not None and grade_date < cutoff:
+                continue
             action = str(item.get("action") or "").lower()
             if action == "up":
                 upgrades += 1

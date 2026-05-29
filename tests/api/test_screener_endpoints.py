@@ -351,6 +351,7 @@ def test_screener_candidate_includes_sector_rotation_context(monkeypatch):
         "slow_rs": 0.02,
         "in_rotation": True,
     }
+    assert candidate["sector_rs"] == pytest.approx(0.03)
     assert captured["sector_benchmark_returns"] == {"AAA": 0.07}
 
 

@@ -133,6 +133,39 @@ def test_prompt_includes_position_section_with_context():
     assert "position_outlook" in prompt
 
 
+def test_prompt_and_inputs_include_sector_rotation_context():
+    from swing_screener.intelligence.symbol_analyzer import _build_user_prompt
+
+    req = SymbolIntelligenceRequest(
+        close=50.0,
+        signal="breakout",
+        rel_strength=4.2,
+        sector_rs=3.0,
+        sector_rotation_context={"fast_rs": 0.04, "slow_rs": 0.02, "in_rotation": True},
+    )
+    prompt = _build_user_prompt("AAPL", req)
+
+    assert "Relative strength vs sector ETF: 3.0%" in prompt
+    assert "Sector rotation:" in prompt
+    assert "in rotation: True" in prompt
+
+    fake_response = _make_fake_openai_response(_FAKE_RESPONSE_TEXT)
+    with patch("swing_screener.intelligence.symbol_analyzer.OpenAI") as MockOpenAI:
+        mock_client = MagicMock()
+        MockOpenAI.return_value = mock_client
+        mock_client.responses.create.return_value = fake_response
+
+        analyzer = SymbolAnalyzer()
+        result = analyzer.analyze("AAPL", req)
+
+    assert result.inputs_used["technical"]["sector_rs"] == 3.0
+    assert result.inputs_used["technical"]["sector_rotation_context"] == {
+        "fast_rs": 0.04,
+        "slow_rs": 0.02,
+        "in_rotation": True,
+    }
+
+
 def test_symbol_analyzer_maps_position_outlook():
     import json
 

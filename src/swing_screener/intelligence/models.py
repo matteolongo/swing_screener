@@ -92,6 +92,9 @@ class SymbolIntelligenceRequest(BaseModel):
     # 52-week high proximity
     dist_52w_high_pct: float | None = None
     near_52w_high: bool | None = None
+    # Sector ETF rotation context
+    sector_rs: float | None = None
+    sector_rotation_context: dict | None = None
 
 
 class SymbolIntelligence(BaseModel):

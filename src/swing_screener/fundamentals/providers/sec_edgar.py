@@ -573,6 +573,7 @@ class SecEdgarFundamentalsProvider:
             taxonomies=("us-gaap",),
             concepts=(
                 "CashAndCashEquivalentsAtCarryingValue",
+                "CashCashEquivalentsAndShortTermInvestments",
                 "CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents",
                 "Cash",
             ),

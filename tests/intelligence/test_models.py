@@ -25,10 +25,14 @@ def test_symbol_intelligence_request_full():
         momentum_6m=32.5,
         momentum_12m=78.0,
         sector="Materials",
+        sector_rs=0.03,
+        sector_rotation_context={"fast_rs": 0.04, "slow_rs": 0.02, "in_rotation": True},
         currency="EUR",
     )
     assert req.close == 48.5
     assert req.currency == "EUR"
+    assert req.sector_rs == 0.03
+    assert req.sector_rotation_context == {"fast_rs": 0.04, "slow_rs": 0.02, "in_rotation": True}
 
 
 def test_request_accepts_position_context():

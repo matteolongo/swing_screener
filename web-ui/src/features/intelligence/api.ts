@@ -21,6 +21,10 @@ export interface IntelligenceRequestPayload {
   rr?: number | null;
   target?: number | null;
   rel_strength?: number | null;
+  sector_rs?: number | null;
+  sector_rotation_context?: Record<string, unknown> | null;
+  dist_52w_high_pct?: number | null;
+  near_52w_high?: boolean | null;
   atr?: number | null;
   fair_value_low?: number | null;
   fair_value_base?: number | null;
@@ -53,6 +57,10 @@ export function candidateToPayload(
   };
   payload.rr = candidate.rr ?? null;
   payload.rel_strength = candidate.relStrength ?? null;
+  payload.sector_rs = candidate.sectorRs ?? null;
+  payload.sector_rotation_context = candidate.sectorRotationContext ?? null;
+  payload.dist_52w_high_pct = candidate.dist52wHighPct ?? null;
+  payload.near_52w_high = candidate.near52wHigh ?? null;
   payload.atr = candidate.atr ?? null;
   payload.target = candidate.decisionSummary?.tradePlan?.target ?? null;
   payload.fair_value_low = candidate.decisionSummary?.valuationContext?.fairValueLow ?? null;

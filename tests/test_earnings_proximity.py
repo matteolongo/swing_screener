@@ -66,42 +66,103 @@ def test_returns_none_when_finnhub_returns_empty():
     resp.json.return_value = {"earningsCalendar": []}
 
     with patch("swing_screener.fundamentals.earnings_proximity.httpx.get", return_value=resp):
-        result = fetch_next_earnings_days(
-            tickers=["AAPL"],
-            finnhub_api_key="test-key",
-            asof_date=dt.date.today(),
-        )
+        with patch("swing_screener.fundamentals.earnings_proximity.yf.Ticker", side_effect=Exception("no calendar")):
+            result = fetch_next_earnings_days(
+                tickers=["AAPL"],
+                finnhub_api_key="test-key",
+                asof_date=dt.date.today(),
+            )
 
     assert result["AAPL"] is None
 
 
-def test_falls_back_to_yfinance_when_no_finnhub_key():
+def test_falls_back_to_yfinance_when_finnhub_returns_empty():
     from swing_screener.fundamentals.earnings_proximity import fetch_next_earnings_days
 
     today = dt.date.today()
     earnings_date = today + dt.timedelta(days=7)
+    resp = MagicMock()
+    resp.raise_for_status = MagicMock()
+    resp.json.return_value = {"earningsCalendar": []}
     mock_ticker = MagicMock()
     mock_ticker.calendar = {"Earnings Date": [earnings_date]}
 
-    with patch("swing_screener.fundamentals.earnings_proximity.yf.Ticker", return_value=mock_ticker):
-        result = fetch_next_earnings_days(
-            tickers=["AAPL"],
-            finnhub_api_key=None,
-            asof_date=today,
-        )
+    with patch("swing_screener.fundamentals.earnings_proximity.httpx.get", return_value=resp):
+        with patch("swing_screener.fundamentals.earnings_proximity.yf.Ticker", return_value=mock_ticker):
+            result = fetch_next_earnings_days(
+                tickers=["AAPL"],
+                finnhub_api_key="test-key",
+                asof_date=today,
+            )
 
     assert result["AAPL"] == 7
+
+
+def test_falls_back_to_yfinance_when_finnhub_errors():
+    from swing_screener.fundamentals.earnings_proximity import fetch_next_earnings_days
+
+    today = dt.date.today()
+    earnings_date = today + dt.timedelta(days=9)
+    mock_ticker = MagicMock()
+    mock_ticker.calendar = {"Earnings Date": [earnings_date]}
+
+    with patch("swing_screener.fundamentals.earnings_proximity.httpx.get", side_effect=Exception("timeout")):
+        with patch("swing_screener.fundamentals.earnings_proximity.yf.Ticker", return_value=mock_ticker):
+            result = fetch_next_earnings_days(
+                tickers=["AAPL"],
+                finnhub_api_key="test-key",
+                asof_date=today,
+            )
+
+    assert result["AAPL"] == 9
+
+
+def test_returns_none_when_both_earnings_sources_fail():
+    from swing_screener.fundamentals.earnings_proximity import fetch_next_earnings_days
+
+    with patch("swing_screener.fundamentals.earnings_proximity.httpx.get", side_effect=Exception("timeout")):
+        with patch("swing_screener.fundamentals.earnings_proximity.yf.Ticker", side_effect=Exception("no calendar")):
+            result = fetch_next_earnings_days(
+                tickers=["AAPL"],
+                finnhub_api_key="test-key",
+                asof_date=dt.date.today(),
+            )
+
+    assert result["AAPL"] is None
+
+
+def test_past_finnhub_date_does_not_fall_back_to_yfinance():
+    from swing_screener.fundamentals.earnings_proximity import fetch_next_earnings_days
+
+    today = dt.date.today()
+    past_date = today - dt.timedelta(days=5)
+    mock_ticker = MagicMock()
+    mock_ticker.calendar = {"Earnings Date": [today + dt.timedelta(days=7)]}
+
+    with patch(
+        "swing_screener.fundamentals.earnings_proximity.httpx.get",
+        return_value=_mock_finnhub_earnings("AAPL", past_date),
+    ):
+        with patch("swing_screener.fundamentals.earnings_proximity.yf.Ticker", return_value=mock_ticker):
+            result = fetch_next_earnings_days(
+                tickers=["AAPL"],
+                finnhub_api_key="test-key",
+                asof_date=today,
+            )
+
+    assert result["AAPL"] is None
 
 
 def test_returns_none_for_ticker_on_fetch_error():
     from swing_screener.fundamentals.earnings_proximity import fetch_next_earnings_days
 
     with patch("swing_screener.fundamentals.earnings_proximity.httpx.get", side_effect=Exception("timeout")):
-        result = fetch_next_earnings_days(
-            tickers=["AAPL"],
-            finnhub_api_key="test-key",
-            asof_date=dt.date.today(),
-        )
+        with patch("swing_screener.fundamentals.earnings_proximity.yf.Ticker", side_effect=Exception("no calendar")):
+            result = fetch_next_earnings_days(
+                tickers=["AAPL"],
+                finnhub_api_key="test-key",
+                asof_date=dt.date.today(),
+            )
 
     assert result["AAPL"] is None
 
@@ -126,3 +187,22 @@ def test_handles_multiple_tickers():
 
     assert result["AAPL"] == 5
     assert result["MSFT"] == 15
+
+
+def test_falls_back_to_yfinance_when_no_finnhub_key():
+    from swing_screener.fundamentals.earnings_proximity import fetch_next_earnings_days
+
+    today = dt.date.today()
+    earnings_date = today + dt.timedelta(days=7)
+    mock_ticker = MagicMock()
+    mock_ticker.calendar = {"Earnings Date": [earnings_date]}
+
+    with patch("swing_screener.fundamentals.earnings_proximity.yf.Ticker", return_value=mock_ticker):
+        result = fetch_next_earnings_days(
+            tickers=["AAPL"],
+            finnhub_api_key=None,
+            asof_date=today,
+        )
+
+    assert result["AAPL"] == 7
+

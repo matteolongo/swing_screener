@@ -212,6 +212,56 @@ def test_snapshot_from_dict_handles_malformed_new_numeric_fields():
         assert snapshot.data_confidence_score == 0.5
 
 
+def test_snapshot_from_dict_roundtrips_scoring_modifier_fields():
+    snapshot = FundamentalSnapshot.from_dict({
+        "symbol": "AAPL",
+        "asof_date": "2026-05-29",
+        "provider": "sec_edgar",
+        "updated_at": "2026-05-29T10:00:00",
+        "revenue_acceleration": 0.12,
+        "margin_trend_slope": 0.03,
+        "fcf_margin_trend": -0.01,
+        "freshness_penalty": 0.2,
+        "coverage_penalty": 0.4,
+        "business_quality_score": 0.75,
+        "valuation_attractiveness": 0.55,
+    })
+
+    assert snapshot.revenue_acceleration == 0.12
+    assert snapshot.margin_trend_slope == 0.03
+    assert snapshot.fcf_margin_trend == -0.01
+    assert snapshot.freshness_penalty == 0.2
+    assert snapshot.coverage_penalty == 0.4
+    assert snapshot.business_quality_score == 0.75
+    assert snapshot.valuation_attractiveness == 0.55
+
+
+def test_snapshot_from_dict_defensively_parses_finnhub_fields():
+    snapshot = FundamentalSnapshot.from_dict({
+        "symbol": "AAPL",
+        "asof_date": "2026-05-29",
+        "provider": "finnhub",
+        "updated_at": "2026-05-29T10:00:00",
+        "net_margin": "bad",
+        "analyst_recommendation_score": {},
+        "analyst_price_target": [],
+        "earnings_beat_streak": "NaN",
+        "insider_net_shares_90d": "bad",
+        "insider_transaction_count_90d": "Infinity",
+        "forward_eps_estimate": "oops",
+        "analyst_upgrade_downgrade_net_30d": object(),
+    })
+
+    assert snapshot.net_margin is None
+    assert snapshot.analyst_recommendation_score is None
+    assert snapshot.analyst_price_target is None
+    assert snapshot.earnings_beat_streak is None
+    assert snapshot.insider_net_shares_90d is None
+    assert snapshot.insider_transaction_count_90d is None
+    assert snapshot.forward_eps_estimate is None
+    assert snapshot.analyst_upgrade_downgrade_net_30d is None
+
+
 def test_insider_and_estimate_fields_round_trip():
     from swing_screener.fundamentals.models import FundamentalSnapshot
     import pytest

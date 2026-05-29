@@ -125,6 +125,7 @@ export interface ScreenerCandidate {
   momentum6m: number;
   momentum12m: number;
   relStrength: number;
+  sectorRs?: number;
   score: number;
   confidence: number;
   rank: number;
@@ -155,7 +156,11 @@ export interface ScreenerCandidate {
   combinedPriorityScore?: number;
   volumeRatio?: number;
   avgDailyVolumeEur?: number;
+  dist52wHighPct?: number | null;
+  near52wHigh?: boolean | null;
   weeklyTrend?: 'up' | 'down' | 'neutral';
+  daysToEarnings?: number | null;
+  sectorRotationContext?: Record<string, unknown> | null;
   dataSourceSummary?: CandidateDataSourceSummary;
 }
 
@@ -233,6 +238,7 @@ export interface ScreenerCandidateAPI {
   momentum_6m: number;
   momentum_12m: number;
   rel_strength: number;
+  sector_rs?: number | null;
   score: number;
   confidence: number;
   rank: number;
@@ -274,7 +280,11 @@ export interface ScreenerCandidateAPI {
   combined_priority_score?: number;
   volume_ratio?: number;
   avg_daily_volume_eur?: number;
+  dist_52w_high_pct?: number | null;
+  near_52w_high?: boolean | null;
   weekly_trend?: 'up' | 'down' | 'neutral' | null;
+  days_to_earnings?: number | null;
+  sector_rotation_context?: Record<string, unknown> | null;
   data_source_summary?: Record<string, unknown> | null;
   dataSourceSummary?: Record<string, unknown> | null;
 }
@@ -478,6 +488,7 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
       momentum6m: c.momentum_6m,
       momentum12m: c.momentum_12m,
       relStrength: c.rel_strength,
+      sectorRs: c.sector_rs ?? undefined,
       score: c.score,
       confidence: c.confidence,
       rank: c.rank,
@@ -521,7 +532,11 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
       combinedPriorityScore: c.combined_priority_score ?? undefined,
       volumeRatio: c.volume_ratio ?? undefined,
       avgDailyVolumeEur: c.avg_daily_volume_eur ?? undefined,
+      dist52wHighPct: c.dist_52w_high_pct ?? null,
+      near52wHigh: c.near_52w_high ?? null,
       weeklyTrend: c.weekly_trend ?? undefined,
+      daysToEarnings: c.days_to_earnings ?? null,
+      sectorRotationContext: c.sector_rotation_context ?? null,
       dataSourceSummary: transformDataSourceSummary(c.data_source_summary ?? c.dataSourceSummary),
     })),
     asofDate: apiResponse.asof_date,

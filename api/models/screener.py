@@ -46,6 +46,7 @@ class ScreenerCandidate(BaseModel):
     momentum_6m: float
     momentum_12m: float
     rel_strength: float
+    sector_rs: Optional[float] = None
     score: float
     confidence: float
     rank: int

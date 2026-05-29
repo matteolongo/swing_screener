@@ -1048,6 +1048,7 @@ class ScreenerService:
                         momentum_6m=_safe_float(row.get("mom_6m")),
                         momentum_12m=_safe_float(row.get("mom_12m")),
                         rel_strength=_safe_float(row.get("rs_6m")),
+                        sector_rs=_safe_optional_float(row.get("sector_rs_6m")),
                         score=_safe_float(row.get("score")),
                         confidence=_safe_float(row.get("confidence")),
                         rank=int(row.get("rank", len(candidates) + 1)),

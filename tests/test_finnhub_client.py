@@ -295,12 +295,22 @@ def test_fetch_forward_eps_returns_first_quarter_estimate():
     client = FinnhubEnrichmentClient(api_key="test")
     payload = {
         "data": [
-            {"eps": 1.55, "period": "2026Q2", "numberAnalyst": 12},
-            {"eps": 1.70, "period": "2026Q3", "numberAnalyst": 10},
+            {"epsAvg": 1.55, "period": "2026Q2", "numberAnalyst": 12},
+            {"epsAvg": 1.70, "period": "2026Q3", "numberAnalyst": 10},
         ],
         "freq": "quarterly",
         "symbol": "AAPL",
     }
+    with patch("swing_screener.fundamentals.finnhub_client.httpx.get", return_value=_mock_http(payload)):
+        result = client._fetch_forward_eps_estimate("AAPL")
+
+    assert result == pytest.approx(1.55)
+
+
+def test_fetch_forward_eps_accepts_legacy_eps_field():
+    from swing_screener.fundamentals.finnhub_client import FinnhubEnrichmentClient
+    client = FinnhubEnrichmentClient(api_key="test")
+    payload = {"data": [{"eps": 1.55, "period": "2026Q2", "numberAnalyst": 12}]}
     with patch("swing_screener.fundamentals.finnhub_client.httpx.get", return_value=_mock_http(payload)):
         result = client._fetch_forward_eps_estimate("AAPL")
 
@@ -319,15 +329,19 @@ def test_fetch_forward_eps_returns_none_on_empty():
 def test_fetch_upgrade_downgrade_net_counts_correctly():
     from swing_screener.fundamentals.finnhub_client import FinnhubEnrichmentClient
     client = FinnhubEnrichmentClient(api_key="test")
+    today = dt.date.today()
+    recent = (today - dt.timedelta(days=15)).strftime("%Y-%m-%d")
+    old = (today - dt.timedelta(days=45)).strftime("%Y-%m-%d")
     payload = [
-        {"action": "up", "company": "Morgan Stanley", "gradeTime": 1000000},
-        {"action": "up", "company": "Goldman Sachs", "gradeTime": 1000000},
-        {"action": "down", "company": "JP Morgan", "gradeTime": 1000000},
+        {"action": "up", "company": "Morgan Stanley", "gradeTime": int(dt.datetime.strptime(recent, "%Y-%m-%d").timestamp())},
+        {"action": "up", "company": "Goldman Sachs", "gradeTime": int(dt.datetime.strptime(recent, "%Y-%m-%d").timestamp())},
+        {"action": "down", "company": "JP Morgan", "gradeTime": int(dt.datetime.strptime(recent, "%Y-%m-%d").timestamp())},
+        {"action": "up", "company": "Old Firm", "gradeTime": int(dt.datetime.strptime(old, "%Y-%m-%d").timestamp())},
     ]
     with patch("swing_screener.fundamentals.finnhub_client.httpx.get", return_value=_mock_http(payload)):
         result = client._fetch_upgrade_downgrade_net("AAPL")
 
-    assert result == 1  # 2 ups - 1 down
+    assert result == 1  # 2 ups - 1 down in last 30 days; old row excluded
 
 
 def test_fetch_upgrade_downgrade_returns_none_on_error():
@@ -359,7 +373,8 @@ def test_enrich_populates_insider_and_estimate_fields():
 
     insider_resp = _mock_http({"data": [{"change": 1000, "transactionCode": "P", "transactionDate": "2026-05-01"}]})
     eps_resp = _mock_http({"data": [{"eps": 1.55, "period": "2026Q2"}]})
-    upgrade_resp = _mock_http([{"action": "up", "gradeTime": 1000000}, {"action": "down", "gradeTime": 1000001}])
+    recent_ts = int(dt.datetime.combine(dt.date.today() - dt.timedelta(days=5), dt.time.min).timestamp())
+    upgrade_resp = _mock_http([{"action": "up", "gradeTime": recent_ts}, {"action": "down", "gradeTime": recent_ts}])
 
     def side_effect(url, **kwargs):
         if "metric" in url:
