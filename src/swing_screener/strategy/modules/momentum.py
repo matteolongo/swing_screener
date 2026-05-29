@@ -72,12 +72,17 @@ def build_momentum_report(
     ohlcv: pd.DataFrame,
     cfg: ReportConfig,
     exclude_tickers: Iterable[str] | None = None,
+    sector_benchmark_returns: dict[str, float] | None = None,
 ) -> pd.DataFrame:
     """
     Pipeline:
       eligible_universe -> ranking top_n -> signals -> trade plans -> merged report
     """
-    univ = eligible_universe(ohlcv, cfg.universe)
+    univ = eligible_universe(
+        ohlcv,
+        cfg.universe,
+        sector_benchmark_returns=sector_benchmark_returns,
+    )
     if univ is None or univ.empty:
         return pd.DataFrame()
 
@@ -164,5 +169,11 @@ class MomentumStrategyModule:
         ohlcv: pd.DataFrame,
         cfg: ReportConfig,
         exclude_tickers: Iterable[str] | None = None,
+        sector_benchmark_returns: dict[str, float] | None = None,
     ) -> pd.DataFrame:
-        return build_momentum_report(ohlcv, cfg=cfg, exclude_tickers=exclude_tickers)
+        return build_momentum_report(
+            ohlcv,
+            cfg=cfg,
+            exclude_tickers=exclude_tickers,
+            sector_benchmark_returns=sector_benchmark_returns,
+        )

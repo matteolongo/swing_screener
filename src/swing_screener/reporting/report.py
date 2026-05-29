@@ -12,6 +12,7 @@ def build_daily_report(
     ohlcv: pd.DataFrame,
     cfg: ReportConfig = ReportConfig(),
     exclude_tickers: Iterable[str] | None = None,
+    sector_benchmark_returns: dict[str, float] | None = None,
 ) -> pd.DataFrame:
     from swing_screener.strategy.orchestrator import build_strategy_report
 
@@ -19,6 +20,7 @@ def build_daily_report(
         ohlcv=ohlcv,
         cfg=cfg,
         exclude_tickers=exclude_tickers,
+        sector_benchmark_returns=sector_benchmark_returns,
     )
 
 

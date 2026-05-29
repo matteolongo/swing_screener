@@ -44,6 +44,7 @@ class UniverseConfig:
 def build_feature_table(
     ohlcv: pd.DataFrame,
     cfg: UniverseConfig = UniverseConfig(),
+    sector_benchmark_returns: dict[str, float] | None = None,
 ) -> pd.DataFrame:
     """
     Join trend + volatility + momentum into a single per-ticker feature table.
@@ -56,7 +57,11 @@ def build_feature_table(
     """
     trend_df = compute_trend_features(ohlcv, cfg.trend)
     vol_df = compute_volatility_features(ohlcv, cfg.vol)
-    mom_df = compute_momentum_features(ohlcv, cfg.mom)
+    mom_df = compute_momentum_features(
+        ohlcv,
+        cfg.mom,
+        sector_benchmark_returns=sector_benchmark_returns,
+    )
 
     feats = trend_df.join(vol_df, how="inner").join(mom_df, how="inner")
 
@@ -149,23 +154,33 @@ def apply_universe_filters(
 def build_universe(
     ohlcv: pd.DataFrame,
     cfg: UniverseConfig = UniverseConfig(),
+    sector_benchmark_returns: dict[str, float] | None = None,
 ) -> pd.DataFrame:
     """
     Shortcut: build features + apply filters.
     """
-    feats = build_feature_table(ohlcv, cfg)
+    feats = build_feature_table(
+        ohlcv,
+        cfg,
+        sector_benchmark_returns=sector_benchmark_returns,
+    )
     return apply_universe_filters(feats, cfg.filt)
 
 
 def eligible_universe(
     ohlcv: pd.DataFrame,
     cfg: UniverseConfig = UniverseConfig(),
+    sector_benchmark_returns: dict[str, float] | None = None,
 ) -> pd.DataFrame:
     """
     Returns only eligible tickers (filtered).
     Sorted by momentum/RS as a convenience.
     """
-    df = build_universe(ohlcv, cfg)
+    df = build_universe(
+        ohlcv,
+        cfg,
+        sector_benchmark_returns=sector_benchmark_returns,
+    )
     df = df[df["is_eligible"]]
     if df.empty:
         return df

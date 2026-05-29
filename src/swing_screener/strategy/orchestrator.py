@@ -12,6 +12,12 @@ def build_strategy_report(
     ohlcv: pd.DataFrame,
     cfg: ReportConfig = ReportConfig(),
     exclude_tickers: Iterable[str] | None = None,
+    sector_benchmark_returns: dict[str, float] | None = None,
 ) -> pd.DataFrame:
     module = get_strategy_module(cfg.strategy_module)
-    return module.build_report(ohlcv, cfg=cfg, exclude_tickers=exclude_tickers)
+    return module.build_report(
+        ohlcv,
+        cfg=cfg,
+        exclude_tickers=exclude_tickers,
+        sector_benchmark_returns=sector_benchmark_returns,
+    )
