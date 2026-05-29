@@ -83,6 +83,8 @@ class ScreenerCandidate(BaseModel):
     close_location_in_range: Optional[float] = None
     above_breakout_extension: Optional[float] = None
     breakout_volume_confirmation: Optional[bool] = None
+    dist_52w_high_pct: Optional[float] = None
+    near_52w_high: Optional[bool] = None
     weekly_trend: Optional[Literal["up", "down", "neutral"]] = None
     volume_ratio: Optional[float] = None
     avg_daily_volume_eur: Optional[float] = None

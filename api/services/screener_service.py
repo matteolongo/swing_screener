@@ -1013,6 +1013,12 @@ class ScreenerService:
                             if not _is_na_scalar(row.get("breakout_volume_confirmation"))
                             else None
                         ),
+                        dist_52w_high_pct=_safe_optional_float(row.get("dist_52w_high_pct")),
+                        near_52w_high=(
+                            bool(row.get("near_52w_high"))
+                            if not _is_na_scalar(row.get("near_52w_high"))
+                            else None
+                        ),
                         weekly_trend=(
                             str(row.get("weekly_trend"))
                             if not _is_na_scalar(row.get("weekly_trend"))

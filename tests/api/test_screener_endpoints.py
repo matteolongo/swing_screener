@@ -822,3 +822,40 @@ def test_screener_preview_order_route_removed():
     )
 
     assert response.status_code == 404
+
+
+def test_screener_candidate_includes_52w_high_fields(monkeypatch):
+    ohlcv = _ohlcv_with_spy()
+    mock_provider = _create_mock_provider(ohlcv)
+
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, **kwargs):
+        return pd.DataFrame(
+            {
+                "atr14": [1.2],
+                "mom_6m": [0.1],
+                "mom_12m": [0.2],
+                "rs_6m": [0.05],
+                "score": [0.55],
+                "confidence": [60.0],
+                "last": [50.0],
+                "ma20_level": [48.0],
+                "dist_sma50_pct": [5.0],
+                "dist_sma200_pct": [10.0],
+                "rank": [1],
+                "dist_52w_high_pct": [-0.03],
+                "near_52w_high": [True],
+            },
+            index=["AAA"],
+        )
+
+    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
+    monkeypatch.setattr(screener_service, "get_multiple_ticker_info", lambda tickers: {})
+
+    client = TestClient(app)
+    res = client.post("/api/screener/run", json={"universe": "broad_market_stocks", "top": 1})
+    assert res.status_code == 200
+    candidate = res.json()["candidates"][0]
+    assert "dist_52w_high_pct" in candidate
+    assert candidate["dist_52w_high_pct"] == pytest.approx(-0.03, abs=1e-4)
+    assert candidate["near_52w_high"] is True

@@ -135,6 +135,7 @@ def build_momentum_report(
         "breakout_level", ma_col,
         "consolidation_tightness", "close_location_in_range",
         "above_breakout_extension", "breakout_volume_confirmation",
+        "dist_52w_high_pct", "near_52w_high",
         "volume_ratio", "avg_daily_volume_eur",
         "entry", "stop", "shares", "position_value", "realized_risk",
     ]
