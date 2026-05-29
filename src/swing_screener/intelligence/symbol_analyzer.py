@@ -15,6 +15,12 @@ _SYSTEM_PROMPT = """\
 You are a swing-trading analyst. Given the technical context below and live web search results, \
 produce a structured analysis for the symbol in English.
 
+CRITICAL RULES — TRADE PLAN NUMBERS:
+• The "Close" in the input is the CURRENT MARKET PRICE — it is NOT the entry price.
+• When a "Planned entry (pullback level)" is provided, ALWAYS use that price as the entry point in the narrative. Never use the Close as the entry.
+• When a "Risk/Reward" value is provided in the Trade plan block, use it exactly as given. Do NOT compute your own R/R from Close.
+• When action is BUY_ON_PULLBACK, the trade has not triggered yet. The stock is currently trading ABOVE the planned entry — the user is waiting for a pullback to that lower level before placing the order.
+
 IMPORTANT RULE — EXISTING POSITION MODE:
 If the input contains an "OPEN POSITION" block, the user already holds this stock.
 In that case you MUST:
@@ -94,30 +100,18 @@ def _build_user_prompt(ticker: str, req: SymbolIntelligenceRequest) -> str:
             "Include position_signal and position_outlook in your JSON output.",
         ]
     else:
+        currency = req.currency or ""
         lines += [
             f"Symbol: {ticker}",
             f"Signal: {req.signal}",
-            f"Close: {fmt(req.close)} {req.currency}",
         ]
 
-    lines += [
-        "",
-        "--- Technical context ---",
-        f"SMA20: {fmt(req.sma_20)} | SMA50: {fmt(req.sma_50)} | SMA200: {fmt(req.sma_200)}",
-        f"Momentum 6m: {fmt(req.momentum_6m)}% | 12m: {fmt(req.momentum_12m)}%",
-        f"Sector: {req.sector or 'Unknown'}",
-    ]
-
-    if not has_position:
-        # Trade plan block
-        if any(x is not None for x in (req.entry, req.stop, req.target, req.rr)):
-            currency = req.currency or ""
-            plan_lines: list[str] = [
-                "",
-                "--- Trade plan ---",
-            ]
-            entry_str = f"Planned entry (pullback level): {fmt(req.entry)} {currency}" if req.entry is not None else ""
-            stop_str = f"Stop loss (invalidation level): {fmt(req.stop)} {currency}" if req.stop is not None else ""
+        # Trade plan block — placed FIRST so the planned entry is the dominant price.
+        # The current market price follows below as context only.
+        if not has_position and any(x is not None for x in (req.entry, req.stop, req.target, req.rr)):
+            plan_lines: list[str] = ["", "--- Trade plan (use these prices in the narrative) ---"]
+            entry_str = f"Planned entry: {fmt(req.entry)} {currency}" if req.entry is not None else ""
+            stop_str = f"Stop loss: {fmt(req.stop)} {currency}" if req.stop is not None else ""
             target_str = f"Price target: {fmt(req.target)} {currency}" if req.target is not None else ""
             price_parts = [p for p in (entry_str, stop_str, target_str) if p]
             if price_parts:
@@ -132,6 +126,18 @@ def _build_user_prompt(ticker: str, req: SymbolIntelligenceRequest) -> str:
             if rr_parts:
                 plan_lines.append(" | ".join(rr_parts))
             lines += plan_lines
+
+        lines.append(f"Current market price (context only, NOT the entry): {fmt(req.close)} {currency}")
+
+    lines += [
+        "",
+        "--- Technical context ---",
+        f"SMA20: {fmt(req.sma_20)} | SMA50: {fmt(req.sma_50)} | SMA200: {fmt(req.sma_200)}",
+        f"Momentum 6m: {fmt(req.momentum_6m)}% | 12m: {fmt(req.momentum_12m)}%",
+        f"Sector: {req.sector or 'Unknown'}",
+    ]
+
+    if not has_position:
 
         # Decision context block
         has_decision = any(
