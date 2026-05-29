@@ -236,3 +236,82 @@ def test_avg_daily_volume_eur_absent_when_no_volume() -> None:
 
     assert "avg_daily_volume_eur" not in result.columns, \
         "avg_daily_volume_eur should not appear when volume data is absent"
+
+
+# ── 52-week high proximity tests ─────────────────────────────────────────────
+
+def _ohlcv_at_252w_high(price: float, n_bars: int = 260) -> pd.DataFrame:
+    """Ticker closing at all-time high in data window."""
+    dates = pd.date_range("2025-01-01", periods=n_bars, freq="B")
+    closes = [price * (1 - (n_bars - i - 1) * 0.001) for i in range(n_bars)]
+    closes[-1] = price  # last bar is the high
+    df = pd.DataFrame(
+        {
+            ("Close", "AAA"): closes,
+            ("High", "AAA"): [c * 1.005 for c in closes],
+            ("Low", "AAA"): [c * 0.995 for c in closes],
+            ("Volume", "AAA"): [1_000_000] * n_bars,
+        },
+        index=dates,
+    )
+    df.columns = pd.MultiIndex.from_tuples(df.columns)
+    return df
+
+
+def _ohlcv_below_52w_high(price: float, high_mult: float = 1.10, n_bars: int = 260) -> pd.DataFrame:
+    """Ticker closing below 252-bar high."""
+    dates = pd.date_range("2025-01-01", periods=n_bars, freq="B")
+    closes = [price] * n_bars
+    closes[120] = price * high_mult  # inject past high
+    df = pd.DataFrame(
+        {
+            ("Close", "AAA"): closes,
+            ("High", "AAA"): [c * 1.005 for c in closes],
+            ("Low", "AAA"): [c * 0.995 for c in closes],
+            ("Volume", "AAA"): [1_000_000] * n_bars,
+        },
+        index=dates,
+    )
+    df.columns = pd.MultiIndex.from_tuples(df.columns)
+    return df
+
+
+def test_dist_52w_high_is_zero_when_at_high():
+    ohlcv = _ohlcv_at_252w_high(price=50.0)
+    result = compute_setup_quality(ohlcv)
+    assert "dist_52w_high_pct" in result.columns
+    assert result.loc["AAA", "dist_52w_high_pct"] == pytest.approx(0.0, abs=1e-4)
+
+
+def test_dist_52w_high_is_negative_when_below_high():
+    ohlcv = _ohlcv_below_52w_high(price=50.0, high_mult=1.10)
+    result = compute_setup_quality(ohlcv)
+    dist = result.loc["AAA", "dist_52w_high_pct"]
+    assert dist < 0
+    # high = price * 1.10, close = price → dist = (price - price*1.10) / (price*1.10) = -0.1/1.10
+    assert dist == pytest.approx(-0.1 / 1.10, rel=0.01)
+
+
+def test_near_52w_high_true_within_5_pct():
+    ohlcv = _ohlcv_below_52w_high(price=50.0, high_mult=1.03)
+    result = compute_setup_quality(ohlcv)
+    assert result.loc["AAA", "near_52w_high"] == True
+
+
+def test_near_52w_high_false_when_far_below():
+    ohlcv = _ohlcv_below_52w_high(price=50.0, high_mult=1.15)
+    result = compute_setup_quality(ohlcv)
+    assert result.loc["AAA", "near_52w_high"] == False
+
+
+def test_dist_52w_high_nan_when_insufficient_history():
+    dates = pd.date_range("2025-01-01", periods=100, freq="B")
+    closes = [50.0] * 100
+    df = pd.DataFrame(
+        {("Close", "AAA"): closes, ("High", "AAA"): [c * 1.005 for c in closes], ("Low", "AAA"): [c * 0.995 for c in closes]},
+        index=dates,
+    )
+    df.columns = pd.MultiIndex.from_tuples(df.columns)
+    result = compute_setup_quality(df)
+    if "dist_52w_high_pct" in result.columns and "AAA" in result.index:
+        assert pd.isna(result.loc["AAA", "dist_52w_high_pct"])

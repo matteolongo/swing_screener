@@ -50,7 +50,7 @@ def compute_setup_quality(
 
     if close_m is None or close_m.empty:
         return pd.DataFrame(
-            columns=["consolidation_tightness", "close_location_in_range", "above_breakout_extension"],
+            columns=["consolidation_tightness", "close_location_in_range", "above_breakout_extension", "dist_52w_high_pct", "near_52w_high"],
             index=pd.Index([], name="ticker"),
         )
 
@@ -123,6 +123,17 @@ def compute_setup_quality(
                 ext = max(0.0, (last_close / prior_high_50) - 1.0)
         row["above_breakout_extension"] = ext
 
+        # ── 52-week high proximity ────────────────────────────────────────────
+        dist_52w = float("nan")
+        near_high = float("nan")
+        if len(c) >= 252:
+            rolling_max_252 = float(c.iloc[-252:].max())
+            if rolling_max_252 > 0:
+                dist_52w = (last_close - rolling_max_252) / rolling_max_252  # <= 0
+                near_high = dist_52w >= -0.05
+        row["dist_52w_high_pct"] = dist_52w
+        row["near_52w_high"] = near_high
+
         # ── breakout_volume_confirmation + volume_ratio + avg_daily_volume_eur ─
         if vol_m is not None and ticker in vol_m.columns:
             v = vol_m[ticker].dropna()
@@ -138,7 +149,7 @@ def compute_setup_quality(
 
     if not rows:
         return pd.DataFrame(
-            columns=["consolidation_tightness", "close_location_in_range", "above_breakout_extension"],
+            columns=["consolidation_tightness", "close_location_in_range", "above_breakout_extension", "dist_52w_high_pct", "near_52w_high"],
             index=pd.Index([], name="ticker"),
         )
 
