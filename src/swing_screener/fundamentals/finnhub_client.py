@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime as dt
 import logging
 from dataclasses import replace
 from typing import Any
@@ -114,6 +115,63 @@ class FinnhubEnrichmentClient:
         except Exception as exc:
             logger.debug("Finnhub /stock/earnings failed for %s: %s", symbol, exc)
             return None
+
+    def _fetch_insider_transactions(self, symbol: str) -> tuple[int | None, int | None]:
+        """Returns (net_shares_90d, transaction_count_90d). net_shares > 0 = net buy."""
+        from_date = (dt.date.today() - dt.timedelta(days=90)).isoformat()
+        try:
+            data = self._get("/stock/insider-transactions", {"symbol": symbol, "from": from_date})
+            rows = data.get("data") or []
+        except Exception as exc:
+            logger.debug("Finnhub /stock/insider-transactions failed for %s: %s", symbol, exc)
+            return None, None
+
+        if not rows:
+            return None, None
+
+        net = 0
+        for row in rows:
+            change = _safe_float(row.get("change"))
+            if change is not None:
+                net += int(change)
+        return net, len(rows)
+
+    def _fetch_forward_eps_estimate(self, symbol: str) -> float | None:
+        """Next quarter EPS consensus estimate."""
+        try:
+            data = self._get("/stock/eps-estimate", {"symbol": symbol, "freq": "quarterly"})
+            rows = data.get("data") or []
+            if not rows:
+                return None
+            return _safe_float(rows[0].get("eps"))
+        except Exception as exc:
+            logger.debug("Finnhub /stock/eps-estimate failed for %s: %s", symbol, exc)
+            return None
+
+    def _fetch_upgrade_downgrade_net(self, symbol: str) -> int | None:
+        """Net analyst actions (upgrades minus downgrades) in the last 30 days."""
+        from_date = (dt.date.today() - dt.timedelta(days=30)).isoformat()
+        cutoff_ts = (dt.datetime.utcnow() - dt.timedelta(days=30)).timestamp()
+        try:
+            items = self._get("/stock/upgrade-downgrade", {"symbol": symbol, "from": from_date})
+            if not items:
+                return None
+        except Exception as exc:
+            logger.debug("Finnhub /stock/upgrade-downgrade failed for %s: %s", symbol, exc)
+            return None
+
+        upgrades = 0
+        downgrades = 0
+        for item in items:
+            grade_time = item.get("gradeTime") or 0
+            if float(grade_time) < cutoff_ts:
+                continue
+            action = str(item.get("action") or "").lower()
+            if action == "up":
+                upgrades += 1
+            elif action == "down":
+                downgrades += 1
+        return upgrades - downgrades
 
     def enrich(self, record: ProviderFundamentalsRecord) -> ProviderFundamentalsRecord:
         """Fill None fields and add analyst signals. Never raises."""

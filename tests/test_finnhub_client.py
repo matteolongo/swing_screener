@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime as dt
 import pytest
 from unittest.mock import MagicMock, patch
 
@@ -253,3 +254,90 @@ def test_enrich_one_failed_signal_does_not_block_others():
 
     assert enriched.analyst_recommendation_score == pytest.approx(33.0)
     assert enriched.analyst_price_target is None
+
+
+def _mock_http(json_body) -> MagicMock:
+    resp = MagicMock()
+    resp.json.return_value = json_body
+    resp.raise_for_status = MagicMock()
+    return resp
+
+
+def test_fetch_insider_net_shares_positive_for_net_buyer():
+    from swing_screener.fundamentals.finnhub_client import FinnhubEnrichmentClient
+    client = FinnhubEnrichmentClient(api_key="test")
+    payload = {
+        "data": [
+            {"change": 5000, "transactionCode": "P", "transactionDate": "2026-05-01"},
+            {"change": -2000, "transactionCode": "S", "transactionDate": "2026-04-20"},
+            {"change": 3000, "transactionCode": "P", "transactionDate": "2026-04-10"},
+        ]
+    }
+    with patch("swing_screener.fundamentals.finnhub_client.httpx.get", return_value=_mock_http(payload)):
+        net, count = client._fetch_insider_transactions("AAPL")
+
+    assert net == 6000   # 5000 + 3000 - 2000
+    assert count == 3
+
+
+def test_fetch_insider_returns_none_on_empty_data():
+    from swing_screener.fundamentals.finnhub_client import FinnhubEnrichmentClient
+    client = FinnhubEnrichmentClient(api_key="test")
+    with patch("swing_screener.fundamentals.finnhub_client.httpx.get", return_value=_mock_http({"data": []})):
+        net, count = client._fetch_insider_transactions("AAPL")
+
+    assert net is None
+    assert count is None
+
+
+def test_fetch_forward_eps_returns_first_quarter_estimate():
+    from swing_screener.fundamentals.finnhub_client import FinnhubEnrichmentClient
+    client = FinnhubEnrichmentClient(api_key="test")
+    payload = {
+        "data": [
+            {"eps": 1.55, "period": "2026Q2", "numberAnalyst": 12},
+            {"eps": 1.70, "period": "2026Q3", "numberAnalyst": 10},
+        ],
+        "freq": "quarterly",
+        "symbol": "AAPL",
+    }
+    with patch("swing_screener.fundamentals.finnhub_client.httpx.get", return_value=_mock_http(payload)):
+        result = client._fetch_forward_eps_estimate("AAPL")
+
+    assert result == pytest.approx(1.55)
+
+
+def test_fetch_forward_eps_returns_none_on_empty():
+    from swing_screener.fundamentals.finnhub_client import FinnhubEnrichmentClient
+    client = FinnhubEnrichmentClient(api_key="test")
+    with patch("swing_screener.fundamentals.finnhub_client.httpx.get", return_value=_mock_http({"data": []})):
+        result = client._fetch_forward_eps_estimate("AAPL")
+
+    assert result is None
+
+
+def test_fetch_upgrade_downgrade_net_counts_correctly():
+    from swing_screener.fundamentals.finnhub_client import FinnhubEnrichmentClient
+    client = FinnhubEnrichmentClient(api_key="test")
+    today = dt.date.today()
+    recent = (today - dt.timedelta(days=15)).strftime("%Y-%m-%d")
+    old = (today - dt.timedelta(days=45)).strftime("%Y-%m-%d")
+    payload = [
+        {"action": "up", "company": "Morgan Stanley", "gradeTime": int(dt.datetime.strptime(recent, "%Y-%m-%d").timestamp())},
+        {"action": "up", "company": "Goldman Sachs", "gradeTime": int(dt.datetime.strptime(recent, "%Y-%m-%d").timestamp())},
+        {"action": "down", "company": "JP Morgan", "gradeTime": int(dt.datetime.strptime(recent, "%Y-%m-%d").timestamp())},
+        {"action": "up", "company": "Old Firm", "gradeTime": int(dt.datetime.strptime(old, "%Y-%m-%d").timestamp())},
+    ]
+    with patch("swing_screener.fundamentals.finnhub_client.httpx.get", return_value=_mock_http(payload)):
+        result = client._fetch_upgrade_downgrade_net("AAPL")
+
+    assert result == 1  # 2 ups - 1 down in last 30 days; old one excluded
+
+
+def test_fetch_upgrade_downgrade_returns_none_on_error():
+    from swing_screener.fundamentals.finnhub_client import FinnhubEnrichmentClient
+    client = FinnhubEnrichmentClient(api_key="test")
+    with patch("swing_screener.fundamentals.finnhub_client.httpx.get", side_effect=Exception("timeout")):
+        result = client._fetch_upgrade_downgrade_net("AAPL")
+
+    assert result is None
