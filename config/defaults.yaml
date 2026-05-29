@@ -104,6 +104,16 @@ strategy:
       - SPY
       - QQQ
       - XLK
+      - XLF
+      - XLE
+      - XLV
+      - XLI
+      - XLY
+      - XLP
+      - XLB
+      - XLU
+      - XLRE
+      - XLC
       - SMH
       - XBI
     llm:
@@ -197,6 +207,16 @@ intelligence:
     - SPY
     - QQQ
     - XLK
+    - XLF
+    - XLE
+    - XLV
+    - XLI
+    - XLY
+    - XLP
+    - XLB
+    - XLU
+    - XLRE
+    - XLC
     - SMH
     - XBI
   llm:

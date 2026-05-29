@@ -37,6 +37,7 @@ from swing_screener.data.market_data import MarketDataConfig
 from swing_screener.data.providers import MarketDataProvider, get_default_provider
 from swing_screener.data.currency import detect_currency
 from swing_screener.data.ticker_info import get_multiple_ticker_info
+from swing_screener.data import sector_rotation
 from swing_screener.reporting.report import ReportConfig, build_daily_report
 from swing_screener.reporting.concentration import sector_concentration_warnings
 from swing_screener.fundamentals.storage import FundamentalsStorage
@@ -791,7 +792,17 @@ class ScreenerService:
             # but not passed to provider (provider has its own defaults)
             start_date = "2022-01-01"
             end_date = asof_str
-            
+            sector_context_tickers = ["SPY", *sector_rotation.SECTOR_ETFS.keys()]
+            sector_ohlcv = pd.DataFrame()
+            try:
+                sector_ohlcv = self._provider.fetch_ohlcv(
+                    sector_context_tickers,
+                    start_date=start_date,
+                    end_date=end_date,
+                )
+            except Exception as exc:
+                logger.warning("Sector ETF OHLCV fetch failed: %s", exc)
+
             logger.info(
                 "Screener run: universe=%s top=%s tickers=%s provider=%s",
                 request.universe or "broad_market_stocks",
@@ -808,6 +819,8 @@ class ScreenerService:
             if ohlcv is None or ohlcv.empty:
                 logger.error("OHLCV fetch returned empty data (tickers=%s)", len(tickers))
                 raise HTTPException(status_code=404, detail="No market data found for requested tickers")
+
+            ohlcv = _merge_ohlcv(ohlcv, sector_ohlcv)
 
             if "Close" not in ohlcv.columns.get_level_values(0) or benchmark not in ohlcv["Close"].columns:
                 logger.warning("Benchmark %s missing from OHLCV; fetching separately.", benchmark)
@@ -880,7 +893,29 @@ class ScreenerService:
                 risk=risk_cfg,
             )
 
-            results = build_daily_report(ohlcv, cfg=report_cfg, exclude_tickers=[])
+            ticker_info = get_multiple_ticker_info(screening_tickers) if screening_tickers else {}
+            etf_returns = sector_rotation.compute_sector_benchmark_returns(ohlcv)
+            rotation_scores = sector_rotation.compute_sector_rotation_scores(ohlcv)
+            ticker_sectors = {
+                ticker: (ticker_info.get(ticker) or {}).get("sector")
+                for ticker in screening_tickers
+            }
+            sector_benchmark_returns = sector_rotation.build_ticker_sector_returns(
+                ticker_sectors,
+                etf_returns,
+            )
+            sector_rotation_by_name = {
+                sector_name: rotation_scores[etf]
+                for etf, sector_name in sector_rotation.SECTOR_ETFS.items()
+                if etf in rotation_scores
+            }
+
+            results = build_daily_report(
+                ohlcv,
+                cfg=report_cfg,
+                exclude_tickers=sector_rotation.SECTOR_ETFS.keys(),
+                sector_benchmark_returns=sector_benchmark_returns,
+            )
             if results is None or results.empty:
                 logger.warning(
                     "Screener returned no candidates (top=%s, tickers=%s).",
@@ -912,7 +947,6 @@ class ScreenerService:
                 logger.warning(message)
 
             ticker_list = [str(idx) for idx in results.index]
-            ticker_info = get_multiple_ticker_info(ticker_list) if ticker_list else {}
             
             # Build price history only for candidate tickers to improve performance
             price_history_map = _price_history_map(ohlcv, tickers=ticker_list)
@@ -1042,6 +1076,7 @@ class ScreenerService:
                         avg_daily_volume_eur=_safe_optional_float(row.get("avg_daily_volume_eur")),
                         symbol_change_pct=symbol_change_pct,
                         benchmark_outperformance_pct=benchmark_outperformance_pct,
+                        sector_rotation_context=sector_rotation_by_name.get(info.get("sector")),
                         data_source_summary={"market_data": market_health},
                         signal=str(signal) if not _is_na_scalar(signal) else None,
                         entry=rec_risk.entry,

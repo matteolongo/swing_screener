@@ -91,6 +91,7 @@ class ScreenerCandidate(BaseModel):
     symbol_change_pct: Optional[float] = None
     benchmark_outperformance_pct: Optional[float] = None
     days_to_earnings: Optional[int] = None
+    sector_rotation_context: Optional[dict] = None
 
 
 class ScreenerRequest(BaseModel):

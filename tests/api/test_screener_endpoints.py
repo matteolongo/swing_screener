@@ -110,7 +110,7 @@ def test_screener_top_over_100_returns_candidates(monkeypatch):
     ohlcv = _ohlcv_with_spy()
     mock_provider = _create_mock_provider(ohlcv)
 
-    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None):
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None):
         idx = [f"T{i:03d}" for i in range(150)]
         data = {
             "atr14": [1.2] * len(idx),
@@ -161,7 +161,7 @@ def test_screener_recommendation_payload_shape(monkeypatch):
     ohlcv = _ohlcv_with_spy()
     mock_provider = _create_mock_provider(ohlcv)
 
-    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None):
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None):
         idx = ["AAA"]
         data = {
             "atr14": [1.2],
@@ -230,7 +230,7 @@ def test_screener_response_includes_market_data_source_summary(monkeypatch):
     ohlcv = _ohlcv_with_spy()
     mock_provider = _create_mock_provider(ohlcv)
 
-    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None):
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None):
         return pd.DataFrame(
             {
                 "atr14": [1.2],
@@ -267,7 +267,7 @@ def test_screener_candidate_includes_days_to_earnings(monkeypatch):
     ohlcv = _ohlcv_with_spy()
     mock_provider = _create_mock_provider(ohlcv)
 
-    def fake_report(ohlcv, cfg, exclude_tickers=None):
+    def fake_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None):
         return pd.DataFrame(
             {
                 "atr14": [1.2],
@@ -300,11 +300,65 @@ def test_screener_candidate_includes_days_to_earnings(monkeypatch):
     assert candidate.get("days_to_earnings") == 12
 
 
+def test_screener_candidate_includes_sector_rotation_context(monkeypatch):
+    ohlcv = _ohlcv_with_spy()
+    mock_provider = _create_mock_provider(ohlcv)
+    captured: dict[str, object] = {}
+
+    def fake_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None):
+        captured["sector_benchmark_returns"] = sector_benchmark_returns
+        return pd.DataFrame(
+            {
+                "atr14": [1.2],
+                "mom_6m": [0.10],
+                "mom_12m": [0.20],
+                "rs_6m": [0.05],
+                "sector_rs_6m": [0.03],
+                "score": [0.55],
+                "confidence": [60.0],
+                "last": [50.0],
+                "ma20_level": [48.0],
+                "dist_sma50_pct": [5.0],
+                "dist_sma200_pct": [10.0],
+                "rank": [1],
+            },
+            index=["AAA"],
+        )
+
+    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(screener_service, "build_daily_report", fake_report)
+    monkeypatch.setattr(
+        screener_service,
+        "get_multiple_ticker_info",
+        lambda tickers: {"AAA": {"sector": "Technology"}},
+    )
+
+    from swing_screener.data import sector_rotation as sr
+
+    monkeypatch.setattr(sr, "compute_sector_benchmark_returns", lambda ohlcv, **kw: {"XLK": 0.07})
+    monkeypatch.setattr(
+        sr,
+        "compute_sector_rotation_scores",
+        lambda ohlcv, **kw: {"XLK": {"fast_rs": 0.04, "slow_rs": 0.02, "in_rotation": True}},
+    )
+
+    client = TestClient(app)
+    res = client.post("/api/screener/run", json={"tickers": ["AAA"], "top": 1})
+    assert res.status_code == 200
+    candidate = res.json()["candidates"][0]
+    assert candidate["sector_rotation_context"] == {
+        "fast_rs": 0.04,
+        "slow_rs": 0.02,
+        "in_rotation": True,
+    }
+    assert captured["sector_benchmark_returns"] == {"AAA": 0.07}
+
+
 def test_screener_filters_candidates_too_close_to_earnings(monkeypatch):
     ohlcv = _ohlcv_with_spy()
     mock_provider = _create_mock_provider(ohlcv)
 
-    def fake_report(ohlcv, cfg, exclude_tickers=None):
+    def fake_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None):
         return pd.DataFrame(
             {
                 "atr14": [1.2, 1.2],
@@ -343,7 +397,7 @@ def test_screener_attaches_benchmark_comparison(monkeypatch):
     ohlcv = _ohlcv_with_symbol_and_spy()
     mock_provider = _create_mock_provider(ohlcv)
 
-    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None):
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None):
         idx = ["AAA"]
         data = {
             "atr14": [1.2],
@@ -382,7 +436,7 @@ def test_screener_response_is_prioritized_by_decision_action_and_conviction(monk
     ohlcv = _ohlcv_with_spy()
     mock_provider = _create_mock_provider(ohlcv)
 
-    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None):
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None):
         idx = ["AAA", "BBB", "CCC"]
         data = {
             "atr14": [1.2, 1.2, 1.2],
@@ -447,7 +501,7 @@ def test_screener_currency_comes_from_metadata(monkeypatch):
     ohlcv = _ohlcv_with_spy()
     mock_provider = _create_mock_provider(ohlcv)
 
-    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None):
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None):
         idx = ["ASML.AS"]
         data = {
             "atr14": [1.2],
@@ -484,7 +538,7 @@ def test_screener_request_currency_filter_overrides_strategy(monkeypatch):
     mock_provider = _create_mock_provider(ohlcv)
     captured = {}
 
-    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None):
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None):
         captured["currencies"] = cfg.universe.filt.currencies
         idx = ["AAPL"]
         data = {
@@ -525,7 +579,7 @@ def test_screener_exchange_filter_reduces_working_list(monkeypatch):
         captured["tickers"] = list(tickers)
         return ohlcv
 
-    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None):
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None):
         del ohlcv, cfg, exclude_tickers
         return pd.DataFrame(
             {
@@ -569,7 +623,7 @@ def test_screener_returns_same_symbol_add_on_metadata(monkeypatch):
     ohlcv = _ohlcv_with_spy()
     mock_provider = _create_mock_provider(ohlcv)
 
-    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None):
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None):
         idx = ["REP.MC"]
         data = {
             "atr14": [0.8],
@@ -684,7 +738,7 @@ def test_screener_uses_universe_currency_for_european_close(monkeypatch):
     ohlcv = _ohlcv_with_abn_and_aex()
     mock_provider = _create_mock_provider(ohlcv)
 
-    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None):
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None):
         idx = ["ABN.AS"]
         data = {
             "atr14": [1.0],
@@ -842,7 +896,7 @@ def test_screener_require_weekly_uptrend_overrides_strategy(monkeypatch):
     mock_provider = _create_mock_provider(ohlcv)
     captured: list = []
 
-    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None):
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None):
         captured.append(cfg)
         idx = ["AAPL"]
         data = {
