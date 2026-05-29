@@ -4,7 +4,7 @@ from dataclasses import replace
 
 import pytest
 
-from swing_screener.fundamentals.config import FundamentalsConfig
+from swing_screener.fundamentals.config import FundamentalsConfig, build_fundamentals_config
 from swing_screener.fundamentals.models import (
     FundamentalMetricContext,
     FundamentalMetricSeries,
@@ -395,7 +395,24 @@ def test_fundamentals_service_builds_supported_quarterly_snapshot_with_high_trus
     assert snapshot.metric_context["revenue_growth_yoy"].cadence == "quarterly"
     assert snapshot.data_quality_status == "high"
     assert snapshot.data_quality_flags == []
+    assert 0.0 <= snapshot.data_confidence_score <= 1.0
+    assert snapshot.data_confidence_score == pytest.approx(0.9)
+    assert snapshot.source_health["provider"] == "yfinance"
+    assert snapshot.source_health["domain"] == "fundamentals"
+    assert snapshot.source_health["status"] == "ok"
     assert "Quarterly revenue trend is improving." in snapshot.highlights
+
+
+def test_default_fundamentals_config_excludes_degiro_when_integration_unavailable():
+    cfg = build_fundamentals_config({})
+
+    assert cfg.providers == ("sec_edgar", "yfinance")
+
+
+def test_explicit_fundamentals_config_still_allows_degiro_provider_name():
+    cfg = build_fundamentals_config({"providers": ["degiro", "yfinance"]})
+
+    assert cfg.providers == ("degiro", "yfinance")
 
 
 def test_fundamentals_service_marks_etf_as_unsupported(tmp_path):

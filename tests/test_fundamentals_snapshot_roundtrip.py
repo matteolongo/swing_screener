@@ -181,3 +181,32 @@ def test_snapshot_from_dict_new_fields_default_to_none_when_absent():
     assert snapshot.analyst_recommendation_score is None
     assert snapshot.analyst_price_target is None
     assert snapshot.earnings_beat_streak is None
+
+
+def test_snapshot_from_dict_handles_malformed_new_numeric_fields():
+    from swing_screener.fundamentals.models import FundamentalSnapshot
+    cases = [
+        ("not-a-number", {}, [], "bad-score"),
+        ("NaN", "Infinity", "-Infinity", "NaN"),
+        ("Infinity", "-Infinity", "NaN", "Infinity"),
+        ("-Infinity", "NaN", "Infinity", "-Infinity"),
+    ]
+
+    for total_assets, total_liabilities, cash_and_equivalents, data_confidence_score in cases:
+        payload = {
+            "symbol": "AAPL",
+            "asof_date": "2026-05-27",
+            "provider": "yfinance",
+            "updated_at": "2026-05-27T10:00:00",
+            "total_assets": total_assets,
+            "total_liabilities": total_liabilities,
+            "cash_and_equivalents": cash_and_equivalents,
+            "data_confidence_score": data_confidence_score,
+        }
+
+        snapshot = FundamentalSnapshot.from_dict(payload)
+
+        assert snapshot.total_assets is None
+        assert snapshot.total_liabilities is None
+        assert snapshot.cash_and_equivalents is None
+        assert snapshot.data_confidence_score == 0.5

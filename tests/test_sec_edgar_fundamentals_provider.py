@@ -169,6 +169,42 @@ def test_sec_edgar_provider_builds_quarterly_record(monkeypatch):
                         ]
                     }
                 },
+                "Assets": {
+                    "units": {
+                        "USD": [
+                            {
+                                "end": "2026-03-31",
+                                "val": 3500.0,
+                                "form": "10-Q",
+                                "filed": "2026-05-01",
+                            }
+                        ]
+                    }
+                },
+                "Liabilities": {
+                    "units": {
+                        "USD": [
+                            {
+                                "end": "2026-03-31",
+                                "val": 2700.0,
+                                "form": "10-Q",
+                                "filed": "2026-05-01",
+                            }
+                        ]
+                    }
+                },
+                "CashAndCashEquivalentsAtCarryingValue": {
+                    "units": {
+                        "USD": [
+                            {
+                                "end": "2026-03-31",
+                                "val": 600.0,
+                                "form": "10-Q",
+                                "filed": "2026-05-01",
+                            }
+                        ]
+                    }
+                },
                 "AssetsCurrent": {
                     "units": {
                         "USD": [
@@ -242,7 +278,18 @@ def test_sec_edgar_provider_builds_quarterly_record(monkeypatch):
     assert record.current_ratio == 2.0
     assert record.shares_outstanding == 100.0
     assert record.total_equity == 800.0
+    assert record.total_assets == 3500.0
+    assert record.total_liabilities == 2700.0
+    assert record.cash_and_equivalents == 600.0
+    assert record.latest_filing_form == "10-Q"
+    assert record.latest_filing_date == "2026-05-01"
     assert record.most_recent_quarter == "2026-03-31"
+    assert record.metric_sources["total_assets"] == "sec_edgar.us-gaap.Assets"
+    assert record.metric_sources["total_liabilities"] == "sec_edgar.us-gaap.Liabilities"
+    assert (
+        record.metric_sources["cash_and_equivalents"]
+        == "sec_edgar.us-gaap.CashAndCashEquivalentsAtCarryingValue"
+    )
     assert record.historical_series["revenue"].frequency == "quarterly"
     assert record.historical_series["free_cash_flow"].points[-1].value == 200.0
     assert record.historical_series["free_cash_flow_margin"].points[-1].value == 200.0 / 1200.0

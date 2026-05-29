@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import replace
 from datetime import date, datetime
 
+from swing_screener.data.source_health import DataSourceHealth
 from swing_screener.fundamentals.config import FundamentalsConfig
 from swing_screener.fundamentals.models import (
     FundamentalMetricContext,
@@ -36,6 +37,9 @@ _METRIC_LABELS = {
     "book_value_per_share": "Book value / share",
     "price_to_book": "Price / book",
     "book_to_price": "Book / price",
+    "total_assets": "Total assets",
+    "total_liabilities": "Total liabilities",
+    "cash_and_equivalents": "Cash and equivalents",
 }
 
 
@@ -114,6 +118,9 @@ def _coverage_status(record: ProviderFundamentalsRecord, supported: bool) -> str
         record.price_to_sales,
         record.book_value_per_share,
         record.price_to_book,
+        record.total_assets,
+        record.total_liabilities,
+        record.cash_and_equivalents,
     ]
     count = sum(1 for value in available if value is not None)
     if count >= 7:
@@ -738,6 +745,46 @@ def _valuation_attractiveness_score(pillars: dict[str, FundamentalPillarScore]) 
     return valuation.score
 
 
+def _data_confidence_score(
+    *,
+    coverage_status: str,
+    freshness_status: str,
+    data_quality_status: str,
+) -> float:
+    coverage = {
+        "supported": 0.9,
+        "partial": 0.6,
+        "insufficient": 0.3,
+        "unsupported": 0.1,
+    }.get(coverage_status, 0.3)
+    freshness = {
+        "current": 1.0,
+        "stale": 0.55,
+        "unknown": 0.45,
+    }.get(freshness_status, 0.45)
+    quality = {
+        "high": 1.0,
+        "medium": 0.75,
+        "low": 0.45,
+    }.get(data_quality_status, 0.45)
+    return round(max(0.0, min(1.0, coverage * freshness * quality)), 4)
+
+
+def _source_health_status(
+    *,
+    coverage_status: str,
+    freshness_status: str,
+    data_quality_status: str,
+) -> str:
+    if (
+        coverage_status != "supported"
+        or freshness_status != "current"
+        or data_quality_status == "low"
+    ):
+        return "degraded"
+    return "ok"
+
+
 def build_snapshot(record: ProviderFundamentalsRecord, cfg: FundamentalsConfig) -> FundamentalSnapshot:
     resolved_record = _resolved_record(record)
     supported = _is_supported_equity(resolved_record.instrument_type)
@@ -748,6 +795,23 @@ def build_snapshot(record: ProviderFundamentalsRecord, cfg: FundamentalsConfig) 
     red_flags = _build_red_flags(resolved_record, freshness_status, historical_series)
     highlights = _build_highlights(resolved_record, pillars, coverage_status, historical_series)
     data_quality_status, data_quality_flags = _build_data_quality(resolved_record, historical_series)
+    data_confidence_score = _data_confidence_score(
+        coverage_status=coverage_status,
+        freshness_status=freshness_status,
+        data_quality_status=data_quality_status,
+    )
+    source_health = DataSourceHealth(
+        provider=resolved_record.provider,
+        domain="fundamentals",
+        status=_source_health_status(
+            coverage_status=coverage_status,
+            freshness_status=freshness_status,
+            data_quality_status=data_quality_status,
+        ),
+        quality_score=data_confidence_score,
+        delay_policy=freshness_status,
+        warnings=data_quality_flags,
+    ).to_dict()
 
     # Compute trend acceleration signals
     rev_accel = _revenue_acceleration(historical_series)
@@ -803,6 +867,11 @@ def build_snapshot(record: ProviderFundamentalsRecord, cfg: FundamentalsConfig) 
         book_value_per_share=resolved_record.book_value_per_share,
         price_to_book=resolved_record.price_to_book,
         book_to_price=resolved_record.book_to_price,
+        total_assets=resolved_record.total_assets,
+        total_liabilities=resolved_record.total_liabilities,
+        cash_and_equivalents=resolved_record.cash_and_equivalents,
+        latest_filing_form=resolved_record.latest_filing_form,
+        latest_filing_date=resolved_record.latest_filing_date,
         most_recent_quarter=resolved_record.most_recent_quarter,
         data_region=resolved_record.data_region,
         pillars=pillars,
@@ -810,6 +879,8 @@ def build_snapshot(record: ProviderFundamentalsRecord, cfg: FundamentalsConfig) 
         metric_context=resolved_record.metric_context,
         data_quality_status=data_quality_status,
         data_quality_flags=data_quality_flags,
+        data_confidence_score=data_confidence_score,
+        source_health=source_health,
         red_flags=red_flags,
         highlights=highlights,
         metric_sources=resolved_record.metric_sources,
@@ -842,6 +913,15 @@ def build_provider_error_snapshot(symbol: str, provider: str, error: str) -> Fun
         metric_context={},
         data_quality_status="low",
         data_quality_flags=["Provider reported an error; snapshot may be incomplete."],
+        data_confidence_score=0.0,
+        source_health=DataSourceHealth(
+            provider=provider,
+            domain="fundamentals",
+            status="failed",
+            quality_score=0.0,
+            delay_policy="unknown",
+            warnings=["Provider reported an error; snapshot may be incomplete."],
+        ).to_dict(),
         red_flags=[error],
         highlights=["Provider call failed; no fresh fundamental snapshot is available."],
         error=error,

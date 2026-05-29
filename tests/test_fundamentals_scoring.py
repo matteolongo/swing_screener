@@ -8,14 +8,20 @@ from pytest import approx
 
 from swing_screener.fundamentals.scoring import (
     _coverage_penalty_from_pillars,
+    _data_confidence_score,
     _freshness_penalty_from_date,
     _revenue_acceleration,
     _linear_slope,
+    build_provider_error_snapshot,
+    build_snapshot,
 )
 from swing_screener.fundamentals.models import (
+    FundamentalSnapshot,
     FundamentalMetricSeries,
     FundamentalSeriesPoint,
+    ProviderFundamentalsRecord,
 )
+from swing_screener.fundamentals.config import FundamentalsConfig
 
 
 # ---------------------------------------------------------------------------
@@ -115,3 +121,145 @@ def test_linear_slope_increasing():
 
 def test_linear_slope_insufficient_data():
     assert _linear_slope([5.0]) is None
+
+
+def test_data_confidence_score_uses_multiplicative_plan_formula():
+    strong = _data_confidence_score(
+        coverage_status="supported",
+        freshness_status="current",
+        data_quality_status="high",
+    )
+    partial_stale = _data_confidence_score(
+        coverage_status="partial",
+        freshness_status="stale",
+        data_quality_status="medium",
+    )
+    weak = _data_confidence_score(
+        coverage_status="insufficient",
+        freshness_status="unknown",
+        data_quality_status="low",
+    )
+
+    assert strong == 0.9
+    assert partial_stale == 0.2475
+    assert weak == 0.0608
+    assert 0.0 <= weak <= 1.0
+    assert 0.0 <= strong <= 1.0
+    assert strong > weak
+
+
+def test_snapshot_from_dict_missing_confidence_defaults_to_neutral():
+    snapshot = FundamentalSnapshot.from_dict(
+        {
+            "symbol": "AAPL",
+            "asof_date": "2026-05-28",
+            "provider": "yfinance",
+            "updated_at": "2026-05-28T10:00:00",
+        }
+    )
+
+    assert snapshot.data_confidence_score == 0.5
+
+
+def test_snapshot_from_dict_malformed_confidence_and_balance_sheet_fields_are_defensive():
+    cases = [
+        ("bad-assets", {}, [], "bad-score"),
+        ("NaN", "Infinity", "-Infinity", "NaN"),
+        ("Infinity", "-Infinity", "NaN", "Infinity"),
+        ("-Infinity", "NaN", "Infinity", "-Infinity"),
+    ]
+    for total_assets, total_liabilities, cash_and_equivalents, data_confidence_score in cases:
+        snapshot = FundamentalSnapshot.from_dict(
+            {
+                "symbol": "AAPL",
+                "asof_date": "2026-05-28",
+                "provider": "yfinance",
+                "updated_at": "2026-05-28T10:00:00",
+                "total_assets": total_assets,
+                "total_liabilities": total_liabilities,
+                "cash_and_equivalents": cash_and_equivalents,
+                "data_confidence_score": data_confidence_score,
+            }
+        )
+
+        assert snapshot.total_assets is None
+        assert snapshot.total_liabilities is None
+        assert snapshot.cash_and_equivalents is None
+        assert snapshot.data_confidence_score == 0.5
+
+
+def test_stale_high_quality_snapshot_marks_source_health_degraded():
+    record = ProviderFundamentalsRecord(
+        symbol="AAPL",
+        asof_date="2026-05-28",
+        provider="sec_edgar",
+        instrument_type="equity",
+        most_recent_quarter="2024-12-31",
+        revenue_growth_yoy=0.12,
+        earnings_growth_yoy=0.16,
+        gross_margin=0.45,
+        operating_margin=0.25,
+        free_cash_flow_margin=0.18,
+        debt_to_equity=40.0,
+        current_ratio=1.6,
+        return_on_equity=0.22,
+        trailing_pe=22.0,
+        price_to_sales=5.0,
+    )
+
+    snapshot = build_snapshot(
+        record,
+        FundamentalsConfig(providers=("sec_edgar", "yfinance"), stale_after_days=30),
+    )
+
+    assert snapshot.coverage_status == "supported"
+    assert snapshot.data_quality_status == "high"
+    assert snapshot.freshness_status == "stale"
+    assert snapshot.source_health["status"] == "degraded"
+
+
+def test_provider_error_snapshot_has_zero_confidence_for_failed_source_health():
+    snapshot = build_provider_error_snapshot("AAPL", "sec_edgar", "boom")
+
+    assert snapshot.source_health["status"] == "failed"
+    assert snapshot.source_health["quality_score"] == 0.0
+    assert snapshot.data_confidence_score == 0.0
+
+
+def test_build_snapshot_propagates_confidence_health_and_sec_balance_sheet_fields():
+    record = ProviderFundamentalsRecord(
+        symbol="AAPL",
+        asof_date="2026-05-28",
+        provider="sec_edgar",
+        instrument_type="equity",
+        most_recent_quarter="2026-03-31",
+        revenue_growth_yoy=0.12,
+        earnings_growth_yoy=0.16,
+        gross_margin=0.45,
+        operating_margin=0.25,
+        free_cash_flow_margin=0.18,
+        debt_to_equity=40.0,
+        current_ratio=1.6,
+        return_on_equity=0.22,
+        trailing_pe=22.0,
+        price_to_sales=5.0,
+        total_assets=350_000_000_000.0,
+        total_liabilities=275_000_000_000.0,
+        cash_and_equivalents=55_000_000_000.0,
+        latest_filing_form="10-Q",
+        latest_filing_date="2026-05-01",
+    )
+
+    snapshot = build_snapshot(
+        record,
+        FundamentalsConfig(providers=("sec_edgar", "yfinance"), stale_after_days=120),
+    )
+
+    assert snapshot.total_assets == 350_000_000_000.0
+    assert snapshot.total_liabilities == 275_000_000_000.0
+    assert snapshot.cash_and_equivalents == 55_000_000_000.0
+    assert snapshot.latest_filing_form == "10-Q"
+    assert snapshot.latest_filing_date == "2026-05-01"
+    assert 0.0 <= snapshot.data_confidence_score <= 1.0
+    assert snapshot.source_health["provider"] == "sec_edgar"
+    assert snapshot.source_health["quality_score"] == snapshot.data_confidence_score
