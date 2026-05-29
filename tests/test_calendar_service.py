@@ -207,6 +207,10 @@ def test_earnings_from_finnhub_includes_eps_estimate(tmp_path):
     assert len(earnings) == 1
     assert earnings[0].eps_estimate == pytest.approx(1.72)
     assert earnings[0].ticker == "AAPL"
+    assert earnings[0].provider == "finnhub"
+    assert 0.0 <= earnings[0].confidence <= 1.0
+    assert earnings[0].confidence == pytest.approx(0.85)
+    assert earnings[0].source_url == "https://finnhub.io/api/v1/calendar/earnings"
 
 
 def test_earnings_falls_back_to_yfinance_when_no_finnhub_key(tmp_path):
@@ -224,6 +228,9 @@ def test_earnings_falls_back_to_yfinance_when_no_finnhub_key(tmp_path):
     mock_yf.assert_called()
     earnings = [e for e in events if e.event_type == "earnings"]
     assert len(earnings) == 1
+    assert earnings[0].provider == "yfinance"
+    assert 0.0 <= earnings[0].confidence <= 1.0
+    assert earnings[0].confidence == pytest.approx(0.55)
 
 
 def test_earnings_finnhub_per_ticker_failure_is_skipped(tmp_path):
@@ -278,6 +285,10 @@ def test_ipo_events_returned_when_finnhub_key_set(tmp_path):
     assert len(ipos) == 1
     assert ipos[0].ticker == "ACME"
     assert ipos[0].source_tag == "ipo"
+    assert ipos[0].provider == "finnhub"
+    assert 0.0 <= ipos[0].confidence <= 1.0
+    assert ipos[0].confidence == pytest.approx(0.8)
+    assert ipos[0].source_url == "https://finnhub.io/api/v1/calendar/ipo"
 
 
 def test_ipo_events_skipped_when_no_finnhub_key(tmp_path):
@@ -345,6 +356,45 @@ def test_dividend_events_only_for_position_tickers(tmp_path):
     assert len(divs) == 1
     assert divs[0].ticker == "AAPL"
     assert divs[0].source_tag == "position"
+    assert divs[0].provider == "finnhub"
+    assert 0.0 <= divs[0].confidence <= 1.0
+    assert divs[0].confidence == pytest.approx(0.8)
+    assert divs[0].source_url == "https://finnhub.io/api/v1/calendar/dividend"
+
+
+def test_economic_events_include_finnhub_provenance_and_confidence(tmp_path):
+    import datetime as dt
+    from unittest.mock import MagicMock, patch
+    from api.services.calendar_service import CalendarService
+
+    repo = _make_positions_repo([])
+    svc = CalendarService(positions_repo=repo, data_dir=tmp_path, finnhub_api_key="test_key")
+
+    event_date = dt.date.today() + dt.timedelta(days=3)
+    resp = MagicMock()
+    resp.json.return_value = {
+        "economicCalendar": [
+            {
+                "time": f"{event_date.isoformat()} 08:30:00",
+                "event": "CPI",
+                "impact": "high",
+            }
+        ]
+    }
+    resp.raise_for_status = MagicMock()
+
+    with patch("api.services.calendar_service.httpx.get", return_value=resp):
+        with patch.object(svc, "_batch_fetch_earnings", return_value=[]):
+            with patch.object(svc, "_fetch_ipo_events", return_value=[]):
+                with patch.object(svc, "_fetch_dividend_events", return_value=[]):
+                    events = svc.get_events(days_ahead=30)
+
+    economic = [e for e in events if e.event_type == "economic"]
+    assert len(economic) == 1
+    assert economic[0].provider == "finnhub"
+    assert 0.0 <= economic[0].confidence <= 1.0
+    assert economic[0].confidence == pytest.approx(0.8)
+    assert economic[0].source_url == "https://finnhub.io/api/v1/calendar/economic"
 
 
 def test_dividend_events_skipped_when_no_finnhub_key(tmp_path):

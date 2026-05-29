@@ -15,6 +15,11 @@ from api.repositories.positions_repo import PositionsRepository
 
 logger = logging.getLogger(__name__)
 
+FINNHUB_EARNINGS_URL = "https://finnhub.io/api/v1/calendar/earnings"
+FINNHUB_ECONOMIC_URL = "https://finnhub.io/api/v1/calendar/economic"
+FINNHUB_IPO_URL = "https://finnhub.io/api/v1/calendar/ipo"
+FINNHUB_DIVIDEND_URL = "https://finnhub.io/api/v1/calendar/dividend"
+
 
 class CalendarService:
     def __init__(
@@ -102,6 +107,9 @@ class CalendarService:
                             event_type="earnings",
                             title=f"{ticker} Earnings",
                             source_tag=source_tag,
+                            provider="finnhub",
+                            confidence=0.85,
+                            source_url=FINNHUB_EARNINGS_URL,
                             eps_estimate=eps_estimate,
                             eps_actual=eps_actual,
                         ))
@@ -119,7 +127,7 @@ class CalendarService:
         end: dt.date,
     ) -> Optional[tuple[dt.date, Optional[float], Optional[float]]]:
         resp = httpx.get(
-            "https://finnhub.io/api/v1/calendar/earnings",
+            FINNHUB_EARNINGS_URL,
             params={
                 "symbol": ticker,
                 "from": start.isoformat(),
@@ -166,6 +174,9 @@ class CalendarService:
                             event_type="earnings",
                             title=f"{ticker} Earnings",
                             source_tag=source_tag,
+                            provider="yfinance",
+                            confidence=0.55,
+                            source_url=f"https://finance.yahoo.com/quote/{ticker}/calendar",
                         ))
                 except Exception as exc:
                     logger.debug("Earnings fetch failed for %s: %s", ticker, exc)
@@ -191,7 +202,7 @@ class CalendarService:
             return []
         try:
             resp = httpx.get(
-                "https://finnhub.io/api/v1/calendar/economic",
+                FINNHUB_ECONOMIC_URL,
                 params={
                     "from": start.isoformat(),
                     "to": end.isoformat(),
@@ -208,6 +219,9 @@ class CalendarService:
                     event_type="economic",
                     title=item.get("event", "Economic event"),
                     source_tag="economic",
+                    provider="finnhub",
+                    confidence=0.8,
+                    source_url=FINNHUB_ECONOMIC_URL,
                 )
                 for item in items
                 if item.get("time") and item.get("impact") == "high"
@@ -221,7 +235,7 @@ class CalendarService:
             return []
         try:
             resp = httpx.get(
-                "https://finnhub.io/api/v1/calendar/ipo",
+                FINNHUB_IPO_URL,
                 params={
                     "from": start.isoformat(),
                     "to": end.isoformat(),
@@ -238,6 +252,9 @@ class CalendarService:
                     event_type="ipo",
                     title=f"{item.get('name', item.get('symbol', 'IPO'))} IPO",
                     source_tag="ipo",
+                    provider="finnhub",
+                    confidence=0.8,
+                    source_url=FINNHUB_IPO_URL,
                 )
                 for item in items
                 if item.get("date") and item.get("status") in {"priced", "filed"}
@@ -275,7 +292,7 @@ class CalendarService:
         end: dt.date,
     ) -> list[CalendarEvent]:
         resp = httpx.get(
-            "https://finnhub.io/api/v1/calendar/dividend",
+            FINNHUB_DIVIDEND_URL,
             params={
                 "symbol": ticker,
                 "from": start.isoformat(),
@@ -293,6 +310,9 @@ class CalendarService:
                 event_type="dividend",
                 title=f"{ticker} Dividend",
                 source_tag="position",
+                provider="finnhub",
+                confidence=0.8,
+                source_url=FINNHUB_DIVIDEND_URL,
             )
             for item in items
             if item.get("date")

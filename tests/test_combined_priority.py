@@ -147,6 +147,7 @@ def test_fundamentals_snapshot_penalties_and_quality_shape_priority() -> None:
             valuation_attractiveness=0.4,
             freshness_penalty=0.4,
             coverage_penalty=0.6,
+            data_confidence_score=1.0,
         ),
     )
     resilient = _candidate(
@@ -165,6 +166,7 @@ def test_fundamentals_snapshot_penalties_and_quality_shape_priority() -> None:
             valuation_attractiveness=0.75,
             freshness_penalty=0.0,
             coverage_penalty=0.0,
+            data_confidence_score=1.0,
         ),
     )
     anchor = _candidate("ANCHOR", confidence=20, rank=3)
@@ -176,3 +178,72 @@ def test_fundamentals_snapshot_penalties_and_quality_shape_priority() -> None:
     assert scores["PENALIZED"] is not None
     assert scores["RESILIENT"] is not None
     assert scores["PENALIZED"] < scores["RESILIENT"]
+
+
+def test_data_confidence_penalizes_equivalent_fundamental_and_valuation_scores() -> None:
+    high_confidence = _candidate(
+        "HIGHCONF",
+        confidence=80,
+        rank=2,
+        fundamentals_label="strong",
+        catalyst_label="neutral",
+        valuation_label="cheap",
+        fundamentals_snapshot=FundamentalSnapshot(
+            symbol="HIGHCONF",
+            asof_date="2026-03-31",
+            provider="test",
+            updated_at="2026-03-31T00:00:00",
+            business_quality_score=0.8,
+            valuation_attractiveness=0.7,
+            data_confidence_score=0.95,
+        ),
+    )
+    low_confidence = _candidate(
+        "LOWCONF",
+        confidence=80,
+        rank=1,
+        fundamentals_label="strong",
+        catalyst_label="neutral",
+        valuation_label="cheap",
+        fundamentals_snapshot=FundamentalSnapshot(
+            symbol="LOWCONF",
+            asof_date="2026-03-31",
+            provider="test",
+            updated_at="2026-03-31T00:00:00",
+            business_quality_score=0.8,
+            valuation_attractiveness=0.7,
+            data_confidence_score=0.25,
+        ),
+    )
+
+    result = compute_combined_priority([low_confidence, high_confidence], cfg=_CFG)
+
+    assert result[0].ticker == "HIGHCONF"
+    assert result[0].combined_priority_score is not None
+    assert result[1].combined_priority_score is not None
+    assert result[0].combined_priority_score > result[1].combined_priority_score
+
+
+def test_zero_confidence_error_snapshot_uses_configured_confidence_floors() -> None:
+    candidate = _candidate(
+        "ERRFLOOR",
+        confidence=80,
+        rank=1,
+        fundamentals_label="strong",
+        catalyst_label="neutral",
+        valuation_label="cheap",
+        fundamentals_snapshot=FundamentalSnapshot(
+            symbol="ERRFLOOR",
+            asof_date="2026-03-31",
+            provider="test",
+            updated_at="2026-03-31T00:00:00",
+            business_quality_score=0.8,
+            valuation_attractiveness=0.7,
+            data_confidence_score=0.0,
+            error="provider failed",
+        ),
+    )
+
+    result = compute_combined_priority([candidate], cfg=_CFG)
+
+    assert result[0].combined_priority_score == pytest.approx(0.403)

@@ -74,6 +74,13 @@ def _label_score(mapping: dict[str, float], label: str | None, default: float = 
     return mapping.get((label or "").lower(), default)
 
 
+def _data_confidence_multiplier(snapshot: Any, floor: float) -> float:
+    data_confidence = _safe_float(getattr(snapshot, "data_confidence_score", None))
+    if data_confidence is None:
+        return 1.0
+    return max(floor, max(0.0, min(1.0, data_confidence)))
+
+
 def _fundamentals_score(candidate: ScreenerCandidate) -> float:
     """Fundamentals sub-score: uses business_quality_score from snapshot when available,
     falls back to decision_summary label. Applies freshness and coverage penalties."""
@@ -93,6 +100,7 @@ def _fundamentals_score(candidate: ScreenerCandidate) -> float:
     freshness_penalty = _safe_float(getattr(snapshot, "freshness_penalty", None)) or 0.0
     coverage_penalty = _safe_float(getattr(snapshot, "coverage_penalty", None)) or 0.0
     penalty_multiplier = max(0.0, 1.0 - freshness_penalty - (coverage_penalty * 0.5))
+    score *= _data_confidence_multiplier(snapshot, floor=0.25)
     return max(0.0, score * penalty_multiplier)
 
 
@@ -109,7 +117,8 @@ def _valuation_score(candidate: ScreenerCandidate) -> float:
         return score
 
     valuation = _safe_float(getattr(snapshot, "valuation_attractiveness", None))
-    return valuation if valuation is not None else score
+    score = valuation if valuation is not None else score
+    return max(0.0, score * _data_confidence_multiplier(snapshot, floor=0.4))
 
 
 def compute_combined_priority(
