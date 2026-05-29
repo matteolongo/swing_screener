@@ -382,6 +382,6 @@ class FundamentalSnapshot:
             earnings_beat_streak=(int(payload["earnings_beat_streak"]) if payload.get("earnings_beat_streak") is not None else None),
             insider_net_shares_90d=(int(payload["insider_net_shares_90d"]) if payload.get("insider_net_shares_90d") is not None else None),
             insider_transaction_count_90d=(int(payload["insider_transaction_count_90d"]) if payload.get("insider_transaction_count_90d") is not None else None),
-            forward_eps_estimate=(float(payload["forward_eps_estimate"]) if payload.get("forward_eps_estimate") is not None else None),
+            forward_eps_estimate=_optional_float(payload.get("forward_eps_estimate")),
             analyst_upgrade_downgrade_net_30d=(int(payload["analyst_upgrade_downgrade_net_30d"]) if payload.get("analyst_upgrade_downgrade_net_30d") is not None else None),
         )
