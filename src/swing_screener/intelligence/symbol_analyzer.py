@@ -180,6 +180,22 @@ def _build_user_prompt(ticker: str, req: SymbolIntelligenceRequest) -> str:
             if cq_parts:
                 lines.append(" | ".join(cq_parts))
 
+    # Finnhub enrichment signals block
+    has_finnhub = any(x is not None for x in (
+        req.insider_net_shares_90d, req.forward_eps_estimate, req.analyst_upgrade_downgrade_net_30d
+    ))
+    if has_finnhub and not has_position:
+        lines += ["", "--- Finnhub enrichment signals ---"]
+        if req.insider_net_shares_90d is not None:
+            direction = "net buyer" if req.insider_net_shares_90d > 0 else "net seller"
+            lines.append(f"Insider activity (90d): {req.insider_net_shares_90d:+,} shares ({direction})")
+        if req.forward_eps_estimate is not None:
+            lines.append(f"Forward EPS estimate (next Q): {req.forward_eps_estimate:.2f}")
+        if req.analyst_upgrade_downgrade_net_30d is not None:
+            net = req.analyst_upgrade_downgrade_net_30d
+            direction = "net upgrades" if net > 0 else ("net downgrades" if net < 0 else "flat")
+            lines.append(f"Analyst upgrades/downgrades (30d): {net:+d} ({direction})")
+
     # Catalyst context block (before web search instruction)
     if req.catalyst_summary:
         lines += [
@@ -263,6 +279,18 @@ class SymbolAnalyzer:
 
         if req.catalyst_summary:
             inputs_used["catalyst"] = {"summary_available": True}
+
+        finnhub_signals: dict = {}
+        if req.insider_net_shares_90d is not None:
+            finnhub_signals["insider_net_shares_90d"] = req.insider_net_shares_90d
+        if req.insider_transaction_count_90d is not None:
+            finnhub_signals["insider_transaction_count_90d"] = req.insider_transaction_count_90d
+        if req.forward_eps_estimate is not None:
+            finnhub_signals["forward_eps_estimate"] = req.forward_eps_estimate
+        if req.analyst_upgrade_downgrade_net_30d is not None:
+            finnhub_signals["analyst_upgrade_downgrade_net_30d"] = req.analyst_upgrade_downgrade_net_30d
+        if finnhub_signals:
+            inputs_used["finnhub_signals"] = finnhub_signals
 
         user_prompt = _build_user_prompt(ticker, req)
         response = self._client.responses.create(

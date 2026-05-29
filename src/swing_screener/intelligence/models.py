@@ -84,6 +84,11 @@ class SymbolIntelligenceRequest(BaseModel):
     technical_label: str | None = None
     fundamentals_label: str | None = None
     catalyst_summary: str | None = None
+    # Finnhub enrichment signals
+    insider_net_shares_90d: int | None = None
+    insider_transaction_count_90d: int | None = None
+    forward_eps_estimate: float | None = None
+    analyst_upgrade_downgrade_net_30d: int | None = None
 
 
 class SymbolIntelligence(BaseModel):
