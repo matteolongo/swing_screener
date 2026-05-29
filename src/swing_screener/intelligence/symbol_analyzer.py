@@ -171,7 +171,7 @@ def _build_user_prompt(ticker: str, req: SymbolIntelligenceRequest) -> str:
                 )
 
         # Chart quality block
-        has_chart_quality = any(x is not None for x in (req.atr, req.rel_strength))
+        has_chart_quality = any(x is not None for x in (req.atr, req.rel_strength, req.dist_52w_high_pct, req.near_52w_high))
         if has_chart_quality:
             lines += ["", "--- Chart quality ---"]
             atr_str = f"ATR: {fmt(req.atr)}" if req.atr is not None else ""
@@ -179,6 +179,10 @@ def _build_user_prompt(ticker: str, req: SymbolIntelligenceRequest) -> str:
             cq_parts = [p for p in (atr_str, rs_str) if p]
             if cq_parts:
                 lines.append(" | ".join(cq_parts))
+            if req.dist_52w_high_pct is not None:
+                pct = round(req.dist_52w_high_pct * 100, 1)
+                near_str = " (near 52w high)" if req.near_52w_high else ""
+                lines.append(f"Distance from 52w high: {pct:+.1f}%{near_str}")
 
     # Finnhub enrichment signals block
     has_finnhub = any(x is not None for x in (
@@ -252,6 +256,10 @@ class SymbolAnalyzer:
             technical["rel_strength"] = req.rel_strength
         if req.atr is not None:
             technical["atr"] = req.atr
+        if req.dist_52w_high_pct is not None:
+            technical["dist_52w_high_pct"] = round(req.dist_52w_high_pct * 100, 1)
+        if req.near_52w_high is not None:
+            technical["near_52w_high"] = req.near_52w_high
         if req.signal:
             technical["signal"] = req.signal
         if technical:
