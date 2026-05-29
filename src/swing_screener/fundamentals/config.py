@@ -1,16 +1,34 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from importlib.util import find_spec
 from typing import Any
 
 SUPPORTED_FUNDAMENTAL_PROVIDERS = {"sec_edgar", "yfinance", "degiro"}
 
 # Ordered provider chain for the Tier 1 free-first stack.
-# SEC EDGAR is tried first (US equities only); degiro covers EU equities with
-# analyst estimates and ratios; yfinance is the global fallback.
+# SEC EDGAR is tried first (US equities only); yfinance is the global fallback.
+# DeGiro is included in the default chain only when its integration package is
+# available in this checkout.
 # Add new providers here when graduating to Tier 2 — this is the single source
 # of truth referenced by both the domain config and the API validation layer.
-TIER1_PROVIDERS: tuple[str, ...] = ("sec_edgar", "degiro", "yfinance")
+
+
+def _degiro_integration_available() -> bool:
+    try:
+        return (
+            find_spec("swing_screener.integrations.degiro.credentials") is not None
+            and find_spec("swing_screener.integrations.degiro.client") is not None
+        )
+    except ModuleNotFoundError:
+        return False
+
+
+TIER1_PROVIDERS: tuple[str, ...] = (
+    ("sec_edgar", "degiro", "yfinance")
+    if _degiro_integration_available()
+    else ("sec_edgar", "yfinance")
+)
 
 
 @dataclass(frozen=True)

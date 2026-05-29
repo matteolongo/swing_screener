@@ -93,6 +93,21 @@ export interface DecisionSummary {
   catalystSources: string[];
 }
 
+export interface DataSourceHealth {
+  provider: string;
+  status: 'ok' | 'degraded' | 'failed' | 'unknown';
+  qualityScore: number;
+  delayPolicy?: string;
+  warnings: string[];
+}
+
+export interface CandidateDataSourceSummary {
+  marketData?: DataSourceHealth;
+  fundamentals?: DataSourceHealth;
+  calendar?: DataSourceHealth;
+  intelligence?: DataSourceHealth;
+}
+
 export interface ScreenerCandidate {
   ticker: string;
   currency: string;
@@ -141,6 +156,7 @@ export interface ScreenerCandidate {
   volumeRatio?: number;
   avgDailyVolumeEur?: number;
   weeklyTrend?: 'up' | 'down' | 'neutral';
+  dataSourceSummary?: CandidateDataSourceSummary;
 }
 
 export interface DecisionTradePlanAPI {
@@ -259,6 +275,8 @@ export interface ScreenerCandidateAPI {
   volume_ratio?: number;
   avg_daily_volume_eur?: number;
   weekly_trend?: 'up' | 'down' | 'neutral' | null;
+  data_source_summary?: Record<string, unknown> | null;
+  dataSourceSummary?: Record<string, unknown> | null;
 }
 
 export interface ScreenerRequest {
@@ -402,6 +420,44 @@ function transformDecisionSummary(apiSummary: DecisionSummaryAPI): DecisionSumma
   };
 }
 
+const sourceStatuses: DataSourceHealth['status'][] = ['ok', 'degraded', 'failed', 'unknown'];
+
+function transformDataSourceHealth(value: unknown): DataSourceHealth | undefined {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+
+  const payload = value as Record<string, unknown>;
+  const rawStatus = String(payload.status ?? 'unknown');
+
+  return {
+    provider: String(payload.provider ?? ''),
+    status: sourceStatuses.includes(rawStatus as DataSourceHealth['status'])
+      ? rawStatus as DataSourceHealth['status']
+      : 'unknown',
+    qualityScore: Number(payload.quality_score ?? payload.qualityScore ?? 0.5),
+    delayPolicy: payload.delay_policy || payload.delayPolicy
+      ? String(payload.delay_policy ?? payload.delayPolicy)
+      : undefined,
+    warnings: Array.isArray(payload.warnings) ? payload.warnings.map(String) : [],
+  };
+}
+
+function transformDataSourceSummary(value: unknown): CandidateDataSourceSummary {
+  if (!value || typeof value !== 'object') {
+    return {};
+  }
+
+  const payload = value as Record<string, unknown>;
+
+  return {
+    marketData: transformDataSourceHealth(payload.market_data ?? payload.marketData),
+    fundamentals: transformDataSourceHealth(payload.fundamentals),
+    calendar: transformDataSourceHealth(payload.calendar),
+    intelligence: transformDataSourceHealth(payload.intelligence),
+  };
+}
+
 // Transform API response to UI format
 export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): ScreenerResponse {
   return {
@@ -466,6 +522,7 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
       volumeRatio: c.volume_ratio ?? undefined,
       avgDailyVolumeEur: c.avg_daily_volume_eur ?? undefined,
       weeklyTrend: c.weekly_trend ?? undefined,
+      dataSourceSummary: transformDataSourceSummary(c.data_source_summary ?? c.dataSourceSummary),
     })),
     asofDate: apiResponse.asof_date,
     totalScreened: apiResponse.total_screened,

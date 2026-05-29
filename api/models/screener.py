@@ -1,7 +1,7 @@
 """Screener models."""
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import Any, Literal, Optional
 from pydantic import BaseModel, Field, field_validator
 from api.models.recommendation import Recommendation
 from swing_screener.fundamentals.models import FundamentalSnapshot
@@ -55,6 +55,7 @@ class ScreenerCandidate(BaseModel):
     fundamentals_summary: Optional[str] = None
     fundamentals_asof: Optional[str] = None
     intelligence_asof: Optional[str] = None
+    data_source_summary: dict[str, Any] = Field(default_factory=dict)
     # Plan + recommendation fields (education-first)
     signal: Optional[str] = None
     entry: Optional[float] = None

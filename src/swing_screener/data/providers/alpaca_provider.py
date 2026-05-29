@@ -13,6 +13,7 @@ from alpaca.data.requests import StockBarsRequest
 from alpaca.data.timeframe import TimeFrame
 
 from .base import MarketDataProvider
+from swing_screener.data.source_health import DataSourceHealth
 
 
 class AlpacaDataProvider(MarketDataProvider):
@@ -65,6 +66,16 @@ class AlpacaDataProvider(MarketDataProvider):
         # Create cache directory
         if self.use_cache:
             self.cache_dir.mkdir(parents=True, exist_ok=True)
+
+    def get_source_health(self) -> DataSourceHealth:
+        return DataSourceHealth(
+            provider=self.get_provider_name(),
+            domain="market_data",
+            status="ok",
+            quality_score=0.75 if self.paper else 0.85,
+            delay_policy="provider_plan_dependent",
+            warnings=["paper_or_basic_plan_may_be_limited"] if self.paper else [],
+        )
     
     def _wait_for_rate_limit(self):
         """Enforce rate limiting (200 requests/minute)."""

@@ -234,6 +234,39 @@ def _latest_instant_value(
     return (best[2], best[0], source)
 
 
+def _latest_filing_metadata(payload: dict[str, Any]) -> tuple[str | None, str | None]:
+    facts = payload.get("facts")
+    if not isinstance(facts, dict):
+        return (None, None)
+
+    best: tuple[str, str] | None = None
+    for section in facts.values():
+        if not isinstance(section, dict):
+            continue
+        for node in section.values():
+            if not isinstance(node, dict):
+                continue
+            units = node.get("units")
+            if not isinstance(units, dict):
+                continue
+            for items in units.values():
+                if not isinstance(items, list):
+                    continue
+                for item in items:
+                    if not isinstance(item, dict):
+                        continue
+                    form = str(item.get("form", "")).strip().upper()
+                    filed_at = str(item.get("filed", "")).strip()
+                    if not filed_at or form not in _ALLOWED_FORMS:
+                        continue
+                    candidate = (filed_at, form)
+                    if best is None or candidate > best:
+                        best = candidate
+    if best is None:
+        return (None, None)
+    return (best[1], best[0])
+
+
 def _latest_series_value(series: FundamentalMetricSeries | None) -> float | None:
     if series is None or not series.points:
         return None
@@ -523,6 +556,29 @@ class SecEdgarFundamentalsProvider:
             concepts=("StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest", "StockholdersEquity"),
             unit_candidates=("USD",),
         )
+        total_assets, total_assets_period, total_assets_source = _latest_instant_value(
+            payload,
+            taxonomies=("us-gaap",),
+            concepts=("Assets",),
+            unit_candidates=("USD",),
+        )
+        total_liabilities, total_liabilities_period, total_liabilities_source = _latest_instant_value(
+            payload,
+            taxonomies=("us-gaap",),
+            concepts=("Liabilities",),
+            unit_candidates=("USD",),
+        )
+        cash_and_equivalents, cash_period, cash_source = _latest_instant_value(
+            payload,
+            taxonomies=("us-gaap",),
+            concepts=(
+                "CashAndCashEquivalentsAtCarryingValue",
+                "CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents",
+                "Cash",
+            ),
+            unit_candidates=("USD",),
+        )
+        latest_filing_form, latest_filing_date = _latest_filing_metadata(payload)
         shares_outstanding, shares_period, shares_source = _latest_instant_value(
             payload,
             taxonomies=("dei", "us-gaap"),
@@ -648,6 +704,27 @@ class SecEdgarFundamentalsProvider:
                 cadence="quarterly",
                 period_end=total_equity_period,
             )
+        if total_assets is not None and total_assets_source:
+            metric_sources["total_assets"] = total_assets_source
+            metric_context["total_assets"] = _latest_context(
+                source=total_assets_source,
+                cadence="quarterly",
+                period_end=total_assets_period,
+            )
+        if total_liabilities is not None and total_liabilities_source:
+            metric_sources["total_liabilities"] = total_liabilities_source
+            metric_context["total_liabilities"] = _latest_context(
+                source=total_liabilities_source,
+                cadence="quarterly",
+                period_end=total_liabilities_period,
+            )
+        if cash_and_equivalents is not None and cash_source:
+            metric_sources["cash_and_equivalents"] = cash_source
+            metric_context["cash_and_equivalents"] = _latest_context(
+                source=cash_source,
+                cadence="quarterly",
+                period_end=cash_period,
+            )
         if shares_outstanding is not None and shares_source:
             metric_sources["shares_outstanding"] = shares_source
             metric_context["shares_outstanding"] = _latest_context(
@@ -686,6 +763,11 @@ class SecEdgarFundamentalsProvider:
             current_ratio=current_ratio,
             shares_outstanding=shares_outstanding,
             total_equity=total_equity,
+            total_assets=total_assets,
+            total_liabilities=total_liabilities,
+            cash_and_equivalents=cash_and_equivalents,
+            latest_filing_form=latest_filing_form,
+            latest_filing_date=latest_filing_date,
             historical_series=historical_series,
             metric_context=metric_context,
             metric_sources={key: value for key, value in metric_sources.items() if value},

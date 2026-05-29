@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
+import math
 from typing import Any
 
 VALID_METRIC_UNITS = {"number", "currency", "percent", "ratio"}
@@ -65,6 +66,25 @@ def _sanitize_trend_claims(
     return sanitized
 
 
+def _optional_float(value: Any) -> float | None:
+    if value is None:
+        return None
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(parsed):
+        return None
+    return parsed
+
+
+def _bounded_float(value: Any, fallback: float) -> float:
+    parsed = _optional_float(value)
+    if parsed is None:
+        return fallback
+    return max(0.0, min(1.0, parsed))
+
+
 @dataclass(frozen=True)
 class FundamentalPillarScore:
     score: float | None = None
@@ -125,6 +145,11 @@ class ProviderFundamentalsRecord:
     book_value_per_share: float | None = None
     price_to_book: float | None = None
     book_to_price: float | None = None
+    total_assets: float | None = None
+    total_liabilities: float | None = None
+    cash_and_equivalents: float | None = None
+    latest_filing_form: str | None = None
+    latest_filing_date: str | None = None
     net_margin: float | None = None
     analyst_recommendation_score: float | None = None
     analyst_price_target: float | None = None
@@ -173,6 +198,8 @@ class FundamentalSnapshot:
     metric_context: dict[str, FundamentalMetricContext] = field(default_factory=dict)
     data_quality_status: str = "low"
     data_quality_flags: list[str] = field(default_factory=list)
+    data_confidence_score: float = 0.5
+    source_health: dict[str, Any] = field(default_factory=dict)
     red_flags: list[str] = field(default_factory=list)
     highlights: list[str] = field(default_factory=list)
     metric_sources: dict[str, str] = field(default_factory=dict)
@@ -192,6 +219,11 @@ class FundamentalSnapshot:
     analyst_recommendation_score: float | None = None
     analyst_price_target: float | None = None
     earnings_beat_streak: int | None = None
+    total_assets: float | None = None
+    total_liabilities: float | None = None
+    cash_and_equivalents: float | None = None
+    latest_filing_form: str | None = None
+    latest_filing_date: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -310,6 +342,11 @@ class FundamentalSnapshot:
             book_value_per_share=payload.get("book_value_per_share"),
             price_to_book=payload.get("price_to_book"),
             book_to_price=payload.get("book_to_price"),
+            total_assets=_optional_float(payload.get("total_assets")),
+            total_liabilities=_optional_float(payload.get("total_liabilities")),
+            cash_and_equivalents=_optional_float(payload.get("cash_and_equivalents")),
+            latest_filing_form=(str(payload.get("latest_filing_form")).strip() if payload.get("latest_filing_form") else None),
+            latest_filing_date=(str(payload.get("latest_filing_date")).strip() if payload.get("latest_filing_date") else None),
             most_recent_quarter=payload.get("most_recent_quarter"),
             data_region=(str(payload.get("data_region")).strip().upper() if payload.get("data_region") else None),
             pillars=pillars,
@@ -317,6 +354,12 @@ class FundamentalSnapshot:
             metric_context=metric_context,
             data_quality_status=data_quality_status,
             data_quality_flags=data_quality_flags,
+            data_confidence_score=_bounded_float(payload.get("data_confidence_score"), 0.5),
+            source_health=(
+                dict(payload.get("source_health"))
+                if isinstance(payload.get("source_health"), dict)
+                else {}
+            ),
             red_flags=_sanitize_trend_claims(payload.get("red_flags", []), historical_series),
             highlights=_sanitize_trend_claims(payload.get("highlights", []), historical_series),
             metric_sources={

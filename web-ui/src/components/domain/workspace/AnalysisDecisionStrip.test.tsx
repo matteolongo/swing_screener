@@ -242,3 +242,29 @@ describe('AnalysisDecisionStrip — metric grid layout', () => {
     expect(gridWrapper).not.toBeNull();
   });
 });
+
+describe('AnalysisDecisionStrip — source chips', () => {
+  it('renders compact provider and status chips from candidate data sources', () => {
+    const candidate = buildCandidate({
+      dataSourceSummary: {
+        marketData: {
+          provider: 'yfinance',
+          status: 'ok',
+          qualityScore: 0.65,
+          warnings: [],
+        },
+        fundamentals: {
+          provider: 'sec_edgar',
+          status: 'degraded',
+          qualityScore: 0.72,
+          warnings: ['stale'],
+        },
+      },
+    });
+
+    render(<AnalysisDecisionStrip ticker="AAPL" candidate={candidate} />);
+
+    expect(screen.getByText('Market: yfinance (ok)')).toBeInTheDocument();
+    expect(screen.getByText('Fundamentals: sec_edgar (degraded)')).toBeInTheDocument();
+  });
+});

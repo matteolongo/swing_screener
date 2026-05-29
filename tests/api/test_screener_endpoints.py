@@ -10,6 +10,7 @@ from api.main import app
 from api.dependencies import get_portfolio_service
 import api.services.screener_service as screener_service
 from api.models.screener import ScreenerResponse
+from swing_screener.data.source_health import DataSourceHealth
 from swing_screener.data.providers import MarketDataProvider
 from swing_screener.recommendation.models import DecisionSummary
 
@@ -86,6 +87,13 @@ def _create_mock_provider(ohlcv_data: pd.DataFrame) -> MarketDataProvider:
     mock_provider = MagicMock(spec=MarketDataProvider)
     mock_provider.fetch_ohlcv.return_value = ohlcv_data
     mock_provider.get_provider_name.return_value = "mock"
+    mock_provider.get_source_health.return_value = DataSourceHealth(
+        provider="mock",
+        domain="market_data",
+        status="ok",
+        quality_score=0.7,
+        delay_policy="test_fixture",
+    )
     return mock_provider
 
 
@@ -207,6 +215,43 @@ def test_screener_recommendation_payload_shape(monkeypatch):
     }
     assert isinstance(rec["checklist"][0]["gate_name"], str)
     assert isinstance(rec["education"]["what_would_make_valid"], list)
+
+
+def test_screener_response_includes_market_data_source_summary(monkeypatch):
+    ohlcv = _ohlcv_with_spy()
+    mock_provider = _create_mock_provider(ohlcv)
+
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None):
+        return pd.DataFrame(
+            {
+                "atr14": [1.2],
+                "mom_6m": [0.1],
+                "mom_12m": [0.2],
+                "rs_6m": [0.05],
+                "score": [0.55],
+                "confidence": [60.0],
+                "last": [50.0],
+                "ma20_level": [48.0],
+                "dist_sma50_pct": [5.0],
+                "dist_sma200_pct": [10.0],
+                "rank": [1],
+            },
+            index=["AAA"],
+        )
+
+    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
+    monkeypatch.setattr(screener_service, "get_multiple_ticker_info", lambda tickers: {})
+
+    client = TestClient(app)
+    res = client.post("/api/screener/run", json={"universe": "broad_market_stocks", "top": 1})
+    assert res.status_code == 200
+
+    candidate = res.json()["candidates"][0]
+    market_data = candidate["data_source_summary"]["market_data"]
+    assert market_data["provider"] == "mock"
+    assert market_data["status"] in {"ok", "degraded", "failed", "unknown"}
+    assert 0 <= market_data["quality_score"] <= 1
 
 
 def test_screener_attaches_benchmark_comparison(monkeypatch):
