@@ -151,7 +151,6 @@ class FinnhubEnrichmentClient:
     def _fetch_upgrade_downgrade_net(self, symbol: str) -> int | None:
         """Net analyst actions (upgrades minus downgrades) in the last 30 days."""
         from_date = (dt.date.today() - dt.timedelta(days=30)).isoformat()
-        cutoff_ts = (dt.datetime.utcnow() - dt.timedelta(days=30)).timestamp()
         try:
             items = self._get("/stock/upgrade-downgrade", {"symbol": symbol, "from": from_date})
             if not items:
@@ -163,14 +162,14 @@ class FinnhubEnrichmentClient:
         upgrades = 0
         downgrades = 0
         for item in items:
-            grade_time = item.get("gradeTime") or 0
-            if float(grade_time) < cutoff_ts:
-                continue
             action = str(item.get("action") or "").lower()
             if action == "up":
                 upgrades += 1
             elif action == "down":
                 downgrades += 1
+
+        if upgrades == 0 and downgrades == 0:
+            return None
         return upgrades - downgrades
 
     def enrich(self, record: ProviderFundamentalsRecord) -> ProviderFundamentalsRecord:

@@ -319,25 +319,34 @@ def test_fetch_forward_eps_returns_none_on_empty():
 def test_fetch_upgrade_downgrade_net_counts_correctly():
     from swing_screener.fundamentals.finnhub_client import FinnhubEnrichmentClient
     client = FinnhubEnrichmentClient(api_key="test")
-    today = dt.date.today()
-    recent = (today - dt.timedelta(days=15)).strftime("%Y-%m-%d")
-    old = (today - dt.timedelta(days=45)).strftime("%Y-%m-%d")
     payload = [
-        {"action": "up", "company": "Morgan Stanley", "gradeTime": int(dt.datetime.strptime(recent, "%Y-%m-%d").timestamp())},
-        {"action": "up", "company": "Goldman Sachs", "gradeTime": int(dt.datetime.strptime(recent, "%Y-%m-%d").timestamp())},
-        {"action": "down", "company": "JP Morgan", "gradeTime": int(dt.datetime.strptime(recent, "%Y-%m-%d").timestamp())},
-        {"action": "up", "company": "Old Firm", "gradeTime": int(dt.datetime.strptime(old, "%Y-%m-%d").timestamp())},
+        {"action": "up", "company": "Morgan Stanley", "gradeTime": 1000000},
+        {"action": "up", "company": "Goldman Sachs", "gradeTime": 1000000},
+        {"action": "down", "company": "JP Morgan", "gradeTime": 1000000},
     ]
     with patch("swing_screener.fundamentals.finnhub_client.httpx.get", return_value=_mock_http(payload)):
         result = client._fetch_upgrade_downgrade_net("AAPL")
 
-    assert result == 1  # 2 ups - 1 down in last 30 days; old one excluded
+    assert result == 1  # 2 ups - 1 down
 
 
 def test_fetch_upgrade_downgrade_returns_none_on_error():
     from swing_screener.fundamentals.finnhub_client import FinnhubEnrichmentClient
     client = FinnhubEnrichmentClient(api_key="test")
     with patch("swing_screener.fundamentals.finnhub_client.httpx.get", side_effect=Exception("timeout")):
+        result = client._fetch_upgrade_downgrade_net("AAPL")
+
+    assert result is None
+
+
+def test_fetch_upgrade_downgrade_returns_none_when_only_init_actions():
+    from swing_screener.fundamentals.finnhub_client import FinnhubEnrichmentClient
+    client = FinnhubEnrichmentClient(api_key="test")
+    payload = [
+        {"action": "init", "company": "Morgan Stanley", "gradeTime": 1000000},
+        {"action": "main", "company": "Goldman Sachs", "gradeTime": 1000000},
+    ]
+    with patch("swing_screener.fundamentals.finnhub_client.httpx.get", return_value=_mock_http(payload)):
         result = client._fetch_upgrade_downgrade_net("AAPL")
 
     assert result is None
