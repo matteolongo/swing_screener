@@ -1,6 +1,6 @@
 # Data Source Audit And Provider Strategy
 
-Last updated: 2026-03-20
+Last updated: 2026-05-29
 
 ## Scope
 
@@ -20,6 +20,13 @@ Last updated: 2026-03-20
 | **Tier 3** — Best Quality / Production | Not started | — |
 
 ---
+
+## Current Code Reality As Of 2026-05-29
+
+- Default fundamentals are `sec_edgar -> yfinance` unless the DeGiro integration modules are installed.
+- Explicit `degiro` config is still accepted because the optional provider exists behind lazy imports and credential checks.
+- `EODHD` and `Twelve Data` are roadmap providers only; no runtime config should pretend they are available.
+- Paid providers must land behind provider modules, config validation, contract tests, and explicit user config before contributing to ranking.
 
 ---
 

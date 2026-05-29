@@ -389,3 +389,34 @@ low_level:
       rate_limit_window_seconds: 60
       max_retries: 3
       retry_delay_base_seconds: 1.0
+
+# ---------------------------------------------------------------------------
+# Paid provider roadmap only. These entries document intended future gates and
+# must not be treated as active runtime providers until provider implementations
+# and validation tests exist.
+# ---------------------------------------------------------------------------
+data_provider_roadmap:
+  eodhd:
+    status: planned
+    runtime_enabled: false
+    activation_gates:
+      - provider_module_implemented
+      - config_validation_added
+      - contract_tests_passing
+      - explicit_user_config
+    domains:
+      - eu_fundamentals
+      - global_calendar
+      - financial_news
+  twelve_data:
+    status: planned
+    runtime_enabled: false
+    activation_gates:
+      - provider_module_implemented
+      - config_validation_added
+      - contract_tests_passing
+      - explicit_user_config
+    domains:
+      - global_fundamentals
+      - earnings_calendar
+      - dividends_calendar

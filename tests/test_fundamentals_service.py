@@ -415,6 +415,19 @@ def test_explicit_fundamentals_config_still_allows_degiro_provider_name():
     assert cfg.providers == ("degiro", "yfinance")
 
 
+def test_paid_vendor_provider_names_are_rejected_until_implemented():
+    from swing_screener.fundamentals import config
+    from swing_screener.fundamentals.providers import vendor_placeholder
+
+    cfg = build_fundamentals_config({"providers": ["eodhd", "twelve_data", "sec_edgar"]})
+
+    assert cfg.providers == ("sec_edgar",)
+    assert vendor_placeholder.PLANNED_VENDOR_PROVIDER_NAMES == ("eodhd", "twelve_data")
+    assert set(vendor_placeholder.PLANNED_VENDOR_PROVIDER_NAMES).isdisjoint(
+        config.SUPPORTED_FUNDAMENTAL_PROVIDERS
+    )
+
+
 def test_fundamentals_service_marks_etf_as_unsupported(tmp_path):
     service = FundamentalsAnalysisService(
         storage=FundamentalsStorage(tmp_path / "fundamentals"),

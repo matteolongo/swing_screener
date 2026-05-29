@@ -85,4 +85,96 @@ describe('transformScreenerResponse', () => {
     expect(result.candidates[0].decisionSummary?.valuationContext.priceToBook).toBe(5.4);
     expect(result.candidates[0].decisionSummary?.valuationContext.fairValueBase).toBe(107.32);
   });
+
+  it('maps data source summary from API payload', () => {
+    const apiResponse: ScreenerResponseAPI = {
+      asof_date: '2026-03-02',
+      total_screened: 1,
+      data_freshness: 'final_close',
+      candidates: [
+        {
+          ticker: 'AAPL',
+          close: 100,
+          sma_20: 99,
+          sma_50: 95,
+          sma_200: 90,
+          atr: 2,
+          momentum_6m: 0.2,
+          momentum_12m: 0.3,
+          rel_strength: 1.1,
+          score: 0.8,
+          confidence: 78,
+          rank: 1,
+          data_source_summary: {
+            market_data: {
+              provider: 'yfinance',
+              status: 'ok',
+              quality_score: 0.65,
+              delay_policy: 'delayed_or_eod',
+              warnings: ['unofficial_provider'],
+            },
+            fundamentals: {
+              provider: 'sec_edgar',
+              status: 'ok',
+              quality_score: 0.9,
+            },
+          },
+        },
+      ],
+    };
+
+    const result = transformScreenerResponse(apiResponse);
+
+    expect(result.candidates[0].dataSourceSummary?.marketData?.provider).toBe('yfinance');
+    expect(result.candidates[0].dataSourceSummary?.marketData?.qualityScore).toBe(0.65);
+    expect(result.candidates[0].dataSourceSummary?.marketData?.delayPolicy).toBe('delayed_or_eod');
+    expect(result.candidates[0].dataSourceSummary?.marketData?.warnings).toEqual(['unofficial_provider']);
+    expect(result.candidates[0].dataSourceSummary?.fundamentals?.provider).toBe('sec_edgar');
+  });
+
+  it('maps camelCase data source summary from API payload', () => {
+    const apiResponse: ScreenerResponseAPI = {
+      asof_date: '2026-03-02',
+      total_screened: 1,
+      data_freshness: 'final_close',
+      candidates: [
+        {
+          ticker: 'MSFT',
+          close: 300,
+          sma_20: 295,
+          sma_50: 290,
+          sma_200: 280,
+          atr: 5,
+          momentum_6m: 0.15,
+          momentum_12m: 0.22,
+          rel_strength: 1.05,
+          score: 0.75,
+          confidence: 72,
+          rank: 2,
+          dataSourceSummary: {
+            marketData: {
+              provider: 'alpaca',
+              status: 'degraded',
+              qualityScore: 0.8,
+              delayPolicy: 'intraday',
+              warnings: ['limited_history'],
+            },
+            calendar: {
+              provider: 'finnhub',
+              status: 'ok',
+              qualityScore: 0.85,
+            },
+          },
+        },
+      ],
+    };
+
+    const result = transformScreenerResponse(apiResponse);
+
+    expect(result.candidates[0].dataSourceSummary?.marketData?.provider).toBe('alpaca');
+    expect(result.candidates[0].dataSourceSummary?.marketData?.status).toBe('degraded');
+    expect(result.candidates[0].dataSourceSummary?.marketData?.qualityScore).toBe(0.8);
+    expect(result.candidates[0].dataSourceSummary?.marketData?.delayPolicy).toBe('intraday');
+    expect(result.candidates[0].dataSourceSummary?.calendar?.provider).toBe('finnhub');
+  });
 });

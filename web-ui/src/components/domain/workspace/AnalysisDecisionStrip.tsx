@@ -1,6 +1,7 @@
 import Badge from '@/components/common/Badge';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
 import type {
+  DataSourceHealth,
   DecisionAction,
   DecisionConviction,
 } from '@/features/screener/types';
@@ -61,6 +62,18 @@ function compactValue(label: string, value: string, secondary?: string) {
   );
 }
 
+function sourceBadgeVariant(source: DataSourceHealth): 'success' | 'warning' | 'error' | 'default' {
+  switch (source.status) {
+    case 'ok':
+      return 'success';
+    case 'failed':
+      return 'error';
+    case 'degraded':
+    case 'unknown':
+      return 'warning';
+  }
+}
+
 export default function AnalysisDecisionStrip({
   ticker,
   candidate,
@@ -93,6 +106,14 @@ export default function AnalysisDecisionStrip({
   const closeSecondary = usesSuggestedEntry && isPositiveNumber(closeEntry)
     ? `${t('workspacePage.panels.analysis.decisionSummary.tradePlan.close')} ${formatCurrency(closeEntry, currency)}`
     : undefined;
+  const sourceItems = [
+    ['Market', candidate?.dataSourceSummary?.marketData],
+    ['Fundamentals', candidate?.dataSourceSummary?.fundamentals],
+    ['Events', candidate?.dataSourceSummary?.calendar],
+  ] as const;
+  const visibleSourceItems = sourceItems.filter(
+    (item): item is readonly [typeof item[0], DataSourceHealth] => Boolean(item[1])
+  );
 
   return (
     <div className="sticky top-0 z-10 rounded-xl border border-slate-200 bg-slate-50/95 p-3 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-slate-50/85">
@@ -103,6 +124,11 @@ export default function AnalysisDecisionStrip({
               <h2 className="text-base font-semibold text-slate-900">{ticker}</h2>
               {summary ? <Badge variant="primary">{actionLabel(summary.action)}</Badge> : null}
               {summary ? <Badge variant="default">{convictionLabel(summary.conviction)}</Badge> : null}
+              {visibleSourceItems.map(([label, source]) => (
+                <Badge key={label} variant={sourceBadgeVariant(source)}>
+                  {label}: {source.provider || 'unknown'} ({source.status})
+                </Badge>
+              ))}
             </div>
             <p className="text-xs text-slate-600">
               {summary?.explanation?.summaryLine

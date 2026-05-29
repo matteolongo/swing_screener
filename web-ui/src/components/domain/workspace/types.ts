@@ -1,5 +1,9 @@
 import type { Recommendation } from '@/types/recommendation';
-import type { DecisionSummary, SameSymbolCandidateContext } from '@/features/screener/types';
+import type {
+  CandidateDataSourceSummary,
+  DecisionSummary,
+  SameSymbolCandidateContext,
+} from '@/features/screener/types';
 
 export type WorkspaceAnalysisTab = 'overview' | 'fundamentals' | 'order';
 
@@ -31,4 +35,5 @@ export interface SymbolAnalysisCandidate {
   executionNote?: string;
   sameSymbol?: SameSymbolCandidateContext;
   decisionSummary?: DecisionSummary;
+  dataSourceSummary?: CandidateDataSourceSummary;
 }
