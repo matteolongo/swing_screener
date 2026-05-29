@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime, timezone
 from typing import Any
 
+import pandas as pd
 import yfinance as yf
 
 from swing_screener.fundamentals.models import (
@@ -108,6 +109,26 @@ def _find_row_label(frame: Any, candidates: list[str]) -> Any | None:
         label = normalized.get(candidate.strip().lower())
         if label is not None:
             return label
+    return None
+
+
+def _extract_bs_value(bs: Any, *row_keys: str) -> float | None:
+    if bs is None or not _frame_has_data(bs):
+        return None
+    for key in row_keys:
+        row_label = _find_row_label(bs, [key])
+        if row_label is None:
+            continue
+        try:
+            value = bs.loc[row_label].iloc[0]
+        except Exception:
+            continue
+        try:
+            numeric_value = float(value)
+        except (TypeError, ValueError):
+            continue
+        if not pd.isna(numeric_value):
+            return numeric_value
     return None
 
 
@@ -338,6 +359,20 @@ class YfinanceFundamentalsProvider:
                     period_end=latest_total_equity.period_end,
                 )
 
+        total_assets = _extract_bs_value(balance_frame, "Total Assets", "TotalAssets")
+        total_liabilities = _extract_bs_value(
+            balance_frame,
+            "Total Liab",
+            "TotalLiabilities",
+            "Total Liabilities Net Minority Interest",
+        )
+        cash_and_equivalents = _extract_bs_value(
+            balance_frame,
+            "Cash",
+            "Cash And Cash Equivalents",
+            "Cash Cash Equivalents And Short Term Investments",
+        )
+
         most_recent_quarter = _coerce_iso_date(info.get("mostRecentQuarter"))
         if most_recent_quarter:
             metric_sources["most_recent_quarter"] = _info_source("mostRecentQuarter")
@@ -475,6 +510,9 @@ class YfinanceFundamentalsProvider:
             total_equity=total_equity,
             book_value_per_share=book_value_per_share,
             price_to_book=price_to_book,
+            total_assets=total_assets,
+            total_liabilities=total_liabilities,
+            cash_and_equivalents=cash_and_equivalents,
             historical_series=historical_series,
             metric_context=metric_context,
             metric_sources={key: value for key, value in metric_sources.items() if value},

@@ -403,6 +403,39 @@ def test_fundamentals_service_builds_supported_quarterly_snapshot_with_high_trus
     assert "Quarterly revenue trend is improving." in snapshot.highlights
 
 
+def test_yfinance_provider_populates_balance_sheet_fields():
+    from unittest.mock import MagicMock, patch
+
+    import pandas as pd
+    import yfinance as yf
+
+    from swing_screener.fundamentals.providers.yfinance import YfinanceFundamentalsProvider
+
+    provider = YfinanceFundamentalsProvider()
+    mock_ticker = MagicMock()
+
+    balance_sheet = pd.DataFrame(
+        {
+            "2026-03-31": [300e9, 180e9, 50e9],
+        },
+        index=["Total Assets", "Total Liab", "Cash"],
+    )
+    mock_ticker.balance_sheet = balance_sheet
+    mock_ticker.quarterly_balance_sheet = balance_sheet
+    mock_ticker.income_stmt = pd.DataFrame()
+    mock_ticker.quarterly_income_stmt = pd.DataFrame()
+    mock_ticker.cashflow = pd.DataFrame()
+    mock_ticker.quarterly_cashflow = pd.DataFrame()
+    mock_ticker.info = {"sector": "Technology", "marketCap": 2e12}
+
+    with patch.object(yf, "Ticker", return_value=mock_ticker):
+        record = provider.fetch_record("AAPL")
+
+    assert record.total_assets == pytest.approx(300e9)
+    assert record.total_liabilities == pytest.approx(180e9)
+    assert record.cash_and_equivalents == pytest.approx(50e9)
+
+
 def test_default_fundamentals_config_excludes_degiro_when_integration_unavailable():
     cfg = build_fundamentals_config({})
 
