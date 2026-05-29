@@ -41,7 +41,7 @@ export function candidateToPayload(
   const payload: IntelligenceRequestPayload = {
     close: candidate.close,
     signal: candidate.signal ?? 'unknown',
-    entry: candidate.entry ?? null,
+    entry: candidate.suggestedOrderPrice ?? candidate.entry ?? null,
     stop: candidate.stop ?? null,
     sma_20: candidate.sma20 ?? null,
     sma_50: candidate.sma50 ?? null,
