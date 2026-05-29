@@ -210,3 +210,39 @@ def test_snapshot_from_dict_handles_malformed_new_numeric_fields():
         assert snapshot.total_liabilities is None
         assert snapshot.cash_and_equivalents is None
         assert snapshot.data_confidence_score == 0.5
+
+
+def test_insider_and_estimate_fields_round_trip():
+    from swing_screener.fundamentals.models import FundamentalSnapshot
+    import pytest
+    snap = FundamentalSnapshot(
+        symbol="AAPL",
+        asof_date="2026-05-29",
+        provider="finnhub",
+        updated_at="2026-05-29T10:00:00",
+        insider_net_shares_90d=15000,
+        insider_transaction_count_90d=3,
+        forward_eps_estimate=1.55,
+        analyst_upgrade_downgrade_net_30d=2,
+    )
+    payload = snap.to_dict()
+    restored = FundamentalSnapshot.from_dict(payload)
+
+    assert restored.insider_net_shares_90d == 15000
+    assert restored.insider_transaction_count_90d == 3
+    assert restored.forward_eps_estimate == pytest.approx(1.55)
+    assert restored.analyst_upgrade_downgrade_net_30d == 2
+
+
+def test_insider_fields_default_to_none():
+    from swing_screener.fundamentals.models import FundamentalSnapshot
+    snap = FundamentalSnapshot.from_dict({
+        "symbol": "AAPL",
+        "asof_date": "2026-05-29",
+        "provider": "yfinance",
+        "updated_at": "2026-05-29T10:00:00",
+    })
+    assert snap.insider_net_shares_90d is None
+    assert snap.insider_transaction_count_90d is None
+    assert snap.forward_eps_estimate is None
+    assert snap.analyst_upgrade_downgrade_net_30d is None

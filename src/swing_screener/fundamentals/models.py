@@ -154,6 +154,10 @@ class ProviderFundamentalsRecord:
     analyst_recommendation_score: float | None = None
     analyst_price_target: float | None = None
     earnings_beat_streak: int | None = None
+    insider_net_shares_90d: int | None = None
+    insider_transaction_count_90d: int | None = None
+    forward_eps_estimate: float | None = None
+    analyst_upgrade_downgrade_net_30d: int | None = None
     data_region: str | None = None
     historical_series: dict[str, FundamentalMetricSeries] = field(default_factory=dict)
     metric_context: dict[str, FundamentalMetricContext] = field(default_factory=dict)
@@ -219,6 +223,10 @@ class FundamentalSnapshot:
     analyst_recommendation_score: float | None = None
     analyst_price_target: float | None = None
     earnings_beat_streak: int | None = None
+    insider_net_shares_90d: int | None = None
+    insider_transaction_count_90d: int | None = None
+    forward_eps_estimate: float | None = None
+    analyst_upgrade_downgrade_net_30d: int | None = None
     total_assets: float | None = None
     total_liabilities: float | None = None
     cash_and_equivalents: float | None = None
@@ -372,4 +380,8 @@ class FundamentalSnapshot:
             analyst_recommendation_score=(float(payload["analyst_recommendation_score"]) if payload.get("analyst_recommendation_score") is not None else None),
             analyst_price_target=(float(payload["analyst_price_target"]) if payload.get("analyst_price_target") is not None else None),
             earnings_beat_streak=(int(payload["earnings_beat_streak"]) if payload.get("earnings_beat_streak") is not None else None),
+            insider_net_shares_90d=(int(payload["insider_net_shares_90d"]) if payload.get("insider_net_shares_90d") is not None else None),
+            insider_transaction_count_90d=(int(payload["insider_transaction_count_90d"]) if payload.get("insider_transaction_count_90d") is not None else None),
+            forward_eps_estimate=(float(payload["forward_eps_estimate"]) if payload.get("forward_eps_estimate") is not None else None),
+            analyst_upgrade_downgrade_net_30d=(int(payload["analyst_upgrade_downgrade_net_30d"]) if payload.get("analyst_upgrade_downgrade_net_30d") is not None else None),
         )
