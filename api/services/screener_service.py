@@ -7,6 +7,7 @@ import datetime as dt
 from datetime import datetime, timezone, timedelta
 import logging
 import math
+import os
 from zoneinfo import ZoneInfo
 
 import pandas as pd
@@ -39,8 +40,10 @@ from swing_screener.data.ticker_info import get_multiple_ticker_info
 from swing_screener.reporting.report import ReportConfig, build_daily_report
 from swing_screener.reporting.concentration import sector_concentration_warnings
 from swing_screener.fundamentals.storage import FundamentalsStorage
+from swing_screener.fundamentals.earnings_proximity import fetch_next_earnings_days
 from swing_screener.recommendation import build_decision_summary
 from swing_screener.recommendation.priority import CombinedPriorityConfig, compute_combined_priority
+from swing_screener.settings import get_settings_manager
 from swing_screener.strategy.config import (
     build_entry_config,
     build_ranking_config,
@@ -119,6 +122,17 @@ MARKET_CLOSE_BY_CURRENCY: dict[str, tuple[str, int, int]] = {
 
 
 _CATALYST_STALE_DAYS = 2
+
+
+def _min_days_to_earnings_default() -> int:
+    selection_defaults = get_settings_manager().get_low_level_defaults_payload("selection")
+    universe_defaults = selection_defaults.get("universe", {})
+    if not isinstance(universe_defaults, dict):
+        return 0
+    try:
+        return int(universe_defaults.get("min_days_to_earnings", 0))
+    except (TypeError, ValueError):
+        return 0
 
 
 def _is_stale(opportunity: object | None) -> bool:
@@ -1084,6 +1098,27 @@ class ScreenerService:
             candidates = filtered_candidates
             candidates = _apply_cached_fundamentals_context(candidates)
             candidates = _apply_decision_summary_context(candidates)
+
+            finnhub_key = os.environ.get("FINNHUB_API_KEY")
+            earnings_asof_date = dt.date.fromisoformat(asof_str)
+            earnings_days = fetch_next_earnings_days(
+                tickers=[candidate.ticker for candidate in candidates],
+                finnhub_api_key=finnhub_key,
+                asof_date=earnings_asof_date,
+            )
+            candidates = [
+                candidate.model_copy(update={"days_to_earnings": earnings_days.get(candidate.ticker)})
+                for candidate in candidates
+            ]
+
+            min_days_to_earnings = _min_days_to_earnings_default()
+            if min_days_to_earnings > 0:
+                candidates = [
+                    candidate
+                    for candidate in candidates
+                    if candidate.days_to_earnings is None or candidate.days_to_earnings >= min_days_to_earnings
+                ]
+
             # Stage 2: combined priority re-ranks prefilter set and trims to final top-N
             candidates = compute_combined_priority(candidates, cfg=combined_priority_cfg)
             candidates = candidates[:requested_top]

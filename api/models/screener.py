@@ -90,6 +90,7 @@ class ScreenerCandidate(BaseModel):
     avg_daily_volume_eur: Optional[float] = None
     symbol_change_pct: Optional[float] = None
     benchmark_outperformance_pct: Optional[float] = None
+    days_to_earnings: Optional[int] = None
 
 
 class ScreenerRequest(BaseModel):

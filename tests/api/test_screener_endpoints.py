@@ -97,6 +97,15 @@ def _create_mock_provider(ohlcv_data: pd.DataFrame) -> MarketDataProvider:
     return mock_provider
 
 
+@pytest.fixture(autouse=True)
+def _stub_earnings_proximity(monkeypatch):
+    monkeypatch.setattr(
+        screener_service,
+        "fetch_next_earnings_days",
+        lambda tickers, finnhub_api_key, asof_date, **kwargs: {ticker: None for ticker in tickers},
+    )
+
+
 def test_screener_top_over_100_returns_candidates(monkeypatch):
     ohlcv = _ohlcv_with_spy()
     mock_provider = _create_mock_provider(ohlcv)
@@ -252,6 +261,82 @@ def test_screener_response_includes_market_data_source_summary(monkeypatch):
     assert market_data["provider"] == "mock"
     assert market_data["status"] in {"ok", "degraded", "failed", "unknown"}
     assert 0 <= market_data["quality_score"] <= 1
+
+
+def test_screener_candidate_includes_days_to_earnings(monkeypatch):
+    ohlcv = _ohlcv_with_spy()
+    mock_provider = _create_mock_provider(ohlcv)
+
+    def fake_report(ohlcv, cfg, exclude_tickers=None):
+        return pd.DataFrame(
+            {
+                "atr14": [1.2],
+                "mom_6m": [0.1],
+                "mom_12m": [0.2],
+                "rs_6m": [0.05],
+                "score": [0.55],
+                "confidence": [60.0],
+                "last": [50.0],
+                "ma20_level": [48.0],
+                "dist_sma50_pct": [5.0],
+                "dist_sma200_pct": [10.0],
+                "rank": [1],
+            },
+            index=["AAA"],
+        )
+
+    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(screener_service, "build_daily_report", fake_report)
+    monkeypatch.setattr(screener_service, "get_multiple_ticker_info", lambda tickers: {})
+    monkeypatch.setattr(
+        "api.services.screener_service.fetch_next_earnings_days",
+        lambda tickers, finnhub_api_key, asof_date, **kwargs: {"AAA": 12},
+    )
+
+    client = TestClient(app)
+    res = client.post("/api/screener/run", json={"universe": "broad_market_stocks", "top": 1})
+    assert res.status_code == 200
+    candidate = res.json()["candidates"][0]
+    assert candidate.get("days_to_earnings") == 12
+
+
+def test_screener_filters_candidates_too_close_to_earnings(monkeypatch):
+    ohlcv = _ohlcv_with_spy()
+    mock_provider = _create_mock_provider(ohlcv)
+
+    def fake_report(ohlcv, cfg, exclude_tickers=None):
+        return pd.DataFrame(
+            {
+                "atr14": [1.2, 1.2],
+                "mom_6m": [0.1, 0.1],
+                "mom_12m": [0.2, 0.2],
+                "rs_6m": [0.05, 0.05],
+                "score": [0.55, 0.55],
+                "confidence": [60.0, 59.0],
+                "last": [50.0, 51.0],
+                "ma20_level": [48.0, 49.0],
+                "dist_sma50_pct": [5.0, 5.0],
+                "dist_sma200_pct": [10.0, 10.0],
+                "rank": [1, 2],
+            },
+            index=["AAA", "BBB"],
+        )
+
+    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(screener_service, "build_daily_report", fake_report)
+    monkeypatch.setattr(screener_service, "get_multiple_ticker_info", lambda tickers: {})
+    monkeypatch.setattr(screener_service, "_min_days_to_earnings_default", lambda: 10)
+    monkeypatch.setattr(
+        "api.services.screener_service.fetch_next_earnings_days",
+        lambda tickers, finnhub_api_key, asof_date, **kwargs: {"AAA": 5, "BBB": 12},
+    )
+
+    client = TestClient(app)
+    res = client.post("/api/screener/run", json={"universe": "broad_market_stocks", "top": 2})
+    assert res.status_code == 200
+    candidates = res.json()["candidates"]
+    assert [candidate["ticker"] for candidate in candidates] == ["BBB"]
+    assert candidates[0]["days_to_earnings"] == 12
 
 
 def test_screener_attaches_benchmark_comparison(monkeypatch):
