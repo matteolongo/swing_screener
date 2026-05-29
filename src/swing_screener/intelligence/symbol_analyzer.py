@@ -187,7 +187,7 @@ def _build_user_prompt(ticker: str, req: SymbolIntelligenceRequest) -> str:
     if has_finnhub and not has_position:
         lines += ["", "--- Finnhub enrichment signals ---"]
         if req.insider_net_shares_90d is not None:
-            direction = "net buyer" if req.insider_net_shares_90d > 0 else "net seller"
+            direction = "net buyer" if req.insider_net_shares_90d > 0 else ("net seller" if req.insider_net_shares_90d < 0 else "flat")
             lines.append(f"Insider activity (90d): {req.insider_net_shares_90d:+,} shares ({direction})")
         if req.forward_eps_estimate is not None:
             lines.append(f"Forward EPS estimate (next Q): {req.forward_eps_estimate:.2f}")
