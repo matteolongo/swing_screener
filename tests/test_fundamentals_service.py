@@ -437,9 +437,23 @@ def test_yfinance_provider_populates_balance_sheet_fields():
 
 
 def test_default_fundamentals_config_excludes_degiro_when_integration_unavailable():
-    cfg = build_fundamentals_config({})
+    from unittest.mock import patch
+    import swing_screener.fundamentals.config as fconfig
+
+    with patch.object(fconfig, "TIER1_PROVIDERS", ("sec_edgar", "yfinance")):
+        cfg = build_fundamentals_config({})
 
     assert cfg.providers == ("sec_edgar", "yfinance")
+
+
+def test_default_fundamentals_config_includes_degiro_when_integration_available():
+    from unittest.mock import patch
+    import swing_screener.fundamentals.config as fconfig
+
+    with patch.object(fconfig, "TIER1_PROVIDERS", ("sec_edgar", "degiro", "yfinance")):
+        cfg = build_fundamentals_config({})
+
+    assert cfg.providers == ("sec_edgar", "degiro", "yfinance")
 
 
 def test_explicit_fundamentals_config_still_allows_degiro_provider_name():
