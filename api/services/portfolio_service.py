@@ -502,6 +502,9 @@ class PortfolioService:
             exit_fee_eur = position.get("exit_fee_eur")
             if exit_fee_eur is not None:
                 realized_pnl -= abs(float(exit_fee_eur))
+            entry_fee_eur = position.get("entry_fee_eur")
+            if entry_fee_eur is not None:
+                realized_pnl -= abs(float(entry_fee_eur))
         return realized_pnl
 
     def get_portfolio_summary(self, account_size: float, account_size_mode: str = "equity") -> PortfolioSummary:
