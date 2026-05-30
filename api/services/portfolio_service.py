@@ -1123,22 +1123,19 @@ class PortfolioService:
                 detail=f"DeGiro order {degiro_order_id} not found in history (last 90 days)",
             )
 
-        fill_price = float(degiro_order.get("price", 0))
+        fill_price = degiro_order.get("price")
+        if not fill_price:
+            raise HTTPException(
+                status_code=422,
+                detail=f"DeGiro order {degiro_order_id} has no execution price (may be cancelled or pending)",
+            )
+        fill_price = float(fill_price)
         fill_qty = int(float(degiro_order.get("size", 0) or degiro_order.get("quantity", 0) or 0))
         fill_date = str(degiro_order.get("date", "") or get_today_str())[:10]
         isin_from_degiro = str(degiro_order.get("isin", "") or "") or None
         product_id = str(degiro_order.get("productId", "") or "") or None
 
         quantity_mismatch = fill_qty != order.get("quantity", 0)
-
-        broker_updates: dict = {
-            "broker_order_id": degiro_order_id,
-            "broker": "degiro",
-            "broker_synced_at": get_today_str(),
-        }
-        if isin_from_degiro and not order.get("isin"):
-            broker_updates["isin"] = isin_from_degiro
-        self._orders_repo.update_order(order_id, broker_updates)
 
         from api.services.orders_service import OrdersService
         orders_svc = OrdersService(
@@ -1150,6 +1147,15 @@ class PortfolioService:
             filled_date=fill_date,
             fee_eur=None,
         ))
+
+        broker_updates: dict = {
+            "broker_order_id": degiro_order_id,
+            "broker": "degiro",
+            "broker_synced_at": get_today_str(),
+        }
+        if isin_from_degiro and not order.get("isin"):
+            broker_updates["isin"] = isin_from_degiro
+        self._orders_repo.update_order(order_id, broker_updates)
 
         if product_id:
             data = self._positions_repo.read()

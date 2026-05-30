@@ -52,3 +52,44 @@ def test_list_degiro_orders_returns_response(tmp_path: Path) -> None:
     assert len(resp.orders) == 1
     assert resp.orders[0].order_id == "DG-001"
     assert resp.orders[0].side == "buy"
+
+
+def test_fill_order_from_degiro_raises_on_zero_price(tmp_path: Path) -> None:
+    """fill_order_from_degiro must raise HTTP 422 when the DeGiro order has no execution price."""
+    svc = _make_service(tmp_path)
+
+    # Seed a pending order
+    of = tmp_path / "orders.json"
+    pending_order = {
+        "order_id": "ORD-001",
+        "ticker": "AAPL",
+        "status": "pending",
+        "quantity": 10,
+        "isin": None,
+    }
+    of.write_text(json.dumps({"orders": [pending_order], "asof": "2026-05-28"}), encoding="utf-8")
+    svc._orders_repo = svc._orders_repo.__class__(of)
+
+    degiro_history_order = {
+        "orderId": "DG-NOPRICE",
+        "size": 10,
+        # no "price" key — simulates a cancelled/pending DeGiro order
+        "date": "2026-05-28",
+    }
+
+    from fastapi import HTTPException
+
+    with patch("swing_screener.integrations.degiro.credentials.load_credentials") as lc, \
+         patch("swing_screener.integrations.degiro.client.DegiroClient") as ClientCls:
+        lc.return_value = MagicMock()
+        mock_client = MagicMock()
+        mock_client.__enter__ = lambda s: s
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_client.get_order_history.return_value = [degiro_history_order]
+        ClientCls.return_value = mock_client
+
+        with pytest.raises(HTTPException) as exc_info:
+            svc.fill_order_from_degiro("ORD-001", "DG-NOPRICE")
+
+    assert exc_info.value.status_code == 422
+    assert "no execution price" in exc_info.value.detail
