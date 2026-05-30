@@ -25,11 +25,13 @@ from api.models.portfolio import (
 )
 from api.dependencies import get_config_repo, get_orders_service, get_portfolio_service, get_regime_analytics_service
 from api.dependencies import get_strategy_repo
+from api.models.position_intelligence import OpenPositionIntelligenceSummary
 from api.repositories.config_repo import ConfigRepository
 from api.repositories.strategy_repo import StrategyRepository
 from api.services.orders_service import OrdersService
 from api.services.portfolio_service import PortfolioService
 from api.services.regime_analytics import RegimeAnalyticsService
+from swing_screener.intelligence.cache import read_from_cache
 
 router = APIRouter()
 
@@ -68,6 +70,42 @@ async def create_position(
 ):
     """Register a position manually after a DeGiro fill."""
     return service.create_position(request)
+
+
+@router.get("/positions/open/intelligence", response_model=list[OpenPositionIntelligenceSummary])
+async def get_open_positions_intelligence(
+    service: PortfolioService = Depends(get_portfolio_service),
+) -> list[OpenPositionIntelligenceSummary]:
+    """Return cached intelligence + stop suggestion for all open positions."""
+    result = service.list_positions(status="open", time_stop_days=None, time_stop_min_r=None)
+    summaries: list[OpenPositionIntelligenceSummary] = []
+    for pos in result.positions:
+        try:
+            stop = service.suggest_position_stop(pos.position_id)
+            stop_action = stop.action
+            stop_suggested = stop.stop_suggested
+            stop_reason = stop.reason
+        except Exception:
+            stop_action = "NO_ACTION"
+            stop_suggested = pos.stop_price
+            stop_reason = ""
+        intelligence = read_from_cache(pos.ticker)
+        summaries.append(
+            OpenPositionIntelligenceSummary(
+                position_id=pos.position_id,
+                ticker=pos.ticker,
+                entry_price=pos.entry_price,
+                stop_price=pos.stop_price,
+                current_price=pos.current_price,
+                r_now=pos.r_now,
+                days_open=pos.days_open,
+                stop_action=stop_action,
+                stop_suggested=stop_suggested,
+                stop_reason=stop_reason,
+                intelligence=intelligence,
+            )
+        )
+    return summaries
 
 
 @router.get("/positions/{position_id}", response_model=Position)

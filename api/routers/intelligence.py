@@ -4,9 +4,11 @@ from __future__ import annotations
 import logging
 import os
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
+from api.dependencies import get_portfolio_service
+from api.services.portfolio_service import PortfolioService
 from swing_screener.intelligence.cache import read_from_cache
 from swing_screener.intelligence.models import SymbolIntelligence, SymbolIntelligenceRequest
 from swing_screener.intelligence.symbol_analyzer import SymbolAnalyzer
@@ -72,5 +74,30 @@ def analyze_symbol(ticker: str, request: SymbolIntelligenceRequest) -> SymbolInt
     try:
         analyzer = SymbolAnalyzer()
         return analyzer.analyze(ticker.upper(), request)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.post("/position/{position_id}", response_model=SymbolIntelligence)
+def analyze_position(
+    position_id: str,
+    portfolio_service: PortfolioService = Depends(get_portfolio_service),
+) -> SymbolIntelligence:
+    """Trigger a position-aware LLM analysis for an open position."""
+    _require_api_key()
+    pos = portfolio_service.get_position_metrics(position_id)
+    stop = portfolio_service.suggest_position_stop(position_id)
+    request = SymbolIntelligenceRequest(
+        close=float(pos.current_price or pos.entry_price),
+        signal=stop.action,
+        entry_price=float(pos.entry_price),
+        entry=float(pos.entry_price),
+        stop=float(pos.stop_price),
+        r_now=float(pos.r_now),
+        days_open=int(pos.days_open),
+    )
+    try:
+        analyzer = SymbolAnalyzer()
+        return analyzer.analyze(pos.ticker, request)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
