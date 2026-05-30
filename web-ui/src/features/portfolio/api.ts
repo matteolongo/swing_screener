@@ -27,7 +27,15 @@ import {
   ClosePositionRequest,
   PartialCloseRequest,
   UpdateTrailMethodRequest,
+  DegiroOrder,
+  DegiroOrderApiResponse,
+  FillFromDegiroRequest,
+  FillFromDegiroResponse,
+  FillFromDegiroResponseApi,
   transformCreateOrderRequest,
+  transformDegiroOrder,
+  transformFillFromDegiroRequest,
+  transformFillFromDegiroResponse,
   transformOrder,
   transformPosition,
   transformPositionUpdate,
@@ -166,6 +174,22 @@ export interface EarningsProximity {
   warning: boolean;
 }
 
+export interface DegiroStatusApiResponse {
+  installed: boolean;
+  credentials_configured: boolean;
+  available: boolean;
+  mode: 'ready' | 'missing_library' | 'missing_credentials';
+  detail: string;
+}
+
+export interface DegiroStatus {
+  installed: boolean;
+  credentialsConfigured: boolean;
+  available: boolean;
+  mode: 'ready' | 'missing_library' | 'missing_credentials';
+  detail: string;
+}
+
 export type OrderFilterStatus = OrderStatus | 'all';
 export type PositionFilterStatus = PositionStatus | 'all';
 
@@ -251,6 +275,67 @@ export async function cancelOrder(orderId: string): Promise<void> {
     method: 'DELETE',
   });
   if (!response.ok) throw new Error('Failed to cancel order');
+}
+
+export async function fetchDegiroStatus(): Promise<DegiroStatus> {
+  if (isLocalPersistenceMode()) {
+    return {
+      installed: false,
+      credentialsConfigured: false,
+      available: false,
+      mode: 'missing_library',
+      detail: 'Local persistence mode keeps broker tracking manual. DeGiro sync is unavailable.',
+    };
+  }
+
+  const response = await fetch(apiUrl(API_ENDPOINTS.degiroStatus));
+  if (!response.ok) {
+    throw await buildApiError(response, 'Failed to fetch DeGiro status');
+  }
+
+  const payload: DegiroStatusApiResponse = await response.json();
+  return {
+    installed: payload.installed,
+    credentialsConfigured: payload.credentials_configured,
+    available: payload.available,
+    mode: payload.mode,
+    detail: payload.detail,
+  };
+}
+
+export async function fetchDegiroOrderHistory(): Promise<DegiroOrder[]> {
+  if (isLocalPersistenceMode()) {
+    return [];
+  }
+
+  const response = await fetch(apiUrl(API_ENDPOINTS.degiroOrderHistory));
+  if (!response.ok) {
+    throw await buildApiError(response, 'Failed to fetch DeGiro order history');
+  }
+
+  const data: { orders?: DegiroOrderApiResponse[] } = await response.json();
+  return (data.orders ?? []).map(transformDegiroOrder);
+}
+
+export async function fillOrderFromDegiro(
+  orderId: string,
+  request: FillFromDegiroRequest,
+): Promise<FillFromDegiroResponse> {
+  if (isLocalPersistenceMode()) {
+    throw new Error('Fill from DeGiro is not supported in local persistence mode');
+  }
+
+  const response = await fetch(apiUrl(API_ENDPOINTS.orderFillFromDegiro(orderId)), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(transformFillFromDegiroRequest(request)),
+  });
+  if (!response.ok) {
+    throw await buildApiError(response, 'Failed to fill order from DeGiro');
+  }
+
+  const payload: FillFromDegiroResponseApi = await response.json();
+  return transformFillFromDegiroResponse(payload);
 }
 
 export async function fetchPositions(status: PositionFilterStatus): Promise<PositionWithMetrics[]> {

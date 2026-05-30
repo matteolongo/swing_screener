@@ -39,6 +39,15 @@ describe('API Client', () => {
     it('has dynamic order endpoint function', () => {
       expect(API_ENDPOINTS.order('ORD-123')).toBe('/api/portfolio/orders/ORD-123')
       expect(API_ENDPOINTS.orderFill('ORD-123')).toBe('/api/portfolio/orders/ORD-123/fill')
+      expect(API_ENDPOINTS.orderFillFromDegiro('ORD-123')).toBe(
+        '/api/portfolio/orders/ORD-123/fill-from-degiro'
+      )
+    })
+
+    it('has active DeGiro portfolio endpoints', () => {
+      expect(API_ENDPOINTS.degiroStatus).toBe('/api/portfolio/degiro/status')
+      expect(API_ENDPOINTS.degiroOrderHistory).toBe('/api/portfolio/degiro/order-history')
+      expect(API_ENDPOINTS.degiroOrderSyncApply).toBe('/api/portfolio/sync/degiro/apply')
     })
 
     it('has watchlist endpoints', () => {
@@ -57,10 +66,6 @@ describe('API Client', () => {
       expect('chatAnswer' in API_ENDPOINTS).toBe(false)
       expect('screenerUniverses' in API_ENDPOINTS).toBe(false)
       expect('screenerPreview' in API_ENDPOINTS).toBe(false)
-      expect('degiroStatus' in API_ENDPOINTS).toBe(false)
-      expect('degiroOrderHistory' in API_ENDPOINTS).toBe(false)
-      expect('orderFillFromDegiro' in API_ENDPOINTS).toBe(false)
-      expect('degiroOrderSyncApply' in API_ENDPOINTS).toBe(false)
       expect('degiroCapabilityAudit' in API_ENDPOINTS).toBe(false)
       expect('degiroPortfolioAudit' in API_ENDPOINTS).toBe(false)
       expect('intelligenceConfig' in API_ENDPOINTS).toBe(false)

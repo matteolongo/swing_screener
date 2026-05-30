@@ -675,6 +675,10 @@ export const handlers = [
     })
   }),
 
+  http.get(`${API_BASE_URL}/api/portfolio/positions/open/intelligence`, () => {
+    return HttpResponse.json([])
+  }),
+
   // Orders endpoints
   http.get(`${API_BASE_URL}/api/portfolio/orders`, ({ request }) => {
     const url = new URL(request.url)
@@ -705,6 +709,41 @@ export const handlers = [
     return HttpResponse.json({
       status: 'ok',
       order_id: params.orderId,
+    })
+  }),
+
+  http.get(`${API_BASE_URL}/api/portfolio/degiro/status`, () => {
+    return HttpResponse.json({
+      installed: false,
+      credentials_configured: false,
+      available: false,
+      mode: 'missing_library',
+      detail: 'degiro-connector is not installed.',
+    })
+  }),
+
+  http.get(`${API_BASE_URL}/api/portfolio/degiro/order-history`, () => {
+    return HttpResponse.json({ orders: [], asof: '2026-05-28' })
+  }),
+
+  http.post(`${API_BASE_URL}/api/portfolio/orders/:orderId/fill-from-degiro`, ({ params }) => {
+    return HttpResponse.json({
+      order_id: params.orderId,
+      broker_order_id: 'DG-001',
+      quantity_mismatch: false,
+      position: mockPositions[0],
+    }, { status: 201 })
+  }),
+
+  http.post(`${API_BASE_URL}/api/portfolio/sync/degiro/apply`, () => {
+    return HttpResponse.json({
+      positions_created: 0,
+      positions_updated: 0,
+      orders_created: 0,
+      orders_updated: 0,
+      fees_applied: 0,
+      ambiguous_skipped: 0,
+      artifact_paths: {},
     })
   }),
 

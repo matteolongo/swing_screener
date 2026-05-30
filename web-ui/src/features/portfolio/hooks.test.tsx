@@ -10,7 +10,10 @@ vi.mock('@/features/portfolio/api', () => ({
   cancelOrder: vi.fn(),
   fetchPositions: vi.fn(),
   fetchPositionStopSuggestion: vi.fn(),
+  fetchDegiroStatus: vi.fn(),
+  fetchDegiroOrderHistory: vi.fn(),
   updatePositionStop: vi.fn(),
+  fillOrderFromDegiro: vi.fn(),
   closePosition: vi.fn(),
 }))
 

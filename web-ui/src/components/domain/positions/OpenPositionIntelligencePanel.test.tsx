@@ -5,7 +5,7 @@ import OpenPositionIntelligencePanel from './OpenPositionIntelligencePanel';
 import { server } from '@/test/mocks/server';
 import { http, HttpResponse } from 'msw';
 
-const openPositionsUrl = '/api/portfolio/positions/open/intelligence';
+const openPositionsUrl = '*/api/portfolio/positions/open/intelligence';
 
 const mockPositionRow = {
   position_id: 'pos-1',
