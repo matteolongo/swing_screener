@@ -39,6 +39,9 @@ logger = logging.getLogger("swing_screener.api")
 # missing timezone). Our provider already logs these as WARNING with a useful summary.
 # Silence yfinance below CRITICAL to avoid duplicate noise in the output.
 logging.getLogger("yfinance").setLevel(logging.CRITICAL)
+# httpx logs full request URLs at INFO, including provider API tokens passed as
+# query params by upstream APIs. Keep those out of application logs.
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 ensure_runtime_env_loaded()
 
