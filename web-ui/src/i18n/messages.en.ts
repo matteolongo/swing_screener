@@ -2118,6 +2118,24 @@ export const messagesEn = {
       today: 'Today',
       screener: 'Screener',
     },
+    openPositions: {
+      sectionTitle: 'Open positions',
+      analyzing: 'Analyzing…',
+      analyzeButton: 'Analyze',
+      noIntelligence: 'No analysis yet',
+      stopAction: {
+        NO_ACTION: 'Hold stop',
+        MOVE_STOP_UP: 'Trail stop',
+        CLOSE_STOP_HIT: 'Stop hit',
+        CLOSE_TIME_EXIT: 'Time exit',
+        CLOSE_EXIT_SIGNAL: 'Exit signal',
+      },
+      positionSignal: {
+        HOLD: 'Hold',
+        TRIM: 'Trim',
+        EXIT: 'Exit',
+      },
+    },
     todayPriorityCard: {
       title: "Today's Priority",
       kinds: {
