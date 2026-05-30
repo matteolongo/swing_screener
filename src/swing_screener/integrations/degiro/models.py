@@ -54,7 +54,7 @@ class DegiroAuditRun:
 # Phase 2 sync models
 # ---------------------------------------------------------------------------
 
-@dataclass(frozen=True)
+@dataclass
 class DegiroSyncRaw:
     positions: list[dict]
     pending_orders: list[dict]

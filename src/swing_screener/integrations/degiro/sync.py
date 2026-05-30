@@ -1,7 +1,7 @@
 """DeGiro portfolio reconciliation service.
 
-All degiro_connector imports are lazy. The service is read-only except for
-apply(), which idempotently reconciles local files with the latest broker state.
+All degiro_connector imports are lazy. The service is read-only; the main
+exports are ``fetch_live_data``, ``normalize``, and ``preview``.
 """
 from __future__ import annotations
 
@@ -403,12 +403,13 @@ def _match_order(broker_order: dict, local_orders: list[dict]) -> tuple[Optional
         lo_qty = abs(int(lo.get("quantity", 0) or 0))
         lo_date = str(lo.get("order_date", "") or lo.get("filled_date", ""))[:10]
         lo_type = str(lo.get("order_type", "")).upper()
-        lo_side = "buy" if "BUY" in lo_type else "sell"
+        lo_side = "buy" if "BUY" in lo_type else ("sell" if "SELL" in lo_type else None)
         if (
             lo_product
             and lo_product == broker_product
             and lo_qty == broker_qty
             and lo_date == broker_date
+            and lo_side is not None
             and lo_side == broker_side
         ):
             fuzzy_hits.append(lo)

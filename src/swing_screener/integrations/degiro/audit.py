@@ -167,8 +167,6 @@ def _audit_product_id(
     include_agenda: bool,
 ) -> DegiroAuditRecord:
     """Audit a known DeGiro product ID (uses get_products_info instead of text search)."""
-    from swing_screener.integrations.degiro.resolver import resolve_by_product_id
-
     product_ref, confidence, notes = resolve_by_product_id(client, product_id)
 
     if product_ref is None:
