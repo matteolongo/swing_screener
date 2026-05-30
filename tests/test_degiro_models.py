@@ -1,4 +1,3 @@
-import pytest
 from api.models.portfolio import (
     DegiroAvailabilityMode,
     DegiroStatus,

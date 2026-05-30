@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import math
 import re
-from typing import Literal, Optional
+from typing import Any, Literal, Optional
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 
@@ -428,7 +428,7 @@ class SyncDiffResponse(BaseModel):
     local_id: Optional[str] = None
     broker_id: Optional[str] = None
     confidence: str
-    fields: dict = Field(default_factory=dict)
+    fields: dict[str, Any] = Field(default_factory=dict)
 
 
 class DegiroSyncPreviewResponse(BaseModel):
