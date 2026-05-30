@@ -85,10 +85,13 @@ def analyze_position(
 ) -> SymbolIntelligence:
     """Trigger a position-aware LLM analysis for an open position."""
     _require_api_key()
-    pos = portfolio_service.get_position_metrics(position_id)
+    result = portfolio_service.list_positions(status="open", time_stop_days=None, time_stop_min_r=None)
+    pos = next((p for p in result.positions if p.position_id == position_id), None)
+    if pos is None:
+        raise HTTPException(status_code=404, detail=f"No open position with id {position_id!r}")
     stop = portfolio_service.suggest_position_stop(position_id)
     request = SymbolIntelligenceRequest(
-        close=float(pos.current_price or pos.entry_price),
+        close=float(pos.current_price if pos.current_price is not None else pos.entry_price),
         signal=stop.action,
         entry_price=float(pos.entry_price),
         entry=float(pos.entry_price),
@@ -98,6 +101,6 @@ def analyze_position(
     )
     try:
         analyzer = SymbolAnalyzer()
-        return analyzer.analyze(pos.ticker, request)
+        return analyzer.analyze(pos.ticker.upper(), request)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc

@@ -126,3 +126,54 @@ def test_analyze_position_503_without_api_key(client):
     finally:
         if env_backup is not None:
             os.environ["OPENAI_API_KEY"] = env_backup
+
+
+def test_analyze_position_returns_intelligence(client):
+    from swing_screener.intelligence.models import (
+        SymbolIntelligence,
+        PositionSignal,
+        PositionSignalAction,
+    )
+
+    pos = _mock_position()
+    positions_resp = MagicMock()
+    positions_resp.positions = [pos]
+
+    mock_intelligence = SymbolIntelligence(
+        symbol="BESI.AS",
+        generated_at="2026-05-30T03:00:00",
+        action="BUY_ON_PULLBACK",
+        conviction="medium",
+        catalyst_urgency="none",
+        summary_line="Hold, thesis intact.",
+        narrative="...",
+        upcoming_events=[],
+        position_signal=PositionSignal(action=PositionSignalAction.HOLD, reason="Momentum sustained."),
+        sources=[],
+        inputs_used={},
+    )
+
+    def override_portfolio():
+        svc = MagicMock()
+        svc.list_positions.return_value = positions_resp
+        svc.suggest_position_stop.return_value = _mock_stop_suggestion()
+        return svc
+
+    with (
+        patch("api.routers.intelligence.SymbolAnalyzer") as mock_analyzer_cls,
+        patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}),
+    ):
+        analyzer_instance = MagicMock()
+        analyzer_instance.analyze.return_value = mock_intelligence
+        mock_analyzer_cls.return_value = analyzer_instance
+
+        app.dependency_overrides[get_portfolio_service] = override_portfolio
+        try:
+            response = client.post("/api/intelligence/position/pos-1")
+        finally:
+            app.dependency_overrides.pop(get_portfolio_service, None)
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["position_signal"]["action"] == "HOLD"
+    assert data["summary_line"] == "Hold, thesis intact."

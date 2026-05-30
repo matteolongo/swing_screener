@@ -1,7 +1,10 @@
 """Portfolio router - Positions CRUD and local order management."""
 from __future__ import annotations
 
+import logging
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, Depends, Query
 
@@ -85,7 +88,8 @@ async def get_open_positions_intelligence(
             stop_action = stop.action
             stop_suggested = stop.stop_suggested
             stop_reason = stop.reason
-        except Exception:
+        except Exception as exc:
+            logger.warning("suggest_position_stop failed for %s: %s", pos.position_id, exc)
             stop_action = "NO_ACTION"
             stop_suggested = pos.stop_price
             stop_reason = ""
