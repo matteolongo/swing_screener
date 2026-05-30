@@ -1,6 +1,7 @@
 """Portfolio router - Positions CRUD and local order management."""
 from __future__ import annotations
 
+import importlib.util
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
@@ -22,6 +23,13 @@ from api.models.portfolio import (
     StopSuggestionComputeRequest,
     EarningsProximityResponse,
     RegimeBreakdownResponse,
+    DegiroStatus,
+    DegiroOrdersResponse,
+    FillFromDegiroRequest,
+    FillFromDegiroResponse,
+    DegiroSyncRequest,
+    DegiroSyncPreviewResponse,
+    DegiroApplyResponse,
 )
 from api.dependencies import get_config_repo, get_orders_service, get_portfolio_service, get_regime_analytics_service
 from api.dependencies import get_strategy_repo
@@ -32,6 +40,47 @@ from api.services.portfolio_service import PortfolioService
 from api.services.regime_analytics import RegimeAnalyticsService
 
 router = APIRouter()
+
+
+def _get_degiro_status() -> DegiroStatus:
+    if importlib.util.find_spec("degiro_connector") is None:
+        return DegiroStatus(
+            installed=False,
+            credentials_configured=False,
+            available=False,
+            mode="missing_library",
+            detail=(
+                "degiro-connector is not installed. Install it with: pip install -e '.[degiro]'. "
+                "The rest of the app still works, but DeGiro sync and audits stay unavailable."
+            ),
+        )
+    try:
+        from swing_screener.integrations.degiro.credentials import load_credentials
+        load_credentials()
+    except ValueError as exc:
+        return DegiroStatus(
+            installed=True,
+            credentials_configured=False,
+            available=False,
+            mode="missing_credentials",
+            detail=(
+                f"{exc} The rest of the app still works, but DeGiro sync and audits stay unavailable."
+            ),
+        )
+    return DegiroStatus(
+        installed=True,
+        credentials_configured=True,
+        available=True,
+        mode="ready",
+        detail="DeGiro sync and audits are available.",
+    )
+
+
+def _check_degiro_available() -> None:
+    from fastapi import HTTPException
+    status = _get_degiro_status()
+    if not status.available:
+        raise HTTPException(status_code=503, detail=status.detail)
 
 
 # ===== Positions =====
@@ -241,4 +290,144 @@ async def fill_order(
     return service.fill_order(order_id, request)
 
 
+# ===== DeGiro =====
+
+@router.get("/degiro/status", response_model=DegiroStatus)
+async def get_degiro_status():
+    """Report whether optional DeGiro sync/audit features are usable."""
+    return _get_degiro_status()
+
+
+@router.get("/degiro/order-history", response_model=DegiroOrdersResponse)
+async def get_degiro_order_history(
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+    service: PortfolioService = Depends(get_portfolio_service),
+):
+    """Fetch filled/cancelled order history from DeGiro (defaults to last 30 days)."""
+    _check_degiro_available()
+    from datetime import date, timedelta
+    from api.utils.files import get_today_str
+
+    if to_date is None:
+        to_date = get_today_str()
+    if from_date is None:
+        from_date = (date.fromisoformat(to_date) - timedelta(days=30)).isoformat()
+
+    return service.list_degiro_order_history(from_date=from_date, to_date=to_date)
+
+
+@router.post("/orders/{order_id}/fill-from-degiro", status_code=201, response_model=FillFromDegiroResponse)
+async def fill_order_from_degiro(
+    order_id: str,
+    request: FillFromDegiroRequest,
+    service: PortfolioService = Depends(get_portfolio_service),
+):
+    """Fill a local pending order by linking it to a DeGiro order."""
+    _check_degiro_available()
+    return service.fill_order_from_degiro(order_id, request.degiro_order_id)
+
+
+@router.post("/sync/degiro/preview", response_model=DegiroSyncPreviewResponse)
+async def degiro_sync_preview(
+    request: DegiroSyncRequest,
+    service: PortfolioService = Depends(get_portfolio_service),
+):
+    """Preview DeGiro position sync — computes diffs without writing anything."""
+    _check_degiro_available()
+
+    from swing_screener.integrations.degiro.credentials import load_credentials
+    from swing_screener.integrations.degiro.client import DegiroClient
+    from swing_screener.integrations.degiro import sync as degiro_sync
+
+    credentials = load_credentials()
+    with DegiroClient(credentials) as client:
+        raw_data = degiro_sync.fetch_live_data(
+            client,
+            request.from_date,
+            request.to_date,
+            include_portfolio=request.include_portfolio,
+            include_orders_history=request.include_orders_history,
+            include_transactions=request.include_transactions,
+        )
+
+    sync_raw = degiro_sync.normalize(raw_data)
+    positions_resp = service.list_positions()
+    local_positions = [p.model_dump() for p in positions_resp.positions]
+    preview = degiro_sync.preview(sync_raw, local_positions)
+
+    def _diff_list(diffs):
+        return [
+            {"kind": d.kind, "action": d.action, "local_id": d.local_id,
+             "broker_id": d.broker_id, "confidence": d.confidence, "fields": d.fields}
+            for d in diffs
+        ]
+
+    return DegiroSyncPreviewResponse(
+        positions_to_create=_diff_list(preview.positions_to_create),
+        positions_to_update=_diff_list(preview.positions_to_update),
+        orders_to_create=[],
+        orders_to_update=[],
+        fees_applied=0,
+        ambiguous=[],
+        unmatched=[],
+    )
+
+
+@router.post("/sync/degiro/apply", response_model=DegiroApplyResponse)
+async def degiro_sync_apply(
+    request: DegiroSyncRequest,
+    service: PortfolioService = Depends(get_portfolio_service),
+):
+    """Apply DeGiro portfolio sync — updates local positions to match broker state."""
+    _check_degiro_available()
+
+    from swing_screener.integrations.degiro.credentials import load_credentials
+    from swing_screener.integrations.degiro.client import DegiroClient
+    from swing_screener.integrations.degiro import sync as degiro_sync
+    from api.utils.files import get_today_str
+
+    credentials = load_credentials()
+    with DegiroClient(credentials) as client:
+        raw_data = degiro_sync.fetch_live_data(
+            client,
+            request.from_date,
+            request.to_date,
+            include_portfolio=request.include_portfolio,
+            include_orders_history=request.include_orders_history,
+            include_transactions=request.include_transactions,
+        )
+
+    sync_raw = degiro_sync.normalize(raw_data)
+    positions_resp = service.list_positions()
+    local_positions = [p.model_dump() for p in positions_resp.positions]
+    preview = degiro_sync.preview(sync_raw, local_positions)
+
+    positions_updated = 0
+    ambiguous_skipped = 0
+    data = service._positions_repo.read()
+    positions = data.get("positions", [])
+
+    for diff in preview.positions_to_update:
+        if not diff.local_id:
+            ambiguous_skipped += 1
+            continue
+        for pos in positions:
+            if pos.get("position_id") == diff.local_id:
+                pos.update(diff.fields)
+                positions_updated += 1
+                break
+
+    if positions_updated > 0:
+        data["asof"] = get_today_str()
+        service._positions_repo.write(data)
+
+    return DegiroApplyResponse(
+        positions_created=0,
+        positions_updated=positions_updated,
+        orders_created=0,
+        orders_updated=positions_updated,
+        fees_applied=0,
+        ambiguous_skipped=ambiguous_skipped,
+    )
 
