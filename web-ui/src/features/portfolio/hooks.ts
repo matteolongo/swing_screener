@@ -12,6 +12,8 @@ import {
   fetchPositionStopPreview,
   fetchEarningsProximity,
   fetchRegimeBreakdown,
+  fetchOpenPositionsIntelligence,
+  triggerPositionAnalyze,
   fillOrder,
   updatePositionStop,
   updatePositionTrailMethod,
@@ -197,5 +199,23 @@ export function useRegimeBreakdown() {
     queryKey: ['regime-breakdown'],
     queryFn: fetchRegimeBreakdown,
     staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useOpenPositionsIntelligence() {
+  return useQuery({
+    queryKey: queryKeys.openPositionsIntelligence(),
+    queryFn: fetchOpenPositionsIntelligence,
+    staleTime: 60_000,
+  });
+}
+
+export function useAnalyzePositionMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (positionId: string) => triggerPositionAnalyze(positionId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.openPositionsIntelligence() });
+    },
   });
 }

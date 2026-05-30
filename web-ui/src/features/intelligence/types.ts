@@ -109,6 +109,52 @@ export function transformIntelligence(api: SymbolIntelligenceAPI): SymbolIntelli
 
 export type { IntelligenceRequestPayload };
 
+export interface OpenPositionIntelligenceSummaryAPI {
+  position_id: string;
+  ticker: string;
+  entry_price: number;
+  stop_price: number;
+  current_price: number | null;
+  r_now: number;
+  days_open: number;
+  stop_action: string;
+  stop_suggested: number;
+  stop_reason: string;
+  intelligence: SymbolIntelligenceAPI | null;
+}
+
+export interface OpenPositionIntelligenceSummary {
+  positionId: string;
+  ticker: string;
+  entryPrice: number;
+  stopPrice: number;
+  currentPrice: number | null;
+  rNow: number;
+  daysOpen: number;
+  stopAction: string;
+  stopSuggested: number;
+  stopReason: string;
+  intelligence: SymbolIntelligence | null;
+}
+
+export function transformOpenPositionIntelligence(
+  api: OpenPositionIntelligenceSummaryAPI,
+): OpenPositionIntelligenceSummary {
+  return {
+    positionId: api.position_id,
+    ticker: api.ticker,
+    entryPrice: api.entry_price,
+    stopPrice: api.stop_price,
+    currentPrice: api.current_price,
+    rNow: api.r_now,
+    daysOpen: api.days_open,
+    stopAction: api.stop_action,
+    stopSuggested: api.stop_suggested,
+    stopReason: api.stop_reason,
+    intelligence: api.intelligence ? transformIntelligence(api.intelligence) : null,
+  };
+}
+
 export interface SweepSymbolPayload {
   ticker: string;
   request: IntelligenceRequestPayload;

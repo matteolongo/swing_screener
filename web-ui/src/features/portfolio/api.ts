@@ -1,4 +1,6 @@
 import { API_ENDPOINTS, apiUrl } from '@/lib/api';
+import type { OpenPositionIntelligenceSummaryAPI, OpenPositionIntelligenceSummary } from '@/features/intelligence/types';
+import { transformOpenPositionIntelligence } from '@/features/intelligence/types';
 import {
   cancelOrderLocal,
   closePositionLocal,
@@ -598,4 +600,18 @@ export async function fetchRegimeBreakdown(): Promise<RegimeBreakdownResponse> {
     regimes: (data.regimes ?? []).map(transformRegimeStats),
     benchmark: data.benchmark,
   };
+}
+
+export async function fetchOpenPositionsIntelligence(): Promise<OpenPositionIntelligenceSummary[]> {
+  const response = await fetch(apiUrl(API_ENDPOINTS.openPositionsIntelligence));
+  if (!response.ok) throw new Error(`Failed to fetch open positions intelligence: ${response.status}`);
+  const data: OpenPositionIntelligenceSummaryAPI[] = await response.json();
+  return data.map(transformOpenPositionIntelligence);
+}
+
+export async function triggerPositionAnalyze(positionId: string): Promise<void> {
+  const response = await fetch(apiUrl(API_ENDPOINTS.analyzePosition(positionId)), {
+    method: 'POST',
+  });
+  if (!response.ok) throw new Error(`Position analysis failed: ${response.status}`);
 }
