@@ -9,7 +9,8 @@ import BeginnerScreenerSummary from '@/components/domain/screener/BeginnerScreen
 import { useConfigDefaultsQuery } from '@/features/config/hooks';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 import { useUniverses, useRunScreenerMutation } from '@/features/screener/hooks';
-import { filterCandidates, prioritizeCandidates, type DecisionActionFilter } from '@/features/screener/prioritization';
+import { filterCandidates, filterOutAddOns, prioritizeCandidates, type DecisionActionFilter } from '@/features/screener/prioritization';
+import OpenPositionIntelligencePanel from '@/components/domain/positions/OpenPositionIntelligencePanel';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import type { WorkspaceAnalysisTab } from '@/components/domain/workspace/types';
@@ -232,17 +233,18 @@ export default function ScreenerInboxPanel() {
 
   const result = screenerMutation.data ?? lastResult;
   const allCandidates = result ? prioritizeCandidates(result.candidates) : [];
-  const candidates = filterCandidates(allCandidates, { recommendedOnly, actionFilter });
+  const filteredCandidates = filterCandidates(allCandidates, { recommendedOnly, actionFilter });
+  const displayCandidates = filterOutAddOns(filteredCandidates);
 
   useEffect(() => {
-    if (!candidates.length || !selectedTicker || selectedTickerSource === 'portfolio') {
+    if (!displayCandidates.length || !selectedTicker || selectedTickerSource === 'portfolio') {
       return;
     }
-    const stillPresent = candidates.some((candidate) => candidate.ticker.toUpperCase() === selectedTicker.toUpperCase());
+    const stillPresent = displayCandidates.some((candidate) => candidate.ticker.toUpperCase() === selectedTicker.toUpperCase());
     if (!stillPresent) {
-      setSelectedTicker(candidates[0].ticker, 'screener');
+      setSelectedTicker(displayCandidates[0].ticker, 'screener');
     }
-  }, [candidates, selectedTicker, selectedTickerSource, setSelectedTicker]);
+  }, [displayCandidates, selectedTicker, selectedTickerSource, setSelectedTicker]);
 
   useEffect(() => {
     if (runScreenerTrigger > 0) {
@@ -323,13 +325,19 @@ export default function ScreenerInboxPanel() {
         </div>
       ) : null}
 
+      <div className="px-3 pt-3">
+        <OpenPositionIntelligencePanel
+          onTickerSelect={(ticker) => setSelectedTicker(ticker, 'screener')}
+        />
+      </div>
+
       {result ? (
         <div className="rounded-lg border border-gray-200 bg-white p-3 flex-1 min-h-0 flex flex-col gap-3">
           <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
             <div className="space-y-1 text-xs md:text-sm text-gray-600 dark:text-gray-400">
               <div>
                 {t('workspacePage.panels.screener.resultSummary', {
-                  shown: candidates.length,
+                  shown: displayCandidates.length,
                   total: allCandidates.length,
                   screened: result.totalScreened,
                 })}
@@ -352,7 +360,7 @@ export default function ScreenerInboxPanel() {
             </div>
           </div>
           <BeginnerScreenerSummary
-            candidates={candidates}
+            candidates={displayCandidates}
             onReviewCandidate={(ticker) => handleSelectCandidate(ticker, 'overview')}
           />
           {result.sameSymbolSuppressedCount || result.sameSymbolAddOnCount ? (
@@ -403,14 +411,14 @@ export default function ScreenerInboxPanel() {
           </div>
           {viewMode === 'guided' ? (
             <ScreenerCandidateReviewList
-              candidates={candidates}
+              candidates={displayCandidates}
               selectedTicker={selectedTicker}
               onReview={(ticker) => handleSelectCandidate(ticker, 'overview')}
             />
           ) : (
             <div className="flex-1 min-h-0 overflow-auto rounded-md border border-gray-200 dark:border-gray-700">
               <ScreenerCandidatesTable
-                candidates={candidates}
+                candidates={displayCandidates}
                 selectedTicker={selectedTicker}
                 onSymbolClick={(ticker) => handleSelectCandidate(ticker, 'overview')}
                 onRowClick={(candidate) => handleSelectCandidate(candidate.ticker, analysisTab === 'order' ? 'order' : 'overview')}

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCircle2, RefreshCw } from 'lucide-react';
 import AnalysisCanvasPanel from '@/components/domain/workspace/AnalysisCanvasPanel';
+import OpenPositionIntelligencePanel from '@/components/domain/positions/OpenPositionIntelligencePanel';
 import ScreenerInboxPanel from '@/components/domain/workspace/ScreenerInboxPanel';
 import ClosePositionModalForm from '@/components/domain/positions/ClosePositionModalForm';
 import UpdateStopModalForm from '@/components/domain/positions/UpdateStopModalForm';
@@ -923,6 +924,9 @@ export default function Today() {
                 <div className="px-3 pt-3">
                   <TodayPrioritySection onTickerSelect={handleTickerSelect} onSwitchToScreener={() => setLeftTab('screener')} />
                   <PendingOrdersBadge />
+                </div>
+                <div className="px-3">
+                  <OpenPositionIntelligencePanel onTickerSelect={handleTickerSelect} />
                 </div>
                 <TodayActionList onTickerSelect={handleTickerSelect} />
               </>
