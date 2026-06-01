@@ -3,6 +3,8 @@ from __future__ import annotations
 import datetime as dt
 from unittest.mock import MagicMock, patch
 
+import httpx
+
 
 def _mock_finnhub_earnings(ticker: str, earnings_date: dt.date) -> MagicMock:
     resp = MagicMock()
@@ -117,6 +119,28 @@ def test_falls_back_to_yfinance_when_finnhub_errors():
     assert result["AAPL"] == 9
 
 
+def test_finnhub_auth_failure_disables_remaining_batch_lookups():
+    from swing_screener.fundamentals.earnings_proximity import fetch_next_earnings_days
+
+    request = httpx.Request("GET", "https://finnhub.io/api/v1/calendar/earnings")
+    response = httpx.Response(401, request=request)
+    auth_error = httpx.HTTPStatusError("unauthorized", request=request, response=response)
+    resp = MagicMock()
+    resp.raise_for_status.side_effect = auth_error
+
+    with patch("swing_screener.fundamentals.earnings_proximity.httpx.get", return_value=resp) as get:
+        with patch("swing_screener.fundamentals.earnings_proximity.yf.Ticker", side_effect=Exception("no calendar")):
+            result = fetch_next_earnings_days(
+                tickers=["AAPL", "MSFT", "NVDA"],
+                finnhub_api_key="bad-key",
+                asof_date=dt.date.today(),
+                max_workers=1,
+            )
+
+    assert result == {"AAPL": None, "MSFT": None, "NVDA": None}
+    assert get.call_count == 1
+
+
 def test_returns_none_when_both_earnings_sources_fail():
     from swing_screener.fundamentals.earnings_proximity import fetch_next_earnings_days
 
@@ -205,4 +229,3 @@ def test_falls_back_to_yfinance_when_no_finnhub_key():
         )
 
     assert result["AAPL"] == 7
-

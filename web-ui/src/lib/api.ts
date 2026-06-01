@@ -36,12 +36,18 @@ export const API_ENDPOINTS = {
   portfolioSummary: '/api/portfolio/summary',
   earningsProximity: (ticker: string) => `/api/portfolio/earnings-proximity/${encodeURIComponent(ticker)}`,
   regimeBreakdown: '/api/portfolio/analytics/regime-breakdown',
+  openPositionsIntelligence: '/api/portfolio/positions/open/intelligence',
+  analyzePosition: (positionId: string) => `/api/intelligence/position/${encodeURIComponent(positionId)}`,
+  degiroStatus: '/api/portfolio/degiro/status',
   
   // Portfolio - Orders
   orders: '/api/portfolio/orders',
   order: (id: string) => `/api/portfolio/orders/${id}`,
   orderFill: (id: string) => `/api/portfolio/orders/${id}/fill`,
+  degiroOrderHistory: '/api/portfolio/degiro/order-history',
+  orderFillFromDegiro: (id: string) => `/api/portfolio/orders/${id}/fill-from-degiro`,
   localOrders: '/api/portfolio/orders/local',
+  degiroOrderSyncApply: '/api/portfolio/sync/degiro/apply',
 
   // Watchlist
   watchlist: '/api/watchlist',

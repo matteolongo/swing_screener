@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { filterCandidates, prioritizeCandidates } from '@/features/screener/prioritization';
+import { filterCandidates, filterOutAddOns, prioritizeCandidates } from '@/features/screener/prioritization';
 import type { ScreenerCandidate } from '@/features/screener/types';
 
 function buildCandidate(
@@ -83,6 +83,18 @@ describe('prioritizeCandidates', () => {
     ]);
     expect(prioritized.map((candidate) => candidate.priorityRank)).toEqual([1, 2, 3, 4]);
     expect(prioritized.map((candidate) => candidate.rank)).toEqual([5, 3, 4, 1]);
+  });
+});
+
+describe('filterOutAddOns', () => {
+  it('filterOutAddOns removes ADD_ON candidates and keeps others', () => {
+    const addOn = { ticker: 'BESI.AS', sameSymbol: { mode: 'ADD_ON' } } as unknown as ScreenerCandidate;
+    const fresh = { ticker: 'CRBN.AS', sameSymbol: { mode: 'NEW_ENTRY' } } as unknown as ScreenerCandidate;
+    const noContext = { ticker: 'MT.AS' } as unknown as ScreenerCandidate;
+
+    const result = filterOutAddOns([addOn, fresh, noContext]);
+    expect(result).toHaveLength(2);
+    expect(result.map((c) => c.ticker)).toEqual(['CRBN.AS', 'MT.AS']);
   });
 });
 
