@@ -94,10 +94,57 @@ def test_yahoo_predefined_discovery_explains_empty_non_us_filters():
             limit=10,
         ),
         fetch_json=lambda url: payload,
+        fetch_yahoo_custom_json=lambda payload: {"finance": {"result": [{"quotes": []}]}},
     )
 
     assert result.symbols == []
     assert any("US-centric" in note for note in result.notes)
+
+
+def test_yahoo_custom_screener_discovers_eur_exchange_symbols():
+    custom_payloads: list[dict] = []
+
+    def fake_custom(payload: dict) -> dict:
+        custom_payloads.append(payload)
+        return {
+            "finance": {
+                "result": [
+                    {
+                        "quotes": [
+                            {
+                                "symbol": "ASML.AS",
+                                "shortName": "ASML Holding",
+                                "quoteType": "EQUITY",
+                                "exchange": "AMS",
+                                "fullExchangeName": "Amsterdam",
+                                "currency": "EUR",
+                                "market": "nl_market",
+                                "region": "US",
+                                "marketCap": 500_000_000_000,
+                                "regularMarketVolume": 700_000,
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+
+    result = discover_symbols(
+        SymbolDiscoveryQuery(
+            provider="yahoo_predefined",
+            currencies=("EUR",),
+            exchange_mics=("XAMS",),
+            limit=10,
+        ),
+        fetch_yahoo_custom_json=fake_custom,
+    )
+
+    assert [item["symbol"] for item in result.symbols] == ["ASML.AS"]
+    assert result.symbols[0]["exchange_mic"] == "XAMS"
+    assert result.taxonomy["currency"] == {"EUR": 1}
+    assert result.taxonomy["market"] == {"NL": 1}
+    assert custom_payloads[0]["query"]["operands"][0]["operands"] == ["exchange", "AMS"]
+    assert any("custom screener" in note for note in result.notes)
 
 
 def test_eodhd_exchange_discovery_requires_key():

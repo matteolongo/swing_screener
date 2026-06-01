@@ -178,7 +178,7 @@ export default function Universes() {
       ? []
       : currencyPreset.split(',');
   const discoveryQuoteTypes = typePreset.split(',');
-  const yahooLikelyUnsupported = discoveryProvider === 'yahoo_predefined' && (
+  const yahooUsesCustomScreener = discoveryProvider === 'yahoo_predefined' && (
     discoveryCurrencies.some((currency) => currency !== 'USD')
     || selectedMarket.exchangeMics.some((mic) => !YAHOO_SUPPORTED_MICS.has(mic))
   );
@@ -282,11 +282,8 @@ export default function Universes() {
                 value={marketPreset}
                 onChange={(event) => {
                   const nextMarket = event.target.value as (typeof MARKET_PRESETS)[number]['value'];
-                  const preset = MARKET_PRESETS.find((item) => item.value === nextMarket);
                   setMarketPreset(nextMarket);
-                  if (preset?.currencies.includes('EUR') || preset?.exchangeMics.some((mic) => !YAHOO_SUPPORTED_MICS.has(mic))) {
-                    setDiscoveryProvider('eodhd_exchange');
-                  } else if (nextMarket === 'us_major') {
+                  if (nextMarket === 'us_major') {
                     setDiscoveryProvider('yahoo_predefined');
                   }
                 }}
@@ -394,9 +391,9 @@ export default function Universes() {
             </div>
           </div>
 
-          {yahooLikelyUnsupported ? (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-              Yahoo predefined screens are US-centric and usually return no EUR symbols. Switch to EODHD exchange list for live EUR discovery, or screen an existing EUR universe below.
+          {yahooUsesCustomScreener ? (
+            <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+              Yahoo will use its custom screener endpoint for this market because predefined screeners are mostly US-centric.
             </div>
           ) : null}
 
@@ -463,7 +460,7 @@ export default function Universes() {
               ) : null}
               {discoveryResult.symbols.length === 0 ? (
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                  No symbols matched this discovery source and filter set. For EUR markets, use EODHD exchange list with an API key or screen one of the configured EUR universes.
+                  No symbols matched this discovery source and filter set. Try a broader market, lower liquidity filters, or screen one of the configured universes below.
                 </div>
               ) : null}
               <div className="max-h-[420px] overflow-auto rounded-xl border border-gray-200">
