@@ -10,17 +10,16 @@ Swing Screener is a deterministic, risk-first swing-trading system for end-of-da
 
 ## Main Interfaces
 
-- Web UI: browser-first workflow for workspace, strategy, intelligence, orders, and positions
+- Web UI: browser-first workflow for daily review, research, book, and strategy
 - API: FastAPI backend for the web app and local integrations
-- MCP Server: canonical AI/tooling transport
-- Agent: workflow automation and chat over MCP
+- Agent CLI: workflow automation and chat, calls services directly (no HTTP hop)
 
 ## Local Setup
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -e ".[mcp]"
+pip install -e ".[dev]"
 
 cd web-ui
 npm install
@@ -41,12 +40,6 @@ cd web-ui
 npm run dev
 ```
 
-MCP server:
-
-```bash
-python -m mcp_server.main
-```
-
 Agent examples:
 
 ```bash
@@ -59,16 +52,9 @@ python -m agent.cli chat "What pending orders do I have?"
 
 - `src/swing_screener/`: core trading, risk, execution, portfolio, and intelligence logic
 - `api/`: FastAPI layer and shared business services
-- `mcp_server/`: MCP tools backed by the same services
-- `agent/`: MCP client and workflow orchestration
+- `agent/`: workflow CLI, calls API services directly
 - `web-ui/`: React frontend
 - `data/`: local JSON runtime state
-
-The AI/runtime path is MCP-first:
-
-- workspace chat: Web UI -> API -> persistent agent runtime -> MCP -> `ChatService`
-- agent chat: agent -> MCP -> `ChatService`
-- intelligence: API/MCP -> shared services -> pipeline / LLM providers
 
 ## Documentation
 
@@ -76,13 +62,11 @@ Core:
 
 - [Web UI Guide](web-ui/docs/WEB_UI_GUIDE.md)
 - [API README](api/README.md)
-- [MCP Server README](mcp_server/README.md)
 - [Agent README](agent/README.md)
 
 AI / LLM:
 
 - [AI Runtime Architecture](docs/engineering/AI_RUNTIME_ARCHITECTURE.md)
-- [Workspace Chat Analysis](docs/engineering/WORKSPACE_CHAT_ANALYSIS.md)
 - [Intelligence Module README](src/swing_screener/intelligence/README.md)
 
 Operations:

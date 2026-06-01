@@ -50,8 +50,6 @@ features:
 
 Changes require MCP server restart.
 
-**Documentation:** See `mcp_server/docs/` for complete documentation.
-
 ## Notes
 
 - New configurable behavior should be added to the existing YAML configuration surfaces in this directory instead of being hardcoded in Python, TypeScript, or prompts.
@@ -66,10 +64,3 @@ Changes require MCP server restart.
 - Do not store runtime artifacts or temporary files here
 - Config files should be versioned (committed to git)
 - Sensitive credentials should use environment variables, not config files
-
-## Related Documentation
-
-- [MCP Architecture](../mcp_server/docs/MCP_ARCHITECTURE.md) - Complete architecture design
-- [MCP Feature Map](../mcp_server/docs/MCP_FEATURE_MAP.md) - All available features
-- [MCP Usage Guide](../mcp_server/docs/MCP_USAGE_GUIDE.md) - How to use MCP server
-- [MCP Implementation Roadmap](../mcp_server/docs/MCP_IMPLEMENTATION_ROADMAP.md) - Development plan

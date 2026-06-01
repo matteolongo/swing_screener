@@ -6,7 +6,7 @@ This file provides guidance for GitHub Copilot when working on this repository.
 
 ## 📚 Primary Reference: AGENTS.md
 
-**Before making any changes, read [AGENTS.md](../AGENTS.md) in the repository root.**
+**Before making any changes, read [AGENTS.md](../docs/overview/AGENTS.md).**
 
 AGENTS.md is the authoritative guide covering:
 - Project philosophy and constraints
@@ -99,7 +99,7 @@ AGENTS.md is the authoritative guide covering:
 
 **Frontend:**
 - Run `cd web-ui && npm test` before and after changes
-- 158 comprehensive tests (51 unit, 24 component, 87 integration)
+- comprehensive test suite (Vitest + React Testing Library + MSW)
 - Coverage thresholds enforced: 80%+ lines, 75%+ branches
 - Use `renderWithProviders()` for component tests
 - Mock APIs with MSW handlers
@@ -177,8 +177,7 @@ If a change:
 - **[ROADMAP.md](../docs/engineering/ROADMAP.md)** - Feature status and priorities
 - **[README.md](../README.md)** - Project setup and usage
 - **[docs/WEB_UI_GUIDE.md](../web-ui/docs/WEB_UI_GUIDE.md)** - Complete Web UI documentation
-- **[docs/DAILY_REVIEW_IMPLEMENTATION.md](../web-ui/docs/DAILY_REVIEW_IMPLEMENTATION.md)** - Recent implementation patterns
 
 ---
 
-_For complete details, see [AGENTS.md](../AGENTS.md) in the repository root._
+_For complete details, see [AGENTS.md](../docs/overview/AGENTS.md)._
