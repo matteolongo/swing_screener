@@ -67,36 +67,10 @@ Both converge on the same shared services:
 |-------|------|------|
 | Core library | `src/swing_screener/` | Pure trading logic |
 | API | `api/routers/` + `api/services/` + `api/repositories/` | FastAPI REST, business logic, JSON/SQLite I/O |
-| Agent CLI | `agent/cli.py` | argparse CLI, calls service factories directly, includes LangGraph chat loop |
+| Agent CLI | `agent/cli.py` | argparse CLI, calls service factories directly |
 | Web UI | `web-ui/` | React 18 + TypeScript, Zustand, React Query |
 
-### Core Library Modules (`src/swing_screener/`)
-- **selection/**: screening pipeline — universe filtering → momentum ranking → entry signals
-- **risk/**: position sizing, stop calculation, regime-aware risk scaling
-- **portfolio/**: position lifecycle, P&L, R-multiple metrics
-- **execution/**: orders, order workflows, entry fills
-- **indicators/**: SMA trend, RS/momentum %, ATR volatility
-- **intelligence/**: post-close LLM enrichment (LangChain/LangGraph), event ingestion, catalyst scoring
-- **strategy/**: strategy config, module/regime plugins
-- **recommendation/**: recommendation engine (separate from strategy/)
-- **fundamentals/**: fundamental data providers, scoring, snapshot storage
-- **social/**: sentiment providers and scoring
-- **integrations/**: broker integrations (e.g. DeGiro via `degiro` optional dep)
-- **data/**: universe definitions, snapshot registries, market data providers
-- **settings/**: YAML config loading, `SettingsManager`, path resolution
-- **db.py**: SQLAlchemy ORM models for positions/orders (SQLite); parallel to JSON files
-
-### Configuration Surfaces (YAML — never hardcode configurable behavior)
-- `config/defaults.yaml` — system defaults
-- `config/user.yaml` — user overrides
-- `config/strategies.yaml` — strategy definitions
-- `config/intelligence.yaml` — intelligence/LLM config
-- `config/mcp.yaml` — MCP tool toggles
-
-### Runtime State (JSON — single source of truth)
-- `data/positions.json` — open trades
-- `data/orders.json` — order lifecycle state
-- `data/config.json` — application config snapshot
+See `docs/engineering/MODULE_ARCHITECTURE.md` for the canonical backend module list and `web-ui/docs/WEB_UI_GUIDE.md` for the frontend page and feature map.
 
 ## Critical Conventions
 
@@ -120,6 +94,12 @@ API model changes and corresponding Web UI type changes must be in the **same co
 ### Schema Changes to `data/*.json`
 Require migration/backfill notes in the nearest `README.md`.
 
+### Config Surfaces
+Configurable behavior goes in YAML, never hardcoded. Config files live in `config/`. See `config/README.md` for which file to use for each type of setting.
+
+### Runtime State
+Primary state: `data/positions.json` (open trades), `data/orders.json` (order lifecycle). See `data/README.md` for schema notes and migration history.
+
 ## Testing Patterns
 
 **Backend:** prefer pure functions; keep behavior deterministic; use `pytest`. Tests requiring external API keys must be marked `@pytest.mark.integration` — they are skipped in CI.
@@ -132,9 +112,17 @@ Require migration/backfill notes in the nearest `README.md`.
 
 ## Documentation Rules
 
-- Every behavior/contract change must update the nearest `README.md`.
-- Config, workflow, UX, and onboarding changes update corresponding docs in the same change.
-- Update `docs/overview/INDEX.md` when adding/removing docs.
+Before finishing any code change, go through this checklist:
+
+1. **Nearest README** — does the module/layer you touched have a `README.md`? If the behavior, contract, or public interface changed, update it.
+2. **Config docs** — if you added or changed a config key, update `config/README.md` and the relevant YAML file's inline comments.
+3. **API surface** — if you added, removed, or changed an endpoint signature, update `api/README.md`.
+4. **Web UI feature map** — if you added or removed a page or feature directory, update `web-ui/docs/WEB_UI_GUIDE.md`.
+5. **Schema changes** — if `data/*.json` schema changed, add migration/backfill notes in the nearest `README.md`.
+6. **New doc files** — if you created a new doc, add it to `docs/overview/INDEX.md`.
+7. **Intelligence module** — if you changed the analysis pipeline, cache, or API surface, update `src/swing_screener/intelligence/README.md`.
+
+When in doubt: read the relevant doc, check if it still describes what the code does, and update any section that no longer matches.
 
 ## PR Delivery
 
@@ -143,3 +131,15 @@ When finishing branch-based work, provide a GitHub compare link:
 https://github.com/matteolongo/swing_screener/compare/<base>...<head>?expand=1
 ```
 Use the branch the work was created from as `<base>` (not `main` by default). If uncertain, state the assumed base explicitly.
+
+## Feature Context
+
+For deeper context on a specific area:
+- Backend modules: `docs/engineering/MODULE_ARCHITECTURE.md`
+- API surface: `api/README.md`
+- Web UI pages and features: `web-ui/docs/WEB_UI_GUIDE.md`
+- Intelligence module: `src/swing_screener/intelligence/README.md`
+- Config options: `config/README.md`
+- Runtime data schema: `data/README.md`
+- Roadmap: `docs/engineering/ROADMAP.md`
+- Troubleshooting: `docs/engineering/TROUBLESHOOTING.md`

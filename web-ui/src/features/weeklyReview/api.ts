@@ -1,4 +1,3 @@
-import axios from 'axios';
 import { API_BASE_URL } from '@/lib/api';
 
 export interface WeeklyReview {
@@ -19,17 +18,28 @@ export interface WeeklyReviewUpsertRequest {
 
 const base = () => `${API_BASE_URL}/api/weekly-reviews`;
 
+async function parseJsonResponse<T>(response: Response, fallbackMessage: string): Promise<T> {
+  if (!response.ok) {
+    throw new Error(fallbackMessage);
+  }
+  return response.json() as Promise<T>;
+}
+
 export async function fetchWeeklyReviews(): Promise<WeeklyReview[]> {
-  const res = await axios.get<WeeklyReview[]>(base());
-  return res.data;
+  const res = await fetch(base());
+  return parseJsonResponse<WeeklyReview[]>(res, 'Failed to fetch weekly reviews');
 }
 
 export async function fetchWeeklyReview(weekId: string): Promise<WeeklyReview> {
-  const res = await axios.get<WeeklyReview>(`${base()}/${encodeURIComponent(weekId)}`);
-  return res.data;
+  const res = await fetch(`${base()}/${encodeURIComponent(weekId)}`);
+  return parseJsonResponse<WeeklyReview>(res, 'Failed to fetch weekly review');
 }
 
 export async function upsertWeeklyReview(weekId: string, request: WeeklyReviewUpsertRequest): Promise<WeeklyReview> {
-  const res = await axios.put<WeeklyReview>(`${base()}/${encodeURIComponent(weekId)}`, request);
-  return res.data;
+  const res = await fetch(`${base()}/${encodeURIComponent(weekId)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+  return parseJsonResponse<WeeklyReview>(res, 'Failed to save weekly review');
 }
