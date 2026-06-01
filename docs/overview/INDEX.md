@@ -1,7 +1,7 @@
 # Documentation Index
 
 > Status: current.  
-> Last reviewed: 2026-03-17.
+> Last reviewed: 2026-06-01.
 
 ## Overview
 - `/README.md`
@@ -10,23 +10,18 @@
 
 ## AI / LLM Canonical Docs
 - `/docs/engineering/AI_RUNTIME_ARCHITECTURE.md`
-- `/docs/engineering/WORKSPACE_CHAT_ANALYSIS.md`
 - `/src/swing_screener/intelligence/README.md`
 
 ## Engineering
-- `/docs/engineering/BACKEND_CLEANUP_AUDIT.md`
-- `/docs/engineering/BACKEND_CLEANUP_ROADMAP.md`
-- `/docs/engineering/COMBINED_ANALYSIS_IMPLEMENTATION_PLAN.md`
+- `/docs/engineering/DATA_SOURCE_AUDIT_AND_PROVIDER_STRATEGY.md`
 - `/docs/engineering/ROADMAP.md`
 - `/docs/engineering/MODULE_ARCHITECTURE.md`
 - `/docs/engineering/DATABASE_MIGRATION.md`
 - `/docs/engineering/OPERATIONAL_GUIDE.md`
 - `/docs/engineering/TROUBLESHOOTING.md`
 - `/docs/engineering/GITHUB_ACTIONS.md`
-
-## Archived Snapshots
-- `/docs/engineering/MODULE_ARCHITECTURE_MIGRATION_PLAN.md`
-- `/docs/engineering/CODE_REVIEW.md`
+- `/docs/engineering/CODE_HEALTH.md`
+- `/docs/engineering/FRAGILE_DATA_ACQUISITION_PATTERNS_AND_SAFE_ALTERNATIVES.md`
 
 ## Product
 - `/docs/product/COMBINED_ANALYSIS_REASONING.md`
@@ -38,6 +33,7 @@
 - `/docs/education/RECOMMENDED_LOGIC_UI_COPY.md`
 
 ## Module Docs
+
 API:
 - `/api/README.md`
 
@@ -49,10 +45,8 @@ Web UI:
 Agent:
 - `/agent/README.md`
 
-Data Providers:
+Data:
 - `/data/README.md`
-- `/src/swing_screener/data/docs/BROKER_INTEGRATION.md`
-- `/src/swing_screener/data/docs/INDICATOR_VALIDATION.md`
 
 Intelligence:
 - `/src/swing_screener/intelligence/README.md`
