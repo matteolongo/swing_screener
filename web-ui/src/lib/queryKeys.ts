@@ -31,6 +31,5 @@ export const queryKeys = {
   fundamentalsWarmupStatus: (jobId?: string) => ['fundamentals-warmup-status', jobId] as const,
   calendarEvents: (daysAhead?: number) =>
     ['calendar-events', daysAhead ?? 30] as const,
-  degiroStatus: () => ['degiro-status'] as const,
   openPositionsIntelligence: () => ['openPositionsIntelligence'] as const,
 };

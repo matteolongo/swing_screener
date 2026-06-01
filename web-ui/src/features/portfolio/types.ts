@@ -10,9 +10,6 @@ export type {
   FillFromDegiroResponseApi,
   OrderSnapshot,
   OrderSnapshotResponseApi,
-  DegiroOrder,
-  FillFromDegiroRequest,
-  FillFromDegiroResponse,
 } from '@/types/order';
 export {
   transformOrder,

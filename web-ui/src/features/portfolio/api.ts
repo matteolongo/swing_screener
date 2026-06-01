@@ -40,9 +40,6 @@ import {
   transformPosition,
   transformPositionUpdate,
   PositionUpdate,
-  DegiroOrder,
-  FillFromDegiroRequest,
-  FillFromDegiroResponse,
 } from './types';
 
 interface PositionMetricsApiResponse {
