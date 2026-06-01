@@ -66,6 +66,40 @@ def test_yahoo_predefined_discovery_filters_and_taxonomizes_symbols():
     assert result.symbols[0]["source_screen"] == "most_actives"
 
 
+def test_yahoo_predefined_discovery_explains_empty_non_us_filters():
+    payload = {
+        "finance": {
+            "result": [
+                {
+                    "quotes": [
+                        {
+                            "symbol": "NVDA",
+                            "shortName": "NVIDIA Corporation",
+                            "quoteType": "EQUITY",
+                            "exchange": "NMS",
+                            "currency": "USD",
+                        },
+                    ]
+                }
+            ]
+        }
+    }
+
+    result = discover_symbols(
+        SymbolDiscoveryQuery(
+            provider="yahoo_predefined",
+            screens=("most_actives",),
+            currencies=("EUR",),
+            exchange_mics=("XAMS",),
+            limit=10,
+        ),
+        fetch_json=lambda url: payload,
+    )
+
+    assert result.symbols == []
+    assert any("US-centric" in note for note in result.notes)
+
+
 def test_eodhd_exchange_discovery_requires_key():
     with pytest.raises(SymbolDiscoveryError, match="requires EODHD_API_KEY"):
         discover_symbols(

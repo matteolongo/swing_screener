@@ -78,6 +78,8 @@ const MARKET_CAP_PRESETS = [
   { value: 50_000_000_000, label: '$50B+' },
 ] as const;
 
+const YAHOO_SUPPORTED_MICS = new Set(['ARCX', 'BATS', 'XASE', 'XNAS', 'XNYS', 'XOTC']);
+
 const freshnessVariant = (status: UniverseSummary['freshness_status']): 'success' | 'warning' | 'error' | 'default' => {
   switch (status) {
     case 'fresh':
@@ -176,6 +178,11 @@ export default function Universes() {
       ? []
       : currencyPreset.split(',');
   const discoveryQuoteTypes = typePreset.split(',');
+  const yahooLikelyUnsupported = discoveryProvider === 'yahoo_predefined' && (
+    discoveryCurrencies.some((currency) => currency !== 'USD')
+    || selectedMarket.exchangeMics.some((mic) => !YAHOO_SUPPORTED_MICS.has(mic))
+  );
+  const eodhdNeedsKey = discoveryProvider === 'eodhd_exchange';
 
   const toggleScreen = (screen: string) => {
     setSelectedScreens((current) => {
@@ -273,7 +280,16 @@ export default function Universes() {
               <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Market</span>
               <select
                 value={marketPreset}
-                onChange={(event) => setMarketPreset(event.target.value as (typeof MARKET_PRESETS)[number]['value'])}
+                onChange={(event) => {
+                  const nextMarket = event.target.value as (typeof MARKET_PRESETS)[number]['value'];
+                  const preset = MARKET_PRESETS.find((item) => item.value === nextMarket);
+                  setMarketPreset(nextMarket);
+                  if (preset?.currencies.includes('EUR') || preset?.exchangeMics.some((mic) => !YAHOO_SUPPORTED_MICS.has(mic))) {
+                    setDiscoveryProvider('eodhd_exchange');
+                  } else if (nextMarket === 'us_major') {
+                    setDiscoveryProvider('yahoo_predefined');
+                  }
+                }}
                 className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
               >
                 {MARKET_PRESETS.map((preset) => (
@@ -378,6 +394,18 @@ export default function Universes() {
             </div>
           </div>
 
+          {yahooLikelyUnsupported ? (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+              Yahoo predefined screens are US-centric and usually return no EUR symbols. Switch to EODHD exchange list for live EUR discovery, or screen an existing EUR universe below.
+            </div>
+          ) : null}
+
+          {eodhdNeedsKey ? (
+            <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+              EODHD exchange discovery needs `EODHD_API_KEY` configured in the backend environment. Without it, the request will return a setup error instead of live EUR symbols.
+            </div>
+          ) : null}
+
           {discoveryMutation.isError ? (
             <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
               {discoveryMutation.error instanceof Error ? discoveryMutation.error.message : 'Symbol discovery failed.'}
@@ -431,6 +459,11 @@ export default function Universes() {
                   {discoveryResult.notes.map((note) => (
                     <div key={note}>{note}</div>
                   ))}
+                </div>
+              ) : null}
+              {discoveryResult.symbols.length === 0 ? (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                  No symbols matched this discovery source and filter set. For EUR markets, use EODHD exchange list with an API key or screen one of the configured EUR universes.
                 </div>
               ) : null}
               <div className="max-h-[420px] overflow-auto rounded-xl border border-gray-200">

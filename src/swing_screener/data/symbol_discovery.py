@@ -179,6 +179,17 @@ def discover_with_yahoo_predefined(
         if len(symbols) >= query.limit:
             break
 
+    requested_currencies = _normalize_codes(query.currencies)
+    requested_mics = _normalize_codes(query.exchange_mics)
+    us_mics = {"ARCX", "BATS", "XASE", "XNAS", "XNYS", "XOTC"}
+    if not symbols and (
+        any(currency != "USD" for currency in requested_currencies)
+        or any(mic not in us_mics for mic in requested_mics)
+    ):
+        notes.append(
+            "Yahoo predefined screeners are effectively US-centric; use eodhd_exchange with an API key for live EUR exchange lists.",
+        )
+
     return SymbolDiscoveryResult(
         provider="yahoo_predefined",
         source_asof=dt.date.today().isoformat(),
