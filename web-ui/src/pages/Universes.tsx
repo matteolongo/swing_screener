@@ -1,12 +1,14 @@
-import { RefreshCw, Database, AlertTriangle, CheckCircle2, Target, Search, Globe2 } from 'lucide-react';
+import { RefreshCw, Database, AlertTriangle, CheckCircle2, Target, Search, Globe2, ListChecks } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
 import { useRefreshUniverseMutation, useSymbolDiscoveryMutation, useUniverseCatalog, useUniverseDetail, useUpdateUniverseBenchmarkMutation } from '@/features/universes/hooks';
-import type { UniverseSummary } from '@/features/screener/types';
+import type { ScreenerCandidate, UniverseSummary } from '@/features/screener/types';
 import type { SymbolDiscoveryRequest } from '@/features/universes/types';
+import { useRunScreenerMutation } from '@/features/screener/hooks';
+import { formatCurrency, formatPercent } from '@/utils/formatters';
 
 const BENCHMARK_OPTIONS = [
   'ACWI',
@@ -32,6 +34,48 @@ const BENCHMARK_OPTIONS = [
   '^IBEX',
   '^FTSE',
   '^GSPC',
+] as const;
+
+const DISCOVERY_SCREENS = [
+  { value: 'most_actives', label: 'Most active' },
+  { value: 'day_gainers', label: 'Day gainers' },
+  { value: 'day_losers', label: 'Day losers' },
+] as const;
+
+const MARKET_PRESETS = [
+  { value: 'us_major', label: 'US major exchanges', currencies: ['USD'], exchangeMics: ['XNAS', 'XNYS'], eodhdExchanges: ['NASDAQ', 'NYSE'] },
+  { value: 'amsterdam', label: 'Amsterdam', currencies: ['EUR'], exchangeMics: ['XAMS'], eodhdExchanges: ['AS'] },
+  { value: 'euronext_core', label: 'Euronext core', currencies: ['EUR'], exchangeMics: ['XAMS', 'XPAR', 'XBRU'], eodhdExchanges: ['AS', 'PA', 'BR'] },
+  { value: 'global_keyed', label: 'Global keyed sample', currencies: [], exchangeMics: [], eodhdExchanges: ['NASDAQ', 'NYSE', 'AS', 'PA', 'LSE', 'HK'] },
+  { value: 'custom_any', label: 'Any market', currencies: [], exchangeMics: [], eodhdExchanges: [] },
+] as const;
+
+const CURRENCY_PRESETS = [
+  { value: 'preset', label: 'Market preset' },
+  { value: 'USD', label: 'USD' },
+  { value: 'EUR', label: 'EUR' },
+  { value: 'USD,EUR', label: 'USD + EUR' },
+  { value: 'any', label: 'Any currency' },
+] as const;
+
+const TYPE_PRESETS = [
+  { value: 'EQUITY', label: 'Equities' },
+  { value: 'ETF', label: 'ETFs' },
+  { value: 'EQUITY,ETF', label: 'Equities + ETFs' },
+] as const;
+
+const VOLUME_PRESETS = [
+  { value: 0, label: 'Any volume' },
+  { value: 500_000, label: '500K+' },
+  { value: 1_000_000, label: '1M+' },
+  { value: 5_000_000, label: '5M+' },
+] as const;
+
+const MARKET_CAP_PRESETS = [
+  { value: 0, label: 'Any market cap' },
+  { value: 1_000_000_000, label: '$1B+' },
+  { value: 10_000_000_000, label: '$10B+' },
+  { value: 50_000_000_000, label: '$50B+' },
 ] as const;
 
 const freshnessVariant = (status: UniverseSummary['freshness_status']): 'success' | 'warning' | 'error' | 'default' => {
@@ -66,13 +110,6 @@ const sourceLabel = (source: string): string => {
   return source;
 };
 
-const parseCsv = (value: string): string[] => (
-  value
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean)
-);
-
 const formatCompactNumber = (value?: number | null): string => {
   if (value == null || !Number.isFinite(value)) return '—';
   return new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(value);
@@ -82,19 +119,31 @@ const taxonomyRows = (taxonomy: Record<string, Record<string, number>>, key: str
   Object.entries(taxonomy[key] ?? {}).sort((a, b) => b[1] - a[1])
 );
 
+const actionLabel = (candidate: ScreenerCandidate): string => {
+  const action = candidate.decisionSummary?.action;
+  if (action === 'BUY_NOW') return 'Buy Now';
+  if (action === 'BUY_ON_PULLBACK') return 'Pullback';
+  if (action === 'WAIT_FOR_BREAKOUT') return 'Breakout';
+  if (action === 'WATCH') return 'Watch';
+  if (action === 'TACTICAL_ONLY') return 'Tactical';
+  if (action === 'AVOID') return 'Avoid';
+  if (action === 'MANAGE_ONLY') return 'Manage';
+  return candidate.signal ?? '—';
+};
+
 export default function Universes() {
   const catalogQuery = useUniverseCatalog();
   const universes = catalogQuery.data?.universes ?? [];
   const [selectedUniverseId, setSelectedUniverseId] = useState<string | null>(null);
   const [discoveryProvider, setDiscoveryProvider] = useState<SymbolDiscoveryRequest['provider']>('yahoo_predefined');
-  const [discoveryScreens, setDiscoveryScreens] = useState('most_actives, day_gainers, day_losers');
-  const [discoveryExchanges, setDiscoveryExchanges] = useState('');
-  const [discoveryCurrencies, setDiscoveryCurrencies] = useState('USD');
-  const [discoveryExchangeMics, setDiscoveryExchangeMics] = useState('XNAS, XNYS');
-  const [discoveryQuoteTypes, setDiscoveryQuoteTypes] = useState('EQUITY');
+  const [selectedScreens, setSelectedScreens] = useState<string[]>(['most_actives', 'day_gainers', 'day_losers']);
+  const [marketPreset, setMarketPreset] = useState<(typeof MARKET_PRESETS)[number]['value']>('us_major');
+  const [currencyPreset, setCurrencyPreset] = useState<(typeof CURRENCY_PRESETS)[number]['value']>('preset');
+  const [typePreset, setTypePreset] = useState<(typeof TYPE_PRESETS)[number]['value']>('EQUITY');
   const [discoveryLimit, setDiscoveryLimit] = useState(50);
   const [discoveryMinVolume, setDiscoveryMinVolume] = useState(1_000_000);
-  const [discoveryMinMarketCap, setDiscoveryMinMarketCap] = useState('');
+  const [discoveryMinMarketCap, setDiscoveryMinMarketCap] = useState(0);
+  const [screenerTop, setScreenerTop] = useState(20);
 
   useEffect(() => {
     if (!selectedUniverseId && universes.length > 0) {
@@ -106,6 +155,7 @@ export default function Universes() {
   const refreshMutation = useRefreshUniverseMutation(selectedUniverseId);
   const benchmarkMutation = useUpdateUniverseBenchmarkMutation(selectedUniverseId);
   const discoveryMutation = useSymbolDiscoveryMutation();
+  const discoveryScreenerMutation = useRunScreenerMutation();
   const [benchmarkDraft, setBenchmarkDraft] = useState('');
   const selectedSummary = useMemo(
     () => universes.find((item) => item.id === selectedUniverseId) ?? null,
@@ -119,21 +169,57 @@ export default function Universes() {
     setBenchmarkDraft(benchmark);
   }, [detail?.benchmark, selectedSummary?.benchmark, selectedUniverseId]);
 
+  const selectedMarket = MARKET_PRESETS.find((preset) => preset.value === marketPreset) ?? MARKET_PRESETS[0];
+  const discoveryCurrencies = currencyPreset === 'preset'
+    ? selectedMarket.currencies
+    : currencyPreset === 'any'
+      ? []
+      : currencyPreset.split(',');
+  const discoveryQuoteTypes = typePreset.split(',');
+
+  const toggleScreen = (screen: string) => {
+    setSelectedScreens((current) => {
+      if (current.includes(screen)) {
+        const next = current.filter((item) => item !== screen);
+        return next.length ? next : current;
+      }
+      return [...current, screen];
+    });
+  };
+
+  const discoveryRequest = (): SymbolDiscoveryRequest => ({
+    provider: discoveryProvider,
+    screens: selectedScreens,
+    exchanges: selectedMarket.eodhdExchanges,
+    currencies: discoveryCurrencies,
+    exchange_mics: selectedMarket.exchangeMics,
+    quote_types: discoveryQuoteTypes,
+    limit: discoveryLimit,
+    min_volume: discoveryMinVolume > 0 ? discoveryMinVolume : null,
+    min_market_cap: discoveryMinMarketCap > 0 ? discoveryMinMarketCap : null,
+  });
+
   const runDiscovery = () => {
-    discoveryMutation.mutate({
-      provider: discoveryProvider,
-      screens: parseCsv(discoveryScreens),
-      exchanges: parseCsv(discoveryExchanges),
-      currencies: parseCsv(discoveryCurrencies).map((item) => item.toUpperCase()),
-      exchange_mics: parseCsv(discoveryExchangeMics).map((item) => item.toUpperCase()),
-      quote_types: parseCsv(discoveryQuoteTypes).map((item) => item.toUpperCase()),
-      limit: discoveryLimit,
-      min_volume: discoveryMinVolume > 0 ? discoveryMinVolume : null,
-      min_market_cap: discoveryMinMarketCap.trim() ? Number(discoveryMinMarketCap) : null,
+    discoveryScreenerMutation.reset();
+    discoveryMutation.mutate(discoveryRequest());
+  };
+
+  const runScreenerForDiscovery = () => {
+    const symbols = (discoveryMutation.data?.symbols ?? []).map((symbol) => symbol.symbol);
+    if (!symbols.length) return;
+    discoveryScreenerMutation.mutate({
+      tickers: symbols,
+      top: screenerTop,
+      currencies: discoveryCurrencies.length ? discoveryCurrencies : undefined,
+      exchangeMics: selectedMarket.exchangeMics.length ? selectedMarket.exchangeMics : undefined,
+      instrumentTypes: discoveryQuoteTypes
+        .map((item) => item.toLowerCase())
+        .filter((item): item is 'equity' | 'etf' => item === 'equity' || item === 'etf'),
     });
   };
 
   const discoveryResult = discoveryMutation.data;
+  const discoveryScreenerResult = discoveryScreenerMutation.data;
 
   return (
     <div className="mx-auto max-w-[1680px] px-4 py-4">
@@ -184,90 +270,112 @@ export default function Universes() {
               </select>
             </label>
             <label className="block">
-              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Screens</span>
-              <input
-                type="text"
-                value={discoveryScreens}
-                onChange={(event) => setDiscoveryScreens(event.target.value)}
-                disabled={discoveryProvider !== 'yahoo_predefined'}
+              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Market</span>
+              <select
+                value={marketPreset}
+                onChange={(event) => setMarketPreset(event.target.value as (typeof MARKET_PRESETS)[number]['value'])}
                 className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
-              />
+              >
+                {MARKET_PRESETS.map((preset) => (
+                  <option key={preset.value} value={preset.value}>{preset.label}</option>
+                ))}
+              </select>
             </label>
             <label className="block">
-              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">EODHD exchanges</span>
-              <input
-                type="text"
-                value={discoveryExchanges}
-                onChange={(event) => setDiscoveryExchanges(event.target.value.toUpperCase())}
-                placeholder="NASDAQ, NYSE, AS, PA"
-                disabled={discoveryProvider !== 'eodhd_exchange'}
+              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Currency</span>
+              <select
+                value={currencyPreset}
+                onChange={(event) => setCurrencyPreset(event.target.value as (typeof CURRENCY_PRESETS)[number]['value'])}
                 className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
-              />
+              >
+                {CURRENCY_PRESETS.map((preset) => (
+                  <option key={preset.value} value={preset.value}>{preset.label}</option>
+                ))}
+              </select>
             </label>
             <label className="block">
-              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Limit</span>
-              <input
-                type="number"
-                min={1}
-                max={500}
-                value={discoveryLimit}
-                onChange={(event) => setDiscoveryLimit(Number(event.target.value))}
+              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Instrument type</span>
+              <select
+                value={typePreset}
+                onChange={(event) => setTypePreset(event.target.value as (typeof TYPE_PRESETS)[number]['value'])}
                 className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
-              />
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Currencies</span>
-              <input
-                type="text"
-                value={discoveryCurrencies}
-                onChange={(event) => setDiscoveryCurrencies(event.target.value.toUpperCase())}
-                placeholder="USD, EUR"
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
-              />
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Exchange MICs</span>
-              <input
-                type="text"
-                value={discoveryExchangeMics}
-                onChange={(event) => setDiscoveryExchangeMics(event.target.value.toUpperCase())}
-                placeholder="XNAS, XNYS, XAMS"
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
-              />
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Types</span>
-              <input
-                type="text"
-                value={discoveryQuoteTypes}
-                onChange={(event) => setDiscoveryQuoteTypes(event.target.value.toUpperCase())}
-                placeholder="EQUITY, ETF"
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
-              />
+              >
+                {TYPE_PRESETS.map((preset) => (
+                  <option key={preset.value} value={preset.value}>{preset.label}</option>
+                ))}
+              </select>
             </label>
             <label className="block">
               <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Min volume</span>
-              <input
-                type="number"
-                min={0}
-                step={100000}
+              <select
                 value={discoveryMinVolume}
                 onChange={(event) => setDiscoveryMinVolume(Number(event.target.value))}
                 className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
-              />
+              >
+                {VOLUME_PRESETS.map((preset) => (
+                  <option key={preset.value} value={preset.value}>{preset.label}</option>
+                ))}
+              </select>
             </label>
-            <label className="block md:col-span-2 xl:col-span-1">
+            <label className="block">
               <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Min market cap</span>
-              <input
-                type="number"
-                min={0}
-                step={1000000000}
+              <select
                 value={discoveryMinMarketCap}
-                onChange={(event) => setDiscoveryMinMarketCap(event.target.value)}
-                placeholder="Optional"
+                onChange={(event) => setDiscoveryMinMarketCap(Number(event.target.value))}
                 className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
-              />
+              >
+                {MARKET_CAP_PRESETS.map((preset) => (
+                  <option key={preset.value} value={preset.value}>{preset.label}</option>
+                ))}
+              </select>
             </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Discovery limit</span>
+              <select
+                value={discoveryLimit}
+                onChange={(event) => setDiscoveryLimit(Number(event.target.value))}
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
+              >
+                {[25, 50, 100, 200].map((value) => (
+                  <option key={value} value={value}>{value} symbols</option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Screener results</span>
+              <select
+                value={screenerTop}
+                onChange={(event) => setScreenerTop(Number(event.target.value))}
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
+              >
+                {[10, 20, 50, 100].map((value) => (
+                  <option key={value} value={value}>Top {value}</option>
+                ))}
+              </select>
+            </label>
+            <div className="md:col-span-2 xl:col-span-4">
+              <div className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Yahoo status screens</div>
+              <div className="flex flex-wrap gap-2">
+                {DISCOVERY_SCREENS.map((screen) => {
+                  const active = selectedScreens.includes(screen.value);
+                  return (
+                    <button
+                      key={screen.value}
+                      type="button"
+                      onClick={() => toggleScreen(screen.value)}
+                      disabled={discoveryProvider !== 'yahoo_predefined'}
+                      className={`rounded-md border px-3 py-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                        active
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {screen.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
 
           {discoveryMutation.isError ? (
@@ -278,10 +386,31 @@ export default function Universes() {
 
           {discoveryResult ? (
             <div className="space-y-3">
-              <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
-                <Badge variant="default">{discoveryResult.symbols.length} candidates</Badge>
-                <Badge variant="default">{discoveryResult.provider}</Badge>
-                <span>as of {discoveryResult.source_asof}</span>
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
+                  <Badge variant="default">{discoveryResult.symbols.length} candidates</Badge>
+                  <Badge variant="default">{discoveryResult.provider}</Badge>
+                  <Badge variant="default">{selectedMarket.label}</Badge>
+                  <span>as of {discoveryResult.source_asof}</span>
+                </div>
+                <Button
+                  onClick={runScreenerForDiscovery}
+                  disabled={discoveryScreenerMutation.isPending || discoveryResult.symbols.length === 0}
+                  size="sm"
+                  variant="secondary"
+                >
+                  {discoveryScreenerMutation.isPending ? (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                      Screening…
+                    </>
+                  ) : (
+                    <>
+                      <ListChecks className="mr-2 h-4 w-4" />
+                      Run Screener on These Symbols
+                    </>
+                  )}
+                </Button>
               </div>
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                 {(['currency', 'exchange_mic', 'market', 'instrument_type'] as const).map((key) => (
@@ -329,6 +458,70 @@ export default function Universes() {
                         <td className="px-3 py-2 text-gray-600">{formatCompactNumber(symbol.volume)}</td>
                         <td className="px-3 py-2 text-gray-600">{formatCompactNumber(symbol.market_cap)}</td>
                         <td className="px-3 py-2 text-gray-600">{symbol.source_screen ?? symbol.source ?? '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : null}
+
+          {discoveryScreenerMutation.isError ? (
+            <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              {discoveryScreenerMutation.error instanceof Error ? discoveryScreenerMutation.error.message : 'Screener run failed.'}
+            </div>
+          ) : null}
+
+          {discoveryScreenerResult ? (
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Screener Results for Discovered Symbols</h3>
+                <Badge variant="default">{discoveryScreenerResult.candidates.length} candidates</Badge>
+                <Badge variant="default">{discoveryScreenerResult.totalScreened} screened</Badge>
+                {discoveryScreenerResult.benchmarkTicker ? (
+                  <Badge variant="default">Benchmark {discoveryScreenerResult.benchmarkTicker}</Badge>
+                ) : null}
+              </div>
+              {discoveryScreenerResult.warnings?.length ? (
+                <div className="space-y-1 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                  {discoveryScreenerResult.warnings.map((warning) => (
+                    <div key={warning}>{warning}</div>
+                  ))}
+                </div>
+              ) : null}
+              <div className="max-h-[520px] overflow-auto rounded-xl border border-gray-200">
+                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
+                    <tr>
+                      <th className="px-3 py-2">Rank</th>
+                      <th className="px-3 py-2">Symbol</th>
+                      <th className="px-3 py-2">Signal</th>
+                      <th className="px-3 py-2 text-right">Close</th>
+                      <th className="px-3 py-2 text-right">Score</th>
+                      <th className="px-3 py-2 text-right">6M momentum</th>
+                      <th className="px-3 py-2 text-right">Rel strength</th>
+                      <th className="px-3 py-2 text-right">R:R</th>
+                      <th className="px-3 py-2">Fundamentals</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 bg-white">
+                    {discoveryScreenerResult.candidates.map((candidate) => (
+                      <tr key={candidate.ticker}>
+                        <td className="px-3 py-2 font-medium text-gray-900">#{candidate.priorityRank ?? candidate.rank}</td>
+                        <td className="px-3 py-2">
+                          <div className="font-semibold text-gray-900">{candidate.ticker}</div>
+                          <div className="text-xs text-gray-500">
+                            {candidate.name ?? '—'}
+                            {candidate.sector ? ` · ${candidate.sector}` : ''}
+                          </div>
+                        </td>
+                        <td className="px-3 py-2 text-gray-700">{actionLabel(candidate)}</td>
+                        <td className="px-3 py-2 text-right font-mono text-gray-900">{formatCurrency(candidate.close, candidate.currency)}</td>
+                        <td className="px-3 py-2 text-right font-mono text-gray-900">{candidate.score.toFixed(1)}</td>
+                        <td className="px-3 py-2 text-right font-mono text-gray-900">{formatPercent(candidate.momentum6m, 1)}</td>
+                        <td className="px-3 py-2 text-right font-mono text-gray-900">{formatPercent(candidate.relStrength, 1)}</td>
+                        <td className="px-3 py-2 text-right font-mono text-gray-900">{candidate.rr != null ? candidate.rr.toFixed(1) : '—'}</td>
+                        <td className="px-3 py-2 text-gray-600">{candidate.fundamentalsCoverageStatus ?? '—'}</td>
                       </tr>
                     ))}
                   </tbody>

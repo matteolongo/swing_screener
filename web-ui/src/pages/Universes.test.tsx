@@ -16,6 +16,12 @@ describe('Universes page', () => {
 
     expect(screen.getByText('USD 1')).toBeInTheDocument()
 
+    await user.click(screen.getByRole('button', { name: /run screener on these symbols/i }))
+
+    expect(await screen.findByText('Screener Results for Discovered Symbols')).toBeInTheDocument()
+    expect(screen.getByText('AAPL')).toBeInTheDocument()
+    expect(screen.getByText('500 screened')).toBeInTheDocument()
+
     await waitFor(() => {
       expect(screen.queryByText('Discovering…')).not.toBeInTheDocument()
     })
