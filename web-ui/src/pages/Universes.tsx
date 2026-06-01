@@ -1,11 +1,12 @@
-import { RefreshCw, Database, AlertTriangle, CheckCircle2, Target } from 'lucide-react';
+import { RefreshCw, Database, AlertTriangle, CheckCircle2, Target, Search, Globe2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
-import { useRefreshUniverseMutation, useUniverseCatalog, useUniverseDetail, useUpdateUniverseBenchmarkMutation } from '@/features/universes/hooks';
+import { useRefreshUniverseMutation, useSymbolDiscoveryMutation, useUniverseCatalog, useUniverseDetail, useUpdateUniverseBenchmarkMutation } from '@/features/universes/hooks';
 import type { UniverseSummary } from '@/features/screener/types';
+import type { SymbolDiscoveryRequest } from '@/features/universes/types';
 
 const BENCHMARK_OPTIONS = [
   'ACWI',
@@ -65,10 +66,35 @@ const sourceLabel = (source: string): string => {
   return source;
 };
 
+const parseCsv = (value: string): string[] => (
+  value
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+);
+
+const formatCompactNumber = (value?: number | null): string => {
+  if (value == null || !Number.isFinite(value)) return '—';
+  return new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(value);
+};
+
+const taxonomyRows = (taxonomy: Record<string, Record<string, number>>, key: string): Array<[string, number]> => (
+  Object.entries(taxonomy[key] ?? {}).sort((a, b) => b[1] - a[1])
+);
+
 export default function Universes() {
   const catalogQuery = useUniverseCatalog();
   const universes = catalogQuery.data?.universes ?? [];
   const [selectedUniverseId, setSelectedUniverseId] = useState<string | null>(null);
+  const [discoveryProvider, setDiscoveryProvider] = useState<SymbolDiscoveryRequest['provider']>('yahoo_predefined');
+  const [discoveryScreens, setDiscoveryScreens] = useState('most_actives, day_gainers, day_losers');
+  const [discoveryExchanges, setDiscoveryExchanges] = useState('');
+  const [discoveryCurrencies, setDiscoveryCurrencies] = useState('USD');
+  const [discoveryExchangeMics, setDiscoveryExchangeMics] = useState('XNAS, XNYS');
+  const [discoveryQuoteTypes, setDiscoveryQuoteTypes] = useState('EQUITY');
+  const [discoveryLimit, setDiscoveryLimit] = useState(50);
+  const [discoveryMinVolume, setDiscoveryMinVolume] = useState(1_000_000);
+  const [discoveryMinMarketCap, setDiscoveryMinMarketCap] = useState('');
 
   useEffect(() => {
     if (!selectedUniverseId && universes.length > 0) {
@@ -79,6 +105,7 @@ export default function Universes() {
   const detailQuery = useUniverseDetail(selectedUniverseId);
   const refreshMutation = useRefreshUniverseMutation(selectedUniverseId);
   const benchmarkMutation = useUpdateUniverseBenchmarkMutation(selectedUniverseId);
+  const discoveryMutation = useSymbolDiscoveryMutation();
   const [benchmarkDraft, setBenchmarkDraft] = useState('');
   const selectedSummary = useMemo(
     () => universes.find((item) => item.id === selectedUniverseId) ?? null,
@@ -92,6 +119,22 @@ export default function Universes() {
     setBenchmarkDraft(benchmark);
   }, [detail?.benchmark, selectedSummary?.benchmark, selectedUniverseId]);
 
+  const runDiscovery = () => {
+    discoveryMutation.mutate({
+      provider: discoveryProvider,
+      screens: parseCsv(discoveryScreens),
+      exchanges: parseCsv(discoveryExchanges),
+      currencies: parseCsv(discoveryCurrencies).map((item) => item.toUpperCase()),
+      exchange_mics: parseCsv(discoveryExchangeMics).map((item) => item.toUpperCase()),
+      quote_types: parseCsv(discoveryQuoteTypes).map((item) => item.toUpperCase()),
+      limit: discoveryLimit,
+      min_volume: discoveryMinVolume > 0 ? discoveryMinVolume : null,
+      min_market_cap: discoveryMinMarketCap.trim() ? Number(discoveryMinMarketCap) : null,
+    });
+  };
+
+  const discoveryResult = discoveryMutation.data;
+
   return (
     <div className="mx-auto max-w-[1680px] px-4 py-4">
       <div className="mb-4">
@@ -100,6 +143,201 @@ export default function Universes() {
           Review source coverage, freshness, validation, and refresh official universes without editing snapshots by hand.
         </p>
       </div>
+
+      <Card variant="bordered" className="mb-4 p-4">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <Globe2 className="h-4 w-4 text-gray-500" />
+                <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Live Discovery</h2>
+              </div>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                Pull fresh candidate symbols from free sources, then review their market, currency, and exchange taxonomy before screening.
+              </p>
+            </div>
+            <Button onClick={runDiscovery} disabled={discoveryMutation.isPending || discoveryLimit <= 0} size="sm">
+              {discoveryMutation.isPending ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Discovering…
+                </>
+              ) : (
+                <>
+                  <Search className="mr-2 h-4 w-4" />
+                  Discover Symbols
+                </>
+              )}
+            </Button>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Provider</span>
+              <select
+                value={discoveryProvider}
+                onChange={(event) => setDiscoveryProvider(event.target.value as SymbolDiscoveryRequest['provider'])}
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
+              >
+                <option value="yahoo_predefined">Yahoo predefined</option>
+                <option value="eodhd_exchange">EODHD exchange list</option>
+              </select>
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Screens</span>
+              <input
+                type="text"
+                value={discoveryScreens}
+                onChange={(event) => setDiscoveryScreens(event.target.value)}
+                disabled={discoveryProvider !== 'yahoo_predefined'}
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">EODHD exchanges</span>
+              <input
+                type="text"
+                value={discoveryExchanges}
+                onChange={(event) => setDiscoveryExchanges(event.target.value.toUpperCase())}
+                placeholder="NASDAQ, NYSE, AS, PA"
+                disabled={discoveryProvider !== 'eodhd_exchange'}
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Limit</span>
+              <input
+                type="number"
+                min={1}
+                max={500}
+                value={discoveryLimit}
+                onChange={(event) => setDiscoveryLimit(Number(event.target.value))}
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Currencies</span>
+              <input
+                type="text"
+                value={discoveryCurrencies}
+                onChange={(event) => setDiscoveryCurrencies(event.target.value.toUpperCase())}
+                placeholder="USD, EUR"
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Exchange MICs</span>
+              <input
+                type="text"
+                value={discoveryExchangeMics}
+                onChange={(event) => setDiscoveryExchangeMics(event.target.value.toUpperCase())}
+                placeholder="XNAS, XNYS, XAMS"
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Types</span>
+              <input
+                type="text"
+                value={discoveryQuoteTypes}
+                onChange={(event) => setDiscoveryQuoteTypes(event.target.value.toUpperCase())}
+                placeholder="EQUITY, ETF"
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Min volume</span>
+              <input
+                type="number"
+                min={0}
+                step={100000}
+                value={discoveryMinVolume}
+                onChange={(event) => setDiscoveryMinVolume(Number(event.target.value))}
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
+              />
+            </label>
+            <label className="block md:col-span-2 xl:col-span-1">
+              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Min market cap</span>
+              <input
+                type="number"
+                min={0}
+                step={1000000000}
+                value={discoveryMinMarketCap}
+                onChange={(event) => setDiscoveryMinMarketCap(event.target.value)}
+                placeholder="Optional"
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
+              />
+            </label>
+          </div>
+
+          {discoveryMutation.isError ? (
+            <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              {discoveryMutation.error instanceof Error ? discoveryMutation.error.message : 'Symbol discovery failed.'}
+            </div>
+          ) : null}
+
+          {discoveryResult ? (
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
+                <Badge variant="default">{discoveryResult.symbols.length} candidates</Badge>
+                <Badge variant="default">{discoveryResult.provider}</Badge>
+                <span>as of {discoveryResult.source_asof}</span>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                {(['currency', 'exchange_mic', 'market', 'instrument_type'] as const).map((key) => (
+                  <div key={key} className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+                    <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">{key.replace('_', ' ')}</div>
+                    <div className="flex flex-wrap gap-2">
+                      {taxonomyRows(discoveryResult.taxonomy, key).map(([value, count]) => (
+                        <Badge key={`${key}-${value}`} variant="default">
+                          {value} {count}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {discoveryResult.notes.length ? (
+                <div className="space-y-1 text-sm text-gray-500">
+                  {discoveryResult.notes.map((note) => (
+                    <div key={note}>{note}</div>
+                  ))}
+                </div>
+              ) : null}
+              <div className="max-h-[420px] overflow-auto rounded-xl border border-gray-200">
+                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
+                    <tr>
+                      <th className="px-3 py-2">Symbol</th>
+                      <th className="px-3 py-2">Name</th>
+                      <th className="px-3 py-2">Exchange</th>
+                      <th className="px-3 py-2">Currency</th>
+                      <th className="px-3 py-2">Type</th>
+                      <th className="px-3 py-2">Volume</th>
+                      <th className="px-3 py-2">Market Cap</th>
+                      <th className="px-3 py-2">Source</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 bg-white">
+                    {discoveryResult.symbols.map((symbol) => (
+                      <tr key={`${symbol.symbol}-${symbol.source_screen ?? symbol.provider_exchange ?? 'source'}`}>
+                        <td className="px-3 py-2 font-medium text-gray-900">{symbol.symbol}</td>
+                        <td className="px-3 py-2 text-gray-600">{symbol.name ?? '—'}</td>
+                        <td className="px-3 py-2 text-gray-600">{symbol.exchange_mic ?? symbol.provider_exchange ?? '—'}</td>
+                        <td className="px-3 py-2 text-gray-600">{symbol.currency ?? '—'}</td>
+                        <td className="px-3 py-2 text-gray-600">{symbol.instrument_type ?? '—'}</td>
+                        <td className="px-3 py-2 text-gray-600">{formatCompactNumber(symbol.volume)}</td>
+                        <td className="px-3 py-2 text-gray-600">{formatCompactNumber(symbol.market_cap)}</td>
+                        <td className="px-3 py-2 text-gray-600">{symbol.source_screen ?? symbol.source ?? '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </Card>
 
       <div className="grid gap-4 xl:grid-cols-[380px_minmax(0,1fr)]">
         <Card variant="bordered" className="p-3">

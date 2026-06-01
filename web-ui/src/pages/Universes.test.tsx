@@ -1,0 +1,23 @@
+import { describe, expect, it } from 'vitest'
+import { screen, waitFor } from '@testing-library/react'
+
+import Universes from './Universes'
+import { renderWithProviders } from '@/test/utils'
+
+describe('Universes page', () => {
+  it('runs live symbol discovery and shows taxonomy plus candidates', async () => {
+    const { user } = renderWithProviders(<Universes />)
+
+    await user.click(screen.getByRole('button', { name: /discover symbols/i }))
+
+    expect(await screen.findByText('NVDA')).toBeInTheDocument()
+    expect(screen.getByText('NVIDIA Corporation')).toBeInTheDocument()
+    expect(screen.getByText('1 candidates')).toBeInTheDocument()
+
+    expect(screen.getByText('USD 1')).toBeInTheDocument()
+
+    await waitFor(() => {
+      expect(screen.queryByText('Discovering…')).not.toBeInTheDocument()
+    })
+  })
+})

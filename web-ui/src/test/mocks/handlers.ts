@@ -848,6 +848,42 @@ export const handlers = [
     return HttpResponse.json(mockUniverses)
   }),
 
+  http.post(`${API_BASE_URL}/api/universes/discover`, async ({ request }) => {
+    const body = asObject(await request.json())
+    return HttpResponse.json({
+      provider: body.provider || 'yahoo_predefined',
+      source_asof: '2026-06-01',
+      source_documents: [
+        { label: 'Yahoo Finance predefined screener endpoint', url: 'https://query1.finance.yahoo.com/v1/finance/screener/predefined/saved' },
+      ],
+      filters: body,
+      symbols: [
+        {
+          symbol: 'NVDA',
+          name: 'NVIDIA Corporation',
+          instrument_type: 'EQUITY',
+          currency: 'USD',
+          market: 'US',
+          exchange_mic: 'XNAS',
+          provider_exchange: 'NMS',
+          exchange_name: 'NasdaqGS',
+          market_cap: 5_400_000_000_000,
+          volume: 159_000_000,
+          source: 'yahoo_predefined',
+          source_screen: 'most_actives',
+          discovery_rank: 1,
+        },
+      ],
+      taxonomy: {
+        currency: { USD: 1 },
+        exchange_mic: { XNAS: 1 },
+        market: { US: 1 },
+        instrument_type: { EQUITY: 1 },
+      },
+      notes: ['Yahoo Finance predefined screeners are free and keyless but unofficial.'],
+    })
+  }),
+
   http.get(`${API_BASE_URL}/api/universes/:universeId`, ({ params }) => {
     const universe = mockUniverses.universes.find((item) => item.id === params.universeId)
     if (!universe) {
