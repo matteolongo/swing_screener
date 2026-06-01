@@ -71,6 +71,12 @@ export const API_ENDPOINTS = {
 
   // Calendar
   calendarEvents: '/api/calendar/events',
+
+  // DeGiro
+  degiroStatus: '/api/portfolio/degiro/status',
+  degiroOrderHistory: '/api/portfolio/degiro/order-history',
+  orderFillFromDegiro: (id: string) => `/api/portfolio/orders/${id}/fill-from-degiro`,
+  degiroOrderSyncApply: '/api/portfolio/sync/degiro/apply',
 } as const;
 
 // Helper to build full URL
