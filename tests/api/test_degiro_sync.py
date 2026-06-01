@@ -110,6 +110,41 @@ def test_degiro_sync_apply_closes_matching_open_position(monkeypatch: pytest.Mon
         encoding="utf-8",
     )
 
+    _FAKE_RAW = {
+        "positions": [],
+        "pending_orders": [],
+        "order_history": [
+            {
+                "orderId": "DEGIRO-EXIT-1",
+                "productId": "12345",
+                "buysell": "S",
+                "size": 10,
+                "price": 35.0,
+                "date": "2026-04-16",
+                "resolved_product_id": "12345",
+                "resolved_symbol": "SBMO",
+                "resolved_isin": "NL0010547661",
+                "resolved_name": "SBM Offshore NV",
+            }
+        ],
+        "transactions": [
+            {
+                "orderId": "DEGIRO-EXIT-1",
+                "productId": "12345",
+                "buysell": "S",
+                "quantity": -10,
+                "price": 35.0,
+                "feeInBaseCurrency": 0.2,
+                "date": "2026-04-16",
+                "resolved_product_id": "12345",
+                "resolved_symbol": "SBMO",
+                "resolved_isin": "NL0010547661",
+                "resolved_name": "SBM Offshore NV",
+            }
+        ],
+        "cash": [],
+    }
+
     monkeypatch.setattr(api.dependencies, "POSITIONS_FILE", positions_file)
     monkeypatch.setattr(portfolio_router, "_check_degiro_available", lambda: None)
     monkeypatch.setattr(
@@ -119,6 +154,10 @@ def test_degiro_sync_apply_closes_matching_open_position(monkeypatch: pytest.Mon
     monkeypatch.setattr(
         "swing_screener.integrations.degiro.client.DegiroClient",
         _DummyDegiroClient,
+    )
+    monkeypatch.setattr(
+        "swing_screener.integrations.degiro.sync.fetch_live_data",
+        lambda *_args, **_kwargs: _FAKE_RAW,
     )
 
     client = TestClient(app)
