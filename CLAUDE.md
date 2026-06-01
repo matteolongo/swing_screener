@@ -112,9 +112,17 @@ Primary state: `data/positions.json` (open trades), `data/orders.json` (order li
 
 ## Documentation Rules
 
-- Every behavior/contract change must update the nearest `README.md`.
-- Config, workflow, UX, and onboarding changes update corresponding docs in the same change.
-- Update `docs/overview/INDEX.md` when adding/removing docs.
+Before finishing any code change, go through this checklist:
+
+1. **Nearest README** — does the module/layer you touched have a `README.md`? If the behavior, contract, or public interface changed, update it.
+2. **Config docs** — if you added or changed a config key, update `config/README.md` and the relevant YAML file's inline comments.
+3. **API surface** — if you added, removed, or changed an endpoint signature, update `api/README.md`.
+4. **Web UI feature map** — if you added or removed a page or feature directory, update `web-ui/docs/WEB_UI_GUIDE.md`.
+5. **Schema changes** — if `data/*.json` schema changed, add migration/backfill notes in the nearest `README.md`.
+6. **New doc files** — if you created a new doc, add it to `docs/overview/INDEX.md`.
+7. **Intelligence module** — if you changed the analysis pipeline, cache, or API surface, update `src/swing_screener/intelligence/README.md`.
+
+When in doubt: read the relevant doc, check if it still describes what the code does, and update any section that no longer matches.
 
 ## PR Delivery
 
