@@ -1,5 +1,8 @@
 // Order types matching backend API models
 
+import type { Position, PositionApiResponse } from './position';
+import { transformPosition } from './position';
+
 export type OrderStatus = 'pending' | 'filled' | 'cancelled';
 export type OrderKind = 'entry' | 'stop' | 'take_profit';
 export type EntryMode = 'NEW_ENTRY' | 'ADD_ON';
@@ -108,6 +111,50 @@ export interface OrderSnapshotResponseApi {
   asof: string;
 }
 
+export interface DegiroOrder {
+  orderId: string;
+  productId: string | null;
+  isin: string | null;
+  productName: string | null;
+  status: string;
+  price: number | null;
+  quantity: number;
+  orderType: string | null;
+  side: string | null;
+  createdAt: string | null;
+}
+
+export interface DegiroOrderApiResponse {
+  order_id: string;
+  product_id?: string | null;
+  isin?: string | null;
+  product_name?: string | null;
+  status: string;
+  price?: number | null;
+  quantity: number;
+  order_type?: string | null;
+  side?: string | null;
+  created_at?: string | null;
+}
+
+export interface FillFromDegiroRequest {
+  degiroOrderId: string;
+}
+
+export interface FillFromDegiroResponse {
+  orderId: string;
+  brokerOrderId: string;
+  quantityMismatch: boolean;
+  position: Position;
+}
+
+export interface FillFromDegiroResponseApi {
+  order_id: string;
+  broker_order_id: string;
+  quantity_mismatch: boolean;
+  position: PositionApiResponse;
+}
+
 export function transformOrder(apiOrder: OrderApiResponse): Order {
   return {
     orderId: apiOrder.order_id,
@@ -130,6 +177,40 @@ export function transformOrder(apiOrder: OrderApiResponse): Order {
     brokerOrderId: apiOrder.broker_order_id ?? null,
     broker: apiOrder.broker ?? null,
     brokerSyncedAt: apiOrder.broker_synced_at ?? null,
+  };
+}
+
+export function transformDegiroOrder(apiOrder: DegiroOrderApiResponse): DegiroOrder {
+  return {
+    orderId: apiOrder.order_id,
+    productId: apiOrder.product_id ?? null,
+    isin: apiOrder.isin ?? null,
+    productName: apiOrder.product_name ?? null,
+    status: apiOrder.status,
+    price: apiOrder.price ?? null,
+    quantity: apiOrder.quantity,
+    orderType: apiOrder.order_type ?? null,
+    side: apiOrder.side ?? null,
+    createdAt: apiOrder.created_at ?? null,
+  };
+}
+
+export function transformFillFromDegiroRequest(req: FillFromDegiroRequest): {
+  degiro_order_id: string;
+} {
+  return {
+    degiro_order_id: req.degiroOrderId,
+  };
+}
+
+export function transformFillFromDegiroResponse(
+  response: FillFromDegiroResponseApi,
+): FillFromDegiroResponse {
+  return {
+    orderId: response.order_id,
+    brokerOrderId: response.broker_order_id,
+    quantityMismatch: response.quantity_mismatch,
+    position: transformPosition(response.position),
   };
 }
 

@@ -95,4 +95,22 @@ describe('FillViaDegiroModal', () => {
     renderWithProviders(<FillViaDegiroModal order={order} onClose={vi.fn()} />);
     expect(await screen.findByText(t('fillViaDegiroModal.noOrders'))).toBeInTheDocument();
   });
+
+  it('hides buy orders that are not filled or executable', async () => {
+    server.use(
+      http.get('*/api/portfolio/degiro/order-history', () =>
+        HttpResponse.json({
+          orders: [
+            { ...degiroOrders[0], order_id: 'DG-CANCELLED', product_name: 'Cancelled SBMO', status: 'cancelled' },
+            { ...degiroOrders[0], order_id: 'DG-PENDING', product_name: 'Pending SBMO', status: 'pending' },
+          ],
+          asof: '2026-04-27',
+        })
+      )
+    );
+    renderWithProviders(<FillViaDegiroModal order={order} onClose={vi.fn()} />);
+    expect(await screen.findByText(t('fillViaDegiroModal.noOrders'))).toBeInTheDocument();
+    expect(screen.queryByText('Cancelled SBMO')).not.toBeInTheDocument();
+    expect(screen.queryByText('Pending SBMO')).not.toBeInTheDocument();
+  });
 });

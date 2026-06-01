@@ -14,6 +14,8 @@ export const queryKeys = {
     status == null ? (['orders'] as const) : (['orders', status] as const),
   positions: (status?: PositionFilterStatus | 'open') =>
     status == null ? (['positions'] as const) : (['positions', status] as const),
+  degiroStatus: () => ['degiro-status'] as const,
+  degiroOrderHistory: () => ['degiro-order-history'] as const,
   positionMetrics: (positionId?: string) =>
     positionId == null ? (['position-metrics'] as const) : (['position-metrics', positionId] as const),
   portfolioSummary: () => ['portfolio-summary'] as const,
@@ -30,4 +32,5 @@ export const queryKeys = {
   calendarEvents: (daysAhead?: number) =>
     ['calendar-events', daysAhead ?? 30] as const,
   degiroStatus: () => ['degiro-status'] as const,
+  openPositionsIntelligence: () => ['openPositionsIntelligence'] as const,
 };

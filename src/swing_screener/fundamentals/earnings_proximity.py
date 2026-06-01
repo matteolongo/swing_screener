@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime as dt
 import logging
+import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import httpx
@@ -12,6 +13,14 @@ logger = logging.getLogger(__name__)
 _FINNHUB_EARNINGS_URL = "https://finnhub.io/api/v1/calendar/earnings"
 _TIMEOUT = 10.0
 _UNAVAILABLE = object()
+_AUTH_FAILED = object()
+
+
+def _is_auth_error(exc: Exception) -> bool:
+    return (
+        isinstance(exc, httpx.HTTPStatusError)
+        and exc.response.status_code in {401, 403}
+    )
 
 
 def _fetch_via_finnhub(ticker: str, api_key: str, asof_date: dt.date) -> int | None | object:
@@ -30,6 +39,9 @@ def _fetch_via_finnhub(ticker: str, api_key: str, asof_date: dt.date) -> int | N
         resp.raise_for_status()
         items = resp.json().get("earningsCalendar") or []
     except Exception as exc:
+        if _is_auth_error(exc):
+            logger.warning("Finnhub earnings lookup unauthorized; disabling Finnhub earnings lookups for this batch")
+            return _AUTH_FAILED
         logger.debug("Finnhub earnings lookup failed for %s: %s", ticker, exc)
         return _UNAVAILABLE
 
@@ -74,10 +86,14 @@ def fetch_next_earnings_days(
 ) -> dict[str, int | None]:
     """Return ticker to days until next earnings, or None when unknown."""
     result: dict[str, int | None] = {}
+    finnhub_auth_failed = threading.Event()
 
     def _fetch_one(ticker: str) -> tuple[str, int | None]:
-        if finnhub_api_key:
+        if finnhub_api_key and not finnhub_auth_failed.is_set():
             days = _fetch_via_finnhub(ticker, finnhub_api_key, asof_date)
+            if days is _AUTH_FAILED:
+                finnhub_auth_failed.set()
+                days = _fetch_via_yfinance(ticker, asof_date)
             if days is _UNAVAILABLE:
                 days = _fetch_via_yfinance(ticker, asof_date)
         else:

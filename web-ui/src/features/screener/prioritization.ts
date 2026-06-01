@@ -81,3 +81,7 @@ export function filterCandidates(
     return true;
   });
 }
+
+export function filterOutAddOns(candidates: ScreenerCandidate[]): ScreenerCandidate[] {
+  return candidates.filter((c) => c.sameSymbol?.mode !== 'ADD_ON');
+}

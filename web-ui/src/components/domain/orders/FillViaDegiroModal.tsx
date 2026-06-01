@@ -10,13 +10,25 @@ interface FillViaDegiroModalProps {
   onClose: () => void;
 }
 
+const FILLABLE_DEGIRO_STATUSES = new Set(['confirmed', 'executed', 'filled', 'complete', 'completed']);
+
+function isFillableBuyOrder(order: DegiroOrder): boolean {
+  return (
+    order.side === 'buy'
+    && order.price != null
+    && order.quantity > 0
+    && FILLABLE_DEGIRO_STATUSES.has(order.status.trim().toLowerCase())
+  );
+}
+
+
 export default function FillViaDegiroModal({ order, onClose }: FillViaDegiroModalProps) {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const historyQuery = useDegiroOrderHistory();
   const fillMutation = useFillFromDegiroMutation(onClose);
 
   const allOrders = historyQuery.data ?? [];
-  const buyOrders = allOrders.filter((o) => o.side === 'buy');
+  const buyOrders = allOrders.filter(isFillableBuyOrder);
   const tickerMatches = buyOrders.filter(
     (o) => (o.productName ?? '').toUpperCase().includes(order.ticker)
   );

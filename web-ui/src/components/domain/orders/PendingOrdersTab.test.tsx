@@ -59,7 +59,52 @@ describe('PendingOrdersTab', () => {
     renderWithProviders(<PendingOrdersTab />);
     expect(
       await screen.findByRole('button', { name: t('pendingOrdersTab.fillManually') })
-    ).toBeInTheDocument();
+    ).toBeEnabled();
+  });
+
+  it('shows fill-via-degiro button when DeGiro connected', async () => {
+    server.use(
+      http.get('*/api/portfolio/orders/local', () =>
+        HttpResponse.json({ orders: [pendingOrder], asof: '2026-04-27' })
+      ),
+      http.get('*/api/portfolio/degiro/status', () =>
+        HttpResponse.json({
+          available: true,
+          installed: true,
+          credentials_configured: true,
+          mode: 'ready',
+          detail: '',
+        })
+      )
+    );
+    renderWithProviders(<PendingOrdersTab />);
+    expect(
+      await screen.findByRole('button', { name: t('pendingOrdersTab.fillViaDegiro') })
+    ).toBeEnabled();
+    expect(
+      screen.getByRole('button', { name: t('pendingOrdersTab.fillManually') })
+    ).toBeEnabled();
+  });
+
+  it('disables fill-via-degiro button when DeGiro is unavailable', async () => {
+    server.use(
+      http.get('*/api/portfolio/orders/local', () =>
+        HttpResponse.json({ orders: [pendingOrder], asof: '2026-04-27' })
+      ),
+      http.get('*/api/portfolio/degiro/status', () =>
+        HttpResponse.json({
+          available: false,
+          installed: false,
+          credentials_configured: false,
+          mode: 'missing_library',
+          detail: 'degiro-connector is not installed.',
+        })
+      )
+    );
+    renderWithProviders(<PendingOrdersTab />);
+    expect(
+      await screen.findByRole('button', { name: t('pendingOrdersTab.fillViaDegiro') })
+    ).toBeDisabled();
   });
 
   it('shows Fill via DeGiro button when degiro is available', async () => {
