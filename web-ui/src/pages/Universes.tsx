@@ -8,7 +8,7 @@ import { useRefreshUniverseMutation, useSymbolDiscoveryMutation, useUniverseCata
 import type { ScreenerCandidate, UniverseSummary } from '@/features/screener/types';
 import type { SymbolDiscoveryRequest } from '@/features/universes/types';
 import { useRunScreenerMutation } from '@/features/screener/hooks';
-import { formatCurrency, formatPercent } from '@/utils/formatters';
+import { formatCompactNumber, formatCurrency, formatPercent } from '@/utils/formatters';
 
 const BENCHMARK_OPTIONS = [
   'ACWI',
@@ -112,11 +112,6 @@ const sourceLabel = (source: string): string => {
   return source;
 };
 
-const formatCompactNumber = (value?: number | null): string => {
-  if (value == null || !Number.isFinite(value)) return '—';
-  return new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(value);
-};
-
 const taxonomyRows = (taxonomy: Record<string, Record<string, number>>, key: string): Array<[string, number]> => (
   Object.entries(taxonomy[key] ?? {}).sort((a, b) => b[1] - a[1])
 );
@@ -197,9 +192,9 @@ export default function Universes() {
   const discoveryRequest = (): SymbolDiscoveryRequest => ({
     provider: discoveryProvider,
     screens: selectedScreens,
-    exchanges: selectedMarket.eodhdExchanges,
-    currencies: discoveryCurrencies,
-    exchange_mics: selectedMarket.exchangeMics,
+    exchanges: [...selectedMarket.eodhdExchanges],
+    currencies: [...discoveryCurrencies],
+    exchange_mics: [...selectedMarket.exchangeMics],
     quote_types: discoveryQuoteTypes,
     limit: discoveryLimit,
     min_volume: discoveryMinVolume > 0 ? discoveryMinVolume : null,
@@ -217,8 +212,8 @@ export default function Universes() {
     discoveryScreenerMutation.mutate({
       tickers: symbols,
       top: screenerTop,
-      currencies: discoveryCurrencies.length ? discoveryCurrencies : undefined,
-      exchangeMics: selectedMarket.exchangeMics.length ? selectedMarket.exchangeMics : undefined,
+      currencies: discoveryCurrencies.length ? [...discoveryCurrencies] : undefined,
+      exchangeMics: selectedMarket.exchangeMics.length ? [...selectedMarket.exchangeMics] : undefined,
       instrumentTypes: discoveryQuoteTypes
         .map((item) => item.toLowerCase())
         .filter((item): item is 'equity' | 'etf' => item === 'equity' || item === 'etf'),

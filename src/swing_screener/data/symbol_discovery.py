@@ -7,7 +7,7 @@ import os
 from dataclasses import dataclass, field
 from typing import Callable, Iterable, Literal
 from http.cookiejar import CookieJar
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode
 from urllib.request import HTTPCookieProcessor, Request, build_opener, urlopen
 
 
@@ -125,6 +125,8 @@ def _fetch_yahoo_custom_json(payload: dict) -> dict:
     crumb_request = Request(YAHOO_CRUMB_URL, headers=headers)
     with opener.open(crumb_request, timeout=15) as response:
         crumb = response.read().decode("utf-8", errors="ignore").strip()
+    if not crumb:
+        raise SymbolDiscoveryError("Yahoo crumb fetch returned empty response; authentication may have changed.")
     request = Request(
         f"{YAHOO_CUSTOM_SCREENER_URL}?{urlencode({'crumb': crumb})}",
         data=json.dumps(payload).encode("utf-8"),
@@ -159,20 +161,23 @@ def _normalize_yahoo_market(quote: dict) -> str | None:
     return raw_region or None
 
 
-def _passes_filters(item: dict, query: SymbolDiscoveryQuery) -> bool:
-    currencies = _normalize_codes(query.currencies)
-    exchange_mics = _normalize_codes(query.exchange_mics)
-    quote_types = _normalize_codes(query.quote_types)
-
+def _passes_filters(
+    item: dict,
+    currencies: tuple[str, ...],
+    exchange_mics: tuple[str, ...],
+    quote_types: tuple[str, ...],
+    min_market_cap: int | None,
+    min_volume: int | None,
+) -> bool:
     if currencies and str(item.get("currency") or "").upper() not in currencies:
         return False
     if exchange_mics and str(item.get("exchange_mic") or "").upper() not in exchange_mics:
         return False
     if quote_types and str(item.get("instrument_type") or "").upper() not in quote_types:
         return False
-    if query.min_market_cap is not None and (item.get("market_cap") or 0) < query.min_market_cap:
+    if min_market_cap is not None and (item.get("market_cap") or 0) < min_market_cap:
         return False
-    if query.min_volume is not None and (item.get("volume") or 0) < query.min_volume:
+    if min_volume is not None and (item.get("volume") or 0) < min_volume:
         return False
     return True
 
@@ -252,6 +257,9 @@ def _discover_with_yahoo_custom_screener(
 ) -> list[dict]:
     seen: set[str] = set()
     symbols: list[dict] = []
+    currencies = _normalize_codes(query.currencies)
+    exchange_mics = _normalize_codes(query.exchange_mics)
+    quote_types = _normalize_codes(query.quote_types)
     for query_field, value in _yahoo_custom_queries(query):
         data = fetch_custom_json(_yahoo_custom_payload(query_field=query_field, query_value=value, query=query))
         result = ((data.get("finance") or {}).get("result") or [{}])[0]
@@ -260,7 +268,7 @@ def _discover_with_yahoo_custom_screener(
             symbol = item.get("symbol")
             if not symbol or symbol in seen:
                 continue
-            if not _passes_filters(item, query):
+            if not _passes_filters(item, currencies, exchange_mics, quote_types, query.min_market_cap, query.min_volume):
                 continue
             seen.add(symbol)
             symbols.append(item)
@@ -275,7 +283,7 @@ def discover_with_yahoo_predefined(
     fetch_json: Callable[[str], dict] = _fetch_json,
     fetch_custom_json: Callable[[dict], dict] = _fetch_yahoo_custom_json,
 ) -> SymbolDiscoveryResult:
-    screens = tuple(query.screens or DEFAULT_YAHOO_SCREENS)
+    screens = query.screens
     seen: set[str] = set()
     symbols: list[dict] = []
     notes: list[str] = [
@@ -291,9 +299,11 @@ def discover_with_yahoo_predefined(
             notes.append(f"Yahoo custom screener failed ({type(exc).__name__}); falling back to predefined screeners.")
 
     if not symbols:
-        per_screen_count = max(query.limit, 1)
+        currencies = _normalize_codes(query.currencies)
+        exchange_mics = _normalize_codes(query.exchange_mics)
+        quote_types = _normalize_codes(query.quote_types)
         for screen in screens:
-            url = f"{YAHOO_SCREENER_URL}?{urlencode({'scrIds': screen, 'count': per_screen_count})}"
+            url = f"{YAHOO_SCREENER_URL}?{urlencode({'scrIds': screen, 'count': query.limit})}"
             data = fetch_json(url)
             result = ((data.get("finance") or {}).get("result") or [{}])[0]
             for index, quote in enumerate(result.get("quotes") or [], start=1):
@@ -301,7 +311,7 @@ def discover_with_yahoo_predefined(
                 symbol = item.get("symbol")
                 if not symbol or symbol in seen:
                     continue
-                if not _passes_filters(item, query):
+                if not _passes_filters(item, currencies, exchange_mics, quote_types, query.min_market_cap, query.min_volume):
                     continue
                 seen.add(symbol)
                 symbols.append(item)
@@ -309,10 +319,13 @@ def discover_with_yahoo_predefined(
                     break
             if len(symbols) >= query.limit:
                 break
+    else:
+        currencies = _normalize_codes(query.currencies)
+        exchange_mics = _normalize_codes(query.exchange_mics)
 
-    requested_currencies = _normalize_codes(query.currencies)
-    requested_mics = _normalize_codes(query.exchange_mics)
     us_mics = {"ARCX", "BATS", "XASE", "XNAS", "XNYS", "XOTC"}
+    requested_currencies = currencies
+    requested_mics = exchange_mics
     if not symbols and (
         any(currency != "USD" for currency in requested_currencies)
         or any(mic not in us_mics for mic in requested_mics)
@@ -364,16 +377,20 @@ def discover_with_eodhd_exchange(
     symbols: list[dict] = []
     seen: set[str] = set()
     documents: list[dict] = []
+    currencies = _normalize_codes(query.currencies)
+    exchange_mics = _normalize_codes(query.exchange_mics)
+    quote_types = _normalize_codes(query.quote_types)
     for exchange in query.exchanges:
-        url = f"{EODHD_SYMBOL_LIST_URL.format(exchange=exchange)}?{urlencode({'api_token': token, 'fmt': 'csv'})}"
-        documents.append({"label": f"EODHD exchange symbol list: {exchange.upper()}", "url": EODHD_SYMBOL_LIST_URL.format(exchange=exchange)})
+        safe_exchange = quote(exchange, safe="")
+        url = f"{EODHD_SYMBOL_LIST_URL.format(exchange=safe_exchange)}?{urlencode({'api_token': token, 'fmt': 'csv'})}"
+        documents.append({"label": f"EODHD exchange symbol list: {exchange.upper()}", "url": EODHD_SYMBOL_LIST_URL.format(exchange=safe_exchange)})
         reader = csv.DictReader(fetch_text(url).splitlines())
         for row in reader:
             item = _eodhd_symbol_from_row(row, exchange)
             symbol = item.get("symbol")
             if not symbol or symbol in seen:
                 continue
-            if not _passes_filters(item, query):
+            if not _passes_filters(item, currencies, exchange_mics, quote_types, query.min_market_cap, query.min_volume):
                 continue
             seen.add(symbol)
             symbols.append(item)
@@ -418,6 +435,8 @@ def discover_symbols(
 ) -> SymbolDiscoveryResult:
     if query.limit <= 0:
         raise ValueError("limit must be positive.")
+    if query.provider == "yahoo_predefined" and not query.screens:
+        raise ValueError("screens must be non-empty for yahoo_predefined.")
     if query.provider == "yahoo_predefined":
         return discover_with_yahoo_predefined(
             query,

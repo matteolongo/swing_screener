@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from swing_screener.data.symbol_discovery import (
+    DiscoveryProvider,
     SymbolDiscoveryError,
     SymbolDiscoveryQuery,
     discover_symbols,
@@ -29,7 +30,7 @@ class UniverseBenchmarkRequest(BaseModel):
 
 
 class SymbolDiscoveryRequest(BaseModel):
-    provider: str = "yahoo_predefined"
+    provider: DiscoveryProvider = "yahoo_predefined"
     screens: list[str] = Field(default_factory=lambda: ["most_actives", "day_gainers", "day_losers"])
     exchanges: list[str] = Field(default_factory=list)
     currencies: list[str] = Field(default_factory=list)
@@ -49,10 +50,10 @@ async def list_universes():
 
 
 @router.post("/discover")
-async def discover_universe_symbols(request: SymbolDiscoveryRequest):
+def discover_universe_symbols(request: SymbolDiscoveryRequest):
     try:
         query = SymbolDiscoveryQuery(
-            provider=request.provider,  # type: ignore[arg-type]
+            provider=request.provider,
             screens=tuple(request.screens),
             exchanges=tuple(request.exchanges),
             currencies=tuple(request.currencies),

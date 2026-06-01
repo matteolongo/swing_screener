@@ -77,6 +77,14 @@ export function formatDate(date: string | Date): string {
 }
 
 /**
+ * Format number in compact notation (e.g., 1.2M, 500K). Returns '—' for null/non-finite.
+ */
+export function formatCompactNumber(value?: number | null): string {
+  if (value == null || !Number.isFinite(value)) return '—';
+  return new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(value);
+}
+
+/**
  * Format datetime (e.g., "Feb 5, 2026 14:30")
  */
 export function formatDateTime(date: string | Date): string {
