@@ -215,3 +215,24 @@ def test_position_update_has_exhaustion_fields():
     assert hasattr(u, "exhaustion_label")
     assert u.exhaustion_score is None
     assert u.exhaustion_label is None
+
+
+def test_render_degiro_includes_exhaustion():
+    from swing_screener.portfolio.state import PositionUpdate, render_degiro_actions_md
+    updates = [
+        PositionUpdate(
+            ticker="AAA", status="open", last=110.0, entry=100.0,
+            stop_old=90.0, stop_suggested=100.0, shares=1,
+            r_now=1.0, action="MOVE_STOP_UP", reason="breakeven",
+            exhaustion_score=7.5, exhaustion_label="exit",
+        ),
+        PositionUpdate(
+            ticker="BBB", status="open", last=105.0, entry=100.0,
+            stop_old=90.0, stop_suggested=90.0, shares=1,
+            r_now=0.5, action="NO_ACTION", reason="no rule",
+            exhaustion_score=2.0, exhaustion_label="fine",
+        ),
+    ]
+    md = render_degiro_actions_md(updates)
+    assert "Exhaustion: 7.5 🔴" in md
+    assert "Exhaustion: 2.0 🟢" in md

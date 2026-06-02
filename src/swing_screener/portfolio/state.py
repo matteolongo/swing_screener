@@ -541,6 +541,13 @@ def apply_stop_updates(
     return out
 
 
+def _fmt_exhaustion(u: PositionUpdate) -> str:
+    if u.exhaustion_score is None:
+        return ""
+    emoji = {"exit": "🔴", "watch": "🟡", "fine": "🟢"}.get(u.exhaustion_label or "", "🟢")
+    return f" | Exhaustion: {u.exhaustion_score:.1f} {emoji} {u.exhaustion_label}"
+
+
 def render_degiro_actions_md(updates: list[PositionUpdate]) -> str:
     """
     Generate a Degiro-friendly Markdown checklist.
@@ -577,7 +584,7 @@ def render_degiro_actions_md(updates: list[PositionUpdate]) -> str:
         for u in move:
             lines.append(
                 f"- **{u.ticker}**: stop {fmt(u.stop_old)} → **{fmt(u.stop_suggested)}** "
-                f"(last {fmt(u.last)}, R {fmt_r(u.r_now)})"
+                f"(last {fmt(u.last)}, R {fmt_r(u.r_now)}){_fmt_exhaustion(u)}"
             )
 
     lines.append("")
@@ -587,7 +594,7 @@ def render_degiro_actions_md(updates: list[PositionUpdate]) -> str:
     else:
         for u in close:
             lines.append(
-                f"- **{u.ticker}**: **{u.action}** (last {fmt(u.last)}, stop {fmt(u.stop_old)}, R {fmt_r(u.r_now)})"
+                f"- **{u.ticker}**: **{u.action}** (last {fmt(u.last)}, stop {fmt(u.stop_old)}, R {fmt_r(u.r_now)}){_fmt_exhaustion(u)}"
             )
 
     lines.append("")
@@ -597,7 +604,7 @@ def render_degiro_actions_md(updates: list[PositionUpdate]) -> str:
     else:
         for u in none:
             lines.append(
-                f"- **{u.ticker}**: keep stop {fmt(u.stop_old)} (last {fmt(u.last)}, R {fmt_r(u.r_now)})"
+                f"- **{u.ticker}**: keep stop {fmt(u.stop_old)} (last {fmt(u.last)}, R {fmt_r(u.r_now)}){_fmt_exhaustion(u)}"
             )
 
     lines.append("")
