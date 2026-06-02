@@ -48,8 +48,8 @@ def compute_trend_features(
     Output: DataFrame indexed by ticker with:
       - last, sma20, sma50, sma200 (by default)
       - trend_ok: (last > sma200) AND (sma50 > sma200)
-      - dist_sma50_pct, dist_sma200_pct
-      
+      - dist_sma20_pct, dist_sma50_pct, dist_sma200_pct
+
     Computes SMAs per ticker on their actual trading days only,
     ignoring NaN gaps from sparse calendars (e.g., EUR vs USD holidays).
     """
@@ -61,6 +61,7 @@ def compute_trend_features(
             f"sma{cfg.sma_mid}",
             f"sma{cfg.sma_long}",
             "trend_ok",
+            "dist_sma20_pct",
             "dist_sma50_pct",
             "dist_sma200_pct",
         ]
@@ -82,6 +83,7 @@ def compute_trend_features(
             continue
             
         trend_ok = (last_val > sma_long_val) and (sma_mid_val > sma_long_val)
+        dist_sma20 = ((last_val / sma_fast_val) - 1.0) * 100.0 if pd.notna(sma_fast_val) else float("nan")
         dist_sma50 = ((last_val / sma_mid_val) - 1.0) * 100.0 if pd.notna(sma_mid_val) else float("nan")
         dist_sma200 = ((last_val / sma_long_val) - 1.0) * 100.0 if pd.notna(sma_long_val) else float("nan")
         
@@ -107,6 +109,7 @@ def compute_trend_features(
             f"sma{cfg.sma_mid}": sma_mid_val,
             f"sma{cfg.sma_long}": sma_long_val,
             "trend_ok": trend_ok,
+            "dist_sma20_pct": dist_sma20,
             "dist_sma50_pct": dist_sma50,
             "dist_sma200_pct": dist_sma200,
             "sma20_slope": sma20_slope,
@@ -120,6 +123,7 @@ def compute_trend_features(
             f"sma{cfg.sma_mid}",
             f"sma{cfg.sma_long}",
             "trend_ok",
+            "dist_sma20_pct",
             "dist_sma50_pct",
             "dist_sma200_pct",
         ]
