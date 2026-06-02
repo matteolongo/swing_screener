@@ -40,6 +40,8 @@ class Position:
     lesson: Optional[str] = None
     trail_method: str = "sma20"   # "sma20" | "atr" | "fixed_pct" | "manual"
     trail_param: Optional[float] = None
+    last_exhaustion_score: Optional[float] = None
+    last_exhaustion_label: Optional[str] = None
 
 
 @dataclass
@@ -68,6 +70,8 @@ class PositionUpdate:
     r_now: float
     action: Literal["NO_ACTION", "MOVE_STOP_UP", "CLOSE_STOP_HIT", "CLOSE_TIME_EXIT", "CLOSE_EXIT_SIGNAL"]
     reason: str
+    exhaustion_score: Optional[float] = None
+    exhaustion_label: Optional[str] = None
 
 
 def load_positions(path: str | Path) -> list[Position]:
@@ -123,6 +127,12 @@ def load_positions(path: str | Path) -> list[Position]:
                     if item.get("trail_param") is not None
                     else None
                 ),
+                last_exhaustion_score=(
+                    float(item["last_exhaustion_score"])
+                    if item.get("last_exhaustion_score") is not None
+                    else None
+                ),
+                last_exhaustion_label=item.get("last_exhaustion_label", None),
             )
         )
     return out
@@ -158,6 +168,8 @@ def save_positions(
                 "lesson": pos.lesson,
                 "trail_method": pos.trail_method,
                 "trail_param": pos.trail_param,
+                "last_exhaustion_score": pos.last_exhaustion_score,
+                "last_exhaustion_label": pos.last_exhaustion_label,
             }
             for pos in positions
         ],
