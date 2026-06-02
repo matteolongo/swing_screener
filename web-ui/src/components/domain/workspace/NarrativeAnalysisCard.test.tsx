@@ -144,3 +144,62 @@ describe('NarrativeAnalysisCard', () => {
     expect(screen.queryByText('Should not appear')).toBeNull();
   });
 });
+
+describe('NarrativeAnalysisCard — new structured fields', () => {
+  const richIntelligence: SymbolIntelligence = {
+    ...baseIntelligence,
+    priceHook: 'Tight consolidation near 52w high with sector tailwind.',
+    keyNumbers: [
+      { label: 'SMA20', value: '€266', sentiment: 'bullish' },
+      { label: 'Valuation', value: 'expensive', sentiment: 'bearish' },
+      { label: 'RS vs benchmark', value: '+11.3%', sentiment: 'bullish' },
+    ],
+    riskFactors: ['Valuation stretched vs fair value.', 'No catalyst snapshot cached.'],
+    predictionBullets: [
+      { direction: 'bullish', reason: 'SMA20 absorbs pullback.', reference: 'SMA20 support' },
+      { direction: 'bearish', reason: 'Valuation caps upside.', reference: 'fair value range' },
+    ],
+    pastTradesContext: 'Prior stop at €247 — that level is now key support.',
+  };
+
+  it('renders price hook section', () => {
+    render(<NarrativeAnalysisCard intelligence={richIntelligence} />);
+    expect(screen.getByText(/Why now/i)).toBeInTheDocument();
+    expect(screen.getByText('Tight consolidation near 52w high with sector tailwind.')).toBeInTheDocument();
+  });
+
+  it('renders key numbers chips', () => {
+    render(<NarrativeAnalysisCard intelligence={richIntelligence} />);
+    expect(screen.getByText(/Key numbers/i)).toBeInTheDocument();
+    expect(screen.getByText('SMA20')).toBeInTheDocument();
+    expect(screen.getByText('€266')).toBeInTheDocument();
+    expect(screen.getByText('Valuation')).toBeInTheDocument();
+  });
+
+  it('renders prediction bullets with direction', () => {
+    render(<NarrativeAnalysisCard intelligence={richIntelligence} />);
+    expect(screen.getByText(/Prediction/i)).toBeInTheDocument();
+    expect(screen.getByText('SMA20 absorbs pullback.')).toBeInTheDocument();
+    expect(screen.getByText('SMA20 support')).toBeInTheDocument();
+  });
+
+  it('renders risk factors', () => {
+    render(<NarrativeAnalysisCard intelligence={richIntelligence} />);
+    expect(screen.getByText(/Risks/i)).toBeInTheDocument();
+    expect(screen.getByText('Valuation stretched vs fair value.')).toBeInTheDocument();
+  });
+
+  it('renders past trades context', () => {
+    render(<NarrativeAnalysisCard intelligence={richIntelligence} />);
+    expect(screen.getByText(/Past trades on/i)).toBeInTheDocument();
+    expect(screen.getByText('Prior stop at €247 — that level is now key support.')).toBeInTheDocument();
+  });
+
+  it('does not render new sections when fields absent (old cache)', () => {
+    render(<NarrativeAnalysisCard intelligence={baseIntelligence} />);
+    expect(screen.queryByText(/Why now/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Key numbers/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Prediction/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Past trades on/i)).not.toBeInTheDocument();
+  });
+});
