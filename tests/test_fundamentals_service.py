@@ -378,7 +378,16 @@ class _BrokenSecProvider:
         raise ValueError(f"SEC companyfacts unavailable for {symbol}")
 
 
-def test_fundamentals_service_builds_supported_quarterly_snapshot_with_high_trust(tmp_path):
+def test_fundamentals_service_builds_supported_quarterly_snapshot_with_high_trust(tmp_path, monkeypatch):
+    import datetime as _dt
+
+    class _FrozenDatetime(_dt.datetime):
+        @classmethod
+        def utcnow(cls):
+            return cls(2026, 3, 18)
+
+    monkeypatch.setattr("swing_screener.fundamentals.scoring.datetime", _FrozenDatetime)
+
     service = FundamentalsAnalysisService(
         storage=FundamentalsStorage(tmp_path / "fundamentals"),
         yfinance_provider=_FakeQuarterlyProvider(),
