@@ -62,6 +62,8 @@ export interface DailyReviewPositionHoldAPI {
   days_open?: number;
   time_stop_warning?: boolean;
   reason: string;
+  exhaustion_score?: number | null;
+  exhaustion_label?: string | null;
 }
 
 export interface DailyReviewPositionUpdateAPI {
@@ -75,6 +77,8 @@ export interface DailyReviewPositionUpdateAPI {
   days_open?: number;
   time_stop_warning?: boolean;
   reason: string;
+  exhaustion_score?: number | null;
+  exhaustion_label?: string | null;
 }
 
 export interface DailyReviewPositionCloseAPI {
@@ -173,6 +177,8 @@ export interface DailyReviewPositionHold {
   daysOpen: number;
   timeStopWarning: boolean;
   reason: string;
+  exhaustionScore: number | null;
+  exhaustionLabel: string | null;
 }
 
 export interface DailyReviewPositionUpdate {
@@ -186,6 +192,8 @@ export interface DailyReviewPositionUpdate {
   daysOpen: number;
   timeStopWarning: boolean;
   reason: string;
+  exhaustionScore: number | null;
+  exhaustionLabel: string | null;
 }
 
 export interface DailyReviewPositionClose {
@@ -339,6 +347,8 @@ export function transformPositionHold(api: DailyReviewPositionHoldAPI): DailyRev
     daysOpen: api.days_open ?? 0,
     timeStopWarning: api.time_stop_warning ?? false,
     reason: api.reason,
+    exhaustionScore: api.exhaustion_score ?? null,
+    exhaustionLabel: api.exhaustion_label ?? null,
   };
 }
 
@@ -354,6 +364,8 @@ export function transformPositionUpdate(api: DailyReviewPositionUpdateAPI): Dail
     daysOpen: api.days_open ?? 0,
     timeStopWarning: api.time_stop_warning ?? false,
     reason: api.reason,
+    exhaustionScore: api.exhaustion_score ?? null,
+    exhaustionLabel: api.exhaustion_label ?? null,
   };
 }
 

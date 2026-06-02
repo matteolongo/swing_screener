@@ -2,9 +2,67 @@ import { describe, expect, it } from 'vitest';
 import {
   transformDailyReview,
   transformPositionExitSignal,
+  transformPositionHold,
+  transformPositionUpdate,
   type DailyReviewAPI,
   type DailyReviewPositionExitSignalAPI,
+  type DailyReviewPositionHoldAPI,
+  type DailyReviewPositionUpdateAPI,
 } from '@/features/dailyReview/types';
+
+describe('transformPositionHold exhaustion fields', () => {
+  it('maps exhaustion_score and exhaustion_label when present', () => {
+    const api: DailyReviewPositionHoldAPI = {
+      position_id: 'pos-1',
+      ticker: 'AAPL',
+      entry_price: 100,
+      stop_price: 95,
+      current_price: 108,
+      r_now: 1.6,
+      reason: 'hold',
+      exhaustion_score: 6.5,
+      exhaustion_label: 'watch',
+    };
+    const result = transformPositionHold(api);
+    expect(result.exhaustionScore).toBe(6.5);
+    expect(result.exhaustionLabel).toBe('watch');
+  });
+
+  it('defaults exhaustionScore and exhaustionLabel to null when fields absent', () => {
+    const api: DailyReviewPositionHoldAPI = {
+      position_id: 'pos-2',
+      ticker: 'MSFT',
+      entry_price: 400,
+      stop_price: 380,
+      current_price: 420,
+      r_now: 1.0,
+      reason: 'hold',
+    };
+    const result = transformPositionHold(api);
+    expect(result.exhaustionScore).toBeNull();
+    expect(result.exhaustionLabel).toBeNull();
+  });
+});
+
+describe('transformPositionUpdate exhaustion fields', () => {
+  it('maps exhaustion_score and exhaustion_label when present', () => {
+    const api: DailyReviewPositionUpdateAPI = {
+      position_id: 'pos-3',
+      ticker: 'NVDA',
+      entry_price: 800,
+      stop_current: 760,
+      stop_suggested: 780,
+      current_price: 850,
+      r_now: 2.5,
+      reason: 'trail stop',
+      exhaustion_score: 8.2,
+      exhaustion_label: 'exit',
+    };
+    const result = transformPositionUpdate(api);
+    expect(result.exhaustionScore).toBe(8.2);
+    expect(result.exhaustionLabel).toBe('exit');
+  });
+});
 
 describe('transformDailyReview', () => {
   it('maps candidate close and execution guidance fields', () => {

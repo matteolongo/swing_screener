@@ -130,6 +130,7 @@ function UpdateStopItem({ item, onClick, onAction, isDone, isFocused }: UpdateSt
         {item.rNow >= 0 ? '+' : ''}{formatNumber(item.rNow, 2)}R
       </span>
       <TimeStopBadge daysOpen={item.daysOpen} rNow={item.rNow} show={item.timeStopWarning} />
+      <ExhaustionBadge score={item.exhaustionScore} label={item.exhaustionLabel} />
       <span className="text-xs text-gray-500 dark:text-gray-400 truncate flex-1">{item.reason}</span>
       {isDone ? (
         <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
@@ -223,6 +224,25 @@ function CandidateItem({ item, isAddOn, onClick, isFocused }: CandidateItemProps
   );
 }
 
+function ExhaustionBadge({ score, label }: { score: number | null; label: string | null }) {
+  if (score == null || label == null) return null;
+  const emoji = label === 'exit' ? '🔴' : label === 'watch' ? '🟡' : '🟢';
+  const colorClass =
+    label === 'exit'
+      ? 'text-rose-700 dark:text-rose-400'
+      : label === 'watch'
+      ? 'text-amber-700 dark:text-amber-400'
+      : 'text-emerald-700 dark:text-emerald-400';
+  return (
+    <span
+      className={`text-xs font-medium tabular-nums shrink-0 ${colorClass}`}
+      title={`Exhaustion: ${score.toFixed(1)}/10`}
+    >
+      {emoji} {score.toFixed(1)}
+    </span>
+  );
+}
+
 interface HoldItemProps {
   item: DailyReviewPositionHold;
   onClick: (ticker: string) => void;
@@ -249,6 +269,7 @@ function HoldItem({ item, onClick, isFocused }: HoldItemProps) {
         {item.rNow >= 0 ? '+' : ''}{formatNumber(item.rNow, 2)}R
       </span>
       <TimeStopBadge daysOpen={item.daysOpen} rNow={item.rNow} show={item.timeStopWarning} />
+      <ExhaustionBadge score={item.exhaustionScore} label={item.exhaustionLabel} />
       <span className="text-xs text-gray-400 dark:text-gray-500 truncate flex-1">{item.reason}</span>
     </button>
   );
