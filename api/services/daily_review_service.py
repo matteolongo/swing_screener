@@ -181,6 +181,8 @@ class DailyReviewService:
                         r_now=suggestion.r_now,
                         **self._time_stop_payload_from_position(pos, suggestion.r_now, active_manage),
                         reason=suggestion.reason,
+                        exhaustion_score=suggestion.exhaustion_score,
+                        exhaustion_label=suggestion.exhaustion_label,
                     )
                 )
 
@@ -196,6 +198,8 @@ class DailyReviewService:
                         r_now=suggestion.r_now,
                         **self._time_stop_payload_from_position(pos, suggestion.r_now, active_manage),
                         reason=suggestion.reason,
+                        exhaustion_score=suggestion.exhaustion_score,
+                        exhaustion_label=suggestion.exhaustion_label,
                     )
                 )
 
@@ -500,6 +504,8 @@ class DailyReviewService:
                         r_now=suggestion.r_now,
                         **self._time_stop_payload(pos, suggestion.r_now, manage_payload),
                         reason=suggestion.reason,
+                        exhaustion_score=suggestion.exhaustion_score,
+                        exhaustion_label=suggestion.exhaustion_label,
                     )
                 )
             elif suggestion.action == "MOVE_STOP_UP":
@@ -514,6 +520,8 @@ class DailyReviewService:
                         r_now=suggestion.r_now,
                         **self._time_stop_payload(pos, suggestion.r_now, manage_payload),
                         reason=suggestion.reason,
+                        exhaustion_score=suggestion.exhaustion_score,
+                        exhaustion_label=suggestion.exhaustion_label,
                     )
                 )
             elif suggestion.action in ["CLOSE_STOP_HIT", "CLOSE_TIME_EXIT"]:
