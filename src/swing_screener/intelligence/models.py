@@ -41,6 +41,18 @@ class PositionSignal(BaseModel):
     reason: str
 
 
+class KeyNumber(BaseModel):
+    label: str
+    value: str
+    sentiment: Literal["bullish", "bearish", "neutral"]
+
+
+class PredictionBullet(BaseModel):
+    direction: Literal["bullish", "bearish", "neutral"]
+    reason: str
+    reference: str
+
+
 class PositionOutlook(BaseModel):
     expected_holding_period: Literal["days", "1-2_weeks", "2-6_weeks", "unknown"]
     hold_until: str
@@ -110,3 +122,8 @@ class SymbolIntelligence(BaseModel):
     position_outlook: PositionOutlook | None = None
     sources: list[str] = []
     inputs_used: dict = Field(default_factory=dict)
+    price_hook: str | None = None
+    key_numbers: list[KeyNumber] = Field(default_factory=list)
+    risk_factors: list[str] = Field(default_factory=list)
+    prediction_bullets: list[PredictionBullet] = Field(default_factory=list)
+    past_trades_context: str | None = None

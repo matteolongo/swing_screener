@@ -128,3 +128,56 @@ def test_symbol_intelligence_defaults():
     assert intel.upcoming_events == []
     assert intel.position_signal is None
     assert intel.position_outlook is None
+
+
+def test_symbol_intelligence_new_fields_default_empty():
+    from swing_screener.intelligence.models import SymbolIntelligence
+    intel = SymbolIntelligence(
+        symbol="AAPL",
+        generated_at="2026-06-02T10:00:00Z",
+        action="BUY_NOW",
+        conviction="high",
+        summary_line="Test.",
+        narrative="Test narrative.",
+    )
+    assert intel.price_hook is None
+    assert intel.key_numbers == []
+    assert intel.risk_factors == []
+    assert intel.prediction_bullets == []
+    assert intel.past_trades_context is None
+
+
+def test_key_number_sentiment_values():
+    from swing_screener.intelligence.models import KeyNumber
+    kn = KeyNumber(label="SMA20", value="€266", sentiment="bullish")
+    assert kn.sentiment == "bullish"
+
+
+def test_prediction_bullet_direction_values():
+    from swing_screener.intelligence.models import PredictionBullet
+    pb = PredictionBullet(direction="bearish", reason="Stretched valuation", reference="fair value range")
+    assert pb.direction == "bearish"
+    assert pb.reference == "fair value range"
+
+
+def test_symbol_intelligence_accepts_new_fields():
+    from swing_screener.intelligence.models import SymbolIntelligence, KeyNumber, PredictionBullet
+    intel = SymbolIntelligence(
+        symbol="BESI.AS",
+        generated_at="2026-06-02T10:00:00Z",
+        action="BUY_ON_PULLBACK",
+        conviction="medium",
+        summary_line="Test.",
+        narrative="Test narrative.",
+        price_hook="Tight consolidation near 52w high with sector tailwind.",
+        key_numbers=[KeyNumber(label="SMA20", value="€266", sentiment="bullish")],
+        risk_factors=["Valuation stretched vs fair value."],
+        prediction_bullets=[PredictionBullet(direction="bullish", reason="SMA20 support", reference="technical")],
+        past_trades_context="Prior stop at €247 — now key support.",
+    )
+    assert intel.price_hook == "Tight consolidation near 52w high with sector tailwind."
+    assert len(intel.key_numbers) == 1
+    assert intel.key_numbers[0].label == "SMA20"
+    assert len(intel.risk_factors) == 1
+    assert len(intel.prediction_bullets) == 1
+    assert intel.past_trades_context == "Prior stop at €247 — now key support."
