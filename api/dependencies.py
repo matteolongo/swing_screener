@@ -12,8 +12,10 @@ from api.repositories.config_repo import ConfigRepository
 from api.repositories.fundamentals_config_repo import FundamentalsConfigRepository
 from api.repositories.orders_repo import OrdersRepository
 from api.repositories.positions_repo import PositionsRepository
+from api.repositories.screener_history_repo import ScreenerHistoryRepository
 from api.repositories.strategy_repo import StrategyRepository
 from api.repositories.watchlist_repo import WatchlistRepository
+from api.repositories.weekly_reviews_repo import WeeklyReviewsRepository
 from api.services.fundamentals_service import FundamentalsService
 from api.services.orders_service import OrdersService
 from api.services.portfolio_service import PortfolioService
@@ -155,15 +157,11 @@ def get_fundamentals_service(
 
 
 
-from api.repositories.screener_history_repo import ScreenerHistoryRepository
-
 SCREENER_HISTORY_FILE = DATA_DIR / "screener_history.json"
 
 def get_screener_history_repo() -> ScreenerHistoryRepository:
     return ScreenerHistoryRepository(SCREENER_HISTORY_FILE)
 
-
-from api.repositories.weekly_reviews_repo import WeeklyReviewsRepository
 
 WEEKLY_REVIEWS_FILE = DATA_DIR / "weekly_reviews.json"
 

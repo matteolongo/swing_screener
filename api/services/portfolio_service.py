@@ -29,6 +29,7 @@ from api.models.portfolio import (
 from api.repositories.config_repo import ConfigRepository
 from api.repositories.positions_repo import PositionsRepository
 from api.utils.files import get_today_str
+from api.utils.converters import to_iso as _to_iso
 from swing_screener.portfolio.state import (
     ManageConfig as ManageStateConfig,
     Position as StatePosition,
@@ -46,11 +47,6 @@ from swing_screener.portfolio.metrics import (
 from swing_screener.utils.date_helpers import get_default_history_start
 
 logger = logging.getLogger(__name__)
-
-
-def _resolve_isin(ticker: str) -> Optional[str]:
-    """Return an ISIN when one is provided by supported static metadata."""
-    return None
 
 
 # Simple cache for EURUSD rate with 5-minute TTL
@@ -94,18 +90,6 @@ def _country_from_ticker(ticker: str) -> str:
         if upper.endswith(suffix):
             return country
     return "US"
-
-
-def _to_iso(ts) -> Optional[str]:
-    if ts is None or pd.isna(ts):
-        return None
-    if isinstance(ts, pd.Timestamp):
-        ts = ts.to_pydatetime()
-    if isinstance(ts, dt.datetime):
-        return ts.isoformat()
-    if isinstance(ts, dt.date):
-        return dt.datetime.combine(ts, dt.time()).isoformat()
-    return str(ts)
 
 
 def _last_close_map(ohlcv: pd.DataFrame) -> tuple[dict[str, float], dict[str, str]]:
@@ -690,7 +674,7 @@ class PortfolioService:
         ticker = request.ticker.upper()
         position_id = f"POS-{uuid.uuid4().hex[:8].upper()}"
         initial_risk = round(request.entry_price - request.stop_price, 4)
-        isin = request.isin or _resolve_isin(ticker)
+        isin = request.isin
 
         new_position: dict = {
             "position_id": position_id,

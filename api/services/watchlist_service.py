@@ -11,6 +11,7 @@ from api.models.screener import PriceHistoryPoint
 from api.models.watchlist import WatchItem, WatchlistItemView
 from api.repositories.strategy_repo import StrategyRepository
 from api.repositories.watchlist_repo import WatchlistRepository
+from api.utils.converters import to_iso as _to_iso
 from api.utils.files import get_today_str
 from swing_screener.data.providers import MarketDataProvider, get_default_provider
 from swing_screener.selection.entries import build_signal_board
@@ -21,16 +22,6 @@ from swing_screener.utils.date_helpers import get_default_history_start
 logger = logging.getLogger(__name__)
 
 WATCHLIST_SPARKLINE_BARS = 5
-
-
-def _to_iso(ts) -> Optional[str]:
-    if ts is None or pd.isna(ts):
-        return None
-    if isinstance(ts, pd.Timestamp):
-        ts = ts.to_pydatetime()
-    if hasattr(ts, "isoformat"):
-        return ts.isoformat()
-    return str(ts)
 
 
 def _last_close_map(ohlcv: pd.DataFrame) -> tuple[dict[str, float], dict[str, str]]:

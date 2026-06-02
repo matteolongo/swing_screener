@@ -52,6 +52,7 @@ from swing_screener.strategy.config import (
     build_universe_config,
 )
 from swing_screener.risk.regime import compute_regime_risk_multiplier
+from api.utils.converters import to_iso as _to_iso
 
 # Map of removed universe ids to their replacements (or None if dropped with no replacement).
 _REMOVED_UNIVERSE_IDS: dict[str, str | None] = {
@@ -285,18 +286,6 @@ def _resolve_data_freshness(asof_date: str, now_utc: dt.datetime, currencies: li
     if resolved > now_utc.date():
         return "intraday"
     return "final_close" if _all_markets_closed(now_utc, currencies) else "intraday"
-
-
-def _to_iso(ts) -> Optional[str]:
-    if ts is None or pd.isna(ts):
-        return None
-    if isinstance(ts, pd.Timestamp):
-        ts = ts.to_pydatetime()
-    if isinstance(ts, dt.datetime):
-        return ts.isoformat()
-    if isinstance(ts, dt.date):
-        return dt.datetime.combine(ts, dt.time()).isoformat()
-    return str(ts)
 
 
 def _to_date_iso(ts) -> Optional[str]:
