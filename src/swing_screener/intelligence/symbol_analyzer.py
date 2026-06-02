@@ -59,6 +59,18 @@ Return ONLY a JSON block (fenced with ```json) with exactly these fields:
   opportunity_cost: low | medium | high
   confidence_decay: one sentence explaining when the idea becomes stale if nothing changes
 - sources: list of URLs you cited (may be empty)
+- price_hook: one sentence — why this symbol, why now (max 140 chars).
+- key_numbers: array of 4–8 objects {label, value, sentiment}. Pick the most decision-relevant numbers: SMAs relative to price, momentum, revenue growth, valuation label, relative strength vs benchmark, 52-week high proximity. sentiment must be one of: bullish | bearish | neutral based on what the value implies for the trade.
+- risk_factors: array of 3–5 strings. Each is a concrete, specific risk to the thesis. No generic filler.
+- prediction_bullets: array of 2–5 objects {direction, reason, reference}. direction: bullish | bearish | neutral. reason: one sentence. reference: short label for the data point or event (e.g. "SMA20 support", "Q1 earnings", "fair value range", "prior stop-out level"). If past trades are provided, at least one bullet must reference them.
+- past_trades_context: null unless a "Past trades" block is in the input. If past trades are present, write one paragraph: what the pattern tells us about this setup — name the levels, outcomes, and what they imply for stop placement or conviction. Use this analysis to calibrate conviction.
+
+PAST TRADES RULE:
+If a "Past trades" block is present in the input:
+  • Analyse entries, exits, stop levels, and R outcomes.
+  • If 2+ stop-outs occurred, lower conviction one step (high→medium, medium→low) and flag the pattern in past_trades_context.
+  • If there is a prior win on this ticker, note setup similarity or difference.
+  • Always set past_trades_context (not null) when past trades are present.
 
 Do not include any text outside the JSON block.\
 """
@@ -74,7 +86,35 @@ def _extract_json(text: str) -> dict:
     raise ValueError(f"No JSON found in LLM response: {text[:300]}")
 
 
-def _build_user_prompt(ticker: str, req: SymbolIntelligenceRequest) -> str:
+def _format_past_trades(ticker: str, past_positions: list[dict]) -> str | None:
+    """Summarise closed positions for ticker into a prompt block. Returns None if none."""
+    closed = [
+        p for p in past_positions
+        if str(p.get("ticker", "")).upper() == ticker.upper()
+        and p.get("status") == "closed"
+        and p.get("exit_price") is not None
+    ]
+    if not closed:
+        return None
+    lines = [f"--- Past trades on {ticker} ---"]
+    for p in closed:
+        entry = float(p["entry_price"])
+        stop = float(p["stop_price"])
+        exit_p = float(p["exit_price"])
+        denom = entry - stop
+        r = (exit_p - entry) / denom if denom != 0 else 0.0
+        entry_date = p.get("entry_date") or "?"
+        exit_date = p.get("exit_date") or "?"
+        outcome = "stopped out" if exit_p < entry else "target/manual exit"
+        r_sign = "+" if r >= 0 else ""
+        lines.append(
+            f"  Trade: {entry_date}→{exit_date} | entry {entry:.2f} → exit {exit_p:.2f}"
+            f" | {r_sign}{r:.2f}R | {outcome}"
+        )
+    return "\n".join(lines)
+
+
+def _build_user_prompt(ticker: str, req: SymbolIntelligenceRequest, past_positions: list[dict] | None = None) -> str:
     def fmt(v: float | None) -> str:
         return f"{v:.2f}" if v is not None else "N/A"
 
@@ -233,6 +273,12 @@ def _build_user_prompt(ticker: str, req: SymbolIntelligenceRequest) -> str:
             "(Build on this context. Do not repeat it verbatim.)",
         ]
 
+    # Inject past trades block before the web-search instruction
+    past_block = _format_past_trades(ticker, past_positions or [])
+    if past_block:
+        lines.append("")
+        lines.append(past_block)
+
     lines.append(
         f"\nSearch for recent news, earnings results, catalysts, and analyst views for {ticker}. "
         "Then produce the structured JSON analysis."
@@ -248,7 +294,7 @@ class SymbolAnalyzer:
         self._max_tokens = int(llm_cfg.get("web_search_max_tokens", 2000))
         self._client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
-    def analyze(self, ticker: str, req: SymbolIntelligenceRequest) -> SymbolIntelligence:
+    def analyze(self, ticker: str, req: SymbolIntelligenceRequest, past_positions: list[dict] | None = None) -> SymbolIntelligence:
         inputs_used: dict = {}
 
         trade_plan: dict = {}
@@ -328,7 +374,7 @@ class SymbolAnalyzer:
         if finnhub_signals:
             inputs_used["finnhub_signals"] = finnhub_signals
 
-        user_prompt = _build_user_prompt(ticker, req)
+        user_prompt = _build_user_prompt(ticker, req, past_positions=past_positions or [])
         response = self._client.responses.create(
             model=self._model,
             tools=[{"type": "web_search_preview"}],
@@ -349,6 +395,11 @@ class SymbolAnalyzer:
             position_signal=raw.get("position_signal"),
             position_outlook=raw.get("position_outlook"),
             sources=raw.get("sources", []),
+            price_hook=raw.get("price_hook"),
+            key_numbers=raw.get("key_numbers", []),
+            risk_factors=raw.get("risk_factors", []),
+            prediction_bullets=raw.get("prediction_bullets", []),
+            past_trades_context=raw.get("past_trades_context"),
         )
         result = result.model_copy(update={"inputs_used": inputs_used})
         try:
