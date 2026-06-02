@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCircle2, RefreshCw } from 'lucide-react';
 import AnalysisCanvasPanel from '@/components/domain/workspace/AnalysisCanvasPanel';
-import OpenPositionIntelligencePanel from '@/components/domain/positions/OpenPositionIntelligencePanel';
 import ScreenerInboxPanel from '@/components/domain/workspace/ScreenerInboxPanel';
 import ClosePositionModalForm from '@/components/domain/positions/ClosePositionModalForm';
 import UpdateStopModalForm from '@/components/domain/positions/UpdateStopModalForm';
@@ -13,8 +12,9 @@ import {
   parseUniverseFromStorage,
   SCREENER_UNIVERSE_STORAGE_KEY,
 } from '@/features/screener/universeStorage';
-import { useOrders, usePositions, useUpdateStopMutation, useClosePositionMutation } from '@/features/portfolio/hooks';
+import { useOrders, usePositions, useUpdateStopMutation, useClosePositionMutation, useOpenPositionsIntelligence } from '@/features/portfolio/hooks';
 import type { ClosePositionRequest, Position, UpdateStopRequest } from '@/features/portfolio/types';
+import type { OpenPositionIntelligenceSummary } from '@/features/intelligence/types';
 import { pickTodayPriority } from '@/features/dailyReview/beginnerPriority';
 import { toBeginnerDecisionFromDailyCandidate } from '@/features/screener/beginnerDecision';
 import { useNavigate } from 'react-router-dom';
@@ -60,9 +60,10 @@ interface CloseItemProps {
   onAction?: () => void;
   isDone?: boolean;
   isFocused?: boolean;
+  intelligenceSummary?: OpenPositionIntelligenceSummary;
 }
 
-function CloseItem({ item, onClick, onAction, isDone, isFocused }: CloseItemProps) {
+function CloseItem({ item, onClick, onAction, isDone, isFocused, intelligenceSummary }: CloseItemProps) {
   return (
     <button
       type="button"
@@ -83,6 +84,7 @@ function CloseItem({ item, onClick, onAction, isDone, isFocused }: CloseItemProp
         {item.rNow >= 0 ? '+' : ''}{formatNumber(item.rNow, 2)}R
       </span>
       <TimeStopBadge daysOpen={item.daysOpen} rNow={item.rNow} show={item.timeStopWarning} />
+      <AiSignalBadge summary={intelligenceSummary} />
       <span className="text-xs text-gray-500 dark:text-gray-400 truncate flex-1">{item.reason}</span>
       {isDone ? (
         <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
@@ -270,13 +272,31 @@ function ExhaustionBadge({ score, label }: { score: number | null; label: string
   );
 }
 
+function AiSignalBadge({ summary }: { summary: OpenPositionIntelligenceSummary | undefined }) {
+  const posSignal = summary?.intelligence?.positionSignal;
+  if (!posSignal) return null;
+  const colorClass =
+    posSignal.action === 'EXIT'
+      ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+      : posSignal.action === 'TRIM'
+      ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
+      : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
+  const labelMap: Record<string, string> = { HOLD: 'Hold', TRIM: 'Trim', EXIT: 'Exit' };
+  return (
+    <span className={`text-xs font-medium px-1.5 py-0.5 rounded shrink-0 ${colorClass}`}>
+      {labelMap[posSignal.action] ?? posSignal.action}
+    </span>
+  );
+}
+
 interface HoldItemProps {
   item: DailyReviewPositionHold;
   onClick: (ticker: string) => void;
   isFocused?: boolean;
+  intelligenceSummary?: OpenPositionIntelligenceSummary;
 }
 
-function HoldItem({ item, onClick, isFocused }: HoldItemProps) {
+function HoldItem({ item, onClick, isFocused, intelligenceSummary }: HoldItemProps) {
   return (
     <button
       type="button"
@@ -297,6 +317,7 @@ function HoldItem({ item, onClick, isFocused }: HoldItemProps) {
       </span>
       <TimeStopBadge daysOpen={item.daysOpen} rNow={item.rNow} show={item.timeStopWarning} />
       <ExhaustionBadge score={item.exhaustionScore} label={item.exhaustionLabel} />
+      <AiSignalBadge summary={intelligenceSummary} />
       <span className="text-xs text-gray-400 dark:text-gray-500 truncate flex-1">{item.reason}</span>
     </button>
   );
@@ -306,9 +327,10 @@ interface ExitSignalItemProps {
   item: DailyReviewPositionExitSignal;
   onClick: (ticker: string) => void;
   isFocused?: boolean;
+  intelligenceSummary?: OpenPositionIntelligenceSummary;
 }
 
-function ExitSignalItem({ item, onClick, isFocused }: ExitSignalItemProps) {
+function ExitSignalItem({ item, onClick, isFocused, intelligenceSummary }: ExitSignalItemProps) {
   return (
     <button
       type="button"
@@ -327,6 +349,7 @@ function ExitSignalItem({ item, onClick, isFocused }: ExitSignalItemProps) {
       <span className={cn('text-xs font-semibold tabular-nums', item.rNow >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400')}>
         {item.rNow >= 0 ? '+' : ''}{formatNumber(item.rNow, 2)}R
       </span>
+      <AiSignalBadge summary={intelligenceSummary} />
       <span className="text-xs text-gray-500 dark:text-gray-400 truncate flex-1">{item.reason}</span>
     </button>
   );
@@ -525,6 +548,13 @@ interface TodayActionListProps {
 function TodayActionList({ onTickerSelect }: TodayActionListProps) {
   const selectedUniverse = parseUniverseFromStorage(localStorage.getItem(SCREENER_UNIVERSE_STORAGE_KEY));
   const { data: review, isLoading, error, refetch, isFetching } = useDailyReview(200, selectedUniverse);
+
+  // Intelligence summaries for inline AI signal badges
+  const { data: intelligenceSummaries } = useOpenPositionsIntelligence();
+  const intelligenceByTicker = useMemo(
+    () => new Map(intelligenceSummaries?.map((s) => [s.ticker, s]) ?? []),
+    [intelligenceSummaries],
+  );
 
   // Open positions lookup for modal actions
   const openPositionsQuery = usePositions('open');
@@ -730,6 +760,7 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
                     onAction={position ? () => setCloseTarget(position) : undefined}
                     isDone={doneIds.has(item.positionId)}
                     isFocused={focusedIndex === idx}
+                    intelligenceSummary={intelligenceByTicker.get(item.ticker)}
                   />
                 );
               })}
@@ -773,6 +804,7 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
                     item={item}
                     onClick={handleItemClick}
                     isFocused={focusedIndex === idx}
+                    intelligenceSummary={intelligenceByTicker.get(item.ticker)}
                   />
                 );
               })}
@@ -881,6 +913,7 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
                       item={item}
                       onClick={handleItemClick}
                       isFocused={focusedIndex === idx}
+                      intelligenceSummary={intelligenceByTicker.get(item.ticker)}
                     />
                   );
                 })}
@@ -993,9 +1026,6 @@ export default function Today() {
                 <div className="px-3 pt-3">
                   <TodayPrioritySection onTickerSelect={handleTickerSelect} onSwitchToScreener={() => setLeftTab('screener')} />
                   <PendingOrdersBadge />
-                </div>
-                <div className="px-3">
-                  <OpenPositionIntelligencePanel onTickerSelect={handleTickerSelect} />
                 </div>
                 <TodayActionList onTickerSelect={handleTickerSelect} />
               </>
