@@ -105,11 +105,13 @@ interface UpdateStopItemProps {
   item: DailyReviewPositionUpdate;
   onClick: (ticker: string) => void;
   onAction?: () => void;
+  onAccept?: (positionId: string, stopSuggested: number, reason: string) => void;
   isDone?: boolean;
+  isAccepting?: boolean;
   isFocused?: boolean;
 }
 
-function UpdateStopItem({ item, onClick, onAction, isDone, isFocused }: UpdateStopItemProps) {
+function UpdateStopItem({ item, onClick, onAction, onAccept, isDone, isAccepting, isFocused }: UpdateStopItemProps) {
   return (
     <button
       type="button"
@@ -133,7 +135,32 @@ function UpdateStopItem({ item, onClick, onAction, isDone, isFocused }: UpdateSt
       <ExhaustionBadge score={item.exhaustionScore} label={item.exhaustionLabel} />
       <span className="text-xs text-gray-500 dark:text-gray-400 truncate flex-1">{item.reason}</span>
       {isDone ? (
-        <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+        <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 shrink-0">
+          {t('todayPage.actionList.acceptStopDone')}
+        </span>
+      ) : onAccept ? (
+        <span
+          role="button"
+          tabIndex={0}
+          onClick={(e) => {
+            e.stopPropagation();
+            onAccept(item.positionId, item.stopSuggested, item.reason);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.stopPropagation();
+              onAccept(item.positionId, item.stopSuggested, item.reason);
+            }
+          }}
+          className={cn(
+            'text-xs px-2 py-0.5 rounded shrink-0 cursor-pointer',
+            'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+            'hover:bg-amber-200 dark:hover:bg-amber-800/40',
+            isAccepting && 'opacity-50 cursor-not-allowed',
+          )}
+        >
+          {isAccepting ? '…' : t('todayPage.actionList.acceptStop')}
+        </span>
       ) : onAction ? (
         <span
           role="button"
@@ -509,6 +536,20 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
   // Done state after executing actions
   const [doneIds, setDoneIds] = useState<Set<string>>(() => new Set());
 
+  // 1-click accept stop state
+  const acceptStopMutation = useUpdateStopMutation();
+  const [acceptedStops, setAcceptedStops] = useState<Set<string>>(new Set());
+
+  const handleAcceptStop = useCallback(
+    (positionId: string, stopSuggested: number, reason: string) => {
+      acceptStopMutation.mutate(
+        { positionId, request: { newStop: stopSuggested, reason } },
+        { onSuccess: () => setAcceptedStops((prev) => new Set([...prev, positionId])) },
+      );
+    },
+    [acceptStopMutation],
+  );
+
   // Modal targets
   const [updateStopTarget, setUpdateStopTarget] = useState<Position | null>(null);
   const [closeTarget, setCloseTarget] = useState<Position | null>(null);
@@ -701,7 +742,14 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
                     item={item}
                     onClick={handleItemClick}
                     onAction={position ? () => setUpdateStopTarget(position) : undefined}
-                    isDone={doneIds.has(item.positionId)}
+                    onAccept={(positionId, stopSuggested, reason) =>
+                      handleAcceptStop(positionId, stopSuggested, reason)
+                    }
+                    isDone={acceptedStops.has(item.positionId) || doneIds.has(item.positionId)}
+                    isAccepting={
+                      acceptStopMutation.isPending &&
+                      acceptStopMutation.variables?.positionId === item.positionId
+                    }
                     isFocused={focusedIndex === idx}
                   />
                 );
