@@ -201,8 +201,6 @@ def main() -> None:
         ohlcv = provider.fetch_ohlcv(tickers, start_date="2022-01-01", end_date=end_date)
         exclude_tickers = None
         if args.positions:
-            from swing_screener.portfolio.state import load_positions
-
             positions = load_positions(args.positions)
             exclude_tickers = [
                 p.ticker for p in positions if p.status == "open"
