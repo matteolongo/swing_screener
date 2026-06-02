@@ -7,7 +7,8 @@ import os
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from api.dependencies import get_portfolio_service
+from api.dependencies import get_portfolio_service, get_positions_repo
+from api.repositories.positions_repo import PositionsRepository
 from api.services.portfolio_service import PortfolioService
 from swing_screener.intelligence.cache import read_from_cache
 from swing_screener.intelligence.models import SymbolIntelligence, SymbolIntelligenceRequest
@@ -68,12 +69,17 @@ def get_latest(ticker: str) -> SymbolIntelligence:
 
 
 @router.post("/{ticker}", response_model=SymbolIntelligence)
-def analyze_symbol(ticker: str, request: SymbolIntelligenceRequest) -> SymbolIntelligence:
+def analyze_symbol(
+    ticker: str,
+    request: SymbolIntelligenceRequest,
+    positions_repo: PositionsRepository = Depends(get_positions_repo),
+) -> SymbolIntelligence:
     """Generate a web-search-grounded LLM analysis for a symbol."""
     _require_api_key()
     try:
+        past_positions, _ = positions_repo.list_positions(status="closed")
         analyzer = SymbolAnalyzer()
-        return analyzer.analyze(ticker.upper(), request)
+        return analyzer.analyze(ticker.upper(), request, past_positions=past_positions)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
