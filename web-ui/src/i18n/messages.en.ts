@@ -2233,6 +2233,7 @@ export const messagesEn = {
       acceptStop: 'Accept',
       acceptStopDone: '✓',
       earningsBadge: '⚠ {{days}}d',
+      candidateConfidence: '{{pct}}%',
     },
     keyboard: {
       hint: 'j/k navigate · Enter select',

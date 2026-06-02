@@ -180,6 +180,27 @@ function UpdateStopItem({ item, onClick, onAction, onAccept, isDone, isAccepting
   );
 }
 
+function VolumeDot({ ratio }: { ratio: number | undefined }) {
+  if (ratio == null) return null;
+  if (ratio >= 1.5) {
+    return (
+      <span
+        className="inline-block w-2 h-2 rounded-full bg-emerald-500 shrink-0"
+        title={`Volume ${ratio.toFixed(1)}× avg (strong)`}
+      />
+    );
+  }
+  if (ratio < 0.8) {
+    return (
+      <span
+        className="inline-block w-2 h-2 rounded-full bg-gray-400 shrink-0"
+        title={`Volume ${ratio.toFixed(1)}× avg (weak)`}
+      />
+    );
+  }
+  return null;
+}
+
 interface CandidateItemProps {
   item: DailyReviewCandidate;
   isAddOn?: boolean;
@@ -218,6 +239,12 @@ function CandidateItem({ item, isAddOn, onClick, isFocused }: CandidateItemProps
         <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">
           r/r: {formatNumber(item.rReward, 2)}R
         </span>
+        {item.confidence != null && (
+          <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums shrink-0">
+            {t('todayPage.actionList.candidateConfidence', { pct: String(Math.round(item.confidence)) })}
+          </span>
+        )}
+        <VolumeDot ratio={item.volumeRatio} />
         {item.name && (
           <span className="text-xs text-gray-400 dark:text-gray-500 truncate flex-1">{item.name}</span>
         )}
