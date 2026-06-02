@@ -12,7 +12,7 @@ import {
   parseUniverseFromStorage,
   SCREENER_UNIVERSE_STORAGE_KEY,
 } from '@/features/screener/universeStorage';
-import { useOrders, usePositions, useUpdateStopMutation, useClosePositionMutation, useOpenPositionsIntelligence } from '@/features/portfolio/hooks';
+import { useOrders, usePositions, useUpdateStopMutation, useClosePositionMutation, useOpenPositionsIntelligence, useEarningsProximity } from '@/features/portfolio/hooks';
 import type { ClosePositionRequest, Position, UpdateStopRequest } from '@/features/portfolio/types';
 import type { OpenPositionIntelligenceSummary } from '@/features/intelligence/types';
 import { pickTodayPriority } from '@/features/dailyReview/beginnerPriority';
@@ -85,6 +85,7 @@ function CloseItem({ item, onClick, onAction, isDone, isFocused, intelligenceSum
       </span>
       <TimeStopBadge daysOpen={item.daysOpen} rNow={item.rNow} show={item.timeStopWarning} />
       <AiSignalBadge summary={intelligenceSummary} />
+      <EarningsBadge ticker={item.ticker} />
       <span className="text-xs text-gray-500 dark:text-gray-400 truncate flex-1">{item.reason}</span>
       {isDone ? (
         <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
@@ -135,6 +136,7 @@ function UpdateStopItem({ item, onClick, onAction, onAccept, isDone, isAccepting
       </span>
       <TimeStopBadge daysOpen={item.daysOpen} rNow={item.rNow} show={item.timeStopWarning} />
       <ExhaustionBadge score={item.exhaustionScore} label={item.exhaustionLabel} />
+      <EarningsBadge ticker={item.ticker} />
       <span className="text-xs text-gray-500 dark:text-gray-400 truncate flex-1">{item.reason}</span>
       {isDone ? (
         <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 shrink-0">
@@ -253,6 +255,19 @@ function CandidateItem({ item, isAddOn, onClick, isFocused }: CandidateItemProps
   );
 }
 
+function EarningsBadge({ ticker }: { ticker: string }) {
+  const { data } = useEarningsProximity(ticker);
+  if (!data?.warning || data.daysUntil == null) return null;
+  return (
+    <span
+      className="text-xs font-medium px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 shrink-0"
+      title={`Earnings in ${data.daysUntil} day${data.daysUntil === 1 ? '' : 's'}`}
+    >
+      {t('todayPage.actionList.earningsBadge', { days: String(data.daysUntil) })}
+    </span>
+  );
+}
+
 function ExhaustionBadge({ score, label }: { score: number | null; label: string | null }) {
   if (score == null || label == null) return null;
   const emoji = label === 'exit' ? '🔴' : label === 'watch' ? '🟡' : '🟢';
@@ -318,6 +333,7 @@ function HoldItem({ item, onClick, isFocused, intelligenceSummary }: HoldItemPro
       <TimeStopBadge daysOpen={item.daysOpen} rNow={item.rNow} show={item.timeStopWarning} />
       <ExhaustionBadge score={item.exhaustionScore} label={item.exhaustionLabel} />
       <AiSignalBadge summary={intelligenceSummary} />
+      <EarningsBadge ticker={item.ticker} />
       <span className="text-xs text-gray-400 dark:text-gray-500 truncate flex-1">{item.reason}</span>
     </button>
   );
@@ -350,6 +366,7 @@ function ExitSignalItem({ item, onClick, isFocused, intelligenceSummary }: ExitS
         {item.rNow >= 0 ? '+' : ''}{formatNumber(item.rNow, 2)}R
       </span>
       <AiSignalBadge summary={intelligenceSummary} />
+      <EarningsBadge ticker={item.ticker} />
       <span className="text-xs text-gray-500 dark:text-gray-400 truncate flex-1">{item.reason}</span>
     </button>
   );

@@ -2232,6 +2232,7 @@ export const messagesEn = {
       catalystScanLastRun: 'Last run',
       acceptStop: 'Accept',
       acceptStopDone: '✓',
+      earningsBadge: '⚠ {{days}}d',
     },
     keyboard: {
       hint: 'j/k navigate · Enter select',
