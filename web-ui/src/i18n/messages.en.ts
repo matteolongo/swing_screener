@@ -1324,15 +1324,18 @@ export const messagesEn = {
     filter: {
       all: 'All',
       pending: 'Pending',
+      submitted: 'Submitted',
       filled: 'Filled',
       cancelled: 'Cancelled',
     },
     listTitle: {
       all: 'All Orders',
       pending: 'Pending Orders',
+      submitted: 'Submitted Orders',
       filled: 'Filled Orders',
       cancelled: 'Cancelled Orders',
     },
+    markSubmitted: 'Mark submitted',
     empty: 'No orders found.',
     headers: {
       ticker: 'Ticker',
@@ -2117,6 +2120,7 @@ export const messagesEn = {
     fillViaDegiro: 'Fill via DeGiro',
     fillManually: 'Fill manually',
     degiroNotConnected: 'DeGiro not connected',
+    markSubmitted: 'Mark submitted',
   },
   fillViaDegiroModal: {
     title: 'Link fill for {{ticker}}',

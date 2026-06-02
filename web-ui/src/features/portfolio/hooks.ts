@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   createOrder,
   cancelOrder,
+  submitOrder,
   closePosition,
   partialClosePosition,
   fetchOrders,
@@ -97,6 +98,16 @@ export function useFillFromDegiroMutation(onSuccess?: () => void) {
         invalidatePositionQueries(queryClient),
       ]);
       onSuccess?.();
+    },
+  });
+}
+
+export function useSubmitOrderMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (orderId: string) => submitOrder(orderId),
+    onSuccess: async () => {
+      await invalidateOrderQueries(queryClient);
     },
   });
 }

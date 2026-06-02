@@ -266,6 +266,13 @@ export async function fillOrder(orderId: string, request: FillOrderRequest): Pro
   if (!response.ok) throw await buildApiError(response, 'Failed to fill order');
 }
 
+export async function submitOrder(orderId: string): Promise<void> {
+  const response = await fetch(apiUrl(`/api/portfolio/orders/${orderId}/submit`), {
+    method: 'PATCH',
+  });
+  if (!response.ok) throw new Error('Failed to mark order submitted');
+}
+
 export async function cancelOrder(orderId: string): Promise<void> {
   if (isLocalPersistenceMode()) {
     cancelOrderLocal(orderId);

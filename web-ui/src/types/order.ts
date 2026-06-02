@@ -3,7 +3,7 @@
 import type { Position, PositionApiResponse } from './position';
 import { transformPosition } from './position';
 
-export type OrderStatus = 'pending' | 'filled' | 'cancelled';
+export type OrderStatus = 'pending' | 'submitted' | 'filled' | 'cancelled';
 export type OrderKind = 'entry' | 'stop' | 'take_profit';
 export type EntryMode = 'NEW_ENTRY' | 'ADD_ON';
 
