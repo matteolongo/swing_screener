@@ -2247,6 +2247,11 @@ export const messagesEn = {
       plural: '{{count}} pending orders',
       goToOrders: 'Go to Orders',
     },
+    weeklyNudge: {
+      message: "It's Friday — did you write this week's review?",
+      action: 'Write review',
+      dismiss: 'Dismiss',
+    },
   },
 } as const;
 
