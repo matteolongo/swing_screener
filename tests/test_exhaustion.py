@@ -1,7 +1,7 @@
 import math
 import pandas as pd
 import pytest
-from swing_screener.indicators.exhaustion import ExhaustionResult, compute_exhaustion_score
+from swing_screener.indicators.exhaustion import ExhaustionResult, _label_from_score, compute_exhaustion_score
 
 
 def _series(values: list[float], name: str = "close") -> pd.Series:
@@ -16,18 +16,18 @@ def _flat(n: int, val: float = 100.0) -> pd.Series:
 # ── ExhaustionResult label ────────────────────────────────────────────────────
 
 def test_label_fine():
-    r = ExhaustionResult(score=3.9, label="fine", components={})
-    assert r.label == "fine"
+    assert _label_from_score(3.9) == "fine"
+    assert _label_from_score(0.0) == "fine"
 
 
 def test_label_watch():
-    r = ExhaustionResult(score=5.0, label="watch", components={})
-    assert r.label == "watch"
+    assert _label_from_score(4.0) == "watch"
+    assert _label_from_score(6.99) == "watch"
 
 
 def test_label_exit():
-    r = ExhaustionResult(score=7.0, label="exit", components={})
-    assert r.label == "exit"
+    assert _label_from_score(7.0) == "exit"
+    assert _label_from_score(10.0) == "exit"
 
 
 # ── ext_sma20 ─────────────────────────────────────────────────────────────────
@@ -48,7 +48,7 @@ def test_ext_sma20_at_15pct_scores_one():
 
 
 def test_ext_sma20_nan_when_insufficient_data():
-    close = _flat(15, 100.0)  # < 20 bars
+    close = _flat(15, 100.0)  # < 21 bars (guard is len < 21)
     result = compute_exhaustion_score(close, _flat(15), _flat(15), _flat(15))
     assert math.isnan(result.components["ext_sma20"])
 

@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import pandas as pd
 
 
-@dataclass(frozen=True)
+@dataclass
 class ExhaustionResult:
     score: float  # 0–10
     label: str    # "fine" | "watch" | "exit"
@@ -93,14 +93,14 @@ def _range_decay(close: pd.Series, high: pd.Series, low: pd.Series) -> float:
 def _rsi_overbought(close: pd.Series, period: int = 14) -> float:
     if len(close) < period + 1:
         return float("nan")
-    deltas = close.diff().dropna().iloc[-period:]
-    if len(deltas) < period:
+    deltas = close.iloc[-(period + 1):].diff().iloc[1:]  # exactly `period` deltas from contiguous window
+    if deltas.isna().any():
         return float("nan")
     avg_gain = float(deltas.clip(lower=0).mean())
     avg_loss = float((-deltas).clip(lower=0).mean())
     if avg_gain == 0 and avg_loss == 0:
-        rsi = 50.0
-    elif avg_loss == 0:
+        return 0.0  # flat price → RSI = 50 → score 0
+    if avg_loss == 0:
         rsi = 100.0
     else:
         rsi = 100.0 - (100.0 / (1.0 + avg_gain / avg_loss))
@@ -138,7 +138,8 @@ def compute_exhaustion_score(
     score = sum(
         raw[name] * weight
         for name, weight in _WEIGHTS.items()
-        if not math.isnan(raw.get(name, float("nan")))
+        if not math.isnan(raw[name])
     )
 
-    return ExhaustionResult(score=round(score, 2), label=_label_from_score(score), components=raw)
+    rounded = round(score, 2)
+    return ExhaustionResult(score=rounded, label=_label_from_score(rounded), components=raw)
