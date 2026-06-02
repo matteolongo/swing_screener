@@ -2158,7 +2158,7 @@ export const messagesEn = {
   todayPage: {
     tabs: {
       today: 'Today',
-      screener: 'Screener',
+      screener: 'Last Run',
     },
     openPositions: {
       sectionTitle: 'Open positions',
