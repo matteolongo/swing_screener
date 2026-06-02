@@ -648,6 +648,12 @@ export const messagesEn = {
             confidenceDecay: 'Confidence decay',
             invalidationSignals: 'Invalidation signals',
           },
+          priceHook: 'Why now',
+          keyNumbers: 'Key numbers',
+          prediction: 'Prediction',
+          riskFactors: 'Risks',
+          pastTrades: 'Past trades on {{symbol}}',
+          fullRationale: 'Full rationale',
         },
         decisionSummary: {
           title: '{{ticker}} Decision Summary',

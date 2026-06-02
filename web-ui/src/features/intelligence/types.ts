@@ -12,6 +12,18 @@ export type ThesisStatus = 'intact' | 'weakening' | 'broken' | 'unclear';
 export type ProfitManagement = 'hold_full' | 'consider_trim' | 'trail_stop' | 'protect_breakeven' | 'exit';
 export type OpportunityCost = 'low' | 'medium' | 'high';
 
+export interface KeyNumber {
+  label: string;
+  value: string;
+  sentiment: 'bullish' | 'bearish' | 'neutral';
+}
+
+export interface PredictionBullet {
+  direction: 'bullish' | 'bearish' | 'neutral';
+  reason: string;
+  reference: string;
+}
+
 export interface IntelligenceEvent {
   type: IntelligenceEventType;
   date: string | null;
@@ -59,6 +71,11 @@ export interface SymbolIntelligenceAPI {
   position_outlook?: PositionOutlookAPI | null;
   sources: string[];
   inputs_used?: Record<string, Record<string, unknown>>;
+  price_hook?: string | null;
+  key_numbers?: KeyNumber[];
+  risk_factors?: string[];
+  prediction_bullets?: PredictionBullet[];
+  past_trades_context?: string | null;
 }
 
 export interface SymbolIntelligence {
@@ -74,6 +91,11 @@ export interface SymbolIntelligence {
   positionOutlook?: PositionOutlook | null;
   sources: string[];
   inputsUsed?: Record<string, Record<string, unknown>>;
+  priceHook?: string | null;
+  keyNumbers?: KeyNumber[];
+  riskFactors?: string[];
+  predictionBullets?: PredictionBullet[];
+  pastTradesContext?: string | null;
 }
 
 function transformPositionOutlook(api: PositionOutlookAPI | null | undefined): PositionOutlook | null {
@@ -104,6 +126,11 @@ export function transformIntelligence(api: SymbolIntelligenceAPI): SymbolIntelli
     positionOutlook: transformPositionOutlook(api.position_outlook),
     sources: api.sources ?? [],
     inputsUsed: api.inputs_used ?? {},
+    priceHook: api.price_hook ?? null,
+    keyNumbers: api.key_numbers ?? [],
+    riskFactors: api.risk_factors ?? [],
+    predictionBullets: api.prediction_bullets ?? [],
+    pastTradesContext: api.past_trades_context ?? null,
   };
 }
 
