@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { queryKeys } from '@/lib/queryKeys';
-import { fetchUniverseCatalog, fetchUniverseDetail, refreshUniverse, updateUniverseBenchmark } from './api';
+import { discoverSymbols, fetchUniverseCatalog, fetchUniverseDetail, refreshUniverse, updateUniverseBenchmark } from './api';
 
 export function useUniverseCatalog() {
   return useQuery({
@@ -37,5 +37,11 @@ export function useUpdateUniverseBenchmarkMutation(universeId: string | null) {
       queryClient.invalidateQueries({ queryKey: queryKeys.universes() });
       queryClient.invalidateQueries({ queryKey: queryKeys.universeDetail(universeId) });
     },
+  });
+}
+
+export function useSymbolDiscoveryMutation() {
+  return useMutation({
+    mutationFn: discoverSymbols,
   });
 }

@@ -1,8 +1,14 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
+from swing_screener.data.symbol_discovery import (
+    DiscoveryProvider,
+    SymbolDiscoveryError,
+    SymbolDiscoveryQuery,
+    discover_symbols,
+)
 from swing_screener.data.universe import (
     get_package_universe_detail,
     list_package_universe_entries,
@@ -23,12 +29,54 @@ class UniverseBenchmarkRequest(BaseModel):
     benchmark: str
 
 
+class SymbolDiscoveryRequest(BaseModel):
+    provider: DiscoveryProvider = "yahoo_predefined"
+    screens: list[str] = Field(default_factory=lambda: ["most_actives", "day_gainers", "day_losers"])
+    exchanges: list[str] = Field(default_factory=list)
+    currencies: list[str] = Field(default_factory=list)
+    exchange_mics: list[str] = Field(default_factory=list)
+    quote_types: list[str] = Field(default_factory=lambda: ["EQUITY"])
+    limit: int = 100
+    min_market_cap: int | None = None
+    min_volume: int | None = None
+
+
 @router.get("")
 async def list_universes():
     try:
         return {"universes": list_package_universe_entries()}
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Failed to list universes") from exc
+
+
+@router.post("/discover")
+def discover_universe_symbols(request: SymbolDiscoveryRequest):
+    try:
+        query = SymbolDiscoveryQuery(
+            provider=request.provider,
+            screens=tuple(request.screens),
+            exchanges=tuple(request.exchanges),
+            currencies=tuple(request.currencies),
+            exchange_mics=tuple(request.exchange_mics),
+            quote_types=tuple(request.quote_types),
+            limit=request.limit,
+            min_market_cap=request.min_market_cap,
+            min_volume=request.min_volume,
+        )
+        result = discover_symbols(query)
+        return {
+            "provider": result.provider,
+            "source_asof": result.source_asof,
+            "source_documents": result.source_documents,
+            "filters": result.filters,
+            "symbols": result.symbols,
+            "taxonomy": result.taxonomy,
+            "notes": result.notes,
+        }
+    except (ValueError, SymbolDiscoveryError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Failed to discover symbols") from exc
 
 
 @router.get("/{universe_id}")

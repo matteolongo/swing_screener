@@ -1,6 +1,6 @@
 import { API_ENDPOINTS, apiUrl } from '@/lib/api';
 import type { UniversesResponse, UniverseSummary } from '@/features/screener/types';
-import type { UniverseDetail, UniverseRefreshPreview } from './types';
+import type { SymbolDiscoveryRequest, SymbolDiscoveryResponse, UniverseDetail, UniverseRefreshPreview } from './types';
 
 export async function fetchUniverseCatalog(): Promise<UniversesResponse> {
   const res = await fetch(apiUrl(API_ENDPOINTS.universes));
@@ -39,6 +39,19 @@ export async function updateUniverseBenchmark(id: string, benchmark: string): Pr
   if (!res.ok) {
     const error = await res.json().catch(() => ({}));
     throw new Error(error.detail || 'Failed to update universe benchmark');
+  }
+  return res.json();
+}
+
+export async function discoverSymbols(request: SymbolDiscoveryRequest): Promise<SymbolDiscoveryResponse> {
+  const res = await fetch(apiUrl(API_ENDPOINTS.universeDiscover), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    throw new Error(error.detail || 'Failed to discover symbols');
   }
   return res.json();
 }

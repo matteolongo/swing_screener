@@ -23,6 +23,12 @@ describe('API Client', () => {
       expect(API_ENDPOINTS.screenerRunStatus('job-1')).toBe('/api/screener/run/job-1')
     })
 
+    it('has universe management endpoints', () => {
+      expect(API_ENDPOINTS.universes).toBe('/api/universes')
+      expect(API_ENDPOINTS.universeDiscover).toBe('/api/universes/discover')
+      expect(API_ENDPOINTS.universeById('amsterdam_all')).toBe('/api/universes/amsterdam_all')
+    })
+
     it('has all portfolio endpoints', () => {
       expect(API_ENDPOINTS.positions).toBe('/api/portfolio/positions')
       expect(API_ENDPOINTS.orders).toBe('/api/portfolio/orders')

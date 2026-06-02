@@ -2,6 +2,7 @@ from fastapi.testclient import TestClient
 
 from api.main import app
 import swing_screener.data.universe as universe_data
+from swing_screener.data.symbol_discovery import SymbolDiscoveryResult
 
 
 client = TestClient(app)
@@ -60,3 +61,35 @@ def test_update_universe_benchmark_persists_snapshot(monkeypatch):
     payload = response.json()
     assert payload["benchmark"] == "VGK"
     assert writes and writes[0]["benchmark"] == "VGK"
+
+
+def test_discover_symbols_endpoint_returns_taxonomy(monkeypatch):
+    def fake_discover(query):
+        assert query.provider == "yahoo_predefined"
+        assert query.currencies == ("USD",)
+        return SymbolDiscoveryResult(
+            provider="yahoo_predefined",
+            source_asof="2026-06-01",
+            source_documents=[{"label": "source", "url": "https://example.test"}],
+            filters={"currencies": ["USD"], "limit": 1},
+            symbols=[
+                {
+                    "symbol": "AAPL",
+                    "instrument_type": "EQUITY",
+                    "currency": "USD",
+                    "exchange_mic": "XNAS",
+                    "market": "US",
+                }
+            ],
+            taxonomy={"currency": {"USD": 1}, "exchange_mic": {"XNAS": 1}, "market": {"US": 1}, "instrument_type": {"EQUITY": 1}},
+            notes=["free source"],
+        )
+
+    monkeypatch.setattr("api.routers.universes.discover_symbols", fake_discover)
+
+    response = client.post("/api/universes/discover", json={"currencies": ["USD"], "limit": 1})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["symbols"][0]["symbol"] == "AAPL"
+    assert payload["taxonomy"]["currency"] == {"USD": 1}
