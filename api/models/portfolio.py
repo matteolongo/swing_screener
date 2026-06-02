@@ -66,6 +66,8 @@ class PositionUpdate(BaseModel):
     r_now: float
     action: ActionType
     reason: str
+    exhaustion_score: Optional[float] = None
+    exhaustion_label: Optional[str] = None
 
 
 class UpdateStopRequest(BaseModel):

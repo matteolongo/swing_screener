@@ -65,7 +65,7 @@ Five signals, each normalized to [0, 1], combined as weighted sum → [0, 10].
 | Signal | Weight | Detects | Formula |
 |--------|--------|---------|---------|
 | `ext_sma20` | 2.5 | Price ran too far from mean | `dist_sma20_pct`: 0 below 3%, 1.0 at ≥15% (linear) |
-| `slope_sma20` | 2.0 | Mean losing upward momentum | `sma20_slope` (already in trend features): negative→1.0, flat (<0.001)→0.5, positive→0 |
+| `slope_sma20` | 2.0 | Mean losing upward momentum | SMA20 slope computed internally in `exhaustion.py` from the close series: `(sma20_now / sma20_prev) - 1` over a 20-bar window. Negative→1.0, flat (<0.001)→0.5, positive→0 |
 | `vol_distribution` | 2.0 | No new buyers at highs | 3-day avg vol / 20-day avg vol: score 1.0 if ratio <0.7 AND dist_sma20 >5%; else scaled linearly |
 | `range_decay` | 2.0 | Price failing to hold upper range | `close_location_in_range`: score 0 at ≥0.8, 1.0 at ≤0.3 (linear) |
 | `rsi_overbought` | 1.5 | Overbought momentum | 14-period RSI from close: 0 below 65, 1.0 at ≥80 (linear) |
