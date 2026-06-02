@@ -29,7 +29,7 @@ def _count_add_ons_for_position(orders: list[object], position_id: Optional[str]
 def _has_pending_entry_for_ticker(orders: list[object], ticker: str) -> bool:
     normalized = ticker.upper()
     return any(
-        getattr(order, "status", None) == "pending"
+        getattr(order, "status", None) in ("pending", "submitted")
         and getattr(order, "ticker", "").upper() == normalized
         and getattr(order, "order_kind", None) == "entry"
         for order in orders

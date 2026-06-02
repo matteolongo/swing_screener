@@ -40,7 +40,7 @@ class OrdersService:
         if request.order_kind == "entry":
             pending_entry = any(
                 o.get("ticker") == ticker
-                and o.get("status") == "pending"
+                and o.get("status") in ("pending", "submitted")
                 and o.get("order_kind") == "entry"
                 for o in orders
             )
@@ -96,6 +96,14 @@ class OrdersService:
         orders, asof = self._orders_repo.list_orders(status=status)
         return {"orders": orders, "asof": asof}
 
+    def submit_order(self, order_id: str) -> dict:
+        order = self._orders_repo.submit_order(order_id)
+        if order is None:
+            raise HTTPException(status_code=404, detail=f"Order {order_id} not found")
+        if order.get("status") != "submitted":
+            raise HTTPException(status_code=409, detail=f"Order {order_id} is already {order.get('status')}")
+        return {"order_id": order_id, "status": "submitted"}
+
     def cancel_order(self, order_id: str) -> dict:
         order = self._orders_repo.cancel_order(order_id)
         if order is None:
@@ -108,7 +116,7 @@ class OrdersService:
         order = self._orders_repo.get_order(order_id)
         if order is None:
             raise HTTPException(status_code=404, detail=f"Order {order_id} not found")
-        if order.get("status") != "pending":
+        if order.get("status") not in ("pending", "submitted"):
             raise HTTPException(status_code=409, detail=f"Order {order_id} is already {order.get('status')}")
 
         ticker = order["ticker"]
