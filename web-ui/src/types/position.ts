@@ -61,6 +61,8 @@ export interface PositionUpdate {
   rNow: number;
   action: ActionType;
   reason: string;
+  exhaustionScore?: number | null;
+  exhaustionLabel?: string | null;
 }
 
 export interface PositionUpdateApiResponse {
@@ -74,6 +76,8 @@ export interface PositionUpdateApiResponse {
   r_now: number;
   action: ActionType;
   reason: string;
+  exhaustion_score?: number | null;
+  exhaustion_label?: string | null;
 }
 
 export interface UpdateStopRequest {
@@ -168,5 +172,7 @@ export function transformPositionUpdate(apiUpdate: PositionUpdateApiResponse): P
     rNow: apiUpdate.r_now,
     action: apiUpdate.action,
     reason: apiUpdate.reason,
+    exhaustionScore: apiUpdate.exhaustion_score ?? null,
+    exhaustionLabel: apiUpdate.exhaustion_label ?? null,
   };
 }

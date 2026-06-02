@@ -190,3 +190,49 @@ def test_exit_signal_disabled_when_exit_signal_days_zero():
         ohlcv, [pos], ManageConfig(exit_signal_days=0, max_holding_days=999)
     )
     assert updates[0].action != "CLOSE_EXIT_SIGNAL"
+
+
+def test_position_has_exhaustion_fields():
+    from swing_screener.portfolio.state import Position
+    pos = Position(
+        ticker="AAA", status="open", entry_date="2026-01-01",
+        entry_price=100.0, stop_price=90.0, shares=1,
+    )
+    assert hasattr(pos, "last_exhaustion_score")
+    assert hasattr(pos, "last_exhaustion_label")
+    assert pos.last_exhaustion_score is None
+    assert pos.last_exhaustion_label is None
+
+
+def test_position_update_has_exhaustion_fields():
+    from swing_screener.portfolio.state import PositionUpdate
+    u = PositionUpdate(
+        ticker="AAA", status="open", last=100.0, entry=95.0,
+        stop_old=90.0, stop_suggested=90.0, shares=1,
+        r_now=1.0, action="NO_ACTION", reason="test",
+    )
+    assert hasattr(u, "exhaustion_score")
+    assert hasattr(u, "exhaustion_label")
+    assert u.exhaustion_score is None
+    assert u.exhaustion_label is None
+
+
+def test_render_degiro_includes_exhaustion():
+    from swing_screener.portfolio.state import PositionUpdate, render_degiro_actions_md
+    updates = [
+        PositionUpdate(
+            ticker="AAA", status="open", last=110.0, entry=100.0,
+            stop_old=90.0, stop_suggested=100.0, shares=1,
+            r_now=1.0, action="MOVE_STOP_UP", reason="breakeven",
+            exhaustion_score=7.5, exhaustion_label="exit",
+        ),
+        PositionUpdate(
+            ticker="BBB", status="open", last=105.0, entry=100.0,
+            stop_old=90.0, stop_suggested=90.0, shares=1,
+            r_now=0.5, action="NO_ACTION", reason="no rule",
+            exhaustion_score=2.0, exhaustion_label="fine",
+        ),
+    ]
+    md = render_degiro_actions_md(updates)
+    assert "Exhaustion: 7.5 🔴" in md
+    assert "Exhaustion: 2.0 🟢" in md

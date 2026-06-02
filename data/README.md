@@ -25,6 +25,12 @@ New fields added in F13 (Trail Customization):
 
 Existing positions without these fields behave identically to before (SMA20 trail is the default).
 
+New fields added in exhaustion-score feature:
+- `last_exhaustion_score`: `float | null` — composite exhaustion score (0–10) from last `evaluate_positions()` run. Higher = more likely topping out.
+- `last_exhaustion_label`: `"fine" | "watch" | "exit" | null` — threshold label for `last_exhaustion_score`.
+
+Both fields are optional. Existing positions without them load with `None` (backward-compatible).
+
 ## Optional Database
 - `swing_screener.db`: SQLite database (module exists but not wired by default)
 - Migration notes: `docs/engineering/DATABASE_MIGRATION.md`

@@ -169,6 +169,19 @@ function StopPreviewPanel({ positionId, ticker, price, onClose }: StopPreviewPan
           <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">
             R: {data.rNow >= 0 ? '+' : ''}{data.rNow.toFixed(2)} · live {formatCurrency(data.last)}
           </p>
+          {data.exhaustionScore != null && data.exhaustionLabel != null && (
+            <p className={`text-xs font-medium ${
+              data.exhaustionLabel === 'exit' ? 'text-rose-700 dark:text-rose-400' :
+              data.exhaustionLabel === 'watch' ? 'text-amber-700 dark:text-amber-400' :
+              'text-emerald-700 dark:text-emerald-400'
+            }`}>
+              {data.exhaustionLabel === 'exit' ? '🔴' : data.exhaustionLabel === 'watch' ? '🟡' : '🟢'}{' '}
+              {t('workspacePage.panels.portfolio.intradayPreview.exhaustion', {
+                label: data.exhaustionLabel,
+                score: data.exhaustionScore.toFixed(1),
+              })}
+            </p>
+          )}
         </div>
       )}
     </div>

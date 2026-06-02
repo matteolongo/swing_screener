@@ -93,3 +93,15 @@ def test_compute_trend_features_handles_sparse_calendar_gaps():
 
     assert "BBB" in feats.index
     assert pd.notna(feats.loc["BBB", "sma200"])
+
+
+def test_dist_sma20_pct_present_in_trend_features():
+    """dist_sma20_pct should be present in compute_trend_features output."""
+    n = 210
+    dates = pd.date_range("2020-01-01", periods=n, freq="B")
+    closes = [float(100 + i * 0.1) for i in range(n)]
+    df = pd.DataFrame({"Close": closes}, index=dates)
+    df.columns = pd.MultiIndex.from_tuples([("Close", "AAA")])
+    feats = compute_trend_features(df)
+    assert "dist_sma20_pct" in feats.columns
+    assert not pd.isna(feats.loc["AAA", "dist_sma20_pct"])

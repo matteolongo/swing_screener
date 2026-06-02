@@ -775,6 +775,7 @@ export const messagesEn = {
           timeExit: 'Time exit condition met',
           hypotheticalPrice: 'Hypothetical price',
           loading: 'Fetching live price…',
+          exhaustion: 'Exhaustion: {{label}} · {{score}}/10',
         },
       },
     },

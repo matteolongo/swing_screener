@@ -918,6 +918,8 @@ class PortfolioService:
             r_now=update.r_now,
             action=update.action,
             reason=update.reason,
+            exhaustion_score=update.exhaustion_score,
+            exhaustion_label=update.exhaustion_label,
         )
 
     def compute_position_stop_suggestion(
@@ -1001,6 +1003,8 @@ class PortfolioService:
             r_now=update.r_now,
             action=update.action,
             reason=update.reason,
+            exhaustion_score=update.exhaustion_score,
+            exhaustion_label=update.exhaustion_label,
         )
 
     def update_trail_method(self, position_id: str, request: UpdateTrailMethodRequest) -> dict:
