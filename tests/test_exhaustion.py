@@ -185,3 +185,33 @@ def test_missing_volume_gives_nan_for_vol_component_only():
     assert math.isnan(result.components["vol_distribution"])
     # other components should not be nan (sufficient data)
     assert not math.isnan(result.components["range_decay"])
+
+
+def test_evaluate_positions_populates_exhaustion():
+    """evaluate_positions populates exhaustion_score and exhaustion_label on PositionUpdate."""
+    import pandas as pd
+    from swing_screener.portfolio.state import Position, ManageConfig, evaluate_positions
+
+    n = 50
+    dates = pd.date_range("2024-01-01", periods=n, freq="B")
+    closes = [float(100 + i * 0.5) for i in range(n)]  # gently rising
+    ticker = "AAA"
+    data = {
+        ("Close", ticker): closes,
+        ("High", ticker): [c + 0.5 for c in closes],
+        ("Low", ticker): [c - 0.5 for c in closes],
+        ("Volume", ticker): [1000.0] * n,
+    }
+    ohlcv = pd.DataFrame(data, index=dates)
+    ohlcv.columns = pd.MultiIndex.from_tuples(ohlcv.columns)
+
+    pos = Position(
+        ticker=ticker, status="open", entry_date="2024-01-01",
+        entry_price=100.0, stop_price=90.0, shares=1,
+    )
+    updates, new_positions = evaluate_positions(ohlcv, [pos], ManageConfig(max_holding_days=0))
+    u = updates[0]
+    assert u.exhaustion_score is not None
+    assert u.exhaustion_label in ("fine", "watch", "exit")
+    assert new_positions[0].last_exhaustion_score == u.exhaustion_score
+    assert new_positions[0].last_exhaustion_label == u.exhaustion_label

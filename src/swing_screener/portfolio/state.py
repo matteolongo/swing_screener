@@ -11,6 +11,7 @@ from dataclasses import replace
 import pandas as pd
 
 from swing_screener.utils.file_lock import locked_read_json_cli, locked_write_json_cli
+from swing_screener.indicators.exhaustion import compute_exhaustion_score
 
 
 PositionStatus = Literal["open", "closed"]
@@ -235,6 +236,17 @@ def _get_close_series(ohlcv: pd.DataFrame, ticker: str) -> pd.Series:
     return close[ticker].dropna()
 
 
+def _get_series(ohlcv: pd.DataFrame, field: str, ticker: str) -> pd.Series:
+    """Return (field, ticker) series from OHLCV. Returns empty Series if field/ticker missing."""
+    try:
+        df = ohlcv[field]
+        if ticker not in df.columns:
+            return pd.Series(dtype=float)
+        return df[ticker].dropna()
+    except (KeyError, TypeError):
+        return pd.Series(dtype=float)
+
+
 def _sma(s: pd.Series, window: int) -> float:
     if len(s) < window:
         return float("nan")
@@ -295,6 +307,13 @@ def evaluate_positions(
         s = _get_close_series(ohlcv, pos.ticker)
         last = float(s.iloc[-1])
 
+        exhaustion = compute_exhaustion_score(
+            close=s,
+            high=_get_series(ohlcv, "High", pos.ticker),
+            low=_get_series(ohlcv, "Low", pos.ticker),
+            volume=_get_series(ohlcv, "Volume", pos.ticker),
+        )
+
         # update max favorable
         mfp = (
             pos.max_favorable_price
@@ -327,11 +346,15 @@ def evaluate_positions(
                 r_now=r_now,
                 action="CLOSE_STOP_HIT",
                 reason="Price <= stop (stop hit)",
+                exhaustion_score=exhaustion.score,
+                exhaustion_label=exhaustion.label,
             )
             updates.append(upd)
             # keep as open in state (you decide after execution), but you can mark closed manually later
             new_positions.append(
-                Position(**{**pos.__dict__, "max_favorable_price": mfp_new})
+                Position(**{**pos.__dict__, "max_favorable_price": mfp_new,
+                            "last_exhaustion_score": exhaustion.score,
+                            "last_exhaustion_label": exhaustion.label})
             )
             continue
 
@@ -362,10 +385,14 @@ def evaluate_positions(
                 r_now=r_now,
                 action="CLOSE_TIME_EXIT",
                 reason=f"Time exit: {bars_since} bars since entry_date >= {cfg.max_holding_days}",
+                exhaustion_score=exhaustion.score,
+                exhaustion_label=exhaustion.label,
             )
             updates.append(upd)
             new_positions.append(
-                Position(**{**pos.__dict__, "max_favorable_price": mfp_new})
+                Position(**{**pos.__dict__, "max_favorable_price": mfp_new,
+                            "last_exhaustion_score": exhaustion.score,
+                            "last_exhaustion_label": exhaustion.label})
             )
             continue
 
@@ -392,9 +419,13 @@ def evaluate_positions(
                     r_now=float(r_now),
                     action="CLOSE_EXIT_SIGNAL",
                     reason=reason,
+                    exhaustion_score=exhaustion.score,
+                    exhaustion_label=exhaustion.label,
                 ))
                 new_positions.append(
-                    Position(**{**pos.__dict__, "max_favorable_price": mfp_new})
+                    Position(**{**pos.__dict__, "max_favorable_price": mfp_new,
+                                "last_exhaustion_score": exhaustion.score,
+                                "last_exhaustion_label": exhaustion.label})
                 )
                 continue
 
@@ -454,11 +485,15 @@ def evaluate_positions(
                 r_now=float(r_now),
                 action=action,
                 reason=reason,
+                exhaustion_score=exhaustion.score,
+                exhaustion_label=exhaustion.label,
             )
         )
 
         new_positions.append(
-            Position(**{**pos.__dict__, "max_favorable_price": mfp_new})
+            Position(**{**pos.__dict__, "max_favorable_price": mfp_new,
+                        "last_exhaustion_score": exhaustion.score,
+                        "last_exhaustion_label": exhaustion.label})
         )
 
     return updates, new_positions
