@@ -40,4 +40,5 @@ export interface SymbolAnalysisCandidate {
   decisionSummary?: DecisionSummary;
   sectorRotationContext?: Record<string, unknown> | null;
   dataSourceSummary?: CandidateDataSourceSummary;
+  daysToEarnings?: number | null;
 }

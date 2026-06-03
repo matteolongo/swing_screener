@@ -110,6 +110,9 @@ class SymbolIntelligenceRequest(BaseModel):
     # Sector ETF rotation context
     sector_rs: float | None = None
     sector_rotation_context: dict | None = None
+    # Earnings proximity
+    days_to_earnings: int | None = None
+    next_earnings_date: str | None = None
 
 
 class SymbolIntelligence(BaseModel):

@@ -154,9 +154,11 @@ def test_analyze_position_returns_intelligence(client):
     )
 
     def override_portfolio():
+        from api.models.portfolio import EarningsProximityResponse
         svc = MagicMock()
         svc.list_positions.return_value = positions_resp
         svc.suggest_position_stop.return_value = _mock_stop_suggestion()
+        svc.get_earnings_proximity.return_value = EarningsProximityResponse(ticker="BESI.AS")
         return svc
 
     with (

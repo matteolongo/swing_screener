@@ -35,6 +35,8 @@ export interface IntelligenceRequestPayload {
   technical_label?: string | null;
   fundamentals_label?: string | null;
   catalyst_summary?: string | null;
+  days_to_earnings?: number | null;
+  next_earnings_date?: string | null;
 }
 
 export function candidateToPayload(
@@ -72,6 +74,7 @@ export function candidateToPayload(
   payload.technical_label = candidate.decisionSummary?.technicalLabel ?? null;
   payload.fundamentals_label = candidate.decisionSummary?.fundamentalsLabel ?? null;
   payload.catalyst_summary = candidate.decisionSummary?.catalystSummary ?? null;
+  payload.days_to_earnings = candidate.daysToEarnings ?? null;
   if (position != null) {
     payload.entry_price = position.entryPrice;
     payload.r_now = position.rNow;

@@ -268,6 +268,16 @@ def _build_user_prompt(ticker: str, req: SymbolIntelligenceRequest, past_positio
             direction = "net upgrades" if net > 0 else ("net downgrades" if net < 0 else "flat")
             lines.append(f"Analyst upgrades/downgrades (30d): {net:+d} ({direction})")
 
+    # Earnings proximity block
+    if req.days_to_earnings is not None:
+        date_str = f" ({req.next_earnings_date})" if req.next_earnings_date else ""
+        lines += [
+            "",
+            "--- Upcoming earnings ---",
+            f"Next earnings report: {req.days_to_earnings} day{'s' if req.days_to_earnings != 1 else ''} away{date_str}",
+            "Factor this into your risk assessment and timing. If earnings are within 2 weeks, flag the binary-event risk explicitly.",
+        ]
+
     # Catalyst context block (before web search instruction)
     if req.catalyst_summary:
         lines += [

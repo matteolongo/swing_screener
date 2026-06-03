@@ -96,6 +96,15 @@ def analyze_position(
     if pos is None:
         raise HTTPException(status_code=404, detail=f"No open position with id {position_id!r}")
     stop = portfolio_service.suggest_position_stop(position_id)
+    earnings_days: int | None = None
+    earnings_date: str | None = None
+    try:
+        ep = portfolio_service.get_earnings_proximity(pos.ticker)
+        if ep.days_until is not None:
+            earnings_days = ep.days_until
+            earnings_date = ep.next_earnings_date
+    except Exception:
+        pass
     request = SymbolIntelligenceRequest(
         close=float(pos.current_price if pos.current_price is not None else pos.entry_price),
         signal=stop.action,
@@ -104,6 +113,8 @@ def analyze_position(
         stop=float(pos.stop_price),
         r_now=float(pos.r_now),
         days_open=int(pos.days_open),
+        days_to_earnings=earnings_days,
+        next_earnings_date=earnings_date,
     )
     try:
         analyzer = SymbolAnalyzer()
