@@ -53,6 +53,11 @@ export interface DailyReviewCandidateAPI {
   } | null;
 }
 
+export interface TrimSuggestionAPI {
+  r_threshold: number;
+  r_now: number;
+}
+
 export interface DailyReviewPositionHoldAPI {
   position_id: string;
   ticker: string;
@@ -65,6 +70,7 @@ export interface DailyReviewPositionHoldAPI {
   reason: string;
   exhaustion_score?: number | null;
   exhaustion_label?: string | null;
+  trim_suggestion?: TrimSuggestionAPI | null;
 }
 
 export interface DailyReviewPositionUpdateAPI {
@@ -169,6 +175,11 @@ export interface DailyReviewCandidate {
   sameSymbol?: SameSymbolCandidateContext;
 }
 
+export interface TrimSuggestion {
+  rThreshold: number;
+  rNow: number;
+}
+
 export interface DailyReviewPositionHold {
   positionId: string;
   ticker: string;
@@ -181,6 +192,7 @@ export interface DailyReviewPositionHold {
   reason: string;
   exhaustionScore: number | null;
   exhaustionLabel: string | null;
+  trimSuggestion?: TrimSuggestion | null;
 }
 
 export interface DailyReviewPositionUpdate {
@@ -352,6 +364,9 @@ export function transformPositionHold(api: DailyReviewPositionHoldAPI): DailyRev
     reason: api.reason,
     exhaustionScore: api.exhaustion_score ?? null,
     exhaustionLabel: api.exhaustion_label ?? null,
+    trimSuggestion: api.trim_suggestion
+      ? { rThreshold: api.trim_suggestion.r_threshold, rNow: api.trim_suggestion.r_now }
+      : null,
   };
 }
 

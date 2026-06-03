@@ -1095,11 +1095,14 @@ class ScreenerService:
                 )
 
             portfolio_positions = self._portfolio_service.list_positions(status="open").positions
+            portfolio_closed = self._portfolio_service.list_positions(status="closed").positions
             portfolio_orders: list = []
             same_symbol_evaluator = SameSymbolReentryEvaluator(self._portfolio_service)
             same_symbol_suppressed_count = 0
             same_symbol_add_on_count = 0
             filtered_candidates: list[ScreenerCandidate] = []
+            manage_cfg = self._portfolio_service._config.get("manage", {}) if hasattr(self._portfolio_service, "_config") else {}
+            reentry_lookback = int(manage_cfg.get("reentry_lookback_days", 30)) if isinstance(manage_cfg, dict) else 30
             for candidate in candidates:
                 enriched_candidate, same_symbol = same_symbol_evaluator.evaluate(
                     candidate,
@@ -1109,8 +1112,10 @@ class ScreenerService:
                     risk_pct_target=float(risk_cfg.risk_pct),
                     max_position_pct=float(risk_cfg.max_position_pct),
                     min_shares=int(risk_cfg.min_shares),
+                    closed_positions=portfolio_closed,
+                    reentry_lookback_days=reentry_lookback,
                 )
-                if same_symbol.mode == "ADD_ON":
+                if same_symbol.mode in ("ADD_ON", "SCALE_BACK", "RE_ENTRY"):
                     same_symbol_add_on_count += 1
                 if same_symbol.mode == "MANAGE_ONLY":
                     if enriched_candidate is None:

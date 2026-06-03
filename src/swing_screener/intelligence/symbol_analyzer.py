@@ -45,7 +45,11 @@ Return ONLY a JSON block (fenced with ```json) with exactly these fields:
   date: ISO date string or null if unknown
   direction: bullish | bearish | neutral
   summary: one sentence description
-- position_signal: null unless position context is provided — then {action: HOLD | TRIM | EXIT, reason: one sentence}
+- position_signal: null unless position context is provided — then:
+  {action: HOLD | TRIM | EXIT, reason: one sentence,
+   trim_pct: fraction to trim if TRIM (e.g. 0.5 for 50%), else null,
+   trim_price: suggested execution price if TRIM (near current price or resistance), else null,
+   re_entry_zone: {"low": <price>, "high": <price>} if TRIM or EXIT and a re-entry level exists, else null}
   HOLD = thesis intact, no change needed
   TRIM = take partial profit or reduce risk, thesis weakening
   EXIT = thesis broken or clearly better use of capital

@@ -2,7 +2,7 @@
 
 import { Recommendation, RecommendationAPI, transformRecommendation } from '@/types/recommendation';
 
-export type SameSymbolMode = 'NEW_ENTRY' | 'ADD_ON' | 'MANAGE_ONLY';
+export type SameSymbolMode = 'NEW_ENTRY' | 'ADD_ON' | 'MANAGE_ONLY' | 'RE_ENTRY' | 'SCALE_BACK';
 
 export interface SameSymbolCandidateContext {
   mode: SameSymbolMode;
