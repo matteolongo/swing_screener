@@ -21,6 +21,7 @@ function isFillableBuyOrder(order: DegiroOrder): boolean {
   );
 }
 
+
 export default function FillViaDegiroModal({ order, onClose }: FillViaDegiroModalProps) {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const historyQuery = useDegiroOrderHistory();

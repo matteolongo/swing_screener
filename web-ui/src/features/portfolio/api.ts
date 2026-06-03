@@ -338,6 +338,31 @@ export async function fillOrderFromDegiro(
   return transformFillFromDegiroResponse(payload);
 }
 
+export interface DegiroSyncResult {
+  orders_created: number;
+  orders_updated: number;
+  fees_applied: number;
+  ambiguous_skipped: number;
+}
+
+export async function syncDegiroOrders(): Promise<DegiroSyncResult> {
+  const toDate = new Date().toISOString().split('T')[0];
+  const fromDate = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const response = await fetch(apiUrl(API_ENDPOINTS.degiroOrderSyncApply), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from_date: fromDate,
+      to_date: toDate,
+      include_portfolio: true,
+      include_orders_history: true,
+      include_transactions: true,
+    }),
+  });
+  if (!response.ok) throw await buildApiError(response, 'DeGiro sync failed');
+  return response.json();
+}
+
 export async function fetchPositions(status: PositionFilterStatus): Promise<PositionWithMetrics[]> {
   if (isLocalPersistenceMode()) {
     return listPositionsLocal(status);

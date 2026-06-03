@@ -20,6 +20,7 @@ import {
   fillOrderFromDegiro,
   updatePositionStop,
   updatePositionTrailMethod,
+  syncDegiroOrders,
   OrderFilterStatus,
   PositionFilterStatus,
   DegiroStatus,
@@ -227,6 +228,19 @@ export function usePartialClosePositionMutation(onSuccess?: () => void) {
     onSuccess: async () => {
       await invalidatePositionQueries(queryClient);
       onSuccess?.();
+    },
+  });
+}
+
+export function useSyncDegiroOrdersMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: syncDegiroOrders,
+    onSuccess: async () => {
+      await Promise.all([
+        invalidateOrderQueries(queryClient),
+        invalidatePositionQueries(queryClient),
+      ]);
     },
   });
 }

@@ -122,8 +122,9 @@ def get_orders_service(
 def get_portfolio_service(
     positions_repo: PositionsRepository = Depends(get_positions_repo),
     config_repo: ConfigRepository = Depends(get_config_repo),
+    orders_repo: OrdersRepository = Depends(get_orders_repo),
 ) -> PortfolioService:
-    return PortfolioService(positions_repo=positions_repo, config_repo=config_repo)
+    return PortfolioService(positions_repo=positions_repo, config_repo=config_repo, orders_repo=orders_repo)
 
 
 def get_regime_analytics_service(

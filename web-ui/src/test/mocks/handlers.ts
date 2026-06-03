@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw'
-import { API_BASE_URL } from '@/lib/api'
+import { API_BASE_URL, API_ENDPOINTS } from '@/lib/api'
 
 // Mock data fixtures
 export const mockConfig = {
@@ -990,6 +990,33 @@ export const handlers = [
       days_ahead: 30,
     })
   }),
+
+  // DeGiro endpoints
+  http.get(`${API_BASE_URL}${API_ENDPOINTS.degiroStatus}`, () =>
+    HttpResponse.json({
+      installed: false,
+      credentials_configured: false,
+      available: false,
+      mode: 'missing_library',
+      detail: 'degiro-connector is not installed.',
+    })
+  ),
+
+  http.get(`${API_BASE_URL}${API_ENDPOINTS.degiroOrderHistory}`, () =>
+    HttpResponse.json({ orders: [], asof: '2026-05-28' })
+  ),
+
+  http.post(`${API_BASE_URL}${API_ENDPOINTS.degiroOrderSyncApply}`, () =>
+    HttpResponse.json({
+      positions_created: 0,
+      positions_updated: 0,
+      orders_created: 0,
+      orders_updated: 0,
+      fees_applied: 0,
+      ambiguous_skipped: 0,
+      artifact_paths: {},
+    })
+  ),
 
   // Fundamentals snapshot mock
   http.get(`${API_BASE_URL}/api/fundamentals/snapshot/:symbol`, ({ params }) => {

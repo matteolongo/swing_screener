@@ -79,6 +79,13 @@ describe('API Client', () => {
       expect('intelligenceRun' in API_ENDPOINTS).toBe(false)
       expect('intelligenceOpportunities' in API_ENDPOINTS).toBe(false)
     })
+
+    it('has DeGiro integration endpoints', () => {
+      expect(API_ENDPOINTS.degiroStatus).toBe('/api/portfolio/degiro/status')
+      expect(API_ENDPOINTS.degiroOrderHistory).toBe('/api/portfolio/degiro/order-history')
+      expect(API_ENDPOINTS.orderFillFromDegiro('ORD-123')).toBe('/api/portfolio/orders/ORD-123/fill-from-degiro')
+      expect(API_ENDPOINTS.degiroOrderSyncApply).toBe('/api/portfolio/sync/degiro/apply')
+    })
   })
 
   describe('apiUrl', () => {

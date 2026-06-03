@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import math
 import re
-from typing import Literal, Optional
+from typing import Any, Literal, Optional
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 
@@ -369,3 +369,86 @@ class PortfolioSummary(BaseModel):
         default=0.0,
         description="Account size adjusted for realized P&L when mode=equity",
     )
+
+
+# ---------------------------------------------------------------------------
+# DeGiro integration models
+# ---------------------------------------------------------------------------
+
+DegiroAvailabilityMode = Literal["ready", "missing_library", "missing_credentials"]
+
+
+class DegiroOrder(BaseModel):
+    """Live order read from DeGiro API (read-only)."""
+    order_id: str
+    product_id: Optional[str] = None
+    isin: Optional[str] = None
+    product_name: Optional[str] = None
+    status: str
+    price: Optional[float] = None
+    quantity: int
+    order_type: Optional[str] = None
+    side: Optional[str] = None
+    created_at: Optional[str] = None
+
+
+class DegiroOrdersResponse(BaseModel):
+    orders: list[DegiroOrder]
+    asof: str
+
+
+class DegiroStatus(BaseModel):
+    installed: bool
+    credentials_configured: bool
+    available: bool
+    mode: DegiroAvailabilityMode
+    detail: str
+
+
+class FillFromDegiroRequest(BaseModel):
+    degiro_order_id: str
+
+
+class FillFromDegiroResponse(BaseModel):
+    order_id: str
+    broker_order_id: str
+    quantity_mismatch: bool
+    position: Position
+
+
+class DegiroSyncRequest(BaseModel):
+    from_date: str = Field(description="Start date (YYYY-MM-DD)")
+    to_date: str = Field(description="End date (YYYY-MM-DD)")
+    include_portfolio: bool = True
+    include_orders_history: bool = True
+    include_transactions: bool = True
+
+
+class SyncDiffResponse(BaseModel):
+    kind: str
+    action: str
+    local_id: Optional[str] = None
+    broker_id: Optional[str] = None
+    confidence: str
+    fields: dict[str, Any] = Field(default_factory=dict)
+
+
+class DegiroSyncPreviewResponse(BaseModel):
+    positions_to_create: list[SyncDiffResponse] = Field(default_factory=list)
+    positions_to_update: list[SyncDiffResponse] = Field(default_factory=list)
+    orders_to_create: list[SyncDiffResponse] = Field(default_factory=list)
+    orders_to_update: list[SyncDiffResponse] = Field(default_factory=list)
+    fees_applied: int = 0
+    ambiguous: list[SyncDiffResponse] = Field(default_factory=list)
+    unmatched: list[SyncDiffResponse] = Field(default_factory=list)
+    artifact_paths: dict[str, str] = Field(default_factory=dict)
+
+
+class DegiroApplyResponse(BaseModel):
+    positions_created: int = 0
+    positions_updated: int = 0
+    orders_created: int = 0
+    orders_updated: int = 0
+    fees_applied: int = 0
+    ambiguous_skipped: int = 0
+    artifact_paths: dict[str, str] = Field(default_factory=dict)

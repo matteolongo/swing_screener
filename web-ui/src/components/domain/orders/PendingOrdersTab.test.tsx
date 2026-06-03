@@ -106,4 +106,29 @@ describe('PendingOrdersTab', () => {
       await screen.findByRole('button', { name: t('pendingOrdersTab.fillViaDegiro') })
     ).toBeDisabled();
   });
+
+  it('shows Fill via DeGiro button when degiro is available', async () => {
+    server.use(
+      http.get('*/api/portfolio/orders/local', () =>
+        HttpResponse.json({ orders: [pendingOrder], asof: '2026-04-27' })
+      ),
+      http.get('*/api/portfolio/degiro/status', () =>
+        HttpResponse.json({
+          installed: true,
+          credentials_configured: true,
+          available: true,
+          mode: 'ready',
+          detail: '',
+        })
+      )
+    );
+    renderWithProviders(<PendingOrdersTab />);
+    expect(
+      await screen.findByRole('button', { name: t('pendingOrdersTab.fillViaDegiro') })
+    ).toBeInTheDocument();
+    // button should be enabled when degiro is available
+    expect(
+      screen.getByRole('button', { name: t('pendingOrdersTab.fillViaDegiro') })
+    ).not.toBeDisabled();
+  });
 });
