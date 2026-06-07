@@ -155,7 +155,7 @@ async def get_position_stop_preview(
     price: Optional[float] = Query(default=None, gt=0),
     service: PortfolioService = Depends(get_portfolio_service),
 ):
-    """Intraday stop rule preview using live or user-supplied price."""
+    """Preview stop rules at a current price without persisting any change."""
     return service.suggest_stop_intraday(position_id, price=price)
 
 
