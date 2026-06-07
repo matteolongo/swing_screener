@@ -56,6 +56,18 @@ class PredictionBullet(BaseModel):
     reference: str
 
 
+class KeyNumber(BaseModel):
+    label: str
+    value: str
+    sentiment: Literal["bullish", "bearish", "neutral"]
+
+
+class PredictionBullet(BaseModel):
+    direction: Literal["bullish", "bearish", "neutral"]
+    reason: str
+    reference: str
+
+
 class PositionOutlook(BaseModel):
     expected_holding_period: Literal["days", "1-2_weeks", "2-6_weeks", "unknown"]
     hold_until: str
