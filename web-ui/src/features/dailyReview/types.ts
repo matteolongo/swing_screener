@@ -33,6 +33,7 @@ export interface DailyReviewCandidateAPI {
   r_reward: number;
   name: string | null;
   sector: string | null;
+  volume_ratio?: number | null;
   suggested_order_type?: string | null;
   suggested_order_price?: number | null;
   execution_note?: string | null;
@@ -159,6 +160,7 @@ export interface DailyReviewCandidate {
   rReward: number;
   name: string | null;
   sector: string | null;
+  volumeRatio?: number;
   suggestedOrderType?: string;
   suggestedOrderPrice?: number;
   executionNote?: string;
@@ -275,6 +277,7 @@ export function transformCandidate(api: DailyReviewCandidateAPI): DailyReviewCan
     rReward: api.r_reward,
     name: api.name,
     sector: api.sector,
+    volumeRatio: api.volume_ratio ?? undefined,
     suggestedOrderType: api.suggested_order_type ?? undefined,
     suggestedOrderPrice: api.suggested_order_price ?? undefined,
     executionNote: api.execution_note ?? undefined,

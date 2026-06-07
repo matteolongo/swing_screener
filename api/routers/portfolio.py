@@ -264,6 +264,15 @@ async def list_local_orders(
     return service.list_local_orders(status=status)
 
 
+@router.patch("/orders/{order_id}/submit")
+async def submit_order(
+    order_id: str,
+    service: OrdersService = Depends(get_orders_service),
+):
+    """Mark a pending order as submitted to broker."""
+    return service.submit_order(order_id)
+
+
 @router.delete("/orders/{order_id}")
 async def cancel_order(
     order_id: str,
