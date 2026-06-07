@@ -20,6 +20,8 @@ import { toBeginnerDecisionFromDailyCandidate } from '@/features/screener/beginn
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/utils/cn';
 import { t } from '@/i18n/t';
+import { useWeeklyReviews } from '@/features/weeklyReview/hooks';
+import { getCurrentWeekId } from '@/components/domain/weeklyReview/WeeklyReviewForm';
 import { formatNumber } from '@/utils/formatters';
 import type {
   DailyReviewCandidate,
@@ -498,6 +500,40 @@ function SectionHeader({ label, count, colorClass, expanded, onToggle }: Section
       <span>{label}</span>
       <span className="font-bold">{count} {expanded ? '▲' : '▼'}</span>
     </button>
+  );
+}
+
+// ─── Weekly review nudge ─────────────────────────────────────────────────────
+
+function WeeklyReviewNudge() {
+  const navigate = useNavigate();
+  const [dismissed, setDismissed] = useState(false);
+  const { data: reviews } = useWeeklyReviews();
+  const currentWeekId = getCurrentWeekId();
+  const isFriday = new Date().getDay() === 5;
+  const hasCurrentWeekReview = (reviews ?? []).some((r) => r.week_id === currentWeekId);
+  if (!isFriday || hasCurrentWeekReview || dismissed) return null;
+  return (
+    <div className="mb-3 flex items-center gap-3 rounded-lg border border-purple-200 bg-purple-50 px-4 py-2 dark:border-purple-700 dark:bg-purple-950">
+      <span className="text-sm text-purple-800 dark:text-purple-200 flex-1">
+        {t('todayPage.weeklyNudge.message')}
+      </span>
+      <button
+        type="button"
+        onClick={() => navigate('/book', { state: { tab: 'review' } })}
+        className="text-xs font-medium text-purple-700 hover:underline dark:text-purple-300 shrink-0"
+      >
+        {t('todayPage.weeklyNudge.action')}
+      </button>
+      <button
+        type="button"
+        onClick={() => setDismissed(true)}
+        className="text-xs text-purple-500 hover:text-purple-700 dark:text-purple-400 shrink-0"
+        aria-label={t('todayPage.weeklyNudge.dismiss')}
+      >
+        ✕
+      </button>
+    </div>
   );
 }
 
@@ -1068,6 +1104,7 @@ export default function Today() {
             {leftTab === 'today' && (
               <>
                 <div className="px-3 pt-3">
+                  <WeeklyReviewNudge />
                   <TodayPrioritySection onTickerSelect={handleTickerSelect} onSwitchToScreener={() => setLeftTab('screener')} />
                   <PendingOrdersBadge />
                 </div>

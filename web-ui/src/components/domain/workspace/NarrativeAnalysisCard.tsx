@@ -1,6 +1,6 @@
 import ReactMarkdown from 'react-markdown';
 import Badge from '@/components/common/Badge';
-import type { SymbolIntelligence, DecisionAction, DecisionConviction } from '@/features/intelligence/types';
+import type { SymbolIntelligence, DecisionAction, DecisionConviction, KeyNumber, PredictionBullet } from '@/features/intelligence/types';
 import type { DecisionCatalystLabel, DecisionSignalLabel, DecisionValuationLabel } from '@/features/screener/types';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
 import { t } from '@/i18n/t';
@@ -34,36 +34,26 @@ function convictionLabel(conviction: DecisionConviction): string {
 
 function signalLabel(label: DecisionSignalLabel): string {
   switch (label) {
-    case 'strong':
-      return t('workspacePage.panels.analysis.decisionSummary.signal.strong');
-    case 'neutral':
-      return t('workspacePage.panels.analysis.decisionSummary.signal.neutral');
-    case 'weak':
-      return t('workspacePage.panels.analysis.decisionSummary.signal.weak');
+    case 'strong': return t('workspacePage.panels.analysis.decisionSummary.signal.strong');
+    case 'neutral': return t('workspacePage.panels.analysis.decisionSummary.signal.neutral');
+    case 'weak': return t('workspacePage.panels.analysis.decisionSummary.signal.weak');
   }
 }
 
 function valuationLabel(label: DecisionValuationLabel): string {
   switch (label) {
-    case 'cheap':
-      return t('workspacePage.panels.analysis.decisionSummary.valuation.cheap');
-    case 'fair':
-      return t('workspacePage.panels.analysis.decisionSummary.valuation.fair');
-    case 'expensive':
-      return t('workspacePage.panels.analysis.decisionSummary.valuation.expensive');
-    case 'unknown':
-      return t('workspacePage.panels.analysis.decisionSummary.valuation.unknown');
+    case 'cheap': return t('workspacePage.panels.analysis.decisionSummary.valuation.cheap');
+    case 'fair': return t('workspacePage.panels.analysis.decisionSummary.valuation.fair');
+    case 'expensive': return t('workspacePage.panels.analysis.decisionSummary.valuation.expensive');
+    case 'unknown': return t('workspacePage.panels.analysis.decisionSummary.valuation.unknown');
   }
 }
 
 function catalystLabel(label: DecisionCatalystLabel): string {
   switch (label) {
-    case 'active':
-      return t('workspacePage.panels.analysis.decisionSummary.catalyst.active');
-    case 'neutral':
-      return t('workspacePage.panels.analysis.decisionSummary.catalyst.neutral');
-    case 'weak':
-      return t('workspacePage.panels.analysis.decisionSummary.catalyst.weak');
+    case 'active': return t('workspacePage.panels.analysis.decisionSummary.catalyst.active');
+    case 'neutral': return t('workspacePage.panels.analysis.decisionSummary.catalyst.neutral');
+    case 'weak': return t('workspacePage.panels.analysis.decisionSummary.catalyst.weak');
   }
 }
 
@@ -86,35 +76,56 @@ function convictionVariant(conviction: DecisionConviction): 'default' | 'success
   }
 }
 
+function sentimentChipClass(sentiment: KeyNumber['sentiment']): string {
+  switch (sentiment) {
+    case 'bullish': return 'bg-emerald-50 border-emerald-200 text-emerald-800';
+    case 'bearish': return 'bg-rose-50 border-rose-200 text-rose-800';
+    default: return 'bg-slate-100 border-slate-200 text-slate-700';
+  }
+}
+
+function directionArrow(direction: PredictionBullet['direction']): string {
+  switch (direction) {
+    case 'bullish': return '↑';
+    case 'bearish': return '↓';
+    default: return '→';
+  }
+}
+
+function directionClass(direction: PredictionBullet['direction']): string {
+  switch (direction) {
+    case 'bullish': return 'text-emerald-600';
+    case 'bearish': return 'text-rose-600';
+    default: return 'text-slate-500';
+  }
+}
+
 export default function NarrativeAnalysisCard({
   intelligence,
   candidate,
 }: NarrativeAnalysisCardProps) {
-  const { action, conviction, summaryLine, narrative } = intelligence;
+  const { action, conviction, summaryLine, narrative, symbol } = intelligence;
   const summary = candidate?.decisionSummary;
   const warnings = (summary?.explanation?.confidenceNotes ?? summary?.drivers.warnings ?? []).filter(Boolean);
-  const decisionHighlights = [
-    {
-      label: t('workspacePage.panels.analysis.intelligence.whyNow'),
-      value: summary?.whyNow,
-    },
-    {
-      label: t('workspacePage.panels.analysis.intelligence.whatToDo'),
-      value: summary?.whatToDo,
-    },
-    {
-      label: t('workspacePage.panels.analysis.intelligence.watchFor'),
-      value: summary?.mainRisk || warnings[0],
-    },
-  ].filter((item) => item.value);
 
+  const hasNewFields = Boolean(intelligence.priceHook);
+  const hasKeyNumbers = (intelligence.keyNumbers?.length ?? 0) > 0;
+  const hasPrediction = (intelligence.predictionBullets?.length ?? 0) > 0;
+  const hasRisks = (intelligence.riskFactors?.length ?? 0) > 0;
+  const hasPastTrades = Boolean(intelligence.pastTradesContext);
+
+  const decisionHighlights = [
+    { label: t('workspacePage.panels.analysis.intelligence.whyNow'), value: summary?.whyNow },
+    { label: t('workspacePage.panels.analysis.intelligence.whatToDo'), value: summary?.whatToDo },
+    { label: t('workspacePage.panels.analysis.intelligence.watchFor'), value: summary?.mainRisk || warnings[0] },
+  ].filter((item) => item.value);
 
   return (
     <div className="rounded-lg border border-slate-200 overflow-hidden">
-      {/* Action/conviction banner */}
+      {/* Banner */}
       <div className={`px-3 py-2 flex items-center justify-between gap-3 ${bannerClass(action)}`}>
         <span className="font-semibold text-sm">
-          {intelligence.symbol} — {actionLabel(action)}
+          {symbol} — {actionLabel(action)}
         </span>
         <Badge variant={convictionVariant(conviction)}>{convictionLabel(conviction)}</Badge>
       </div>
@@ -128,7 +139,8 @@ export default function NarrativeAnalysisCard({
             })}
           </div>
         )}
-        {/* Decision first, rationale after. */}
+
+        {/* Decision focus */}
         <div className="rounded-md bg-white border border-slate-200 p-3">
           <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             {t('workspacePage.panels.analysis.intelligence.decisionFocus')}
@@ -138,9 +150,7 @@ export default function NarrativeAnalysisCard({
             <dl className="mt-3 grid gap-2">
               {decisionHighlights.map((item) => (
                 <div key={item.label} className="rounded-md bg-slate-50 px-3 py-2">
-                  <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                    {item.label}
-                  </dt>
+                  <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{item.label}</dt>
                   <dd className="mt-1 text-sm text-slate-800">{item.value}</dd>
                 </div>
               ))}
@@ -148,7 +158,7 @@ export default function NarrativeAnalysisCard({
           )}
         </div>
 
-        {/* Warnings — always visible, never collapsed */}
+        {/* Warnings */}
         {warnings.length > 0 && (
           <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
             <div className="text-xs font-medium uppercase tracking-wide text-amber-800">
@@ -160,17 +170,108 @@ export default function NarrativeAnalysisCard({
           </div>
         )}
 
-        {/* Narrative */}
-        <div className="rounded-md bg-white border border-slate-200 p-3">
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            {t('workspacePage.panels.analysis.intelligence.aiRationale')}
+        {/* WHY NOW */}
+        {hasNewFields && intelligence.priceHook && (
+          <div className="rounded-md bg-white border border-slate-200 p-3">
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+              {t('workspacePage.panels.analysis.intelligence.priceHook')}
+            </div>
+            <p className="text-sm text-slate-800">{intelligence.priceHook}</p>
           </div>
-          <div className="prose prose-sm prose-slate mt-2 max-w-none">
-            <ReactMarkdown>{narrative}</ReactMarkdown>
-          </div>
-        </div>
+        )}
 
-        {/* Data inputs used by AI */}
+        {/* KEY NUMBERS */}
+        {hasKeyNumbers && (
+          <div className="rounded-md bg-white border border-slate-200 p-3">
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">
+              {t('workspacePage.panels.analysis.intelligence.keyNumbers')}
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {(intelligence.keyNumbers ?? []).map((kn, i) => (
+                <span
+                  key={i}
+                  className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium ${sentimentChipClass(kn.sentiment)}`}
+                >
+                  <span className="opacity-70">{kn.label}</span>
+                  <span className="opacity-40">:</span>
+                  <span>{kn.value}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* PREDICTION */}
+        {hasPrediction && (
+          <div className="rounded-md bg-white border border-slate-200 p-3">
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">
+              {t('workspacePage.panels.analysis.intelligence.prediction')}
+            </div>
+            <ul className="space-y-2">
+              {(intelligence.predictionBullets ?? []).map((pb, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm">
+                  <span className={`font-bold text-base leading-tight shrink-0 ${directionClass(pb.direction)}`}>
+                    {directionArrow(pb.direction)}
+                  </span>
+                  <span className="flex-1 text-slate-800">{pb.reason}</span>
+                  <span className="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500 font-medium">
+                    {pb.reference}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* RISKS */}
+        {hasRisks && (
+          <div className="rounded-md bg-white border border-slate-200 p-3">
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">
+              {t('workspacePage.panels.analysis.intelligence.riskFactors')}
+            </div>
+            <ul className="space-y-1">
+              {(intelligence.riskFactors ?? []).map((rf, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
+                  <span className="text-slate-400 shrink-0 mt-0.5">•</span>
+                  <span>{rf}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* PAST TRADES */}
+        {hasPastTrades && (
+          <div className="rounded-md bg-white border border-slate-200 p-3">
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+              {t('workspacePage.panels.analysis.intelligence.pastTrades', { symbol })}
+            </div>
+            <p className="text-sm text-slate-700">{intelligence.pastTradesContext}</p>
+          </div>
+        )}
+
+        {/* Full rationale — collapsible when new structured fields are present; always visible otherwise */}
+        {hasNewFields ? (
+          <details className="rounded-md bg-white border border-slate-200 p-3">
+            <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-slate-500 select-none">
+              {t('workspacePage.panels.analysis.intelligence.fullRationale')}
+            </summary>
+            <div className="prose prose-sm prose-slate mt-2 max-w-none">
+              <ReactMarkdown>{narrative}</ReactMarkdown>
+            </div>
+          </details>
+        ) : (
+          <div className="rounded-md bg-white border border-slate-200 p-3">
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              {t('workspacePage.panels.analysis.intelligence.fullRationale')}
+            </div>
+            <div className="prose prose-sm prose-slate mt-2 max-w-none">
+              <ReactMarkdown>{narrative}</ReactMarkdown>
+            </div>
+          </div>
+        )}
+
+        {/* Data inputs */}
         {intelligence.inputsUsed && Object.keys(intelligence.inputsUsed).length > 0 && (
           <details className="rounded-md border border-slate-200 bg-white p-3">
             <summary className="cursor-pointer text-xs font-medium text-slate-500 select-none">
@@ -199,7 +300,7 @@ export default function NarrativeAnalysisCard({
           </details>
         )}
 
-        {/* Collapsed signals + valuation detail */}
+        {/* Signals detail */}
         {summary && (
           <details className="rounded-md border border-slate-200 bg-white p-3">
             <summary className="cursor-pointer text-xs font-medium text-slate-500 select-none">

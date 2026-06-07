@@ -648,6 +648,12 @@ export const messagesEn = {
             confidenceDecay: 'Confidence decay',
             invalidationSignals: 'Invalidation signals',
           },
+          priceHook: 'Why now',
+          keyNumbers: 'Key numbers',
+          prediction: 'Prediction',
+          riskFactors: 'Risks',
+          pastTrades: 'Past trades on {{symbol}}',
+          fullRationale: 'Full rationale',
         },
         decisionSummary: {
           title: '{{ticker}} Decision Summary',
@@ -2158,7 +2164,7 @@ export const messagesEn = {
   todayPage: {
     tabs: {
       today: 'Today',
-      screener: 'Screener',
+      screener: 'Last Run',
     },
     openPositions: {
       sectionTitle: 'Open positions',
@@ -2246,6 +2252,11 @@ export const messagesEn = {
       singular: '{{count}} pending order',
       plural: '{{count}} pending orders',
       goToOrders: 'Go to Orders',
+    },
+    weeklyNudge: {
+      message: "It's Friday — did you write this week's review?",
+      action: 'Write review',
+      dismiss: 'Dismiss',
     },
   },
 } as const;

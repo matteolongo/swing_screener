@@ -209,6 +209,127 @@ def test_symbol_analyzer_maps_position_outlook():
     assert result.position_outlook.profit_management == "trail_stop"
 
 
+def test_format_past_trades_empty():
+    from swing_screener.intelligence.symbol_analyzer import _format_past_trades
+    assert _format_past_trades("AAPL", []) is None
+
+
+def test_format_past_trades_no_closed():
+    from swing_screener.intelligence.symbol_analyzer import _format_past_trades
+    positions = [{"ticker": "AAPL", "status": "open", "entry_price": 50.0}]
+    assert _format_past_trades("AAPL", positions) is None
+
+
+def test_format_past_trades_one_stopped_out():
+    from swing_screener.intelligence.symbol_analyzer import _format_past_trades
+    positions = [{
+        "ticker": "AAPL", "status": "closed",
+        "entry_price": 48.15, "stop_price": 47.17, "exit_price": 47.29,
+        "entry_date": "2026-01-15", "exit_date": "2026-01-23",
+    }]
+    result = _format_past_trades("AAPL", positions)
+    assert result is not None
+    assert "Past trades on AAPL" in result
+    assert "48.15" in result
+    assert "47.29" in result
+    assert "stopped out" in result
+    assert "2026-01-15" in result
+
+
+def test_format_past_trades_win():
+    from swing_screener.intelligence.symbol_analyzer import _format_past_trades
+    positions = [{
+        "ticker": "BESI.AS", "status": "closed",
+        "entry_price": 200.0, "stop_price": 190.0, "exit_price": 230.0,
+        "entry_date": "2026-01-10", "exit_date": "2026-01-31",
+    }]
+    result = _format_past_trades("BESI.AS", positions)
+    assert result is not None
+    assert "+3.00R" in result
+    assert "target/manual exit" in result
+
+
+def test_format_past_trades_ignores_wrong_ticker():
+    from swing_screener.intelligence.symbol_analyzer import _format_past_trades
+    positions = [{
+        "ticker": "MSFT", "status": "closed",
+        "entry_price": 400.0, "stop_price": 390.0, "exit_price": 380.0,
+        "entry_date": "2026-01-10", "exit_date": "2026-01-20",
+    }]
+    assert _format_past_trades("AAPL", positions) is None
+
+
+def test_prompt_includes_past_trades_block():
+    from swing_screener.intelligence.symbol_analyzer import _build_user_prompt
+    from swing_screener.intelligence.models import SymbolIntelligenceRequest
+    past = [{
+        "ticker": "AAPL", "status": "closed",
+        "entry_price": 48.15, "stop_price": 47.17, "exit_price": 47.29,
+        "entry_date": "2026-01-15", "exit_date": "2026-01-23",
+    }]
+    req = SymbolIntelligenceRequest(close=50.0, signal="breakout")
+    prompt = _build_user_prompt("AAPL", req, past_positions=past)
+    assert "Past trades on AAPL" in prompt
+    assert "48.15" in prompt
+
+
+def test_prompt_no_past_trades_block_when_empty():
+    from swing_screener.intelligence.symbol_analyzer import _build_user_prompt
+    from swing_screener.intelligence.models import SymbolIntelligenceRequest
+    req = SymbolIntelligenceRequest(close=50.0, signal="breakout")
+    prompt = _build_user_prompt("AAPL", req, past_positions=[])
+    assert "Past trades" not in prompt
+
+
+def test_analyzer_parses_new_fields():
+    import json
+    from unittest.mock import MagicMock, patch
+    from swing_screener.intelligence.models import SymbolIntelligenceRequest
+
+    fake_json = {
+        "action": "BUY_ON_PULLBACK",
+        "conviction": "medium",
+        "catalyst_urgency": "low",
+        "summary_line": "Pullback candidate.",
+        "narrative": "Text.",
+        "upcoming_events": [],
+        "position_signal": None,
+        "position_outlook": None,
+        "sources": [],
+        "price_hook": "Near 52w high with sector tailwind.",
+        "key_numbers": [
+            {"label": "SMA20", "value": "€266", "sentiment": "bullish"},
+            {"label": "Valuation", "value": "expensive", "sentiment": "bearish"},
+        ],
+        "risk_factors": ["Stretched valuation.", "No catalyst snapshot."],
+        "prediction_bullets": [
+            {"direction": "bullish", "reason": "SMA20 holds as support.", "reference": "technical"},
+        ],
+        "past_trades_context": "One prior stop at €247.",
+    }
+    fake_text = "```json\n" + json.dumps(fake_json) + "\n```"
+    resp = MagicMock()
+    resp.output_text = fake_text
+
+    req = SymbolIntelligenceRequest(close=286.0, signal="breakout")
+    with patch("swing_screener.intelligence.symbol_analyzer.OpenAI") as MockOpenAI:
+        mock_client = MagicMock()
+        MockOpenAI.return_value = mock_client
+        mock_client.responses.create.return_value = resp
+        from swing_screener.intelligence.symbol_analyzer import SymbolAnalyzer
+        analyzer = SymbolAnalyzer()
+        result = analyzer.analyze("BESI.AS", req, past_positions=[])
+
+    assert result.price_hook == "Near 52w high with sector tailwind."
+    assert len(result.key_numbers) == 2
+    assert result.key_numbers[0].label == "SMA20"
+    assert result.key_numbers[1].sentiment == "bearish"
+    assert result.risk_factors == ["Stretched valuation.", "No catalyst snapshot."]
+    assert len(result.prediction_bullets) == 1
+    assert result.prediction_bullets[0].direction == "bullish"
+    assert result.past_trades_context == "One prior stop at €247."
+
+
 def test_analyze_writes_to_cache(tmp_path, monkeypatch):
     import json
     from unittest.mock import MagicMock, patch
