@@ -3,15 +3,23 @@
 Project scope, constraints, and conventions for code changes.
 
 ## Scope
-- End-of-day swing-trading workflows
+- End-of-day swing-trading decision workflows
+- Read-only current-price observations and previews when explicitly marked as non-final
 - Manual execution
 - Deterministic, testable logic
 
 ## Non-goals
 - Live trading / broker execution
-- Intraday logic
+- Automated intraday decisions, signal generation, or order management
+- Treating an intraday preview as a final end-of-day recommendation
 - ML or curve-fitting
 - Hidden state or heuristic tuning
+
+## Intraday Boundary
+- The system may read a current or user-supplied price to preview position metrics or stop rules.
+- Preview endpoints must be read-only: they must not persist a stop change, submit an order, or mutate portfolio state.
+- Screener results based on an unclosed daily candle must be labeled `intraday`; only results labeled `final_close` are final end-of-day output.
+- Actionable recommendations remain part of the post-close review and require manual broker execution.
 
 ## Core Concepts
 - OHLCV data uses a MultiIndex DataFrame (field, ticker).

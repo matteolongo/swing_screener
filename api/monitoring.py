@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import time
 import threading
+import tempfile
 from pathlib import Path
 from typing import Dict, Any
 import json
@@ -10,71 +11,90 @@ import json
 
 class HealthChecker:
     """Health check for API dependencies and resources."""
-    
+
     @staticmethod
-    def check_file_access() -> Dict[str, Any]:
-        """Check that critical files are accessible.
-        
-        Note: This method has a side effect - it will create positions.json
-        and orders.json with empty list content if they don't exist.
-        """
-        # Use hardcoded paths instead of importing (avoid circular deps)
-        positions_file = Path("positions.json")
-        orders_file = Path("orders.json")
-        
-        issues = []
-        
-        # Check positions.json
+    def _configured_state_files() -> dict[str, Path]:
+        """Return the state files used by the configured repositories."""
+        from swing_screener.settings import get_settings_manager
+
+        manager = get_settings_manager()
+        app_config = manager.get_app_config_payload()
+        return {
+            "positions": manager.resolve_runtime_path(
+                "positions_file",
+                app_config.get("positions_file", "data/positions.json"),
+            ),
+            "orders": manager.resolve_runtime_path(
+                "orders_file",
+                app_config.get("orders_file", "data/orders.json"),
+            ),
+        }
+
+    @staticmethod
+    def _check_json_state_file(path: Path) -> tuple[str, str | None]:
+        """Check that a JSON state file is readable and its location writable."""
+        parent = path.parent
         try:
-            if not positions_file.exists():
-                # File doesn't exist yet - that's ok, will be created
-                positions_file.parent.mkdir(parents=True, exist_ok=True)
-                positions_file.write_text("[]")
-            
-            # Try to read
-            with open(positions_file, "r") as f:
-                json.load(f)
-            
-            positions_status = "ok"
-        except PermissionError:
-            positions_status = "error"
-            issues.append("positions.json: permission denied")
+            if not parent.is_dir():
+                return "error", f"{path}: parent directory not found"
+
+            if path.exists():
+                json.loads(path.read_text(encoding="utf-8"))
+                # Opening an existing file for append validates file-level write
+                # access without changing its contents.
+                with path.open("a", encoding="utf-8"):
+                    pass
+
+            # Repository writes also need to create lock/temporary files beside the
+            # state file. Probe the directory without creating the state file itself.
+            with tempfile.NamedTemporaryFile(dir=parent, prefix=".health-", delete=True):
+                pass
         except json.JSONDecodeError:
-            positions_status = "warning"
-            issues.append("positions.json: invalid JSON")
-        except Exception as exc:
-            positions_status = "error"
-            issues.append(f"positions.json: {type(exc).__name__}")
-        
-        # Check orders.json
-        try:
-            if not orders_file.exists():
-                orders_file.parent.mkdir(parents=True, exist_ok=True)
-                orders_file.write_text("[]")
-            
-            with open(orders_file, "r") as f:
-                json.load(f)
-            
-            orders_status = "ok"
+            return "warning", f"{path}: invalid JSON"
         except PermissionError:
-            orders_status = "error"
-            issues.append("orders.json: permission denied")
-        except json.JSONDecodeError:
-            orders_status = "warning"
-            issues.append("orders.json: invalid JSON")
-        except Exception as exc:
-            orders_status = "error"
-            issues.append(f"orders.json: {type(exc).__name__}")
-        
-        overall_status = "healthy" if not issues else ("degraded" if "error" not in str(issues) else "unhealthy")
-        
+            return "error", f"{path}: permission denied"
+        except OSError as exc:
+            return "error", f"{path}: {type(exc).__name__}"
+        return "ok", None
+
+    @staticmethod
+    def check_file_access(
+        positions_file: Path | None = None,
+        orders_file: Path | None = None,
+    ) -> Dict[str, Any]:
+        """Check configured position and order storage without mutating it."""
+        configured = (
+            HealthChecker._configured_state_files()
+            if positions_file is None or orders_file is None
+            else {}
+        )
+        files = {
+            "positions": positions_file or configured["positions"],
+            "orders": orders_file or configured["orders"],
+        }
+
+        statuses: dict[str, str] = {}
+        issues: list[str] = []
+        for name, path in files.items():
+            status, issue = HealthChecker._check_json_state_file(path)
+            statuses[name] = status
+            if issue is not None:
+                issues.append(issue)
+
+        if "error" in statuses.values():
+            overall_status = "unhealthy"
+        elif "warning" in statuses.values():
+            overall_status = "degraded"
+        else:
+            overall_status = "healthy"
+
         return {
             "status": overall_status,
-            "positions_file": positions_status,
-            "orders_file": orders_status,
-            "issues": issues if issues else None,
+            "positions_file": statuses["positions"],
+            "orders_file": statuses["orders"],
+            "issues": issues or None,
         }
-    
+
     @staticmethod
     def check_data_directory() -> Dict[str, Any]:
         """Check that data directory is accessible."""
@@ -82,10 +102,10 @@ class HealthChecker:
             data_dir = Path("data")
             if not data_dir.exists():
                 return {"status": "warning", "message": "data/ directory not found"}
-            
+
             # Check if we can list files
             list(data_dir.iterdir())
-            
+
             return {"status": "ok"}
         except PermissionError:
             return {"status": "error", "message": "Permission denied"}

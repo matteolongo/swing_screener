@@ -95,6 +95,6 @@ npm test
 
 - deterministic logic over discretionary behavior
 - risk-first trade selection and management
-- post-close workflows, not intraday automation
+- post-close decision workflows; current-price previews may be read-only, but never automate intraday decisions or execution
 - local files as the default source of truth
 - manual execution by design

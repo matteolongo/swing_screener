@@ -42,6 +42,8 @@ Screener (`/api/screener`):
 - `GET /api/screener/run/{job_id}` (poll async screener status/result)
 - `GET /api/screener/recurrence`
 
+Screener responses label data freshness as `intraday` while a relevant market is still open and `final_close` once the daily bars are final. Intraday responses are previews, not final end-of-day recommendations.
+
 Universes (`/api/universes`):
 - `GET /api/universes`
 - `GET /api/universes/{universe_id}`
@@ -54,7 +56,7 @@ Portfolio (`/api/portfolio`):
 - `GET /api/portfolio/positions/{position_id}/metrics`
 - `PUT /api/portfolio/positions/{position_id}/stop`
 - `GET /api/portfolio/positions/{position_id}/stop-suggestion`
-- `GET /api/portfolio/positions/{position_id}/stop-preview`
+- `GET /api/portfolio/positions/{position_id}/stop-preview` (read-only current-price preview; does not persist a stop change)
 - `PATCH /api/portfolio/positions/{position_id}/trail-method`
 - `POST /api/portfolio/stop-suggestion/compute`
 - `POST /api/portfolio/positions/{position_id}/close`
