@@ -1101,8 +1101,8 @@ class ScreenerService:
             same_symbol_suppressed_count = 0
             same_symbol_add_on_count = 0
             filtered_candidates: list[ScreenerCandidate] = []
-            manage_cfg = self._portfolio_service._config.get("manage", {}) if hasattr(self._portfolio_service, "_config") else {}
-            reentry_lookback = int(manage_cfg.get("reentry_lookback_days", 30)) if isinstance(manage_cfg, dict) else 30
+            manage_cfg = strategy.get("manage", {}) if isinstance(strategy, dict) else {}
+            reentry_lookback = int(manage_cfg.get("reentry_lookback_days", 30))
             for candidate in candidates:
                 enriched_candidate, same_symbol = same_symbol_evaluator.evaluate(
                     candidate,
