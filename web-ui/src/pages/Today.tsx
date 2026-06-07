@@ -3,6 +3,7 @@ import { CheckCircle2, RefreshCw } from 'lucide-react';
 import AnalysisCanvasPanel from '@/components/domain/workspace/AnalysisCanvasPanel';
 import ScreenerInboxPanel from '@/components/domain/workspace/ScreenerInboxPanel';
 import ClosePositionModalForm from '@/components/domain/positions/ClosePositionModalForm';
+import PartialCloseModalForm from '@/components/domain/positions/PartialCloseModalForm';
 import UpdateStopModalForm from '@/components/domain/positions/UpdateStopModalForm';
 import WatchMetaInline from '@/components/domain/watchlist/WatchMetaInline';
 import TodayPriorityCard from '@/components/domain/today/TodayPriorityCard';
@@ -12,8 +13,8 @@ import {
   parseUniverseFromStorage,
   SCREENER_UNIVERSE_STORAGE_KEY,
 } from '@/features/screener/universeStorage';
-import { useOrders, usePositions, useUpdateStopMutation, useClosePositionMutation, useOpenPositionsIntelligence, useEarningsProximity } from '@/features/portfolio/hooks';
-import type { ClosePositionRequest, Position, UpdateStopRequest } from '@/features/portfolio/types';
+import { useOrders, usePositions, useUpdateStopMutation, useClosePositionMutation, useOpenPositionsIntelligence, useEarningsProximity, usePartialClosePositionMutation } from '@/features/portfolio/hooks';
+import type { ClosePositionRequest, PartialCloseRequest, Position, UpdateStopRequest } from '@/features/portfolio/types';
 import type { OpenPositionIntelligenceSummary } from '@/features/intelligence/types';
 import { pickTodayPriority } from '@/features/dailyReview/beginnerPriority';
 import { toBeginnerDecisionFromDailyCandidate } from '@/features/screener/beginnerDecision';
@@ -210,6 +211,36 @@ interface CandidateItemProps {
   isFocused?: boolean;
 }
 
+function candidateModeBadge(item: DailyReviewCandidate, isAddOn?: boolean) {
+  const mode = item.sameSymbol?.mode;
+  if (mode === 'RE_ENTRY') {
+    return (
+      <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+        {t('todayPage.actionList.reEnter')}
+      </span>
+    );
+  }
+  if (mode === 'SCALE_BACK') {
+    return (
+      <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
+        {t('todayPage.actionList.scaleBack')}
+      </span>
+    );
+  }
+  if (isAddOn || mode === 'ADD_ON') {
+    return (
+      <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
+        {t('todayPage.actionList.addOn')}
+      </span>
+    );
+  }
+  return (
+    <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+      {item.decisionSummary?.action ?? item.signal}
+    </span>
+  );
+}
+
 function CandidateItem({ item, isAddOn, onClick, isFocused }: CandidateItemProps) {
   const showCatalyst =
     !isAddOn &&
@@ -229,15 +260,7 @@ function CandidateItem({ item, isAddOn, onClick, isFocused }: CandidateItemProps
         <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 min-w-[60px]">
           {item.ticker}
         </span>
-        {isAddOn ? (
-          <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
-            {t('todayPage.actionList.addOn')}
-          </span>
-        ) : (
-          <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-            {item.decisionSummary?.action ?? item.signal}
-          </span>
-        )}
+        {candidateModeBadge(item, isAddOn)}
         <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">
           r/r: {formatNumber(item.rReward, 2)}R
         </span>
@@ -336,11 +359,12 @@ function AiSignalBadge({ summary }: { summary: OpenPositionIntelligenceSummary |
 interface HoldItemProps {
   item: DailyReviewPositionHold;
   onClick: (ticker: string) => void;
+  onTrim?: () => void;
   isFocused?: boolean;
   intelligenceSummary?: OpenPositionIntelligenceSummary;
 }
 
-function HoldItem({ item, onClick, isFocused, intelligenceSummary }: HoldItemProps) {
+function HoldItem({ item, onClick, onTrim, isFocused, intelligenceSummary }: HoldItemProps) {
   return (
     <button
       type="button"
@@ -356,6 +380,11 @@ function HoldItem({ item, onClick, isFocused, intelligenceSummary }: HoldItemPro
       <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
         {t('dailyReview.table.hold.holdBadge')}
       </span>
+      {item.trimSuggestion && (
+        <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+          {t('todayPage.actionList.trim')}
+        </span>
+      )}
       <span className={cn('text-xs font-semibold tabular-nums', item.rNow >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400')}>
         {item.rNow >= 0 ? '+' : ''}{formatNumber(item.rNow, 2)}R
       </span>
@@ -364,6 +393,17 @@ function HoldItem({ item, onClick, isFocused, intelligenceSummary }: HoldItemPro
       <AiSignalBadge summary={intelligenceSummary} />
       <EarningsBadge ticker={item.ticker} />
       <span className="text-xs text-gray-400 dark:text-gray-500 truncate flex-1">{item.reason}</span>
+      {item.trimSuggestion && onTrim && (
+        <span
+          role="button"
+          tabIndex={0}
+          onClick={(e) => { e.stopPropagation(); onTrim(); }}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onTrim(); } }}
+          className="text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-800/40 shrink-0 cursor-pointer"
+        >
+          {t('todayPage.actionList.trimAction')}
+        </span>
+      )}
     </button>
   );
 }
@@ -663,10 +703,12 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
   // Modal targets
   const [updateStopTarget, setUpdateStopTarget] = useState<Position | null>(null);
   const [closeTarget, setCloseTarget] = useState<Position | null>(null);
+  const [trimTarget, setTrimTarget] = useState<Position | null>(null);
 
   // Mutations (no built-in onSuccess — we use per-call callbacks)
   const updateStopMutation = useUpdateStopMutation();
   const closePositionMutation = useClosePositionMutation();
+  const partialCloseMutation = usePartialClosePositionMutation();
 
   const handleUpdateStop = useCallback((position: Position, req: UpdateStopRequest) => {
     updateStopMutation.mutate(
@@ -691,6 +733,17 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
       },
     );
   }, [closePositionMutation]);
+
+  const handlePartialClose = useCallback((position: Position, req: PartialCloseRequest) => {
+    partialCloseMutation.mutate(
+      { positionId: position.positionId!, request: req },
+      {
+        onSuccess: () => {
+          setTrimTarget(null);
+        },
+      },
+    );
+  }, [partialCloseMutation]);
 
   const [holdExpanded, setHoldExpanded] = useState(false);
 
@@ -987,11 +1040,13 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
               <div className="space-y-0.5">
                 {review?.positionsHold.map((item) => {
                   const idx = flatItems.findIndex((fi) => fi.id === item.positionId);
+                  const position = positionById.get(item.positionId);
                   return (
                     <HoldItem
                       key={item.positionId}
                       item={item}
                       onClick={handleItemClick}
+                      onTrim={item.trimSuggestion && position ? () => setTrimTarget(position) : undefined}
                       isFocused={focusedIndex === idx}
                       intelligenceSummary={intelligenceByTicker.get(item.ticker)}
                     />
@@ -1020,6 +1075,15 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
           error={closePositionMutation.error instanceof Error ? closePositionMutation.error.message : undefined}
           onClose={() => setCloseTarget(null)}
           onSubmit={(req) => handleClosePosition(closeTarget, req)}
+        />
+      )}
+      {trimTarget && (
+        <PartialCloseModalForm
+          position={trimTarget}
+          isLoading={partialCloseMutation.isPending}
+          error={partialCloseMutation.error instanceof Error ? partialCloseMutation.error.message : undefined}
+          onClose={() => setTrimTarget(null)}
+          onSubmit={(req) => handlePartialClose(trimTarget, req)}
         />
       )}
     </div>

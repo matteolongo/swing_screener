@@ -13,7 +13,7 @@ class PriceHistoryPoint(BaseModel):
     close: float
 
 
-SameSymbolMode = Literal["NEW_ENTRY", "ADD_ON", "MANAGE_ONLY"]
+SameSymbolMode = Literal["NEW_ENTRY", "ADD_ON", "MANAGE_ONLY", "RE_ENTRY", "SCALE_BACK"]
 
 
 class SameSymbolCandidateContext(BaseModel):

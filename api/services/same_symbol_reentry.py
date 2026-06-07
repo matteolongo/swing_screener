@@ -2,10 +2,20 @@
 from __future__ import annotations
 
 import math
+from datetime import date, timedelta
 from typing import Optional
 
 from api.models.recommendation import Recommendation, RecommendationRisk
 from api.models.screener import SameSymbolCandidateContext, ScreenerCandidate
+
+def _parse_date(value: object) -> Optional[date]:
+    if value is None:
+        return None
+    try:
+        return date.fromisoformat(str(value)[:10])
+    except (ValueError, TypeError):
+        return None
+
 
 def _safe_round(value: Optional[float], digits: int = 4) -> Optional[float]:
     if value is None or not math.isfinite(value):
@@ -111,6 +121,8 @@ class SameSymbolReentryEvaluator:
         risk_pct_target: float,
         max_position_pct: float,
         min_shares: int,
+        closed_positions: list[object] | None = None,
+        reentry_lookback_days: int = 30,
     ) -> tuple[Optional[ScreenerCandidate], SameSymbolCandidateContext]:
         matching_position = next(
             (
@@ -123,6 +135,28 @@ class SameSymbolReentryEvaluator:
         )
         fresh_setup_stop = _safe_round(candidate.stop)
         if matching_position is None:
+            # Check for a recently-closed position → RE_ENTRY
+            if closed_positions:
+                cutoff = date.today() - timedelta(days=reentry_lookback_days)
+                recently_closed = next(
+                    (
+                        pos
+                        for pos in closed_positions
+                        if getattr(pos, "ticker", "").upper() == candidate.ticker.upper()
+                        and _parse_date(getattr(pos, "exit_date", None)) is not None
+                        and _parse_date(getattr(pos, "exit_date", None)) >= cutoff
+                    ),
+                    None,
+                )
+                if recently_closed is not None:
+                    context = SameSymbolCandidateContext(
+                        mode="RE_ENTRY",
+                        fresh_setup_stop=fresh_setup_stop,
+                        execution_stop=fresh_setup_stop,
+                        reason=f"Previously closed within last {reentry_lookback_days} days — re-entry candidate.",
+                    )
+                    candidate.same_symbol = context
+                    return candidate, context
             context = SameSymbolCandidateContext(
                 mode="NEW_ENTRY",
                 fresh_setup_stop=fresh_setup_stop,
@@ -137,6 +171,7 @@ class SameSymbolReentryEvaluator:
         current_entry = float(getattr(matching_position, "entry_price", 0.0))
         pending_entry_exists = _has_pending_entry_for_ticker(orders, candidate.ticker)
         add_on_count = _count_add_ons_for_position(orders, position_id)
+        has_partial_closes = bool(getattr(matching_position, "partial_closes", None))
         context = SameSymbolCandidateContext(
             mode="MANAGE_ONLY",
             position_id=position_id,
@@ -206,8 +241,9 @@ class SameSymbolReentryEvaluator:
         candidate.risk_pct = adjusted_recommendation.risk.risk_pct
         candidate.position_size_usd = adjusted_recommendation.risk.position_size
         candidate.shares = adjusted_recommendation.risk.shares
-        context.mode = "ADD_ON"
-        context.reason = "One portfolio-aware add-on is allowed using the current live stop."
+        context.mode = "SCALE_BACK" if has_partial_closes else "ADD_ON"
+        reason_prefix = "Scale-back after partial trim" if has_partial_closes else "One portfolio-aware add-on is allowed"
+        context.reason = f"{reason_prefix} using the current live stop."
         candidate.same_symbol = context
         note_prefix = (
             f"Add-on for open position. Live stop {current_stop:.2f} is used for execution; "

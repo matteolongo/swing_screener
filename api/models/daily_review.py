@@ -41,6 +41,12 @@ class DailyReviewCandidate(BaseModel):
     decision_summary: Optional[DecisionSummary] = None
 
 
+class TrimSuggestion(BaseModel):
+    """Rules-based trim opportunity detected for a held position."""
+    r_threshold: float
+    r_now: float
+
+
 class DailyReviewPositionHold(BaseModel):
     """A position that requires no action (keep current stop)."""
     position_id: str
@@ -54,6 +60,7 @@ class DailyReviewPositionHold(BaseModel):
     reason: str = Field(..., description="Why no action is needed")
     exhaustion_score: Optional[float] = None
     exhaustion_label: Optional[str] = None
+    trim_suggestion: TrimSuggestion | None = None
 
 
 class DailyReviewPositionUpdate(BaseModel):

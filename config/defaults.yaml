@@ -30,6 +30,8 @@ app_config:
     time_stop_days: 15
     time_stop_min_r: 0.5
     exit_signal_days: 2
+    trim_r_threshold: 2.0
+    reentry_lookback_days: 30
   positions_file: data/positions.json
   orders_file: data/orders.json
 
@@ -94,6 +96,8 @@ strategy:
     time_stop_days: 15
     time_stop_min_r: 0.5
     exit_signal_days: 2
+    trim_r_threshold: 2.0
+    reentry_lookback_days: 30
     benchmark: SPY
   market_intelligence:
     enabled: false

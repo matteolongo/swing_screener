@@ -16,6 +16,7 @@ from api.models.daily_review import (
     DailyReviewPositionExitSignal,
     DailyReviewSummary,
     PendingOrderReview,
+    TrimSuggestion,
 )
 from api.models.screener import ScreenerRequest
 from api.repositories.orders_repo import OrdersRepository
@@ -104,7 +105,7 @@ class DailyReviewService:
                 decision_summary=c.decision_summary,
             )
         new_candidates = [_to_daily_candidate(c) for c in candidates if c.same_symbol is None or c.same_symbol.mode == "NEW_ENTRY"]
-        add_on_candidates = [_to_daily_candidate(c) for c in candidates if c.same_symbol is not None and c.same_symbol.mode == "ADD_ON"]
+        add_on_candidates = [_to_daily_candidate(c) for c in candidates if c.same_symbol is not None and c.same_symbol.mode in ("ADD_ON", "RE_ENTRY", "SCALE_BACK")]
         screener_tickers = {c.ticker.upper() for c in candidates}
         watchlist_near_trigger = [
             item for item in self._watchlist_near_trigger_items()
@@ -114,6 +115,7 @@ class DailyReviewService:
         
         # 2. Analyze all open positions
         active_manage = self._active_manage_cfg_payload()
+        trim_r_threshold = float(active_manage.get("trim_r_threshold", 2.0))
         positions_response = self.portfolio.list_positions(
             status="open",
             time_stop_days=int(active_manage.get("time_stop_days", 15)),
@@ -171,6 +173,11 @@ class DailyReviewService:
 
             # Categorize based on action
             if suggestion.action == "NO_ACTION":
+                trim_suggestion = (
+                    TrimSuggestion(r_threshold=trim_r_threshold, r_now=suggestion.r_now)
+                    if suggestion.r_now >= trim_r_threshold
+                    else None
+                )
                 positions_hold.append(
                     DailyReviewPositionHold(
                         position_id=pos.position_id,
@@ -183,6 +190,7 @@ class DailyReviewService:
                         reason=suggestion.reason,
                         exhaustion_score=suggestion.exhaustion_score,
                         exhaustion_label=suggestion.exhaustion_label,
+                        trim_suggestion=trim_suggestion,
                     )
                 )
 
@@ -439,13 +447,16 @@ class DailyReviewService:
                 decision_summary=c.decision_summary,
             )
         new_candidates = [_to_daily_candidate(c) for c in candidates if c.same_symbol is None or c.same_symbol.mode == "NEW_ENTRY"]
-        add_on_candidates = [_to_daily_candidate(c) for c in candidates if c.same_symbol is not None and c.same_symbol.mode == "ADD_ON"]
+        add_on_candidates = [_to_daily_candidate(c) for c in candidates if c.same_symbol is not None and c.same_symbol.mode in ("ADD_ON", "RE_ENTRY", "SCALE_BACK")]
 
         positions_hold: list[DailyReviewPositionHold] = []
         positions_update: list[DailyReviewPositionUpdate] = []
         positions_close: list[DailyReviewPositionClose] = []
         positions_exit_signal: list[DailyReviewPositionExitSignal] = []
         manage_payload = self._manage_cfg_payload_from_strategy(strategy)
+        trim_r_threshold_state = float(
+            (strategy.get("manage", {}) if isinstance(strategy, dict) else {}).get("trim_r_threshold", 2.0)
+        )
 
         for pos in positions:
             if pos.get("status") != "open":
@@ -494,6 +505,11 @@ class DailyReviewService:
                 continue
 
             if suggestion.action == "NO_ACTION":
+                trim_sug = (
+                    TrimSuggestion(r_threshold=trim_r_threshold_state, r_now=suggestion.r_now)
+                    if suggestion.r_now >= trim_r_threshold_state
+                    else None
+                )
                 positions_hold.append(
                     DailyReviewPositionHold(
                         position_id=position_id,
@@ -506,6 +522,7 @@ class DailyReviewService:
                         reason=suggestion.reason,
                         exhaustion_score=suggestion.exhaustion_score,
                         exhaustion_label=suggestion.exhaustion_label,
+                        trim_suggestion=trim_sug,
                     )
                 )
             elif suggestion.action == "MOVE_STOP_UP":

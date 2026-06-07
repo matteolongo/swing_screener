@@ -39,6 +39,21 @@ class PositionSignalAction(str, Enum):
 class PositionSignal(BaseModel):
     action: PositionSignalAction
     reason: str
+    trim_pct: float | None = None
+    trim_price: float | None = None
+    re_entry_zone: dict | None = None
+
+
+class KeyNumber(BaseModel):
+    label: str
+    value: str
+    sentiment: Literal["bullish", "bearish", "neutral"]
+
+
+class PredictionBullet(BaseModel):
+    direction: Literal["bullish", "bearish", "neutral"]
+    reason: str
+    reference: str
 
 
 class KeyNumber(BaseModel):
@@ -107,6 +122,9 @@ class SymbolIntelligenceRequest(BaseModel):
     # Sector ETF rotation context
     sector_rs: float | None = None
     sector_rotation_context: dict | None = None
+    # Earnings proximity
+    days_to_earnings: int | None = None
+    next_earnings_date: str | None = None
 
 
 class SymbolIntelligence(BaseModel):
