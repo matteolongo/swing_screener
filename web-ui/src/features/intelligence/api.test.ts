@@ -62,16 +62,28 @@ describe('candidateToPayload', () => {
     expect(payload!.days_open).toBe(12);
   });
 
-  it('position context does not overwrite candidate technical fields', () => {
+  it('position context does not overwrite stop/entry when position has no stopPrice', () => {
     const position = {
       entryPrice: 140,
       rNow: 1.5,
       daysOpen: 12,
     } as PositionWithMetrics;
     const payload = candidateToPayload({ ...baseCandidate, entry: 152, stop: 143 }, position);
-    expect(payload!.entry).toBe(152);
     expect(payload!.stop).toBe(143);
     expect(payload!.entry_price).toBe(140);
+  });
+
+  it('overrides stop and entry with position values when position has stopPrice', () => {
+    const position = {
+      entryPrice: 47.72,
+      stopPrice: 50.50,
+      rNow: 1.17,
+      daysOpen: 20,
+    } as PositionWithMetrics;
+    const payload = candidateToPayload({ ...baseCandidate, entry: 45.0, stop: 49.00 }, position);
+    expect(payload!.stop).toBe(50.50);
+    expect(payload!.entry).toBe(47.72);
+    expect(payload!.entry_price).toBe(47.72);
   });
 
   it('maps rr, atr, rel_strength and sector rotation fields from candidate fields', () => {

@@ -77,6 +77,10 @@ export function candidateToPayload(
   payload.days_to_earnings = candidate.daysToEarnings ?? null;
   if (position != null) {
     payload.entry_price = position.entryPrice;
+    payload.entry = position.entryPrice;
+    if (position.stopPrice != null) {
+      payload.stop = position.stopPrice;
+    }
     payload.r_now = position.rNow;
     payload.days_open = position.daysOpen;
   }

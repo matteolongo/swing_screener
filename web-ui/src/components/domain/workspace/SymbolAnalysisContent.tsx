@@ -149,6 +149,7 @@ export default function SymbolAnalysisContent({
         <AnalysisDecisionStrip
           ticker={ticker}
           candidate={candidate}
+          position={position}
           onPrepareOrder={() => onTabChange('order')}
           isWatched={isWatched}
           isPendingWatch={isWatchPending}
