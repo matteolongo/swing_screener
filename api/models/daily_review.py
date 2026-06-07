@@ -52,6 +52,8 @@ class DailyReviewPositionHold(BaseModel):
     days_open: int = 0
     time_stop_warning: bool = False
     reason: str = Field(..., description="Why no action is needed")
+    exhaustion_score: Optional[float] = None
+    exhaustion_label: Optional[str] = None
 
 
 class DailyReviewPositionUpdate(BaseModel):
@@ -66,6 +68,8 @@ class DailyReviewPositionUpdate(BaseModel):
     days_open: int = 0
     time_stop_warning: bool = False
     reason: str = Field(..., description="Why stop should be updated")
+    exhaustion_score: Optional[float] = None
+    exhaustion_label: Optional[str] = None
 
 
 class DailyReviewPositionClose(BaseModel):

@@ -2230,6 +2230,9 @@ export const messagesEn = {
       catalystScanDone: 'Catalyst scan complete — {{count}} themes found',
       catalystScanError: 'Catalyst scan failed',
       catalystScanLastRun: 'Last run',
+      acceptStop: 'Accept',
+      acceptStopDone: '✓',
+      earningsBadge: '⚠ {{days}}d',
     },
     keyboard: {
       hint: 'j/k navigate · Enter select',

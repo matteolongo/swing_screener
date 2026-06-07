@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCircle2, RefreshCw } from 'lucide-react';
 import AnalysisCanvasPanel from '@/components/domain/workspace/AnalysisCanvasPanel';
-import OpenPositionIntelligencePanel from '@/components/domain/positions/OpenPositionIntelligencePanel';
 import ScreenerInboxPanel from '@/components/domain/workspace/ScreenerInboxPanel';
 import ClosePositionModalForm from '@/components/domain/positions/ClosePositionModalForm';
 import UpdateStopModalForm from '@/components/domain/positions/UpdateStopModalForm';
@@ -13,8 +12,9 @@ import {
   parseUniverseFromStorage,
   SCREENER_UNIVERSE_STORAGE_KEY,
 } from '@/features/screener/universeStorage';
-import { useOrders, usePositions, useUpdateStopMutation, useClosePositionMutation } from '@/features/portfolio/hooks';
+import { useOrders, usePositions, useUpdateStopMutation, useClosePositionMutation, useOpenPositionsIntelligence, useEarningsProximity } from '@/features/portfolio/hooks';
 import type { ClosePositionRequest, Position, UpdateStopRequest } from '@/features/portfolio/types';
+import type { OpenPositionIntelligenceSummary } from '@/features/intelligence/types';
 import { pickTodayPriority } from '@/features/dailyReview/beginnerPriority';
 import { toBeginnerDecisionFromDailyCandidate } from '@/features/screener/beginnerDecision';
 import { useNavigate } from 'react-router-dom';
@@ -60,9 +60,10 @@ interface CloseItemProps {
   onAction?: () => void;
   isDone?: boolean;
   isFocused?: boolean;
+  intelligenceSummary?: OpenPositionIntelligenceSummary;
 }
 
-function CloseItem({ item, onClick, onAction, isDone, isFocused }: CloseItemProps) {
+function CloseItem({ item, onClick, onAction, isDone, isFocused, intelligenceSummary }: CloseItemProps) {
   return (
     <button
       type="button"
@@ -83,6 +84,8 @@ function CloseItem({ item, onClick, onAction, isDone, isFocused }: CloseItemProp
         {item.rNow >= 0 ? '+' : ''}{formatNumber(item.rNow, 2)}R
       </span>
       <TimeStopBadge daysOpen={item.daysOpen} rNow={item.rNow} show={item.timeStopWarning} />
+      <AiSignalBadge summary={intelligenceSummary} />
+      <EarningsBadge ticker={item.ticker} />
       <span className="text-xs text-gray-500 dark:text-gray-400 truncate flex-1">{item.reason}</span>
       {isDone ? (
         <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
@@ -105,11 +108,13 @@ interface UpdateStopItemProps {
   item: DailyReviewPositionUpdate;
   onClick: (ticker: string) => void;
   onAction?: () => void;
+  onAccept?: (positionId: string, stopSuggested: number, reason: string) => void;
   isDone?: boolean;
+  isAccepting?: boolean;
   isFocused?: boolean;
 }
 
-function UpdateStopItem({ item, onClick, onAction, isDone, isFocused }: UpdateStopItemProps) {
+function UpdateStopItem({ item, onClick, onAction, onAccept, isDone, isAccepting, isFocused }: UpdateStopItemProps) {
   return (
     <button
       type="button"
@@ -130,9 +135,36 @@ function UpdateStopItem({ item, onClick, onAction, isDone, isFocused }: UpdateSt
         {item.rNow >= 0 ? '+' : ''}{formatNumber(item.rNow, 2)}R
       </span>
       <TimeStopBadge daysOpen={item.daysOpen} rNow={item.rNow} show={item.timeStopWarning} />
+      <ExhaustionBadge score={item.exhaustionScore} label={item.exhaustionLabel} />
+      <EarningsBadge ticker={item.ticker} />
       <span className="text-xs text-gray-500 dark:text-gray-400 truncate flex-1">{item.reason}</span>
       {isDone ? (
-        <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+        <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 shrink-0">
+          {t('todayPage.actionList.acceptStopDone')}
+        </span>
+      ) : onAccept ? (
+        <span
+          role="button"
+          tabIndex={0}
+          onClick={(e) => {
+            e.stopPropagation();
+            onAccept(item.positionId, item.stopSuggested, item.reason);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.stopPropagation();
+              onAccept(item.positionId, item.stopSuggested, item.reason);
+            }
+          }}
+          className={cn(
+            'text-xs px-2 py-0.5 rounded shrink-0 cursor-pointer',
+            'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+            'hover:bg-amber-200 dark:hover:bg-amber-800/40',
+            isAccepting && 'opacity-50 cursor-not-allowed',
+          )}
+        >
+          {isAccepting ? '…' : t('todayPage.actionList.acceptStop')}
+        </span>
       ) : onAction ? (
         <span
           role="button"
@@ -223,13 +255,63 @@ function CandidateItem({ item, isAddOn, onClick, isFocused }: CandidateItemProps
   );
 }
 
+function EarningsBadge({ ticker }: { ticker: string }) {
+  const { data } = useEarningsProximity(ticker);
+  if (!data?.warning || data.daysUntil == null) return null;
+  return (
+    <span
+      className="text-xs font-medium px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 shrink-0"
+      title={`Earnings in ${data.daysUntil} day${data.daysUntil === 1 ? '' : 's'}`}
+    >
+      {t('todayPage.actionList.earningsBadge', { days: String(data.daysUntil) })}
+    </span>
+  );
+}
+
+function ExhaustionBadge({ score, label }: { score: number | null; label: string | null }) {
+  if (score == null || label == null) return null;
+  const emoji = label === 'exit' ? '🔴' : label === 'watch' ? '🟡' : '🟢';
+  const colorClass =
+    label === 'exit'
+      ? 'text-rose-700 dark:text-rose-400'
+      : label === 'watch'
+      ? 'text-amber-700 dark:text-amber-400'
+      : 'text-emerald-700 dark:text-emerald-400';
+  return (
+    <span
+      className={`text-xs font-medium tabular-nums shrink-0 ${colorClass}`}
+      title={`Exhaustion: ${score.toFixed(1)}/10`}
+    >
+      {emoji} {score.toFixed(1)}
+    </span>
+  );
+}
+
+function AiSignalBadge({ summary }: { summary: OpenPositionIntelligenceSummary | undefined }) {
+  const posSignal = summary?.intelligence?.positionSignal;
+  if (!posSignal) return null;
+  const colorClass =
+    posSignal.action === 'EXIT'
+      ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+      : posSignal.action === 'TRIM'
+      ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
+      : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
+  const labelMap: Record<string, string> = { HOLD: 'Hold', TRIM: 'Trim', EXIT: 'Exit' };
+  return (
+    <span className={`text-xs font-medium px-1.5 py-0.5 rounded shrink-0 ${colorClass}`}>
+      {labelMap[posSignal.action] ?? posSignal.action}
+    </span>
+  );
+}
+
 interface HoldItemProps {
   item: DailyReviewPositionHold;
   onClick: (ticker: string) => void;
   isFocused?: boolean;
+  intelligenceSummary?: OpenPositionIntelligenceSummary;
 }
 
-function HoldItem({ item, onClick, isFocused }: HoldItemProps) {
+function HoldItem({ item, onClick, isFocused, intelligenceSummary }: HoldItemProps) {
   return (
     <button
       type="button"
@@ -249,6 +331,9 @@ function HoldItem({ item, onClick, isFocused }: HoldItemProps) {
         {item.rNow >= 0 ? '+' : ''}{formatNumber(item.rNow, 2)}R
       </span>
       <TimeStopBadge daysOpen={item.daysOpen} rNow={item.rNow} show={item.timeStopWarning} />
+      <ExhaustionBadge score={item.exhaustionScore} label={item.exhaustionLabel} />
+      <AiSignalBadge summary={intelligenceSummary} />
+      <EarningsBadge ticker={item.ticker} />
       <span className="text-xs text-gray-400 dark:text-gray-500 truncate flex-1">{item.reason}</span>
     </button>
   );
@@ -258,9 +343,10 @@ interface ExitSignalItemProps {
   item: DailyReviewPositionExitSignal;
   onClick: (ticker: string) => void;
   isFocused?: boolean;
+  intelligenceSummary?: OpenPositionIntelligenceSummary;
 }
 
-function ExitSignalItem({ item, onClick, isFocused }: ExitSignalItemProps) {
+function ExitSignalItem({ item, onClick, isFocused, intelligenceSummary }: ExitSignalItemProps) {
   return (
     <button
       type="button"
@@ -279,6 +365,8 @@ function ExitSignalItem({ item, onClick, isFocused }: ExitSignalItemProps) {
       <span className={cn('text-xs font-semibold tabular-nums', item.rNow >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400')}>
         {item.rNow >= 0 ? '+' : ''}{formatNumber(item.rNow, 2)}R
       </span>
+      <AiSignalBadge summary={intelligenceSummary} />
+      <EarningsBadge ticker={item.ticker} />
       <span className="text-xs text-gray-500 dark:text-gray-400 truncate flex-1">{item.reason}</span>
     </button>
   );
@@ -478,6 +566,13 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
   const selectedUniverse = parseUniverseFromStorage(localStorage.getItem(SCREENER_UNIVERSE_STORAGE_KEY));
   const { data: review, isLoading, error, refetch, isFetching } = useDailyReview(200, selectedUniverse);
 
+  // Intelligence summaries for inline AI signal badges
+  const { data: intelligenceSummaries } = useOpenPositionsIntelligence();
+  const intelligenceByTicker = useMemo(
+    () => new Map(intelligenceSummaries?.map((s) => [s.ticker, s]) ?? []),
+    [intelligenceSummaries],
+  );
+
   // Open positions lookup for modal actions
   const openPositionsQuery = usePositions('open');
   const positionById = useMemo(
@@ -487,6 +582,20 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
 
   // Done state after executing actions
   const [doneIds, setDoneIds] = useState<Set<string>>(() => new Set());
+
+  // 1-click accept stop state
+  const acceptStopMutation = useUpdateStopMutation();
+  const [acceptedStops, setAcceptedStops] = useState<Set<string>>(new Set());
+
+  const handleAcceptStop = useCallback(
+    (positionId: string, stopSuggested: number, reason: string) => {
+      acceptStopMutation.mutate(
+        { positionId, request: { newStop: stopSuggested, reason } },
+        { onSuccess: () => setAcceptedStops((prev) => new Set([...prev, positionId])) },
+      );
+    },
+    [acceptStopMutation],
+  );
 
   // Modal targets
   const [updateStopTarget, setUpdateStopTarget] = useState<Position | null>(null);
@@ -668,6 +777,7 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
                     onAction={position ? () => setCloseTarget(position) : undefined}
                     isDone={doneIds.has(item.positionId)}
                     isFocused={focusedIndex === idx}
+                    intelligenceSummary={intelligenceByTicker.get(item.ticker)}
                   />
                 );
               })}
@@ -680,7 +790,14 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
                     item={item}
                     onClick={handleItemClick}
                     onAction={position ? () => setUpdateStopTarget(position) : undefined}
-                    isDone={doneIds.has(item.positionId)}
+                    onAccept={(positionId, stopSuggested, reason) =>
+                      handleAcceptStop(positionId, stopSuggested, reason)
+                    }
+                    isDone={acceptedStops.has(item.positionId) || doneIds.has(item.positionId)}
+                    isAccepting={
+                      acceptStopMutation.isPending &&
+                      acceptStopMutation.variables?.positionId === item.positionId
+                    }
                     isFocused={focusedIndex === idx}
                   />
                 );
@@ -704,6 +821,7 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
                     item={item}
                     onClick={handleItemClick}
                     isFocused={focusedIndex === idx}
+                    intelligenceSummary={intelligenceByTicker.get(item.ticker)}
                   />
                 );
               })}
@@ -812,6 +930,7 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
                       item={item}
                       onClick={handleItemClick}
                       isFocused={focusedIndex === idx}
+                      intelligenceSummary={intelligenceByTicker.get(item.ticker)}
                     />
                   );
                 })}
@@ -924,9 +1043,6 @@ export default function Today() {
                 <div className="px-3 pt-3">
                   <TodayPrioritySection onTickerSelect={handleTickerSelect} onSwitchToScreener={() => setLeftTab('screener')} />
                   <PendingOrdersBadge />
-                </div>
-                <div className="px-3">
-                  <OpenPositionIntelligencePanel onTickerSelect={handleTickerSelect} />
                 </div>
                 <TodayActionList onTickerSelect={handleTickerSelect} />
               </>

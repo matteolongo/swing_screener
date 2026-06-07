@@ -33,6 +33,8 @@ function makeUpdateItem(ticker = 'MSFT'): DailyReviewPositionUpdate {
     daysOpen: 10,
     timeStopWarning: false,
     reason: 'Trail: R=1.3 >= 1.0',
+    exhaustionScore: null,
+    exhaustionLabel: null,
   };
 }
 
