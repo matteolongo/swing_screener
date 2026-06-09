@@ -949,6 +949,75 @@ def test_screener_async_mode_returns_job_and_status(monkeypatch):
     assert final_payload["result"]["total_screened"] == 0
 
 
+def test_screener_async_mode_records_history(monkeypatch):
+    from api.dependencies import get_screener_history_repo
+    from api.models.screener import ScreenerCandidate
+
+    monkeypatch.setenv("SCREENER_RUN_MODE", "async")
+
+    candidate = ScreenerCandidate(
+        ticker="AAA",
+        close=20.0,
+        sma_20=19.0,
+        sma_50=18.0,
+        sma_200=15.0,
+        atr=1.0,
+        momentum_6m=0.1,
+        momentum_12m=0.2,
+        rel_strength=0.05,
+        score=0.5,
+        confidence=80.0,
+        rank=1,
+    )
+
+    def fake_run(self, request, strategy_override=None):
+        return ScreenerResponse(
+            candidates=[candidate],
+            asof_date="2026-02-26",
+            total_screened=1,
+            data_freshness="final_close",
+            warnings=[],
+        )
+
+    monkeypatch.setattr(screener_service.ScreenerService, "run_screener", fake_run)
+
+    recorded: list[tuple[str, list[str]]] = []
+
+    class StubHistoryRepo:
+        def record_run(self, asof_date, tickers):
+            recorded.append((asof_date, list(tickers)))
+
+    app.dependency_overrides[get_screener_history_repo] = lambda: StubHistoryRepo()
+    try:
+        client = TestClient(app)
+        launch_res = client.post("/api/screener/run", json={"universe": "broad_market_stocks", "top": 20})
+        assert launch_res.status_code == 202
+        job_id = launch_res.json()["job_id"]
+
+        for _ in range(40):
+            payload = client.get(f"/api/screener/run/{job_id}").json()
+            if payload["status"] in {"completed", "error"}:
+                break
+            time.sleep(0.05)
+
+        assert payload["status"] == "completed"
+        assert recorded == [("2026-02-26", ["AAA"])]
+    finally:
+        app.dependency_overrides.pop(get_screener_history_repo, None)
+
+
+def test_screener_run_endpoint_does_not_block_event_loop():
+    """The sync screener run takes minutes; the handler must be a plain def so
+    FastAPI executes it in the threadpool instead of blocking the event loop."""
+    import inspect
+
+    route = next(
+        r for r in app.routes
+        if getattr(r, "path", None) == "/api/screener/run" and "POST" in getattr(r, "methods", set())
+    )
+    assert not inspect.iscoroutinefunction(route.endpoint)
+
+
 def test_screener_universes_route_removed_in_favor_of_canonical_universes():
     client = TestClient(app)
 

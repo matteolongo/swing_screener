@@ -30,27 +30,34 @@ def _resolve_screener_run_mode() -> str:
     return "async" if os.getenv("DYNO") else "sync"
 
 
-@router.post(
-    "/run",
-    response_model=ScreenerResponse,
-    responses={202: {"model": ScreenerRunLaunchResponse}},
-)
-async def run_screener(
-    request: ScreenerRequest,
-    service: ScreenerService = Depends(get_screener_service),
-    history_repo: ScreenerHistoryRepository = Depends(get_screener_history_repo),
-):
-    """Run screener sync or launch async job depending on environment mode."""
-    if _resolve_screener_run_mode() == "async":
-        launch = service.start_run_async(request)
-        return JSONResponse(status_code=202, content=launch.model_dump())
-    result = service.run_screener(request)
+def _record_history(history_repo: ScreenerHistoryRepository, result: ScreenerResponse) -> None:
     try:
         tickers = [c.ticker for c in result.candidates]
         if tickers:
             history_repo.record_run(result.asof_date, tickers)
     except Exception:
         pass  # Never fail a screener run due to history recording
+
+
+@router.post(
+    "/run",
+    response_model=ScreenerResponse,
+    responses={202: {"model": ScreenerRunLaunchResponse}},
+)
+def run_screener(
+    request: ScreenerRequest,
+    service: ScreenerService = Depends(get_screener_service),
+    history_repo: ScreenerHistoryRepository = Depends(get_screener_history_repo),
+):
+    """Run screener sync (in the threadpool) or launch async job depending on mode."""
+    if _resolve_screener_run_mode() == "async":
+        launch = service.start_run_async(
+            request,
+            on_complete=lambda result: _record_history(history_repo, result),
+        )
+        return JSONResponse(status_code=202, content=launch.model_dump())
+    result = service.run_screener(request)
+    _record_history(history_repo, result)
     return result
 
 
