@@ -49,12 +49,30 @@ def _strategy_service():
     return StrategyService(strategy_repo=StrategyRepository())
 
 
+def _orders_service():
+    from api.repositories.orders_repo import OrdersRepository
+    from api.repositories.positions_repo import PositionsRepository
+    from api.services.orders_service import OrdersService
+    from api.utils.files import get_today_str, write_json_file
+    orders_path = _data_dir() / "orders.json"
+    if not orders_path.exists():
+        write_json_file(orders_path, {"asof": get_today_str(), "orders": []})
+    positions_path = _data_dir() / "positions.json"
+    if not positions_path.exists():
+        write_json_file(positions_path, {"asof": get_today_str(), "positions": []})
+    return OrdersService(
+        orders_repo=OrdersRepository(orders_path),
+        positions_repo=PositionsRepository(positions_path),
+    )
+
+
 def _screener_service():
     from api.repositories.strategy_repo import StrategyRepository
     from api.services.screener_service import ScreenerService
     return ScreenerService(
         strategy_repo=StrategyRepository(),
         portfolio_service=_portfolio_service(),
+        orders_service=_orders_service(),
     )
 
 

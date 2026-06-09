@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 from types import SimpleNamespace
 
 from api.main import app
-from api.dependencies import get_portfolio_service
+from api.dependencies import get_orders_service, get_portfolio_service
 import api.services.screener_service as screener_service
 from api.models.screener import ScreenerResponse
 from swing_screener.data.source_health import DataSourceHealth
@@ -699,6 +699,94 @@ def test_screener_returns_same_symbol_add_on_metadata(monkeypatch):
         assert body["candidates"][0]["recommendation"]["risk"]["stop"] == 19.63
     finally:
         app.dependency_overrides.pop(get_portfolio_service, None)
+
+
+def test_screener_pending_entry_order_blocks_add_on(monkeypatch):
+    ohlcv = _ohlcv_with_spy()
+    mock_provider = _create_mock_provider(ohlcv)
+
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None):
+        idx = ["REP.MC"]
+        data = {
+            "atr14": [0.8],
+            "mom_6m": [0.15],
+            "mom_12m": [0.25],
+            "rs_6m": [0.05],
+            "score": [0.994],
+            "confidence": [92.7],
+            "last": [23.0],
+            "ma20_level": [22.0],
+            "dist_sma50_pct": [9.5],
+            "dist_sma200_pct": [22.0],
+            "rank": [1],
+            "signal": ["breakout"],
+            "entry": [22.83],
+            "stop": [21.62],
+            "shares": [5],
+            "position_value": [114.15],
+            "realized_risk": [6.05],
+        }
+        return pd.DataFrame(data, index=idx)
+
+    class StubPortfolioService:
+        def list_positions(self, status=None):
+            del status
+            return SimpleNamespace(
+                positions=[
+                    SimpleNamespace(
+                        ticker="REP.MC",
+                        status="open",
+                        position_id="POS-REP-1",
+                        entry_price=19.63,
+                        current_price=23.0,
+                        stop_price=19.63,
+                        shares=5,
+                        current_value=115.0,
+                    )
+                ]
+            )
+
+        def suggest_position_stop(self, position_id):
+            del position_id
+            return SimpleNamespace(action="NO_ACTION")
+
+    class StubOrdersService:
+        def list_local_orders(self, status=None):
+            del status
+            return {
+                "orders": [
+                    {
+                        "ticker": "REP.MC",
+                        "status": "pending",
+                        "order_kind": "entry",
+                        "position_id": None,
+                    }
+                ]
+            }
+
+    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
+    monkeypatch.setattr(
+        screener_service,
+        "get_multiple_ticker_info",
+        lambda tickers: {"REP.MC": {"name": "Repsol", "sector": "Energy", "currency": "EUR"}},
+    )
+
+    app.dependency_overrides[get_portfolio_service] = lambda: StubPortfolioService()
+    app.dependency_overrides[get_orders_service] = lambda: StubOrdersService()
+    try:
+        client = TestClient(app)
+        res = client.post("/api/screener/run", json={"universe": "broad_market_stocks", "top": 20})
+        assert res.status_code == 200
+
+        body = res.json()
+        assert body["same_symbol_add_on_count"] == 0
+        candidate = body["candidates"][0]
+        assert candidate["same_symbol"]["pending_entry_exists"] is True
+        assert candidate["same_symbol"]["mode"] == "MANAGE_ONLY"
+    finally:
+        app.dependency_overrides.pop(get_portfolio_service, None)
+        app.dependency_overrides.pop(get_orders_service, None)
 
 
 def test_screener_invalid_currency_rejected():
