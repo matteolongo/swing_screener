@@ -332,7 +332,7 @@ export default function ScreenerInboxPanel() {
 
       <div className="px-3 pt-3">
         <OpenPositionIntelligencePanel
-          onTickerSelect={(ticker) => setSelectedTicker(ticker, 'screener')}
+          onTickerSelect={(ticker) => setSelectedTicker(ticker, 'portfolio')}
         />
       </div>
 
