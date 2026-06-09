@@ -52,11 +52,17 @@ export async function runScreener(request: ScreenerRequest): Promise<ScreenerRes
   return transformScreenerResponse(apiResponse);
 }
 
-async function pollScreenerRunResult(jobId: string): Promise<ScreenerResponse> {
-  const maxAttempts = 120;
-  const delayMs = 1000;
+// Cold-cache runs on large universes can take well over two minutes, so the
+// polling budget is generous; the delay backs off to keep request volume low.
+const POLL_BUDGET_MS = 30 * 60 * 1000;
+const POLL_INITIAL_DELAY_MS = 1000;
+const POLL_MAX_DELAY_MS = 5000;
 
-  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+async function pollScreenerRunResult(jobId: string): Promise<ScreenerResponse> {
+  const startedAt = Date.now();
+  let delayMs = POLL_INITIAL_DELAY_MS;
+
+  while (Date.now() - startedAt < POLL_BUDGET_MS) {
     const res = await fetch(apiUrl(API_ENDPOINTS.screenerRunStatus(jobId)));
     if (!res.ok) {
       const error = await res.json();
@@ -72,6 +78,7 @@ async function pollScreenerRunResult(jobId: string): Promise<ScreenerResponse> {
     }
 
     await new Promise((resolve) => setTimeout(resolve, delayMs));
+    delayMs = Math.min(delayMs * 1.5, POLL_MAX_DELAY_MS);
   }
 
   throw new Error('Screener run timed out. Please try again.');
