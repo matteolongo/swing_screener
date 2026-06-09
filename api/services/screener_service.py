@@ -1115,7 +1115,7 @@ class ScreenerService:
                     closed_positions=portfolio_closed,
                     reentry_lookback_days=reentry_lookback,
                 )
-                if same_symbol.mode in ("ADD_ON", "SCALE_BACK", "RE_ENTRY"):
+                if same_symbol.mode in ("ADD_ON", "SCALE_BACK"):
                     same_symbol_add_on_count += 1
                 if same_symbol.mode == "MANAGE_ONLY":
                     if enriched_candidate is None:
