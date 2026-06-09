@@ -305,6 +305,77 @@ class TestYfinanceProvider:
         assert len(download_called) >= 1
         assert not df1.empty
         
+    def test_fetch_ohlcv_same_day_reuses_fresh_cache(self, monkeypatch, tmp_path):
+        """Same-day requests should reuse a cache file written within the TTL."""
+        cache_dir = tmp_path / "test_cache"
+        provider = YfinanceProvider(cache_dir=str(cache_dir))
+
+        download_calls = []
+
+        def fake_download(*args, **kwargs):
+            download_calls.append(True)
+            return _mock_ohlcv_frame(["AAPL"])
+
+        monkeypatch.setattr(yfinance_provider_module.yf, "download", fake_download)
+
+        today = datetime.now().strftime("%Y-%m-%d")
+        provider.fetch_ohlcv(["AAPL"], "2026-01-01", today)
+        first_count = len(download_calls)
+
+        df2 = provider.fetch_ohlcv(["AAPL"], "2026-01-01", today)
+
+        assert len(download_calls) == first_count
+        assert not df2.empty
+
+    def test_fetch_ohlcv_same_day_refreshes_stale_cache(self, monkeypatch, tmp_path):
+        """Same-day requests should re-download once the cached file exceeds the TTL."""
+        import os
+        import time
+
+        cache_dir = tmp_path / "test_cache"
+        provider = YfinanceProvider(cache_dir=str(cache_dir))
+
+        download_calls = []
+
+        def fake_download(*args, **kwargs):
+            download_calls.append(True)
+            return _mock_ohlcv_frame(["AAPL"])
+
+        monkeypatch.setattr(yfinance_provider_module.yf, "download", fake_download)
+
+        today = datetime.now().strftime("%Y-%m-%d")
+        provider.fetch_ohlcv(["AAPL"], "2026-01-01", today)
+        first_count = len(download_calls)
+
+        # Age the cache file beyond the same-day TTL
+        stale = time.time() - (provider.same_day_cache_ttl_minutes * 60 + 60)
+        for cache_file in cache_dir.glob("*.parquet"):
+            os.utime(cache_file, (stale, stale))
+
+        provider.fetch_ohlcv(["AAPL"], "2026-01-01", today)
+
+        assert len(download_calls) > first_count
+
+    def test_fetch_ohlcv_force_refresh_bypasses_fresh_cache(self, monkeypatch, tmp_path):
+        """Explicit force_refresh must re-download even when the cache is fresh."""
+        cache_dir = tmp_path / "test_cache"
+        provider = YfinanceProvider(cache_dir=str(cache_dir))
+
+        download_calls = []
+
+        def fake_download(*args, **kwargs):
+            download_calls.append(True)
+            return _mock_ohlcv_frame(["AAPL"])
+
+        monkeypatch.setattr(yfinance_provider_module.yf, "download", fake_download)
+
+        provider.fetch_ohlcv(["AAPL"], "2026-01-01", "2026-01-31")
+        first_count = len(download_calls)
+
+        provider.fetch_ohlcv(["AAPL"], "2026-01-01", "2026-01-31", force_refresh=True)
+
+        assert len(download_calls) > first_count
+
     def test_fetch_ohlcv_keeps_cache_for_historical_end_date(self, monkeypatch, tmp_path):
         """Historical windows should keep normal cache behavior."""
         cache_dir = tmp_path / "test_cache"
