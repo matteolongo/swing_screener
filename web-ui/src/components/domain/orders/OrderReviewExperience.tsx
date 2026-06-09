@@ -319,8 +319,8 @@ export default function OrderReviewExperience({
         limitPrice: values.limitPrice,
         stopPrice: values.stopPrice,
         orderKind: 'entry',
-        positionId: context.sameSymbol?.mode === 'ADD_ON' ? (context.positionId ?? context.sameSymbol.positionId) : undefined,
-        entryMode: context.sameSymbol?.mode === 'ADD_ON' ? 'ADD_ON' : 'NEW_ENTRY',
+        positionId: (context.sameSymbol?.mode === 'ADD_ON' || context.sameSymbol?.mode === 'SCALE_BACK') ? (context.positionId ?? context.sameSymbol.positionId) : undefined,
+        entryMode: context.sameSymbol?.mode === 'ADD_ON' || context.sameSymbol?.mode === 'SCALE_BACK' ? 'ADD_ON' : 'NEW_ENTRY',
         notes: values.notes?.trim() ?? '',
         thesis: tradeThesis.trim() || undefined,
       });

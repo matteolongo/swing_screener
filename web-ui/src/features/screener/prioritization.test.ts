@@ -87,12 +87,14 @@ describe('prioritizeCandidates', () => {
 });
 
 describe('filterOutAddOns', () => {
-  it('filterOutAddOns removes ADD_ON candidates and keeps others', () => {
+  it('removes ADD_ON, RE_ENTRY, and SCALE_BACK candidates; keeps NEW_ENTRY and no-context', () => {
     const addOn = { ticker: 'BESI.AS', sameSymbol: { mode: 'ADD_ON' } } as unknown as ScreenerCandidate;
+    const reEntry = { ticker: 'ASML.AS', sameSymbol: { mode: 'RE_ENTRY' } } as unknown as ScreenerCandidate;
+    const scaleBack = { ticker: 'ADYEN.AS', sameSymbol: { mode: 'SCALE_BACK' } } as unknown as ScreenerCandidate;
     const fresh = { ticker: 'CRBN.AS', sameSymbol: { mode: 'NEW_ENTRY' } } as unknown as ScreenerCandidate;
     const noContext = { ticker: 'MT.AS' } as unknown as ScreenerCandidate;
 
-    const result = filterOutAddOns([addOn, fresh, noContext]);
+    const result = filterOutAddOns([addOn, reEntry, scaleBack, fresh, noContext]);
     expect(result).toHaveLength(2);
     expect(result.map((c) => c.ticker)).toEqual(['CRBN.AS', 'MT.AS']);
   });

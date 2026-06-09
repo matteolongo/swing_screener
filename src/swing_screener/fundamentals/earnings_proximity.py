@@ -40,7 +40,6 @@ def _fetch_via_finnhub(ticker: str, api_key: str, asof_date: dt.date) -> int | N
         items = resp.json().get("earningsCalendar") or []
     except Exception as exc:
         if _is_auth_error(exc):
-            logger.warning("Finnhub earnings lookup unauthorized; disabling Finnhub earnings lookups for this batch")
             return _AUTH_FAILED
         logger.debug("Finnhub earnings lookup failed for %s: %s", ticker, exc)
         return _UNAVAILABLE
@@ -88,10 +87,17 @@ def fetch_next_earnings_days(
     result: dict[str, int | None] = {}
     finnhub_auth_failed = threading.Event()
 
+    _auth_warn_lock = threading.Lock()
+
     def _fetch_one(ticker: str) -> tuple[str, int | None]:
         if finnhub_api_key and not finnhub_auth_failed.is_set():
             days = _fetch_via_finnhub(ticker, finnhub_api_key, asof_date)
             if days is _AUTH_FAILED:
+                with _auth_warn_lock:
+                    if not finnhub_auth_failed.is_set():
+                        logger.warning(
+                            "Finnhub earnings lookup unauthorized; disabling Finnhub earnings lookups for this batch"
+                        )
                 finnhub_auth_failed.set()
                 days = _fetch_via_yfinance(ticker, asof_date)
             if days is _UNAVAILABLE:

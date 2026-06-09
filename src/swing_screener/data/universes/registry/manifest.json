@@ -110,6 +110,17 @@
     "stale_after_days": 180
   },
   {
+    "id": "italy_ftse_mib",
+    "description": "Euronext Milan FTSE MIB constituents",
+    "kind": "index",
+    "benchmark": "FTSEMIB.MI",
+    "currencies": ["EUR"],
+    "source": "manual",
+    "source_asof": "2025-08-01",
+    "last_reviewed_at": "2026-06-09",
+    "stale_after_days": 100
+  },
+  {
     "id": "global_proxy_stocks",
     "description": "ADRs, US listings, and OTC proxies for non-local exposure",
     "kind": "curated",

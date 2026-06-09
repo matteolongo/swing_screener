@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import Badge from '@/components/common/Badge';
 import Card from '@/components/common/Card';
@@ -246,11 +246,16 @@ export default function ScreenerInboxPanel() {
     }
   }, [displayCandidates, selectedTicker, selectedTickerSource, setSelectedTicker]);
 
+  const handleRunScreenerRef = useRef(handleRunScreener);
+  useEffect(() => {
+    handleRunScreenerRef.current = handleRunScreener;
+  });
+
   useEffect(() => {
     if (runScreenerTrigger > 0) {
-      handleRunScreener();
+      handleRunScreenerRef.current();
     }
-  }, [handleRunScreener, runScreenerTrigger]);
+  }, [runScreenerTrigger]);
 
   const handleSelectCandidate = useCallback(
     (ticker: string, tab: WorkspaceAnalysisTab) => {

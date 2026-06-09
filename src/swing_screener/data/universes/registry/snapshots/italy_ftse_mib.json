@@ -1,0 +1,300 @@
+{
+  "id": "italy_ftse_mib",
+  "kind": "index",
+  "description": "Euronext Milan FTSE MIB constituents",
+  "benchmark": "FTSEMIB.MI",
+  "source": "manual",
+  "source_asof": "2025-08-01",
+  "last_reviewed_at": "2026-06-09",
+  "stale_after_days": 100,
+  "rules": {
+    "exchange_mics": [
+      "XMIL"
+    ],
+    "currencies": [
+      "EUR"
+    ]
+  },
+  "constituents": [
+    {
+      "symbol": "A2A.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "A2A",
+      "source_symbol": "A2A"
+    },
+    {
+      "symbol": "AMP.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "AMPLIFON",
+      "source_symbol": "AMP"
+    },
+    {
+      "symbol": "AZM.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "AZIMUT HOLDING",
+      "source_symbol": "AZM"
+    },
+    {
+      "symbol": "BAMI.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "BANCO BPM",
+      "source_symbol": "BAMI"
+    },
+    {
+      "symbol": "BMED.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "BANCA MEDIOLANUM",
+      "source_symbol": "BMED"
+    },
+    {
+      "symbol": "BMPS.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "BANCA MONTE DEI PASCHI DI SIENA",
+      "source_symbol": "BMPS"
+    },
+    {
+      "symbol": "BPE.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "BPER BANCA",
+      "source_symbol": "BPE"
+    },
+    {
+      "symbol": "BUZZI.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "BUZZI UNICEM",
+      "source_symbol": "BUZZI"
+    },
+    {
+      "symbol": "CNH.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "CNH INDUSTRIAL",
+      "source_symbol": "CNH"
+    },
+    {
+      "symbol": "CPR.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "DAVIDE CAMPARI-MILANO",
+      "source_symbol": "CPR"
+    },
+    {
+      "symbol": "DIA.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "DIASORIN",
+      "source_symbol": "DIA"
+    },
+    {
+      "symbol": "DLGI.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "DE' LONGHI",
+      "source_symbol": "DLGI"
+    },
+    {
+      "symbol": "ENEL.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "ENEL",
+      "source_symbol": "ENEL"
+    },
+    {
+      "symbol": "ENI.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "ENI",
+      "source_symbol": "ENI"
+    },
+    {
+      "symbol": "ERG.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "ERG",
+      "source_symbol": "ERG"
+    },
+    {
+      "symbol": "FBK.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "FINECOBANK",
+      "source_symbol": "FBK"
+    },
+    {
+      "symbol": "G.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "ASSICURAZIONI GENERALI",
+      "source_symbol": "G"
+    },
+    {
+      "symbol": "HER.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "HERA",
+      "source_symbol": "HER"
+    },
+    {
+      "symbol": "IG.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "ITALGAS",
+      "source_symbol": "IG"
+    },
+    {
+      "symbol": "INW.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "INWIT",
+      "source_symbol": "INW"
+    },
+    {
+      "symbol": "IP.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "INTERPUMP GROUP",
+      "source_symbol": "IP"
+    },
+    {
+      "symbol": "ISP.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "INTESA SANPAOLO",
+      "source_symbol": "ISP"
+    },
+    {
+      "symbol": "LDO.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "LEONARDO",
+      "source_symbol": "LDO"
+    },
+    {
+      "symbol": "MB.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "MEDIOBANCA",
+      "source_symbol": "MB"
+    },
+    {
+      "symbol": "MONC.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "MONCLER",
+      "source_symbol": "MONC"
+    },
+    {
+      "symbol": "NEXI.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "NEXI",
+      "source_symbol": "NEXI"
+    },
+    {
+      "symbol": "PIRC.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "PIRELLI & C.",
+      "source_symbol": "PIRC"
+    },
+    {
+      "symbol": "PRY.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "PRYSMIAN",
+      "source_symbol": "PRY"
+    },
+    {
+      "symbol": "PST.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "POSTE ITALIANE",
+      "source_symbol": "PST"
+    },
+    {
+      "symbol": "RACE.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "FERRARI",
+      "source_symbol": "RACE"
+    },
+    {
+      "symbol": "REC.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "RECORDATI",
+      "source_symbol": "REC"
+    },
+    {
+      "symbol": "SPM.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "SAIPEM",
+      "source_symbol": "SPM"
+    },
+    {
+      "symbol": "SRG.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "SNAM",
+      "source_symbol": "SRG"
+    },
+    {
+      "symbol": "STLAM.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "STELLANTIS",
+      "source_symbol": "STLAM"
+    },
+    {
+      "symbol": "STM.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "STMICROELECTRONICS",
+      "source_symbol": "STM"
+    },
+    {
+      "symbol": "TEN.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "TENARIS",
+      "source_symbol": "TEN"
+    },
+    {
+      "symbol": "TIT.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "TELECOM ITALIA",
+      "source_symbol": "TIT"
+    },
+    {
+      "symbol": "TRN.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "TERNA",
+      "source_symbol": "TRN"
+    },
+    {
+      "symbol": "UCG.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "UNICREDIT",
+      "source_symbol": "UCG"
+    },
+    {
+      "symbol": "UNI.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "UNIPOL GRUPPO",
+      "source_symbol": "UNI"
+    }
+  ]
+}

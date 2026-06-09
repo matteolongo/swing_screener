@@ -118,15 +118,20 @@ class ScreenerRunManager:
             job = self._parse_job_payload(payload, now=now)
             if job is None:
                 continue
+            corrected = False
             if job.status not in {"queued", "running", "completed", "error"}:
                 job.status = "error"
                 job.error = "Recovered invalid job status from disk."
                 job.updated_at = now
+                corrected = True
             if job.status in {"queued", "running"}:
                 job.status = "error"
                 job.result = None
                 job.error = "Run interrupted by API restart."
                 job.updated_at = now
+                corrected = True
+            if corrected:
+                self._write_job_to_disk(job)
             loaded.append(job)
 
         loaded.sort(key=lambda item: item.updated_at)
