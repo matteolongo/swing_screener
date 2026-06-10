@@ -1,5 +1,24 @@
 [
   {
+    "symbol": "A2A.MI",
+    "exchange_mic": "XMIL",
+    "country_code": "IT",
+    "currency": "EUR",
+    "timezone": "Europe/Rome",
+    "provider_symbol_map": {
+      "yahoo_finance": "A2A.MI",
+      "stooq": "a2a.mi.it"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "manual",
+    "source_asof": "2026-06-10",
+    "last_reviewed_at": "2026-06-10",
+    "instrument_type": "equity"
+  },
+  {
     "symbol": "AALB.AS",
     "exchange_mic": "XAMS",
     "country_code": "NL",
@@ -452,6 +471,25 @@
     "instrument_type": "equity"
   },
   {
+    "symbol": "AMP.MI",
+    "exchange_mic": "XMIL",
+    "country_code": "IT",
+    "currency": "EUR",
+    "timezone": "Europe/Rome",
+    "provider_symbol_map": {
+      "yahoo_finance": "AMP.MI",
+      "stooq": "amp.mi.it"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "manual",
+    "source_asof": "2026-06-10",
+    "last_reviewed_at": "2026-06-10",
+    "instrument_type": "equity"
+  },
+  {
     "symbol": "AMZN",
     "exchange_mic": "XNAS",
     "country_code": "US",
@@ -685,6 +723,25 @@
     "instrument_type": "equity"
   },
   {
+    "symbol": "AZM.MI",
+    "exchange_mic": "XMIL",
+    "country_code": "IT",
+    "currency": "EUR",
+    "timezone": "Europe/Rome",
+    "provider_symbol_map": {
+      "yahoo_finance": "AZM.MI",
+      "stooq": "azm.mi.it"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "manual",
+    "source_asof": "2026-06-10",
+    "last_reviewed_at": "2026-06-10",
+    "instrument_type": "equity"
+  },
+  {
     "symbol": "AZN",
     "exchange_mic": "XNYS",
     "country_code": "US",
@@ -796,6 +853,25 @@
     "source": "manual",
     "source_asof": "2026-04-11",
     "last_reviewed_at": "2026-04-11",
+    "instrument_type": "equity"
+  },
+  {
+    "symbol": "BAMI.MI",
+    "exchange_mic": "XMIL",
+    "country_code": "IT",
+    "currency": "EUR",
+    "timezone": "Europe/Rome",
+    "provider_symbol_map": {
+      "yahoo_finance": "BAMI.MI",
+      "stooq": "bami.mi.it"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "manual",
+    "source_asof": "2026-06-10",
+    "last_reviewed_at": "2026-06-10",
     "instrument_type": "equity"
   },
   {
@@ -1122,6 +1198,25 @@
     "instrument_type": "equity"
   },
   {
+    "symbol": "BMED.MI",
+    "exchange_mic": "XMIL",
+    "country_code": "IT",
+    "currency": "EUR",
+    "timezone": "Europe/Rome",
+    "provider_symbol_map": {
+      "yahoo_finance": "BMED.MI",
+      "stooq": "bmed.mi.it"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "manual",
+    "source_asof": "2026-06-10",
+    "last_reviewed_at": "2026-06-10",
+    "instrument_type": "equity"
+  },
+  {
     "symbol": "BMO",
     "exchange_mic": "XNYS",
     "country_code": "US",
@@ -1138,6 +1233,25 @@
     "source": "manual",
     "source_asof": "2026-04-11",
     "last_reviewed_at": "2026-04-11",
+    "instrument_type": "equity"
+  },
+  {
+    "symbol": "BMPS.MI",
+    "exchange_mic": "XMIL",
+    "country_code": "IT",
+    "currency": "EUR",
+    "timezone": "Europe/Rome",
+    "provider_symbol_map": {
+      "yahoo_finance": "BMPS.MI",
+      "stooq": "bmps.mi.it"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "manual",
+    "source_asof": "2026-06-10",
+    "last_reviewed_at": "2026-06-10",
     "instrument_type": "equity"
   },
   {
@@ -1255,6 +1369,25 @@
     "instrument_type": "equity"
   },
   {
+    "symbol": "BPE.MI",
+    "exchange_mic": "XMIL",
+    "country_code": "IT",
+    "currency": "EUR",
+    "timezone": "Europe/Rome",
+    "provider_symbol_map": {
+      "yahoo_finance": "BPE.MI",
+      "stooq": "bpe.mi.it"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "manual",
+    "source_asof": "2026-06-10",
+    "last_reviewed_at": "2026-06-10",
+    "instrument_type": "equity"
+  },
+  {
     "symbol": "BRK-B",
     "exchange_mic": "XNYS",
     "country_code": "US",
@@ -1328,6 +1461,25 @@
     "source": "manual",
     "source_asof": "2026-04-11",
     "last_reviewed_at": "2026-04-11",
+    "instrument_type": "equity"
+  },
+  {
+    "symbol": "BUZZI.MI",
+    "exchange_mic": "XMIL",
+    "country_code": "IT",
+    "currency": "EUR",
+    "timezone": "Europe/Rome",
+    "provider_symbol_map": {
+      "yahoo_finance": "BUZZI.MI",
+      "stooq": "buzzi.mi.it"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "manual",
+    "source_asof": "2026-06-10",
+    "last_reviewed_at": "2026-06-10",
     "instrument_type": "equity"
   },
   {
@@ -1502,6 +1654,25 @@
     "instrument_type": "equity"
   },
   {
+    "symbol": "CNH.MI",
+    "exchange_mic": "XMIL",
+    "country_code": "IT",
+    "currency": "EUR",
+    "timezone": "Europe/Rome",
+    "provider_symbol_map": {
+      "yahoo_finance": "CNH.MI",
+      "stooq": "cnh.mi.it"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "manual",
+    "source_asof": "2026-06-10",
+    "last_reviewed_at": "2026-06-10",
+    "instrument_type": "equity"
+  },
+  {
     "symbol": "CNI",
     "exchange_mic": "XNYS",
     "country_code": "US",
@@ -1613,6 +1784,25 @@
     "source": "manual",
     "source_asof": "2026-04-11",
     "last_reviewed_at": "2026-04-11",
+    "instrument_type": "equity"
+  },
+  {
+    "symbol": "CPR.MI",
+    "exchange_mic": "XMIL",
+    "country_code": "IT",
+    "currency": "EUR",
+    "timezone": "Europe/Rome",
+    "provider_symbol_map": {
+      "yahoo_finance": "CPR.MI",
+      "stooq": "cpr.mi.it"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "manual",
+    "source_asof": "2026-06-10",
+    "last_reviewed_at": "2026-06-10",
     "instrument_type": "equity"
   },
   {
@@ -2002,6 +2192,25 @@
     "instrument_type": "etf"
   },
   {
+    "symbol": "DIA.MI",
+    "exchange_mic": "XMIL",
+    "country_code": "IT",
+    "currency": "EUR",
+    "timezone": "Europe/Rome",
+    "provider_symbol_map": {
+      "yahoo_finance": "DIA.MI",
+      "stooq": "dia.mi.it"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "manual",
+    "source_asof": "2026-06-10",
+    "last_reviewed_at": "2026-06-10",
+    "instrument_type": "equity"
+  },
+  {
     "symbol": "DIS",
     "exchange_mic": "XNAS",
     "country_code": "US",
@@ -2018,6 +2227,25 @@
     "source": "manual",
     "source_asof": "2026-04-11",
     "last_reviewed_at": "2026-04-11",
+    "instrument_type": "equity"
+  },
+  {
+    "symbol": "DLGI.MI",
+    "exchange_mic": "XMIL",
+    "country_code": "IT",
+    "currency": "EUR",
+    "timezone": "Europe/Rome",
+    "provider_symbol_map": {
+      "yahoo_finance": "DLGI.MI",
+      "stooq": "dlgi.mi.it"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "manual",
+    "source_asof": "2026-06-10",
+    "last_reviewed_at": "2026-06-10",
     "instrument_type": "equity"
   },
   {
@@ -2254,6 +2482,25 @@
     "instrument_type": "equity"
   },
   {
+    "symbol": "ERG.MI",
+    "exchange_mic": "XMIL",
+    "country_code": "IT",
+    "currency": "EUR",
+    "timezone": "Europe/Rome",
+    "provider_symbol_map": {
+      "yahoo_finance": "ERG.MI",
+      "stooq": "erg.mi.it"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "manual",
+    "source_asof": "2026-06-10",
+    "last_reviewed_at": "2026-06-10",
+    "instrument_type": "equity"
+  },
+  {
     "symbol": "EUNL.DE",
     "exchange_mic": "XETR",
     "country_code": "DE",
@@ -2371,6 +2618,25 @@
     "source": "manual",
     "source_asof": "2026-04-11",
     "last_reviewed_at": "2026-04-11",
+    "instrument_type": "equity"
+  },
+  {
+    "symbol": "FBK.MI",
+    "exchange_mic": "XMIL",
+    "country_code": "IT",
+    "currency": "EUR",
+    "timezone": "Europe/Rome",
+    "provider_symbol_map": {
+      "yahoo_finance": "FBK.MI",
+      "stooq": "fbk.mi.it"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "manual",
+    "source_asof": "2026-06-10",
+    "last_reviewed_at": "2026-06-10",
     "instrument_type": "equity"
   },
   {
@@ -2504,6 +2770,25 @@
     "source": "manual",
     "source_asof": "2026-04-11",
     "last_reviewed_at": "2026-04-11",
+    "instrument_type": "equity"
+  },
+  {
+    "symbol": "G.MI",
+    "exchange_mic": "XMIL",
+    "country_code": "IT",
+    "currency": "EUR",
+    "timezone": "Europe/Rome",
+    "provider_symbol_map": {
+      "yahoo_finance": "G.MI",
+      "stooq": "g.mi.it"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "manual",
+    "source_asof": "2026-06-10",
+    "last_reviewed_at": "2026-06-10",
     "instrument_type": "equity"
   },
   {
@@ -2868,6 +3153,25 @@
     "instrument_type": "equity"
   },
   {
+    "symbol": "HER.MI",
+    "exchange_mic": "XMIL",
+    "country_code": "IT",
+    "currency": "EUR",
+    "timezone": "Europe/Rome",
+    "provider_symbol_map": {
+      "yahoo_finance": "HER.MI",
+      "stooq": "her.mi.it"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "manual",
+    "source_asof": "2026-06-10",
+    "last_reviewed_at": "2026-06-10",
+    "instrument_type": "equity"
+  },
+  {
     "symbol": "HII",
     "exchange_mic": "XNYS",
     "country_code": "US",
@@ -3194,6 +3498,25 @@
     "instrument_type": "equity"
   },
   {
+    "symbol": "IG.MI",
+    "exchange_mic": "XMIL",
+    "country_code": "IT",
+    "currency": "EUR",
+    "timezone": "Europe/Rome",
+    "provider_symbol_map": {
+      "yahoo_finance": "IG.MI",
+      "stooq": "ig.mi.it"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "manual",
+    "source_asof": "2026-06-10",
+    "last_reviewed_at": "2026-06-10",
+    "instrument_type": "equity"
+  },
+  {
     "symbol": "IHE",
     "exchange_mic": "ARCX",
     "country_code": "US",
@@ -3381,6 +3704,44 @@
     "source": "manual",
     "source_asof": "2026-04-11",
     "last_reviewed_at": "2026-04-11",
+    "instrument_type": "equity"
+  },
+  {
+    "symbol": "INW.MI",
+    "exchange_mic": "XMIL",
+    "country_code": "IT",
+    "currency": "EUR",
+    "timezone": "Europe/Rome",
+    "provider_symbol_map": {
+      "yahoo_finance": "INW.MI",
+      "stooq": "inw.mi.it"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "manual",
+    "source_asof": "2026-06-10",
+    "last_reviewed_at": "2026-06-10",
+    "instrument_type": "equity"
+  },
+  {
+    "symbol": "IP.MI",
+    "exchange_mic": "XMIL",
+    "country_code": "IT",
+    "currency": "EUR",
+    "timezone": "Europe/Rome",
+    "provider_symbol_map": {
+      "yahoo_finance": "IP.MI",
+      "stooq": "ip.mi.it"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "manual",
+    "source_asof": "2026-06-10",
+    "last_reviewed_at": "2026-06-10",
     "instrument_type": "equity"
   },
   {
@@ -3764,6 +4125,25 @@
     "instrument_type": "equity"
   },
   {
+    "symbol": "LDO.MI",
+    "exchange_mic": "XMIL",
+    "country_code": "IT",
+    "currency": "EUR",
+    "timezone": "Europe/Rome",
+    "provider_symbol_map": {
+      "yahoo_finance": "LDO.MI",
+      "stooq": "ldo.mi.it"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "manual",
+    "source_asof": "2026-06-10",
+    "last_reviewed_at": "2026-06-10",
+    "instrument_type": "equity"
+  },
+  {
     "symbol": "LDOS",
     "exchange_mic": "XNYS",
     "country_code": "US",
@@ -3995,6 +4375,25 @@
     "instrument_type": "equity"
   },
   {
+    "symbol": "MB.MI",
+    "exchange_mic": "XMIL",
+    "country_code": "IT",
+    "currency": "EUR",
+    "timezone": "Europe/Rome",
+    "provider_symbol_map": {
+      "yahoo_finance": "MB.MI",
+      "stooq": "mb.mi.it"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "manual",
+    "source_asof": "2026-06-10",
+    "last_reviewed_at": "2026-06-10",
+    "instrument_type": "equity"
+  },
+  {
     "symbol": "MBG.DE",
     "exchange_mic": "XETR",
     "country_code": "DE",
@@ -4188,6 +4587,25 @@
     "source": "manual",
     "source_asof": "2026-04-11",
     "last_reviewed_at": "2026-04-11",
+    "instrument_type": "equity"
+  },
+  {
+    "symbol": "MONC.MI",
+    "exchange_mic": "XMIL",
+    "country_code": "IT",
+    "currency": "EUR",
+    "timezone": "Europe/Rome",
+    "provider_symbol_map": {
+      "yahoo_finance": "MONC.MI",
+      "stooq": "monc.mi.it"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "manual",
+    "source_asof": "2026-06-10",
+    "last_reviewed_at": "2026-06-10",
     "instrument_type": "equity"
   },
   {
@@ -4427,6 +4845,25 @@
     "source": "manual",
     "source_asof": "2026-04-11",
     "last_reviewed_at": "2026-04-11",
+    "instrument_type": "equity"
+  },
+  {
+    "symbol": "NEXI.MI",
+    "exchange_mic": "XMIL",
+    "country_code": "IT",
+    "currency": "EUR",
+    "timezone": "Europe/Rome",
+    "provider_symbol_map": {
+      "yahoo_finance": "NEXI.MI",
+      "stooq": "nexi.mi.it"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "manual",
+    "source_asof": "2026-06-10",
+    "last_reviewed_at": "2026-06-10",
     "instrument_type": "equity"
   },
   {
@@ -4948,6 +5385,25 @@
     "instrument_type": "equity"
   },
   {
+    "symbol": "PIRC.MI",
+    "exchange_mic": "XMIL",
+    "country_code": "IT",
+    "currency": "EUR",
+    "timezone": "Europe/Rome",
+    "provider_symbol_map": {
+      "yahoo_finance": "PIRC.MI",
+      "stooq": "pirc.mi.it"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "manual",
+    "source_asof": "2026-06-10",
+    "last_reviewed_at": "2026-06-10",
+    "instrument_type": "equity"
+  },
+  {
     "symbol": "PJP",
     "exchange_mic": "ARCX",
     "country_code": "US",
@@ -5062,6 +5518,44 @@
     "instrument_type": "equity"
   },
   {
+    "symbol": "PRY.MI",
+    "exchange_mic": "XMIL",
+    "country_code": "IT",
+    "currency": "EUR",
+    "timezone": "Europe/Rome",
+    "provider_symbol_map": {
+      "yahoo_finance": "PRY.MI",
+      "stooq": "pry.mi.it"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "manual",
+    "source_asof": "2026-06-10",
+    "last_reviewed_at": "2026-06-10",
+    "instrument_type": "equity"
+  },
+  {
+    "symbol": "PST.MI",
+    "exchange_mic": "XMIL",
+    "country_code": "IT",
+    "currency": "EUR",
+    "timezone": "Europe/Rome",
+    "provider_symbol_map": {
+      "yahoo_finance": "PST.MI",
+      "stooq": "pst.mi.it"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "manual",
+    "source_asof": "2026-06-10",
+    "last_reviewed_at": "2026-06-10",
+    "instrument_type": "equity"
+  },
+  {
     "symbol": "PUM.DE",
     "exchange_mic": "XETR",
     "country_code": "DE",
@@ -5138,6 +5632,25 @@
     "instrument_type": "etf"
   },
   {
+    "symbol": "RACE.MI",
+    "exchange_mic": "XMIL",
+    "country_code": "IT",
+    "currency": "EUR",
+    "timezone": "Europe/Rome",
+    "provider_symbol_map": {
+      "yahoo_finance": "RACE.MI",
+      "stooq": "race.mi.it"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "manual",
+    "source_asof": "2026-06-10",
+    "last_reviewed_at": "2026-06-10",
+    "instrument_type": "equity"
+  },
+  {
     "symbol": "RAND.AS",
     "exchange_mic": "XAMS",
     "country_code": "NL",
@@ -5173,6 +5686,25 @@
     "source": "manual",
     "source_asof": "2026-04-11",
     "last_reviewed_at": "2026-04-11",
+    "instrument_type": "equity"
+  },
+  {
+    "symbol": "REC.MI",
+    "exchange_mic": "XMIL",
+    "country_code": "IT",
+    "currency": "EUR",
+    "timezone": "Europe/Rome",
+    "provider_symbol_map": {
+      "yahoo_finance": "REC.MI",
+      "stooq": "rec.mi.it"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "manual",
+    "source_asof": "2026-06-10",
+    "last_reviewed_at": "2026-06-10",
     "instrument_type": "equity"
   },
   {
@@ -5915,6 +6447,25 @@
     "instrument_type": "equity"
   },
   {
+    "symbol": "SPM.MI",
+    "exchange_mic": "XMIL",
+    "country_code": "IT",
+    "currency": "EUR",
+    "timezone": "Europe/Rome",
+    "provider_symbol_map": {
+      "yahoo_finance": "SPM.MI",
+      "stooq": "spm.mi.it"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "manual",
+    "source_asof": "2026-06-10",
+    "last_reviewed_at": "2026-06-10",
+    "instrument_type": "equity"
+  },
+  {
     "symbol": "SPPE.DE",
     "exchange_mic": "XETR",
     "country_code": "DE",
@@ -5956,6 +6507,25 @@
     "instrument_type": "etf"
   },
   {
+    "symbol": "SRG.MI",
+    "exchange_mic": "XMIL",
+    "country_code": "IT",
+    "currency": "EUR",
+    "timezone": "Europe/Rome",
+    "provider_symbol_map": {
+      "yahoo_finance": "SRG.MI",
+      "stooq": "srg.mi.it"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "manual",
+    "source_asof": "2026-06-10",
+    "last_reviewed_at": "2026-06-10",
+    "instrument_type": "equity"
+  },
+  {
     "symbol": "SRPT",
     "exchange_mic": "XNAS",
     "country_code": "US",
@@ -5991,6 +6561,44 @@
     "source": "manual",
     "source_asof": "2026-04-11",
     "last_reviewed_at": "2026-04-11",
+    "instrument_type": "equity"
+  },
+  {
+    "symbol": "STLAM.MI",
+    "exchange_mic": "XMIL",
+    "country_code": "IT",
+    "currency": "EUR",
+    "timezone": "Europe/Rome",
+    "provider_symbol_map": {
+      "yahoo_finance": "STLAM.MI",
+      "stooq": "stlam.mi.it"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "manual",
+    "source_asof": "2026-06-10",
+    "last_reviewed_at": "2026-06-10",
+    "instrument_type": "equity"
+  },
+  {
+    "symbol": "STM.MI",
+    "exchange_mic": "XMIL",
+    "country_code": "IT",
+    "currency": "EUR",
+    "timezone": "Europe/Rome",
+    "provider_symbol_map": {
+      "yahoo_finance": "STM.MI",
+      "stooq": "stm.mi.it"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "manual",
+    "source_asof": "2026-06-10",
+    "last_reviewed_at": "2026-06-10",
     "instrument_type": "equity"
   },
   {
@@ -6225,6 +6833,25 @@
     "instrument_type": "equity"
   },
   {
+    "symbol": "TEN.MI",
+    "exchange_mic": "XMIL",
+    "country_code": "IT",
+    "currency": "EUR",
+    "timezone": "Europe/Rome",
+    "provider_symbol_map": {
+      "yahoo_finance": "TEN.MI",
+      "stooq": "ten.mi.it"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "manual",
+    "source_asof": "2026-06-10",
+    "last_reviewed_at": "2026-06-10",
+    "instrument_type": "equity"
+  },
+  {
     "symbol": "TEVA",
     "exchange_mic": "XNYS",
     "country_code": "US",
@@ -6301,6 +6928,25 @@
     "source": "manual",
     "source_asof": "2026-04-11",
     "last_reviewed_at": "2026-04-11",
+    "instrument_type": "equity"
+  },
+  {
+    "symbol": "TIT.MI",
+    "exchange_mic": "XMIL",
+    "country_code": "IT",
+    "currency": "EUR",
+    "timezone": "Europe/Rome",
+    "provider_symbol_map": {
+      "yahoo_finance": "TIT.MI",
+      "stooq": "tit.mi.it"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "manual",
+    "source_asof": "2026-06-10",
+    "last_reviewed_at": "2026-06-10",
     "instrument_type": "equity"
   },
   {
@@ -6399,6 +7045,25 @@
     "source": "manual",
     "source_asof": "2026-04-11",
     "last_reviewed_at": "2026-04-11",
+    "instrument_type": "equity"
+  },
+  {
+    "symbol": "TRN.MI",
+    "exchange_mic": "XMIL",
+    "country_code": "IT",
+    "currency": "EUR",
+    "timezone": "Europe/Rome",
+    "provider_symbol_map": {
+      "yahoo_finance": "TRN.MI",
+      "stooq": "trn.mi.it"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "manual",
+    "source_asof": "2026-06-10",
+    "last_reviewed_at": "2026-06-10",
     "instrument_type": "equity"
   },
   {
@@ -6703,6 +7368,25 @@
     "source": "manual",
     "source_asof": "2026-04-11",
     "last_reviewed_at": "2026-04-11",
+    "instrument_type": "equity"
+  },
+  {
+    "symbol": "UNI.MI",
+    "exchange_mic": "XMIL",
+    "country_code": "IT",
+    "currency": "EUR",
+    "timezone": "Europe/Rome",
+    "provider_symbol_map": {
+      "yahoo_finance": "UNI.MI",
+      "stooq": "uni.mi.it"
+    },
+    "primary_listing": true,
+    "status": "active",
+    "status_reason": null,
+    "replacement_symbol": null,
+    "source": "manual",
+    "source_asof": "2026-06-10",
+    "last_reviewed_at": "2026-06-10",
     "instrument_type": "equity"
   },
   {
