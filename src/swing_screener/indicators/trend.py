@@ -38,6 +38,23 @@ def sma(close: pd.DataFrame, window: int) -> pd.DataFrame:
     return close.rolling(window=window, min_periods=window).mean()
 
 
+def _tail_position_from_end(close: pd.DataFrame) -> pd.DataFrame:
+    """For each cell, 1-based position of its non-NaN value counting from the
+    series end (NaN cells get the position of the next non-NaN below them)."""
+    mask = close.notna()
+    return mask.iloc[::-1].cumsum().iloc[::-1]
+
+
+def _tail_mean_matrix(close: pd.DataFrame, window: int, *, offset: int = 0) -> pd.Series:
+    """Mean of each column's non-NaN values in positions (offset, offset+window]
+    counting from the end. NaN when fewer than offset+window valid values."""
+    pos = _tail_position_from_end(close)
+    take = close.notna() & (pos > offset) & (pos <= offset + window)
+    counts = take.sum()
+    means = close.where(take).sum() / float(window)
+    return means.where(counts >= window)
+
+
 def compute_trend_features(
     ohlcv: pd.DataFrame,
     cfg: TrendConfig = TrendConfig(),
@@ -52,84 +69,52 @@ def compute_trend_features(
 
     Computes SMAs per ticker on their actual trading days only,
     ignoring NaN gaps from sparse calendars (e.g., EUR vs USD holidays).
+    All features are computed on the whole close matrix at once.
     """
+    empty_cols = [
+        "last",
+        f"sma{cfg.sma_fast}",
+        f"sma{cfg.sma_mid}",
+        f"sma{cfg.sma_long}",
+        "trend_ok",
+        "dist_sma20_pct",
+        "dist_sma50_pct",
+        "dist_sma200_pct",
+    ]
     close = get_close_matrix(ohlcv)
     if close.empty:
-        cols = [
-            "last",
-            f"sma{cfg.sma_fast}",
-            f"sma{cfg.sma_mid}",
-            f"sma{cfg.sma_long}",
-            "trend_ok",
-            "dist_sma20_pct",
-            "dist_sma50_pct",
-            "dist_sma200_pct",
-        ]
-        return pd.DataFrame(columns=cols, index=pd.Index([], name="ticker"))
+        return pd.DataFrame(columns=empty_cols, index=pd.Index([], name="ticker"))
 
-    results = []
-    for ticker in close.columns:
-        series = close[ticker]
-        valid = series.dropna()
-        if len(valid) < cfg.sma_long:
-            continue
-            
-        last_val = valid.iloc[-1]
-        sma_fast_val = sma_per_ticker(series, cfg.sma_fast)
-        sma_mid_val = sma_per_ticker(series, cfg.sma_mid)
-        sma_long_val = sma_per_ticker(series, cfg.sma_long)
-        
-        if pd.isna(sma_long_val):
-            continue
-            
-        trend_ok = (last_val > sma_long_val) and (sma_mid_val > sma_long_val)
-        dist_sma20 = ((last_val / sma_fast_val) - 1.0) * 100.0 if pd.notna(sma_fast_val) else float("nan")
-        dist_sma50 = ((last_val / sma_mid_val) - 1.0) * 100.0 if pd.notna(sma_mid_val) else float("nan")
-        dist_sma200 = ((last_val / sma_long_val) - 1.0) * 100.0 if pd.notna(sma_long_val) else float("nan")
-        
-        # SMA slopes: (sma[t] / sma[t-window]) - 1 (trend acceleration)
-        sma20_slope = float("nan")
-        if len(valid) >= cfg.sma_fast * 2:
-            sma_now = valid.iloc[-cfg.sma_fast:].mean()
-            sma_prev = valid.iloc[-cfg.sma_fast * 2:-cfg.sma_fast].mean()
-            if sma_prev and sma_prev != 0:
-                sma20_slope = (sma_now / sma_prev) - 1.0
+    n_valid = close.notna().sum()
+    eligible = n_valid[n_valid >= cfg.sma_long].index
+    if eligible.empty:
+        return pd.DataFrame(columns=empty_cols, index=pd.Index([], name="ticker"))
+    close = close[eligible]
 
-        sma50_slope = float("nan")
-        if len(valid) >= cfg.sma_mid * 2:
-            sma_now_mid = valid.iloc[-cfg.sma_mid:].mean()
-            sma_prev_mid = valid.iloc[-cfg.sma_mid * 2:-cfg.sma_mid].mean()
-            if sma_prev_mid and sma_prev_mid != 0:
-                sma50_slope = (sma_now_mid / sma_prev_mid) - 1.0
+    last = close.ffill().iloc[-1]
+    sma_fast = _tail_mean_matrix(close, cfg.sma_fast)
+    sma_mid = _tail_mean_matrix(close, cfg.sma_mid)
+    sma_long = _tail_mean_matrix(close, cfg.sma_long)
 
-        results.append({
-            "ticker": ticker,
-            "last": last_val,
-            f"sma{cfg.sma_fast}": sma_fast_val,
-            f"sma{cfg.sma_mid}": sma_mid_val,
-            f"sma{cfg.sma_long}": sma_long_val,
-            "trend_ok": trend_ok,
-            "dist_sma20_pct": dist_sma20,
-            "dist_sma50_pct": dist_sma50,
-            "dist_sma200_pct": dist_sma200,
-            "sma20_slope": sma20_slope,
-            "sma50_slope": sma50_slope,
-        })
-    
-    if not results:
-        cols = [
-            "last",
-            f"sma{cfg.sma_fast}",
-            f"sma{cfg.sma_mid}",
-            f"sma{cfg.sma_long}",
-            "trend_ok",
-            "dist_sma20_pct",
-            "dist_sma50_pct",
-            "dist_sma200_pct",
-        ]
-        return pd.DataFrame(columns=cols, index=pd.Index([], name="ticker"))
-    
-    feats = pd.DataFrame(results).set_index("ticker")
+    # SMA slopes: (sma[t] / sma[t-window]) - 1 (trend acceleration)
+    prev_fast = _tail_mean_matrix(close, cfg.sma_fast, offset=cfg.sma_fast).replace(0.0, float("nan"))
+    prev_mid = _tail_mean_matrix(close, cfg.sma_mid, offset=cfg.sma_mid).replace(0.0, float("nan"))
+
+    feats = pd.DataFrame(
+        {
+            "last": last,
+            f"sma{cfg.sma_fast}": sma_fast,
+            f"sma{cfg.sma_mid}": sma_mid,
+            f"sma{cfg.sma_long}": sma_long,
+            "trend_ok": (last > sma_long) & (sma_mid > sma_long),
+            "dist_sma20_pct": ((last / sma_fast) - 1.0) * 100.0,
+            "dist_sma50_pct": ((last / sma_mid) - 1.0) * 100.0,
+            "dist_sma200_pct": ((last / sma_long) - 1.0) * 100.0,
+            "sma20_slope": (sma_fast / prev_fast) - 1.0,
+            "sma50_slope": (sma_mid / prev_mid) - 1.0,
+        }
+    )
+    feats.index.name = "ticker"
     return feats.sort_index()
 
 
@@ -153,35 +138,22 @@ def compute_weekly_trend_features(ohlcv: pd.DataFrame) -> pd.DataFrame:
             {"weekly_trend": []}, index=pd.Index([], name="ticker")
         )
 
-    results = []
-    for ticker in close.columns:
-        series = close[ticker].dropna()
-        weekly = series.resample("W").last().dropna()
+    # One resample over the whole matrix; per-bin last() skips NaN, matching
+    # the previous per-ticker dropna -> resample behavior.
+    weekly = close.resample("W").last()
+    n_weekly = weekly.notna().sum()
+    w20 = _tail_mean_matrix(weekly, 20)
+    w50 = _tail_mean_matrix(weekly, 50)
+    last = weekly.ffill().iloc[-1]
 
-        if len(weekly) < 50:
-            results.append({"ticker": str(ticker), "weekly_trend": "neutral"})
-            continue
+    classified = (n_weekly >= 50) & w20.notna() & w50.notna()
+    up = classified & (last > w20) & (w20 > w50)
+    down = classified & (last < w20) & (w20 < w50)
 
-        w20 = sma_per_ticker(weekly, 20)
-        w50 = sma_per_ticker(weekly, 50)
-        last = float(weekly.iloc[-1])
+    trend = pd.Series("neutral", index=weekly.columns.map(str), name="weekly_trend")
+    trend[up.values] = "up"
+    trend[down.values] = "down"
 
-        if pd.isna(w20) or pd.isna(w50):
-            results.append({"ticker": str(ticker), "weekly_trend": "neutral"})
-            continue
-
-        if last > w20 > w50:
-            trend = "up"
-        elif last < w20 < w50:
-            trend = "down"
-        else:
-            trend = "neutral"
-
-        results.append({"ticker": str(ticker), "weekly_trend": trend})
-
-    if not results:
-        return pd.DataFrame(
-            {"weekly_trend": []}, index=pd.Index([], name="ticker")
-        )
-
-    return pd.DataFrame(results).set_index("ticker").sort_index()
+    out = trend.to_frame()
+    out.index.name = "ticker"
+    return out.sort_index()

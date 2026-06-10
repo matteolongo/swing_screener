@@ -70,3 +70,26 @@ def test_weekly_trend_empty_ohlcv_returns_empty_dataframe():
     result = compute_weekly_trend_features(ohlcv)
     assert isinstance(result, pd.DataFrame)
     assert result.empty
+
+
+def test_weekly_trend_matches_per_ticker_resample_semantics():
+    """Weekly classification follows resampled Friday closes of non-NaN data."""
+    import pandas as pd
+
+    from swing_screener.indicators.trend import compute_weekly_trend_features, sma_per_ticker
+
+    idx = pd.bdate_range("2023-01-02", periods=300)
+    rising = pd.Series(range(100, 400), index=idx, dtype=float)
+    rising.iloc[::9] = float("nan")
+
+    df = pd.DataFrame({("Close", "GAP"): rising}, index=idx)
+    df.columns = pd.MultiIndex.from_tuples(df.columns)
+
+    out = compute_weekly_trend_features(df)
+
+    weekly = rising.dropna().resample("W").last().dropna()
+    w20 = sma_per_ticker(weekly, 20)
+    w50 = sma_per_ticker(weekly, 50)
+    last = float(weekly.iloc[-1])
+    expected = "up" if last > w20 > w50 else ("down" if last < w20 < w50 else "neutral")
+    assert out.loc["GAP", "weekly_trend"] == expected
