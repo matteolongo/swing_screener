@@ -136,6 +136,7 @@ def build_momentum_report(
         "mom_6m", "mom_12m", "rs_6m", "sector_rs_6m",
         "sma20_slope", "sma50_slope",
         "trend_ok", "dist_sma50_pct", "dist_sma200_pct",
+        "weekly_trend",
         "signal",
         "breakout_level", ma_col,
         "consolidation_tightness", "close_location_in_range",
