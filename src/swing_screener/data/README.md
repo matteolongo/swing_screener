@@ -75,10 +75,11 @@ provider = get_market_data_provider()  # reads env vars below
 ## Caching
 
 OHLCV data is cached locally in Parquet format to avoid redundant downloads:
-- **Location**: `.cache/market_data/`
-- **Format**: One `.parquet` file per ticker
-- **Invalidation**: Pass `force_refresh=True` to bypass cache
-- **Ticker metadata**: `.cache/ticker_meta.json`
+- **Location**: `.cache/market_data/by_ticker/` (one `.parquet` file per ticker, plus `index.json` recording each ticker's covered date window)
+- **Reuse**: a ticker is served from cache when its covered window contains the requested window, so universe membership changes never invalidate other tickers
+- **Freshness**: windows ending today are reused within `same_day_cache_ttl_minutes` (default 15, see `data_providers.yfinance` in `config/defaults.yaml`); historical windows never expire
+- **Invalidation**: pass `force_refresh=True` to bypass cache
+- **Ticker metadata**: `.cache/ticker_meta.json`, company name/sector cache in `.cache/ticker_info.json`, earnings proximity cache in `.cache/earnings_days.json`
 
 ## Universes
 
