@@ -468,21 +468,32 @@ def _fundamentals_summary(snapshot) -> str | None:
     return None
 
 
+def _load_fundamentals_snapshots(
+    candidates: list[ScreenerCandidate],
+    *,
+    storage: FundamentalsStorage | None = None,
+) -> dict[str, object]:
+    """Load each unique candidate ticker's snapshot once (None when missing)."""
+    fundamentals_storage = storage or FundamentalsStorage()
+    return {
+        ticker: fundamentals_storage.load_snapshot(ticker)
+        for ticker in {c.ticker for c in candidates}
+    }
+
+
 def _apply_cached_fundamentals_context(
     candidates: list[ScreenerCandidate],
     *,
+    snapshots: dict[str, object] | None = None,
     storage: FundamentalsStorage | None = None,
 ) -> list[ScreenerCandidate]:
     if not candidates:
         return candidates
-    fundamentals_storage = storage or FundamentalsStorage()
-    # Load each unique ticker's snapshot once to avoid N redundant file reads.
-    unique_tickers = {c.ticker for c in candidates}
-    snapshot_cache: dict[str, object] = {}
-    for ticker in unique_tickers:
-        snap = fundamentals_storage.load_snapshot(ticker)
-        if snap is not None:
-            snapshot_cache[ticker] = snap
+    snapshot_cache = (
+        snapshots
+        if snapshots is not None
+        else _load_fundamentals_snapshots(candidates, storage=storage)
+    )
     enriched: list[ScreenerCandidate] = []
     for candidate in candidates:
         snapshot = snapshot_cache.get(candidate.ticker)
@@ -504,12 +515,11 @@ def _apply_cached_fundamentals_context(
 def _apply_decision_summary_context(
     candidates: list[ScreenerCandidate],
     *,
+    snapshots: dict[str, object] | None = None,
     fundamentals_storage: FundamentalsStorage | None = None,
 ) -> list[ScreenerCandidate]:
     if not candidates:
         return candidates
-
-    fundamentals = fundamentals_storage or FundamentalsStorage()
 
     # Load today's catalyst opportunity index once for all candidates
     catalyst_index: dict = {}
@@ -519,8 +529,11 @@ def _apply_decision_summary_context(
     except Exception as exc:
         logger.warning("Failed to load catalyst index: %s", exc)
 
-    unique_tickers = {candidate.ticker for candidate in candidates}
-    snapshot_cache = {ticker: fundamentals.load_snapshot(ticker) for ticker in unique_tickers}
+    snapshot_cache = (
+        snapshots
+        if snapshots is not None
+        else _load_fundamentals_snapshots(candidates, storage=fundamentals_storage)
+    )
 
     enriched: list[ScreenerCandidate] = []
     for candidate in candidates:
@@ -1150,8 +1163,9 @@ class ScreenerService:
                     filtered_candidates.append(enriched_candidate)
 
             candidates = filtered_candidates
-            candidates = _apply_cached_fundamentals_context(candidates)
-            candidates = _apply_decision_summary_context(candidates)
+            fundamentals_snapshots = _load_fundamentals_snapshots(candidates)
+            candidates = _apply_cached_fundamentals_context(candidates, snapshots=fundamentals_snapshots)
+            candidates = _apply_decision_summary_context(candidates, snapshots=fundamentals_snapshots)
 
             finnhub_key = os.environ.get("FINNHUB_API_KEY")
             earnings_asof_date = dt.date.fromisoformat(asof_str)
