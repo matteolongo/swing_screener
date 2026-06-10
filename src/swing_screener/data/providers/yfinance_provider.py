@@ -38,18 +38,22 @@ class YfinanceProvider(MarketDataProvider):
         stooq_fallback_enabled: bool = True,
         stooq_timeout_sec: float = 10.0,
         stooq_provider: StooqDataProvider | None = None,
+        same_day_cache_ttl_minutes: float = 15.0,
     ):
         """
         Initialize Yfinance provider.
-        
+
         Args:
             cache_dir: Directory for parquet cache files
             auto_adjust: Use adjusted prices (default: True)
             progress: Show download progress bar (default: False)
+            same_day_cache_ttl_minutes: Max age of a cache file reused for
+                requests whose end date is today or later (default: 15)
         """
         self.cache_dir = Path(cache_dir)
         self.auto_adjust = auto_adjust
         self.progress = progress
+        self.same_day_cache_ttl_minutes = float(same_day_cache_ttl_minutes)
         self.stooq_fallback_enabled = bool(stooq_fallback_enabled)
         self._stooq_provider = stooq_provider or StooqDataProvider(timeout_sec=stooq_timeout_sec)
         
@@ -350,6 +354,16 @@ class YfinanceProvider(MarketDataProvider):
         df = df.dropna(how="all")
         return df
     
+    def _cache_is_fresh(self, cache_file: Path, max_age_sec: Optional[float]) -> bool:
+        """A cache file is fresh when no max age applies or its mtime is within it."""
+        if max_age_sec is None:
+            return True
+        try:
+            age = datetime.now().timestamp() - cache_file.stat().st_mtime
+        except OSError:
+            return False
+        return age <= max_age_sec
+
     def _fetch_ohlcv_with_config(
         self,
         tickers: list[str],
@@ -359,22 +373,28 @@ class YfinanceProvider(MarketDataProvider):
         use_cache: bool = True,
         force_refresh: bool = False,
         allow_cache_fallback_on_error: bool = True,
+        cache_max_age_sec: Optional[float] = None,
     ) -> pd.DataFrame:
         """
         Internal method to fetch OHLCV with optional None end_date for backward compatibility.
-        
+
         This method preserves the cache path behavior when end_date is None.
         """
         # Normalize tickers
         tks = normalize_tickers(tickers)
-        
+
         # Determine actual end date for yfinance call
         actual_end = end_date if end_date else None
-        
+
         # Check cache - use original end_date (possibly None) for cache path
         cache_file = self._cache_path(tks, start_date, end_date, self.auto_adjust)
-        
-        if use_cache and (not force_refresh) and cache_file.exists():
+
+        if (
+            use_cache
+            and (not force_refresh)
+            and cache_file.exists()
+            and self._cache_is_fresh(cache_file, cache_max_age_sec)
+        ):
             cached = self._read_cached_ohlcv(cache_file, tks)
             if cached is not None:
                 return cached
@@ -468,10 +488,13 @@ class YfinanceProvider(MarketDataProvider):
         end_date_adjusted = end_dt_inclusive.strftime("%Y-%m-%d")
         request_end = end_dt.date()
         today = date.today()
-        # For "today/live-edge" requests, bypass stale same-day cache so users
-        # don't have to wait for midnight to get post-close bars.
-        force_refresh = request_end >= today
-        
+        # Historical windows never change, so their cache never expires. For
+        # "today/live-edge" requests, reuse the cache only within a short TTL
+        # so repeated runs are fast but post-close bars still show up.
+        cache_max_age_sec: Optional[float] = None
+        if request_end >= today:
+            cache_max_age_sec = self.same_day_cache_ttl_minutes * 60.0
+
         # Delegate to internal method
         return self._fetch_ohlcv_with_config(
             tickers,
@@ -481,6 +504,7 @@ class YfinanceProvider(MarketDataProvider):
             use_cache,
             force_refresh,
             allow_cache_fallback_on_error,
+            cache_max_age_sec=cache_max_age_sec,
         )
     
     def fetch_latest_price(self, ticker: str) -> float:

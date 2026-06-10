@@ -407,6 +407,9 @@ low_level:
       auto_adjust: true
       progress: false
       stooq_fallback_enabled: true
+      # Cache reuse window (minutes) for requests whose end date is today;
+      # historical windows are cached indefinitely.
+      same_day_cache_ttl_minutes: 15
     stooq:
       timeout_seconds: 10.0
     alpaca:

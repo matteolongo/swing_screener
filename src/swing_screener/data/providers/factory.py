@@ -59,6 +59,10 @@ def get_market_data_provider(
                 "stooq_timeout_sec",
                 float(stooq_defaults.get("timeout_seconds", 10.0)),
             ),
+            same_day_cache_ttl_minutes=kwargs.get(
+                "same_day_cache_ttl_minutes",
+                float(yfinance_defaults.get("same_day_cache_ttl_minutes", 15.0)),
+            ),
         )
     
     elif config.provider == "alpaca":
