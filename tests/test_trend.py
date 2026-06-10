@@ -105,3 +105,36 @@ def test_dist_sma20_pct_present_in_trend_features():
     feats = compute_trend_features(df)
     assert "dist_sma20_pct" in feats.columns
     assert not pd.isna(feats.loc["AAA", "dist_sma20_pct"])
+
+
+def test_trend_features_match_dropna_tail_semantics():
+    """SMAs and slopes are computed on each ticker's last N non-NaN closes."""
+    import pytest
+
+    ohlcv = _make_synthetic_ohlcv()
+    sparse_days = ohlcv.index[::7]
+    for field in ["Open", "High", "Low", "Close", "Volume"]:
+        ohlcv.loc[sparse_days, (field, "BBB")] = float("nan")
+
+    feats = compute_trend_features(ohlcv, TrendConfig())
+
+    valid = ohlcv[("Close", "BBB")].dropna()
+    assert feats.loc["BBB", "last"] == pytest.approx(valid.iloc[-1])
+    assert feats.loc["BBB", "sma20"] == pytest.approx(valid.iloc[-20:].mean())
+    assert feats.loc["BBB", "sma50"] == pytest.approx(valid.iloc[-50:].mean())
+    assert feats.loc["BBB", "sma200"] == pytest.approx(valid.iloc[-200:].mean())
+    expected_slope20 = valid.iloc[-20:].mean() / valid.iloc[-40:-20].mean() - 1.0
+    expected_slope50 = valid.iloc[-50:].mean() / valid.iloc[-100:-50].mean() - 1.0
+    assert feats.loc["BBB", "sma20_slope"] == pytest.approx(expected_slope20)
+    assert feats.loc["BBB", "sma50_slope"] == pytest.approx(expected_slope50)
+
+
+def test_trend_features_drop_tickers_with_short_history():
+    ohlcv = _make_synthetic_ohlcv()
+    # Wipe all but the last 150 bars of BBB -> below the 200-bar requirement
+    ohlcv.loc[ohlcv.index[:-150], ("Close", "BBB")] = float("nan")
+
+    feats = compute_trend_features(ohlcv, TrendConfig())
+
+    assert "AAA" in feats.index
+    assert "BBB" not in feats.index
