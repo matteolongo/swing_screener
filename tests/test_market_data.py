@@ -35,14 +35,14 @@ def test_fetch_ohlcv_returns_multiindex(monkeypatch):
 
 def test_fetch_ohlcv_fallbacks_to_cache_on_download_error(tmp_path, monkeypatch):
     cache_dir = tmp_path / "cache"
-    cache_dir.mkdir(parents=True, exist_ok=True)
     cfg = MarketDataConfig(start="2023-01-01", cache_dir=str(cache_dir))
 
-    expected = _fake_download_multiindex()
-    cached = expected.copy()
-    cached.to_parquet(
-        cache_dir / "AAPL-MSFT-SPY__2023-01-01__NONE__adj=1.parquet"
+    # Warm the per-ticker cache with a successful fetch first.
+    monkeypatch.setattr(
+        "swing_screener.data.providers.yfinance_provider.yf.download",
+        _fake_download_multiindex,
     )
+    warm = fetch_ohlcv(["AAPL", "MSFT", "SPY"], cfg)
 
     def _raise(*args, **kwargs):
         raise RuntimeError("network down")
@@ -57,4 +57,4 @@ def test_fetch_ohlcv_fallbacks_to_cache_on_download_error(tmp_path, monkeypatch)
 
     df = fetch_ohlcv(["AAPL", "MSFT", "SPY"], cfg, use_cache=False)
     assert ("Close", "AAPL") in df.columns
-    assert len(df) == len(cached)
+    assert len(df) == len(warm)

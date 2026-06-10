@@ -5,7 +5,9 @@ from datetime import datetime, timedelta, date
 from pathlib import Path
 from typing import Iterable, Iterator, Optional
 import hashlib
+import json
 import logging
+import re
 import uuid
 import pandas as pd
 import yfinance as yf
@@ -61,22 +63,98 @@ class YfinanceProvider(MarketDataProvider):
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self._configure_yf_tz_cache()
     
-    def _cache_path(
+    def _slice_window(
         self,
+        frame: Optional[pd.DataFrame],
+        start_date: str,
+        end_exclusive: str,
+    ) -> Optional[pd.DataFrame]:
+        """Trim a cached frame (which may cover a wider window) to the request."""
+        if frame is None or frame.empty or not isinstance(frame.index, pd.DatetimeIndex):
+            return frame
+        start_ts = pd.Timestamp(start_date, tz=frame.index.tz)
+        end_ts = pd.Timestamp(end_exclusive, tz=frame.index.tz)
+        return frame.loc[(frame.index >= start_ts) & (frame.index < end_ts)]
+
+    def _ticker_cache_dir(self) -> Path:
+        return self.cache_dir / "by_ticker"
+
+    def _ticker_cache_path(self, ticker: str) -> Path:
+        """Per-ticker parquet path, so universe membership changes never
+        invalidate other tickers' cached data."""
+        safe = re.sub(r"[^A-Za-z0-9._-]", "_", ticker)
+        if safe != ticker:
+            safe = f"{safe}__{hashlib.sha1(ticker.encode('utf-8')).hexdigest()[:8]}"
+        return self._ticker_cache_dir() / f"{safe}__adj={int(self.auto_adjust)}.parquet"
+
+    def _ticker_index_path(self) -> Path:
+        return self._ticker_cache_dir() / "index.json"
+
+    def _index_key(self, ticker: str) -> str:
+        return f"{ticker}|adj={int(self.auto_adjust)}"
+
+    def _load_ticker_index(self) -> dict:
+        """Coverage index: ticker key -> {start, end} of the cached window."""
+        try:
+            payload = json.loads(self._ticker_index_path().read_text(encoding="utf-8"))
+            return payload if isinstance(payload, dict) else {}
+        except (OSError, ValueError):
+            return {}
+
+    def _save_ticker_index(self, index: dict) -> None:
+        path = self._ticker_index_path()
+        tmp = path.with_name(f".{path.name}.tmp-{uuid.uuid4().hex}")
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            tmp.write_text(json.dumps(index, ensure_ascii=False), encoding="utf-8")
+            tmp.replace(path)
+        except OSError as exc:
+            logger.warning("Failed to persist OHLCV cache index %s: %s", path, exc)
+            try:
+                tmp.unlink(missing_ok=True)
+            except OSError:
+                pass
+
+    def _store_per_ticker_cache(
+        self,
+        df: pd.DataFrame,
         tickers: list[str],
-        start: str,
-        end: Optional[str],
-        auto_adjust: bool,
-    ) -> Path:
-        """Generate cache file path for given parameters."""
-        safe_end = end if end else "NONE"
-        key = f"{'-'.join(tickers)}__{start}__{safe_end}__adj={int(auto_adjust)}"
-        key = key.replace("/", "_")
-        if len(key) > 200:
-            digest = hashlib.sha1(key.encode("utf-8")).hexdigest()
-            prefix = "-".join(tickers[:3])
-            key = f"{prefix}__n={len(tickers)}__{start}__{safe_end}__adj={int(auto_adjust)}__{digest}"
-        return self.cache_dir / f"{key}.parquet"
+        start_date: str,
+        end_for_coverage: str,
+    ) -> None:
+        """Persist each downloaded ticker's columns to its own parquet and
+        extend the coverage window recorded in the index."""
+        if df is None or df.empty or not isinstance(df.columns, pd.MultiIndex):
+            return
+        self._ticker_cache_dir().mkdir(parents=True, exist_ok=True)
+        index = self._load_ticker_index()
+        present = set(map(str, df.columns.get_level_values(1)))
+        dirty = False
+        for ticker in tickers:
+            if ticker not in present:
+                continue
+            sub = df.loc[:, df.columns.get_level_values(1) == ticker]
+            if sub.dropna(how="all").empty:
+                continue
+            path = self._ticker_cache_path(ticker)
+            if path.exists():
+                existing = self._read_cached_ohlcv(path, [ticker])
+                if existing is not None and not existing.empty:
+                    merged = pd.concat([existing, sub])
+                    merged = merged.loc[~merged.index.duplicated(keep="last")].sort_index()
+                    sub = merged
+            self._write_cached_ohlcv(path, sub)
+            key = self._index_key(ticker)
+            entry = index.get(key) if isinstance(index.get(key), dict) else {}
+            old_start = str(entry.get("start")) if entry.get("start") else None
+            old_end = str(entry.get("end")) if entry.get("end") else None
+            index[key] = {
+                "start": min(start_date, old_start) if old_start else start_date,
+                "end": max(end_for_coverage, old_end) if old_end else end_for_coverage,
+            }
+            dirty = True
+        if dirty:
+            self._save_ticker_index(index)
 
     def _configure_yf_tz_cache(self) -> None:
         """Point yfinance timezone cache to a writable project-local directory."""
@@ -378,76 +456,122 @@ class YfinanceProvider(MarketDataProvider):
         """
         Internal method to fetch OHLCV with optional None end_date for backward compatibility.
 
-        This method preserves the cache path behavior when end_date is None.
+        Caching is per ticker: each symbol satisfied by its cached coverage
+        window is served from disk; only the misses are downloaded.
         """
         # Normalize tickers
         tks = normalize_tickers(tickers)
 
         # Determine actual end date for yfinance call
         actual_end = end_date if end_date else None
+        end_for_coverage = end_date or (date.today() + timedelta(days=1)).isoformat()
 
-        # Check cache - use original end_date (possibly None) for cache path
-        cache_file = self._cache_path(tks, start_date, end_date, self.auto_adjust)
-
-        if (
-            use_cache
-            and (not force_refresh)
-            and cache_file.exists()
-            and self._cache_is_fresh(cache_file, cache_max_age_sec)
-        ):
-            cached = self._read_cached_ohlcv(cache_file, tks)
-            if cached is not None:
-                return cached
-        
-        # Download from Yahoo Finance (bulk first, then targeted retries for missing symbols)
-        df = self._download_batch(tks, start_date, actual_end)
-
-        if (df is None or df.empty) and len(tks) > 1:
-            logger.warning(
-                "Bulk yfinance download returned no data for %s tickers; retrying sequentially.",
-                len(tks),
+        cached_frames: list[pd.DataFrame] = []
+        stale_fallback: dict[str, Path] = {}
+        misses: list[str] = []
+        read_cache = use_cache and not force_refresh
+        index = self._load_ticker_index() if (read_cache or allow_cache_fallback_on_error) else {}
+        for ticker in tks:
+            path = self._ticker_cache_path(ticker)
+            entry = index.get(self._index_key(ticker))
+            covered = (
+                isinstance(entry, dict)
+                and str(entry.get("start") or "9999") <= start_date
+                and str(entry.get("end") or "0000") >= end_for_coverage
+                and path.exists()
             )
-            df = self._download_sequential(tks, start_date, actual_end)
+            if not covered:
+                misses.append(ticker)
+                continue
+            if not read_cache or not self._cache_is_fresh(path, cache_max_age_sec):
+                # Covering but unusable directly (cache reads disabled, forced
+                # refresh, or past TTL): keep as error fallback only.
+                stale_fallback[ticker] = path
+                misses.append(ticker)
+                continue
+            frame = self._slice_window(
+                self._read_cached_ohlcv(path, [ticker]), start_date, end_for_coverage
+            )
+            if frame is None or frame.empty:
+                misses.append(ticker)
+                continue
+            cached_frames.append(frame)
 
-        if df is None or df.empty:
-            df = self._fetch_stooq_fallback(tks, start_date, end_date, interval=interval)
-        if df is None or df.empty:
-            if allow_cache_fallback_on_error and cache_file.exists():
-                cached = self._read_cached_ohlcv(cache_file, tks)
-                if cached is not None:
-                    return cached
+        df = pd.DataFrame()
+        if misses:
+            # Download from Yahoo Finance (bulk first, then targeted retries)
+            df = self._download_batch(misses, start_date, actual_end)
+
+            if (df is None or df.empty) and len(misses) > 1:
+                logger.warning(
+                    "Bulk yfinance download returned no data for %s tickers; retrying sequentially.",
+                    len(misses),
+                )
+                df = self._download_sequential(misses, start_date, actual_end)
+
+            if df is None or df.empty:
+                df = self._fetch_stooq_fallback(misses, start_date, end_date, interval=interval)
+
+            if df is None or df.empty:
+                df = pd.DataFrame()
+                if allow_cache_fallback_on_error:
+                    for ticker, path in stale_fallback.items():
+                        frame = self._slice_window(
+                            self._read_cached_ohlcv(path, [ticker]), start_date, end_for_coverage
+                        )
+                        if frame is not None and not frame.empty:
+                            cached_frames.append(frame)
+                if not cached_frames:
+                    raise RuntimeError("Download empty. Check tickers or connection.")
+            else:
+                missing_tickers = self._missing_close_tickers(df, misses)
+                if missing_tickers and len(misses) > 1:
+                    logger.warning(
+                        "yfinance missing close data for %s/%s tickers; retrying missing symbols.",
+                        len(missing_tickers),
+                        len(misses),
+                    )
+                    retry_df = self._retry_missing_tickers(missing_tickers, start_date, actual_end)
+                    df = self._merge_ohlcv_frames(df, retry_df)
+
+                    remaining_missing = self._missing_close_tickers(df, misses)
+                    if remaining_missing:
+                        logger.warning(
+                            "yfinance still missing close data for %s tickers after retries (%s).",
+                            len(remaining_missing),
+                            ",".join(remaining_missing[:10]),
+                        )
+                        fallback_df = self._fetch_stooq_fallback(
+                            remaining_missing,
+                            start_date,
+                            end_date,
+                            interval=interval,
+                        )
+                        df = self._merge_ohlcv_frames(df, fallback_df)
+
+                # Tickers that still have no data but hold stale cached coverage
+                # are better served stale than dropped.
+                if allow_cache_fallback_on_error and stale_fallback:
+                    for ticker in self._missing_close_tickers(df, misses):
+                        path = stale_fallback.get(ticker)
+                        if path is None:
+                            continue
+                        frame = self._slice_window(
+                            self._read_cached_ohlcv(path, [ticker]), start_date, end_for_coverage
+                        )
+                        if frame is not None and not frame.empty:
+                            cached_frames.append(frame)
+
+                if use_cache:
+                    self._store_per_ticker_cache(df, misses, start_date, end_for_coverage)
+
+        out = df
+        for frame in cached_frames:
+            out = self._merge_ohlcv_frames(out, frame)
+        if out is None or out.empty:
             raise RuntimeError("Download empty. Check tickers or connection.")
 
-        missing_tickers = self._missing_close_tickers(df, tks)
-        if missing_tickers and len(tks) > 1:
-            logger.warning(
-                "yfinance missing close data for %s/%s tickers; retrying missing symbols.",
-                len(missing_tickers),
-                len(tks),
-            )
-            retry_df = self._retry_missing_tickers(missing_tickers, start_date, actual_end)
-            df = self._merge_ohlcv_frames(df, retry_df)
-
-            remaining_missing = self._missing_close_tickers(df, tks)
-            if remaining_missing:
-                logger.warning(
-                    "yfinance still missing close data for %s tickers after retries (%s).",
-                    len(remaining_missing),
-                    ",".join(remaining_missing[:10]),
-                )
-                fallback_df = self._fetch_stooq_fallback(
-                    remaining_missing,
-                    start_date,
-                    end_date,
-                    interval=interval,
-                )
-                df = self._merge_ohlcv_frames(df, fallback_df)
-        
-        # Cache result
-        if use_cache:
-            self._write_cached_ohlcv(cache_file, df)
-        
-        return self._clean_ohlcv(df, tks)
+        return self._clean_ohlcv(out, tks)
     
     def fetch_ohlcv(
         self,

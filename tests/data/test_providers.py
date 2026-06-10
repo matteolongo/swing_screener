@@ -349,7 +349,7 @@ class TestYfinanceProvider:
 
         # Age the cache file beyond the same-day TTL
         stale = time.time() - (provider.same_day_cache_ttl_minutes * 60 + 60)
-        for cache_file in cache_dir.glob("*.parquet"):
+        for cache_file in cache_dir.rglob("*.parquet"):
             os.utime(cache_file, (stale, stale))
 
         provider.fetch_ohlcv(["AAPL"], "2026-01-01", today)
@@ -375,6 +375,48 @@ class TestYfinanceProvider:
         provider.fetch_ohlcv(["AAPL"], "2026-01-01", "2026-01-31", force_refresh=True)
 
         assert len(download_calls) > first_count
+
+    def test_fetch_ohlcv_reuses_per_ticker_cache_when_universe_grows(self, monkeypatch, tmp_path):
+        """Adding a ticker to the universe must not re-download cached tickers."""
+        provider = YfinanceProvider(cache_dir=str(tmp_path / "cache"))
+        downloaded: list[str] = []
+
+        def fake_download(tickers, *args, **kwargs):
+            tks = [tickers] if isinstance(tickers, str) else list(tickers)
+            downloaded.extend(tks)
+            return _mock_ohlcv_frame(tks)
+
+        monkeypatch.setattr(yfinance_provider_module.yf, "download", fake_download)
+
+        provider.fetch_ohlcv(["AAA", "BBB"], "2026-01-01", "2026-01-31")
+        df = provider.fetch_ohlcv(["AAA", "BBB", "CCC"], "2026-01-01", "2026-01-31")
+
+        assert downloaded.count("AAA") == 1
+        assert downloaded.count("BBB") == 1
+        assert "CCC" in downloaded
+        for ticker in ["AAA", "BBB", "CCC"]:
+            assert ticker in df["Close"].columns
+
+    def test_fetch_ohlcv_serves_subwindow_from_cache(self, monkeypatch, tmp_path):
+        """A narrower window inside cached coverage is served without downloads."""
+        provider = YfinanceProvider(cache_dir=str(tmp_path / "cache"))
+        download_calls = []
+
+        def fake_download(*args, **kwargs):
+            download_calls.append(True)
+            return _mock_ohlcv_frame(["AAA"])
+
+        monkeypatch.setattr(yfinance_provider_module.yf, "download", fake_download)
+
+        provider.fetch_ohlcv(["AAA"], "2026-01-01", "2026-01-31")
+        first_count = len(download_calls)
+
+        df = provider.fetch_ohlcv(["AAA"], "2026-01-06", "2026-01-08")
+
+        assert len(download_calls) == first_count
+        assert not df.empty
+        assert df.index.min() >= pd.Timestamp("2026-01-06")
+        assert df.index.max() <= pd.Timestamp("2026-01-08")
 
     def test_fetch_ohlcv_keeps_cache_for_historical_end_date(self, monkeypatch, tmp_path):
         """Historical windows should keep normal cache behavior."""
@@ -418,14 +460,13 @@ class TestYfinanceProvider:
         # Check that cache directory was created
         assert cache_dir.exists()
         # Check that cache files exist in the directory
-        cache_files = list(cache_dir.glob("*.parquet"))
+        cache_files = list(cache_dir.rglob("*.parquet"))
         assert len(cache_files) > 0
 
     def test_fetch_ohlcv_recovers_from_corrupted_cache(self, monkeypatch, tmp_path):
         """Corrupted parquet cache should be deleted and refreshed from provider."""
         cache_dir = tmp_path / "test_corrupted_cache"
         provider = YfinanceProvider(cache_dir=str(cache_dir))
-        cache_dir.mkdir(parents=True, exist_ok=True)
 
         calls = {"count": 0}
 
@@ -438,15 +479,17 @@ class TestYfinanceProvider:
         # Use historical window so normal cache reads apply.
         start = "2026-01-01"
         end = "2026-01-31"
-        cache_file = provider._cache_path(["AAPL"], start, "2026-02-01", provider.auto_adjust)
-        cache_file.write_bytes(b"not-a-parquet-file")
+        provider.fetch_ohlcv(["AAPL"], start, end)
+        cache_files = list(cache_dir.rglob("*.parquet"))
+        assert len(cache_files) == 1
+        cache_files[0].write_bytes(b"not-a-parquet-file")
 
         df = provider.fetch_ohlcv(["AAPL"], start, end)
 
         assert not df.empty
-        assert calls["count"] == 1
+        assert calls["count"] == 2
         # Should have replaced corrupt bytes with a readable parquet file.
-        reread = pd.read_parquet(cache_file)
+        reread = pd.read_parquet(cache_files[0])
         assert not reread.empty
 
 
