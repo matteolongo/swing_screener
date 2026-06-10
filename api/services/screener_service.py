@@ -1206,10 +1206,23 @@ class ScreenerService:
             logger.exception("Unexpected screener error")
             raise HTTPException(status_code=500, detail="Screener failed unexpectedly")
 
-    def start_run_async(self, request: ScreenerRequest) -> ScreenerRunLaunchResponse:
-        """Start screener run in background and return job metadata."""
+    def start_run_async(self, request: ScreenerRequest, on_complete=None) -> ScreenerRunLaunchResponse:
+        """Start screener run in background and return job metadata.
+
+        ``on_complete`` is invoked with the ScreenerResponse after a successful
+        run (e.g. to record screener history); its failures never fail the job.
+        """
+        def _run() -> ScreenerResponse:
+            result = self.run_screener(request)
+            if on_complete is not None:
+                try:
+                    on_complete(result)
+                except Exception as exc:
+                    logger.warning("Screener run on_complete hook failed: %s", exc)
+            return result
+
         manager = get_screener_run_manager()
-        job_id = manager.start_job(run_fn=lambda: self.run_screener(request))
+        job_id = manager.start_job(run_fn=_run)
         job = manager.get_job(job_id)
         if job is None:
             raise HTTPException(status_code=500, detail="Failed to start screener run.")
