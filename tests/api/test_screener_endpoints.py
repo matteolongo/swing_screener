@@ -701,6 +701,46 @@ def test_screener_returns_same_symbol_add_on_metadata(monkeypatch):
         app.dependency_overrides.pop(get_portfolio_service, None)
 
 
+def test_screener_loads_each_fundamentals_snapshot_once(monkeypatch):
+    ohlcv = _ohlcv_with_spy()
+    mock_provider = _create_mock_provider(ohlcv)
+    load_calls: list[str] = []
+
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None):
+        idx = ["AAA", "BBB"]
+        data = {
+            "atr14": [1.2, 1.1],
+            "mom_6m": [0.1, 0.1],
+            "mom_12m": [0.2, 0.2],
+            "rs_6m": [0.05, 0.04],
+            "score": [0.5, 0.4],
+            "confidence": [80.0, 70.0],
+            "last": [20.0, 21.0],
+            "ma20_level": [19.0, 20.0],
+            "dist_sma50_pct": [5.0, 5.0],
+            "dist_sma200_pct": [15.0, 15.0],
+            "rank": [1, 2],
+            "signal": ["breakout", "breakout"],
+        }
+        return pd.DataFrame(data, index=idx)
+
+    def fake_load_snapshot(self, symbol):
+        load_calls.append(symbol)
+        return None
+
+    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
+    monkeypatch.setattr(screener_service, "get_multiple_ticker_info", lambda tickers: {})
+    monkeypatch.setattr(screener_service.FundamentalsStorage, "load_snapshot", fake_load_snapshot)
+
+    client = TestClient(app)
+    res = client.post("/api/screener/run", json={"universe": "broad_market_stocks", "top": 5})
+    assert res.status_code == 200
+    assert len(res.json()["candidates"]) == 2
+
+    assert sorted(load_calls) == ["AAA", "BBB"]
+
+
 def test_resolve_fetch_start_date_covers_min_history():
     start = screener_service._resolve_fetch_start_date("2026-03-02", 260)
     asof = dt.date.fromisoformat("2026-03-02")
@@ -787,6 +827,7 @@ def test_screener_widens_ranking_pool_for_combined_priority(monkeypatch):
     multiplier = CombinedPriorityConfig().prefilter_multiplier
     assert captured["ranking_top_n"] >= 50 * multiplier
     assert len(res.json()["candidates"]) == 50
+
 
 
 def test_screener_pending_entry_order_blocks_add_on(monkeypatch):
