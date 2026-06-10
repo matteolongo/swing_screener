@@ -229,3 +229,85 @@ def test_falls_back_to_yfinance_when_no_finnhub_key():
         )
 
     assert result["AAPL"] == 7
+
+
+def test_caches_earnings_days_per_ticker_and_asof(tmp_path):
+    from swing_screener.fundamentals.earnings_proximity import fetch_next_earnings_days
+
+    today = dt.date.today()
+    cache_path = tmp_path / "earnings_days.json"
+    calls: list[str] = []
+
+    def side_effect(url, **kwargs):
+        symbol = kwargs.get("params", {}).get("symbol", "")
+        calls.append(symbol)
+        return _mock_finnhub_earnings(symbol, today + dt.timedelta(days=10))
+
+    with patch("swing_screener.fundamentals.earnings_proximity.httpx.get", side_effect=side_effect):
+        first = fetch_next_earnings_days(
+            tickers=["AAPL"],
+            finnhub_api_key="test-key",
+            asof_date=today,
+            cache_path=cache_path,
+        )
+        second = fetch_next_earnings_days(
+            tickers=["AAPL"],
+            finnhub_api_key="test-key",
+            asof_date=today,
+            cache_path=cache_path,
+        )
+
+    assert first["AAPL"] == 10
+    assert second["AAPL"] == 10
+    assert calls == ["AAPL"]
+
+
+def test_cache_is_scoped_to_asof_date(tmp_path):
+    from swing_screener.fundamentals.earnings_proximity import fetch_next_earnings_days
+
+    today = dt.date.today()
+    yesterday = today - dt.timedelta(days=1)
+    cache_path = tmp_path / "earnings_days.json"
+    calls: list[str] = []
+
+    def side_effect(url, **kwargs):
+        symbol = kwargs.get("params", {}).get("symbol", "")
+        calls.append(symbol)
+        return _mock_finnhub_earnings(symbol, today + dt.timedelta(days=10))
+
+    with patch("swing_screener.fundamentals.earnings_proximity.httpx.get", side_effect=side_effect):
+        fetch_next_earnings_days(
+            tickers=["AAPL"], finnhub_api_key="test-key", asof_date=yesterday, cache_path=cache_path
+        )
+        fetch_next_earnings_days(
+            tickers=["AAPL"], finnhub_api_key="test-key", asof_date=today, cache_path=cache_path
+        )
+
+    assert calls == ["AAPL", "AAPL"]
+
+
+def test_does_not_cache_unknown_earnings(tmp_path):
+    from swing_screener.fundamentals.earnings_proximity import fetch_next_earnings_days
+
+    today = dt.date.today()
+    cache_path = tmp_path / "earnings_days.json"
+    calls: list[str] = []
+
+    def failing_get(url, **kwargs):
+        calls.append(kwargs.get("params", {}).get("symbol", ""))
+        raise httpx.ConnectError("network down")
+
+    failing_ticker = MagicMock()
+    failing_ticker.calendar = {}
+
+    with patch("swing_screener.fundamentals.earnings_proximity.httpx.get", side_effect=failing_get), \
+         patch("swing_screener.fundamentals.earnings_proximity.yf.Ticker", return_value=failing_ticker):
+        first = fetch_next_earnings_days(
+            tickers=["AAPL"], finnhub_api_key="test-key", asof_date=today, cache_path=cache_path
+        )
+        fetch_next_earnings_days(
+            tickers=["AAPL"], finnhub_api_key="test-key", asof_date=today, cache_path=cache_path
+        )
+
+    assert first["AAPL"] is None
+    assert calls == ["AAPL", "AAPL"]

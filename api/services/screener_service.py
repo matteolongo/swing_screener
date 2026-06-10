@@ -1173,6 +1173,7 @@ class ScreenerService:
                 tickers=[candidate.ticker for candidate in candidates],
                 finnhub_api_key=finnhub_key,
                 asof_date=earnings_asof_date,
+                cache_path=".cache/earnings_days.json",
             )
             candidates = [
                 candidate.model_copy(update={"days_to_earnings": earnings_days.get(candidate.ticker)})
