@@ -676,14 +676,16 @@ def _safe_list(val):
 
 class ScreenerService:
     def __init__(
-        self, 
+        self,
         strategy_repo: StrategyRepository,
         portfolio_service: PortfolioService,
-        provider: Optional[MarketDataProvider] = None
+        provider: Optional[MarketDataProvider] = None,
+        orders_service=None,
     ) -> None:
         self._strategy_repo = strategy_repo
         self._portfolio_service = portfolio_service
         self._provider = provider or get_default_provider()
+        self._orders_service = orders_service
 
     def _resolve_strategy(self, strategy_id: Optional[str], strategy_override: Optional[dict] = None) -> dict:
         if strategy_override is not None:
@@ -1097,6 +1099,11 @@ class ScreenerService:
             portfolio_positions = self._portfolio_service.list_positions(status="open").positions
             portfolio_closed = self._portfolio_service.list_positions(status="closed").positions
             portfolio_orders: list = []
+            if self._orders_service is not None:
+                try:
+                    portfolio_orders = self._orders_service.list_local_orders().get("orders", [])
+                except Exception as exc:
+                    logger.warning("Failed to load orders for same-symbol evaluation: %s", exc)
             same_symbol_evaluator = SameSymbolReentryEvaluator(self._portfolio_service)
             same_symbol_suppressed_count = 0
             same_symbol_add_on_count = 0

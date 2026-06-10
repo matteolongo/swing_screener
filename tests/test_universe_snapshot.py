@@ -26,7 +26,7 @@ _CFG_NO_BENCH = UniverseConfig(benchmark="SPY", ensure_benchmark=False)
 
 def test_list_package_universes_count():
     ids = list_package_universes()
-    assert len(ids) == 14, f"Expected 14 universes, got {len(ids)}: {ids}"
+    assert len(ids) == 15, f"Expected 15 universes, got {len(ids)}: {ids}"
 
 
 def test_list_package_universes_contains_expected():
@@ -38,6 +38,7 @@ def test_list_package_universes_contains_expected():
         "defense_stocks", "defense_etfs",
         "healthcare_stocks", "healthcare_etfs",
         "semiconductor_stocks", "energy_stocks", "financial_stocks",
+        "italy_ftse_mib",
     }
     assert expected == set(ids)
 

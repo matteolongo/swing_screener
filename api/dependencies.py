@@ -141,8 +141,13 @@ def get_strategy_service(
 def get_screener_service(
     strategy_repo: StrategyRepository = Depends(get_strategy_repo),
     portfolio_service: PortfolioService = Depends(get_portfolio_service),
+    orders_service: OrdersService = Depends(get_orders_service),
 ) -> ScreenerService:
-    return ScreenerService(strategy_repo=strategy_repo, portfolio_service=portfolio_service)
+    return ScreenerService(
+        strategy_repo=strategy_repo,
+        portfolio_service=portfolio_service,
+        orders_service=orders_service,
+    )
 
 
 def get_fundamentals_service(

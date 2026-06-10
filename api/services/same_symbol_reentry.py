@@ -23,15 +23,22 @@ def _safe_round(value: Optional[float], digits: int = 4) -> Optional[float]:
     return round(float(value), digits)
 
 
+def _order_field(order: object, key: str, default=None):
+    """Read an order attribute from either a model object or a raw dict."""
+    if isinstance(order, dict):
+        return order.get(key, default)
+    return getattr(order, key, default)
+
+
 def _count_add_ons_for_position(orders: list[object], position_id: Optional[str]) -> int:
     if not position_id:
         return 0
     filled_entries = [
         order
         for order in orders
-        if getattr(order, "status", None) == "filled"
-        and getattr(order, "position_id", None) == position_id
-        and getattr(order, "order_kind", None) == "entry"
+        if _order_field(order, "status") == "filled"
+        and _order_field(order, "position_id") == position_id
+        and _order_field(order, "order_kind") == "entry"
     ]
     return max(0, len(filled_entries) - 1)
 
@@ -39,9 +46,9 @@ def _count_add_ons_for_position(orders: list[object], position_id: Optional[str]
 def _has_pending_entry_for_ticker(orders: list[object], ticker: str) -> bool:
     normalized = ticker.upper()
     return any(
-        getattr(order, "status", None) in ("pending", "submitted")
-        and getattr(order, "ticker", "").upper() == normalized
-        and getattr(order, "order_kind", None) == "entry"
+        _order_field(order, "status") in ("pending", "submitted")
+        and str(_order_field(order, "ticker", "") or "").upper() == normalized
+        and _order_field(order, "order_kind") == "entry"
         for order in orders
     )
 
