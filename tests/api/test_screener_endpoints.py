@@ -701,6 +701,53 @@ def test_screener_returns_same_symbol_add_on_metadata(monkeypatch):
         app.dependency_overrides.pop(get_portfolio_service, None)
 
 
+def test_resolve_fetch_start_date_covers_min_history():
+    start = screener_service._resolve_fetch_start_date("2026-03-02", 260)
+    asof = dt.date.fromisoformat("2026-03-02")
+    window_days = (asof - dt.date.fromisoformat(start)).days
+    # Enough calendar days to yield >= 260 trading bars, but no multi-year window
+    assert window_days >= 260 * 1.4
+    assert window_days <= 600
+
+
+def test_resolve_fetch_start_date_grows_with_min_history():
+    short = screener_service._resolve_fetch_start_date("2026-03-02", 260)
+    long = screener_service._resolve_fetch_start_date("2026-03-02", 400)
+    assert dt.date.fromisoformat(long) < dt.date.fromisoformat(short)
+
+
+def test_screener_fetches_rolling_window_not_fixed_start(monkeypatch):
+    ohlcv = _ohlcv_with_spy()
+    mock_provider = _create_mock_provider(ohlcv)
+    captured: dict = {}
+
+    original_return = mock_provider.fetch_ohlcv.return_value
+
+    def record_fetch(tickers, start_date=None, end_date=None, **kwargs):
+        captured.setdefault("start_dates", []).append(start_date)
+        return original_return
+
+    mock_provider.fetch_ohlcv.side_effect = record_fetch
+
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None):
+        return pd.DataFrame()
+
+    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
+    monkeypatch.setattr(screener_service, "get_multiple_ticker_info", lambda tickers: {})
+
+    client = TestClient(app)
+    res = client.post(
+        "/api/screener/run",
+        json={"universe": "broad_market_stocks", "top": 5, "asof_date": "2026-03-02"},
+    )
+    assert res.status_code == 200
+
+    assert captured["start_dates"]
+    for start in captured["start_dates"]:
+        assert start == screener_service._resolve_fetch_start_date("2026-03-02", 260)
+
+
 def test_screener_widens_ranking_pool_for_combined_priority(monkeypatch):
     """Stage 1 must rank a pool of top * prefilter_multiplier candidates so the
     combined-priority stage can actually re-rank beyond the requested top-N."""

@@ -288,6 +288,24 @@ def _resolve_data_freshness(asof_date: str, now_utc: dt.datetime, currencies: li
     return "final_close" if _all_markets_closed(now_utc, currencies) else "intraday"
 
 
+_FETCH_TRADING_TO_CALENDAR = 1.45
+_FETCH_WINDOW_BUFFER_DAYS = 45
+_FETCH_MIN_BARS = 260
+
+
+def _resolve_fetch_start_date(asof_date: str, min_history: int) -> str:
+    """Start of the OHLCV fetch window: enough calendar days before asof to
+    yield at least max(min_history, 260) trading bars, instead of a fixed
+    start date whose window grows unbounded over time."""
+    try:
+        asof = dt.date.fromisoformat(asof_date)
+    except ValueError:
+        return "2022-01-01"
+    bars_needed = max(int(min_history), _FETCH_MIN_BARS)
+    calendar_days = math.ceil(bars_needed * _FETCH_TRADING_TO_CALENDAR) + _FETCH_WINDOW_BUFFER_DAYS
+    return (asof - dt.timedelta(days=calendar_days)).isoformat()
+
+
 def _to_date_iso(ts) -> Optional[str]:
     if ts is None or pd.isna(ts):
         return None
@@ -777,11 +795,15 @@ class ScreenerService:
             if len(tickers) <= 1 and benchmark in tickers:
                 raise HTTPException(status_code=404, detail="No tickers left after applying screener filters")
 
-            from swing_screener.data.market_data import MarketDataConfig
+            signals_cfg = build_entry_config(strategy)
+            if "breakout_lookback" in fields_set and request.breakout_lookback is not None:
+                signals_cfg = replace(signals_cfg, breakout_lookback=request.breakout_lookback)
+            if "pullback_ma" in fields_set and request.pullback_ma is not None:
+                signals_cfg = replace(signals_cfg, pullback_ma=request.pullback_ma)
+            if "min_history" in fields_set and request.min_history is not None:
+                signals_cfg = replace(signals_cfg, min_history=request.min_history)
 
-            # Note: MarketDataConfig is kept for backward compatibility
-            # but not passed to provider (provider has its own defaults)
-            start_date = "2022-01-01"
+            start_date = _resolve_fetch_start_date(asof_str, signals_cfg.min_history)
             end_date = asof_str
             sector_context_tickers = ["SPY", *sector_rotation.SECTOR_ETFS.keys()]
             sector_ohlcv = pd.DataFrame()
@@ -861,14 +883,6 @@ class ScreenerService:
             prefilter_pool = requested_top * combined_priority_cfg.prefilter_multiplier
             if ranking_cfg.top_n < prefilter_pool:
                 ranking_cfg = replace(ranking_cfg, top_n=prefilter_pool)
-
-            signals_cfg = build_entry_config(strategy)
-            if "breakout_lookback" in fields_set and request.breakout_lookback is not None:
-                signals_cfg = replace(signals_cfg, breakout_lookback=request.breakout_lookback)
-            if "pullback_ma" in fields_set and request.pullback_ma is not None:
-                signals_cfg = replace(signals_cfg, pullback_ma=request.pullback_ma)
-            if "min_history" in fields_set and request.min_history is not None:
-                signals_cfg = replace(signals_cfg, min_history=request.min_history)
 
             risk_cfg = build_risk_config(strategy)
             multiplier, regime_meta = compute_regime_risk_multiplier(ohlcv, benchmark, risk_cfg)
