@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
+import WorkspaceSymbolModal from '@/components/domain/workspace/WorkspaceSymbolModal';
 import { useRefreshUniverseMutation, useSymbolDiscoveryMutation, useUniverseCatalog, useUniverseDetail, useUpdateUniverseBenchmarkMutation } from '@/features/universes/hooks';
 import type { ScreenerCandidate, UniverseSummary } from '@/features/screener/types';
 import type { SymbolDiscoveryRequest } from '@/features/universes/types';
@@ -141,6 +142,7 @@ export default function Universes() {
   const [discoveryMinVolume, setDiscoveryMinVolume] = useState(1_000_000);
   const [discoveryMinMarketCap, setDiscoveryMinMarketCap] = useState(0);
   const [screenerTop, setScreenerTop] = useState(20);
+  const [detailTicker, setDetailTicker] = useState<string | null>(null);
 
   useEffect(() => {
     if (!selectedUniverseId && universes.length > 0) {
@@ -531,7 +533,11 @@ export default function Universes() {
                   </thead>
                   <tbody className="divide-y divide-gray-100 bg-white">
                     {discoveryScreenerResult.candidates.map((candidate) => (
-                      <tr key={candidate.ticker}>
+                      <tr
+                        key={candidate.ticker}
+                        onClick={() => setDetailTicker(candidate.ticker)}
+                        className="cursor-pointer hover:bg-gray-50"
+                      >
                         <td className="px-3 py-2 font-medium text-gray-900">#{candidate.priorityRank ?? candidate.rank}</td>
                         <td className="px-3 py-2">
                           <div className="font-semibold text-gray-900">{candidate.ticker}</div>
@@ -866,6 +872,10 @@ export default function Universes() {
           ) : null}
         </div>
       </div>
+
+      {detailTicker ? (
+        <WorkspaceSymbolModal ticker={detailTicker} onBack={() => setDetailTicker(null)} />
+      ) : null}
     </div>
   );
 }

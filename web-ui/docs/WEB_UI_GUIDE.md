@@ -15,7 +15,7 @@ Daily trading workflow through the Swing Screener web interface.
 | Calendar | `/calendar` | Earnings calendar, upcoming catalyst events |
 | Book | `/book` | Open positions: stop updates, partial close, trail config; order management: create, fill, cancel |
 | Research | `/research` | Screener run and candidates, symbol intelligence analysis, watchlist |
-| Universes | `/universes` | Universe management, manual refresh, benchmark |
+| Universes | `/universes` | Universe management, manual refresh, benchmark, symbol discovery with ad-hoc screener run (row click opens symbol detail modal) |
 | Strategy | `/strategy` | Strategy CRUD, activation, and validation |
 | Journal | `/journal` | Weekly reviews and trade log |
 | Onboarding | `/onboarding` | Setup guide for new users |
