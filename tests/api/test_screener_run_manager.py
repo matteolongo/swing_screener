@@ -91,6 +91,45 @@ def test_screener_run_manager_persists_job_errors(
     assert recovered.error == "provider unavailable"
 
 
+class NeverRunThread:
+    """Thread stub that never executes, leaving jobs in their queued state."""
+
+    def __init__(self, *, target, kwargs, daemon) -> None:
+        del target, kwargs
+        self.daemon = daemon
+
+    def start(self) -> None:
+        return None
+
+
+def test_screener_run_manager_never_evicts_active_jobs(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setattr(run_manager_module.threading, "Thread", NeverRunThread)
+    manager = ScreenerRunManager(max_jobs=2, jobs_dir=tmp_path / "jobs")
+
+    job_ids = [manager.start_job(run_fn=_expected_result) for _ in range(3)]
+
+    for job_id in job_ids:
+        job = manager.get_job(job_id)
+        assert job is not None, f"active job {job_id} was evicted"
+        assert job.status == "queued"
+
+
+def test_screener_run_manager_still_trims_terminal_jobs(
+    tmp_path: Path,
+    synchronous_jobs: None,
+):
+    manager = ScreenerRunManager(max_jobs=2, jobs_dir=tmp_path / "jobs")
+
+    job_ids = [manager.start_job(run_fn=_expected_result) for _ in range(3)]
+
+    assert manager.get_job(job_ids[0]) is None
+    assert manager.get_job(job_ids[1]) is not None
+    assert manager.get_job(job_ids[2]) is not None
+
+
 @pytest.mark.parametrize("interrupted_status", ["queued", "running"])
 def test_screener_run_manager_marks_interrupted_jobs_as_errors(
     tmp_path: Path,

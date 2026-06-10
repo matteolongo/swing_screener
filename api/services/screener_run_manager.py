@@ -215,9 +215,15 @@ class ScreenerRunManager:
     def _trim_jobs_locked(self) -> None:
         if len(self._jobs) <= self._max_jobs:
             return
-        sorted_jobs = sorted(self._jobs.values(), key=lambda item: item.updated_at)
+        # Only terminal jobs are evictable: trimming a queued/running job would
+        # drop its result mid-flight and 404 the client polling it. The map may
+        # temporarily exceed max_jobs when everything in excess is still active.
+        terminal_jobs = sorted(
+            (job for job in self._jobs.values() if job.status in {"completed", "error"}),
+            key=lambda item: item.updated_at,
+        )
         to_remove = len(self._jobs) - self._max_jobs
-        for item in sorted_jobs[:to_remove]:
+        for item in terminal_jobs[:to_remove]:
             self._jobs.pop(item.job_id, None)
             try:
                 self._job_file(item.job_id).unlink(missing_ok=True)
