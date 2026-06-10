@@ -856,8 +856,11 @@ class ScreenerService:
                 universe_cfg = replace(universe_cfg, filt=replace(filt, require_weekly_uptrend=request.require_weekly_uptrend))
 
             ranking_cfg = build_ranking_config(strategy)
-            if ranking_cfg.top_n < requested_top:
-                ranking_cfg = replace(ranking_cfg, top_n=requested_top)
+            # Rank a pool of top * prefilter_multiplier so the combined-priority
+            # stage can re-rank beyond the requested top-N (stage 1 of 2).
+            prefilter_pool = requested_top * combined_priority_cfg.prefilter_multiplier
+            if ranking_cfg.top_n < prefilter_pool:
+                ranking_cfg = replace(ranking_cfg, top_n=prefilter_pool)
 
             signals_cfg = build_entry_config(strategy)
             if "breakout_lookback" in fields_set and request.breakout_lookback is not None:

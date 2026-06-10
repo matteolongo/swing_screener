@@ -701,6 +701,47 @@ def test_screener_returns_same_symbol_add_on_metadata(monkeypatch):
         app.dependency_overrides.pop(get_portfolio_service, None)
 
 
+def test_screener_widens_ranking_pool_for_combined_priority(monkeypatch):
+    """Stage 1 must rank a pool of top * prefilter_multiplier candidates so the
+    combined-priority stage can actually re-rank beyond the requested top-N."""
+    from swing_screener.recommendation.priority import CombinedPriorityConfig
+
+    ohlcv = _ohlcv_with_spy()
+    mock_provider = _create_mock_provider(ohlcv)
+    captured: dict = {}
+
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None):
+        captured["ranking_top_n"] = cfg.ranking.top_n
+        idx = [f"T{i:03d}" for i in range(min(cfg.ranking.top_n, 200))]
+        data = {
+            "atr14": [1.2] * len(idx),
+            "mom_6m": [0.1] * len(idx),
+            "mom_12m": [0.2] * len(idx),
+            "rs_6m": [0.05] * len(idx),
+            "score": [0.5] * len(idx),
+            "confidence": [80.0 - i for i in range(len(idx))],
+            "last": [20.0] * len(idx),
+            "ma20_level": [19.0] * len(idx),
+            "dist_sma50_pct": [5.0] * len(idx),
+            "dist_sma200_pct": [15.0] * len(idx),
+            "rank": list(range(1, len(idx) + 1)),
+            "signal": ["breakout"] * len(idx),
+        }
+        return pd.DataFrame(data, index=idx)
+
+    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
+    monkeypatch.setattr(screener_service, "get_multiple_ticker_info", lambda tickers: {})
+
+    client = TestClient(app)
+    res = client.post("/api/screener/run", json={"universe": "broad_market_stocks", "top": 50})
+    assert res.status_code == 200
+
+    multiplier = CombinedPriorityConfig().prefilter_multiplier
+    assert captured["ranking_top_n"] >= 50 * multiplier
+    assert len(res.json()["candidates"]) == 50
+
+
 def test_screener_pending_entry_order_blocks_add_on(monkeypatch):
     ohlcv = _ohlcv_with_spy()
     mock_provider = _create_mock_provider(ohlcv)
