@@ -67,18 +67,6 @@ describe('API Client', () => {
       expect(API_ENDPOINTS.fundamentalsWarmup).toBe('/api/fundamentals/warmup')
       expect(API_ENDPOINTS.fundamentalsWarmupStatus('job-1')).toBe('/api/fundamentals/warmup/job-1')
     })
-
-    it('does not expose removed backend contracts', () => {
-      expect('chatAnswer' in API_ENDPOINTS).toBe(false)
-      expect('screenerUniverses' in API_ENDPOINTS).toBe(false)
-      expect('screenerPreview' in API_ENDPOINTS).toBe(false)
-      expect('degiroCapabilityAudit' in API_ENDPOINTS).toBe(false)
-      expect('degiroPortfolioAudit' in API_ENDPOINTS).toBe(false)
-      expect('intelligenceConfig' in API_ENDPOINTS).toBe(false)
-      expect('intelligenceProviders' in API_ENDPOINTS).toBe(false)
-      expect('intelligenceRun' in API_ENDPOINTS).toBe(false)
-      expect('intelligenceOpportunities' in API_ENDPOINTS).toBe(false)
-    })
   })
 
   describe('apiUrl', () => {

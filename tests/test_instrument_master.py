@@ -45,14 +45,6 @@ def test_instrument_master_no_duplicate_symbols():
     assert not duplicates, f"Duplicate symbols in instrument master: {duplicates}"
 
 
-def test_instrument_master_active_records_have_no_reason():
-    records = _load_master()
-    for r in records:
-        if r.get("status") == "active":
-            # active records should have null status_reason (not a required value, just a check)
-            pass  # no strict requirement for active records
-
-
 def test_non_active_records_have_status_reason():
     records = _load_master()
     for r in records:

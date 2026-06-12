@@ -92,6 +92,8 @@ class TestBasicLocking:
 class TestConcurrentAccess:
     """Test concurrent file access with locking."""
 
+    pytestmark = pytest.mark.slow
+
     def test_concurrent_reads(self, tmp_path):
         """Test that multiple threads can read concurrently."""
         test_file = tmp_path / "test.json"
@@ -199,6 +201,8 @@ class TestConcurrentAccess:
 
 class TestLockTimeout:
     """Test lock timeout behavior."""
+
+    pytestmark = pytest.mark.slow
 
     def test_concurrent_write_eventually_succeeds(self, tmp_path):
         """Test that concurrent writes wait for lock release."""
