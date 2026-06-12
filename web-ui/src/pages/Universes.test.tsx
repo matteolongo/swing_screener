@@ -26,4 +26,17 @@ describe('Universes page', () => {
       expect(screen.queryByText('Discovering…')).not.toBeInTheDocument()
     })
   })
+
+  it('opens the symbol detail modal when a screener result row is clicked', async () => {
+    const { user } = renderWithProviders(<Universes />)
+
+    await user.click(screen.getByRole('button', { name: /discover symbols/i }))
+    await screen.findByText('NVDA')
+    await user.click(screen.getByRole('button', { name: /run screener on these symbols/i }))
+    await screen.findByText('Screener Results for Discovered Symbols')
+
+    await user.click(screen.getByText('AAPL'))
+
+    expect(await screen.findByText('AAPL Details')).toBeInTheDocument()
+  })
 })
