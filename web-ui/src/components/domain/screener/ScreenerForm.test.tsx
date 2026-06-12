@@ -74,7 +74,7 @@ describe('ScreenerForm - collapsed state', () => {
 
   it('shows "Advanced filters" label in collapsed view', () => {
     renderWithProviders(<ScreenerForm {...defaultProps} isCollapsed={true} />);
-    expect(screen.getByText('Advanced filters')).toBeInTheDocument();
+    expect(screen.getByText(t('screener.controls.adjustFilters'))).toBeInTheDocument();
   });
 
   it('calls onToggleCollapsed when "Advanced filters" button is clicked', async () => {
@@ -83,7 +83,7 @@ describe('ScreenerForm - collapsed state', () => {
     renderWithProviders(
       <ScreenerForm {...defaultProps} isCollapsed={true} onToggleCollapsed={onToggleCollapsed} />
     );
-    const adjustBtn = screen.getByRole('button', { name: 'Advanced filters' });
+    const adjustBtn = screen.getByRole('button', { name: t('screener.controls.adjustFilters') });
     await user.click(adjustBtn);
     expect(onToggleCollapsed).toHaveBeenCalledTimes(1);
   });

@@ -64,6 +64,7 @@ testpaths = ["tests"]
 pythonpath = [".", "src"]
 markers = [
     "integration: marks tests as integration tests (require API keys, slower)",
+    "slow: marks tests as slow (e.g. thread-contention sleeps); skip with -m 'not slow'",
 ]
 
 [tool.setuptools.package-data]
