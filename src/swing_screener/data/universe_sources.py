@@ -4,7 +4,7 @@ import datetime as dt
 import html
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Callable, Iterable
 from urllib.error import URLError
 from urllib.request import Request, urlopen
@@ -99,6 +99,7 @@ class UniverseSourceResult:
     source_documents: list[dict]
     constituents: list[dict]
     notes: list[str]
+    new_master_records: list[dict] = field(default_factory=list)
 
 
 def _fetch_text(url: str) -> str:

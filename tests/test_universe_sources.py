@@ -1,6 +1,7 @@
 from swing_screener.data.universe_sources import (
     MARCH_2026_REVIEW_URL,
     SEPTEMBER_2025_REVIEW_URL,
+    UniverseSourceResult,
     _apply_delta,
     _extract_composition_rows,
     _extract_delta_rows,
@@ -116,3 +117,14 @@ def test_refresh_amsterdam_adapter_maps_official_names_to_symbols():
         "RAND.AS",
         "THEON.AS",
     ]
+
+
+def test_universe_source_result_defaults_new_master_records_empty():
+    result = UniverseSourceResult(
+        source_adapter="manual_snapshot",
+        source_asof="2026-01-01",
+        source_documents=[],
+        constituents=[],
+        notes=[],
+    )
+    assert result.new_master_records == []
