@@ -93,7 +93,11 @@ def filter_ticker_list(
 def _load_registry_manifest() -> list[dict]:
     rel = f"{_REGISTRY_REL}/manifest.json"
     try:
-        data = importlib_resources.files(_REGISTRY_PKG).joinpath(rel).read_text(encoding="utf-8")
+        data = (
+            importlib_resources.files(_REGISTRY_PKG)
+            .joinpath(rel)
+            .read_text(encoding="utf-8")
+        )
     except FileNotFoundError as exc:
         raise FileNotFoundError(
             f"Universe registry manifest not found: {_REGISTRY_PKG}/{rel}"
@@ -111,7 +115,11 @@ def _load_registry_manifest() -> list[dict]:
 def _load_snapshot(universe_id: str) -> dict:
     rel = f"{_REGISTRY_REL}/snapshots/{universe_id}.json"
     try:
-        data = importlib_resources.files(_REGISTRY_PKG).joinpath(rel).read_text(encoding="utf-8")
+        data = (
+            importlib_resources.files(_REGISTRY_PKG)
+            .joinpath(rel)
+            .read_text(encoding="utf-8")
+        )
     except FileNotFoundError as exc:
         raise FileNotFoundError(
             f"Snapshot not found for universe '{universe_id}': {_REGISTRY_PKG}/{rel}"
@@ -133,7 +141,9 @@ def _snapshot_path(universe_id: str) -> Path:
 def _write_snapshot(universe_id: str, snapshot: dict) -> None:
     path = _snapshot_path(universe_id)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(snapshot, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(snapshot, indent=2, ensure_ascii=True) + "\n", encoding="utf-8"
+    )
     _load_snapshot.cache_clear()
 
 
@@ -195,7 +205,11 @@ def _check_stale(snapshot: dict) -> None:
         if kind == "index":
             raise RuntimeError(msg + " Index universes must be updated before use.")
         else:
-            warnings.warn(msg + " Curated universe loaded with stale data.", UserWarning, stacklevel=4)
+            warnings.warn(
+                msg + " Curated universe loaded with stale data.",
+                UserWarning,
+                stacklevel=4,
+            )
 
 
 def _load_instrument_master() -> dict[str, dict]:
@@ -203,20 +217,63 @@ def _load_instrument_master() -> dict[str, dict]:
     return _instrument_master_cache()
 
 
-@lru_cache(maxsize=1)
-def _instrument_master_cache() -> dict[str, dict]:
+_INSTRUMENT_MASTER_PATH_OVERRIDE: str | None = None
+
+
+def _instrument_master_path() -> str:
     import os
-    # Try project-relative path first (works in dev), then package data
+
+    if _INSTRUMENT_MASTER_PATH_OVERRIDE:
+        return os.path.abspath(_INSTRUMENT_MASTER_PATH_OVERRIDE)
     for candidate in [
         "data/intelligence/instrument_master.json",
-        os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "data", "intelligence", "instrument_master.json"),
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "..",
+            "..",
+            "..",
+            "data",
+            "intelligence",
+            "instrument_master.json",
+        ),
     ]:
         p = os.path.abspath(candidate)
         if os.path.exists(p):
-            with open(p, encoding="utf-8") as f:
-                records = json.load(f)
-            return {r["symbol"]: r for r in records}
+            return p
+    return os.path.abspath("data/intelligence/instrument_master.json")
+
+
+@lru_cache(maxsize=1)
+def _instrument_master_cache() -> dict[str, dict]:
+    import os
+
+    path = _instrument_master_path()
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as f:
+            records = json.load(f)
+        return {r["symbol"]: r for r in records}
     return {}
+
+
+def _write_instrument_master(new_records: list[dict]) -> int:
+    """Append new symbols to instrument master (never overwrite). Returns count added."""
+    if not new_records:
+        return 0
+    path = _instrument_master_path()
+    with open(path, encoding="utf-8") as f:
+        records = json.load(f)
+    existing = {r["symbol"] for r in records}
+    added = [r for r in new_records if r["symbol"] not in existing]
+    if not added:
+        return 0
+    records.extend(added)
+    records.sort(key=lambda r: str(r.get("symbol", "")))
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(records, f, indent=2, ensure_ascii=False)
+        f.write("\n")
+    _instrument_master_cache.cache_clear()
+    return len(added)
 
 
 def validate_universe_snapshot(universe_id: str) -> list[str]:
@@ -257,12 +314,28 @@ def get_instrument_record(symbol: str) -> Optional[dict]:
 def _summary_from_entry(entry: dict, snapshot: dict) -> dict:
     constituents = snapshot.get("constituents", [])
     item = dict(entry)
-    for key in ("description", "benchmark", "source", "source_asof", "last_reviewed_at", "stale_after_days", "kind"):
+    for key in (
+        "description",
+        "benchmark",
+        "source",
+        "source_asof",
+        "last_reviewed_at",
+        "stale_after_days",
+        "kind",
+    ):
         if key in snapshot and snapshot.get(key) not in (None, ""):
             item[key] = snapshot.get(key)
     item["member_count"] = len(constituents)
-    item["currencies"] = sorted({str(c.get("currency", "")).upper() for c in constituents if c.get("currency")})
-    item["exchange_mics"] = sorted({str(c.get("exchange_mic", "")).upper() for c in constituents if c.get("exchange_mic")})
+    item["currencies"] = sorted(
+        {str(c.get("currency", "")).upper() for c in constituents if c.get("currency")}
+    )
+    item["exchange_mics"] = sorted(
+        {
+            str(c.get("exchange_mic", "")).upper()
+            for c in constituents
+            if c.get("exchange_mic")
+        }
+    )
     item["source_adapter"] = str(snapshot.get("source_adapter") or "manual_snapshot")
     item["source_documents"] = list(snapshot.get("source_documents") or [])
     item["refreshable"] = item["source_adapter"] != "manual_snapshot"
@@ -304,12 +377,17 @@ def get_package_universe_detail(universe_id: str) -> dict:
     constituents: list[dict] = []
     for item in snapshot.get("constituents", []):
         rec = get_instrument_record(item.get("symbol", "")) or {}
-        yahoo_symbol = str((rec.get("provider_symbol_map") or {}).get("yahoo_finance") or item.get("symbol") or "")
+        yahoo_symbol = str(
+            (rec.get("provider_symbol_map") or {}).get("yahoo_finance")
+            or item.get("symbol")
+            or ""
+        )
         constituents.append(
             {
                 "symbol": item.get("symbol"),
                 "source_name": item.get("source_name"),
-                "source_symbol": item.get("source_symbol") or yahoo_symbol.split(".")[0],
+                "source_symbol": item.get("source_symbol")
+                or yahoo_symbol.split(".")[0],
                 "exchange_mic": item.get("exchange_mic") or rec.get("exchange_mic"),
                 "currency": item.get("currency") or rec.get("currency"),
                 "instrument_type": rec.get("instrument_type"),
@@ -331,7 +409,9 @@ def refresh_package_universe(universe_id: str, *, apply: bool = False) -> dict:
         raise ValueError(f"Unknown universe id: '{universe_id}'")
     current_snapshot = _load_snapshot(universe_id)
     instrument_master = _load_instrument_master()
-    preview = refresh_snapshot_from_source(universe_id, current_snapshot, instrument_master)
+    preview = refresh_snapshot_from_source(
+        universe_id, current_snapshot, instrument_master
+    )
     proposed_snapshot = json.loads(json.dumps(current_snapshot))
     proposed_snapshot["constituents"] = preview.constituents
     proposed_snapshot["source_asof"] = preview.source_asof
@@ -359,19 +439,30 @@ def refresh_package_universe(universe_id: str, *, apply: bool = False) -> dict:
         rules["currencies"] = currencies
     proposed_snapshot["rules"] = rules
 
-    current_symbols = [str(item.get("symbol", "")).upper() for item in current_snapshot.get("constituents", [])]
-    proposed_symbols = [str(item.get("symbol", "")).upper() for item in proposed_snapshot.get("constituents", [])]
+    current_symbols = [
+        str(item.get("symbol", "")).upper()
+        for item in current_snapshot.get("constituents", [])
+    ]
+    proposed_symbols = [
+        str(item.get("symbol", "")).upper()
+        for item in proposed_snapshot.get("constituents", [])
+    ]
     current_set = set(current_symbols)
     proposed_set = set(proposed_symbols)
     additions = [symbol for symbol in proposed_symbols if symbol not in current_set]
     removals = [symbol for symbol in current_symbols if symbol not in proposed_set]
     changed = current_symbols != proposed_symbols
 
+    if apply and getattr(preview, "new_master_records", None):
+        _write_instrument_master(preview.new_master_records)
+
     if apply and changed:
         _write_snapshot(universe_id, proposed_snapshot)
         current_snapshot = proposed_snapshot
 
-    summary = _summary_from_entry(entry, current_snapshot if apply and changed else proposed_snapshot)
+    summary = _summary_from_entry(
+        entry, current_snapshot if apply and changed else proposed_snapshot
+    )
     return {
         "universe": summary,
         "applied": apply and changed,
@@ -397,9 +488,15 @@ def filter_tickers_by_metadata(
 
     Unknown metadata is only tolerated when no corresponding filter is requested.
     """
-    allowed_currencies = {str(c).strip().upper() for c in (currencies or []) if str(c).strip()}
-    allowed_exchanges = {str(m).strip().upper() for m in (exchange_mics or []) if str(m).strip()}
-    allowed_types = {str(t).strip().lower() for t in (instrument_types or []) if str(t).strip()}
+    allowed_currencies = {
+        str(c).strip().upper() for c in (currencies or []) if str(c).strip()
+    }
+    allowed_exchanges = {
+        str(m).strip().upper() for m in (exchange_mics or []) if str(m).strip()
+    }
+    allowed_types = {
+        str(t).strip().lower() for t in (instrument_types or []) if str(t).strip()
+    }
 
     out: list[str] = []
     for raw in tickers:
@@ -408,8 +505,12 @@ def filter_tickers_by_metadata(
             continue
         rec = get_instrument_record(symbol)
         currency = str((rec or {}).get("currency") or "").strip().upper() or "UNKNOWN"
-        exchange = str((rec or {}).get("exchange_mic") or "").strip().upper() or "UNKNOWN"
-        instrument_type = str((rec or {}).get("instrument_type") or "unknown").strip().lower()
+        exchange = (
+            str((rec or {}).get("exchange_mic") or "").strip().upper() or "UNKNOWN"
+        )
+        instrument_type = (
+            str((rec or {}).get("instrument_type") or "unknown").strip().lower()
+        )
 
         if allowed_currencies and currency not in allowed_currencies:
             continue
