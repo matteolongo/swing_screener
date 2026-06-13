@@ -258,11 +258,16 @@ def _instrument_master_cache() -> dict[str, dict]:
 
 def _write_instrument_master(new_records: list[dict]) -> int:
     """Append new symbols to instrument master (never overwrite). Returns count added."""
+    import os
+
     if not new_records:
         return 0
     path = _instrument_master_path()
-    with open(path, encoding="utf-8") as f:
-        records = json.load(f)
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as f:
+            records = json.load(f)
+    else:
+        records = []
     existing = {r["symbol"] for r in records}
     added = [r for r in new_records if r["symbol"] not in existing]
     if not added:
