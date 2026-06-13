@@ -5,9 +5,725 @@
   "benchmark": "^FTSE",
   "source": "wikipedia",
   "source_adapter": "wikipedia_index_review",
-  "source_asof": "2026-06-12",
-  "last_reviewed_at": "2026-06-12",
+  "source_asof": "2026-06-13",
+  "last_reviewed_at": "2026-06-13",
   "stale_after_days": 100,
-  "rules": {},
-  "constituents": []
+  "rules": {
+    "exchange_mics": [
+      "XLON"
+    ],
+    "currencies": [
+      "EUR",
+      "GBP",
+      "USD"
+    ]
+  },
+  "constituents": [
+    {
+      "symbol": "III.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "3i",
+      "source_symbol": "III"
+    },
+    {
+      "symbol": "ADM.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Admiral Group",
+      "source_symbol": "ADM"
+    },
+    {
+      "symbol": "AAF.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Airtel Africa",
+      "source_symbol": "AAF"
+    },
+    {
+      "symbol": "ALW.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Alliance Witan",
+      "source_symbol": "ALW"
+    },
+    {
+      "symbol": "AAL.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Anglo American plc",
+      "source_symbol": "AAL"
+    },
+    {
+      "symbol": "ANTO.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Antofagasta plc",
+      "source_symbol": "ANTO"
+    },
+    {
+      "symbol": "ABF.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Associated British Foods",
+      "source_symbol": "ABF"
+    },
+    {
+      "symbol": "AZN.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "AstraZeneca",
+      "source_symbol": "AZN"
+    },
+    {
+      "symbol": "AUTO.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Autotrader Group",
+      "source_symbol": "AUTO"
+    },
+    {
+      "symbol": "AV.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Aviva",
+      "source_symbol": "AV"
+    },
+    {
+      "symbol": "BAB.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Babcock International",
+      "source_symbol": "BAB"
+    },
+    {
+      "symbol": "BA.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "BAE Systems",
+      "source_symbol": "BA"
+    },
+    {
+      "symbol": "BARC.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Barclays",
+      "source_symbol": "BARC"
+    },
+    {
+      "symbol": "BTRW.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Barratt Redrow",
+      "source_symbol": "BTRW"
+    },
+    {
+      "symbol": "BEZ.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Beazley",
+      "source_symbol": "BEZ"
+    },
+    {
+      "symbol": "BKG.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Berkeley Group Holdings",
+      "source_symbol": "BKG"
+    },
+    {
+      "symbol": "BP.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "BP",
+      "source_symbol": "BP"
+    },
+    {
+      "symbol": "BATS.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "British American Tobacco",
+      "source_symbol": "BATS"
+    },
+    {
+      "symbol": "BLND.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "British Land",
+      "source_symbol": "BLND"
+    },
+    {
+      "symbol": "BT-A.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "BT Group",
+      "source_symbol": "BT-A"
+    },
+    {
+      "symbol": "BNZL.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Bunzl",
+      "source_symbol": "BNZL"
+    },
+    {
+      "symbol": "BRBY.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Burberry Group",
+      "source_symbol": "BRBY"
+    },
+    {
+      "symbol": "CNA.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Centrica",
+      "source_symbol": "CNA"
+    },
+    {
+      "symbol": "CCEP.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Coca-Cola Europacific Partners",
+      "source_symbol": "CCEP"
+    },
+    {
+      "symbol": "CCH.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Coca-Cola HBC",
+      "source_symbol": "CCH"
+    },
+    {
+      "symbol": "CPG.L",
+      "exchange_mic": "XLON",
+      "currency": "USD",
+      "source_name": "Compass Group",
+      "source_symbol": "CPG"
+    },
+    {
+      "symbol": "CTEC.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Convatec",
+      "source_symbol": "CTEC"
+    },
+    {
+      "symbol": "CRDA.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Croda International",
+      "source_symbol": "CRDA"
+    },
+    {
+      "symbol": "DCC.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "DCC plc",
+      "source_symbol": "DCC"
+    },
+    {
+      "symbol": "DGE.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Diageo",
+      "source_symbol": "DGE"
+    },
+    {
+      "symbol": "DPLM.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Diploma",
+      "source_symbol": "DPLM"
+    },
+    {
+      "symbol": "EDV.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Endeavour Mining",
+      "source_symbol": "EDV"
+    },
+    {
+      "symbol": "ENT.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Entain",
+      "source_symbol": "ENT"
+    },
+    {
+      "symbol": "EXPN.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Experian",
+      "source_symbol": "EXPN"
+    },
+    {
+      "symbol": "FCIT.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "F & C Investment Trust",
+      "source_symbol": "FCIT"
+    },
+    {
+      "symbol": "FRES.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Fresnillo plc",
+      "source_symbol": "FRES"
+    },
+    {
+      "symbol": "GAW.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Games Workshop",
+      "source_symbol": "GAW"
+    },
+    {
+      "symbol": "GLEN.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Glencore",
+      "source_symbol": "GLEN"
+    },
+    {
+      "symbol": "GSK.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "GSK plc",
+      "source_symbol": "GSK"
+    },
+    {
+      "symbol": "HLN.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Haleon",
+      "source_symbol": "HLN"
+    },
+    {
+      "symbol": "HLMA.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Halma plc",
+      "source_symbol": "HLMA"
+    },
+    {
+      "symbol": "HSX.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Hiscox",
+      "source_symbol": "HSX"
+    },
+    {
+      "symbol": "HWDN.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Howdens Joinery",
+      "source_symbol": "HWDN"
+    },
+    {
+      "symbol": "HSBA.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "HSBC",
+      "source_symbol": "HSBA"
+    },
+    {
+      "symbol": "ICG.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "ICG",
+      "source_symbol": "ICG"
+    },
+    {
+      "symbol": "IGG.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "IG Group",
+      "source_symbol": "IGG"
+    },
+    {
+      "symbol": "IHG.L",
+      "exchange_mic": "XLON",
+      "currency": "USD",
+      "source_name": "IHG Hotels & Resorts",
+      "source_symbol": "IHG"
+    },
+    {
+      "symbol": "IMI.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "IMI",
+      "source_symbol": "IMI"
+    },
+    {
+      "symbol": "IMB.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Imperial Brands",
+      "source_symbol": "IMB"
+    },
+    {
+      "symbol": "INF.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Informa",
+      "source_symbol": "INF"
+    },
+    {
+      "symbol": "IAG.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "International Airlines Group",
+      "source_symbol": "IAG"
+    },
+    {
+      "symbol": "ITRK.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Intertek",
+      "source_symbol": "ITRK"
+    },
+    {
+      "symbol": "JD.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "JD Sports",
+      "source_symbol": "JD"
+    },
+    {
+      "symbol": "BGEO.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Lion Finance Group",
+      "source_symbol": "BGEO"
+    },
+    {
+      "symbol": "KGF.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Kingfisher plc",
+      "source_symbol": "KGF"
+    },
+    {
+      "symbol": "LAND.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Land Securities",
+      "source_symbol": "LAND"
+    },
+    {
+      "symbol": "LGEN.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Legal & General",
+      "source_symbol": "LGEN"
+    },
+    {
+      "symbol": "LLOY.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Lloyds Banking Group",
+      "source_symbol": "LLOY"
+    },
+    {
+      "symbol": "LMP.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "LondonMetric Property",
+      "source_symbol": "LMP"
+    },
+    {
+      "symbol": "LSEG.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "London Stock Exchange Group",
+      "source_symbol": "LSEG"
+    },
+    {
+      "symbol": "MNG.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "M&G",
+      "source_symbol": "MNG"
+    },
+    {
+      "symbol": "MKS.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Marks & Spencer",
+      "source_symbol": "MKS"
+    },
+    {
+      "symbol": "MRO.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Melrose Industries",
+      "source_symbol": "MRO"
+    },
+    {
+      "symbol": "MTLN.L",
+      "exchange_mic": "XLON",
+      "currency": "EUR",
+      "source_name": "Metlen Energy & Metals",
+      "source_symbol": "MTLN"
+    },
+    {
+      "symbol": "MNDI.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Mondi",
+      "source_symbol": "MNDI"
+    },
+    {
+      "symbol": "NG.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "National Grid plc",
+      "source_symbol": "NG"
+    },
+    {
+      "symbol": "NWG.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "NatWest Group",
+      "source_symbol": "NWG"
+    },
+    {
+      "symbol": "NXT.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Next plc",
+      "source_symbol": "NXT"
+    },
+    {
+      "symbol": "PSON.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Pearson plc",
+      "source_symbol": "PSON"
+    },
+    {
+      "symbol": "PSH.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Pershing Square Holdings",
+      "source_symbol": "PSH"
+    },
+    {
+      "symbol": "PSN.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Persimmon",
+      "source_symbol": "PSN"
+    },
+    {
+      "symbol": "PCT.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Polar Capital Technology Trust",
+      "source_symbol": "PCT"
+    },
+    {
+      "symbol": "PRU.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Prudential plc",
+      "source_symbol": "PRU"
+    },
+    {
+      "symbol": "RKT.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Reckitt",
+      "source_symbol": "RKT"
+    },
+    {
+      "symbol": "REL.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "RELX",
+      "source_symbol": "REL"
+    },
+    {
+      "symbol": "RTO.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Rentokil Initial",
+      "source_symbol": "RTO"
+    },
+    {
+      "symbol": "RMV.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Rightmove",
+      "source_symbol": "RMV"
+    },
+    {
+      "symbol": "RIO.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Rio Tinto",
+      "source_symbol": "RIO"
+    },
+    {
+      "symbol": "RR.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Rolls-Royce Holdings",
+      "source_symbol": "RR"
+    },
+    {
+      "symbol": "SGE.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Sage Group",
+      "source_symbol": "SGE"
+    },
+    {
+      "symbol": "SBRY.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Sainsbury's",
+      "source_symbol": "SBRY"
+    },
+    {
+      "symbol": "SDR.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Schroders",
+      "source_symbol": "SDR"
+    },
+    {
+      "symbol": "SMT.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Scottish Mortgage Investment Trust",
+      "source_symbol": "SMT"
+    },
+    {
+      "symbol": "SGRO.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Segro",
+      "source_symbol": "SGRO"
+    },
+    {
+      "symbol": "SVT.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Severn Trent",
+      "source_symbol": "SVT"
+    },
+    {
+      "symbol": "SHEL.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Shell plc",
+      "source_symbol": "SHEL"
+    },
+    {
+      "symbol": "SMIN.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Smiths Group",
+      "source_symbol": "SMIN"
+    },
+    {
+      "symbol": "SN.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Smith & Nephew",
+      "source_symbol": "SN"
+    },
+    {
+      "symbol": "SPX.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Spirax Group",
+      "source_symbol": "SPX"
+    },
+    {
+      "symbol": "SSE.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "SSE plc",
+      "source_symbol": "SSE"
+    },
+    {
+      "symbol": "STAN.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Standard Chartered",
+      "source_symbol": "STAN"
+    },
+    {
+      "symbol": "SDLF.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Standard Life",
+      "source_symbol": "SDLF"
+    },
+    {
+      "symbol": "STJ.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "St. James's Place",
+      "source_symbol": "STJ"
+    },
+    {
+      "symbol": "TSCO.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Tesco",
+      "source_symbol": "TSCO"
+    },
+    {
+      "symbol": "BBOX.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Tritax Big Box REIT",
+      "source_symbol": "BBOX"
+    },
+    {
+      "symbol": "ULVR.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Unilever",
+      "source_symbol": "ULVR"
+    },
+    {
+      "symbol": "UU.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "United Utilities",
+      "source_symbol": "UU"
+    },
+    {
+      "symbol": "VOD.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Vodafone Group",
+      "source_symbol": "VOD"
+    },
+    {
+      "symbol": "WEIR.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Weir Group",
+      "source_symbol": "WEIR"
+    },
+    {
+      "symbol": "WTB.L",
+      "exchange_mic": "XLON",
+      "currency": "GBP",
+      "source_name": "Whitbread",
+      "source_symbol": "WTB"
+    }
+  ],
+  "source_documents": [
+    {
+      "label": "Wikipedia: FTSE_100_Index",
+      "url": "https://en.wikipedia.org/wiki/FTSE_100_Index"
+    }
+  ]
 }

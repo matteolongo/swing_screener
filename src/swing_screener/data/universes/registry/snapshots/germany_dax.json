@@ -5,9 +5,304 @@
   "benchmark": "^GDAXI",
   "source": "wikipedia",
   "source_adapter": "wikipedia_index_review",
-  "source_asof": "2026-06-12",
-  "last_reviewed_at": "2026-06-12",
+  "source_asof": "2026-06-13",
+  "last_reviewed_at": "2026-06-13",
   "stale_after_days": 100,
-  "rules": {},
-  "constituents": []
+  "rules": {
+    "exchange_mics": [
+      "XETR",
+      "XPAR"
+    ],
+    "currencies": [
+      "EUR"
+    ]
+  },
+  "constituents": [
+    {
+      "symbol": "ADS.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Adidas",
+      "source_symbol": "ADS"
+    },
+    {
+      "symbol": "AIR.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Airbus",
+      "source_symbol": "AIR"
+    },
+    {
+      "symbol": "ALV.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Allianz",
+      "source_symbol": "ALV"
+    },
+    {
+      "symbol": "BAS.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "BASF",
+      "source_symbol": "BAS"
+    },
+    {
+      "symbol": "BAYN.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Bayer",
+      "source_symbol": "BAYN"
+    },
+    {
+      "symbol": "BEI.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Beiersdorf",
+      "source_symbol": "BEI"
+    },
+    {
+      "symbol": "BMW.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "BMW",
+      "source_symbol": "BMW"
+    },
+    {
+      "symbol": "BNR.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Brenntag",
+      "source_symbol": "BNR"
+    },
+    {
+      "symbol": "CBK.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Commerzbank",
+      "source_symbol": "CBK"
+    },
+    {
+      "symbol": "CON.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Continental",
+      "source_symbol": "CON"
+    },
+    {
+      "symbol": "DTG.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Daimler Truck",
+      "source_symbol": "DTG"
+    },
+    {
+      "symbol": "DBK.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Deutsche Bank",
+      "source_symbol": "DBK"
+    },
+    {
+      "symbol": "DB1.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Deutsche B\u00f6rse",
+      "source_symbol": "DB1"
+    },
+    {
+      "symbol": "DHL.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Deutsche Post",
+      "source_symbol": "DHL"
+    },
+    {
+      "symbol": "DTE.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Deutsche Telekom",
+      "source_symbol": "DTE"
+    },
+    {
+      "symbol": "EOAN.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "E.ON",
+      "source_symbol": "EOAN"
+    },
+    {
+      "symbol": "FRE.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Fresenius",
+      "source_symbol": "FRE"
+    },
+    {
+      "symbol": "FME.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Fresenius Medical Care",
+      "source_symbol": "FME"
+    },
+    {
+      "symbol": "G1A.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "GEA Group",
+      "source_symbol": "G1A"
+    },
+    {
+      "symbol": "HNR1.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Hannover Re",
+      "source_symbol": "HNR1"
+    },
+    {
+      "symbol": "HEI.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Heidelberg Materials",
+      "source_symbol": "HEI"
+    },
+    {
+      "symbol": "HEN3.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Henkel",
+      "source_symbol": "HEN3"
+    },
+    {
+      "symbol": "IFX.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Infineon Technologies",
+      "source_symbol": "IFX"
+    },
+    {
+      "symbol": "MBG.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Mercedes-Benz Group",
+      "source_symbol": "MBG"
+    },
+    {
+      "symbol": "MRK.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Merck",
+      "source_symbol": "MRK"
+    },
+    {
+      "symbol": "MTX.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "MTU Aero Engines",
+      "source_symbol": "MTX"
+    },
+    {
+      "symbol": "MUV2.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Munich Re",
+      "source_symbol": "MUV2"
+    },
+    {
+      "symbol": "PAH3.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Porsche SE",
+      "source_symbol": "PAH3"
+    },
+    {
+      "symbol": "QIA.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Qiagen",
+      "source_symbol": "QIA"
+    },
+    {
+      "symbol": "RHM.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Rheinmetall",
+      "source_symbol": "RHM"
+    },
+    {
+      "symbol": "RWE.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "RWE",
+      "source_symbol": "RWE"
+    },
+    {
+      "symbol": "SAP.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "SAP",
+      "source_symbol": "SAP"
+    },
+    {
+      "symbol": "G24.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Scout24",
+      "source_symbol": "G24"
+    },
+    {
+      "symbol": "SIE.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Siemens",
+      "source_symbol": "SIE"
+    },
+    {
+      "symbol": "ENR.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Siemens Energy",
+      "source_symbol": "ENR"
+    },
+    {
+      "symbol": "SHL.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Siemens Healthineers",
+      "source_symbol": "SHL"
+    },
+    {
+      "symbol": "SY1.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Symrise",
+      "source_symbol": "SY1"
+    },
+    {
+      "symbol": "VOW3.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Volkswagen Group",
+      "source_symbol": "VOW3"
+    },
+    {
+      "symbol": "VNA.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Vonovia",
+      "source_symbol": "VNA"
+    },
+    {
+      "symbol": "ZAL.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Zalando",
+      "source_symbol": "ZAL"
+    }
+  ],
+  "source_documents": [
+    {
+      "label": "Wikipedia: DAX",
+      "url": "https://en.wikipedia.org/wiki/DAX"
+    }
+  ]
 }

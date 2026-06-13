@@ -5,9 +5,234 @@
   "benchmark": "^DJI",
   "source": "wikipedia",
   "source_adapter": "wikipedia_index_review",
-  "source_asof": "2026-06-12",
-  "last_reviewed_at": "2026-06-12",
+  "source_asof": "2026-06-13",
+  "last_reviewed_at": "2026-06-13",
   "stale_after_days": 100,
-  "rules": {},
-  "constituents": []
+  "rules": {
+    "exchange_mics": [
+      "XNAS",
+      "XNYS"
+    ],
+    "currencies": [
+      "USD"
+    ]
+  },
+  "constituents": [
+    {
+      "symbol": "MMM",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "3M",
+      "source_symbol": "MMM"
+    },
+    {
+      "symbol": "AXP",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "American Express",
+      "source_symbol": "AXP"
+    },
+    {
+      "symbol": "AMGN",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Amgen",
+      "source_symbol": "AMGN"
+    },
+    {
+      "symbol": "AMZN",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Amazon",
+      "source_symbol": "AMZN"
+    },
+    {
+      "symbol": "AAPL",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Apple",
+      "source_symbol": "AAPL"
+    },
+    {
+      "symbol": "BA",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Boeing",
+      "source_symbol": "BA"
+    },
+    {
+      "symbol": "CAT",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Caterpillar",
+      "source_symbol": "CAT"
+    },
+    {
+      "symbol": "CVX",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Chevron",
+      "source_symbol": "CVX"
+    },
+    {
+      "symbol": "CSCO",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Cisco",
+      "source_symbol": "CSCO"
+    },
+    {
+      "symbol": "KO",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Coca-Cola",
+      "source_symbol": "KO"
+    },
+    {
+      "symbol": "DIS",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Disney",
+      "source_symbol": "DIS"
+    },
+    {
+      "symbol": "GS",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Goldman Sachs",
+      "source_symbol": "GS"
+    },
+    {
+      "symbol": "HD",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Home Depot",
+      "source_symbol": "HD"
+    },
+    {
+      "symbol": "HON",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Honeywell",
+      "source_symbol": "HON"
+    },
+    {
+      "symbol": "IBM",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "IBM",
+      "source_symbol": "IBM"
+    },
+    {
+      "symbol": "JNJ",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Johnson & Johnson",
+      "source_symbol": "JNJ"
+    },
+    {
+      "symbol": "JPM",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "JPMorgan Chase",
+      "source_symbol": "JPM"
+    },
+    {
+      "symbol": "MCD",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "McDonald's",
+      "source_symbol": "MCD"
+    },
+    {
+      "symbol": "MRK",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Merck",
+      "source_symbol": "MRK"
+    },
+    {
+      "symbol": "MSFT",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Microsoft",
+      "source_symbol": "MSFT"
+    },
+    {
+      "symbol": "NKE",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Nike",
+      "source_symbol": "NKE"
+    },
+    {
+      "symbol": "NVDA",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Nvidia",
+      "source_symbol": "NVDA"
+    },
+    {
+      "symbol": "PG",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Procter & Gamble",
+      "source_symbol": "PG"
+    },
+    {
+      "symbol": "CRM",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Salesforce",
+      "source_symbol": "CRM"
+    },
+    {
+      "symbol": "SHW",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Sherwin-Williams",
+      "source_symbol": "SHW"
+    },
+    {
+      "symbol": "TRV",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Travelers Companies, Inc.",
+      "source_symbol": "TRV"
+    },
+    {
+      "symbol": "UNH",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "UnitedHealth Group",
+      "source_symbol": "UNH"
+    },
+    {
+      "symbol": "VZ",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Verizon",
+      "source_symbol": "VZ"
+    },
+    {
+      "symbol": "V",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Visa",
+      "source_symbol": "V"
+    },
+    {
+      "symbol": "WMT",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Walmart",
+      "source_symbol": "WMT"
+    }
+  ],
+  "source_documents": [
+    {
+      "label": "Wikipedia: Dow_Jones_Industrial_Average",
+      "url": "https://en.wikipedia.org/wiki/Dow_Jones_Industrial_Average"
+    }
+  ]
 }

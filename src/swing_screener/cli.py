@@ -166,9 +166,15 @@ def main() -> None:
     uni_doctor = uni_sub.add_parser("doctor", help="Detailed validation for a single universe")
     uni_doctor.add_argument("--name", required=True, help="Universe id to inspect")
 
-    uni_refresh = uni_sub.add_parser("refresh", help="Refresh an index universe from its source adapter")
+    uni_refresh = uni_sub.add_parser(
+        "refresh", help="Refresh an index universe from its source adapter"
+    )
     uni_refresh.add_argument("--name", required=True, help="Universe id to refresh")
-    uni_refresh.add_argument("--apply", action="store_true", help="Write the refreshed snapshot + master records")
+    uni_refresh.add_argument(
+        "--apply",
+        action="store_true",
+        help="Write the refreshed snapshot + master records",
+    )
 
     args = parser.parse_args()
 
