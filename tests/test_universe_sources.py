@@ -7,6 +7,81 @@ from swing_screener.data.universe_sources import (
     _extract_delta_rows,
     refresh_amsterdam_from_euronext_review,
 )
+from swing_screener.data.wikipedia_sources import RawConstituent
+
+
+def us_raw(symbol, name):
+    return RawConstituent(
+        symbol=symbol, source_name=name, source_symbol=symbol.split(".")[0]
+    )
+
+
+def test_wikipedia_adapter_builds_constituents_and_new_records(monkeypatch):
+    import swing_screener.data.universe_sources as us
+
+    fake_rows = [us_raw("AAPL", "Apple Inc."), us_raw("MSFT", "Microsoft")]
+    monkeypatch.setattr(
+        us, "fetch_index_constituents", lambda uid, fetch_text=None: fake_rows
+    )
+
+    def fake_enrich(symbol, info_provider=None):
+        return {
+            "symbol": symbol,
+            "exchange_mic": "XNAS",
+            "currency": "USD",
+            "country_code": "US",
+            "timezone": "America/New_York",
+            "instrument_type": "equity",
+            "provider_symbol_map": {"yahoo_finance": symbol},
+        }
+
+    monkeypatch.setattr(us, "enrich_symbol", fake_enrich)
+
+    snapshot = {
+        "id": "us_sp500",
+        "source_adapter": "wikipedia_index_review",
+        "rules": {},
+    }
+    result = us.refresh_snapshot_from_source("us_sp500", snapshot, instrument_master={})
+
+    assert result.source_adapter == "wikipedia_index_review"
+    assert [c["symbol"] for c in result.constituents] == ["AAPL", "MSFT"]
+    assert {r["symbol"] for r in result.new_master_records} == {"AAPL", "MSFT"}
+
+
+def test_wikipedia_adapter_skips_unresolved(monkeypatch):
+    import swing_screener.data.universe_sources as us
+
+    monkeypatch.setattr(
+        us,
+        "fetch_index_constituents",
+        lambda uid, fetch_text=None: [us_raw("AAPL", "Apple"), us_raw("ZZZZ", "Ghost")],
+    )
+    monkeypatch.setattr(
+        us,
+        "enrich_symbol",
+        lambda s, info_provider=None: (
+            None
+            if s == "ZZZZ"
+            else {
+                "symbol": s,
+                "exchange_mic": "XNAS",
+                "currency": "USD",
+                "country_code": "US",
+                "timezone": "America/New_York",
+                "instrument_type": "equity",
+                "provider_symbol_map": {"yahoo_finance": s},
+            }
+        ),
+    )
+    snapshot = {
+        "id": "us_sp500",
+        "source_adapter": "wikipedia_index_review",
+        "rules": {},
+    }
+    result = us.refresh_snapshot_from_source("us_sp500", snapshot, instrument_master={})
+    assert [c["symbol"] for c in result.constituents] == ["AAPL"]
+    assert any("ZZZZ" in n for n in result.notes)
 
 
 SEPTEMBER_HTML = """
@@ -74,12 +149,36 @@ def test_apply_delta_keeps_existing_members_and_applies_changes():
 
 def test_refresh_amsterdam_adapter_maps_official_names_to_symbols():
     instrument_master = {
-        "AALB.AS": {"exchange_mic": "XAMS", "currency": "EUR", "provider_symbol_map": {"yahoo_finance": "AALB.AS"}},
-        "AF.PA": {"exchange_mic": "XPAR", "currency": "EUR", "provider_symbol_map": {"yahoo_finance": "AF.PA"}},
-        "RAND.AS": {"exchange_mic": "XAMS", "currency": "EUR", "provider_symbol_map": {"yahoo_finance": "RAND.AS"}},
-        "SBMO.AS": {"exchange_mic": "XAMS", "currency": "EUR", "provider_symbol_map": {"yahoo_finance": "SBMO.AS"}},
-        "THEON.AS": {"exchange_mic": "XAMS", "currency": "EUR", "provider_symbol_map": {"yahoo_finance": "THEON.AS"}},
-        "OCI.AS": {"exchange_mic": "XAMS", "currency": "EUR", "provider_symbol_map": {"yahoo_finance": "OCI.AS"}},
+        "AALB.AS": {
+            "exchange_mic": "XAMS",
+            "currency": "EUR",
+            "provider_symbol_map": {"yahoo_finance": "AALB.AS"},
+        },
+        "AF.PA": {
+            "exchange_mic": "XPAR",
+            "currency": "EUR",
+            "provider_symbol_map": {"yahoo_finance": "AF.PA"},
+        },
+        "RAND.AS": {
+            "exchange_mic": "XAMS",
+            "currency": "EUR",
+            "provider_symbol_map": {"yahoo_finance": "RAND.AS"},
+        },
+        "SBMO.AS": {
+            "exchange_mic": "XAMS",
+            "currency": "EUR",
+            "provider_symbol_map": {"yahoo_finance": "SBMO.AS"},
+        },
+        "THEON.AS": {
+            "exchange_mic": "XAMS",
+            "currency": "EUR",
+            "provider_symbol_map": {"yahoo_finance": "THEON.AS"},
+        },
+        "OCI.AS": {
+            "exchange_mic": "XAMS",
+            "currency": "EUR",
+            "provider_symbol_map": {"yahoo_finance": "OCI.AS"},
+        },
     }
 
     def fake_fetch(url: str) -> str:

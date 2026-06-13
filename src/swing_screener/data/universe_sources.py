@@ -9,6 +9,13 @@ from typing import Callable, Iterable
 from urllib.error import URLError
 from urllib.request import Request, urlopen
 
+from swing_screener.data.instrument_enrichment import enrich_symbol
+from swing_screener.data.wikipedia_sources import (
+    WIKIPEDIA_BASE,
+    WIKIPEDIA_INDEX_CONFIG,
+    fetch_index_constituents,
+)
+
 
 SEPTEMBER_2025_REVIEW_URL = (
     "https://www.euronext.com/en/about/media/euronext-press-releases/"
@@ -121,14 +128,18 @@ def _clean_cell(cell_html: str) -> str:
 def _extract_table_after_marker(page_text: str, marker_pattern: str) -> list[list[str]]:
     match = re.search(marker_pattern, page_text, flags=re.IGNORECASE | re.DOTALL)
     if not match:
-        raise UniverseSourceError(f"Could not find source section matching: {marker_pattern}")
+        raise UniverseSourceError(
+            f"Could not find source section matching: {marker_pattern}"
+        )
     tbody = match.group(1)
     rows = re.findall(r"<tr>(.*?)</tr>", tbody, flags=re.IGNORECASE | re.DOTALL)
     parsed: list[list[str]] = []
     for row in rows:
         cells = [
             _clean_cell(cell)
-            for cell in re.findall(r"<t[dh][^>]*>(.*?)</t[dh]>", row, flags=re.IGNORECASE | re.DOTALL)
+            for cell in re.findall(
+                r"<t[dh][^>]*>(.*?)</t[dh]>", row, flags=re.IGNORECASE | re.DOTALL
+            )
         ]
         if cells:
             parsed.append(cells)
@@ -172,7 +183,9 @@ def _extract_delta_rows(page_text: str, index_name: str) -> tuple[list[str], lis
     return additions, removals
 
 
-def _apply_delta(base_names: Iterable[str], additions: Iterable[str], removals: Iterable[str]) -> list[str]:
+def _apply_delta(
+    base_names: Iterable[str], additions: Iterable[str], removals: Iterable[str]
+) -> list[str]:
     out: list[str] = []
     seen = set()
     removed = {normalize_company_name(name) for name in removals}
@@ -191,7 +204,9 @@ def _apply_delta(base_names: Iterable[str], additions: Iterable[str], removals: 
     return out
 
 
-def _build_constituents(names: Iterable[str], instrument_master: dict[str, dict]) -> list[dict]:
+def _build_constituents(
+    names: Iterable[str], instrument_master: dict[str, dict]
+) -> list[dict]:
     constituents: list[dict] = []
     for name in names:
         normalized = normalize_company_name(name)
@@ -200,7 +215,9 @@ def _build_constituents(names: Iterable[str], instrument_master: dict[str, dict]
             raise UniverseSourceError(f"No symbol mapping configured for '{name}'")
         rec = instrument_master.get(symbol)
         if rec is None:
-            raise UniverseSourceError(f"Instrument master is missing '{symbol}' for '{name}'")
+            raise UniverseSourceError(
+                f"Instrument master is missing '{symbol}' for '{name}'"
+            )
         provider_symbol_map = dict(rec.get("provider_symbol_map") or {})
         source_symbol = provider_symbol_map.get("yahoo_finance", symbol).split(".")[0]
         constituents.append(
@@ -245,12 +262,19 @@ def refresh_amsterdam_from_euronext_review(
             "Official AMX composition includes AIR FRANCE-KLM (mnemonic AF), which resolves to the local provider symbol AF.PA.",
         ]
     elif universe_id == "amsterdam_all":
-        names = aex_names + [name for name in amx_names if normalize_company_name(name) not in {normalize_company_name(value) for value in aex_names}]
+        names = aex_names + [
+            name
+            for name in amx_names
+            if normalize_company_name(name)
+            not in {normalize_company_name(value) for value in aex_names}
+        ]
         notes = [
             "Built from official AEX and AMX review sources and merged into one Amsterdam index-family basket.",
         ]
     else:
-        raise UniverseSourceError(f"Unsupported universe for Euronext adapter: {universe_id}")
+        raise UniverseSourceError(
+            f"Unsupported universe for Euronext adapter: {universe_id}"
+        )
 
     constituents = _build_constituents(names, instrument_master)
     return UniverseSourceResult(
@@ -277,7 +301,65 @@ def manual_snapshot_result(current_snapshot: dict) -> UniverseSourceResult:
         source_asof=str(current_snapshot.get("source_asof") or ""),
         source_documents=list(current_snapshot.get("source_documents") or []),
         constituents=list(current_snapshot.get("constituents") or []),
-        notes=["This universe is manually curated and has no remote refresh adapter configured."],
+        notes=[
+            "This universe is manually curated and has no remote refresh adapter configured."
+        ],
+    )
+
+
+def refresh_index_from_wikipedia(
+    universe_id: str,
+    current_snapshot: dict,
+    instrument_master: dict[str, dict],
+    *,
+    fetch_text: Callable[[str], str] = _fetch_text,
+) -> UniverseSourceResult:
+    cfg = WIKIPEDIA_INDEX_CONFIG.get(universe_id)
+    if cfg is None:
+        raise UniverseSourceError(f"No Wikipedia config for universe '{universe_id}'")
+    rows = fetch_index_constituents(universe_id, fetch_text=fetch_text)
+
+    constituents: list[dict] = []
+    new_records: list[dict] = []
+    notes: list[str] = []
+    today = dt.date.today().isoformat()
+
+    for row in rows:
+        rec = instrument_master.get(row.symbol)
+        if rec is None:
+            rec = enrich_symbol(row.symbol)
+            if rec is None:
+                notes.append(
+                    f"Skipped {row.symbol} ({row.source_name}): yfinance could not resolve."
+                )
+                continue
+            new_records.append(rec)
+        constituents.append(
+            {
+                "symbol": row.symbol,
+                "exchange_mic": rec.get("exchange_mic"),
+                "currency": rec.get("currency"),
+                "source_name": row.source_name,
+                "source_symbol": row.source_symbol,
+            }
+        )
+
+    if not constituents:
+        raise UniverseSourceError(f"No resolvable constituents for '{universe_id}'")
+
+    notes.insert(0, f"Built from Wikipedia '{cfg.wiki_slug}' + yfinance enrichment.")
+    return UniverseSourceResult(
+        source_adapter="wikipedia_index_review",
+        source_asof=today,
+        source_documents=[
+            {
+                "label": f"Wikipedia: {cfg.wiki_slug}",
+                "url": WIKIPEDIA_BASE + cfg.wiki_slug,
+            }
+        ],
+        constituents=constituents,
+        notes=notes,
+        new_master_records=new_records,
     )
 
 
@@ -288,13 +370,19 @@ def refresh_snapshot_from_source(
     *,
     fetch_text: Callable[[str], str] = _fetch_text,
 ) -> UniverseSourceResult:
-    adapter = str(current_snapshot.get("source_adapter") or "manual_snapshot").strip().lower()
+    adapter = (
+        str(current_snapshot.get("source_adapter") or "manual_snapshot").strip().lower()
+    )
     if adapter == "euronext_aex_family_review":
         return refresh_amsterdam_from_euronext_review(
             universe_id,
             current_snapshot,
             instrument_master,
             fetch_text=fetch_text,
+        )
+    if adapter == "wikipedia_index_review":
+        return refresh_index_from_wikipedia(
+            universe_id, current_snapshot, instrument_master, fetch_text=fetch_text
         )
     return manual_snapshot_result(current_snapshot)
 
