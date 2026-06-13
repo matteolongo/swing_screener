@@ -4,6 +4,7 @@ import io
 import re
 from dataclasses import dataclass
 from typing import Callable
+from urllib.error import URLError
 from urllib.request import Request, urlopen
 
 import pandas as pd
@@ -13,8 +14,12 @@ WIKIPEDIA_BASE = "https://en.wikipedia.org/wiki/"
 
 def _fetch_text(url: str) -> str:
     request = Request(url, headers={"User-Agent": "Mozilla/5.0"})
-    with urlopen(request, timeout=30) as response:
-        return response.read().decode("utf-8", errors="ignore")
+    try:
+        with urlopen(request, timeout=30) as response:
+            raw = response.read()
+    except URLError as exc:  # pragma: no cover - network failures depend on env
+        raise _error(f"Failed to fetch source document: {url}") from exc
+    return raw.decode("utf-8", errors="ignore")
 
 
 @dataclass(frozen=True)
@@ -130,6 +135,7 @@ def normalize_yahoo_symbol(raw: str, default_suffix: str) -> str:
     if ":" in text:
         text = text.split(":", 1)[1].strip()
     text = re.sub(r"\s+", "", text).upper()
+    text = text.strip(".")
     if not text:
         return ""
     if "." in text and text.rsplit(".", 1)[1] in {
@@ -183,7 +189,7 @@ def fetch_index_constituents(
         if not symbol or symbol in seen or symbol.lower() in {"nan", "—"}:
             continue
         seen.add(symbol)
-        bare = symbol.split(".")[0] if cfg.default_suffix else symbol
+        bare = symbol.rsplit(".", 1)[0] if "." in symbol else symbol
         out.append(RawConstituent(symbol=symbol, source_name=name, source_symbol=bare))
     if not out:
         raise _error(f"Parsed zero constituents for '{universe_id}'")
