@@ -88,6 +88,17 @@
     "stale_after_days": 180
   },
   {
+    "id": "europe_eurostoxx50",
+    "description": "EURO STOXX 50 constituents",
+    "kind": "index",
+    "benchmark": "^STOXX50E",
+    "currencies": ["EUR"],
+    "source": "wikipedia",
+    "source_asof": "2026-06-12",
+    "last_reviewed_at": "2026-06-12",
+    "stale_after_days": 100
+  },
+  {
     "id": "europe_large_caps",
     "description": "Primary European large-cap local listings",
     "kind": "curated",
@@ -110,14 +121,25 @@
     "stale_after_days": 180
   },
   {
-    "id": "italy_ftse_mib",
-    "description": "Euronext Milan FTSE MIB constituents",
+    "id": "france_cac40",
+    "description": "CAC 40 constituents",
     "kind": "index",
-    "benchmark": "FTSEMIB.MI",
+    "benchmark": "^FCHI",
     "currencies": ["EUR"],
-    "source": "manual",
-    "source_asof": "2025-08-01",
-    "last_reviewed_at": "2026-06-09",
+    "source": "wikipedia",
+    "source_asof": "2026-06-12",
+    "last_reviewed_at": "2026-06-12",
+    "stale_after_days": 100
+  },
+  {
+    "id": "germany_dax",
+    "description": "DAX 40 constituents",
+    "kind": "index",
+    "benchmark": "^GDAXI",
+    "currencies": ["EUR"],
+    "source": "wikipedia",
+    "source_asof": "2026-06-12",
+    "last_reviewed_at": "2026-06-12",
     "stale_after_days": 100
   },
   {
@@ -154,6 +176,17 @@
     "stale_after_days": 180
   },
   {
+    "id": "italy_ftse_mib",
+    "description": "Euronext Milan FTSE MIB constituents",
+    "kind": "index",
+    "benchmark": "FTSEMIB.MI",
+    "currencies": ["EUR"],
+    "source": "manual",
+    "source_asof": "2025-08-01",
+    "last_reviewed_at": "2026-06-09",
+    "stale_after_days": 100
+  },
+  {
     "id": "semiconductor_stocks",
     "description": "Semiconductor designers, manufacturers, and equipment makers",
     "kind": "curated",
@@ -163,5 +196,60 @@
     "source_asof": "2026-04-12",
     "last_reviewed_at": "2026-04-12",
     "stale_after_days": 180
+  },
+  {
+    "id": "spain_ibex35",
+    "description": "IBEX 35 constituents",
+    "kind": "index",
+    "benchmark": "^IBEX",
+    "currencies": ["EUR"],
+    "source": "wikipedia",
+    "source_asof": "2026-06-12",
+    "last_reviewed_at": "2026-06-12",
+    "stale_after_days": 100
+  },
+  {
+    "id": "uk_ftse100",
+    "description": "FTSE 100 constituents",
+    "kind": "index",
+    "benchmark": "^FTSE",
+    "currencies": ["GBP"],
+    "source": "wikipedia",
+    "source_asof": "2026-06-12",
+    "last_reviewed_at": "2026-06-12",
+    "stale_after_days": 100
+  },
+  {
+    "id": "us_dow30",
+    "description": "Dow Jones Industrial Average constituents",
+    "kind": "index",
+    "benchmark": "^DJI",
+    "currencies": ["USD"],
+    "source": "wikipedia",
+    "source_asof": "2026-06-12",
+    "last_reviewed_at": "2026-06-12",
+    "stale_after_days": 100
+  },
+  {
+    "id": "us_nasdaq100",
+    "description": "Nasdaq-100 constituents",
+    "kind": "index",
+    "benchmark": "^NDX",
+    "currencies": ["USD"],
+    "source": "wikipedia",
+    "source_asof": "2026-06-12",
+    "last_reviewed_at": "2026-06-12",
+    "stale_after_days": 100
+  },
+  {
+    "id": "us_sp500",
+    "description": "S&P 500 constituents",
+    "kind": "index",
+    "benchmark": "^GSPC",
+    "currencies": ["USD"],
+    "source": "wikipedia",
+    "source_asof": "2026-06-12",
+    "last_reviewed_at": "2026-06-12",
+    "stale_after_days": 100
   }
 ]

@@ -1,0 +1,13 @@
+{
+  "id": "europe_eurostoxx50",
+  "kind": "index",
+  "description": "EURO STOXX 50 constituents",
+  "benchmark": "^STOXX50E",
+  "source": "wikipedia",
+  "source_adapter": "wikipedia_index_review",
+  "source_asof": "2026-06-12",
+  "last_reviewed_at": "2026-06-12",
+  "stale_after_days": 100,
+  "rules": {},
+  "constituents": []
+}

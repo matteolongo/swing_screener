@@ -1,0 +1,13 @@
+{
+  "id": "germany_dax",
+  "kind": "index",
+  "description": "DAX 40 constituents",
+  "benchmark": "^GDAXI",
+  "source": "wikipedia",
+  "source_adapter": "wikipedia_index_review",
+  "source_asof": "2026-06-12",
+  "last_reviewed_at": "2026-06-12",
+  "stale_after_days": 100,
+  "rules": {},
+  "constituents": []
+}

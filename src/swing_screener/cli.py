@@ -166,6 +166,10 @@ def main() -> None:
     uni_doctor = uni_sub.add_parser("doctor", help="Detailed validation for a single universe")
     uni_doctor.add_argument("--name", required=True, help="Universe id to inspect")
 
+    uni_refresh = uni_sub.add_parser("refresh", help="Refresh an index universe from its source adapter")
+    uni_refresh.add_argument("--name", required=True, help="Universe id to refresh")
+    uni_refresh.add_argument("--apply", action="store_true", help="Write the refreshed snapshot + master records")
+
     args = parser.parse_args()
 
     # -------------------------
@@ -467,6 +471,18 @@ def main() -> None:
                 sys.exit(1)
             else:
                 print("  Validation: OK")
+            return
+
+        if args.uni_command == "refresh":
+            from swing_screener.data.universe import refresh_package_universe
+
+            result = refresh_package_universe(args.name, apply=args.apply)
+            print(
+                f"{args.name}: changed={result['changed']} applied={result['applied']} "
+                f"members {result['current_member_count']} -> {result['proposed_member_count']}"
+            )
+            for note in result.get("notes", []):
+                print(f"  note: {note}")
             return
 
         parser.error("Unknown universes command")

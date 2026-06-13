@@ -1,0 +1,13 @@
+{
+  "id": "france_cac40",
+  "kind": "index",
+  "description": "CAC 40 constituents",
+  "benchmark": "^FCHI",
+  "source": "wikipedia",
+  "source_adapter": "wikipedia_index_review",
+  "source_asof": "2026-06-12",
+  "last_reviewed_at": "2026-06-12",
+  "stale_after_days": 100,
+  "rules": {},
+  "constituents": []
+}

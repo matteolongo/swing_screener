@@ -1,0 +1,13 @@
+{
+  "id": "uk_ftse100",
+  "kind": "index",
+  "description": "FTSE 100 constituents",
+  "benchmark": "^FTSE",
+  "source": "wikipedia",
+  "source_adapter": "wikipedia_index_review",
+  "source_asof": "2026-06-12",
+  "last_reviewed_at": "2026-06-12",
+  "stale_after_days": 100,
+  "rules": {},
+  "constituents": []
+}
