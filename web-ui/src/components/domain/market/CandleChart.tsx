@@ -135,7 +135,7 @@ export function CandleChart({
   const showBenchmark = hasBenchmark && benchmarkLabel != null;
 
   return (
-    <div className={cn(className)}>
+    <div className={cn('w-full', className)}>
       {showBenchmark && (
         <div className="mb-1 flex items-center gap-3 text-[11px] text-slate-500 dark:text-slate-400">
           <span className="inline-flex items-center gap-1">
@@ -158,7 +158,15 @@ export function CandleChart({
           )}
         </div>
       )}
-      <svg width={width} height={height} role="img" aria-label={`${ticker} candles`}>
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        width="100%"
+        height={height}
+        preserveAspectRatio="none"
+        className="w-full"
+        role="img"
+        aria-label={`${ticker} candles`}
+      >
         {usable.map((b, i) => {
           const x = xOf(i);
           const up = b.close >= b.open;
