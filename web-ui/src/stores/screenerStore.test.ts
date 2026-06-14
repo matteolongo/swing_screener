@@ -64,4 +64,26 @@ describe('useScreenerStore', () => {
 
     expect(result.current.lastResult).toBeNull();
   });
+
+  it('keeps price history in memory but strips it from the persisted copy', () => {
+    const { result } = renderHook(() => useScreenerStore());
+    const withHistory = {
+      ...candidate('AAA', 1),
+      priceHistory: [{ date: '2024-01-01', close: 10 }],
+      benchmarkPriceHistory: [{ date: '2024-01-01', close: 100 }],
+    };
+
+    act(() => result.current.setLastResult(response([withHistory])));
+
+    // in-memory state keeps the heavy arrays so charts render this session
+    const liveCandidate = result.current.lastResult?.candidates[0] as Record<string, unknown>;
+    expect(liveCandidate.priceHistory).toBeDefined();
+
+    // persisted copy drops them to stay under the localStorage quota
+    const persisted = JSON.parse(localStorage.getItem('swing-screener-last-result') as string);
+    const persistedCandidate = persisted.state.lastResult.candidates[0];
+    expect(persistedCandidate.ticker).toBe('AAA');
+    expect(persistedCandidate.priceHistory).toBeUndefined();
+    expect(persistedCandidate.benchmarkPriceHistory).toBeUndefined();
+  });
 });
