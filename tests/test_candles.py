@@ -140,3 +140,18 @@ def test_detect_patterns_handles_missing_ohlc():
     )
     result = detect_patterns(df)
     assert result == {} or result == {"AAA": []}
+
+
+def test_detect_patterns_filters_requested_tickers():
+    idx = pd.date_range("2024-01-01", periods=60, freq="B")
+    rows_a = [(10, 10.1, 9.9, 10.0, 1000)] * 59 + [(10.0, 10.2, 8.0, 10.1, 1500)]
+    rows_b = [(20, 20.1, 19.9, 20.0, 1000)] * 60
+    data = {}
+    for fi, fname in enumerate(["Open", "High", "Low", "Close", "Volume"]):
+        data[(fname, "AAA")] = [r[fi] for r in rows_a]
+        data[(fname, "BBB")] = [r[fi] for r in rows_b]
+    cols = pd.MultiIndex.from_tuples(list(data.keys()), names=["field", "ticker"])
+    df = pd.DataFrame({k: v for k, v in data.items()}, index=idx).reindex(columns=cols)
+
+    out = detect_patterns(df, tickers=["aaa"], lookback=5)  # lowercase on purpose
+    assert set(out.keys()) == {"AAA"}

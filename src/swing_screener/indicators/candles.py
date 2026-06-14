@@ -138,6 +138,8 @@ class CandlePattern:
 
 
 def _field(ohlcv: pd.DataFrame, name: str) -> pd.DataFrame | None:
+    if not isinstance(ohlcv.columns, pd.MultiIndex):
+        return None
     if name not in ohlcv.columns.get_level_values(0):
         return None
     sub = ohlcv[name]
@@ -171,6 +173,7 @@ def detect_patterns(
         low = low_m[tk]
         c = c_m[tk]
         frame = pd.concat([o, h, low, c], axis=1, keys=["o", "h", "l", "c"]).dropna()
+        # Need at least 2 bars for prev/cur, and a full lookback window before scanning.
         if len(frame) < max(2, lb):
             out[tk] = []
             continue
