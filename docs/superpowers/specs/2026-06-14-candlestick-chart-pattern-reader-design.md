@@ -29,7 +29,10 @@ the curve-fitting the project forbids.
 ## Locked Decisions
 
 - Ship candle chart **and** pattern reader together (one iteration).
-- Replace the line chart **everywhere** (mini in list rows, full in symbol modal).
+- Candle chart in the **full views only** (symbol modal + symbol analysis
+  content). Compact screener candidate rows **keep the existing close-only
+  sparkline** (`CachedSymbolPriceChart`) — mini candles are not worth it under
+  ~5px/bar. No "mini" candle mode.
 - **Hand-rolled SVG**, no charting library dependency.
 - Curated set of ~6 patterns: hammer, shooting star, bullish/bearish engulfing,
   inside bar, outside bar, doji.
@@ -38,7 +41,11 @@ the curve-fitting the project forbids.
 - Pattern `context` computed **inside** the engine so all consumers get it
   identically.
 - Volume **included** in payload and drawn as bars under the candles.
-- Two `max_bars` values: short for list/mini candles, long for the modal.
+- Pattern reader `lookback = 10` bars.
+- Pattern names rendered in **English** by default (`Inside bar`,
+  `Bullish engulfing`, …); still routed through i18n.
+- Single `max_bars` for the candidate price-history payload (sized for the modal);
+  the sparkline reads `close` from the same points.
 
 ## Architecture
 
@@ -139,8 +146,9 @@ emit O/H/L/Volume per bar (same `max_bars`, same slicing). Call
 `detect_patterns(ohlcv, ...)` once for the ticker batch and attach patterns to
 each candidate. Same hook in `watchlist_service`.
 
-**Two `max_bars`**: short value for list/mini candles, long for the modal, to cap
-payload cost (O/H/L/V ~4× close-only weight).
+**Single `max_bars`** sized for the modal. O/H/L/V is ~4× the close-only weight,
+but `PRICE_HISTORY_MAX_BARS` already caps bars; the compact rows reuse the same
+points' `close` for the sparkline, so no extra payload variant is needed.
 
 **Frontend `features/screener/types.ts`**: `PriceHistoryPoint` gains
 `open/high/low/volume?`; candidate gains `patterns?: CandlePattern[]`. Transform at
@@ -149,32 +157,30 @@ contract rule).
 
 ## Component 3 — Frontend `CandleChart` (SVG)
 
-New `components/domain/market/CandleChart.tsx`, **replaces** `CachedSymbolPriceChart`
-in all 3 usages (symbol modal, symbol analysis content, screener candidate row).
-Two modes via prop:
+New `components/domain/market/CandleChart.tsx`, used in the **full views only**:
+symbol modal (`WorkspaceSymbolModal`) and symbol analysis content
+(`SymbolAnalysisContent`). The compact screener candidate row **keeps**
+`CachedSymbolPriceChart` (sparkline). `CachedSymbolPriceChart` is **not removed**.
 
 ```tsx
-<CandleChart ticker bars patterns mode="mini" | "full" range={PriceRangeKey} />
+<CandleChart ticker bars patterns range={PriceRangeKey} />
 ```
 
-- **mini** (list rows, ~220×72 as now): thin candles, no axes, no volume, pattern
-  marker as a colored dot on the latest relevant bar. Reuses `slicePriceHistory` +
-  `getDefaultPriceRange`.
-- **full** (modal): candles + volume bars below + price axis on the right + range
-  selector (ranges already in `priceHistory.ts`) + pattern markers above candles
-  with tooltip (`name` + `context`, e.g. "Inside bar · at pullback").
+Single full mode: candles + volume bars below + price axis on the right + range
+selector (ranges already in `priceHistory.ts`) + pattern markers above candles
+with tooltip (`name` + `context`, e.g. "Inside bar · at pullback").
 
 Rendering: hand SVG, price scale from visible H/L min/max (extend `getValueBounds`
 for O/H/L). Body = rect open→close, wick = line high→low, green/red by
 close≷open. Marker = small triangle/label anchored at `key_level`.
 
-i18n: pattern names and context labels go through `web-ui/src/i18n/` (no hardcoded
-strings). Keys like `chart.pattern.hammer`, `chart.context.atPullback`.
+i18n: pattern names and context labels go through `web-ui/src/i18n/`, **English by
+default** (no hardcoded strings). Keys like `chart.pattern.hammer`,
+`chart.context.atPullback`.
 
 Colors from existing theme tokens reused from `CachedSymbolPriceChart`.
 
-`CachedSymbolPriceChart` is **removed**; the 3 importers and their tests updated.
-`WEB_UI_GUIDE.md` updated if the feature map changes.
+`WEB_UI_GUIDE.md` updated for the new CandleChart.
 
 ## Component 4 — Entry/stop refinement (`execution/guidance.py`)
 
@@ -232,9 +238,10 @@ narrative reflects price action. Additive, low risk. Documented in
 backward-compatible (optional fields). MSW handlers updated.
 
 **Frontend (Vitest)**:
-- `CandleChart` mini + full: renders N candles from `bars`, green/red by
-  close≷open, marker present when `patterns` non-empty, range selector changes
+- `CandleChart`: renders N candles from `bars`, green/red by close≷open, volume
+  bars present, marker present when `patterns` non-empty, range selector changes
   slice. Copy asserted via i18n keys.
+- `CachedSymbolPriceChart` (sparkline) unchanged — existing tests still pass.
 - Existing coverage thresholds (80% lines / 75% branches) hold.
 
 **Full suite before commit**: `pytest -q && cd web-ui && npm test`, plus
@@ -245,7 +252,8 @@ backward-compatible (optional fields). MSW handlers updated.
 - `config/README.md` — new candle + execution thresholds.
 - `data/README.md` — if persisted price-history schema changes.
 - `api/README.md` — payload signature changes.
-- `web-ui/docs/WEB_UI_GUIDE.md` — new CandleChart, removed CachedSymbolPriceChart.
+- `web-ui/docs/WEB_UI_GUIDE.md` — new CandleChart in full views (sparkline kept in
+  compact rows).
 - `src/swing_screener/indicators/` README (if present) — new module.
 - `src/swing_screener/intelligence/README.md` — enriched prompt.
 - `docs/overview/INDEX.md` — this spec.
