@@ -18,7 +18,7 @@ def test_hammer_true():
 
 
 def test_hammer_false_when_lower_wick_too_short():
-    m = _bar(o=10.0, h=10.2, low=9.8, c=10.1)
+    m = _bar(o=10.0, h=10.2, low=9.95, c=10.1)
     assert _is_hammer(m, CandleConfig()) is False
 
 

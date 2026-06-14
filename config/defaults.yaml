@@ -391,7 +391,7 @@ low_level:
     allow_second_chance_breakout: true
   candles:
     lookback: 10
-    doji_body_ratio: 0.05
+    doji_body_ratio: 0.1
     hammer_lower_wick_mult: 2.0
     hammer_max_opposite_wick_ratio: 0.25
     extension_threshold_pct: 0.10
