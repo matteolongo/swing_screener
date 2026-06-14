@@ -1,3 +1,6 @@
+import numpy as np
+import pandas as pd
+
 from swing_screener.indicators.candles import (
     CandleConfig,
     _bar_metrics,
@@ -8,6 +11,7 @@ from swing_screener.indicators.candles import (
     _is_bearish_engulfing,
     _is_inside_bar,
     _is_outside_bar,
+    _context_for_latest,
 )
 
 
@@ -63,3 +67,27 @@ def test_outside_bar():
     prev = _bar(o=9.8, h=10.2, low=9.4, c=10.0)
     cur = _bar(o=9.5, h=10.5, low=9.0, c=10.1)  # H/L contains prev
     assert _is_outside_bar(prev, cur) is True
+
+
+def _close_series(values):
+    idx = pd.date_range("2024-01-01", periods=len(values), freq="B")
+    return pd.Series(values, index=idx)
+
+
+def test_context_extended_when_far_above_prior_high():
+    base = list(np.linspace(10, 20, 60))
+    base[-1] = 30.0  # spike far above prior 50-bar high
+    ctx = _context_for_latest(_close_series(base), CandleConfig())
+    assert ctx == "extended"
+
+
+def test_context_at_breakout():
+    base = [10.0] * 60
+    base[-1] = 10.05  # close above prior flat high, below extension threshold
+    ctx = _context_for_latest(_close_series(base), CandleConfig())
+    assert ctx == "at_breakout"
+
+
+def test_context_none_for_flat_series():
+    ctx = _context_for_latest(_close_series([10.0] * 60), CandleConfig())
+    assert ctx == "none"

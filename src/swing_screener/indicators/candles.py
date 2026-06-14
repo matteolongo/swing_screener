@@ -9,6 +9,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+import pandas as pd
+
+from swing_screener.selection.entries import breakout_signal, pullback_reclaim_signal
 from swing_screener.settings.manager import get_settings_manager
 
 
@@ -120,3 +123,26 @@ def _is_inside_bar(prev: _Metrics, cur: _Metrics) -> bool:
 
 def _is_outside_bar(prev: _Metrics, cur: _Metrics) -> bool:
     return cur.h > prev.h and cur.low < prev.low
+
+
+def _context_for_latest(close_s: pd.Series, cfg: CandleConfig) -> str:
+    """Label the latest bar's setup context. Precedence: extended > at_breakout
+    > at_pullback > none. 'extended' suppresses pattern-based stops downstream."""
+    close_s = close_s.dropna()
+    if len(close_s) < cfg.breakout_lookback + 2:
+        return "none"
+
+    last = float(close_s.iloc[-1])
+    prior_high = float(close_s.iloc[-(cfg.breakout_lookback + 1) : -1].max())
+    if prior_high > 0 and (last / prior_high) - 1.0 >= cfg.extension_threshold_pct:
+        return "extended"
+
+    is_breakout, _ = breakout_signal(close_s, cfg.breakout_lookback)
+    if is_breakout:
+        return "at_breakout"
+
+    is_pullback, _ = pullback_reclaim_signal(close_s, cfg.pullback_ma)
+    if is_pullback:
+        return "at_pullback"
+
+    return "none"
