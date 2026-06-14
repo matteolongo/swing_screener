@@ -13,6 +13,18 @@ Low-level shared defaults for the system:
 - intelligence defaults
 - backend provider catalogs and operational fallback values
 
+Candlestick pattern + structural-stop settings live under `low_level`:
+
+- `low_level.candles` — thresholds for the deterministic candlestick engine
+  (`indicators/candles.py`): `lookback`, `doji_body_ratio`,
+  `hammer_lower_wick_mult`, `hammer_max_opposite_wick_ratio`,
+  `extension_threshold_pct`, `breakout_lookback`, `pullback_ma`.
+- `low_level.execution.pattern_stop_enabled` / `pattern_stop_atr_buffer` —
+  toggle and ATR buffer for the structural stop derived from a bullish pattern on
+  the latest bar (`execution/guidance.apply_pattern_stop`). The structural stop is
+  only used when it is tighter than the existing stop, below entry, not in an
+  `extended` context, and does not breach minimum R.
+
 ### `user.yaml`
 
 Shared user-facing configuration that affects UI and system behavior without carrying secrets:
