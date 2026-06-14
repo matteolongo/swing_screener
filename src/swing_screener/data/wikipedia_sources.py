@@ -108,7 +108,12 @@ def _flatten(table: pd.DataFrame) -> pd.DataFrame:
 def _select_table(html: str, ticker_col: str, company_col: str) -> pd.DataFrame:
     try:
         tables = pd.read_html(io.StringIO(html))
-    except (ValueError, ImportError) as exc:
+    except ImportError as exc:
+        raise _error(
+            "pandas.read_html needs an HTML parser; install 'lxml' "
+            f"(import failed: {exc})"
+        ) from exc
+    except ValueError as exc:
         raise _error(
             f"No constituent table with columns ~'{ticker_col}'/'{company_col}' found"
         ) from exc

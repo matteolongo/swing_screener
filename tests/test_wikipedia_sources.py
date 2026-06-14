@@ -90,3 +90,19 @@ def test_empty_table_raises():
         fetch_index_constituents(
             "us_dow30", fetch_text=lambda _u: "<html><body>no tables</body></html>"
         )
+
+
+def test_missing_html_parser_surfaces_clear_error(monkeypatch):
+    """A missing read_html parser must not be masked as 'no constituent table'."""
+    import swing_screener.data.wikipedia_sources as ws
+    from swing_screener.data.universe_sources import UniverseSourceError
+
+    def _boom(*_args, **_kwargs):
+        raise ImportError("Import lxml failed.")
+
+    monkeypatch.setattr(ws.pd, "read_html", _boom)
+    with pytest.raises(UniverseSourceError) as excinfo:
+        fetch_index_constituents("us_dow30", fetch_text=lambda _u: "<html></html>")
+    message = str(excinfo.value).lower()
+    assert "lxml" in message or "parser" in message
+    assert "no constituent table" not in message
