@@ -1,0 +1,383 @@
+{
+  "id": "europe_eurostoxx50",
+  "kind": "index",
+  "description": "EURO STOXX 50 constituents",
+  "benchmark": "^STOXX50E",
+  "source": "wikipedia",
+  "source_adapter": "wikipedia_index_review",
+  "source_asof": "2026-06-13",
+  "last_reviewed_at": "2026-06-13",
+  "stale_after_days": 100,
+  "rules": {
+    "exchange_mics": [
+      "XAMS",
+      "XBRU",
+      "XETR",
+      "XHEL",
+      "XMAD",
+      "XMIL",
+      "XPAR"
+    ],
+    "currencies": [
+      "EUR"
+    ]
+  },
+  "constituents": [
+    {
+      "symbol": "ADS.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Adidas",
+      "source_symbol": "ADS"
+    },
+    {
+      "symbol": "ADYEN.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR",
+      "source_name": "Adyen",
+      "source_symbol": "ADYEN"
+    },
+    {
+      "symbol": "AD.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR",
+      "source_name": "Ahold Delhaize",
+      "source_symbol": "AD"
+    },
+    {
+      "symbol": "AI.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Air Liquide",
+      "source_symbol": "AI"
+    },
+    {
+      "symbol": "AIR.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Airbus",
+      "source_symbol": "AIR"
+    },
+    {
+      "symbol": "ALV.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Allianz",
+      "source_symbol": "ALV"
+    },
+    {
+      "symbol": "ABI.BR",
+      "exchange_mic": "XBRU",
+      "currency": "EUR",
+      "source_name": "Anheuser-Busch InBev",
+      "source_symbol": "ABI"
+    },
+    {
+      "symbol": "ARGX.BR",
+      "exchange_mic": "XBRU",
+      "currency": "EUR",
+      "source_name": "Argenx",
+      "source_symbol": "ARGX"
+    },
+    {
+      "symbol": "ASML.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR",
+      "source_name": "ASML Holding",
+      "source_symbol": "ASML"
+    },
+    {
+      "symbol": "CS.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Axa",
+      "source_symbol": "CS"
+    },
+    {
+      "symbol": "BAS.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "BASF",
+      "source_symbol": "BAS"
+    },
+    {
+      "symbol": "BAYN.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Bayer",
+      "source_symbol": "BAYN"
+    },
+    {
+      "symbol": "BBVA.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR",
+      "source_name": "BBVA",
+      "source_symbol": "BBVA"
+    },
+    {
+      "symbol": "SAN.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR",
+      "source_name": "Banco Santander",
+      "source_symbol": "SAN"
+    },
+    {
+      "symbol": "BMW.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "BMW",
+      "source_symbol": "BMW"
+    },
+    {
+      "symbol": "BNP.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "BNP Paribas",
+      "source_symbol": "BNP"
+    },
+    {
+      "symbol": "BN.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Danone",
+      "source_symbol": "BN"
+    },
+    {
+      "symbol": "DBK.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Deutsche Bank",
+      "source_symbol": "DBK"
+    },
+    {
+      "symbol": "DB1.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Deutsche B\u00f6rse",
+      "source_symbol": "DB1"
+    },
+    {
+      "symbol": "DHL.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Deutsche Post",
+      "source_symbol": "DHL"
+    },
+    {
+      "symbol": "DTE.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Deutsche Telekom",
+      "source_symbol": "DTE"
+    },
+    {
+      "symbol": "ENEL.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "Enel",
+      "source_symbol": "ENEL"
+    },
+    {
+      "symbol": "ENI.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "Eni",
+      "source_symbol": "ENI"
+    },
+    {
+      "symbol": "EL.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "EssilorLuxottica",
+      "source_symbol": "EL"
+    },
+    {
+      "symbol": "RACE.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "Ferrari",
+      "source_symbol": "RACE"
+    },
+    {
+      "symbol": "RMS.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Herm\u00e8s",
+      "source_symbol": "RMS"
+    },
+    {
+      "symbol": "IBE.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR",
+      "source_name": "Iberdrola",
+      "source_symbol": "IBE"
+    },
+    {
+      "symbol": "ITX.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR",
+      "source_name": "Inditex",
+      "source_symbol": "ITX"
+    },
+    {
+      "symbol": "IFX.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Infineon Technologies",
+      "source_symbol": "IFX"
+    },
+    {
+      "symbol": "INGA.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR",
+      "source_name": "ING Group",
+      "source_symbol": "INGA"
+    },
+    {
+      "symbol": "ISP.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "Intesa Sanpaolo",
+      "source_symbol": "ISP"
+    },
+    {
+      "symbol": "OR.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "L'Or\u00e9al",
+      "source_symbol": "OR"
+    },
+    {
+      "symbol": "MC.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "LVMH Mo\u00ebt Hennessy Louis Vuitton",
+      "source_symbol": "MC"
+    },
+    {
+      "symbol": "MBG.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Mercedes-Benz Group",
+      "source_symbol": "MBG"
+    },
+    {
+      "symbol": "MUV2.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Munich Re",
+      "source_symbol": "MUV2"
+    },
+    {
+      "symbol": "NDA-FI.HE",
+      "exchange_mic": "XHEL",
+      "currency": "EUR",
+      "source_name": "Nordea",
+      "source_symbol": "NDA-FI"
+    },
+    {
+      "symbol": "PRX.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR",
+      "source_name": "Prosus",
+      "source_symbol": "PRX"
+    },
+    {
+      "symbol": "RHM.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Rheinmetall",
+      "source_symbol": "RHM"
+    },
+    {
+      "symbol": "SAF.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Safran",
+      "source_symbol": "SAF"
+    },
+    {
+      "symbol": "SGO.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Saint-Gobain",
+      "source_symbol": "SGO"
+    },
+    {
+      "symbol": "SAN.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Sanofi",
+      "source_symbol": "SAN"
+    },
+    {
+      "symbol": "SAP.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "SAP",
+      "source_symbol": "SAP"
+    },
+    {
+      "symbol": "SU.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Schneider Electric",
+      "source_symbol": "SU"
+    },
+    {
+      "symbol": "SIE.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Siemens",
+      "source_symbol": "SIE"
+    },
+    {
+      "symbol": "ENR.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Siemens Energy",
+      "source_symbol": "ENR"
+    },
+    {
+      "symbol": "TTE.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "TotalEnergies",
+      "source_symbol": "TTE"
+    },
+    {
+      "symbol": "DG.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Vinci SA",
+      "source_symbol": "DG"
+    },
+    {
+      "symbol": "UCG.MI",
+      "exchange_mic": "XMIL",
+      "currency": "EUR",
+      "source_name": "UniCredit",
+      "source_symbol": "UCG"
+    },
+    {
+      "symbol": "VOW.DE",
+      "exchange_mic": "XETR",
+      "currency": "EUR",
+      "source_name": "Volkswagen Group",
+      "source_symbol": "VOW"
+    },
+    {
+      "symbol": "WKL.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR",
+      "source_name": "Wolters Kluwer",
+      "source_symbol": "WKL"
+    }
+  ],
+  "source_documents": [
+    {
+      "label": "Wikipedia: EURO_STOXX_50",
+      "url": "https://en.wikipedia.org/wiki/EURO_STOXX_50"
+    }
+  ]
+}

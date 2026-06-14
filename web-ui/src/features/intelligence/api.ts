@@ -37,6 +37,7 @@ export interface IntelligenceRequestPayload {
   catalyst_summary?: string | null;
   days_to_earnings?: number | null;
   next_earnings_date?: string | null;
+  recent_patterns?: string[] | null;
 }
 
 export function candidateToPayload(
@@ -75,6 +76,9 @@ export function candidateToPayload(
   payload.fundamentals_label = candidate.decisionSummary?.fundamentalsLabel ?? null;
   payload.catalyst_summary = candidate.decisionSummary?.catalystSummary ?? null;
   payload.days_to_earnings = candidate.daysToEarnings ?? null;
+  payload.recent_patterns = candidate.patterns?.length
+    ? candidate.patterns.map((p) => `${p.name}@${p.context}`)
+    : null;
   if (position != null) {
     payload.entry_price = position.entryPrice;
     payload.entry = position.entryPrice;

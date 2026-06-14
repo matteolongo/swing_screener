@@ -1,0 +1,736 @@
+{
+  "id": "us_nasdaq100",
+  "kind": "index",
+  "description": "Nasdaq-100 constituents",
+  "benchmark": "^NDX",
+  "source": "wikipedia",
+  "source_adapter": "wikipedia_index_review",
+  "source_asof": "2026-06-13",
+  "last_reviewed_at": "2026-06-13",
+  "stale_after_days": 100,
+  "rules": {
+    "exchange_mics": [
+      "XNAS",
+      "XNYS",
+      "XOTC"
+    ],
+    "currencies": [
+      "USD"
+    ]
+  },
+  "constituents": [
+    {
+      "symbol": "ADBE",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Adobe Inc.",
+      "source_symbol": "ADBE"
+    },
+    {
+      "symbol": "AMD",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Advanced Micro Devices",
+      "source_symbol": "AMD"
+    },
+    {
+      "symbol": "ABNB",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Airbnb",
+      "source_symbol": "ABNB"
+    },
+    {
+      "symbol": "ALNY",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Alnylam Pharmaceuticals",
+      "source_symbol": "ALNY"
+    },
+    {
+      "symbol": "GOOGL",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Alphabet Inc. (Class A)",
+      "source_symbol": "GOOGL"
+    },
+    {
+      "symbol": "GOOG",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Alphabet Inc. (Class C)",
+      "source_symbol": "GOOG"
+    },
+    {
+      "symbol": "AMZN",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Amazon",
+      "source_symbol": "AMZN"
+    },
+    {
+      "symbol": "AEP",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "American Electric Power",
+      "source_symbol": "AEP"
+    },
+    {
+      "symbol": "AMGN",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Amgen",
+      "source_symbol": "AMGN"
+    },
+    {
+      "symbol": "ADI",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Analog Devices",
+      "source_symbol": "ADI"
+    },
+    {
+      "symbol": "AAPL",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Apple Inc.",
+      "source_symbol": "AAPL"
+    },
+    {
+      "symbol": "AMAT",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Applied Materials",
+      "source_symbol": "AMAT"
+    },
+    {
+      "symbol": "APP",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "AppLovin",
+      "source_symbol": "APP"
+    },
+    {
+      "symbol": "ARM",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Arm Holdings",
+      "source_symbol": "ARM"
+    },
+    {
+      "symbol": "ASML",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "ASML Holding",
+      "source_symbol": "ASML"
+    },
+    {
+      "symbol": "ADSK",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Autodesk",
+      "source_symbol": "ADSK"
+    },
+    {
+      "symbol": "ADP",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Automatic Data Processing",
+      "source_symbol": "ADP"
+    },
+    {
+      "symbol": "AXON",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Axon Enterprise",
+      "source_symbol": "AXON"
+    },
+    {
+      "symbol": "BKR",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Baker Hughes",
+      "source_symbol": "BKR"
+    },
+    {
+      "symbol": "BKNG",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Booking Holdings",
+      "source_symbol": "BKNG"
+    },
+    {
+      "symbol": "AVGO",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Broadcom",
+      "source_symbol": "AVGO"
+    },
+    {
+      "symbol": "CDNS",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Cadence Design Systems",
+      "source_symbol": "CDNS"
+    },
+    {
+      "symbol": "CHTR",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Charter Communications",
+      "source_symbol": "CHTR"
+    },
+    {
+      "symbol": "CTAS",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Cintas",
+      "source_symbol": "CTAS"
+    },
+    {
+      "symbol": "CSCO",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Cisco",
+      "source_symbol": "CSCO"
+    },
+    {
+      "symbol": "CCEP",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Coca-Cola Europacific Partners",
+      "source_symbol": "CCEP"
+    },
+    {
+      "symbol": "CTSH",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Cognizant",
+      "source_symbol": "CTSH"
+    },
+    {
+      "symbol": "CMCSA",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Comcast",
+      "source_symbol": "CMCSA"
+    },
+    {
+      "symbol": "CEG",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Constellation Energy",
+      "source_symbol": "CEG"
+    },
+    {
+      "symbol": "CPRT",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Copart",
+      "source_symbol": "CPRT"
+    },
+    {
+      "symbol": "COST",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Costco",
+      "source_symbol": "COST"
+    },
+    {
+      "symbol": "CRWD",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "CrowdStrike",
+      "source_symbol": "CRWD"
+    },
+    {
+      "symbol": "CSX",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "CSX Corporation",
+      "source_symbol": "CSX"
+    },
+    {
+      "symbol": "DDOG",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Datadog",
+      "source_symbol": "DDOG"
+    },
+    {
+      "symbol": "DXCM",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "DexCom",
+      "source_symbol": "DXCM"
+    },
+    {
+      "symbol": "FANG",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Diamondback Energy",
+      "source_symbol": "FANG"
+    },
+    {
+      "symbol": "DASH",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "DoorDash",
+      "source_symbol": "DASH"
+    },
+    {
+      "symbol": "EA",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Electronic Arts",
+      "source_symbol": "EA"
+    },
+    {
+      "symbol": "EXC",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Exelon",
+      "source_symbol": "EXC"
+    },
+    {
+      "symbol": "FAST",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Fastenal",
+      "source_symbol": "FAST"
+    },
+    {
+      "symbol": "FER",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Ferrovial",
+      "source_symbol": "FER"
+    },
+    {
+      "symbol": "FTNT",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Fortinet",
+      "source_symbol": "FTNT"
+    },
+    {
+      "symbol": "GEHC",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "GE HealthCare",
+      "source_symbol": "GEHC"
+    },
+    {
+      "symbol": "GILD",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Gilead Sciences",
+      "source_symbol": "GILD"
+    },
+    {
+      "symbol": "HON",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Honeywell",
+      "source_symbol": "HON"
+    },
+    {
+      "symbol": "IDXX",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Idexx Laboratories",
+      "source_symbol": "IDXX"
+    },
+    {
+      "symbol": "INSM",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Insmed Incorporated",
+      "source_symbol": "INSM"
+    },
+    {
+      "symbol": "INTC",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Intel",
+      "source_symbol": "INTC"
+    },
+    {
+      "symbol": "INTU",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Intuit",
+      "source_symbol": "INTU"
+    },
+    {
+      "symbol": "ISRG",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Intuitive Surgical",
+      "source_symbol": "ISRG"
+    },
+    {
+      "symbol": "KDP",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Keurig Dr Pepper",
+      "source_symbol": "KDP"
+    },
+    {
+      "symbol": "KLAC",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "KLA Corporation",
+      "source_symbol": "KLAC"
+    },
+    {
+      "symbol": "KHC",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Kraft Heinz",
+      "source_symbol": "KHC"
+    },
+    {
+      "symbol": "LRCX",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Lam Research",
+      "source_symbol": "LRCX"
+    },
+    {
+      "symbol": "LIN",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Linde plc",
+      "source_symbol": "LIN"
+    },
+    {
+      "symbol": "LITE",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Lumentum",
+      "source_symbol": "LITE"
+    },
+    {
+      "symbol": "MAR",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Marriott International",
+      "source_symbol": "MAR"
+    },
+    {
+      "symbol": "MRVL",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Marvell Technology",
+      "source_symbol": "MRVL"
+    },
+    {
+      "symbol": "MELI",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Mercado Libre",
+      "source_symbol": "MELI"
+    },
+    {
+      "symbol": "META",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Meta Platforms",
+      "source_symbol": "META"
+    },
+    {
+      "symbol": "MCHP",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Microchip Technology",
+      "source_symbol": "MCHP"
+    },
+    {
+      "symbol": "MU",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Micron Technology",
+      "source_symbol": "MU"
+    },
+    {
+      "symbol": "MSFT",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Microsoft",
+      "source_symbol": "MSFT"
+    },
+    {
+      "symbol": "MSTR",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "MicroStrategy",
+      "source_symbol": "MSTR"
+    },
+    {
+      "symbol": "MDLZ",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Mondelez International",
+      "source_symbol": "MDLZ"
+    },
+    {
+      "symbol": "MPWR",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Monolithic Power Systems",
+      "source_symbol": "MPWR"
+    },
+    {
+      "symbol": "MNST",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Monster Beverage",
+      "source_symbol": "MNST"
+    },
+    {
+      "symbol": "NFLX",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Netflix, Inc.",
+      "source_symbol": "NFLX"
+    },
+    {
+      "symbol": "NVDA",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Nvidia",
+      "source_symbol": "NVDA"
+    },
+    {
+      "symbol": "NXPI",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "NXP Semiconductors",
+      "source_symbol": "NXPI"
+    },
+    {
+      "symbol": "ORLY",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "O'Reilly Automotive",
+      "source_symbol": "ORLY"
+    },
+    {
+      "symbol": "ODFL",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Old Dominion Freight Line",
+      "source_symbol": "ODFL"
+    },
+    {
+      "symbol": "PCAR",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Paccar",
+      "source_symbol": "PCAR"
+    },
+    {
+      "symbol": "PLTR",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Palantir Technologies",
+      "source_symbol": "PLTR"
+    },
+    {
+      "symbol": "PANW",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Palo Alto Networks",
+      "source_symbol": "PANW"
+    },
+    {
+      "symbol": "PAYX",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Paychex",
+      "source_symbol": "PAYX"
+    },
+    {
+      "symbol": "PYPL",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "PayPal",
+      "source_symbol": "PYPL"
+    },
+    {
+      "symbol": "PDD",
+      "exchange_mic": "XOTC",
+      "currency": "USD",
+      "source_name": "PDD Holdings",
+      "source_symbol": "PDD"
+    },
+    {
+      "symbol": "PEP",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "PepsiCo",
+      "source_symbol": "PEP"
+    },
+    {
+      "symbol": "QCOM",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Qualcomm",
+      "source_symbol": "QCOM"
+    },
+    {
+      "symbol": "REGN",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Regeneron Pharmaceuticals",
+      "source_symbol": "REGN"
+    },
+    {
+      "symbol": "ROP",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Roper Technologies",
+      "source_symbol": "ROP"
+    },
+    {
+      "symbol": "ROST",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Ross Stores",
+      "source_symbol": "ROST"
+    },
+    {
+      "symbol": "SNDK",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Sandisk",
+      "source_symbol": "SNDK"
+    },
+    {
+      "symbol": "STX",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Seagate Technology",
+      "source_symbol": "STX"
+    },
+    {
+      "symbol": "SHOP",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Shopify",
+      "source_symbol": "SHOP"
+    },
+    {
+      "symbol": "SBUX",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Starbucks",
+      "source_symbol": "SBUX"
+    },
+    {
+      "symbol": "SNPS",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Synopsys",
+      "source_symbol": "SNPS"
+    },
+    {
+      "symbol": "TMUS",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "T-Mobile US",
+      "source_symbol": "TMUS"
+    },
+    {
+      "symbol": "TTWO",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Take-Two Interactive",
+      "source_symbol": "TTWO"
+    },
+    {
+      "symbol": "TSLA",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Tesla, Inc.",
+      "source_symbol": "TSLA"
+    },
+    {
+      "symbol": "TXN",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Texas Instruments",
+      "source_symbol": "TXN"
+    },
+    {
+      "symbol": "TRI",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Thomson Reuters",
+      "source_symbol": "TRI"
+    },
+    {
+      "symbol": "VRSK",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Verisk Analytics",
+      "source_symbol": "VRSK"
+    },
+    {
+      "symbol": "VRTX",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Vertex Pharmaceuticals",
+      "source_symbol": "VRTX"
+    },
+    {
+      "symbol": "WMT",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Walmart",
+      "source_symbol": "WMT"
+    },
+    {
+      "symbol": "WBD",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Warner Bros. Discovery",
+      "source_symbol": "WBD"
+    },
+    {
+      "symbol": "WDC",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Western Digital",
+      "source_symbol": "WDC"
+    },
+    {
+      "symbol": "WDAY",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Workday, Inc.",
+      "source_symbol": "WDAY"
+    },
+    {
+      "symbol": "XEL",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Xcel Energy",
+      "source_symbol": "XEL"
+    },
+    {
+      "symbol": "ZS",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Zscaler",
+      "source_symbol": "ZS"
+    }
+  ],
+  "source_documents": [
+    {
+      "label": "Wikipedia: Nasdaq-100",
+      "url": "https://en.wikipedia.org/wiki/Nasdaq-100"
+    }
+  ]
+}

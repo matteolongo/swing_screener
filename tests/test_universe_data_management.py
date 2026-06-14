@@ -1,5 +1,8 @@
+import json
+
 import pytest
 
+import swing_screener.data.universe as universe_mod
 from swing_screener.data.universe import (
     list_package_universes,
     filter_ticker_list,
@@ -8,6 +11,7 @@ from swing_screener.data.universe import (
     UniverseConfig,
     load_universe_from_package,
 )
+from swing_screener.data.universe_sources import UniverseSourceResult
 
 
 def test_list_package_universes_returns_new_ids():
@@ -82,3 +86,76 @@ def test_filter_tickers_by_metadata_respects_exchange_and_instrument_type():
         instrument_types=["equity"],
     )
     assert filtered == ["AAPL", "ASML.AS"]
+
+
+def test_refresh_apply_merges_new_master_records(monkeypatch, tmp_path):
+    master_path = tmp_path / "instrument_master.json"
+    master_path.write_text(
+        json.dumps(
+            [
+                {
+                    "symbol": "AAPL",
+                    "exchange_mic": "XNAS",
+                    "currency": "USD",
+                    "source": "manual",
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        universe_mod,
+        "_INSTRUMENT_MASTER_PATH_OVERRIDE",
+        str(master_path),
+        raising=False,
+    )
+    universe_mod._instrument_master_cache.cache_clear()
+
+    snapshot = {
+        "id": "us_sp500",
+        "source_adapter": "wikipedia_index_review",
+        "constituents": [],
+        "rules": {},
+    }
+    monkeypatch.setattr(universe_mod, "_load_snapshot", lambda _id: dict(snapshot))
+    monkeypatch.setattr(
+        universe_mod,
+        "get_universe_meta",
+        lambda _id: {"id": "us_sp500", "kind": "index"},
+    )
+    monkeypatch.setattr(universe_mod, "_write_snapshot", lambda _id, _snap: None)
+
+    result = UniverseSourceResult(
+        source_adapter="wikipedia_index_review",
+        source_asof="2026-06-12",
+        source_documents=[],
+        notes=[],
+        constituents=[
+            {
+                "symbol": "MSFT",
+                "exchange_mic": "XNAS",
+                "currency": "USD",
+                "source_name": "Microsoft",
+                "source_symbol": "MSFT",
+            }
+        ],
+        new_master_records=[
+            {
+                "symbol": "MSFT",
+                "exchange_mic": "XNAS",
+                "currency": "USD",
+                "source": "wikipedia_yfinance",
+            }
+        ],
+    )
+    monkeypatch.setattr(
+        universe_mod, "refresh_snapshot_from_source", lambda *a, **k: result
+    )
+
+    universe_mod.refresh_package_universe("us_sp500", apply=True)
+
+    written = json.loads(master_path.read_text(encoding="utf-8"))
+    symbols = {r["symbol"]: r for r in written}
+    assert "MSFT" in symbols
+    assert symbols["AAPL"]["source"] == "manual"

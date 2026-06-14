@@ -1,7 +1,8 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
 import { ScreenerResponse } from '@/features/screener/types';
 import { prioritizeCandidates } from '@/features/screener/prioritization';
+import { indexedDbStorage } from '@/stores/idbStorage';
 
 interface ScreenerStore {
   lastResult: ScreenerResponse | null;
@@ -44,6 +45,11 @@ export const useScreenerStore = create<ScreenerStore>()(
     }),
     {
       name: 'swing-screener-last-result',
+      // IndexedDB (not localStorage) so the full result, including per-candidate
+      // OHLCV price histories, survives reloads without exceeding the storage
+      // quota for large universes (e.g. S&P 500). Charts stay populated after a
+      // reload instead of going empty.
+      storage: createJSONStorage(() => indexedDbStorage),
     }
   )
 );

@@ -1,0 +1,272 @@
+{
+  "id": "spain_ibex35",
+  "kind": "index",
+  "description": "IBEX 35 constituents",
+  "benchmark": "^IBEX",
+  "source": "wikipedia",
+  "source_adapter": "wikipedia_index_review",
+  "source_asof": "2026-06-13",
+  "last_reviewed_at": "2026-06-13",
+  "stale_after_days": 100,
+  "rules": {
+    "exchange_mics": [
+      "XMAD"
+    ],
+    "currencies": [
+      "EUR"
+    ]
+  },
+  "constituents": [
+    {
+      "symbol": "ACS.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR",
+      "source_name": "ACS",
+      "source_symbol": "ACS"
+    },
+    {
+      "symbol": "ACX.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR",
+      "source_name": "Acerinox",
+      "source_symbol": "ACX"
+    },
+    {
+      "symbol": "AMS.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR",
+      "source_name": "Amadeus IT Group",
+      "source_symbol": "AMS"
+    },
+    {
+      "symbol": "ANA.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR",
+      "source_name": "Acciona",
+      "source_symbol": "ANA"
+    },
+    {
+      "symbol": "ANE.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR",
+      "source_name": "Acciona Energ\u00eda",
+      "source_symbol": "ANE"
+    },
+    {
+      "symbol": "BBVA.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR",
+      "source_name": "BBVA",
+      "source_symbol": "BBVA"
+    },
+    {
+      "symbol": "BKT.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR",
+      "source_name": "Bankinter",
+      "source_symbol": "BKT"
+    },
+    {
+      "symbol": "CABK.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR",
+      "source_name": "CaixaBank",
+      "source_symbol": "CABK"
+    },
+    {
+      "symbol": "CLNX.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR",
+      "source_name": "Cellnex Telecom",
+      "source_symbol": "CLNX"
+    },
+    {
+      "symbol": "COL.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR",
+      "source_name": "Inmobiliaria Colonial",
+      "source_symbol": "COL"
+    },
+    {
+      "symbol": "AENA.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR",
+      "source_name": "AENA",
+      "source_symbol": "AENA"
+    },
+    {
+      "symbol": "ELE.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR",
+      "source_name": "Endesa",
+      "source_symbol": "ELE"
+    },
+    {
+      "symbol": "ENG.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR",
+      "source_name": "Enag\u00e1s",
+      "source_symbol": "ENG"
+    },
+    {
+      "symbol": "FDR.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR",
+      "source_name": "Fluidra",
+      "source_symbol": "FDR"
+    },
+    {
+      "symbol": "FER.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR",
+      "source_name": "Ferrovial",
+      "source_symbol": "FER"
+    },
+    {
+      "symbol": "GRF.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR",
+      "source_name": "Grifols",
+      "source_symbol": "GRF"
+    },
+    {
+      "symbol": "IAG.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR",
+      "source_name": "International Airlines Group",
+      "source_symbol": "IAG"
+    },
+    {
+      "symbol": "IBE.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR",
+      "source_name": "Iberdrola",
+      "source_symbol": "IBE"
+    },
+    {
+      "symbol": "IDR.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR",
+      "source_name": "Indra",
+      "source_symbol": "IDR"
+    },
+    {
+      "symbol": "ITX.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR",
+      "source_name": "Inditex",
+      "source_symbol": "ITX"
+    },
+    {
+      "symbol": "LOG.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR",
+      "source_name": "Logista",
+      "source_symbol": "LOG"
+    },
+    {
+      "symbol": "MAP.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR",
+      "source_name": "Mapfre",
+      "source_symbol": "MAP"
+    },
+    {
+      "symbol": "MRL.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR",
+      "source_name": "Merlin Properties",
+      "source_symbol": "MRL"
+    },
+    {
+      "symbol": "MTS.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR",
+      "source_name": "ArcelorMittal",
+      "source_symbol": "MTS"
+    },
+    {
+      "symbol": "NTGY.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR",
+      "source_name": "Naturgy",
+      "source_symbol": "NTGY"
+    },
+    {
+      "symbol": "PUIG.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR",
+      "source_name": "Puig",
+      "source_symbol": "PUIG"
+    },
+    {
+      "symbol": "RED.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR",
+      "source_name": "Redeia Corporaci\u00f3n",
+      "source_symbol": "RED"
+    },
+    {
+      "symbol": "REP.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR",
+      "source_name": "Repsol",
+      "source_symbol": "REP"
+    },
+    {
+      "symbol": "ROVI.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR",
+      "source_name": "Laboratorios Rovi\u00a0[es]",
+      "source_symbol": "ROVI"
+    },
+    {
+      "symbol": "SAB.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR",
+      "source_name": "Banco Sabadell",
+      "source_symbol": "SAB"
+    },
+    {
+      "symbol": "SAN.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR",
+      "source_name": "Santander",
+      "source_symbol": "SAN"
+    },
+    {
+      "symbol": "SCYR.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR",
+      "source_name": "Sacyr",
+      "source_symbol": "SCYR"
+    },
+    {
+      "symbol": "SLR.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR",
+      "source_name": "Solaria",
+      "source_symbol": "SLR"
+    },
+    {
+      "symbol": "TEF.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR",
+      "source_name": "Telef\u00f3nica",
+      "source_symbol": "TEF"
+    },
+    {
+      "symbol": "UNI.MC",
+      "exchange_mic": "XMAD",
+      "currency": "EUR",
+      "source_name": "Unicaja",
+      "source_symbol": "UNI"
+    }
+  ],
+  "source_documents": [
+    {
+      "label": "Wikipedia: IBEX_35",
+      "url": "https://en.wikipedia.org/wiki/IBEX_35"
+    }
+  ]
+}

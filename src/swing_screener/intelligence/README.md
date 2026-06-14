@@ -37,6 +37,10 @@ The analyzer assembles context from:
 - Fundamentals snapshot (P/E, revenue growth, gross margin, balance sheet signals)
 - Finnhub signals (insider transactions, forward EPS estimate, upgrade/downgrade actions)
 - Open position details (if ticker is already held — switches action to `MANAGE_ONLY`)
+- Recent candlestick patterns via `SymbolIntelligenceRequest.recent_patterns`
+  (list of `"name@context"` strings). When present they render a
+  "Recent candlestick patterns" line in the prompt; the field is optional and the
+  caller (e.g. the web UI request builder) populates it from detected patterns.
 
 ## Configuration
 

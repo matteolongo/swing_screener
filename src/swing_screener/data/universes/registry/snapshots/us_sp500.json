@@ -1,0 +1,3550 @@
+{
+  "id": "us_sp500",
+  "kind": "index",
+  "description": "S&P 500 constituents",
+  "benchmark": "^GSPC",
+  "source": "wikipedia",
+  "source_adapter": "wikipedia_index_review",
+  "source_asof": "2026-06-13",
+  "last_reviewed_at": "2026-06-13",
+  "stale_after_days": 100,
+  "rules": {
+    "exchange_mics": [
+      "BATS",
+      "XNAS",
+      "XNYS"
+    ],
+    "currencies": [
+      "USD"
+    ]
+  },
+  "constituents": [
+    {
+      "symbol": "MMM",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "3M",
+      "source_symbol": "MMM"
+    },
+    {
+      "symbol": "AOS",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "A. O. Smith",
+      "source_symbol": "AOS"
+    },
+    {
+      "symbol": "ABT",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Abbott Laboratories",
+      "source_symbol": "ABT"
+    },
+    {
+      "symbol": "ABBV",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "AbbVie",
+      "source_symbol": "ABBV"
+    },
+    {
+      "symbol": "ACN",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Accenture",
+      "source_symbol": "ACN"
+    },
+    {
+      "symbol": "ADBE",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Adobe Inc.",
+      "source_symbol": "ADBE"
+    },
+    {
+      "symbol": "AMD",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Advanced Micro Devices",
+      "source_symbol": "AMD"
+    },
+    {
+      "symbol": "AES",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "AES Corporation",
+      "source_symbol": "AES"
+    },
+    {
+      "symbol": "AFL",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Aflac",
+      "source_symbol": "AFL"
+    },
+    {
+      "symbol": "A",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Agilent Technologies",
+      "source_symbol": "A"
+    },
+    {
+      "symbol": "APD",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Air Products",
+      "source_symbol": "APD"
+    },
+    {
+      "symbol": "ABNB",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Airbnb",
+      "source_symbol": "ABNB"
+    },
+    {
+      "symbol": "AKAM",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Akamai Technologies",
+      "source_symbol": "AKAM"
+    },
+    {
+      "symbol": "ALB",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Albemarle Corporation",
+      "source_symbol": "ALB"
+    },
+    {
+      "symbol": "ARE",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Alexandria Real Estate Equities",
+      "source_symbol": "ARE"
+    },
+    {
+      "symbol": "ALGN",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Align Technology",
+      "source_symbol": "ALGN"
+    },
+    {
+      "symbol": "ALLE",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Allegion",
+      "source_symbol": "ALLE"
+    },
+    {
+      "symbol": "LNT",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Alliant Energy",
+      "source_symbol": "LNT"
+    },
+    {
+      "symbol": "ALL",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Allstate",
+      "source_symbol": "ALL"
+    },
+    {
+      "symbol": "GOOGL",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Alphabet Inc. (Class A)",
+      "source_symbol": "GOOGL"
+    },
+    {
+      "symbol": "GOOG",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Alphabet Inc. (Class C)",
+      "source_symbol": "GOOG"
+    },
+    {
+      "symbol": "MO",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Altria",
+      "source_symbol": "MO"
+    },
+    {
+      "symbol": "AMZN",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Amazon",
+      "source_symbol": "AMZN"
+    },
+    {
+      "symbol": "AMCR",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Amcor",
+      "source_symbol": "AMCR"
+    },
+    {
+      "symbol": "AEE",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Ameren",
+      "source_symbol": "AEE"
+    },
+    {
+      "symbol": "AEP",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "American Electric Power",
+      "source_symbol": "AEP"
+    },
+    {
+      "symbol": "AXP",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "American Express",
+      "source_symbol": "AXP"
+    },
+    {
+      "symbol": "AIG",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "American International Group",
+      "source_symbol": "AIG"
+    },
+    {
+      "symbol": "AMT",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "American Tower",
+      "source_symbol": "AMT"
+    },
+    {
+      "symbol": "AWK",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "American Water Works",
+      "source_symbol": "AWK"
+    },
+    {
+      "symbol": "AMP",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Ameriprise Financial",
+      "source_symbol": "AMP"
+    },
+    {
+      "symbol": "AME",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Ametek",
+      "source_symbol": "AME"
+    },
+    {
+      "symbol": "AMGN",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Amgen",
+      "source_symbol": "AMGN"
+    },
+    {
+      "symbol": "APH",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Amphenol",
+      "source_symbol": "APH"
+    },
+    {
+      "symbol": "ADI",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Analog Devices",
+      "source_symbol": "ADI"
+    },
+    {
+      "symbol": "AON",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Aon plc",
+      "source_symbol": "AON"
+    },
+    {
+      "symbol": "APA",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "APA Corporation",
+      "source_symbol": "APA"
+    },
+    {
+      "symbol": "APO",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Apollo Global Management",
+      "source_symbol": "APO"
+    },
+    {
+      "symbol": "AAPL",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Apple Inc.",
+      "source_symbol": "AAPL"
+    },
+    {
+      "symbol": "AMAT",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Applied Materials",
+      "source_symbol": "AMAT"
+    },
+    {
+      "symbol": "APP",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "AppLovin",
+      "source_symbol": "APP"
+    },
+    {
+      "symbol": "APTV",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Aptiv",
+      "source_symbol": "APTV"
+    },
+    {
+      "symbol": "ACGL",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Arch Capital Group",
+      "source_symbol": "ACGL"
+    },
+    {
+      "symbol": "ADM",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Archer Daniels Midland",
+      "source_symbol": "ADM"
+    },
+    {
+      "symbol": "ARES",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Ares Management",
+      "source_symbol": "ARES"
+    },
+    {
+      "symbol": "ANET",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Arista Networks",
+      "source_symbol": "ANET"
+    },
+    {
+      "symbol": "AJG",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Arthur J. Gallagher & Co.",
+      "source_symbol": "AJG"
+    },
+    {
+      "symbol": "AIZ",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Assurant",
+      "source_symbol": "AIZ"
+    },
+    {
+      "symbol": "T",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "AT&T",
+      "source_symbol": "T"
+    },
+    {
+      "symbol": "ATO",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Atmos Energy",
+      "source_symbol": "ATO"
+    },
+    {
+      "symbol": "ADSK",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Autodesk",
+      "source_symbol": "ADSK"
+    },
+    {
+      "symbol": "ADP",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Automatic Data Processing",
+      "source_symbol": "ADP"
+    },
+    {
+      "symbol": "AZO",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "AutoZone",
+      "source_symbol": "AZO"
+    },
+    {
+      "symbol": "AVB",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "AvalonBay Communities",
+      "source_symbol": "AVB"
+    },
+    {
+      "symbol": "AVY",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Avery Dennison",
+      "source_symbol": "AVY"
+    },
+    {
+      "symbol": "AXON",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Axon Enterprise",
+      "source_symbol": "AXON"
+    },
+    {
+      "symbol": "BKR",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Baker Hughes",
+      "source_symbol": "BKR"
+    },
+    {
+      "symbol": "BALL",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Ball Corporation",
+      "source_symbol": "BALL"
+    },
+    {
+      "symbol": "BAC",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Bank of America",
+      "source_symbol": "BAC"
+    },
+    {
+      "symbol": "BAX",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Baxter International",
+      "source_symbol": "BAX"
+    },
+    {
+      "symbol": "BDX",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Becton Dickinson",
+      "source_symbol": "BDX"
+    },
+    {
+      "symbol": "BRK-B",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Berkshire Hathaway",
+      "source_symbol": "BRK-B"
+    },
+    {
+      "symbol": "BBY",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Best Buy",
+      "source_symbol": "BBY"
+    },
+    {
+      "symbol": "TECH",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Bio-Techne",
+      "source_symbol": "TECH"
+    },
+    {
+      "symbol": "BIIB",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Biogen",
+      "source_symbol": "BIIB"
+    },
+    {
+      "symbol": "BLK",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "BlackRock",
+      "source_symbol": "BLK"
+    },
+    {
+      "symbol": "BX",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Blackstone Inc.",
+      "source_symbol": "BX"
+    },
+    {
+      "symbol": "XYZ",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Block, Inc.",
+      "source_symbol": "XYZ"
+    },
+    {
+      "symbol": "BNY",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "BNY Mellon",
+      "source_symbol": "BNY"
+    },
+    {
+      "symbol": "BA",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Boeing",
+      "source_symbol": "BA"
+    },
+    {
+      "symbol": "BKNG",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Booking Holdings",
+      "source_symbol": "BKNG"
+    },
+    {
+      "symbol": "BSX",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Boston Scientific",
+      "source_symbol": "BSX"
+    },
+    {
+      "symbol": "BMY",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Bristol Myers Squibb",
+      "source_symbol": "BMY"
+    },
+    {
+      "symbol": "AVGO",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Broadcom",
+      "source_symbol": "AVGO"
+    },
+    {
+      "symbol": "BR",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Broadridge Financial Solutions",
+      "source_symbol": "BR"
+    },
+    {
+      "symbol": "BRO",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Brown & Brown",
+      "source_symbol": "BRO"
+    },
+    {
+      "symbol": "BF-B",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Brown\u2013Forman",
+      "source_symbol": "BF-B"
+    },
+    {
+      "symbol": "BLDR",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Builders FirstSource",
+      "source_symbol": "BLDR"
+    },
+    {
+      "symbol": "BG",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Bunge Global",
+      "source_symbol": "BG"
+    },
+    {
+      "symbol": "BXP",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "BXP, Inc.",
+      "source_symbol": "BXP"
+    },
+    {
+      "symbol": "CHRW",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "C.H. Robinson",
+      "source_symbol": "CHRW"
+    },
+    {
+      "symbol": "CDNS",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Cadence Design Systems",
+      "source_symbol": "CDNS"
+    },
+    {
+      "symbol": "CPT",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Camden Property Trust",
+      "source_symbol": "CPT"
+    },
+    {
+      "symbol": "CPB",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Campbell's Company (The)",
+      "source_symbol": "CPB"
+    },
+    {
+      "symbol": "COF",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Capital One",
+      "source_symbol": "COF"
+    },
+    {
+      "symbol": "CAH",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Cardinal Health",
+      "source_symbol": "CAH"
+    },
+    {
+      "symbol": "CCL",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Carnival Corporation",
+      "source_symbol": "CCL"
+    },
+    {
+      "symbol": "CARR",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Carrier Global",
+      "source_symbol": "CARR"
+    },
+    {
+      "symbol": "CVNA",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Carvana",
+      "source_symbol": "CVNA"
+    },
+    {
+      "symbol": "CASY",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Casey's",
+      "source_symbol": "CASY"
+    },
+    {
+      "symbol": "CAT",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Caterpillar Inc.",
+      "source_symbol": "CAT"
+    },
+    {
+      "symbol": "CBOE",
+      "exchange_mic": "BATS",
+      "currency": "USD",
+      "source_name": "Cboe Global Markets",
+      "source_symbol": "CBOE"
+    },
+    {
+      "symbol": "CBRE",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "CBRE Group",
+      "source_symbol": "CBRE"
+    },
+    {
+      "symbol": "CDW",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "CDW Corporation",
+      "source_symbol": "CDW"
+    },
+    {
+      "symbol": "COR",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Cencora",
+      "source_symbol": "COR"
+    },
+    {
+      "symbol": "CNC",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Centene Corporation",
+      "source_symbol": "CNC"
+    },
+    {
+      "symbol": "CNP",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "CenterPoint Energy",
+      "source_symbol": "CNP"
+    },
+    {
+      "symbol": "CF",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "CF Industries",
+      "source_symbol": "CF"
+    },
+    {
+      "symbol": "CRL",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Charles River Laboratories",
+      "source_symbol": "CRL"
+    },
+    {
+      "symbol": "SCHW",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Charles Schwab Corporation",
+      "source_symbol": "SCHW"
+    },
+    {
+      "symbol": "CHTR",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Charter Communications",
+      "source_symbol": "CHTR"
+    },
+    {
+      "symbol": "CVX",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Chevron Corporation",
+      "source_symbol": "CVX"
+    },
+    {
+      "symbol": "CMG",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Chipotle Mexican Grill",
+      "source_symbol": "CMG"
+    },
+    {
+      "symbol": "CB",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Chubb Limited",
+      "source_symbol": "CB"
+    },
+    {
+      "symbol": "CHD",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Church & Dwight",
+      "source_symbol": "CHD"
+    },
+    {
+      "symbol": "CIEN",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Ciena",
+      "source_symbol": "CIEN"
+    },
+    {
+      "symbol": "CI",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Cigna",
+      "source_symbol": "CI"
+    },
+    {
+      "symbol": "CINF",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Cincinnati Financial",
+      "source_symbol": "CINF"
+    },
+    {
+      "symbol": "CTAS",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Cintas",
+      "source_symbol": "CTAS"
+    },
+    {
+      "symbol": "CSCO",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Cisco",
+      "source_symbol": "CSCO"
+    },
+    {
+      "symbol": "C",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Citigroup",
+      "source_symbol": "C"
+    },
+    {
+      "symbol": "CFG",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Citizens Financial Group",
+      "source_symbol": "CFG"
+    },
+    {
+      "symbol": "CLX",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Clorox",
+      "source_symbol": "CLX"
+    },
+    {
+      "symbol": "CME",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "CME Group",
+      "source_symbol": "CME"
+    },
+    {
+      "symbol": "CMS",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "CMS Energy",
+      "source_symbol": "CMS"
+    },
+    {
+      "symbol": "KO",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Coca-Cola Company (The)",
+      "source_symbol": "KO"
+    },
+    {
+      "symbol": "CTSH",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Cognizant",
+      "source_symbol": "CTSH"
+    },
+    {
+      "symbol": "COHR",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Coherent Corp.",
+      "source_symbol": "COHR"
+    },
+    {
+      "symbol": "COIN",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Coinbase",
+      "source_symbol": "COIN"
+    },
+    {
+      "symbol": "CL",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Colgate-Palmolive",
+      "source_symbol": "CL"
+    },
+    {
+      "symbol": "CMCSA",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Comcast",
+      "source_symbol": "CMCSA"
+    },
+    {
+      "symbol": "FIX",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Comfort Systems USA",
+      "source_symbol": "FIX"
+    },
+    {
+      "symbol": "CAG",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Conagra Brands",
+      "source_symbol": "CAG"
+    },
+    {
+      "symbol": "COP",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "ConocoPhillips",
+      "source_symbol": "COP"
+    },
+    {
+      "symbol": "ED",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Consolidated Edison",
+      "source_symbol": "ED"
+    },
+    {
+      "symbol": "STZ",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Constellation Brands",
+      "source_symbol": "STZ"
+    },
+    {
+      "symbol": "CEG",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Constellation Energy",
+      "source_symbol": "CEG"
+    },
+    {
+      "symbol": "COO",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Cooper Companies (The)",
+      "source_symbol": "COO"
+    },
+    {
+      "symbol": "CPRT",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Copart",
+      "source_symbol": "CPRT"
+    },
+    {
+      "symbol": "GLW",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Corning Inc.",
+      "source_symbol": "GLW"
+    },
+    {
+      "symbol": "CPAY",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Corpay",
+      "source_symbol": "CPAY"
+    },
+    {
+      "symbol": "CTVA",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Corteva",
+      "source_symbol": "CTVA"
+    },
+    {
+      "symbol": "CSGP",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "CoStar Group",
+      "source_symbol": "CSGP"
+    },
+    {
+      "symbol": "COST",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Costco",
+      "source_symbol": "COST"
+    },
+    {
+      "symbol": "CRH",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "CRH plc",
+      "source_symbol": "CRH"
+    },
+    {
+      "symbol": "CRWD",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "CrowdStrike",
+      "source_symbol": "CRWD"
+    },
+    {
+      "symbol": "CCI",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Crown Castle",
+      "source_symbol": "CCI"
+    },
+    {
+      "symbol": "CSX",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "CSX Corporation",
+      "source_symbol": "CSX"
+    },
+    {
+      "symbol": "CMI",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Cummins",
+      "source_symbol": "CMI"
+    },
+    {
+      "symbol": "CVS",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "CVS Health",
+      "source_symbol": "CVS"
+    },
+    {
+      "symbol": "DHR",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Danaher Corporation",
+      "source_symbol": "DHR"
+    },
+    {
+      "symbol": "DRI",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Darden Restaurants",
+      "source_symbol": "DRI"
+    },
+    {
+      "symbol": "DDOG",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Datadog",
+      "source_symbol": "DDOG"
+    },
+    {
+      "symbol": "DVA",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "DaVita",
+      "source_symbol": "DVA"
+    },
+    {
+      "symbol": "DECK",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Deckers Brands",
+      "source_symbol": "DECK"
+    },
+    {
+      "symbol": "DE",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Deere & Company",
+      "source_symbol": "DE"
+    },
+    {
+      "symbol": "DELL",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Dell Technologies",
+      "source_symbol": "DELL"
+    },
+    {
+      "symbol": "DAL",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Delta Air Lines",
+      "source_symbol": "DAL"
+    },
+    {
+      "symbol": "DVN",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Devon Energy",
+      "source_symbol": "DVN"
+    },
+    {
+      "symbol": "DXCM",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Dexcom",
+      "source_symbol": "DXCM"
+    },
+    {
+      "symbol": "FANG",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Diamondback Energy",
+      "source_symbol": "FANG"
+    },
+    {
+      "symbol": "DLR",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Digital Realty",
+      "source_symbol": "DLR"
+    },
+    {
+      "symbol": "DG",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Dollar General",
+      "source_symbol": "DG"
+    },
+    {
+      "symbol": "DLTR",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Dollar Tree",
+      "source_symbol": "DLTR"
+    },
+    {
+      "symbol": "D",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Dominion Energy",
+      "source_symbol": "D"
+    },
+    {
+      "symbol": "DPZ",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Domino's",
+      "source_symbol": "DPZ"
+    },
+    {
+      "symbol": "DASH",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "DoorDash",
+      "source_symbol": "DASH"
+    },
+    {
+      "symbol": "DOV",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Dover Corporation",
+      "source_symbol": "DOV"
+    },
+    {
+      "symbol": "DOW",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Dow Inc.",
+      "source_symbol": "DOW"
+    },
+    {
+      "symbol": "DHI",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "D. R. Horton",
+      "source_symbol": "DHI"
+    },
+    {
+      "symbol": "DTE",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "DTE Energy",
+      "source_symbol": "DTE"
+    },
+    {
+      "symbol": "DUK",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Duke Energy",
+      "source_symbol": "DUK"
+    },
+    {
+      "symbol": "DD",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "DuPont",
+      "source_symbol": "DD"
+    },
+    {
+      "symbol": "ETN",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Eaton Corporation",
+      "source_symbol": "ETN"
+    },
+    {
+      "symbol": "EBAY",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "eBay Inc.",
+      "source_symbol": "EBAY"
+    },
+    {
+      "symbol": "SATS",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "EchoStar",
+      "source_symbol": "SATS"
+    },
+    {
+      "symbol": "ECL",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Ecolab",
+      "source_symbol": "ECL"
+    },
+    {
+      "symbol": "EIX",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Edison International",
+      "source_symbol": "EIX"
+    },
+    {
+      "symbol": "EW",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Edwards Lifesciences",
+      "source_symbol": "EW"
+    },
+    {
+      "symbol": "EA",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Electronic Arts",
+      "source_symbol": "EA"
+    },
+    {
+      "symbol": "ELV",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Elevance Health",
+      "source_symbol": "ELV"
+    },
+    {
+      "symbol": "EME",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Emcor",
+      "source_symbol": "EME"
+    },
+    {
+      "symbol": "EMR",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Emerson Electric",
+      "source_symbol": "EMR"
+    },
+    {
+      "symbol": "ETR",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Entergy",
+      "source_symbol": "ETR"
+    },
+    {
+      "symbol": "EOG",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "EOG Resources",
+      "source_symbol": "EOG"
+    },
+    {
+      "symbol": "EQT",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "EQT Corporation",
+      "source_symbol": "EQT"
+    },
+    {
+      "symbol": "EFX",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Equifax",
+      "source_symbol": "EFX"
+    },
+    {
+      "symbol": "EQIX",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Equinix",
+      "source_symbol": "EQIX"
+    },
+    {
+      "symbol": "EQR",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Equity Residential",
+      "source_symbol": "EQR"
+    },
+    {
+      "symbol": "ERIE",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Erie Indemnity",
+      "source_symbol": "ERIE"
+    },
+    {
+      "symbol": "ESS",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Essex Property Trust",
+      "source_symbol": "ESS"
+    },
+    {
+      "symbol": "EL",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Est\u00e9e Lauder Companies (The)",
+      "source_symbol": "EL"
+    },
+    {
+      "symbol": "EG",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Everest Group",
+      "source_symbol": "EG"
+    },
+    {
+      "symbol": "EVRG",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Evergy",
+      "source_symbol": "EVRG"
+    },
+    {
+      "symbol": "ES",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Eversource Energy",
+      "source_symbol": "ES"
+    },
+    {
+      "symbol": "EXC",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Exelon",
+      "source_symbol": "EXC"
+    },
+    {
+      "symbol": "EXE",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Expand Energy",
+      "source_symbol": "EXE"
+    },
+    {
+      "symbol": "EXPE",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Expedia Group",
+      "source_symbol": "EXPE"
+    },
+    {
+      "symbol": "EXPD",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Expeditors International",
+      "source_symbol": "EXPD"
+    },
+    {
+      "symbol": "EXR",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Extra Space Storage",
+      "source_symbol": "EXR"
+    },
+    {
+      "symbol": "XOM",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "ExxonMobil",
+      "source_symbol": "XOM"
+    },
+    {
+      "symbol": "FFIV",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "F5, Inc.",
+      "source_symbol": "FFIV"
+    },
+    {
+      "symbol": "FDS",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "FactSet",
+      "source_symbol": "FDS"
+    },
+    {
+      "symbol": "FICO",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Fair Isaac",
+      "source_symbol": "FICO"
+    },
+    {
+      "symbol": "FAST",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Fastenal",
+      "source_symbol": "FAST"
+    },
+    {
+      "symbol": "FRT",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Federal Realty Investment Trust",
+      "source_symbol": "FRT"
+    },
+    {
+      "symbol": "FDX",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "FedEx",
+      "source_symbol": "FDX"
+    },
+    {
+      "symbol": "FDXF",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "FedEx Freight",
+      "source_symbol": "FDXF"
+    },
+    {
+      "symbol": "FIS",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Fidelity National Information Services",
+      "source_symbol": "FIS"
+    },
+    {
+      "symbol": "FITB",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Fifth Third Bancorp",
+      "source_symbol": "FITB"
+    },
+    {
+      "symbol": "FSLR",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "First Solar",
+      "source_symbol": "FSLR"
+    },
+    {
+      "symbol": "FE",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "FirstEnergy",
+      "source_symbol": "FE"
+    },
+    {
+      "symbol": "FISV",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Fiserv",
+      "source_symbol": "FISV"
+    },
+    {
+      "symbol": "F",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Ford Motor Company",
+      "source_symbol": "F"
+    },
+    {
+      "symbol": "FTNT",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Fortinet",
+      "source_symbol": "FTNT"
+    },
+    {
+      "symbol": "FTV",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Fortive",
+      "source_symbol": "FTV"
+    },
+    {
+      "symbol": "FOXA",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Fox Corporation (Class A)",
+      "source_symbol": "FOXA"
+    },
+    {
+      "symbol": "FOX",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Fox Corporation (Class B)",
+      "source_symbol": "FOX"
+    },
+    {
+      "symbol": "BEN",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Franklin Resources",
+      "source_symbol": "BEN"
+    },
+    {
+      "symbol": "FCX",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Freeport-McMoRan",
+      "source_symbol": "FCX"
+    },
+    {
+      "symbol": "GRMN",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Garmin",
+      "source_symbol": "GRMN"
+    },
+    {
+      "symbol": "IT",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Gartner",
+      "source_symbol": "IT"
+    },
+    {
+      "symbol": "GE",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "GE Aerospace",
+      "source_symbol": "GE"
+    },
+    {
+      "symbol": "GEHC",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "GE HealthCare",
+      "source_symbol": "GEHC"
+    },
+    {
+      "symbol": "GEV",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "GE Vernova",
+      "source_symbol": "GEV"
+    },
+    {
+      "symbol": "GEN",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Gen Digital",
+      "source_symbol": "GEN"
+    },
+    {
+      "symbol": "GNRC",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Generac",
+      "source_symbol": "GNRC"
+    },
+    {
+      "symbol": "GD",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "General Dynamics",
+      "source_symbol": "GD"
+    },
+    {
+      "symbol": "GIS",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "General Mills",
+      "source_symbol": "GIS"
+    },
+    {
+      "symbol": "GM",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "General Motors",
+      "source_symbol": "GM"
+    },
+    {
+      "symbol": "GPC",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Genuine Parts Company",
+      "source_symbol": "GPC"
+    },
+    {
+      "symbol": "GILD",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Gilead Sciences",
+      "source_symbol": "GILD"
+    },
+    {
+      "symbol": "GPN",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Global Payments",
+      "source_symbol": "GPN"
+    },
+    {
+      "symbol": "GL",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Globe Life",
+      "source_symbol": "GL"
+    },
+    {
+      "symbol": "GDDY",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "GoDaddy",
+      "source_symbol": "GDDY"
+    },
+    {
+      "symbol": "GS",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Goldman Sachs",
+      "source_symbol": "GS"
+    },
+    {
+      "symbol": "HAL",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Halliburton",
+      "source_symbol": "HAL"
+    },
+    {
+      "symbol": "HIG",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Hartford (The)",
+      "source_symbol": "HIG"
+    },
+    {
+      "symbol": "HAS",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Hasbro",
+      "source_symbol": "HAS"
+    },
+    {
+      "symbol": "HCA",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "HCA Healthcare",
+      "source_symbol": "HCA"
+    },
+    {
+      "symbol": "DOC",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Healthpeak Properties",
+      "source_symbol": "DOC"
+    },
+    {
+      "symbol": "HSIC",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Henry Schein",
+      "source_symbol": "HSIC"
+    },
+    {
+      "symbol": "HSY",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Hershey Company (The)",
+      "source_symbol": "HSY"
+    },
+    {
+      "symbol": "HPE",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Hewlett Packard Enterprise",
+      "source_symbol": "HPE"
+    },
+    {
+      "symbol": "HLT",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Hilton Worldwide",
+      "source_symbol": "HLT"
+    },
+    {
+      "symbol": "HD",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Home Depot (The)",
+      "source_symbol": "HD"
+    },
+    {
+      "symbol": "HON",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Honeywell",
+      "source_symbol": "HON"
+    },
+    {
+      "symbol": "HRL",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Hormel Foods",
+      "source_symbol": "HRL"
+    },
+    {
+      "symbol": "HST",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Host Hotels & Resorts",
+      "source_symbol": "HST"
+    },
+    {
+      "symbol": "HWM",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Howmet Aerospace",
+      "source_symbol": "HWM"
+    },
+    {
+      "symbol": "HPQ",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "HP Inc.",
+      "source_symbol": "HPQ"
+    },
+    {
+      "symbol": "HUBB",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Hubbell Incorporated",
+      "source_symbol": "HUBB"
+    },
+    {
+      "symbol": "HUM",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Humana",
+      "source_symbol": "HUM"
+    },
+    {
+      "symbol": "HBAN",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Huntington Bancshares",
+      "source_symbol": "HBAN"
+    },
+    {
+      "symbol": "HII",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Huntington Ingalls Industries",
+      "source_symbol": "HII"
+    },
+    {
+      "symbol": "IBM",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "IBM",
+      "source_symbol": "IBM"
+    },
+    {
+      "symbol": "IEX",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "IDEX Corporation",
+      "source_symbol": "IEX"
+    },
+    {
+      "symbol": "IDXX",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Idexx Laboratories",
+      "source_symbol": "IDXX"
+    },
+    {
+      "symbol": "ITW",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Illinois Tool Works",
+      "source_symbol": "ITW"
+    },
+    {
+      "symbol": "INCY",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Incyte",
+      "source_symbol": "INCY"
+    },
+    {
+      "symbol": "IR",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Ingersoll Rand",
+      "source_symbol": "IR"
+    },
+    {
+      "symbol": "PODD",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Insulet Corporation",
+      "source_symbol": "PODD"
+    },
+    {
+      "symbol": "INTC",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Intel",
+      "source_symbol": "INTC"
+    },
+    {
+      "symbol": "IBKR",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Interactive Brokers",
+      "source_symbol": "IBKR"
+    },
+    {
+      "symbol": "ICE",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Intercontinental Exchange",
+      "source_symbol": "ICE"
+    },
+    {
+      "symbol": "IFF",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "International Flavors & Fragrances",
+      "source_symbol": "IFF"
+    },
+    {
+      "symbol": "IP",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "International Paper",
+      "source_symbol": "IP"
+    },
+    {
+      "symbol": "INTU",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Intuit",
+      "source_symbol": "INTU"
+    },
+    {
+      "symbol": "ISRG",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Intuitive Surgical",
+      "source_symbol": "ISRG"
+    },
+    {
+      "symbol": "IVZ",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Invesco",
+      "source_symbol": "IVZ"
+    },
+    {
+      "symbol": "INVH",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Invitation Homes",
+      "source_symbol": "INVH"
+    },
+    {
+      "symbol": "IQV",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "IQVIA",
+      "source_symbol": "IQV"
+    },
+    {
+      "symbol": "IRM",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Iron Mountain",
+      "source_symbol": "IRM"
+    },
+    {
+      "symbol": "JBHT",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "J.B. Hunt",
+      "source_symbol": "JBHT"
+    },
+    {
+      "symbol": "JBL",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Jabil",
+      "source_symbol": "JBL"
+    },
+    {
+      "symbol": "JKHY",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Jack Henry & Associates",
+      "source_symbol": "JKHY"
+    },
+    {
+      "symbol": "J",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Jacobs Solutions",
+      "source_symbol": "J"
+    },
+    {
+      "symbol": "JNJ",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Johnson & Johnson",
+      "source_symbol": "JNJ"
+    },
+    {
+      "symbol": "JCI",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Johnson Controls",
+      "source_symbol": "JCI"
+    },
+    {
+      "symbol": "JPM",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "JPMorgan Chase",
+      "source_symbol": "JPM"
+    },
+    {
+      "symbol": "KVUE",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Kenvue",
+      "source_symbol": "KVUE"
+    },
+    {
+      "symbol": "KDP",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Keurig Dr Pepper",
+      "source_symbol": "KDP"
+    },
+    {
+      "symbol": "KEY",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "KeyCorp",
+      "source_symbol": "KEY"
+    },
+    {
+      "symbol": "KEYS",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Keysight Technologies",
+      "source_symbol": "KEYS"
+    },
+    {
+      "symbol": "KMB",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Kimberly-Clark",
+      "source_symbol": "KMB"
+    },
+    {
+      "symbol": "KIM",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Kimco Realty",
+      "source_symbol": "KIM"
+    },
+    {
+      "symbol": "KMI",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Kinder Morgan",
+      "source_symbol": "KMI"
+    },
+    {
+      "symbol": "KKR",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "KKR & Co.",
+      "source_symbol": "KKR"
+    },
+    {
+      "symbol": "KLAC",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "KLA Corporation",
+      "source_symbol": "KLAC"
+    },
+    {
+      "symbol": "KHC",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Kraft Heinz",
+      "source_symbol": "KHC"
+    },
+    {
+      "symbol": "KR",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Kroger",
+      "source_symbol": "KR"
+    },
+    {
+      "symbol": "LHX",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "L3Harris",
+      "source_symbol": "LHX"
+    },
+    {
+      "symbol": "LH",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Labcorp",
+      "source_symbol": "LH"
+    },
+    {
+      "symbol": "LRCX",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Lam Research",
+      "source_symbol": "LRCX"
+    },
+    {
+      "symbol": "LVS",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Las Vegas Sands",
+      "source_symbol": "LVS"
+    },
+    {
+      "symbol": "LDOS",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Leidos",
+      "source_symbol": "LDOS"
+    },
+    {
+      "symbol": "LEN",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Lennar",
+      "source_symbol": "LEN"
+    },
+    {
+      "symbol": "LII",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Lennox International",
+      "source_symbol": "LII"
+    },
+    {
+      "symbol": "LLY",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Lilly (Eli)",
+      "source_symbol": "LLY"
+    },
+    {
+      "symbol": "LIN",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Linde plc",
+      "source_symbol": "LIN"
+    },
+    {
+      "symbol": "LYV",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Live Nation Entertainment",
+      "source_symbol": "LYV"
+    },
+    {
+      "symbol": "LMT",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Lockheed Martin",
+      "source_symbol": "LMT"
+    },
+    {
+      "symbol": "L",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Loews Corporation",
+      "source_symbol": "L"
+    },
+    {
+      "symbol": "LOW",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Lowe's",
+      "source_symbol": "LOW"
+    },
+    {
+      "symbol": "LULU",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Lululemon Athletica",
+      "source_symbol": "LULU"
+    },
+    {
+      "symbol": "LITE",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Lumentum",
+      "source_symbol": "LITE"
+    },
+    {
+      "symbol": "LYB",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "LyondellBasell",
+      "source_symbol": "LYB"
+    },
+    {
+      "symbol": "MTB",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "M&T Bank",
+      "source_symbol": "MTB"
+    },
+    {
+      "symbol": "MPC",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Marathon Petroleum",
+      "source_symbol": "MPC"
+    },
+    {
+      "symbol": "MAR",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Marriott International",
+      "source_symbol": "MAR"
+    },
+    {
+      "symbol": "MRSH",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Marsh McLennan",
+      "source_symbol": "MRSH"
+    },
+    {
+      "symbol": "MLM",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Martin Marietta Materials",
+      "source_symbol": "MLM"
+    },
+    {
+      "symbol": "MAS",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Masco",
+      "source_symbol": "MAS"
+    },
+    {
+      "symbol": "MA",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Mastercard",
+      "source_symbol": "MA"
+    },
+    {
+      "symbol": "MKC",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "McCormick & Company",
+      "source_symbol": "MKC"
+    },
+    {
+      "symbol": "MCD",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "McDonald's",
+      "source_symbol": "MCD"
+    },
+    {
+      "symbol": "MCK",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "McKesson Corporation",
+      "source_symbol": "MCK"
+    },
+    {
+      "symbol": "MDT",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Medtronic",
+      "source_symbol": "MDT"
+    },
+    {
+      "symbol": "MRK",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Merck & Co.",
+      "source_symbol": "MRK"
+    },
+    {
+      "symbol": "META",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Meta Platforms",
+      "source_symbol": "META"
+    },
+    {
+      "symbol": "MET",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "MetLife",
+      "source_symbol": "MET"
+    },
+    {
+      "symbol": "MTD",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Mettler Toledo",
+      "source_symbol": "MTD"
+    },
+    {
+      "symbol": "MGM",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "MGM Resorts",
+      "source_symbol": "MGM"
+    },
+    {
+      "symbol": "MCHP",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Microchip Technology",
+      "source_symbol": "MCHP"
+    },
+    {
+      "symbol": "MU",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Micron Technology",
+      "source_symbol": "MU"
+    },
+    {
+      "symbol": "MSFT",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Microsoft",
+      "source_symbol": "MSFT"
+    },
+    {
+      "symbol": "MAA",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Mid-America Apartment Communities",
+      "source_symbol": "MAA"
+    },
+    {
+      "symbol": "MRNA",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Moderna",
+      "source_symbol": "MRNA"
+    },
+    {
+      "symbol": "TAP",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Molson Coors Beverage Company",
+      "source_symbol": "TAP"
+    },
+    {
+      "symbol": "MDLZ",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Mondelez International",
+      "source_symbol": "MDLZ"
+    },
+    {
+      "symbol": "MPWR",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Monolithic Power Systems",
+      "source_symbol": "MPWR"
+    },
+    {
+      "symbol": "MNST",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Monster Beverage",
+      "source_symbol": "MNST"
+    },
+    {
+      "symbol": "MCO",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Moody's Corporation",
+      "source_symbol": "MCO"
+    },
+    {
+      "symbol": "MS",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Morgan Stanley",
+      "source_symbol": "MS"
+    },
+    {
+      "symbol": "MOS",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Mosaic Company (The)",
+      "source_symbol": "MOS"
+    },
+    {
+      "symbol": "MSI",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Motorola Solutions",
+      "source_symbol": "MSI"
+    },
+    {
+      "symbol": "MSCI",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "MSCI Inc.",
+      "source_symbol": "MSCI"
+    },
+    {
+      "symbol": "NDAQ",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Nasdaq, Inc.",
+      "source_symbol": "NDAQ"
+    },
+    {
+      "symbol": "NTAP",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "NetApp",
+      "source_symbol": "NTAP"
+    },
+    {
+      "symbol": "NFLX",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Netflix",
+      "source_symbol": "NFLX"
+    },
+    {
+      "symbol": "NEM",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Newmont",
+      "source_symbol": "NEM"
+    },
+    {
+      "symbol": "NWSA",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "News Corp (Class A)",
+      "source_symbol": "NWSA"
+    },
+    {
+      "symbol": "NWS",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "News Corp (Class B)",
+      "source_symbol": "NWS"
+    },
+    {
+      "symbol": "NEE",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "NextEra Energy",
+      "source_symbol": "NEE"
+    },
+    {
+      "symbol": "NKE",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Nike, Inc.",
+      "source_symbol": "NKE"
+    },
+    {
+      "symbol": "NI",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "NiSource",
+      "source_symbol": "NI"
+    },
+    {
+      "symbol": "NDSN",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Nordson Corporation",
+      "source_symbol": "NDSN"
+    },
+    {
+      "symbol": "NSC",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Norfolk Southern",
+      "source_symbol": "NSC"
+    },
+    {
+      "symbol": "NTRS",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Northern Trust",
+      "source_symbol": "NTRS"
+    },
+    {
+      "symbol": "NOC",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Northrop Grumman",
+      "source_symbol": "NOC"
+    },
+    {
+      "symbol": "NCLH",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Norwegian Cruise Line Holdings",
+      "source_symbol": "NCLH"
+    },
+    {
+      "symbol": "NRG",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "NRG Energy",
+      "source_symbol": "NRG"
+    },
+    {
+      "symbol": "NUE",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Nucor",
+      "source_symbol": "NUE"
+    },
+    {
+      "symbol": "NVDA",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Nvidia",
+      "source_symbol": "NVDA"
+    },
+    {
+      "symbol": "NVR",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "NVR, Inc.",
+      "source_symbol": "NVR"
+    },
+    {
+      "symbol": "NXPI",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "NXP Semiconductors",
+      "source_symbol": "NXPI"
+    },
+    {
+      "symbol": "ORLY",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "O\u2019Reilly Automotive",
+      "source_symbol": "ORLY"
+    },
+    {
+      "symbol": "OXY",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Occidental Petroleum",
+      "source_symbol": "OXY"
+    },
+    {
+      "symbol": "ODFL",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Old Dominion",
+      "source_symbol": "ODFL"
+    },
+    {
+      "symbol": "OMC",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Omnicom Group",
+      "source_symbol": "OMC"
+    },
+    {
+      "symbol": "ON",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "ON Semiconductor",
+      "source_symbol": "ON"
+    },
+    {
+      "symbol": "OKE",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Oneok",
+      "source_symbol": "OKE"
+    },
+    {
+      "symbol": "ORCL",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Oracle Corporation",
+      "source_symbol": "ORCL"
+    },
+    {
+      "symbol": "OTIS",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Otis Worldwide",
+      "source_symbol": "OTIS"
+    },
+    {
+      "symbol": "PCAR",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Paccar",
+      "source_symbol": "PCAR"
+    },
+    {
+      "symbol": "PKG",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Packaging Corporation of America",
+      "source_symbol": "PKG"
+    },
+    {
+      "symbol": "PLTR",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Palantir Technologies",
+      "source_symbol": "PLTR"
+    },
+    {
+      "symbol": "PANW",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Palo Alto Networks",
+      "source_symbol": "PANW"
+    },
+    {
+      "symbol": "PSKY",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Paramount Skydance Corporation",
+      "source_symbol": "PSKY"
+    },
+    {
+      "symbol": "PH",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Parker Hannifin",
+      "source_symbol": "PH"
+    },
+    {
+      "symbol": "PAYX",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Paychex",
+      "source_symbol": "PAYX"
+    },
+    {
+      "symbol": "PYPL",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "PayPal",
+      "source_symbol": "PYPL"
+    },
+    {
+      "symbol": "PNR",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Pentair",
+      "source_symbol": "PNR"
+    },
+    {
+      "symbol": "PEP",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "PepsiCo",
+      "source_symbol": "PEP"
+    },
+    {
+      "symbol": "PFE",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Pfizer",
+      "source_symbol": "PFE"
+    },
+    {
+      "symbol": "PCG",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "PG&E Corporation",
+      "source_symbol": "PCG"
+    },
+    {
+      "symbol": "PM",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Philip Morris International",
+      "source_symbol": "PM"
+    },
+    {
+      "symbol": "PSX",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Phillips 66",
+      "source_symbol": "PSX"
+    },
+    {
+      "symbol": "PNW",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Pinnacle West Capital",
+      "source_symbol": "PNW"
+    },
+    {
+      "symbol": "PNC",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "PNC Financial Services",
+      "source_symbol": "PNC"
+    },
+    {
+      "symbol": "POOL",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Pool Corporation",
+      "source_symbol": "POOL"
+    },
+    {
+      "symbol": "PPG",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "PPG Industries",
+      "source_symbol": "PPG"
+    },
+    {
+      "symbol": "PPL",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "PPL Corporation",
+      "source_symbol": "PPL"
+    },
+    {
+      "symbol": "PFG",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Principal Financial Group",
+      "source_symbol": "PFG"
+    },
+    {
+      "symbol": "PG",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Procter & Gamble",
+      "source_symbol": "PG"
+    },
+    {
+      "symbol": "PGR",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Progressive Corporation",
+      "source_symbol": "PGR"
+    },
+    {
+      "symbol": "PLD",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Prologis",
+      "source_symbol": "PLD"
+    },
+    {
+      "symbol": "PRU",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Prudential Financial",
+      "source_symbol": "PRU"
+    },
+    {
+      "symbol": "PEG",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Public Service Enterprise Group",
+      "source_symbol": "PEG"
+    },
+    {
+      "symbol": "PTC",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "PTC Inc.",
+      "source_symbol": "PTC"
+    },
+    {
+      "symbol": "PSA",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Public Storage",
+      "source_symbol": "PSA"
+    },
+    {
+      "symbol": "PHM",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "PulteGroup",
+      "source_symbol": "PHM"
+    },
+    {
+      "symbol": "PWR",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Quanta Services",
+      "source_symbol": "PWR"
+    },
+    {
+      "symbol": "QCOM",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Qualcomm",
+      "source_symbol": "QCOM"
+    },
+    {
+      "symbol": "DGX",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Quest Diagnostics",
+      "source_symbol": "DGX"
+    },
+    {
+      "symbol": "Q",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Qnity Electronics",
+      "source_symbol": "Q"
+    },
+    {
+      "symbol": "RL",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Ralph Lauren Corporation",
+      "source_symbol": "RL"
+    },
+    {
+      "symbol": "RJF",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Raymond James Financial",
+      "source_symbol": "RJF"
+    },
+    {
+      "symbol": "RTX",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "RTX Corporation",
+      "source_symbol": "RTX"
+    },
+    {
+      "symbol": "O",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Realty Income",
+      "source_symbol": "O"
+    },
+    {
+      "symbol": "REG",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Regency Centers",
+      "source_symbol": "REG"
+    },
+    {
+      "symbol": "REGN",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Regeneron Pharmaceuticals",
+      "source_symbol": "REGN"
+    },
+    {
+      "symbol": "RF",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Regions Financial Corporation",
+      "source_symbol": "RF"
+    },
+    {
+      "symbol": "RSG",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Republic Services",
+      "source_symbol": "RSG"
+    },
+    {
+      "symbol": "RMD",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "ResMed",
+      "source_symbol": "RMD"
+    },
+    {
+      "symbol": "RVTY",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Revvity",
+      "source_symbol": "RVTY"
+    },
+    {
+      "symbol": "HOOD",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Robinhood Markets",
+      "source_symbol": "HOOD"
+    },
+    {
+      "symbol": "ROK",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Rockwell Automation",
+      "source_symbol": "ROK"
+    },
+    {
+      "symbol": "ROL",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Rollins, Inc.",
+      "source_symbol": "ROL"
+    },
+    {
+      "symbol": "ROP",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Roper Technologies",
+      "source_symbol": "ROP"
+    },
+    {
+      "symbol": "ROST",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Ross Stores",
+      "source_symbol": "ROST"
+    },
+    {
+      "symbol": "RCL",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Royal Caribbean Group",
+      "source_symbol": "RCL"
+    },
+    {
+      "symbol": "SPGI",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "S&P Global",
+      "source_symbol": "SPGI"
+    },
+    {
+      "symbol": "CRM",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Salesforce",
+      "source_symbol": "CRM"
+    },
+    {
+      "symbol": "SNDK",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Sandisk",
+      "source_symbol": "SNDK"
+    },
+    {
+      "symbol": "SBAC",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "SBA Communications",
+      "source_symbol": "SBAC"
+    },
+    {
+      "symbol": "SLB",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Schlumberger",
+      "source_symbol": "SLB"
+    },
+    {
+      "symbol": "STX",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Seagate Technology",
+      "source_symbol": "STX"
+    },
+    {
+      "symbol": "SRE",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Sempra",
+      "source_symbol": "SRE"
+    },
+    {
+      "symbol": "NOW",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "ServiceNow",
+      "source_symbol": "NOW"
+    },
+    {
+      "symbol": "SHW",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Sherwin-Williams",
+      "source_symbol": "SHW"
+    },
+    {
+      "symbol": "SPG",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Simon Property Group",
+      "source_symbol": "SPG"
+    },
+    {
+      "symbol": "SWKS",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Skyworks Solutions",
+      "source_symbol": "SWKS"
+    },
+    {
+      "symbol": "SJM",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "J.M. Smucker Company (The)",
+      "source_symbol": "SJM"
+    },
+    {
+      "symbol": "SW",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Smurfit Westrock",
+      "source_symbol": "SW"
+    },
+    {
+      "symbol": "SNA",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Snap-on",
+      "source_symbol": "SNA"
+    },
+    {
+      "symbol": "SOLV",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Solventum",
+      "source_symbol": "SOLV"
+    },
+    {
+      "symbol": "SO",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Southern Company",
+      "source_symbol": "SO"
+    },
+    {
+      "symbol": "LUV",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Southwest Airlines",
+      "source_symbol": "LUV"
+    },
+    {
+      "symbol": "SWK",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Stanley Black & Decker",
+      "source_symbol": "SWK"
+    },
+    {
+      "symbol": "SBUX",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Starbucks",
+      "source_symbol": "SBUX"
+    },
+    {
+      "symbol": "STT",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "State Street Corporation",
+      "source_symbol": "STT"
+    },
+    {
+      "symbol": "STLD",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Steel Dynamics",
+      "source_symbol": "STLD"
+    },
+    {
+      "symbol": "STE",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Steris",
+      "source_symbol": "STE"
+    },
+    {
+      "symbol": "SYK",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Stryker Corporation",
+      "source_symbol": "SYK"
+    },
+    {
+      "symbol": "SMCI",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Supermicro",
+      "source_symbol": "SMCI"
+    },
+    {
+      "symbol": "SYF",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Synchrony Financial",
+      "source_symbol": "SYF"
+    },
+    {
+      "symbol": "SNPS",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Synopsys",
+      "source_symbol": "SNPS"
+    },
+    {
+      "symbol": "SYY",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Sysco",
+      "source_symbol": "SYY"
+    },
+    {
+      "symbol": "TMUS",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "T-Mobile US",
+      "source_symbol": "TMUS"
+    },
+    {
+      "symbol": "TROW",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "T. Rowe Price",
+      "source_symbol": "TROW"
+    },
+    {
+      "symbol": "TTWO",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Take-Two Interactive",
+      "source_symbol": "TTWO"
+    },
+    {
+      "symbol": "TPR",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Tapestry, Inc.",
+      "source_symbol": "TPR"
+    },
+    {
+      "symbol": "TRGP",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Targa Resources",
+      "source_symbol": "TRGP"
+    },
+    {
+      "symbol": "TGT",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Target Corporation",
+      "source_symbol": "TGT"
+    },
+    {
+      "symbol": "TEL",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "TE Connectivity",
+      "source_symbol": "TEL"
+    },
+    {
+      "symbol": "TDY",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Teledyne Technologies",
+      "source_symbol": "TDY"
+    },
+    {
+      "symbol": "TER",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Teradyne",
+      "source_symbol": "TER"
+    },
+    {
+      "symbol": "TSLA",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Tesla, Inc.",
+      "source_symbol": "TSLA"
+    },
+    {
+      "symbol": "TXN",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Texas Instruments",
+      "source_symbol": "TXN"
+    },
+    {
+      "symbol": "TPL",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Texas Pacific Land Corporation",
+      "source_symbol": "TPL"
+    },
+    {
+      "symbol": "TXT",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Textron",
+      "source_symbol": "TXT"
+    },
+    {
+      "symbol": "TMO",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Thermo Fisher Scientific",
+      "source_symbol": "TMO"
+    },
+    {
+      "symbol": "TJX",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "TJX Companies",
+      "source_symbol": "TJX"
+    },
+    {
+      "symbol": "TKO",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "TKO Group Holdings",
+      "source_symbol": "TKO"
+    },
+    {
+      "symbol": "TTD",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Trade Desk (The)",
+      "source_symbol": "TTD"
+    },
+    {
+      "symbol": "TSCO",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Tractor Supply",
+      "source_symbol": "TSCO"
+    },
+    {
+      "symbol": "TT",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Trane Technologies",
+      "source_symbol": "TT"
+    },
+    {
+      "symbol": "TDG",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "TransDigm Group",
+      "source_symbol": "TDG"
+    },
+    {
+      "symbol": "TRV",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Travelers Companies (The)",
+      "source_symbol": "TRV"
+    },
+    {
+      "symbol": "TRMB",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Trimble Inc.",
+      "source_symbol": "TRMB"
+    },
+    {
+      "symbol": "TFC",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Truist Financial",
+      "source_symbol": "TFC"
+    },
+    {
+      "symbol": "TYL",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Tyler Technologies",
+      "source_symbol": "TYL"
+    },
+    {
+      "symbol": "TSN",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Tyson Foods",
+      "source_symbol": "TSN"
+    },
+    {
+      "symbol": "USB",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "U.S. Bancorp",
+      "source_symbol": "USB"
+    },
+    {
+      "symbol": "UBER",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Uber",
+      "source_symbol": "UBER"
+    },
+    {
+      "symbol": "UDR",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "UDR, Inc.",
+      "source_symbol": "UDR"
+    },
+    {
+      "symbol": "ULTA",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Ulta Beauty",
+      "source_symbol": "ULTA"
+    },
+    {
+      "symbol": "UNP",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Union Pacific Corporation",
+      "source_symbol": "UNP"
+    },
+    {
+      "symbol": "UAL",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "United Airlines Holdings",
+      "source_symbol": "UAL"
+    },
+    {
+      "symbol": "UPS",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "United Parcel Service",
+      "source_symbol": "UPS"
+    },
+    {
+      "symbol": "URI",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "United Rentals",
+      "source_symbol": "URI"
+    },
+    {
+      "symbol": "UNH",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "UnitedHealth Group",
+      "source_symbol": "UNH"
+    },
+    {
+      "symbol": "UHS",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Universal Health Services",
+      "source_symbol": "UHS"
+    },
+    {
+      "symbol": "VLO",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Valero Energy",
+      "source_symbol": "VLO"
+    },
+    {
+      "symbol": "VEEV",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Veeva Systems",
+      "source_symbol": "VEEV"
+    },
+    {
+      "symbol": "VTR",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Ventas",
+      "source_symbol": "VTR"
+    },
+    {
+      "symbol": "VLTO",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Veralto",
+      "source_symbol": "VLTO"
+    },
+    {
+      "symbol": "VRSN",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Verisign",
+      "source_symbol": "VRSN"
+    },
+    {
+      "symbol": "VRSK",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Verisk Analytics",
+      "source_symbol": "VRSK"
+    },
+    {
+      "symbol": "VZ",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Verizon",
+      "source_symbol": "VZ"
+    },
+    {
+      "symbol": "VRTX",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Vertex Pharmaceuticals",
+      "source_symbol": "VRTX"
+    },
+    {
+      "symbol": "VRT",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Vertiv",
+      "source_symbol": "VRT"
+    },
+    {
+      "symbol": "VTRS",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Viatris",
+      "source_symbol": "VTRS"
+    },
+    {
+      "symbol": "VICI",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Vici Properties",
+      "source_symbol": "VICI"
+    },
+    {
+      "symbol": "V",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Visa Inc.",
+      "source_symbol": "V"
+    },
+    {
+      "symbol": "VST",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Vistra Corp.",
+      "source_symbol": "VST"
+    },
+    {
+      "symbol": "VMC",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Vulcan Materials Company",
+      "source_symbol": "VMC"
+    },
+    {
+      "symbol": "WRB",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "W. R. Berkley Corporation",
+      "source_symbol": "WRB"
+    },
+    {
+      "symbol": "GWW",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "W. W. Grainger",
+      "source_symbol": "GWW"
+    },
+    {
+      "symbol": "WAB",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Wabtec",
+      "source_symbol": "WAB"
+    },
+    {
+      "symbol": "WMT",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Walmart",
+      "source_symbol": "WMT"
+    },
+    {
+      "symbol": "DIS",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Walt Disney Company (The)",
+      "source_symbol": "DIS"
+    },
+    {
+      "symbol": "WBD",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Warner Bros. Discovery",
+      "source_symbol": "WBD"
+    },
+    {
+      "symbol": "WM",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Waste Management",
+      "source_symbol": "WM"
+    },
+    {
+      "symbol": "WAT",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Waters Corporation",
+      "source_symbol": "WAT"
+    },
+    {
+      "symbol": "WEC",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "WEC Energy Group",
+      "source_symbol": "WEC"
+    },
+    {
+      "symbol": "WFC",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Wells Fargo",
+      "source_symbol": "WFC"
+    },
+    {
+      "symbol": "WELL",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Welltower",
+      "source_symbol": "WELL"
+    },
+    {
+      "symbol": "WST",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "West Pharmaceutical Services",
+      "source_symbol": "WST"
+    },
+    {
+      "symbol": "WDC",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Western Digital",
+      "source_symbol": "WDC"
+    },
+    {
+      "symbol": "WY",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Weyerhaeuser",
+      "source_symbol": "WY"
+    },
+    {
+      "symbol": "WSM",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Williams-Sonoma, Inc.",
+      "source_symbol": "WSM"
+    },
+    {
+      "symbol": "WMB",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Williams Companies",
+      "source_symbol": "WMB"
+    },
+    {
+      "symbol": "WTW",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Willis Towers Watson",
+      "source_symbol": "WTW"
+    },
+    {
+      "symbol": "WDAY",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Workday, Inc.",
+      "source_symbol": "WDAY"
+    },
+    {
+      "symbol": "WYNN",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Wynn Resorts",
+      "source_symbol": "WYNN"
+    },
+    {
+      "symbol": "XEL",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Xcel Energy",
+      "source_symbol": "XEL"
+    },
+    {
+      "symbol": "XYL",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Xylem Inc.",
+      "source_symbol": "XYL"
+    },
+    {
+      "symbol": "YUM",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Yum! Brands",
+      "source_symbol": "YUM"
+    },
+    {
+      "symbol": "ZBRA",
+      "exchange_mic": "XNAS",
+      "currency": "USD",
+      "source_name": "Zebra Technologies",
+      "source_symbol": "ZBRA"
+    },
+    {
+      "symbol": "ZBH",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Zimmer Biomet",
+      "source_symbol": "ZBH"
+    },
+    {
+      "symbol": "ZTS",
+      "exchange_mic": "XNYS",
+      "currency": "USD",
+      "source_name": "Zoetis",
+      "source_symbol": "ZTS"
+    }
+  ],
+  "source_documents": [
+    {
+      "label": "Wikipedia: List_of_S%26P_500_companies",
+      "url": "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
+    }
+  ]
+}

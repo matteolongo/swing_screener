@@ -1,4 +1,5 @@
-import type { PriceHistoryPoint } from '@/features/screener/types';
+import type { CandlePattern, CandlePatternRaw, PriceHistoryPoint } from '@/features/screener/types';
+import { transformCandlePattern } from '@/features/screener/types';
 
 export interface WatchItemAPI {
   ticker: string;
@@ -12,6 +13,7 @@ export interface WatchItemAPI {
   signal_trigger_price?: number | null;
   distance_to_trigger_pct?: number | null;
   price_history?: PriceHistoryPoint[] | null;
+  patterns?: CandlePatternRaw[] | null;
 }
 
 export interface WatchlistResponseAPI {
@@ -30,6 +32,7 @@ export interface WatchItem {
   signalTriggerPrice?: number;
   distanceToTriggerPct?: number;
   priceHistory: PriceHistoryPoint[];
+  patterns?: CandlePattern[];
 }
 
 export interface WatchSymbolRequest {
@@ -52,5 +55,6 @@ export function transformWatchItem(api: WatchItemAPI): WatchItem {
     signalTriggerPrice: api.signal_trigger_price ?? undefined,
     distanceToTriggerPct: api.distance_to_trigger_pct ?? undefined,
     priceHistory: api.price_history ?? [],
+    patterns: (api.patterns ?? []).map(transformCandlePattern),
   };
 }

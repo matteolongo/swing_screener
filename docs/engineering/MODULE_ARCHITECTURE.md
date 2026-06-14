@@ -51,6 +51,21 @@ Also removed:
 
 - `swing_screener.reporting.config` as a canonical import target.
 
+## Universe Registry Data Sources
+
+The packaged universe registry (`src/swing_screener/data/universes/registry/`) is
+refreshed by source adapters in the `data` domain:
+
+- `data/universe_sources.py` — adapter dispatch (`refresh_snapshot_from_source`); Euronext AEX-family and `wikipedia_index_review` adapters.
+- `data/wikipedia_sources.py` — fetch and parse index constituent tables from Wikipedia; normalize tickers to Yahoo symbols.
+- `data/instrument_enrichment.py` — resolve a Yahoo symbol to an instrument-master record via yfinance `.info` (MIC, currency, country, timezone, type).
+
+Refreshing an index universe (`refresh_package_universe(..., apply=True)`, or
+`python -m swing_screener.cli universes refresh --name <id> --apply`) writes the
+snapshot and appends any newly enriched symbols to
+`data/intelligence/instrument_master.json` (append-only; never overwrites
+existing records).
+
 ## API and Frontend Note
 
 This refactor was internal to module structure. API routes and frontend endpoint usage remain unchanged:

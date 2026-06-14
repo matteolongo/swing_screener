@@ -43,6 +43,8 @@ Each domain has a directory under `web-ui/src/features/<domain>/` with `api.ts` 
 | `features/config` | (cross-cutting) | App config read/write |
 | `features/persistence` | (cross-cutting) | API vs localStorage mode toggle |
 
+Charts (`components/domain/market/`): `CandleChart` is a responsive hand-rolled SVG candlestick chart (bodies + wicks + volume bars + pattern markers with i18n tooltips + a rebased benchmark comparison line). `CachedSymbolCandleChart` wraps it, sourcing OHLCV bars, detected patterns, and the benchmark series from the cached screener result by ticker, and adds a time-range selector (`1W`/`1M`/`3M`/`6M`/`1Y`/`MAX`, default `MAX`) plus a fullscreen overlay. It is used in the full symbol views (`WorkspaceSymbolModal`, `SymbolAnalysisContent`); range slicing reuses `features/screener/priceHistory.ts`. The older close-only `CachedSymbolPriceChart` was removed.
+
 ## Typical Workflow
 
 1. Start API and web UI.

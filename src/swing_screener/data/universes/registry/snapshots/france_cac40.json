@@ -1,0 +1,308 @@
+{
+  "id": "france_cac40",
+  "kind": "index",
+  "description": "CAC 40 constituents",
+  "benchmark": "^FCHI",
+  "source": "wikipedia",
+  "source_adapter": "wikipedia_index_review",
+  "source_asof": "2026-06-13",
+  "last_reviewed_at": "2026-06-13",
+  "stale_after_days": 100,
+  "rules": {
+    "exchange_mics": [
+      "XAMS",
+      "XPAR"
+    ],
+    "currencies": [
+      "EUR"
+    ]
+  },
+  "constituents": [
+    {
+      "symbol": "AC.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Accor",
+      "source_symbol": "AC"
+    },
+    {
+      "symbol": "AI.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Air Liquide",
+      "source_symbol": "AI"
+    },
+    {
+      "symbol": "AIR.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Airbus",
+      "source_symbol": "AIR"
+    },
+    {
+      "symbol": "MT.AS",
+      "exchange_mic": "XAMS",
+      "currency": "EUR",
+      "source_name": "ArcelorMittal",
+      "source_symbol": "MT"
+    },
+    {
+      "symbol": "CS.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Axa",
+      "source_symbol": "CS"
+    },
+    {
+      "symbol": "BNP.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "BNP Paribas",
+      "source_symbol": "BNP"
+    },
+    {
+      "symbol": "EN.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Bouygues",
+      "source_symbol": "EN"
+    },
+    {
+      "symbol": "BVI.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Bureau Veritas",
+      "source_symbol": "BVI"
+    },
+    {
+      "symbol": "CAP.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Capgemini",
+      "source_symbol": "CAP"
+    },
+    {
+      "symbol": "CA.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Carrefour",
+      "source_symbol": "CA"
+    },
+    {
+      "symbol": "ACA.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Cr\u00e9dit Agricole",
+      "source_symbol": "ACA"
+    },
+    {
+      "symbol": "BN.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Danone",
+      "source_symbol": "BN"
+    },
+    {
+      "symbol": "DSY.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Dassault Syst\u00e8mes",
+      "source_symbol": "DSY"
+    },
+    {
+      "symbol": "EDEN.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Edenred",
+      "source_symbol": "EDEN"
+    },
+    {
+      "symbol": "ENGI.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Engie",
+      "source_symbol": "ENGI"
+    },
+    {
+      "symbol": "EL.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "EssilorLuxottica",
+      "source_symbol": "EL"
+    },
+    {
+      "symbol": "ERF.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Eurofins Scientific",
+      "source_symbol": "ERF"
+    },
+    {
+      "symbol": "RMS.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Herm\u00e8s",
+      "source_symbol": "RMS"
+    },
+    {
+      "symbol": "KER.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Kering",
+      "source_symbol": "KER"
+    },
+    {
+      "symbol": "OR.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "L'Or\u00e9al",
+      "source_symbol": "OR"
+    },
+    {
+      "symbol": "LR.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Legrand",
+      "source_symbol": "LR"
+    },
+    {
+      "symbol": "MC.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "LVMH",
+      "source_symbol": "MC"
+    },
+    {
+      "symbol": "ML.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Michelin",
+      "source_symbol": "ML"
+    },
+    {
+      "symbol": "ORA.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Orange",
+      "source_symbol": "ORA"
+    },
+    {
+      "symbol": "RI.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Pernod Ricard",
+      "source_symbol": "RI"
+    },
+    {
+      "symbol": "PUB.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Publicis",
+      "source_symbol": "PUB"
+    },
+    {
+      "symbol": "RNO.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Renault",
+      "source_symbol": "RNO"
+    },
+    {
+      "symbol": "SAF.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Safran",
+      "source_symbol": "SAF"
+    },
+    {
+      "symbol": "SGO.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Saint-Gobain",
+      "source_symbol": "SGO"
+    },
+    {
+      "symbol": "SAN.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Sanofi",
+      "source_symbol": "SAN"
+    },
+    {
+      "symbol": "SU.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Schneider Electric",
+      "source_symbol": "SU"
+    },
+    {
+      "symbol": "GLE.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Soci\u00e9t\u00e9 G\u00e9n\u00e9rale",
+      "source_symbol": "GLE"
+    },
+    {
+      "symbol": "STLAP.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Stellantis",
+      "source_symbol": "STLAP"
+    },
+    {
+      "symbol": "STMPA.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "STMicroelectronics",
+      "source_symbol": "STMPA"
+    },
+    {
+      "symbol": "TEP.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Teleperformance",
+      "source_symbol": "TEP"
+    },
+    {
+      "symbol": "HO.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Thales",
+      "source_symbol": "HO"
+    },
+    {
+      "symbol": "TTE.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "TotalEnergies",
+      "source_symbol": "TTE"
+    },
+    {
+      "symbol": "URW.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Unibail-Rodamco-Westfield",
+      "source_symbol": "URW"
+    },
+    {
+      "symbol": "VIE.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Veolia",
+      "source_symbol": "VIE"
+    },
+    {
+      "symbol": "DG.PA",
+      "exchange_mic": "XPAR",
+      "currency": "EUR",
+      "source_name": "Vinci",
+      "source_symbol": "DG"
+    }
+  ],
+  "source_documents": [
+    {
+      "label": "Wikipedia: CAC_40",
+      "url": "https://en.wikipedia.org/wiki/CAC_40"
+    }
+  ]
+}

@@ -43,6 +43,22 @@ describe('candidateToPayload', () => {
     expect(payload!.days_open).toBeUndefined();
   });
 
+  it('maps candle patterns to recent_patterns strings', () => {
+    const payload = candidateToPayload({
+      ...baseCandidate,
+      patterns: [
+        { barIndex: 9, date: '2024-01-10', name: 'hammer', direction: 'bullish', keyLevel: 9, context: 'at_pullback' },
+        { barIndex: 9, date: '2024-01-10', name: 'inside_bar', direction: 'bullish', keyLevel: 9, context: 'none' },
+      ],
+    });
+    expect(payload!.recent_patterns).toEqual(['hammer@at_pullback', 'inside_bar@none']);
+  });
+
+  it('sets recent_patterns to null when no patterns', () => {
+    const payload = candidateToPayload(baseCandidate);
+    expect(payload!.recent_patterns).toBeNull();
+  });
+
   it('omits position fields when null position provided', () => {
     const payload = candidateToPayload(baseCandidate, null);
     expect(payload!.entry_price).toBeUndefined();

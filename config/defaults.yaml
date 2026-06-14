@@ -389,6 +389,16 @@ low_level:
     pullback_band_atr_low: 0.5
     pullback_band_atr_high: 0.0
     allow_second_chance_breakout: true
+    pattern_stop_enabled: true
+    pattern_stop_atr_buffer: 0.25
+  candles:
+    lookback: 10
+    doji_body_ratio: 0.1
+    hammer_lower_wick_mult: 2.0
+    hammer_max_opposite_wick_ratio: 0.25
+    extension_threshold_pct: 0.10
+    breakout_lookback: 50
+    pullback_ma: 20
   # ---------------------------------------------------------------------------
   # Tier 1 free-first data provider stack
   # ---------------------------------------------------------------------------

@@ -2,7 +2,12 @@ import numpy as np
 import pandas as pd
 from pytest import approx
 
-from swing_screener.execution.guidance import add_execution_guidance, ExecutionConfig
+from swing_screener.execution.guidance import (
+    add_execution_guidance,
+    apply_pattern_stop,
+    ExecutionConfig,
+)
+from swing_screener.indicators.candles import CandlePattern
 
 
 def test_breakout_not_triggered_buy_stop():
@@ -246,3 +251,83 @@ def test_missing_atr_column_does_not_affect_breakout_stop_price():
     assert out.loc["X", "suggested_order_type"] == "BUY_STOP"
     assert out.loc["X", "suggested_order_price"] == approx(100.0 * 1.002, rel=1e-9)
     assert np.isnan(out.loc["X", "order_price_band_low"])
+
+
+def test_apply_pattern_stop_tightens_below_hammer_low():
+    patterns = {
+        "AAA": [
+            CandlePattern(
+                ticker="AAA",
+                bar_index=59,
+                date="2024-03-01",
+                name="hammer",
+                direction="bullish",
+                key_level=9.0,
+                context="at_pullback",
+            )
+        ]
+    }
+    stop, reason = apply_pattern_stop(
+        ticker="AAA",
+        entry=10.0,
+        current_stop=8.0,
+        atr=0.5,
+        patterns=patterns,
+        buffer_atr=0.25,
+        min_rr_stop=None,
+    )
+    assert stop == 9.0 - 0.25 * 0.5
+    assert "hammer" in reason.lower()
+
+
+def test_apply_pattern_stop_skips_when_extended():
+    patterns = {
+        "AAA": [
+            CandlePattern(
+                ticker="AAA",
+                bar_index=59,
+                date="2024-03-01",
+                name="hammer",
+                direction="bullish",
+                key_level=9.0,
+                context="extended",
+            )
+        ]
+    }
+    stop, reason = apply_pattern_stop(
+        ticker="AAA",
+        entry=10.0,
+        current_stop=8.0,
+        atr=0.5,
+        patterns=patterns,
+        buffer_atr=0.25,
+        min_rr_stop=None,
+    )
+    assert stop is None and reason is None
+
+
+def test_apply_pattern_stop_keeps_atr_when_pattern_stop_wider():
+    patterns = {
+        "AAA": [
+            CandlePattern(
+                ticker="AAA",
+                bar_index=59,
+                date="2024-03-01",
+                name="hammer",
+                direction="bullish",
+                key_level=7.0,
+                context="at_pullback",
+            )
+        ]
+    }
+    stop, reason = apply_pattern_stop(
+        ticker="AAA",
+        entry=10.0,
+        current_stop=8.0,
+        atr=0.5,
+        patterns=patterns,
+        buffer_atr=0.25,
+        min_rr_stop=None,
+    )
+    # pattern stop 6.875 is wider than ATR stop 8.0 -> keep ATR, no override
+    assert stop is None and reason is None

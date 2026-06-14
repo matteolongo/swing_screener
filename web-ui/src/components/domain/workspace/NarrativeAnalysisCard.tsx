@@ -284,7 +284,7 @@ export default function NarrativeAnalysisCard({
                     {group.replace(/_/g, ' ')}
                   </div>
                   <div className="flex flex-wrap gap-1.5">
-                    {Object.entries(fields as Record<string, unknown>).filter(([, v]) => v != null).map(([key, value]) => (
+                    {Object.entries(fields as Record<string, unknown>).filter(([, v]) => v != null && typeof v !== 'object').map(([key, value]) => (
                       <span
                         key={key}
                         className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs text-slate-700"

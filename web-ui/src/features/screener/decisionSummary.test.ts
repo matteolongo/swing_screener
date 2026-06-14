@@ -89,14 +89,31 @@ describe('rebuildDecisionSummaryWithFundamentals', () => {
     expect(rebuilt.valuationContext.summary).toContain('Trailing PE is 24.6x');
   });
 
-  it('patches metadata from the snapshot but preserves existing backend decisionSummary', () => {
+  it('enriches an empty valuation context from the snapshot while preserving backend action/conviction', () => {
     const patched = syncCandidateWithFundamentals(buildCandidate(), buildSnapshot());
 
     expect(patched.fundamentalsCoverageStatus).toBe('supported');
     expect(patched.fundamentalsFreshnessStatus).toBe('current');
     expect(patched.fundamentalsSummary).toBe('Growth metrics are supportive.');
-    // decisionSummary came from the backend (buildCandidate has one) — must be preserved, not rebuilt
-    expect(patched.decisionSummary?.valuationContext.method).toBe('not_available');
+    // backend stays the source of truth for action/conviction/drivers
+    expect(patched.decisionSummary?.action).toBe('WATCH');
+    expect(patched.decisionSummary?.conviction).toBe('low');
+    expect(patched.decisionSummary?.whyNow).toBe('Old summary');
+    // but the empty valuation context is now derived from the loaded snapshot
+    expect(patched.decisionSummary?.valuationContext.method).toBe('earnings_multiple');
+    expect(patched.decisionSummary?.valuationContext.fairValueBase).toBe(193.17);
+  });
+
+  it('keeps the backend valuation context when it already has a fair value', () => {
+    const candidate = buildCandidate();
+    candidate.decisionSummary!.valuationContext = {
+      method: 'book_multiple',
+      summary: 'Backend valuation.',
+      fairValueBase: 150,
+    };
+    const patched = syncCandidateWithFundamentals(candidate, buildSnapshot());
+    expect(patched.decisionSummary?.valuationContext.method).toBe('book_multiple');
+    expect(patched.decisionSummary?.valuationContext.fairValueBase).toBe(150);
   });
 
   it('rebuilds decisionSummary locally when the backend has not yet enriched the candidate', () => {

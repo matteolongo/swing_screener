@@ -644,10 +644,27 @@ export function syncCandidateWithFundamentals(
   // Preserve the backend decision summary when one already exists so the server
   // remains the single source of truth for action/conviction/drivers.
   // Only rebuild locally when the backend has not yet enriched the candidate.
-  const decisionSummary =
-    candidate.decisionSummary != null
-      ? candidate.decisionSummary
-      : rebuildDecisionSummaryWithFundamentals(candidate, snapshot);
+  // Exception: the screener computes the summary from cached fundamentals, which
+  // may be absent at screen time, leaving the valuation context empty. When a
+  // snapshot is now available, enrich just the valuation label + context from it
+  // while keeping the backend action/conviction/drivers.
+  let decisionSummary: DecisionSummary;
+  if (candidate.decisionSummary != null) {
+    const backendSummary = candidate.decisionSummary;
+    const valuationMissing = backendSummary.valuationContext?.fairValueBase == null;
+    if (valuationMissing) {
+      const valuationLabel = deriveValuationLabel(candidate, snapshot);
+      decisionSummary = {
+        ...backendSummary,
+        valuationLabel,
+        valuationContext: buildValuationContext(candidate, snapshot, valuationLabel),
+      };
+    } else {
+      decisionSummary = backendSummary;
+    }
+  } else {
+    decisionSummary = rebuildDecisionSummaryWithFundamentals(candidate, snapshot);
+  }
   const changed =
     candidate.fundamentalsCoverageStatus !== snapshot.coverageStatus ||
     candidate.fundamentalsFreshnessStatus !== snapshot.freshnessStatus ||

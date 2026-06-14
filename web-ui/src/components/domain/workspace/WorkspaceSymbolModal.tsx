@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, ExternalLink, ShoppingCart } from 'lucide-react';
 import Button from '@/components/common/Button';
 import ModalShell from '@/components/common/ModalShell';
-import CachedSymbolPriceChart from '@/components/domain/market/CachedSymbolPriceChart';
+import CachedSymbolCandleChart from '@/components/domain/market/CachedSymbolCandleChart';
 import KeyMetrics from '@/components/domain/workspace/KeyMetrics';
 import ActionPanel from '@/components/domain/workspace/ActionPanel';
 import IntelligenceCard from '@/components/domain/workspace/IntelligenceCard';
@@ -121,7 +121,7 @@ export default function WorkspaceSymbolModal({ ticker, position = null, onBack }
                     {t('workspacePage.panels.analysis.chartHint')}
                   </span>
                 </div>
-                <CachedSymbolPriceChart ticker={ticker} className="mt-2" />
+                <CachedSymbolCandleChart ticker={ticker} className="mt-2" width={760} height={240} />
               </div>
               <KeyMetrics ticker={ticker} />
               <div className="rounded-lg border border-slate-200 bg-white p-3">

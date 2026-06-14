@@ -7,13 +7,14 @@ from typing import Optional
 
 import pandas as pd
 
-from api.models.screener import PriceHistoryPoint
+from api.models.screener import PriceHistoryPoint, CandlePatternOut
 from api.models.watchlist import WatchItem, WatchlistItemView
 from api.repositories.strategy_repo import StrategyRepository
 from api.repositories.watchlist_repo import WatchlistRepository
 from api.utils.converters import to_iso as _to_iso
 from api.utils.files import get_today_str
 from swing_screener.data.providers import MarketDataProvider, get_default_provider
+from swing_screener.indicators.candles import detect_patterns, CandleConfig
 from swing_screener.selection.entries import build_signal_board
 from swing_screener.strategy.config import build_entry_config
 from swing_screener.utils.dataframe_helpers import get_close_matrix
@@ -106,6 +107,7 @@ class WatchlistService:
             board = build_signal_board(ohlcv, tickers, cfg=signals_cfg)
             last_prices, last_bars = _last_close_map(ohlcv)
             sparkline_history = _sparkline_history_map(ohlcv, tickers)
+            patterns_map = detect_patterns(ohlcv, tickers=tickers, cfg=CandleConfig())
 
             for ticker in tickers:
                 row = board.loc[ticker] if ticker in board.index else None
@@ -124,6 +126,17 @@ class WatchlistService:
                     signal_trigger_price=trigger_price,
                     distance_to_trigger_pct=_compute_distance_pct(last_prices.get(ticker), trigger_price),
                     price_history=sparkline_history.get(ticker, []),
+                    patterns=[
+                        CandlePatternOut(
+                            bar_index=p.bar_index,
+                            date=p.date,
+                            name=p.name,
+                            direction=p.direction,
+                            key_level=p.key_level,
+                            context=p.context,
+                        )
+                        for p in patterns_map.get(ticker, [])
+                    ],
                 )
                 enriched[ticker] = WatchlistItemView(**payload)
         except Exception:

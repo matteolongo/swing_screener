@@ -20,6 +20,39 @@ export interface SameSymbolCandidateContext {
 export interface PriceHistoryPoint {
   date: string;
   close: number;
+  open?: number;
+  high?: number;
+  low?: number;
+  volume?: number;
+}
+
+export interface CandlePattern {
+  barIndex: number;
+  date: string;
+  name: string;
+  direction: 'bullish' | 'bearish' | 'neutral';
+  keyLevel: number;
+  context: 'at_breakout' | 'at_pullback' | 'extended' | 'none';
+}
+
+export interface CandlePatternRaw {
+  bar_index: number;
+  date: string;
+  name: string;
+  direction: string;
+  key_level: number;
+  context: string;
+}
+
+export function transformCandlePattern(raw: CandlePatternRaw): CandlePattern {
+  return {
+    barIndex: raw.bar_index,
+    date: raw.date,
+    name: raw.name,
+    direction: raw.direction as CandlePattern['direction'],
+    keyLevel: raw.key_level,
+    context: raw.context as CandlePattern['context'],
+  };
 }
 
 export type DecisionAction =
@@ -145,6 +178,9 @@ export interface ScreenerCandidate {
   recommendation?: Recommendation;
   priceHistory?: PriceHistoryPoint[];
   benchmarkPriceHistory?: PriceHistoryPoint[];
+  patterns?: CandlePattern[];
+  patternStop?: number | null;
+  patternStopReason?: string | null;
   symbolChangePct?: number;
   benchmarkOutperformancePct?: number;
   suggestedOrderType?: string;
@@ -258,6 +294,9 @@ export interface ScreenerCandidateAPI {
   recommendation?: RecommendationAPI;
   price_history?: PriceHistoryPoint[];
   benchmark_price_history?: PriceHistoryPoint[];
+  patterns?: CandlePatternRaw[];
+  pattern_stop?: number | null;
+  pattern_stop_reason?: string | null;
   symbol_change_pct?: number;
   benchmark_outperformance_pct?: number;
   suggested_order_type?: string;
@@ -508,6 +547,9 @@ export function transformScreenerResponse(apiResponse: ScreenerResponseAPI): Scr
       recommendation: c.recommendation ? transformRecommendation(c.recommendation) : undefined,
       priceHistory: c.price_history ?? [],
       benchmarkPriceHistory: c.benchmark_price_history ?? [],
+      patterns: (c.patterns ?? []).map(transformCandlePattern),
+      patternStop: c.pattern_stop ?? null,
+      patternStopReason: c.pattern_stop_reason ?? null,
       symbolChangePct: c.symbol_change_pct,
       benchmarkOutperformancePct: c.benchmark_outperformance_pct,
       suggestedOrderType: c.suggested_order_type,

@@ -181,6 +181,12 @@ def _build_user_prompt(ticker: str, req: SymbolIntelligenceRequest, past_positio
         f"Sector: {req.sector or 'Unknown'}",
     ]
 
+    if req.recent_patterns:
+        readable = ", ".join(
+            p.replace("@", " @ ").replace("_", " ") for p in req.recent_patterns
+        )
+        lines.append(f"Recent candlestick patterns: {readable}")
+
     if not has_position:
 
         # Decision context block
@@ -387,6 +393,9 @@ class SymbolAnalyzer:
             finnhub_signals["analyst_upgrade_downgrade_net_30d"] = req.analyst_upgrade_downgrade_net_30d
         if finnhub_signals:
             inputs_used["finnhub_signals"] = finnhub_signals
+
+        if req.recent_patterns:
+            inputs_used["candles"] = {"patterns": ", ".join(req.recent_patterns)}
 
         user_prompt = _build_user_prompt(ticker, req, past_positions=past_positions or [])
         response = self._client.responses.create(

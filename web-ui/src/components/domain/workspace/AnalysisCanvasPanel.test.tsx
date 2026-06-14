@@ -39,7 +39,7 @@ vi.mock('@/features/watchlist/hooks', () => ({
   useUnwatchSymbolMutation: vi.fn(),
 }));
 
-vi.mock('@/components/domain/market/CachedSymbolPriceChart', () => ({
+vi.mock('@/components/domain/market/CachedSymbolCandleChart', () => ({
   default: ({ ticker }: { ticker: string }) => <div>Chart {ticker}</div>,
 }));
 

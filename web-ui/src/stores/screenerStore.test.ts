@@ -64,4 +64,23 @@ describe('useScreenerStore', () => {
 
     expect(result.current.lastResult).toBeNull();
   });
+
+  it('keeps full price history in memory and does not use localStorage', () => {
+    const { result } = renderHook(() => useScreenerStore());
+    const withHistory = {
+      ...candidate('AAA', 1),
+      priceHistory: [{ date: '2024-01-01', open: 9, high: 11, low: 8, close: 10, volume: 100 }],
+      benchmarkPriceHistory: [{ date: '2024-01-01', close: 100 }],
+    };
+
+    act(() => result.current.setLastResult(response([withHistory])));
+
+    // in-memory state keeps the full OHLCV history so charts render after reload
+    const liveCandidate = result.current.lastResult?.candidates[0];
+    expect(liveCandidate?.priceHistory).toBeDefined();
+    expect(liveCandidate?.priceHistory?.[0].open).toBe(9);
+
+    // persistence moved to IndexedDB; nothing is written to localStorage anymore
+    expect(localStorage.getItem('swing-screener-last-result')).toBeNull();
+  });
 });
