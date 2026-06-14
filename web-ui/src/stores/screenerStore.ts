@@ -1,7 +1,8 @@
 import { create } from 'zustand';
-import { createJSONStorage, persist, type StateStorage } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
 import { ScreenerResponse } from '@/features/screener/types';
 import { prioritizeCandidates } from '@/features/screener/prioritization';
+import { indexedDbStorage } from '@/stores/idbStorage';
 
 interface ScreenerStore {
   lastResult: ScreenerResponse | null;
@@ -11,36 +12,6 @@ interface ScreenerStore {
     ticker: string,
     updater: (candidate: ScreenerResponse['candidates'][number]) => ScreenerResponse['candidates'][number]
   ) => void;
-}
-
-// localStorage that never throws on quota: persistence is a convenience, not
-// correctness, so a failed write degrades to in-memory-only instead of crashing.
-const safeLocalStorage: StateStorage = {
-  getItem: (name) => localStorage.getItem(name),
-  setItem: (name, value) => {
-    try {
-      localStorage.setItem(name, value);
-    } catch (error) {
-      console.warn(`screener result not persisted (storage quota): ${String(error)}`);
-    }
-  },
-  removeItem: (name) => localStorage.removeItem(name),
-};
-
-// Drop the heavy per-candidate price-history arrays from the persisted copy.
-// They stay in memory for the live session (charts work); after a reload the
-// table rehydrates without histories until the next screener run. This keeps the
-// payload well under the localStorage quota for large universes (e.g. S&P 500).
-function stripHeavyFields(result: ScreenerResponse): ScreenerResponse {
-  return {
-    ...result,
-    candidates: result.candidates.map((candidate) => {
-      const slim = { ...candidate };
-      delete slim.priceHistory;
-      delete slim.benchmarkPriceHistory;
-      return slim;
-    }),
-  };
 }
 
 export const useScreenerStore = create<ScreenerStore>()(
@@ -74,10 +45,11 @@ export const useScreenerStore = create<ScreenerStore>()(
     }),
     {
       name: 'swing-screener-last-result',
-      storage: createJSONStorage(() => safeLocalStorage),
-      partialize: (state) => ({
-        lastResult: state.lastResult ? stripHeavyFields(state.lastResult) : null,
-      }),
+      // IndexedDB (not localStorage) so the full result, including per-candidate
+      // OHLCV price histories, survives reloads without exceeding the storage
+      // quota for large universes (e.g. S&P 500). Charts stay populated after a
+      // reload instead of going empty.
+      storage: createJSONStorage(() => indexedDbStorage),
     }
   )
 );
