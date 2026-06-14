@@ -6,6 +6,7 @@ import logging
 import numpy as np
 import pandas as pd
 import re
+from swing_screener.indicators.candles import CandlePattern
 from swing_screener.settings import get_settings_manager
 
 logger = logging.getLogger(__name__)
@@ -17,11 +18,83 @@ def _execution_defaults() -> dict:
 
 @dataclass(frozen=True)
 class ExecutionConfig:
-    breakout_stop_buffer_pct: float = field(default_factory=lambda: float(_execution_defaults().get("breakout_stop_buffer_pct", 0.002)))
-    pullback_atr_fraction: float = field(default_factory=lambda: float(_execution_defaults().get("pullback_atr_fraction", 0.25)))
-    pullback_band_atr_low: float = field(default_factory=lambda: float(_execution_defaults().get("pullback_band_atr_low", 0.50)))
-    pullback_band_atr_high: float = field(default_factory=lambda: float(_execution_defaults().get("pullback_band_atr_high", 0.00)))
-    allow_second_chance_breakout: bool = field(default_factory=lambda: bool(_execution_defaults().get("allow_second_chance_breakout", True)))
+    breakout_stop_buffer_pct: float = field(
+        default_factory=lambda: float(
+            _execution_defaults().get("breakout_stop_buffer_pct", 0.002)
+        )
+    )
+    pullback_atr_fraction: float = field(
+        default_factory=lambda: float(
+            _execution_defaults().get("pullback_atr_fraction", 0.25)
+        )
+    )
+    pullback_band_atr_low: float = field(
+        default_factory=lambda: float(
+            _execution_defaults().get("pullback_band_atr_low", 0.50)
+        )
+    )
+    pullback_band_atr_high: float = field(
+        default_factory=lambda: float(
+            _execution_defaults().get("pullback_band_atr_high", 0.00)
+        )
+    )
+    allow_second_chance_breakout: bool = field(
+        default_factory=lambda: bool(
+            _execution_defaults().get("allow_second_chance_breakout", True)
+        )
+    )
+    pattern_stop_enabled: bool = field(
+        default_factory=lambda: bool(
+            _execution_defaults().get("pattern_stop_enabled", True)
+        )
+    )
+    pattern_stop_atr_buffer: float = field(
+        default_factory=lambda: float(
+            _execution_defaults().get("pattern_stop_atr_buffer", 0.25)
+        )
+    )
+
+
+_PATTERN_STOP_PATTERNS = {"hammer", "bullish_engulfing", "inside_bar"}
+_PATTERN_STOP_CONTEXTS = {"at_breakout", "at_pullback"}
+
+
+def apply_pattern_stop(
+    *,
+    ticker: str,
+    entry: float,
+    current_stop: float | None,
+    atr: float | None,
+    patterns: dict[str, list[CandlePattern]],
+    buffer_atr: float,
+    min_rr_stop: float | None,
+) -> tuple[float | None, str | None]:
+    """Return a tighter structural stop derived from a bullish pattern on the
+    latest bar, or (None, None) to keep the existing stop. Never returns a stop
+    that is wider than current, above entry, in an 'extended' context, or below
+    `min_rr_stop` (the lowest stop that still satisfies minimum R)."""
+    pats = patterns.get(ticker) or patterns.get(str(ticker).upper()) or []
+    candidates = [
+        p
+        for p in pats
+        if p.name in _PATTERN_STOP_PATTERNS and p.context in _PATTERN_STOP_CONTEXTS
+    ]
+    if not candidates or atr is None or atr <= 0:
+        return None, None
+
+    # Use the highest key_level -> tightest stop among eligible patterns.
+    best = max(candidates, key=lambda p: p.key_level)
+    pattern_stop = round(best.key_level - buffer_atr * atr, 4)
+
+    if pattern_stop >= entry:
+        return None, None
+    if current_stop is not None and pattern_stop <= current_stop:
+        return None, None  # not tighter
+    if min_rr_stop is not None and pattern_stop < min_rr_stop:
+        return None, None  # would break minimum R
+
+    reason = f"Stop below {best.name.replace('_', ' ')} low ({best.context.replace('_', ' ')})"
+    return pattern_stop, reason
 
 
 def _pick_feature_column(df: pd.DataFrame, pattern: str, fallback: str) -> str | None:
@@ -33,7 +106,9 @@ def _pick_feature_column(df: pd.DataFrame, pattern: str, fallback: str) -> str |
     return None
 
 
-def _coerce_numeric_series(value: pd.Series | pd.DataFrame | None, index: pd.Index) -> pd.Series:
+def _coerce_numeric_series(
+    value: pd.Series | pd.DataFrame | None, index: pd.Index
+) -> pd.Series:
     if value is None:
         return pd.Series(index=index, dtype=float)
 
@@ -94,14 +169,26 @@ def add_execution_guidance(
     atr_col = _pick_feature_column(out, r"^atr\d+$", "atr14")
 
     if ma_col is None:
-        logger.warning("execution guidance: no MA level column found (tried ma*_level, ma20_level); pullback signals will use empty MA series")
+        logger.warning(
+            "execution guidance: no MA level column found (tried ma*_level, ma20_level); pullback signals will use empty MA series"
+        )
     if atr_col is None:
-        logger.warning("execution guidance: no ATR column found (tried atr*, atr14); order price bands will be empty")
+        logger.warning(
+            "execution guidance: no ATR column found (tried atr*, atr14); order price bands will be empty"
+        )
 
     last = _pick_numeric_column(out, ["last"])
     breakout_level = _pick_numeric_column(out, ["breakout_level", "breakout_level_sig"])
-    ma_level = _coerce_numeric_series(out[ma_col], out.index) if ma_col else pd.Series(index=out.index, dtype=float)
-    atr_val = _coerce_numeric_series(out[atr_col], out.index) if atr_col else pd.Series(index=out.index, dtype=float)
+    ma_level = (
+        _coerce_numeric_series(out[ma_col], out.index)
+        if ma_col
+        else pd.Series(index=out.index, dtype=float)
+    )
+    atr_val = (
+        _coerce_numeric_series(out[atr_col], out.index)
+        if atr_col
+        else pd.Series(index=out.index, dtype=float)
+    )
 
     mask_both = out["signal"] == "both"
     mask_breakout = out["signal"] == "breakout"
@@ -117,13 +204,12 @@ def add_execution_guidance(
     )
     if bool(mask_breakout_not_triggered.any()):
         out.loc[mask_breakout_not_triggered, "suggested_order_type"] = "BUY_STOP"
-        out.loc[mask_breakout_not_triggered, "suggested_order_price"] = (
-            breakout_level[mask_breakout_not_triggered]
-            * (1.0 + cfg.breakout_stop_buffer_pct)
+        out.loc[mask_breakout_not_triggered, "suggested_order_price"] = breakout_level[
+            mask_breakout_not_triggered
+        ] * (1.0 + cfg.breakout_stop_buffer_pct)
+        out.loc[mask_breakout_not_triggered, "execution_note"] = (
+            "Breakout not triggered yet. Place BUY STOP slightly above breakout_level."
         )
-        out.loc[
-            mask_breakout_not_triggered, "execution_note"
-        ] = "Breakout not triggered yet. Place BUY STOP slightly above breakout_level."
 
     mask_breakout_triggered = (
         mask_breakout_like
@@ -137,34 +223,41 @@ def add_execution_guidance(
         if bool(mask_second_chance.any()):
             out.loc[mask_second_chance, "suggested_order_type"] = "BUY_LIMIT"
             out.loc[mask_second_chance, "suggested_order_price"] = (
-                last[mask_second_chance] - cfg.pullback_atr_fraction * atr_val[mask_second_chance]
+                last[mask_second_chance]
+                - cfg.pullback_atr_fraction * atr_val[mask_second_chance]
             )
             out.loc[mask_second_chance, "order_price_band_low"] = (
-                last[mask_second_chance] - cfg.pullback_band_atr_low * atr_val[mask_second_chance]
+                last[mask_second_chance]
+                - cfg.pullback_band_atr_low * atr_val[mask_second_chance]
             )
             out.loc[mask_second_chance, "order_price_band_high"] = (
-                last[mask_second_chance] - cfg.pullback_band_atr_high * atr_val[mask_second_chance]
+                last[mask_second_chance]
+                - cfg.pullback_band_atr_high * atr_val[mask_second_chance]
             )
-            out.loc[
-                mask_second_chance, "execution_note"
-            ] = "Breakout already occurred. Do NOT use buy-stop. Limit entry only on pullback."
+            out.loc[mask_second_chance, "execution_note"] = (
+                "Breakout already occurred. Do NOT use buy-stop. Limit entry only on pullback."
+            )
     else:
         out.loc[mask_breakout_triggered, "suggested_order_type"] = "SKIP"
         out.loc[mask_breakout_triggered, "suggested_order_price"] = np.nan
-        out.loc[
-            mask_breakout_triggered, "execution_note"
-        ] = "Breakout already occurred. Trade skipped to avoid chasing."
+        out.loc[mask_breakout_triggered, "execution_note"] = (
+            "Breakout already occurred. Trade skipped to avoid chasing."
+        )
 
     mask_pullback_ready = (mask_pullback | mask_both_as_pullback) & ma_level.notna()
     if bool(mask_pullback_ready.any()):
         out.loc[mask_pullback_ready, "suggested_order_type"] = "BUY_LIMIT"
-        out.loc[mask_pullback_ready, "suggested_order_price"] = ma_level[mask_pullback_ready]
-        out.loc[
-            mask_pullback_ready, "execution_note"
-        ] = "Pullback setup. Place BUY LIMIT near moving-average reclaim level."
-        out.loc[mask_pullback_ready, "order_price_band_low"] = ma_level[mask_pullback_ready]
-        out.loc[mask_pullback_ready, "order_price_band_high"] = (
-            ma_level[mask_pullback_ready] + 0.1 * atr_val[mask_pullback_ready].fillna(0.0)
+        out.loc[mask_pullback_ready, "suggested_order_price"] = ma_level[
+            mask_pullback_ready
+        ]
+        out.loc[mask_pullback_ready, "execution_note"] = (
+            "Pullback setup. Place BUY LIMIT near moving-average reclaim level."
         )
+        out.loc[mask_pullback_ready, "order_price_band_low"] = ma_level[
+            mask_pullback_ready
+        ]
+        out.loc[mask_pullback_ready, "order_price_band_high"] = ma_level[
+            mask_pullback_ready
+        ] + 0.1 * atr_val[mask_pullback_ready].fillna(0.0)
 
     return out

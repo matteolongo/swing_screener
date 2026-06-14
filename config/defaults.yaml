@@ -389,6 +389,8 @@ low_level:
     pullback_band_atr_low: 0.5
     pullback_band_atr_high: 0.0
     allow_second_chance_breakout: true
+    pattern_stop_enabled: true
+    pattern_stop_atr_buffer: 0.25
   candles:
     lookback: 10
     doji_body_ratio: 0.1
