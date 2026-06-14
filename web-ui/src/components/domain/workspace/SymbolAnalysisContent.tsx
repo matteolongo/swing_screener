@@ -211,6 +211,13 @@ export default function SymbolAnalysisContent({
                 width={820}
                 height={220}
               />
+              {candidate?.patternStop != null && (
+                <p className="mt-2 text-xs text-sky-700 dark:text-sky-300">
+                  {t('chart.patternStopLabel')}: {candidate.patternStop.toFixed(2)}
+                  {candidate.currency ? ` ${candidate.currency}` : ''}
+                  {candidate.patternStopReason ? ` · ${candidate.patternStopReason}` : ''}
+                </p>
+              )}
             </div>
             {catalystQuery.data && (
               <CatalystContextCard opportunity={catalystQuery.data} />
