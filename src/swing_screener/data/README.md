@@ -38,7 +38,10 @@ currency = detect_currency("ASML.AS")  # EUR
 
 | File | Purpose |
 |------|---------|
-| `universe.py` | `load_universe_from_package()`, `load_universe_from_file()`, `apply_universe_filters()` |
+| `universe.py` | `load_universe_from_package()`, `load_universe_from_file()`, `apply_universe_filters()`, registry refresh + `instrument_master.json` merge |
+| `universe_sources.py` | Source-adapter dispatch (`refresh_snapshot_from_source`): Euronext AEX-family and `wikipedia_index_review` |
+| `wikipedia_sources.py` | Fetch + parse index constituent tables from Wikipedia; normalize tickers to Yahoo symbols |
+| `instrument_enrichment.py` | Resolve a Yahoo symbol to an instrument-master record via yfinance `.info` (MIC, currency, country, timezone, type) |
 | `market_data.py` | Legacy `fetch_ohlcv()` wrapper (backward-compat; prefer provider factory) |
 | `ticker_info.py` | `get_ticker_info()` — name, sector, currency |
 | `currency.py` | `detect_currency()` — USD vs EUR from ticker suffix |
@@ -92,6 +95,21 @@ tickers = load_universe_from_file("my_custom_list.csv")
 ```
 
 Universe names follow the pattern `{currency}_{category}_{scope}`. Aliases are defined in `universes/manifest.json`. See `universes/README.md` for the full naming convention and available universes.
+
+## Index universe refresh
+
+Index universes with a `source_adapter` (e.g. the `wikipedia_index_review` indices
+`us_sp500`, `us_nasdaq100`, `us_dow30`, `germany_dax`, `france_cac40`, `uk_ftse100`,
+`spain_ibex35`, `europe_eurostoxx50`) can be rebuilt from source:
+
+```bash
+python -m swing_screener.cli universes refresh --name us_sp500 --apply
+```
+
+`--apply` writes the snapshot and appends any newly enriched symbols to
+`data/intelligence/instrument_master.json` (append-only, never overwrites). Omit
+`--apply` for a dry-run preview. Symbols yfinance cannot resolve are skipped with a
+note rather than failing the whole refresh.
 
 ## Universe Filtering
 
