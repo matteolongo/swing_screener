@@ -247,11 +247,11 @@ def _is_bearish_engulfing(prev: _Metrics, cur: _Metrics) -> bool:
 
 
 def _is_inside_bar(prev: _Metrics, cur: _Metrics) -> bool:
-    return cur.h < prev.h and cur.l > prev.l
+    return cur.h < prev.h and cur.low > prev.low
 
 
 def _is_outside_bar(prev: _Metrics, cur: _Metrics) -> bool:
-    return cur.h > prev.h and cur.l < prev.l
+    return cur.h > prev.h and cur.low < prev.low
 ```
 
 - [ ] **Step 4: Run, verify pass**
@@ -474,20 +474,20 @@ def detect_patterns(
 
             found: list[tuple[str, str, float]] = []  # (name, direction, key_level)
             if _is_hammer(m, cfg):
-                found.append(("hammer", "bullish", m.l))
+                found.append(("hammer", "bullish", m.low))
             if _is_shooting_star(m, cfg):
                 found.append(("shooting_star", "bearish", m.h))
             if _is_doji(m, cfg):
                 found.append(("doji", "neutral", m.c))
             if _is_bullish_engulfing(pm, m):
-                found.append(("bullish_engulfing", "bullish", m.l))
+                found.append(("bullish_engulfing", "bullish", m.low))
             if _is_bearish_engulfing(pm, m):
                 found.append(("bearish_engulfing", "bearish", m.h))
             if _is_inside_bar(pm, m):
-                found.append(("inside_bar", "bullish", m.l))
+                found.append(("inside_bar", "bullish", m.low))
             if _is_outside_bar(pm, m):
                 direction = "bullish" if m.c >= m.o else "bearish"
-                found.append(("outside_bar", direction, m.l if direction == "bullish" else m.h))
+                found.append(("outside_bar", direction, m.low if direction == "bullish" else m.h))
 
             for name, direction, key_level in found:
                 patterns.append(CandlePattern(
