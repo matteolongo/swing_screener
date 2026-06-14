@@ -113,6 +113,21 @@ describe('NarrativeAnalysisCard', () => {
     expect(screen.getByText('entry:')).toBeInTheDocument();
   });
 
+  it('renders candle patterns and skips object-valued inputs (no [object Object])', () => {
+    const intelligenceWithObjects: SymbolIntelligence = {
+      ...baseIntelligence,
+      inputsUsed: {
+        technical: { signal: 'breakout', sector_rotation_context: { sector: 'Tech', score: 1 } },
+        candles: { patterns: 'hammer@at_pullback' },
+      },
+    };
+    render(<NarrativeAnalysisCard intelligence={intelligenceWithObjects} />);
+    expect(screen.getByText('patterns:')).toBeInTheDocument();
+    expect(screen.getByText('hammer@at_pullback')).toBeInTheDocument();
+    expect(screen.queryByText('[object Object]')).toBeNull();
+    expect(screen.queryByText('sector rotation context:')).toBeNull();
+  });
+
   it('does not render "Data used by AI" panel when inputsUsed is empty', () => {
     const intelligenceEmptyInputs: SymbolIntelligence = {
       ...baseIntelligence,

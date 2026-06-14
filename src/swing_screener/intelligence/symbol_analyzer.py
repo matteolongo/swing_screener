@@ -394,6 +394,9 @@ class SymbolAnalyzer:
         if finnhub_signals:
             inputs_used["finnhub_signals"] = finnhub_signals
 
+        if req.recent_patterns:
+            inputs_used["candles"] = {"patterns": ", ".join(req.recent_patterns)}
+
         user_prompt = _build_user_prompt(ticker, req, past_positions=past_positions or [])
         response = self._client.responses.create(
             model=self._model,

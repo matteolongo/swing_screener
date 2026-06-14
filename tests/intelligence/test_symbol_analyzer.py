@@ -106,6 +106,27 @@ def test_symbol_analyzer_returns_intelligence():
     assert result.sources == ["https://aperam.com/q1-2026"]
 
 
+def test_inputs_used_includes_recent_candle_patterns():
+    fake_response = _make_fake_openai_response(_FAKE_RESPONSE_TEXT)
+    request = SymbolIntelligenceRequest(
+        close=48.5,
+        signal="breakout",
+        recent_patterns=["hammer@at_pullback", "inside_bar@none"],
+    )
+
+    with patch("swing_screener.intelligence.symbol_analyzer.OpenAI") as MockOpenAI:
+        mock_client = MagicMock()
+        MockOpenAI.return_value = mock_client
+        mock_client.responses.create.return_value = fake_response
+
+        analyzer = SymbolAnalyzer()
+        result = analyzer.analyze("APAM", request)
+
+    assert result.inputs_used["candles"] == {
+        "patterns": "hammer@at_pullback, inside_bar@none"
+    }
+
+
 def test_symbol_analyzer_raises_on_invalid_action():
     bad_json = __import__("json").dumps({
         "action": "TOTALLY_WRONG",
