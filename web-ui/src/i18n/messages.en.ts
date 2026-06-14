@@ -2266,6 +2266,7 @@ export const messagesEn = {
   chart: {
     volume: 'Volume',
     patternStopLabel: 'Pattern stop',
+    symbolLegend: 'Symbol',
     pattern: {
       hammer: 'Hammer',
       shooting_star: 'Shooting star',

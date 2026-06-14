@@ -41,6 +41,29 @@ describe('CandleChart', () => {
     expect(document.querySelectorAll('[data-testid="pattern-marker"]').length).toBe(1);
   });
 
+  it('renders a rebased benchmark line when benchmark bars are provided', () => {
+    const benchmarkBars: PriceHistoryPoint[] = [
+      { date: '2024-01-01', close: 500 },
+      { date: '2024-01-02', close: 505 },
+    ];
+    renderWithProviders(
+      <CandleChart
+        ticker="AAA"
+        bars={bars}
+        patterns={[]}
+        benchmarkBars={benchmarkBars}
+        benchmarkLabel="SPY"
+        outperformancePct={-2.5}
+      />,
+    );
+    expect(document.querySelectorAll('[data-testid="benchmark-line"]').length).toBe(1);
+  });
+
+  it('omits the benchmark line when no benchmark label', () => {
+    renderWithProviders(<CandleChart ticker="AAA" bars={bars} patterns={[]} />);
+    expect(document.querySelectorAll('[data-testid="benchmark-line"]').length).toBe(0);
+  });
+
   it('renders a fallback when no usable OHLC bars', () => {
     const closeOnly: PriceHistoryPoint[] = [{ date: '2024-01-01', close: 10 }];
     renderWithProviders(<CandleChart ticker="AAA" bars={closeOnly} patterns={[]} />);
