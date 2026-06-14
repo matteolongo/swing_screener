@@ -1,5 +1,31 @@
 import { describe, expect, it } from 'vitest';
-import { transformScreenerResponse, type ScreenerResponseAPI } from '@/features/screener/types';
+import {
+  transformScreenerResponse,
+  transformCandlePattern,
+  type ScreenerResponseAPI,
+} from '@/features/screener/types';
+
+describe('transformCandlePattern', () => {
+  it('maps snake_case raw pattern to camelCase', () => {
+    expect(
+      transformCandlePattern({
+        bar_index: 5,
+        date: '2024-01-01',
+        name: 'hammer',
+        direction: 'bullish',
+        key_level: 9,
+        context: 'at_pullback',
+      }),
+    ).toEqual({
+      barIndex: 5,
+      date: '2024-01-01',
+      name: 'hammer',
+      direction: 'bullish',
+      keyLevel: 9,
+      context: 'at_pullback',
+    });
+  });
+});
 
 describe('transformScreenerResponse', () => {
   it('maps execution guidance and fundamentals fields from API to UI shape', () => {
