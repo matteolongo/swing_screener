@@ -76,8 +76,8 @@ describe('useScreenerStore', () => {
     act(() => result.current.setLastResult(response([withHistory])));
 
     // in-memory state keeps the heavy arrays so charts render this session
-    const liveCandidate = result.current.lastResult?.candidates[0] as Record<string, unknown>;
-    expect(liveCandidate.priceHistory).toBeDefined();
+    const liveCandidate = result.current.lastResult?.candidates[0];
+    expect(liveCandidate?.priceHistory).toBeDefined();
 
     // persisted copy drops them to stay under the localStorage quota
     const persisted = JSON.parse(localStorage.getItem('swing-screener-last-result') as string);
