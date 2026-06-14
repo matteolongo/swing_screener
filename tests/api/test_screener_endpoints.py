@@ -1096,14 +1096,17 @@ def test_screener_async_mode_records_history(monkeypatch):
 
 def test_screener_run_endpoint_does_not_block_event_loop():
     """The sync screener run takes minutes; the handler must be a plain def so
-    FastAPI executes it in the threadpool instead of blocking the event loop."""
+    FastAPI executes it in the threadpool instead of blocking the event loop.
+
+    Asserts on the endpoint function directly rather than walking ``app.routes``:
+    FastAPI decides threadpool-vs-event-loop via ``iscoroutinefunction`` on this
+    exact function, and Starlette 1.x no longer flattens included routers into
+    ``app.routes`` (they are wrapped in an opaque router object)."""
     import inspect
 
-    route = next(
-        r for r in app.routes
-        if getattr(r, "path", None) == "/api/screener/run" and "POST" in getattr(r, "methods", set())
-    )
-    assert not inspect.iscoroutinefunction(route.endpoint)
+    from api.routers.screener import run_screener
+
+    assert not inspect.iscoroutinefunction(run_screener)
 
 
 def test_screener_universes_route_removed_in_favor_of_canonical_universes():
