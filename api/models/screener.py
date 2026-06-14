@@ -1,4 +1,5 @@
 """Screener models."""
+
 from __future__ import annotations
 
 from typing import Any, Literal, Optional
@@ -11,6 +12,19 @@ from swing_screener.recommendation.models import DecisionSummary
 class PriceHistoryPoint(BaseModel):
     date: str
     close: float
+    open: float | None = None
+    high: float | None = None
+    low: float | None = None
+    volume: float | None = None
+
+
+class CandlePatternOut(BaseModel):
+    bar_index: int
+    date: str
+    name: str
+    direction: str
+    key_level: float
+    context: str
 
 
 SameSymbolMode = Literal["NEW_ENTRY", "ADD_ON", "MANAGE_ONLY", "RE_ENTRY", "SCALE_BACK"]
@@ -75,7 +89,9 @@ class ScreenerCandidate(BaseModel):
     execution_note: Optional[str] = None
     same_symbol: Optional[SameSymbolCandidateContext] = None
     decision_summary: Optional[DecisionSummary] = None
-    fundamentals_snapshot: Optional[FundamentalSnapshot] = Field(default=None, exclude=True)
+    fundamentals_snapshot: Optional[FundamentalSnapshot] = Field(
+        default=None, exclude=True
+    )
     raw_technical_rank: Optional[int] = None
     combined_priority_score: Optional[float] = None
     sma20_slope: Optional[float] = None
@@ -93,16 +109,33 @@ class ScreenerCandidate(BaseModel):
     benchmark_outperformance_pct: Optional[float] = None
     days_to_earnings: Optional[int] = None
     sector_rotation_context: Optional[dict] = None
+    patterns: list[CandlePatternOut] = Field(default_factory=list)
+    pattern_stop: float | None = None
+    pattern_stop_reason: str | None = None
 
 
 class ScreenerRequest(BaseModel):
-    universe: Optional[str] = Field(default=None, description="Named universe (e.g., 'sp500')")
-    tickers: Optional[list[str]] = Field(default=None, description="Explicit ticker list")
-    top: Optional[int] = Field(default=20, ge=1, le=200, description="Max candidates to return")
-    strategy_id: Optional[str] = Field(default=None, description="Strategy id to use (defaults to active)")
-    asof_date: Optional[str] = Field(default=None, description="Date for screening (YYYY-MM-DD)")
-    min_price: Optional[float] = Field(default=5.0, ge=0, description="Minimum stock price")
-    max_price: Optional[float] = Field(default=500.0, gt=0, description="Maximum stock price")
+    universe: Optional[str] = Field(
+        default=None, description="Named universe (e.g., 'sp500')"
+    )
+    tickers: Optional[list[str]] = Field(
+        default=None, description="Explicit ticker list"
+    )
+    top: Optional[int] = Field(
+        default=20, ge=1, le=200, description="Max candidates to return"
+    )
+    strategy_id: Optional[str] = Field(
+        default=None, description="Strategy id to use (defaults to active)"
+    )
+    asof_date: Optional[str] = Field(
+        default=None, description="Date for screening (YYYY-MM-DD)"
+    )
+    min_price: Optional[float] = Field(
+        default=5.0, ge=0, description="Minimum stock price"
+    )
+    max_price: Optional[float] = Field(
+        default=500.0, gt=0, description="Maximum stock price"
+    )
     currencies: Optional[list[str]] = Field(
         default=None,
         description="Allowed currencies (e.g., ['USD'], ['EUR'], ['USD','EUR'])",
@@ -119,9 +152,15 @@ class ScreenerRequest(BaseModel):
         default=None,
         description="Allowed instrument types (e.g., ['equity'], ['etf'])",
     )
-    breakout_lookback: Optional[int] = Field(default=None, gt=0, description="Breakout lookback window")
-    pullback_ma: Optional[int] = Field(default=None, gt=0, description="Pullback MA window")
-    min_history: Optional[int] = Field(default=None, gt=0, description="Minimum bars required for signals")
+    breakout_lookback: Optional[int] = Field(
+        default=None, gt=0, description="Breakout lookback window"
+    )
+    pullback_ma: Optional[int] = Field(
+        default=None, gt=0, description="Pullback MA window"
+    )
+    min_history: Optional[int] = Field(
+        default=None, gt=0, description="Minimum bars required for signals"
+    )
     require_weekly_uptrend: Optional[bool] = Field(
         default=None,
         description="Require weekly uptrend (close > sma20 > sma50 on weekly bars)",
@@ -150,7 +189,9 @@ class ScreenerRequest(BaseModel):
 
     @field_validator("instrument_types")
     @classmethod
-    def validate_instrument_types(cls, values: Optional[list[str]]) -> Optional[list[str]]:
+    def validate_instrument_types(
+        cls, values: Optional[list[str]]
+    ) -> Optional[list[str]]:
         if values is None:
             return None
         cleaned = [str(v).strip().lower() for v in values if str(v).strip()]
