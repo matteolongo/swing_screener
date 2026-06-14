@@ -181,6 +181,12 @@ def _build_user_prompt(ticker: str, req: SymbolIntelligenceRequest, past_positio
         f"Sector: {req.sector or 'Unknown'}",
     ]
 
+    if req.recent_patterns:
+        readable = ", ".join(
+            p.replace("@", " @ ").replace("_", " ") for p in req.recent_patterns
+        )
+        lines.append(f"Recent candlestick patterns: {readable}")
+
     if not has_position:
 
         # Decision context block

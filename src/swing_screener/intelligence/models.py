@@ -125,6 +125,8 @@ class SymbolIntelligenceRequest(BaseModel):
     # Earnings proximity
     days_to_earnings: int | None = None
     next_earnings_date: str | None = None
+    # Recent candlestick patterns as "name@context" strings, for the prompt
+    recent_patterns: list[str] | None = None
 
 
 class SymbolIntelligence(BaseModel):

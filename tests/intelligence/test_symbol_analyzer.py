@@ -3,7 +3,28 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from swing_screener.intelligence.models import SymbolIntelligence, SymbolIntelligenceRequest
-from swing_screener.intelligence.symbol_analyzer import SymbolAnalyzer, _extract_json
+from swing_screener.intelligence.symbol_analyzer import (
+    SymbolAnalyzer,
+    _extract_json,
+    _build_user_prompt,
+)
+
+
+def test_prompt_includes_recent_patterns():
+    req = SymbolIntelligenceRequest(
+        close=10.0,
+        signal="breakout",
+        recent_patterns=["hammer@at_pullback", "inside_bar@none"],
+    )
+    prompt = _build_user_prompt("AAA", req, past_positions=[])
+    assert "hammer" in prompt
+    assert "Recent candlestick patterns" in prompt
+
+
+def test_prompt_omits_patterns_when_absent():
+    req = SymbolIntelligenceRequest(close=10.0, signal="breakout")
+    prompt = _build_user_prompt("AAA", req, past_positions=[])
+    assert "Recent candlestick patterns" not in prompt
 
 
 # --- unit tests for JSON extraction ---
