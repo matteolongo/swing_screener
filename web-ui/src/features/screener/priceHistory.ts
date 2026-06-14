@@ -1,13 +1,15 @@
 import type { PriceHistoryPoint } from './types';
 
-export type PriceRangeKey = '1M' | '3M' | '6M' | '1Y' | 'MAX';
+export type PriceRangeKey = '1W' | '1M' | '3M' | '6M' | '1Y' | 'MAX';
 
 interface PriceRangeSpec {
   key: Exclude<PriceRangeKey, 'MAX'>;
-  months: number;
+  months?: number;
+  days?: number;
 }
 
 const RANGE_SPECS: PriceRangeSpec[] = [
+  { key: '1W', days: 7 },
   { key: '1M', months: 1 },
   { key: '3M', months: 3 },
   { key: '6M', months: 6 },
@@ -19,9 +21,13 @@ function parsePointDate(value: string): Date | null {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
-function shiftMonths(date: Date, months: number): Date {
+function shiftSpec(date: Date, spec: PriceRangeSpec): Date {
   const shifted = new Date(date.getTime());
-  shifted.setUTCMonth(shifted.getUTCMonth() - months);
+  if (spec.days != null) {
+    shifted.setUTCDate(shifted.getUTCDate() - spec.days);
+  } else if (spec.months != null) {
+    shifted.setUTCMonth(shifted.getUTCMonth() - spec.months);
+  }
   return shifted;
 }
 
@@ -44,15 +50,15 @@ export function getAvailablePriceRanges(history: PriceHistoryPoint[]): PriceRang
   }
 
   const available = RANGE_SPECS
-    .filter((range) => bounds.first <= shiftMonths(bounds.last, range.months))
+    .filter((range) => bounds.first <= shiftSpec(bounds.last, range))
     .map((range) => range.key);
 
   if (available.length === 0) {
     return ['MAX'];
   }
 
-  const largestMonths = RANGE_SPECS.find((range) => range.key === available[available.length - 1])?.months ?? 0;
-  if (bounds.first < shiftMonths(bounds.last, largestMonths)) {
+  const largestSpec = RANGE_SPECS.find((range) => range.key === available[available.length - 1]);
+  if (largestSpec && bounds.first < shiftSpec(bounds.last, largestSpec)) {
     return [...available, 'MAX'];
   }
 
@@ -72,12 +78,12 @@ export function slicePriceHistory(
     return history;
   }
 
-  const months = RANGE_SPECS.find((item) => item.key === range)?.months;
-  if (!months) {
+  const spec = RANGE_SPECS.find((item) => item.key === range);
+  if (!spec) {
     return history;
   }
 
-  const cutoff = shiftMonths(bounds.last, months);
+  const cutoff = shiftSpec(bounds.last, spec);
   const sliced = history.filter((point) => {
     const date = parsePointDate(point.date);
     return date != null && date >= cutoff;

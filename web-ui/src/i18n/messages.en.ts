@@ -2267,6 +2267,8 @@ export const messagesEn = {
     volume: 'Volume',
     patternStopLabel: 'Pattern stop',
     symbolLegend: 'Symbol',
+    fullscreen: 'Fullscreen',
+    exitFullscreen: 'Exit fullscreen',
     pattern: {
       hammer: 'Hammer',
       shooting_star: 'Shooting star',
