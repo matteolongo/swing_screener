@@ -100,3 +100,23 @@ def _is_shooting_star(m: _Metrics, cfg: CandleConfig) -> bool:
         m.upper_wick >= cfg.hammer_lower_wick_mult * m.body
         and m.lower_wick <= cfg.hammer_max_opposite_wick_ratio * m.rng
     )
+
+
+def _is_bullish_engulfing(prev: _Metrics, cur: _Metrics) -> bool:
+    prev_bearish = prev.c < prev.o
+    cur_bullish = cur.c > cur.o
+    return prev_bearish and cur_bullish and cur.c >= prev.o and cur.o <= prev.c
+
+
+def _is_bearish_engulfing(prev: _Metrics, cur: _Metrics) -> bool:
+    prev_bullish = prev.c > prev.o
+    cur_bearish = cur.c < cur.o
+    return prev_bullish and cur_bearish and cur.o >= prev.c and cur.c <= prev.o
+
+
+def _is_inside_bar(prev: _Metrics, cur: _Metrics) -> bool:
+    return cur.h < prev.h and cur.low > prev.low
+
+
+def _is_outside_bar(prev: _Metrics, cur: _Metrics) -> bool:
+    return cur.h > prev.h and cur.low < prev.low
