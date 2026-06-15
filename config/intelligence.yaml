@@ -33,7 +33,7 @@ config:
     education_learn_system_prompt: ''
     education_learn_user_prompt_template: ''
     web_search_model: gpt-4o
-    web_search_max_tokens: 2000
+    web_search_max_tokens: 4000  # raised for multi-hop news + catalyst search
   catalyst:
     lookback_hours: 72
     recency_half_life_hours: 36

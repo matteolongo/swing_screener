@@ -1,5 +1,5 @@
 from swing_screener.intelligence.models import SymbolIntelligenceRequest
-from swing_screener.intelligence.symbol_analyzer import _build_user_prompt
+from swing_screener.intelligence.symbol_analyzer import _SYSTEM_PROMPT, _build_user_prompt
 
 
 def test_request_accepts_raw_fundamentals_fields():
@@ -42,3 +42,16 @@ def test_prompt_omits_fundamentals_block_when_absent():
     req = SymbolIntelligenceRequest(close=100.0, signal="breakout")
     prompt = _build_user_prompt("AAPL", req)
     assert "--- Fundamentals ---" not in prompt
+
+
+def test_system_prompt_requires_multi_hop_and_catalyst_search():
+    text = _SYSTEM_PROMPT.lower()
+    assert "follow" in text and "lead" in text          # multi-hop guidance
+    assert "forward-looking catalyst" in text           # dedicated catalyst pass
+    assert "cite" in text                               # require source citations
+
+
+def test_user_prompt_search_instruction_is_multi_hop():
+    req = SymbolIntelligenceRequest(close=100.0, signal="breakout")
+    prompt = _build_user_prompt("AAPL", req).lower()
+    assert "follow" in prompt and "catalyst" in prompt
