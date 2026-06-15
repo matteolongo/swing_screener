@@ -42,6 +42,23 @@ The analyzer assembles context from:
   "Recent candlestick patterns" line in the prompt; the field is optional and the
   caller (e.g. the web UI request builder) populates it from detected patterns.
 
+### Server-side auto-fetch (full data, blocking)
+
+`POST /api/intelligence/{ticker}` runs `enrich_intelligence_request`
+(`api/services/intelligence_enrichment.py`) before the LLM call. Any request field
+left unset is filled server-side (blocking) from the fundamentals snapshot
+(`FundamentalsService.get_snapshot`) and earnings proximity — so the model always
+sees the full picture regardless of what the caller sent. Provider errors degrade
+gracefully (the field stays unset; analysis never fails on a fetch error), and
+caller-provided values are never overwritten.
+
+The prompt now renders a `--- Fundamentals ---` block from the raw-fundamentals
+fields on `SymbolIntelligenceRequest`: `trailing_pe`, `revenue_growth_yoy`,
+`gross_margin`, `net_margin`, `return_on_equity`, `debt_to_equity` (alongside the
+existing Finnhub signal fields). The web-search instruction is multi-hop — search
+broadly, follow the material leads, then run a dedicated forward-looking catalyst
+pass — and every news claim must cite its source URL.
+
 ## Configuration
 
 `config/intelligence.yaml` — LLM provider (OpenAI), model, temperature, signal type toggles.

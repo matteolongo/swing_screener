@@ -45,6 +45,9 @@ Dedicated intelligence configuration envelope:
 - bootstrap metadata
 - last update timestamp
 
+`config.llm.web_search_max_tokens` is `4000` (raised from 2000) to fit the multi-hop
+news + forward-catalyst search the intelligence prompt now performs.
+
 ### `mcp.yaml`
 
 MCP feature flags and server metadata.
