@@ -3,7 +3,11 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import HTTPException
+from swing_screener.errors import (
+    NotFoundError,
+    ValidationError,
+    ServiceError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -110,13 +114,13 @@ class FundamentalsService:
     def start_warmup(self, request: FundamentalsWarmupRequest) -> FundamentalsWarmupLaunchResponse:
         if request.source == "watchlist":
             if self._watchlist_repo is None:
-                raise HTTPException(status_code=500, detail="Watchlist repository is not available.")
+                raise ServiceError("Watchlist repository is not available.")
             symbols = [item.ticker for item in self._watchlist_repo.list_items()]
         else:
             symbols = list(request.symbols)
 
         if not symbols:
-            raise HTTPException(status_code=400, detail="No symbols available for fundamentals warmup.")
+            raise ValidationError("No symbols available for fundamentals warmup.")
 
         job_id = self._warmup_manager.start_job(
             symbols=symbols,
@@ -125,11 +129,11 @@ class FundamentalsService:
             cfg=self._build_cfg(),
         )
         if not job_id:
-            raise HTTPException(status_code=400, detail="No valid symbols available for fundamentals warmup.")
+            raise ValidationError("No valid symbols available for fundamentals warmup.")
 
         job = self._warmup_manager.get_job(job_id)
         if job is None:
-            raise HTTPException(status_code=500, detail="Failed to create fundamentals warmup job.")
+            raise ServiceError("Failed to create fundamentals warmup job.")
 
         return FundamentalsWarmupLaunchResponse.model_validate(
             {
@@ -146,5 +150,5 @@ class FundamentalsService:
     def get_warmup_status(self, job_id: str) -> FundamentalsWarmupStatusResponse:
         job = self._warmup_manager.get_job(job_id)
         if job is None:
-            raise HTTPException(status_code=404, detail="Fundamentals warmup job not found.")
+            raise NotFoundError("Fundamentals warmup job not found.")
         return self._serialize_warmup_job_status(job)
