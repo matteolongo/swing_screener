@@ -5,7 +5,7 @@ from datetime import date
 from pathlib import Path
 from typing import Literal, Optional
 
-from fastapi import HTTPException
+from swing_screener.errors import DomainError
 
 from api.models.daily_review import (
     DailyReview,
@@ -132,8 +132,8 @@ class DailyReviewService:
             # Get stop suggestion for this position
             try:
                 suggestion = self.portfolio.suggest_position_stop(pos.position_id)
-            except HTTPException as exc:
-                reason = exc.detail if isinstance(exc.detail, str) else str(exc.detail)
+            except DomainError as exc:
+                reason = exc.detail
                 logger.warning(
                     "Daily review stop suggestion unavailable for %s: %s",
                     pos.ticker,
@@ -465,8 +465,8 @@ class DailyReviewService:
             position_id = str(pos.get("position_id") or f"LOCAL-{pos.get('ticker', 'UNKNOWN')}")
             try:
                 suggestion = self.portfolio.compute_position_stop_suggestion(pos, manage_payload)
-            except HTTPException as exc:
-                reason = exc.detail if isinstance(exc.detail, str) else str(exc.detail)
+            except DomainError as exc:
+                reason = exc.detail
                 logger.warning(
                     "Stateless daily review stop suggestion unavailable for %s: %s",
                     pos.get("ticker"),
