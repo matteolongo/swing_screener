@@ -8,7 +8,12 @@ from decimal import Decimal, ROUND_HALF_UP
 from typing import Optional
 
 import pandas as pd
-from fastapi import HTTPException
+from swing_screener.errors import (
+    NotFoundError,
+    ValidationError,
+    ServiceError,
+    UpstreamError,
+)
 
 from api.models.portfolio import (
     ConcentrationGroup,
@@ -395,13 +400,13 @@ class PortfolioService:
     def get_position(self, position_id: str) -> Position:
         position = self._positions_repo.get_position(position_id)
         if position is None:
-            raise HTTPException(status_code=404, detail=f"Position not found: {position_id}")
+            raise NotFoundError(f"Position not found: {position_id}")
         return Position(**position)
 
     def get_position_metrics(self, position_id: str) -> PositionMetrics:
         position = self._positions_repo.get_position(position_id)
         if position is None:
-            raise HTTPException(status_code=404, detail=f"Position not found: {position_id}")
+            raise NotFoundError(f"Position not found: {position_id}")
 
         ticker = str(position.get("ticker", "")).upper()
         current_price = self._fallback_price(position)
@@ -709,14 +714,13 @@ class PortfolioService:
         for pos in positions:
             if pos.get("position_id") == position_id:
                 if pos.get("status") != "open":
-                    raise HTTPException(status_code=400, detail="Cannot update stop on closed position")
+                    raise ValidationError("Cannot update stop on closed position")
 
                 old_stop = _round_price(float(pos.get("stop_price")))
 
                 if new_stop <= old_stop:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"Cannot move stop down. Current: {old_stop}, Requested: {new_stop}",
+                    raise ValidationError(
+                        f"Cannot move stop down. Current: {old_stop}, Requested: {new_stop}",
                     )
 
                 ticker = pos.get("ticker")
@@ -733,12 +737,9 @@ class PortfolioService:
                     logger.warning("Could not fetch current price for validation: %s", exc)
 
                 if current_price is not None and new_stop > current_price:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=(
-                            f"Stop price ({new_stop}) must be at or below current price "
-                            f"({current_price}) for long positions"
-                        ),
+                    raise ValidationError(
+                        f"Stop price ({new_stop}) must be at or below current price "
+                        f"({current_price}) for long positions",
                     )
 
                 pos["stop_price"] = new_stop
@@ -750,7 +751,7 @@ class PortfolioService:
                 break
 
         if not found:
-            raise HTTPException(status_code=404, detail=f"Position not found: {position_id}")
+            raise NotFoundError(f"Position not found: {position_id}")
 
         data["asof"] = get_today_str()
         self._positions_repo.write(data)
@@ -770,7 +771,7 @@ class PortfolioService:
         for pos in positions:
             if pos.get("position_id") == position_id:
                 if pos.get("status") != "open":
-                    raise HTTPException(status_code=400, detail="Position already closed")
+                    raise ValidationError("Position already closed")
 
                 pos["status"] = "closed"
                 pos["exit_price"] = request.exit_price
@@ -787,7 +788,7 @@ class PortfolioService:
                 break
 
         if not found:
-            raise HTTPException(status_code=404, detail=f"Position not found: {position_id}")
+            raise NotFoundError(f"Position not found: {position_id}")
 
         data["asof"] = get_today_str()
         self._positions_repo.write(data)
@@ -811,13 +812,12 @@ class PortfolioService:
                 continue
 
             if pos.get("status") != "open":
-                raise HTTPException(status_code=400, detail="Position is not open")
+                raise ValidationError("Position is not open")
 
             current_shares = int(pos.get("shares", 0))
             if request.shares_closed >= current_shares:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"shares_closed ({request.shares_closed}) must be less than current shares ({current_shares}); use close_position to fully close",
+                raise ValidationError(
+                    f"shares_closed ({request.shares_closed}) must be less than current shares ({current_shares}); use close_position to fully close",
                 )
 
             entry_price = float(pos.get("entry_price", 0.0))
@@ -841,7 +841,7 @@ class PortfolioService:
             break
 
         if not found:
-            raise HTTPException(status_code=404, detail=f"Position not found: {position_id}")
+            raise NotFoundError(f"Position not found: {position_id}")
 
         data["asof"] = get_today_str()
         self._positions_repo.write(data)
@@ -875,11 +875,11 @@ class PortfolioService:
         manage_payload: Optional[dict] = None,
     ) -> PositionUpdate:
         if position.get("status") != "open":
-            raise HTTPException(status_code=400, detail="Stop suggestions require an open position")
+            raise ValidationError("Stop suggestions require an open position")
 
         ticker = position.get("ticker")
         if not ticker:
-            raise HTTPException(status_code=400, detail="Position ticker is missing")
+            raise ValidationError("Position ticker is missing")
 
         manage_cfg = self._resolve_manage_cfg(manage_payload)
         start_date = _calc_start_date(position.get("entry_date"), manage_cfg.trail_sma)
@@ -888,23 +888,21 @@ class PortfolioService:
         try:
             ohlcv = self._provider.fetch_ohlcv([ticker], start_date=start_date, end_date=end_date)
         except Exception as exc:
-            raise HTTPException(
-                status_code=502,
-                detail=f"Failed to fetch market data for {ticker}: {exc}",
+            raise UpstreamError(
+                f"Failed to fetch market data for {ticker}: {exc}",
             ) from exc
 
         try:
             updates, _ = evaluate_positions(ohlcv, [_to_state_position(position)], manage_cfg)
         except ValueError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
+            raise ValidationError(str(exc)) from exc
         except Exception as exc:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Failed to compute stop suggestion: {exc}",
+            raise ServiceError(
+                f"Failed to compute stop suggestion: {exc}",
             ) from exc
 
         if not updates:
-            raise HTTPException(status_code=500, detail="No stop suggestion available")
+            raise ServiceError("No stop suggestion available")
 
         update = updates[0]
         return PositionUpdate(
@@ -932,7 +930,7 @@ class PortfolioService:
     def suggest_position_stop(self, position_id: str) -> PositionUpdate:
         position = self._positions_repo.get_position(position_id)
         if position is None:
-            raise HTTPException(status_code=404, detail=f"Position not found: {position_id}")
+            raise NotFoundError(f"Position not found: {position_id}")
         return self._suggest_position_stop_from_dict(position)
 
     def suggest_stop_intraday(
@@ -942,13 +940,13 @@ class PortfolioService:
     ) -> PositionUpdate:
         position = self._positions_repo.get_position(position_id)
         if position is None:
-            raise HTTPException(status_code=404, detail=f"Position not found: {position_id}")
+            raise NotFoundError(f"Position not found: {position_id}")
         if position.get("status") != "open":
-            raise HTTPException(status_code=400, detail="Position is not open")
+            raise ValidationError("Position is not open")
 
         ticker = position.get("ticker")
         if not ticker:
-            raise HTTPException(status_code=400, detail="Position ticker is missing")
+            raise ValidationError("Position ticker is missing")
 
         manage_cfg = self._resolve_manage_cfg(None)
         start_date = _calc_start_date(position.get("entry_date"), manage_cfg.trail_sma)
@@ -957,18 +955,16 @@ class PortfolioService:
         try:
             ohlcv = self._provider.fetch_ohlcv([ticker], start_date=start_date, end_date=yesterday)
         except Exception as exc:
-            raise HTTPException(
-                status_code=502,
-                detail=f"Failed to fetch market data: {exc}",
+            raise UpstreamError(
+                f"Failed to fetch market data: {exc}",
             ) from exc
 
         if price is None:
             try:
                 price = self._provider.fetch_latest_price(ticker)
             except Exception as exc:
-                raise HTTPException(
-                    status_code=502,
-                    detail=f"Failed to fetch live price for {ticker}: {exc}",
+                raise UpstreamError(
+                    f"Failed to fetch live price for {ticker}: {exc}",
                 ) from exc
 
         today_idx = pd.Timestamp(dt.date.today())
@@ -981,15 +977,14 @@ class PortfolioService:
         try:
             updates, _ = evaluate_positions(ohlcv, [_to_state_position(position)], manage_cfg)
         except ValueError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
+            raise ValidationError(str(exc)) from exc
         except Exception as exc:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Failed to compute stop preview: {exc}",
+            raise ServiceError(
+                f"Failed to compute stop preview: {exc}",
             ) from exc
 
         if not updates:
-            raise HTTPException(status_code=500, detail="No stop preview available")
+            raise ServiceError("No stop preview available")
 
         update = updates[0]
         return PositionUpdate(
@@ -1013,9 +1008,8 @@ class PortfolioService:
         for pos in positions:
             if pos.get("position_id") == position_id:
                 if pos.get("status") != "open":
-                    raise HTTPException(
-                        status_code=400,
-                        detail="Cannot update trail method on a closed position",
+                    raise ValidationError(
+                        "Cannot update trail method on a closed position",
                     )
                 pos["trail_method"] = request.trail_method
                 pos["trail_param"] = request.trail_param
@@ -1027,4 +1021,4 @@ class PortfolioService:
                     "trail_method": request.trail_method,
                     "trail_param": request.trail_param,
                 }
-        raise HTTPException(status_code=404, detail=f"Position {position_id} not found")
+        raise NotFoundError(f"Position {position_id} not found")
