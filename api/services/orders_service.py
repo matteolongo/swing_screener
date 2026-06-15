@@ -5,7 +5,11 @@ import uuid
 import logging
 from typing import Optional
 
-from fastapi import HTTPException
+from swing_screener.errors import (
+    NotFoundError,
+    ConflictError,
+    UnprocessableError,
+)
 
 from api.models.portfolio import (
     CreateOrderRequest,
@@ -45,18 +49,17 @@ class OrdersService:
                 for o in orders
             )
             if pending_entry:
-                raise HTTPException(status_code=409, detail=f"{ticker}: pending entry order already exists.")
+                raise ConflictError(f"{ticker}: pending entry order already exists.")
 
             positions, _ = self._positions_repo.list_positions(status="open")
             open_position = next((p for p in positions if p.get("ticker") == ticker), None)
 
             if request.entry_mode == "ADD_ON":
                 if not open_position:
-                    raise HTTPException(status_code=409, detail=f"{ticker}: no open position found for add-on order.")
+                    raise ConflictError(f"{ticker}: no open position found for add-on order.")
             elif open_position:
-                raise HTTPException(
-                    status_code=409,
-                    detail=f"{ticker}: open position already exists. Create this as an ADD_ON order instead.",
+                raise ConflictError(
+                    f"{ticker}: open position already exists. Create this as an ADD_ON order instead.",
                 )
 
         existing_ids = {o.get("order_id", "") for o in orders}
@@ -99,32 +102,32 @@ class OrdersService:
     def submit_order(self, order_id: str) -> dict:
         order = self._orders_repo.submit_order(order_id)
         if order is None:
-            raise HTTPException(status_code=404, detail=f"Order {order_id} not found")
+            raise NotFoundError(f"Order {order_id} not found")
         if order.get("status") != "submitted":
-            raise HTTPException(status_code=409, detail=f"Order {order_id} is already {order.get('status')}")
+            raise ConflictError(f"Order {order_id} is already {order.get('status')}")
         return {"order_id": order_id, "status": "submitted"}
 
     def cancel_order(self, order_id: str) -> dict:
         order = self._orders_repo.cancel_order(order_id)
         if order is None:
-            raise HTTPException(status_code=404, detail=f"Order {order_id} not found")
+            raise NotFoundError(f"Order {order_id} not found")
         if order.get("status") != "cancelled":
-            raise HTTPException(status_code=409, detail=f"Order {order_id} is already {order.get('status')}")
+            raise ConflictError(f"Order {order_id} is already {order.get('status')}")
         return {"order_id": order_id, "status": "cancelled"}
 
     def fill_order(self, order_id: str, request: FillOrderRequest) -> FillOrderResponse:
         order = self._orders_repo.get_order(order_id)
         if order is None:
-            raise HTTPException(status_code=404, detail=f"Order {order_id} not found")
+            raise NotFoundError(f"Order {order_id} not found")
         if order.get("status") not in ("pending", "submitted"):
-            raise HTTPException(status_code=409, detail=f"Order {order_id} is already {order.get('status')}")
+            raise ConflictError(f"Order {order_id} is already {order.get('status')}")
 
         ticker = order["ticker"]
         stop_price = request.stop_price if request.stop_price is not None else order.get("stop_price")
         if not stop_price or stop_price <= 0:
-            raise HTTPException(status_code=422, detail=f"No valid stop price for order {order_id}")
+            raise UnprocessableError(f"No valid stop price for order {order_id}")
         if stop_price >= request.filled_price:
-            raise HTTPException(status_code=422, detail="stop_price must be below filled_price")
+            raise UnprocessableError("stop_price must be below filled_price")
 
         updates = {
             "status": "filled",
