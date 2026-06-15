@@ -76,7 +76,7 @@ describe('useScreenerStore', () => {
     act(() => result.current.setLastResult(response([withHistory])));
 
     // in-memory state keeps the heavy arrays so charts render this session
-    const liveCandidate = result.current.lastResult?.candidates[0] as Record<string, unknown>;
+    const liveCandidate = result.current.lastResult?.candidates[0] as unknown as Record<string, unknown>;
     expect(liveCandidate.priceHistory).toBeDefined();
 
     // persisted copy drops them to stay under the localStorage quota
