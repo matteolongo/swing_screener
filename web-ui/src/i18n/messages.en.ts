@@ -654,6 +654,23 @@ export const messagesEn = {
           riskFactors: 'Risks',
           pastTrades: 'Past trades on {{symbol}}',
           fullRationale: 'Full rationale',
+          aiAnalysisTitle: 'AI analysis',
+          secondOpinion: 'AI second opinion: {{aiAction}} — differs from the screener verdict ({{screenerAction}}). The screener verdict stands.',
+        },
+        decisionWhy: {
+          title: 'What to do & why',
+          whatToDo: 'What to do',
+          whyNow: 'Why now',
+          watchFor: 'Watch for',
+          noGuidance: 'Run the screener to get an actionable read.',
+        },
+        fundamentalsStrip: {
+          title: 'Fundamentals',
+          pe: 'P/E',
+          revenueGrowth: 'Rev growth',
+          grossMargin: 'Gross margin',
+          valuation: 'Valuation',
+          unavailable: 'No fundamentals loaded',
         },
         decisionSummary: {
           title: '{{ticker}} Decision Summary',

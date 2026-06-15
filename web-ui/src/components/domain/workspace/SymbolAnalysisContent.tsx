@@ -8,6 +8,8 @@ import CachedSymbolCandleChart from '@/components/domain/market/CachedSymbolCand
 import FundamentalsSnapshotCard from '@/components/domain/fundamentals/FundamentalsSnapshotCard';
 import AnalysisDecisionStrip from '@/components/domain/workspace/AnalysisDecisionStrip';
 import DecisionSummaryCard from '@/components/domain/workspace/DecisionSummaryCard';
+import DecisionWhyPanel from '@/components/domain/workspace/DecisionWhyPanel';
+import FundamentalsStrip from '@/components/domain/workspace/FundamentalsStrip';
 import NarrativeAnalysisCard from '@/components/domain/workspace/NarrativeAnalysisCard';
 import TechnicalMetricsGrid from '@/components/domain/workspace/TechnicalMetricsGrid';
 import type { SymbolAnalysisCandidate, WorkspaceAnalysisTab } from '@/components/domain/workspace/types';
@@ -53,7 +55,7 @@ export default function SymbolAnalysisContent({
   const watchSymbolMutation = useWatchSymbolMutation();
   const unwatchSymbolMutation = useUnwatchSymbolMutation();
   const fundamentalsQuery = useFundamentalSnapshotQuery(
-    activeTab === 'fundamentals' ? ticker : undefined
+    activeTab === 'fundamentals' || activeTab === 'overview' ? ticker : undefined
   );
   const refreshFundamentalsMutation = useRefreshFundamentalSnapshotMutation();
   const computeAnalysisMutation = useRunScreenerMutation((result) => {
@@ -159,6 +161,16 @@ export default function SymbolAnalysisContent({
 
         {activeTab === 'overview' && (
           <>
+            <DecisionWhyPanel
+              summary={candidate?.decisionSummary}
+              aiSummaryLine={hasNarrative ? displayedIntelligence?.summaryLine ?? null : null}
+            />
+            <FundamentalsStrip
+              trailingPe={fundamentalsQuery.data?.trailingPe ?? null}
+              revenueGrowthYoy={fundamentalsQuery.data?.revenueGrowthYoy ?? null}
+              grossMargin={fundamentalsQuery.data?.grossMargin ?? null}
+              valuationLabel={candidate?.decisionSummary?.valuationLabel ?? null}
+            />
             {!candidate && (
               <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 flex flex-col gap-3">
                 <p className="text-sm text-gray-600 dark:text-gray-400">

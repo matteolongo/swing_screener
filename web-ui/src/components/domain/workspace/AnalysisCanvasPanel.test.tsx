@@ -707,6 +707,87 @@ describe('AnalysisCanvasPanel', () => {
     expect(screen.queryByText('Should I place an order?')).not.toBeInTheDocument();
   });
 
+  it('overview shows the unified decision panel above the AI analysis section', () => {
+    useWorkspaceStore.setState({
+      selectedTicker: 'AAPL',
+      selectedTickerSource: 'screener',
+      analysisTab: 'overview',
+    });
+    useScreenerStore.setState({
+      lastResult: {
+        asofDate: '2026-03-19',
+        totalScreened: 1,
+        dataFreshness: 'final_close',
+        candidates: [
+          {
+            ticker: 'AAPL',
+            currency: 'USD',
+            close: 180,
+            sma20: 175,
+            sma50: 170,
+            sma200: 160,
+            atr: 3,
+            momentum6m: 0.18,
+            momentum12m: 0.27,
+            relStrength: 0.09,
+            score: 0.82,
+            confidence: 79,
+            rank: 1,
+            decisionSummary: {
+              symbol: 'AAPL',
+              action: 'BUY_NOW',
+              conviction: 'high',
+              technicalLabel: 'strong',
+              fundamentalsLabel: 'strong',
+              valuationLabel: 'fair',
+              catalystLabel: 'active',
+              whyNow: 'Breakout from a multi-week base.',
+              whatToDo: 'Place a stop-buy above the pivot.',
+              mainRisk: 'Earnings in 5 days.',
+              tradePlan: { entry: 180, stop: 171, target: 198, rr: 2 },
+              valuationContext: { method: 'not_available' },
+              drivers: { positives: [], negatives: [], warnings: [] },
+              catalystSummary: null,
+              catalystSources: [],
+            },
+          },
+        ],
+      },
+    });
+    vi.mocked(intelligenceHooks.useIntelligenceLatestQuery).mockReturnValue({
+      data: {
+        symbol: 'AAPL',
+        generatedAt: '2026-05-26T10:00:00',
+        action: 'BUY_NOW',
+        conviction: 'high',
+        catalystUrgency: 'medium',
+        summaryLine: 'AAPL setup confirmed.',
+        narrative: 'Strong momentum aligns with the breakout.',
+        upcomingEvents: [],
+        positionSignal: null,
+        sources: [],
+      },
+      isLoading: false,
+      isError: false,
+    } as never);
+    vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
+      isLoading: false, isError: false, data: undefined,
+    } as never);
+    vi.mocked(fundamentalsHooks.useRefreshFundamentalSnapshotMutation).mockReturnValue({
+      mutate: vi.fn(), data: undefined, isPending: false, isError: false, error: null,
+    } as never);
+
+    renderWithProviders(<AnalysisCanvasPanel />);
+
+    const decisionTitle = screen.getByText(t('workspacePage.panels.analysis.decisionWhy.title'));
+    // NarrativeAnalysisCard renders "{symbol} — AI analysis" in a <span>
+    const aiTitle = screen.getByText((_content, el) =>
+      el?.tagName === 'SPAN' &&
+      (el?.textContent?.includes(t('workspacePage.panels.analysis.intelligence.aiAnalysisTitle')) ?? false)
+    );
+    expect(decisionTitle.compareDocumentPosition(aiTitle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('renders a watch toggle for the selected symbol', () => {
     vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
       isLoading: false,

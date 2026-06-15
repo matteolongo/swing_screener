@@ -76,14 +76,14 @@ Daily Review (`/api/daily-review`):
 - `POST /api/daily-review/compute`
 
 Intelligence (`/api/intelligence`):
-- `POST /api/intelligence/{ticker}`
+- `POST /api/intelligence/{ticker}` — enriches the request with full data (fundamentals + Finnhub + earnings, fetched server-side and blocking) before running the analysis. Request body fields stay optional, so this is not a breaking change.
 - `GET /api/intelligence/{ticker}/latest`
 - `POST /api/intelligence/sweep`
 
 Fundamentals (`/api/fundamentals`):
 - `GET /api/fundamentals/config`
 - `PUT /api/fundamentals/config`
-- `GET /api/fundamentals/snapshot/{symbol}`
+- `GET /api/fundamentals/snapshot/{symbol}` — `FundamentalSnapshotResponse` now also exposes optional Finnhub signals (`net_margin`, `insider_net_shares_90d`, `insider_transaction_count_90d`, `forward_eps_estimate`, `analyst_upgrade_downgrade_net_30d`).
 - `POST /api/fundamentals/refresh`
 - `POST /api/fundamentals/compare`
 - `POST /api/fundamentals/warmup`

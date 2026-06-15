@@ -99,6 +99,12 @@ class FundamentalSnapshotResponse(BaseModel):
     highlights: list[str] = Field(default_factory=list)
     metric_sources: dict[str, str] = Field(default_factory=dict)
     error: Optional[str] = None
+    # Finnhub enrichment signals (additive, optional)
+    net_margin: Optional[float] = None
+    insider_net_shares_90d: Optional[int] = None
+    insider_transaction_count_90d: Optional[int] = None
+    forward_eps_estimate: Optional[float] = None
+    analyst_upgrade_downgrade_net_30d: Optional[int] = None
 
 
 class FundamentalRefreshRequest(BaseModel):

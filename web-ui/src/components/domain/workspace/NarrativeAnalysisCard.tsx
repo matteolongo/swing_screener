@@ -57,17 +57,6 @@ function catalystLabel(label: DecisionCatalystLabel): string {
   }
 }
 
-function bannerClass(action: DecisionAction): string {
-  switch (action) {
-    case 'BUY_NOW': return 'bg-emerald-600 text-white';
-    case 'BUY_ON_PULLBACK':
-    case 'WAIT_FOR_BREAKOUT':
-    case 'TACTICAL_ONLY': return 'bg-amber-400 text-amber-950';
-    case 'AVOID': return 'bg-rose-600 text-white';
-    default: return 'bg-gray-200 text-gray-800';
-  }
-}
-
 function convictionVariant(conviction: DecisionConviction): 'default' | 'success' | 'primary' | 'warning' {
   switch (conviction) {
     case 'high': return 'success';
@@ -122,10 +111,10 @@ export default function NarrativeAnalysisCard({
 
   return (
     <div className="rounded-lg border border-slate-200 overflow-hidden">
-      {/* Banner */}
-      <div className={`px-3 py-2 flex items-center justify-between gap-3 ${bannerClass(action)}`}>
+      {/* Neutral AI header — verdict lives in the screener-owned decision header above */}
+      <div className="px-3 py-2 flex items-center justify-between gap-3 bg-slate-100 text-slate-800">
         <span className="font-semibold text-sm">
-          {symbol} — {actionLabel(action)}
+          {symbol} — {t('workspacePage.panels.analysis.intelligence.aiAnalysisTitle')}
         </span>
         <Badge variant={convictionVariant(conviction)}>{convictionLabel(conviction)}</Badge>
       </div>
@@ -133,7 +122,7 @@ export default function NarrativeAnalysisCard({
       <div className="bg-slate-50 p-3 space-y-3">
         {candidate?.decisionSummary?.action && action !== candidate.decisionSummary.action && (
           <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-            {t('workspacePage.panels.analysis.intelligence.aiActionMismatch', {
+            {t('workspacePage.panels.analysis.intelligence.secondOpinion', {
               aiAction: actionLabel(action),
               screenerAction: actionLabel(candidate.decisionSummary.action),
             })}

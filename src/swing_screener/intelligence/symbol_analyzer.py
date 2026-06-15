@@ -15,6 +15,12 @@ _SYSTEM_PROMPT = """\
 You are a swing-trading analyst. Given the technical context below and live web search results, \
 produce a structured analysis for the symbol in English.
 
+SEARCH STRATEGY — LIVE NEWS, MULTI-HOP:
+• Start with a broad news search (recent headlines, earnings results, analyst views).
+• Then FOLLOW THE LEADS you find: an earnings beat → search the guidance and analyst reaction; a downgrade → search the stated reason; a new product/partnership → search demand and competitive response. Iterate until you have a forward-looking view, not just a snapshot.
+• Run a dedicated FORWARD-LOOKING CATALYST pass: search explicitly for upcoming earnings dates, product launches, macro events, and regulatory decisions that could move the price. These drive `upcoming_events` and `prediction_bullets`.
+• CITE the URL of every news source you rely on in `sources`. Do not assert news without a citation.
+
 CRITICAL RULES — TRADE PLAN NUMBERS:
 • The "Close" in the input is the CURRENT MARKET PRICE — it is NOT the entry price.
 • When a "Planned entry (pullback level)" is provided, ALWAYS use that price as the entry point in the narrative. Never use the Close as the entry.
@@ -187,6 +193,31 @@ def _build_user_prompt(ticker: str, req: SymbolIntelligenceRequest, past_positio
         )
         lines.append(f"Recent candlestick patterns: {readable}")
 
+    has_fundamentals = any(
+        x is not None
+        for x in (
+            req.trailing_pe,
+            req.revenue_growth_yoy,
+            req.gross_margin,
+            req.net_margin,
+            req.return_on_equity,
+            req.debt_to_equity,
+        )
+    )
+    if has_fundamentals:
+        def _pct(v: float | None) -> str | None:
+            return f"{v * 100:.1f}%" if v is not None else None
+
+        fund_parts = [
+            f"P/E: {req.trailing_pe:.2f}" if req.trailing_pe is not None else None,
+            f"Revenue growth YoY: {_pct(req.revenue_growth_yoy)}" if req.revenue_growth_yoy is not None else None,
+            f"Gross margin: {_pct(req.gross_margin)}" if req.gross_margin is not None else None,
+            f"Net margin: {_pct(req.net_margin)}" if req.net_margin is not None else None,
+            f"ROE: {_pct(req.return_on_equity)}" if req.return_on_equity is not None else None,
+            f"Debt/Equity: {req.debt_to_equity:.2f}" if req.debt_to_equity is not None else None,
+        ]
+        lines += ["", "--- Fundamentals ---", " | ".join(p for p in fund_parts if p)]
+
     if not has_position:
 
         # Decision context block
@@ -300,8 +331,9 @@ def _build_user_prompt(ticker: str, req: SymbolIntelligenceRequest, past_positio
         lines.append(past_block)
 
     lines.append(
-        f"\nSearch for recent news, earnings results, catalysts, and analyst views for {ticker}. "
-        "Then produce the structured JSON analysis."
+        f"\nSearch broadly for recent news, earnings results, catalysts, and analyst views for {ticker}, "
+        "then follow the most material leads with further searches and run a forward-looking catalyst pass. "
+        "Cite every source. Finally produce the structured JSON analysis."
     )
     return "\n".join(lines)
 
