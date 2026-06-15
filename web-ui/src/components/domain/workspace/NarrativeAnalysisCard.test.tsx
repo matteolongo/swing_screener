@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import NarrativeAnalysisCard from './NarrativeAnalysisCard';
 import type { SymbolIntelligence } from '@/features/intelligence/types';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
+import { t } from '@/i18n/t';
 
 const baseIntelligence: SymbolIntelligence = {
   symbol: 'AAPL',
@@ -82,25 +83,48 @@ describe('NarrativeAnalysisCard', () => {
     expect(screen.queryByText('Watch China exposure')).toBeNull();
   });
 
-  it('shows mismatch banner when intelligence action differs from candidate decisionSummary action', () => {
-    const watchIntelligence: SymbolIntelligence = {
+  it('does not render a competing action banner verdict', () => {
+    const buyNowIntelligence: SymbolIntelligence = {
       ...baseIntelligence,
-      action: 'WATCH',
+      action: 'BUY_NOW',
     };
-    const buyNowCandidate: SymbolAnalysisCandidate = {
+    const watchCandidate: SymbolAnalysisCandidate = {
       ...baseCandidate,
       decisionSummary: {
         ...baseCandidate.decisionSummary!,
-        action: 'BUY_NOW',
+        action: 'WATCH',
       },
     };
-    render(<NarrativeAnalysisCard intelligence={watchIntelligence} candidate={buyNowCandidate} />);
-    expect(screen.getByText(/AI summary reflects/)).toBeInTheDocument();
+    render(<NarrativeAnalysisCard intelligence={buyNowIntelligence} candidate={watchCandidate} />);
+    expect(screen.queryByText(/—\s*Buy Now/i)).not.toBeInTheDocument();
+    expect(
+      screen.getByText(new RegExp(t('workspacePage.panels.analysis.intelligence.aiAnalysisTitle'), 'i'))
+    ).toBeInTheDocument();
   });
 
-  it('does not show mismatch banner when actions match', () => {
+  it('shows an inline second-opinion note when AI disagrees with the screener', () => {
+    const buyNowIntelligence: SymbolIntelligence = {
+      ...baseIntelligence,
+      action: 'BUY_NOW',
+    };
+    const watchCandidate: SymbolAnalysisCandidate = {
+      ...baseCandidate,
+      decisionSummary: {
+        ...baseCandidate.decisionSummary!,
+        action: 'WATCH',
+      },
+    };
+    render(<NarrativeAnalysisCard intelligence={buyNowIntelligence} candidate={watchCandidate} />);
+    const note = t('workspacePage.panels.analysis.intelligence.secondOpinion', {
+      aiAction: t('workspacePage.panels.analysis.decisionSummary.actions.buyNow'),
+      screenerAction: t('workspacePage.panels.analysis.decisionSummary.actions.watch'),
+    });
+    expect(screen.getByText(note)).toBeInTheDocument();
+  });
+
+  it('shows no second-opinion note when actions agree', () => {
     render(<NarrativeAnalysisCard intelligence={baseIntelligence} candidate={baseCandidate} />);
-    expect(screen.queryByText(/AI summary reflects/)).toBeNull();
+    expect(screen.queryByText(/second opinion/i)).not.toBeInTheDocument();
   });
 
   it('renders "Data used by AI" panel with chips when inputsUsed has content', () => {
