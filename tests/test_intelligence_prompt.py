@@ -1,4 +1,5 @@
 from swing_screener.intelligence.models import SymbolIntelligenceRequest
+from swing_screener.intelligence.symbol_analyzer import _build_user_prompt
 
 
 def test_request_accepts_raw_fundamentals_fields():
@@ -18,3 +19,26 @@ def test_request_accepts_raw_fundamentals_fields():
     assert req.net_margin == 0.21
     assert req.return_on_equity == 0.30
     assert req.debt_to_equity == 0.8
+
+
+def test_prompt_includes_fundamentals_block():
+    req = SymbolIntelligenceRequest(
+        close=100.0,
+        signal="breakout",
+        trailing_pe=22.5,
+        revenue_growth_yoy=0.18,
+        gross_margin=0.46,
+        return_on_equity=0.30,
+        debt_to_equity=0.8,
+    )
+    prompt = _build_user_prompt("AAPL", req)
+    assert "--- Fundamentals ---" in prompt
+    assert "P/E: 22.50" in prompt
+    assert "Revenue growth YoY: 18.0%" in prompt
+    assert "Gross margin: 46.0%" in prompt
+
+
+def test_prompt_omits_fundamentals_block_when_absent():
+    req = SymbolIntelligenceRequest(close=100.0, signal="breakout")
+    prompt = _build_user_prompt("AAPL", req)
+    assert "--- Fundamentals ---" not in prompt

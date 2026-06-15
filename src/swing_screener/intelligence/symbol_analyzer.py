@@ -187,6 +187,31 @@ def _build_user_prompt(ticker: str, req: SymbolIntelligenceRequest, past_positio
         )
         lines.append(f"Recent candlestick patterns: {readable}")
 
+    has_fundamentals = any(
+        x is not None
+        for x in (
+            req.trailing_pe,
+            req.revenue_growth_yoy,
+            req.gross_margin,
+            req.net_margin,
+            req.return_on_equity,
+            req.debt_to_equity,
+        )
+    )
+    if has_fundamentals:
+        def _pct(v: float | None) -> str | None:
+            return f"{v * 100:.1f}%" if v is not None else None
+
+        fund_parts = [
+            f"P/E: {req.trailing_pe:.2f}" if req.trailing_pe is not None else None,
+            f"Revenue growth YoY: {_pct(req.revenue_growth_yoy)}" if req.revenue_growth_yoy is not None else None,
+            f"Gross margin: {_pct(req.gross_margin)}" if req.gross_margin is not None else None,
+            f"Net margin: {_pct(req.net_margin)}" if req.net_margin is not None else None,
+            f"ROE: {_pct(req.return_on_equity)}" if req.return_on_equity is not None else None,
+            f"Debt/Equity: {req.debt_to_equity:.2f}" if req.debt_to_equity is not None else None,
+        ]
+        lines += ["", "--- Fundamentals ---", " | ".join(p for p in fund_parts if p)]
+
     if not has_position:
 
         # Decision context block
