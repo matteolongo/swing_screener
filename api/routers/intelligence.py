@@ -7,8 +7,10 @@ import os
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from api.dependencies import get_portfolio_service, get_positions_repo
+from api.dependencies import get_fundamentals_service, get_portfolio_service, get_positions_repo
 from api.repositories.positions_repo import PositionsRepository
+from api.services.fundamentals_service import FundamentalsService
+from api.services.intelligence_enrichment import enrich_intelligence_request
 from api.services.portfolio_service import PortfolioService
 from swing_screener.intelligence.cache import read_from_cache
 from swing_screener.intelligence.models import SymbolIntelligence, SymbolIntelligenceRequest
@@ -73,13 +75,27 @@ def analyze_symbol(
     ticker: str,
     request: SymbolIntelligenceRequest,
     positions_repo: PositionsRepository = Depends(get_positions_repo),
+    fundamentals_service: FundamentalsService = Depends(get_fundamentals_service),
+    portfolio_service: PortfolioService = Depends(get_portfolio_service),
 ) -> SymbolIntelligence:
-    """Generate a web-search-grounded LLM analysis for a symbol."""
+    """Generate a web-search-grounded LLM analysis for a symbol, after enriching with full data."""
     _require_api_key()
+    upper = ticker.upper()
+
+    def _earnings(t: str) -> tuple[int | None, str | None]:
+        ep = portfolio_service.get_earnings_proximity(t)
+        return ep.days_until, ep.next_earnings_date
+
+    request = enrich_intelligence_request(
+        upper,
+        request,
+        fundamentals=fundamentals_service,
+        earnings=_earnings,
+    )
     try:
         past_positions, _ = positions_repo.list_positions(status="closed")
         analyzer = SymbolAnalyzer()
-        return analyzer.analyze(ticker.upper(), request, past_positions=past_positions)
+        return analyzer.analyze(upper, request, past_positions=past_positions)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
