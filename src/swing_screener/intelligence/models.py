@@ -3,7 +3,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from swing_screener.recommendation.models import DecisionAction, DecisionConviction
 
@@ -49,17 +49,10 @@ class KeyNumber(BaseModel):
     value: str
     sentiment: Literal["bullish", "bearish", "neutral"]
 
-
-class PredictionBullet(BaseModel):
-    direction: Literal["bullish", "bearish", "neutral"]
-    reason: str
-    reference: str
-
-
-class KeyNumber(BaseModel):
-    label: str
-    value: str
-    sentiment: Literal["bullish", "bearish", "neutral"]
+    @field_validator("value", mode="before")
+    @classmethod
+    def coerce_value_to_string(cls, value: object) -> str:
+        return "" if value is None else str(value)
 
 
 class PredictionBullet(BaseModel):

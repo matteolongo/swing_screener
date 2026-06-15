@@ -153,6 +153,14 @@ def test_key_number_sentiment_values():
     assert kn.sentiment == "bullish"
 
 
+def test_key_number_value_coerces_numeric_llm_output_to_string():
+    from swing_screener.intelligence.models import KeyNumber
+
+    kn = KeyNumber(label="SMA20", value=322.77, sentiment="bullish")
+
+    assert kn.value == "322.77"
+
+
 def test_prediction_bullet_direction_values():
     from swing_screener.intelligence.models import PredictionBullet
     pb = PredictionBullet(direction="bearish", reason="Stretched valuation", reference="fair value range")
