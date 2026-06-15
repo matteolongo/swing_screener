@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 import pytest
-from fastapi import HTTPException
+from swing_screener.errors import ValidationError
 from api.models.portfolio import (
     PartialCloseRequest,
     PartialCloseEvent,
@@ -125,9 +125,8 @@ def test_partial_close_preserves_initial_risk(tmp_path: Path):
 def test_partial_close_rejects_closing_all_shares(tmp_path):
     svc = _make_service_simple(tmp_path)
     req = PartialCloseRequest(shares_closed=10, price=22.0)
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(ValidationError):
         svc.partial_close_position("POS-001", req)
-    assert exc_info.value.status_code == 400
 
 
 def test_partial_close_rejects_closed_position(tmp_path):
@@ -138,6 +137,5 @@ def test_partial_close_rejects_closed_position(tmp_path):
     pos_file.write_text(json.dumps({"positions": [pos], "asof": "2026-01-01"}))
     svc = PortfolioService(positions_repo=PositionsRepository(pos_file))
     req = PartialCloseRequest(shares_closed=5, price=22.0)
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(ValidationError):
         svc.partial_close_position("POS-001", req)
-    assert exc_info.value.status_code == 400
