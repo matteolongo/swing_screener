@@ -16,6 +16,7 @@
 - `/docs/engineering/DATA_SOURCE_AUDIT_AND_PROVIDER_STRATEGY.md`
 - `/docs/engineering/ROADMAP.md`
 - `/docs/engineering/MODULE_ARCHITECTURE.md`
+- `/docs/engineering/BACKEND_ARCHITECTURE_ASSESSMENT.md`
 - `/docs/engineering/DATABASE_MIGRATION.md`
 - `/docs/engineering/OPERATIONAL_GUIDE.md`
 - `/docs/engineering/TROUBLESHOOTING.md`
@@ -59,6 +60,7 @@ Config:
 - `/docs/superpowers/plans/2026-06-12-index-universes-wikipedia.md`
 - `/docs/superpowers/specs/2026-06-14-candlestick-chart-pattern-reader-design.md`
 - `/docs/superpowers/plans/2026-06-14-candlestick-chart-pattern-reader.md`
+- `/docs/superpowers/plans/2026-06-16-backend-pr-a-domain-errors-logging-docs.md`
 
 ## Repo Policy Docs
 - `/.github/BRANCH_PROTECTION.md`
