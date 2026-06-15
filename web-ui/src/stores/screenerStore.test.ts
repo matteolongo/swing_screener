@@ -75,10 +75,10 @@ describe('useScreenerStore', () => {
 
     act(() => result.current.setLastResult(response([withHistory])));
 
-    // in-memory state keeps the full OHLCV history so charts render after reload
-    const liveCandidate = result.current.lastResult?.candidates[0];
-    expect(liveCandidate?.priceHistory).toBeDefined();
-    expect(liveCandidate?.priceHistory?.[0].open).toBe(9);
+    // in-memory state keeps the full OHLCV history so charts render this session
+    const liveCandidate = result.current.lastResult?.candidates[0] as unknown as Record<string, unknown>;
+    expect(liveCandidate.priceHistory).toBeDefined();
+    expect((liveCandidate.priceHistory as Array<{ open: number }>)[0].open).toBe(9);
 
     // persistence moved to IndexedDB; nothing is written to localStorage anymore
     expect(localStorage.getItem('swing-screener-last-result')).toBeNull();
