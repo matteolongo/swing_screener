@@ -127,6 +127,13 @@ class SymbolIntelligenceRequest(BaseModel):
     next_earnings_date: str | None = None
     # Recent candlestick patterns as "name@context" strings, for the prompt
     recent_patterns: list[str] | None = None
+    # Raw fundamentals (filled by the server-side enricher when absent)
+    trailing_pe: float | None = None
+    revenue_growth_yoy: float | None = None
+    gross_margin: float | None = None
+    net_margin: float | None = None
+    return_on_equity: float | None = None
+    debt_to_equity: float | None = None
 
 
 class SymbolIntelligence(BaseModel):
