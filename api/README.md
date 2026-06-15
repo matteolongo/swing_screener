@@ -44,6 +44,8 @@ Screener (`/api/screener`):
 
 Screener responses label data freshness as `intraday` while a relevant market is still open and `final_close` once the daily bars are final. Intraday responses are previews, not final end-of-day recommendations.
 
+Candle data (screener candidates and watchlist items): `PriceHistoryPoint` now carries optional `open`/`high`/`low`/`volume` alongside `close` (absent fields omitted; backward-compatible). Candidates and watchlist items also expose `patterns` (list of `{bar_index, date, name, direction, key_level, context}`). Screener candidates additionally expose `pattern_stop` / `pattern_stop_reason` — a structural stop derived from a bullish candlestick pattern on the latest bar (advisory; does not affect ranking).
+
 Universes (`/api/universes`):
 - `GET /api/universes`
 - `GET /api/universes/{universe_id}`

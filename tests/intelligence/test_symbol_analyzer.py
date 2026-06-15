@@ -3,7 +3,28 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from swing_screener.intelligence.models import SymbolIntelligence, SymbolIntelligenceRequest
-from swing_screener.intelligence.symbol_analyzer import SymbolAnalyzer, _extract_json
+from swing_screener.intelligence.symbol_analyzer import (
+    SymbolAnalyzer,
+    _extract_json,
+    _build_user_prompt,
+)
+
+
+def test_prompt_includes_recent_patterns():
+    req = SymbolIntelligenceRequest(
+        close=10.0,
+        signal="breakout",
+        recent_patterns=["hammer@at_pullback", "inside_bar@none"],
+    )
+    prompt = _build_user_prompt("AAA", req, past_positions=[])
+    assert "hammer" in prompt
+    assert "Recent candlestick patterns" in prompt
+
+
+def test_prompt_omits_patterns_when_absent():
+    req = SymbolIntelligenceRequest(close=10.0, signal="breakout")
+    prompt = _build_user_prompt("AAA", req, past_positions=[])
+    assert "Recent candlestick patterns" not in prompt
 
 
 # --- unit tests for JSON extraction ---
@@ -83,6 +104,27 @@ def test_symbol_analyzer_returns_intelligence():
     assert result.summary_line == "Cyclical recovery with strong EBITDA momentum."
     assert "Aperam" in result.narrative
     assert result.sources == ["https://aperam.com/q1-2026"]
+
+
+def test_inputs_used_includes_recent_candle_patterns():
+    fake_response = _make_fake_openai_response(_FAKE_RESPONSE_TEXT)
+    request = SymbolIntelligenceRequest(
+        close=48.5,
+        signal="breakout",
+        recent_patterns=["hammer@at_pullback", "inside_bar@none"],
+    )
+
+    with patch("swing_screener.intelligence.symbol_analyzer.OpenAI") as MockOpenAI:
+        mock_client = MagicMock()
+        MockOpenAI.return_value = mock_client
+        mock_client.responses.create.return_value = fake_response
+
+        analyzer = SymbolAnalyzer()
+        result = analyzer.analyze("APAM", request)
+
+    assert result.inputs_used["candles"] == {
+        "patterns": "hammer@at_pullback, inside_bar@none"
+    }
 
 
 def test_symbol_analyzer_raises_on_invalid_action():

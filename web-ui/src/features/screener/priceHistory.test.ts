@@ -20,16 +20,24 @@ const mkHistory = (startDate: string, len: number) => {
 };
 
 describe('priceHistory helpers', () => {
-  it('returns only MAX when less than one month of bars', () => {
-    expect(getAvailablePriceRanges(mkHistory('2026-02-01', 10))).toEqual(['MAX']);
+  it('returns 1W and MAX when between a week and a month of bars', () => {
+    expect(getAvailablePriceRanges(mkHistory('2026-02-01', 10))).toEqual(['1W', 'MAX']);
   });
 
   it('returns ranges based on calendar span and includes MAX when extra older data exists', () => {
-    expect(getAvailablePriceRanges(mkHistory('2025-02-01', 500))).toEqual(['1M', '3M', '6M', '1Y', 'MAX']);
+    expect(getAvailablePriceRanges(mkHistory('2025-02-01', 500))).toEqual(['1W', '1M', '3M', '6M', '1Y', 'MAX']);
   });
 
   it('keeps exact range set without MAX when the history starts exactly at the boundary', () => {
-    expect(getAvailablePriceRanges(mkHistory('2025-02-17', 366))).toEqual(['1M', '3M', '6M', '1Y']);
+    expect(getAvailablePriceRanges(mkHistory('2025-02-17', 366))).toEqual(['1W', '1M', '3M', '6M', '1Y']);
+  });
+
+  it('slices history to the last week for the 1W range', () => {
+    const history = mkHistory('2025-08-01', 60);
+    const sliced = slicePriceHistory(history, '1W');
+    expect(sliced.length).toBeGreaterThanOrEqual(7);
+    expect(sliced.length).toBeLessThanOrEqual(8);
+    expect(sliced[sliced.length - 1]).toEqual(history[history.length - 1]);
   });
 
   it('slices history for selected range', () => {

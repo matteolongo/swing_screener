@@ -4,7 +4,7 @@ import CatalystContextCard from '@/components/domain/workspace/CatalystContextCa
 import { useIntelligenceAnalysisMutation, useIntelligenceLatestQuery } from '@/features/intelligence/hooks';
 import { useSymbolCatalystQuery } from '@/features/intelligence/catalysts/hooks';
 import type { SymbolIntelligence } from '@/features/intelligence/types';
-import CachedSymbolPriceChart from '@/components/domain/market/CachedSymbolPriceChart';
+import CachedSymbolCandleChart from '@/components/domain/market/CachedSymbolCandleChart';
 import FundamentalsSnapshotCard from '@/components/domain/fundamentals/FundamentalsSnapshotCard';
 import AnalysisDecisionStrip from '@/components/domain/workspace/AnalysisDecisionStrip';
 import DecisionSummaryCard from '@/components/domain/workspace/DecisionSummaryCard';
@@ -206,13 +206,18 @@ export default function SymbolAnalysisContent({
               return null;
             })()}
             <div className="rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700">
-              <CachedSymbolPriceChart
+              <CachedSymbolCandleChart
                 ticker={ticker}
-                defaultOpen
-                showToggle={false}
                 width={820}
-                height={200}
+                height={220}
               />
+              {candidate?.patternStop != null && (
+                <p className="mt-2 text-xs text-sky-700 dark:text-sky-300">
+                  {t('chart.patternStopLabel')}: {candidate.patternStop.toFixed(2)}
+                  {candidate.currency ? ` ${candidate.currency}` : ''}
+                  {candidate.patternStopReason ? ` · ${candidate.patternStopReason}` : ''}
+                </p>
+              )}
             </div>
             {catalystQuery.data && (
               <CatalystContextCard opportunity={catalystQuery.data} />

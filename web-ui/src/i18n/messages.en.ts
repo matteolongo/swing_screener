@@ -2263,6 +2263,28 @@ export const messagesEn = {
       dismiss: 'Dismiss',
     },
   },
+  chart: {
+    volume: 'Volume',
+    patternStopLabel: 'Pattern stop',
+    symbolLegend: 'Symbol',
+    fullscreen: 'Fullscreen',
+    exitFullscreen: 'Exit fullscreen',
+    pattern: {
+      hammer: 'Hammer',
+      shooting_star: 'Shooting star',
+      bullish_engulfing: 'Bullish engulfing',
+      bearish_engulfing: 'Bearish engulfing',
+      inside_bar: 'Inside bar',
+      outside_bar: 'Outside bar',
+      doji: 'Doji',
+    },
+    context: {
+      at_breakout: 'at breakout',
+      at_pullback: 'at pullback',
+      extended: 'extended',
+      none: '',
+    },
+  },
 } as const;
 
 export type MessagesEn = typeof messagesEn;

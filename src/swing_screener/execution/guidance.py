@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 import re
 from swing_screener.settings import get_settings_manager
+from swing_screener.indicators.candles import CandlePattern
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,50 @@ class ExecutionConfig:
     pullback_band_atr_low: float = field(default_factory=lambda: float(_execution_defaults().get("pullback_band_atr_low", 0.50)))
     pullback_band_atr_high: float = field(default_factory=lambda: float(_execution_defaults().get("pullback_band_atr_high", 0.00)))
     allow_second_chance_breakout: bool = field(default_factory=lambda: bool(_execution_defaults().get("allow_second_chance_breakout", True)))
+    pattern_stop_enabled: bool = field(default_factory=lambda: bool(_execution_defaults().get("pattern_stop_enabled", True)))
+    pattern_stop_atr_buffer: float = field(default_factory=lambda: float(_execution_defaults().get("pattern_stop_atr_buffer", 0.25)))
+
+
+_PATTERN_STOP_PATTERNS = {"hammer", "bullish_engulfing", "inside_bar"}
+_PATTERN_STOP_CONTEXTS = {"at_breakout", "at_pullback"}
+
+
+def apply_pattern_stop(
+    *,
+    ticker: str,
+    entry: float,
+    current_stop: float | None,
+    atr: float | None,
+    patterns: dict[str, list[CandlePattern]],
+    buffer_atr: float,
+    min_rr_stop: float | None,
+) -> tuple[float | None, str | None]:
+    """Return a tighter structural stop derived from a bullish pattern on the
+    latest bar, or (None, None) to keep the existing stop. Never returns a stop
+    that is wider than current, above entry, in an 'extended' context, or below
+    `min_rr_stop` (the lowest stop that still satisfies minimum R)."""
+    pats = patterns.get(ticker) or patterns.get(str(ticker).upper()) or []
+    candidates = [
+        p
+        for p in pats
+        if p.name in _PATTERN_STOP_PATTERNS and p.context in _PATTERN_STOP_CONTEXTS
+    ]
+    if not candidates or atr is None or atr <= 0:
+        return None, None
+
+    # Use the highest key_level -> tightest stop among eligible patterns.
+    best = max(candidates, key=lambda p: p.key_level)
+    pattern_stop = round(best.key_level - buffer_atr * atr, 4)
+
+    if pattern_stop >= entry:
+        return None, None
+    if current_stop is not None and pattern_stop <= current_stop:
+        return None, None  # not tighter
+    if min_rr_stop is not None and pattern_stop < min_rr_stop:
+        return None, None  # would break minimum R
+
+    reason = f"Stop below {best.name.replace('_', ' ')} low ({best.context.replace('_', ' ')})"
+    return pattern_stop, reason
 
 
 def _pick_feature_column(df: pd.DataFrame, pattern: str, fallback: str) -> str | None:

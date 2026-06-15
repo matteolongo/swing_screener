@@ -19,11 +19,14 @@ from api.models.screener import (
     ScreenerRunStatusResponse,
     ScreenerResponse,
     ScreenerCandidate,
+    CandlePatternOut,
 )
 from api.models.recommendation import Recommendation
 from api.services.portfolio_service import PortfolioService
 from api.services.same_symbol_reentry import SameSymbolReentryEvaluator
 from swing_screener.risk.engine import RiskEngineConfig, evaluate_recommendation
+from swing_screener.indicators.candles import detect_patterns, CandleConfig
+from swing_screener.execution.guidance import apply_pattern_stop, ExecutionConfig
 from api.repositories.strategy_repo import StrategyRepository
 from swing_screener.data.universe import (
     filter_tickers_by_metadata,
@@ -349,17 +352,27 @@ def _price_history_map(
         max_bars: Maximum number of bars to include per ticker
         
     Returns:
-        Dict mapping ticker to list of {date, close} points
+        Dict mapping ticker to list of {date, close} points. Each point also
+        carries open/high/low/volume when those fields exist in *ohlcv*
+        (optional, for candlestick rendering); absent fields are omitted.
     """
     out: dict[str, list[dict]] = {}
     if ohlcv is None or ohlcv.empty:
         return out
-    if "Close" not in ohlcv.columns.get_level_values(0):
+    levels = ohlcv.columns.get_level_values(0)
+    if "Close" not in levels:
         return out
 
+    def _sub(field: str):
+        return ohlcv[field] if field in levels else None
+
     close = ohlcv["Close"]
+    open_ = _sub("Open")
+    high = _sub("High")
+    low = _sub("Low")
+    vol = _sub("Volume")
     columns_to_process = close.columns if tickers is None else [t for t in tickers if t in close.columns]
-    
+
     for ticker in columns_to_process:
         series = close[ticker].dropna()
         if series.empty:
@@ -371,10 +384,13 @@ def _price_history_map(
             date = _to_date_iso(ts)
             if date is None:
                 continue
-            points.append({
-                "date": date,
-                "close": float(px),
-            })
+            point = {"date": date, "close": float(px)}
+            for key, frame in (("open", open_), ("high", high), ("low", low), ("volume", vol)):
+                if frame is not None and ticker in frame.columns:
+                    val = frame[ticker].get(ts)
+                    if val is not None and pd.notna(val):
+                        point[key] = float(val)
+            points.append(point)
         if points:
             out[str(ticker)] = points
     return out
@@ -971,6 +987,8 @@ class ScreenerService:
             
             # Build price history only for candidate tickers to improve performance
             price_history_map = _price_history_map(ohlcv, tickers=ticker_list)
+            patterns_map = detect_patterns(ohlcv, tickers=ticker_list, cfg=CandleConfig())
+            exec_cfg = ExecutionConfig()
             benchmark_history = _price_history_map(ohlcv, tickers=[benchmark]).get(benchmark, [])
             benchmark_change_pct = _price_history_change_pct(benchmark_history)
             benchmark_last_bar = last_bar_map.get(benchmark) or overall_last_bar
@@ -1051,6 +1069,29 @@ class ScreenerService:
                     else None
                 )
 
+                cand_patterns = [
+                    CandlePatternOut(
+                        bar_index=p.bar_index,
+                        date=p.date,
+                        name=p.name,
+                        direction=p.direction,
+                        key_level=p.key_level,
+                        context=p.context,
+                    )
+                    for p in patterns_map.get(ticker_str, [])
+                ]
+                pattern_stop_val, pattern_stop_reason = (None, None)
+                if exec_cfg.pattern_stop_enabled and entry_val:
+                    pattern_stop_val, pattern_stop_reason = apply_pattern_stop(
+                        ticker=ticker_str,
+                        entry=entry_val,
+                        current_stop=stop_val,
+                        atr=_safe_optional_float(row.get(atr_col)),
+                        patterns=patterns_map,
+                        buffer_atr=exec_cfg.pattern_stop_atr_buffer,
+                        min_rr_stop=None,
+                    )
+
                 candidates.append(
                     ScreenerCandidate(
                         ticker=ticker_str,
@@ -1112,6 +1153,9 @@ class ScreenerService:
                         recommendation=recommendation,
                         price_history=price_history_map.get(ticker_str, []),
                         benchmark_price_history=benchmark_price_history,
+                        patterns=cand_patterns,
+                        pattern_stop=pattern_stop_val,
+                        pattern_stop_reason=pattern_stop_reason,
                         suggested_order_type=(
                             str(row.get("suggested_order_type"))
                             if not _is_na_scalar(row.get("suggested_order_type"))

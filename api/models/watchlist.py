@@ -8,7 +8,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
 
-from api.models.screener import PriceHistoryPoint
+from api.models.screener import PriceHistoryPoint, CandlePatternOut
 
 
 class WatchItemUpsertRequest(BaseModel):
@@ -84,6 +84,7 @@ class WatchlistItemView(WatchItem):
     signal_trigger_price: Optional[float] = None
     distance_to_trigger_pct: Optional[float] = None
     price_history: list[PriceHistoryPoint] = Field(default_factory=list)
+    patterns: list[CandlePatternOut] = Field(default_factory=list)
 
 
 class WatchlistResponse(BaseModel):

@@ -1,6 +1,7 @@
 import type { Recommendation } from '@/types/recommendation';
 import type {
   CandidateDataSourceSummary,
+  CandlePattern,
   DecisionSummary,
   SameSymbolCandidateContext,
 } from '@/features/screener/types';
@@ -41,4 +42,7 @@ export interface SymbolAnalysisCandidate {
   sectorRotationContext?: Record<string, unknown> | null;
   dataSourceSummary?: CandidateDataSourceSummary;
   daysToEarnings?: number | null;
+  patterns?: CandlePattern[];
+  patternStop?: number | null;
+  patternStopReason?: string | null;
 }
