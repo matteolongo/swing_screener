@@ -115,3 +115,4 @@ config/intelligence.lock
 
 # Superpowers tooling
 .superpowers/
+docs/superpowers/
