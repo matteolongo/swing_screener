@@ -26,7 +26,7 @@ _CFG_NO_BENCH = UniverseConfig(benchmark="SPY", ensure_benchmark=False)
 
 def test_list_package_universes_count():
     ids = list_package_universes()
-    assert len(ids) == 15, f"Expected 15 universes, got {len(ids)}: {ids}"
+    assert len(ids) == 23, f"Expected 23 universes, got {len(ids)}: {ids}"
 
 
 def test_list_package_universes_contains_expected():
@@ -39,6 +39,9 @@ def test_list_package_universes_contains_expected():
         "healthcare_stocks", "healthcare_etfs",
         "semiconductor_stocks", "energy_stocks", "financial_stocks",
         "italy_ftse_mib",
+        "us_sp500", "us_nasdaq100", "us_dow30",
+        "germany_dax", "france_cac40", "uk_ftse100",
+        "spain_ibex35", "europe_eurostoxx50",
     }
     assert expected == set(ids)
 
@@ -232,3 +235,21 @@ def test_broad_market_etfs_contains_eur_and_usd():
 def test_validate_universe_snapshot_returns_list():
     errors = validate_universe_snapshot("amsterdam_aex")
     assert isinstance(errors, list)
+
+
+# ---------------------------------------------------------------------------
+# New index universes
+# ---------------------------------------------------------------------------
+
+EXPECTED_INDEX_IDS = {
+    "us_sp500", "us_nasdaq100", "us_dow30", "germany_dax",
+    "france_cac40", "uk_ftse100", "spain_ibex35", "europe_eurostoxx50",
+}
+
+
+def test_new_indices_present_and_refreshable():
+    names = set(list_package_universes())
+    assert EXPECTED_INDEX_IDS <= names
+    for uid in EXPECTED_INDEX_IDS:
+        meta = get_universe_meta(uid)
+        assert meta["kind"] == "index"

@@ -16,11 +16,12 @@ authors = [
 
 dependencies = [
   "pandas>=2.0",
+  "lxml>=5.0",
   "numpy>=1.24",
   "pyyaml>=6.0",
   "yfinance>=0.2",
   "pyarrow>=14.0",
-  "fastapi>=0.104",
+  "fastapi>=0.104,<0.134",  # <0.134 keeps starlette on 0.x: 1.x stops flattening included routers into app.routes and drops httpx TestClient support (pinned httpx <0.29)
   "uvicorn[standard]>=0.24",
   "pydantic>=2.0",
   "httpx (>=0.28.1,<0.29.0)",

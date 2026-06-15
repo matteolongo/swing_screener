@@ -54,6 +54,10 @@ Intelligence:
 Config:
 - `/config/README.md`
 
+## Specs & Plans
+- `/docs/superpowers/specs/2026-06-12-index-universes-wikipedia-design.md`
+- `/docs/superpowers/plans/2026-06-12-index-universes-wikipedia.md`
+
 ## Repo Policy Docs
 - `/.github/BRANCH_PROTECTION.md`
 - `/.github/copilot-instructions.md`
