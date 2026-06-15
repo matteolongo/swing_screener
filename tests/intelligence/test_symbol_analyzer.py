@@ -10,6 +10,18 @@ from swing_screener.intelligence.symbol_analyzer import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _isolate_intelligence_cache(tmp_path, monkeypatch):
+    """Redirect the intelligence cache to a tmp dir for every test in this module.
+
+    `SymbolAnalyzer.analyze` writes its result via `write_to_cache`, which resolves
+    `data_dir()` from `SWING_SCREENER_DATA_DIR`. Without this, tests that call
+    `analyze()` write fixture data into the real `data/intelligence/sweep_<today>.json`
+    and poison the running app's cache.
+    """
+    monkeypatch.setenv("SWING_SCREENER_DATA_DIR", str(tmp_path))
+
+
 def test_prompt_includes_recent_patterns():
     req = SymbolIntelligenceRequest(
         close=10.0,
