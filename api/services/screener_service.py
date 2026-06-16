@@ -786,85 +786,112 @@ class ScreenerService:
             return strategy
         return self._strategy_repo.get_active_strategy()
 
+    def _resolve_universe_and_window(self, ctx: _RunContext) -> int:
+        """Resolve strategy, universe, benchmark, ticker list and screening window.
+
+        Returns requested_top. Populates ctx.universe_cfg, benchmark, tickers,
+        screening_tickers, active_currencies, asof_str, market_health, now_utc,
+        warnings. Raises UnprocessableError/NotFoundError exactly as before.
+        """
+        request = ctx.request
+        requested_top = request.top or 20
+        if requested_top <= 0:
+            raise UnprocessableError("top must be >= 1")
+
+        ctx.universe_cfg = build_universe_config(ctx.strategy)
+        ctx.now_utc = dt.datetime.now(dt.timezone.utc)
+        ctx.benchmark = ctx.universe_cfg.mom.benchmark
+        if request.universe:
+            valid_ids = set(list_package_universes())
+            if request.universe not in valid_ids:
+                replacement = _REMOVED_UNIVERSE_IDS.get(request.universe)
+                if replacement:
+                    detail = (
+                        f"Universe '{request.universe}' was removed. "
+                        f"Use '{replacement}' instead."
+                    )
+                else:
+                    detail = (
+                        f"Universe '{request.universe}' is not available. "
+                        f"Available universes: {sorted(valid_ids)}"
+                    )
+                raise UnprocessableError(detail)
+            uni_benchmark = get_universe_benchmark(request.universe)
+            if uni_benchmark and uni_benchmark != ctx.benchmark:
+                ctx.universe_cfg = replace(
+                    ctx.universe_cfg,
+                    mom=replace(ctx.universe_cfg.mom, benchmark=uni_benchmark),
+                )
+                ctx.benchmark = uni_benchmark
+
+        if request.tickers:
+            ctx.tickers = [t.upper() for t in request.tickers]
+            if ctx.benchmark not in ctx.tickers:
+                ctx.tickers.append(ctx.benchmark)
+        elif request.universe:
+            universe_cap = max(500, requested_top * 2)
+            ucfg = DataUniverseConfig(benchmark=ctx.benchmark, ensure_benchmark=True, max_tickers=universe_cap)
+            ctx.tickers = load_universe_from_package(request.universe, ucfg)
+        else:
+            universe_cap = max(500, requested_top * 2)
+            ucfg = DataUniverseConfig(benchmark=ctx.benchmark, ensure_benchmark=True, max_tickers=universe_cap)
+            ctx.tickers = load_universe_from_package("broad_market_stocks", ucfg)
+
+        filtered_tickers = filter_tickers_by_metadata(
+            ctx.tickers,
+            currencies=request.currencies,
+            exchange_mics=request.exchange_mics,
+            include_otc=request.include_otc if request.include_otc is not None else True,
+            instrument_types=request.instrument_types,
+        )
+        if ctx.benchmark not in filtered_tickers:
+            filtered_tickers.append(ctx.benchmark)
+        if len(filtered_tickers) < len(ctx.tickers):
+            ctx.warnings.append(
+                f"Universe filters reduced the working list from {len(ctx.tickers)} to {len(filtered_tickers)} tickers."
+            )
+        ctx.tickers = filtered_tickers
+        ctx.market_health = self._provider.get_source_health().to_dict()
+
+        ctx.screening_tickers = [ticker for ticker in ctx.tickers if ticker != ctx.benchmark]
+        ctx.active_currencies = _resolve_screening_currencies(
+            request,
+            strategy_currencies=ctx.universe_cfg.filt.currencies,
+            tickers=ctx.screening_tickers,
+            universe_id=request.universe,
+        )
+        if request.asof_date:
+            ctx.asof_str = request.asof_date
+        else:
+            ctx.asof_str = _resolve_default_asof_date(ctx.now_utc, ctx.active_currencies).isoformat()
+
+        if len(ctx.tickers) <= 1 and ctx.benchmark in ctx.tickers:
+            raise NotFoundError("No tickers left after applying screener filters")
+
+        return requested_top
+
     def run_screener(self, request: ScreenerRequest, strategy_override: Optional[dict] = None) -> ScreenerResponse:
         try:
-            requested_top = request.top or 20
-            if requested_top <= 0:
-                raise UnprocessableError("top must be >= 1")
-            combined_priority_cfg = CombinedPriorityConfig()
-            warnings: list[str] = []
+            ctx = _RunContext(
+                request=request,
+                strategy=self._resolve_strategy(request.strategy_id, strategy_override),
+                combined_priority_cfg=CombinedPriorityConfig(),
+            )
+            requested_top = self._resolve_universe_and_window(ctx)
+            # Bridge ctx fields back into local names still used by not-yet-extracted code below.
+            warnings = ctx.warnings
+            universe_cfg = ctx.universe_cfg
+            benchmark = ctx.benchmark
+            tickers = ctx.tickers
+            screening_tickers = ctx.screening_tickers
+            active_currencies = ctx.active_currencies
+            asof_str = ctx.asof_str
+            market_health = ctx.market_health
+            now_utc = ctx.now_utc
+            strategy = ctx.strategy
+            combined_priority_cfg = ctx.combined_priority_cfg
 
             fields_set = request.model_fields_set
-            strategy = self._resolve_strategy(request.strategy_id, strategy_override)
-            universe_cfg = build_universe_config(strategy)
-            now_utc = dt.datetime.now(dt.timezone.utc)
-            benchmark = universe_cfg.mom.benchmark
-            if request.universe:
-                valid_ids = set(list_package_universes())
-                if request.universe not in valid_ids:
-                    replacement = _REMOVED_UNIVERSE_IDS.get(request.universe)
-                    if replacement:
-                        detail = (
-                            f"Universe '{request.universe}' was removed. "
-                            f"Use '{replacement}' instead."
-                        )
-                    else:
-                        detail = (
-                            f"Universe '{request.universe}' is not available. "
-                            f"Available universes: {sorted(valid_ids)}"
-                        )
-                    raise UnprocessableError(detail)
-                uni_benchmark = get_universe_benchmark(request.universe)
-                if uni_benchmark and uni_benchmark != benchmark:
-                    universe_cfg = replace(
-                        universe_cfg,
-                        mom=replace(universe_cfg.mom, benchmark=uni_benchmark),
-                    )
-                    benchmark = uni_benchmark
-
-            if request.tickers:
-                tickers = [t.upper() for t in request.tickers]
-                if benchmark not in tickers:
-                    tickers.append(benchmark)
-            elif request.universe:
-                universe_cap = max(500, requested_top * 2)
-                ucfg = DataUniverseConfig(benchmark=benchmark, ensure_benchmark=True, max_tickers=universe_cap)
-                tickers = load_universe_from_package(request.universe, ucfg)
-            else:
-                universe_cap = max(500, requested_top * 2)
-                ucfg = DataUniverseConfig(benchmark=benchmark, ensure_benchmark=True, max_tickers=universe_cap)
-                tickers = load_universe_from_package("broad_market_stocks", ucfg)
-
-            filtered_tickers = filter_tickers_by_metadata(
-                tickers,
-                currencies=request.currencies,
-                exchange_mics=request.exchange_mics,
-                include_otc=request.include_otc if request.include_otc is not None else True,
-                instrument_types=request.instrument_types,
-            )
-            if benchmark not in filtered_tickers:
-                filtered_tickers.append(benchmark)
-            if len(filtered_tickers) < len(tickers):
-                warnings.append(
-                    f"Universe filters reduced the working list from {len(tickers)} to {len(filtered_tickers)} tickers."
-                )
-            tickers = filtered_tickers
-            market_health = self._provider.get_source_health().to_dict()
-
-            screening_tickers = [ticker for ticker in tickers if ticker != benchmark]
-            active_currencies = _resolve_screening_currencies(
-                request,
-                strategy_currencies=universe_cfg.filt.currencies,
-                tickers=screening_tickers,
-                universe_id=request.universe,
-            )
-            if request.asof_date:
-                asof_str = request.asof_date
-            else:
-                asof_str = _resolve_default_asof_date(now_utc, active_currencies).isoformat()
-
-            if len(tickers) <= 1 and benchmark in tickers:
-                raise NotFoundError("No tickers left after applying screener filters")
 
             signals_cfg = build_entry_config(strategy)
             if "breakout_lookback" in fields_set and request.breakout_lookback is not None:
