@@ -993,6 +993,63 @@ class ScreenerService:
             risk=ctx.risk_cfg,
         )
 
+    def _run_daily_report(self, ctx: _RunContext, requested_top: int) -> "pd.DataFrame | None":
+        """Build sector context and run the daily report.
+
+        Returns the ranked results DataFrame, or None when there are no
+        candidates (orchestrator then returns the empty ScreenerResponse).
+        Populates ctx.ticker_info and ctx.sector_rotation_by_name.
+        """
+        ticker_info = get_multiple_ticker_info(ctx.screening_tickers) if ctx.screening_tickers else {}
+        etf_returns = sector_rotation.compute_sector_benchmark_returns(ctx.ohlcv)
+        rotation_scores = sector_rotation.compute_sector_rotation_scores(ctx.ohlcv)
+        ticker_sectors = {
+            ticker: (ticker_info.get(ticker) or {}).get("sector")
+            for ticker in ctx.screening_tickers
+        }
+        sector_benchmark_returns = sector_rotation.build_ticker_sector_returns(
+            ticker_sectors,
+            etf_returns,
+        )
+        sector_rotation_by_name = {
+            sector_name: rotation_scores[etf]
+            for etf, sector_name in sector_rotation.SECTOR_ETFS.items()
+            if etf in rotation_scores
+        }
+
+        ctx.ticker_info = ticker_info
+        ctx.sector_rotation_by_name = sector_rotation_by_name
+
+        results = build_daily_report(
+            ctx.ohlcv,
+            cfg=ctx.report_cfg,
+            exclude_tickers=sector_rotation.SECTOR_ETFS.keys(),
+            sector_benchmark_returns=sector_benchmark_returns,
+        )
+        if results is None or results.empty:
+            logger.warning(
+                "Screener returned no candidates (top=%s, tickers=%s).",
+                requested_top,
+                len(ctx.tickers),
+            )
+            ctx.warnings.append("No candidates found for the current screener filters.")
+            return None
+
+        if not results.empty and "confidence" in results.columns:
+            results = results.sort_values("confidence", ascending=False)
+            if ctx.request.top:
+                # Stage 1: widen prefilter to allow combined priority stage to re-rank
+                prefilter_n = ctx.request.top * ctx.combined_priority_cfg.prefilter_multiplier
+                results = results.head(prefilter_n)
+            results["rank"] = range(1, len(results) + 1)
+
+        if len(results) < requested_top:
+            message = f"Only {len(results)} candidates found for top {requested_top}."
+            ctx.warnings.append(message)
+            logger.warning(message)
+
+        return results
+
     def run_screener(self, request: ScreenerRequest, strategy_override: Optional[dict] = None) -> ScreenerResponse:
         try:
             ctx = _RunContext(
@@ -1006,7 +1063,6 @@ class ScreenerService:
             universe_cfg = ctx.universe_cfg
             benchmark = ctx.benchmark
             tickers = ctx.tickers
-            screening_tickers = ctx.screening_tickers
             asof_str = ctx.asof_str
             market_health = ctx.market_health
             strategy = ctx.strategy
@@ -1020,62 +1076,23 @@ class ScreenerService:
             data_freshness = ctx.data_freshness
 
             self._build_run_configs(ctx, requested_top)
-            report_cfg = ctx.report_cfg
             risk_cfg = ctx.risk_cfg
             universe_cfg = ctx.universe_cfg
 
-            ticker_info = get_multiple_ticker_info(screening_tickers) if screening_tickers else {}
-            etf_returns = sector_rotation.compute_sector_benchmark_returns(ohlcv)
-            rotation_scores = sector_rotation.compute_sector_rotation_scores(ohlcv)
-            ticker_sectors = {
-                ticker: (ticker_info.get(ticker) or {}).get("sector")
-                for ticker in screening_tickers
-            }
-            sector_benchmark_returns = sector_rotation.build_ticker_sector_returns(
-                ticker_sectors,
-                etf_returns,
-            )
-            sector_rotation_by_name = {
-                sector_name: rotation_scores[etf]
-                for etf, sector_name in sector_rotation.SECTOR_ETFS.items()
-                if etf in rotation_scores
-            }
-
-            results = build_daily_report(
-                ohlcv,
-                cfg=report_cfg,
-                exclude_tickers=sector_rotation.SECTOR_ETFS.keys(),
-                sector_benchmark_returns=sector_benchmark_returns,
-            )
-            if results is None or results.empty:
-                logger.warning(
-                    "Screener returned no candidates (top=%s, tickers=%s).",
-                    requested_top,
-                    len(tickers),
-                )
-                warnings.append("No candidates found for the current screener filters.")
+            results = self._run_daily_report(ctx, requested_top)
+            if results is None:
                 return ScreenerResponse(
                     candidates=[],
-                    asof_date=asof_str,
-                    total_screened=len(tickers),
-                    data_freshness=data_freshness,
-                    warnings=warnings,
+                    asof_date=ctx.asof_str,
+                    total_screened=len(ctx.tickers),
+                    data_freshness=ctx.data_freshness,
+                    warnings=ctx.warnings,
                     same_symbol_suppressed_count=0,
                     same_symbol_add_on_count=0,
                 )
-
-            if not results.empty and "confidence" in results.columns:
-                results = results.sort_values("confidence", ascending=False)
-                if request.top:
-                    # Stage 1: widen prefilter to allow combined priority stage to re-rank
-                    prefilter_n = request.top * combined_priority_cfg.prefilter_multiplier
-                    results = results.head(prefilter_n)
-                results["rank"] = range(1, len(results) + 1)
-
-            if len(results) < requested_top:
-                message = f"Only {len(results)} candidates found for top {requested_top}."
-                warnings.append(message)
-                logger.warning(message)
+            # Bridge ctx fields back into local names still used by not-yet-extracted code below.
+            ticker_info = ctx.ticker_info
+            sector_rotation_by_name = ctx.sector_rotation_by_name
 
             ticker_list = [str(idx) for idx in results.index]
             
