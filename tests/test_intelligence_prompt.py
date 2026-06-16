@@ -55,3 +55,56 @@ def test_user_prompt_search_instruction_is_multi_hop():
     req = SymbolIntelligenceRequest(close=100.0, signal="breakout")
     prompt = _build_user_prompt("AAPL", req).lower()
     assert "follow" in prompt and "catalyst" in prompt
+
+
+def _open_position_request() -> SymbolIntelligenceRequest:
+    return SymbolIntelligenceRequest(
+        close=110.0,
+        signal="MANAGE_ONLY",
+        entry_price=100.0,
+        entry_date="2026-05-01",
+        stop=95.0,
+        r_now=2.0,
+        days_open=46,
+    )
+
+
+def test_open_position_prompt_includes_entry_date_and_move_explanation():
+    prompt = _build_user_prompt("AAPL", _open_position_request())
+    assert "Entry date:    2026-05-01" in prompt
+    assert "position_move_explanation" in prompt
+    assert "moved from the entry to now" in prompt
+
+
+def test_move_explanation_omitted_without_position_context():
+    prompt = _build_user_prompt("AAPL", SymbolIntelligenceRequest(close=110.0, signal="breakout"))
+    assert "position_move_explanation" not in prompt
+    assert "Entry date:" not in prompt
+
+
+def test_system_prompt_documents_move_explanation_schema():
+    assert "position_move_explanation" in _SYSTEM_PROMPT
+    assert "up | down | flat" in _SYSTEM_PROMPT
+
+
+def test_symbol_intelligence_parses_position_move_explanation():
+    from swing_screener.intelligence.models import SymbolIntelligence
+
+    result = SymbolIntelligence.model_validate(
+        {
+            "symbol": "AAPL",
+            "generated_at": "2026-06-16T00:00:00+00:00",
+            "action": "MANAGE_ONLY",
+            "conviction": "medium",
+            "summary_line": "Holding into earnings.",
+            "narrative": "What to do: hold.",
+            "position_move_explanation": {
+                "direction": "up",
+                "summary": "Up since entry on a strong Q1 beat.",
+                "drivers": [{"label": "Q1 earnings beat", "detail": "Revenue topped guidance."}],
+            },
+        }
+    )
+    assert result.position_move_explanation is not None
+    assert result.position_move_explanation.direction == "up"
+    assert result.position_move_explanation.drivers[0].label == "Q1 earnings beat"

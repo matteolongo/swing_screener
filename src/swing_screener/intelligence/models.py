@@ -44,6 +44,17 @@ class PositionSignal(BaseModel):
     re_entry_zone: dict | None = None
 
 
+class PriceMoveDriver(BaseModel):
+    label: str
+    detail: str
+
+
+class PositionMoveExplanation(BaseModel):
+    direction: Literal["up", "down", "flat"]
+    summary: str
+    drivers: list[PriceMoveDriver] = Field(default_factory=list)
+
+
 class KeyNumber(BaseModel):
     label: str
     value: str
@@ -85,6 +96,7 @@ class SymbolIntelligenceRequest(BaseModel):
     sector: str | None = None
     currency: str = "USD"
     entry_price: float | None = None
+    entry_date: str | None = None
     r_now: float | None = None
     days_open: int | None = None
     # Extended context — decision summary + chart quality + fundamentals
@@ -140,6 +152,7 @@ class SymbolIntelligence(BaseModel):
     upcoming_events: list[IntelligenceEvent] = []
     position_signal: PositionSignal | None = None
     position_outlook: PositionOutlook | None = None
+    position_move_explanation: PositionMoveExplanation | None = None
     sources: list[str] = []
     inputs_used: dict = Field(default_factory=dict)
     price_hook: str | None = None

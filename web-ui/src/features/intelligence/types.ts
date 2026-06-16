@@ -58,6 +58,19 @@ export interface PositionOutlook {
   confidenceDecay: string;
 }
 
+export type PriceMoveDirection = 'up' | 'down' | 'flat';
+
+export interface PriceMoveDriver {
+  label: string;
+  detail: string;
+}
+
+export interface PositionMoveExplanation {
+  direction: PriceMoveDirection;
+  summary: string;
+  drivers: PriceMoveDriver[];
+}
+
 export interface SymbolIntelligenceAPI {
   symbol: string;
   generated_at: string;
@@ -69,6 +82,7 @@ export interface SymbolIntelligenceAPI {
   upcoming_events: IntelligenceEvent[];
   position_signal: PositionSignal | null;
   position_outlook?: PositionOutlookAPI | null;
+  position_move_explanation?: PositionMoveExplanation | null;
   sources: string[];
   inputs_used?: Record<string, Record<string, unknown>>;
   price_hook?: string | null;
@@ -89,6 +103,7 @@ export interface SymbolIntelligence {
   upcomingEvents: IntelligenceEvent[];
   positionSignal: PositionSignal | null;
   positionOutlook?: PositionOutlook | null;
+  positionMoveExplanation?: PositionMoveExplanation | null;
   sources: string[];
   inputsUsed?: Record<string, Record<string, unknown>>;
   priceHook?: string | null;
@@ -124,6 +139,7 @@ export function transformIntelligence(api: SymbolIntelligenceAPI): SymbolIntelli
     upcomingEvents: api.upcoming_events ?? [],
     positionSignal: api.position_signal ?? null,
     positionOutlook: transformPositionOutlook(api.position_outlook),
+    positionMoveExplanation: api.position_move_explanation ?? null,
     sources: api.sources ?? [],
     inputsUsed: api.inputs_used ?? {},
     priceHook: api.price_hook ?? null,

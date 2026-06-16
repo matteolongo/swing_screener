@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import IntelligenceCard from './IntelligenceCard';
+import { t } from '@/i18n/t';
 import type {
   SymbolIntelligence,
   IntelligenceEvent,
@@ -115,5 +116,32 @@ describe('IntelligenceCard', () => {
     expect(screen.getByText('Hold while price remains above SMA20.')).toBeInTheDocument();
     expect(screen.getByText('Reassess after earnings.')).toBeInTheDocument();
     expect(screen.getByText('Close below SMA20')).toBeInTheDocument();
+  });
+
+  it('renders position move explanation when present', () => {
+    render(
+      <IntelligenceCard
+        intelligence={{
+          ...baseIntelExtended,
+          positionMoveExplanation: {
+            direction: 'up',
+            summary: 'Up since entry on a strong Q1 beat.',
+            drivers: [{ label: 'Q1 earnings beat', detail: 'Revenue topped guidance.' }],
+          },
+        }}
+      />,
+    );
+    expect(
+      screen.getByText(t('workspacePage.panels.analysis.intelligence.positionMove.title')),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Up since entry on a strong Q1 beat.')).toBeInTheDocument();
+    expect(screen.getByText(/Revenue topped guidance\./)).toBeInTheDocument();
+  });
+
+  it('does not render position move explanation when null', () => {
+    render(<IntelligenceCard intelligence={{ ...baseIntelExtended, positionMoveExplanation: null }} />);
+    expect(
+      screen.queryByText(t('workspacePage.panels.analysis.intelligence.positionMove.title')),
+    ).toBeNull();
   });
 });
