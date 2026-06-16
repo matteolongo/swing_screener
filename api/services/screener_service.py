@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import replace, asdict, dataclass, field
 from typing import Optional
 import datetime as dt
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta
 import logging
 import math
 import os
@@ -49,9 +49,7 @@ from swing_screener.data.ticker_info import get_multiple_ticker_info
 from swing_screener.data import sector_rotation
 from swing_screener.reporting.report import ReportConfig, build_daily_report
 from swing_screener.reporting.concentration import sector_concentration_warnings
-from swing_screener.fundamentals.storage import FundamentalsStorage
 from swing_screener.fundamentals.earnings_proximity import fetch_next_earnings_days
-from swing_screener.recommendation import build_decision_summary
 from swing_screener.recommendation.priority import CombinedPriorityConfig, compute_combined_priority
 from swing_screener.settings import get_settings_manager
 from swing_screener.strategy.config import (
@@ -75,6 +73,17 @@ from swing_screener.utils.coerce import (
     safe_optional_float,
     safe_optional_int,
 )
+from api.services.decision_context import (
+    apply_cached_fundamentals_context,
+    apply_decision_priority_ranking,
+    apply_decision_summary_context,
+    load_fundamentals_snapshots,
+    rebuild_recommendations_with_decision_action,
+)
+from swing_screener.selection.universe import UniverseConfig as SelectionUniverseConfig
+from swing_screener.selection.ranking import RankingConfig
+from swing_screener.selection.entries import EntrySignalConfig
+from swing_screener.risk.position_sizing import RiskConfig
 
 # Map of removed universe ids to their replacements (or None if dropped with no replacement).
 _REMOVED_UNIVERSE_IDS: dict[str, str | None] = {
@@ -123,28 +132,11 @@ from api.services.screener_run_manager import get_screener_run_manager
 
 logger = logging.getLogger(__name__)
 SUPPORTED_CURRENCIES = {"USD", "EUR"}
-DECISION_ACTION_PRIORITY = {
-    "BUY_NOW": 6,
-    "BUY_ON_PULLBACK": 5,
-    "WAIT_FOR_BREAKOUT": 4,
-    "WATCH": 3,
-    "TACTICAL_ONLY": 2,
-    "MANAGE_ONLY": 1,
-    "AVOID": 0,
-}
-DECISION_CONVICTION_PRIORITY = {
-    "high": 2,
-    "medium": 1,
-    "low": 0,
-}
 MARKET_CLOSE_BY_CURRENCY: dict[str, tuple[str, int, int]] = {
     # (IANA timezone, close hour, close minute), with a small post-close buffer.
     "USD": ("America/New_York", 16, 10),
     "EUR": ("Europe/Amsterdam", 17, 40),
 }
-
-
-_CATALYST_STALE_DAYS = 2
 
 
 def _min_days_to_earnings_default() -> int:
@@ -156,18 +148,6 @@ def _min_days_to_earnings_default() -> int:
         return int(universe_defaults.get("min_days_to_earnings", 0))
     except (TypeError, ValueError):
         return 0
-
-
-def _is_stale(opportunity: object | None) -> bool:
-    if opportunity is None:
-        return True
-    try:
-        generated_at = datetime.fromisoformat(str(getattr(opportunity, "generated_at", "")))
-        if generated_at.tzinfo is None:
-            generated_at = generated_at.replace(tzinfo=timezone.utc)
-        return (datetime.now(timezone.utc) - generated_at).days > _CATALYST_STALE_DAYS
-    except (ValueError, TypeError):
-        return True
 
 
 def _fetch_ohlcv_chunked(
@@ -317,214 +297,6 @@ def _resolve_fetch_start_date(asof_date: str, min_history: int) -> str:
     return (asof - dt.timedelta(days=calendar_days)).isoformat()
 
 
-def _fundamentals_summary(snapshot) -> str | None:
-    for value in getattr(snapshot, "highlights", []) or []:
-        text = str(value).strip()
-        if text:
-            return text
-    for value in getattr(snapshot, "red_flags", []) or []:
-        text = str(value).strip()
-        if text:
-            return text
-    error = getattr(snapshot, "error", None)
-    if error:
-        text = str(error).strip()
-        if text:
-            return text
-    return None
-
-
-def _load_fundamentals_snapshots(
-    candidates: list[ScreenerCandidate],
-    *,
-    storage: FundamentalsStorage | None = None,
-) -> dict[str, object]:
-    """Load each unique candidate ticker's snapshot once (None when missing)."""
-    fundamentals_storage = storage or FundamentalsStorage()
-    return {
-        ticker: fundamentals_storage.load_snapshot(ticker)
-        for ticker in {c.ticker for c in candidates}
-    }
-
-
-def _apply_cached_fundamentals_context(
-    candidates: list[ScreenerCandidate],
-    *,
-    snapshots: dict[str, object] | None = None,
-    storage: FundamentalsStorage | None = None,
-) -> list[ScreenerCandidate]:
-    if not candidates:
-        return candidates
-    snapshot_cache = (
-        snapshots
-        if snapshots is not None
-        else _load_fundamentals_snapshots(candidates, storage=storage)
-    )
-    enriched: list[ScreenerCandidate] = []
-    for candidate in candidates:
-        snapshot = snapshot_cache.get(candidate.ticker)
-        if snapshot is None:
-            enriched.append(candidate)
-            continue
-        enriched.append(
-            candidate.model_copy(
-                update={
-                    "fundamentals_coverage_status": getattr(snapshot, "coverage_status", None),
-                    "fundamentals_freshness_status": getattr(snapshot, "freshness_status", None),
-                    "fundamentals_summary": _fundamentals_summary(snapshot),
-                }
-            )
-        )
-    return enriched
-
-
-def _apply_decision_summary_context(
-    candidates: list[ScreenerCandidate],
-    *,
-    snapshots: dict[str, object] | None = None,
-    fundamentals_storage: FundamentalsStorage | None = None,
-) -> list[ScreenerCandidate]:
-    if not candidates:
-        return candidates
-
-    # Load today's catalyst opportunity index once for all candidates
-    catalyst_index: dict = {}
-    try:
-        from swing_screener.intelligence.catalysts.store import CatalystStore
-        catalyst_index = CatalystStore().load_symbol_index()
-    except Exception as exc:
-        logger.warning("Failed to load catalyst index: %s", exc)
-
-    snapshot_cache = (
-        snapshots
-        if snapshots is not None
-        else _load_fundamentals_snapshots(candidates, storage=fundamentals_storage)
-    )
-
-    enriched: list[ScreenerCandidate] = []
-    for candidate in candidates:
-        fund_snap = snapshot_cache.get(candidate.ticker)
-        fund_asof = getattr(fund_snap, "asof_date", None) if fund_snap is not None else None
-        raw_opportunity = catalyst_index.get(candidate.ticker.upper())
-        opportunity = None if _is_stale(raw_opportunity) else raw_opportunity
-        enriched.append(
-            candidate.model_copy(
-                update={
-                    "decision_summary": build_decision_summary(
-                        candidate,
-                        opportunity=opportunity,
-                        fundamentals=fund_snap,
-                    ),
-                    "fundamentals_snapshot": fund_snap,
-                    "fundamentals_asof": str(fund_asof) if fund_asof else None,
-                    "intelligence_asof": opportunity.generated_at if opportunity else None,
-                }
-            )
-        )
-    return enriched
-
-
-def _rebuild_recommendations_with_decision_action(
-    candidates: list[ScreenerCandidate],
-    *,
-    risk_cfg,
-    rr_target: float,
-    commission_pct: float,
-) -> list[ScreenerCandidate]:
-    """Rebuild each candidate's recommendation using the decision_summary action as the
-    signal input so that the Order tab verdict is consistent with the decision badge."""
-    if not candidates:
-        return candidates
-
-    rebuilt: list[ScreenerCandidate] = []
-    for candidate in candidates:
-        action = getattr(getattr(candidate, "decision_summary", None), "action", None)
-        if not action:
-            rebuilt.append(candidate)
-            continue
-
-        rec = candidate.recommendation
-        if rec is None:
-            rebuilt.append(candidate)
-            continue
-
-        # Only rebuild when the original recommendation already failed signal_active.
-        # This prevents demoting a RECOMMENDED candidate that already has a chart signal.
-        signal_gate_passed = any(
-            gate.gate_name == "signal_active" and gate.passed
-            for gate in (rec.checklist or [])
-        )
-        if signal_gate_passed:
-            rebuilt.append(candidate)
-            continue
-
-        # Rebuild using decision action as signal so signal_active reflects the full picture.
-        logger.debug(
-            "Rebuilding recommendation for %s: signal_active was False, decision_summary.action=%s",
-            candidate.ticker,
-            action,
-        )
-        new_rec_payload = evaluate_recommendation(
-            signal=action,
-            entry=rec.risk.entry if rec.risk else None,
-            stop=rec.risk.stop if rec.risk else None,
-            shares=rec.risk.shares if rec.risk else None,
-            risk_cfg=risk_cfg,
-            rr_target=rr_target,
-            costs=RiskEngineConfig(
-                commission_pct=commission_pct,
-                slippage_bps=5.0,
-                fx_estimate_pct=0.0,
-            ),
-            ticker=candidate.ticker,
-            strategy="Momentum",
-            close=candidate.close,
-            sma_20=candidate.sma_20,
-            sma_50=candidate.sma_50,
-            sma_200=candidate.sma_200,
-            atr=candidate.atr,
-            momentum_6m=candidate.momentum_6m,
-            momentum_12m=candidate.momentum_12m,
-            rel_strength=candidate.rel_strength,
-            confidence=candidate.confidence,
-        )
-        rebuilt.append(
-            candidate.model_copy(
-                update={"recommendation": Recommendation.model_validate(asdict(new_rec_payload))}
-            )
-        )
-    return rebuilt
-
-
-def _apply_decision_priority_ranking(candidates: list[ScreenerCandidate]) -> list[ScreenerCandidate]:
-    if not candidates:
-        return candidates
-
-    # Keep the raw screener rank intact and use decision action + conviction as an additive ordering layer.
-    ordered = sorted(
-        candidates,
-        key=lambda candidate: (
-            -DECISION_ACTION_PRIORITY.get(
-                getattr(getattr(candidate, "decision_summary", None), "action", ""),
-                -1,
-            ),
-            -DECISION_CONVICTION_PRIORITY.get(
-                getattr(getattr(candidate, "decision_summary", None), "conviction", ""),
-                -1,
-            ),
-            candidate.rank,
-            -candidate.confidence,
-            candidate.ticker,
-        ),
-    )
-    return [
-        candidate.model_copy(update={"priority_rank": index})
-        for index, candidate in enumerate(ordered, start=1)
-    ]
-
-
-
-
 @dataclass
 class _RunContext:
     """Mutable state accumulated across run_screener pipeline steps.
@@ -536,11 +308,11 @@ class _RunContext:
     strategy: dict
     warnings: list[str] = field(default_factory=list)
     # populated by steps as the run progresses
-    universe_cfg: object = None
-    signals_cfg: object = None
-    ranking_cfg: object = None
-    risk_cfg: object = None
-    report_cfg: object = None
+    universe_cfg: SelectionUniverseConfig | None = None
+    signals_cfg: EntrySignalConfig | None = None
+    ranking_cfg: RankingConfig | None = None
+    risk_cfg: RiskConfig | None = None
+    report_cfg: ReportConfig | None = None
     benchmark: str = ""
     tickers: list[str] = field(default_factory=list)
     screening_tickers: list[str] = field(default_factory=list)
@@ -549,16 +321,16 @@ class _RunContext:
     start_date: str = ""
     end_date: str = ""
     market_health: dict = field(default_factory=dict)
-    ohlcv: object = None
+    ohlcv: pd.DataFrame | None = None
     last_bar_map: dict = field(default_factory=dict)
-    overall_last_bar: object = None
+    overall_last_bar: pd.Series | None = None
     data_freshness: str = ""
     ticker_info: dict = field(default_factory=dict)
     sector_rotation_by_name: dict = field(default_factory=dict)
-    combined_priority_cfg: object = None
-    now_utc: object = None
-    benchmark_change_pct: object = None
-    benchmark_last_bar: object = None
+    combined_priority_cfg: CombinedPriorityConfig | None = None
+    now_utc: datetime | None = None
+    benchmark_change_pct: float | None = None
+    benchmark_last_bar: pd.Series | None = None
 
 
 class ScreenerService:
@@ -1126,9 +898,9 @@ class ScreenerService:
         ticker_info = ctx.ticker_info
         warnings = ctx.warnings
 
-        fundamentals_snapshots = _load_fundamentals_snapshots(candidates)
-        candidates = _apply_cached_fundamentals_context(candidates, snapshots=fundamentals_snapshots)
-        candidates = _apply_decision_summary_context(candidates, snapshots=fundamentals_snapshots)
+        fundamentals_snapshots = load_fundamentals_snapshots(candidates)
+        candidates = apply_cached_fundamentals_context(candidates, snapshots=fundamentals_snapshots)
+        candidates = apply_decision_summary_context(candidates, snapshots=fundamentals_snapshots)
 
         finnhub_key = os.environ.get("FINNHUB_API_KEY")
         earnings_asof_date = dt.date.fromisoformat(asof_str)
@@ -1154,13 +926,13 @@ class ScreenerService:
         # Stage 2: combined priority re-ranks prefilter set and trims to final top-N
         candidates = compute_combined_priority(candidates, cfg=combined_priority_cfg)
         candidates = candidates[:requested_top]
-        candidates = _rebuild_recommendations_with_decision_action(
+        candidates = rebuild_recommendations_with_decision_action(
             candidates,
             risk_cfg=risk_cfg,
             rr_target=safe_float(getattr(risk_cfg, "rr_target", 2.0), default=2.0),
             commission_pct=safe_float(getattr(risk_cfg, "commission_pct", 0.0), default=0.0),
         )
-        candidates = _apply_decision_priority_ranking(candidates)
+        candidates = apply_decision_priority_ranking(candidates)
         if same_symbol_suppressed_count > 0:
             warnings.append(
                 f"{same_symbol_suppressed_count} same-symbol candidate"
