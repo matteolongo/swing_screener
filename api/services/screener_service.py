@@ -1259,6 +1259,55 @@ class ScreenerService:
         ctx.benchmark_last_bar = benchmark_last_bar
         return candidates
 
+    def _apply_same_symbol_filter(
+        self, ctx: _RunContext, candidates: list[ScreenerCandidate]
+    ) -> tuple[list[ScreenerCandidate], int, int]:
+        """Run the same-symbol re-entry evaluator over candidates.
+
+        Returns (filtered_candidates, suppressed_count, add_on_count). Reads
+        portfolio/orders services and ctx.strategy / ctx.risk_cfg.
+        """
+        strategy = ctx.strategy
+        risk_cfg = ctx.risk_cfg
+
+        portfolio_positions = self._portfolio_service.list_positions(status="open").positions
+        portfolio_closed = self._portfolio_service.list_positions(status="closed").positions
+        portfolio_orders: list = []
+        if self._orders_service is not None:
+            try:
+                portfolio_orders = self._orders_service.list_local_orders().get("orders", [])
+            except Exception as exc:
+                logger.warning("Failed to load orders for same-symbol evaluation: %s", exc)
+        same_symbol_evaluator = SameSymbolReentryEvaluator(self._portfolio_service)
+        same_symbol_suppressed_count = 0
+        same_symbol_add_on_count = 0
+        filtered_candidates: list[ScreenerCandidate] = []
+        manage_cfg = strategy.get("manage", {}) if isinstance(strategy, dict) else {}
+        reentry_lookback = int(manage_cfg.get("reentry_lookback_days", 30))
+        for candidate in candidates:
+            enriched_candidate, same_symbol = same_symbol_evaluator.evaluate(
+                candidate,
+                positions=portfolio_positions,
+                orders=portfolio_orders,
+                account_size=float(risk_cfg.account_size),
+                risk_pct_target=float(risk_cfg.risk_pct),
+                max_position_pct=float(risk_cfg.max_position_pct),
+                min_shares=int(risk_cfg.min_shares),
+                closed_positions=portfolio_closed,
+                reentry_lookback_days=reentry_lookback,
+            )
+            if same_symbol.mode in ("ADD_ON", "SCALE_BACK"):
+                same_symbol_add_on_count += 1
+            if same_symbol.mode == "MANAGE_ONLY":
+                if enriched_candidate is None:
+                    same_symbol_suppressed_count += 1
+                    continue
+                # Recommended but add-on conditions not met: show with MANAGE_ONLY flag
+            if enriched_candidate is not None:
+                filtered_candidates.append(enriched_candidate)
+
+        return filtered_candidates, same_symbol_suppressed_count, same_symbol_add_on_count
+
     def run_screener(self, request: ScreenerRequest, strategy_override: Optional[dict] = None) -> ScreenerResponse:
         try:
             ctx = _RunContext(
@@ -1307,43 +1356,9 @@ class ScreenerService:
             benchmark_change_pct = ctx.benchmark_change_pct
             benchmark_last_bar = ctx.benchmark_last_bar
 
-            portfolio_positions = self._portfolio_service.list_positions(status="open").positions
-            portfolio_closed = self._portfolio_service.list_positions(status="closed").positions
-            portfolio_orders: list = []
-            if self._orders_service is not None:
-                try:
-                    portfolio_orders = self._orders_service.list_local_orders().get("orders", [])
-                except Exception as exc:
-                    logger.warning("Failed to load orders for same-symbol evaluation: %s", exc)
-            same_symbol_evaluator = SameSymbolReentryEvaluator(self._portfolio_service)
-            same_symbol_suppressed_count = 0
-            same_symbol_add_on_count = 0
-            filtered_candidates: list[ScreenerCandidate] = []
-            manage_cfg = strategy.get("manage", {}) if isinstance(strategy, dict) else {}
-            reentry_lookback = int(manage_cfg.get("reentry_lookback_days", 30))
-            for candidate in candidates:
-                enriched_candidate, same_symbol = same_symbol_evaluator.evaluate(
-                    candidate,
-                    positions=portfolio_positions,
-                    orders=portfolio_orders,
-                    account_size=float(risk_cfg.account_size),
-                    risk_pct_target=float(risk_cfg.risk_pct),
-                    max_position_pct=float(risk_cfg.max_position_pct),
-                    min_shares=int(risk_cfg.min_shares),
-                    closed_positions=portfolio_closed,
-                    reentry_lookback_days=reentry_lookback,
-                )
-                if same_symbol.mode in ("ADD_ON", "SCALE_BACK"):
-                    same_symbol_add_on_count += 1
-                if same_symbol.mode == "MANAGE_ONLY":
-                    if enriched_candidate is None:
-                        same_symbol_suppressed_count += 1
-                        continue
-                    # Recommended but add-on conditions not met: show with MANAGE_ONLY flag
-                if enriched_candidate is not None:
-                    filtered_candidates.append(enriched_candidate)
-
-            candidates = filtered_candidates
+            candidates, same_symbol_suppressed_count, same_symbol_add_on_count = (
+                self._apply_same_symbol_filter(ctx, candidates)
+            )
             fundamentals_snapshots = _load_fundamentals_snapshots(candidates)
             candidates = _apply_cached_fundamentals_context(candidates, snapshots=fundamentals_snapshots)
             candidates = _apply_decision_summary_context(candidates, snapshots=fundamentals_snapshots)
