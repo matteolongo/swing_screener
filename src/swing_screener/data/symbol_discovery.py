@@ -209,6 +209,7 @@ def _yahoo_symbol_from_quote(quote: dict, *, screen: str, rank: int) -> dict:
         "exchange_name": quote.get("fullExchangeName"),
         "market_cap": _coerce_int(quote.get("marketCap") or quote.get("intradaymarketcap")),
         "volume": _coerce_int(quote.get("regularMarketVolume") or quote.get("averageDailyVolume3Month")),
+        "last_price": quote.get("regularMarketPrice"),
         "sector": quote.get("sector"),
         "industry": quote.get("industry"),
         "source": "yahoo_predefined",

@@ -26,6 +26,7 @@ describe('API Client', () => {
     it('has universe management endpoints', () => {
       expect(API_ENDPOINTS.universes).toBe('/api/universes')
       expect(API_ENDPOINTS.universeDiscover).toBe('/api/universes/discover')
+      expect(API_ENDPOINTS.universeAutoRefresh).toBe('/api/universes/auto-refresh')
       expect(API_ENDPOINTS.universeById('amsterdam_all')).toBe('/api/universes/amsterdam_all')
     })
 

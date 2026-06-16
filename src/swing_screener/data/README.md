@@ -38,7 +38,8 @@ currency = detect_currency("ASML.AS")  # EUR
 
 | File | Purpose |
 |------|---------|
-| `universe.py` | `load_universe_from_package()`, `load_universe_from_file()`, `apply_universe_filters()`, registry refresh + `instrument_master.json` merge |
+| `universe.py` | `load_universe_from_package()`, `load_universe_from_file()`, `apply_universe_filters()`, registry refresh + `instrument_master.json` merge; also exposes generated auto-universes |
+| `auto_universe.py` | Materialize discovered symbols into versioned runtime universes backed by `data/intelligence/auto_universes.json` |
 | `universe_sources.py` | Source-adapter dispatch (`refresh_snapshot_from_source`): Euronext AEX-family and `wikipedia_index_review` |
 | `wikipedia_sources.py` | Fetch + parse index constituent tables from Wikipedia; normalize tickers to Yahoo symbols |
 | `instrument_enrichment.py` | Resolve a Yahoo symbol to an instrument-master record via yfinance `.info` (MIC, currency, country, timezone, type) |
@@ -95,6 +96,11 @@ tickers = load_universe_from_file("my_custom_list.csv")
 ```
 
 Universe names follow the pattern `{currency}_{category}_{scope}`. Aliases are defined in `universes/manifest.json`. See `universes/README.md` for the full naming convention and available universes.
+
+Generated auto-universes are stored outside the packaged registry in
+`data/intelligence/auto_universes.json` (or `SWING_SCREENER_AUTO_UNIVERSES_FILE`).
+They are listed by the same universe APIs and can be passed to the screener like
+packaged universe ids after `POST /api/universes/auto-refresh` materializes them.
 
 ## Index universe refresh
 
