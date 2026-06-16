@@ -10,9 +10,9 @@ from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import pytest
-from fastapi import HTTPException
 
 from api.utils.file_lock import locked_read_json, locked_write_json, locked_read_modify_write
+from swing_screener.errors import NotFoundError, ServiceError, ServiceUnavailableError
 
 
 def _portalocker_timeout_warnings(caught: list[warnings.WarningMessage]) -> list[warnings.WarningMessage]:
@@ -50,24 +50,24 @@ class TestBasicLocking:
         assert not _portalocker_timeout_warnings(caught)
 
     def test_locked_read_nonexistent_file(self, tmp_path):
-        """Test that reading non-existent file raises HTTPException 404."""
+        """Test that reading non-existent file raises NotFoundError 404."""
         test_file = tmp_path / "nonexistent.json"
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(NotFoundError) as exc_info:
             locked_read_json(test_file)
 
-        assert exc_info.value.status_code == 404
+        assert exc_info.value.http_status == 404
         assert "File not found" in exc_info.value.detail
 
     def test_locked_read_invalid_json(self, tmp_path):
-        """Test that invalid JSON raises HTTPException 500."""
+        """Test that invalid JSON raises ServiceError 500."""
         test_file = tmp_path / "invalid.json"
         test_file.write_text("{invalid json}")
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(ServiceError) as exc_info:
             locked_read_json(test_file)
 
-        assert exc_info.value.status_code == 500
+        assert exc_info.value.http_status == 500
         assert "Invalid JSON" in exc_info.value.detail
 
     def test_locked_read_handles_nan(self, tmp_path):
@@ -140,12 +140,9 @@ class TestConcurrentAccess:
                 # Write back
                 locked_write_json(test_file, data)
                 successful_writes.append(thread_id)
-            except HTTPException as e:
-                if e.status_code == 503:
-                    # Lock timeout is acceptable
-                    pass
-                else:
-                    errors.append(e)
+            except ServiceUnavailableError:
+                # Lock timeout is acceptable
+                pass
             except Exception as e:
                 errors.append(e)
 
@@ -178,12 +175,9 @@ class TestConcurrentAccess:
                     return data
 
                 locked_read_modify_write(test_file, modify)
-            except HTTPException as e:
-                if e.status_code == 503:
-                    # Lock timeout acceptable
-                    pass
-                else:
-                    errors.append(e)
+            except ServiceUnavailableError:
+                # Lock timeout acceptable
+                pass
             except Exception as e:
                 errors.append(e)
 
@@ -211,7 +205,7 @@ class TestLockTimeout:
         locked_write_json(test_file, test_data)
 
         results = []
-        
+
         def slow_write():
             """Hold lock for a bit then write."""
             import portalocker
@@ -230,17 +224,16 @@ class TestLockTimeout:
                     json.dump(data, f)
                     f.flush()
             results.append("slow")
-        
+
         def fast_write():
             """Try to write while lock is held."""
             time.sleep(0.1)  # Let slow_write acquire lock first
             try:
                 locked_write_json(test_file, {"fast": "write"}, timeout=2.0)
                 results.append("fast")
-            except HTTPException as e:
-                if e.status_code == 503:
-                    results.append("timeout")
-        
+            except ServiceUnavailableError:
+                results.append("timeout")
+
         # Start both threads
         import concurrent.futures
         with warnings.catch_warnings(record=True) as caught:
