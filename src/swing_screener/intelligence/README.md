@@ -76,3 +76,13 @@ Results stored as JSON under `data/intelligence/<ticker>_analysis.json`. TTL is 
 - `BUY_ON_PULLBACK` — waiting for price to pull back to planned entry level
 - `MANAGE_ONLY` — position already held; narrative is position-management focused
 - `SKIP` — no actionable signal
+
+## Open-position fields
+
+When the request carries position context (`entry_price`, `entry_date`, `r_now`, `days_open`), the
+result also populates:
+- `position_signal` — HOLD / TRIM / EXIT call
+- `position_outlook` — forward holding plan (expected hold, thesis status, invalidation signals, …)
+- `position_move_explanation` — backward look: why price moved from entry to now (`direction`
+  up/down/flat, `summary`, and `drivers[]` of `{label, detail}` grounded in news since the entry
+  date), explaining the sign and size of the current R. `null` outside position context.

@@ -37,6 +37,9 @@ In that case you MUST:
   • Write the narrative from a position-management perspective — do NOT suggest initiating an entry.
   • Frame **What to do:** around holding, trimming, or exiting the current position.
   • Frame **Watch for:** around signals that would change your hold/trim/exit recommendation.
+  • Set position_move_explanation: explain why the price moved from the entry to now over the
+    holding window, citing live news / earnings / sector moves since the entry date, and account
+    for the sign and size of the current P&L (R).
 
 Return ONLY a JSON block (fenced with ```json) with exactly these fields:
 - action: one of BUY_NOW | BUY_ON_PULLBACK | WAIT_FOR_BREAKOUT | WATCH | TACTICAL_ONLY | AVOID | MANAGE_ONLY
@@ -62,6 +65,12 @@ Return ONLY a JSON block (fenced with ```json) with exactly these fields:
   HOLD = thesis intact, no change needed
   TRIM = take partial profit or reduce risk, thesis weakening
   EXIT = thesis broken or clearly better use of capital
+- position_move_explanation: null unless position context is provided — then an object with:
+  direction: up | down | flat (how price moved from entry to now)
+  summary: one sentence — net reason the price is where it is versus the entry, consistent with the P&L sign
+  drivers: array of 1-4 objects {label, detail}, most material first. label = short tag
+    (e.g. "Q1 earnings beat", "sector selloff", "guidance cut"); detail = one sentence.
+    Ground drivers in news/events since the entry date, not generic commentary.
 - position_outlook: null unless position context is provided — then an object with:
   expected_holding_period: days | 1-2_weeks | 2-6_weeks | unknown
   hold_until: plain-English condition for staying in the trade, not a guaranteed date
@@ -144,13 +153,17 @@ def _build_user_prompt(ticker: str, req: SymbolIntelligenceRequest, past_positio
         lines += [
             "⚠️  OPEN POSITION — the user already holds this stock. Do NOT suggest initiating.",
             f"  Filled entry:  {fmt(req.entry_price)} {req.currency}",
+            f"  Entry date:    {req.entry_date or 'N/A'}",
             f"  Current price: {fmt(req.close)} {req.currency}",
             f"  Current P&L:   {r_sign}{req.r_now:.2f}R",
             f"  Days held:     {req.days_open}",
             f"  Current stop:  {fmt(req.stop)} {req.currency}",
             "",
             "Focus on whether to HOLD, TRIM, or EXIT. Set action = MANAGE_ONLY.",
-            "Include position_signal and position_outlook in your JSON output.",
+            "Explain why the price moved from the entry to now over the holding window: "
+            "use live news, earnings and sector moves since the entry date to account for the "
+            "sign and size of the current P&L (R). Put this in position_move_explanation.",
+            "Include position_signal, position_outlook and position_move_explanation in your JSON output.",
         ]
     else:
         currency = req.currency or ""
@@ -452,6 +465,7 @@ class SymbolAnalyzer:
             upcoming_events=raw.get("upcoming_events", []),
             position_signal=raw.get("position_signal"),
             position_outlook=raw.get("position_outlook"),
+            position_move_explanation=raw.get("position_move_explanation"),
             sources=raw.get("sources", []),
             price_hook=raw.get("price_hook"),
             key_numbers=raw.get("key_numbers", []),

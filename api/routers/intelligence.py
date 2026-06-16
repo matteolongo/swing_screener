@@ -126,6 +126,7 @@ def analyze_position(
         signal=stop.action,
         entry_price=float(pos.entry_price),
         entry=float(pos.entry_price),
+        entry_date=str(pos.entry_date) if pos.entry_date is not None else None,
         stop=float(pos.stop_price),
         r_now=float(pos.r_now),
         days_open=int(pos.days_open),

@@ -14,6 +14,42 @@ describe('candidateToPayload', () => {
     expect(candidateToPayload({ ticker: 'AAPL' })).toBeNull();
   });
 
+  it('builds a position-only payload for a held symbol with no candidate', () => {
+    const position = {
+      entryPrice: 100,
+      stopPrice: 95,
+      currentPrice: 110,
+      rNow: 2,
+      daysOpen: 46,
+      entryDate: '2026-05-01',
+    } as PositionWithMetrics;
+    const payload = candidateToPayload(undefined, position);
+    expect(payload).not.toBeNull();
+    expect(payload!.close).toBe(110);
+    expect(payload!.signal).toBe('MANAGE_ONLY');
+    expect(payload!.entry_price).toBe(100);
+    expect(payload!.entry_date).toBe('2026-05-01');
+    expect(payload!.r_now).toBe(2);
+    expect(payload!.days_open).toBe(46);
+  });
+
+  it('falls back to entry price when the position has no current price', () => {
+    const position = { entryPrice: 100, rNow: 0, daysOpen: 1, entryDate: '2026-05-01' } as PositionWithMetrics;
+    const payload = candidateToPayload(undefined, position);
+    expect(payload!.close).toBe(100);
+  });
+
+  it('passes entry_date through when a candidate and position are both present', () => {
+    const position = {
+      entryPrice: 140,
+      rNow: 1.5,
+      daysOpen: 12,
+      entryDate: '2026-04-10',
+    } as PositionWithMetrics;
+    const payload = candidateToPayload(baseCandidate, position);
+    expect(payload!.entry_date).toBe('2026-04-10');
+  });
+
   it('maps candidate fields to API payload', () => {
     const payload = candidateToPayload({
       ...baseCandidate,

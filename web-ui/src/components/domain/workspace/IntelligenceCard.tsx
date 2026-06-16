@@ -1,6 +1,7 @@
 import type {
   CatalystUrgency,
   PositionSignalAction,
+  PriceMoveDirection,
   SymbolIntelligence,
 } from '@/features/intelligence/types';
 import { t } from '@/i18n/t';
@@ -34,6 +35,24 @@ function humanizeToken(value: string): string {
   return value.replace(/_/g, ' ');
 }
 
+function moveDirectionClass(direction: PriceMoveDirection): string {
+  switch (direction) {
+    case 'up': return 'bg-emerald-50 border-emerald-200 text-emerald-800';
+    case 'down': return 'bg-rose-50 border-rose-200 text-rose-800';
+    default: return 'bg-slate-50 border-slate-200 text-slate-700';
+  }
+}
+
+const MOVE_DIRECTION_ARROW: Record<PriceMoveDirection, string> = {
+  up: '↑',
+  down: '↓',
+  flat: '→',
+};
+
+function moveDirectionLabel(direction: PriceMoveDirection): string {
+  return t(`workspacePage.panels.analysis.intelligence.positionMove.direction.${direction}`);
+}
+
 const DIRECTION_ARROW: Record<string, string> = {
   bullish: '↑',
   bearish: '↓',
@@ -46,14 +65,16 @@ interface IntelligenceCardProps {
 
 export default function IntelligenceCard({ intelligence }: IntelligenceCardProps) {
   const {
-    catalystUrgency, upcomingEvents, positionSignal, positionOutlook, sources,
+    catalystUrgency, upcomingEvents, positionSignal, positionOutlook,
+    positionMoveExplanation, sources,
   } = intelligence;
   const hasUrgency = catalystUrgency !== 'none';
   const hasEvents = upcomingEvents.length > 0;
   const hasSources = sources.length > 0;
   const hasPositionOutlook = Boolean(positionOutlook);
+  const hasMoveExplanation = Boolean(positionMoveExplanation);
 
-  if (!hasUrgency && !positionSignal && !hasPositionOutlook && !hasEvents && !hasSources) {
+  if (!hasUrgency && !positionSignal && !hasMoveExplanation && !hasPositionOutlook && !hasEvents && !hasSources) {
     return null;
   }
 
@@ -77,6 +98,32 @@ export default function IntelligenceCard({ intelligence }: IntelligenceCardProps
               {positionSignalLabel(positionSignal.action)}
             </span>
             <span className="text-sm">{positionSignal.reason}</span>
+          </div>
+        </>
+      )}
+
+      {positionMoveExplanation && (
+        <>
+          <hr className="border-slate-100" />
+          <div className={`rounded-lg border px-3 py-2 ${moveDirectionClass(positionMoveExplanation.direction)}`}>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wide">
+                {t('workspacePage.panels.analysis.intelligence.positionMove.title')}
+              </span>
+              <span className="text-sm font-semibold">
+                {MOVE_DIRECTION_ARROW[positionMoveExplanation.direction]} {moveDirectionLabel(positionMoveExplanation.direction)}
+              </span>
+            </div>
+            <p className="text-sm mt-1">{positionMoveExplanation.summary}</p>
+            {positionMoveExplanation.drivers.length > 0 && (
+              <ul className="mt-2 space-y-1 text-sm list-disc list-inside">
+                {positionMoveExplanation.drivers.map((driver, index) => (
+                  <li key={`${driver.label}-${index}`}>
+                    <span className="font-medium">{driver.label}:</span> {driver.detail}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </>
       )}

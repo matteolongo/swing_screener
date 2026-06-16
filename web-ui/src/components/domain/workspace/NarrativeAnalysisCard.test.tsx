@@ -241,4 +241,31 @@ describe('NarrativeAnalysisCard — new structured fields', () => {
     expect(screen.queryByText(/Prediction/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Past trades on/i)).not.toBeInTheDocument();
   });
+
+  it('renders the position move explanation when present', () => {
+    render(
+      <NarrativeAnalysisCard
+        intelligence={{
+          ...baseIntelligence,
+          positionMoveExplanation: {
+            direction: 'down',
+            summary: 'Down since entry on a sector selloff.',
+            drivers: [{ label: 'Sector selloff', detail: 'Semis sold off on rate fears.' }],
+          },
+        }}
+      />,
+    );
+    expect(
+      screen.getByText(t('workspacePage.panels.analysis.intelligence.positionMove.title')),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Down since entry on a sector selloff.')).toBeInTheDocument();
+    expect(screen.getByText(/Semis sold off on rate fears\./)).toBeInTheDocument();
+  });
+
+  it('does not render the position move explanation when absent', () => {
+    render(<NarrativeAnalysisCard intelligence={baseIntelligence} />);
+    expect(
+      screen.queryByText(t('workspacePage.panels.analysis.intelligence.positionMove.title')),
+    ).not.toBeInTheDocument();
+  });
 });

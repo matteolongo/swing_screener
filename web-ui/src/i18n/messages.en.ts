@@ -637,6 +637,14 @@ export const messagesEn = {
             trim: 'Trim',
             exit: 'Exit',
           },
+          positionMove: {
+            title: 'Why it moved',
+            direction: {
+              up: 'Up since entry',
+              down: 'Down since entry',
+              flat: 'Flat since entry',
+            },
+          },
           positionOutlook: {
             title: 'Position Outlook',
             expectedHoldingPeriod: 'Expected hold',
