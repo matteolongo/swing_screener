@@ -1,6 +1,6 @@
 import pandas as pd
 
-from api.services.screener_service import _price_history_map
+from swing_screener.data.price_history import price_history_map
 
 
 def _ohlcv():
@@ -27,7 +27,7 @@ def _ohlcv():
 
 
 def test_price_history_map_includes_ohlcv():
-    out = _price_history_map(_ohlcv(), tickers=["AAA"])
+    out = price_history_map(_ohlcv(), tickers=["AAA"])
     point = out["AAA"][0]
     assert point["close"] == 10.0
     assert point["open"] == 9.5
@@ -40,7 +40,7 @@ def test_price_history_map_close_only_when_ohlc_absent():
     idx = pd.date_range("2024-01-01", periods=2, freq="B")
     cols = pd.MultiIndex.from_tuples([("Close", "AAA")], names=["field", "ticker"])
     df = pd.DataFrame([[10.0], [10.5]], index=idx, columns=cols)
-    out = _price_history_map(df, tickers=["AAA"])
+    out = price_history_map(df, tickers=["AAA"])
     point = out["AAA"][0]
     assert point["close"] == 10.0
     assert "open" not in point and "volume" not in point

@@ -62,6 +62,13 @@ from swing_screener.strategy.config import (
 )
 from swing_screener.risk.regime import compute_regime_risk_multiplier
 from api.utils.converters import to_iso as _to_iso
+from swing_screener.data.price_history import (
+    merge_ohlcv,
+    last_bar_map,
+    price_history_map,
+    price_history_change_pct,
+    aligned_benchmark_price_history,
+)
 from swing_screener.utils.coerce import (
     is_na_scalar,
     safe_float,
@@ -115,7 +122,6 @@ _REMOVED_UNIVERSE_IDS: dict[str, str | None] = {
 from api.services.screener_run_manager import get_screener_run_manager
 
 logger = logging.getLogger(__name__)
-PRICE_HISTORY_MAX_BARS = 252
 SUPPORTED_CURRENCIES = {"USD", "EUR"}
 DECISION_ACTION_PRIORITY = {
     "BUY_NOW": 6,
@@ -164,16 +170,6 @@ def _is_stale(opportunity: object | None) -> bool:
         return True
 
 
-def _merge_ohlcv(base: pd.DataFrame, extra: pd.DataFrame) -> pd.DataFrame:
-    if base is None or base.empty:
-        return extra
-    if extra is None or extra.empty:
-        return base
-    merged = pd.concat([base, extra], axis=1)
-    merged = merged.loc[:, ~merged.columns.duplicated()]
-    return merged.sort_index(axis=1)
-
-
 def _fetch_ohlcv_chunked(
     provider: MarketDataProvider,
     tickers: list[str], 
@@ -194,7 +190,7 @@ def _fetch_ohlcv_chunked(
         return pd.DataFrame()
     out = frames[0]
     for df in frames[1:]:
-        out = _merge_ohlcv(out, df)
+        out = merge_ohlcv(out, df)
     return out
 
 
@@ -319,164 +315,6 @@ def _resolve_fetch_start_date(asof_date: str, min_history: int) -> str:
     bars_needed = max(int(min_history), _FETCH_MIN_BARS)
     calendar_days = math.ceil(bars_needed * _FETCH_TRADING_TO_CALENDAR) + _FETCH_WINDOW_BUFFER_DAYS
     return (asof - dt.timedelta(days=calendar_days)).isoformat()
-
-
-def _to_date_iso(ts) -> Optional[str]:
-    if ts is None or pd.isna(ts):
-        return None
-    if isinstance(ts, pd.Timestamp):
-        return ts.date().isoformat()
-    if isinstance(ts, dt.datetime):
-        return ts.date().isoformat()
-    if isinstance(ts, dt.date):
-        return ts.isoformat()
-    return str(ts)
-
-
-def _last_bar_map(ohlcv: pd.DataFrame) -> dict[str, str]:
-    out: dict[str, str] = {}
-    if ohlcv is None or ohlcv.empty:
-        return out
-    if "Close" not in ohlcv.columns.get_level_values(0):
-        return out
-    close = ohlcv["Close"]
-    for t in close.columns:
-        series = close[t].dropna()
-        if series.empty:
-            continue
-        ts = series.index[-1]
-        iso = _to_iso(ts)
-        if iso:
-            out[str(t)] = iso
-    return out
-
-
-def _price_history_map(
-    ohlcv: pd.DataFrame,
-    tickers: list[str] | None = None,
-    max_bars: int = PRICE_HISTORY_MAX_BARS,
-) -> dict[str, list[dict]]:
-    """Build price history map for specified tickers only.
-    
-    Args:
-        ohlcv: OHLCV DataFrame with MultiIndex columns
-        tickers: List of tickers to process. If None, processes all tickers.
-        max_bars: Maximum number of bars to include per ticker
-        
-    Returns:
-        Dict mapping ticker to list of {date, close} points. Each point also
-        carries open/high/low/volume when those fields exist in *ohlcv*
-        (optional, for candlestick rendering); absent fields are omitted.
-    """
-    out: dict[str, list[dict]] = {}
-    if ohlcv is None or ohlcv.empty:
-        return out
-    levels = ohlcv.columns.get_level_values(0)
-    if "Close" not in levels:
-        return out
-
-    def _sub(field: str):
-        return ohlcv[field] if field in levels else None
-
-    close = ohlcv["Close"]
-    open_ = _sub("Open")
-    high = _sub("High")
-    low = _sub("Low")
-    vol = _sub("Volume")
-    columns_to_process = close.columns if tickers is None else [t for t in tickers if t in close.columns]
-
-    for ticker in columns_to_process:
-        series = close[ticker].dropna()
-        if series.empty:
-            continue
-        if max_bars > 0 and len(series) > max_bars:
-            series = series.iloc[-max_bars:]
-        points = []
-        for ts, px in series.items():
-            date = _to_date_iso(ts)
-            if date is None:
-                continue
-            point = {"date": date, "close": float(px)}
-            for key, frame in (("open", open_), ("high", high), ("low", low), ("volume", vol)):
-                if frame is not None and ticker in frame.columns:
-                    val = frame[ticker].get(ts)
-                    if val is not None and pd.notna(val):
-                        point[key] = float(val)
-            points.append(point)
-        if points:
-            out[str(ticker)] = points
-    return out
-
-
-def _price_history_change_pct(history: list[dict]) -> Optional[float]:
-    if len(history) < 2:
-        return None
-    try:
-        start = float(history[0]["close"])
-        end = float(history[-1]["close"])
-    except (KeyError, TypeError, ValueError):
-        return None
-    if not math.isfinite(start) or not math.isfinite(end) or start <= 0:
-        return None
-    return ((end - start) / start) * 100.0
-
-
-def _aligned_benchmark_price_history(
-    candidate_history: list[dict],
-    benchmark_history: list[dict],
-) -> list[dict]:
-    """Return benchmark closes aligned to the candidate timeline and normalized to the symbol's start price."""
-    if len(candidate_history) < 2 or len(benchmark_history) < 1:
-        return []
-
-    candidate_dates: list[pd.Timestamp] = []
-    candidate_closes: list[float] = []
-    for point in candidate_history:
-        try:
-            ts = pd.Timestamp(str(point["date"]))
-            close = float(point["close"])
-        except (KeyError, TypeError, ValueError):
-            continue
-        if pd.isna(ts) or not math.isfinite(close) or close <= 0:
-            continue
-        candidate_dates.append(ts)
-        candidate_closes.append(close)
-
-    benchmark_points: list[tuple[pd.Timestamp, float]] = []
-    for point in benchmark_history:
-        try:
-            ts = pd.Timestamp(str(point["date"]))
-            close = float(point["close"])
-        except (KeyError, TypeError, ValueError):
-            continue
-        if pd.isna(ts) or not math.isfinite(close) or close <= 0:
-            continue
-        benchmark_points.append((ts, close))
-
-    if len(candidate_dates) < 2 or not benchmark_points:
-        return []
-
-    benchmark_series = pd.Series(
-        {ts: close for ts, close in benchmark_points},
-        dtype=float,
-    ).sort_index()
-    aligned = benchmark_series.reindex(pd.DatetimeIndex(candidate_dates)).ffill().bfill()
-    if aligned.isna().any():
-        return []
-
-    symbol_start = candidate_closes[0]
-    benchmark_start = float(aligned.iloc[0])
-    if symbol_start <= 0 or benchmark_start <= 0:
-        return []
-
-    scale = symbol_start / benchmark_start
-    return [
-        {
-            "date": _to_date_iso(ts) or str(ts),
-            "close": float(close * scale),
-        }
-        for ts, close in zip(candidate_dates, aligned.tolist())
-    ]
 
 
 def _fundamentals_summary(snapshot) -> str | None:
@@ -877,16 +715,16 @@ class ScreenerService:
             logger.error("OHLCV fetch returned empty data (tickers=%s)", len(ctx.tickers))
             raise NotFoundError("No market data found for requested tickers")
 
-        ctx.ohlcv = _merge_ohlcv(ctx.ohlcv, sector_ohlcv)
+        ctx.ohlcv = merge_ohlcv(ctx.ohlcv, sector_ohlcv)
 
         if "Close" not in ctx.ohlcv.columns.get_level_values(0) or ctx.benchmark not in ctx.ohlcv["Close"].columns:
             logger.warning("Benchmark %s missing from OHLCV; fetching separately.", ctx.benchmark)
             bench_df = self._provider.fetch_ohlcv([ctx.benchmark], start_date=ctx.start_date, end_date=ctx.end_date)
-            ctx.ohlcv = _merge_ohlcv(ctx.ohlcv, bench_df)
+            ctx.ohlcv = merge_ohlcv(ctx.ohlcv, bench_df)
             if "Close" not in ctx.ohlcv.columns.get_level_values(0) or ctx.benchmark not in ctx.ohlcv["Close"].columns:
                 raise ServiceError("Benchmark data missing; cannot compute momentum.")
 
-        ctx.last_bar_map = _last_bar_map(ctx.ohlcv)
+        ctx.last_bar_map = last_bar_map(ctx.ohlcv)
         ctx.overall_last_bar = _to_iso(ctx.ohlcv.index.max())
         ctx.data_freshness = _resolve_data_freshness(ctx.asof_str, ctx.now_utc, ctx.active_currencies)
 
@@ -1031,11 +869,11 @@ class ScreenerService:
         ticker_list = [str(idx) for idx in results.index]
 
         # Build price history only for candidate tickers to improve performance
-        price_history_map = _price_history_map(ohlcv, tickers=ticker_list)
+        price_history_by_ticker = price_history_map(ohlcv, tickers=ticker_list)
         patterns_map = detect_patterns(ohlcv, tickers=ticker_list, cfg=CandleConfig())
         exec_cfg = ExecutionConfig()
-        benchmark_history = _price_history_map(ohlcv, tickers=[benchmark]).get(benchmark, [])
-        benchmark_change_pct = _price_history_change_pct(benchmark_history)
+        benchmark_history = price_history_map(ohlcv, tickers=[benchmark]).get(benchmark, [])
+        benchmark_change_pct = price_history_change_pct(benchmark_history)
         benchmark_last_bar = last_bar_map.get(benchmark) or overall_last_bar
 
         atr_col = f"atr{universe_cfg.vol.atr_window}"
@@ -1105,9 +943,9 @@ class ScreenerService:
             )
             recommendation = Recommendation.model_validate(asdict(rec_payload))
             rec_risk = recommendation.risk
-            candidate_history = price_history_map.get(ticker_str, [])
-            symbol_change_pct = _price_history_change_pct(candidate_history)
-            benchmark_price_history = _aligned_benchmark_price_history(candidate_history, benchmark_history)
+            candidate_history = price_history_by_ticker.get(ticker_str, [])
+            symbol_change_pct = price_history_change_pct(candidate_history)
+            benchmark_price_history = aligned_benchmark_price_history(candidate_history, benchmark_history)
             benchmark_outperformance_pct = (
                 symbol_change_pct - benchmark_change_pct
                 if symbol_change_pct is not None and benchmark_change_pct is not None
@@ -1196,7 +1034,7 @@ class ScreenerService:
                     risk_usd=risk_usd if risk_usd is not None else rec_risk.risk_amount,
                     risk_pct=risk_pct if risk_pct is not None else rec_risk.risk_pct,
                     recommendation=recommendation,
-                    price_history=price_history_map.get(ticker_str, []),
+                    price_history=price_history_by_ticker.get(ticker_str, []),
                     benchmark_price_history=benchmark_price_history,
                     patterns=cand_patterns,
                     pattern_stop=pattern_stop_val,
