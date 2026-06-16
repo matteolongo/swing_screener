@@ -41,3 +41,9 @@ class UpstreamError(DomainError):
     """A dependency (data provider, external API) failed."""
 
     http_status = 502
+
+
+class ServiceUnavailableError(DomainError):
+    """A transient condition (e.g. lock contention) prevents serving the request."""
+
+    http_status = 503

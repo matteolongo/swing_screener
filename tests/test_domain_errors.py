@@ -1,7 +1,7 @@
 import pytest
 from swing_screener.errors import (
     DomainError, NotFoundError, ValidationError, ConflictError,
-    UnprocessableError, ServiceError, UpstreamError,
+    UnprocessableError, ServiceError, UpstreamError, ServiceUnavailableError,
 )
 
 
@@ -14,6 +14,7 @@ from swing_screener.errors import (
         (UnprocessableError, 422),
         (ServiceError, 500),
         (UpstreamError, 502),
+        (ServiceUnavailableError, 503),
     ],
 )
 def test_each_error_carries_its_http_status(exc_cls, expected_status):
