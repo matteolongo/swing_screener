@@ -61,6 +61,7 @@ Config:
 - `/docs/superpowers/specs/2026-06-14-candlestick-chart-pattern-reader-design.md`
 - `/docs/superpowers/plans/2026-06-14-candlestick-chart-pattern-reader.md`
 - `/docs/superpowers/plans/2026-06-16-backend-pr-a-domain-errors-logging-docs.md`
+- `/docs/superpowers/plans/2026-06-16-backend-pr-b-split-run-screener.md`
 
 ## Repo Policy Docs
 - `/.github/BRANCH_PROTECTION.md`
