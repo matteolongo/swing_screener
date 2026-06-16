@@ -46,8 +46,8 @@ def _save_earnings_cache(path: Path, cache: dict[str, dict]) -> None:
         logger.warning("Failed to persist earnings cache %s: %s", path, exc)
         try:
             tmp.unlink(missing_ok=True)
-        except OSError:
-            pass
+        except OSError as rm_exc:
+            logger.debug("Failed to remove temp earnings cache %s: %s", tmp, rm_exc)
 
 
 def _is_auth_error(exc: Exception) -> bool:

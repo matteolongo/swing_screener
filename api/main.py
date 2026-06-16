@@ -10,6 +10,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from contextlib import asynccontextmanager
+from swing_screener.errors import DomainError
 from swing_screener.settings import get_settings_manager
 from swing_screener.settings.migration import migrate_legacy_config_to_yaml
 from swing_screener.runtime_env import ensure_runtime_env_loaded
@@ -132,12 +133,21 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down...")
 
 
+def register_domain_error_handler(target_app) -> None:
+    """Translate DomainError subclasses to HTTP responses (status from err.http_status)."""
+
+    @target_app.exception_handler(DomainError)
+    async def _domain_error_handler(request, exc: DomainError):  # noqa: ANN001
+        return JSONResponse(status_code=exc.http_status, content={"detail": exc.detail})
+
+
 app = FastAPI(
     title="Swing Screener API",
     description="REST API for the Swing Screener trading system",
     version="0.1.0",
     lifespan=lifespan,
 )
+register_domain_error_handler(app)
 
 _DEFAULT_ALLOW_ORIGINS = ["http://localhost:5173", "http://localhost:5174"]
 _raw_allow_origins = _API_SETTINGS.get("allow_origins", _DEFAULT_ALLOW_ORIGINS)

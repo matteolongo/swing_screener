@@ -16,6 +16,13 @@ import logging
 import sys
 from pathlib import Path
 
+from swing_screener.errors import DomainError
+
+
+def render_domain_error(exc: DomainError) -> int:
+    print(f"Error: {exc.detail}", file=sys.stderr)
+    return 1
+
 
 def setup_logging(level: str = "INFO") -> None:
     logging.basicConfig(
@@ -114,6 +121,8 @@ def cmd_screen(args: argparse.Namespace) -> int:
                 json.dump(result.model_dump(mode="json"), f, indent=2)
             print(f"\nResults saved to {args.output}")
         return 0
+    except DomainError:
+        raise
     except Exception as e:
         logging.error(f"Screening failed: {e}", exc_info=True)
         return 1
@@ -137,6 +146,8 @@ def cmd_positions_review(args: argparse.Namespace) -> int:
         else:
             print("\nNo open positions.")
         return 0
+    except DomainError:
+        raise
     except Exception as e:
         logging.error(f"Position review failed: {e}", exc_info=True)
         return 1
@@ -153,6 +164,8 @@ def cmd_positions_suggest_stops(args: argparse.Namespace) -> int:
                 suggestion = service.suggest_position_stop(p.position_id)
                 if suggestion.should_update:
                     suggestions.append((p.ticker, p.stop_price, suggestion))
+            except DomainError:
+                raise
             except Exception:
                 pass
         if suggestions:
@@ -166,6 +179,8 @@ def cmd_positions_suggest_stops(args: argparse.Namespace) -> int:
         else:
             print("\nNo stop updates recommended.")
         return 0
+    except DomainError:
+        raise
     except Exception as e:
         logging.error(f"Stop suggestion failed: {e}", exc_info=True)
         return 1
@@ -181,6 +196,8 @@ def cmd_positions_update_stop(args: argparse.Namespace) -> int:
         )
         print(f"\nStop updated for {args.position_id} -> ${args.new_stop:.2f}")
         return 0
+    except DomainError:
+        raise
     except Exception as e:
         logging.error(f"Stop update failed: {e}", exc_info=True)
         return 1
@@ -203,6 +220,8 @@ def cmd_orders_list(args: argparse.Namespace) -> int:
         else:
             print("  No orders found.")
         return 0
+    except DomainError:
+        raise
     except Exception as e:
         logging.error(f"Order listing failed: {e}", exc_info=True)
         return 1
@@ -230,6 +249,8 @@ def cmd_daily_review(args: argparse.Namespace) -> int:
             for u in update:
                 print(f"  {u.ticker}  new stop=${u.new_stop:.2f}")
         return 0
+    except DomainError:
+        raise
     except Exception as e:
         logging.error(f"Daily review failed: {e}", exc_info=True)
         return 1
@@ -283,26 +304,29 @@ def main() -> int:
 
     setup_logging(args.log_level)
 
-    if args.command == "screen":
-        return cmd_screen(args)
-    elif args.command == "positions":
-        if not args.action:
-            positions_parser.print_help()
-            return 1
-        if args.action == "review":
-            return cmd_positions_review(args)
-        elif args.action == "suggest-stops":
-            return cmd_positions_suggest_stops(args)
-        elif args.action == "update-stop":
-            return cmd_positions_update_stop(args)
-    elif args.command == "orders":
-        if not args.action:
-            orders_parser.print_help()
-            return 1
-        if args.action == "list":
-            return cmd_orders_list(args)
-    elif args.command == "daily-review":
-        return cmd_daily_review(args)
+    try:
+        if args.command == "screen":
+            return cmd_screen(args)
+        elif args.command == "positions":
+            if not args.action:
+                positions_parser.print_help()
+                return 1
+            if args.action == "review":
+                return cmd_positions_review(args)
+            elif args.action == "suggest-stops":
+                return cmd_positions_suggest_stops(args)
+            elif args.action == "update-stop":
+                return cmd_positions_update_stop(args)
+        elif args.command == "orders":
+            if not args.action:
+                orders_parser.print_help()
+                return 1
+            if args.action == "list":
+                return cmd_orders_list(args)
+        elif args.command == "daily-review":
+            return cmd_daily_review(args)
+    except DomainError as exc:
+        return render_domain_error(exc)
 
     parser.print_help()
     return 1

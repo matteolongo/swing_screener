@@ -93,8 +93,8 @@ class ScreenerRunManager:
             logger.warning("Failed to persist screener job %s to %s: %s", job.job_id, target, exc)
             try:
                 tmp.unlink(missing_ok=True)
-            except Exception:
-                pass
+            except Exception as rm_exc:
+                logger.debug("Failed to remove temp screener job file %s: %s", tmp, rm_exc)
 
     def _read_job_from_disk(self, job_id: str) -> Optional[ScreenerRunJob]:
         path = self._job_file(job_id)
@@ -228,7 +228,7 @@ class ScreenerRunManager:
             try:
                 self._job_file(item.job_id).unlink(missing_ok=True)
             except Exception:
-                pass
+                logger.debug("Failed to remove evicted screener job file for %s", item.job_id, exc_info=True)
 
 
 _MANAGER = ScreenerRunManager()

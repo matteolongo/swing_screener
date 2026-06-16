@@ -85,7 +85,7 @@ def _current_ratio_value(groups: list[dict], ratio_id: str) -> Optional[float]:
                 try:
                     return float(item["value"])
                 except (TypeError, ValueError):
-                    pass
+                    pass  # parse fallback
     return None
 
 
@@ -96,7 +96,7 @@ def _forecast_value(ratios: list[dict], ratio_id: str) -> Optional[float]:
             try:
                 return float(r["value"])
             except (TypeError, ValueError):
-                pass
+                pass  # parse fallback
     return None
 
 
@@ -111,7 +111,7 @@ def _estimate_item(statements: list[dict], stmt_type: str, code: str) -> Optiona
                         try:
                             return float(v)
                         except (TypeError, ValueError):
-                            pass
+                            pass  # parse fallback
     return None
 
 
@@ -172,7 +172,7 @@ class DegiroFundamentalsProvider:
                 info = yf.Ticker(symbol).info
                 isin = info.get("isin") or None
             except Exception:
-                pass
+                logger.warning("yfinance ISIN lookup failed for %r; ISIN unresolved", symbol, exc_info=True)
 
         self._isin_cache[symbol] = isin
         return isin
@@ -197,7 +197,7 @@ class DegiroFundamentalsProvider:
             try:
                 self._client.disconnect()
             except Exception:
-                pass
+                logger.debug("DeGiro client disconnect failed; ignoring", exc_info=True)
             self._client = None
 
     # ------------------------------------------------------------------

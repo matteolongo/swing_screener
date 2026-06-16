@@ -11,7 +11,13 @@ import os
 from zoneinfo import ZoneInfo
 
 import pandas as pd
-from fastapi import HTTPException
+from swing_screener.errors import (
+    DomainError,
+    NotFoundError,
+    ValidationError,
+    UnprocessableError,
+    ServiceError,
+)
 
 from api.models.screener import (
     ScreenerRequest,
@@ -740,7 +746,7 @@ class ScreenerService:
         if strategy_id:
             strategy = self._strategy_repo.get_strategy(strategy_id)
             if strategy is None:
-                raise HTTPException(status_code=404, detail=f"Strategy not found: {strategy_id}")
+                raise NotFoundError(f"Strategy not found: {strategy_id}")
             return strategy
         return self._strategy_repo.get_active_strategy()
 
@@ -748,7 +754,7 @@ class ScreenerService:
         try:
             requested_top = request.top or 20
             if requested_top <= 0:
-                raise HTTPException(status_code=422, detail="top must be >= 1")
+                raise UnprocessableError("top must be >= 1")
             combined_priority_cfg = CombinedPriorityConfig()
             warnings: list[str] = []
 
@@ -771,7 +777,7 @@ class ScreenerService:
                             f"Universe '{request.universe}' is not available. "
                             f"Available universes: {sorted(valid_ids)}"
                         )
-                    raise HTTPException(status_code=422, detail=detail)
+                    raise UnprocessableError(detail)
                 uni_benchmark = get_universe_benchmark(request.universe)
                 if uni_benchmark and uni_benchmark != benchmark:
                     universe_cfg = replace(
@@ -822,7 +828,7 @@ class ScreenerService:
                 asof_str = _resolve_default_asof_date(now_utc, active_currencies).isoformat()
 
             if len(tickers) <= 1 and benchmark in tickers:
-                raise HTTPException(status_code=404, detail="No tickers left after applying screener filters")
+                raise NotFoundError("No tickers left after applying screener filters")
 
             signals_cfg = build_entry_config(strategy)
             if "breakout_lookback" in fields_set and request.breakout_lookback is not None:
@@ -860,7 +866,7 @@ class ScreenerService:
 
             if ohlcv is None or ohlcv.empty:
                 logger.error("OHLCV fetch returned empty data (tickers=%s)", len(tickers))
-                raise HTTPException(status_code=404, detail="No market data found for requested tickers")
+                raise NotFoundError("No market data found for requested tickers")
 
             ohlcv = _merge_ohlcv(ohlcv, sector_ohlcv)
 
@@ -869,7 +875,7 @@ class ScreenerService:
                 bench_df = self._provider.fetch_ohlcv([benchmark], start_date=start_date, end_date=end_date)
                 ohlcv = _merge_ohlcv(ohlcv, bench_df)
                 if "Close" not in ohlcv.columns.get_level_values(0) or benchmark not in ohlcv["Close"].columns:
-                    raise HTTPException(status_code=500, detail="Benchmark data missing; cannot compute momentum.")
+                    raise ServiceError("Benchmark data missing; cannot compute momentum.")
 
             last_bar_map = _last_bar_map(ohlcv)
             overall_last_bar = _to_iso(ohlcv.index.max())
@@ -1267,17 +1273,17 @@ class ScreenerService:
             logger.info("Screener completed: candidates=%s", len(candidates))
             return response
 
-        except HTTPException:
+        except DomainError:
             raise
         except ValueError as exc:
             logger.error("Screener configuration error: %s", exc)
-            raise HTTPException(status_code=400, detail=f"Invalid screener configuration: {str(exc)}")
+            raise ValidationError(f"Invalid screener configuration: {str(exc)}")
         except (KeyError, IndexError) as exc:
             logger.error("Screener data error: %s", exc)
-            raise HTTPException(status_code=500, detail="Screener failed due to data error")
+            raise ServiceError("Screener failed due to data error")
         except Exception as exc:
             logger.exception("Unexpected screener error")
-            raise HTTPException(status_code=500, detail="Screener failed unexpectedly")
+            raise ServiceError("Screener failed unexpectedly")
 
     def start_run_async(self, request: ScreenerRequest, on_complete=None) -> ScreenerRunLaunchResponse:
         """Start screener run in background and return job metadata.
@@ -1298,7 +1304,7 @@ class ScreenerService:
         job_id = manager.start_job(run_fn=_run)
         job = manager.get_job(job_id)
         if job is None:
-            raise HTTPException(status_code=500, detail="Failed to start screener run.")
+            raise ServiceError("Failed to start screener run.")
         return ScreenerRunLaunchResponse(
             job_id=job.job_id,
             status=job.status,  # type: ignore[arg-type]
@@ -1310,7 +1316,7 @@ class ScreenerService:
         """Get status for background screener run."""
         job = get_screener_run_manager().get_job(job_id)
         if job is None:
-            raise HTTPException(status_code=404, detail=f"Screener run job not found: {job_id}")
+            raise NotFoundError(f"Screener run job not found: {job_id}")
         return ScreenerRunStatusResponse(
             job_id=job.job_id,
             status=job.status,  # type: ignore[arg-type]

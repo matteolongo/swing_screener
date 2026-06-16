@@ -2,7 +2,11 @@
 from __future__ import annotations
 
 import datetime as dt
-from fastapi import HTTPException
+from swing_screener.errors import (
+    NotFoundError,
+    ValidationError,
+    ConflictError,
+)
 
 from api.models.strategy import (
     Strategy,
@@ -23,7 +27,7 @@ class StrategyService:
     def _require_strategy(self, strategy_id: str) -> dict:
         strategy = self._repo.get_strategy(strategy_id)
         if strategy is None:
-            raise HTTPException(status_code=404, detail=f"Strategy not found: {strategy_id}")
+            raise NotFoundError(f"Strategy not found: {strategy_id}")
         return strategy
 
     def list_strategies(self) -> list[Strategy]:
@@ -42,11 +46,11 @@ class StrategyService:
 
     def create_strategy(self, request: StrategyCreateRequest) -> Strategy:
         if request.id == self._repo.default_strategy_id:
-            raise HTTPException(status_code=400, detail="Cannot create strategy with reserved id 'default'.")
+            raise ValidationError("Cannot create strategy with reserved id 'default'.")
 
         strategies = self._repo.list_strategies()
         if any(s.get("id") == request.id for s in strategies):
-            raise HTTPException(status_code=409, detail=f"Strategy already exists: {request.id}")
+            raise ConflictError(f"Strategy already exists: {request.id}")
 
         ts = self._now_iso()
         payload = request.model_dump()
@@ -76,13 +80,13 @@ class StrategyService:
             self._repo.save_strategies(strategies)
             return updated
 
-        raise HTTPException(status_code=404, detail=f"Strategy not found: {strategy_id}")
+        raise NotFoundError(f"Strategy not found: {strategy_id}")
 
     def delete_strategy(self, strategy_id: str) -> dict:
         strategies = self._repo.list_strategies()
 
         if strategy_id == self._repo.default_strategy_id:
-            raise HTTPException(status_code=400, detail="Default strategy cannot be deleted.")
+            raise ValidationError("Default strategy cannot be deleted.")
 
         active_id = self._repo.get_active_strategy_id()
 
@@ -91,13 +95,13 @@ class StrategyService:
         for strategy in strategies:
             if strategy.get("id") == strategy_id:
                 if strategy.get("is_default"):
-                    raise HTTPException(status_code=400, detail="Default strategy cannot be deleted.")
+                    raise ValidationError("Default strategy cannot be deleted.")
                 removed = True
                 continue
             kept.append(strategy)
 
         if not removed:
-            raise HTTPException(status_code=404, detail=f"Strategy not found: {strategy_id}")
+            raise NotFoundError(f"Strategy not found: {strategy_id}")
 
         self._repo.save_strategies(kept)
 
