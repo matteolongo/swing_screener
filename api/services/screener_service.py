@@ -62,6 +62,12 @@ from swing_screener.strategy.config import (
 )
 from swing_screener.risk.regime import compute_regime_risk_multiplier
 from api.utils.converters import to_iso as _to_iso
+from swing_screener.utils.coerce import (
+    is_na_scalar,
+    safe_float,
+    safe_optional_float,
+    safe_optional_int,
+)
 
 # Map of removed universe ids to their replacements (or None if dropped with no replacement).
 _REMOVED_UNIVERSE_IDS: dict[str, str | None] = {
@@ -680,52 +686,6 @@ def _apply_decision_priority_ranking(candidates: list[ScreenerCandidate]) -> lis
 
 
 
-def _is_na_scalar(val) -> bool:
-    if val is None:
-        return True
-    if isinstance(val, (list, tuple, set, dict)):
-        return False
-    try:
-        return bool(pd.isna(val))
-    except (TypeError, ValueError):
-        return False
-
-
-def _safe_float(val, default=0.0):
-    if _is_na_scalar(val):
-        return default
-    return float(val)
-
-
-def _safe_optional_float(val):
-    if _is_na_scalar(val):
-        return None
-    return float(val)
-
-
-def _safe_optional_int(val):
-    if _is_na_scalar(val):
-        return None
-    try:
-        return int(val)
-    except (TypeError, ValueError, OverflowError):
-        return None
-
-
-def _safe_list(val):
-    if _is_na_scalar(val):
-        return []
-    if isinstance(val, list):
-        return [str(v) for v in val if not _is_na_scalar(v)]
-    if isinstance(val, str):
-        if not val.strip():
-            return []
-        sep = ";" if ";" in val else "," if "," in val else None
-        if sep:
-            return [v.strip() for v in val.split(sep) if v.strip()]
-        return [val]
-    return [str(val)]
-
 
 @dataclass
 class _RunContext:
@@ -1082,10 +1042,10 @@ class ScreenerService:
         ma_col = f"ma{signals_cfg.pullback_ma}_level"
         candidates = []
         for idx, row in results.iterrows():
-            sma20 = _safe_float(row.get(ma_col))
-            sma50_dist = _safe_float(row.get("dist_sma50_pct"))
-            sma200_dist = _safe_float(row.get("dist_sma200_pct"))
-            last_price = _safe_float(row.get("last"))
+            sma20 = safe_float(row.get(ma_col))
+            sma50_dist = safe_float(row.get("dist_sma50_pct"))
+            sma200_dist = safe_float(row.get("dist_sma200_pct"))
+            last_price = safe_float(row.get("last"))
 
             sma50 = last_price / (1 + sma50_dist / 100) if last_price and sma50_dist else last_price
             sma200 = last_price / (1 + sma200_dist / 100) if last_price and sma200_dist else last_price
@@ -1102,24 +1062,24 @@ class ScreenerService:
             ).upper()
 
             signal = row.get("signal")
-            entry_val = _safe_optional_float(row.get("entry")) or last_price
-            stop_val = _safe_optional_float(row.get("stop"))
+            entry_val = safe_optional_float(row.get("entry")) or last_price
+            stop_val = safe_optional_float(row.get("stop"))
             if stop_val is None and entry_val:
                 # No explicit stop from the pipeline — derive one from ATR so that
                 # target and R:R can be computed for the order panel.
-                atr_val = _safe_optional_float(row.get(atr_col))
+                atr_val = safe_optional_float(row.get(atr_col))
                 if atr_val and atr_val > 0:
                     stop_val = round(entry_val - 2.0 * atr_val, 4)
-            shares_val = _safe_optional_int(row.get("shares"))
-            position_size = _safe_optional_float(row.get("position_value"))
-            risk_usd = _safe_optional_float(row.get("realized_risk"))
+            shares_val = safe_optional_int(row.get("shares"))
+            position_size = safe_optional_float(row.get("position_value"))
+            risk_usd = safe_optional_float(row.get("realized_risk"))
             risk_pct = (risk_usd / risk_cfg.account_size) if risk_usd and risk_cfg.account_size else None
 
-            rr_target = _safe_float(getattr(risk_cfg, "rr_target", 2.0), default=2.0)
-            commission_pct = _safe_float(getattr(risk_cfg, "commission_pct", 0.0), default=0.0)
+            rr_target = safe_float(getattr(risk_cfg, "rr_target", 2.0), default=2.0)
+            commission_pct = safe_float(getattr(risk_cfg, "commission_pct", 0.0), default=0.0)
 
             rec_payload = evaluate_recommendation(
-                signal=str(signal) if not _is_na_scalar(signal) else None,
+                signal=str(signal) if not is_na_scalar(signal) else None,
                 entry=entry_val,
                 stop=stop_val,
                 shares=shares_val,
@@ -1137,11 +1097,11 @@ class ScreenerService:
                 sma_20=sma20,
                 sma_50=sma50,
                 sma_200=sma200,
-                atr=_safe_float(row.get(atr_col)),
-                momentum_6m=_safe_float(row.get("mom_6m")),
-                    momentum_12m=_safe_float(row.get("mom_12m")),
-                    rel_strength=_safe_float(row.get("rs_6m")),
-                    confidence=_safe_float(row.get("confidence")),
+                atr=safe_float(row.get(atr_col)),
+                momentum_6m=safe_float(row.get("mom_6m")),
+                    momentum_12m=safe_float(row.get("mom_12m")),
+                    rel_strength=safe_float(row.get("rs_6m")),
+                    confidence=safe_float(row.get("confidence")),
             )
             recommendation = Recommendation.model_validate(asdict(rec_payload))
             rec_risk = recommendation.risk
@@ -1171,7 +1131,7 @@ class ScreenerService:
                     ticker=ticker_str,
                     entry=entry_val,
                     current_stop=stop_val,
-                    atr=_safe_optional_float(row.get(atr_col)),
+                    atr=safe_optional_float(row.get(atr_col)),
                     patterns=patterns_map,
                     buffer_atr=exec_cfg.pattern_stop_atr_buffer,
                     min_rr_stop=None,
@@ -1191,42 +1151,42 @@ class ScreenerService:
                     sma_20=sma20,
                     sma_50=sma50,
                     sma_200=sma200,
-                    atr=_safe_float(row.get(atr_col)),
-                    momentum_6m=_safe_float(row.get("mom_6m")),
-                    momentum_12m=_safe_float(row.get("mom_12m")),
-                    rel_strength=_safe_float(row.get("rs_6m")),
-                    sector_rs=_safe_optional_float(row.get("sector_rs_6m")),
-                    score=_safe_float(row.get("score")),
-                    confidence=_safe_float(row.get("confidence")),
+                    atr=safe_float(row.get(atr_col)),
+                    momentum_6m=safe_float(row.get("mom_6m")),
+                    momentum_12m=safe_float(row.get("mom_12m")),
+                    rel_strength=safe_float(row.get("rs_6m")),
+                    sector_rs=safe_optional_float(row.get("sector_rs_6m")),
+                    score=safe_float(row.get("score")),
+                    confidence=safe_float(row.get("confidence")),
                     rank=int(row.get("rank", len(candidates) + 1)),
-                    sma20_slope=_safe_optional_float(row.get("sma20_slope")),
-                    sma50_slope=_safe_optional_float(row.get("sma50_slope")),
-                    consolidation_tightness=_safe_optional_float(row.get("consolidation_tightness")),
-                    close_location_in_range=_safe_optional_float(row.get("close_location_in_range")),
-                    above_breakout_extension=_safe_optional_float(row.get("above_breakout_extension")),
+                    sma20_slope=safe_optional_float(row.get("sma20_slope")),
+                    sma50_slope=safe_optional_float(row.get("sma50_slope")),
+                    consolidation_tightness=safe_optional_float(row.get("consolidation_tightness")),
+                    close_location_in_range=safe_optional_float(row.get("close_location_in_range")),
+                    above_breakout_extension=safe_optional_float(row.get("above_breakout_extension")),
                     breakout_volume_confirmation=(
                         bool(row.get("breakout_volume_confirmation"))
-                        if not _is_na_scalar(row.get("breakout_volume_confirmation"))
+                        if not is_na_scalar(row.get("breakout_volume_confirmation"))
                         else None
                     ),
-                    dist_52w_high_pct=_safe_optional_float(row.get("dist_52w_high_pct")),
+                    dist_52w_high_pct=safe_optional_float(row.get("dist_52w_high_pct")),
                     near_52w_high=(
                         bool(row.get("near_52w_high"))
-                        if not _is_na_scalar(row.get("near_52w_high"))
+                        if not is_na_scalar(row.get("near_52w_high"))
                         else None
                     ),
                     weekly_trend=(
                         str(row.get("weekly_trend"))
-                        if not _is_na_scalar(row.get("weekly_trend"))
+                        if not is_na_scalar(row.get("weekly_trend"))
                         else None
                     ),
-                    volume_ratio=_safe_optional_float(row.get("volume_ratio")),
-                    avg_daily_volume_eur=_safe_optional_float(row.get("avg_daily_volume_eur")),
+                    volume_ratio=safe_optional_float(row.get("volume_ratio")),
+                    avg_daily_volume_eur=safe_optional_float(row.get("avg_daily_volume_eur")),
                     symbol_change_pct=symbol_change_pct,
                     benchmark_outperformance_pct=benchmark_outperformance_pct,
                     sector_rotation_context=sector_rotation_by_name.get(info.get("sector")),
                     data_source_summary={"market_data": market_health},
-                    signal=str(signal) if not _is_na_scalar(signal) else None,
+                    signal=str(signal) if not is_na_scalar(signal) else None,
                     entry=rec_risk.entry,
                     stop=rec_risk.stop if stop_val is not None else None,
                     target=rec_risk.target,
@@ -1243,13 +1203,13 @@ class ScreenerService:
                     pattern_stop_reason=pattern_stop_reason,
                     suggested_order_type=(
                         str(row.get("suggested_order_type"))
-                        if not _is_na_scalar(row.get("suggested_order_type"))
+                        if not is_na_scalar(row.get("suggested_order_type"))
                         else None
                     ),
-                    suggested_order_price=_safe_optional_float(row.get("suggested_order_price")),
+                    suggested_order_price=safe_optional_float(row.get("suggested_order_price")),
                     execution_note=(
                         str(row.get("execution_note"))
-                        if not _is_na_scalar(row.get("execution_note"))
+                        if not is_na_scalar(row.get("execution_note"))
                         else None
                     ),
                 )
@@ -1359,8 +1319,8 @@ class ScreenerService:
         candidates = _rebuild_recommendations_with_decision_action(
             candidates,
             risk_cfg=risk_cfg,
-            rr_target=_safe_float(getattr(risk_cfg, "rr_target", 2.0), default=2.0),
-            commission_pct=_safe_float(getattr(risk_cfg, "commission_pct", 0.0), default=0.0),
+            rr_target=safe_float(getattr(risk_cfg, "rr_target", 2.0), default=2.0),
+            commission_pct=safe_float(getattr(risk_cfg, "commission_pct", 0.0), default=0.0),
         )
         candidates = _apply_decision_priority_ranking(candidates)
         if same_symbol_suppressed_count > 0:
