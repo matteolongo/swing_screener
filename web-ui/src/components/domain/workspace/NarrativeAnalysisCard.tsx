@@ -1,6 +1,6 @@
 import ReactMarkdown from 'react-markdown';
 import Badge from '@/components/common/Badge';
-import type { SymbolIntelligence, DecisionAction, DecisionConviction, KeyNumber, PredictionBullet } from '@/features/intelligence/types';
+import type { SymbolIntelligence, DecisionAction, DecisionConviction, KeyNumber, PredictionBullet, PriceMoveDirection } from '@/features/intelligence/types';
 import type { DecisionCatalystLabel, DecisionSignalLabel, DecisionValuationLabel } from '@/features/screener/types';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
 import { t } from '@/i18n/t';
@@ -89,6 +89,20 @@ function directionClass(direction: PredictionBullet['direction']): string {
   }
 }
 
+const MOVE_DIRECTION_ARROW: Record<PriceMoveDirection, string> = {
+  up: '↑',
+  down: '↓',
+  flat: '→',
+};
+
+function moveDirectionClass(direction: PriceMoveDirection): string {
+  switch (direction) {
+    case 'up': return 'border-emerald-200 bg-emerald-50 text-emerald-800';
+    case 'down': return 'border-rose-200 bg-rose-50 text-rose-800';
+    default: return 'border-slate-200 bg-slate-50 text-slate-700';
+  }
+}
+
 export default function NarrativeAnalysisCard({
   intelligence,
   candidate,
@@ -102,6 +116,7 @@ export default function NarrativeAnalysisCard({
   const hasPrediction = (intelligence.predictionBullets?.length ?? 0) > 0;
   const hasRisks = (intelligence.riskFactors?.length ?? 0) > 0;
   const hasPastTrades = Boolean(intelligence.pastTradesContext);
+  const moveExplanation = intelligence.positionMoveExplanation ?? null;
 
   const decisionHighlights = [
     { label: t('workspacePage.panels.analysis.intelligence.whyNow'), value: summary?.whyNow },
@@ -146,6 +161,31 @@ export default function NarrativeAnalysisCard({
             </dl>
           )}
         </div>
+
+        {/* Why it moved since entry (open positions) */}
+        {moveExplanation && (
+          <div className={`rounded-md border p-3 ${moveDirectionClass(moveExplanation.direction)}`}>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wide">
+                {t('workspacePage.panels.analysis.intelligence.positionMove.title')}
+              </span>
+              <span className="text-sm font-semibold">
+                {MOVE_DIRECTION_ARROW[moveExplanation.direction]}{' '}
+                {t(`workspacePage.panels.analysis.intelligence.positionMove.direction.${moveExplanation.direction}`)}
+              </span>
+            </div>
+            <p className="mt-1 text-sm">{moveExplanation.summary}</p>
+            {moveExplanation.drivers.length > 0 && (
+              <ul className="mt-2 space-y-1 text-sm list-disc list-inside">
+                {moveExplanation.drivers.map((driver, index) => (
+                  <li key={`${driver.label}-${index}`}>
+                    <span className="font-medium">{driver.label}:</span> {driver.detail}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
 
         {/* Warnings */}
         {warnings.length > 0 && (

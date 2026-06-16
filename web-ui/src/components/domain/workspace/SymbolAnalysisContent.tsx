@@ -286,6 +286,13 @@ export default function SymbolAnalysisContent({
                     {new Date(displayedIntelligence.generatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 )}
+                {intelligenceMutation.isError && (
+                  <span className="text-xs text-rose-600">
+                    {intelligenceMutation.error instanceof Error
+                      ? intelligenceMutation.error.message
+                      : t('workspacePage.panels.analysis.intelligence.analyzeError')}
+                  </span>
+                )}
               </div>
             )}
           </>
