@@ -1,7 +1,7 @@
 """Screener service."""
 from __future__ import annotations
 
-from dataclasses import replace, asdict
+from dataclasses import replace, asdict, dataclass, field
 from typing import Optional
 import datetime as dt
 from datetime import datetime, timezone, timedelta
@@ -725,6 +725,42 @@ def _safe_list(val):
             return [v.strip() for v in val.split(sep) if v.strip()]
         return [val]
     return [str(val)]
+
+
+@dataclass
+class _RunContext:
+    """Mutable state accumulated across run_screener pipeline steps.
+
+    Holds everything the steps hand to each other so step signatures stay
+    small. Created fresh per run_screener call; never shared across calls.
+    """
+    request: ScreenerRequest
+    strategy: dict
+    warnings: list[str] = field(default_factory=list)
+    # populated by steps as the run progresses
+    universe_cfg: object = None
+    signals_cfg: object = None
+    ranking_cfg: object = None
+    risk_cfg: object = None
+    report_cfg: object = None
+    benchmark: str = ""
+    tickers: list[str] = field(default_factory=list)
+    screening_tickers: list[str] = field(default_factory=list)
+    active_currencies: list[str] = field(default_factory=list)
+    asof_str: str = ""
+    start_date: str = ""
+    end_date: str = ""
+    market_health: dict = field(default_factory=dict)
+    ohlcv: object = None
+    last_bar_map: dict = field(default_factory=dict)
+    overall_last_bar: object = None
+    data_freshness: str = ""
+    ticker_info: dict = field(default_factory=dict)
+    sector_rotation_by_name: dict = field(default_factory=dict)
+    combined_priority_cfg: object = None
+    now_utc: object = None
+    benchmark_change_pct: object = None
+    benchmark_last_bar: object = None
 
 
 class ScreenerService:
