@@ -67,7 +67,11 @@ the `ScreenerResponse` from the context:
 Each step reads/writes `_RunContext`; the orchestrator owns response construction. The pure,
 side-effect-free helpers it relies on live in core: scalar coercion in
 `swing_screener.utils.coerce` and price-history shaping in `swing_screener.data.price_history`.
-The I/O-coupled `_fetch_ohlcv_chunked` and fundamentals-coupled `_is_stale` remain in the service.
+The candidate decision-context enrichment helpers (fundamentals-snapshot loading, decision-summary
+context, recommendation rebuild keyed off the decision action, and decision-priority ranking) live in
+`api/services/decision_context.py` — they operate on API models (`ScreenerCandidate`/`Recommendation`)
+and call fundamentals storage, the catalyst store and the risk engine, so they stay in the API layer
+rather than core. The I/O-coupled `_fetch_ohlcv_chunked` remains in the service.
 
 ## Removed Legacy Packages
 

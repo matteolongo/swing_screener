@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from api.models.screener import ScreenerCandidate
-from api.services.screener_service import (
-    _apply_cached_fundamentals_context,
-    _apply_decision_priority_ranking,
-    _apply_decision_summary_context,
+from api.services.decision_context import (
+    apply_cached_fundamentals_context,
+    apply_decision_priority_ranking,
+    apply_decision_summary_context,
 )
 from swing_screener.fundamentals.models import FundamentalPillarScore
 from swing_screener.fundamentals.models import FundamentalSnapshot
@@ -44,7 +44,7 @@ def test_apply_cached_fundamentals_context_uses_snapshot_summary(tmp_path):
         )
     )
 
-    enriched = _apply_cached_fundamentals_context([_candidate()], storage=storage)
+    enriched = apply_cached_fundamentals_context([_candidate()], storage=storage)
 
     assert enriched[0].fundamentals_coverage_status == "supported"
     assert enriched[0].fundamentals_freshness_status == "current"
@@ -75,7 +75,7 @@ def test_apply_decision_summary_context_uses_fundamentals(tmp_path):
         )
     )
 
-    enriched = _apply_decision_summary_context(
+    enriched = apply_decision_summary_context(
         [_candidate()],
         fundamentals_storage=fundamentals_storage,
     )
@@ -144,7 +144,7 @@ def test_apply_decision_priority_ranking_uses_action_then_conviction_then_raw_ra
         }
     )
 
-    prioritized = _apply_decision_priority_ranking([watch_candidate, buy_now_medium, buy_now_high])
+    prioritized = apply_decision_priority_ranking([watch_candidate, buy_now_medium, buy_now_high])
 
     assert [candidate.ticker for candidate in prioritized] == ["HIGH", "MEDIUM", "WATCH"]
     assert [candidate.priority_rank for candidate in prioritized] == [1, 2, 3]

@@ -9,6 +9,7 @@ from types import SimpleNamespace
 from api.main import app
 from api.dependencies import get_orders_service, get_portfolio_service
 import api.services.screener_service as screener_service
+import api.services.decision_context as decision_context
 from api.models.screener import ScreenerResponse
 from swing_screener.data.source_health import DataSourceHealth
 from swing_screener.data.providers import MarketDataProvider
@@ -486,7 +487,7 @@ def test_screener_response_is_prioritized_by_decision_action_and_conviction(monk
     monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
     monkeypatch.setattr(screener_service, "get_multiple_ticker_info", lambda tickers: {})
-    monkeypatch.setattr(screener_service, "_apply_decision_summary_context", fake_apply_decision_summary_context)
+    monkeypatch.setattr(screener_service, "apply_decision_summary_context", fake_apply_decision_summary_context)
 
     client = TestClient(app)
     res = client.post("/api/screener/run", json={"universe": "broad_market_stocks", "top": 20})
@@ -731,7 +732,7 @@ def test_screener_loads_each_fundamentals_snapshot_once(monkeypatch):
     monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
     monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
     monkeypatch.setattr(screener_service, "get_multiple_ticker_info", lambda tickers: {})
-    monkeypatch.setattr(screener_service.FundamentalsStorage, "load_snapshot", fake_load_snapshot)
+    monkeypatch.setattr(decision_context.FundamentalsStorage, "load_snapshot", fake_load_snapshot)
 
     client = TestClient(app)
     res = client.post("/api/screener/run", json={"universe": "broad_market_stocks", "top": 5})
