@@ -942,6 +942,57 @@ class ScreenerService:
                     f"{', '.join(missing)}"
                 )
 
+    def _build_run_configs(self, ctx: _RunContext, requested_top: int) -> None:
+        """Apply request filter overrides and build ranking/risk/report configs.
+
+        Mutates ctx.universe_cfg; populates ctx.ranking_cfg, risk_cfg, report_cfg;
+        appends regime-scaling warnings. requested_top sizes the prefilter pool.
+        """
+        fields_set = ctx.request.model_fields_set
+
+        if "min_price" in fields_set or "max_price" in fields_set:
+            filt = ctx.universe_cfg.filt
+            min_price = ctx.request.min_price if ctx.request.min_price is not None else filt.min_price
+            max_price = ctx.request.max_price if ctx.request.max_price is not None else filt.max_price
+            ctx.universe_cfg = replace(ctx.universe_cfg, filt=replace(filt, min_price=min_price, max_price=max_price))
+        if "currencies" in fields_set and ctx.request.currencies is not None:
+            filt = ctx.universe_cfg.filt
+            requested_currencies = [
+                str(code).strip().upper()
+                for code in ctx.request.currencies
+                if str(code).strip()
+            ]
+            if not requested_currencies:
+                requested_currencies = ["USD", "EUR"]
+            ctx.universe_cfg = replace(ctx.universe_cfg, filt=replace(filt, currencies=requested_currencies))
+        if "require_weekly_uptrend" in fields_set and ctx.request.require_weekly_uptrend is not None:
+            filt = ctx.universe_cfg.filt
+            ctx.universe_cfg = replace(ctx.universe_cfg, filt=replace(filt, require_weekly_uptrend=ctx.request.require_weekly_uptrend))
+
+        ctx.ranking_cfg = build_ranking_config(ctx.strategy)
+        # Rank a pool of top * prefilter_multiplier so the combined-priority
+        # stage can re-rank beyond the requested top-N (stage 1 of 2).
+        prefilter_pool = requested_top * ctx.combined_priority_cfg.prefilter_multiplier
+        if ctx.ranking_cfg.top_n < prefilter_pool:
+            ctx.ranking_cfg = replace(ctx.ranking_cfg, top_n=prefilter_pool)
+
+        ctx.risk_cfg = build_risk_config(ctx.strategy)
+        multiplier, regime_meta = compute_regime_risk_multiplier(ctx.ohlcv, ctx.benchmark, ctx.risk_cfg)
+        if multiplier != 1.0:
+            ctx.risk_cfg = replace(ctx.risk_cfg, risk_pct=ctx.risk_cfg.risk_pct * multiplier)
+            if regime_meta.get("reasons"):
+                reasons = ", ".join(regime_meta["reasons"])
+                ctx.warnings.append(f"Risk scaled by {multiplier:.2f}x due to regime: {reasons}")
+            else:
+                ctx.warnings.append(f"Risk scaled by {multiplier:.2f}x due to regime conditions.")
+
+        ctx.report_cfg = ReportConfig(
+            universe=ctx.universe_cfg,
+            ranking=ctx.ranking_cfg,
+            signals=ctx.signals_cfg,
+            risk=ctx.risk_cfg,
+        )
+
     def run_screener(self, request: ScreenerRequest, strategy_override: Optional[dict] = None) -> ScreenerResponse:
         try:
             ctx = _RunContext(
@@ -961,8 +1012,6 @@ class ScreenerService:
             strategy = ctx.strategy
             combined_priority_cfg = ctx.combined_priority_cfg
 
-            fields_set = request.model_fields_set
-
             self._build_signals_and_fetch_ohlcv(ctx, requested_top)
             signals_cfg = ctx.signals_cfg
             ohlcv = ctx.ohlcv
@@ -970,48 +1019,10 @@ class ScreenerService:
             overall_last_bar = ctx.overall_last_bar
             data_freshness = ctx.data_freshness
 
-            if "min_price" in fields_set or "max_price" in fields_set:
-                filt = universe_cfg.filt
-                min_price = request.min_price if request.min_price is not None else filt.min_price
-                max_price = request.max_price if request.max_price is not None else filt.max_price
-                universe_cfg = replace(universe_cfg, filt=replace(filt, min_price=min_price, max_price=max_price))
-            if "currencies" in fields_set and request.currencies is not None:
-                filt = universe_cfg.filt
-                requested_currencies = [
-                    str(code).strip().upper()
-                    for code in request.currencies
-                    if str(code).strip()
-                ]
-                if not requested_currencies:
-                    requested_currencies = ["USD", "EUR"]
-                universe_cfg = replace(universe_cfg, filt=replace(filt, currencies=requested_currencies))
-            if "require_weekly_uptrend" in fields_set and request.require_weekly_uptrend is not None:
-                filt = universe_cfg.filt
-                universe_cfg = replace(universe_cfg, filt=replace(filt, require_weekly_uptrend=request.require_weekly_uptrend))
-
-            ranking_cfg = build_ranking_config(strategy)
-            # Rank a pool of top * prefilter_multiplier so the combined-priority
-            # stage can re-rank beyond the requested top-N (stage 1 of 2).
-            prefilter_pool = requested_top * combined_priority_cfg.prefilter_multiplier
-            if ranking_cfg.top_n < prefilter_pool:
-                ranking_cfg = replace(ranking_cfg, top_n=prefilter_pool)
-
-            risk_cfg = build_risk_config(strategy)
-            multiplier, regime_meta = compute_regime_risk_multiplier(ohlcv, benchmark, risk_cfg)
-            if multiplier != 1.0:
-                risk_cfg = replace(risk_cfg, risk_pct=risk_cfg.risk_pct * multiplier)
-                if regime_meta.get("reasons"):
-                    reasons = ", ".join(regime_meta["reasons"])
-                    warnings.append(f"Risk scaled by {multiplier:.2f}x due to regime: {reasons}")
-                else:
-                    warnings.append(f"Risk scaled by {multiplier:.2f}x due to regime conditions.")
-
-            report_cfg = ReportConfig(
-                universe=universe_cfg,
-                ranking=ranking_cfg,
-                signals=signals_cfg,
-                risk=risk_cfg,
-            )
+            self._build_run_configs(ctx, requested_top)
+            report_cfg = ctx.report_cfg
+            risk_cfg = ctx.risk_cfg
+            universe_cfg = ctx.universe_cfg
 
             ticker_info = get_multiple_ticker_info(screening_tickers) if screening_tickers else {}
             etf_returns = sector_rotation.compute_sector_benchmark_returns(ohlcv)
