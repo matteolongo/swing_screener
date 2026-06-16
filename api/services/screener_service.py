@@ -870,6 +870,78 @@ class ScreenerService:
 
         return requested_top
 
+    def _build_signals_and_fetch_ohlcv(self, ctx: _RunContext, requested_top: int) -> None:
+        """Build signals config, fetch and shape OHLCV, compute freshness + last-bar maps.
+
+        Populates ctx.signals_cfg, start_date, end_date, ohlcv, last_bar_map,
+        overall_last_bar, data_freshness, warnings. Raises NotFoundError on empty
+        OHLCV and ServiceError on missing benchmark, exactly as before.
+        """
+        fields_set = ctx.request.model_fields_set
+
+        ctx.signals_cfg = build_entry_config(ctx.strategy)
+        if "breakout_lookback" in fields_set and ctx.request.breakout_lookback is not None:
+            ctx.signals_cfg = replace(ctx.signals_cfg, breakout_lookback=ctx.request.breakout_lookback)
+        if "pullback_ma" in fields_set and ctx.request.pullback_ma is not None:
+            ctx.signals_cfg = replace(ctx.signals_cfg, pullback_ma=ctx.request.pullback_ma)
+        if "min_history" in fields_set and ctx.request.min_history is not None:
+            ctx.signals_cfg = replace(ctx.signals_cfg, min_history=ctx.request.min_history)
+
+        ctx.start_date = _resolve_fetch_start_date(ctx.asof_str, ctx.signals_cfg.min_history)
+        ctx.end_date = ctx.asof_str
+        sector_context_tickers = ["SPY", *sector_rotation.SECTOR_ETFS.keys()]
+        sector_ohlcv = pd.DataFrame()
+        try:
+            sector_ohlcv = self._provider.fetch_ohlcv(
+                sector_context_tickers,
+                start_date=ctx.start_date,
+                end_date=ctx.end_date,
+            )
+        except Exception as exc:
+            logger.warning("Sector ETF OHLCV fetch failed: %s", exc)
+
+        logger.info(
+            "Screener run: universe=%s top=%s tickers=%s provider=%s",
+            ctx.request.universe or "broad_market_stocks",
+            requested_top,
+            len(ctx.tickers),
+            self._provider.get_provider_name(),
+        )
+
+        if len(ctx.tickers) > 120:
+            ctx.ohlcv = _fetch_ohlcv_chunked(self._provider, ctx.tickers, ctx.start_date, ctx.end_date, chunk_size=100)
+        else:
+            ctx.ohlcv = self._provider.fetch_ohlcv(ctx.tickers, start_date=ctx.start_date, end_date=ctx.end_date)
+
+        if ctx.ohlcv is None or ctx.ohlcv.empty:
+            logger.error("OHLCV fetch returned empty data (tickers=%s)", len(ctx.tickers))
+            raise NotFoundError("No market data found for requested tickers")
+
+        ctx.ohlcv = _merge_ohlcv(ctx.ohlcv, sector_ohlcv)
+
+        if "Close" not in ctx.ohlcv.columns.get_level_values(0) or ctx.benchmark not in ctx.ohlcv["Close"].columns:
+            logger.warning("Benchmark %s missing from OHLCV; fetching separately.", ctx.benchmark)
+            bench_df = self._provider.fetch_ohlcv([ctx.benchmark], start_date=ctx.start_date, end_date=ctx.end_date)
+            ctx.ohlcv = _merge_ohlcv(ctx.ohlcv, bench_df)
+            if "Close" not in ctx.ohlcv.columns.get_level_values(0) or ctx.benchmark not in ctx.ohlcv["Close"].columns:
+                raise ServiceError("Benchmark data missing; cannot compute momentum.")
+
+        ctx.last_bar_map = _last_bar_map(ctx.ohlcv)
+        ctx.overall_last_bar = _to_iso(ctx.ohlcv.index.max())
+        ctx.data_freshness = _resolve_data_freshness(ctx.asof_str, ctx.now_utc, ctx.active_currencies)
+
+        # Detect tickers that failed to download and surface them as warnings
+        if "Close" in ctx.ohlcv.columns.get_level_values(0):
+            present = set(ctx.ohlcv["Close"].columns.tolist())
+            requested_set = set(ctx.tickers) - {ctx.benchmark}
+            missing = sorted(requested_set - present)
+            if missing:
+                ctx.warnings.append(
+                    f"{len(missing)} ticker{'s' if len(missing) != 1 else ''} could not be downloaded "
+                    f"and were excluded from screening (possibly delisted or renamed): "
+                    f"{', '.join(missing)}"
+                )
+
     def run_screener(self, request: ScreenerRequest, strategy_override: Optional[dict] = None) -> ScreenerResponse:
         try:
             ctx = _RunContext(
@@ -884,77 +956,19 @@ class ScreenerService:
             benchmark = ctx.benchmark
             tickers = ctx.tickers
             screening_tickers = ctx.screening_tickers
-            active_currencies = ctx.active_currencies
             asof_str = ctx.asof_str
             market_health = ctx.market_health
-            now_utc = ctx.now_utc
             strategy = ctx.strategy
             combined_priority_cfg = ctx.combined_priority_cfg
 
             fields_set = request.model_fields_set
 
-            signals_cfg = build_entry_config(strategy)
-            if "breakout_lookback" in fields_set and request.breakout_lookback is not None:
-                signals_cfg = replace(signals_cfg, breakout_lookback=request.breakout_lookback)
-            if "pullback_ma" in fields_set and request.pullback_ma is not None:
-                signals_cfg = replace(signals_cfg, pullback_ma=request.pullback_ma)
-            if "min_history" in fields_set and request.min_history is not None:
-                signals_cfg = replace(signals_cfg, min_history=request.min_history)
-
-            start_date = _resolve_fetch_start_date(asof_str, signals_cfg.min_history)
-            end_date = asof_str
-            sector_context_tickers = ["SPY", *sector_rotation.SECTOR_ETFS.keys()]
-            sector_ohlcv = pd.DataFrame()
-            try:
-                sector_ohlcv = self._provider.fetch_ohlcv(
-                    sector_context_tickers,
-                    start_date=start_date,
-                    end_date=end_date,
-                )
-            except Exception as exc:
-                logger.warning("Sector ETF OHLCV fetch failed: %s", exc)
-
-            logger.info(
-                "Screener run: universe=%s top=%s tickers=%s provider=%s",
-                request.universe or "broad_market_stocks",
-                requested_top,
-                len(tickers),
-                self._provider.get_provider_name(),
-            )
-
-            if len(tickers) > 120:
-                ohlcv = _fetch_ohlcv_chunked(self._provider, tickers, start_date, end_date, chunk_size=100)
-            else:
-                ohlcv = self._provider.fetch_ohlcv(tickers, start_date=start_date, end_date=end_date)
-
-            if ohlcv is None or ohlcv.empty:
-                logger.error("OHLCV fetch returned empty data (tickers=%s)", len(tickers))
-                raise NotFoundError("No market data found for requested tickers")
-
-            ohlcv = _merge_ohlcv(ohlcv, sector_ohlcv)
-
-            if "Close" not in ohlcv.columns.get_level_values(0) or benchmark not in ohlcv["Close"].columns:
-                logger.warning("Benchmark %s missing from OHLCV; fetching separately.", benchmark)
-                bench_df = self._provider.fetch_ohlcv([benchmark], start_date=start_date, end_date=end_date)
-                ohlcv = _merge_ohlcv(ohlcv, bench_df)
-                if "Close" not in ohlcv.columns.get_level_values(0) or benchmark not in ohlcv["Close"].columns:
-                    raise ServiceError("Benchmark data missing; cannot compute momentum.")
-
-            last_bar_map = _last_bar_map(ohlcv)
-            overall_last_bar = _to_iso(ohlcv.index.max())
-            data_freshness = _resolve_data_freshness(asof_str, now_utc, active_currencies)
-
-            # Detect tickers that failed to download and surface them as warnings
-            if "Close" in ohlcv.columns.get_level_values(0):
-                present = set(ohlcv["Close"].columns.tolist())
-                requested_set = set(tickers) - {benchmark}
-                missing = sorted(requested_set - present)
-                if missing:
-                    warnings.append(
-                        f"{len(missing)} ticker{'s' if len(missing) != 1 else ''} could not be downloaded "
-                        f"and were excluded from screening (possibly delisted or renamed): "
-                        f"{', '.join(missing)}"
-                    )
+            self._build_signals_and_fetch_ohlcv(ctx, requested_top)
+            signals_cfg = ctx.signals_cfg
+            ohlcv = ctx.ohlcv
+            last_bar_map = ctx.last_bar_map
+            overall_last_bar = ctx.overall_last_bar
+            data_freshness = ctx.data_freshness
 
             if "min_price" in fields_set or "max_price" in fields_set:
                 filt = universe_cfg.filt
