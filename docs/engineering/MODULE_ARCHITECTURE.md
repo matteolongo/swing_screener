@@ -1,7 +1,7 @@
 # Module Architecture
 
 > Status: current.
-> Last reviewed: 2026-02-24.
+> Last reviewed: 2026-06-16.
 
 This document is the canonical module layout after the 2026 architecture consolidation.
 
@@ -9,12 +9,16 @@ This document is the canonical module layout after the 2026 architecture consoli
 
 - `src/swing_screener/data`
 - `src/swing_screener/execution`
+- `src/swing_screener/fundamentals`
 - `src/swing_screener/indicators`
+- `src/swing_screener/integrations`
 - `src/swing_screener/intelligence`
 - `src/swing_screener/portfolio`
+- `src/swing_screener/recommendation`
 - `src/swing_screener/reporting`
 - `src/swing_screener/risk`
 - `src/swing_screener/selection`
+- `src/swing_screener/settings`
 - `src/swing_screener/strategy`
 - `src/swing_screener/utils`
 
@@ -27,6 +31,12 @@ This document is the canonical module layout after the 2026 architecture consoli
 5. `execution` owns order state/workflows.
 6. `portfolio` owns position state/metrics.
 7. `data` owns provider access and market-data ingestion.
+8. `fundamentals` owns fundamental data providers, scoring, and snapshot storage.
+9. `intelligence` owns the LLM analysis pipeline, cache, and symbol analyzer.
+10. `recommendation` owns the unified decision summary (what-to-do / why) — distinct from
+    `risk/recommendations`, which owns the risk-side recommendation engine and trade thesis.
+11. `settings` owns settings load/migrate/path resolution.
+12. `integrations` owns third-party brokerage integrations (e.g. degiro).
 
 ## Canonical Import Paths
 
@@ -65,6 +75,24 @@ Refreshing an index universe (`refresh_package_universe(..., apply=True)`, or
 snapshot and appends any newly enriched symbols to
 `data/intelligence/instrument_master.json` (append-only; never overwrites
 existing records).
+
+## CLI Entry Points
+
+Two CLIs exist by design:
+
+- `agent/cli.py` (`python -m agent.cli`) — user trading workflow (screen, positions, orders, chat).
+  Depends on the application services (currently under `api/services`) + core. Must not require a
+  running HTTP server; raises/catches `swing_screener.errors.DomainError`, never `HTTPException`.
+- `swing_screener/cli.py` (`python -m swing_screener.cli`) — data/admin operations (universe refresh,
+  report generation). Depends on the domain core directly.
+
+## Error Boundary
+
+The application layer (`api/services`), persistence (`api/repositories`), and IO helpers
+(`api/utils/file_lock.py`, `api/utils/files.py`) are framework-free: they raise
+`swing_screener.errors.DomainError` subclasses, never `fastapi.HTTPException`. A single handler in
+`api/main.py` (`register_domain_error_handler`) translates `DomainError.http_status` to the HTTP
+response. Enforced by `tests/test_services_no_fastapi.py`.
 
 ## API and Frontend Note
 
