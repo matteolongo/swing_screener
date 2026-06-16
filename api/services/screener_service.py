@@ -1308,6 +1308,73 @@ class ScreenerService:
 
         return filtered_candidates, same_symbol_suppressed_count, same_symbol_add_on_count
 
+    def _enrich_and_rank(
+        self,
+        ctx: _RunContext,
+        candidates: list[ScreenerCandidate],
+        requested_top: int,
+        same_symbol_suppressed_count: int,
+    ) -> list[ScreenerCandidate]:
+        """Enrich candidates (fundamentals, decision summary, earnings) and rank.
+
+        Applies combined-priority re-rank + trim to requested_top, rebuilds
+        recommendations with the decision action, applies decision-priority
+        ranking, and appends suppressed + sector-concentration warnings.
+        Returns the final candidate list.
+        """
+        asof_str = ctx.asof_str
+        combined_priority_cfg = ctx.combined_priority_cfg
+        risk_cfg = ctx.risk_cfg
+        ticker_info = ctx.ticker_info
+        warnings = ctx.warnings
+
+        fundamentals_snapshots = _load_fundamentals_snapshots(candidates)
+        candidates = _apply_cached_fundamentals_context(candidates, snapshots=fundamentals_snapshots)
+        candidates = _apply_decision_summary_context(candidates, snapshots=fundamentals_snapshots)
+
+        finnhub_key = os.environ.get("FINNHUB_API_KEY")
+        earnings_asof_date = dt.date.fromisoformat(asof_str)
+        earnings_days = fetch_next_earnings_days(
+            tickers=[candidate.ticker for candidate in candidates],
+            finnhub_api_key=finnhub_key,
+            asof_date=earnings_asof_date,
+            cache_path=".cache/earnings_days.json",
+        )
+        candidates = [
+            candidate.model_copy(update={"days_to_earnings": earnings_days.get(candidate.ticker)})
+            for candidate in candidates
+        ]
+
+        min_days_to_earnings = _min_days_to_earnings_default()
+        if min_days_to_earnings > 0:
+            candidates = [
+                candidate
+                for candidate in candidates
+                if candidate.days_to_earnings is None or candidate.days_to_earnings >= min_days_to_earnings
+            ]
+
+        # Stage 2: combined priority re-ranks prefilter set and trims to final top-N
+        candidates = compute_combined_priority(candidates, cfg=combined_priority_cfg)
+        candidates = candidates[:requested_top]
+        candidates = _rebuild_recommendations_with_decision_action(
+            candidates,
+            risk_cfg=risk_cfg,
+            rr_target=_safe_float(getattr(risk_cfg, "rr_target", 2.0), default=2.0),
+            commission_pct=_safe_float(getattr(risk_cfg, "commission_pct", 0.0), default=0.0),
+        )
+        candidates = _apply_decision_priority_ranking(candidates)
+        if same_symbol_suppressed_count > 0:
+            warnings.append(
+                f"{same_symbol_suppressed_count} same-symbol candidate"
+                f"{'' if same_symbol_suppressed_count == 1 else 's'} suppressed because they are manage-only."
+            )
+
+        visible_ticker_list = [candidate.ticker for candidate in candidates]
+        sector_map = {t: info.get("sector") for t, info in ticker_info.items()}
+        warnings.extend(sector_concentration_warnings(visible_ticker_list, sector_map))
+
+        return candidates
+
     def run_screener(self, request: ScreenerRequest, strategy_override: Optional[dict] = None) -> ScreenerResponse:
         try:
             ctx = _RunContext(
@@ -1359,50 +1426,9 @@ class ScreenerService:
             candidates, same_symbol_suppressed_count, same_symbol_add_on_count = (
                 self._apply_same_symbol_filter(ctx, candidates)
             )
-            fundamentals_snapshots = _load_fundamentals_snapshots(candidates)
-            candidates = _apply_cached_fundamentals_context(candidates, snapshots=fundamentals_snapshots)
-            candidates = _apply_decision_summary_context(candidates, snapshots=fundamentals_snapshots)
-
-            finnhub_key = os.environ.get("FINNHUB_API_KEY")
-            earnings_asof_date = dt.date.fromisoformat(asof_str)
-            earnings_days = fetch_next_earnings_days(
-                tickers=[candidate.ticker for candidate in candidates],
-                finnhub_api_key=finnhub_key,
-                asof_date=earnings_asof_date,
-                cache_path=".cache/earnings_days.json",
+            candidates = self._enrich_and_rank(
+                ctx, candidates, requested_top, same_symbol_suppressed_count
             )
-            candidates = [
-                candidate.model_copy(update={"days_to_earnings": earnings_days.get(candidate.ticker)})
-                for candidate in candidates
-            ]
-
-            min_days_to_earnings = _min_days_to_earnings_default()
-            if min_days_to_earnings > 0:
-                candidates = [
-                    candidate
-                    for candidate in candidates
-                    if candidate.days_to_earnings is None or candidate.days_to_earnings >= min_days_to_earnings
-                ]
-
-            # Stage 2: combined priority re-ranks prefilter set and trims to final top-N
-            candidates = compute_combined_priority(candidates, cfg=combined_priority_cfg)
-            candidates = candidates[:requested_top]
-            candidates = _rebuild_recommendations_with_decision_action(
-                candidates,
-                risk_cfg=risk_cfg,
-                rr_target=_safe_float(getattr(risk_cfg, "rr_target", 2.0), default=2.0),
-                commission_pct=_safe_float(getattr(risk_cfg, "commission_pct", 0.0), default=0.0),
-            )
-            candidates = _apply_decision_priority_ranking(candidates)
-            if same_symbol_suppressed_count > 0:
-                warnings.append(
-                    f"{same_symbol_suppressed_count} same-symbol candidate"
-                    f"{'' if same_symbol_suppressed_count == 1 else 's'} suppressed because they are manage-only."
-                )
-
-            visible_ticker_list = [candidate.ticker for candidate in candidates]
-            sector_map = {t: info.get("sector") for t, info in ticker_info.items()}
-            warnings.extend(sector_concentration_warnings(visible_ticker_list, sector_map))
 
             response = ScreenerResponse(
                 candidates=candidates,
