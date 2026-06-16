@@ -1383,26 +1383,10 @@ class ScreenerService:
                 combined_priority_cfg=CombinedPriorityConfig(),
             )
             requested_top = self._resolve_universe_and_window(ctx)
-            # Bridge ctx fields back into local names still used by not-yet-extracted code below.
-            warnings = ctx.warnings
-            universe_cfg = ctx.universe_cfg
-            benchmark = ctx.benchmark
-            tickers = ctx.tickers
-            asof_str = ctx.asof_str
-            market_health = ctx.market_health
-            strategy = ctx.strategy
-            combined_priority_cfg = ctx.combined_priority_cfg
 
             self._build_signals_and_fetch_ohlcv(ctx, requested_top)
-            signals_cfg = ctx.signals_cfg
-            ohlcv = ctx.ohlcv
-            last_bar_map = ctx.last_bar_map
-            overall_last_bar = ctx.overall_last_bar
-            data_freshness = ctx.data_freshness
 
             self._build_run_configs(ctx, requested_top)
-            risk_cfg = ctx.risk_cfg
-            universe_cfg = ctx.universe_cfg
 
             results = self._run_daily_report(ctx, requested_top)
             if results is None:
@@ -1415,13 +1399,8 @@ class ScreenerService:
                     same_symbol_suppressed_count=0,
                     same_symbol_add_on_count=0,
                 )
-            # Bridge ctx fields back into local names still used by not-yet-extracted code below.
-            ticker_info = ctx.ticker_info
-            sector_rotation_by_name = ctx.sector_rotation_by_name
 
             candidates = self._build_candidates(ctx, results)
-            benchmark_change_pct = ctx.benchmark_change_pct
-            benchmark_last_bar = ctx.benchmark_last_bar
 
             candidates, same_symbol_suppressed_count, same_symbol_add_on_count = (
                 self._apply_same_symbol_filter(ctx, candidates)
@@ -1432,13 +1411,13 @@ class ScreenerService:
 
             response = ScreenerResponse(
                 candidates=candidates,
-                asof_date=asof_str,
-                total_screened=len(tickers),
-                benchmark_ticker=benchmark,
-                benchmark_change_pct=benchmark_change_pct,
-                benchmark_last_bar=benchmark_last_bar,
-                data_freshness=data_freshness,
-                warnings=warnings,
+                asof_date=ctx.asof_str,
+                total_screened=len(ctx.tickers),
+                benchmark_ticker=ctx.benchmark,
+                benchmark_change_pct=ctx.benchmark_change_pct,
+                benchmark_last_bar=ctx.benchmark_last_bar,
+                data_freshness=ctx.data_freshness,
+                warnings=ctx.warnings,
                 same_symbol_suppressed_count=same_symbol_suppressed_count,
                 same_symbol_add_on_count=same_symbol_add_on_count,
             )
