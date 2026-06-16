@@ -47,6 +47,27 @@ Use these paths for new code:
 - Selection pipeline: `swing_screener.selection.*`
 - Recommendations: `swing_screener.risk.recommendations.*`
 - Report config: `swing_screener.strategy.report_config.ReportConfig`
+- Scalar coercion helpers: `swing_screener.utils.coerce.*` (`is_na_scalar`, `safe_float`, `safe_optional_float`, `safe_optional_int`, `safe_list`)
+- Price-history / OHLCV shaping: `swing_screener.data.price_history.*` (`merge_ohlcv`, `to_date_iso`, `last_bar_map`, `price_history_map`, `price_history_change_pct`, `aligned_benchmark_price_history`)
+
+## Screener Pipeline
+
+`ScreenerService.run_screener` (`api/services/screener_service.py`) is a thin orchestrator
+that builds a `_RunContext` and calls seven private pipeline steps in order, then constructs
+the `ScreenerResponse` from the context:
+
+1. `_resolve_universe_and_window`
+2. `_build_signals_and_fetch_ohlcv`
+3. `_build_run_configs`
+4. `_run_daily_report` (returns `None` when there are no candidates)
+5. `_build_candidates`
+6. `_apply_same_symbol_filter`
+7. `_enrich_and_rank`
+
+Each step reads/writes `_RunContext`; the orchestrator owns response construction. The pure,
+side-effect-free helpers it relies on live in core: scalar coercion in
+`swing_screener.utils.coerce` and price-history shaping in `swing_screener.data.price_history`.
+The I/O-coupled `_fetch_ohlcv_chunked` and fundamentals-coupled `_is_stale` remain in the service.
 
 ## Removed Legacy Packages
 
