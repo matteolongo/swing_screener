@@ -120,7 +120,7 @@ def analyze_position(
             earnings_days = ep.days_until
             earnings_date = ep.next_earnings_date
     except Exception:
-        pass
+        logger.warning("Earnings proximity fetch failed for %r; proceeding without earnings data", pos.ticker, exc_info=True)
     request = SymbolIntelligenceRequest(
         close=float(pos.current_price if pos.current_price is not None else pos.entry_price),
         signal=stop.action,

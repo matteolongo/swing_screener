@@ -10,6 +10,9 @@ from openai import OpenAI
 from swing_screener.intelligence.cache import write_to_cache
 from swing_screener.intelligence.models import SymbolIntelligence, SymbolIntelligenceRequest
 from swing_screener.settings import get_settings_manager
+from swing_screener.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 _SYSTEM_PROMPT = """\
 You are a swing-trading analyst. Given the technical context below and live web search results, \
@@ -460,5 +463,5 @@ class SymbolAnalyzer:
         try:
             write_to_cache(ticker, result)
         except Exception:
-            pass
+            logger.warning("Failed to write intelligence cache for %r; result will not be cached", ticker, exc_info=True)
         return result

@@ -15,7 +15,9 @@ except Exception:  # pragma: no cover
     import importlib_resources  # type: ignore
 
 from swing_screener.data.universe_sources import refresh_snapshot_from_source
+from swing_screener.utils.logging_config import get_logger
 
+logger = get_logger(__name__)
 
 _TICKER_RE = re.compile(r"^[A-Z0-9.\-]+$")
 _BENCHMARK_RE = re.compile(r"^[A-Z0-9.^\-]+$")
@@ -559,7 +561,7 @@ def get_universe_benchmark(name: str) -> Optional[str]:
         if benchmark:
             return _normalize_benchmark_symbol(str(benchmark))
     except Exception:
-        pass
+        logger.warning("Failed to load snapshot for universe %r; falling back to manifest", name, exc_info=True)
     for entry in _load_registry_manifest():
         if entry.get("id") == name:
             b = entry.get("benchmark")
@@ -626,7 +628,7 @@ def load_universe_from_file(
             if row:
                 raw_items.append(row[0])
     except Exception:
-        pass
+        logger.debug("CSV re-parse of universe file failed; using line-split results", exc_info=True)
 
     tickers = normalize_tickers(raw_items)
     tickers = apply_universe_config(tickers, cfg)

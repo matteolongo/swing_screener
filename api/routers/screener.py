@@ -1,9 +1,12 @@
 """Screener router - Run screener."""
 from __future__ import annotations
 
+import logging
 import os
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
+
+logger = logging.getLogger(__name__)
 
 from api.models.screener import (
     ScreenerRequest,
@@ -36,7 +39,7 @@ def _record_history(history_repo: ScreenerHistoryRepository, result: ScreenerRes
         if tickers:
             history_repo.record_run(result.asof_date, tickers)
     except Exception:
-        pass  # Never fail a screener run due to history recording
+        logger.warning("Failed to record screener history for run dated %r; ignoring", result.asof_date, exc_info=True)
 
 
 @router.post(

@@ -112,8 +112,8 @@ class YfinanceProvider(MarketDataProvider):
             logger.warning("Failed to persist OHLCV cache index %s: %s", path, exc)
             try:
                 tmp.unlink(missing_ok=True)
-            except OSError:
-                pass
+            except OSError as rm_exc:
+                logger.debug("Failed to remove temp cache index %s: %s", tmp, rm_exc)
 
     def _store_per_ticker_cache(
         self,
@@ -207,8 +207,8 @@ class YfinanceProvider(MarketDataProvider):
             logger.warning("Failed writing OHLCV cache %s: %s", cache_file, exc)
             try:
                 tmp_file.unlink(missing_ok=True)
-            except Exception:
-                pass
+            except Exception as rm_exc:
+                logger.debug("Failed to remove temp OHLCV cache %s: %s", tmp_file, rm_exc)
 
     def _iter_chunks(self, tickers: list[str], size: int) -> Iterator[list[str]]:
         """Yield fixed-size chunks from a ticker list."""

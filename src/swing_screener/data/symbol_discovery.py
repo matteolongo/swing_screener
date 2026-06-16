@@ -10,6 +10,10 @@ from http.cookiejar import CookieJar
 from urllib.parse import quote, urlencode
 from urllib.request import HTTPCookieProcessor, Request, build_opener, urlopen
 
+from swing_screener.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
+
 
 DiscoveryProvider = Literal["yahoo_predefined", "eodhd_exchange"]
 
@@ -121,7 +125,7 @@ def _fetch_yahoo_custom_json(payload: dict) -> dict:
     try:
         opener.open(Request(YAHOO_COOKIE_URL, headers=headers), timeout=10).read()
     except Exception:
-        pass
+        logger.debug("Yahoo cookie prefetch failed; continuing without cookie", exc_info=True)
     crumb_request = Request(YAHOO_CRUMB_URL, headers=headers)
     with opener.open(crumb_request, timeout=15) as response:
         crumb = response.read().decode("utf-8", errors="ignore").strip()

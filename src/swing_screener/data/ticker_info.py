@@ -64,8 +64,8 @@ def _save_info_cache(path: Path, cache: dict[str, dict]) -> None:
         logger.warning("Failed to persist ticker info cache %s: %s", path, exc)
         try:
             tmp.unlink(missing_ok=True)
-        except OSError:
-            pass
+        except OSError as rm_exc:
+            logger.debug("Failed to remove temp ticker info cache %s: %s", tmp, rm_exc)
 
 
 def get_multiple_ticker_info(
