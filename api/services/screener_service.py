@@ -1050,6 +1050,215 @@ class ScreenerService:
 
         return results
 
+    def _build_candidates(self, ctx: _RunContext, results: "pd.DataFrame") -> list[ScreenerCandidate]:
+        """Construct ScreenerCandidate objects for each ranked result row.
+
+        Reads ctx.ohlcv, ticker_info, benchmark, last_bar_map, overall_last_bar,
+        market_health, risk_cfg, universe_cfg, signals_cfg, sector_rotation_by_name.
+        Returns the candidate list (pre same-symbol filtering).
+        """
+        ohlcv = ctx.ohlcv
+        ticker_info = ctx.ticker_info
+        benchmark = ctx.benchmark
+        last_bar_map = ctx.last_bar_map
+        overall_last_bar = ctx.overall_last_bar
+        market_health = ctx.market_health
+        risk_cfg = ctx.risk_cfg
+        universe_cfg = ctx.universe_cfg
+        signals_cfg = ctx.signals_cfg
+        sector_rotation_by_name = ctx.sector_rotation_by_name
+
+        ticker_list = [str(idx) for idx in results.index]
+
+        # Build price history only for candidate tickers to improve performance
+        price_history_map = _price_history_map(ohlcv, tickers=ticker_list)
+        patterns_map = detect_patterns(ohlcv, tickers=ticker_list, cfg=CandleConfig())
+        exec_cfg = ExecutionConfig()
+        benchmark_history = _price_history_map(ohlcv, tickers=[benchmark]).get(benchmark, [])
+        benchmark_change_pct = _price_history_change_pct(benchmark_history)
+        benchmark_last_bar = last_bar_map.get(benchmark) or overall_last_bar
+
+        atr_col = f"atr{universe_cfg.vol.atr_window}"
+        ma_col = f"ma{signals_cfg.pullback_ma}_level"
+        candidates = []
+        for idx, row in results.iterrows():
+            sma20 = _safe_float(row.get(ma_col))
+            sma50_dist = _safe_float(row.get("dist_sma50_pct"))
+            sma200_dist = _safe_float(row.get("dist_sma200_pct"))
+            last_price = _safe_float(row.get("last"))
+
+            sma50 = last_price / (1 + sma50_dist / 100) if last_price and sma50_dist else last_price
+            sma200 = last_price / (1 + sma200_dist / 100) if last_price and sma200_dist else last_price
+
+            ticker_str = str(idx)
+            info = ticker_info.get(ticker_str, {})
+            instrument = get_instrument_record(ticker_str) or {}
+            last_bar = last_bar_map.get(ticker_str) or overall_last_bar
+            currency = str(
+                info.get("currency")
+                or row.get("currency")
+                or instrument.get("currency")
+                or detect_currency(ticker_str)
+            ).upper()
+
+            signal = row.get("signal")
+            entry_val = _safe_optional_float(row.get("entry")) or last_price
+            stop_val = _safe_optional_float(row.get("stop"))
+            if stop_val is None and entry_val:
+                # No explicit stop from the pipeline — derive one from ATR so that
+                # target and R:R can be computed for the order panel.
+                atr_val = _safe_optional_float(row.get(atr_col))
+                if atr_val and atr_val > 0:
+                    stop_val = round(entry_val - 2.0 * atr_val, 4)
+            shares_val = _safe_optional_int(row.get("shares"))
+            position_size = _safe_optional_float(row.get("position_value"))
+            risk_usd = _safe_optional_float(row.get("realized_risk"))
+            risk_pct = (risk_usd / risk_cfg.account_size) if risk_usd and risk_cfg.account_size else None
+
+            rr_target = _safe_float(getattr(risk_cfg, "rr_target", 2.0), default=2.0)
+            commission_pct = _safe_float(getattr(risk_cfg, "commission_pct", 0.0), default=0.0)
+
+            rec_payload = evaluate_recommendation(
+                signal=str(signal) if not _is_na_scalar(signal) else None,
+                entry=entry_val,
+                stop=stop_val,
+                shares=shares_val,
+                risk_cfg=risk_cfg,
+                rr_target=rr_target,
+                costs=RiskEngineConfig(
+                    commission_pct=commission_pct,
+                    slippage_bps=5.0,
+                    fx_estimate_pct=0.0,
+                ),
+                # Pass candidate data for Trade Thesis
+                ticker=ticker_str,
+                strategy="Momentum",
+                close=last_price,
+                sma_20=sma20,
+                sma_50=sma50,
+                sma_200=sma200,
+                atr=_safe_float(row.get(atr_col)),
+                momentum_6m=_safe_float(row.get("mom_6m")),
+                    momentum_12m=_safe_float(row.get("mom_12m")),
+                    rel_strength=_safe_float(row.get("rs_6m")),
+                    confidence=_safe_float(row.get("confidence")),
+            )
+            recommendation = Recommendation.model_validate(asdict(rec_payload))
+            rec_risk = recommendation.risk
+            candidate_history = price_history_map.get(ticker_str, [])
+            symbol_change_pct = _price_history_change_pct(candidate_history)
+            benchmark_price_history = _aligned_benchmark_price_history(candidate_history, benchmark_history)
+            benchmark_outperformance_pct = (
+                symbol_change_pct - benchmark_change_pct
+                if symbol_change_pct is not None and benchmark_change_pct is not None
+                else None
+            )
+
+            cand_patterns = [
+                CandlePatternOut(
+                    bar_index=p.bar_index,
+                    date=p.date,
+                    name=p.name,
+                    direction=p.direction,
+                    key_level=p.key_level,
+                    context=p.context,
+                )
+                for p in patterns_map.get(ticker_str, [])
+            ]
+            pattern_stop_val, pattern_stop_reason = (None, None)
+            if exec_cfg.pattern_stop_enabled and entry_val:
+                pattern_stop_val, pattern_stop_reason = apply_pattern_stop(
+                    ticker=ticker_str,
+                    entry=entry_val,
+                    current_stop=stop_val,
+                    atr=_safe_optional_float(row.get(atr_col)),
+                    patterns=patterns_map,
+                    buffer_atr=exec_cfg.pattern_stop_atr_buffer,
+                    min_rr_stop=None,
+                )
+
+            candidates.append(
+                ScreenerCandidate(
+                    ticker=ticker_str,
+                    currency=currency,
+                    exchange_mic=str(instrument.get("exchange_mic") or "").upper() or None,
+                    instrument_type=str(instrument.get("instrument_type") or "").lower() or None,
+                    is_otc=str(instrument.get("exchange_mic") or "").upper() == "XOTC",
+                    name=info.get("name"),
+                    sector=info.get("sector"),
+                    last_bar=last_bar,
+                    close=last_price,
+                    sma_20=sma20,
+                    sma_50=sma50,
+                    sma_200=sma200,
+                    atr=_safe_float(row.get(atr_col)),
+                    momentum_6m=_safe_float(row.get("mom_6m")),
+                    momentum_12m=_safe_float(row.get("mom_12m")),
+                    rel_strength=_safe_float(row.get("rs_6m")),
+                    sector_rs=_safe_optional_float(row.get("sector_rs_6m")),
+                    score=_safe_float(row.get("score")),
+                    confidence=_safe_float(row.get("confidence")),
+                    rank=int(row.get("rank", len(candidates) + 1)),
+                    sma20_slope=_safe_optional_float(row.get("sma20_slope")),
+                    sma50_slope=_safe_optional_float(row.get("sma50_slope")),
+                    consolidation_tightness=_safe_optional_float(row.get("consolidation_tightness")),
+                    close_location_in_range=_safe_optional_float(row.get("close_location_in_range")),
+                    above_breakout_extension=_safe_optional_float(row.get("above_breakout_extension")),
+                    breakout_volume_confirmation=(
+                        bool(row.get("breakout_volume_confirmation"))
+                        if not _is_na_scalar(row.get("breakout_volume_confirmation"))
+                        else None
+                    ),
+                    dist_52w_high_pct=_safe_optional_float(row.get("dist_52w_high_pct")),
+                    near_52w_high=(
+                        bool(row.get("near_52w_high"))
+                        if not _is_na_scalar(row.get("near_52w_high"))
+                        else None
+                    ),
+                    weekly_trend=(
+                        str(row.get("weekly_trend"))
+                        if not _is_na_scalar(row.get("weekly_trend"))
+                        else None
+                    ),
+                    volume_ratio=_safe_optional_float(row.get("volume_ratio")),
+                    avg_daily_volume_eur=_safe_optional_float(row.get("avg_daily_volume_eur")),
+                    symbol_change_pct=symbol_change_pct,
+                    benchmark_outperformance_pct=benchmark_outperformance_pct,
+                    sector_rotation_context=sector_rotation_by_name.get(info.get("sector")),
+                    data_source_summary={"market_data": market_health},
+                    signal=str(signal) if not _is_na_scalar(signal) else None,
+                    entry=rec_risk.entry,
+                    stop=rec_risk.stop if stop_val is not None else None,
+                    target=rec_risk.target,
+                    rr=rec_risk.rr,
+                    shares=shares_val if shares_val is not None else rec_risk.shares,
+                    position_size_usd=position_size if position_size is not None else rec_risk.position_size,
+                    risk_usd=risk_usd if risk_usd is not None else rec_risk.risk_amount,
+                    risk_pct=risk_pct if risk_pct is not None else rec_risk.risk_pct,
+                    recommendation=recommendation,
+                    price_history=price_history_map.get(ticker_str, []),
+                    benchmark_price_history=benchmark_price_history,
+                    patterns=cand_patterns,
+                    pattern_stop=pattern_stop_val,
+                    pattern_stop_reason=pattern_stop_reason,
+                    suggested_order_type=(
+                        str(row.get("suggested_order_type"))
+                        if not _is_na_scalar(row.get("suggested_order_type"))
+                        else None
+                    ),
+                    suggested_order_price=_safe_optional_float(row.get("suggested_order_price")),
+                    execution_note=(
+                        str(row.get("execution_note"))
+                        if not _is_na_scalar(row.get("execution_note"))
+                        else None
+                    ),
+                )
+            )
+
+        ctx.benchmark_change_pct = benchmark_change_pct
+        ctx.benchmark_last_bar = benchmark_last_bar
+        return candidates
+
     def run_screener(self, request: ScreenerRequest, strategy_override: Optional[dict] = None) -> ScreenerResponse:
         try:
             ctx = _RunContext(
@@ -1094,192 +1303,9 @@ class ScreenerService:
             ticker_info = ctx.ticker_info
             sector_rotation_by_name = ctx.sector_rotation_by_name
 
-            ticker_list = [str(idx) for idx in results.index]
-            
-            # Build price history only for candidate tickers to improve performance
-            price_history_map = _price_history_map(ohlcv, tickers=ticker_list)
-            patterns_map = detect_patterns(ohlcv, tickers=ticker_list, cfg=CandleConfig())
-            exec_cfg = ExecutionConfig()
-            benchmark_history = _price_history_map(ohlcv, tickers=[benchmark]).get(benchmark, [])
-            benchmark_change_pct = _price_history_change_pct(benchmark_history)
-            benchmark_last_bar = last_bar_map.get(benchmark) or overall_last_bar
-
-            atr_col = f"atr{universe_cfg.vol.atr_window}"
-            ma_col = f"ma{signals_cfg.pullback_ma}_level"
-            candidates = []
-            for idx, row in results.iterrows():
-                sma20 = _safe_float(row.get(ma_col))
-                sma50_dist = _safe_float(row.get("dist_sma50_pct"))
-                sma200_dist = _safe_float(row.get("dist_sma200_pct"))
-                last_price = _safe_float(row.get("last"))
-
-                sma50 = last_price / (1 + sma50_dist / 100) if last_price and sma50_dist else last_price
-                sma200 = last_price / (1 + sma200_dist / 100) if last_price and sma200_dist else last_price
-
-                ticker_str = str(idx)
-                info = ticker_info.get(ticker_str, {})
-                instrument = get_instrument_record(ticker_str) or {}
-                last_bar = last_bar_map.get(ticker_str) or overall_last_bar
-                currency = str(
-                    info.get("currency")
-                    or row.get("currency")
-                    or instrument.get("currency")
-                    or detect_currency(ticker_str)
-                ).upper()
-
-                signal = row.get("signal")
-                entry_val = _safe_optional_float(row.get("entry")) or last_price
-                stop_val = _safe_optional_float(row.get("stop"))
-                if stop_val is None and entry_val:
-                    # No explicit stop from the pipeline — derive one from ATR so that
-                    # target and R:R can be computed for the order panel.
-                    atr_val = _safe_optional_float(row.get(atr_col))
-                    if atr_val and atr_val > 0:
-                        stop_val = round(entry_val - 2.0 * atr_val, 4)
-                shares_val = _safe_optional_int(row.get("shares"))
-                position_size = _safe_optional_float(row.get("position_value"))
-                risk_usd = _safe_optional_float(row.get("realized_risk"))
-                risk_pct = (risk_usd / risk_cfg.account_size) if risk_usd and risk_cfg.account_size else None
-
-                rr_target = _safe_float(getattr(risk_cfg, "rr_target", 2.0), default=2.0)
-                commission_pct = _safe_float(getattr(risk_cfg, "commission_pct", 0.0), default=0.0)
-
-                rec_payload = evaluate_recommendation(
-                    signal=str(signal) if not _is_na_scalar(signal) else None,
-                    entry=entry_val,
-                    stop=stop_val,
-                    shares=shares_val,
-                    risk_cfg=risk_cfg,
-                    rr_target=rr_target,
-                    costs=RiskEngineConfig(
-                        commission_pct=commission_pct,
-                        slippage_bps=5.0,
-                        fx_estimate_pct=0.0,
-                    ),
-                    # Pass candidate data for Trade Thesis
-                    ticker=ticker_str,
-                    strategy="Momentum",
-                    close=last_price,
-                    sma_20=sma20,
-                    sma_50=sma50,
-                    sma_200=sma200,
-                    atr=_safe_float(row.get(atr_col)),
-                    momentum_6m=_safe_float(row.get("mom_6m")),
-                        momentum_12m=_safe_float(row.get("mom_12m")),
-                        rel_strength=_safe_float(row.get("rs_6m")),
-                        confidence=_safe_float(row.get("confidence")),
-                )
-                recommendation = Recommendation.model_validate(asdict(rec_payload))
-                rec_risk = recommendation.risk
-                candidate_history = price_history_map.get(ticker_str, [])
-                symbol_change_pct = _price_history_change_pct(candidate_history)
-                benchmark_price_history = _aligned_benchmark_price_history(candidate_history, benchmark_history)
-                benchmark_outperformance_pct = (
-                    symbol_change_pct - benchmark_change_pct
-                    if symbol_change_pct is not None and benchmark_change_pct is not None
-                    else None
-                )
-
-                cand_patterns = [
-                    CandlePatternOut(
-                        bar_index=p.bar_index,
-                        date=p.date,
-                        name=p.name,
-                        direction=p.direction,
-                        key_level=p.key_level,
-                        context=p.context,
-                    )
-                    for p in patterns_map.get(ticker_str, [])
-                ]
-                pattern_stop_val, pattern_stop_reason = (None, None)
-                if exec_cfg.pattern_stop_enabled and entry_val:
-                    pattern_stop_val, pattern_stop_reason = apply_pattern_stop(
-                        ticker=ticker_str,
-                        entry=entry_val,
-                        current_stop=stop_val,
-                        atr=_safe_optional_float(row.get(atr_col)),
-                        patterns=patterns_map,
-                        buffer_atr=exec_cfg.pattern_stop_atr_buffer,
-                        min_rr_stop=None,
-                    )
-
-                candidates.append(
-                    ScreenerCandidate(
-                        ticker=ticker_str,
-                        currency=currency,
-                        exchange_mic=str(instrument.get("exchange_mic") or "").upper() or None,
-                        instrument_type=str(instrument.get("instrument_type") or "").lower() or None,
-                        is_otc=str(instrument.get("exchange_mic") or "").upper() == "XOTC",
-                        name=info.get("name"),
-                        sector=info.get("sector"),
-                        last_bar=last_bar,
-                        close=last_price,
-                        sma_20=sma20,
-                        sma_50=sma50,
-                        sma_200=sma200,
-                        atr=_safe_float(row.get(atr_col)),
-                        momentum_6m=_safe_float(row.get("mom_6m")),
-                        momentum_12m=_safe_float(row.get("mom_12m")),
-                        rel_strength=_safe_float(row.get("rs_6m")),
-                        sector_rs=_safe_optional_float(row.get("sector_rs_6m")),
-                        score=_safe_float(row.get("score")),
-                        confidence=_safe_float(row.get("confidence")),
-                        rank=int(row.get("rank", len(candidates) + 1)),
-                        sma20_slope=_safe_optional_float(row.get("sma20_slope")),
-                        sma50_slope=_safe_optional_float(row.get("sma50_slope")),
-                        consolidation_tightness=_safe_optional_float(row.get("consolidation_tightness")),
-                        close_location_in_range=_safe_optional_float(row.get("close_location_in_range")),
-                        above_breakout_extension=_safe_optional_float(row.get("above_breakout_extension")),
-                        breakout_volume_confirmation=(
-                            bool(row.get("breakout_volume_confirmation"))
-                            if not _is_na_scalar(row.get("breakout_volume_confirmation"))
-                            else None
-                        ),
-                        dist_52w_high_pct=_safe_optional_float(row.get("dist_52w_high_pct")),
-                        near_52w_high=(
-                            bool(row.get("near_52w_high"))
-                            if not _is_na_scalar(row.get("near_52w_high"))
-                            else None
-                        ),
-                        weekly_trend=(
-                            str(row.get("weekly_trend"))
-                            if not _is_na_scalar(row.get("weekly_trend"))
-                            else None
-                        ),
-                        volume_ratio=_safe_optional_float(row.get("volume_ratio")),
-                        avg_daily_volume_eur=_safe_optional_float(row.get("avg_daily_volume_eur")),
-                        symbol_change_pct=symbol_change_pct,
-                        benchmark_outperformance_pct=benchmark_outperformance_pct,
-                        sector_rotation_context=sector_rotation_by_name.get(info.get("sector")),
-                        data_source_summary={"market_data": market_health},
-                        signal=str(signal) if not _is_na_scalar(signal) else None,
-                        entry=rec_risk.entry,
-                        stop=rec_risk.stop if stop_val is not None else None,
-                        target=rec_risk.target,
-                        rr=rec_risk.rr,
-                        shares=shares_val if shares_val is not None else rec_risk.shares,
-                        position_size_usd=position_size if position_size is not None else rec_risk.position_size,
-                        risk_usd=risk_usd if risk_usd is not None else rec_risk.risk_amount,
-                        risk_pct=risk_pct if risk_pct is not None else rec_risk.risk_pct,
-                        recommendation=recommendation,
-                        price_history=price_history_map.get(ticker_str, []),
-                        benchmark_price_history=benchmark_price_history,
-                        patterns=cand_patterns,
-                        pattern_stop=pattern_stop_val,
-                        pattern_stop_reason=pattern_stop_reason,
-                        suggested_order_type=(
-                            str(row.get("suggested_order_type"))
-                            if not _is_na_scalar(row.get("suggested_order_type"))
-                            else None
-                        ),
-                        suggested_order_price=_safe_optional_float(row.get("suggested_order_price")),
-                        execution_note=(
-                            str(row.get("execution_note"))
-                            if not _is_na_scalar(row.get("execution_note"))
-                            else None
-                        ),
-                    )
-                )
+            candidates = self._build_candidates(ctx, results)
+            benchmark_change_pct = ctx.benchmark_change_pct
+            benchmark_last_bar = ctx.benchmark_last_bar
 
             portfolio_positions = self._portfolio_service.list_positions(status="open").positions
             portfolio_closed = self._portfolio_service.list_positions(status="closed").positions
