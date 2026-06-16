@@ -25,13 +25,34 @@ from api.services.strategy_service import StrategyService
 from api.services.watchlist_service import WatchlistService
 from api.utils.files import read_json_file, write_json_file, get_today_str
 from swing_screener.settings import data_dir, get_settings_manager, project_root
+from swing_screener.runtime_env import get_env_value
 from swing_screener.fundamentals.finnhub_client import FinnhubEnrichmentClient
 from swing_screener.fundamentals import FundamentalsAnalysisService as _FundamentalsAnalysisService
 
-_finnhub_api_key: str | None = os.environ.get("FINNHUB_API_KEY")
-_finnhub_client: FinnhubEnrichmentClient | None = (
-    FinnhubEnrichmentClient(_finnhub_api_key) if _finnhub_api_key else None
-)
+_finnhub_client: FinnhubEnrichmentClient | None = None
+_finnhub_client_api_key: str | None = None
+_finnhub_client_lock = threading.Lock()
+
+
+def get_finnhub_client() -> FinnhubEnrichmentClient | None:
+    """Return a lazily initialized Finnhub client after repo-root .env loading.
+
+    api.main imports routers before it calls ensure_runtime_env_loaded(), and those
+    router imports load this module. Building the client at import time therefore
+    misses FINNHUB_API_KEY values that exist only in .env. Resolve the key lazily
+    so endpoint dependency construction sees the final runtime environment.
+    """
+    global _finnhub_client, _finnhub_client_api_key
+    api_key = get_env_value("FINNHUB_API_KEY", "").strip()
+    if not api_key:
+        return None
+    if _finnhub_client is not None and _finnhub_client_api_key == api_key:
+        return _finnhub_client
+    with _finnhub_client_lock:
+        if _finnhub_client is None or _finnhub_client_api_key != api_key:
+            _finnhub_client = FinnhubEnrichmentClient(api_key)
+            _finnhub_client_api_key = api_key
+        return _finnhub_client
 
 # Repository root
 ROOT_DIR = project_root()
@@ -157,7 +178,7 @@ def get_fundamentals_service(
     return FundamentalsService(
         config_repo=config_repo,
         watchlist_repo=watchlist_repo,
-        analysis_service=_FundamentalsAnalysisService(finnhub_client=_finnhub_client),
+        analysis_service=_FundamentalsAnalysisService(finnhub_client=get_finnhub_client()),
     )
 
 
