@@ -2,7 +2,7 @@
 from datetime import date, timedelta
 from unittest.mock import Mock
 import pytest
-from fastapi import HTTPException
+from swing_screener.errors import UpstreamError
 
 from api.models.daily_review import DailyReview, PendingOrderReview
 from api.models.screener import ScreenerResponse, ScreenerCandidate, SameSymbolCandidateContext
@@ -479,12 +479,12 @@ def test_generate_daily_review_survives_stop_suggestion_error(
     mock_portfolio_service,
     tmp_path,
 ):
-    """A single stop-suggestion failure should not fail the whole review."""
+    """A DomainError from suggest_position_stop degrades gracefully (warning branch)."""
     original_side_effect = mock_portfolio_service.suggest_position_stop.side_effect
 
     def side_effect(position_id: str):
         if position_id == "pos2":
-            raise HTTPException(status_code=502, detail="Failed to fetch market data for GOOGL")
+            raise UpstreamError("Failed to fetch market data for GOOGL")
         return original_side_effect(position_id)
 
     mock_portfolio_service.suggest_position_stop.side_effect = side_effect
