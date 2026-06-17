@@ -123,7 +123,7 @@ def test_hangseng_symbol_strips_prefix_and_zero_pads_to_4():
 
 def test_kospi_symbol_zero_pads_to_6():
     assert _kospi_symbol("005930") == "005930.KS"
-    assert _kospi_symbol(5930) == "005930.KS"   # pandas may coerce to int
+    assert _kospi_symbol(5930) == "005930.KS"  # pandas may coerce to int
     assert _kospi_symbol("090430") == "090430.KS"
     assert _kospi_symbol("nan") == ""
 
@@ -132,11 +132,13 @@ def test_csi_symbol_routes_shanghai_and_shenzhen():
     assert _csi_symbol("SSE: 600519") == "600519.SS"
     assert _csi_symbol("SZSE: 000333") == "000333.SZ"
     assert _csi_symbol("SZSE: 300750") == "300750.SZ"
-    assert _csi_symbol("600519") == ""          # no venue prefix -> drop
+    assert _csi_symbol("600519") == ""  # no venue prefix -> drop
 
 
 def test_hangseng_parses_constituents():
-    rows = fetch_index_constituents("hongkong_hsi", fetch_text=_fixture_fetch("hongkong_hsi"))
+    rows = fetch_index_constituents(
+        "hongkong_hsi", fetch_text=_fixture_fetch("hongkong_hsi")
+    )
     syms = {r.symbol for r in rows}
     assert len(rows) >= 78
     assert all(s.endswith(".HK") and len(s.split(".")[0]) >= 4 for s in syms)
@@ -144,7 +146,9 @@ def test_hangseng_parses_constituents():
 
 
 def test_kospi200_parses_200_constituents():
-    rows = fetch_index_constituents("korea_kospi200", fetch_text=_fixture_fetch("korea_kospi200"))
+    rows = fetch_index_constituents(
+        "korea_kospi200", fetch_text=_fixture_fetch("korea_kospi200")
+    )
     syms = {r.symbol for r in rows}
     assert len(rows) >= 195
     assert all(s.endswith(".KS") and len(s.split(".")[0]) == 6 for s in syms)
@@ -152,7 +156,9 @@ def test_kospi200_parses_200_constituents():
 
 
 def test_csi300_parses_constituents_with_dual_venue():
-    rows = fetch_index_constituents("china_csi300", fetch_text=_fixture_fetch("china_csi300"))
+    rows = fetch_index_constituents(
+        "china_csi300", fetch_text=_fixture_fetch("china_csi300")
+    )
     syms = {r.symbol for r in rows}
     assert len(rows) >= 295
     assert any(s.endswith(".SS") for s in syms)

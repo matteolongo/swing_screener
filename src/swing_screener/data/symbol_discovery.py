@@ -17,7 +17,9 @@ logger = get_logger(__name__)
 
 DiscoveryProvider = Literal["yahoo_predefined", "eodhd_exchange"]
 
-YAHOO_SCREENER_URL = "https://query1.finance.yahoo.com/v1/finance/screener/predefined/saved"
+YAHOO_SCREENER_URL = (
+    "https://query1.finance.yahoo.com/v1/finance/screener/predefined/saved"
+)
 YAHOO_CUSTOM_SCREENER_URL = "https://query1.finance.yahoo.com/v1/finance/screener"
 YAHOO_CRUMB_URL = "https://query1.finance.yahoo.com/v1/test/getcrumb"
 YAHOO_COOKIE_URL = "https://fc.yahoo.com"
@@ -113,7 +115,9 @@ class SymbolDiscoveryResult:
 
 
 def _normalize_codes(values: Iterable[str]) -> tuple[str, ...]:
-    return tuple(sorted({str(value).strip().upper() for value in values if str(value).strip()}))
+    return tuple(
+        sorted({str(value).strip().upper() for value in values if str(value).strip()})
+    )
 
 
 def _fetch_json(url: str) -> dict:
@@ -129,12 +133,16 @@ def _fetch_yahoo_custom_json(payload: dict) -> dict:
     try:
         opener.open(Request(YAHOO_COOKIE_URL, headers=headers), timeout=10).read()
     except Exception:
-        logger.debug("Yahoo cookie prefetch failed; continuing without cookie", exc_info=True)
+        logger.debug(
+            "Yahoo cookie prefetch failed; continuing without cookie", exc_info=True
+        )
     crumb_request = Request(YAHOO_CRUMB_URL, headers=headers)
     with opener.open(crumb_request, timeout=15) as response:
         crumb = response.read().decode("utf-8", errors="ignore").strip()
     if not crumb:
-        raise SymbolDiscoveryError("Yahoo crumb fetch returned empty response; authentication may have changed.")
+        raise SymbolDiscoveryError(
+            "Yahoo crumb fetch returned empty response; authentication may have changed."
+        )
     request = Request(
         f"{YAHOO_CUSTOM_SCREENER_URL}?{urlencode({'crumb': crumb})}",
         data=json.dumps(payload).encode("utf-8"),
@@ -179,9 +187,15 @@ def _passes_filters(
 ) -> bool:
     if currencies and str(item.get("currency") or "").upper() not in currencies:
         return False
-    if exchange_mics and str(item.get("exchange_mic") or "").upper() not in exchange_mics:
+    if (
+        exchange_mics
+        and str(item.get("exchange_mic") or "").upper() not in exchange_mics
+    ):
         return False
-    if quote_types and str(item.get("instrument_type") or "").upper() not in quote_types:
+    if (
+        quote_types
+        and str(item.get("instrument_type") or "").upper() not in quote_types
+    ):
         return False
     if min_market_cap is not None and (item.get("market_cap") or 0) < min_market_cap:
         return False
@@ -204,15 +218,21 @@ def _yahoo_symbol_from_quote(quote: dict, *, screen: str, rank: int) -> dict:
     quote_type = str(quote.get("quoteType") or "UNKNOWN").upper()
     return {
         "symbol": str(quote.get("symbol") or "").upper(),
-        "name": quote.get("shortName") or quote.get("longName") or quote.get("displayName"),
+        "name": quote.get("shortName")
+        or quote.get("longName")
+        or quote.get("displayName"),
         "instrument_type": quote_type,
         "currency": str(quote.get("currency") or "").upper() or None,
         "market": _normalize_yahoo_market(quote),
         "exchange_mic": YAHOO_EXCHANGE_TO_MIC.get(exchange_code),
         "provider_exchange": exchange_code or None,
         "exchange_name": quote.get("fullExchangeName"),
-        "market_cap": _coerce_int(quote.get("marketCap") or quote.get("intradaymarketcap")),
-        "volume": _coerce_int(quote.get("regularMarketVolume") or quote.get("averageDailyVolume3Month")),
+        "market_cap": _coerce_int(
+            quote.get("marketCap") or quote.get("intradaymarketcap")
+        ),
+        "volume": _coerce_int(
+            quote.get("regularMarketVolume") or quote.get("averageDailyVolume3Month")
+        ),
         "last_price": quote.get("regularMarketPrice"),
         "sector": quote.get("sector"),
         "industry": quote.get("industry"),
@@ -222,7 +242,9 @@ def _yahoo_symbol_from_quote(quote: dict, *, screen: str, rank: int) -> dict:
     }
 
 
-def _yahoo_custom_payload(*, query_field: str, query_value: str, query: SymbolDiscoveryQuery) -> dict:
+def _yahoo_custom_payload(
+    *, query_field: str, query_value: str, query: SymbolDiscoveryQuery
+) -> dict:
     quote_types = _normalize_codes(query.quote_types)
     return {
         "offset": 0,
@@ -270,14 +292,27 @@ def _discover_with_yahoo_custom_screener(
     exchange_mics = _normalize_codes(query.exchange_mics)
     quote_types = _normalize_codes(query.quote_types)
     for query_field, value in _yahoo_custom_queries(query):
-        data = fetch_custom_json(_yahoo_custom_payload(query_field=query_field, query_value=value, query=query))
+        data = fetch_custom_json(
+            _yahoo_custom_payload(
+                query_field=query_field, query_value=value, query=query
+            )
+        )
         result = ((data.get("finance") or {}).get("result") or [{}])[0]
         for index, quote in enumerate(result.get("quotes") or [], start=1):
-            item = _yahoo_symbol_from_quote(quote, screen=f"custom_{query_field}_{value}", rank=index)
+            item = _yahoo_symbol_from_quote(
+                quote, screen=f"custom_{query_field}_{value}", rank=index
+            )
             symbol = item.get("symbol")
             if not symbol or symbol in seen:
                 continue
-            if not _passes_filters(item, currencies, exchange_mics, quote_types, query.min_market_cap, query.min_volume):
+            if not _passes_filters(
+                item,
+                currencies,
+                exchange_mics,
+                quote_types,
+                query.min_market_cap,
+                query.min_volume,
+            ):
                 continue
             seen.add(symbol)
             symbols.append(item)
@@ -302,10 +337,18 @@ def discover_with_yahoo_predefined(
 
     if custom_queries:
         try:
-            symbols = _discover_with_yahoo_custom_screener(query, fetch_custom_json=fetch_custom_json)
-            notes.append("Used Yahoo custom screener because exchange/currency filters require non-US enumeration.")
-        except Exception as exc:  # pragma: no cover - live Yahoo auth can vary by environment
-            notes.append(f"Yahoo custom screener failed ({type(exc).__name__}); falling back to predefined screeners.")
+            symbols = _discover_with_yahoo_custom_screener(
+                query, fetch_custom_json=fetch_custom_json
+            )
+            notes.append(
+                "Used Yahoo custom screener because exchange/currency filters require non-US enumeration."
+            )
+        except (
+            Exception
+        ) as exc:  # pragma: no cover - live Yahoo auth can vary by environment
+            notes.append(
+                f"Yahoo custom screener failed ({type(exc).__name__}); falling back to predefined screeners."
+            )
 
     if not symbols:
         currencies = _normalize_codes(query.currencies)
@@ -320,7 +363,14 @@ def discover_with_yahoo_predefined(
                 symbol = item.get("symbol")
                 if not symbol or symbol in seen:
                     continue
-                if not _passes_filters(item, currencies, exchange_mics, quote_types, query.min_market_cap, query.min_volume):
+                if not _passes_filters(
+                    item,
+                    currencies,
+                    exchange_mics,
+                    quote_types,
+                    query.min_market_cap,
+                    query.min_volume,
+                ):
                     continue
                 seen.add(symbol)
                 symbols.append(item)
@@ -346,7 +396,12 @@ def discover_with_yahoo_predefined(
     return SymbolDiscoveryResult(
         provider="yahoo_predefined",
         source_asof=dt.date.today().isoformat(),
-        source_documents=[{"label": "Yahoo Finance predefined screener endpoint", "url": YAHOO_SCREENER_URL}],
+        source_documents=[
+            {
+                "label": "Yahoo Finance predefined screener endpoint",
+                "url": YAHOO_SCREENER_URL,
+            }
+        ],
         filters=_query_filters(query),
         symbols=symbols,
         taxonomy=_taxonomy(symbols),
@@ -360,9 +415,19 @@ def _eodhd_symbol_from_row(row: dict, exchange: str) -> dict:
     return {
         "symbol": code,
         "name": row.get("Name") or row.get("name"),
-        "instrument_type": "ETF" if type_value == "ETF" else "EQUITY" if "COMMON" in type_value or type_value in {"STOCK", "EQUITY"} else type_value,
-        "currency": str(row.get("Currency") or row.get("currency") or "").upper() or None,
-        "market": str(row.get("Country") or row.get("country") or exchange).upper() or None,
+        "instrument_type": (
+            "ETF"
+            if type_value == "ETF"
+            else (
+                "EQUITY"
+                if "COMMON" in type_value or type_value in {"STOCK", "EQUITY"}
+                else type_value
+            )
+        ),
+        "currency": str(row.get("Currency") or row.get("currency") or "").upper()
+        or None,
+        "market": str(row.get("Country") or row.get("country") or exchange).upper()
+        or None,
         "exchange_mic": EODHD_EXCHANGE_TO_MIC.get(exchange.upper()),
         "provider_exchange": exchange.upper(),
         "exchange_name": row.get("Exchange") or row.get("exchange"),
@@ -377,11 +442,19 @@ def discover_with_eodhd_exchange(
     api_token: str | None = None,
     fetch_text: Callable[[str], str] = _fetch_text,
 ) -> SymbolDiscoveryResult:
-    token = api_token or os.getenv("EODHD_API_KEY") or os.getenv("EOD_HISTORICAL_DATA_API_KEY")
+    token = (
+        api_token
+        or os.getenv("EODHD_API_KEY")
+        or os.getenv("EOD_HISTORICAL_DATA_API_KEY")
+    )
     if not token:
-        raise SymbolDiscoveryError("EODHD discovery requires EODHD_API_KEY or EOD_HISTORICAL_DATA_API_KEY.")
+        raise SymbolDiscoveryError(
+            "EODHD discovery requires EODHD_API_KEY or EOD_HISTORICAL_DATA_API_KEY."
+        )
     if not query.exchanges:
-        raise SymbolDiscoveryError("EODHD discovery requires at least one exchange code, e.g. NASDAQ, NYSE, PA, AS.")
+        raise SymbolDiscoveryError(
+            "EODHD discovery requires at least one exchange code, e.g. NASDAQ, NYSE, PA, AS."
+        )
 
     symbols: list[dict] = []
     seen: set[str] = set()
@@ -392,14 +465,26 @@ def discover_with_eodhd_exchange(
     for exchange in query.exchanges:
         safe_exchange = quote(exchange, safe="")
         url = f"{EODHD_SYMBOL_LIST_URL.format(exchange=safe_exchange)}?{urlencode({'api_token': token, 'fmt': 'csv'})}"
-        documents.append({"label": f"EODHD exchange symbol list: {exchange.upper()}", "url": EODHD_SYMBOL_LIST_URL.format(exchange=safe_exchange)})
+        documents.append(
+            {
+                "label": f"EODHD exchange symbol list: {exchange.upper()}",
+                "url": EODHD_SYMBOL_LIST_URL.format(exchange=safe_exchange),
+            }
+        )
         reader = csv.DictReader(fetch_text(url).splitlines())
         for row in reader:
             item = _eodhd_symbol_from_row(row, exchange)
             symbol = item.get("symbol")
             if not symbol or symbol in seen:
                 continue
-            if not _passes_filters(item, currencies, exchange_mics, quote_types, query.min_market_cap, query.min_volume):
+            if not _passes_filters(
+                item,
+                currencies,
+                exchange_mics,
+                quote_types,
+                query.min_market_cap,
+                query.min_volume,
+            ):
                 continue
             seen.add(symbol)
             symbols.append(item)
@@ -453,5 +538,7 @@ def discover_symbols(
             fetch_custom_json=fetch_yahoo_custom_json,
         )
     if query.provider == "eodhd_exchange":
-        return discover_with_eodhd_exchange(query, api_token=eodhd_api_token, fetch_text=fetch_text)
+        return discover_with_eodhd_exchange(
+            query, api_token=eodhd_api_token, fetch_text=fetch_text
+        )
     raise ValueError(f"Unsupported discovery provider: {query.provider}")

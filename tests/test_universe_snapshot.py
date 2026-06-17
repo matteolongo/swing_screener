@@ -1,4 +1,5 @@
 """Tests for the registry-backed universe system."""
+
 import datetime
 import warnings
 from unittest.mock import patch
@@ -24,6 +25,7 @@ _CFG_NO_BENCH = UniverseConfig(benchmark="SPY", ensure_benchmark=False)
 # Registry manifest
 # ---------------------------------------------------------------------------
 
+
 def test_list_package_universes_count():
     ids = list_package_universes()
     assert len(ids) == 26, f"Expected 26 universes, got {len(ids)}: {ids}"
@@ -32,17 +34,32 @@ def test_list_package_universes_count():
 def test_list_package_universes_contains_expected():
     ids = list_package_universes()
     expected = {
-        "amsterdam_aex", "amsterdam_amx", "amsterdam_all",
-        "broad_market_stocks", "broad_market_etfs",
-        "europe_large_caps", "global_proxy_stocks",
-        "defense_stocks", "defense_etfs",
-        "healthcare_stocks", "healthcare_etfs",
-        "semiconductor_stocks", "energy_stocks", "financial_stocks",
+        "amsterdam_aex",
+        "amsterdam_amx",
+        "amsterdam_all",
+        "broad_market_stocks",
+        "broad_market_etfs",
+        "europe_large_caps",
+        "global_proxy_stocks",
+        "defense_stocks",
+        "defense_etfs",
+        "healthcare_stocks",
+        "healthcare_etfs",
+        "semiconductor_stocks",
+        "energy_stocks",
+        "financial_stocks",
         "italy_ftse_mib",
-        "us_sp500", "us_nasdaq100", "us_dow30",
-        "germany_dax", "france_cac40", "uk_ftse100",
-        "spain_ibex35", "europe_eurostoxx50",
-        "hongkong_hsi", "korea_kospi200", "china_csi300",
+        "us_sp500",
+        "us_nasdaq100",
+        "us_dow30",
+        "germany_dax",
+        "france_cac40",
+        "uk_ftse100",
+        "spain_ibex35",
+        "europe_eurostoxx50",
+        "hongkong_hsi",
+        "korea_kospi200",
+        "china_csi300",
     }
     assert expected == set(ids)
 
@@ -55,6 +72,7 @@ def test_list_package_universes_sorted():
 # ---------------------------------------------------------------------------
 # Loading
 # ---------------------------------------------------------------------------
+
 
 def test_load_broad_market_stocks_non_empty():
     tickers = load_universe_from_package("broad_market_stocks", _CFG_NO_BENCH)
@@ -86,6 +104,7 @@ def test_load_eur_all_raises():
 # Benchmark lookup
 # ---------------------------------------------------------------------------
 
+
 def test_benchmark_amsterdam_aex():
     assert get_universe_benchmark("amsterdam_aex") == "^AEX"
 
@@ -110,13 +129,16 @@ def test_benchmark_unknown_returns_none():
 # Stale check
 # ---------------------------------------------------------------------------
 
+
 def test_stale_index_hard_fails():
     stale_snapshot = {
         "id": "amsterdam_aex",
         "kind": "index",
         "last_reviewed_at": "2020-01-01",
         "stale_after_days": 100,
-        "constituents": [{"symbol": "ASML.AS", "exchange_mic": "XAMS", "currency": "EUR"}],
+        "constituents": [
+            {"symbol": "ASML.AS", "exchange_mic": "XAMS", "currency": "EUR"}
+        ],
     }
     with pytest.raises(RuntimeError, match="stale"):
         _check_stale(stale_snapshot)
@@ -155,12 +177,17 @@ def test_fresh_snapshot_does_not_raise_or_warn():
 # Content rules
 # ---------------------------------------------------------------------------
 
+
 def test_amsterdam_aex_all_xams():
     snapshot = _load_snapshot("amsterdam_aex")
     assert len(snapshot["constituents"]) == 30
     for c in snapshot["constituents"]:
-        assert c["exchange_mic"] == "XAMS", f"{c['symbol']} has wrong MIC: {c['exchange_mic']}"
-        assert c["currency"] == "EUR", f"{c['symbol']} has wrong currency: {c['currency']}"
+        assert (
+            c["exchange_mic"] == "XAMS"
+        ), f"{c['symbol']} has wrong MIC: {c['exchange_mic']}"
+        assert (
+            c["currency"] == "EUR"
+        ), f"{c['symbol']} has wrong currency: {c['currency']}"
 
 
 def test_amsterdam_amx_official_membership_includes_air_france_klm():
@@ -170,7 +197,10 @@ def test_amsterdam_amx_official_membership_includes_air_france_klm():
     assert "AF.PA" in symbols
     for c in snapshot["constituents"]:
         assert c["currency"] == "EUR"
-        assert c["exchange_mic"] in {"XAMS", "XPAR"}, f"{c['symbol']} has wrong MIC: {c['exchange_mic']}"
+        assert c["exchange_mic"] in {
+            "XAMS",
+            "XPAR",
+        }, f"{c['symbol']} has wrong MIC: {c['exchange_mic']}"
 
 
 def test_amsterdam_all_tracks_verified_aex_plus_amx_membership():
@@ -186,41 +216,41 @@ def test_amsterdam_all_tracks_verified_aex_plus_amx_membership():
 def test_europe_large_caps_no_gbp():
     snapshot = _load_snapshot("europe_large_caps")
     for c in snapshot["constituents"]:
-        assert not c["symbol"].endswith(".L"), (
-            f"GBP ticker {c['symbol']} should not be in europe_large_caps"
-        )
+        assert not c["symbol"].endswith(
+            ".L"
+        ), f"GBP ticker {c['symbol']} should not be in europe_large_caps"
 
 
 def test_europe_large_caps_no_chf():
     snapshot = _load_snapshot("europe_large_caps")
     for c in snapshot["constituents"]:
-        assert not c["symbol"].endswith(".SW"), (
-            f"CHF ticker {c['symbol']} should not be in europe_large_caps"
-        )
+        assert not c["symbol"].endswith(
+            ".SW"
+        ), f"CHF ticker {c['symbol']} should not be in europe_large_caps"
 
 
 def test_europe_large_caps_no_sek():
     snapshot = _load_snapshot("europe_large_caps")
     for c in snapshot["constituents"]:
-        assert not c["symbol"].endswith(".ST"), (
-            f"SEK ticker {c['symbol']} should not be in europe_large_caps"
-        )
+        assert not c["symbol"].endswith(
+            ".ST"
+        ), f"SEK ticker {c['symbol']} should not be in europe_large_caps"
 
 
 def test_europe_large_caps_no_dkk():
     snapshot = _load_snapshot("europe_large_caps")
     for c in snapshot["constituents"]:
-        assert not c["symbol"].endswith(".CO"), (
-            f"DKK ticker {c['symbol']} should not be in europe_large_caps"
-        )
+        assert not c["symbol"].endswith(
+            ".CO"
+        ), f"DKK ticker {c['symbol']} should not be in europe_large_caps"
 
 
 def test_global_proxy_stocks_all_usd():
     snapshot = _load_snapshot("global_proxy_stocks")
     for c in snapshot["constituents"]:
-        assert c["currency"] == "USD", (
-            f"{c['symbol']} has currency {c['currency']}, expected USD in global_proxy_stocks"
-        )
+        assert (
+            c["currency"] == "USD"
+        ), f"{c['symbol']} has currency {c['currency']}, expected USD in global_proxy_stocks"
 
 
 def test_broad_market_etfs_contains_eur_and_usd():
@@ -233,6 +263,7 @@ def test_broad_market_etfs_contains_eur_and_usd():
 # Validate
 # ---------------------------------------------------------------------------
 
+
 def test_validate_universe_snapshot_returns_list():
     errors = validate_universe_snapshot("amsterdam_aex")
     assert isinstance(errors, list)
@@ -243,8 +274,14 @@ def test_validate_universe_snapshot_returns_list():
 # ---------------------------------------------------------------------------
 
 EXPECTED_INDEX_IDS = {
-    "us_sp500", "us_nasdaq100", "us_dow30", "germany_dax",
-    "france_cac40", "uk_ftse100", "spain_ibex35", "europe_eurostoxx50",
+    "us_sp500",
+    "us_nasdaq100",
+    "us_dow30",
+    "germany_dax",
+    "france_cac40",
+    "uk_ftse100",
+    "spain_ibex35",
+    "europe_eurostoxx50",
 }
 
 
@@ -259,6 +296,7 @@ def test_new_indices_present_and_refreshable():
 # ---------------------------------------------------------------------------
 # Asian index universes
 # ---------------------------------------------------------------------------
+
 
 def test_asian_index_universes_registered():
     from swing_screener.data.universe import (

@@ -106,7 +106,8 @@ packaged universe ids after `POST /api/universes/auto-refresh` materializes them
 
 Index universes with a `source_adapter` (e.g. the `wikipedia_index_review` indices
 `us_sp500`, `us_nasdaq100`, `us_dow30`, `germany_dax`, `france_cac40`, `uk_ftse100`,
-`spain_ibex35`, `europe_eurostoxx50`) can be rebuilt from source:
+`spain_ibex35`, `europe_eurostoxx50`, `hongkong_hsi`, `korea_kospi200`,
+`china_csi300`) can be rebuilt from source:
 
 ```bash
 python -m swing_screener.cli universes refresh --name us_sp500 --apply
