@@ -165,6 +165,10 @@ class ScreenerRequest(BaseModel):
         default=None,
         description="Require weekly uptrend (close > sma20 > sma50 on weekly bars)",
     )
+    force_refresh: bool = Field(
+        default=False,
+        description="Bypass the per-symbol eval cache and recompute all symbols",
+    )
 
     @field_validator("currencies")
     @classmethod

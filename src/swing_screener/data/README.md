@@ -128,6 +128,22 @@ tickers = load_universe_from_package("usd_all", cfg)
 # Filters are also applied in selection/universe.py as part of build_feature_table()
 ```
 
+## Per-Symbol Evaluation Cache
+
+Screener evaluation results are cached per symbol to avoid recomputing unchanged per-symbol features across runs.
+
+- **Location**: `.cache/eval/{strategy_sig}/{asof_date}/{SYMBOL}.parquet`
+- **Key components**:
+  - `strategy_sig` — SHA of the universe+signals+risk config fields that affect per-symbol output (excludes ranking weights and `top_n`)
+  - `asof_date` — trading date of the run; a new day auto-invalidates all entries
+  - `SYMBOL` — the ticker being evaluated
+- **What is cached**: deterministic per-symbol features — momentum/RS, signals, setup quality, ATR/stop primitives, eligibility flags
+- **What is NOT cached**: cross-sectional `score`/`rank`/`confidence` (universe percentiles, recomputed every run), position sizing (`shares`), and catalyst/intelligence/LLM outputs
+- **Mixed-universe sharing**: the key contains the symbol, not the universe, so overlapping universes share cached records — daily-review reuses per-symbol parquets from a prior manual screen run on the same day
+- **Retention**: `prune()` deletes eval parquet files older than 24 h (by mtime)
+- **Force-refresh**: pass `force_refresh=True` on `ScreenerRequest` to bypass cache reads for the whole run (recomputes and overwrites)
+- **Cache directory**: configurable via the `eval_cache_dir` runtime path key (default `.cache/eval`)
+
 ## Notes
 
 - `fetch_ohlcv()` in `market_data.py` is a backward-compatibility wrapper. New code should use `get_market_data_provider()` directly.
