@@ -21,7 +21,7 @@ def _fixture_fetch(name):
     return _fetch
 
 
-def test_config_covers_eight_indices():
+def test_config_covers_eleven_indices():
     assert set(WIKIPEDIA_INDEX_CONFIG) == {
         "us_sp500",
         "us_nasdaq100",
@@ -31,6 +31,9 @@ def test_config_covers_eight_indices():
         "uk_ftse100",
         "spain_ibex35",
         "europe_eurostoxx50",
+        "hongkong_hsi",
+        "korea_kospi200",
+        "china_csi300",
     }
 
 
@@ -130,3 +133,28 @@ def test_csi_symbol_routes_shanghai_and_shenzhen():
     assert _csi_symbol("SZSE: 000333") == "000333.SZ"
     assert _csi_symbol("SZSE: 300750") == "300750.SZ"
     assert _csi_symbol("600519") == ""          # no venue prefix -> drop
+
+
+def test_hangseng_parses_constituents():
+    rows = fetch_index_constituents("hongkong_hsi", fetch_text=_fixture_fetch("hongkong_hsi"))
+    syms = {r.symbol for r in rows}
+    assert len(rows) >= 78
+    assert all(s.endswith(".HK") and len(s.split(".")[0]) >= 4 for s in syms)
+    assert "0700.HK" in syms  # Tencent
+
+
+def test_kospi200_parses_200_constituents():
+    rows = fetch_index_constituents("korea_kospi200", fetch_text=_fixture_fetch("korea_kospi200"))
+    syms = {r.symbol for r in rows}
+    assert len(rows) >= 195
+    assert all(s.endswith(".KS") and len(s.split(".")[0]) == 6 for s in syms)
+    assert "005930.KS" in syms  # Samsung Electronics
+
+
+def test_csi300_parses_constituents_with_dual_venue():
+    rows = fetch_index_constituents("china_csi300", fetch_text=_fixture_fetch("china_csi300"))
+    syms = {r.symbol for r in rows}
+    assert len(rows) >= 295
+    assert any(s.endswith(".SS") for s in syms)
+    assert any(s.endswith(".SZ") for s in syms)
+    assert "600519.SS" in syms  # Kweichow Moutai
