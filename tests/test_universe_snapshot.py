@@ -271,3 +271,19 @@ def test_asian_index_universes_registered():
     assert get_universe_benchmark("hongkong_hsi") == "^HSI"
     assert get_universe_benchmark("korea_kospi200") == "^KS11"
     assert get_universe_benchmark("china_csi300") == "000300.SS"
+
+
+@pytest.mark.parametrize(
+    "uid, probe, min_count",
+    [
+        ("hongkong_hsi", "0700.HK", 78),
+        ("korea_kospi200", "005930.KS", 195),
+        ("china_csi300", "600519.SS", 295),
+    ],
+)
+def test_asian_universe_loads_real_constituents(uid, probe, min_count):
+    from swing_screener.data.universe import load_universe_from_package
+
+    tickers = load_universe_from_package(uid)
+    assert len(tickers) >= min_count
+    assert probe in tickers
