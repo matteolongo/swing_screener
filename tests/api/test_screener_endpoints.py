@@ -111,7 +111,7 @@ def test_screener_top_over_100_returns_candidates(monkeypatch):
     ohlcv = _ohlcv_with_spy()
     mock_provider = _create_mock_provider(ohlcv)
 
-    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None):
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs):
         idx = [f"T{i:03d}" for i in range(150)]
         data = {
             "atr14": [1.2] * len(idx),
@@ -162,7 +162,7 @@ def test_screener_recommendation_payload_shape(monkeypatch):
     ohlcv = _ohlcv_with_spy()
     mock_provider = _create_mock_provider(ohlcv)
 
-    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None):
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs):
         idx = ["AAA"]
         data = {
             "atr14": [1.2],
@@ -231,7 +231,7 @@ def test_screener_response_includes_market_data_source_summary(monkeypatch):
     ohlcv = _ohlcv_with_spy()
     mock_provider = _create_mock_provider(ohlcv)
 
-    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None):
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs):
         return pd.DataFrame(
             {
                 "atr14": [1.2],
@@ -268,7 +268,7 @@ def test_screener_candidate_includes_days_to_earnings(monkeypatch):
     ohlcv = _ohlcv_with_spy()
     mock_provider = _create_mock_provider(ohlcv)
 
-    def fake_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None):
+    def fake_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs):
         return pd.DataFrame(
             {
                 "atr14": [1.2],
@@ -306,7 +306,7 @@ def test_screener_candidate_includes_sector_rotation_context(monkeypatch):
     mock_provider = _create_mock_provider(ohlcv)
     captured: dict[str, object] = {}
 
-    def fake_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None):
+    def fake_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs):
         captured["sector_benchmark_returns"] = sector_benchmark_returns
         return pd.DataFrame(
             {
@@ -360,7 +360,7 @@ def test_screener_filters_candidates_too_close_to_earnings(monkeypatch):
     ohlcv = _ohlcv_with_spy()
     mock_provider = _create_mock_provider(ohlcv)
 
-    def fake_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None):
+    def fake_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs):
         return pd.DataFrame(
             {
                 "atr14": [1.2, 1.2],
@@ -399,7 +399,7 @@ def test_screener_attaches_benchmark_comparison(monkeypatch):
     ohlcv = _ohlcv_with_symbol_and_spy()
     mock_provider = _create_mock_provider(ohlcv)
 
-    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None):
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs):
         idx = ["AAA"]
         data = {
             "atr14": [1.2],
@@ -438,7 +438,7 @@ def test_screener_response_is_prioritized_by_decision_action_and_conviction(monk
     ohlcv = _ohlcv_with_spy()
     mock_provider = _create_mock_provider(ohlcv)
 
-    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None):
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs):
         idx = ["AAA", "BBB", "CCC"]
         data = {
             "atr14": [1.2, 1.2, 1.2],
@@ -503,7 +503,7 @@ def test_screener_currency_comes_from_metadata(monkeypatch):
     ohlcv = _ohlcv_with_spy()
     mock_provider = _create_mock_provider(ohlcv)
 
-    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None):
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs):
         idx = ["ASML.AS"]
         data = {
             "atr14": [1.2],
@@ -540,7 +540,7 @@ def test_screener_request_currency_filter_overrides_strategy(monkeypatch):
     mock_provider = _create_mock_provider(ohlcv)
     captured = {}
 
-    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None):
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs):
         captured["currencies"] = cfg.universe.filt.currencies
         idx = ["AAPL"]
         data = {
@@ -581,7 +581,7 @@ def test_screener_exchange_filter_reduces_working_list(monkeypatch):
         captured["tickers"] = list(tickers)
         return ohlcv
 
-    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None):
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs):
         del ohlcv, cfg, exclude_tickers
         return pd.DataFrame(
             {
@@ -625,7 +625,7 @@ def test_screener_returns_same_symbol_add_on_metadata(monkeypatch):
     ohlcv = _ohlcv_with_spy()
     mock_provider = _create_mock_provider(ohlcv)
 
-    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None):
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs):
         idx = ["REP.MC"]
         data = {
             "atr14": [0.8],
@@ -707,7 +707,7 @@ def test_screener_loads_each_fundamentals_snapshot_once(monkeypatch):
     mock_provider = _create_mock_provider(ohlcv)
     load_calls: list[str] = []
 
-    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None):
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs):
         idx = ["AAA", "BBB"]
         data = {
             "atr14": [1.2, 1.1],
@@ -770,7 +770,7 @@ def test_screener_fetches_rolling_window_not_fixed_start(monkeypatch):
 
     mock_provider.fetch_ohlcv.side_effect = record_fetch
 
-    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None):
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs):
         return pd.DataFrame()
 
     monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
@@ -798,7 +798,7 @@ def test_screener_widens_ranking_pool_for_combined_priority(monkeypatch):
     mock_provider = _create_mock_provider(ohlcv)
     captured: dict = {}
 
-    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None):
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs):
         captured["ranking_top_n"] = cfg.ranking.top_n
         idx = [f"T{i:03d}" for i in range(min(cfg.ranking.top_n, 200))]
         data = {
@@ -835,7 +835,7 @@ def test_screener_pending_entry_order_blocks_add_on(monkeypatch):
     ohlcv = _ohlcv_with_spy()
     mock_provider = _create_mock_provider(ohlcv)
 
-    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None):
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs):
         idx = ["REP.MC"]
         data = {
             "atr14": [0.8],
@@ -957,7 +957,7 @@ def test_screener_uses_universe_currency_for_european_close(monkeypatch):
     ohlcv = _ohlcv_with_abn_and_aex()
     mock_provider = _create_mock_provider(ohlcv)
 
-    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None):
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs):
         idx = ["ABN.AS"]
         data = {
             "atr14": [1.0],
@@ -1187,7 +1187,7 @@ def test_screener_require_weekly_uptrend_overrides_strategy(monkeypatch):
     mock_provider = _create_mock_provider(ohlcv)
     captured: list = []
 
-    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None):
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs):
         captured.append(cfg)
         idx = ["AAPL"]
         data = {
