@@ -64,6 +64,27 @@ def test_split_isolated_by_asof_and_sig(tmp_path):
     assert misses_sig == ["AAPL"]
 
 
+def test_write_preserves_numeric_dtype(tmp_path):
+    """records.loc[[ticker]] preserves column dtypes; iterrows+to_frame().T yields object dtype."""
+    records = pd.DataFrame(
+        {"mom_6m": [1.5, 2.5], "is_eligible": [True, False], "currency": ["USD", "EUR"]},
+        index=pd.Index(["AAPL", "MSFT"], name="ticker"),
+    )
+    # The fix: slicing with loc[[ticker]] must preserve float64
+    for ticker in records.index:
+        frame = records.loc[[ticker]]
+        assert pd.api.types.is_float_dtype(frame["mom_6m"]), (
+            f"loc[[ticker]] yielded {frame['mom_6m'].dtype} for {ticker}; expected float64"
+        )
+    # End-to-end: write then split must also round-trip correctly
+    cache = EvalCache(root=tmp_path)
+    cache.write(records, asof="2026-06-16", sig="abc")
+    hits, _ = cache.split(["AAPL", "MSFT"], asof="2026-06-16", sig="abc")
+    assert pd.api.types.is_float_dtype(hits["mom_6m"]), f"expected float64, got {hits['mom_6m'].dtype}"
+    assert hits.loc["AAPL", "mom_6m"] == 1.5
+    assert hits.index.name == "ticker"
+
+
 import os
 import time
 

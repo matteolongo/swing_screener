@@ -76,9 +76,10 @@ class EvalCache:
             return
         target = self._dir(asof, sig)
         target.mkdir(parents=True, exist_ok=True)
-        for ticker, row in records.iterrows():
-            frame = row.to_frame().T
-            frame.index.name = records.index.name or "ticker"
+        index_name = records.index.name or "ticker"
+        for ticker in records.index:
+            frame = records.loc[[ticker]]
+            frame.index.name = index_name
             path = self._path(str(ticker), asof, sig)
             tmp = path.with_name(f".{path.name}.tmp-{uuid.uuid4().hex}")
             try:
