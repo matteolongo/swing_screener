@@ -5,6 +5,7 @@ import hashlib
 import json
 import logging
 import re
+import time
 import uuid
 from pathlib import Path
 
@@ -86,3 +87,18 @@ class EvalCache:
             except Exception as exc:
                 logger.warning("Failed writing eval cache %s: %s", path, exc)
                 tmp.unlink(missing_ok=True)
+
+    def prune(self, max_age_sec: float = 24 * 3600) -> None:
+        """Delete eval parquet files older than max_age_sec; drop empty dirs."""
+        if not self.root.exists():
+            return
+        cutoff = time.time() - max_age_sec
+        for path in self.root.rglob("*.parquet"):
+            try:
+                if path.stat().st_mtime < cutoff:
+                    path.unlink(missing_ok=True)
+            except OSError as exc:
+                logger.debug("Prune skip %s: %s", path, exc)
+        for sub in sorted(self.root.rglob("*"), reverse=True):
+            if sub.is_dir() and not any(sub.iterdir()):
+                sub.rmdir()

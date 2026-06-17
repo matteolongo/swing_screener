@@ -62,3 +62,19 @@ def test_split_isolated_by_asof_and_sig(tmp_path):
     _, misses_sig = cache.split(["AAPL"], asof="2026-06-16", sig="zzz")
     assert misses_day == ["AAPL"]
     assert misses_sig == ["AAPL"]
+
+
+import os
+import time
+
+
+def test_prune_removes_old_files(tmp_path):
+    cache = EvalCache(root=tmp_path)
+    cache.write(_records(["AAPL"]), asof="2026-06-16", sig="abc")
+    path = cache._path("AAPL", "2026-06-16", "abc")
+    old = time.time() - 25 * 3600
+    os.utime(path, (old, old))
+    cache.write(_records(["MSFT"]), asof="2026-06-16", sig="abc")  # fresh
+    cache.prune(max_age_sec=24 * 3600)
+    assert not path.exists()
+    assert cache._path("MSFT", "2026-06-16", "abc").exists()
