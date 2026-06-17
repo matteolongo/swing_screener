@@ -65,6 +65,14 @@ features:
 
 Changes require MCP server restart.
 
+## Runtime Path Keys
+
+Runtime path keys are defined under `paths` in `defaults.yaml` and control where the application writes cache and data files.
+
+| Key | Default | Purpose |
+|-----|---------|---------|
+| `eval_cache_dir` | `.cache/eval` | Root directory for the per-symbol evaluation cache. Parquets are stored at `{eval_cache_dir}/{strategy_sig}/{asof_date}/{SYMBOL}.parquet`. Files older than 24 h are pruned automatically on each run. |
+
 ## Notes
 
 - New configurable behavior should be added to the existing YAML configuration surfaces in this directory instead of being hardcoded in Python, TypeScript, or prompts.

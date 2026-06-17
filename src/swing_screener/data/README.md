@@ -38,7 +38,8 @@ currency = detect_currency("ASML.AS")  # EUR
 
 | File | Purpose |
 |------|---------|
-| `universe.py` | `load_universe_from_package()`, `load_universe_from_file()`, `apply_universe_filters()`, registry refresh + `instrument_master.json` merge |
+| `universe.py` | `load_universe_from_package()`, `load_universe_from_file()`, `apply_universe_filters()`, registry refresh + `instrument_master.json` merge; also exposes generated auto-universes |
+| `auto_universe.py` | Materialize discovered symbols into versioned runtime universes backed by `data/intelligence/auto_universes.json` |
 | `universe_sources.py` | Source-adapter dispatch (`refresh_snapshot_from_source`): Euronext AEX-family and `wikipedia_index_review` |
 | `wikipedia_sources.py` | Fetch + parse index constituent tables from Wikipedia; normalize tickers to Yahoo symbols |
 | `instrument_enrichment.py` | Resolve a Yahoo symbol to an instrument-master record via yfinance `.info` (MIC, currency, country, timezone, type) |
@@ -96,6 +97,11 @@ tickers = load_universe_from_file("my_custom_list.csv")
 
 Universe names follow the pattern `{currency}_{category}_{scope}`. Aliases are defined in `universes/manifest.json`. See `universes/README.md` for the full naming convention and available universes.
 
+Generated auto-universes are stored outside the packaged registry in
+`data/intelligence/auto_universes.json` (or `SWING_SCREENER_AUTO_UNIVERSES_FILE`).
+They are listed by the same universe APIs and can be passed to the screener like
+packaged universe ids after `POST /api/universes/auto-refresh` materializes them.
+
 ## Index universe refresh
 
 Index universes with a `source_adapter` (e.g. the `wikipedia_index_review` indices
@@ -121,6 +127,22 @@ tickers = load_universe_from_package("usd_all", cfg)
 
 # Filters are also applied in selection/universe.py as part of build_feature_table()
 ```
+
+## Per-Symbol Evaluation Cache
+
+Screener evaluation results are cached per symbol to avoid recomputing unchanged per-symbol features across runs.
+
+- **Location**: `.cache/eval/{strategy_sig}/{asof_date}/{SYMBOL}.parquet`
+- **Key components**:
+  - `strategy_sig` — SHA of the universe+signals+risk config fields that affect per-symbol output (excludes ranking weights and `top_n`)
+  - `asof_date` — trading date of the run; a new day auto-invalidates all entries
+  - `SYMBOL` — the ticker being evaluated
+- **What is cached**: deterministic per-symbol features — momentum/RS, signals, setup quality, ATR/stop primitives, eligibility flags
+- **What is NOT cached**: cross-sectional `score`/`rank`/`confidence` (universe percentiles, recomputed every run), position sizing (`shares`), and catalyst/intelligence/LLM outputs
+- **Mixed-universe sharing**: the key contains the symbol, not the universe, so overlapping universes share cached records — daily-review reuses per-symbol parquets from a prior manual screen run on the same day
+- **Retention**: `prune()` deletes eval parquet files older than 24 h (by mtime)
+- **Force-refresh**: pass `force_refresh=True` on `ScreenerRequest` to bypass cache reads for the whole run (recomputes and overwrites)
+- **Cache directory**: configurable via the `eval_cache_dir` runtime path key (default `.cache/eval`)
 
 ## Notes
 

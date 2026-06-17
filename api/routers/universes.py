@@ -9,6 +9,11 @@ from swing_screener.data.symbol_discovery import (
     SymbolDiscoveryQuery,
     discover_symbols,
 )
+from swing_screener.data.auto_universe import (
+    AutoUniverseFilter,
+    AutoUniverseRequest,
+    materialize_auto_universe,
+)
 from swing_screener.data.universe import (
     get_package_universe_detail,
     list_package_universe_entries,
@@ -39,6 +44,17 @@ class SymbolDiscoveryRequest(BaseModel):
     limit: int = 100
     min_market_cap: int | None = None
     min_volume: int | None = None
+
+
+class AutoUniverseRefreshRequest(SymbolDiscoveryRequest):
+    universe_id: str = "auto_liquid_supported"
+    description: str = "Auto-curated liquid supported symbols"
+    benchmark: str = "SPY"
+    apply: bool = False
+    min_price: float | None = None
+    max_price: float | None = None
+    exclude_symbols: list[str] = Field(default_factory=list)
+    pinned_symbols: list[str] = Field(default_factory=list)
 
 
 @router.get("")
@@ -77,6 +93,44 @@ def discover_universe_symbols(request: SymbolDiscoveryRequest):
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Failed to discover symbols") from exc
+
+
+@router.post("/auto-refresh")
+def refresh_auto_universe(request: AutoUniverseRefreshRequest):
+    try:
+        query = SymbolDiscoveryQuery(
+            provider=request.provider,
+            screens=tuple(request.screens),
+            exchanges=tuple(request.exchanges),
+            currencies=tuple(request.currencies),
+            exchange_mics=tuple(request.exchange_mics),
+            quote_types=tuple(request.quote_types),
+            limit=request.limit,
+            min_market_cap=request.min_market_cap,
+            min_volume=request.min_volume,
+        )
+        auto_request = AutoUniverseRequest(
+            universe_id=request.universe_id,
+            description=request.description,
+            benchmark=request.benchmark,
+            discovery=query,
+            filters=AutoUniverseFilter(
+                currencies=tuple(request.currencies),
+                exchange_mics=tuple(request.exchange_mics),
+                instrument_types=tuple(request.quote_types),
+                min_price=request.min_price,
+                max_price=request.max_price,
+                min_volume=request.min_volume,
+                min_market_cap=request.min_market_cap,
+                exclude_symbols=tuple(request.exclude_symbols),
+                pinned_symbols=tuple(request.pinned_symbols),
+            ),
+        )
+        return materialize_auto_universe(auto_request, apply=request.apply)
+    except (ValueError, SymbolDiscoveryError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Failed to refresh auto universe") from exc
 
 
 @router.get("/{universe_id}")

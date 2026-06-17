@@ -20,6 +20,7 @@ export const API_ENDPOINTS = {
   // Universe management
   universes: '/api/universes',
   universeDiscover: '/api/universes/discover',
+  universeAutoRefresh: '/api/universes/auto-refresh',
   universeById: (id: string) => `/api/universes/${encodeURIComponent(id)}`,
   universeRefresh: (id: string) => `/api/universes/${encodeURIComponent(id)}/refresh`,
   universeBenchmark: (id: string) => `/api/universes/${encodeURIComponent(id)}/benchmark`,

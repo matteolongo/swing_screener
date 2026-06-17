@@ -84,6 +84,7 @@ from swing_screener.selection.universe import UniverseConfig as SelectionUnivers
 from swing_screener.selection.ranking import RankingConfig
 from swing_screener.selection.entries import EntrySignalConfig
 from swing_screener.risk.position_sizing import RiskConfig
+from swing_screener.selection.eval_cache import EvalCache
 
 # Map of removed universe ids to their replacements (or None if dropped with no replacement).
 _REMOVED_UNIVERSE_IDS: dict[str, str | None] = {
@@ -340,11 +341,18 @@ class ScreenerService:
         portfolio_service: PortfolioService,
         provider: Optional[MarketDataProvider] = None,
         orders_service=None,
+        eval_cache: Optional[EvalCache] = None,
     ) -> None:
         self._strategy_repo = strategy_repo
         self._portfolio_service = portfolio_service
         self._provider = provider or get_default_provider()
         self._orders_service = orders_service
+        if eval_cache is not None:
+            self._eval_cache: EvalCache = eval_cache
+        else:
+            self._eval_cache = EvalCache(
+                root=get_settings_manager().resolve_runtime_path("eval_cache_dir", ".cache/eval")
+            )
 
     def _resolve_strategy(self, strategy_id: Optional[str], strategy_override: Optional[dict] = None) -> dict:
         if strategy_override is not None:
@@ -595,7 +603,14 @@ class ScreenerService:
             cfg=ctx.report_cfg,
             exclude_tickers=sector_rotation.SECTOR_ETFS.keys(),
             sector_benchmark_returns=sector_benchmark_returns,
+            eval_cache=self._eval_cache,
+            asof_date=ctx.asof_str,
+            force_refresh=bool(getattr(ctx.request, "force_refresh", False)),
         )
+        try:
+            self._eval_cache.prune()
+        except Exception as exc:
+            logger.debug("Eval cache prune failed (non-fatal): %s", exc)
         if results is None or results.empty:
             logger.warning(
                 "Screener returned no candidates (top=%s, tickers=%s).",

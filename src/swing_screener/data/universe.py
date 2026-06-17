@@ -361,15 +361,37 @@ def _normalize_benchmark_symbol(value: str) -> str:
 
 def list_package_universe_entries() -> list[dict]:
     """Return manifest entries enriched with lightweight snapshot metadata."""
+    from swing_screener.data.auto_universe import list_auto_universe_entries
+
     entries = []
     for entry in _load_registry_manifest():
         snapshot = _load_snapshot(entry["id"])
         item = _summary_from_entry(entry, snapshot)
         entries.append(item)
+    entries.extend(list_auto_universe_entries())
     return sorted(entries, key=lambda item: str(item.get("id", "")))
 
 
 def get_package_universe_entry(universe_id: str) -> dict:
+    from swing_screener.data.auto_universe import get_auto_universe_detail
+
+    auto = get_auto_universe_detail(universe_id)
+    if auto:
+        return {
+            "id": auto.get("id"),
+            "kind": "auto",
+            "description": auto.get("description"),
+            "benchmark": auto.get("benchmark"),
+            "source": auto.get("source"),
+            "source_asof": auto.get("source_asof"),
+            "last_reviewed_at": auto.get("last_reviewed_at"),
+            "member_count": auto.get("member_count", len(auto.get("symbols") or [])),
+            "source_adapter": "auto_universe",
+            "source_documents": auto.get("source_documents", []),
+            "refreshable": True,
+            "freshness_status": "fresh",
+            "is_stale": False,
+        }
     entry = get_universe_meta(universe_id)
     if not entry:
         raise ValueError(f"Unknown universe id: '{universe_id}'")
@@ -378,6 +400,11 @@ def get_package_universe_entry(universe_id: str) -> dict:
 
 
 def get_package_universe_detail(universe_id: str) -> dict:
+    from swing_screener.data.auto_universe import get_auto_universe_detail
+
+    auto = get_auto_universe_detail(universe_id)
+    if auto:
+        return auto
     entry = get_package_universe_entry(universe_id)
     snapshot = _load_snapshot(universe_id)
     errors = validate_universe_snapshot(universe_id)
@@ -534,13 +561,22 @@ def filter_tickers_by_metadata(
 
 def list_package_universes() -> list[str]:
     """Return universe ids from registry manifest, sorted."""
-    return sorted(e["id"] for e in _load_registry_manifest())
+    from swing_screener.data.auto_universe import list_auto_universes
+
+    return sorted([e["id"] for e in _load_registry_manifest()] + list_auto_universes())
 
 
 def load_universe_from_package(
     name: str, cfg: UniverseConfig = UniverseConfig()
 ) -> list[str]:
     """Load tickers from a registry snapshot. Fails on unknown id or stale index."""
+    from swing_screener.data.auto_universe import (
+        list_auto_universes,
+        load_auto_universe_symbols,
+    )
+
+    if name in set(list_auto_universes()):
+        return apply_universe_config(load_auto_universe_symbols(name), cfg)
     manifest_ids = {e["id"] for e in _load_registry_manifest()}
     if name not in manifest_ids:
         raise ValueError(
@@ -555,6 +591,11 @@ def load_universe_from_package(
 
 def get_universe_benchmark(name: str) -> Optional[str]:
     """Return benchmark from manifest entry."""
+    from swing_screener.data.auto_universe import get_auto_universe_benchmark
+
+    auto_benchmark = get_auto_universe_benchmark(name)
+    if auto_benchmark:
+        return auto_benchmark
     try:
         snapshot = _load_snapshot(name)
         benchmark = snapshot.get("benchmark")
