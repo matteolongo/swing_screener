@@ -44,7 +44,7 @@ YAHOO_EXCHANGE_TO_MIC = {
     "PCX": "ARCX",
     "PNK": "XOTC",
     "SHH": "XSHG",
-    "SHZ": "XSEC",
+    "SHZ": "XSHE",
 }
 
 YAHOO_MIC_TO_EXCHANGES = {

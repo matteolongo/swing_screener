@@ -27,7 +27,7 @@ MIC_TO_COUNTRY_TZ: dict[str, tuple[str, str]] = {
     "XHKG": ("HK", "Asia/Hong_Kong"),
     "XKRX": ("KR", "Asia/Seoul"),
     "XSHG": ("CN", "Asia/Shanghai"),
-    "XSEC": ("CN", "Asia/Shanghai"),
+    "XSHE": ("CN", "Asia/Shanghai"),
 }
 
 # Yahoo exchange codes seen on EuroStoxx venues not already in symbol_discovery's map.
