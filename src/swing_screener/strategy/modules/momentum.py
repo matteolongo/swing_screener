@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from typing import Iterable
 
@@ -7,10 +8,20 @@ import pandas as pd
 
 from swing_screener.strategy.report_config import ReportConfig
 from swing_screener.selection.ranking import top_candidates
+from swing_screener.selection.universe import build_universe
 from swing_screener.selection.entries import build_signal_board
 from swing_screener.indicators.setup_quality import compute_setup_quality
 from swing_screener.risk.position_sizing import build_trade_plans
 from swing_screener.execution.guidance import add_execution_guidance
+
+# Marker column persisted in the per-symbol records frame holding the JSON list
+# of universe feature-table columns. Ranking must run only on those columns so
+# the cross-sectional score matches the original pipeline, where ranking ran on
+# the eligible feature table *before* the signal board and setup-quality columns
+# were joined. Storing the list in the records (and thus in the parquet cache)
+# makes this an allowlist that auto-excludes any future board/setup column,
+# rather than a denylist that fails open on a new, uniquely-named column.
+_FEATURE_COLS_MARKER = "__feature_cols__"
 
 
 def _normalize_ticker_set(items: Iterable[str] | None) -> set[str]:
@@ -67,40 +78,20 @@ def _compute_confidence(report: pd.DataFrame, max_atr_pct: float) -> pd.Series:
     return conf
 
 
-def _non_feature_columns(columns: Iterable[str], cfg: ReportConfig) -> list[str]:
-    """Columns contributed by the signal board / setup quality stages.
+def _ranking_input(eligible: pd.DataFrame) -> pd.DataFrame:
+    """Restrict ranking to the universe feature-table columns.
 
-    These are excluded when ranking so the cross-sectional score matches the
-    original pipeline, where ranking ran on the eligible feature table before
-    signals and setup quality were joined.
+    The set of feature columns is read from the :data:`_FEATURE_COLS_MARKER`
+    column when present (always set by :func:`compute_symbol_records`, and
+    preserved across the parquet cache). When absent — e.g. synthetic records
+    injected directly in tests — ranking falls back to all columns.
     """
-    lookback = cfg.signals.breakout_lookback
-    ma = cfg.signals.pullback_ma
-    board_cols = {
-        "last",  # collides with feature ``last`` -> appears as ``last_sig``
-        f"breakout{lookback}",
-        "breakout_level",
-        f"pullback_ma{ma}",
-        f"ma{ma}_level",
-        "signal",
-        "breakout_volume_confirmation",
-    }
-    setup_cols = {
-        "consolidation_tightness",
-        "close_location_in_range",
-        "above_breakout_extension",
-        "breakout_volume_confirmation",
-        "dist_52w_high_pct",
-        "near_52w_high",
-        "volume_ratio",
-        "avg_daily_volume_eur",
-    }
-    non_feature = board_cols | setup_cols | {"last_sig"}
-    out: list[str] = []
-    for c in columns:
-        if c in non_feature or c.endswith("_sig") or c.endswith("_sq"):
-            out.append(c)
-    return out
+    if _FEATURE_COLS_MARKER in eligible.columns and not eligible.empty:
+        raw = eligible[_FEATURE_COLS_MARKER].iloc[0]
+        feature_cols = json.loads(raw) if isinstance(raw, str) else list(raw)
+        cols = [c for c in feature_cols if c in eligible.columns]
+        return eligible[cols]
+    return eligible.drop(columns=[_FEATURE_COLS_MARKER], errors="ignore")
 
 
 def compute_symbol_records(
@@ -112,15 +103,16 @@ def compute_symbol_records(
 
     Joins the universe feature table (incl. ``is_eligible``) with the entry signal
     board and setup-quality features. Cross-sectional ranking is NOT applied here.
+    The feature-table column names are recorded in :data:`_FEATURE_COLS_MARKER`
+    so ranking can later run on exactly those columns.
     """
-    from swing_screener.selection.universe import build_universe
-
     feats = build_universe(
         ohlcv, cfg.universe, sector_benchmark_returns=sector_benchmark_returns
     )
     if feats is None or feats.empty:
         return pd.DataFrame()
 
+    feature_cols = [str(c) for c in feats.columns]
     tickers = [str(t) for t in feats.index]
     board = build_signal_board(ohlcv, tickers, cfg.signals)
     setup = compute_setup_quality(ohlcv, tickers)
@@ -128,6 +120,7 @@ def compute_symbol_records(
     records = feats.join(board, how="left", rsuffix="_sig")
     if setup is not None and not setup.empty:
         records = records.join(setup, how="left", rsuffix="_sq")
+    records[_FEATURE_COLS_MARKER] = json.dumps(feature_cols)
     return records
 
 
@@ -159,15 +152,17 @@ def build_momentum_report(
         return pd.DataFrame()
     eligible = eligible.sort_values(["mom_6m", "rs_6m"], ascending=False)
 
-    # Rank on the universe-feature columns only. In the original pipeline,
-    # ranking ran on the eligible feature table *before* the signal board and
-    # setup-quality features were joined, so optional ranking terms and the
-    # extension penalty that read those columns (w_setup_quality,
-    # above_breakout_extension, ...) were inert. Hiding the board/setup columns
-    # here preserves that behaviour exactly.
-    rank_input = eligible.drop(
-        columns=_non_feature_columns(eligible.columns, cfg), errors="ignore"
-    )
+    # Rank on the universe-feature columns only (see ``_ranking_input``). In the
+    # original pipeline ranking ran on the eligible feature table *before* the
+    # signal board and setup-quality features were joined, so the setup-derived
+    # ranking terms (the ``above_breakout_extension`` extension penalty and the
+    # optional ``w_setup_quality`` inputs ``consolidation_tightness`` /
+    # ``close_location_in_range``) were inert. Restricting the input to the
+    # feature columns preserves that exactly. The marker column is then dropped
+    # so it never reaches trade plans, the report, or the output projection.
+    rank_input = _ranking_input(eligible)
+    records = records.drop(columns=[_FEATURE_COLS_MARKER], errors="ignore")
+    eligible = eligible.drop(columns=[_FEATURE_COLS_MARKER], errors="ignore")
     ranked_scored = top_candidates(rank_input, cfg.ranking)
     if ranked_scored.empty:
         return pd.DataFrame()
@@ -253,5 +248,4 @@ class MomentumStrategyModule:
             cfg=cfg,
             exclude_tickers=exclude_tickers,
             sector_benchmark_returns=sector_benchmark_returns,
-            records=None,
         )

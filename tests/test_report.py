@@ -133,3 +133,42 @@ def test_build_daily_report_excludes_open_positions():
 
     assert "AAA" not in rep.index
     assert "BBB" in rep.index
+
+
+def test_ranking_input_is_subset_of_feature_columns():
+    """Guard: ranking must run only on universe feature-table columns.
+
+    Converts the latent "a new board/setup column silently leaks into ranking
+    and drifts scores" failure mode into a hard test failure.
+    """
+    import json
+
+    from swing_screener.strategy.modules.momentum import (
+        _FEATURE_COLS_MARKER,
+        _ranking_input,
+        compute_symbol_records,
+    )
+    from swing_screener.selection.universe import build_universe
+
+    ohlcv = _make_ohlcv_for_report()
+    cfg = ReportConfig(
+        universe=UniverseConfig(
+            filt=UniverseFilterConfig(
+                min_price=10, max_price=1000, max_atr_pct=10.0, require_trend_ok=False
+            )
+        )
+    )
+
+    feature_cols = set(build_universe(ohlcv, cfg.universe).columns)
+    records = compute_symbol_records(ohlcv, cfg)
+    assert _FEATURE_COLS_MARKER in records.columns
+    assert set(json.loads(records[_FEATURE_COLS_MARKER].iloc[0])) == feature_cols
+
+    rank_input = _ranking_input(records)
+    assert set(rank_input.columns) <= feature_cols
+    assert _FEATURE_COLS_MARKER not in rank_input.columns
+
+    # A future board/setup column with a brand-new name must NOT leak in.
+    poisoned = records.copy()
+    poisoned["brand_new_setup_metric"] = 1.0
+    assert "brand_new_setup_metric" not in _ranking_input(poisoned).columns
