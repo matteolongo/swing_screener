@@ -31,6 +31,8 @@ YAHOO_EXCHANGE_TO_MIC = {
     "BTS": "BATS",
     "FRA": "XFRA",
     "GER": "XETR",
+    "HKG": "XHKG",
+    "KSC": "XKRX",
     "LSE": "XLON",
     "MCE": "XMAD",
     "MIL": "XMIL",
@@ -41,6 +43,8 @@ YAHOO_EXCHANGE_TO_MIC = {
     "PAR": "XPAR",
     "PCX": "ARCX",
     "PNK": "XOTC",
+    "SHH": "XSHG",
+    "SHZ": "XSEC",
 }
 
 YAHOO_MIC_TO_EXCHANGES = {
