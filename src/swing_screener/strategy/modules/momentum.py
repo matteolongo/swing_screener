@@ -6,7 +6,6 @@ from typing import Iterable
 import pandas as pd
 
 from swing_screener.strategy.report_config import ReportConfig
-from swing_screener.selection.universe import eligible_universe
 from swing_screener.selection.ranking import top_candidates
 from swing_screener.selection.entries import build_signal_board
 from swing_screener.indicators.setup_quality import compute_setup_quality
@@ -68,37 +67,117 @@ def _compute_confidence(report: pd.DataFrame, max_atr_pct: float) -> pd.Series:
     return conf
 
 
+def _non_feature_columns(columns: Iterable[str], cfg: ReportConfig) -> list[str]:
+    """Columns contributed by the signal board / setup quality stages.
+
+    These are excluded when ranking so the cross-sectional score matches the
+    original pipeline, where ranking ran on the eligible feature table before
+    signals and setup quality were joined.
+    """
+    lookback = cfg.signals.breakout_lookback
+    ma = cfg.signals.pullback_ma
+    board_cols = {
+        "last",  # collides with feature ``last`` -> appears as ``last_sig``
+        f"breakout{lookback}",
+        "breakout_level",
+        f"pullback_ma{ma}",
+        f"ma{ma}_level",
+        "signal",
+        "breakout_volume_confirmation",
+    }
+    setup_cols = {
+        "consolidation_tightness",
+        "close_location_in_range",
+        "above_breakout_extension",
+        "breakout_volume_confirmation",
+        "dist_52w_high_pct",
+        "near_52w_high",
+        "volume_ratio",
+        "avg_daily_volume_eur",
+    }
+    non_feature = board_cols | setup_cols | {"last_sig"}
+    out: list[str] = []
+    for c in columns:
+        if c in non_feature or c.endswith("_sig") or c.endswith("_sq"):
+            out.append(c)
+    return out
+
+
+def compute_symbol_records(
+    ohlcv: pd.DataFrame,
+    cfg: ReportConfig,
+    sector_benchmark_returns: dict[str, float] | None = None,
+) -> pd.DataFrame:
+    """Universe-independent per-symbol evaluation row for every ticker in ``ohlcv``.
+
+    Joins the universe feature table (incl. ``is_eligible``) with the entry signal
+    board and setup-quality features. Cross-sectional ranking is NOT applied here.
+    """
+    from swing_screener.selection.universe import build_universe
+
+    feats = build_universe(
+        ohlcv, cfg.universe, sector_benchmark_returns=sector_benchmark_returns
+    )
+    if feats is None or feats.empty:
+        return pd.DataFrame()
+
+    tickers = [str(t) for t in feats.index]
+    board = build_signal_board(ohlcv, tickers, cfg.signals)
+    setup = compute_setup_quality(ohlcv, tickers)
+
+    records = feats.join(board, how="left", rsuffix="_sig")
+    if setup is not None and not setup.empty:
+        records = records.join(setup, how="left", rsuffix="_sq")
+    return records
+
+
 def build_momentum_report(
     ohlcv: pd.DataFrame,
     cfg: ReportConfig,
     exclude_tickers: Iterable[str] | None = None,
     sector_benchmark_returns: dict[str, float] | None = None,
+    records: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
+    """Cross-sectional assembly over per-symbol records.
+
+    When ``records`` is provided (e.g. from the eval cache), the per-symbol stage
+    is skipped; otherwise it is computed via :func:`compute_symbol_records`.
     """
-    Pipeline:
-      eligible_universe -> ranking top_n -> signals -> trade plans -> merged report
-    """
-    univ = eligible_universe(
-        ohlcv,
-        cfg.universe,
-        sector_benchmark_returns=sector_benchmark_returns,
-    )
-    if univ is None or univ.empty:
+    if records is None:
+        records = compute_symbol_records(
+            ohlcv, cfg, sector_benchmark_returns=sector_benchmark_returns
+        )
+    if records is None or records.empty:
         return pd.DataFrame()
 
     exclude = _normalize_ticker_set(exclude_tickers)
     if exclude:
-        univ = univ.drop(index=list(exclude), errors="ignore")
-        if univ.empty:
-            return pd.DataFrame()
+        records = records.drop(index=list(exclude), errors="ignore")
 
-    ranked = top_candidates(univ, cfg.ranking)
-    if ranked.empty:
+    eligible = records[records["is_eligible"]] if "is_eligible" in records.columns else records
+    if eligible.empty:
+        return pd.DataFrame()
+    eligible = eligible.sort_values(["mom_6m", "rs_6m"], ascending=False)
+
+    # Rank on the universe-feature columns only. In the original pipeline,
+    # ranking ran on the eligible feature table *before* the signal board and
+    # setup-quality features were joined, so optional ranking terms and the
+    # extension penalty that read those columns (w_setup_quality,
+    # above_breakout_extension, ...) were inert. Hiding the board/setup columns
+    # here preserves that behaviour exactly.
+    rank_input = eligible.drop(
+        columns=_non_feature_columns(eligible.columns, cfg), errors="ignore"
+    )
+    ranked_scored = top_candidates(rank_input, cfg.ranking)
+    if ranked_scored.empty:
         return pd.DataFrame()
 
-    tickers = ranked.index.tolist()
-    board = build_signal_board(ohlcv, tickers, cfg.signals)
-    setup = compute_setup_quality(ohlcv, tickers)
+    tickers = ranked_scored.index.tolist()
+    # ``ranked`` carries score/rank from ranking plus the full per-symbol record
+    # (features + signal board + setup quality) sliced to the top-N candidates.
+    board = records.loc[records.index.intersection(tickers)]
+    ranked = ranked_scored[["score", "rank"]].join(board, how="left")
+    ranked = ranked.loc[tickers]
 
     atr_col = f"atr{cfg.universe.vol.atr_window}"
 
@@ -109,10 +188,7 @@ def build_momentum_report(
         atr_col=atr_col,
     )
 
-    # merge: ranked features + signal board (left) + setup quality (left) + plans (left)
-    report = ranked.join(board, how="left", rsuffix="_sig")
-    if not setup.empty:
-        report = report.join(setup, how="left", rsuffix="_sq")
+    report = ranked
 
     if plans is not None and not plans.empty:
         # keep some plan cols
@@ -177,4 +253,5 @@ class MomentumStrategyModule:
             cfg=cfg,
             exclude_tickers=exclude_tickers,
             sector_benchmark_returns=sector_benchmark_returns,
+            records=None,
         )
