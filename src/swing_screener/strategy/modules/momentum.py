@@ -7,6 +7,7 @@ from typing import Iterable
 import pandas as pd
 
 from swing_screener.strategy.report_config import ReportConfig
+from swing_screener.selection.eval_cache import strategy_signature
 from swing_screener.selection.ranking import top_candidates
 from swing_screener.selection.universe import build_universe
 from swing_screener.selection.entries import build_signal_board
@@ -150,7 +151,8 @@ def build_momentum_report(
     eligible = records[records["is_eligible"]] if "is_eligible" in records.columns else records
     if eligible.empty:
         return pd.DataFrame()
-    eligible = eligible.sort_values(["mom_6m", "rs_6m"], ascending=False)
+    sort_cols = [c for c in ["mom_6m", "rs_6m"] if c in eligible.columns]
+    eligible = eligible.sort_values(sort_cols, ascending=False) if sort_cols else eligible
 
     # Rank on the universe-feature columns only (see ``_ranking_input``). In the
     # original pipeline ranking ran on the eligible feature table *before* the
@@ -163,6 +165,9 @@ def build_momentum_report(
     rank_input = _ranking_input(eligible)
     records = records.drop(columns=[_FEATURE_COLS_MARKER], errors="ignore")
     eligible = eligible.drop(columns=[_FEATURE_COLS_MARKER], errors="ignore")
+    required_ranking_cols = {"mom_6m", "mom_12m", "rs_6m"}
+    if not required_ranking_cols.issubset(rank_input.columns):
+        return pd.DataFrame()
     ranked_scored = top_candidates(rank_input, cfg.ranking)
     if ranked_scored.empty:
         return pd.DataFrame()
@@ -239,13 +244,44 @@ class MomentumStrategyModule:
     def build_report(
         self,
         ohlcv: pd.DataFrame,
-        cfg: ReportConfig,
+        cfg: ReportConfig = ReportConfig(),
         exclude_tickers: Iterable[str] | None = None,
         sector_benchmark_returns: dict[str, float] | None = None,
+        eval_cache=None,
+        asof_date: str | None = None,
+        force_refresh: bool = False,
     ) -> pd.DataFrame:
+        if eval_cache is None or asof_date is None:
+            return build_momentum_report(
+                ohlcv,
+                cfg=cfg,
+                exclude_tickers=exclude_tickers,
+                sector_benchmark_returns=sector_benchmark_returns,
+            )
+        sig = strategy_signature(cfg)
+        level0 = ohlcv.columns.get_level_values(0)
+        all_tickers = (
+            [str(t) for t in ohlcv.columns.get_level_values(1)[level0 == "Close"]]
+            if "Close" in set(level0)
+            else []
+        )
+        if force_refresh:
+            hits, misses = pd.DataFrame(), all_tickers
+        else:
+            hits, misses = eval_cache.split(all_tickers, asof=asof_date, sig=sig)
+        miss_records = pd.DataFrame()
+        if misses:
+            miss_ohlcv = ohlcv.loc[:, ohlcv.columns.get_level_values(1).isin(misses)]
+            miss_records = compute_symbol_records(miss_ohlcv, cfg, sector_benchmark_returns=sector_benchmark_returns)
+            eval_cache.write(miss_records, asof=asof_date, sig=sig)
+        frames = [f for f in (hits, miss_records) if f is not None and not f.empty]
+        records = pd.concat(frames) if frames else pd.DataFrame()
+        if not records.empty:
+            records = records[~records.index.duplicated(keep="last")]
         return build_momentum_report(
             ohlcv,
             cfg=cfg,
             exclude_tickers=exclude_tickers,
             sector_benchmark_returns=sector_benchmark_returns,
+            records=records,
         )

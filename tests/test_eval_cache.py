@@ -99,3 +99,29 @@ def test_prune_removes_old_files(tmp_path):
     cache.prune(max_age_sec=24 * 3600)
     assert not path.exists()
     assert cache._path("MSFT", "2026-06-16", "abc").exists()
+
+
+import swing_screener.reporting.report as report_mod
+
+
+def test_build_daily_report_computes_only_misses(tmp_path, monkeypatch):
+    cache = EvalCache(root=tmp_path)
+    calls = []
+
+    def fake_compute(ohlcv, cfg, sector_benchmark_returns=None):
+        tks = [str(c) for c in ohlcv["Close"].columns]
+        calls.append(tuple(sorted(tks)))
+        return _records(tks)
+
+    monkeypatch.setattr(
+        "swing_screener.strategy.modules.momentum.compute_symbol_records", fake_compute
+    )
+
+    ohlcv = pd.DataFrame({("Close", "AAPL"): [1.0], ("Close", "MSFT"): [1.0]})
+    ohlcv.columns = pd.MultiIndex.from_tuples(ohlcv.columns)
+
+    report_mod.build_daily_report(ohlcv, eval_cache=cache, asof_date="2026-06-16")
+    report_mod.build_daily_report(ohlcv, eval_cache=cache, asof_date="2026-06-16")
+
+    assert calls[0] == ("AAPL", "MSFT")   # cold run computes both
+    assert len(calls) == 1                  # warm run computes nothing
