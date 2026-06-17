@@ -4,6 +4,9 @@ import pytest
 
 from swing_screener.data.wikipedia_sources import (
     WIKIPEDIA_INDEX_CONFIG,
+    _csi_symbol,
+    _hangseng_symbol,
+    _kospi_symbol,
     fetch_index_constituents,
     normalize_yahoo_symbol,
 )
@@ -106,3 +109,24 @@ def test_missing_html_parser_surfaces_clear_error(monkeypatch):
     message = str(excinfo.value).lower()
     assert "lxml" in message or "parser" in message
     assert "no constituent table" not in message
+
+
+def test_hangseng_symbol_strips_prefix_and_zero_pads_to_4():
+    assert _hangseng_symbol("SEHK:\xa05") == "0005.HK"
+    assert _hangseng_symbol("SEHK: 700") == "0700.HK"
+    assert _hangseng_symbol("SEHK: 1299") == "1299.HK"
+    assert _hangseng_symbol("") == ""
+
+
+def test_kospi_symbol_zero_pads_to_6():
+    assert _kospi_symbol("005930") == "005930.KS"
+    assert _kospi_symbol(5930) == "005930.KS"   # pandas may coerce to int
+    assert _kospi_symbol("090430") == "090430.KS"
+    assert _kospi_symbol("nan") == ""
+
+
+def test_csi_symbol_routes_shanghai_and_shenzhen():
+    assert _csi_symbol("SSE: 600519") == "600519.SS"
+    assert _csi_symbol("SZSE: 000333") == "000333.SZ"
+    assert _csi_symbol("SZSE: 300750") == "300750.SZ"
+    assert _csi_symbol("600519") == ""          # no venue prefix -> drop

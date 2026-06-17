@@ -169,6 +169,40 @@ def _eurostoxx_symbol(ticker_cell: str) -> str:
     return normalize_yahoo_symbol(text, suffix)
 
 
+def _digits(raw: object) -> str:
+    head = str(raw if raw is not None else "").split(".", 1)[0]
+    return re.sub(r"[^0-9]", "", head)
+
+
+def _hangseng_symbol(raw: object) -> str:
+    code = _digits(raw)
+    return f"{code.zfill(4)}.HK" if code else ""
+
+
+def _kospi_symbol(raw: object) -> str:
+    code = _digits(raw)
+    return f"{code.zfill(6)}.KS" if code else ""
+
+
+_CSI_VENUE_SUFFIX = {"SSE": ".SS", "SZSE": ".SZ"}
+
+
+def _csi_symbol(raw: object) -> str:
+    text = str(raw if raw is not None else "")
+    prefix = text.split(":", 1)[0].strip().upper() if ":" in text else ""
+    suffix = _CSI_VENUE_SUFFIX.get(prefix)
+    code = _digits(text)
+    return f"{code.zfill(6)}{suffix}" if (suffix and code) else ""
+
+
+_CUSTOM_SYMBOL_RESOLVERS: dict[str, Callable[[str], str]] = {
+    "europe_eurostoxx50": _eurostoxx_symbol,
+    "hongkong_hsi": _hangseng_symbol,
+    "korea_kospi200": _kospi_symbol,
+    "china_csi300": _csi_symbol,
+}
+
+
 def fetch_index_constituents(
     universe_id: str,
     *,
