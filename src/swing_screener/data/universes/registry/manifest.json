@@ -251,5 +251,38 @@
     "source_asof": "2026-06-12",
     "last_reviewed_at": "2026-06-12",
     "stale_after_days": 100
+  },
+  {
+    "id": "china_csi300",
+    "description": "CSI 300 constituents",
+    "kind": "index",
+    "benchmark": "000300.SS",
+    "currencies": ["CNY"],
+    "source": "wikipedia",
+    "source_asof": "2026-06-17",
+    "last_reviewed_at": "2026-06-17",
+    "stale_after_days": 100
+  },
+  {
+    "id": "hongkong_hsi",
+    "description": "Hang Seng Index constituents",
+    "kind": "index",
+    "benchmark": "^HSI",
+    "currencies": ["HKD"],
+    "source": "wikipedia",
+    "source_asof": "2026-06-17",
+    "last_reviewed_at": "2026-06-17",
+    "stale_after_days": 100
+  },
+  {
+    "id": "korea_kospi200",
+    "description": "KOSPI 200 constituents",
+    "kind": "index",
+    "benchmark": "^KS11",
+    "currencies": ["KRW"],
+    "source": "wikipedia",
+    "source_asof": "2026-06-17",
+    "last_reviewed_at": "2026-06-17",
+    "stale_after_days": 100
   }
 ]

@@ -26,7 +26,7 @@ _CFG_NO_BENCH = UniverseConfig(benchmark="SPY", ensure_benchmark=False)
 
 def test_list_package_universes_count():
     ids = list_package_universes()
-    assert len(ids) == 23, f"Expected 23 universes, got {len(ids)}: {ids}"
+    assert len(ids) == 26, f"Expected 26 universes, got {len(ids)}: {ids}"
 
 
 def test_list_package_universes_contains_expected():
@@ -42,6 +42,7 @@ def test_list_package_universes_contains_expected():
         "us_sp500", "us_nasdaq100", "us_dow30",
         "germany_dax", "france_cac40", "uk_ftse100",
         "spain_ibex35", "europe_eurostoxx50",
+        "hongkong_hsi", "korea_kospi200", "china_csi300",
     }
     assert expected == set(ids)
 
@@ -253,3 +254,20 @@ def test_new_indices_present_and_refreshable():
     for uid in EXPECTED_INDEX_IDS:
         meta = get_universe_meta(uid)
         assert meta["kind"] == "index"
+
+
+# ---------------------------------------------------------------------------
+# Asian index universes
+# ---------------------------------------------------------------------------
+
+def test_asian_index_universes_registered():
+    from swing_screener.data.universe import (
+        get_universe_benchmark,
+        list_package_universes,
+    )
+
+    ids = set(list_package_universes())
+    assert {"hongkong_hsi", "korea_kospi200", "china_csi300"} <= ids
+    assert get_universe_benchmark("hongkong_hsi") == "^HSI"
+    assert get_universe_benchmark("korea_kospi200") == "^KS11"
+    assert get_universe_benchmark("china_csi300") == "000300.SS"

@@ -1,0 +1,13 @@
+{
+  "id": "korea_kospi200",
+  "kind": "index",
+  "description": "KOSPI 200 constituents",
+  "benchmark": "^KS11",
+  "source": "wikipedia",
+  "source_adapter": "wikipedia_index_review",
+  "source_asof": "2026-06-17",
+  "last_reviewed_at": "2026-06-17",
+  "stale_after_days": 100,
+  "rules": {},
+  "constituents": []
+}

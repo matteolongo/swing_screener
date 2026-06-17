@@ -1,0 +1,13 @@
+{
+  "id": "china_csi300",
+  "kind": "index",
+  "description": "CSI 300 constituents",
+  "benchmark": "000300.SS",
+  "source": "wikipedia",
+  "source_adapter": "wikipedia_index_review",
+  "source_asof": "2026-06-17",
+  "last_reviewed_at": "2026-06-17",
+  "stale_after_days": 100,
+  "rules": {},
+  "constituents": []
+}
