@@ -57,7 +57,8 @@ New custom symbol resolvers added in `wikipedia_sources.py`
 (`_CUSTOM_SYMBOL_RESOLVERS`):
 - HK: zero-pad raw code to 4 digits, append `.HK`
 - Korea: zero-pad raw code to 6 digits, append `.KS`
-- China: route by exchange column — SSE codes get `.SS`, SZSE codes get `.SZ`
+- China: route by the `SSE:`/`SZSE:` prefix in the ticker cell: SSE codes get
+  `.SS`, SZSE codes get `.SZ`
 
 Japan / Nikkei 225 deferred: Wikipedia does not publish a machine-readable
 constituent table for that index.

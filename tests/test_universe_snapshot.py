@@ -282,6 +282,9 @@ EXPECTED_INDEX_IDS = {
     "uk_ftse100",
     "spain_ibex35",
     "europe_eurostoxx50",
+    "hongkong_hsi",
+    "korea_kospi200",
+    "china_csi300",
 }
 
 
