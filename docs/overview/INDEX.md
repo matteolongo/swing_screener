@@ -27,6 +27,7 @@
 ## Product
 - `/docs/product/COMBINED_ANALYSIS_REASONING.md`
 - `/docs/product/DAILY_USAGE_GUIDE.md`
+- `/docs/product/SCALABLE_UNIVERSE_AUTOMATION.md`
 
 ## Education
 - `/docs/education/RECOMMENDED_LOGIC_BEGINNER_GUIDE.md`

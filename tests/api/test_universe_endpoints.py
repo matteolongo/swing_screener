@@ -93,3 +93,39 @@ def test_discover_symbols_endpoint_returns_taxonomy(monkeypatch):
     payload = response.json()
     assert payload["symbols"][0]["symbol"] == "AAPL"
     assert payload["taxonomy"]["currency"] == {"USD": 1}
+
+
+def test_auto_refresh_endpoint_materializes_universe(monkeypatch, tmp_path):
+    import swing_screener.data.auto_universe as auto_mod
+
+    monkeypatch.setattr(auto_mod, "_AUTO_STORE_PATH_OVERRIDE", str(tmp_path / "auto.json"), raising=False)
+
+    def fake_discover(query):
+        return SymbolDiscoveryResult(
+            provider="yahoo_predefined",
+            source_asof="2026-06-16",
+            source_documents=[],
+            filters={"limit": query.limit},
+            symbols=[
+                {"symbol": "MSFT", "currency": "USD", "exchange_mic": "XNAS", "instrument_type": "EQUITY", "volume": 500000, "last_price": 300},
+                {"symbol": "LOWP", "currency": "USD", "exchange_mic": "XNAS", "instrument_type": "EQUITY", "volume": 1, "last_price": 1},
+            ],
+            taxonomy={"currency": {"USD": 2}},
+            notes=[],
+        )
+
+    monkeypatch.setattr("swing_screener.data.auto_universe.discover_symbols", fake_discover)
+
+    response = client.post(
+        "/api/universes/auto-refresh",
+        json={"universe_id": "auto_test", "currencies": ["USD"], "exchange_mics": ["XNAS"], "min_volume": 1000, "min_price": 5, "apply": True},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["applied"] is True
+    assert payload["universe"]["symbols"] == ["MSFT"]
+
+    detail = client.get("/api/universes/auto_test")
+    assert detail.status_code == 200
+    assert detail.json()["constituents"][0]["symbol"] == "MSFT"

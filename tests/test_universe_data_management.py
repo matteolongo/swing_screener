@@ -159,3 +159,43 @@ def test_refresh_apply_merges_new_master_records(monkeypatch, tmp_path):
     symbols = {r["symbol"]: r for r in written}
     assert "MSFT" in symbols
     assert symbols["AAPL"]["source"] == "manual"
+
+
+def test_materialize_auto_universe_persists_and_loads(monkeypatch, tmp_path):
+    from swing_screener.data.auto_universe import (
+        AutoUniverseFilter,
+        AutoUniverseRequest,
+        SymbolDiscoveryQuery,
+        materialize_auto_universe,
+    )
+    from swing_screener.data.symbol_discovery import SymbolDiscoveryResult
+
+    store_path = tmp_path / "auto_universes.json"
+    import swing_screener.data.auto_universe as auto_mod
+
+    monkeypatch.setattr(auto_mod, "_AUTO_STORE_PATH_OVERRIDE", str(store_path), raising=False)
+
+    result = SymbolDiscoveryResult(
+        provider="yahoo_predefined",
+        source_asof="2026-06-16",
+        source_documents=[{"label": "fixture", "url": "https://example.test"}],
+        filters={"limit": 3},
+        symbols=[
+            {"symbol": "AAPL", "currency": "USD", "exchange_mic": "XNAS", "instrument_type": "EQUITY", "volume": 1000000, "market_cap": 1000000000, "last_price": 200},
+            {"symbol": "PINK", "currency": "USD", "exchange_mic": "XOTC", "instrument_type": "EQUITY", "volume": 1000, "market_cap": 1000, "last_price": 1},
+        ],
+        taxonomy={"currency": {"USD": 2}},
+        notes=["fixture"],
+    )
+    request = AutoUniverseRequest(
+        universe_id="Auto USD Liquid",
+        discovery=SymbolDiscoveryQuery(limit=3, currencies=("USD",)),
+        filters=AutoUniverseFilter(currencies=("USD",), exchange_mics=("XNAS",), min_volume=100000, min_price=5),
+    )
+
+    payload = materialize_auto_universe(request, discovery_result=result, apply=True)
+
+    assert payload["applied"] is True
+    assert payload["universe"]["id"] == "auto_usd_liquid"
+    assert load_universe_from_package("auto_usd_liquid", UniverseConfig(benchmark="SPY", ensure_benchmark=False)) == ["AAPL"]
+    assert "auto_usd_liquid" in list_package_universes()

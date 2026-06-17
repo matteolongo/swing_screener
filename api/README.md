@@ -49,6 +49,7 @@ Candle data (screener candidates and watchlist items): `PriceHistoryPoint` now c
 Universes (`/api/universes`):
 - `GET /api/universes`
 - `GET /api/universes/{universe_id}`
+- `POST /api/universes/auto-refresh`
 - `POST /api/universes/{universe_id}/refresh`
 - `POST /api/universes/{universe_id}/benchmark`
 
