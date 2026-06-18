@@ -242,7 +242,7 @@ export default function ScreenerForm({
               value={selectedUniverse}
               onChange={(e) => setSelectedUniverse(e.target.value)}
               aria-label={t('screener.controls.universe')}
-              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary/40"
+              className="w-full px-3 py-2 border border-border rounded-lg bg-surface text-foreground placeholder:text-muted focus:ring-2 focus:ring-primary focus:border-primary/40"
               disabled={isLoading}
             >
               {universes.map((universe) => (
@@ -262,7 +262,7 @@ export default function ScreenerForm({
               aria-label={t('screener.controls.topN')}
               min="1"
               max={TOP_N_MAX}
-              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary/40"
+              className="w-full px-3 py-2 border border-border rounded-lg bg-surface text-foreground placeholder:text-muted focus:ring-2 focus:ring-primary focus:border-primary/40"
               disabled={isLoading}
             />
           </div>
@@ -276,7 +276,7 @@ export default function ScreenerForm({
               aria-label={t('screener.controls.minPrice')}
               min="0"
               step="0.1"
-              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary/40"
+              className="w-full px-3 py-2 border border-border rounded-lg bg-surface text-foreground placeholder:text-muted focus:ring-2 focus:ring-primary focus:border-primary/40"
               disabled={isLoading}
             />
           </div>
@@ -290,7 +290,7 @@ export default function ScreenerForm({
               aria-label={t('screener.controls.maxPrice')}
               min="0"
               step="1"
-              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary/40"
+              className="w-full px-3 py-2 border border-border rounded-lg bg-surface text-foreground placeholder:text-muted focus:ring-2 focus:ring-primary focus:border-primary/40"
               disabled={isLoading}
             />
           </div>
@@ -301,7 +301,7 @@ export default function ScreenerForm({
               value={currencyFilter}
               onChange={(e) => setCurrencyFilter(e.target.value as CurrencyFilter)}
               aria-label={t('screener.controls.currency')}
-              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary/40"
+              className="w-full px-3 py-2 border border-border rounded-lg bg-surface text-foreground placeholder:text-muted focus:ring-2 focus:ring-primary focus:border-primary/40"
               disabled={isLoading}
             >
               <option value="all">{t('screener.currencyFilter.all')}</option>
@@ -316,7 +316,7 @@ export default function ScreenerForm({
               value={exchangeFilter}
               onChange={(e) => setExchangeFilter(e.target.value as ExchangeFilter)}
               aria-label={t('screener.controls.venue.label')}
-              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary/40"
+              className="w-full px-3 py-2 border border-border rounded-lg bg-surface text-foreground placeholder:text-muted focus:ring-2 focus:ring-primary focus:border-primary/40"
               disabled={isLoading}
             >
               <option value="all">{t('screener.controls.venue.all')}</option>
@@ -336,7 +336,7 @@ export default function ScreenerForm({
               value={instrumentFilter}
               onChange={(e) => setInstrumentFilter(e.target.value as InstrumentFilter)}
               aria-label={t('screener.controls.instrument.label')}
-              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary/40"
+              className="w-full px-3 py-2 border border-border rounded-lg bg-surface text-foreground placeholder:text-muted focus:ring-2 focus:ring-primary focus:border-primary/40"
               disabled={isLoading}
             >
               <option value="all">{t('screener.controls.instrument.all')}</option>
@@ -431,7 +431,7 @@ export default function ScreenerForm({
               value={actionFilter}
               onChange={(e) => setActionFilter(e.target.value as DecisionActionFilter)}
               aria-label={t('screener.controls.actionFilter')}
-              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary/40"
+              className="w-full px-3 py-2 border border-border rounded-lg bg-surface text-foreground placeholder:text-muted focus:ring-2 focus:ring-primary focus:border-primary/40"
               disabled={isLoading}
             >
               {(['all', 'BUY_NOW', 'BUY_ON_PULLBACK', 'WAIT_FOR_BREAKOUT', 'WATCH', 'TACTICAL_ONLY', 'AVOID', 'MANAGE_ONLY'] as const).map(

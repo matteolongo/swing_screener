@@ -285,7 +285,7 @@ export default function NarrativeAnalysisCard({
             <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-muted select-none">
               {t('workspacePage.panels.analysis.intelligence.fullRationale')}
             </summary>
-            <div className="prose prose-sm prose-slate mt-2 max-w-none">
+            <div className="prose prose-sm prose-invert mt-2 max-w-none">
               <ReactMarkdown>{narrative}</ReactMarkdown>
             </div>
           </details>
@@ -294,7 +294,7 @@ export default function NarrativeAnalysisCard({
             <div className="text-xs font-semibold uppercase tracking-wide text-muted">
               {t('workspacePage.panels.analysis.intelligence.fullRationale')}
             </div>
-            <div className="prose prose-sm prose-slate mt-2 max-w-none">
+            <div className="prose prose-sm prose-invert mt-2 max-w-none">
               <ReactMarkdown>{narrative}</ReactMarkdown>
             </div>
           </div>
