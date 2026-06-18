@@ -14,7 +14,6 @@ describe('Sidebar', () => {
 
     expect(screen.getByText('Today')).toBeInTheDocument();
     expect(screen.getByText('Book')).toBeInTheDocument();
-    expect(screen.getByText('Research')).toBeInTheDocument();
     expect(screen.getByText('Settings')).toBeInTheDocument();
   });
 
@@ -23,6 +22,7 @@ describe('Sidebar', () => {
 
     expect(screen.queryByText('Workspace')).not.toBeInTheDocument();
     expect(screen.queryByText('Daily Review')).not.toBeInTheDocument();
+    expect(screen.queryByText('Research')).not.toBeInTheDocument();
     expect(screen.queryByText('Intelligence')).not.toBeInTheDocument();
     expect(screen.queryByText('Fundamentals')).not.toBeInTheDocument();
     expect(screen.queryByText('Journal')).not.toBeInTheDocument();

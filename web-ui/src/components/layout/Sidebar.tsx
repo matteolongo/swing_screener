@@ -3,7 +3,6 @@ import {
   CalendarCheck,
   CalendarDays,
   BookMarked,
-  FlaskConical,
   Database,
   Settings2,
 } from 'lucide-react';
@@ -21,7 +20,6 @@ const primaryNav: NavigationItem[] = [
   { labelKey: 'sidebar.nav.today', href: '/today', icon: CalendarCheck },
   { labelKey: 'sidebar.nav.calendar', href: '/calendar', icon: CalendarDays },
   { labelKey: 'sidebar.nav.book', href: '/book', icon: BookMarked },
-  { labelKey: 'sidebar.nav.research', href: '/research', icon: FlaskConical },
   { labelKey: 'sidebar.nav.universes', href: '/universes', icon: Database },
 ];
 

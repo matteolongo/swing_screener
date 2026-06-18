@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import AnalysisCanvasPanel from '@/components/domain/workspace/AnalysisCanvasPanel';
 import ScreenerInboxPanel from '@/components/domain/workspace/ScreenerInboxPanel';
 import TodayActionList from '@/components/domain/today/TodayActionList';
+import WatchlistPipelinePanel from '@/components/domain/watchlist/WatchlistPipelinePanel';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useOrders } from '@/features/portfolio/hooks';
 import { useNavigate } from 'react-router-dom';
@@ -76,7 +77,13 @@ function PendingOrdersBadge() {
 
 // ─── Today page ──────────────────────────────────────────────────────────────
 
-type LeftTab = 'today' | 'screener';
+type LeftTab = 'today' | 'screener' | 'watchlist';
+
+const LEFT_TAB_LABEL_KEYS: Record<LeftTab, 'todayPage.tabs.today' | 'todayPage.tabs.screener' | 'todayPage.tabs.watchlist'> = {
+  today: 'todayPage.tabs.today',
+  screener: 'todayPage.tabs.screener',
+  watchlist: 'todayPage.tabs.watchlist',
+};
 type TabletTab = 'left' | 'analysis';
 
 export default function Today() {
@@ -129,7 +136,7 @@ export default function Today() {
         >
           {/* Left panel tab bar */}
           <div className="flex border-b border-border shrink-0">
-            {(['today', 'screener'] as const).map((tab) => (
+            {(['today', 'screener', 'watchlist'] as const).map((tab) => (
               <button
                 key={tab}
                 type="button"
@@ -141,7 +148,7 @@ export default function Today() {
                     : 'text-muted hover:text-foreground'
                 )}
               >
-                {tab === 'today' ? t('todayPage.tabs.today') : t('todayPage.tabs.screener')}
+                {t(LEFT_TAB_LABEL_KEYS[tab])}
               </button>
             ))}
           </div>
@@ -159,6 +166,11 @@ export default function Today() {
             )}
             {leftTab === 'screener' && (
               <ScreenerInboxPanel />
+            )}
+            {leftTab === 'watchlist' && (
+              <div className="h-full overflow-auto px-3 pt-3">
+                <WatchlistPipelinePanel onTickerSelect={handleTickerSelect} />
+              </div>
             )}
           </div>
         </div>

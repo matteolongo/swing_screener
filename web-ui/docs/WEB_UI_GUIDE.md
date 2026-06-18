@@ -11,16 +11,14 @@ Daily trading workflow through the Swing Screener web interface.
 
 | Page | Route | Purpose |
 |------|-------|---------|
-| Today | `/today` | Compute daily review, check pending orders, open risk summary |
+| Today | `/today` | Left panel with three tabs — Today (daily review, pending orders), Last Run (screener candidates), Watchlist — plus the symbol analysis canvas on the right |
 | Calendar | `/calendar` | Earnings calendar, upcoming catalyst events |
 | Book | `/book` | Open positions: stop updates, partial close, trail config; order management: create, fill, cancel |
-| Research | `/research` | Screener run and candidates, symbol intelligence analysis, watchlist |
 | Universes | `/universes` | Universe management, manual refresh, benchmark, symbol discovery with ad-hoc screener run (row click opens symbol detail modal) |
 | Strategy | `/strategy` | Strategy CRUD, activation, and validation |
 | Journal | `/journal` | Weekly reviews and trade log |
 | Onboarding | `/onboarding` | Setup guide for new users |
 | Analytics | `/analytics` | Regime breakdown and performance analytics |
-| Fundamentals | `/fundamentals` | Fundamental data browser: snapshot, compare, warmup |
 
 ## Feature Directory Map
 
@@ -30,12 +28,12 @@ Each domain has a directory under `web-ui/src/features/<domain>/` with `api.ts` 
 |---|---|---|
 | `features/portfolio` | Book | Positions: CRUD, stop updates, partial close, trail method |
 | `features/orders` | Book, Today | Order lifecycle: create, fill, cancel |
-| `features/screener` | Research | Screener run, candidates, recurrence state |
-| `features/intelligence` | Research | Symbol analysis (LLM), cached results, sweep |
-| `features/watchlist` | Research | Watchlist CRUD |
+| `features/screener` | Today | Screener run, candidates, recurrence state |
+| `features/intelligence` | Today | Symbol analysis (LLM), cached results, sweep |
+| `features/watchlist` | Today | Watchlist CRUD (Watchlist tab) |
 | `features/dailyReview` | Today | Daily review compute and structured result |
 | `features/analytics` | Analytics | Regime breakdown, performance stats |
-| `features/fundamentals` | Fundamentals | Fundamental snapshots, compare, warmup job |
+| `features/fundamentals` | Today (symbol analysis) | Fundamental snapshots used by the symbol analysis panels. The standalone Research/Fundamentals comparison page was removed; the `compare`/`warmup` hooks are now unused and pending cleanup. |
 | `features/calendar` | Calendar | Calendar events |
 | `features/weeklyReview` | Journal | Weekly review CRUD |
 | `features/strategy` | Strategy | Strategy CRUD and activation |
@@ -65,10 +63,9 @@ Not every control fits a primitive: checkboxes, radios, range sliders, search bo
 ## Typical Workflow
 
 1. Start API and web UI.
-2. **Today** — compute daily review, check pending orders.
-3. **Research** — run screener, review candidates, trigger intelligence analysis.
-4. Create orders via **Book**.
-5. Next trading day: fill orders and update stops in **Book**.
+2. **Today** — compute daily review and check pending orders (Today tab), run the screener and review candidates (Last Run tab), trigger symbol analysis, track the Watchlist tab.
+3. Create orders via **Book**.
+4. Next trading day: fill orders and update stops in **Book**.
 
 Full timing guidance: `docs/product/DAILY_USAGE_GUIDE.md`.
 

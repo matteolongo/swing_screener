@@ -14,7 +14,6 @@ const Onboarding = lazy(() => import('./pages/Onboarding'));
 // New primary destination pages
 const Today = lazy(() => import('./pages/Today'));
 const Book = lazy(() => import('./pages/Book'));
-const Research = lazy(() => import('./pages/Research'));
 const Universes = lazy(() => import('./pages/Universes'));
 const Calendar = lazy(() => import('./pages/Calendar'));
 
@@ -47,7 +46,6 @@ function App() {
                 <Route path="today" element={<ErrorBoundary><Today /></ErrorBoundary>} />
                 <Route path="calendar" element={<ErrorBoundary><Calendar /></ErrorBoundary>} />
                 <Route path="book" element={<ErrorBoundary><Book /></ErrorBoundary>} />
-                <Route path="research" element={<ErrorBoundary><Research /></ErrorBoundary>} />
                 <Route path="universes" element={<ErrorBoundary><Universes /></ErrorBoundary>} />
 
                 {/* Strategy / settings — still accessible */}
@@ -63,8 +61,9 @@ function App() {
                 <Route path="portfolio" element={<Navigate to="/book" replace />} />
                 <Route path="journal" element={<Navigate to="/book" replace />} />
                 <Route path="analytics" element={<Navigate to="/book" replace />} />
-                <Route path="intelligence" element={<Navigate to="/research" replace />} />
-                <Route path="fundamentals" element={<Navigate to="/research" replace />} />
+                <Route path="research" element={<Navigate to="/today" replace />} />
+                <Route path="intelligence" element={<Navigate to="/today" replace />} />
+                <Route path="fundamentals" element={<Navigate to="/today" replace />} />
 
                 {/* Other legacy redirects */}
                 <Route path="dashboard" element={<Navigate to="/today" replace />} />
