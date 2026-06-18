@@ -91,6 +91,11 @@ export default function OrderReviewExperience({
   const suggestedEntry = Number.isFinite(initialEntry) && initialEntry > 0 ? initialEntry : fallbackEntry;
   const initialStop = recRisk?.stop ?? context.stop ?? suggestedEntry * 0.95;
   const suggestedStop = Math.max(0.01, Math.min(initialStop, suggestedEntry - 0.01));
+  const recTarget = recRisk?.target ?? null;
+  const suggestedTarget =
+    recTarget != null && Number.isFinite(recTarget) && recTarget > suggestedEntry
+      ? parseFloat(recTarget.toFixed(2))
+      : undefined;
   const rawSuggestedShares = recRisk?.shares ?? context.shares ?? Math.max(1, risk.minShares);
   const maxSharesByPositionCap =
     risk.maxPositionPct > 0 && suggestedEntry > 0
@@ -116,6 +121,7 @@ export default function OrderReviewExperience({
       quantity: suggestedShares,
       limitPrice: parseFloat(suggestedEntry.toFixed(2)),
       stopPrice: parseFloat(suggestedStop.toFixed(2)),
+      targetPrice: suggestedTarget,
       notes: defaultNotes,
     },
   });
@@ -134,6 +140,7 @@ export default function OrderReviewExperience({
       quantity: suggestedShares,
       limitPrice: parseFloat(suggestedEntry.toFixed(2)),
       stopPrice: parseFloat(suggestedStop.toFixed(2)),
+      targetPrice: suggestedTarget,
       notes: defaultNotes,
     });
     setOverrideConfirmed(false);
@@ -142,7 +149,7 @@ export default function OrderReviewExperience({
     setIsSubmitting(false);
     setActiveSection('decision');
     setTradeThesis('');
-  }, [defaultNotes, defaultOrderType, form, suggestedEntry, suggestedShares, suggestedStop, normalizedTicker]);
+  }, [defaultNotes, defaultOrderType, form, suggestedEntry, suggestedShares, suggestedStop, suggestedTarget, normalizedTicker]);
 
   const orderType = form.watch('orderType') ?? defaultOrderType;
   const quantity = form.watch('quantity') ?? 0;
@@ -216,6 +223,7 @@ export default function OrderReviewExperience({
       quantity: `order-review-quantity-${normalizedTicker}`,
       limitPrice: `order-review-limit-price-${normalizedTicker}`,
       stopPrice: `order-review-stop-price-${normalizedTicker}`,
+      targetPrice: `order-review-target-price-${normalizedTicker}`,
       notes: `order-review-notes-${normalizedTicker}`,
     }),
     [normalizedTicker],
@@ -253,6 +261,7 @@ export default function OrderReviewExperience({
         quantity: values.quantity,
         limitPrice: values.limitPrice,
         stopPrice: values.stopPrice,
+        targetPrice: values.targetPrice,
         orderKind: 'entry',
         positionId: (context.sameSymbol?.mode === 'ADD_ON' || context.sameSymbol?.mode === 'SCALE_BACK') ? (context.positionId ?? context.sameSymbol.positionId) : undefined,
         entryMode: context.sameSymbol?.mode === 'ADD_ON' || context.sameSymbol?.mode === 'SCALE_BACK' ? 'ADD_ON' : 'NEW_ENTRY',
@@ -416,6 +425,24 @@ export default function OrderReviewExperience({
                   />
                   {form.formState.errors.stopPrice ? (
                     <p className="mt-1 text-xs text-danger">{form.formState.errors.stopPrice.message}</p>
+                  ) : null}
+                </div>
+
+                <div>
+                  <label htmlFor={fieldIds.targetPrice} className="mb-1 block text-xs font-medium">
+                    {t('order.candidateModal.targetPrice')}
+                  </label>
+                  <Input
+                    id={fieldIds.targetPrice}
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    {...form.register('targetPrice', {
+                      setValueAs: (v) => (v === '' || v == null ? undefined : Number(v)),
+                    })}
+                  />
+                  {form.formState.errors.targetPrice ? (
+                    <p className="mt-1 text-xs text-danger">{form.formState.errors.targetPrice.message}</p>
                   ) : null}
                 </div>
               </div>

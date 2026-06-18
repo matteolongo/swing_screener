@@ -67,3 +67,58 @@ def test_enricher_is_resilient_to_provider_errors():
     out = enrich_intelligence_request("AAPL", req, fundamentals=_Boom(), earnings=_earn_boom)
     assert out.trailing_pe is None
     assert out.days_to_earnings is None
+
+
+def _synthetic_ohlcv(ticker="AAA", n=300):
+    import numpy as np
+    import pandas as pd
+
+    idx = pd.bdate_range(end="2026-06-01", periods=n)
+    close = pd.Series(np.linspace(100.0, 200.0, n), index=idx)
+    cols = pd.MultiIndex.from_product(
+        [["Open", "High", "Low", "Close", "Volume"], [ticker]]
+    )
+    df = pd.DataFrame(index=idx, columns=cols, dtype=float)
+    df[("Open", ticker)] = close.shift(1).fillna(close.iloc[0]).values
+    df[("High", ticker)] = (close * 1.01).values
+    df[("Low", ticker)] = (close * 0.99).values
+    df[("Close", ticker)] = close.values
+    df[("Volume", ticker)] = 1_000_000.0
+    return df
+
+
+def test_enrich_with_technicals_fills_indicators():
+    from api.services.intelligence_enrichment import enrich_with_technicals
+
+    req = SymbolIntelligenceRequest(close=200.0, signal="hold")
+    out = enrich_with_technicals("AAA", req, _synthetic_ohlcv())
+
+    assert out.sma_20 is not None
+    assert out.sma_200 is not None
+    assert out.momentum_6m is not None
+    assert out.momentum_12m is not None
+    assert out.atr is not None
+    assert out.dist_52w_high_pct is not None
+    # rising series sits at its 52w high
+    assert out.near_52w_high is True
+    # benchmark-relative fields are intentionally left unset on this single-symbol path
+    assert out.rel_strength is None
+
+
+def test_enrich_with_technicals_degrades_on_empty_frame():
+    import pandas as pd
+
+    from api.services.intelligence_enrichment import enrich_with_technicals
+
+    req = SymbolIntelligenceRequest(close=200.0, signal="hold")
+    out = enrich_with_technicals("AAA", req, pd.DataFrame())
+    assert out.sma_20 is None
+    assert out is req
+
+
+def test_enrich_with_technicals_does_not_overwrite_existing():
+    from api.services.intelligence_enrichment import enrich_with_technicals
+
+    req = SymbolIntelligenceRequest(close=200.0, signal="hold", sma_20=123.0)
+    out = enrich_with_technicals("AAA", req, _synthetic_ohlcv())
+    assert out.sma_20 == 123.0
