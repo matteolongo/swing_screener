@@ -56,10 +56,10 @@ function isPositiveNumber(value: number | null | undefined): value is number {
 
 function compactValue(label: string, value: string, secondary?: string) {
   return (
-    <div className="min-w-[88px] rounded-md border border-slate-200 bg-surface/90 px-2.5 py-2">
-      <div className="text-[10px] uppercase tracking-wide text-slate-500">{label}</div>
-      <div className="mt-1 text-sm font-semibold text-slate-900">{value}</div>
-      {secondary ? <div className="mt-0.5 text-[10px] text-slate-500">{secondary}</div> : null}
+    <div className="min-w-[88px] rounded-md border border-border bg-surface/90 px-2.5 py-2">
+      <div className="text-[10px] uppercase tracking-wide text-muted">{label}</div>
+      <div className="mt-1 text-sm font-semibold text-foreground">{value}</div>
+      {secondary ? <div className="mt-0.5 text-[10px] text-muted">{secondary}</div> : null}
     </div>
   );
 }
@@ -122,12 +122,12 @@ export default function AnalysisDecisionStrip({
   );
 
   return (
-    <div className="sticky top-0 z-10 rounded-xl border border-slate-200 bg-slate-50/95 p-3 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-slate-50/85">
+    <div className="sticky top-0 z-10 rounded-xl border border-border bg-surface/95 p-3 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-surface/85">
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-base font-semibold text-slate-900">{ticker}</h2>
+              <h2 className="text-base font-semibold text-foreground">{ticker}</h2>
               {summary ? <Badge variant="primary">{actionLabel(summary.action)}</Badge> : null}
               {summary ? <Badge variant="default">{convictionLabel(summary.conviction)}</Badge> : null}
               {visibleSourceItems.map(([label, source]) => (
@@ -136,7 +136,7 @@ export default function AnalysisDecisionStrip({
                 </Badge>
               ))}
             </div>
-            <p className="text-xs text-slate-600">
+            <p className="text-xs text-muted">
               {summary?.explanation?.summaryLine
                 ?? summary?.whyNow
                 ?? candidate?.recommendation?.reasonsShort?.[0]
@@ -149,7 +149,7 @@ export default function AnalysisDecisionStrip({
                 type="button"
                 onClick={isWatched ? onUnwatch : onWatch}
                 disabled={isPendingWatch}
-                className="rounded-md border border-slate-200 bg-surface px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                className="rounded-md border border-border bg-surface px-2.5 py-1 text-xs font-medium text-muted hover:bg-surface disabled:opacity-50"
               >
                 {isPendingWatch ? '…' : isWatched ? 'Unwatch' : 'Watch'}
               </button>

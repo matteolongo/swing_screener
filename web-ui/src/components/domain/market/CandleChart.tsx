@@ -112,7 +112,7 @@ export function CandleChart({
 
   if (usable.length === 0) {
     return (
-      <div className={cn('flex h-full items-center justify-center text-xs text-slate-400', className)}>
+      <div className={cn('flex h-full items-center justify-center text-xs text-muted', className)}>
         {ticker}
       </div>
     );

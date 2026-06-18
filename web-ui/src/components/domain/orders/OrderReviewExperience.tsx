@@ -799,7 +799,7 @@ export default function OrderReviewExperience({
                 </div>
               ) : null}
 
-              <div className="sticky bottom-0 z-10 -mx-1 rounded-xl border border-slate-200 bg-white/95 p-3 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-white/90">
+              <div className="sticky bottom-0 z-10 -mx-1 rounded-xl border border-border bg-surface/95 p-3 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-surface/90">
                 {submitSucceeded ? (
                   <div className="mb-3 rounded border border-green-300 bg-green-50 p-2 text-xs text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-200">
                     {successMessage}

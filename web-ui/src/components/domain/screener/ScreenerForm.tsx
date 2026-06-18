@@ -166,7 +166,7 @@ export default function ScreenerForm({
               <button
                 type="button"
                 onClick={onToggleCollapsed}
-                className="inline-flex items-center gap-1 text-xs text-muted hover:text-gray-700 px-1"
+                className="inline-flex items-center gap-1 text-xs text-muted hover:text-foreground px-1"
                 aria-label={t('screener.controls.adjustFilters')}
               >
                 <Settings2 className="w-3.5 h-3.5" />
@@ -225,7 +225,7 @@ export default function ScreenerForm({
           <button
             type="button"
             onClick={onToggleCollapsed}
-            className="inline-flex items-center gap-1 text-xs text-muted hover:text-gray-700 px-1"
+            className="inline-flex items-center gap-1 text-xs text-muted hover:text-foreground px-1"
             aria-label={t('screener.controls.hideFilters')}
           >
             <ChevronUp className="w-3.5 h-3.5" />

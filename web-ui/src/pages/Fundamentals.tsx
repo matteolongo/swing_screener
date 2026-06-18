@@ -158,7 +158,7 @@ export default function FundamentalsPage({ initialSymbol, defaultSimple = false 
 
           {warmupStatus ? (
             <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-3">
-              <div className="rounded-md bg-white/70 p-3 text-xs text-sky-900">
+              <div className="rounded-md bg-surface/70 p-3 text-xs text-sky-900">
                 <div className="text-sky-700">{t('fundamentalsPage.warmup.coverage.label')}</div>
                 <div className="mt-1">
                   {t('fundamentalsPage.warmup.coverage.stats', {
@@ -169,7 +169,7 @@ export default function FundamentalsPage({ initialSymbol, defaultSimple = false 
                   })}
                 </div>
               </div>
-              <div className="rounded-md bg-white/70 p-3 text-xs text-sky-900">
+              <div className="rounded-md bg-surface/70 p-3 text-xs text-sky-900">
                 <div className="text-sky-700">{t('fundamentalsPage.warmup.freshness.label')}</div>
                 <div className="mt-1">
                   {t('fundamentalsPage.warmup.freshness.stats', {
@@ -179,7 +179,7 @@ export default function FundamentalsPage({ initialSymbol, defaultSimple = false 
                   })}
                 </div>
               </div>
-              <div className="rounded-md bg-white/70 p-3 text-xs text-sky-900">
+              <div className="rounded-md bg-surface/70 p-3 text-xs text-sky-900">
                 <div className="text-sky-700">{t('fundamentalsPage.warmup.errors.label')}</div>
                 <div className="mt-1">
                   {warmupStatus.errorSample

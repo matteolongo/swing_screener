@@ -111,7 +111,7 @@ export default function PendingOrdersTab() {
                       <button
                         type="button"
                         onClick={() => setFillManualOrder(order)}
-                        className="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300"
+                        className="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700 hover:bg-foreground/10 dark:bg-gray-800 dark:text-gray-300"
                       >
                         {t('pendingOrdersTab.fillManually')}
                       </button>

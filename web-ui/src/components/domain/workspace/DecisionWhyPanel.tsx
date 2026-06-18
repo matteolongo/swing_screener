@@ -9,8 +9,8 @@ interface DecisionWhyPanelProps {
 export default function DecisionWhyPanel({ summary, aiSummaryLine }: DecisionWhyPanelProps) {
   if (!summary) {
     return (
-      <div className="rounded-lg border border-slate-200 bg-surface p-3">
-        <p className="text-sm text-slate-500">
+      <div className="rounded-lg border border-border bg-surface p-3">
+        <p className="text-sm text-muted">
           {t('workspacePage.panels.analysis.decisionWhy.noGuidance')}
         </p>
       </div>
@@ -25,15 +25,15 @@ export default function DecisionWhyPanel({ summary, aiSummaryLine }: DecisionWhy
   ].filter((r) => r.value);
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-surface p-3">
-      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+    <div className="rounded-lg border border-border bg-surface p-3">
+      <div className="text-xs font-semibold uppercase tracking-wide text-muted">
         {t('workspacePage.panels.analysis.decisionWhy.title')}
       </div>
       <dl className="mt-2 grid gap-2">
         {rows.map((r) => (
-          <div key={r.label} className="rounded-md bg-slate-50 px-3 py-2">
-            <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{r.label}</dt>
-            <dd className="mt-1 text-sm text-slate-800">{r.value}</dd>
+          <div key={r.label} className="rounded-md bg-surface px-3 py-2">
+            <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted">{r.label}</dt>
+            <dd className="mt-1 text-sm text-foreground">{r.value}</dd>
           </div>
         ))}
       </dl>

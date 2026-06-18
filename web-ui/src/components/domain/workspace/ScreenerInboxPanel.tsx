@@ -403,13 +403,13 @@ export default function ScreenerInboxPanel() {
           <div className="flex gap-1 rounded-lg border border-border p-0.5 w-fit self-start">
             <button
               onClick={() => setViewMode('guided')}
-              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${viewMode === 'guided' ? 'bg-surface shadow-sm text-foreground' : 'text-muted hover:text-gray-700'}`}
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${viewMode === 'guided' ? 'bg-surface shadow-sm text-foreground' : 'text-muted hover:text-foreground'}`}
             >
               {t('screener.viewToggle.guided')}
             </button>
             <button
               onClick={() => setViewMode('advanced')}
-              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${viewMode === 'advanced' ? 'bg-surface shadow-sm text-foreground' : 'text-muted hover:text-gray-700'}`}
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${viewMode === 'advanced' ? 'bg-surface shadow-sm text-foreground' : 'text-muted hover:text-foreground'}`}
             >
               {t('screener.viewToggle.advanced')}
             </button>

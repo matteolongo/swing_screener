@@ -461,7 +461,7 @@ export default function Universes() {
                 </div>
               ) : null}
               <div className="max-h-[420px] overflow-auto rounded-xl border border-border">
-                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                <table className="min-w-full divide-y divide-border text-sm">
                   <thead className="bg-surface text-left text-xs uppercase tracking-wide text-muted">
                     <tr>
                       <th className="px-3 py-2">Symbol</th>
@@ -474,7 +474,7 @@ export default function Universes() {
                       <th className="px-3 py-2">Source</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 bg-surface">
+                  <tbody className="divide-y divide-border bg-surface">
                     {discoveryResult.symbols.map((symbol) => (
                       <tr key={`${symbol.symbol}-${symbol.source_screen ?? symbol.provider_exchange ?? 'source'}`}>
                         <td className="px-3 py-2 font-medium text-foreground">{symbol.symbol}</td>
@@ -517,7 +517,7 @@ export default function Universes() {
                 </div>
               ) : null}
               <div className="max-h-[520px] overflow-auto rounded-xl border border-border">
-                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                <table className="min-w-full divide-y divide-border text-sm">
                   <thead className="bg-surface text-left text-xs uppercase tracking-wide text-muted">
                     <tr>
                       <th className="px-3 py-2">Rank</th>
@@ -531,7 +531,7 @@ export default function Universes() {
                       <th className="px-3 py-2">Fundamentals</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 bg-surface">
+                  <tbody className="divide-y divide-border bg-surface">
                     {discoveryScreenerResult.candidates.map((candidate) => (
                       <tr
                         key={candidate.ticker}
@@ -843,7 +843,7 @@ export default function Universes() {
                 <div className="text-xs text-muted">{detail.constituents.length} rows</div>
               </div>
               <div className="max-h-[520px] overflow-auto rounded-xl border border-border">
-                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                <table className="min-w-full divide-y divide-border text-sm">
                   <thead className="bg-surface text-left text-xs uppercase tracking-wide text-muted">
                     <tr>
                       <th className="px-3 py-2">Symbol</th>
@@ -854,7 +854,7 @@ export default function Universes() {
                       <th className="px-3 py-2">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 bg-surface">
+                  <tbody className="divide-y divide-border bg-surface">
                     {detail.constituents.map((constituent) => (
                       <tr key={constituent.symbol}>
                         <td className="px-3 py-2 font-medium text-foreground">{constituent.symbol}</td>

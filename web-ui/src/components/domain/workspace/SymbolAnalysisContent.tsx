@@ -138,7 +138,7 @@ export default function SymbolAnalysisContent({
               onClick={() => onTabChange(tab.id)}
               className={cn(
                 'whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
-                isActive ? 'bg-surface text-foreground shadow-sm' : 'text-muted hover:text-gray-900'
+                isActive ? 'bg-surface text-foreground shadow-sm' : 'text-muted hover:text-foreground'
               )}
             >
               {tab.label}
@@ -236,13 +236,13 @@ export default function SymbolAnalysisContent({
             )}
             {candidate ? <TechnicalMetricsGrid candidate={candidate} /> : null}
             {!hasNarrative && candidate && (
-              <div className="rounded-lg border border-slate-200 bg-surface p-3">
+              <div className="rounded-lg border border-border bg-surface p-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <p className="text-sm font-semibold text-slate-900">
+                    <p className="text-sm font-semibold text-foreground">
                       {t('workspacePage.panels.analysis.intelligence.overviewPromptTitle')}
                     </p>
-                    <p className="mt-1 text-sm text-slate-500">
+                    <p className="mt-1 text-sm text-muted">
                       {t('workspacePage.panels.analysis.intelligence.overviewPromptDescription')}
                     </p>
                   </div>
@@ -319,22 +319,22 @@ export default function SymbolAnalysisContent({
                     : t('workspacePage.panels.analysis.fundamentals.runAction')}
               </Button>
               {fundamentalsQuery.data && (
-                <span className="text-xs text-slate-400">
+                <span className="text-xs text-muted">
                   Updated {formatDateTime(fundamentalsQuery.data.updatedAt)}
                 </span>
               )}
             </div>
 
             {fundamentalsQuery.data ? (
-              <details className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                <summary className="cursor-pointer text-xs font-medium uppercase tracking-wide text-slate-500">
+              <details className="rounded-lg border border-border bg-surface p-3">
+                <summary className="cursor-pointer text-xs font-medium uppercase tracking-wide text-muted">
                   About metric labels
                 </summary>
                 <div className="mt-3 grid gap-2 md:grid-cols-3">
                   {provenanceLegendItems().map((item) => (
-                    <div key={item.label} className="rounded-md border border-slate-200 bg-surface px-3 py-2">
-                      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{item.label}</p>
-                      <p className="mt-1 text-sm text-slate-700">{item.detail}</p>
+                    <div key={item.label} className="rounded-md border border-border bg-surface px-3 py-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">{item.label}</p>
+                      <p className="mt-1 text-sm text-muted">{item.detail}</p>
                     </div>
                   ))}
                 </div>

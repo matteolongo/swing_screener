@@ -61,7 +61,7 @@ function trendClass(direction: 'improving' | 'deteriorating' | 'stable' | 'unkno
   if (direction === 'improving') return 'bg-emerald-100 text-emerald-800';
   if (direction === 'deteriorating') return 'bg-rose-100 text-rose-800';
   if (direction === 'stable') return 'bg-amber-100 text-amber-800';
-  if (direction === 'not_comparable') return 'bg-slate-100 text-slate-700';
+  if (direction === 'not_comparable') return 'bg-surface text-muted';
   return 'bg-surface text-muted';
 }
 
@@ -385,7 +385,7 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
                     </div>
                   </div>
                   <div className="border-t border-border">
-                    <table className="min-w-full divide-y divide-gray-200 text-sm">
+                    <table className="min-w-full divide-y divide-border text-sm">
                       <thead className="bg-surface">
                         <tr>
                           <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted">
@@ -396,7 +396,7 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
                           </th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-100 bg-surface">
+                      <tbody className="divide-y divide-border bg-surface">
                         {[...series.points]
                           .sort((left, right) => comparePeriodDesc(left.periodEnd, right.periodEnd))
                           .map((point) => (

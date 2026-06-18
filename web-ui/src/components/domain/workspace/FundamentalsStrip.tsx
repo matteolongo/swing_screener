@@ -26,22 +26,22 @@ export default function FundamentalsStrip({
 
   if (items.length === 0) {
     return (
-      <div className="rounded-lg border border-slate-200 bg-surface p-3 text-sm text-slate-500">
+      <div className="rounded-lg border border-border bg-surface p-3 text-sm text-muted">
         {t('workspacePage.panels.analysis.fundamentalsStrip.unavailable')}
       </div>
     );
   }
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-surface p-3">
-      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">
+    <div className="rounded-lg border border-border bg-surface p-3">
+      <div className="text-xs font-semibold uppercase tracking-wide text-muted mb-2">
         {t('workspacePage.panels.analysis.fundamentalsStrip.title')}
       </div>
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
         {items.map((i) => (
-          <div key={i.label} className="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-2">
-            <div className="text-[10px] uppercase tracking-wide text-slate-500">{i.label}</div>
-            <div className="mt-1 text-sm font-semibold text-slate-900">{i.value}</div>
+          <div key={i.label} className="rounded-md border border-border bg-surface px-2.5 py-2">
+            <div className="text-[10px] uppercase tracking-wide text-muted">{i.label}</div>
+            <div className="mt-1 text-sm font-semibold text-foreground">{i.value}</div>
           </div>
         ))}
       </div>

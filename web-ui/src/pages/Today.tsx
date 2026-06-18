@@ -1128,7 +1128,7 @@ export default function Today() {
               'flex-1 py-2 text-sm font-medium capitalize transition-colors',
               activeTablet === tab
                 ? 'border-b-2 border-primary text-primary'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900'
+                : 'text-gray-600 dark:text-gray-400 hover:text-foreground'
             )}
           >
             {tab === 'left' ? t('todayPage.tabs.today') : t('workspacePage.panels.analysis.title')}

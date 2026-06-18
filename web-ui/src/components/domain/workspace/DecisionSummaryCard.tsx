@@ -201,7 +201,7 @@ export default function DecisionSummaryCard({
   })();
 
   return (
-    <div className="rounded-lg border border-slate-200 overflow-hidden">
+    <div className="rounded-lg border border-border overflow-hidden">
       <div className={`px-3 py-2 flex items-center justify-between gap-3 ${bannerClass}`}>
         <span className="font-semibold text-sm">
           {t('workspacePage.panels.analysis.decisionSummary.title', { ticker: summary.symbol })} — {actionLabel(summary.action)}
@@ -211,7 +211,7 @@ export default function DecisionSummaryCard({
         </Badge>
       </div>
 
-      <div className="bg-slate-50 p-3">
+      <div className="bg-surface p-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="max-w-3xl">
           <p className="text-sm text-muted">
@@ -256,7 +256,7 @@ export default function DecisionSummaryCard({
               <div className="text-xs font-medium uppercase tracking-wide text-muted">
                 {t('workspacePage.panels.analysis.decisionSummary.copy.whyItQualified')}
               </div>
-              <ul className="mt-2 space-y-1 text-sm text-slate-800">
+              <ul className="mt-2 space-y-1 text-sm text-foreground">
                 {summary.explanation.whyItQualified.map((item) => (
                   <li key={item}>{item}</li>
                 ))}
@@ -268,7 +268,7 @@ export default function DecisionSummaryCard({
               <div className="text-xs font-medium uppercase tracking-wide text-muted">
                 {t('workspacePage.panels.analysis.decisionSummary.copy.whyNow')}
               </div>
-              <ul className="mt-2 space-y-1 text-sm text-slate-800">
+              <ul className="mt-2 space-y-1 text-sm text-foreground">
                 {summary.explanation.whyNow.map((item) => (
                   <li key={item}>{item}</li>
                 ))}
@@ -280,7 +280,7 @@ export default function DecisionSummaryCard({
               <div className="text-xs font-medium uppercase tracking-wide text-muted">
                 {t('workspacePage.panels.analysis.decisionSummary.copy.mainRisk')}
               </div>
-              <ul className="mt-2 space-y-1 text-sm text-slate-800">
+              <ul className="mt-2 space-y-1 text-sm text-foreground">
                 {summary.explanation.mainRisks.map((item) => (
                   <li key={item}>{item}</li>
                 ))}
@@ -292,7 +292,7 @@ export default function DecisionSummaryCard({
               <div className="text-xs font-medium uppercase tracking-wide text-muted">
                 {t('workspacePage.panels.analysis.decisionSummary.copy.whatInvalidatesIt')}
               </div>
-              <ul className="mt-2 space-y-1 text-sm text-slate-800">
+              <ul className="mt-2 space-y-1 text-sm text-foreground">
                 {summary.explanation.whatInvalidatesIt.map((item) => (
                   <li key={item}>{item}</li>
                 ))}
@@ -306,25 +306,25 @@ export default function DecisionSummaryCard({
             <div className="text-xs font-medium uppercase tracking-wide text-muted">
               {t('workspacePage.panels.analysis.decisionSummary.copy.whyNow')}
             </div>
-            <p className="mt-2 text-sm text-slate-800">{summary.whyNow}</p>
+            <p className="mt-2 text-sm text-foreground">{summary.whyNow}</p>
           </div>
           <div className="rounded-md bg-surface p-3">
             <div className="text-xs font-medium uppercase tracking-wide text-muted">
               {t('workspacePage.panels.analysis.decisionSummary.copy.whatToDo')}
             </div>
-            <p className="mt-2 text-sm text-slate-800">{summary.whatToDo}</p>
+            <p className="mt-2 text-sm text-foreground">{summary.whatToDo}</p>
           </div>
           <div className="rounded-md bg-surface p-3">
             <div className="text-xs font-medium uppercase tracking-wide text-muted">
               {t('workspacePage.panels.analysis.decisionSummary.copy.mainRisk')}
             </div>
-            <p className="mt-2 text-sm text-slate-800">{summary.mainRisk}</p>
+            <p className="mt-2 text-sm text-foreground">{summary.mainRisk}</p>
           </div>
         </div>
       )}
 
       {summary.valuationContext.summary || valuationMetrics.length ? (
-        <details className="mt-3 rounded-md border border-slate-200 bg-surface p-3">
+        <details className="mt-3 rounded-md border border-border bg-surface p-3">
           <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2">
             <span className="text-xs font-medium uppercase tracking-wide text-muted">
               {t('workspacePage.panels.analysis.decisionSummary.valuationContext.title')}
@@ -336,14 +336,14 @@ export default function DecisionSummaryCard({
             </span>
           </summary>
           {summary.valuationContext.summary ? (
-            <p className="mt-3 text-sm text-slate-800">{summary.valuationContext.summary}</p>
+            <p className="mt-3 text-sm text-foreground">{summary.valuationContext.summary}</p>
           ) : null}
           {valuationMetrics.length ? (
             <div className="mt-3 grid grid-cols-2 gap-2">
               {valuationMetrics.map((item) => (
-                <div key={item.label} className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+                <div key={item.label} className="rounded-md border border-border bg-surface px-3 py-2">
                   <div className="text-[11px] uppercase tracking-wide text-muted">{item.label}</div>
-                  <div className="mt-1 text-sm font-semibold text-slate-900">
+                  <div className="mt-1 text-sm font-semibold text-foreground">
                     {item.formatter(item.value as number)}
                   </div>
                 </div>
