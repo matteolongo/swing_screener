@@ -90,7 +90,7 @@ export default function WorkspaceSymbolModal({ ticker, position = null, onBack }
           </div>
         </div>
 
-        <div className="flex w-full items-center gap-1 overflow-x-auto rounded-lg border border-gray-200 bg-gray-50 p-1" role="tablist" aria-label={t('workspacePage.symbolDetails.tabsAria')}>
+        <div className="flex w-full items-center gap-1 overflow-x-auto rounded-lg border border-border bg-surface p-1" role="tablist" aria-label={t('workspacePage.symbolDetails.tabsAria')}>
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
@@ -102,7 +102,7 @@ export default function WorkspaceSymbolModal({ ticker, position = null, onBack }
                 onClick={() => setAnalysisTab(tab.id)}
                 className={cn(
                   'whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
-                  isActive ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                  isActive ? 'bg-surface text-foreground shadow-sm' : 'text-muted hover:text-foreground'
                 )}
               >
                 {tab.label}
@@ -124,14 +124,14 @@ export default function WorkspaceSymbolModal({ ticker, position = null, onBack }
                 <CachedSymbolCandleChart ticker={ticker} className="mt-2" width={760} height={240} />
               </div>
               <KeyMetrics ticker={ticker} />
-              <div className="rounded-lg border border-slate-200 bg-white p-3">
+              <div className="rounded-lg border border-border bg-surface p-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <p className="text-sm font-semibold text-slate-900">
+                    <p className="text-sm font-semibold text-foreground">
                       {t('workspacePage.panels.analysis.intelligence.overviewPromptTitle')}
                     </p>
                     {position && (
-                      <p className="mt-0.5 text-xs text-slate-500">
+                      <p className="mt-0.5 text-xs text-muted">
                         {t('workspacePage.panels.analysis.intelligence.overviewPromptDescription')}
                       </p>
                     )}

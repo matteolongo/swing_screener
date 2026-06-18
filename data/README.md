@@ -45,6 +45,24 @@ instrument master from 421 to 987 records. New records carry
 append-only and never overwrites). Snapshots live under
 `src/swing_screener/data/universes/registry/snapshots/`.
 
+Migration (2026-06-17): added 3 Asian index universes — `hongkong_hsi` (benchmark
+`^HSI`, HKD, ~85 members), `korea_kospi200` (benchmark `^KS11`, KRW, ~200),
+`china_csi300` (benchmark `000300.SS`, CNY, ~298). Populating them extended the
+instrument master with HKD/KRW/CNY instruments via `universes refresh --apply`.
+
+New exchange→MIC mappings added in `symbol_discovery.py` and
+`instrument_enrichment.py`: `HKG→XHKG`, `KSC→XKRX`, `SHH→XSHG`, `SHZ→XSHE`.
+
+New custom symbol resolvers added in `wikipedia_sources.py`
+(`_CUSTOM_SYMBOL_RESOLVERS`):
+- HK: zero-pad raw code to 4 digits, append `.HK`
+- Korea: zero-pad raw code to 6 digits, append `.KS`
+- China: route by the `SSE:`/`SZSE:` prefix in the ticker cell: SSE codes get
+  `.SS`, SZSE codes get `.SZ`
+
+Japan / Nikkei 225 deferred: Wikipedia does not publish a machine-readable
+constituent table for that index.
+
 Refresh an index (re-fetch constituents + enrich any new symbols):
 
 ```bash

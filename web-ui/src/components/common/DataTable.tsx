@@ -54,7 +54,7 @@ export default function DataTable<RowT>({
       wrapperClassName={wrapperClassName}
       tableClassName={tableClassName}
       headers={(
-        <tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 bg-gray-50/80">
+        <tr className="text-left text-[11px] uppercase tracking-wide text-muted bg-surface/80">
           {columns.map((column) => (
             <th
               key={column.key}

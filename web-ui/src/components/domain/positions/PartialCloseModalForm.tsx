@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import Button from '@/components/common/Button';
 import ModalShell from '@/components/common/ModalShell';
+import RChip from '@/components/common/RChip';
 import type { PartialCloseRequest, Position } from '@/features/portfolio/types';
-import { formatCurrency } from '@/utils/formatters';
+import { formatCurrency, getSignColorClass } from '@/utils/formatters';
 import { t } from '@/i18n/t';
 
 interface PartialCloseModalFormProps {
@@ -144,13 +145,11 @@ export default function PartialCloseModalForm({
             <p className="font-medium">{t('positions.partialCloseModal.preview')}</p>
             <p>
               <span className="text-gray-600 dark:text-gray-400">{t('positions.partialCloseModal.rAtClose')}: </span>
-              <span className={rAtClose >= 0 ? 'text-green-600 font-mono' : 'text-red-600 font-mono'}>
-                {rAtClose >= 0 ? '+' : ''}{rAtClose.toFixed(2)}R
-              </span>
+              <RChip value={rAtClose} className="font-mono" />
             </p>
             <p>
               <span className="text-gray-600 dark:text-gray-400">{t('positions.partialCloseModal.lockedProfit')}: </span>
-              <span className={lockedProfit >= 0 ? 'text-green-600' : 'text-red-600'}>
+              <span className={getSignColorClass(lockedProfit)}>
                 {lockedProfit >= 0 ? '+' : ''}{formatCurrency(lockedProfit)}
               </span>
             </p>

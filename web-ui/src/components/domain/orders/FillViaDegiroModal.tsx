@@ -72,7 +72,7 @@ export default function FillViaDegiroModal({ order, onClose }: FillViaDegiroModa
       className="max-w-lg"
     >
       {historyQuery.isLoading && (
-        <p className="text-sm text-gray-500 py-4">{t('fillViaDegiroModal.loading')}</p>
+        <p className="text-sm text-muted py-4">{t('fillViaDegiroModal.loading')}</p>
       )}
 
       {historyQuery.isError && (
@@ -80,7 +80,7 @@ export default function FillViaDegiroModal({ order, onClose }: FillViaDegiroModa
       )}
 
       {!historyQuery.isLoading && !historyQuery.isError && buyOrders.length === 0 && (
-        <p className="text-sm text-gray-500 py-4">{t('fillViaDegiroModal.noOrders')}</p>
+        <p className="text-sm text-muted py-4">{t('fillViaDegiroModal.noOrders')}</p>
       )}
 
       {buyOrders.length > 0 && (

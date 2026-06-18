@@ -75,7 +75,7 @@ export default function StrategyCoreSettingsCards({
               help={help.module}
             />
           </div>
-          <div className="mt-3 text-xs text-gray-500">
+          <div className="mt-3 text-xs text-muted">
             {t('strategyPage.core.fields.idValue', { id: draft.id })}
           </div>
         </CardContent>

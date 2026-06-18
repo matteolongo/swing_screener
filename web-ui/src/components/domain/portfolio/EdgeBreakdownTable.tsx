@@ -1,8 +1,7 @@
 import { useMemo } from 'react';
 import type { Position } from '@/types/position';
 import { t } from '@/i18n/t';
-import { formatNumber } from '@/utils/formatters';
-import { cn } from '@/utils/cn';
+import RChip from '@/components/common/RChip';
 
 interface TagStats {
   tag: string;
@@ -120,17 +119,11 @@ export default function EdgeBreakdownTable({ positions }: EdgeBreakdownTableProp
               </td>
               <td className="px-4 py-3 text-right tabular-nums">{stat.count}</td>
               <td className="px-4 py-3 text-right tabular-nums">{Math.round(stat.winRate)}%</td>
-              <td className={cn(
-                'px-4 py-3 text-right tabular-nums font-semibold',
-                stat.avgR >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400',
-              )}>
-                {stat.avgR >= 0 ? '+' : ''}{formatNumber(stat.avgR, 2)}R
+              <td className="px-4 py-3 text-right">
+                <RChip value={stat.avgR} />
               </td>
-              <td className={cn(
-                'px-4 py-3 text-right tabular-nums font-semibold',
-                stat.expectancy >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400',
-              )}>
-                {stat.expectancy >= 0 ? '+' : ''}{formatNumber(stat.expectancy, 2)}R
+              <td className="px-4 py-3 text-right">
+                <RChip value={stat.expectancy} />
               </td>
             </tr>
           ))}

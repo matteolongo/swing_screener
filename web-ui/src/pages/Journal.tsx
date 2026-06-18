@@ -3,8 +3,9 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 import { usePositions } from '@/features/portfolio/hooks';
 import type { Position } from '@/features/portfolio/types';
 import { t } from '@/i18n/t';
-import { formatCurrency, formatNumber } from '@/utils/formatters';
+import { formatCurrency, formatNumber, getSignColorClass } from '@/utils/formatters';
 import { cn } from '@/utils/cn';
+import RChip from '@/components/common/RChip';
 
 function computeFinalR(position: Position): number | null {
   const initialRisk = position.initialRisk;
@@ -21,13 +22,8 @@ function computeMaxR(position: Position): number | null {
 }
 
 function RBadge({ value }: { value: number | null }) {
-  if (value == null) return <span className="text-gray-400">—</span>;
-  const isPositive = value > 0;
-  return (
-    <span className={cn('font-semibold', isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400')}>
-      {value > 0 ? '+' : ''}{formatNumber(value, 2)}R
-    </span>
-  );
+  if (value == null) return <span className="text-muted">—</span>;
+  return <RChip value={value} />;
 }
 
 function getTagLabel(tag: string): string {
@@ -84,7 +80,7 @@ function JournalRow({ position }: JournalRowProps) {
               ))}
             </div>
           ) : (
-            <span className="text-gray-400">{t('common.placeholders.emDash')}</span>
+            <span className="text-muted">{t('common.placeholders.emDash')}</span>
           )}
         </td>
         <td className="px-4 py-3 text-sm text-right tabular-nums">
@@ -183,7 +179,7 @@ export default function Journal() {
               'mt-1 text-lg font-bold',
               positive ? 'text-green-600 dark:text-green-400' :
               negative ? 'text-red-600 dark:text-red-400' :
-              rValue != null ? (rValue > 0 ? 'text-green-600 dark:text-green-400' : rValue < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100') :
+              rValue != null ? getSignColorClass(rValue) :
               'text-gray-900 dark:text-gray-100'
             )}>
               {value}

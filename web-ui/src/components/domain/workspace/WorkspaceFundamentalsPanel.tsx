@@ -14,7 +14,7 @@ export default function WorkspaceFundamentalsPanel({ ticker }: WorkspaceFundamen
   const refreshMutation = useRefreshFundamentalSnapshotMutation();
 
   if (snapshotQuery.isLoading) {
-    return <div className="text-sm text-gray-500">Loading fundamentals...</div>;
+    return <div className="text-sm text-muted">Loading fundamentals...</div>;
   }
 
   if (snapshotQuery.isError) {
@@ -37,7 +37,7 @@ export default function WorkspaceFundamentalsPanel({ ticker }: WorkspaceFundamen
   }
 
   if (!snapshotQuery.data) {
-    return <div className="text-sm text-gray-500">No fundamentals snapshot available.</div>;
+    return <div className="text-sm text-muted">No fundamentals snapshot available.</div>;
   }
 
   return (

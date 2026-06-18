@@ -2,7 +2,7 @@ import { useState } from 'react';
 import Button from '@/components/common/Button';
 import ModalShell from '@/components/common/ModalShell';
 import type { ClosePositionRequest, Position } from '@/features/portfolio/types';
-import { formatCurrency, formatPercent } from '@/utils/formatters';
+import { formatCurrency, formatPercent, getSignColorClass } from '@/utils/formatters';
 import { t } from '@/i18n/t';
 import { cn } from '@/utils/cn';
 
@@ -179,11 +179,7 @@ export default function ClosePositionModalForm({
           className={`p-3 rounded ${pnl >= 0 ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20'}`}
         >
           <p className="text-sm font-medium">{t('positions.closeModal.projectedPnlNet')}</p>
-          <p
-            className={`text-lg font-bold ${
-              pnl >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
-            }`}
-          >
+          <p className={`text-lg font-bold ${getSignColorClass(pnl)}`}>
             {pnl >= 0 ? '+' : ''}
             {formatCurrency(pnl)} ({pnl >= 0 ? '+' : ''}
             {formatPercent(pnlPercent)})
@@ -223,7 +219,7 @@ export default function ClosePositionModalForm({
             <p className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
               {t('tradeTags.stepTitle')}
             </p>
-            <p className="mb-3 text-xs text-gray-500">{t('tradeTags.stepHint')}</p>
+            <p className="mb-3 text-xs text-muted">{t('tradeTags.stepHint')}</p>
             <div className="flex flex-wrap gap-2">
               {TRADE_TAGS.map((tag) => (
                 <button

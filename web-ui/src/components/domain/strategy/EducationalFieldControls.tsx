@@ -66,7 +66,7 @@ export function EducationalNumberInput({
             )}
           </span>
           {help && <HelpTooltip short={help.short} title={help.title} content={help.content} />}
-          {suffix && <span className="text-xs text-gray-500">{suffix}</span>}
+          {suffix && <span className="text-xs text-muted">{suffix}</span>}
         </div>
         {microcopy && (
           <div className="mb-2 text-xs text-gray-600 dark:text-gray-400 leading-relaxed">

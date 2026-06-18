@@ -7,7 +7,6 @@ import OnboardingExecutionSetupCard from '@/components/domain/onboarding/Onboard
 import OnboardingStrategySetupStep from '@/components/domain/onboarding/OnboardingStrategySetupStep';
 import { useStrategyReadiness } from '@/features/strategy/useStrategyReadiness';
 import { t } from '@/i18n/t';
-import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 import { useOnboardingStore } from '@/stores/onboardingStore';
 
 type OnboardingStep = {
@@ -23,7 +22,7 @@ const STEPS: OnboardingStep[] = [
     description: t('onboardingPage.steps.welcome.description'),
     icon: CheckCircle,
     content: (
-      <div className="space-y-4 text-sm text-gray-700">
+      <div className="space-y-4 text-sm text-muted">
         <p>{t('onboardingPage.steps.welcome.body')}</p>
         <ol className="list-decimal space-y-2 pl-5">
           <li>{t('onboardingPage.steps.welcome.items.configure')}</li>
@@ -45,7 +44,7 @@ const STEPS: OnboardingStep[] = [
     description: t('onboardingPage.steps.dailyReview.description'),
     icon: Calendar,
     content: (
-      <div className="space-y-3 text-sm text-gray-700">
+      <div className="space-y-3 text-sm text-muted">
         <p>{t('onboardingPage.steps.dailyReview.body')}</p>
         <ul className="list-disc space-y-1 pl-5">
           <li>{t('onboardingPage.steps.dailyReview.items.candidates')}</li>
@@ -61,7 +60,7 @@ const STEPS: OnboardingStep[] = [
     description: t('onboardingPage.steps.action.description'),
     icon: ShoppingCart,
     content: (
-      <div className="space-y-3 text-sm text-gray-700">
+      <div className="space-y-3 text-sm text-muted">
         <p>{t('onboardingPage.steps.action.body')}</p>
         <ul className="list-disc space-y-1 pl-5">
           <li>{t('onboardingPage.steps.action.items.createOrder')}</li>
@@ -76,7 +75,7 @@ const STEPS: OnboardingStep[] = [
     description: t('onboardingPage.steps.verify.description'),
     icon: Search,
     content: (
-      <div className="space-y-3 text-sm text-gray-700">
+      <div className="space-y-3 text-sm text-muted">
         <p>{t('onboardingPage.steps.verify.body')}</p>
         <ul className="list-disc space-y-1 pl-5">
           <li>{t('onboardingPage.steps.verify.items.orders')}</li>
@@ -101,7 +100,6 @@ export default function OnboardingPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { currentStep, setCurrentStep, completeOnboarding, dismissOnboarding } = useOnboardingStore();
-  const { isBeginnerMode, setBeginnerMode } = useBeginnerModeStore();
   const { isReady: strategyReady } = useStrategyReadiness();
 
   useEffect(() => {
@@ -152,18 +150,18 @@ export default function OnboardingPage() {
     <div className="mx-auto flex min-h-[calc(100dvh-8rem)] w-full max-w-4xl flex-col gap-4 pb-20 lg:pb-6">
       <div className="space-y-1">
         <h1 className="text-2xl font-bold md:text-3xl">{t('onboardingPage.header.title')}</h1>
-        <p className="text-sm text-gray-600">{t('onboardingPage.header.subtitle')}</p>
+        <p className="text-sm text-muted">{t('onboardingPage.header.subtitle')}</p>
       </div>
 
       <Card variant="bordered">
         <CardContent className="space-y-4 p-4 sm:p-6">
           <div className="flex items-center gap-3">
-            <Icon className="h-5 w-5 text-blue-600" />
+            <Icon className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-semibold">{step.title}</h2>
           </div>
 
           <div>
-            <p className="text-sm text-gray-600">{step.description}</p>
+            <p className="text-sm text-muted">{step.description}</p>
           </div>
 
           <div className="flex gap-2">
@@ -174,32 +172,9 @@ export default function OnboardingPage() {
               />
             ))}
           </div>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-muted">
             {t('onboardingPage.progress', { step: stepIndex + 1, total: STEPS.length })}
           </p>
-
-          {stepIndex === 0 ? (
-            <div className="rounded-lg border border-gray-200 p-3">
-              <p className="mb-2 text-sm font-medium text-gray-900">{t('onboardingPage.mode.title')}</p>
-              <div className="flex gap-2">
-                <Button
-                  variant={isBeginnerMode ? 'primary' : 'secondary'}
-                  onClick={() => setBeginnerMode(true)}
-                  size="sm"
-                >
-                  {t('onboardingPage.mode.beginner')}
-                </Button>
-                <Button
-                  variant={!isBeginnerMode ? 'primary' : 'secondary'}
-                  onClick={() => setBeginnerMode(false)}
-                  size="sm"
-                >
-                  {t('onboardingPage.mode.advanced')}
-                </Button>
-              </div>
-              <p className="mt-2 text-xs text-gray-600">{t('onboardingPage.mode.hint')}</p>
-            </div>
-          ) : null}
 
           <div>{step.content}</div>
 

@@ -213,8 +213,8 @@ describe('ScreenerCandidateReviewList', () => {
     const aaplRow = Array.from(rows).find((el) => el.textContent?.includes('AAPL'));
     const msftRow = Array.from(rows).find((el) => el.textContent?.includes('MSFT'));
 
-    expect(aaplRow?.className).toContain('bg-blue-50');
-    expect(msftRow?.className).not.toContain('bg-blue-50');
+    expect(aaplRow?.className).toContain('bg-primary/10');
+    expect(msftRow?.className).not.toContain('bg-primary/10');
   });
 
   it('shows empty state when candidates is empty', () => {

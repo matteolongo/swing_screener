@@ -9,8 +9,6 @@ import StrategyCoreSettingsCards from '@/components/domain/strategy/StrategyCore
 import StrategyPhilosophyCard from '@/components/domain/strategy/StrategyPhilosophyCard';
 import StrategySafetyScore from '@/components/domain/strategy/StrategySafetyScore';
 import StrategyCapitalRiskSummary from '@/components/domain/strategy/StrategyCapitalRiskSummary';
-import BeginnerModeToggle from '@/components/domain/strategy/BeginnerModeToggle';
-import StrategyPresets, { applyPresetToStrategy } from '@/components/domain/strategy/StrategyPresets';
 import { useI18n } from '@/i18n/I18nProvider';
 import {
   buildHelp,
@@ -18,11 +16,9 @@ import {
   TextInput,
 } from '@/components/domain/strategy/StrategyFieldControls';
 import { getStrategyInfo } from '@/content/strategy_docs/loader';
-import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 
 export default function StrategyPage() {
   const { locale, t } = useI18n();
-  const { isBeginnerMode, setBeginnerMode } = useBeginnerModeStore();
   const [showStrategyManagement, setShowStrategyManagement] = useState(false);
 
   const help = useMemo(
@@ -281,7 +277,7 @@ export default function StrategyPage() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">{t('strategyPage.header.title')}</h1>
-          <p className="text-sm text-gray-500 mt-1">{t('strategyPage.header.subtitle')}</p>
+          <p className="text-sm text-muted mt-1">{t('strategyPage.header.subtitle')}</p>
         </div>
         <div className="flex gap-2">
           <Button
@@ -299,24 +295,6 @@ export default function StrategyPage() {
           </Button>
         </div>
       </div>
-
-      {draft && isBeginnerMode ? (
-        <Card variant="bordered" className="border-emerald-200 bg-emerald-50/70 dark:border-emerald-900 dark:bg-emerald-950/20">
-          <CardHeader>
-            <CardTitle>{t('strategyPage.quickStart.title')}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <ol className="space-y-1 text-sm text-gray-700 dark:text-gray-200">
-              <li>{t('strategyPage.quickStart.step1')}</li>
-              <li>{t('strategyPage.quickStart.step2')}</li>
-              <li>{t('strategyPage.quickStart.step3')}</li>
-            </ol>
-            <Button onClick={handleSave} disabled={!draft || updateMutation.isPending}>
-              {updateMutation.isPending ? t('strategyPage.actions.saving') : t('strategyPage.quickStart.primaryAction')}
-            </Button>
-          </CardContent>
-        </Card>
-      ) : null}
 
       <StrategyCapitalRiskSummary strategy={draft} />
 
@@ -370,7 +348,7 @@ export default function StrategyPage() {
                   {deleteMutation.isPending ? t('strategyPage.selection.deleting') : t('common.actions.delete')}
                 </Button>
                 {selectedStrategy?.isDefault && (
-                  <span className="text-xs text-gray-500">{t('strategyPage.selection.default')}</span>
+                  <span className="text-xs text-muted">{t('strategyPage.selection.default')}</span>
                 )}
               </div>
               <div className="text-sm font-semibold">{t('strategyPage.create.title')}</div>
@@ -401,7 +379,7 @@ export default function StrategyPage() {
                 <Button onClick={handleCreate} disabled={!canCreate}>
                   {createMutation.isPending ? t('strategyPage.actions.saving') : t('strategyPage.create.saveAsNew')}
                 </Button>
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-muted">
                   {t('strategyPage.create.idHint')}
                 </div>
               </div>
@@ -427,7 +405,7 @@ export default function StrategyPage() {
       {!draft && (
         <Card variant="bordered">
           <CardContent>
-            <div className="text-sm text-gray-500">{t('strategyPage.selection.selectToEdit')}</div>
+            <div className="text-sm text-muted">{t('strategyPage.selection.selectToEdit')}</div>
           </CardContent>
         </Card>
       )}
@@ -439,23 +417,6 @@ export default function StrategyPage() {
             const strategyInfo = getStrategyInfo(draft.module ?? 'momentum');
             return strategyInfo ? <StrategyPhilosophyCard strategyInfo={strategyInfo} /> : null;
           })()}
-
-          {/* Beginner Mode Toggle */}
-          <BeginnerModeToggle
-            isBeginnerMode={isBeginnerMode}
-            onToggle={setBeginnerMode}
-          />
-
-          {/* Presets - Only show in beginner mode */}
-          {isBeginnerMode && (
-            <StrategyPresets
-              currentStrategy={draft}
-              onApplyPreset={(preset) => {
-                const updated = applyPresetToStrategy(draft, preset);
-                setDraft(updated);
-              }}
-            />
-          )}
 
           {/* Safety Score - Provides feedback on configuration quality */}
           <StrategySafetyScore
@@ -469,21 +430,18 @@ export default function StrategyPage() {
             setDraft={setDraft}
             help={help}
             validationWarnings={validationWarnings}
-            useEnhancedEducation={isBeginnerMode}
+            useEnhancedEducation={false}
           />
 
-          {/* Advanced Settings - Hidden in beginner mode */}
-          {!isBeginnerMode && (
-            <StrategyAdvancedSettingsCard
-              draft={draft}
-              setDraft={setDraft}
-              showAdvanced={showAdvanced}
-              setShowAdvanced={setShowAdvanced}
-              lowRrWarning={lowRrWarning}
-              highFeeWarning={highFeeWarning}
-              help={help}
-            />
-          )}
+          <StrategyAdvancedSettingsCard
+            draft={draft}
+            setDraft={setDraft}
+            showAdvanced={showAdvanced}
+            setShowAdvanced={setShowAdvanced}
+            lowRrWarning={lowRrWarning}
+            highFeeWarning={highFeeWarning}
+            help={help}
+          />
         </>
       )}
     </div>

@@ -51,7 +51,7 @@ export default function ScreenerCandidateIdentityCell({
           href={yahooUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+          className="inline-flex items-center text-muted hover:text-gray-600 dark:hover:text-gray-200"
           title={t('screener.table.yahooTickerTitle', { ticker: candidate.ticker })}
           aria-label={t('screener.table.yahooTickerTitle', { ticker: candidate.ticker })}
         >
@@ -80,7 +80,7 @@ export default function ScreenerCandidateIdentityCell({
         <span>{candidate.name}</span>
         {candidate.sector ? (
           <>
-            <span className="mx-1 text-gray-400">·</span>
+            <span className="mx-1 text-muted">·</span>
             <span>{candidate.sector}</span>
           </>
         ) : null}

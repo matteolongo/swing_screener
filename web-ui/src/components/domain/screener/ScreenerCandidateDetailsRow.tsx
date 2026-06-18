@@ -22,7 +22,7 @@ export default function ScreenerCandidateDetailsRow({ candidate }: ScreenerCandi
     <tr className="bg-gray-50 dark:bg-gray-800">
       <td colSpan={6} className="px-4 py-3">
         <div className="rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-900">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted mb-2">
             {t('screener.details.advancedMetrics')}
           </p>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-sm">

@@ -7,7 +7,6 @@ import {
   useSetActiveStrategyMutation,
   useStrategiesQuery,
 } from '@/features/strategy/hooks';
-import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 import { cn } from '@/utils/cn';
 
 interface HeaderProps {
@@ -39,7 +38,6 @@ export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: 
   const activeStrategyQuery = useActiveStrategyQuery();
   const portfolioSummaryQuery = usePortfolioSummary();
   const setActiveMutation = useSetActiveStrategyMutation();
-  const isBeginnerMode = useBeginnerModeStore((state) => state.isBeginnerMode);
   const strategies = strategiesQuery.data ?? [];
   const activeId = activeStrategyQuery.data?.id ?? '';
   const isLoading = strategiesQuery.isLoading || activeStrategyQuery.isLoading;
@@ -56,7 +54,7 @@ export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: 
   });
 
   return (
-    <header className="h-12 px-4 border-b border-border bg-white flex items-center justify-between gap-4 shrink-0">
+    <header className="h-12 px-4 border-b border-border bg-surface flex items-center justify-between gap-4 shrink-0">
       {/* Left: toggle + collapsed brand */}
       <div className="flex items-center gap-2 shrink-0">
         {onToggleSidebar && (
@@ -65,7 +63,7 @@ export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: 
             onClick={onToggleSidebar}
             className={cn(
               'flex items-center justify-center w-7 h-7 rounded transition-colors',
-              'text-muted hover:text-foreground hover:bg-gray-100'
+              'text-muted hover:text-foreground hover:bg-foreground/5'
             )}
             title={isSidebarCollapsed ? t('header.showNavigation') : t('header.hideNavigation')}
             aria-label={isSidebarCollapsed ? t('header.showNavigation') : t('header.hideNavigation')}
@@ -97,7 +95,7 @@ export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: 
           aria-label={t('sidebar.activeStrategy')}
           className={cn(
             'w-full h-7 px-2 text-[13px] border border-border rounded',
-            'bg-white text-foreground',
+            'bg-surface text-foreground',
             'focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary',
             'disabled:opacity-50'
           )}
@@ -114,19 +112,17 @@ export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: 
 
       {/* Right: risk summary + clock */}
       <div className="flex items-center gap-3 shrink-0">
-        {!isBeginnerMode && (
-          <div className="hidden xl:block">
-            <StrategyCapitalRiskSummary
-              strategy={activeStrategyQuery.data}
-              equitySnapshot={portfolioSummaryQuery.data ? {
-                effectiveAccountSize: portfolioSummaryQuery.data.effectiveAccountSize,
-                realizedPnl: portfolioSummaryQuery.data.realizedPnl,
-              } : undefined}
-              variant="compact"
-              className="max-w-[42rem]"
-            />
-          </div>
-        )}
+        <div className="hidden xl:block">
+          <StrategyCapitalRiskSummary
+            strategy={activeStrategyQuery.data}
+            equitySnapshot={portfolioSummaryQuery.data ? {
+              effectiveAccountSize: portfolioSummaryQuery.data.effectiveAccountSize,
+              realizedPnl: portfolioSummaryQuery.data.realizedPnl,
+            } : undefined}
+            variant="compact"
+            className="max-w-[42rem]"
+          />
+        </div>
         <div className="hidden md:flex items-center gap-1.5 text-[12px] text-muted">
           <span>{dateStr}</span>
           <span className="font-mono">{timeStr}</span>

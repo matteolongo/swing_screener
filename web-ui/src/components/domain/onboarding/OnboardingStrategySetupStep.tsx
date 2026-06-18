@@ -125,9 +125,9 @@ export default function OnboardingStrategySetupStep({ onSaved }: OnboardingStrat
         </div>
 
         {selectedPreset ? (
-          <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
+          <div className="rounded-lg border border-primary/40 bg-primary/10 p-3 text-sm text-primary">
             <p className="font-medium">{selectedPreset.name}</p>
-            <p className="text-xs text-blue-800">{selectedPreset.description}</p>
+            <p className="text-xs text-primary">{selectedPreset.description}</p>
             <div className="mt-2 flex flex-wrap gap-2 text-xs">
               <span className="rounded-full bg-white px-2 py-1">
                 {t('onboardingPage.strategyStep.preview.riskPct', {

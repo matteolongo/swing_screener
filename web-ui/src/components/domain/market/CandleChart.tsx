@@ -3,7 +3,7 @@ import type { PriceHistoryPoint, CandlePattern } from '@/features/screener/types
 import { t } from '@/i18n/t';
 import type { MessageKey } from '@/i18n/types';
 import { cn } from '@/utils/cn';
-import { formatPercent } from '@/utils/formatters';
+import { formatPercent, getSignColorClass } from '@/utils/formatters';
 
 interface CandleChartProps {
   ticker: string;
@@ -112,7 +112,7 @@ export function CandleChart({
 
   if (usable.length === 0) {
     return (
-      <div className={cn('flex h-full items-center justify-center text-xs text-slate-400', className)}>
+      <div className={cn('flex h-full items-center justify-center text-xs text-muted', className)}>
         {ticker}
       </div>
     );
@@ -148,10 +148,7 @@ export function CandleChart({
           </span>
           {outperformancePct != null && (
             <span
-              className={cn(
-                'font-mono font-semibold',
-                outperformancePct >= 0 ? 'text-emerald-600' : 'text-rose-600',
-              )}
+              className={cn('font-mono font-semibold', getSignColorClass(outperformancePct))}
             >
               {formatPercent(outperformancePct, 1)}
             </span>

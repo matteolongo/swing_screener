@@ -90,7 +90,7 @@ export function ScreenerRunningPanel() {
   }, []);
 
   return (
-    <div className="rounded-lg border border-blue-200 bg-blue-50/60 p-4 space-y-2">
+    <div className="rounded-lg border border-primary/40 bg-primary/10 p-4 space-y-2">
       {RUNNING_STEPS.map((stepKey, index) => {
         const isCompleted = index < currentStep;
         const isCurrent = index === currentStep;
@@ -101,15 +101,15 @@ export function ScreenerRunningPanel() {
             ) : isCurrent ? (
               <Loader2 className="w-4 h-4 text-blue-500 animate-spin flex-shrink-0" />
             ) : (
-              <div className="w-4 h-4 rounded-full border border-gray-300 flex-shrink-0" />
+              <div className="w-4 h-4 rounded-full border border-border flex-shrink-0" />
             )}
             <span
               className={
                 isCompleted
-                  ? 'text-gray-400 line-through'
+                  ? 'text-muted line-through'
                   : isCurrent
-                    ? 'text-blue-800 font-medium'
-                    : 'text-gray-400'
+                    ? 'text-primary font-medium'
+                    : 'text-muted'
               }
             >
               {t(stepKey)}
@@ -322,9 +322,9 @@ export default function ScreenerInboxPanel() {
       ) : null}
 
       {!screenerMutation.isPending && !result && !screenerMutation.isError ? (
-        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-start">
-          <AlertCircle className="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" />
-          <div className="text-xs md:text-sm text-blue-800">
+        <div className="p-3 bg-primary/10 border border-primary/40 rounded-lg flex items-start">
+          <AlertCircle className="w-5 h-5 text-primary mr-2 flex-shrink-0 mt-0.5" />
+          <div className="text-xs md:text-sm text-primary">
             <strong>{t('screener.info.noteTitle')}</strong> {t('screener.info.noteBody')}
           </div>
         </div>
@@ -337,7 +337,7 @@ export default function ScreenerInboxPanel() {
       </div>
 
       {result ? (
-        <div className="rounded-lg border border-gray-200 bg-white p-3 flex-1 min-h-0 flex flex-col gap-3">
+        <div className="rounded-lg border border-border bg-surface p-3 flex-1 min-h-0 flex flex-col gap-3">
           <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
             <div className="space-y-1 text-xs md:text-sm text-gray-600 dark:text-gray-400">
               <div>
@@ -400,16 +400,16 @@ export default function ScreenerInboxPanel() {
               ))}
             </div>
           ) : null}
-          <div className="flex gap-1 rounded-lg border border-gray-200 p-0.5 w-fit self-start">
+          <div className="flex gap-1 rounded-lg border border-border p-0.5 w-fit self-start">
             <button
               onClick={() => setViewMode('guided')}
-              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${viewMode === 'guided' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${viewMode === 'guided' ? 'bg-surface shadow-sm text-foreground' : 'text-muted hover:text-foreground'}`}
             >
               {t('screener.viewToggle.guided')}
             </button>
             <button
               onClick={() => setViewMode('advanced')}
-              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${viewMode === 'advanced' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${viewMode === 'advanced' ? 'bg-surface shadow-sm text-foreground' : 'text-muted hover:text-foreground'}`}
             >
               {t('screener.viewToggle.advanced')}
             </button>

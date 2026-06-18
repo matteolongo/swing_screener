@@ -125,16 +125,16 @@ export default function NarrativeAnalysisCard({
   ].filter((item) => item.value);
 
   return (
-    <div className="rounded-lg border border-slate-200 overflow-hidden">
+    <div className="rounded-lg border border-border overflow-hidden">
       {/* Neutral AI header — verdict lives in the screener-owned decision header above */}
-      <div className="px-3 py-2 flex items-center justify-between gap-3 bg-slate-100 text-slate-800">
+      <div className="px-3 py-2 flex items-center justify-between gap-3 bg-surface text-foreground">
         <span className="font-semibold text-sm">
           {symbol} — {t('workspacePage.panels.analysis.intelligence.aiAnalysisTitle')}
         </span>
         <Badge variant={convictionVariant(conviction)}>{convictionLabel(conviction)}</Badge>
       </div>
 
-      <div className="bg-slate-50 p-3 space-y-3">
+      <div className="bg-surface p-3 space-y-3">
         {candidate?.decisionSummary?.action && action !== candidate.decisionSummary.action && (
           <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
             {t('workspacePage.panels.analysis.intelligence.secondOpinion', {
@@ -145,17 +145,17 @@ export default function NarrativeAnalysisCard({
         )}
 
         {/* Decision focus */}
-        <div className="rounded-md bg-white border border-slate-200 p-3">
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <div className="rounded-md bg-surface border border-border p-3">
+          <div className="text-xs font-semibold uppercase tracking-wide text-muted">
             {t('workspacePage.panels.analysis.intelligence.decisionFocus')}
           </div>
-          <p className="mt-2 text-base font-semibold text-slate-950">{summaryLine}</p>
+          <p className="mt-2 text-base font-semibold text-foreground">{summaryLine}</p>
           {decisionHighlights.length > 0 && (
             <dl className="mt-3 grid gap-2">
               {decisionHighlights.map((item) => (
-                <div key={item.label} className="rounded-md bg-slate-50 px-3 py-2">
-                  <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{item.label}</dt>
-                  <dd className="mt-1 text-sm text-slate-800">{item.value}</dd>
+                <div key={item.label} className="rounded-md bg-surface px-3 py-2">
+                  <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted">{item.label}</dt>
+                  <dd className="mt-1 text-sm text-foreground">{item.value}</dd>
                 </div>
               ))}
             </dl>
@@ -201,18 +201,18 @@ export default function NarrativeAnalysisCard({
 
         {/* WHY NOW */}
         {hasNewFields && intelligence.priceHook && (
-          <div className="rounded-md bg-white border border-slate-200 p-3">
-            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+          <div className="rounded-md bg-surface border border-border p-3">
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted mb-1">
               {t('workspacePage.panels.analysis.intelligence.priceHook')}
             </div>
-            <p className="text-sm text-slate-800">{intelligence.priceHook}</p>
+            <p className="text-sm text-foreground">{intelligence.priceHook}</p>
           </div>
         )}
 
         {/* KEY NUMBERS */}
         {hasKeyNumbers && (
-          <div className="rounded-md bg-white border border-slate-200 p-3">
-            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">
+          <div className="rounded-md bg-surface border border-border p-3">
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted mb-2">
               {t('workspacePage.panels.analysis.intelligence.keyNumbers')}
             </div>
             <div className="flex flex-wrap gap-1.5">
@@ -232,8 +232,8 @@ export default function NarrativeAnalysisCard({
 
         {/* PREDICTION */}
         {hasPrediction && (
-          <div className="rounded-md bg-white border border-slate-200 p-3">
-            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">
+          <div className="rounded-md bg-surface border border-border p-3">
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted mb-2">
               {t('workspacePage.panels.analysis.intelligence.prediction')}
             </div>
             <ul className="space-y-2">
@@ -242,8 +242,8 @@ export default function NarrativeAnalysisCard({
                   <span className={`font-bold text-base leading-tight shrink-0 ${directionClass(pb.direction)}`}>
                     {directionArrow(pb.direction)}
                   </span>
-                  <span className="flex-1 text-slate-800">{pb.reason}</span>
-                  <span className="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500 font-medium">
+                  <span className="flex-1 text-foreground">{pb.reason}</span>
+                  <span className="shrink-0 rounded bg-surface px-1.5 py-0.5 text-[10px] text-muted font-medium">
                     {pb.reference}
                   </span>
                 </li>
@@ -254,14 +254,14 @@ export default function NarrativeAnalysisCard({
 
         {/* RISKS */}
         {hasRisks && (
-          <div className="rounded-md bg-white border border-slate-200 p-3">
-            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">
+          <div className="rounded-md bg-surface border border-border p-3">
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted mb-2">
               {t('workspacePage.panels.analysis.intelligence.riskFactors')}
             </div>
             <ul className="space-y-1">
               {(intelligence.riskFactors ?? []).map((rf, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
-                  <span className="text-slate-400 shrink-0 mt-0.5">•</span>
+                <li key={i} className="flex items-start gap-2 text-sm text-muted">
+                  <span className="text-muted shrink-0 mt-0.5">•</span>
                   <span>{rf}</span>
                 </li>
               ))}
@@ -271,18 +271,18 @@ export default function NarrativeAnalysisCard({
 
         {/* PAST TRADES */}
         {hasPastTrades && (
-          <div className="rounded-md bg-white border border-slate-200 p-3">
-            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+          <div className="rounded-md bg-surface border border-border p-3">
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted mb-1">
               {t('workspacePage.panels.analysis.intelligence.pastTrades', { symbol })}
             </div>
-            <p className="text-sm text-slate-700">{intelligence.pastTradesContext}</p>
+            <p className="text-sm text-muted">{intelligence.pastTradesContext}</p>
           </div>
         )}
 
         {/* Full rationale — collapsible when new structured fields are present; always visible otherwise */}
         {hasNewFields ? (
-          <details className="rounded-md bg-white border border-slate-200 p-3">
-            <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-slate-500 select-none">
+          <details className="rounded-md bg-surface border border-border p-3">
+            <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-muted select-none">
               {t('workspacePage.panels.analysis.intelligence.fullRationale')}
             </summary>
             <div className="prose prose-sm prose-slate mt-2 max-w-none">
@@ -290,8 +290,8 @@ export default function NarrativeAnalysisCard({
             </div>
           </details>
         ) : (
-          <div className="rounded-md bg-white border border-slate-200 p-3">
-            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <div className="rounded-md bg-surface border border-border p-3">
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted">
               {t('workspacePage.panels.analysis.intelligence.fullRationale')}
             </div>
             <div className="prose prose-sm prose-slate mt-2 max-w-none">
@@ -302,23 +302,23 @@ export default function NarrativeAnalysisCard({
 
         {/* Data inputs */}
         {intelligence.inputsUsed && Object.keys(intelligence.inputsUsed).length > 0 && (
-          <details className="rounded-md border border-slate-200 bg-white p-3">
-            <summary className="cursor-pointer text-xs font-medium text-slate-500 select-none">
+          <details className="rounded-md border border-border bg-surface p-3">
+            <summary className="cursor-pointer text-xs font-medium text-muted select-none">
               {t('workspacePage.panels.analysis.intelligence.dataInputs')}
             </summary>
             <div className="mt-3 space-y-2">
               {Object.entries(intelligence.inputsUsed).map(([group, fields]) => (
                 <div key={group}>
-                  <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-1">
+                  <div className="text-[10px] font-semibold uppercase tracking-wide text-muted mb-1">
                     {group.replace(/_/g, ' ')}
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {Object.entries(fields as Record<string, unknown>).filter(([, v]) => v != null && typeof v !== 'object').map(([key, value]) => (
                       <span
                         key={key}
-                        className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs text-slate-700"
+                        className="inline-flex items-center gap-1 rounded-full bg-surface px-2.5 py-0.5 text-xs text-muted"
                       >
-                        <span className="font-medium text-slate-500">{key.replace(/_/g, ' ')}:</span>
+                        <span className="font-medium text-muted">{key.replace(/_/g, ' ')}:</span>
                         <span>{typeof value === 'number' ? (Number.isInteger(value) ? value : value.toFixed(2)) : String(value)}</span>
                       </span>
                     ))}
@@ -331,8 +331,8 @@ export default function NarrativeAnalysisCard({
 
         {/* Signals detail */}
         {summary && (
-          <details className="rounded-md border border-slate-200 bg-white p-3">
-            <summary className="cursor-pointer text-xs font-medium text-slate-500 select-none">
+          <details className="rounded-md border border-border bg-surface p-3">
+            <summary className="cursor-pointer text-xs font-medium text-muted select-none">
               {t('workspacePage.panels.analysis.intelligence.signalsDetail')}
             </summary>
             <div className="mt-2 flex flex-wrap gap-2">
@@ -350,7 +350,7 @@ export default function NarrativeAnalysisCard({
               </Badge>
             </div>
             {summary.valuationContext.summary && (
-              <p className="mt-2 text-sm text-slate-700">{summary.valuationContext.summary}</p>
+              <p className="mt-2 text-sm text-muted">{summary.valuationContext.summary}</p>
             )}
           </details>
         )}

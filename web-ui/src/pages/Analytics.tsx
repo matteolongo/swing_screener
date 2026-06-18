@@ -3,7 +3,8 @@ import { usePositions } from '@/features/portfolio/hooks';
 import type { Position } from '@/types/position';
 import { t } from '@/i18n/t';
 import { cn } from '@/utils/cn';
-import { formatNumber, formatCurrency } from '@/utils/formatters';
+import { formatNumber, formatCurrency, getSignColorClass } from '@/utils/formatters';
+import RChip from '@/components/common/RChip';
 import EdgeBreakdownTable from '@/components/domain/portfolio/EdgeBreakdownTable';
 import RegimeBreakdownTable from '@/components/domain/portfolio/RegimeBreakdownTable';
 import { pickEdgeInsight, type EdgeVerdict } from '@/features/analytics/edgeInsight';
@@ -452,11 +453,7 @@ export default function Analytics() {
             <StatCard
               label={t('analyticsPage.stats.avgR')}
               value={stats.avgR != null ? `${stats.avgR >= 0 ? '+' : ''}${formatNumber(stats.avgR, 2)}R` : '—'}
-              colorClass={
-                stats.avgR != null
-                  ? stats.avgR > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
-                  : undefined
-              }
+              colorClass={stats.avgR != null ? getSignColorClass(stats.avgR) : undefined}
               hint="avg R per closed trade"
             />
             <StatCard
@@ -592,10 +589,8 @@ export default function Analytics() {
                       <td className="px-4 py-3 text-right tabular-nums">
                         {p.exitPrice != null ? formatCurrency(p.exitPrice, 'EUR') : '—'}
                       </td>
-                      <td className={cn('px-4 py-3 text-right tabular-nums font-semibold',
-                        fr != null ? (fr > 0 ? 'text-green-600 dark:text-green-400' : fr < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-500') : ''
-                      )}>
-                        {fr != null ? `${fr > 0 ? '+' : ''}${formatNumber(fr, 2)}R` : '—'}
+                      <td className="px-4 py-3 text-right tabular-nums font-semibold">
+                        {fr != null ? <RChip value={fr} /> : '—'}
                       </td>
                       <td className={cn('px-4 py-3 text-right tabular-nums',
                         mr != null && mr > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'

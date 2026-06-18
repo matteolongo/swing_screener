@@ -18,9 +18,9 @@ export default function CatalystContextCard({ opportunity }: CatalystContextCard
   const stateColor = STATE_COLOR[state] ?? 'bg-slate-100 text-slate-600 border-slate-200';
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
+    <div className="rounded-xl border border-border bg-surface p-4 shadow-sm space-y-3">
       <div className="flex items-center gap-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted">
           {t('workspacePage.panels.analysis.intelligence.marketCatalyst')}
         </p>
         <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${stateColor}`}>
@@ -28,16 +28,16 @@ export default function CatalystContextCard({ opportunity }: CatalystContextCard
         </span>
       </div>
 
-      <p className="text-sm text-slate-800">{thesis}</p>
+      <p className="text-sm text-foreground">{thesis}</p>
 
       {keyRisks.length > 0 && (
         <div>
-          <p className="text-xs font-semibold text-slate-500 mb-1">
+          <p className="text-xs font-semibold text-muted mb-1">
             {t('workspacePage.panels.analysis.intelligence.keyRisks')}
           </p>
           <ul className="list-disc list-inside space-y-0.5">
             {keyRisks.map((risk, i) => (
-              <li key={i} className="text-sm text-slate-700">{risk}</li>
+              <li key={i} className="text-sm text-muted">{risk}</li>
             ))}
           </ul>
         </div>
@@ -45,14 +45,14 @@ export default function CatalystContextCard({ opportunity }: CatalystContextCard
 
       {sources.length > 0 && (
         <details className="text-sm">
-          <summary className="cursor-pointer text-slate-500 hover:text-slate-700 select-none">
+          <summary className="cursor-pointer text-muted hover:text-foreground select-none">
             {t('workspacePage.panels.analysis.intelligence.sources')} ({sources.length})
           </summary>
           <ul className="mt-2 space-y-1 list-none pl-0">
             {sources.map((url) => (
               <li key={url}>
                 <a href={url} target="_blank" rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline break-all text-xs">
+                  className="text-primary hover:underline break-all text-xs">
                   {url}
                 </a>
               </li>

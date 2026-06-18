@@ -57,6 +57,15 @@ WIKIPEDIA_INDEX_CONFIG: dict[str, IndexPageConfig] = {
     "europe_eurostoxx50": IndexPageConfig(
         "europe_eurostoxx50", "^STOXX50E", "EURO_STOXX_50", "ticker", "name", ""
     ),
+    "hongkong_hsi": IndexPageConfig(
+        "hongkong_hsi", "^HSI", "Hang_Seng_Index", "ticker", "name", ".HK"
+    ),
+    "korea_kospi200": IndexPageConfig(
+        "korea_kospi200", "^KS11", "KOSPI_200", "symbol", "company", ".KS"
+    ),
+    "china_csi300": IndexPageConfig(
+        "china_csi300", "000300.SS", "CSI_300_Index", "ticker", "company", ".SZ"
+    ),
 }
 
 _EUROSTOXX_VENUE_SUFFIX = {
@@ -169,6 +178,40 @@ def _eurostoxx_symbol(ticker_cell: str) -> str:
     return normalize_yahoo_symbol(text, suffix)
 
 
+def _digits(raw: object) -> str:
+    head = str(raw if raw is not None else "").split(".", 1)[0]
+    return re.sub(r"[^0-9]", "", head)
+
+
+def _hangseng_symbol(raw: object) -> str:
+    code = _digits(raw)
+    return f"{code.zfill(4)}.HK" if code else ""
+
+
+def _kospi_symbol(raw: object) -> str:
+    code = _digits(raw)
+    return f"{code.zfill(6)}.KS" if code else ""
+
+
+_CSI_VENUE_SUFFIX = {"SSE": ".SS", "SZSE": ".SZ"}
+
+
+def _csi_symbol(raw: object) -> str:
+    text = str(raw if raw is not None else "")
+    prefix = text.split(":", 1)[0].strip().upper() if ":" in text else ""
+    suffix = _CSI_VENUE_SUFFIX.get(prefix)
+    code = _digits(text)
+    return f"{code.zfill(6)}{suffix}" if (suffix and code) else ""
+
+
+_CUSTOM_SYMBOL_RESOLVERS: dict[str, Callable[[str], str]] = {
+    "europe_eurostoxx50": _eurostoxx_symbol,
+    "hongkong_hsi": _hangseng_symbol,
+    "korea_kospi200": _kospi_symbol,
+    "china_csi300": _csi_symbol,
+}
+
+
 def fetch_index_constituents(
     universe_id: str,
     *,
@@ -187,8 +230,9 @@ def fetch_index_constituents(
     for _, row in df.iterrows():
         raw_ticker = str(row[tcol])
         name = str(row[ccol]).strip()
-        if universe_id == "europe_eurostoxx50":
-            symbol = _eurostoxx_symbol(raw_ticker)
+        resolver = _CUSTOM_SYMBOL_RESOLVERS.get(universe_id)
+        if resolver is not None:
+            symbol = resolver(raw_ticker)
         else:
             symbol = normalize_yahoo_symbol(raw_ticker, cfg.default_suffix)
         if not symbol or symbol in seen or symbol.lower() in {"nan", "—"}:

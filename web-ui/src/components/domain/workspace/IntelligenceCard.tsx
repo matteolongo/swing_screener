@@ -81,7 +81,7 @@ export default function IntelligenceCard({ intelligence }: IntelligenceCardProps
   const urgencyLabel = t(`workspacePage.panels.analysis.intelligence.catalystUrgency.${catalystUrgency}`);
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
+    <div className="rounded-xl border border-border bg-surface p-4 shadow-sm space-y-3">
       {hasUrgency && (
         <div className="flex flex-wrap items-center gap-2">
           <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${urgencyBadgeClass(catalystUrgency)}`}>
@@ -92,7 +92,7 @@ export default function IntelligenceCard({ intelligence }: IntelligenceCardProps
 
       {positionSignal && (
         <>
-          <hr className="border-slate-100" />
+          <hr className="border-border" />
           <div className={`rounded-lg border px-3 py-2 ${positionSignalClass(positionSignal.action)}`}>
             <span className="text-xs font-semibold uppercase tracking-wide mr-2">
               {positionSignalLabel(positionSignal.action)}
@@ -104,7 +104,7 @@ export default function IntelligenceCard({ intelligence }: IntelligenceCardProps
 
       {positionMoveExplanation && (
         <>
-          <hr className="border-slate-100" />
+          <hr className="border-border" />
           <div className={`rounded-lg border px-3 py-2 ${moveDirectionClass(positionMoveExplanation.direction)}`}>
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold uppercase tracking-wide">
@@ -130,63 +130,63 @@ export default function IntelligenceCard({ intelligence }: IntelligenceCardProps
 
       {positionOutlook && (
         <>
-          <hr className="border-slate-100" />
+          <hr className="border-border" />
           <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted">
               {t('workspacePage.panels.analysis.intelligence.positionOutlook.title')}
             </p>
-            <div className="grid gap-2 text-sm text-slate-700 sm:grid-cols-2">
+            <div className="grid gap-2 text-sm text-muted sm:grid-cols-2">
               <div>
-                <span className="text-xs font-medium text-slate-500">
+                <span className="text-xs font-medium text-muted">
                   {t('workspacePage.panels.analysis.intelligence.positionOutlook.expectedHoldingPeriod')}
                 </span>
-                <p className="font-medium text-slate-900">{humanizeToken(positionOutlook.expectedHoldingPeriod)}</p>
+                <p className="font-medium text-foreground">{humanizeToken(positionOutlook.expectedHoldingPeriod)}</p>
               </div>
               <div>
-                <span className="text-xs font-medium text-slate-500">
+                <span className="text-xs font-medium text-muted">
                   {t('workspacePage.panels.analysis.intelligence.positionOutlook.thesisStatus')}
                 </span>
-                <p className="font-medium text-slate-900">{humanizeToken(positionOutlook.thesisStatus)}</p>
+                <p className="font-medium text-foreground">{humanizeToken(positionOutlook.thesisStatus)}</p>
               </div>
               <div>
-                <span className="text-xs font-medium text-slate-500">
+                <span className="text-xs font-medium text-muted">
                   {t('workspacePage.panels.analysis.intelligence.positionOutlook.profitManagement')}
                 </span>
-                <p className="font-medium text-slate-900">{humanizeToken(positionOutlook.profitManagement)}</p>
+                <p className="font-medium text-foreground">{humanizeToken(positionOutlook.profitManagement)}</p>
               </div>
               <div>
-                <span className="text-xs font-medium text-slate-500">
+                <span className="text-xs font-medium text-muted">
                   {t('workspacePage.panels.analysis.intelligence.positionOutlook.opportunityCost')}
                 </span>
-                <p className="font-medium text-slate-900">{humanizeToken(positionOutlook.opportunityCost)}</p>
+                <p className="font-medium text-foreground">{humanizeToken(positionOutlook.opportunityCost)}</p>
               </div>
             </div>
             <dl className="space-y-2 text-sm">
               <div>
-                <dt className="text-xs font-medium text-slate-500">
+                <dt className="text-xs font-medium text-muted">
                   {t('workspacePage.panels.analysis.intelligence.positionOutlook.holdUntil')}
                 </dt>
-                <dd className="text-slate-700">{positionOutlook.holdUntil}</dd>
+                <dd className="text-muted">{positionOutlook.holdUntil}</dd>
               </div>
               <div>
-                <dt className="text-xs font-medium text-slate-500">
+                <dt className="text-xs font-medium text-muted">
                   {t('workspacePage.panels.analysis.intelligence.positionOutlook.nextReviewTrigger')}
                 </dt>
-                <dd className="text-slate-700">{positionOutlook.nextReviewTrigger}</dd>
+                <dd className="text-muted">{positionOutlook.nextReviewTrigger}</dd>
               </div>
               <div>
-                <dt className="text-xs font-medium text-slate-500">
+                <dt className="text-xs font-medium text-muted">
                   {t('workspacePage.panels.analysis.intelligence.positionOutlook.confidenceDecay')}
                 </dt>
-                <dd className="text-slate-700">{positionOutlook.confidenceDecay}</dd>
+                <dd className="text-muted">{positionOutlook.confidenceDecay}</dd>
               </div>
             </dl>
             {positionOutlook.invalidationSignals.length > 0 && (
               <div>
-                <p className="text-xs font-medium text-slate-500">
+                <p className="text-xs font-medium text-muted">
                   {t('workspacePage.panels.analysis.intelligence.positionOutlook.invalidationSignals')}
                 </p>
-                <ul className="mt-1 list-disc space-y-1 pl-4 text-sm text-slate-700">
+                <ul className="mt-1 list-disc space-y-1 pl-4 text-sm text-muted">
                   {positionOutlook.invalidationSignals.map((signal) => (
                     <li key={signal}>{signal}</li>
                   ))}
@@ -199,23 +199,23 @@ export default function IntelligenceCard({ intelligence }: IntelligenceCardProps
 
       {hasEvents && (
         <>
-          <hr className="border-slate-100" />
+          <hr className="border-border" />
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted mb-2">
               {t('workspacePage.panels.analysis.intelligence.upcomingEvents')}
             </p>
             <ul className="space-y-1">
               {upcomingEvents.map((ev, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
-                  <span className="text-[11px] font-medium bg-slate-100 text-slate-600 rounded px-1.5 py-0.5 shrink-0 mt-0.5">
+                <li key={i} className="flex items-start gap-2 text-sm text-muted">
+                  <span className="text-[11px] font-medium bg-surface text-muted rounded px-1.5 py-0.5 shrink-0 mt-0.5">
                     {ev.type}
                   </span>
-                  <span className="text-slate-500 shrink-0">
+                  <span className="text-muted shrink-0">
                     {DIRECTION_ARROW[ev.direction] ?? '→'}
                   </span>
                   <span>
                     <span>{ev.summary}</span>
-                    {ev.date && <span className="text-slate-400 ml-1">({ev.date})</span>}
+                    {ev.date && <span className="text-muted ml-1">({ev.date})</span>}
                   </span>
                 </li>
               ))}
@@ -226,9 +226,9 @@ export default function IntelligenceCard({ intelligence }: IntelligenceCardProps
 
       {hasSources && (
         <>
-          <hr className="border-slate-100" />
+          <hr className="border-border" />
           <details className="text-sm">
-            <summary className="cursor-pointer text-slate-500 hover:text-slate-700 select-none">
+            <summary className="cursor-pointer text-muted hover:text-foreground select-none">
               {t('workspacePage.panels.analysis.intelligence.sources')} ({sources.length})
             </summary>
             <ul className="mt-2 space-y-1 list-none pl-0">
@@ -238,7 +238,7 @@ export default function IntelligenceCard({ intelligence }: IntelligenceCardProps
                     href={url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline break-all text-xs"
+                    className="text-primary hover:underline break-all text-xs"
                   >
                     {url}
                   </a>

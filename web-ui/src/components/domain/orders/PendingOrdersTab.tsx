@@ -27,7 +27,7 @@ export default function PendingOrdersTab() {
   const filterTabs: ActiveFilter[] = ['pending', 'submitted'];
 
   if (ordersQuery.isLoading) {
-    return <p className="text-sm text-gray-500 py-4">{t('common.table.loading')}</p>;
+    return <p className="text-sm text-muted py-4">{t('common.table.loading')}</p>;
   }
 
   return (
@@ -51,7 +51,7 @@ export default function PendingOrdersTab() {
       </div>
 
       {orders.length === 0 ? (
-        <p className="text-sm text-gray-500 py-4">{t('pendingOrdersTab.empty')}</p>
+        <p className="text-sm text-muted py-4">{t('pendingOrdersTab.empty')}</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
@@ -104,14 +104,14 @@ export default function PendingOrdersTab() {
                         onClick={() => setFillDegiroOrder(order)}
                         disabled={!degiroAvailable}
                         title={!degiroAvailable ? t('pendingOrdersTab.degiroNotConnected') : undefined}
-                        className="px-2 py-1 rounded text-xs font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300 disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="px-2 py-1 rounded text-xs font-medium bg-blue-50 text-blue-700 hover:bg-primary/20 dark:bg-blue-950 dark:text-blue-300 disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         {t('pendingOrdersTab.fillViaDegiro')}
                       </button>
                       <button
                         type="button"
                         onClick={() => setFillManualOrder(order)}
-                        className="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300"
+                        className="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700 hover:bg-foreground/10 dark:bg-gray-800 dark:text-gray-300"
                       >
                         {t('pendingOrdersTab.fillManually')}
                       </button>

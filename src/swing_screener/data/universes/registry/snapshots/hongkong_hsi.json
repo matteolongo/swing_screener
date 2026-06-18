@@ -1,0 +1,622 @@
+{
+  "id": "hongkong_hsi",
+  "kind": "index",
+  "description": "Hang Seng Index constituents",
+  "benchmark": "^HSI",
+  "source": "wikipedia",
+  "source_adapter": "wikipedia_index_review",
+  "source_asof": "2026-06-18",
+  "last_reviewed_at": "2026-06-18",
+  "stale_after_days": 100,
+  "rules": {
+    "exchange_mics": [
+      "XHKG"
+    ],
+    "currencies": [
+      "HKD"
+    ]
+  },
+  "constituents": [
+    {
+      "symbol": "0005.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "HSBC Holdings plc",
+      "source_symbol": "0005"
+    },
+    {
+      "symbol": "0388.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "HKEx Limited",
+      "source_symbol": "0388"
+    },
+    {
+      "symbol": "0939.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "China Construction Bank",
+      "source_symbol": "0939"
+    },
+    {
+      "symbol": "1299.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "AIA Group Limited",
+      "source_symbol": "1299"
+    },
+    {
+      "symbol": "1398.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Industrial and Commercial Bank of China",
+      "source_symbol": "1398"
+    },
+    {
+      "symbol": "2318.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Ping An Insurance",
+      "source_symbol": "2318"
+    },
+    {
+      "symbol": "2388.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "BOC Hong Kong (Holdings) Ltd",
+      "source_symbol": "2388"
+    },
+    {
+      "symbol": "2628.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "China Life",
+      "source_symbol": "2628"
+    },
+    {
+      "symbol": "3968.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "China Merchants Bank",
+      "source_symbol": "3968"
+    },
+    {
+      "symbol": "3988.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Bank of China Ltd",
+      "source_symbol": "3988"
+    },
+    {
+      "symbol": "0002.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "CLP Holdings Limited",
+      "source_symbol": "0002"
+    },
+    {
+      "symbol": "0003.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Hong Kong and China Gas Company Limited",
+      "source_symbol": "0003"
+    },
+    {
+      "symbol": "0006.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Power Assets Holdings Limited",
+      "source_symbol": "0006"
+    },
+    {
+      "symbol": "0836.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "China Resources Power",
+      "source_symbol": "0836"
+    },
+    {
+      "symbol": "1038.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Cheung Kong Infrastructure Holdings Limited",
+      "source_symbol": "1038"
+    },
+    {
+      "symbol": "2688.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "ENN Energy",
+      "source_symbol": "2688"
+    },
+    {
+      "symbol": "0012.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Henderson Land Development Company Limited",
+      "source_symbol": "0012"
+    },
+    {
+      "symbol": "0016.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Sun Hung Kai Properties Limited",
+      "source_symbol": "0016"
+    },
+    {
+      "symbol": "0101.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Hang Lung Properties Limited",
+      "source_symbol": "0101"
+    },
+    {
+      "symbol": "0688.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "China Overseas Land & Investment Limited",
+      "source_symbol": "0688"
+    },
+    {
+      "symbol": "0823.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Link REIT",
+      "source_symbol": "0823"
+    },
+    {
+      "symbol": "0960.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Longfor Properties",
+      "source_symbol": "0960"
+    },
+    {
+      "symbol": "1109.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "China Resources Land Limited",
+      "source_symbol": "1109"
+    },
+    {
+      "symbol": "1113.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "CK Asset Holdings",
+      "source_symbol": "1113"
+    },
+    {
+      "symbol": "1209.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "China Resources Mixc Lifestyle",
+      "source_symbol": "1209"
+    },
+    {
+      "symbol": "1997.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Wharf Real Estate Investment Company Limited",
+      "source_symbol": "1997"
+    },
+    {
+      "symbol": "0001.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "CK Hutchison Holdings Limited",
+      "source_symbol": "0001"
+    },
+    {
+      "symbol": "0027.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Galaxy Entertainment Group Ltd.",
+      "source_symbol": "0027"
+    },
+    {
+      "symbol": "0066.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "MTR Corporation Ltd",
+      "source_symbol": "0066"
+    },
+    {
+      "symbol": "0175.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Geely Auto",
+      "source_symbol": "0175"
+    },
+    {
+      "symbol": "0241.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Alibaba Health",
+      "source_symbol": "0241"
+    },
+    {
+      "symbol": "0267.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "CITIC Limited",
+      "source_symbol": "0267"
+    },
+    {
+      "symbol": "0285.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "BYD Electronics",
+      "source_symbol": "0285"
+    },
+    {
+      "symbol": "0288.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "WH Group",
+      "source_symbol": "0288"
+    },
+    {
+      "symbol": "0291.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "China Resources Beer",
+      "source_symbol": "0291"
+    },
+    {
+      "symbol": "0300.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Midea Group",
+      "source_symbol": "0300"
+    },
+    {
+      "symbol": "0316.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Orient Overseas (International) Limited",
+      "source_symbol": "0316"
+    },
+    {
+      "symbol": "0322.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Tingyi",
+      "source_symbol": "0322"
+    },
+    {
+      "symbol": "0386.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Sinopec Corp",
+      "source_symbol": "0386"
+    },
+    {
+      "symbol": "0669.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Techtronic Industries",
+      "source_symbol": "0669"
+    },
+    {
+      "symbol": "0700.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Tencent Holdings Limited",
+      "source_symbol": "0700"
+    },
+    {
+      "symbol": "0762.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "China Unicom",
+      "source_symbol": "0762"
+    },
+    {
+      "symbol": "0857.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "PetroChina Company Limited",
+      "source_symbol": "0857"
+    },
+    {
+      "symbol": "0868.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Xinyi Glass",
+      "source_symbol": "0868"
+    },
+    {
+      "symbol": "0881.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Zhongsheng Group",
+      "source_symbol": "0881"
+    },
+    {
+      "symbol": "0883.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "CNOOC Limited",
+      "source_symbol": "0883"
+    },
+    {
+      "symbol": "0941.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "China Mobile Ltd",
+      "source_symbol": "0941"
+    },
+    {
+      "symbol": "0968.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Xinyi Solar",
+      "source_symbol": "0968"
+    },
+    {
+      "symbol": "0981.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Semiconductor Manufacturing International Corporation",
+      "source_symbol": "0981"
+    },
+    {
+      "symbol": "0992.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Lenovo",
+      "source_symbol": "0992"
+    },
+    {
+      "symbol": "1024.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Kuaishou",
+      "source_symbol": "1024"
+    },
+    {
+      "symbol": "1044.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Hengan International Group Co. Ltd",
+      "source_symbol": "1044"
+    },
+    {
+      "symbol": "1088.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "China Shenhua Energy",
+      "source_symbol": "1088"
+    },
+    {
+      "symbol": "1093.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "CSPC Pharmaceutical Group",
+      "source_symbol": "1093"
+    },
+    {
+      "symbol": "1099.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Sinopharm Group",
+      "source_symbol": "1099"
+    },
+    {
+      "symbol": "1177.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Sino Biopharm",
+      "source_symbol": "1177"
+    },
+    {
+      "symbol": "1211.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "BYD Company",
+      "source_symbol": "1211"
+    },
+    {
+      "symbol": "1378.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "China Hongqiao Group",
+      "source_symbol": "1378"
+    },
+    {
+      "symbol": "1810.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Xiaomi",
+      "source_symbol": "1810"
+    },
+    {
+      "symbol": "1876.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Budweiser Brewing Company APAC",
+      "source_symbol": "1876"
+    },
+    {
+      "symbol": "1928.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Sands China",
+      "source_symbol": "1928"
+    },
+    {
+      "symbol": "1929.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Chow Tai Fook",
+      "source_symbol": "1929"
+    },
+    {
+      "symbol": "2015.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Li Auto",
+      "source_symbol": "2015"
+    },
+    {
+      "symbol": "2020.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Anta Sports",
+      "source_symbol": "2020"
+    },
+    {
+      "symbol": "2057.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "ZTO Express",
+      "source_symbol": "2057"
+    },
+    {
+      "symbol": "2269.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "WuXi Biologics",
+      "source_symbol": "2269"
+    },
+    {
+      "symbol": "2313.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Shenzhou International",
+      "source_symbol": "2313"
+    },
+    {
+      "symbol": "2319.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Mengniu Dairy",
+      "source_symbol": "2319"
+    },
+    {
+      "symbol": "2331.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Li-Ning",
+      "source_symbol": "2331"
+    },
+    {
+      "symbol": "2359.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "WuXi AppTec",
+      "source_symbol": "2359"
+    },
+    {
+      "symbol": "2382.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Sunny Optical",
+      "source_symbol": "2382"
+    },
+    {
+      "symbol": "2618.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "JD Logistics",
+      "source_symbol": "2618"
+    },
+    {
+      "symbol": "2899.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Zijin Mining",
+      "source_symbol": "2899"
+    },
+    {
+      "symbol": "3690.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Meituan",
+      "source_symbol": "3690"
+    },
+    {
+      "symbol": "3692.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Hansoh Pharmaceutical Group",
+      "source_symbol": "3692"
+    },
+    {
+      "symbol": "6618.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "JD Health",
+      "source_symbol": "6618"
+    },
+    {
+      "symbol": "6690.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Haier",
+      "source_symbol": "6690"
+    },
+    {
+      "symbol": "6862.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Haidilao",
+      "source_symbol": "6862"
+    },
+    {
+      "symbol": "9618.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "JD.com",
+      "source_symbol": "9618"
+    },
+    {
+      "symbol": "9633.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Nongfu Spring",
+      "source_symbol": "9633"
+    },
+    {
+      "symbol": "9888.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Baidu",
+      "source_symbol": "9888"
+    },
+    {
+      "symbol": "9961.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Trip.com Group",
+      "source_symbol": "9961"
+    },
+    {
+      "symbol": "9988.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Alibaba Group",
+      "source_symbol": "9988"
+    },
+    {
+      "symbol": "9992.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "Pop Mart",
+      "source_symbol": "9992"
+    },
+    {
+      "symbol": "9999.HK",
+      "exchange_mic": "XHKG",
+      "currency": "HKD",
+      "source_name": "NetEase",
+      "source_symbol": "9999"
+    }
+  ],
+  "source_documents": [
+    {
+      "label": "Wikipedia: Hang_Seng_Index",
+      "url": "https://en.wikipedia.org/wiki/Hang_Seng_Index"
+    }
+  ]
+}

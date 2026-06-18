@@ -23,7 +23,7 @@ import { cn } from '@/utils/cn';
 import { t } from '@/i18n/t';
 import { useWeeklyReviews } from '@/features/weeklyReview/hooks';
 import { getCurrentWeekId } from '@/components/domain/weeklyReview/WeeklyReviewForm';
-import { formatNumber } from '@/utils/formatters';
+import { formatNumber, getSignColorClass } from '@/utils/formatters';
 import type {
   DailyReviewCandidate,
   DailyReviewPositionClose,
@@ -83,7 +83,7 @@ function CloseItem({ item, onClick, onAction, isDone, isFocused, intelligenceSum
       <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
         {t('todayPage.actionList.close')}
       </span>
-      <span className={cn('text-xs font-semibold tabular-nums', item.rNow >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400')}>
+      <span className={cn('text-xs font-semibold tabular-nums', getSignColorClass(item.rNow))}>
         {item.rNow >= 0 ? '+' : ''}{formatNumber(item.rNow, 2)}R
       </span>
       <TimeStopBadge daysOpen={item.daysOpen} rNow={item.rNow} show={item.timeStopWarning} />
@@ -134,7 +134,7 @@ function UpdateStopItem({ item, onClick, onAction, onAccept, isDone, isAccepting
       <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
         {t('todayPage.actionList.updateStop')}
       </span>
-      <span className={cn('text-xs font-semibold tabular-nums', item.rNow >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400')}>
+      <span className={cn('text-xs font-semibold tabular-nums', getSignColorClass(item.rNow))}>
         {item.rNow >= 0 ? '+' : ''}{formatNumber(item.rNow, 2)}R
       </span>
       <TimeStopBadge daysOpen={item.daysOpen} rNow={item.rNow} show={item.timeStopWarning} />
@@ -253,7 +253,7 @@ function CandidateItem({ item, isAddOn, onClick, isFocused }: CandidateItemProps
         type="button"
         onClick={() => onClick(item.ticker)}
         className={cn(
-          'w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-l-2 border-blue-500',
+          'w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-l-2 border-primary/40',
           isFocused && 'ring-1 ring-primary',
         )}
       >
@@ -385,7 +385,7 @@ function HoldItem({ item, onClick, onTrim, isFocused, intelligenceSummary }: Hol
           {t('todayPage.actionList.trim')}
         </span>
       )}
-      <span className={cn('text-xs font-semibold tabular-nums', item.rNow >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400')}>
+      <span className={cn('text-xs font-semibold tabular-nums', getSignColorClass(item.rNow))}>
         {item.rNow >= 0 ? '+' : ''}{formatNumber(item.rNow, 2)}R
       </span>
       <TimeStopBadge daysOpen={item.daysOpen} rNow={item.rNow} show={item.timeStopWarning} />
@@ -431,7 +431,7 @@ function ExitSignalItem({ item, onClick, isFocused, intelligenceSummary }: ExitS
       <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
         {t('todayPage.actionList.exitSignal')}
       </span>
-      <span className={cn('text-xs font-semibold tabular-nums', item.rNow >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400')}>
+      <span className={cn('text-xs font-semibold tabular-nums', getSignColorClass(item.rNow))}>
         {item.rNow >= 0 ? '+' : ''}{formatNumber(item.rNow, 2)}R
       </span>
       <AiSignalBadge summary={intelligenceSummary} />
@@ -1128,7 +1128,7 @@ export default function Today() {
               'flex-1 py-2 text-sm font-medium capitalize transition-colors',
               activeTablet === tab
                 ? 'border-b-2 border-primary text-primary'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900'
+                : 'text-gray-600 dark:text-gray-400 hover:text-foreground'
             )}
           >
             {tab === 'left' ? t('todayPage.tabs.today') : t('workspacePage.panels.analysis.title')}

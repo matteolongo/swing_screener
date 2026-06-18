@@ -526,7 +526,7 @@ describe('Scenario 8: ScreenerCandidateReviewList — candidate selection', () =
     const nvdaRow = nvdaBtn.closest('[class*="flex items-start"]');
     const amdRow = amdBtn.closest('[class*="flex items-start"]');
 
-    expect(nvdaRow?.className).toContain('bg-blue-50');
-    expect(amdRow?.className).not.toContain('bg-blue-50');
+    expect(nvdaRow?.className).toContain('bg-primary/10');
+    expect(amdRow?.className).not.toContain('bg-primary/10');
   });
 });

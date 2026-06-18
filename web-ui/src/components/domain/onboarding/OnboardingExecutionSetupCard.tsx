@@ -8,7 +8,7 @@ export default function OnboardingExecutionSetupCard() {
         <p className="mt-1 text-xs text-gray-600">{t('onboardingPage.execution.description')}</p>
       </div>
 
-      <div className="rounded-md border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">
+      <div className="rounded-md border border-primary/40 bg-primary/10 p-3 text-sm text-primary">
         <p className="font-medium">{t('onboardingPage.execution.manual.title')}</p>
         <p className="mt-1">{t('onboardingPage.execution.manual.body')}</p>
       </div>

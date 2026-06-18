@@ -7,6 +7,7 @@ import {
   formatNumber,
   formatRatioAsPercent,
   formatScreenerScore,
+  getSignColorClass,
 } from './formatters'
 
 describe('Formatter Utilities', () => {
@@ -165,6 +166,20 @@ describe('Formatter Utilities', () => {
 
     it('handles very large numbers', () => {
       expect(formatNumber(999999.99, 2)).toBe('999999.99')
+    })
+  })
+
+  describe('getSignColorClass', () => {
+    it('returns the success token class for positive values', () => {
+      expect(getSignColorClass(2.3)).toBe('text-success')
+    })
+
+    it('treats zero as non-negative (success)', () => {
+      expect(getSignColorClass(0)).toBe('text-success')
+    })
+
+    it('returns the danger token class for negative values', () => {
+      expect(getSignColorClass(-0.4)).toBe('text-danger')
     })
   })
 })

@@ -1,0 +1,2114 @@
+{
+  "id": "china_csi300",
+  "kind": "index",
+  "description": "CSI 300 constituents",
+  "benchmark": "000300.SS",
+  "source": "wikipedia",
+  "source_adapter": "wikipedia_index_review",
+  "source_asof": "2026-06-18",
+  "last_reviewed_at": "2026-06-18",
+  "stale_after_days": 100,
+  "rules": {
+    "exchange_mics": [
+      "XSHE",
+      "XSHG"
+    ],
+    "currencies": [
+      "CNY"
+    ]
+  },
+  "constituents": [
+    {
+      "symbol": "600519.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Kweichow Moutai",
+      "source_symbol": "600519"
+    },
+    {
+      "symbol": "601318.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Ping An Insurance",
+      "source_symbol": "601318"
+    },
+    {
+      "symbol": "300750.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "CATL",
+      "source_symbol": "300750"
+    },
+    {
+      "symbol": "600036.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "China Merchants Bank",
+      "source_symbol": "600036"
+    },
+    {
+      "symbol": "000333.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Midea Group",
+      "source_symbol": "000333"
+    },
+    {
+      "symbol": "000858.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Wuliangye Yibin",
+      "source_symbol": "000858"
+    },
+    {
+      "symbol": "600900.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "China Yangtze Power",
+      "source_symbol": "600900"
+    },
+    {
+      "symbol": "601166.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Industrial Bank",
+      "source_symbol": "601166"
+    },
+    {
+      "symbol": "601899.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Zijin Mining Group",
+      "source_symbol": "601899"
+    },
+    {
+      "symbol": "600030.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "CITIC Securities",
+      "source_symbol": "600030"
+    },
+    {
+      "symbol": "600276.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Jiangsu Hengrui Medicine",
+      "source_symbol": "600276"
+    },
+    {
+      "symbol": "601398.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Industrial and Commercial Bank of China",
+      "source_symbol": "601398"
+    },
+    {
+      "symbol": "600887.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Inner Mongolia Yili Industrial Group",
+      "source_symbol": "600887"
+    },
+    {
+      "symbol": "300059.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "East Money",
+      "source_symbol": "300059"
+    },
+    {
+      "symbol": "000651.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Gree Electric",
+      "source_symbol": "000651"
+    },
+    {
+      "symbol": "300760.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Mindray",
+      "source_symbol": "300760"
+    },
+    {
+      "symbol": "002594.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "BYD",
+      "source_symbol": "002594"
+    },
+    {
+      "symbol": "601328.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Bank of Communications",
+      "source_symbol": "601328"
+    },
+    {
+      "symbol": "600309.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Wanhua Chemical Group",
+      "source_symbol": "600309"
+    },
+    {
+      "symbol": "000725.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "BOE Technology Group",
+      "source_symbol": "000725"
+    },
+    {
+      "symbol": "600919.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Bank of Jiangsu",
+      "source_symbol": "600919"
+    },
+    {
+      "symbol": "002475.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Luxshare Precision Industry",
+      "source_symbol": "002475"
+    },
+    {
+      "symbol": "300124.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Shenzhen Inovance Technology",
+      "source_symbol": "300124"
+    },
+    {
+      "symbol": "601288.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Agricultural Bank of China",
+      "source_symbol": "601288"
+    },
+    {
+      "symbol": "002415.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Hangzhou Hikvision Digital Technology",
+      "source_symbol": "002415"
+    },
+    {
+      "symbol": "000568.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Luzhou Lao Jiao",
+      "source_symbol": "000568"
+    },
+    {
+      "symbol": "601012.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Longi Green Energy Technology",
+      "source_symbol": "601012"
+    },
+    {
+      "symbol": "601088.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "China Shenhua Energy",
+      "source_symbol": "601088"
+    },
+    {
+      "symbol": "601816.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Beijing-Shanghai High Speed Railway",
+      "source_symbol": "601816"
+    },
+    {
+      "symbol": "600028.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "China Petroleum & Chemical Corporation",
+      "source_symbol": "600028"
+    },
+    {
+      "symbol": "600809.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Shanxi Xinghuacun Fen Wine Factory",
+      "source_symbol": "600809"
+    },
+    {
+      "symbol": "601668.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "China State Construction Engineering",
+      "source_symbol": "601668"
+    },
+    {
+      "symbol": "603259.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "WuXi AppTec",
+      "source_symbol": "603259"
+    },
+    {
+      "symbol": "002714.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Muyuan Foodstuff",
+      "source_symbol": "002714"
+    },
+    {
+      "symbol": "000001.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Ping An Bank",
+      "source_symbol": "000001"
+    },
+    {
+      "symbol": "300498.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Wens Foodstuff Group",
+      "source_symbol": "300498"
+    },
+    {
+      "symbol": "600016.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "China Minsheng Bank",
+      "source_symbol": "600016"
+    },
+    {
+      "symbol": "601857.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "PetroChina",
+      "source_symbol": "601857"
+    },
+    {
+      "symbol": "601225.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Shaanxi Coal Industry Company",
+      "source_symbol": "601225"
+    },
+    {
+      "symbol": "300308.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Zhongji Innolight",
+      "source_symbol": "300308"
+    },
+    {
+      "symbol": "688981.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Semiconductor Manufacturing International Corporation",
+      "source_symbol": "688981"
+    },
+    {
+      "symbol": "000063.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "ZTE",
+      "source_symbol": "000063"
+    },
+    {
+      "symbol": "601988.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Bank of China",
+      "source_symbol": "601988"
+    },
+    {
+      "symbol": "002352.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "S.F. Holding",
+      "source_symbol": "002352"
+    },
+    {
+      "symbol": "600406.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "NARI Technology",
+      "source_symbol": "600406"
+    },
+    {
+      "symbol": "600941.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "China Mobile",
+      "source_symbol": "600941"
+    },
+    {
+      "symbol": "000338.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Weichai Power",
+      "source_symbol": "000338"
+    },
+    {
+      "symbol": "600050.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "China United Network Communications",
+      "source_symbol": "600050"
+    },
+    {
+      "symbol": "002230.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Iflytek",
+      "source_symbol": "002230"
+    },
+    {
+      "symbol": "600690.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Qingdao Haier",
+      "source_symbol": "600690"
+    },
+    {
+      "symbol": "601728.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "China Telecom Corporation",
+      "source_symbol": "601728"
+    },
+    {
+      "symbol": "300274.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Sungrow Power Supply",
+      "source_symbol": "300274"
+    },
+    {
+      "symbol": "002142.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Bank of Ningbo",
+      "source_symbol": "002142"
+    },
+    {
+      "symbol": "000792.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Qinghai Salt Lake Potash",
+      "source_symbol": "000792"
+    },
+    {
+      "symbol": "601601.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "China Pacific Insurance",
+      "source_symbol": "601601"
+    },
+    {
+      "symbol": "000100.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "TCL Corporation",
+      "source_symbol": "000100"
+    },
+    {
+      "symbol": "601888.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "China International Travel Service",
+      "source_symbol": "601888"
+    },
+    {
+      "symbol": "600000.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Shanghai Pudong Development Bank",
+      "source_symbol": "600000"
+    },
+    {
+      "symbol": "600031.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Sany Heavy Industry",
+      "source_symbol": "600031"
+    },
+    {
+      "symbol": "601985.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "China National Nuclear Power",
+      "source_symbol": "601985"
+    },
+    {
+      "symbol": "600150.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "China CSSC Holdings",
+      "source_symbol": "600150"
+    },
+    {
+      "symbol": "688041.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Hygon Information Technology",
+      "source_symbol": "688041"
+    },
+    {
+      "symbol": "601766.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "CRRC Corporation",
+      "source_symbol": "601766"
+    },
+    {
+      "symbol": "601169.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Bank of Beijing",
+      "source_symbol": "601169"
+    },
+    {
+      "symbol": "002371.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "NAURA Technology Group",
+      "source_symbol": "002371"
+    },
+    {
+      "symbol": "600089.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "TBEA",
+      "source_symbol": "600089"
+    },
+    {
+      "symbol": "601688.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Huatai Securities",
+      "source_symbol": "601688"
+    },
+    {
+      "symbol": "601138.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Foxconn Industrial Internet",
+      "source_symbol": "601138"
+    },
+    {
+      "symbol": "000625.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Chongqing Changan Automobile",
+      "source_symbol": "000625"
+    },
+    {
+      "symbol": "600438.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Tongwei Company",
+      "source_symbol": "600438"
+    },
+    {
+      "symbol": "600048.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Poly Real Estate Group",
+      "source_symbol": "600048"
+    },
+    {
+      "symbol": "603501.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Will Semiconductor",
+      "source_symbol": "603501"
+    },
+    {
+      "symbol": "600104.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "SAIC Motor",
+      "source_symbol": "600104"
+    },
+    {
+      "symbol": "600660.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Fuyao Glass Industry Group",
+      "source_symbol": "600660"
+    },
+    {
+      "symbol": "000002.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "China Vanke",
+      "source_symbol": "000002"
+    },
+    {
+      "symbol": "300015.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Aier Eye Hospital",
+      "source_symbol": "300015"
+    },
+    {
+      "symbol": "601211.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Guotai Junan Securities",
+      "source_symbol": "601211"
+    },
+    {
+      "symbol": "603288.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Foshan Haitian Flavouring & Food Co",
+      "source_symbol": "603288"
+    },
+    {
+      "symbol": "600436.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Zhangzhou Pientzehuang Pharmaceutical",
+      "source_symbol": "600436"
+    },
+    {
+      "symbol": "601919.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "China Cosco Holdings",
+      "source_symbol": "601919"
+    },
+    {
+      "symbol": "600905.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "China Three Gorges Renewables (Group)",
+      "source_symbol": "600905"
+    },
+    {
+      "symbol": "601390.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "China Railway Group Limited",
+      "source_symbol": "601390"
+    },
+    {
+      "symbol": "601229.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Bank of Shanghai",
+      "source_symbol": "601229"
+    },
+    {
+      "symbol": "300122.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Chongqing Zhifei Biological Products",
+      "source_symbol": "300122"
+    },
+    {
+      "symbol": "002027.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Focus Media Information Technology",
+      "source_symbol": "002027"
+    },
+    {
+      "symbol": "688012.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Advanced Micro-Fabrication Equipment",
+      "source_symbol": "688012"
+    },
+    {
+      "symbol": "688111.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Beijing Kingsoft Office Software",
+      "source_symbol": "688111"
+    },
+    {
+      "symbol": "601006.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Daqin Railway",
+      "source_symbol": "601006"
+    },
+    {
+      "symbol": "002304.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Jiangsu Yanghe Brewery Joint-Stock",
+      "source_symbol": "002304"
+    },
+    {
+      "symbol": "601818.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "China Everbright Bank",
+      "source_symbol": "601818"
+    },
+    {
+      "symbol": "600019.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Baoshan Iron and Steel",
+      "source_symbol": "600019"
+    },
+    {
+      "symbol": "688271.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "United Imaging",
+      "source_symbol": "688271"
+    },
+    {
+      "symbol": "603019.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Dawning Information Industry",
+      "source_symbol": "603019"
+    },
+    {
+      "symbol": "600585.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Anhui Conch Cement",
+      "source_symbol": "600585"
+    },
+    {
+      "symbol": "002050.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "ZHEJIANG SANHUA INTELLIGENT CONTROLS",
+      "source_symbol": "002050"
+    },
+    {
+      "symbol": "002466.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Tianqi Lithium Industries",
+      "source_symbol": "002466"
+    },
+    {
+      "symbol": "601658.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Postal Savings Bank of China",
+      "source_symbol": "601658"
+    },
+    {
+      "symbol": "600938.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "CNOOC Limited",
+      "source_symbol": "600938"
+    },
+    {
+      "symbol": "600999.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "China Merchants Securities",
+      "source_symbol": "600999"
+    },
+    {
+      "symbol": "688036.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Transsion",
+      "source_symbol": "688036"
+    },
+    {
+      "symbol": "000938.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Unisplendour",
+      "source_symbol": "000938"
+    },
+    {
+      "symbol": "601628.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "China Life Insurance Company",
+      "source_symbol": "601628"
+    },
+    {
+      "symbol": "603986.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "GigaDevice",
+      "source_symbol": "603986"
+    },
+    {
+      "symbol": "002049.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Unigroup Guoxin Microelectronics",
+      "source_symbol": "002049"
+    },
+    {
+      "symbol": "601600.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Aluminum Corporation of China Limited",
+      "source_symbol": "601600"
+    },
+    {
+      "symbol": "600111.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "China Northern Rare Earth Group",
+      "source_symbol": "600111"
+    },
+    {
+      "symbol": "688008.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Montage Technology",
+      "source_symbol": "688008"
+    },
+    {
+      "symbol": "300014.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Eve Energy",
+      "source_symbol": "300014"
+    },
+    {
+      "symbol": "601939.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "China Construction Bank",
+      "source_symbol": "601939"
+    },
+    {
+      "symbol": "600958.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Orient Securities",
+      "source_symbol": "600958"
+    },
+    {
+      "symbol": "600893.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "AVIC Aviation Engine Corporation",
+      "source_symbol": "600893"
+    },
+    {
+      "symbol": "002460.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Ganfeng Lithium",
+      "source_symbol": "002460"
+    },
+    {
+      "symbol": "601009.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Bank of Nanjing",
+      "source_symbol": "601009"
+    },
+    {
+      "symbol": "000538.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Yunnan Baiyao Group",
+      "source_symbol": "000538"
+    },
+    {
+      "symbol": "601669.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Power Construction Corporation of China",
+      "source_symbol": "601669"
+    },
+    {
+      "symbol": "600009.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Shanghai International Airport",
+      "source_symbol": "600009"
+    },
+    {
+      "symbol": "002129.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Tianjin Zhonghuan Semiconductor",
+      "source_symbol": "002129"
+    },
+    {
+      "symbol": "603993.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "China Molybdenum",
+      "source_symbol": "603993"
+    },
+    {
+      "symbol": "600886.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "SDIC Power Holdings",
+      "source_symbol": "600886"
+    },
+    {
+      "symbol": "600760.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "AVIC SHENYANG AIRCRAFT COMPANY",
+      "source_symbol": "600760"
+    },
+    {
+      "symbol": "000425.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "XCMG Construction Machinery",
+      "source_symbol": "000425"
+    },
+    {
+      "symbol": "000776.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "GF Securities",
+      "source_symbol": "000776"
+    },
+    {
+      "symbol": "601916.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "China Zheshang Bank",
+      "source_symbol": "601916"
+    },
+    {
+      "symbol": "600795.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "GD Power Development",
+      "source_symbol": "600795"
+    },
+    {
+      "symbol": "000661.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Chang Chun High and New Technology Industry (Group)",
+      "source_symbol": "000661"
+    },
+    {
+      "symbol": "000166.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Shenwan Hongyuan",
+      "source_symbol": "000166"
+    },
+    {
+      "symbol": "600426.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Shandong Hualu-Hengsheng Chemical",
+      "source_symbol": "600426"
+    },
+    {
+      "symbol": "600015.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Hua Xia Bank",
+      "source_symbol": "600015"
+    },
+    {
+      "symbol": "300782.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Maxscend Microelectronics",
+      "source_symbol": "300782"
+    },
+    {
+      "symbol": "601377.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Industrial Securities",
+      "source_symbol": "601377"
+    },
+    {
+      "symbol": "601186.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "China Railway Construction",
+      "source_symbol": "601186"
+    },
+    {
+      "symbol": "000157.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Zoomlion Heavy Industry Science & Technology",
+      "source_symbol": "000157"
+    },
+    {
+      "symbol": "002241.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "GoerTek",
+      "source_symbol": "002241"
+    },
+    {
+      "symbol": "600926.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Bank of Hangzhou",
+      "source_symbol": "600926"
+    },
+    {
+      "symbol": "600547.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Shandong Gold-Mining",
+      "source_symbol": "600547"
+    },
+    {
+      "symbol": "600011.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Huaneng Power International",
+      "source_symbol": "600011"
+    },
+    {
+      "symbol": "000977.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Inspur Electronic Information Industry",
+      "source_symbol": "000977"
+    },
+    {
+      "symbol": "002252.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Shanghai RAAS Blood Products",
+      "source_symbol": "002252"
+    },
+    {
+      "symbol": "600674.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Sichuan Chuantou Energy",
+      "source_symbol": "600674"
+    },
+    {
+      "symbol": "603799.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "ZHEJIANG HUAYOU COBALT",
+      "source_symbol": "603799"
+    },
+    {
+      "symbol": "600584.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "JCET",
+      "source_symbol": "600584"
+    },
+    {
+      "symbol": "600570.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Hundsun Technologies",
+      "source_symbol": "600570"
+    },
+    {
+      "symbol": "002236.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Zhejiang Dahua Technology",
+      "source_symbol": "002236"
+    },
+    {
+      "symbol": "002179.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "AVIC Jonhon Optronic Technology",
+      "source_symbol": "002179"
+    },
+    {
+      "symbol": "000596.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Anhui Gujing Distillery",
+      "source_symbol": "000596"
+    },
+    {
+      "symbol": "002311.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Guangdong Haid Group",
+      "source_symbol": "002311"
+    },
+    {
+      "symbol": "600188.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Yanzhou Coal Mining",
+      "source_symbol": "600188"
+    },
+    {
+      "symbol": "300896.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "IMEIK TECHNOLOGY DEVELOPMENT",
+      "source_symbol": "300896"
+    },
+    {
+      "symbol": "688256.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Cambricon Technologies",
+      "source_symbol": "688256"
+    },
+    {
+      "symbol": "600010.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Inner Mongolia Baotou Steel Union",
+      "source_symbol": "600010"
+    },
+    {
+      "symbol": "002271.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Beijing Oriental Yuhong Waterproof Technology",
+      "source_symbol": "002271"
+    },
+    {
+      "symbol": "601111.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Air China",
+      "source_symbol": "601111"
+    },
+    {
+      "symbol": "001979.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "China Merchants Shekou Industrial Zone Holdings",
+      "source_symbol": "001979"
+    },
+    {
+      "symbol": "300408.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Chaozhou Three-Circle",
+      "source_symbol": "300408"
+    },
+    {
+      "symbol": "600845.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Baosight Software",
+      "source_symbol": "600845"
+    },
+    {
+      "symbol": "603369.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Jiangsu King's Luck Brewery Joint-Stock",
+      "source_symbol": "603369"
+    },
+    {
+      "symbol": "600989.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Ningxia Baofeng Energy Group",
+      "source_symbol": "600989"
+    },
+    {
+      "symbol": "600745.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Wingtech",
+      "source_symbol": "600745"
+    },
+    {
+      "symbol": "601788.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Everbright Securities",
+      "source_symbol": "601788"
+    },
+    {
+      "symbol": "600115.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "China Eastern Airlines Corp",
+      "source_symbol": "600115"
+    },
+    {
+      "symbol": "600029.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "China Southern Airlines",
+      "source_symbol": "600029"
+    },
+    {
+      "symbol": "002601.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "LB Group",
+      "source_symbol": "002601"
+    },
+    {
+      "symbol": "601360.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "360 Security Technology",
+      "source_symbol": "601360"
+    },
+    {
+      "symbol": "601901.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Founder Securities",
+      "source_symbol": "601901"
+    },
+    {
+      "symbol": "002493.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Rongsheng Petro Chemical",
+      "source_symbol": "002493"
+    },
+    {
+      "symbol": "600196.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Fosun Pharmaceutical",
+      "source_symbol": "600196"
+    },
+    {
+      "symbol": "002459.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "JA Solar Technology",
+      "source_symbol": "002459"
+    },
+    {
+      "symbol": "601699.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Shanxi Lu'an Environmental Energy Development",
+      "source_symbol": "601699"
+    },
+    {
+      "symbol": "601995.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "China International Capital Corporation",
+      "source_symbol": "601995"
+    },
+    {
+      "symbol": "600085.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Beijing Tongrentang",
+      "source_symbol": "600085"
+    },
+    {
+      "symbol": "601100.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Jiangsu Hengli Hydraulic",
+      "source_symbol": "601100"
+    },
+    {
+      "symbol": "601800.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "China Communications Construction Company",
+      "source_symbol": "601800"
+    },
+    {
+      "symbol": "000895.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Henan Shuanghui Investment & Development",
+      "source_symbol": "000895"
+    },
+    {
+      "symbol": "002555.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "37 Interactive Entertainment Network Technology Group",
+      "source_symbol": "002555"
+    },
+    {
+      "symbol": "003816.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "CGN Power",
+      "source_symbol": "003816"
+    },
+    {
+      "symbol": "600489.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Zhongjin Gold",
+      "source_symbol": "600489"
+    },
+    {
+      "symbol": "601066.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "China Securities",
+      "source_symbol": "601066"
+    },
+    {
+      "symbol": "000963.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Huadong Medicine",
+      "source_symbol": "000963"
+    },
+    {
+      "symbol": "300142.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Walvax Biotechnology",
+      "source_symbol": "300142"
+    },
+    {
+      "symbol": "300033.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Hithink RoyalFlush Information Network",
+      "source_symbol": "300033"
+    },
+    {
+      "symbol": "000768.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "AVIC Aircraft",
+      "source_symbol": "000768"
+    },
+    {
+      "symbol": "601633.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Great Wall Motor",
+      "source_symbol": "601633"
+    },
+    {
+      "symbol": "000786.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Beijing New Building Materials Public",
+      "source_symbol": "000786"
+    },
+    {
+      "symbol": "002920.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Huizhou Desay SV Automotive",
+      "source_symbol": "002920"
+    },
+    {
+      "symbol": "600600.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Tsingtao Brewery",
+      "source_symbol": "600600"
+    },
+    {
+      "symbol": "601868.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "China Energy Engineering Corporation",
+      "source_symbol": "601868"
+    },
+    {
+      "symbol": "002648.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "SATELLITE CHEMICAL",
+      "source_symbol": "002648"
+    },
+    {
+      "symbol": "601021.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Spring Airlines",
+      "source_symbol": "601021"
+    },
+    {
+      "symbol": "603392.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "BEIJING WANTAI BIOLOGICAL PHARMACY ENTERPRISE",
+      "source_symbol": "603392"
+    },
+    {
+      "symbol": "000301.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Jiangsu Eastern Shenghong",
+      "source_symbol": "000301"
+    },
+    {
+      "symbol": "002001.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Zhejiang NHU",
+      "source_symbol": "002001"
+    },
+    {
+      "symbol": "600741.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "HUAYU Automotive Systems Company",
+      "source_symbol": "600741"
+    },
+    {
+      "symbol": "601336.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "New China Life Insurance",
+      "source_symbol": "601336"
+    },
+    {
+      "symbol": "601689.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Ningbo Tuopu Group",
+      "source_symbol": "601689"
+    },
+    {
+      "symbol": "688599.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Trina Solar",
+      "source_symbol": "688599"
+    },
+    {
+      "symbol": "002812.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Yunnan Energy New Material",
+      "source_symbol": "002812"
+    },
+    {
+      "symbol": "600346.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Hengli Petrochemical",
+      "source_symbol": "600346"
+    },
+    {
+      "symbol": "000983.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Shanxi Coking Coal Energy Group",
+      "source_symbol": "000983"
+    },
+    {
+      "symbol": "601881.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "China Galaxy Securities",
+      "source_symbol": "601881"
+    },
+    {
+      "symbol": "600588.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Yonyou Network Technology",
+      "source_symbol": "600588"
+    },
+    {
+      "symbol": "600515.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Hainan Airport Infrastructure",
+      "source_symbol": "600515"
+    },
+    {
+      "symbol": "601117.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "China National Chemical Engineering",
+      "source_symbol": "601117"
+    },
+    {
+      "symbol": "601838.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "BANK OF CHENGDU",
+      "source_symbol": "601838"
+    },
+    {
+      "symbol": "688126.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "National Silicon Industry Group",
+      "source_symbol": "688126"
+    },
+    {
+      "symbol": "300450.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "WUXI LEAD INTELLIGENT EQUIPMENT",
+      "source_symbol": "300450"
+    },
+    {
+      "symbol": "002736.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Guosen Securities",
+      "source_symbol": "002736"
+    },
+    {
+      "symbol": "002821.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Asymchem Laboratories (Tianjin)",
+      "source_symbol": "002821"
+    },
+    {
+      "symbol": "300316.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Zhejiang Jingsheng Mechanical & Electrical",
+      "source_symbol": "300316"
+    },
+    {
+      "symbol": "300433.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Lens Technology",
+      "source_symbol": "300433"
+    },
+    {
+      "symbol": "600176.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "CHINA JUSHI",
+      "source_symbol": "600176"
+    },
+    {
+      "symbol": "002709.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Guangzhou Tinci Materials Technology",
+      "source_symbol": "002709"
+    },
+    {
+      "symbol": "300347.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Hangzhou Tigermed Consulting",
+      "source_symbol": "300347"
+    },
+    {
+      "symbol": "601618.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Metallurgical Corporation of China",
+      "source_symbol": "601618"
+    },
+    {
+      "symbol": "601872.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "China Merchants Energy Shipping",
+      "source_symbol": "601872"
+    },
+    {
+      "symbol": "000408.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "ZANGGE MINING COMPANY",
+      "source_symbol": "000408"
+    },
+    {
+      "symbol": "002180.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Ninestar Corporation",
+      "source_symbol": "002180"
+    },
+    {
+      "symbol": "300661.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "SG Micro",
+      "source_symbol": "300661"
+    },
+    {
+      "symbol": "600372.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "China Avionics Systems",
+      "source_symbol": "600372"
+    },
+    {
+      "symbol": "601898.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "China Coal Energy",
+      "source_symbol": "601898"
+    },
+    {
+      "symbol": "688396.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "China Resources Microelectronics",
+      "source_symbol": "688396"
+    },
+    {
+      "symbol": "300496.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Thunder Software Technology",
+      "source_symbol": "300496"
+    },
+    {
+      "symbol": "000733.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "China Zhenhua (Group) Science & Technology",
+      "source_symbol": "000733"
+    },
+    {
+      "symbol": "601877.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Zhejiang Chint Electrics",
+      "source_symbol": "601877"
+    },
+    {
+      "symbol": "600233.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "YTO Express Group",
+      "source_symbol": "600233"
+    },
+    {
+      "symbol": "000999.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "China Resources Sanjiu Medical & Pharmaceutical",
+      "source_symbol": "000999"
+    },
+    {
+      "symbol": "600219.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Shandong Nanshan Aluminium",
+      "source_symbol": "600219"
+    },
+    {
+      "symbol": "002007.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Hualan Biological Engineering",
+      "source_symbol": "002007"
+    },
+    {
+      "symbol": "600023.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Zhejiang Zheneng Electric Power",
+      "source_symbol": "600023"
+    },
+    {
+      "symbol": "002074.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "GUOXUAN HIGH-TECH",
+      "source_symbol": "002074"
+    },
+    {
+      "symbol": "002202.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Xinjiang Goldwind Science & Technology",
+      "source_symbol": "002202"
+    },
+    {
+      "symbol": "300759.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Pharmaron Beijing",
+      "source_symbol": "300759"
+    },
+    {
+      "symbol": "600332.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Guangzhou Baiyunshan Pharmaceutical Holdings",
+      "source_symbol": "600332"
+    },
+    {
+      "symbol": "603806.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "HANGZHOU FIRST PV MATERIAL",
+      "source_symbol": "603806"
+    },
+    {
+      "symbol": "600362.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Jiangxi Copper",
+      "source_symbol": "600362"
+    },
+    {
+      "symbol": "000876.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "New Hope Liuhe",
+      "source_symbol": "000876"
+    },
+    {
+      "symbol": "600183.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Shengyi Technology",
+      "source_symbol": "600183"
+    },
+    {
+      "symbol": "601607.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Shanghai Pharmaceuticals Holding",
+      "source_symbol": "601607"
+    },
+    {
+      "symbol": "601799.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Changzhou Xingyu Automotive Lighting Systems",
+      "source_symbol": "601799"
+    },
+    {
+      "symbol": "301269.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Empyrean Technology",
+      "source_symbol": "301269"
+    },
+    {
+      "symbol": "601238.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Guangzhou Automobile Group",
+      "source_symbol": "601238"
+    },
+    {
+      "symbol": "601878.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "ZHESHANG SECURITIES",
+      "source_symbol": "601878"
+    },
+    {
+      "symbol": "601998.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "China Citic Bank",
+      "source_symbol": "601998"
+    },
+    {
+      "symbol": "600918.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Zhongtai Securities",
+      "source_symbol": "600918"
+    },
+    {
+      "symbol": "300999.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Yihai Kerry",
+      "source_symbol": "300999"
+    },
+    {
+      "symbol": "300223.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Ingenic Semiconductor",
+      "source_symbol": "300223"
+    },
+    {
+      "symbol": "603260.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Hoshine Silicon Industry",
+      "source_symbol": "603260"
+    },
+    {
+      "symbol": "688303.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "XinJiang Daqo New Energy",
+      "source_symbol": "688303"
+    },
+    {
+      "symbol": "300413.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Mango Excellent Media",
+      "source_symbol": "300413"
+    },
+    {
+      "symbol": "601615.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "MingYangSmartEnergyGroup",
+      "source_symbol": "601615"
+    },
+    {
+      "symbol": "002410.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Glodon Software",
+      "source_symbol": "002410"
+    },
+    {
+      "symbol": "600875.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Dongfang Electric Corporation",
+      "source_symbol": "600875"
+    },
+    {
+      "symbol": "002603.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Shijiazhuang Yiling Pharmaceutical",
+      "source_symbol": "002603"
+    },
+    {
+      "symbol": "600061.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "SDIC Essence",
+      "source_symbol": "600061"
+    },
+    {
+      "symbol": "688223.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Jinko Solar",
+      "source_symbol": "688223"
+    },
+    {
+      "symbol": "600460.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Hangzhou Silan Microelectronics",
+      "source_symbol": "600460"
+    },
+    {
+      "symbol": "600803.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "ENN Ecological Holdings",
+      "source_symbol": "600803"
+    },
+    {
+      "symbol": "300751.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Suzhou Maxwell Technologies",
+      "source_symbol": "300751"
+    },
+    {
+      "symbol": "600025.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "HuanengLancang River Hydropower",
+      "source_symbol": "600025"
+    },
+    {
+      "symbol": "601319.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "People's Insurance Company of China",
+      "source_symbol": "601319"
+    },
+    {
+      "symbol": "002841.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Guangzhou Shiyuan Electronic Technology Company",
+      "source_symbol": "002841"
+    },
+    {
+      "symbol": "600732.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Shanghai Aiko Solar Energy",
+      "source_symbol": "600732"
+    },
+    {
+      "symbol": "603659.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Shanghai Putailai New Energy Technology",
+      "source_symbol": "603659"
+    },
+    {
+      "symbol": "300454.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Sangfor Technologies",
+      "source_symbol": "300454"
+    },
+    {
+      "symbol": "300919.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "CNGR Advanced Material",
+      "source_symbol": "300919"
+    },
+    {
+      "symbol": "600132.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Chongqing Brewery",
+      "source_symbol": "600132"
+    },
+    {
+      "symbol": "000617.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "CNPC Capital Company",
+      "source_symbol": "000617"
+    },
+    {
+      "symbol": "300763.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Ginlong Technologies",
+      "source_symbol": "300763"
+    },
+    {
+      "symbol": "000069.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Shenzhen Overseas Chinese Town Company",
+      "source_symbol": "000069"
+    },
+    {
+      "symbol": "600018.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Shanghai International Port Group",
+      "source_symbol": "600018"
+    },
+    {
+      "symbol": "000708.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "CITIC Pacific Special Steel Group",
+      "source_symbol": "000708"
+    },
+    {
+      "symbol": "300628.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Yealink Network Technology",
+      "source_symbol": "300628"
+    },
+    {
+      "symbol": "002938.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Avary Holding (Shenzhen) Co",
+      "source_symbol": "002938"
+    },
+    {
+      "symbol": "002916.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Shennan Circuits",
+      "source_symbol": "002916"
+    },
+    {
+      "symbol": "605117.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Ningbo Deye Technology",
+      "source_symbol": "605117"
+    },
+    {
+      "symbol": "600039.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Sichuan Road&Bridge",
+      "source_symbol": "600039"
+    },
+    {
+      "symbol": "605499.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Eastroc Beverage (Group)",
+      "source_symbol": "605499"
+    },
+    {
+      "symbol": "603195.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "GONGNIU GROUP",
+      "source_symbol": "603195"
+    },
+    {
+      "symbol": "600754.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Shanghai Jin Jiang International Hotels",
+      "source_symbol": "600754"
+    },
+    {
+      "symbol": "603899.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "SHANGHAI M&G STATIONERY",
+      "source_symbol": "603899"
+    },
+    {
+      "symbol": "603290.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "StarPower Semiconductor",
+      "source_symbol": "603290"
+    },
+    {
+      "symbol": "603833.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Oppein Home Group",
+      "source_symbol": "603833"
+    },
+    {
+      "symbol": "601865.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Flat Glass Group",
+      "source_symbol": "601865"
+    },
+    {
+      "symbol": "688363.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Bloomage Biotechnology Corporation",
+      "source_symbol": "688363"
+    },
+    {
+      "symbol": "000877.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Xinjiang Tianshan Cement",
+      "source_symbol": "000877"
+    },
+    {
+      "symbol": "688065.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Cathay Biotech",
+      "source_symbol": "688065"
+    },
+    {
+      "symbol": "300957.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Yunnan Botanee Bio-Technology Group",
+      "source_symbol": "300957"
+    },
+    {
+      "symbol": "601236.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "HONGTA SECURITIES",
+      "source_symbol": "601236"
+    },
+    {
+      "symbol": "601698.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "China Satellite Communications",
+      "source_symbol": "601698"
+    },
+    {
+      "symbol": "688187.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Zhuzhou CRRC Times Electric",
+      "source_symbol": "688187"
+    },
+    {
+      "symbol": "688561.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Qi An Xin Technology Group",
+      "source_symbol": "688561"
+    },
+    {
+      "symbol": "601155.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Future Land Holdings",
+      "source_symbol": "601155"
+    },
+    {
+      "symbol": "600606.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "China Development Holdings",
+      "source_symbol": "600606"
+    },
+    {
+      "symbol": "300979.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "Huali Industrial Group Company",
+      "source_symbol": "300979"
+    },
+    {
+      "symbol": "601808.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "China Oilfield Services",
+      "source_symbol": "601808"
+    },
+    {
+      "symbol": "603486.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "Ecovacs Robotics",
+      "source_symbol": "603486"
+    },
+    {
+      "symbol": "000800.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "FAW Car",
+      "source_symbol": "000800"
+    },
+    {
+      "symbol": "601059.SS",
+      "exchange_mic": "XSHG",
+      "currency": "CNY",
+      "source_name": "CINDA SECURITIES",
+      "source_symbol": "601059"
+    },
+    {
+      "symbol": "001289.SZ",
+      "exchange_mic": "XSHE",
+      "currency": "CNY",
+      "source_name": "China Longyuan Power Group Limited",
+      "source_symbol": "001289"
+    }
+  ],
+  "source_documents": [
+    {
+      "label": "Wikipedia: CSI_300_Index",
+      "url": "https://en.wikipedia.org/wiki/CSI_300_Index"
+    }
+  ]
+}

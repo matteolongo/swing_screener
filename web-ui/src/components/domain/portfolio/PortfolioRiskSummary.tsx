@@ -1,7 +1,7 @@
 import type { Position } from '@/types/position';
 import { t } from '@/i18n/t';
 import { cn } from '@/utils/cn';
-import { formatCurrency, formatNumber } from '@/utils/formatters';
+import { formatCurrency, formatNumber, getSignColorClass } from '@/utils/formatters';
 
 interface PortfolioRiskSummaryProps {
   openPositions: Position[];
@@ -38,9 +38,7 @@ export default function PortfolioRiskSummary({ openPositions, accountSize, reali
   const rNowColor =
     avgRNow == null
       ? 'text-gray-700 dark:text-gray-300'
-      : avgRNow >= 0
-        ? 'text-green-600 dark:text-green-400'
-        : 'text-red-600 dark:text-red-400';
+      : getSignColorClass(avgRNow);
 
   const chipBase =
     'flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium';
@@ -70,10 +68,7 @@ export default function PortfolioRiskSummary({ openPositions, accountSize, reali
           <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
             {t('portfolioRisk.realizedPnl')}
           </span>
-          <span className={cn(
-            'font-bold',
-            realizedPnl >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400',
-          )}>
+          <span className={cn('font-bold', getSignColorClass(realizedPnl))}>
             {realizedPnl >= 0 ? '+' : ''}{formatCurrency(realizedPnl, 'EUR')}
           </span>
         </span>

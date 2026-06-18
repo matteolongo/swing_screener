@@ -48,7 +48,7 @@ function pillStatusClass(status: FundamentalSnapshot['coverageStatus'] | 'strong
   if (status === 'supported' || status === 'strong') return 'bg-emerald-100 text-emerald-800';
   if (status === 'partial' || status === 'neutral') return 'bg-amber-100 text-amber-800';
   if (status === 'unsupported' || status === 'weak') return 'bg-rose-100 text-rose-800';
-  return 'bg-gray-100 text-gray-700';
+  return 'bg-surface text-muted';
 }
 
 function qualityBadgeClass(status: FundamentalSnapshot['dataQualityStatus']) {
@@ -61,8 +61,8 @@ function trendClass(direction: 'improving' | 'deteriorating' | 'stable' | 'unkno
   if (direction === 'improving') return 'bg-emerald-100 text-emerald-800';
   if (direction === 'deteriorating') return 'bg-rose-100 text-rose-800';
   if (direction === 'stable') return 'bg-amber-100 text-amber-800';
-  if (direction === 'not_comparable') return 'bg-slate-100 text-slate-700';
-  return 'bg-gray-100 text-gray-700';
+  if (direction === 'not_comparable') return 'bg-surface text-muted';
+  return 'bg-surface text-muted';
 }
 
 function humanizeDirection(direction: 'improving' | 'deteriorating' | 'stable' | 'unknown' | 'not_comparable') {
@@ -235,13 +235,13 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
             <span className={`rounded-full px-2 py-1 text-xs font-medium ${pillStatusClass(snapshot.coverageStatus)}`}>
               {snapshot.coverageStatus}
             </span>
-            <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700">
+            <span className="rounded-full bg-surface px-2 py-1 text-xs font-medium text-muted">
               {snapshot.freshnessStatus}
             </span>
             <span className={`rounded-full px-2 py-1 text-xs font-medium ${qualityBadgeClass(snapshot.dataQualityStatus)}`}>
               quality {snapshot.dataQualityStatus}
             </span>
-            <span className="rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800">
+            <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
               {[snapshot.provider, snapshot.dataRegion].filter(Boolean).join(' · ')}
             </span>
           </div>
@@ -260,10 +260,10 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
         ) : null}
 
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-4">
-          <div className="rounded-md border border-gray-200 bg-white p-3">
-            <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Overall read</div>
-            <div className="mt-2 text-lg font-semibold text-gray-900">{overallRead}</div>
-            <p className="mt-2 text-sm text-gray-600">
+          <div className="rounded-md border border-border bg-surface p-3">
+            <div className="text-[11px] font-medium uppercase tracking-wide text-muted">Overall read</div>
+            <div className="mt-2 text-lg font-semibold text-foreground">{overallRead}</div>
+            <p className="mt-2 text-sm text-muted">
               Use the pillar scores and trust notes below to confirm the quality of the setup.
             </p>
           </div>
@@ -297,17 +297,17 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
             <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Pillar scores</h4>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {pillars.map(([name, pillar]) => (
-                <div key={name} className="rounded-md border border-gray-200 bg-white p-3">
+                <div key={name} className="rounded-md border border-border bg-surface p-3">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-sm font-medium capitalize">{name.replace('_', ' ')}</span>
                     <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${pillStatusClass(pillar.status)}`}>
                       {pillar.status}
                     </span>
                   </div>
-                  <div className="mt-2 text-2xl font-semibold text-gray-900">
+                  <div className="mt-2 text-2xl font-semibold text-foreground">
                     {pillar.score == null ? 'n/a' : `${Math.round(pillar.score * 100)}/100`}
                   </div>
-                  <div className="mt-2 text-xs text-gray-500">{pillar.summary}</div>
+                  <div className="mt-2 text-xs text-muted">{pillar.summary}</div>
                 </div>
               ))}
             </div>
@@ -319,9 +319,9 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
             const context = snapshot.metricContext[metric.key];
             const meta = formatFundamentalMetricMeta(metric.key, context);
             return (
-              <div key={metric.key} className="rounded-md bg-gray-50 p-2">
+              <div key={metric.key} className="rounded-md bg-surface p-2">
                 <div className="flex items-start justify-between gap-2">
-                  <div className="text-xs text-gray-500">{metric.label}</div>
+                  <div className="text-xs text-muted">{metric.label}</div>
                   <span
                     className={`cursor-help rounded-full px-2 py-0.5 text-[10px] font-medium ${metricHorizonClass(metric.key, context)}`}
                     title={metricHorizonTooltip(metric.key, context)}
@@ -330,7 +330,7 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
                   </span>
                 </div>
                 <div className="mt-1 font-medium">{metric.value}</div>
-                {meta ? <div className="mt-1 text-[11px] text-gray-500">{meta}</div> : null}
+                {meta ? <div className="mt-1 text-[11px] text-muted">{meta}</div> : null}
               </div>
             );
           })}
@@ -367,7 +367,7 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
             <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Recent history</h4>
             <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
               {historicalSeries.map(([key, series]) => (
-                <div key={key} className="overflow-hidden rounded-md border border-gray-200 bg-white">
+                <div key={key} className="overflow-hidden rounded-md border border-border bg-surface">
                   <div className="space-y-1 p-3">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-sm font-medium">{series.label}</span>
@@ -375,7 +375,7 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
                         {humanizeDirection(series.direction)}
                       </span>
                     </div>
-                    <div className="text-[11px] text-gray-500">
+                    <div className="text-[11px] text-muted">
                       {[
                         formatFundamentalCadence(series.frequency),
                         humanizeFundamentalSource(series.source),
@@ -384,27 +384,27 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
                         .join(' · ') || 'metadata unavailable'}
                     </div>
                   </div>
-                  <div className="border-t border-gray-200">
-                    <table className="min-w-full divide-y divide-gray-200 text-sm">
-                      <thead className="bg-gray-50">
+                  <div className="border-t border-border">
+                    <table className="min-w-full divide-y divide-border text-sm">
+                      <thead className="bg-surface">
                         <tr>
-                          <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                          <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted">
                             Date
                           </th>
-                          <th className="px-3 py-2 text-right text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                          <th className="px-3 py-2 text-right text-[11px] font-medium uppercase tracking-wide text-muted">
                             Value
                           </th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-100 bg-white">
+                      <tbody className="divide-y divide-border bg-surface">
                         {[...series.points]
                           .sort((left, right) => comparePeriodDesc(left.periodEnd, right.periodEnd))
                           .map((point) => (
                             <tr key={`${key}-${point.periodEnd}`}>
-                              <td className="px-3 py-2 font-mono text-xs text-gray-500">
+                              <td className="px-3 py-2 font-mono text-xs text-muted">
                                 {point.periodEnd}
                               </td>
-                              <td className="px-3 py-2 text-right font-medium text-gray-800">
+                              <td className="px-3 py-2 text-right font-medium text-foreground">
                                 {formatSeriesValue(point.value, series.unit)}
                               </td>
                             </tr>

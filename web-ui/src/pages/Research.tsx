@@ -63,7 +63,7 @@ export default function Research() {
           <button
             type="button"
             onClick={() => { setSharedSymbol(''); setCommittedSymbol(''); }}
-            className="px-2 py-1.5 text-sm text-gray-500 hover:text-gray-700"
+            className="px-2 py-1.5 text-sm text-muted hover:text-foreground"
           >
             ✕
           </button>
