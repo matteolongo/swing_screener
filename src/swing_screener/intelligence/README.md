@@ -52,6 +52,15 @@ sees the full picture regardless of what the caller sent. Provider errors degrad
 gracefully (the field stays unset; analysis never fails on a fetch error), and
 caller-provided values are never overwritten.
 
+`POST /api/intelligence/position/{position_id}` enriches the same way: it runs
+`enrich_intelligence_request` (fundamentals + earnings) and then `enrich_with_technicals`,
+which fetches recent OHLCV via `PortfolioService.fetch_recent_ohlcv` and computes SMAs,
+6m/12m momentum, ATR, 52-week-high distance and candle patterns for the held symbol. This
+is why open positions get the same `--- Technical context ---`, `--- Fundamentals ---`,
+`--- Chart quality ---` and `--- Finnhub enrichment signals ---` blocks a candidate gets,
+instead of only entry/stop. Benchmark-relative fields (`rel_strength`, `sector_rs`) are not
+filled on this single-symbol path. The screener decision-context block stays candidate-only.
+
 The prompt now renders a `--- Fundamentals ---` block from the raw-fundamentals
 fields on `SymbolIntelligenceRequest`: `trailing_pe`, `revenue_growth_yoy`,
 `gross_margin`, `net_margin`, `return_on_equity`, `debt_to_equity` (alongside the

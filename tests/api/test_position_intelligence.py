@@ -7,13 +7,14 @@ import pytest
 from fastapi.testclient import TestClient
 
 from api.main import app
-from api.dependencies import get_portfolio_service
+from api.dependencies import get_fundamentals_service, get_portfolio_service
 
 
 @pytest.fixture(autouse=True)
 def clear_overrides():
     yield
     app.dependency_overrides.pop(get_portfolio_service, None)
+    app.dependency_overrides.pop(get_fundamentals_service, None)
 
 
 @pytest.fixture
@@ -154,11 +155,18 @@ def test_analyze_position_returns_intelligence(client):
     )
 
     def override_portfolio():
+        import pandas as pd
         from api.models.portfolio import EarningsProximityResponse
         svc = MagicMock()
         svc.list_positions.return_value = positions_resp
         svc.suggest_position_stop.return_value = _mock_stop_suggestion()
         svc.get_earnings_proximity.return_value = EarningsProximityResponse(ticker="BESI.AS")
+        svc.fetch_recent_ohlcv.return_value = pd.DataFrame()
+        return svc
+
+    def override_fundamentals():
+        svc = MagicMock()
+        svc.get_snapshot.return_value = None
         return svc
 
     with (
@@ -170,12 +178,17 @@ def test_analyze_position_returns_intelligence(client):
         mock_analyzer_cls.return_value = analyzer_instance
 
         app.dependency_overrides[get_portfolio_service] = override_portfolio
+        app.dependency_overrides[get_fundamentals_service] = override_fundamentals
         try:
             response = client.post("/api/intelligence/position/pos-1")
         finally:
             app.dependency_overrides.pop(get_portfolio_service, None)
+            app.dependency_overrides.pop(get_fundamentals_service, None)
 
     assert response.status_code == 200
     data = response.json()
     assert data["position_signal"]["action"] == "HOLD"
     assert data["summary_line"] == "Hold, thesis intact."
+    # Position analysis now routes through the enrichment pipeline (OHLCV fetch attempted).
+    analyzer_instance.analyze.assert_called_once()
+    assert analyzer_instance.analyze.call_args.args[0] == "BESI.AS"

@@ -267,49 +267,49 @@ def _build_user_prompt(ticker: str, req: SymbolIntelligenceRequest, past_positio
                     f"Fair value range: {fv_low}–{fv_high} (base {fv_base}) {currency}"
                 )
 
-        # Chart quality block
-        has_chart_quality = any(
-            x is not None
-            for x in (
-                req.atr,
-                req.rel_strength,
-                req.sector_rs,
-                req.dist_52w_high_pct,
-                req.near_52w_high,
-                req.sector_rotation_context,
-            )
+    # Chart quality block — also shown for open positions (ATR / 52w distance help manage the trade).
+    has_chart_quality = any(
+        x is not None
+        for x in (
+            req.atr,
+            req.rel_strength,
+            req.sector_rs,
+            req.dist_52w_high_pct,
+            req.near_52w_high,
+            req.sector_rotation_context,
         )
-        if has_chart_quality:
-            lines += ["", "--- Chart quality ---"]
-            atr_str = f"ATR: {fmt(req.atr)}" if req.atr is not None else ""
-            rs_str = f"Relative strength vs benchmark: {req.rel_strength}%" if req.rel_strength is not None else ""
-            sector_rs_str = f"Relative strength vs sector ETF: {req.sector_rs}%" if req.sector_rs is not None else ""
-            cq_parts = [p for p in (atr_str, rs_str, sector_rs_str) if p]
-            if cq_parts:
-                lines.append(" | ".join(cq_parts))
-            if req.dist_52w_high_pct is not None:
-                pct = round(req.dist_52w_high_pct * 100, 1)
-                near_str = " (near 52w high)" if req.near_52w_high else ""
-                lines.append(f"Distance from 52w high: {pct:+.1f}%{near_str}")
-            if req.sector_rotation_context:
-                fast = req.sector_rotation_context.get("fast_rs")
-                slow = req.sector_rotation_context.get("slow_rs")
-                in_rotation = req.sector_rotation_context.get("in_rotation")
-                parts = []
-                if fast is not None:
-                    parts.append(f"4w sector ETF RS: {fmt(fast)}")
-                if slow is not None:
-                    parts.append(f"13w sector ETF RS: {fmt(slow)}")
-                if in_rotation is not None:
-                    parts.append(f"in rotation: {bool(in_rotation)}")
-                if parts:
-                    lines.append("Sector rotation: " + " | ".join(parts))
+    )
+    if has_chart_quality:
+        lines += ["", "--- Chart quality ---"]
+        atr_str = f"ATR: {fmt(req.atr)}" if req.atr is not None else ""
+        rs_str = f"Relative strength vs benchmark: {req.rel_strength}%" if req.rel_strength is not None else ""
+        sector_rs_str = f"Relative strength vs sector ETF: {req.sector_rs}%" if req.sector_rs is not None else ""
+        cq_parts = [p for p in (atr_str, rs_str, sector_rs_str) if p]
+        if cq_parts:
+            lines.append(" | ".join(cq_parts))
+        if req.dist_52w_high_pct is not None:
+            pct = round(req.dist_52w_high_pct * 100, 1)
+            near_str = " (near 52w high)" if req.near_52w_high else ""
+            lines.append(f"Distance from 52w high: {pct:+.1f}%{near_str}")
+        if req.sector_rotation_context:
+            fast = req.sector_rotation_context.get("fast_rs")
+            slow = req.sector_rotation_context.get("slow_rs")
+            in_rotation = req.sector_rotation_context.get("in_rotation")
+            parts = []
+            if fast is not None:
+                parts.append(f"4w sector ETF RS: {fmt(fast)}")
+            if slow is not None:
+                parts.append(f"13w sector ETF RS: {fmt(slow)}")
+            if in_rotation is not None:
+                parts.append(f"in rotation: {bool(in_rotation)}")
+            if parts:
+                lines.append("Sector rotation: " + " | ".join(parts))
 
-    # Finnhub enrichment signals block
+    # Finnhub enrichment signals block — also shown for open positions.
     has_finnhub = any(x is not None for x in (
         req.insider_net_shares_90d, req.forward_eps_estimate, req.analyst_upgrade_downgrade_net_30d
     ))
-    if has_finnhub and not has_position:
+    if has_finnhub:
         lines += ["", "--- Finnhub enrichment signals ---"]
         if req.insider_net_shares_90d is not None:
             direction = "net buyer" if req.insider_net_shares_90d > 0 else ("net seller" if req.insider_net_shares_90d < 0 else "flat")
