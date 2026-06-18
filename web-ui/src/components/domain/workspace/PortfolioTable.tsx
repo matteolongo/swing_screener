@@ -21,7 +21,7 @@ import {
 } from '@/features/portfolio/hooks';
 import { type Order } from '@/features/portfolio/types';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
-import { formatCurrency, formatPercent } from '@/utils/formatters';
+import { formatCurrency, formatPercent, getSignColorClass } from '@/utils/formatters';
 import { t } from '@/i18n/t';
 
 interface PortfolioRow {
@@ -378,9 +378,8 @@ export default function PortfolioTable() {
       align: 'right',
       render: (row) => {
         if (row.netPnl == null) return <span className="text-gray-400 text-xs">—</span>;
-        const isPositive = row.netPnl >= 0;
         return (
-          <span className={`font-semibold text-sm ${isPositive ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`}>
+          <span className={`font-semibold text-sm ${getSignColorClass(row.netPnl)}`}>
             {formatPnlValue(row.netPnl, row.netPnlPercent)}
           </span>
         );

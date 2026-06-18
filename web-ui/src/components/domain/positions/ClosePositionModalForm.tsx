@@ -2,7 +2,7 @@ import { useState } from 'react';
 import Button from '@/components/common/Button';
 import ModalShell from '@/components/common/ModalShell';
 import type { ClosePositionRequest, Position } from '@/features/portfolio/types';
-import { formatCurrency, formatPercent } from '@/utils/formatters';
+import { formatCurrency, formatPercent, getSignColorClass } from '@/utils/formatters';
 import { t } from '@/i18n/t';
 import { cn } from '@/utils/cn';
 
@@ -179,11 +179,7 @@ export default function ClosePositionModalForm({
           className={`p-3 rounded ${pnl >= 0 ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20'}`}
         >
           <p className="text-sm font-medium">{t('positions.closeModal.projectedPnlNet')}</p>
-          <p
-            className={`text-lg font-bold ${
-              pnl >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
-            }`}
-          >
+          <p className={`text-lg font-bold ${getSignColorClass(pnl)}`}>
             {pnl >= 0 ? '+' : ''}
             {formatCurrency(pnl)} ({pnl >= 0 ? '+' : ''}
             {formatPercent(pnlPercent)})

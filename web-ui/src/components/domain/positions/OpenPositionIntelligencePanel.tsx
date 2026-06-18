@@ -1,7 +1,7 @@
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { t } from '@/i18n/t';
-import { formatNumber } from '@/utils/formatters';
+import { formatNumber, getSignColorClass } from '@/utils/formatters';
 import {
   useOpenPositionsIntelligence,
   useAnalyzePositionMutation,
@@ -73,7 +73,7 @@ export default function OpenPositionIntelligencePanel({ onTickerSelect }: Props)
             <span
               className={cn(
                 'text-xs font-semibold tabular-nums shrink-0',
-                item.rNow >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400',
+                getSignColorClass(item.rNow),
               )}
             >
               {item.rNow >= 0 ? '+' : ''}{formatNumber(item.rNow, 2)}R

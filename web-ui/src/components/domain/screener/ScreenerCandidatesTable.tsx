@@ -10,7 +10,7 @@ import { useUnwatchSymbolMutation, useWatchlist, useWatchSymbolMutation } from '
 import { useScreenerStore } from '@/stores/screenerStore';
 import ScreenerCandidateIdentityCell from './ScreenerCandidateIdentityCell';
 import ScreenerCandidateDetailsRow from './ScreenerCandidateDetailsRow';
-import { formatCurrency, formatPercent } from '@/utils/formatters';
+import { formatCurrency, formatPercent, getSignColorClass } from '@/utils/formatters';
 import { t } from '@/i18n/t';
 
 function signalBadge(action?: string): { label: string; className: string } | null {
@@ -211,7 +211,7 @@ export default function ScreenerCandidatesTable({
               {/* Benchmark */}
               <td className="py-1.5 px-3 text-xs text-right font-mono whitespace-nowrap">
                 {candidate.benchmarkOutperformancePct != null ? (
-                  <span className={candidate.benchmarkOutperformancePct >= 0 ? 'text-emerald-600' : 'text-rose-600'}>
+                  <span className={getSignColorClass(candidate.benchmarkOutperformancePct)}>
                     {formatPercent(candidate.benchmarkOutperformancePct, 1)}
                   </span>
                 ) : (

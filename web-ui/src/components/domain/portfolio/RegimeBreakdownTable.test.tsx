@@ -66,7 +66,7 @@ describe('RegimeBreakdownTable', () => {
     );
     const { container } = renderWithProviders(<RegimeBreakdownTable />);
     await screen.findByText(t('analyticsPage.regimeBreakdown.regimes.trending_up'));
-    const greenCells = container.querySelectorAll('.text-green-600');
+    const greenCells = container.querySelectorAll('.text-success');
     expect(greenCells.length).toBeGreaterThan(0);
   });
 });
