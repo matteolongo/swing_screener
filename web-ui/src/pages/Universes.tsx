@@ -228,8 +228,8 @@ export default function Universes() {
   return (
     <div className="mx-auto max-w-[1680px] px-4 py-4">
       <div className="mb-4">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Universe Management</h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        <h1 className="text-2xl font-bold text-foreground">Universe Management</h1>
+        <p className="mt-1 text-sm text-muted">
           Review source coverage, freshness, validation, and refresh official universes without editing snapshots by hand.
         </p>
       </div>
@@ -240,9 +240,9 @@ export default function Universes() {
             <div>
               <div className="flex items-center gap-2">
                 <Globe2 className="h-4 w-4 text-muted" />
-                <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Live Discovery</h2>
+                <h2 className="text-sm font-semibold text-foreground">Live Discovery</h2>
               </div>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              <p className="mt-1 text-sm text-muted">
                 Pull fresh candidate symbols from free sources, then review their market, currency, and exchange taxonomy before screening.
               </p>
             </div>
@@ -267,7 +267,7 @@ export default function Universes() {
               <select
                 value={discoveryProvider}
                 onChange={(event) => setDiscoveryProvider(event.target.value as SymbolDiscoveryRequest['provider'])}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
+                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="yahoo_predefined">Yahoo predefined</option>
                 <option value="eodhd_exchange">EODHD exchange list</option>
@@ -284,7 +284,7 @@ export default function Universes() {
                     setDiscoveryProvider('yahoo_predefined');
                   }
                 }}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
+                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground disabled:bg-foreground/5 disabled:text-muted"
               >
                 {MARKET_PRESETS.map((preset) => (
                   <option key={preset.value} value={preset.value}>{preset.label}</option>
@@ -296,7 +296,7 @@ export default function Universes() {
               <select
                 value={currencyPreset}
                 onChange={(event) => setCurrencyPreset(event.target.value as (typeof CURRENCY_PRESETS)[number]['value'])}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
+                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground disabled:bg-foreground/5 disabled:text-muted"
               >
                 {CURRENCY_PRESETS.map((preset) => (
                   <option key={preset.value} value={preset.value}>{preset.label}</option>
@@ -308,7 +308,7 @@ export default function Universes() {
               <select
                 value={typePreset}
                 onChange={(event) => setTypePreset(event.target.value as (typeof TYPE_PRESETS)[number]['value'])}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
+                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground"
               >
                 {TYPE_PRESETS.map((preset) => (
                   <option key={preset.value} value={preset.value}>{preset.label}</option>
@@ -320,7 +320,7 @@ export default function Universes() {
               <select
                 value={discoveryMinVolume}
                 onChange={(event) => setDiscoveryMinVolume(Number(event.target.value))}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
+                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground"
               >
                 {VOLUME_PRESETS.map((preset) => (
                   <option key={preset.value} value={preset.value}>{preset.label}</option>
@@ -332,7 +332,7 @@ export default function Universes() {
               <select
                 value={discoveryMinMarketCap}
                 onChange={(event) => setDiscoveryMinMarketCap(Number(event.target.value))}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
+                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground"
               >
                 {MARKET_CAP_PRESETS.map((preset) => (
                   <option key={preset.value} value={preset.value}>{preset.label}</option>
@@ -344,7 +344,7 @@ export default function Universes() {
               <select
                 value={discoveryLimit}
                 onChange={(event) => setDiscoveryLimit(Number(event.target.value))}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
+                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground"
               >
                 {[25, 50, 100, 200].map((value) => (
                   <option key={value} value={value}>{value} symbols</option>
@@ -356,7 +356,7 @@ export default function Universes() {
               <select
                 value={screenerTop}
                 onChange={(event) => setScreenerTop(Number(event.target.value))}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
+                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground"
               >
                 {[10, 20, 50, 100].map((value) => (
                   <option key={value} value={value}>Top {value}</option>
@@ -401,7 +401,7 @@ export default function Universes() {
           ) : null}
 
           {discoveryMutation.isError ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            <div className="rounded-xl border border-danger/40 bg-danger/10 p-3 text-sm text-danger">
               {discoveryMutation.error instanceof Error ? discoveryMutation.error.message : 'Symbol discovery failed.'}
             </div>
           ) : null}
@@ -456,7 +456,7 @@ export default function Universes() {
                 </div>
               ) : null}
               {discoveryResult.symbols.length === 0 ? (
-                <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                <div className="rounded-xl border border-warning/40 bg-warning/10 p-3 text-sm text-warning">
                   No symbols matched this discovery source and filter set. Try a broader market, lower liquidity filters, or screen one of the configured universes below.
                 </div>
               ) : null}
@@ -494,7 +494,7 @@ export default function Universes() {
           ) : null}
 
           {discoveryScreenerMutation.isError ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            <div className="rounded-xl border border-danger/40 bg-danger/10 p-3 text-sm text-danger">
               {discoveryScreenerMutation.error instanceof Error ? discoveryScreenerMutation.error.message : 'Screener run failed.'}
             </div>
           ) : null}
@@ -502,7 +502,7 @@ export default function Universes() {
           {discoveryScreenerResult ? (
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Screener Results for Discovered Symbols</h3>
+                <h3 className="text-sm font-semibold text-foreground">Screener Results for Discovered Symbols</h3>
                 <Badge variant="default">{discoveryScreenerResult.candidates.length} candidates</Badge>
                 <Badge variant="default">{discoveryScreenerResult.totalScreened} screened</Badge>
                 {discoveryScreenerResult.benchmarkTicker ? (
@@ -510,7 +510,7 @@ export default function Universes() {
                 ) : null}
               </div>
               {discoveryScreenerResult.warnings?.length ? (
-                <div className="space-y-1 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                <div className="space-y-1 rounded-xl border border-warning/40 bg-warning/10 p-3 text-sm text-warning">
                   {discoveryScreenerResult.warnings.map((warning) => (
                     <div key={warning}>{warning}</div>
                   ))}
@@ -567,12 +567,12 @@ export default function Universes() {
         <Card variant="bordered" className="p-3">
           <div className="mb-3 flex items-center gap-2">
             <Database className="h-4 w-4 text-muted" />
-            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Configured Universes</h2>
+            <h2 className="text-sm font-semibold text-foreground">Configured Universes</h2>
           </div>
           {catalogQuery.isLoading ? (
             <div className="text-sm text-muted">Loading universe catalog…</div>
           ) : catalogQuery.isError ? (
-            <div className="text-sm text-red-600">Failed to load universe catalog.</div>
+            <div className="text-sm text-danger">Failed to load universe catalog.</div>
           ) : (
             <div className="space-y-2">
               {universes.map((universe) => {
@@ -584,8 +584,8 @@ export default function Universes() {
                     onClick={() => setSelectedUniverseId(universe.id)}
                     className={`w-full rounded-xl border p-3 text-left transition-colors ${
                       selected
-                        ? 'border-emerald-500 bg-emerald-50'
-                        : 'border-border bg-surface hover:border-gray-300 hover:bg-foreground/5'
+                        ? 'border-success/40 bg-success/10'
+                        : 'border-border bg-surface hover:border-border hover:bg-foreground/5'
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -616,12 +616,12 @@ export default function Universes() {
             ) : detailQuery.isLoading ? (
               <div className="text-sm text-muted">Loading universe detail…</div>
             ) : detailQuery.isError || !detail ? (
-              <div className="text-sm text-red-600">Failed to load universe detail.</div>
+              <div className="text-sm text-danger">Failed to load universe detail.</div>
             ) : (
               <div className="space-y-4">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                   <div>
-                    <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{detail.description}</h2>
+                    <h2 className="text-xl font-semibold text-foreground">{detail.description}</h2>
                     <p className="mt-1 text-sm text-muted">{detail.id}</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -665,11 +665,11 @@ export default function Universes() {
                 <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                     <div>
-                      <div className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-gray-100">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
                         <Target className="h-4 w-4 text-muted" />
                         Benchmark
                       </div>
-                      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                      <p className="mt-1 text-sm text-muted">
                         Select the index or ETF used for performance comparison in the screener and chart overlay.
                       </p>
                     </div>
@@ -685,7 +685,7 @@ export default function Universes() {
                           value={benchmarkDraft}
                           onChange={(event) => setBenchmarkDraft(event.target.value.toUpperCase())}
                           placeholder="SPY"
-                          className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
+                          className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary"
                         />
                       </div>
                       <Button
@@ -707,12 +707,12 @@ export default function Universes() {
                       ))}
                   </datalist>
                   {benchmarkMutation.isError ? (
-                    <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                    <div className="mt-3 rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
                       {benchmarkMutation.error instanceof Error ? benchmarkMutation.error.message : 'Failed to update benchmark.'}
                     </div>
                   ) : null}
                   {benchmarkMutation.data ? (
-                    <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+                    <div className="mt-3 rounded-lg border border-success/40 bg-success/10 px-3 py-2 text-sm text-success">
                       Benchmark updated to {benchmarkMutation.data.benchmark}. The catalog and screener will pick it up after refresh.
                     </div>
                   ) : null}
@@ -753,7 +753,7 @@ export default function Universes() {
                 </div>
 
                 {refreshMutation.isError ? (
-                  <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  <div className="rounded-xl border border-danger/40 bg-danger/10 p-3 text-sm text-danger">
                     {refreshMutation.error instanceof Error ? refreshMutation.error.message : 'Refresh failed.'}
                   </div>
                 ) : null}
@@ -762,9 +762,9 @@ export default function Universes() {
                   <div className="rounded-xl border border-border bg-surface p-3">
                     <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
                       {refreshResult.changed ? (
-                        <AlertTriangle className="h-4 w-4 text-amber-500" />
+                        <AlertTriangle className="h-4 w-4 text-warning" />
                       ) : (
-                        <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                        <CheckCircle2 className="h-4 w-4 text-success" />
                       )}
                       Refresh Preview
                     </div>
@@ -783,7 +783,7 @@ export default function Universes() {
                     {(refreshResult.additions.length || refreshResult.removals.length) ? (
                       <div className="mt-3 grid gap-3 md:grid-cols-2">
                         <div>
-                          <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-emerald-700">Additions</div>
+                          <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-success">Additions</div>
                           <div className="flex flex-wrap gap-2">
                             {refreshResult.additions.map((symbol) => (
                               <Badge key={symbol} variant="success">{symbol}</Badge>
@@ -791,7 +791,7 @@ export default function Universes() {
                           </div>
                         </div>
                         <div>
-                          <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-red-700">Removals</div>
+                          <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-danger">Removals</div>
                           <div className="flex flex-wrap gap-2">
                             {refreshResult.removals.map((symbol) => (
                               <Badge key={symbol} variant="error">{symbol}</Badge>
@@ -804,9 +804,9 @@ export default function Universes() {
                 ) : null}
 
                 {detail.validation_errors.length ? (
-                  <div className="rounded-xl border border-red-200 bg-red-50 p-3">
-                    <div className="mb-2 text-sm font-semibold text-red-700">Validation Issues</div>
-                    <div className="space-y-1 text-sm text-red-700">
+                  <div className="rounded-xl border border-danger/40 bg-danger/10 p-3">
+                    <div className="mb-2 text-sm font-semibold text-danger">Validation Issues</div>
+                    <div className="space-y-1 text-sm text-danger">
                       {detail.validation_errors.map((error) => (
                         <div key={error}>{error}</div>
                       ))}
@@ -824,7 +824,7 @@ export default function Universes() {
                           href={document.url}
                           target="_blank"
                           rel="noreferrer"
-                          className="block text-sm text-primary hover:text-blue-700 hover:underline"
+                          className="block text-sm text-primary hover:text-primary hover:underline"
                         >
                           {document.label}
                         </a>
@@ -839,7 +839,7 @@ export default function Universes() {
           {detail ? (
             <Card variant="bordered" className="p-4">
               <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Constituents</h3>
+                <h3 className="text-sm font-semibold text-foreground">Constituents</h3>
                 <div className="text-xs text-muted">{detail.constituents.length} rows</div>
               </div>
               <div className="max-h-[520px] overflow-auto rounded-xl border border-border">

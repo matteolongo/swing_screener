@@ -67,9 +67,9 @@ function convictionVariant(conviction: DecisionConviction): 'default' | 'success
 
 function sentimentChipClass(sentiment: KeyNumber['sentiment']): string {
   switch (sentiment) {
-    case 'bullish': return 'bg-emerald-50 border-emerald-200 text-emerald-800';
-    case 'bearish': return 'bg-rose-50 border-rose-200 text-rose-800';
-    default: return 'bg-slate-100 border-slate-200 text-slate-700';
+    case 'bullish': return 'bg-success/10 border-success/40 text-success';
+    case 'bearish': return 'bg-danger/10 border-danger/40 text-danger';
+    default: return 'bg-foreground/5 border-border text-muted';
   }
 }
 
@@ -83,9 +83,9 @@ function directionArrow(direction: PredictionBullet['direction']): string {
 
 function directionClass(direction: PredictionBullet['direction']): string {
   switch (direction) {
-    case 'bullish': return 'text-emerald-600';
-    case 'bearish': return 'text-rose-600';
-    default: return 'text-slate-500';
+    case 'bullish': return 'text-success';
+    case 'bearish': return 'text-danger';
+    default: return 'text-muted';
   }
 }
 
@@ -97,9 +97,9 @@ const MOVE_DIRECTION_ARROW: Record<PriceMoveDirection, string> = {
 
 function moveDirectionClass(direction: PriceMoveDirection): string {
   switch (direction) {
-    case 'up': return 'border-emerald-200 bg-emerald-50 text-emerald-800';
-    case 'down': return 'border-rose-200 bg-rose-50 text-rose-800';
-    default: return 'border-slate-200 bg-slate-50 text-slate-700';
+    case 'up': return 'border-success/40 bg-success/10 text-success';
+    case 'down': return 'border-danger/40 bg-danger/10 text-danger';
+    default: return 'border-border bg-foreground/5 text-muted';
   }
 }
 
@@ -136,7 +136,7 @@ export default function NarrativeAnalysisCard({
 
       <div className="bg-surface p-3 space-y-3">
         {candidate?.decisionSummary?.action && action !== candidate.decisionSummary.action && (
-          <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          <div className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning">
             {t('workspacePage.panels.analysis.intelligence.secondOpinion', {
               aiAction: actionLabel(action),
               screenerAction: actionLabel(candidate.decisionSummary.action),
@@ -189,11 +189,11 @@ export default function NarrativeAnalysisCard({
 
         {/* Warnings */}
         {warnings.length > 0 && (
-          <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
-            <div className="text-xs font-medium uppercase tracking-wide text-amber-800">
+          <div className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2">
+            <div className="text-xs font-medium uppercase tracking-wide text-warning">
               {t('workspacePage.panels.analysis.decisionSummary.warningsTitle')}
             </div>
-            <ul className="mt-2 space-y-1 text-sm text-amber-900">
+            <ul className="mt-2 space-y-1 text-sm text-warning">
               {warnings.map((w) => <li key={w}>{w}</li>)}
             </ul>
           </div>

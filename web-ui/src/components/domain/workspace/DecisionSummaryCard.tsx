@@ -187,16 +187,16 @@ export default function DecisionSummaryCard({
   const bannerClass = (() => {
     switch (summary.action) {
       case 'BUY_NOW':
-        return 'bg-emerald-600 text-white';
+        return 'bg-success text-white';
       case 'BUY_ON_PULLBACK':
       case 'WAIT_FOR_BREAKOUT':
       case 'TACTICAL_ONLY':
-        return 'bg-amber-400 text-amber-950';
+        return 'bg-warning text-warning';
       case 'AVOID':
-        return 'bg-rose-600 text-white';
+        return 'bg-danger text-white';
       case 'WATCH':
       case 'MANAGE_ONLY':
-        return 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
+        return 'bg-foreground/10 text-foreground';
     }
   })();
 
@@ -237,11 +237,11 @@ export default function DecisionSummaryCard({
       </div>
 
       {warningItems.length ? (
-        <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
-          <div className="text-xs font-medium uppercase tracking-wide text-amber-800">
+        <div className="mt-3 rounded-md border border-warning/40 bg-warning/10 px-3 py-2">
+          <div className="text-xs font-medium uppercase tracking-wide text-warning">
             {t('workspacePage.panels.analysis.decisionSummary.warningsTitle')}
           </div>
-          <ul className="mt-2 space-y-1 text-sm text-amber-900">
+          <ul className="mt-2 space-y-1 text-sm text-warning">
             {warningItems.map((warning) => (
               <li key={warning}>{warning}</li>
             ))}
@@ -353,9 +353,9 @@ export default function DecisionSummaryCard({
           {fairValueMetrics.length ? (
             <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4">
               {fairValueMetrics.map((item) => (
-                <div key={item.label} className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2">
-                  <div className="text-[11px] uppercase tracking-wide text-emerald-800">{item.label}</div>
-                  <div className="mt-1 text-sm font-semibold text-emerald-950">
+                <div key={item.label} className="rounded-md border border-success/40 bg-success/10 px-3 py-2">
+                  <div className="text-[11px] uppercase tracking-wide text-success">{item.label}</div>
+                  <div className="mt-1 text-sm font-semibold text-success">
                     {item.formatter(item.value as number)}
                   </div>
                 </div>

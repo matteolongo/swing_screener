@@ -22,25 +22,25 @@ export default function StrategySafetyScore({
 
   const levelConfig = {
     'beginner-safe': {
-      color: 'text-green-700 dark:text-green-400',
-      bgColor: 'bg-green-100 dark:bg-green-900/30',
-      borderColor: 'border-green-300 dark:border-green-700',
+      color: 'text-success',
+      bgColor: 'bg-success/10',
+      borderColor: 'border-success/40',
       icon: '🟢',
       label: 'Beginner Safe',
       message: 'This configuration follows conservative best practices.',
     },
     'requires-discipline': {
-      color: 'text-yellow-700 dark:text-yellow-400',
-      bgColor: 'bg-yellow-100 dark:bg-yellow-900/30',
-      borderColor: 'border-yellow-300 dark:border-yellow-700',
+      color: 'text-warning',
+      bgColor: 'bg-warning/10',
+      borderColor: 'border-warning/40',
       icon: '🟡',
       label: 'Requires Discipline',
       message: 'This configuration requires consistent execution and emotional control.',
     },
     'expert-only': {
-      color: 'text-red-700 dark:text-red-400',
-      bgColor: 'bg-red-100 dark:bg-red-900/30',
-      borderColor: 'border-red-300 dark:border-red-700',
+      color: 'text-danger',
+      bgColor: 'bg-danger/10',
+      borderColor: 'border-danger/40',
       icon: '🔴',
       label: 'Expert Only',
       message: 'This configuration has elevated risk. Only use with extensive experience.',
@@ -63,22 +63,22 @@ export default function StrategySafetyScore({
       <CardContent>
         <div className="space-y-3">
           {isLoading && (
-            <div className="text-sm text-gray-600 dark:text-gray-300">
+            <div className="text-sm text-muted">
               Validating current parameters...
             </div>
           )}
 
           {isError && (
-            <div className="text-sm text-red-600 dark:text-red-400">
+            <div className="text-sm text-danger">
               Validation service unavailable. Showing last known result.
             </div>
           )}
 
-          <div className={`flex items-center gap-3 p-3 rounded-lg border ${config.borderColor} bg-white dark:bg-gray-800`}>
+          <div className={`flex items-center gap-3 p-3 rounded-lg border ${config.borderColor} bg-surface`}>
             <span className="text-3xl">{config.icon}</span>
             <div className="flex-1">
               <div className={`font-bold text-lg ${config.color}`}>{config.label}</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              <div className="text-sm text-muted mt-1">
                 {config.message}
               </div>
             </div>
@@ -86,11 +86,11 @@ export default function StrategySafetyScore({
 
           {dangerWarnings.length > 0 && (
             <div className="space-y-2">
-              <div className="font-semibold text-sm text-red-700 dark:text-red-400">
+              <div className="font-semibold text-sm text-danger">
                 Critical Issues ({dangerWarnings.length}):
               </div>
               {dangerWarnings.map((warning, idx) => (
-                <div key={idx} className="text-sm text-red-600 dark:text-red-400 pl-4">
+                <div key={idx} className="text-sm text-danger pl-4">
                   • {warning.message}
                 </div>
               ))}
@@ -99,11 +99,11 @@ export default function StrategySafetyScore({
 
           {regularWarnings.length > 0 && (
             <div className="space-y-2">
-              <div className="font-semibold text-sm text-yellow-700 dark:text-yellow-400">
+              <div className="font-semibold text-sm text-warning">
                 Considerations ({regularWarnings.length}):
               </div>
               {regularWarnings.map((warning, idx) => (
-                <div key={idx} className="text-sm text-yellow-600 dark:text-yellow-400 pl-4">
+                <div key={idx} className="text-sm text-warning pl-4">
                   • {warning.message}
                 </div>
               ))}
@@ -112,11 +112,11 @@ export default function StrategySafetyScore({
 
           {infoWarnings.length > 0 && (
             <div className="space-y-2">
-              <div className="font-semibold text-sm text-blue-700 dark:text-blue-300">
+              <div className="font-semibold text-sm text-primary">
                 Notes ({infoWarnings.length}):
               </div>
               {infoWarnings.map((warning, idx) => (
-                <div key={idx} className="text-sm text-blue-600 dark:text-blue-300 pl-4">
+                <div key={idx} className="text-sm text-primary pl-4">
                   • {warning.message}
                 </div>
               ))}
@@ -124,7 +124,7 @@ export default function StrategySafetyScore({
           )}
 
           {warnings.length === 0 && (
-            <div className="text-sm text-green-700 dark:text-green-400">
+            <div className="text-sm text-success">
               ✅ All parameters are within recommended ranges.
             </div>
           )}

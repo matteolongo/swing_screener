@@ -53,10 +53,10 @@ interface StatCardProps {
 
 function StatCard({ label, value, colorClass, hint }: StatCardProps) {
   return (
-    <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4">
-      <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{label}</p>
-      <p className={cn('mt-1 text-xl font-bold', colorClass ?? 'text-gray-900 dark:text-gray-100')}>{value}</p>
-      {hint ? <p className="mt-1 text-[11px] text-gray-400 dark:text-gray-500 leading-tight">{hint}</p> : null}
+    <div className="rounded-lg border border-border bg-surface p-4">
+      <p className="text-[11px] font-medium uppercase tracking-wide text-muted">{label}</p>
+      <p className={cn('mt-1 text-xl font-bold', colorClass ?? 'text-foreground')}>{value}</p>
+      {hint ? <p className="mt-1 text-[11px] text-muted leading-tight">{hint}</p> : null}
     </div>
   );
 }
@@ -72,7 +72,7 @@ function EquityCurveChart({ data }: { data: EquityPoint[] }) {
 
   if (data.length === 0) {
     return (
-      <div className="flex items-center justify-center h-[240px] text-sm text-gray-400 dark:text-gray-500">
+      <div className="flex items-center justify-center h-[240px] text-sm text-muted">
         {t('analyticsPage.labels.noTrades')}
       </div>
     );
@@ -258,22 +258,22 @@ function RDistributionChart({ values }: { values: number[] }) {
 
 const VERDICT_STYLES: Record<EdgeVerdict, { border: string; bg: string; label: string; labelClass: string }> = {
   positive: {
-    border: 'border-green-200 dark:border-green-700',
-    bg: 'bg-green-50 dark:bg-green-900/20',
+    border: 'border-success/40',
+    bg: 'bg-success/10',
     label: t('analyticsPage.insight.verdictLabel.positive'),
-    labelClass: 'text-green-700 dark:text-green-300',
+    labelClass: 'text-success',
   },
   developing: {
-    border: 'border-amber-200 dark:border-amber-700',
-    bg: 'bg-amber-50 dark:bg-amber-900/20',
+    border: 'border-warning/40',
+    bg: 'bg-warning/10',
     label: t('analyticsPage.insight.verdictLabel.developing'),
-    labelClass: 'text-amber-700 dark:text-amber-300',
+    labelClass: 'text-warning',
   },
   negative: {
-    border: 'border-red-200 dark:border-red-700',
-    bg: 'bg-red-50 dark:bg-red-900/20',
+    border: 'border-danger/40',
+    bg: 'bg-danger/10',
     label: t('analyticsPage.insight.verdictLabel.negative'),
-    labelClass: 'text-red-700 dark:text-red-400',
+    labelClass: 'text-danger',
   },
 };
 
@@ -290,48 +290,48 @@ function EdgeInsightCard({ totalTrades, avgR, profitFactor, winRate }: EdgeInsig
   return (
     <div className={cn('rounded-lg border px-4 py-3', styles.border, styles.bg)}>
       <div className="flex items-baseline gap-2 mb-1">
-        <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-muted">
           {t('analyticsPage.insight.title')}
         </span>
         <span className={cn('text-xs font-bold uppercase tracking-wide', styles.labelClass)}>
           {styles.label}
         </span>
       </div>
-      <p className="text-sm text-gray-700 dark:text-gray-300">{insight.message}</p>
+      <p className="text-sm text-muted">{insight.message}</p>
     </div>
   );
 }
 
 function HowToReadBox() {
   return (
-    <details open className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 px-4 py-3 text-sm">
-      <summary className="cursor-pointer font-medium text-gray-700 dark:text-gray-300 select-none">
+    <details open className="rounded-lg border border-border bg-foreground/5 px-4 py-3 text-sm">
+      <summary className="cursor-pointer font-medium text-muted select-none">
         How to read this page
       </summary>
       <dl className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 text-sm">
         <div>
-          <dt className="font-semibold text-gray-800 dark:text-gray-200">R (Risk unit)</dt>
-          <dd className="mt-0.5 text-gray-500 dark:text-gray-400">1R = your initial risk per trade (entry − stop × shares). Every result is expressed as a multiple: +2R means you made 2× your risk, −1R means you lost your full planned risk.</dd>
+          <dt className="font-semibold text-foreground">R (Risk unit)</dt>
+          <dd className="mt-0.5 text-muted">1R = your initial risk per trade (entry − stop × shares). Every result is expressed as a multiple: +2R means you made 2× your risk, −1R means you lost your full planned risk.</dd>
         </div>
         <div>
-          <dt className="font-semibold text-gray-800 dark:text-gray-200">Avg R</dt>
-          <dd className="mt-0.5 text-gray-500 dark:text-gray-400">Average R across all closed trades. Must stay above 0R over time to grow the account. Negative avg R means every trade costs you money on average.</dd>
+          <dt className="font-semibold text-foreground">Avg R</dt>
+          <dd className="mt-0.5 text-muted">Average R across all closed trades. Must stay above 0R over time to grow the account. Negative avg R means every trade costs you money on average.</dd>
         </div>
         <div>
-          <dt className="font-semibold text-gray-800 dark:text-gray-200">Profit Factor</dt>
-          <dd className="mt-0.5 text-gray-500 dark:text-gray-400">Total gains ÷ total losses (in R). 1.0 = break even, &gt; 1.0 = profitable. A value of 0.20 means for every 1R gained, 5R is lost in aggregate.</dd>
+          <dt className="font-semibold text-foreground">Profit Factor</dt>
+          <dd className="mt-0.5 text-muted">Total gains ÷ total losses (in R). 1.0 = break even, &gt; 1.0 = profitable. A value of 0.20 means for every 1R gained, 5R is lost in aggregate.</dd>
         </div>
         <div>
-          <dt className="font-semibold text-gray-800 dark:text-gray-200">Max R</dt>
-          <dd className="mt-0.5 text-gray-500 dark:text-gray-400">The best paper gain reached during the trade before exit (based on highest price). Useful to understand how much you left on the table vs. how much you captured.</dd>
+          <dt className="font-semibold text-foreground">Max R</dt>
+          <dd className="mt-0.5 text-muted">The best paper gain reached during the trade before exit (based on highest price). Useful to understand how much you left on the table vs. how much you captured.</dd>
         </div>
         <div>
-          <dt className="font-semibold text-gray-800 dark:text-gray-200">Equity Curve</dt>
-          <dd className="mt-0.5 text-gray-500 dark:text-gray-400">Cumulative R over time — each dot is one closed trade. Hover a dot to see the individual result. A flat or rising curve above 0 is the goal.</dd>
+          <dt className="font-semibold text-foreground">Equity Curve</dt>
+          <dd className="mt-0.5 text-muted">Cumulative R over time — each dot is one closed trade. Hover a dot to see the individual result. A flat or rising curve above 0 is the goal.</dd>
         </div>
         <div>
-          <dt className="font-semibold text-gray-800 dark:text-gray-200">R Distribution</dt>
-          <dd className="mt-0.5 text-gray-500 dark:text-gray-400">How many trades landed in each R outcome bucket. Red bars = losses, green = wins. Empty buckets appear as thin marks. Ideal shape: taller bars on the right than the left.</dd>
+          <dt className="font-semibold text-foreground">R Distribution</dt>
+          <dd className="mt-0.5 text-muted">How many trades landed in each R outcome bucket. Red bars = losses, green = wins. Empty buckets appear as thin marks. Ideal shape: taller bars on the right than the left.</dd>
         </div>
       </dl>
     </details>
@@ -397,11 +397,11 @@ export default function Analytics() {
     return (
       <div className="mx-auto max-w-[1200px] px-4 py-6">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('analyticsPage.title')}</h1>
+          <h1 className="text-2xl font-bold text-foreground">{t('analyticsPage.title')}</h1>
         </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-6 mb-6">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-20 animate-pulse rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800" />
+            <div key={i} className="h-20 animate-pulse rounded-lg border border-border bg-foreground/5" />
           ))}
         </div>
       </div>
@@ -411,7 +411,7 @@ export default function Analytics() {
   if (isError) {
     return (
       <div className="mx-auto max-w-[1200px] px-4 py-6">
-        <p className="text-sm text-red-600">{t('common.errors.generic')}</p>
+        <p className="text-sm text-danger">{t('common.errors.generic')}</p>
       </div>
     );
   }
@@ -422,12 +422,12 @@ export default function Analytics() {
     <div className="mx-auto max-w-[1200px] px-4 py-6 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('analyticsPage.title')}</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('analyticsPage.subtitle')}</p>
+        <h1 className="text-2xl font-bold text-foreground">{t('analyticsPage.title')}</h1>
+        <p className="text-sm text-muted mt-1">{t('analyticsPage.subtitle')}</p>
       </div>
 
       {!hasData ? (
-        <p className="text-sm text-gray-500 dark:text-gray-400">{t('analyticsPage.empty')}</p>
+        <p className="text-sm text-muted">{t('analyticsPage.empty')}</p>
       ) : (
         <>
           {/* Edge insight — computed verdict above stat cards */}
@@ -445,7 +445,7 @@ export default function Analytics() {
               value={stats.winRate != null ? `${formatNumber(stats.winRate, 1)}%` : '—'}
               colorClass={
                 stats.winRate != null
-                  ? stats.winRate >= 50 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                  ? stats.winRate >= 50 ? 'text-success' : 'text-danger'
                   : undefined
               }
               hint={`${stats.winCount}W · ${stats.lossCount}L · ${stats.beCount}BE of ${stats.totalTrades} trades`}
@@ -461,7 +461,7 @@ export default function Analytics() {
               value={stats.profitFactor != null ? formatNumber(stats.profitFactor, 2) : '—'}
               colorClass={
                 stats.profitFactor != null
-                  ? stats.profitFactor >= 1 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                  ? stats.profitFactor >= 1 ? 'text-success' : 'text-danger'
                   : undefined
               }
               hint="total gains ÷ total losses · > 1.0 = profitable"
@@ -474,13 +474,13 @@ export default function Analytics() {
             <StatCard
               label={t('analyticsPage.stats.maxWinStreak')}
               value={String(stats.maxWinStreak)}
-              colorClass="text-green-600 dark:text-green-400"
+              colorClass="text-success"
               hint="consecutive wins (longest run)"
             />
             <StatCard
               label={t('analyticsPage.stats.maxLossStreak')}
               value={String(stats.maxLossStreak)}
-              colorClass="text-red-600 dark:text-red-400"
+              colorClass="text-danger"
               hint="consecutive losses (longest run)"
             />
           </div>
@@ -488,23 +488,23 @@ export default function Analytics() {
           {/* Charts row */}
           <div className="grid grid-cols-3 gap-4">
             {/* Equity Curve — 2/3 width */}
-            <div className="col-span-3 lg:col-span-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4">
+            <div className="col-span-3 lg:col-span-2 rounded-lg border border-border bg-surface p-4">
               <div className="flex items-baseline justify-between mb-3">
-                <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                <h2 className="text-sm font-semibold text-muted">
                   {t('analyticsPage.charts.equityCurve')}
                 </h2>
-                <span className="text-[11px] text-gray-400 dark:text-gray-500">hover a dot for trade detail</span>
+                <span className="text-[11px] text-muted">hover a dot for trade detail</span>
               </div>
               <EquityCurveChart data={stats.equityCurve} />
             </div>
 
             {/* R Distribution — 1/3 width */}
-            <div className="col-span-3 lg:col-span-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4">
+            <div className="col-span-3 lg:col-span-1 rounded-lg border border-border bg-surface p-4">
               <div className="flex items-baseline justify-between mb-3">
-                <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                <h2 className="text-sm font-semibold text-muted">
                   {t('analyticsPage.charts.rDistribution')}
                 </h2>
-                <span className="text-[11px] text-gray-400 dark:text-gray-500">red = loss · green = win</span>
+                <span className="text-[11px] text-muted">red = loss · green = win</span>
               </div>
               <RDistributionChart values={stats.rValues} />
             </div>
@@ -515,7 +515,7 @@ export default function Analytics() {
 
           {/* Edge by setup type */}
           <section>
-            <h2 className="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
+            <h2 className="mb-3 text-sm font-semibold text-muted">
               {t('analyticsPage.edgeBreakdown.title')}
             </h2>
             <EdgeBreakdownTable positions={stats.sorted} />
@@ -523,58 +523,58 @@ export default function Analytics() {
 
           {/* By market regime */}
           <section>
-            <h2 className="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">
+            <h2 className="mb-1 text-sm font-semibold text-muted">
               {t('analyticsPage.regimeBreakdown.title')}
             </h2>
-            <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
+            <p className="mb-3 text-xs text-muted">
               {t('analyticsPage.regimeBreakdown.subtitle')}
             </p>
             <RegimeBreakdownTable />
           </section>
 
           {/* Trade list table */}
-          <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-x-auto">
+          <div className="rounded-lg border border-border overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                <tr className="border-b border-border bg-foreground/5">
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">
                     {t('analyticsPage.table.date')}
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">
                     {t('analyticsPage.table.ticker')}
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted">
                     {t('analyticsPage.table.entry')}
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted">
                     {t('analyticsPage.table.exit')}
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted">
                     {t('analyticsPage.table.finalR')}
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted">
                     {t('analyticsPage.table.maxR')}
                     <span className="ml-1 font-normal normal-case opacity-60" title="Best paper gain reached before exit">↑peak</span>
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted">
                     {t('analyticsPage.table.holdDays')}
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+              <tbody className="divide-y divide-border">
                 {stats.sorted.map((p) => {
                   const fr = finalR(p);
                   const mr = maxR(p);
                   const hd = holdingDays(p);
                   const resultLabel = fr == null ? null : fr > 0 ? 'W' : fr < 0 ? 'L' : 'BE';
                   const resultClass = fr == null ? '' : fr > 0
-                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                    ? 'bg-success/10 text-success'
                     : fr < 0
-                      ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                      : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
+                      ? 'bg-danger/10 text-danger'
+                      : 'bg-foreground/5 text-muted';
                   return (
-                    <tr key={p.positionId ?? `${p.ticker}-${p.exitDate}`} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                      <td className="px-4 py-3 text-gray-600 dark:text-gray-400 whitespace-nowrap">{p.exitDate ?? '—'}</td>
+                    <tr key={p.positionId ?? `${p.ticker}-${p.exitDate}`} className="hover:bg-foreground/5">
+                      <td className="px-4 py-3 text-muted whitespace-nowrap">{p.exitDate ?? '—'}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           {resultLabel && (
@@ -582,7 +582,7 @@ export default function Analytics() {
                               {resultLabel}
                             </span>
                           )}
-                          <span className="font-semibold text-gray-900 dark:text-gray-100">{p.ticker}</span>
+                          <span className="font-semibold text-foreground">{p.ticker}</span>
                         </div>
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(p.entryPrice, 'EUR')}</td>
@@ -593,11 +593,11 @@ export default function Analytics() {
                         {fr != null ? <RChip value={fr} /> : '—'}
                       </td>
                       <td className={cn('px-4 py-3 text-right tabular-nums',
-                        mr != null && mr > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'
+                        mr != null && mr > 0 ? 'text-primary' : 'text-muted'
                       )}>
                         {mr != null ? `${mr > 0 ? '+' : ''}${formatNumber(mr, 2)}R` : '—'}
                       </td>
-                      <td className="px-4 py-3 text-right tabular-nums text-gray-600 dark:text-gray-400">
+                      <td className="px-4 py-3 text-right tabular-nums text-muted">
                         {hd != null ? String(hd) : '—'}
                       </td>
                     </tr>

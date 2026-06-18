@@ -168,7 +168,7 @@ export default function OnboardingPage() {
             {STEPS.map((_, index) => (
               <div
                 key={index}
-                className={`h-2 flex-1 rounded-full ${index <= stepIndex ? 'bg-blue-600' : 'bg-gray-200'}`}
+                className={`h-2 flex-1 rounded-full ${index <= stepIndex ? 'bg-primary' : 'bg-foreground/10'}`}
               />
             ))}
           </div>
@@ -179,7 +179,7 @@ export default function OnboardingPage() {
           <div>{step.content}</div>
 
           {isStrategyStep && !strategyReady ? (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+            <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm text-warning">
               {t('onboardingPage.strategyStep.blockingHint')}
             </div>
           ) : null}

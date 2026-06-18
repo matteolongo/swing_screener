@@ -78,13 +78,13 @@ export default function FundamentalsPage({ initialSymbol, defaultSimple = false 
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">{t('fundamentalsPage.title')}</h1>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
+        <p className="text-sm text-muted">
           {t('fundamentalsPage.description')}
         </p>
       </div>
 
       {showAdvancedTools && configQuery.data ? (
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+        <div className="rounded-lg border border-success/40 bg-success/10 px-4 py-3 text-sm text-success">
           {t('fundamentalsPage.config.providerInfo', {
             provider: configQuery.data.providers.join(', '),
             ttl: configQuery.data.cacheTtlHours,
@@ -127,10 +127,10 @@ export default function FundamentalsPage({ initialSymbol, defaultSimple = false 
         </div>
         <div className="mt-3 space-y-1">
           {compareMutation.isError ? (
-            <p className="text-sm text-rose-600">{compareMutation.error.message}</p>
+            <p className="text-sm text-danger">{compareMutation.error.message}</p>
           ) : null}
           {warmupMutation.isError ? (
-            <p className="text-sm text-rose-600">{warmupMutation.error.message}</p>
+            <p className="text-sm text-danger">{warmupMutation.error.message}</p>
           ) : null}
         </div>
       </div>
@@ -139,7 +139,7 @@ export default function FundamentalsPage({ initialSymbol, defaultSimple = false 
         <div className="rounded-lg border border-primary/40 bg-primary/10 p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <div className="text-sm font-semibold text-sky-950">{t('fundamentalsPage.warmup.title')}</div>
+              <div className="text-sm font-semibold text-primary">{t('fundamentalsPage.warmup.title')}</div>
               <div className="text-xs text-primary">
                 {t('fundamentalsPage.warmup.job', {
                   jobId: warmupJobId,
@@ -194,7 +194,7 @@ export default function FundamentalsPage({ initialSymbol, defaultSimple = false 
           ) : null}
 
           {warmupStatusQuery.isError ? (
-            <p className="mt-3 text-sm text-rose-600">{warmupStatusQuery.error.message}</p>
+            <p className="mt-3 text-sm text-danger">{warmupStatusQuery.error.message}</p>
           ) : null}
         </div>
       ) : null}

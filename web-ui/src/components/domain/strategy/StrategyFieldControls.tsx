@@ -3,7 +3,7 @@ import HelpTooltip from '@/components/common/HelpTooltip';
 import { t } from '@/i18n/t';
 
 export const strategyFieldClass =
-  'w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-800';
+  'w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-surface';
 
 export type HelpInfo = {
   short: string;

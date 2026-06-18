@@ -65,7 +65,7 @@ export default function WorkspaceSymbolModal({ ticker, position = null, onBack }
     >
       <div className="space-y-4">
         <div className="flex items-start justify-between gap-4">
-          <p className="text-sm text-gray-600 dark:text-gray-400">{t('workspacePage.symbolDetails.description')}</p>
+          <p className="text-sm text-muted">{t('workspacePage.symbolDetails.description')}</p>
           <div className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
@@ -81,7 +81,7 @@ export default function WorkspaceSymbolModal({ ticker, position = null, onBack }
               href={yahooUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex w-fit items-center gap-1 rounded-md border border-gray-200 px-2.5 py-1.5 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+              className="inline-flex w-fit items-center gap-1 rounded-md border border-border px-2.5 py-1.5 text-sm text-muted hover:bg-foreground/5"
               title={t('screener.table.yahooTickerTitle', { ticker })}
             >
               <ExternalLink className="h-4 w-4" />
@@ -114,10 +114,10 @@ export default function WorkspaceSymbolModal({ ticker, position = null, onBack }
         <div className="space-y-3">
           {activeTab === 'overview' ? (
             <>
-              <div className="rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-900">
+              <div className="rounded-lg border border-border bg-surface p-3">
                 <div className="flex items-center justify-between gap-3">
                   <h3 className="text-base font-semibold">{ticker}</h3>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                  <span className="text-xs text-muted">
                     {t('workspacePage.panels.analysis.chartHint')}
                   </span>
                 </div>
@@ -151,7 +151,7 @@ export default function WorkspaceSymbolModal({ ticker, position = null, onBack }
                   </Button>
                 </div>
                 {intelligenceMutation.isError && (
-                  <p className="mt-2 text-sm text-rose-600">
+                  <p className="mt-2 text-sm text-danger">
                     {intelligenceMutation.error instanceof Error
                       ? intelligenceMutation.error.message
                       : t('workspacePage.panels.analysis.intelligence.analyzeError')}

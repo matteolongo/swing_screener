@@ -26,8 +26,8 @@ export default function OrderReadinessGate({ readiness, children }: OrderReadine
 
   return (
     <div className="space-y-3">
-      <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-100">
-        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-300" aria-hidden="true" />
+      <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-3 text-sm text-warning">
+        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
         <span>
           {requiresOverride
             ? t('orderGate.avoidWarning')
@@ -37,7 +37,7 @@ export default function OrderReadinessGate({ readiness, children }: OrderReadine
 
       {requiresOverride ? (
         <>
-          <label className="flex cursor-pointer items-start gap-2 rounded border border-yellow-200 bg-yellow-50 px-3 py-2 text-xs text-yellow-900 dark:border-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-200">
+          <label className="flex cursor-pointer items-start gap-2 rounded border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">
             <input
               type="checkbox"
               checked={overrideChecked}

@@ -44,19 +44,19 @@ function PastReviews({ reviews }: { reviews: WeeklyReview[] }) {
 
   return (
     <div className="mt-4 space-y-2">
-      <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Past Reviews</h3>
+      <h3 className="text-sm font-semibold text-muted">Past Reviews</h3>
       {pastReviews.map((review) => (
-        <div key={review.week_id} className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div key={review.week_id} className="rounded-lg border border-border overflow-hidden">
           <button
             type="button"
             onClick={() => setExpandedWeek(expandedWeek === review.week_id ? null : review.week_id)}
-            className="w-full px-3 py-2 flex items-center justify-between bg-gray-50 dark:bg-gray-900 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 text-left"
+            className="w-full px-3 py-2 flex items-center justify-between bg-foreground/5 text-sm font-medium text-muted hover:bg-foreground/5 text-left"
           >
             <span>Week {review.week_id}</span>
             <span className="text-muted">{expandedWeek === review.week_id ? '▲' : '▼'}</span>
           </button>
           {expandedWeek === review.week_id && (
-            <div className="px-3 py-2 space-y-2 text-sm text-gray-700 dark:text-gray-300">
+            <div className="px-3 py-2 space-y-2 text-sm text-muted">
               {review.what_worked && (
                 <div>
                   <span className="font-medium text-xs text-muted uppercase tracking-wide">What Worked</span>
@@ -127,10 +127,10 @@ export default function Book() {
     <div className="mx-auto max-w-[1200px] px-4 py-4">
       {/* Page header */}
       <div className="mb-4">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+        <h1 className="text-2xl font-bold text-foreground">
           {t('bookPage.title')}
         </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+        <p className="text-sm text-muted mt-1">
           {t('bookPage.subtitle')}
         </p>
       </div>
@@ -146,7 +146,7 @@ export default function Book() {
               'px-4 py-2 rounded-full text-sm font-medium transition-colors',
               activeTab === key
                 ? 'bg-primary/10 text-primary font-semibold'
-                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                : 'text-muted hover:text-muted'
             )}
           >
             {label}

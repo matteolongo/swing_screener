@@ -19,7 +19,7 @@ export default function TableState({
 }: TableStateProps) {
   if (loading) {
     return (
-      <div className="text-sm text-gray-600 dark:text-gray-400">
+      <div className="text-sm text-muted">
         {loadingMessage ?? t('tableState.loadingFallback')}
       </div>
     );
@@ -27,7 +27,7 @@ export default function TableState({
 
   if (error) {
     return (
-      <div className="flex items-start gap-2 text-sm text-red-700 dark:text-red-300">
+      <div className="flex items-start gap-2 text-sm text-danger">
         <AlertCircle className="w-4 h-4 mt-0.5" />
         <span>
           {t('tableState.errorPrefix')}: {error}
@@ -38,7 +38,7 @@ export default function TableState({
 
   if (empty) {
     return (
-      <div className="text-sm text-gray-600 dark:text-gray-400">
+      <div className="text-sm text-muted">
         {emptyMessage ?? t('tableState.emptyFallback')}
       </div>
     );

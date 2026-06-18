@@ -45,22 +45,22 @@ function comparePeriodDesc(left: string, right: string) {
 }
 
 function pillStatusClass(status: FundamentalSnapshot['coverageStatus'] | 'strong' | 'neutral' | 'weak' | 'unavailable') {
-  if (status === 'supported' || status === 'strong') return 'bg-emerald-100 text-emerald-800';
-  if (status === 'partial' || status === 'neutral') return 'bg-amber-100 text-amber-800';
-  if (status === 'unsupported' || status === 'weak') return 'bg-rose-100 text-rose-800';
+  if (status === 'supported' || status === 'strong') return 'bg-success/10 text-success';
+  if (status === 'partial' || status === 'neutral') return 'bg-warning/10 text-warning';
+  if (status === 'unsupported' || status === 'weak') return 'bg-danger/10 text-danger';
   return 'bg-surface text-muted';
 }
 
 function qualityBadgeClass(status: FundamentalSnapshot['dataQualityStatus']) {
-  if (status === 'high') return 'bg-emerald-100 text-emerald-800';
-  if (status === 'medium') return 'bg-amber-100 text-amber-800';
-  return 'bg-rose-100 text-rose-800';
+  if (status === 'high') return 'bg-success/10 text-success';
+  if (status === 'medium') return 'bg-warning/10 text-warning';
+  return 'bg-danger/10 text-danger';
 }
 
 function trendClass(direction: 'improving' | 'deteriorating' | 'stable' | 'unknown' | 'not_comparable') {
-  if (direction === 'improving') return 'bg-emerald-100 text-emerald-800';
-  if (direction === 'deteriorating') return 'bg-rose-100 text-rose-800';
-  if (direction === 'stable') return 'bg-amber-100 text-amber-800';
+  if (direction === 'improving') return 'bg-success/10 text-success';
+  if (direction === 'deteriorating') return 'bg-danger/10 text-danger';
+  if (direction === 'stable') return 'bg-warning/10 text-warning';
   if (direction === 'not_comparable') return 'bg-surface text-muted';
   return 'bg-surface text-muted';
 }
@@ -218,10 +218,10 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <CardTitle>{snapshot.symbol}</CardTitle>
-            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+            <p className="mt-1 text-sm text-muted">
               {snapshot.companyName ?? 'Unknown company'}
             </p>
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            <p className="mt-1 text-xs text-muted">
               {[
                 snapshot.sector,
                 snapshot.currency,
@@ -249,9 +249,9 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
       </CardHeader>
       <CardContent className="space-y-4">
         {snapshot.dataQualityFlags.length > 0 ? (
-          <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
-            <h4 className="text-sm font-semibold text-amber-700 dark:text-amber-300">Data quality</h4>
-            <ul className="mt-2 space-y-1 text-sm text-amber-800 dark:text-amber-200">
+          <div className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2">
+            <h4 className="text-sm font-semibold text-warning">Data quality</h4>
+            <ul className="mt-2 space-y-1 text-sm text-warning">
               {snapshot.dataQualityFlags.map((item) => (
                 <li key={item}>• {item}</li>
               ))}
@@ -267,26 +267,26 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
               Use the pillar scores and trust notes below to confirm the quality of the setup.
             </p>
           </div>
-          <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3">
-            <div className="text-[11px] font-medium uppercase tracking-wide text-emerald-800">Key supports</div>
-            <ul className="mt-2 space-y-1 text-sm text-emerald-950">
+          <div className="rounded-md border border-success/40 bg-success/10 p-3">
+            <div className="text-[11px] font-medium uppercase tracking-wide text-success">Key supports</div>
+            <ul className="mt-2 space-y-1 text-sm text-success">
               {(topSupports.length ? topSupports : ['No strong support stands out yet.']).map((item) => (
                 <li key={item}>• {item}</li>
               ))}
             </ul>
           </div>
-          <div className="rounded-md border border-rose-200 bg-rose-50 p-3">
-            <div className="text-[11px] font-medium uppercase tracking-wide text-rose-800">Main concerns</div>
-            <ul className="mt-2 space-y-1 text-sm text-rose-900">
+          <div className="rounded-md border border-danger/40 bg-danger/10 p-3">
+            <div className="text-[11px] font-medium uppercase tracking-wide text-danger">Main concerns</div>
+            <ul className="mt-2 space-y-1 text-sm text-danger">
               {(topConcerns.length ? topConcerns : ['No major fundamental red flag is currently visible.']).map((item) => (
                 <li key={item}>• {item}</li>
               ))}
             </ul>
           </div>
-          <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
-            <div className="text-[11px] font-medium uppercase tracking-wide text-amber-800">Data quality</div>
-            <p className="mt-2 text-sm text-amber-900">{trustStatement}</p>
-            <p className="mt-2 text-xs text-amber-800">
+          <div className="rounded-md border border-warning/40 bg-warning/10 p-3">
+            <div className="text-[11px] font-medium uppercase tracking-wide text-warning">Data quality</div>
+            <p className="mt-2 text-sm text-warning">{trustStatement}</p>
+            <p className="mt-2 text-xs text-warning">
               Quality status: <span className="font-semibold">{snapshot.dataQualityStatus}</span>
             </p>
           </div>
@@ -294,7 +294,7 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
 
         {pillars.length > 0 ? (
           <div className="space-y-2">
-            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Pillar scores</h4>
+            <h4 className="text-sm font-semibold text-muted">Pillar scores</h4>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {pillars.map(([name, pillar]) => (
                 <div key={name} className="rounded-md border border-border bg-surface p-3">
@@ -340,8 +340,8 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
           <div className="grid gap-4 md:grid-cols-2">
             {safeHighlights.length > 0 ? (
               <div>
-                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Highlights</h4>
-                <ul className="mt-2 space-y-1 text-sm text-gray-600 dark:text-gray-400">
+                <h4 className="text-sm font-semibold text-muted">Highlights</h4>
+                <ul className="mt-2 space-y-1 text-sm text-muted">
                   {safeHighlights.map((item) => (
                     <li key={item}>• {item}</li>
                   ))}
@@ -351,8 +351,8 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
 
             {safeRedFlags.length > 0 ? (
               <div>
-                <h4 className="text-sm font-semibold text-rose-700 dark:text-rose-300">Red flags</h4>
-                <ul className="mt-2 space-y-1 text-sm text-rose-700 dark:text-rose-300">
+                <h4 className="text-sm font-semibold text-danger">Red flags</h4>
+                <ul className="mt-2 space-y-1 text-sm text-danger">
                   {safeRedFlags.map((item) => (
                     <li key={item}>• {item}</li>
                   ))}
@@ -364,7 +364,7 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
 
         {historicalSeries.length > 0 ? (
           <div className="space-y-2">
-            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Recent history</h4>
+            <h4 className="text-sm font-semibold text-muted">Recent history</h4>
             <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
               {historicalSeries.map(([key, series]) => (
                 <div key={key} className="overflow-hidden rounded-md border border-border bg-surface">
@@ -419,7 +419,7 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
         ) : null}
 
         {snapshot.error ? (
-          <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+          <p className="rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
             {snapshot.error}
           </p>
         ) : null}

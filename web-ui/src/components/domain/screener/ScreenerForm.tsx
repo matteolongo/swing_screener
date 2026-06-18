@@ -145,7 +145,7 @@ export default function ScreenerForm({
         {/* Row 1: Universe name + Run CTA */}
         <div className="flex items-center justify-between gap-3">
           <div>
-            <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+            <span className="text-sm font-semibold text-foreground">
               {selectedUniverseMeta?.description ?? selectedUniverse}
             </span>
             {selectedUniverseMeta && (
@@ -177,29 +177,29 @@ export default function ScreenerForm({
         </div>
         {/* Row 2: Key filter pills */}
         <div className="flex flex-wrap gap-1.5">
-          <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+          <span className="text-[11px] px-2 py-0.5 rounded-full bg-foreground/10 text-muted">
             {t('screener.controls.topN')}: {topN}
           </span>
-          <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+          <span className="text-[11px] px-2 py-0.5 rounded-full bg-foreground/10 text-muted">
             ${minPrice}–${maxPrice}
           </span>
           {currencyFilter !== 'all' && (
-            <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-foreground/10 text-muted">
               {currencyFilter.toUpperCase()}
             </span>
           )}
           {exchangeFilter !== 'all' && (
-            <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-foreground/10 text-muted">
               {exchangeFilter}
             </span>
           )}
           {instrumentFilter !== 'all' && (
-            <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-foreground/10 text-muted">
               {instrumentFilter}
             </span>
           )}
           {!includeOtc && (
-            <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-foreground/10 text-muted">
               {t('screener.controls.noOtc')}
             </span>
           )}

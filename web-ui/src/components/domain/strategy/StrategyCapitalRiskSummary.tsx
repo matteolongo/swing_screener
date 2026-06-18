@@ -63,12 +63,12 @@ export default function StrategyCapitalRiskSummary({
     return (
       <div
         className={cn(
-          'flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-slate-50/90 px-3 py-2 text-xs text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-200',
+          'flex flex-wrap items-center gap-2 rounded-lg border border-border bg-foreground/5 px-3 py-2 text-xs text-muted shadow-sm',
           className,
         )}
       >
-        <span className="inline-flex items-center gap-1 font-semibold text-slate-900 dark:text-slate-100">
-          <span className="text-slate-500 dark:text-slate-400">Risk</span>
+        <span className="inline-flex items-center gap-1 font-semibold text-foreground">
+          <span className="text-muted">Risk</span>
           <span>{snapshot.strategyName}</span>
         </span>
         <span title={snapshot.isEquityMode ? t('portfolioHeader.equityModeHint') : undefined}>
@@ -87,57 +87,57 @@ export default function StrategyCapitalRiskSummary({
     <Card
       variant="bordered"
       className={cn(
-        'border-sky-200 bg-gradient-to-br from-sky-50 via-white to-indigo-50/70 shadow-sm dark:border-sky-900/60 dark:from-sky-950/30 dark:via-gray-800 dark:to-indigo-950/20',
+        'border-primary/40 bg-gradient-to-br bg-primary/10 via-white bg-primary/10 shadow-sm',
         className,
       )}
     >
       <CardHeader>
         <CardTitle className="flex flex-wrap items-center justify-between gap-2">
-          <span className="text-slate-900 dark:text-slate-50">Capital Risk at a Glance</span>
-          <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+          <span className="text-foreground">Capital Risk at a Glance</span>
+          <span className="text-xs font-medium text-muted">
             {snapshot.strategyName}
           </span>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-sm text-slate-600 dark:text-slate-300">
+        <p className="text-sm text-muted">
           This strategy sizes positions from the active risk settings below. The education sections
           underneath still explain why each parameter matters.
         </p>
 
         <div className="grid gap-3 md:grid-cols-3">
-          <div className="rounded-lg border border-slate-200 bg-white/80 p-3 dark:border-slate-700 dark:bg-slate-900/60">
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+          <div className="rounded-lg border border-border bg-surface/80 p-3">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-muted">
               {snapshot.isEquityMode ? t('portfolioHeader.effectiveEquity') : 'Account Size'}
             </div>
-            <div className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-50">
+            <div className="mt-1 text-lg font-semibold text-foreground">
               {accountSizeLabel}
             </div>
             {snapshot.isEquityMode ? (
-              <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              <div className="mt-1 text-xs text-muted">
                 {t('portfolioHeader.baseAccount')} {baseAccountLabel} · {t('portfolioHeader.realizedPnl')} {realizedPnlLabel}
               </div>
             ) : null}
           </div>
-          <div className="rounded-lg border border-slate-200 bg-white/80 p-3 dark:border-slate-700 dark:bg-slate-900/60">
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+          <div className="rounded-lg border border-border bg-surface/80 p-3">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-muted">
               Capital at Risk / Trade
             </div>
-            <div className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-50">
+            <div className="mt-1 text-lg font-semibold text-foreground">
               {capitalAtRiskLabel}
             </div>
-            <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            <div className="mt-1 text-xs text-muted">
               {riskPctLabel} of the account
             </div>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-white/80 p-3 dark:border-slate-700 dark:bg-slate-900/60">
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+          <div className="rounded-lg border border-border bg-surface/80 p-3">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-muted">
               Max Position Value
             </div>
-            <div className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-50">
+            <div className="mt-1 text-lg font-semibold text-foreground">
               {maxPositionLabel}
             </div>
-            <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            <div className="mt-1 text-xs text-muted">
               {formatOrDash(snapshot.maxPositionPct, (value) => formatRatioAsPercent(value))} cap
             </div>
           </div>

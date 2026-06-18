@@ -20,7 +20,7 @@ export default function WorkspaceFundamentalsPanel({ ticker }: WorkspaceFundamen
   if (snapshotQuery.isError) {
     return (
       <div className="space-y-3">
-        <p className="text-sm text-rose-600">
+        <p className="text-sm text-danger">
           {snapshotQuery.error instanceof Error ? snapshotQuery.error.message : 'Failed to load fundamentals'}
         </p>
         <Button

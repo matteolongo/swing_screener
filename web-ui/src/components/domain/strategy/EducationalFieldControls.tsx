@@ -10,7 +10,7 @@ import { getParameterDoc } from '@/content/strategy_docs/loader';
 import type { ParameterDocumentation } from '@/content/strategy_docs/types';
 
 export const strategyFieldClass =
-  'w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-800';
+  'w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-surface';
 
 export type HelpInfo = {
   short: string;
@@ -60,7 +60,7 @@ export function EducationalNumberInput({
           <span className="flex items-center gap-2">
             {label}
             {recommendedBadge && (
-              <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 py-0.5 rounded">
+              <span className="text-xs bg-success/10 text-success px-2 py-0.5 rounded">
                 ✔ Recommended
               </span>
             )}
@@ -69,7 +69,7 @@ export function EducationalNumberInput({
           {suffix && <span className="text-xs text-muted">{suffix}</span>}
         </div>
         {microcopy && (
-          <div className="mb-2 text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+          <div className="mb-2 text-xs text-muted leading-relaxed">
             {microcopy}
           </div>
         )}
@@ -132,7 +132,7 @@ export function EducationalCheckboxInput({
       </div>
 
       {microcopy && (
-        <div className="ml-6 text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+        <div className="ml-6 text-xs text-muted leading-relaxed">
           {microcopy}
         </div>
       )}

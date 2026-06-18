@@ -14,15 +14,15 @@ export default function KeyMetrics({ ticker }: KeyMetricsProps) {
 
   if (!candidate) {
     return (
-      <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
-        <p className="text-sm text-gray-600 dark:text-gray-400">{t('workspacePage.panels.analysis.noMetrics')}</p>
+      <div className="rounded-lg border border-border p-3">
+        <p className="text-sm text-muted">{t('workspacePage.panels.analysis.noMetrics')}</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-2">
-      <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('workspacePage.panels.analysis.metricsTitle')}</h3>
+    <div className="rounded-lg border border-border p-3 space-y-2">
+      <h3 className="text-sm font-semibold text-foreground">{t('workspacePage.panels.analysis.metricsTitle')}</h3>
       <div className="flex flex-wrap gap-2">
         <Badge variant="default">ATR: {candidate.atr.toFixed(2)}</Badge>
         <Badge variant="default">SMA20: {candidate.sma20.toFixed(2)}</Badge>

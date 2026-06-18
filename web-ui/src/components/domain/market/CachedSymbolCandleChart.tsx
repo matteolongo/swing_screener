@@ -43,8 +43,8 @@ function ChartToolbar({ availableRanges, range, onRange, fullscreen, onToggleFul
             className={cn(
               'rounded border px-2 py-0.5 text-[11px] font-medium',
               option === range
-                ? 'border-sky-400 bg-sky-50 text-sky-700 dark:border-sky-700 dark:bg-sky-950/40 dark:text-sky-300'
-                : 'border-gray-300 bg-white text-gray-600 hover:bg-foreground/5 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400',
+                ? 'border-primary/40 bg-primary/10 text-primary'
+                : 'border-border bg-surface text-muted hover:bg-foreground/5',
             )}
           >
             {option}
@@ -56,7 +56,7 @@ function ChartToolbar({ availableRanges, range, onRange, fullscreen, onToggleFul
         onClick={onToggleFullscreen}
         aria-label={fullscreen ? t('chart.exitFullscreen') : t('chart.fullscreen')}
         title={fullscreen ? t('chart.exitFullscreen') : t('chart.fullscreen')}
-        className="rounded border border-gray-300 p-1 text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800"
+        className="rounded border border-border p-1 text-muted hover:bg-foreground/5"
       >
         {fullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
       </button>
@@ -140,7 +140,7 @@ export function CachedSymbolCandleChart({ ticker, className, width, height }: Ca
             onClick={() => setFullscreen(false)}
           >
             <div
-              className="w-full max-w-[95vw] rounded-lg bg-white p-4 shadow-xl dark:bg-gray-900"
+              className="w-full max-w-[95vw] rounded-lg bg-surface p-4 shadow-xl"
               onClick={(event) => event.stopPropagation()}
             >
               {toolbar}

@@ -31,7 +31,7 @@ export default function WatchToggleButton({
       }}
       className={
         className ??
-        'rounded border border-gray-300 px-2 py-0.5 text-[11px] font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-60 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700'
+        'rounded border border-border px-2 py-0.5 text-[11px] font-medium text-muted hover:bg-foreground/5 disabled:opacity-60'
       }
       title={isWatched ? t('watchlist.actions.unwatch') : t('watchlist.actions.watch')}
       aria-label={isWatched ? t('watchlist.actions.unwatchAria', { ticker }) : t('watchlist.actions.watchAria', { ticker })}

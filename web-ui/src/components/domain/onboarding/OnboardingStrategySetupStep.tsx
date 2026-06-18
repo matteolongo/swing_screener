@@ -86,7 +86,7 @@ export default function OnboardingStrategySetupStep({ onSaved }: OnboardingStrat
     return (
       <Card variant="bordered">
         <CardContent>
-          <p className="text-sm text-gray-600">{t('onboardingPage.strategyStep.loading')}</p>
+          <p className="text-sm text-muted">{t('onboardingPage.strategyStep.loading')}</p>
         </CardContent>
       </Card>
     );
@@ -96,7 +96,7 @@ export default function OnboardingStrategySetupStep({ onSaved }: OnboardingStrat
     return (
       <Card variant="bordered">
         <CardContent>
-          <p className="text-sm text-red-600">{t('onboardingPage.strategyStep.loadError')}</p>
+          <p className="text-sm text-danger">{t('onboardingPage.strategyStep.loadError')}</p>
         </CardContent>
       </Card>
     );
@@ -108,7 +108,7 @@ export default function OnboardingStrategySetupStep({ onSaved }: OnboardingStrat
         <CardTitle>{t('onboardingPage.strategyStep.title')}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-sm text-gray-600">{t('onboardingPage.strategyStep.description')}</p>
+        <p className="text-sm text-muted">{t('onboardingPage.strategyStep.description')}</p>
 
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {(['conservative', 'balanced', 'aggressive', 'custom'] as const).map((mode) => (
@@ -129,17 +129,17 @@ export default function OnboardingStrategySetupStep({ onSaved }: OnboardingStrat
             <p className="font-medium">{selectedPreset.name}</p>
             <p className="text-xs text-primary">{selectedPreset.description}</p>
             <div className="mt-2 flex flex-wrap gap-2 text-xs">
-              <span className="rounded-full bg-white px-2 py-1">
+              <span className="rounded-full bg-surface px-2 py-1">
                 {t('onboardingPage.strategyStep.preview.riskPct', {
                   value: ((selectedPreset.values.risk?.riskPct ?? 0) * 100).toFixed(1),
                 })}
               </span>
-              <span className="rounded-full bg-white px-2 py-1">
+              <span className="rounded-full bg-surface px-2 py-1">
                 {t('onboardingPage.strategyStep.preview.maxPositionPct', {
                   value: ((selectedPreset.values.risk?.maxPositionPct ?? 0) * 100).toFixed(0),
                 })}
               </span>
-              <span className="rounded-full bg-white px-2 py-1">
+              <span className="rounded-full bg-surface px-2 py-1">
                 {t('onboardingPage.strategyStep.preview.minRr', {
                   value: selectedPreset.values.risk?.minRr ?? 0,
                 })}
@@ -206,9 +206,9 @@ export default function OnboardingStrategySetupStep({ onSaved }: OnboardingStrat
               ? t('onboardingPage.strategyStep.saving')
               : t('onboardingPage.strategyStep.save')}
           </Button>
-          {statusMessage ? <p className="text-sm text-green-700">{statusMessage}</p> : null}
+          {statusMessage ? <p className="text-sm text-success">{statusMessage}</p> : null}
           {updateMutation.isError ? (
-            <p className="text-sm text-red-600">
+            <p className="text-sm text-danger">
               {(updateMutation.error as Error)?.message || t('onboardingPage.strategyStep.saveError')}
             </p>
           ) : null}

@@ -16,10 +16,10 @@ export interface ScreenerCandidateReviewListProps {
 }
 
 const QUALITY_BADGE_CLASS: Record<BeginnerSetupQuality, string> = {
-  pass: 'bg-green-100 text-green-800 border border-green-300',
-  caution: 'bg-amber-100 text-amber-800 border border-amber-300',
-  fail: 'bg-red-100 text-red-800 border border-red-300',
-  incomplete: 'bg-gray-100 text-gray-700 border border-gray-300',
+  pass: 'bg-success/10 text-success border border-success/40',
+  caution: 'bg-warning/10 text-warning border border-warning/40',
+  fail: 'bg-danger/10 text-danger border border-danger/40',
+  incomplete: 'bg-foreground/5 text-muted border border-border',
 };
 
 const QUALITY_LABEL_KEY: Record<BeginnerSetupQuality, MessageKey> = {
@@ -30,12 +30,12 @@ const QUALITY_LABEL_KEY: Record<BeginnerSetupQuality, MessageKey> = {
 };
 
 const READINESS_CHIP_CLASS: Record<BeginnerOrderReadiness, string> = {
-  ready: 'bg-green-100 text-green-800 border border-green-300',
-  wait_for_price: 'bg-amber-100 text-amber-800 border border-amber-300',
+  ready: 'bg-success/10 text-success border border-success/40',
+  wait_for_price: 'bg-warning/10 text-warning border border-warning/40',
   watch_only: 'bg-primary/10 text-primary border border-primary/40',
-  avoid: 'bg-red-100 text-red-800 border border-red-300',
-  manage_existing: 'bg-gray-100 text-gray-700 border border-gray-300',
-  incomplete: 'bg-gray-100 text-gray-700 border border-gray-300',
+  avoid: 'bg-danger/10 text-danger border border-danger/40',
+  manage_existing: 'bg-foreground/5 text-muted border border-border',
+  incomplete: 'bg-foreground/5 text-muted border border-border',
 };
 
 const READINESS_LABEL_KEY: Record<BeginnerOrderReadiness, MessageKey> = {

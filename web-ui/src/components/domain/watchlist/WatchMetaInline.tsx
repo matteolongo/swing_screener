@@ -52,7 +52,7 @@ function computeDelta(
   ) {
     return {
       text: t('watchlist.delta.unavailable'),
-      colorClass: 'text-gray-500 dark:text-gray-400',
+      colorClass: 'text-muted',
     };
   }
   const abs = currentPrice - watchPrice;
@@ -63,7 +63,7 @@ function computeDelta(
         abs: formatDeltaCurrency(abs, currency),
         pct: formatPercent(pct),
       }),
-      colorClass: 'text-green-700 dark:text-green-300',
+      colorClass: 'text-success',
     };
   }
   if (abs < 0) {
@@ -72,7 +72,7 @@ function computeDelta(
         abs: formatDeltaCurrency(abs, currency),
         pct: formatPercent(pct),
       }),
-      colorClass: 'text-red-700 dark:text-red-300',
+      colorClass: 'text-danger',
     };
   }
   return {
@@ -80,7 +80,7 @@ function computeDelta(
       abs: formatDeltaCurrency(abs, currency),
       pct: formatPercent(pct),
     }),
-    colorClass: 'text-gray-600 dark:text-gray-300',
+    colorClass: 'text-muted',
   };
 }
 
@@ -97,7 +97,7 @@ export default function WatchMetaInline({
 
   return (
     <div className={className ?? 'flex flex-wrap items-center gap-2 text-[11px] leading-4'}>
-      <span className="text-gray-500 dark:text-gray-400" title={exact}>
+      <span className="text-muted" title={exact}>
         {t('watchlist.since.label', { value: relative })}
       </span>
       <span className={delta.colorClass}>

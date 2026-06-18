@@ -129,7 +129,7 @@ export default function StrategyPresets({ onApplyPreset }: StrategyPresetsProps)
         <CardTitle>Quick Start Presets</CardTitle>
       </CardHeader>
       <CardContent>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+        <p className="text-sm text-muted mb-4">
           Start with a proven configuration. You can customize it later.
         </p>
 
@@ -137,18 +137,18 @@ export default function StrategyPresets({ onApplyPreset }: StrategyPresetsProps)
           {momentumPresets.map((preset) => (
             <div
               key={preset.id}
-              className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3 hover:border-blue-300 dark:hover:border-blue-700 transition-colors"
+              className="border border-border rounded-lg p-4 space-y-3 hover:border-primary/40 transition-colors"
             >
               <div className="flex items-center gap-2">
                 <span className="text-2xl">{preset.icon}</span>
                 <h3 className="font-semibold text-lg">{preset.name}</h3>
               </div>
 
-              <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+              <p className="text-sm text-muted leading-relaxed">
                 {preset.description}
               </p>
 
-              <div className="space-y-1 text-xs text-gray-500 dark:text-gray-500">
+              <div className="space-y-1 text-xs text-muted">
                 <div>Risk/Trade: {((preset.values.risk?.riskPct ?? 0) * 100).toFixed(1)}%</div>
                 <div>
                   Breakout Lookback: {preset.values.signals?.breakoutLookback ?? 'N/A'}
@@ -167,7 +167,7 @@ export default function StrategyPresets({ onApplyPreset }: StrategyPresetsProps)
           ))}
         </div>
 
-        <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-sm text-blue-800 dark:text-blue-200">
+        <div className="mt-4 p-3 bg-primary/10 rounded-lg text-sm text-primary">
           💡 <strong>Tip:</strong> Conservative is recommended for your first 20-30 trades while you learn
           the system.
         </div>

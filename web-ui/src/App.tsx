@@ -39,7 +39,7 @@ function App() {
       <TradingStoreSyncBridge />
       <BrowserRouter>
         <ErrorBoundary>
-          <Suspense fallback={<div className="p-6 text-sm text-gray-500">Loading page...</div>}>
+          <Suspense fallback={<div className="p-6 text-sm text-muted">Loading page...</div>}>
             <Routes>
               <Route path="/" element={<MainLayout />}>
                 {/* New primary destinations */}

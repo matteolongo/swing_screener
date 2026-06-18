@@ -25,10 +25,10 @@ function isIncomplete(
 }
 
 const VERDICT_STYLES: Record<string, string> = {
-  RECOMMENDED: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-  NOT_RECOMMENDED: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
-  INCOMPLETE: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300',
-  UNKNOWN: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+  RECOMMENDED: 'bg-success/10 text-success',
+  NOT_RECOMMENDED: 'bg-danger/10 text-danger',
+  INCOMPLETE: 'bg-warning/10 text-warning',
+  UNKNOWN: 'bg-foreground/5 text-muted',
 };
 
 const VERDICT_LABEL_KEY: Record<string, MessageKey> = {
@@ -63,7 +63,7 @@ export default function RecommendationBadge({
         {t(VERDICT_LABEL_KEY[displayKey] ?? 'recommendation.verdict.INCOMPLETE')}
       </span>
       {showExplanation ? (
-        <span className="text-[11px] text-gray-500 leading-snug">
+        <span className="text-[11px] text-muted leading-snug">
           {t('recommendation.setupQualityExplanation')}
         </span>
       ) : null}

@@ -42,7 +42,7 @@ export default function PendingOrdersTab() {
             className={
               activeFilter === f
                 ? 'px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary'
-                : 'px-3 py-1 rounded-full text-xs font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                : 'px-3 py-1 rounded-full text-xs font-medium text-muted hover:text-muted'
             }
           >
             {t(`ordersPage.filter.${f}`)}
@@ -56,7 +56,7 @@ export default function PendingOrdersTab() {
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>
-              <tr className="text-xs text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
+              <tr className="text-xs text-muted border-b border-border">
                 <th className="py-2 pr-4 text-left font-medium">{t('pendingOrdersTab.columnTicker')}</th>
                 <th className="py-2 pr-4 text-right font-medium">{t('pendingOrdersTab.columnShares')}</th>
                 <th className="py-2 pr-4 text-right font-medium">{t('pendingOrdersTab.columnLimit')}</th>
@@ -69,24 +69,24 @@ export default function PendingOrdersTab() {
               {orders.map((order) => (
                 <tr
                   key={order.orderId}
-                  className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900"
+                  className="border-b border-border hover:bg-foreground/5"
                 >
-                  <td className="py-2 pr-4 font-semibold text-gray-900 dark:text-gray-100">
+                  <td className="py-2 pr-4 font-semibold text-foreground">
                     {order.ticker}
                     {order.status === 'submitted' && (
-                      <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                      <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-primary/10 text-primary">
                         {t('ordersPage.filter.submitted')}
                       </span>
                     )}
                   </td>
-                  <td className="py-2 pr-4 text-right text-gray-700 dark:text-gray-300">{order.quantity}</td>
-                  <td className="py-2 pr-4 text-right text-gray-700 dark:text-gray-300">
+                  <td className="py-2 pr-4 text-right text-muted">{order.quantity}</td>
+                  <td className="py-2 pr-4 text-right text-muted">
                     {order.limitPrice != null ? order.limitPrice.toFixed(2) : t('common.placeholders.dash')}
                   </td>
-                  <td className="py-2 pr-4 text-right text-gray-700 dark:text-gray-300">
+                  <td className="py-2 pr-4 text-right text-muted">
                     {order.stopPrice != null ? order.stopPrice.toFixed(2) : t('common.placeholders.dash')}
                   </td>
-                  <td className="py-2 pr-4 text-gray-500 dark:text-gray-400">{order.orderDate}</td>
+                  <td className="py-2 pr-4 text-muted">{order.orderDate}</td>
                   <td className="py-2">
                     <div className="flex gap-2">
                       {order.status === 'pending' && (
@@ -94,7 +94,7 @@ export default function PendingOrdersTab() {
                           type="button"
                           onClick={() => submitMutation.mutate(order.orderId)}
                           disabled={submitMutation.isPending}
-                          className="text-xs px-2 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 hover:bg-blue-200 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+                          className="text-xs px-2 py-0.5 rounded bg-primary/10 text-primary hover:bg-primary/20 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                           {t('pendingOrdersTab.markSubmitted')}
                         </button>
@@ -104,14 +104,14 @@ export default function PendingOrdersTab() {
                         onClick={() => setFillDegiroOrder(order)}
                         disabled={!degiroAvailable}
                         title={!degiroAvailable ? t('pendingOrdersTab.degiroNotConnected') : undefined}
-                        className="px-2 py-1 rounded text-xs font-medium bg-blue-50 text-blue-700 hover:bg-primary/20 dark:bg-blue-950 dark:text-blue-300 disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="px-2 py-1 rounded text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         {t('pendingOrdersTab.fillViaDegiro')}
                       </button>
                       <button
                         type="button"
                         onClick={() => setFillManualOrder(order)}
-                        className="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700 hover:bg-foreground/10 dark:bg-gray-800 dark:text-gray-300"
+                        className="px-2 py-1 rounded text-xs font-medium bg-foreground/5 text-muted hover:bg-foreground/10"
                       >
                         {t('pendingOrdersTab.fillManually')}
                       </button>

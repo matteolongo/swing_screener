@@ -54,14 +54,14 @@ function JournalRow({ position }: JournalRowProps) {
   return (
     <>
       <tr
-        className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+        className="cursor-pointer hover:bg-foreground/5 transition-colors"
         onClick={() => setExpanded((v) => !v)}
       >
-        <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
+        <td className="px-4 py-3 text-sm text-muted whitespace-nowrap">
           {expanded ? <ChevronDown className="inline h-4 w-4" /> : <ChevronRight className="inline h-4 w-4" />}
           <span className="ml-1">{position.exitDate ?? '—'}</span>
         </td>
-        <td className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100">{position.ticker}</td>
+        <td className="px-4 py-3 text-sm font-semibold text-foreground">{position.ticker}</td>
         <td className="px-4 py-3 text-sm text-right tabular-nums">{formatCurrency(position.entryPrice)}</td>
         <td className="px-4 py-3 text-sm text-right tabular-nums">
           {position.exitPrice != null ? formatCurrency(position.exitPrice) : '—'}
@@ -73,7 +73,7 @@ function JournalRow({ position }: JournalRowProps) {
               {(position.tags ?? []).map((tag) => (
                 <span
                   key={tag}
-                  className="rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                  className="rounded-full border border-border bg-foreground/5 px-2 py-0.5 text-xs font-medium text-muted"
                 >
                   {getTagLabel(tag)}
                 </span>
@@ -92,29 +92,29 @@ function JournalRow({ position }: JournalRowProps) {
 
       {expanded && (
         <tr>
-          <td colSpan={9} className="px-4 pb-4 pt-0 bg-gray-50 dark:bg-gray-800/30">
+          <td colSpan={9} className="px-4 pb-4 pt-0 bg-foreground/5">
             <div className="grid gap-4 sm:grid-cols-3 text-sm">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted mb-1">
                   {t('journalPage.labels.thesis')}
                 </p>
-                <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
+                <p className="text-foreground whitespace-pre-wrap">
                   {position.thesis || t('journalPage.labels.noEntry')}
                 </p>
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted mb-1">
                   {t('journalPage.labels.notes')}
                 </p>
-                <pre className="whitespace-pre-wrap font-sans text-gray-800 dark:text-gray-200">
+                <pre className="whitespace-pre-wrap font-sans text-foreground">
                   {position.notes || t('journalPage.labels.noEntry')}
                 </pre>
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted mb-1">
                   {t('journalPage.labels.lesson')}
                 </p>
-                <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
+                <p className="text-foreground whitespace-pre-wrap">
                   {position.lesson || t('journalPage.labels.noEntry')}
                 </p>
               </div>
@@ -160,8 +160,8 @@ export default function Journal() {
   return (
     <div className="mx-auto max-w-[1200px] px-4 py-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('journalPage.title')}</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('journalPage.subtitle')}</p>
+        <h1 className="text-2xl font-bold text-foreground">{t('journalPage.title')}</h1>
+        <p className="text-sm text-muted mt-1">{t('journalPage.subtitle')}</p>
       </div>
 
       {/* Stats bar */}
@@ -173,14 +173,14 @@ export default function Journal() {
           { label: t('journalPage.stats.avgFinalR'), value: avgFinalR != null ? `${avgFinalR > 0 ? '+' : ''}${formatNumber(avgFinalR, 2)}R` : '—', rValue: avgFinalR },
           { label: t('journalPage.stats.avgMaxR'), value: avgMaxR != null ? `${formatNumber(avgMaxR, 2)}R` : '—', rValue: avgMaxR },
         ].map(({ label, value, positive, negative, rValue }) => (
-          <div key={label} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-3">
-            <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{label}</p>
+          <div key={label} className="rounded-lg border border-border bg-surface p-3">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-muted">{label}</p>
             <p className={cn(
               'mt-1 text-lg font-bold',
-              positive ? 'text-green-600 dark:text-green-400' :
-              negative ? 'text-red-600 dark:text-red-400' :
+              positive ? 'text-success' :
+              negative ? 'text-danger' :
               rValue != null ? getSignColorClass(rValue) :
-              'text-gray-900 dark:text-gray-100'
+              'text-foreground'
             )}>
               {value}
             </p>
@@ -189,15 +189,15 @@ export default function Journal() {
       </div>
 
       {isLoading && (
-        <p className="text-sm text-gray-500 dark:text-gray-400">{t('common.table.loading')}</p>
+        <p className="text-sm text-muted">{t('common.table.loading')}</p>
       )}
 
       {isError && (
-        <p className="text-sm text-red-600">{t('common.errors.generic')}</p>
+        <p className="text-sm text-danger">{t('common.errors.generic')}</p>
       )}
 
       {!isLoading && !isError && positions.length === 0 && (
-        <p className="text-sm text-gray-500 dark:text-gray-400">{t('journalPage.empty')}</p>
+        <p className="text-sm text-muted">{t('journalPage.empty')}</p>
       )}
 
       {!isLoading && !isError && positions.length > 0 && (
@@ -215,8 +215,8 @@ export default function Journal() {
                     className={cn(
                       'rounded-full border px-3 py-1 text-xs font-medium transition-colors',
                       active
-                        ? 'border-blue-600 bg-blue-600 text-white'
-                        : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300',
+                        ? 'border-primary/40 bg-primary text-white'
+                        : 'border-border bg-surface text-muted hover:border-primary/40',
                     )}
                   >
                     {getTagLabel(tag)}
@@ -225,40 +225,40 @@ export default function Journal() {
               })}
             </div>
           ) : null}
-          <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+          <div className="overflow-x-auto rounded-lg border border-border">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                <tr className="border-b border-border bg-foreground/5">
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">
                     {t('journalPage.columns.date')}
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">
                     {t('journalPage.columns.ticker')}
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted">
                     {t('journalPage.columns.entry')}
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted">
                     {t('journalPage.columns.exit')}
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted">
                     {t('journalPage.columns.shares')}
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">
                     {t('journalPage.columns.tags')}
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted">
                     {t('journalPage.columns.initialRisk')}
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted">
                     {t('journalPage.columns.finalR')}
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted">
                     {t('journalPage.columns.maxR')}
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+              <tbody className="divide-y divide-border">
                 {filteredPositions.map((position) => (
                   <JournalRow key={position.positionId ?? `${position.ticker}-${position.exitDate}`} position={position} />
                 ))}

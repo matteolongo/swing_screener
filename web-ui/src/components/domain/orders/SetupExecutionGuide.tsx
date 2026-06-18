@@ -9,7 +9,7 @@ export default function SetupExecutionGuide({ signal }: SetupExecutionGuideProps
   const guidance = getSetupExecutionGuidance(signal);
 
   return (
-    <div className="rounded border border-blue-200 bg-blue-50/70 p-3 text-xs text-blue-900 dark:border-blue-900 dark:bg-blue-950/20 dark:text-blue-100">
+    <div className="rounded border border-primary/40 bg-primary/10 p-3 text-xs text-primary">
       <p className="font-semibold">{t('order.setupGuidance.title')}</p>
       <p className="mt-1">
         <span className="font-semibold">{t('order.setupGuidance.setupLabel')}</span> {t(guidance.setupLabelKey)}

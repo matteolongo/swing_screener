@@ -12,9 +12,9 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     
     const variantStyles = {
       primary: 'bg-primary text-primary-foreground hover:bg-primary/90',
-      secondary: 'bg-gray-100 text-gray-900 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700',
+      secondary: 'bg-foreground/5 text-foreground hover:bg-foreground/10',
       danger: 'bg-danger text-danger-foreground hover:bg-danger/90',
-      ghost: 'hover:bg-gray-100 dark:hover:bg-gray-800',
+      ghost: 'hover:bg-foreground/5',
     };
     
     const sizeStyles = {

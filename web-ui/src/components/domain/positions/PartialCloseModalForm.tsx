@@ -82,7 +82,7 @@ export default function PartialCloseModalForm({
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Position summary */}
-        <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded text-sm space-y-1">
+        <div className="bg-foreground/5 p-3 rounded text-sm space-y-1">
           <p><strong>{t('positions.closeModal.entryLabel')}</strong> {formatCurrency(position.entryPrice)}</p>
           <p><strong>{t('positions.closeModal.sharesLabel')}</strong> {position.shares}</p>
           <p><strong>{t('positions.closeModal.stopLabel')}</strong> {formatCurrency(position.stopPrice)}</p>
@@ -101,7 +101,7 @@ export default function PartialCloseModalForm({
             max={position.shares - 1}
             value={sharesValue}
             onChange={(e) => setSharesValue(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+            className="w-full px-3 py-2 border border-border rounded bg-surface"
             required
           />
         </div>
@@ -118,7 +118,7 @@ export default function PartialCloseModalForm({
             min="0.01"
             value={priceValue}
             onChange={(e) => setPriceValue(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+            className="w-full px-3 py-2 border border-border rounded bg-surface"
             required
           />
         </div>
@@ -135,44 +135,44 @@ export default function PartialCloseModalForm({
             min="0"
             value={feeEurValue}
             onChange={(e) => setFeeEurValue(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+            className="w-full px-3 py-2 border border-border rounded bg-surface"
           />
         </div>
 
         {/* Live preview */}
         {parsedShares > 0 && parsedPrice > 0 && (
-          <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded text-sm space-y-1">
+          <div className="bg-primary/10 p-3 rounded text-sm space-y-1">
             <p className="font-medium">{t('positions.partialCloseModal.preview')}</p>
             <p>
-              <span className="text-gray-600 dark:text-gray-400">{t('positions.partialCloseModal.rAtClose')}: </span>
+              <span className="text-muted">{t('positions.partialCloseModal.rAtClose')}: </span>
               <RChip value={rAtClose} className="font-mono" />
             </p>
             <p>
-              <span className="text-gray-600 dark:text-gray-400">{t('positions.partialCloseModal.lockedProfit')}: </span>
+              <span className="text-muted">{t('positions.partialCloseModal.lockedProfit')}: </span>
               <span className={getSignColorClass(lockedProfit)}>
                 {lockedProfit >= 0 ? '+' : ''}{formatCurrency(lockedProfit)}
               </span>
             </p>
             <p>
-              <span className="text-gray-600 dark:text-gray-400">{t('positions.partialCloseModal.remainingShares')}: </span>
+              <span className="text-muted">{t('positions.partialCloseModal.remainingShares')}: </span>
               {remainingShares}
             </p>
             <p>
-              <span className="text-gray-600 dark:text-gray-400">{t('positions.partialCloseModal.remainingRisk')}: </span>
+              <span className="text-muted">{t('positions.partialCloseModal.remainingRisk')}: </span>
               {formatCurrency(remainingRisk)}
             </p>
           </div>
         )}
 
         {formError && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3">
-            <p className="text-sm text-red-800 dark:text-red-200">{formError}</p>
+          <div className="bg-danger/10 border border-danger/40 rounded p-3">
+            <p className="text-sm text-danger">{formError}</p>
           </div>
         )}
 
         {error && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3">
-            <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+          <div className="bg-danger/10 border border-danger/40 rounded p-3">
+            <p className="text-sm text-danger">{error}</p>
           </div>
         )}
 

@@ -21,7 +21,7 @@ export default function MetricHelpLabel({ metricKey, labelOverride, className }:
           <div className="space-y-3 text-sm">
             <p>{entry.explanation}</p>
             {entry.formula ? (
-              <p className="rounded bg-gray-100 dark:bg-gray-700 px-2 py-1 font-mono text-xs">
+              <p className="rounded bg-foreground/5 px-2 py-1 font-mono text-xs">
                 {entry.formula}
               </p>
             ) : null}

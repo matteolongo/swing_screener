@@ -137,13 +137,13 @@ export function CandleChart({
   return (
     <div className={cn('w-full', className)}>
       {showBenchmark && (
-        <div className="mb-1 flex items-center gap-3 text-[11px] text-slate-500 dark:text-slate-400">
+        <div className="mb-1 flex items-center gap-3 text-[11px] text-muted">
           <span className="inline-flex items-center gap-1">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+            <span className="h-2 w-2 rounded-full bg-success" />
             {t('chart.symbolLegend')}
           </span>
           <span className="inline-flex items-center gap-1">
-            <span className="h-2 w-2 rounded-full bg-sky-500" />
+            <span className="h-2 w-2 rounded-full bg-primary" />
             {benchmarkLabel}
           </span>
           {outperformancePct != null && (
@@ -169,7 +169,7 @@ export function CandleChart({
           const up = b.close >= b.open;
           const bodyTop = yPrice(Math.max(b.open, b.close));
           const bodyBot = yPrice(Math.min(b.open, b.close));
-          const colorClass = up ? 'fill-emerald-500 stroke-emerald-500' : 'fill-rose-500 stroke-rose-500';
+          const colorClass = up ? 'fill-success stroke-success' : 'fill-danger stroke-danger';
           const vh = (b.volume / maxVol) * volH;
           return (
             <g key={b.date}>
@@ -202,7 +202,7 @@ export function CandleChart({
             strokeWidth={1.5}
             strokeDasharray="4 3"
             vectorEffect="non-scaling-stroke"
-            className="stroke-sky-500"
+            className="stroke-primary"
           />
         )}
         {patterns.map((p) => {
@@ -216,7 +216,7 @@ export function CandleChart({
             <g key={`${p.name}-${p.date}`} data-testid="pattern-marker">
               <polygon
                 points={`${x - 4},${y + 10} ${x + 4},${y + 10} ${x},${y + 2}`}
-                className="fill-sky-400"
+                className="fill-primary"
               />
               <title>{patternLabel(p)}</title>
             </g>

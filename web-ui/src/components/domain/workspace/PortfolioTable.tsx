@@ -56,7 +56,7 @@ function TimeStopBadge({ position }: { position: PositionWithMetrics | null }) {
   });
   return (
     <span
-      className="inline-flex items-center rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
+      className="inline-flex items-center rounded bg-warning/10 px-1.5 py-0.5 text-xs font-medium text-warning"
       title={t('bookPage.positions.timeStopWarning')}
     >
       {label}
@@ -68,10 +68,10 @@ function TimeStopBadge({ position }: { position: PositionWithMetrics | null }) {
 function ActionsDropdown({ children }: { children: React.ReactNode }) {
   return (
     <details className="relative inline-block">
-      <summary className="list-none cursor-pointer rounded p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 select-none">
+      <summary className="list-none cursor-pointer rounded p-1.5 hover:bg-foreground/5 text-muted select-none">
         ⋯
       </summary>
-      <div className="absolute right-0 z-10 mt-1 min-w-[10rem] rounded-lg border border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-md p-1">
+      <div className="absolute right-0 z-10 mt-1 min-w-[10rem] rounded-lg border border-border bg-surface shadow-md p-1">
         {children}
       </div>
     </details>
@@ -89,7 +89,7 @@ function DropdownItem({ onClick, label, className }: { onClick: () => void; labe
         if (details) (details as HTMLDetailsElement).open = false;
         onClick();
       }}
-      className={`w-full text-left px-3 py-1.5 text-sm rounded hover:bg-gray-100 dark:hover:bg-gray-700 ${className ?? ''}`}
+      className={`w-full text-left px-3 py-1.5 text-sm rounded hover:bg-foreground/5 ${className ?? ''}`}
     >
       {label}
     </button>
@@ -107,25 +107,25 @@ function StopPreviewPanel({ positionId, ticker, price, onClose }: StopPreviewPan
   const { data, isLoading, error } = usePositionStopPreviewQuery(positionId, price, true);
 
   let message = '';
-  let messageClass = 'text-gray-700 dark:text-gray-300';
+  let messageClass = 'text-muted';
 
   if (data) {
     switch (data.action) {
       case 'MOVE_STOP_UP':
         message = `${t('workspacePage.panels.portfolio.intradayPreview.stopCanRaise')} ${formatCurrency(data.stopSuggested)}`;
-        messageClass = 'text-emerald-700 dark:text-emerald-400 font-semibold';
+        messageClass = 'text-success font-semibold';
         break;
       case 'CLOSE_STOP_HIT':
         message = t('workspacePage.panels.portfolio.intradayPreview.stopHit');
-        messageClass = 'text-rose-700 dark:text-rose-400 font-semibold';
+        messageClass = 'text-danger font-semibold';
         break;
       case 'CLOSE_EXIT_SIGNAL':
         message = t('workspacePage.panels.portfolio.intradayPreview.exitSignal');
-        messageClass = 'text-amber-700 dark:text-amber-400 font-semibold';
+        messageClass = 'text-warning font-semibold';
         break;
       case 'CLOSE_TIME_EXIT':
         message = t('workspacePage.panels.portfolio.intradayPreview.timeExit');
-        messageClass = 'text-amber-700 dark:text-amber-400 font-semibold';
+        messageClass = 'text-warning font-semibold';
         break;
       default:
         message = t('workspacePage.panels.portfolio.intradayPreview.noChange');
@@ -133,12 +133,12 @@ function StopPreviewPanel({ positionId, ticker, price, onClose }: StopPreviewPan
   }
 
   return (
-    <div className="mt-2 rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/30 p-3 text-sm">
+    <div className="mt-2 rounded-lg border border-primary/40 bg-primary/10 p-3 text-sm">
       <div className="flex items-start justify-between gap-2">
-        <div className="font-medium text-blue-900 dark:text-blue-200">
+        <div className="font-medium text-primary">
           {ticker} — {t('workspacePage.panels.portfolio.intradayPreview.checkLive')}
           {price != null && (
-            <span className="ml-1 font-mono text-xs text-blue-700 dark:text-blue-400">
+            <span className="ml-1 font-mono text-xs text-primary">
               @ {formatCurrency(price)}
             </span>
           )}
@@ -146,34 +146,34 @@ function StopPreviewPanel({ positionId, ticker, price, onClose }: StopPreviewPan
         <button
           type="button"
           onClick={onClose}
-          className="text-blue-500 hover:text-blue-700 dark:hover:text-blue-300 text-xs"
+          className="text-primary hover:text-primary text-xs"
           aria-label="Close preview"
         >
           ✕
         </button>
       </div>
       {isLoading && (
-        <p className="mt-1 text-blue-600 dark:text-blue-400 text-xs">
+        <p className="mt-1 text-primary text-xs">
           {t('workspacePage.panels.portfolio.intradayPreview.loading')}
         </p>
       )}
       {error && (
-        <p className="mt-1 text-rose-600 dark:text-rose-400 text-xs">{error.message}</p>
+        <p className="mt-1 text-danger text-xs">{error.message}</p>
       )}
       {data && !isLoading && (
         <div className="mt-1 space-y-0.5">
           <p className={messageClass}>{message}</p>
           {data.reason && (
-            <p className="text-xs text-gray-500 dark:text-gray-400">{data.reason}</p>
+            <p className="text-xs text-muted">{data.reason}</p>
           )}
-          <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+          <p className="text-xs text-muted font-mono">
             R: {data.rNow >= 0 ? '+' : ''}{data.rNow.toFixed(2)} · live {formatCurrency(data.last)}
           </p>
           {data.exhaustionScore != null && data.exhaustionLabel != null && (
             <p className={`text-xs font-medium ${
-              data.exhaustionLabel === 'exit' ? 'text-rose-700 dark:text-rose-400' :
-              data.exhaustionLabel === 'watch' ? 'text-amber-700 dark:text-amber-400' :
-              'text-emerald-700 dark:text-emerald-400'
+              data.exhaustionLabel === 'exit' ? 'text-danger' :
+              data.exhaustionLabel === 'watch' ? 'text-warning' :
+              'text-success'
             }`}>
               {data.exhaustionLabel === 'exit' ? '🔴' : data.exhaustionLabel === 'watch' ? '🟡' : '🟢'}{' '}
               {t('workspacePage.panels.portfolio.intradayPreview.exhaustion', {
@@ -392,17 +392,17 @@ export default function PortfolioTable() {
         <div className="text-xs space-y-0.5 font-mono">
           <div className="flex gap-1 text-muted">
             <span>Entry</span>
-            <span className="text-gray-900 dark:text-gray-100">{formatOptionalCurrency(row.entryPrice)}</span>
+            <span className="text-foreground">{formatOptionalCurrency(row.entryPrice)}</span>
           </div>
           {row.currentPrice != null && row.currentPrice !== row.entryPrice ? (
             <div className="flex gap-1 text-muted">
               <span>Now</span>
-              <span className="text-gray-900 dark:text-gray-100">{formatOptionalCurrency(row.currentPrice)}</span>
+              <span className="text-foreground">{formatOptionalCurrency(row.currentPrice)}</span>
             </div>
           ) : null}
           <div className="flex gap-1 text-muted">
             <span>Stop</span>
-            <span className="text-rose-700 dark:text-rose-400">{formatOptionalCurrency(row.stopLoss)}</span>
+            <span className="text-danger">{formatOptionalCurrency(row.stopLoss)}</span>
           </div>
         </div>
       ),
@@ -433,7 +433,7 @@ export default function PortfolioTable() {
           <div className="text-right font-mono">
             <div className="text-sm">{rLabel}</div>
             <div
-              className="text-xs text-gray-500 dark:text-gray-400"
+              className="text-xs text-muted"
               title={t('positions.rFxAdjustedTooltip')}
             >
               {t('positions.rFxAdjusted')}: {fxLabel}
@@ -495,7 +495,7 @@ export default function PortfolioTable() {
                 />
                 <DropdownItem
                   label={t('positionsPage.closePosition')}
-                  className="text-rose-700 dark:text-rose-400"
+                  className="text-danger"
                   onClick={() => {
                     setSelectedPosition(row.position);
                     setShowCloseModal(true);
@@ -523,7 +523,7 @@ export default function PortfolioTable() {
               <ActionsDropdown>
                 <DropdownItem
                   label={cancelOrderMutation.isPending ? t('common.table.loading') : t('common.actions.cancel')}
-                  className="text-rose-700 dark:text-rose-400"
+                  className="text-danger"
                   onClick={() => {
                     if (!row.order) return;
                     if (!window.confirm(t('ordersPage.confirmCancel'))) return;
@@ -556,8 +556,8 @@ export default function PortfolioTable() {
           return (
             'border-t transition-colors cursor-pointer ' +
             (isSelected
-              ? 'bg-blue-50/70 hover:bg-blue-100/80 dark:bg-blue-900/20 dark:hover:bg-blue-900/30'
-              : 'hover:bg-gray-50 dark:hover:bg-gray-800')
+              ? 'bg-primary/10 hover:bg-primary/10'
+              : 'hover:bg-foreground/5')
           );
         }}
         onRowClick={(row) => setSelectedTicker(row.ticker)}
@@ -566,7 +566,7 @@ export default function PortfolioTable() {
       {previewPositionId && (
         <div className="mt-2 space-y-1">
           <div className="flex items-center gap-2">
-            <label htmlFor="hypothetical-price" className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+            <label htmlFor="hypothetical-price" className="text-xs text-muted whitespace-nowrap">
               {t('workspacePage.panels.portfolio.intradayPreview.hypotheticalPrice')}
             </label>
             <input
@@ -578,7 +578,7 @@ export default function PortfolioTable() {
               value={hypotheticalPriceInput}
               onChange={(e) => setHypotheticalPriceInput(e.target.value)}
               placeholder="live"
-              className="w-24 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-0.5 text-xs font-mono"
+              className="w-24 rounded border border-border bg-surface px-2 py-0.5 text-xs font-mono"
             />
           </div>
           <StopPreviewPanel

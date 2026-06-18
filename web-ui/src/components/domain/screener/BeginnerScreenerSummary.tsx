@@ -14,12 +14,12 @@ export interface BeginnerScreenerSummaryProps {
 }
 
 const READINESS_CHIP_CLASS: Record<BeginnerOrderReadiness, string> = {
-  ready: 'bg-green-100 text-green-800 border border-green-300',
-  wait_for_price: 'bg-amber-100 text-amber-800 border border-amber-300',
+  ready: 'bg-success/10 text-success border border-success/40',
+  wait_for_price: 'bg-warning/10 text-warning border border-warning/40',
   watch_only: 'bg-primary/10 text-primary border border-primary/40',
-  avoid: 'bg-red-100 text-red-800 border border-red-300',
-  manage_existing: 'bg-gray-100 text-gray-700 border border-gray-300',
-  incomplete: 'bg-gray-100 text-gray-700 border border-gray-300',
+  avoid: 'bg-danger/10 text-danger border border-danger/40',
+  manage_existing: 'bg-foreground/5 text-muted border border-border',
+  incomplete: 'bg-foreground/5 text-muted border border-border',
 };
 
 const READINESS_LABEL_KEY: Record<BeginnerOrderReadiness, MessageKey> = {
@@ -42,12 +42,12 @@ const ACTION_LABEL_KEY: Record<DecisionAction, MessageKey> = {
 };
 
 const READINESS_BORDER_CLASS: Record<BeginnerOrderReadiness, string> = {
-  ready: 'border-green-200',
-  wait_for_price: 'border-amber-200',
+  ready: 'border-success/40',
+  wait_for_price: 'border-warning/40',
   watch_only: 'border-primary/40',
-  avoid: 'border-gray-200',
-  manage_existing: 'border-gray-200',
-  incomplete: 'border-gray-200',
+  avoid: 'border-border',
+  manage_existing: 'border-border',
+  incomplete: 'border-border',
 };
 
 export default function BeginnerScreenerSummary({
@@ -93,7 +93,7 @@ export default function BeginnerScreenerSummary({
       </p>
       <p className="text-sm mt-2">{decision.plainReason}</p>
       {decision.mainRisk ? (
-        <p className="text-sm text-amber-700 mt-1">
+        <p className="text-sm text-warning mt-1">
           <span className="font-medium">{t('screener.beginnerSummary.mainRisk')}</span>{' '}
           {decision.mainRisk}
         </p>

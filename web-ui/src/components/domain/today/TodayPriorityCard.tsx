@@ -13,13 +13,13 @@ interface TodayPriorityCardProps {
 }
 
 const KIND_BORDER: Record<TodayPriorityKind, string> = {
-  close_position: 'border-l-4 border-red-500',
-  update_stop: 'border-l-4 border-amber-500',
-  pending_orders: 'border-l-4 border-amber-500',
-  watchlist_near_trigger: 'border-l-4 border-amber-500',
+  close_position: 'border-l-4 border-danger/40',
+  update_stop: 'border-l-4 border-warning/40',
+  pending_orders: 'border-l-4 border-warning/40',
+  watchlist_near_trigger: 'border-l-4 border-warning/40',
   best_candidate: 'border-l-4 border-primary/40',
-  run_screener: 'border-l-4 border-gray-300 dark:border-gray-600',
-  no_action: 'border-l-4 border-gray-300 dark:border-gray-600',
+  run_screener: 'border-l-4 border-border',
+  no_action: 'border-l-4 border-border',
 };
 
 const KIND_BADGE_VARIANT: Record<TodayPriorityKind, 'error' | 'warning' | 'primary' | 'default'> = {
@@ -44,29 +44,29 @@ export default function TodayPriorityCard({ priority, onAction }: TodayPriorityC
     >
       {/* Header row: title label + kind chip */}
       <div className="flex items-center gap-2 mb-2">
-        <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+        <span className="text-xs font-semibold text-muted uppercase tracking-wide">
           {t('todayPage.todayPriorityCard.title')}
         </span>
         <Badge variant={badgeVariant}>{kindLabel}</Badge>
       </div>
 
       {/* Headline */}
-      <p className="text-base font-bold text-gray-900 dark:text-gray-100 leading-snug mb-1">
+      <p className="text-base font-bold text-foreground leading-snug mb-1">
         {priority.headline}
       </p>
 
       {/* Reason */}
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+      <p className="text-sm text-muted mb-3">
         {priority.reason}
       </p>
 
       {/* Risk (if present) */}
       {priority.risk && (
-        <div className="mb-3 rounded bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 px-3 py-2">
-          <span className="text-xs font-semibold text-amber-700 dark:text-amber-300 uppercase tracking-wide">
+        <div className="mb-3 rounded bg-warning/10 border border-warning/40 px-3 py-2">
+          <span className="text-xs font-semibold text-warning uppercase tracking-wide">
             {t('todayPage.todayPriorityCard.risk')}
           </span>
-          <p className="text-xs text-amber-800 dark:text-amber-200 mt-0.5">{priority.risk}</p>
+          <p className="text-xs text-warning mt-0.5">{priority.risk}</p>
         </div>
       )}
 

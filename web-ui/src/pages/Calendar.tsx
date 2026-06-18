@@ -5,16 +5,16 @@ import type { CalendarEvent, EventSourceTag } from '@/features/calendar/types';
 
 const SOURCE_STYLES: Record<EventSourceTag, { dot: string; badge: string }> = {
   position: {
-    dot: 'bg-blue-500',
-    badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+    dot: 'bg-primary',
+    badge: 'bg-primary/10 text-primary',
   },
   screener: {
-    dot: 'bg-emerald-500',
-    badge: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+    dot: 'bg-success',
+    badge: 'bg-success/10 text-success',
   },
   economic: {
-    dot: 'bg-amber-500',
-    badge: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+    dot: 'bg-warning',
+    badge: 'bg-warning/10 text-warning',
   },
 };
 
@@ -28,9 +28,9 @@ function EventRow({ event }: { event: CalendarEvent }) {
   return (
     <div className="flex items-center gap-3 py-2">
       <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${styles.dot}`} />
-      <span className="flex-1 text-sm text-gray-800 dark:text-gray-200">{event.title}</span>
+      <span className="flex-1 text-sm text-foreground">{event.title}</span>
       {event.ticker && (
-        <span className="text-xs font-mono text-gray-500 dark:text-gray-400">{event.ticker}</span>
+        <span className="text-xs font-mono text-muted">{event.ticker}</span>
       )}
       <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${styles.badge}`}>
         {t(`calendarPage.legend.${event.sourceTag}` as any)}
@@ -42,10 +42,10 @@ function EventRow({ event }: { event: CalendarEvent }) {
 function DateGroup({ date, events }: { date: string; events: CalendarEvent[] }) {
   return (
     <div className="mb-4">
-      <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+      <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted">
         {formatDate(date)}
       </div>
-      <div className="divide-y divide-gray-100 dark:divide-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4">
+      <div className="divide-y divide-border rounded-lg border border-border bg-surface px-4">
         {events.map((e, i) => (
           <EventRow key={`${e.date}-${e.ticker ?? 'eco'}-${i}`} event={e} />
         ))}
@@ -71,10 +71,10 @@ export default function Calendar() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-6">
       <div className="mb-6">
-        <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
+        <h1 className="text-xl font-semibold text-foreground">
           {t('calendarPage.title')}
         </h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        <p className="mt-1 text-sm text-muted">
           {t('calendarPage.subtitle')}
         </p>
       </div>
@@ -83,7 +83,7 @@ export default function Calendar() {
         {(['position', 'screener', 'economic'] as EventSourceTag[]).map((tag) => (
           <div key={tag} className="flex items-center gap-1.5">
             <span className={`h-2.5 w-2.5 rounded-full ${SOURCE_STYLES[tag].dot}`} />
-            <span className="text-xs text-gray-600 dark:text-gray-400">
+            <span className="text-xs text-muted">
               {t(`calendarPage.legend.${tag}` as any)}
             </span>
           </div>
@@ -91,13 +91,13 @@ export default function Calendar() {
       </div>
 
       {isLoading && (
-        <p className="text-sm text-gray-500 dark:text-gray-400">{t('calendarPage.loadingText')}</p>
+        <p className="text-sm text-muted">{t('calendarPage.loadingText')}</p>
       )}
       {isError && (
-        <p className="text-sm text-red-500">{t('calendarPage.errorText')}</p>
+        <p className="text-sm text-danger">{t('calendarPage.errorText')}</p>
       )}
       {!isLoading && !isError && grouped.length === 0 && (
-        <p className="text-sm text-gray-500 dark:text-gray-400">
+        <p className="text-sm text-muted">
           {t('calendarPage.empty' as any, { days: '30' })}
         </p>
       )}

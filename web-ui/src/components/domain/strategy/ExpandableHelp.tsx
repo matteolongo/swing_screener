@@ -13,10 +13,10 @@ export default function ExpandableHelp({ doc }: ExpandableHelpProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
-    <div className="mt-2 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+    <div className="mt-2 border border-border rounded-lg overflow-hidden">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full px-3 py-2 text-left text-sm font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors flex items-center justify-between"
+        className="w-full px-3 py-2 text-left text-sm font-medium text-primary bg-primary/10 hover:bg-primary/10 transition-colors flex items-center justify-between"
         aria-expanded={isExpanded}
       >
         <span>💡 Why this matters</span>
@@ -26,39 +26,39 @@ export default function ExpandableHelp({ doc }: ExpandableHelpProps) {
       </button>
       
       {isExpanded && (
-        <div className="px-3 py-3 space-y-3 text-sm bg-white dark:bg-gray-800">
+        <div className="px-3 py-3 space-y-3 text-sm bg-surface">
           <div>
-            <div className="font-semibold text-gray-700 dark:text-gray-300 mb-1">
+            <div className="font-semibold text-muted mb-1">
               What it is:
             </div>
-            <div className="text-gray-600 dark:text-gray-400">
+            <div className="text-muted">
               {doc.whatItIs}
             </div>
           </div>
 
           <div>
-            <div className="font-semibold text-gray-700 dark:text-gray-300 mb-1">
+            <div className="font-semibold text-muted mb-1">
               Why it matters:
             </div>
-            <div className="text-gray-600 dark:text-gray-400">
+            <div className="text-muted">
               {doc.whyItMatters}
             </div>
           </div>
 
           <div>
-            <div className="font-semibold text-gray-700 dark:text-gray-300 mb-1">
+            <div className="font-semibold text-muted mb-1">
               How it affects trades:
             </div>
-            <div className="text-gray-600 dark:text-gray-400">
+            <div className="text-muted">
               {doc.howItAffectsTrades}
             </div>
           </div>
 
           <div>
-            <div className="font-semibold text-gray-700 dark:text-gray-300 mb-1">
+            <div className="font-semibold text-muted mb-1">
               Tradeoffs:
             </div>
-            <div className="text-gray-600 dark:text-gray-400 space-y-1">
+            <div className="text-muted space-y-1">
               {doc.tradeoffs.lower && (
                 <div>• Lower: {doc.tradeoffs.lower}</div>
               )}
@@ -92,43 +92,43 @@ export default function ExpandableHelp({ doc }: ExpandableHelpProps) {
             </div>
           </div>
 
-          <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-            <div className="font-semibold text-green-700 dark:text-green-400 mb-1">
+          <div className="pt-2 border-t border-border">
+            <div className="font-semibold text-success mb-1">
               ✅ Beginner range:
             </div>
-            <div className="text-gray-600 dark:text-gray-400">
+            <div className="text-muted">
               {doc.beginnerRange}
             </div>
           </div>
 
           {doc.defaultGuidance && (
-            <div className="bg-green-50 dark:bg-green-900/20 rounded p-2">
-              <div className="text-xs font-semibold text-green-800 dark:text-green-300 mb-1">
+            <div className="bg-success/10 rounded p-2">
+              <div className="text-xs font-semibold text-success mb-1">
                 💚 Recommended guidance:
               </div>
-              <div className="text-xs text-green-700 dark:text-green-400">
+              <div className="text-xs text-success">
                 {doc.defaultGuidance}
               </div>
             </div>
           )}
 
           {doc.dangerZone && (
-            <div className="bg-red-50 dark:bg-red-900/20 rounded p-2">
-              <div className="text-xs font-semibold text-red-800 dark:text-red-300 mb-1">
+            <div className="bg-danger/10 rounded p-2">
+              <div className="text-xs font-semibold text-danger mb-1">
                 ⚠️ Danger zone:
               </div>
-              <div className="text-xs text-red-700 dark:text-red-400">
+              <div className="text-xs text-danger">
                 {doc.dangerZone}
               </div>
             </div>
           )}
 
           {doc.proTip && (
-            <div className="bg-blue-50 dark:bg-blue-900/20 rounded p-2">
-              <div className="text-xs font-semibold text-blue-800 dark:text-blue-300 mb-1">
+            <div className="bg-primary/10 rounded p-2">
+              <div className="text-xs font-semibold text-primary mb-1">
                 🎓 Pro tip:
               </div>
-              <div className="text-xs text-blue-700 dark:text-blue-400">
+              <div className="text-xs text-primary">
                 {doc.proTip}
               </div>
             </div>

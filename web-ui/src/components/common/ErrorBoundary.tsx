@@ -30,7 +30,7 @@ export default class ErrorBoundary extends Component<Props, State> {
       }
       return (
         <div className="flex flex-col items-center justify-center min-h-[200px] gap-3 p-6 text-center">
-          <p className="text-sm font-semibold text-rose-600">Something went wrong</p>
+          <p className="text-sm font-semibold text-danger">Something went wrong</p>
           <p className="text-xs text-muted max-w-sm">{error.message}</p>
           <button
             type="button"

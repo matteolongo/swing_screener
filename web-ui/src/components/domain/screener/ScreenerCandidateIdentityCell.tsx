@@ -31,7 +31,7 @@ export default function ScreenerCandidateIdentityCell({
               event.stopPropagation();
               onSymbolClick(candidate.ticker);
             }}
-            className={`font-bold text-sm hover:underline ${candidate.currency === 'USD' ? 'text-green-700 dark:text-green-400' : 'text-blue-600 dark:text-blue-400'}`}
+            className={`font-bold text-sm hover:underline ${candidate.currency === 'USD' ? 'text-success' : 'text-primary'}`}
             title={t('workspacePage.symbolDetails.openTitle', { ticker: candidate.ticker })}
           >
             {candidate.ticker}
@@ -41,7 +41,7 @@ export default function ScreenerCandidateIdentityCell({
             href={yahooUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className={`font-bold text-sm hover:underline ${candidate.currency === 'USD' ? 'text-green-700 dark:text-green-400' : 'text-blue-600 dark:text-blue-400'}`}
+            className={`font-bold text-sm hover:underline ${candidate.currency === 'USD' ? 'text-success' : 'text-primary'}`}
             title={t('screener.table.yahooTickerTitle', { ticker: candidate.ticker })}
           >
             {candidate.ticker}
@@ -51,7 +51,7 @@ export default function ScreenerCandidateIdentityCell({
           href={yahooUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center text-muted hover:text-gray-600 dark:hover:text-gray-200"
+          className="inline-flex items-center text-muted hover:text-muted"
           title={t('screener.table.yahooTickerTitle', { ticker: candidate.ticker })}
           aria-label={t('screener.table.yahooTickerTitle', { ticker: candidate.ticker })}
         >
@@ -59,24 +59,24 @@ export default function ScreenerCandidateIdentityCell({
         </a>
         <RecommendationBadge verdict={candidate.verdict} />
         {streak != null && streak >= 2 ? (
-          <span className="ml-1 text-[10px] font-bold px-1 py-0.5 rounded bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
+          <span className="ml-1 text-[10px] font-bold px-1 py-0.5 rounded bg-warning/10 text-warning">
             {streak}d
           </span>
         ) : null}
         {candidate.sameSymbol?.mode === 'ADD_ON' ? (
-          <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+          <span className="rounded bg-warning/10 px-1.5 py-0.5 text-[10px] text-warning">
             {t('screener.identity.addOnLabel')}
           </span>
         ) : null}
         {candidate.sameSymbol?.mode === 'MANAGE_ONLY' ? (
-          <span className="rounded bg-violet-100 px-1.5 py-0.5 text-[10px] text-violet-800 dark:bg-violet-900/40 dark:text-violet-200">
+          <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">
             {t('screener.identity.inPositionLabel')}
           </span>
         ) : null}
       </div>
 
       {/* Company name + sector */}
-      <div className="text-[11px] text-gray-500 dark:text-gray-500 leading-tight">
+      <div className="text-[11px] text-muted leading-tight">
         <span>{candidate.name}</span>
         {candidate.sector ? (
           <>

@@ -373,7 +373,7 @@ export default function StrategyPage() {
                 />
               </div>
               {idAlreadyExists && (
-                <div className="text-xs text-red-600">{t('strategyPage.create.idAlreadyExists')}</div>
+                <div className="text-xs text-danger">{t('strategyPage.create.idAlreadyExists')}</div>
               )}
               <div className="flex items-center gap-2">
                 <Button onClick={handleCreate} disabled={!canCreate}>
@@ -385,17 +385,17 @@ export default function StrategyPage() {
               </div>
             </div>
           )}
-          {statusMessage && <div className="mt-3 text-sm text-green-600">{statusMessage}</div>}
+          {statusMessage && <div className="mt-3 text-sm text-success">{statusMessage}</div>}
           {updateMutation.isError && (
-            <div className="mt-3 text-sm text-red-600">{t('strategyPage.errors.saveFailed')}</div>
+            <div className="mt-3 text-sm text-danger">{t('strategyPage.errors.saveFailed')}</div>
           )}
           {createMutation.isError && (
-            <div className="mt-3 text-sm text-red-600">
+            <div className="mt-3 text-sm text-danger">
               {(createMutation.error as Error)?.message || t('strategyPage.errors.createFailed')}
             </div>
           )}
           {deleteMutation.isError && (
-            <div className="mt-3 text-sm text-red-600">
+            <div className="mt-3 text-sm text-danger">
               {(deleteMutation.error as Error)?.message || t('strategyPage.errors.deleteFailed')}
             </div>
           )}

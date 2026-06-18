@@ -336,7 +336,7 @@ export default function StrategyAdvancedSettingsCard({
                 />
               </div>
               {(lowRrWarning || highFeeWarning) && (
-                <div className="mt-3 rounded border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
+                <div className="mt-3 rounded border border-warning/40 bg-warning/10 p-3 text-sm text-warning">
                   <div className="font-semibold">{t('strategyPage.advanced.guardrails.title')}</div>
                   {lowRrWarning && (
                     <div>{t('strategyPage.advanced.guardrails.lowRr')}</div>
