@@ -9,8 +9,6 @@ import StrategyCoreSettingsCards from '@/components/domain/strategy/StrategyCore
 import StrategyPhilosophyCard from '@/components/domain/strategy/StrategyPhilosophyCard';
 import StrategySafetyScore from '@/components/domain/strategy/StrategySafetyScore';
 import StrategyCapitalRiskSummary from '@/components/domain/strategy/StrategyCapitalRiskSummary';
-import BeginnerModeToggle from '@/components/domain/strategy/BeginnerModeToggle';
-import StrategyPresets, { applyPresetToStrategy } from '@/components/domain/strategy/StrategyPresets';
 import { useI18n } from '@/i18n/I18nProvider';
 import {
   buildHelp,
@@ -18,11 +16,9 @@ import {
   TextInput,
 } from '@/components/domain/strategy/StrategyFieldControls';
 import { getStrategyInfo } from '@/content/strategy_docs/loader';
-import { useBeginnerModeStore } from '@/stores/beginnerModeStore';
 
 export default function StrategyPage() {
   const { locale, t } = useI18n();
-  const { isBeginnerMode, setBeginnerMode } = useBeginnerModeStore();
   const [showStrategyManagement, setShowStrategyManagement] = useState(false);
 
   const help = useMemo(
@@ -300,24 +296,6 @@ export default function StrategyPage() {
         </div>
       </div>
 
-      {draft && isBeginnerMode ? (
-        <Card variant="bordered" className="border-emerald-200 bg-emerald-50/70 dark:border-emerald-900 dark:bg-emerald-950/20">
-          <CardHeader>
-            <CardTitle>{t('strategyPage.quickStart.title')}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <ol className="space-y-1 text-sm text-gray-700 dark:text-gray-200">
-              <li>{t('strategyPage.quickStart.step1')}</li>
-              <li>{t('strategyPage.quickStart.step2')}</li>
-              <li>{t('strategyPage.quickStart.step3')}</li>
-            </ol>
-            <Button onClick={handleSave} disabled={!draft || updateMutation.isPending}>
-              {updateMutation.isPending ? t('strategyPage.actions.saving') : t('strategyPage.quickStart.primaryAction')}
-            </Button>
-          </CardContent>
-        </Card>
-      ) : null}
-
       <StrategyCapitalRiskSummary strategy={draft} />
 
       <Card variant="bordered">
@@ -440,23 +418,6 @@ export default function StrategyPage() {
             return strategyInfo ? <StrategyPhilosophyCard strategyInfo={strategyInfo} /> : null;
           })()}
 
-          {/* Beginner Mode Toggle */}
-          <BeginnerModeToggle
-            isBeginnerMode={isBeginnerMode}
-            onToggle={setBeginnerMode}
-          />
-
-          {/* Presets - Only show in beginner mode */}
-          {isBeginnerMode && (
-            <StrategyPresets
-              currentStrategy={draft}
-              onApplyPreset={(preset) => {
-                const updated = applyPresetToStrategy(draft, preset);
-                setDraft(updated);
-              }}
-            />
-          )}
-
           {/* Safety Score - Provides feedback on configuration quality */}
           <StrategySafetyScore
             validation={validationResult}
@@ -469,21 +430,18 @@ export default function StrategyPage() {
             setDraft={setDraft}
             help={help}
             validationWarnings={validationWarnings}
-            useEnhancedEducation={isBeginnerMode}
+            useEnhancedEducation={false}
           />
 
-          {/* Advanced Settings - Hidden in beginner mode */}
-          {!isBeginnerMode && (
-            <StrategyAdvancedSettingsCard
-              draft={draft}
-              setDraft={setDraft}
-              showAdvanced={showAdvanced}
-              setShowAdvanced={setShowAdvanced}
-              lowRrWarning={lowRrWarning}
-              highFeeWarning={highFeeWarning}
-              help={help}
-            />
-          )}
+          <StrategyAdvancedSettingsCard
+            draft={draft}
+            setDraft={setDraft}
+            showAdvanced={showAdvanced}
+            setShowAdvanced={setShowAdvanced}
+            lowRrWarning={lowRrWarning}
+            highFeeWarning={highFeeWarning}
+            help={help}
+          />
         </>
       )}
     </div>
