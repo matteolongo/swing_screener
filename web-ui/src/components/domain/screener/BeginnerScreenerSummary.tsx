@@ -16,7 +16,7 @@ export interface BeginnerScreenerSummaryProps {
 const READINESS_CHIP_CLASS: Record<BeginnerOrderReadiness, string> = {
   ready: 'bg-green-100 text-green-800 border border-green-300',
   wait_for_price: 'bg-amber-100 text-amber-800 border border-amber-300',
-  watch_only: 'bg-blue-100 text-blue-800 border border-blue-300',
+  watch_only: 'bg-primary/10 text-primary border border-primary/40',
   avoid: 'bg-red-100 text-red-800 border border-red-300',
   manage_existing: 'bg-gray-100 text-gray-700 border border-gray-300',
   incomplete: 'bg-gray-100 text-gray-700 border border-gray-300',
@@ -44,7 +44,7 @@ const ACTION_LABEL_KEY: Record<DecisionAction, MessageKey> = {
 const READINESS_BORDER_CLASS: Record<BeginnerOrderReadiness, string> = {
   ready: 'border-green-200',
   wait_for_price: 'border-amber-200',
-  watch_only: 'border-blue-200',
+  watch_only: 'border-primary/40',
   avoid: 'border-gray-200',
   manage_existing: 'border-gray-200',
   incomplete: 'border-gray-200',

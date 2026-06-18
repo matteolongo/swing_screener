@@ -136,11 +136,11 @@ export default function FundamentalsPage({ initialSymbol, defaultSimple = false 
       </div>
 
       {warmupJobId ? (
-        <div className="rounded-lg border border-sky-200 bg-sky-50 p-4">
+        <div className="rounded-lg border border-primary/40 bg-primary/10 p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <div className="text-sm font-semibold text-sky-950">{t('fundamentalsPage.warmup.title')}</div>
-              <div className="text-xs text-sky-800">
+              <div className="text-xs text-primary">
                 {t('fundamentalsPage.warmup.job', {
                   jobId: warmupJobId,
                   source: warmupStatus?.source ?? 'queued',
@@ -148,7 +148,7 @@ export default function FundamentalsPage({ initialSymbol, defaultSimple = false 
                 })}
               </div>
             </div>
-            <div className="text-right text-xs text-sky-800">
+            <div className="text-right text-xs text-primary">
               <div>{t('fundamentalsPage.warmup.progress', { progress: progressText })}</div>
               {warmupStatus?.lastCompletedSymbol ? (
                 <div>{t('fundamentalsPage.warmup.last', { symbol: warmupStatus.lastCompletedSymbol })}</div>
@@ -158,8 +158,8 @@ export default function FundamentalsPage({ initialSymbol, defaultSimple = false 
 
           {warmupStatus ? (
             <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-3">
-              <div className="rounded-md bg-surface/70 p-3 text-xs text-sky-900">
-                <div className="text-sky-700">{t('fundamentalsPage.warmup.coverage.label')}</div>
+              <div className="rounded-md bg-surface/70 p-3 text-xs text-primary">
+                <div className="text-primary">{t('fundamentalsPage.warmup.coverage.label')}</div>
                 <div className="mt-1">
                   {t('fundamentalsPage.warmup.coverage.stats', {
                     supported: warmupStatus.coverageCounts.supported,
@@ -169,8 +169,8 @@ export default function FundamentalsPage({ initialSymbol, defaultSimple = false 
                   })}
                 </div>
               </div>
-              <div className="rounded-md bg-surface/70 p-3 text-xs text-sky-900">
-                <div className="text-sky-700">{t('fundamentalsPage.warmup.freshness.label')}</div>
+              <div className="rounded-md bg-surface/70 p-3 text-xs text-primary">
+                <div className="text-primary">{t('fundamentalsPage.warmup.freshness.label')}</div>
                 <div className="mt-1">
                   {t('fundamentalsPage.warmup.freshness.stats', {
                     current: warmupStatus.freshnessCounts.current,
@@ -179,8 +179,8 @@ export default function FundamentalsPage({ initialSymbol, defaultSimple = false 
                   })}
                 </div>
               </div>
-              <div className="rounded-md bg-surface/70 p-3 text-xs text-sky-900">
-                <div className="text-sky-700">{t('fundamentalsPage.warmup.errors.label')}</div>
+              <div className="rounded-md bg-surface/70 p-3 text-xs text-primary">
+                <div className="text-primary">{t('fundamentalsPage.warmup.errors.label')}</div>
                 <div className="mt-1">
                   {warmupStatus.errorSample
                     ? t('fundamentalsPage.warmup.errors.statsWithSample', {

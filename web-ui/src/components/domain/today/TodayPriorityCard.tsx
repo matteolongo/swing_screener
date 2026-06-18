@@ -17,7 +17,7 @@ const KIND_BORDER: Record<TodayPriorityKind, string> = {
   update_stop: 'border-l-4 border-amber-500',
   pending_orders: 'border-l-4 border-amber-500',
   watchlist_near_trigger: 'border-l-4 border-amber-500',
-  best_candidate: 'border-l-4 border-blue-500',
+  best_candidate: 'border-l-4 border-primary/40',
   run_screener: 'border-l-4 border-gray-300 dark:border-gray-600',
   no_action: 'border-l-4 border-gray-300 dark:border-gray-600',
 };

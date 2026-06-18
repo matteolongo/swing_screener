@@ -253,7 +253,7 @@ function CandidateItem({ item, isAddOn, onClick, isFocused }: CandidateItemProps
         type="button"
         onClick={() => onClick(item.ticker)}
         className={cn(
-          'w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-l-2 border-blue-500',
+          'w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-l-2 border-primary/40',
           isFocused && 'ring-1 ring-primary',
         )}
       >

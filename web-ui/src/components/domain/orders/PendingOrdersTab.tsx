@@ -104,7 +104,7 @@ export default function PendingOrdersTab() {
                         onClick={() => setFillDegiroOrder(order)}
                         disabled={!degiroAvailable}
                         title={!degiroAvailable ? t('pendingOrdersTab.degiroNotConnected') : undefined}
-                        className="px-2 py-1 rounded text-xs font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300 disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="px-2 py-1 rounded text-xs font-medium bg-blue-50 text-blue-700 hover:bg-primary/20 dark:bg-blue-950 dark:text-blue-300 disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         {t('pendingOrdersTab.fillViaDegiro')}
                       </button>

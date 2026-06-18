@@ -90,7 +90,7 @@ export function ScreenerRunningPanel() {
   }, []);
 
   return (
-    <div className="rounded-lg border border-blue-200 bg-blue-50/60 p-4 space-y-2">
+    <div className="rounded-lg border border-primary/40 bg-primary/10 p-4 space-y-2">
       {RUNNING_STEPS.map((stepKey, index) => {
         const isCompleted = index < currentStep;
         const isCurrent = index === currentStep;
@@ -108,7 +108,7 @@ export function ScreenerRunningPanel() {
                 isCompleted
                   ? 'text-muted line-through'
                   : isCurrent
-                    ? 'text-blue-800 font-medium'
+                    ? 'text-primary font-medium'
                     : 'text-muted'
               }
             >
@@ -322,9 +322,9 @@ export default function ScreenerInboxPanel() {
       ) : null}
 
       {!screenerMutation.isPending && !result && !screenerMutation.isError ? (
-        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-start">
-          <AlertCircle className="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" />
-          <div className="text-xs md:text-sm text-blue-800">
+        <div className="p-3 bg-primary/10 border border-primary/40 rounded-lg flex items-start">
+          <AlertCircle className="w-5 h-5 text-primary mr-2 flex-shrink-0 mt-0.5" />
+          <div className="text-xs md:text-sm text-primary">
             <strong>{t('screener.info.noteTitle')}</strong> {t('screener.info.noteBody')}
           </div>
         </div>

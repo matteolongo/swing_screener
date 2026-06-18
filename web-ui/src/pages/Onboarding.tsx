@@ -156,7 +156,7 @@ export default function OnboardingPage() {
       <Card variant="bordered">
         <CardContent className="space-y-4 p-4 sm:p-6">
           <div className="flex items-center gap-3">
-            <Icon className="h-5 w-5 text-blue-600" />
+            <Icon className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-semibold">{step.title}</h2>
           </div>
 

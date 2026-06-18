@@ -204,12 +204,12 @@ export default function ScreenerForm({
             </span>
           )}
           {requireWeeklyUptrend && (
-            <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">
               {t('screener.controls.weeklyUptrend')}
             </span>
           )}
           {recommendedOnly && (
-            <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">
               {t('screener.controls.recommendedOnlyShort')}
             </span>
           )}
@@ -242,7 +242,7 @@ export default function ScreenerForm({
               value={selectedUniverse}
               onChange={(e) => setSelectedUniverse(e.target.value)}
               aria-label={t('screener.controls.universe')}
-              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary/40"
               disabled={isLoading}
             >
               {universes.map((universe) => (
@@ -262,7 +262,7 @@ export default function ScreenerForm({
               aria-label={t('screener.controls.topN')}
               min="1"
               max={TOP_N_MAX}
-              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary/40"
               disabled={isLoading}
             />
           </div>
@@ -276,7 +276,7 @@ export default function ScreenerForm({
               aria-label={t('screener.controls.minPrice')}
               min="0"
               step="0.1"
-              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary/40"
               disabled={isLoading}
             />
           </div>
@@ -290,7 +290,7 @@ export default function ScreenerForm({
               aria-label={t('screener.controls.maxPrice')}
               min="0"
               step="1"
-              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary/40"
               disabled={isLoading}
             />
           </div>
@@ -301,7 +301,7 @@ export default function ScreenerForm({
               value={currencyFilter}
               onChange={(e) => setCurrencyFilter(e.target.value as CurrencyFilter)}
               aria-label={t('screener.controls.currency')}
-              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary/40"
               disabled={isLoading}
             >
               <option value="all">{t('screener.currencyFilter.all')}</option>
@@ -316,7 +316,7 @@ export default function ScreenerForm({
               value={exchangeFilter}
               onChange={(e) => setExchangeFilter(e.target.value as ExchangeFilter)}
               aria-label={t('screener.controls.venue.label')}
-              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary/40"
               disabled={isLoading}
             >
               <option value="all">{t('screener.controls.venue.all')}</option>
@@ -336,7 +336,7 @@ export default function ScreenerForm({
               value={instrumentFilter}
               onChange={(e) => setInstrumentFilter(e.target.value as InstrumentFilter)}
               aria-label={t('screener.controls.instrument.label')}
-              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary/40"
               disabled={isLoading}
             >
               <option value="all">{t('screener.controls.instrument.all')}</option>
@@ -396,7 +396,7 @@ export default function ScreenerForm({
                 checked={!includeOtc}
                 onChange={(e) => setIncludeOtc(!e.target.checked)}
                 aria-label={t('screener.controls.excludeOtc')}
-                className="w-5 h-5 text-blue-600 border-border rounded focus:ring-blue-500"
+                className="w-5 h-5 text-primary border-border rounded focus:ring-primary"
                 disabled={isLoading}
               />
               <span className="text-sm font-medium text-muted">{t('screener.controls.excludeOtc')}</span>
@@ -407,7 +407,7 @@ export default function ScreenerForm({
                 checked={recommendedOnly}
                 onChange={(e) => setRecommendedOnly(e.target.checked)}
                 aria-label={t('screener.controls.recommendedOnly')}
-                className="w-5 h-5 text-blue-600 border-border rounded focus:ring-blue-500"
+                className="w-5 h-5 text-primary border-border rounded focus:ring-primary"
                 disabled={isLoading}
               />
               <span className="text-sm font-medium text-muted">{t('screener.controls.recommendedOnly')}</span>
@@ -418,7 +418,7 @@ export default function ScreenerForm({
                 checked={requireWeeklyUptrend}
                 onChange={(e) => setRequireWeeklyUptrend(e.target.checked)}
                 aria-label={t('screener.controls.requireWeeklyUptrend')}
-                className="w-5 h-5 text-blue-600 border-border rounded focus:ring-blue-500"
+                className="w-5 h-5 text-primary border-border rounded focus:ring-primary"
                 disabled={isLoading}
               />
               <span className="text-sm font-medium text-muted">{t('screener.controls.requireWeeklyUptrend')}</span>
@@ -431,7 +431,7 @@ export default function ScreenerForm({
               value={actionFilter}
               onChange={(e) => setActionFilter(e.target.value as DecisionActionFilter)}
               aria-label={t('screener.controls.actionFilter')}
-              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary/40"
               disabled={isLoading}
             >
               {(['all', 'BUY_NOW', 'BUY_ON_PULLBACK', 'WAIT_FOR_BREAKOUT', 'WATCH', 'TACTICAL_ONLY', 'AVOID', 'MANAGE_ONLY'] as const).map(

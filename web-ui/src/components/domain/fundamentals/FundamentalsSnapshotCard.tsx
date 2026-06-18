@@ -241,7 +241,7 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
             <span className={`rounded-full px-2 py-1 text-xs font-medium ${qualityBadgeClass(snapshot.dataQualityStatus)}`}>
               quality {snapshot.dataQualityStatus}
             </span>
-            <span className="rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800">
+            <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
               {[snapshot.provider, snapshot.dataRegion].filter(Boolean).join(' · ')}
             </span>
           </div>

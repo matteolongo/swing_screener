@@ -32,7 +32,7 @@ const QUALITY_LABEL_KEY: Record<BeginnerSetupQuality, MessageKey> = {
 const READINESS_CHIP_CLASS: Record<BeginnerOrderReadiness, string> = {
   ready: 'bg-green-100 text-green-800 border border-green-300',
   wait_for_price: 'bg-amber-100 text-amber-800 border border-amber-300',
-  watch_only: 'bg-blue-100 text-blue-800 border border-blue-300',
+  watch_only: 'bg-primary/10 text-primary border border-primary/40',
   avoid: 'bg-red-100 text-red-800 border border-red-300',
   manage_existing: 'bg-gray-100 text-gray-700 border border-gray-300',
   incomplete: 'bg-gray-100 text-gray-700 border border-gray-300',
@@ -81,7 +81,7 @@ export default function ScreenerCandidateReviewList({
         return (
           <div
             key={candidate.ticker}
-            className={`flex items-start gap-3 px-3 py-2.5 border-b border-border last:border-b-0 ${isSelected ? 'bg-blue-50' : 'bg-surface'}`}
+            className={`flex items-start gap-3 px-3 py-2.5 border-b border-border last:border-b-0 ${isSelected ? 'bg-primary/10' : 'bg-surface'}`}
           >
             <span className="text-xs text-muted w-5 flex-shrink-0 pt-0.5">{index + 1}</span>
 

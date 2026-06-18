@@ -238,7 +238,7 @@ export default function IntelligenceCard({ intelligence }: IntelligenceCardProps
                     href={url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline break-all text-xs"
+                    className="text-primary hover:underline break-all text-xs"
                   >
                     {url}
                   </a>

@@ -267,7 +267,7 @@ export default function Universes() {
               <select
                 value={discoveryProvider}
                 onChange={(event) => setDiscoveryProvider(event.target.value as SymbolDiscoveryRequest['provider'])}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
               >
                 <option value="yahoo_predefined">Yahoo predefined</option>
                 <option value="eodhd_exchange">EODHD exchange list</option>
@@ -376,7 +376,7 @@ export default function Universes() {
                       disabled={discoveryProvider !== 'yahoo_predefined'}
                       className={`rounded-md border px-3 py-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                         active
-                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          ? 'border-primary/40 bg-primary/10 text-primary'
                           : 'border-border bg-surface text-muted hover:bg-foreground/5'
                       }`}
                     >
@@ -389,13 +389,13 @@ export default function Universes() {
           </div>
 
           {yahooUsesCustomScreener ? (
-            <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+            <div className="rounded-xl border border-primary/40 bg-primary/10 p-3 text-sm text-primary">
               Yahoo will use its custom screener endpoint for this market because predefined screeners are mostly US-centric.
             </div>
           ) : null}
 
           {eodhdNeedsKey ? (
-            <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+            <div className="rounded-xl border border-primary/40 bg-primary/10 p-3 text-sm text-primary">
               EODHD exchange discovery needs `EODHD_API_KEY` configured in the backend environment. Without it, the request will return a setup error instead of live EUR symbols.
             </div>
           ) : null}
@@ -685,7 +685,7 @@ export default function Universes() {
                           value={benchmarkDraft}
                           onChange={(event) => setBenchmarkDraft(event.target.value.toUpperCase())}
                           placeholder="SPY"
-                          className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
+                          className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
                         />
                       </div>
                       <Button
@@ -824,7 +824,7 @@ export default function Universes() {
                           href={document.url}
                           target="_blank"
                           rel="noreferrer"
-                          className="block text-sm text-blue-600 hover:text-blue-700 hover:underline"
+                          className="block text-sm text-primary hover:text-blue-700 hover:underline"
                         >
                           {document.label}
                         </a>
