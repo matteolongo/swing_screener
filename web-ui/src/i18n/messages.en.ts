@@ -1098,6 +1098,7 @@ export const messagesEn = {
       scoreLabel: 'Score {{value}}',
       addOnLabel: 'Add-On',
       inPositionLabel: 'In Position',
+      streakTitle: 'Passed the screener {{count}} days in a row',
       confidenceLabel: '{{value}}% confidence',
       confidenceUnknown: 'Confidence N/A',
     },

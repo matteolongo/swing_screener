@@ -55,7 +55,7 @@ export default function RecommendationBadge({
     <span className="inline-flex flex-col gap-1">
       <span
         className={cn(
-          'text-xs px-2 py-1 rounded',
+          'text-xs px-2 py-1 rounded whitespace-nowrap',
           VERDICT_STYLES[displayKey],
           className,
         )}

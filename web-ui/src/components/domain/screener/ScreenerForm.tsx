@@ -238,7 +238,7 @@ export default function ScreenerForm({
       )}
 
       <div className="space-y-3">
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-8 gap-3 items-end">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-7 gap-3 items-end">
           <Field label={t('screener.controls.universe')}>
             <Select
               value={selectedUniverse}
@@ -327,25 +327,26 @@ export default function ScreenerForm({
             </Select>
           </Field>
 
-          <div className="md:col-span-2 xl:col-span-1 flex items-end xl:justify-end">
-            <Button
-              onClick={onRun}
-              disabled={isLoading}
-              className="w-full xl:w-auto xl:min-w-[10rem] whitespace-nowrap"
-            >
-              {isLoading ? (
-                <>
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                  {t('screener.controls.running')}
-                </>
-              ) : (
-                <>
-                  <PlayCircle className="w-4 h-4 mr-2" />
-                  {t('screener.controls.run')}
-                </>
-              )}
-            </Button>
-          </div>
+        </div>
+
+        <div className="flex justify-end">
+          <Button
+            onClick={onRun}
+            disabled={isLoading}
+            className="w-full md:w-auto md:min-w-[10rem] whitespace-nowrap"
+          >
+            {isLoading ? (
+              <>
+                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                {t('screener.controls.running')}
+              </>
+            ) : (
+              <>
+                <PlayCircle className="w-4 h-4 mr-2" />
+                {t('screener.controls.run')}
+              </>
+            )}
+          </Button>
         </div>
 
         {selectedUniverseMeta ? (

@@ -31,6 +31,15 @@ export function metricHorizonLabel(metricKey: string, context?: FundamentalMetri
   return cadence ?? 'varies';
 }
 
+export function metricHorizonShortLabel(metricKey: string, context?: FundamentalMetricContext) {
+  const label = metricHorizonLabel(metricKey, context);
+  if (label === 'live price') return 'live';
+  if (label === 'latest quarter') return 'Q';
+  if (label === 'latest FY') return 'FY';
+  if (label === 'reported') return 'rep';
+  return 'var';
+}
+
 export function metricHorizonTooltip(metricKey: string, context?: FundamentalMetricContext) {
   const label = metricHorizonLabel(metricKey, context);
   if (label === 'live price') return 'Calculated from the current stock price — updates with the market';

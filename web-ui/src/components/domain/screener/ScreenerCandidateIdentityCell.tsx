@@ -59,7 +59,10 @@ export default function ScreenerCandidateIdentityCell({
         </a>
         <RecommendationBadge verdict={candidate.verdict} />
         {streak != null && streak >= 2 ? (
-          <span className="ml-1 text-[10px] font-bold px-1 py-0.5 rounded bg-warning/10 text-warning">
+          <span
+            className="ml-1 whitespace-nowrap rounded bg-warning/10 px-1 py-0.5 text-[10px] font-bold text-warning"
+            title={t('screener.identity.streakTitle', { count: streak })}
+          >
             {streak}d
           </span>
         ) : null}
