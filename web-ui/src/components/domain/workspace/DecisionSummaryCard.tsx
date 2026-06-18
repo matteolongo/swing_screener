@@ -191,7 +191,7 @@ export default function DecisionSummaryCard({
       case 'BUY_ON_PULLBACK':
       case 'WAIT_FOR_BREAKOUT':
       case 'TACTICAL_ONLY':
-        return 'bg-warning text-warning';
+        return 'bg-warning/15 text-warning';
       case 'AVOID':
         return 'bg-danger text-white';
       case 'WATCH':
