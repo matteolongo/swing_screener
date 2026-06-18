@@ -22,38 +22,38 @@ export default function ConcentrationBar({ groups }: ConcentrationBarProps) {
     <section
       data-warning={topGroup.warning ? 'true' : 'false'}
       className={cn(
-        'rounded-lg border bg-white px-4 py-3 dark:bg-gray-900',
+        'rounded-lg border bg-surface px-4 py-3',
         topGroup.warning
-          ? 'border-amber-300 dark:border-amber-700'
-          : 'border-gray-200 dark:border-gray-700',
+          ? 'border-warning/40'
+          : 'border-border',
       )}
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
           {topGroup.warning ? (
-            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-300" aria-hidden="true" />
+            <AlertTriangle className="h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
           ) : null}
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted">
               {t('concentrationBar.title')}
             </p>
-            <p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
+            <p className="truncate text-sm font-semibold text-foreground">
               {t(labelKey, { country: topGroup.country, pct })}
             </p>
           </div>
         </div>
-        <p className="shrink-0 text-xs font-medium text-gray-500 dark:text-gray-400">
+        <p className="shrink-0 text-xs font-medium text-muted">
           {t('concentrationBar.detail', {
             count: topGroup.positionCount,
             amount: formatCurrency(topGroup.riskAmount, 'EUR'),
           })}
         </p>
       </div>
-      <div className="mt-3 h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+      <div className="mt-3 h-2 overflow-hidden rounded-full bg-foreground/5">
         <div
           className={cn(
             'h-full rounded-full',
-            topGroup.warning ? 'bg-amber-500 dark:bg-amber-400' : 'bg-blue-500 dark:bg-blue-400',
+            topGroup.warning ? 'bg-warning' : 'bg-primary',
           )}
           style={{ width: fillWidth }}
         />
