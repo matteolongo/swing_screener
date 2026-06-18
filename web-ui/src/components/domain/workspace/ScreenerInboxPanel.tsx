@@ -97,9 +97,9 @@ export function ScreenerRunningPanel() {
         return (
           <div key={stepKey} className="flex items-center gap-2 text-sm">
             {isCompleted ? (
-              <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
+              <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0" />
             ) : isCurrent ? (
-              <Loader2 className="w-4 h-4 text-blue-500 animate-spin flex-shrink-0" />
+              <Loader2 className="w-4 h-4 text-primary animate-spin flex-shrink-0" />
             ) : (
               <div className="w-4 h-4 rounded-full border border-border flex-shrink-0" />
             )}
@@ -269,7 +269,7 @@ export default function ScreenerInboxPanel() {
     const configFailed = configDefaultsQuery.isError && !activeStrategy?.risk;
     return (
       <Card variant="bordered" className="p-4 md:p-5">
-        <div className={`text-sm ${configFailed ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'}`}>
+        <div className={`text-sm ${configFailed ? 'text-danger' : 'text-muted'}`}>
           {configFailed ? t('common.errors.generic') : t('common.table.loading')}
         </div>
       </Card>
@@ -277,7 +277,7 @@ export default function ScreenerInboxPanel() {
   }
 
   return (
-    <Card variant="bordered" className="p-3 md:p-4 flex min-h-0 flex-col gap-3 xl:h-full xl:overflow-hidden">
+    <Card variant="bordered" className="p-3 md:p-4 flex min-h-0 flex-col gap-3 xl:h-full xl:overflow-y-auto">
       <ScreenerForm
         selectedUniverse={selectedUniverse}
         setSelectedUniverse={setSelectedUniverse}
@@ -311,8 +311,8 @@ export default function ScreenerInboxPanel() {
       {screenerMutation.isPending && <ScreenerRunningPanel />}
 
       {screenerMutation.isError ? (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-xs md:text-sm text-red-800">
+        <div className="p-3 bg-danger/10 border border-danger/40 rounded-lg">
+          <p className="text-xs md:text-sm text-danger">
             {t('screener.error.prefix')}:{' '}
             {screenerMutation.error instanceof Error
               ? screenerMutation.error.message
@@ -337,9 +337,9 @@ export default function ScreenerInboxPanel() {
       </div>
 
       {result ? (
-        <div className="rounded-lg border border-border bg-surface p-3 flex-1 min-h-0 flex flex-col gap-3">
+        <div className="rounded-lg border border-border bg-surface p-3 flex flex-col gap-3">
           <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
-            <div className="space-y-1 text-xs md:text-sm text-gray-600 dark:text-gray-400">
+            <div className="space-y-1 text-xs md:text-sm text-muted">
               <div>
                 {t('workspacePage.panels.screener.resultSummary', {
                   shown: displayCandidates.length,
@@ -351,7 +351,7 @@ export default function ScreenerInboxPanel() {
                 {t('workspacePage.panels.screener.priorityExplanation')}
               </div>
             </div>
-            <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+            <div className="flex items-center gap-2 text-xs text-muted">
               <span>
                 {t('workspacePage.panels.screener.asOf', {
                   date: formatDate(result.asofDate),
@@ -371,7 +371,7 @@ export default function ScreenerInboxPanel() {
           {result.sameSymbolSuppressedCount || result.sameSymbolAddOnCount ? (
             <div className="flex flex-wrap gap-2 text-xs">
               {result.sameSymbolSuppressedCount ? (
-                <div className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+                <div className="rounded-full border border-warning/40 bg-warning/10 px-3 py-1 text-warning">
                   {t('screener.summary.sameSymbolSuppressed', {
                     count: result.sameSymbolSuppressedCount,
                     suffix: result.sameSymbolSuppressedCount === 1 ? '' : 's',
@@ -379,7 +379,7 @@ export default function ScreenerInboxPanel() {
                 </div>
               ) : null}
               {result.sameSymbolAddOnCount ? (
-                <div className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-blue-800 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-200">
+                <div className="rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-primary">
                   {t('screener.summary.sameSymbolAddOns', {
                     count: result.sameSymbolAddOnCount,
                     suffix: result.sameSymbolAddOnCount === 1 ? '' : 's',
@@ -393,7 +393,7 @@ export default function ScreenerInboxPanel() {
               {result.warnings.map((warning, i) => (
                 <div
                   key={i}
-                  className="rounded border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200"
+                  className="rounded border border-warning/40 bg-warning/10 px-3 py-1.5 text-xs text-warning"
                 >
                   {warning}
                 </div>
@@ -421,7 +421,7 @@ export default function ScreenerInboxPanel() {
               onReview={(ticker) => handleSelectCandidate(ticker, 'overview')}
             />
           ) : (
-            <div className="flex-1 min-h-0 overflow-auto rounded-md border border-gray-200 dark:border-gray-700">
+            <div className="overflow-x-auto rounded-md border border-border">
               <ScreenerCandidatesTable
                 candidates={displayCandidates}
                 selectedTicker={selectedTicker}

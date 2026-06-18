@@ -23,12 +23,12 @@ export default function OrderActionPanel({
   successMessage,
 }: OrderActionPanelProps) {
   return (
-    <div className="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+    <div className="rounded-lg border border-border p-3">
       <div className="mb-4">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+        <h3 className="text-sm font-semibold text-foreground">
           {t('workspacePage.panels.analysis.actionTitle')}
         </h3>
-        <p className="text-xs text-gray-600 dark:text-gray-400">
+        <p className="text-xs text-muted">
           {t('workspacePage.panels.analysis.actionDescription')}
         </p>
       </div>

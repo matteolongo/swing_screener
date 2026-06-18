@@ -1,36 +1,27 @@
-import { API_ENDPOINTS, apiUrl } from '@/lib/api';
+import { API_ENDPOINTS } from '@/lib/api';
+import { fetchJson } from '@/lib/fetchJson';
 import { type AppConfig, type AppConfigAPI, toAppConfigAPI, transformAppConfig } from '@/types/config';
 
-async function parseConfigResponse(response: Response, fallbackMessage: string): Promise<AppConfig> {
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.detail || fallbackMessage);
-  }
-  const payload: AppConfigAPI = await response.json();
+export async function fetchConfig(): Promise<AppConfig> {
+  const payload = await fetchJson<AppConfigAPI>(API_ENDPOINTS.config, {
+    errorMessage: 'Failed to fetch app config',
+  });
   return transformAppConfig(payload);
 }
 
-export async function fetchConfig(): Promise<AppConfig> {
-  return parseConfigResponse(
-    await fetch(apiUrl(API_ENDPOINTS.config)),
-    'Failed to fetch app config',
-  );
-}
-
 export async function fetchConfigDefaults(): Promise<AppConfig> {
-  return parseConfigResponse(
-    await fetch(apiUrl(API_ENDPOINTS.configDefaults)),
-    'Failed to fetch config defaults',
-  );
+  const payload = await fetchJson<AppConfigAPI>(API_ENDPOINTS.configDefaults, {
+    errorMessage: 'Failed to fetch config defaults',
+  });
+  return transformAppConfig(payload);
 }
 
 export async function updateConfig(config: AppConfig): Promise<AppConfig> {
-  return parseConfigResponse(
-    await fetch(apiUrl(API_ENDPOINTS.config), {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(toAppConfigAPI(config)),
-    }),
-    'Failed to update app config',
-  );
+  const payload = await fetchJson<AppConfigAPI>(API_ENDPOINTS.config, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(toAppConfigAPI(config)),
+    errorMessage: 'Failed to update app config',
+  });
+  return transformAppConfig(payload);
 }

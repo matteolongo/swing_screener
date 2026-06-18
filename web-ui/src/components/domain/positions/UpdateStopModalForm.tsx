@@ -119,8 +119,8 @@ export default function UpdateStopModalForm({
   return (
     <ModalShell title={t('positions.updateStopModal.title', { ticker: position.ticker })} onClose={onClose} className="max-w-md">
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
-          <p className="text-sm text-gray-600 dark:text-gray-400">{t('positions.updateStopModal.currentPosition')}</p>
+        <div className="bg-foreground/5 p-3 rounded">
+          <p className="text-sm text-muted">{t('positions.updateStopModal.currentPosition')}</p>
           <p className="text-sm mt-1">
             <strong>{t('positions.updateStopModal.entryLabel')}</strong> {formatCurrency(position.entryPrice)}
           </p>
@@ -134,18 +134,18 @@ export default function UpdateStopModalForm({
 
         <TrailMethodSelector value={trailMethod} param={trailParam} onChange={handleTrailChange} />
 
-        <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded">
-          <p className="text-sm text-blue-700 dark:text-blue-200 font-semibold">
+        <div className="bg-primary/10 p-3 rounded">
+          <p className="text-sm text-primary font-semibold">
             {t('positions.updateStopModal.suggestedStop')}
           </p>
           {suggestionQuery.isLoading ? (
-            <p className="text-sm text-blue-700 dark:text-blue-200 mt-1">
+            <p className="text-sm text-primary mt-1">
               {t('positions.updateStopModal.loadingSuggestion')}
             </p>
           ) : suggestionError ? (
-            <p className="text-sm text-red-700 dark:text-red-200 mt-1">{suggestionError}</p>
+            <p className="text-sm text-danger mt-1">{suggestionError}</p>
           ) : suggestion ? (
-            <div className="text-sm text-blue-800 dark:text-blue-100 mt-2 space-y-1">
+            <div className="text-sm text-primary mt-2 space-y-1">
               <p>
                 <strong>{t('positions.updateStopModal.suggested')}:</strong>{' '}
                 {formatCurrency(suggestedStopRounded ?? currentStopRounded)}
@@ -164,13 +164,13 @@ export default function UpdateStopModalForm({
                   {t('positions.updateStopModal.useSuggested')}
                 </Button>
               ) : (
-                <p className="text-xs text-blue-700 dark:text-blue-200">
+                <p className="text-xs text-primary">
                   {t('positions.updateStopModal.noUpdateSuggested')}
                 </p>
               )}
             </div>
           ) : (
-            <p className="text-sm text-blue-700 dark:text-blue-200 mt-1">
+            <p className="text-sm text-primary mt-1">
               {t('positions.updateStopModal.suggestionUnavailable')}
             </p>
           )}
@@ -189,11 +189,11 @@ export default function UpdateStopModalForm({
             onBlur={() =>
               setFormData((prev) => ({ ...prev, newStop: roundToCents(prev.newStop) }))
             }
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+            className="w-full px-3 py-2 border border-border rounded bg-surface"
             required
           />
           {!canMoveUp && roundToCents(formData.newStop) !== currentStopRounded ? (
-            <p className="text-sm text-red-600 mt-1">{t('positions.updateStopModal.canOnlyMoveUp')}</p>
+            <p className="text-sm text-danger mt-1">{t('positions.updateStopModal.canOnlyMoveUp')}</p>
           ) : null}
         </div>
 
@@ -203,20 +203,20 @@ export default function UpdateStopModalForm({
             rows={2}
             value={formData.reason}
             onChange={(event) => setFormData((prev) => ({ ...prev, reason: event.target.value }))}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+            className="w-full px-3 py-2 border border-border rounded bg-surface"
             placeholder={t('positions.updateStopModal.reasonPlaceholder')}
           />
         </div>
 
         {error ? (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3">
-            <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+          <div className="bg-danger/10 border border-danger/40 rounded p-3">
+            <p className="text-sm text-danger">{error}</p>
           </div>
         ) : null}
 
         {trailError ? (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3">
-            <p className="text-sm text-red-800 dark:text-red-200">{trailError}</p>
+          <div className="bg-danger/10 border border-danger/40 rounded p-3">
+            <p className="text-sm text-danger">{trailError}</p>
           </div>
         ) : null}
 

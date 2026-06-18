@@ -12,7 +12,7 @@ describe('Card Components', () => {
     it('applies default variant', () => {
       const { container } = render(<Card>Content</Card>)
       const card = container.firstChild as HTMLElement
-      expect(card).toHaveClass('bg-white')
+      expect(card).toHaveClass('bg-surface')
     })
 
     it('applies elevated variant', () => {

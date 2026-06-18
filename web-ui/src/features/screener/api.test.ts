@@ -12,6 +12,7 @@ const statusResponse = (status: string, result: unknown = null, error: string | 
   ok: true,
   status: 200,
   json: async () => ({ job_id: 'job-1', status, result, error }),
+  text: async () => JSON.stringify({ job_id: 'job-1', status, result, error }),
 });
 
 const emptyResult = {

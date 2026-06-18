@@ -46,7 +46,7 @@ function TimeStopBadge({ daysOpen, rNow, show }: TimeStopBadgeProps) {
   if (!show) return null;
   return (
     <span
-      className="text-xs font-medium px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+      className="text-xs font-medium px-1.5 py-0.5 rounded bg-warning/10 text-warning"
       title={t('todayPage.actionList.timeStopWarning')}
     >
       {t('todayPage.actionList.timeStopBadge', {
@@ -72,15 +72,15 @@ function CloseItem({ item, onClick, onAction, isDone, isFocused, intelligenceSum
       type="button"
       onClick={() => onClick(item.ticker)}
       className={cn(
-        'w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-l-2 border-red-500',
+        'w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-foreground/5 transition-colors border-l-2 border-danger/40',
         isDone && 'opacity-50',
         isFocused && 'ring-1 ring-primary',
       )}
     >
-      <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 min-w-[60px]">
+      <span className="text-sm font-semibold text-foreground min-w-[60px]">
         {item.ticker}
       </span>
-      <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+      <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-danger/10 text-danger">
         {t('todayPage.actionList.close')}
       </span>
       <span className={cn('text-xs font-semibold tabular-nums', getSignColorClass(item.rNow))}>
@@ -89,16 +89,16 @@ function CloseItem({ item, onClick, onAction, isDone, isFocused, intelligenceSum
       <TimeStopBadge daysOpen={item.daysOpen} rNow={item.rNow} show={item.timeStopWarning} />
       <AiSignalBadge summary={intelligenceSummary} />
       <EarningsBadge ticker={item.ticker} />
-      <span className="text-xs text-gray-500 dark:text-gray-400 truncate flex-1">{item.reason}</span>
+      <span className="text-xs text-muted truncate flex-1">{item.reason}</span>
       {isDone ? (
-        <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+        <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
       ) : onAction ? (
         <span
           role="button"
           tabIndex={0}
           onClick={(e) => { e.stopPropagation(); onAction(); }}
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onAction(); } }}
-          className="text-xs px-2 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-800/40 shrink-0 cursor-pointer"
+          className="text-xs px-2 py-0.5 rounded bg-danger/10 text-danger hover:bg-danger/20 shrink-0 cursor-pointer"
         >
           {t('todayPage.actionList.closeAction')}
         </span>
@@ -123,15 +123,15 @@ function UpdateStopItem({ item, onClick, onAction, onAccept, isDone, isAccepting
       type="button"
       onClick={() => onClick(item.ticker)}
       className={cn(
-        'w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-l-2 border-amber-500',
+        'w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-foreground/5 transition-colors border-l-2 border-warning/40',
         isDone && 'opacity-50',
         isFocused && 'ring-1 ring-primary',
       )}
     >
-      <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 min-w-[60px]">
+      <span className="text-sm font-semibold text-foreground min-w-[60px]">
         {item.ticker}
       </span>
-      <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+      <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-warning/10 text-warning">
         {t('todayPage.actionList.updateStop')}
       </span>
       <span className={cn('text-xs font-semibold tabular-nums', getSignColorClass(item.rNow))}>
@@ -140,9 +140,9 @@ function UpdateStopItem({ item, onClick, onAction, onAccept, isDone, isAccepting
       <TimeStopBadge daysOpen={item.daysOpen} rNow={item.rNow} show={item.timeStopWarning} />
       <ExhaustionBadge score={item.exhaustionScore} label={item.exhaustionLabel} />
       <EarningsBadge ticker={item.ticker} />
-      <span className="text-xs text-gray-500 dark:text-gray-400 truncate flex-1">{item.reason}</span>
+      <span className="text-xs text-muted truncate flex-1">{item.reason}</span>
       {isDone ? (
-        <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 shrink-0">
+        <span className="text-xs font-medium text-success shrink-0">
           {t('todayPage.actionList.acceptStopDone')}
         </span>
       ) : onAccept ? (
@@ -161,8 +161,8 @@ function UpdateStopItem({ item, onClick, onAction, onAccept, isDone, isAccepting
           }}
           className={cn(
             'text-xs px-2 py-0.5 rounded shrink-0 cursor-pointer',
-            'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-            'hover:bg-amber-200 dark:hover:bg-amber-800/40',
+            'bg-warning/10 text-warning',
+            'hover:bg-warning/20',
             isAccepting && 'opacity-50 cursor-not-allowed',
           )}
         >
@@ -174,7 +174,7 @@ function UpdateStopItem({ item, onClick, onAction, onAccept, isDone, isAccepting
           tabIndex={0}
           onClick={(e) => { e.stopPropagation(); onAction(); }}
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onAction(); } }}
-          className="text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-800/40 shrink-0 cursor-pointer"
+          className="text-xs px-2 py-0.5 rounded bg-warning/10 text-warning hover:bg-warning/20 shrink-0 cursor-pointer"
         >
           {t('todayPage.actionList.updateAction')}
         </span>
@@ -188,7 +188,7 @@ function VolumeDot({ ratio }: { ratio: number | undefined }) {
   if (ratio >= 1.5) {
     return (
       <span
-        className="inline-block w-2 h-2 rounded-full bg-emerald-500 shrink-0"
+        className="inline-block w-2 h-2 rounded-full bg-success shrink-0"
         title={`Volume ${ratio.toFixed(1)}× avg (strong)`}
       />
     );
@@ -196,7 +196,7 @@ function VolumeDot({ ratio }: { ratio: number | undefined }) {
   if (ratio < 0.8) {
     return (
       <span
-        className="inline-block w-2 h-2 rounded-full bg-gray-400 shrink-0"
+        className="inline-block w-2 h-2 rounded-full bg-foreground/10 shrink-0"
         title={`Volume ${ratio.toFixed(1)}× avg (weak)`}
       />
     );
@@ -215,27 +215,27 @@ function candidateModeBadge(item: DailyReviewCandidate, isAddOn?: boolean) {
   const mode = item.sameSymbol?.mode;
   if (mode === 'RE_ENTRY') {
     return (
-      <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+      <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-success/10 text-success">
         {t('todayPage.actionList.reEnter')}
       </span>
     );
   }
   if (mode === 'SCALE_BACK') {
     return (
-      <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
+      <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-primary/10 text-primary">
         {t('todayPage.actionList.scaleBack')}
       </span>
     );
   }
   if (isAddOn || mode === 'ADD_ON') {
     return (
-      <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
+      <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-primary/10 text-primary">
         {t('todayPage.actionList.addOn')}
       </span>
     );
   }
   return (
-    <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+    <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-primary/10 text-primary">
       {item.decisionSummary?.action ?? item.signal}
     </span>
   );
@@ -253,36 +253,36 @@ function CandidateItem({ item, isAddOn, onClick, isFocused }: CandidateItemProps
         type="button"
         onClick={() => onClick(item.ticker)}
         className={cn(
-          'w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-l-2 border-primary/40',
+          'w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-foreground/5 transition-colors border-l-2 border-primary/40',
           isFocused && 'ring-1 ring-primary',
         )}
       >
-        <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 min-w-[60px]">
+        <span className="text-sm font-semibold text-foreground min-w-[60px]">
           {item.ticker}
         </span>
         {candidateModeBadge(item, isAddOn)}
-        <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">
+        <span className="text-xs text-muted tabular-nums">
           r/r: {formatNumber(item.rReward, 2)}R
         </span>
         {item.confidence != null && (
-          <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums shrink-0">
+          <span className="text-xs text-muted tabular-nums shrink-0">
             {t('todayPage.actionList.candidateConfidence', { pct: String(Math.round(item.confidence)) })}
           </span>
         )}
         <VolumeDot ratio={item.volumeRatio} />
         {item.name && (
-          <span className="text-xs text-gray-400 dark:text-gray-500 truncate flex-1">{item.name}</span>
+          <span className="text-xs text-muted truncate flex-1">{item.name}</span>
         )}
       </button>
       {showCatalyst && (
-        <div className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm">
-          <p className="font-semibold text-emerald-800 text-xs uppercase tracking-wide mb-1">
+        <div className="mt-2 rounded-lg border border-success/40 bg-success/10 px-3 py-2 text-sm">
+          <p className="font-semibold text-success text-xs uppercase tracking-wide mb-1">
             {t('todayPage.candidateCard.catalystContext')}
           </p>
-          <p className="text-emerald-900">{item.decisionSummary!.catalystSummary}</p>
+          <p className="text-success">{item.decisionSummary!.catalystSummary}</p>
           {item.decisionSummary!.catalystSources.length > 0 && (
             <details className="mt-1">
-              <summary className="text-xs text-emerald-700 cursor-pointer select-none">
+              <summary className="text-xs text-success cursor-pointer select-none">
                 {t('todayPage.candidateCard.catalystSources')} ({item.decisionSummary!.catalystSources.length})
               </summary>
               <ul className="mt-1 space-y-0.5">
@@ -292,7 +292,7 @@ function CandidateItem({ item, isAddOn, onClick, isFocused }: CandidateItemProps
                       href={url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs text-emerald-700 hover:underline break-all"
+                      className="text-xs text-success hover:underline break-all"
                     >
                       {url}
                     </a>
@@ -312,7 +312,7 @@ function EarningsBadge({ ticker }: { ticker: string }) {
   if (!data?.warning || data.daysUntil == null) return null;
   return (
     <span
-      className="text-xs font-medium px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 shrink-0"
+      className="text-xs font-medium px-1.5 py-0.5 rounded bg-warning/10 text-warning shrink-0"
       title={`Earnings in ${data.daysUntil} day${data.daysUntil === 1 ? '' : 's'}`}
     >
       {t('todayPage.actionList.earningsBadge', { days: String(data.daysUntil) })}
@@ -325,10 +325,10 @@ function ExhaustionBadge({ score, label }: { score: number | null; label: string
   const emoji = label === 'exit' ? '🔴' : label === 'watch' ? '🟡' : '🟢';
   const colorClass =
     label === 'exit'
-      ? 'text-rose-700 dark:text-rose-400'
+      ? 'text-danger'
       : label === 'watch'
-      ? 'text-amber-700 dark:text-amber-400'
-      : 'text-emerald-700 dark:text-emerald-400';
+      ? 'text-warning'
+      : 'text-success';
   return (
     <span
       className={`text-xs font-medium tabular-nums shrink-0 ${colorClass}`}
@@ -344,10 +344,10 @@ function AiSignalBadge({ summary }: { summary: OpenPositionIntelligenceSummary |
   if (!posSignal) return null;
   const colorClass =
     posSignal.action === 'EXIT'
-      ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+      ? 'bg-danger/10 text-danger'
       : posSignal.action === 'TRIM'
-      ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
-      : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
+      ? 'bg-warning/10 text-warning'
+      : 'bg-success/10 text-success';
   const labelMap: Record<string, string> = { HOLD: 'Hold', TRIM: 'Trim', EXIT: 'Exit' };
   return (
     <span className={`text-xs font-medium px-1.5 py-0.5 rounded shrink-0 ${colorClass}`}>
@@ -370,18 +370,18 @@ function HoldItem({ item, onClick, onTrim, isFocused, intelligenceSummary }: Hol
       type="button"
       onClick={() => onClick(item.ticker)}
       className={cn(
-        'w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-l-2 border-gray-300 dark:border-gray-600',
+        'w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-foreground/5 transition-colors border-l-2 border-border',
         isFocused && 'ring-1 ring-primary',
       )}
     >
-      <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 min-w-[60px]">
+      <span className="text-sm font-semibold text-muted min-w-[60px]">
         {item.ticker}
       </span>
-      <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+      <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-foreground/5 text-muted">
         {t('dailyReview.table.hold.holdBadge')}
       </span>
       {item.trimSuggestion && (
-        <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+        <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-warning/10 text-warning">
           {t('todayPage.actionList.trim')}
         </span>
       )}
@@ -392,14 +392,14 @@ function HoldItem({ item, onClick, onTrim, isFocused, intelligenceSummary }: Hol
       <ExhaustionBadge score={item.exhaustionScore} label={item.exhaustionLabel} />
       <AiSignalBadge summary={intelligenceSummary} />
       <EarningsBadge ticker={item.ticker} />
-      <span className="text-xs text-gray-400 dark:text-gray-500 truncate flex-1">{item.reason}</span>
+      <span className="text-xs text-muted truncate flex-1">{item.reason}</span>
       {item.trimSuggestion && onTrim && (
         <span
           role="button"
           tabIndex={0}
           onClick={(e) => { e.stopPropagation(); onTrim(); }}
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onTrim(); } }}
-          className="text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-800/40 shrink-0 cursor-pointer"
+          className="text-xs px-2 py-0.5 rounded bg-warning/10 text-warning hover:bg-warning/20 shrink-0 cursor-pointer"
         >
           {t('todayPage.actionList.trimAction')}
         </span>
@@ -421,14 +421,14 @@ function ExitSignalItem({ item, onClick, isFocused, intelligenceSummary }: ExitS
       type="button"
       onClick={() => onClick(item.ticker)}
       className={cn(
-        'w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-l-2 border-orange-400',
+        'w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-foreground/5 transition-colors border-l-2 border-warning/40',
         isFocused && 'ring-1 ring-primary',
       )}
     >
-      <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 min-w-[60px]">
+      <span className="text-sm font-semibold text-foreground min-w-[60px]">
         {item.ticker}
       </span>
-      <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
+      <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-warning/10 text-warning">
         {t('todayPage.actionList.exitSignal')}
       </span>
       <span className={cn('text-xs font-semibold tabular-nums', getSignColorClass(item.rNow))}>
@@ -436,7 +436,7 @@ function ExitSignalItem({ item, onClick, isFocused, intelligenceSummary }: ExitS
       </span>
       <AiSignalBadge summary={intelligenceSummary} />
       <EarningsBadge ticker={item.ticker} />
-      <span className="text-xs text-gray-500 dark:text-gray-400 truncate flex-1">{item.reason}</span>
+      <span className="text-xs text-muted truncate flex-1">{item.reason}</span>
     </button>
   );
 }
@@ -448,18 +448,18 @@ function WatchlistNearTriggerItem({ item, onClick, isFocused }: { item: WatchIte
       type="button"
       onClick={() => onClick(item.ticker)}
       className={cn(
-        'w-full text-left flex items-start gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-l-2 border-amber-400',
+        'w-full text-left flex items-start gap-3 px-3 py-2 rounded-lg hover:bg-foreground/5 transition-colors border-l-2 border-warning/40',
         isFocused && 'ring-1 ring-primary',
       )}
     >
-      <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 min-w-[60px]">
+      <span className="text-sm font-semibold text-foreground min-w-[60px]">
         {item.ticker}
       </span>
-      <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+      <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-warning/10 text-warning">
         {t('todayPage.actionList.watchlistNearTrigger')}
       </span>
       <div className="min-w-0 flex-1">
-        <div className="text-xs font-semibold tabular-nums text-amber-700 dark:text-amber-300">
+        <div className="text-xs font-semibold tabular-nums text-warning">
           {distance != null
             ? t('watchlist.pipeline.distanceToBuyZone', { value: `${distance >= 0 ? '+' : ''}${formatNumber(distance, 1)}%` })
             : '—'}
@@ -489,27 +489,27 @@ function PendingOrderItem({ item, onClick, isFocused }: PendingOrderItemProps) {
       type="button"
       onClick={() => onClick(item.ticker)}
       className={cn(
-        'w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-l-2',
-        isStale ? 'border-amber-500' : 'border-gray-300 dark:border-gray-600',
+        'w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-foreground/5 transition-colors border-l-2',
+        isStale ? 'border-warning/40' : 'border-border',
         isFocused && 'ring-1 ring-primary',
       )}
     >
-      <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 min-w-[60px]">
+      <span className="text-sm font-semibold text-foreground min-w-[60px]">
         {item.ticker}
       </span>
       <span className={cn(
         'text-xs font-medium px-1.5 py-0.5 rounded',
         isStale
-          ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-          : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+          ? 'bg-warning/10 text-warning'
+          : 'bg-foreground/5 text-muted',
       )}>
         {t(`todayPage.actionList.pendingOrdersCategory.${item.category}`)}
       </span>
-      <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">
+      <span className="text-xs text-muted tabular-nums">
         {t('todayPage.actionList.pendingOrdersDaysPending', { n: String(item.daysPending) })}
       </span>
       {item.note && (
-        <span className="text-xs text-gray-400 dark:text-gray-500 truncate flex-1">
+        <span className="text-xs text-muted truncate flex-1">
           {item.note}
         </span>
       )}
@@ -554,21 +554,21 @@ function WeeklyReviewNudge() {
   const hasCurrentWeekReview = (reviews ?? []).some((r) => r.week_id === currentWeekId);
   if (!isFriday || hasCurrentWeekReview || dismissed) return null;
   return (
-    <div className="mb-3 flex items-center gap-3 rounded-lg border border-purple-200 bg-purple-50 px-4 py-2 dark:border-purple-700 dark:bg-purple-950">
-      <span className="text-sm text-purple-800 dark:text-purple-200 flex-1">
+    <div className="mb-3 flex items-center gap-3 rounded-lg border border-primary/40 bg-primary/10 px-4 py-2">
+      <span className="text-sm text-primary flex-1">
         {t('todayPage.weeklyNudge.message')}
       </span>
       <button
         type="button"
         onClick={() => navigate('/book', { state: { tab: 'review' } })}
-        className="text-xs font-medium text-purple-700 hover:underline dark:text-purple-300 shrink-0"
+        className="text-xs font-medium text-primary hover:underline shrink-0"
       >
         {t('todayPage.weeklyNudge.action')}
       </button>
       <button
         type="button"
         onClick={() => setDismissed(true)}
-        className="text-xs text-purple-500 hover:text-purple-700 dark:text-purple-400 shrink-0"
+        className="text-xs text-primary hover:text-primary shrink-0"
         aria-label={t('todayPage.weeklyNudge.dismiss')}
       >
         ✕
@@ -643,15 +643,15 @@ function PendingOrdersBadge() {
       : t('todayPage.pendingBadge.plural', { count: String(count) });
 
   return (
-    <div className="mb-4 flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 dark:border-amber-700 dark:bg-amber-950">
-      <span className="text-sm text-amber-800 dark:text-amber-200">
+    <div className="mb-4 flex items-center gap-3 rounded-lg border border-warning/40 bg-warning/10 px-4 py-2">
+      <span className="text-sm text-warning">
         <span aria-hidden="true">⏳ </span>
         <span>{label}</span>
       </span>
       <button
         type="button"
         onClick={() => navigate('/book', { state: { tab: 'orders' } })}
-        className="ml-auto text-xs font-medium text-amber-700 hover:underline dark:text-amber-300"
+        className="ml-auto text-xs font-medium text-warning hover:underline"
       >
         {t('todayPage.pendingBadge.goToOrders')}
       </button>
@@ -807,7 +807,7 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-24 text-sm text-gray-500 dark:text-gray-400">
+      <div className="flex items-center justify-center h-24 text-sm text-muted">
         {t('todayPage.actionList.loading')}
       </div>
     );
@@ -815,7 +815,7 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
 
   if (error) {
     return (
-      <div className="p-3 text-sm text-red-600 dark:text-red-400">
+      <div className="p-3 text-sm text-danger">
         {t('dailyReview.header.error', { message: error instanceof Error ? error.message : t('dailyReview.header.unknownError') })}
       </div>
     );
@@ -830,7 +830,7 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
         <div className="flex items-center gap-2">
           {review && (
             <>
-              <span className="text-xs text-gray-500 dark:text-gray-400">{review.summary.reviewDate}</span>
+              <span className="text-xs text-muted">{review.summary.reviewDate}</span>
             </>
           )}
         </div>
@@ -840,7 +840,7 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
           disabled={isFetching}
           title={t('dailyReview.header.refreshTitle')}
           aria-label={t('dailyReview.header.refreshTitle')}
-          className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 disabled:opacity-50"
+          className="p-1 rounded hover:bg-foreground/5 text-muted disabled:opacity-50"
         >
           <RefreshCw className={cn('h-3.5 w-3.5', isFetching && 'animate-spin')} aria-hidden="true" />
         </button>
@@ -850,17 +850,17 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
       {review && (
         <div className="flex flex-wrap gap-1.5 px-3 py-2 border-b border-border shrink-0">
           {review.summary.newCandidates > 0 && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 font-medium">
+            <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
               {t('dailyReviewBanner.newCandidates', { n: String(review.summary.newCandidates) })}
             </span>
           )}
           {review.summary.updateStop > 0 && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 font-medium">
+            <span className="text-xs px-2 py-0.5 rounded-full bg-warning/10 text-warning font-medium">
               {t('dailyReviewBanner.stopsToUpdate', { n: String(review.summary.updateStop) })}
             </span>
           )}
           {review.summary.closePositions > 0 && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 font-medium">
+            <span className="text-xs px-2 py-0.5 rounded-full bg-danger/10 text-danger font-medium">
               {t('dailyReviewBanner.positionsToClose', { n: String(review.summary.closePositions) })}
             </span>
           )}
@@ -870,7 +870,7 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
       {/* Action list */}
       <div className="flex-1 overflow-y-auto px-2 py-2 space-y-3">
         {isEmpty && (
-          <p className="text-sm text-gray-500 dark:text-gray-400 px-2 py-4 text-center">
+          <p className="text-sm text-muted px-2 py-4 text-center">
             {t('todayPage.actionList.empty')}
           </p>
         )}
@@ -878,7 +878,7 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
         {/* Requires Action section — close and update-stop before watchlist triggers */}
         {requiresActionCount > 0 && (
           <div className="space-y-1">
-            <div className="px-3 py-1 text-xs font-semibold uppercase tracking-wide text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded">
+            <div className="px-3 py-1 text-xs font-semibold uppercase tracking-wide text-danger bg-danger/10 rounded">
               {t('todayPage.actionList.requiresAction')} · {requiresActionCount}
             </div>
             <div className="space-y-0.5">
@@ -925,7 +925,7 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
         {/* Exit Signal section — advisory, below hard requires-action */}
         {exitSignalCount > 0 && (
           <div className="space-y-1">
-            <div className="px-3 py-1 text-xs font-semibold uppercase tracking-wide text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 rounded">
+            <div className="px-3 py-1 text-xs font-semibold uppercase tracking-wide text-warning bg-warning/10 rounded">
               {t('todayPage.actionList.exitSignal')} · {exitSignalCount}
             </div>
             <div className="space-y-0.5">
@@ -948,7 +948,7 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
         {/* Pending Orders section — individual order rows between requires-action and watchlist */}
         {(review?.pendingOrdersReview ?? []).length > 0 && (
           <div className="space-y-1">
-            <div className="px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded">
+            <div className="px-3 py-1 text-xs font-semibold uppercase tracking-wide text-warning bg-warning/10 rounded">
               {t('todayPage.actionList.pendingOrdersSection')} · {review!.pendingOrdersReview!.length}
             </div>
             <div className="space-y-0.5">
@@ -970,10 +970,10 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
         {/* Watchlist near-trigger section — below required position actions */}
         {watchlistNearTriggerCount > 0 && (
           <div className="space-y-1">
-            <div className="px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded">
+            <div className="px-3 py-1 text-xs font-semibold uppercase tracking-wide text-warning bg-warning/10 rounded">
               {t('watchlist.pipeline.dailyReviewTitle')} · {watchlistNearTriggerCount}
             </div>
-            <p className="px-3 text-[11px] text-gray-500 dark:text-gray-400">
+            <p className="px-3 text-[11px] text-muted">
               {t('watchlist.pipeline.dailyReviewSubtitle', { count: String(watchlistNearTriggerCount) })}
             </p>
             <div className="space-y-0.5">
@@ -995,7 +995,7 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
         {/* New Opportunities section */}
         {opportunitiesCount > 0 && (
           <div className="space-y-1">
-            <div className="px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded">
+            <div className="px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary bg-primary/10 rounded">
               {t('todayPage.actionList.opportunities')} · {opportunitiesCount}
             </div>
             <div className="space-y-0.5">
@@ -1032,7 +1032,7 @@ function TodayActionList({ onTickerSelect }: TodayActionListProps) {
             <SectionHeader
               label={t('todayPage.actionList.holding')}
               count={holdCount}
-              colorClass="text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800/50 hover:bg-gray-200 dark:hover:bg-gray-700/50"
+              colorClass="text-muted bg-foreground/5 hover:bg-foreground/10"
               expanded={holdExpanded}
               onToggle={() => setHoldExpanded((v) => !v)}
             />
@@ -1128,7 +1128,7 @@ export default function Today() {
               'flex-1 py-2 text-sm font-medium capitalize transition-colors',
               activeTablet === tab
                 ? 'border-b-2 border-primary text-primary'
-                : 'text-gray-600 dark:text-gray-400 hover:text-foreground'
+                : 'text-muted hover:text-foreground'
             )}
           >
             {tab === 'left' ? t('todayPage.tabs.today') : t('workspacePage.panels.analysis.title')}
@@ -1155,7 +1155,7 @@ export default function Today() {
                   'px-4 py-2.5 text-sm font-medium transition-colors capitalize',
                   leftTab === tab
                     ? 'border-b-2 border-primary text-primary'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                    : 'text-muted hover:text-foreground'
                 )}
               >
                 {tab === 'today' ? t('todayPage.tabs.today') : t('todayPage.tabs.screener')}

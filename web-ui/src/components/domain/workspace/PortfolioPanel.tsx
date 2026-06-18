@@ -8,7 +8,7 @@ export default function PortfolioPanel() {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold">{t('workspacePage.panels.portfolio.title')}</h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+          <p className="text-sm text-muted mt-1">
             {t('workspacePage.panels.portfolio.description')}
           </p>
         </div>

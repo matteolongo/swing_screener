@@ -114,7 +114,7 @@ export default function ModalShell({
         role="dialog"
         aria-modal="true"
         className={cn(
-          'w-full bg-white shadow-xl dark:bg-gray-800',
+          'w-full bg-surface shadow-xl',
           fullScreen
             ? 'h-dvh max-h-dvh overflow-hidden rounded-none flex flex-col'
             : 'max-h-[90vh] overflow-y-auto rounded-lg',
@@ -125,7 +125,7 @@ export default function ModalShell({
         <div
           className={cn(
             'flex items-center justify-between border-b border-border px-6 py-4',
-            immersive ? 'shrink-0 bg-white/95 dark:bg-gray-800/95' : null,
+            immersive ? 'shrink-0 bg-surface/95' : null,
           )}
         >
           <h2 className="text-2xl font-bold">{title}</h2>

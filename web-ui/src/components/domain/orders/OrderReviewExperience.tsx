@@ -88,9 +88,9 @@ function MetricTile({
   emphasize?: boolean;
 }) {
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-900">
-      <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{label}</p>
-      <p className={cn('mt-1 text-sm font-semibold text-gray-900 dark:text-gray-100', emphasize && 'text-blue-700 dark:text-blue-300')}>
+    <div className="rounded-lg border border-border bg-surface p-3">
+      <p className="text-[11px] font-medium uppercase tracking-wide text-muted">{label}</p>
+      <p className={cn('mt-1 text-sm font-semibold text-foreground', emphasize && 'text-primary')}>
         {value}
       </p>
     </div>
@@ -99,7 +99,7 @@ function MetricTile({
 
 function EmptySection({ body }: { body: string }) {
   return (
-    <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-300">
+    <div className="rounded-lg border border-dashed border-border bg-foreground/5 p-4 text-sm text-muted">
       {body}
     </div>
   );
@@ -337,8 +337,8 @@ export default function OrderReviewExperience({
     <div className="space-y-4">
       <EarningsWarningBanner ticker={normalizedTicker} />
       {projectedConcentration ? (
-        <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-100">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-300" aria-hidden="true" />
+        <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
           <span>
             {t('concentrationWarning.orderMessage', {
               country: projectedConcentration.country,
@@ -350,26 +350,26 @@ export default function OrderReviewExperience({
       ) : null}
 
       <section
-        className="rounded-lg border border-gray-200 bg-slate-50/70 p-3 dark:border-gray-700 dark:bg-gray-900/50"
+        className="rounded-lg border border-border bg-foreground/5 p-3"
         aria-label={t('order.review.carouselLabel')}
       >
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-2">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted">
                 {t('order.review.kicker')}
               </p>
-              <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+              <h3 className="text-base font-semibold text-foreground">
                 {t('order.review.title' as any)}
               </h3>
-              <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+              <p className="mt-1 text-sm text-muted">
                 {t('order.review.subtitle' as any)}
               </p>
             </div>
           </div>
 
           <div
-            className="flex w-full items-center gap-1 overflow-x-auto rounded-lg border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-950"
+            className="flex w-full items-center gap-1 overflow-x-auto rounded-lg border border-border bg-surface p-1"
             role="tablist"
             aria-label={t('order.review.carouselLabel')}
           >
@@ -387,8 +387,8 @@ export default function OrderReviewExperience({
                   className={cn(
                     'whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
                     isActive
-                      ? 'bg-gray-900 text-white shadow-sm dark:bg-white dark:text-gray-900'
-                      : 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white',
+                      ? 'bg-surface text-white shadow-sm'
+                      : 'text-muted hover:text-foreground',
                   )}
                 >
                   {t(section.titleKey as any)}
@@ -397,7 +397,7 @@ export default function OrderReviewExperience({
             })}
           </div>
 
-          <div className="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-950">
+          <div className="rounded-xl border border-border bg-surface shadow-sm">
             <div
               id="order-review-panel-decision"
               role="tabpanel"
@@ -410,17 +410,17 @@ export default function OrderReviewExperience({
                   <div className={cn(
                     'rounded-xl border p-4',
                     isRecommended
-                      ? 'border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/20'
+                      ? 'border-success/40 bg-success/10'
                       : isIncomplete
-                        ? 'border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/20'
-                        : 'border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/20',
+                        ? 'border-warning/40 bg-warning/10'
+                        : 'border-danger/40 bg-danger/10',
                   )}>
                     <div className="flex flex-wrap items-center gap-2">
                       <RecommendationBadge verdict={verdict} reasonsDetailed={reasonsDetailed} />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">{t('recommendation.summary')}</span>
+                      <span className="text-sm text-muted">{t('recommendation.summary')}</span>
                     </div>
                     {context.recommendation.reasonsShort.length ? (
-                      <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-gray-700 dark:text-gray-300">
+                      <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-muted">
                         {context.recommendation.reasonsShort.map((reason) => (
                           <li key={reason}>{reason}</li>
                         ))}
@@ -483,7 +483,7 @@ export default function OrderReviewExperience({
                     {warnings.map((warning) => (
                       <div
                         key={warning}
-                        className="rounded-lg border border-yellow-300 bg-yellow-50 px-3 py-2 text-sm text-yellow-900 dark:border-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-200"
+                        className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning"
                       >
                         {warning}
                       </div>
@@ -522,18 +522,18 @@ export default function OrderReviewExperience({
                     />
                   </div>
 
-                  <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950/20">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">
+                  <div className="rounded-lg border border-primary/40 bg-primary/10 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-primary">
                       {thesisEducation?.title || t('tradeThesis.keyInsight')}
                     </p>
-                    <p className="mt-2 text-sm text-blue-950 dark:text-blue-100">
+                    <p className="mt-2 text-sm text-primary">
                       {thesisEducation?.summary || thesis.explanation.keyInsight}
                     </p>
                   </div>
 
                   <div>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('tradeThesis.whyQualified')}</p>
-                    <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-gray-700 dark:text-gray-300">
+                    <p className="text-sm font-semibold text-foreground">{t('tradeThesis.whyQualified')}</p>
+                    <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted">
                       {(thesisEducation?.bullets.length ? thesisEducation.bullets : thesis.explanation.whyQualified).map((reason) => (
                         <li key={reason}>{reason}</li>
                       ))}
@@ -555,16 +555,16 @@ export default function OrderReviewExperience({
               <div className="space-y-4">
                 {hardInvalidations.length ? (
                   <div>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('order.review.hardInvalidationTitle' as any)}</p>
+                    <p className="text-sm font-semibold text-foreground">{t('order.review.hardInvalidationTitle' as any)}</p>
                     <ul className="mt-2 space-y-2">
                       {hardInvalidations.map((rule) => (
                         <li
                           key={rule.ruleId}
-                          className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900 dark:border-red-900 dark:bg-red-950/20 dark:text-red-100"
+                          className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger"
                         >
                           <p>{rule.condition}</p>
                           {rule.metric && rule.threshold != null ? (
-                            <p className="mt-1 text-xs text-red-800 dark:text-red-300">
+                            <p className="mt-1 text-xs text-danger">
                               {t('tradeThesis.monitor')}: {rule.metric} {t('tradeThesis.thresholdAt')} {rule.threshold}
                             </p>
                           ) : null}
@@ -576,16 +576,16 @@ export default function OrderReviewExperience({
 
                 {(softInvalidations.length || context.recommendation?.thesis?.explanation.whatCouldGoWrong.length) ? (
                   <div>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('order.review.softWarningsTitle' as any)}</p>
+                    <p className="text-sm font-semibold text-foreground">{t('order.review.softWarningsTitle' as any)}</p>
                     <ul className="mt-2 space-y-2">
                       {softInvalidations.map((rule) => (
                         <li
                           key={rule.ruleId}
-                          className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-100"
+                          className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning"
                         >
                           <p>{rule.condition}</p>
                           {rule.metric && rule.threshold != null ? (
-                            <p className="mt-1 text-xs text-amber-800 dark:text-amber-300">
+                            <p className="mt-1 text-xs text-warning">
                               {t('tradeThesis.monitor')}: {rule.metric} {t('tradeThesis.thresholdAt')} {rule.threshold}
                             </p>
                           ) : null}
@@ -596,7 +596,7 @@ export default function OrderReviewExperience({
                       ).map((riskItem) => (
                         <li
                           key={riskItem}
-                          className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-100"
+                          className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning"
                         >
                           {riskItem}
                         </li>
@@ -615,14 +615,14 @@ export default function OrderReviewExperience({
         </div>
       </section>
 
-      <section className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-950">
+      <section className="rounded-lg border border-border bg-surface p-4">
         <div className="mb-4">
-          <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">{t('order.review.formTitle')}</h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400">{t('order.review.formDescription')}</p>
+          <h3 className="text-base font-semibold text-foreground">{t('order.review.formTitle')}</h3>
+          <p className="text-sm text-muted">{t('order.review.formDescription')}</p>
         </div>
 
         {showManualOrderHint ? (
-          <div className="mb-4 rounded border border-blue-300 bg-blue-50 p-3 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
+          <div className="mb-4 rounded border border-primary/40 bg-primary/10 p-3 text-sm text-primary">
             {t('workspacePage.panels.analysis.manualOrderHint')}
           </div>
         ) : null}
@@ -632,7 +632,7 @@ export default function OrderReviewExperience({
             {warnings.map((warning) => (
               <div
                 key={`form-${warning}`}
-                className="rounded border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-900 dark:border-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-200"
+                className="rounded border border-warning/40 bg-warning/10 p-3 text-sm text-warning"
               >
                 {warning}
               </div>
@@ -651,7 +651,7 @@ export default function OrderReviewExperience({
                   <select
                     id={fieldIds.orderType}
                     {...form.register('orderType')}
-                    className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800"
+                    className="w-full rounded border border-border bg-surface px-3 py-2 text-sm"
                   >
                     <option value="BUY_LIMIT">{t('order.candidateModal.orderTypeOptions.buyLimit')}</option>
                     <option value="BUY_STOP">{t('order.candidateModal.orderTypeOptions.buyStop')}</option>
@@ -668,10 +668,10 @@ export default function OrderReviewExperience({
                     type="number"
                     min="1"
                     {...form.register('quantity', { valueAsNumber: true })}
-                    className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800"
+                    className="w-full rounded border border-border bg-surface px-3 py-2 text-sm"
                   />
                   {form.formState.errors.quantity ? (
-                    <p className="mt-1 text-xs text-red-600">{form.formState.errors.quantity.message}</p>
+                    <p className="mt-1 text-xs text-danger">{form.formState.errors.quantity.message}</p>
                   ) : null}
                 </div>
               </div>
@@ -691,16 +691,16 @@ export default function OrderReviewExperience({
                     step="0.01"
                     min="0.01"
                     {...form.register('limitPrice', { valueAsNumber: true })}
-                    className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800"
+                    className="w-full rounded border border-border bg-surface px-3 py-2 text-sm"
                   />
                   {orderType === 'BUY_STOP' ? (
-                    <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">{t('order.candidateModal.buyStopHint')}</p>
+                    <p className="mt-1 text-xs text-muted">{t('order.candidateModal.buyStopHint')}</p>
                   ) : null}
                   {form.formState.errors.limitPrice ? (
-                    <p className="mt-1 text-xs text-red-600">{form.formState.errors.limitPrice.message}</p>
+                    <p className="mt-1 text-xs text-danger">{form.formState.errors.limitPrice.message}</p>
                   ) : null}
                   {invalidBuyStopPrice ? (
-                    <p className="mt-1 text-xs text-red-600">
+                    <p className="mt-1 text-xs text-danger">
                       {t('order.candidateModal.buyStopAboveMarketError', {
                         currentPrice:
                           knownCurrentPrice != null
@@ -721,16 +721,16 @@ export default function OrderReviewExperience({
                     step="0.01"
                     min="0.01"
                     {...form.register('stopPrice', { valueAsNumber: true })}
-                    className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800"
+                    className="w-full rounded border border-border bg-surface px-3 py-2 text-sm"
                   />
                   {form.formState.errors.stopPrice ? (
-                    <p className="mt-1 text-xs text-red-600">{form.formState.errors.stopPrice.message}</p>
+                    <p className="mt-1 text-xs text-danger">{form.formState.errors.stopPrice.message}</p>
                   ) : null}
                 </div>
               </div>
 
-              <div className="rounded-md bg-gray-50 p-3 text-xs dark:bg-gray-800">
-                <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              <div className="rounded-md bg-foreground/5 p-3 text-xs">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
                   {t('order.candidateModal.positionSummary')}
                 </p>
                 <div className="grid grid-cols-2 gap-3">
@@ -748,7 +748,7 @@ export default function OrderReviewExperience({
                   </div>
                   <div className="flex justify-between gap-3">
                     <span>{t('order.candidateModal.riskPercent')}</span>
-                    <strong className={riskPercent > risk.riskPct * 100 ? 'text-red-600' : 'text-green-600'}>
+                    <strong className={riskPercent > risk.riskPct * 100 ? 'text-danger' : 'text-success'}>
                       {riskPercent.toFixed(2)}%
                     </strong>
                   </div>
@@ -763,7 +763,7 @@ export default function OrderReviewExperience({
                   id={fieldIds.notes}
                   rows={3}
                   {...form.register('notes')}
-                  className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800"
+                  className="w-full rounded border border-border bg-surface px-3 py-2 text-sm"
                 />
               </div>
 
@@ -777,12 +777,12 @@ export default function OrderReviewExperience({
                   value={tradeThesis}
                   onChange={(e) => setTradeThesis(e.target.value)}
                   placeholder={t('order.candidateModal.tradeThesisPlaceholder')}
-                  className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800"
+                  className="w-full rounded border border-border bg-surface px-3 py-2 text-sm"
                 />
               </div>
 
               {needsOverrideConfirmation ? (
-                <label className="flex items-start gap-2 rounded border border-yellow-200 bg-yellow-50 px-3 py-2 text-xs text-yellow-900 dark:border-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-200">
+                <label className="flex items-start gap-2 rounded border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">
                   <input
                     type="checkbox"
                     checked={overrideConfirmed}
@@ -794,14 +794,14 @@ export default function OrderReviewExperience({
               ) : null}
 
               {submissionError ? (
-                <div className="rounded border border-red-300 bg-red-50 p-2 text-xs text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-200">
+                <div className="rounded border border-danger/40 bg-danger/10 p-2 text-xs text-danger">
                   {submissionError}
                 </div>
               ) : null}
 
               <div className="sticky bottom-0 z-10 -mx-1 rounded-xl border border-border bg-surface/95 p-3 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-surface/90">
                 {submitSucceeded ? (
-                  <div className="mb-3 rounded border border-green-300 bg-green-50 p-2 text-xs text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-200">
+                  <div className="mb-3 rounded border border-success/40 bg-success/10 p-2 text-xs text-success">
                     {successMessage}
                   </div>
                 ) : null}
@@ -823,8 +823,8 @@ export default function OrderReviewExperience({
             </div>
 
             <div className="space-y-4">
-              <div className="rounded-lg border border-blue-200 bg-blue-50/70 p-3 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950/20 dark:text-blue-100">
-                <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">
+              <div className="rounded-lg border border-primary/40 bg-primary/10 p-3 text-sm text-primary">
+                <p className="text-xs font-semibold uppercase tracking-wide text-primary">
                   {t('order.review.executionGuideTitle' as any)}
                 </p>
                 <div className="mt-2 space-y-2">
@@ -833,20 +833,20 @@ export default function OrderReviewExperience({
                   </p>
                   <p>{t(guidance.whatItMeansKey)}</p>
                   {context.executionNote ? (
-                    <div className="rounded-md border border-blue-200 bg-white/70 px-3 py-2 text-xs text-blue-800 dark:border-blue-900 dark:bg-blue-950/20 dark:text-blue-100">
+                    <div className="rounded-md border border-primary/40 bg-surface/70 px-3 py-2 text-xs text-primary">
                       {context.executionNote}
                     </div>
                   ) : null}
                 </div>
               </div>
 
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-100">
-                <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">{t('order.review.executionCautionTitle' as any)}</p>
+              <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm text-warning">
+                <p className="text-xs font-semibold uppercase tracking-wide text-warning">{t('order.review.executionCautionTitle' as any)}</p>
                 <p className="mt-2">{t(guidance.cautionKey)}</p>
               </div>
 
-              <details className="rounded-lg border border-slate-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-950">
-                <summary className="cursor-pointer list-none text-sm font-semibold text-slate-900 dark:text-gray-100">
+              <details className="rounded-lg border border-border bg-surface p-3">
+                <summary className="cursor-pointer list-none text-sm font-semibold text-foreground">
                   {t('order.review.brokerStepsTitle' as any)}
                 </summary>
                 <div className="mt-3">
@@ -854,8 +854,8 @@ export default function OrderReviewExperience({
                 </div>
               </details>
 
-              <details className="rounded-lg border border-slate-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-950">
-                <summary className="cursor-pointer list-none text-sm font-semibold text-slate-900 dark:text-gray-100">
+              <details className="rounded-lg border border-border bg-surface p-3">
+                <summary className="cursor-pointer list-none text-sm font-semibold text-foreground">
                   {t('order.review.degiroSetupTitle' as any)}
                 </summary>
                 <div className="mt-3">

@@ -28,44 +28,44 @@ export default function PortfolioRiskSummary({ openPositions, accountSize, reali
 
   const heatColor =
     portfolioHeat == null
-      ? 'text-gray-700 dark:text-gray-300'
+      ? 'text-muted'
       : portfolioHeat < 5
-        ? 'text-green-600 dark:text-green-400'
+        ? 'text-success'
         : portfolioHeat <= 15
-          ? 'text-yellow-600 dark:text-yellow-400'
-          : 'text-red-600 dark:text-red-400';
+          ? 'text-warning'
+          : 'text-danger';
 
   const rNowColor =
     avgRNow == null
-      ? 'text-gray-700 dark:text-gray-300'
+      ? 'text-muted'
       : getSignColorClass(avgRNow);
 
   const chipBase =
     'flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium';
 
   return (
-    <div className="flex flex-wrap gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3">
+    <div className="flex flex-wrap gap-2 rounded-lg border border-border bg-surface px-4 py-3">
       {/* Open positions count */}
-      <span className={cn(chipBase, 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300')}>
-        <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+      <span className={cn(chipBase, 'border-border text-muted')}>
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted">
           {t('portfolioRisk.openPositions')}
         </span>
-        <span className="font-bold text-gray-900 dark:text-gray-100">{openPositionCount}</span>
+        <span className="font-bold text-foreground">{openPositionCount}</span>
       </span>
 
       {/* Effective equity */}
-      <span className={cn(chipBase, 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300')}>
-        <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+      <span className={cn(chipBase, 'border-border text-muted')}>
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted">
           {t('portfolioRisk.effectiveEquity')}
         </span>
-        <span className="font-bold text-gray-900 dark:text-gray-100">
+        <span className="font-bold text-foreground">
           {accountSize != null ? formatCurrency(accountSize, 'EUR') : '—'}
         </span>
       </span>
 
       {realizedPnl != null ? (
-        <span className={cn(chipBase, 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300')}>
-          <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+        <span className={cn(chipBase, 'border-border text-muted')}>
+          <span className="text-xs font-semibold uppercase tracking-wide text-muted">
             {t('portfolioRisk.realizedPnl')}
           </span>
           <span className={cn('font-bold', getSignColorClass(realizedPnl))}>
@@ -75,16 +75,16 @@ export default function PortfolioRiskSummary({ openPositions, accountSize, reali
       ) : null}
 
       {/* Total risk */}
-      <span className={cn(chipBase, 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300')}>
-        <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+      <span className={cn(chipBase, 'border-border text-muted')}>
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted">
           {t('portfolioRisk.totalRisk')}
         </span>
-        <span className="font-bold text-gray-900 dark:text-gray-100">{formatCurrency(totalOpenRisk, 'EUR')}</span>
+        <span className="font-bold text-foreground">{formatCurrency(totalOpenRisk, 'EUR')}</span>
       </span>
 
       {/* Portfolio heat */}
-      <span className={cn(chipBase, 'border-gray-200 dark:border-gray-700')}>
-        <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+      <span className={cn(chipBase, 'border-border')}>
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted">
           {t('portfolioRisk.portfolioHeat')}
         </span>
         <span className={cn('font-bold', heatColor)}>
@@ -93,8 +93,8 @@ export default function PortfolioRiskSummary({ openPositions, accountSize, reali
       </span>
 
       {/* Avg R now */}
-      <span className={cn(chipBase, 'border-gray-200 dark:border-gray-700')}>
-        <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+      <span className={cn(chipBase, 'border-border')}>
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted">
           {t('portfolioRisk.avgRNow')}
         </span>
         <span className={cn('font-bold', rNowColor)}>

@@ -1,57 +1,43 @@
-import { API_ENDPOINTS, apiUrl } from '@/lib/api';
+import { API_ENDPOINTS } from '@/lib/api';
+import { fetchJson } from '@/lib/fetchJson';
 import type { UniversesResponse, UniverseSummary } from '@/features/screener/types';
 import type { SymbolDiscoveryRequest, SymbolDiscoveryResponse, UniverseDetail, UniverseRefreshPreview } from './types';
 
 export async function fetchUniverseCatalog(): Promise<UniversesResponse> {
-  const res = await fetch(apiUrl(API_ENDPOINTS.universes));
-  if (!res.ok) throw new Error('Failed to fetch universe catalog');
-  return res.json();
+  return fetchJson<UniversesResponse>(API_ENDPOINTS.universes, {
+    errorMessage: 'Failed to fetch universe catalog',
+  });
 }
 
 export async function fetchUniverseDetail(id: string): Promise<UniverseDetail> {
-  const res = await fetch(apiUrl(API_ENDPOINTS.universeById(id)));
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({}));
-    throw new Error(error.detail || 'Failed to fetch universe detail');
-  }
-  return res.json();
+  return fetchJson<UniverseDetail>(API_ENDPOINTS.universeById(id), {
+    errorMessage: 'Failed to fetch universe detail',
+  });
 }
 
 export async function refreshUniverse(id: string, apply = false): Promise<UniverseRefreshPreview> {
-  const res = await fetch(apiUrl(API_ENDPOINTS.universeRefresh(id)), {
+  return fetchJson<UniverseRefreshPreview>(API_ENDPOINTS.universeRefresh(id), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ apply }),
+    errorMessage: 'Failed to refresh universe',
   });
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({}));
-    throw new Error(error.detail || 'Failed to refresh universe');
-  }
-  return res.json();
 }
 
 export async function updateUniverseBenchmark(id: string, benchmark: string): Promise<UniverseSummary> {
-  const res = await fetch(apiUrl(API_ENDPOINTS.universeBenchmark(id)), {
+  return fetchJson<UniverseSummary>(API_ENDPOINTS.universeBenchmark(id), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ benchmark }),
+    errorMessage: 'Failed to update universe benchmark',
   });
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({}));
-    throw new Error(error.detail || 'Failed to update universe benchmark');
-  }
-  return res.json();
 }
 
 export async function discoverSymbols(request: SymbolDiscoveryRequest): Promise<SymbolDiscoveryResponse> {
-  const res = await fetch(apiUrl(API_ENDPOINTS.universeDiscover), {
+  return fetchJson<SymbolDiscoveryResponse>(API_ENDPOINTS.universeDiscover, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request),
+    errorMessage: 'Failed to discover symbols',
   });
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({}));
-    throw new Error(error.detail || 'Failed to discover symbols');
-  }
-  return res.json();
 }

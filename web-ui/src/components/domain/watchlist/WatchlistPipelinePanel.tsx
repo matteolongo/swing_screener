@@ -13,7 +13,7 @@ interface WatchlistPipelinePanelProps {
 
 function DistanceCell({ item }: { item: WatchItem }) {
   if (item.distanceToTriggerPct == null) {
-    return <span className="text-sm text-gray-400 dark:text-gray-500">—</span>;
+    return <span className="text-sm text-muted">—</span>;
   }
   const distance = item.distanceToTriggerPct;
   const isBelow = distance <= 0;
@@ -22,7 +22,7 @@ function DistanceCell({ item }: { item: WatchItem }) {
       <span
         className={cn(
           'text-sm font-semibold tabular-nums',
-          isBelow ? 'text-amber-700 dark:text-amber-300' : 'text-emerald-700 dark:text-emerald-300',
+          isBelow ? 'text-warning' : 'text-success',
         )}
       >
         {isBelow
@@ -30,7 +30,7 @@ function DistanceCell({ item }: { item: WatchItem }) {
           : t('watchlist.pipeline.aboveBuyZone', { value: formatPercent(distance) })}
       </span>
       {item.signalTriggerPrice != null ? (
-        <span className="text-[11px] text-gray-500 dark:text-gray-400">
+        <span className="text-[11px] text-muted">
           {t('watchlist.pipeline.triggerPrice', {
             value: formatCurrency(item.signalTriggerPrice, item.currency ?? 'USD'),
           })}
@@ -60,7 +60,7 @@ function Sparkline({ item }: { item: WatchItem }) {
   }, [points]);
 
   if (!polyline) {
-    return <span className="text-xs text-gray-400 dark:text-gray-500">—</span>;
+    return <span className="text-xs text-muted">—</span>;
   }
 
   const first = points[0]?.close ?? 0;
@@ -74,7 +74,7 @@ function Sparkline({ item }: { item: WatchItem }) {
         stroke={positive ? 'currentColor' : 'currentColor'}
         strokeWidth="1.75"
         points={polyline}
-        className={positive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}
+        className={positive ? 'text-success' : 'text-danger'}
       />
     </svg>
   );
@@ -85,12 +85,12 @@ export default function WatchlistPipelinePanel({ onTickerSelect }: WatchlistPipe
   const items = watchlistQuery.data ?? [];
 
   if (watchlistQuery.isLoading) {
-    return <div className="py-10 text-sm text-gray-500 dark:text-gray-400">{t('watchlist.pipeline.loading')}</div>;
+    return <div className="py-10 text-sm text-muted">{t('watchlist.pipeline.loading')}</div>;
   }
 
   if (watchlistQuery.isError) {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
+      <div className="rounded-lg border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">
         {t('watchlist.pipeline.error')}
       </div>
     );
@@ -98,7 +98,7 @@ export default function WatchlistPipelinePanel({ onTickerSelect }: WatchlistPipe
 
   if (items.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-gray-300 px-4 py-10 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
+      <div className="rounded-lg border border-dashed border-border px-4 py-10 text-center text-sm text-muted">
         {t('watchlist.pipeline.empty')}
       </div>
     );
@@ -108,10 +108,10 @@ export default function WatchlistPipelinePanel({ onTickerSelect }: WatchlistPipe
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('watchlist.pipeline.title')}</h2>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('watchlist.pipeline.subtitle')}</p>
+          <h2 className="text-lg font-semibold text-foreground">{t('watchlist.pipeline.title')}</h2>
+          <p className="mt-1 text-sm text-muted">{t('watchlist.pipeline.subtitle')}</p>
         </div>
-        <div className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+        <div className="inline-flex items-center gap-2 rounded-full bg-warning/10 px-3 py-1 text-xs font-medium text-warning">
           <TrendingUp className="h-3.5 w-3.5" />
           {t('watchlist.pipeline.sortedByDistance')}
         </div>
@@ -119,8 +119,8 @@ export default function WatchlistPipelinePanel({ onTickerSelect }: WatchlistPipe
 
       <div className="overflow-hidden rounded-lg border border-border">
         <table className="min-w-full divide-y divide-border text-sm">
-          <thead className="bg-gray-50 dark:bg-gray-900/50">
-            <tr className="text-left text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+          <thead className="bg-foreground/5">
+            <tr className="text-left text-xs uppercase tracking-wide text-muted">
               <th className="px-4 py-3 font-semibold">{t('watchlist.pipeline.columns.symbol')}</th>
               <th className="px-4 py-3 font-semibold">{t('watchlist.pipeline.columns.current')}</th>
               <th className="px-4 py-3 font-semibold">{t('watchlist.pipeline.columns.distance')}</th>
@@ -128,19 +128,19 @@ export default function WatchlistPipelinePanel({ onTickerSelect }: WatchlistPipe
               <th className="px-4 py-3 font-semibold">{t('watchlist.pipeline.columns.status')}</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border bg-white dark:bg-gray-950/20">
+          <tbody className="divide-y divide-border bg-surface">
             {items.map((item) => (
               <tr
                 key={item.ticker}
                 className={cn(
                   'align-top transition-colors',
-                  onTickerSelect ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900/30' : '',
+                  onTickerSelect ? 'cursor-pointer hover:bg-foreground/5' : '',
                 )}
                 onClick={() => onTickerSelect?.(item.ticker)}
               >
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-gray-900 dark:text-gray-100">{item.ticker}</span>
+                    <span className="font-semibold text-foreground">{item.ticker}</span>
                     {onTickerSelect ? <ArrowUpRight className="h-3.5 w-3.5 text-muted" /> : null}
                   </div>
                   <WatchMetaInline
@@ -151,7 +151,7 @@ export default function WatchlistPipelinePanel({ onTickerSelect }: WatchlistPipe
                     className="mt-1 flex flex-wrap items-center gap-2 text-[11px]"
                   />
                 </td>
-                <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
+                <td className="px-4 py-3 font-medium text-foreground">
                   {item.currentPrice != null ? formatCurrency(item.currentPrice, item.currency ?? 'USD') : '—'}
                 </td>
                 <td className="px-4 py-3">
@@ -161,7 +161,7 @@ export default function WatchlistPipelinePanel({ onTickerSelect }: WatchlistPipe
                   <Sparkline item={item} />
                 </td>
                 <td className="px-4 py-3">
-                  <span className="inline-flex rounded-full bg-gray-100 px-2 py-1 text-[11px] font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                  <span className="inline-flex rounded-full bg-foreground/5 px-2 py-1 text-[11px] font-medium text-muted">
                     {(item.signal ?? 'none').toUpperCase()}
                   </span>
                 </td>

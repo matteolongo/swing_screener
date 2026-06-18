@@ -131,8 +131,8 @@ export default function ClosePositionModalForm({
   return (
     <ModalShell title={t('positions.closeModal.title', { ticker: position.ticker })} onClose={onClose} className="max-w-md">
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
-          <p className="text-sm text-gray-600 dark:text-gray-400">{t('positions.closeModal.positionDetails')}</p>
+        <div className="bg-foreground/5 p-3 rounded">
+          <p className="text-sm text-muted">{t('positions.closeModal.positionDetails')}</p>
           <p className="text-sm mt-1">
             <strong>{t('positions.closeModal.entryLabel')}</strong> {formatCurrency(position.entryPrice)}
           </p>
@@ -155,7 +155,7 @@ export default function ClosePositionModalForm({
             min="0.01"
             value={exitPriceValue}
             onChange={(event) => setExitPriceValue(event.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+            className="w-full px-3 py-2 border border-border rounded bg-surface"
             required
           />
         </div>
@@ -171,12 +171,12 @@ export default function ClosePositionModalForm({
             min="0"
             value={feeEurValue}
             onChange={(event) => setFeeEurValue(event.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+            className="w-full px-3 py-2 border border-border rounded bg-surface"
           />
         </div>
 
         <div
-          className={`p-3 rounded ${pnl >= 0 ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20'}`}
+          className={`p-3 rounded ${pnl >= 0 ? 'bg-success/10' : 'bg-danger/10'}`}
         >
           <p className="text-sm font-medium">{t('positions.closeModal.projectedPnlNet')}</p>
           <p className={`text-lg font-bold ${getSignColorClass(pnl)}`}>
@@ -195,7 +195,7 @@ export default function ClosePositionModalForm({
             rows={2}
             value={reasonValue}
             onChange={(event) => setReasonValue(event.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+            className="w-full px-3 py-2 border border-border rounded bg-surface"
             placeholder={t('positions.closeModal.reasonPlaceholder')}
           />
         </div>
@@ -209,14 +209,14 @@ export default function ClosePositionModalForm({
             rows={3}
             value={lessonValue}
             onChange={(event) => setLessonValue(event.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+            className="w-full px-3 py-2 border border-border rounded bg-surface"
             placeholder={t('positions.closeModal.lessonPlaceholder')}
           />
         </div>
 
         {exitPriceValue ? (
           <div className="mt-4">
-            <p className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+            <p className="mb-2 text-sm font-medium text-muted">
               {t('tradeTags.stepTitle')}
             </p>
             <p className="mb-3 text-xs text-muted">{t('tradeTags.stepHint')}</p>
@@ -229,8 +229,8 @@ export default function ClosePositionModalForm({
                   className={cn(
                     'rounded-full border px-3 py-1 text-xs font-medium transition-colors',
                     selectedTags.includes(tag.id)
-                      ? 'border-blue-600 bg-blue-600 text-white'
-                      : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300',
+                      ? 'border-primary/40 bg-primary text-white'
+                      : 'border-border bg-surface text-muted hover:border-primary/40',
                   )}
                 >
                   {tag.label}
@@ -241,14 +241,14 @@ export default function ClosePositionModalForm({
         ) : null}
 
         {formError ? (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3">
-            <p className="text-sm text-red-800 dark:text-red-200">{formError}</p>
+          <div className="bg-danger/10 border border-danger/40 rounded p-3">
+            <p className="text-sm text-danger">{formError}</p>
           </div>
         ) : null}
 
         {error ? (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3">
-            <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+          <div className="bg-danger/10 border border-danger/40 rounded p-3">
+            <p className="text-sm text-danger">{error}</p>
           </div>
         ) : null}
 

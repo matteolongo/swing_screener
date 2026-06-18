@@ -12,19 +12,19 @@ interface ParameterWarningProps {
 export default function ParameterWarning({ level, message }: ParameterWarningProps) {
   const styles = {
     warning: {
-      container: 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700',
+      container: 'bg-warning/10 border-warning/40',
       icon: '⚠️',
-      text: 'text-yellow-800 dark:text-yellow-200',
+      text: 'text-warning',
     },
     danger: {
-      container: 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700',
+      container: 'bg-danger/10 border-danger/40',
       icon: '🚨',
-      text: 'text-red-800 dark:text-red-200',
+      text: 'text-danger',
     },
     info: {
-      container: 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700',
+      container: 'bg-primary/10 border-primary/40',
       icon: '💡',
-      text: 'text-blue-800 dark:text-blue-200',
+      text: 'text-primary',
     },
   };
 

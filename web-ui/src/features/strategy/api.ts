@@ -1,4 +1,5 @@
-import { API_ENDPOINTS, apiUrl } from '@/lib/api';
+import { API_ENDPOINTS } from '@/lib/api';
+import { fetchJson } from '@/lib/fetchJson';
 import {
   createStrategyLocal,
   deleteStrategyLocal,
@@ -57,9 +58,9 @@ export async function fetchStrategies(): Promise<Strategy[]> {
   if (isLocalPersistenceMode()) {
     return listStrategiesLocal();
   }
-  const res = await fetch(apiUrl(API_ENDPOINTS.strategy));
-  if (!res.ok) throw new Error('Failed to load strategies');
-  const data: StrategyAPI[] = await res.json();
+  const data = await fetchJson<StrategyAPI[]>(API_ENDPOINTS.strategy, {
+    errorMessage: 'Failed to load strategies',
+  });
   return data.map(transformStrategy);
 }
 
@@ -67,9 +68,9 @@ export async function fetchActiveStrategy(): Promise<Strategy> {
   if (isLocalPersistenceMode()) {
     return getActiveStrategyLocal();
   }
-  const res = await fetch(apiUrl(API_ENDPOINTS.strategyActive));
-  if (!res.ok) throw new Error('Failed to load active strategy');
-  const data: StrategyAPI = await res.json();
+  const data = await fetchJson<StrategyAPI>(API_ENDPOINTS.strategyActive, {
+    errorMessage: 'Failed to load active strategy',
+  });
   return transformStrategy(data);
 }
 
@@ -78,16 +79,12 @@ export async function setActiveStrategy(strategyId: string): Promise<Strategy> {
     return setActiveStrategyLocal(strategyId);
   }
   const payload: ActiveStrategyRequestAPI = { strategy_id: strategyId };
-  const res = await fetch(apiUrl(API_ENDPOINTS.strategyActive), {
+  const data = await fetchJson<StrategyAPI>(API_ENDPOINTS.strategyActive, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
+    errorMessage: 'Failed to update active strategy',
   });
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.detail || 'Failed to update active strategy');
-  }
-  const data: StrategyAPI = await res.json();
   return transformStrategy(data);
 }
 
@@ -95,16 +92,12 @@ export async function updateStrategy(strategy: Strategy): Promise<Strategy> {
   if (isLocalPersistenceMode()) {
     return updateStrategyLocal(strategy);
   }
-  const res = await fetch(apiUrl(API_ENDPOINTS.strategyById(strategy.id)), {
+  const data = await fetchJson<StrategyAPI>(API_ENDPOINTS.strategyById(strategy.id), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(toStrategyUpdateRequest(strategy)),
+    errorMessage: 'Failed to update strategy',
   });
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.detail || 'Failed to update strategy');
-  }
-  const data: StrategyAPI = await res.json();
   return transformStrategy(data);
 }
 
@@ -113,13 +106,10 @@ export async function deleteStrategy(strategyId: string): Promise<void> {
     deleteStrategyLocal(strategyId);
     return;
   }
-  const res = await fetch(apiUrl(API_ENDPOINTS.strategyById(strategyId)), {
+  await fetchJson<void>(API_ENDPOINTS.strategyById(strategyId), {
     method: 'DELETE',
+    errorMessage: 'Failed to delete strategy',
   });
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.detail || 'Failed to delete strategy');
-  }
 }
 
 export async function createStrategy(
@@ -129,16 +119,12 @@ export async function createStrategy(
   if (isLocalPersistenceMode()) {
     return createStrategyLocal(strategy, payload);
   }
-  const res = await fetch(apiUrl(API_ENDPOINTS.strategy), {
+  const data = await fetchJson<StrategyAPI>(API_ENDPOINTS.strategy, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(toStrategyCreateRequest(strategy, payload)),
+    errorMessage: 'Failed to create strategy',
   });
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.detail || 'Failed to create strategy');
-  }
-  const data: StrategyAPI = await res.json();
   return transformStrategy(data);
 }
 
@@ -148,16 +134,12 @@ export async function validateStrategy(
   if (isLocalPersistenceMode()) {
     return validateStrategyLocally(strategyPayload);
   }
-  const res = await fetch(apiUrl(API_ENDPOINTS.strategyValidate), {
+  const data = await fetchJson<StrategyValidationResultApi>(API_ENDPOINTS.strategyValidate, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(strategyPayload),
+    errorMessage: 'Failed to validate strategy',
   });
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.detail || 'Failed to validate strategy');
-  }
-  const data: StrategyValidationResultApi = await res.json();
   return transformValidationResult(data);
 }
 

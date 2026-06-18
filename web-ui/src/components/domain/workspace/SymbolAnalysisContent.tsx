@@ -172,8 +172,8 @@ export default function SymbolAnalysisContent({
               valuationLabel={candidate?.decisionSummary?.valuationLabel ?? null}
             />
             {!candidate && (
-              <div className="rounded-lg border border-gray-200 bg-surface p-4 dark:border-gray-700 flex flex-col gap-3">
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+              <div className="rounded-lg border border-border bg-surface p-4 flex flex-col gap-3">
+                <p className="text-sm text-muted">
                   {t('workspacePage.panels.analysis.computeAnalysis.description', { ticker })}
                 </p>
                 <div className="flex items-center gap-3">
@@ -190,7 +190,7 @@ export default function SymbolAnalysisContent({
                   </Button>
                 </div>
                 {computeAnalysisMutation.isError && (
-                  <p className="text-sm text-rose-600">
+                  <p className="text-sm text-danger">
                     {computeAnalysisMutation.error instanceof Error
                       ? computeAnalysisMutation.error.message
                       : t('workspacePage.panels.analysis.computeAnalysis.runError')}
@@ -217,14 +217,14 @@ export default function SymbolAnalysisContent({
               }
               return null;
             })()}
-            <div className="rounded-lg border border-gray-200 bg-surface p-3 dark:border-gray-700">
+            <div className="rounded-lg border border-border bg-surface p-3">
               <CachedSymbolCandleChart
                 ticker={ticker}
                 width={820}
                 height={220}
               />
               {candidate?.patternStop != null && (
-                <p className="mt-2 text-xs text-sky-700 dark:text-sky-300">
+                <p className="mt-2 text-xs text-primary">
                   {t('chart.patternStopLabel')}: {candidate.patternStop.toFixed(2)}
                   {candidate.currency ? ` ${candidate.currency}` : ''}
                   {candidate.patternStopReason ? ` · ${candidate.patternStopReason}` : ''}
@@ -259,7 +259,7 @@ export default function SymbolAnalysisContent({
                   </Button>
                 </div>
                 {intelligenceMutation.isError && (
-                  <p className="mt-2 text-sm text-rose-600">
+                  <p className="mt-2 text-sm text-danger">
                     {intelligenceMutation.error instanceof Error
                       ? intelligenceMutation.error.message
                       : t('workspacePage.panels.analysis.intelligence.analyzeError')}
@@ -287,7 +287,7 @@ export default function SymbolAnalysisContent({
                   </span>
                 )}
                 {intelligenceMutation.isError && (
-                  <span className="text-xs text-rose-600">
+                  <span className="text-xs text-danger">
                     {intelligenceMutation.error instanceof Error
                       ? intelligenceMutation.error.message
                       : t('workspacePage.panels.analysis.intelligence.analyzeError')}
@@ -342,7 +342,7 @@ export default function SymbolAnalysisContent({
             ) : null}
 
             {refreshFundamentalsMutation.isError ? (
-              <div className="text-sm text-rose-600">
+              <div className="text-sm text-danger">
                 {refreshFundamentalsMutation.error instanceof Error
                   ? refreshFundamentalsMutation.error.message
                   : t('workspacePage.panels.analysis.fundamentals.refreshError')}
@@ -352,7 +352,7 @@ export default function SymbolAnalysisContent({
             {fundamentalsQuery.isLoading ? (
               <div className="text-sm text-muted">{t('workspacePage.panels.analysis.fundamentals.loading')}</div>
             ) : fundamentalsQuery.isError ? (
-              <div className="text-sm text-rose-600">
+              <div className="text-sm text-danger">
                 {fundamentalsQuery.error instanceof Error
                   ? fundamentalsQuery.error.message
                   : t('workspacePage.panels.analysis.fundamentals.loadError')}

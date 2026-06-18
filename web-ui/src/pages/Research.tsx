@@ -34,10 +34,10 @@ export default function Research() {
     <div className="mx-auto max-w-[1600px] px-4 py-4">
       {/* Page header */}
       <div className="mb-4">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+        <h1 className="text-2xl font-bold text-foreground">
           {t('researchPage.title')}
         </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+        <p className="text-sm text-muted mt-1">
           {t('researchPage.subtitle')}
         </p>
       </div>
@@ -50,7 +50,7 @@ export default function Research() {
           onChange={(e) => setSharedSymbol(e.target.value.toUpperCase())}
           onKeyDown={(e) => { if (e.key === 'Enter') setCommittedSymbol(sharedSymbol); }}
           placeholder={t('researchPage.symbolSearch.placeholder')}
-          className="w-48 px-3 py-1.5 text-sm border border-border rounded-md bg-white dark:bg-gray-800"
+          className="w-48 px-3 py-1.5 text-sm border border-border rounded-md bg-surface"
         />
         <button
           type="button"
@@ -81,7 +81,7 @@ export default function Research() {
               'px-4 py-2 rounded-full text-sm font-medium transition-colors',
               activeTab === key
                 ? 'bg-primary/10 text-primary font-semibold'
-                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                : 'text-muted hover:text-muted'
             )}
           >
             {label}

@@ -44,20 +44,20 @@ export default function FillViaDegiroModal({ order, onClose }: FillViaDegiroModa
       <tr
         key={o.orderId}
         onClick={() => setSelectedOrderId(o.orderId)}
-        className={`cursor-pointer border-b border-gray-100 dark:border-gray-800 hover:bg-blue-50 dark:hover:bg-blue-950 ${
-          isSelected ? 'bg-blue-100 dark:bg-blue-900' : ''
+        className={`cursor-pointer border-b border-border hover:bg-primary/10 ${
+          isSelected ? 'bg-primary/10' : ''
         }`}
       >
-        <td className="py-2 pr-3 text-sm text-gray-900 dark:text-gray-100">
+        <td className="py-2 pr-3 text-sm text-foreground">
           {o.productName ?? o.orderId}
         </td>
-        <td className="py-2 pr-3 text-sm text-right text-gray-700 dark:text-gray-300">
+        <td className="py-2 pr-3 text-sm text-right text-muted">
           {o.price != null ? o.price.toFixed(2) : t('common.placeholders.dash')}
         </td>
-        <td className="py-2 pr-3 text-sm text-right text-gray-700 dark:text-gray-300">
+        <td className="py-2 pr-3 text-sm text-right text-muted">
           {o.quantity}
         </td>
-        <td className="py-2 text-sm text-gray-500 dark:text-gray-400">
+        <td className="py-2 text-sm text-muted">
           {o.createdAt?.slice(0, 10) ?? t('common.placeholders.dash')}
         </td>
       </tr>
@@ -76,7 +76,7 @@ export default function FillViaDegiroModal({ order, onClose }: FillViaDegiroModa
       )}
 
       {historyQuery.isError && (
-        <p className="text-sm text-red-600 dark:text-red-400 py-2">{t('fillViaDegiroModal.errorFetch')}</p>
+        <p className="text-sm text-danger py-2">{t('fillViaDegiroModal.errorFetch')}</p>
       )}
 
       {!historyQuery.isLoading && !historyQuery.isError && buyOrders.length === 0 && (
@@ -87,7 +87,7 @@ export default function FillViaDegiroModal({ order, onClose }: FillViaDegiroModa
         <div className="mb-4 overflow-x-auto">
           <table className="min-w-full">
             <thead>
-              <tr className="text-xs text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
+              <tr className="text-xs text-muted border-b border-border">
                 <th className="py-1 pr-3 text-left font-medium">{t('fillViaDegiroModal.columnProduct')}</th>
                 <th className="py-1 pr-3 text-right font-medium">{t('fillViaDegiroModal.columnPrice')}</th>
                 <th className="py-1 pr-3 text-right font-medium">{t('fillViaDegiroModal.columnQty')}</th>
@@ -98,7 +98,7 @@ export default function FillViaDegiroModal({ order, onClose }: FillViaDegiroModa
               {tickerMatches.map(renderRow)}
               {otherBuys.length > 0 && tickerMatches.length > 0 && (
                 <tr>
-                  <td colSpan={4} className="py-1 text-xs text-gray-400 dark:text-gray-500 italic">
+                  <td colSpan={4} className="py-1 text-xs text-muted italic">
                     {t('fillViaDegiroModal.otherSection')}
                   </td>
                 </tr>
@@ -110,7 +110,7 @@ export default function FillViaDegiroModal({ order, onClose }: FillViaDegiroModa
       )}
 
       {quantityMismatch && selectedOrder && (
-        <div className="mb-3 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-600 dark:bg-amber-950 dark:text-amber-200">
+        <div className="mb-3 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning">
           {t('fillViaDegiroModal.quantityMismatch', {
             degiroQty: String(selectedOrder.quantity),
             localQty: String(order.quantity),
@@ -119,7 +119,7 @@ export default function FillViaDegiroModal({ order, onClose }: FillViaDegiroModa
       )}
 
       {fillMutation.isError && (
-        <p className="mb-3 text-sm text-red-600 dark:text-red-400">
+        <p className="mb-3 text-sm text-danger">
           {(fillMutation.error as Error)?.message ?? t('common.errors.generic')}
         </p>
       )}

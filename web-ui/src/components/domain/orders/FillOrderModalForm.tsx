@@ -119,8 +119,8 @@ export default function FillOrderModalForm({
       className="max-w-md"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
-          <p className="text-sm text-gray-600 dark:text-gray-400">{t('order.fillModal.orderDetails')}</p>
+        <div className="bg-foreground/5 p-3 rounded">
+          <p className="text-sm text-muted">{t('order.fillModal.orderDetails')}</p>
           <p className="text-sm mt-1">
             <strong>{t('order.fillModal.type')}</strong> {order.orderType}
           </p>
@@ -150,7 +150,7 @@ export default function FillOrderModalForm({
             min="0.01"
             value={filledPriceValue}
             onChange={(event) => setFilledPriceValue(event.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+            className="w-full px-3 py-2 border border-border rounded bg-surface"
             required
           />
         </div>
@@ -164,7 +164,7 @@ export default function FillOrderModalForm({
             type="date"
             value={filledDateValue}
             onChange={(event) => setFilledDateValue(event.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+            className="w-full px-3 py-2 border border-border rounded bg-surface"
             required
           />
         </div>
@@ -182,11 +182,11 @@ export default function FillOrderModalForm({
             min="0.01"
             value={stopPriceValue}
             onChange={(event) => setStopPriceValue(event.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+            className="w-full px-3 py-2 border border-border rounded bg-surface"
             required={requiresStopPrice}
           />
           {isEntryOrder && hasOpenPositionForTicker ? (
-            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+            <p className="mt-1 text-sm text-muted">
               {t('order.fillModal.scaleInStopHint')}
             </p>
           ) : null}
@@ -203,7 +203,7 @@ export default function FillOrderModalForm({
             min="0"
             value={feeEurValue}
             onChange={(event) => setFeeEurValue(event.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+            className="w-full px-3 py-2 border border-border rounded bg-surface"
           />
         </div>
 
@@ -218,19 +218,19 @@ export default function FillOrderModalForm({
             min="0.0001"
             value={fillFxRateValue}
             onChange={(event) => setFillFxRateValue(event.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+            className="w-full px-3 py-2 border border-border rounded bg-surface"
           />
         </div>
 
         {formError ? (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3">
-            <p className="text-sm text-red-800 dark:text-red-200">{formError}</p>
+          <div className="bg-danger/10 border border-danger/40 rounded p-3">
+            <p className="text-sm text-danger">{formError}</p>
           </div>
         ) : null}
 
         {error ? (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3">
-            <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+          <div className="bg-danger/10 border border-danger/40 rounded p-3">
+            <p className="text-sm text-danger">{error}</p>
           </div>
         ) : null}
 

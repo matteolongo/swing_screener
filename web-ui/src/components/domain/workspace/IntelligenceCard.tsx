@@ -8,18 +8,18 @@ import { t } from '@/i18n/t';
 
 function urgencyBadgeClass(urgency: CatalystUrgency): string {
   switch (urgency) {
-    case 'high': return 'bg-rose-100 text-rose-700 border-rose-200';
-    case 'medium': return 'bg-amber-100 text-amber-700 border-amber-200';
-    case 'low': return 'bg-slate-100 text-slate-600 border-slate-200';
+    case 'high': return 'bg-danger/10 text-danger border-danger/40';
+    case 'medium': return 'bg-warning/10 text-warning border-warning/40';
+    case 'low': return 'bg-foreground/5 text-muted border-border';
     default: return '';
   }
 }
 
 function positionSignalClass(action: PositionSignalAction): string {
   switch (action) {
-    case 'EXIT': return 'bg-rose-50 border-rose-200 text-rose-800';
-    case 'TRIM': return 'bg-amber-50 border-amber-200 text-amber-800';
-    default: return 'bg-yellow-50 border-yellow-200 text-yellow-800';
+    case 'EXIT': return 'bg-danger/10 border-danger/40 text-danger';
+    case 'TRIM': return 'bg-warning/10 border-warning/40 text-warning';
+    default: return 'bg-warning/10 border-warning/40 text-warning';
   }
 }
 
@@ -37,9 +37,9 @@ function humanizeToken(value: string): string {
 
 function moveDirectionClass(direction: PriceMoveDirection): string {
   switch (direction) {
-    case 'up': return 'bg-emerald-50 border-emerald-200 text-emerald-800';
-    case 'down': return 'bg-rose-50 border-rose-200 text-rose-800';
-    default: return 'bg-slate-50 border-slate-200 text-slate-700';
+    case 'up': return 'bg-success/10 border-success/40 text-success';
+    case 'down': return 'bg-danger/10 border-danger/40 text-danger';
+    default: return 'bg-foreground/5 border-border text-muted';
   }
 }
 

@@ -19,7 +19,7 @@ export default function EnhancedRiskCard({ draft, setDraft, warnings }: Enhanced
   const riskPerTradeWarning = warnings.find((warning) => warning.parameter === 'riskPerTrade');
 
   return (
-    <Card variant="bordered" className="border-orange-200 bg-orange-50/30 dark:bg-orange-900/10 dark:border-orange-800">
+    <Card variant="bordered" className="border-warning/40 bg-warning/10">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <span className="text-xl">⚖️</span>
@@ -64,7 +64,7 @@ export default function EnhancedRiskCard({ draft, setDraft, warnings }: Enhanced
           />
 
           {/* Risk Per Trade - CRITICAL */}
-          <div className="border-2 border-orange-300 dark:border-orange-700 rounded-lg p-4 bg-white dark:bg-gray-800">
+          <div className="border-2 border-warning/40 rounded-lg p-4 bg-surface">
             <EducationalNumberInput
               label="Risk Per Trade"
               microcopy="Maximum % of account to risk on a single trade — professional traders rarely exceed 2%"

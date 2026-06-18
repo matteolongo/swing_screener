@@ -2,11 +2,11 @@ import type { CatalystOpportunity } from '@/features/intelligence/catalysts/type
 import { t } from '@/i18n/t';
 
 const STATE_COLOR: Record<string, string> = {
-  CATALYST_ACTIVE: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-  TRENDING: 'bg-teal-100 text-teal-700 border-teal-200',
-  WATCH: 'bg-amber-100 text-amber-700 border-amber-200',
-  COOLING_OFF: 'bg-slate-100 text-slate-600 border-slate-200',
-  QUIET: 'bg-slate-100 text-slate-400 border-slate-200',
+  CATALYST_ACTIVE: 'bg-success/10 text-success border-success/40',
+  TRENDING: 'bg-success/10 text-success border-success/40',
+  WATCH: 'bg-warning/10 text-warning border-warning/40',
+  COOLING_OFF: 'bg-foreground/5 text-muted border-border',
+  QUIET: 'bg-foreground/5 text-muted border-border',
 };
 
 interface CatalystContextCardProps {
@@ -15,7 +15,7 @@ interface CatalystContextCardProps {
 
 export default function CatalystContextCard({ opportunity }: CatalystContextCardProps) {
   const { state, thesis, keyRisks, sources } = opportunity;
-  const stateColor = STATE_COLOR[state] ?? 'bg-slate-100 text-slate-600 border-slate-200';
+  const stateColor = STATE_COLOR[state] ?? 'bg-foreground/5 text-muted border-border';
 
   return (
     <div className="rounded-xl border border-border bg-surface p-4 shadow-sm space-y-3">

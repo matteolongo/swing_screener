@@ -80,41 +80,41 @@ export default function EdgeBreakdownTable({ positions }: EdgeBreakdownTableProp
 
   if (taggedClosed.length < MIN_TRADES_FOR_DISPLAY) {
     return (
-      <p className="py-4 text-sm text-gray-500 dark:text-gray-400">
+      <p className="py-4 text-sm text-muted">
         {t('analyticsPage.edgeBreakdown.emptyState')}
       </p>
     );
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+    <div className="overflow-x-auto rounded-lg border border-border bg-surface">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
-            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+          <tr className="border-b border-border bg-foreground/5">
+            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">
               {t('analyticsPage.edgeBreakdown.colTag')}
             </th>
-            <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+            <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted">
               {t('analyticsPage.edgeBreakdown.colTrades')}
             </th>
-            <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+            <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted">
               {t('analyticsPage.edgeBreakdown.colWinRate')}
             </th>
-            <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+            <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted">
               {t('analyticsPage.edgeBreakdown.colAvgR')}
             </th>
             <th
-              className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"
+              className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted"
               title={t('analyticsPage.edgeBreakdown.expectancyHint')}
             >
               {t('analyticsPage.edgeBreakdown.colExpectancy')}
             </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+        <tbody className="divide-y divide-border">
           {stats.map((stat) => (
-            <tr key={stat.tag} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-              <td className="px-4 py-3 font-semibold text-gray-900 dark:text-gray-100">
+            <tr key={stat.tag} className="hover:bg-foreground/5">
+              <td className="px-4 py-3 font-semibold text-foreground">
                 {tagLabel(stat.tag)}
               </td>
               <td className="px-4 py-3 text-right tabular-nums">{stat.count}</td>

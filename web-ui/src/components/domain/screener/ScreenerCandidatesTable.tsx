@@ -16,19 +16,19 @@ import { t } from '@/i18n/t';
 function signalBadge(action?: string): { label: string; className: string } | null {
   switch (action) {
     case 'BUY_NOW':
-      return { label: 'Buy Now', className: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200' };
+      return { label: 'Buy Now', className: 'bg-success/10 text-success' };
     case 'BUY_ON_PULLBACK':
-      return { label: 'Pullback', className: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200' };
+      return { label: 'Pullback', className: 'bg-primary/10 text-primary' };
     case 'WAIT_FOR_BREAKOUT':
-      return { label: 'Breakout', className: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-200' };
+      return { label: 'Breakout', className: 'bg-primary/10 text-primary' };
     case 'WATCH':
-      return { label: 'Watch', className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200' };
+      return { label: 'Watch', className: 'bg-warning/10 text-warning' };
     case 'TACTICAL_ONLY':
-      return { label: 'Tactical', className: 'bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-200' };
+      return { label: 'Tactical', className: 'bg-primary/10 text-primary' };
     case 'AVOID':
-      return { label: 'Avoid', className: 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200' };
+      return { label: 'Avoid', className: 'bg-danger/10 text-danger' };
     case 'MANAGE_ONLY':
-      return { label: 'Manage', className: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' };
+      return { label: 'Manage', className: 'bg-foreground/5 text-muted' };
     default:
       return null;
   }
@@ -156,14 +156,14 @@ export default function ScreenerCandidatesTable({
           <React.Fragment key={candidate.ticker}>
             <tr
               onClick={onRowClick ? () => onRowClick(candidate) : undefined}
-              className={`border-b border-gray-100 dark:border-gray-700 ${
+              className={`border-b border-border ${
                 isSelected
-                  ? 'bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30'
-                  : 'hover:bg-gray-50 dark:hover:bg-gray-800'
+                  ? 'bg-primary/10 hover:bg-primary/10'
+                  : 'hover:bg-foreground/5'
               } ${onRowClick ? 'cursor-pointer' : ''}`}
             >
               {/* Rank */}
-              <td className="py-1.5 px-3 text-xs text-gray-900 dark:text-gray-100 font-medium whitespace-nowrap">
+              <td className="py-1.5 px-3 text-xs text-foreground font-medium whitespace-nowrap">
                 #{vm.priorityRank}
               </td>
 
@@ -188,14 +188,14 @@ export default function ScreenerCandidatesTable({
                   )}
                   {vm.volumeRatio != null && vm.volumeRatio >= 1.5 && (
                     <span
-                      className="inline-block w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0"
+                      className="inline-block w-2 h-2 rounded-full bg-success flex-shrink-0"
                       title={t('screener.details.volumeRatio.dotStrongTitle')}
                       aria-label={t('screener.details.volumeRatio.dotStrongTitle')}
                     />
                   )}
                   {vm.volumeRatio != null && vm.volumeRatio < 0.9 && (
                     <span
-                      className="inline-block w-2 h-2 rounded-full bg-amber-400 flex-shrink-0"
+                      className="inline-block w-2 h-2 rounded-full bg-warning flex-shrink-0"
                       title={t('screener.details.volumeRatio.dotWeakTitle')}
                       aria-label={t('screener.details.volumeRatio.dotWeakTitle')}
                     />
@@ -204,7 +204,7 @@ export default function ScreenerCandidatesTable({
               </td>
 
               {/* Close */}
-              <td className="py-1.5 px-3 text-xs text-right text-gray-900 dark:text-gray-100 font-mono whitespace-nowrap">
+              <td className="py-1.5 px-3 text-xs text-right text-foreground font-mono whitespace-nowrap">
                 {formatCurrency(candidate.close, candidate.currency)}
               </td>
 
@@ -222,7 +222,7 @@ export default function ScreenerCandidatesTable({
               {/* R:R */}
               <td className="py-1.5 px-3 text-xs text-right font-mono whitespace-nowrap">
                 {vm.rr != null && vm.rr > 0 ? (
-                  <span className="text-gray-900 dark:text-gray-100">{vm.rr.toFixed(1)}</span>
+                  <span className="text-foreground">{vm.rr.toFixed(1)}</span>
                 ) : (
                   <span className="text-muted">—</span>
                 )}
@@ -237,7 +237,7 @@ export default function ScreenerCandidatesTable({
                       event.stopPropagation();
                       toggleRow(candidate.ticker);
                     }}
-                    className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                    className="p-1 rounded hover:bg-foreground/5"
                     aria-label={
                       isExpanded
                         ? t('screener.table.collapseRowAria', { ticker: candidate.ticker })

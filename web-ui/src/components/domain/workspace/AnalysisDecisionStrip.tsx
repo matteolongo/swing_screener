@@ -171,7 +171,7 @@ export default function AnalysisDecisionStrip({
             <button
               type="button"
               onClick={onPrepareOrder}
-              className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
+              className="rounded-md bg-success px-3 py-1.5 text-xs font-semibold text-white hover:bg-success"
             >
               {t('analysis.beginnerHeader.action.prepare_order')}
             </button>

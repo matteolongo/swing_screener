@@ -32,15 +32,15 @@ function positionSignalLabel(action: string): string {
 }
 
 function stopActionColor(action: string): string {
-  if (action === 'MOVE_STOP_UP') return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400';
-  if (action.startsWith('CLOSE_')) return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
-  return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
+  if (action === 'MOVE_STOP_UP') return 'bg-warning/10 text-warning';
+  if (action.startsWith('CLOSE_')) return 'bg-danger/10 text-danger';
+  return 'bg-foreground/5 text-muted';
 }
 
 function positionSignalColor(action: string): string {
-  if (action === 'EXIT') return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
-  if (action === 'TRIM') return 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400';
-  return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
+  if (action === 'EXIT') return 'bg-danger/10 text-danger';
+  if (action === 'TRIM') return 'bg-warning/10 text-warning';
+  return 'bg-success/10 text-success';
 }
 
 export default function OpenPositionIntelligencePanel({ onTickerSelect }: Props) {
@@ -51,7 +51,7 @@ export default function OpenPositionIntelligencePanel({ onTickerSelect }: Props)
 
   return (
     <div className="mb-3 space-y-1">
-      <div className="px-3 py-1 text-xs font-semibold uppercase tracking-wide text-purple-700 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 rounded">
+      <div className="px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary bg-primary/10 rounded">
         {t('todayPage.openPositions.sectionTitle')} · {summaries.length}
       </div>
       {summaries.map((item) => {
@@ -64,9 +64,9 @@ export default function OpenPositionIntelligencePanel({ onTickerSelect }: Props)
             key={item.positionId}
             type="button"
             onClick={() => onTickerSelect(item.ticker)}
-            className="w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-l-2 border-purple-400"
+            className="w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-foreground/5 transition-colors border-l-2 border-primary/40"
           >
-            <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 min-w-[60px] shrink-0">
+            <span className="text-sm font-semibold text-foreground min-w-[60px] shrink-0">
               {item.ticker}
             </span>
 
@@ -98,12 +98,12 @@ export default function OpenPositionIntelligencePanel({ onTickerSelect }: Props)
                 >
                   {positionSignalLabel(posSignal.action)}
                 </span>
-                <span className="text-xs text-gray-500 dark:text-gray-400 truncate flex-1 min-w-0">
+                <span className="text-xs text-muted truncate flex-1 min-w-0">
                   {item.intelligence?.summaryLine}
                 </span>
               </>
             ) : (
-              <span className="text-xs text-gray-400 dark:text-gray-500 flex-1 min-w-0">
+              <span className="text-xs text-muted flex-1 min-w-0">
                 {t('todayPage.openPositions.noIntelligence')}
               </span>
             )}
@@ -122,7 +122,7 @@ export default function OpenPositionIntelligencePanel({ onTickerSelect }: Props)
                   analyzeMutation.mutate(item.positionId);
                 }
               }}
-              className="shrink-0 text-xs px-2 py-0.5 rounded bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-800/40 cursor-pointer"
+              className="shrink-0 text-xs px-2 py-0.5 rounded bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer"
             >
               {isAnalyzing ? (
                 <Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" />

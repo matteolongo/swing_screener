@@ -68,9 +68,9 @@ export default function WeeklyReviewForm({ weekId, onSaved }: WeeklyReviewFormPr
   const updatedAt = reviewQuery.data?.updated_at;
 
   return (
-    <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 space-y-3">
+    <div className="rounded-lg border border-border bg-surface p-4 space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+        <h3 className="text-sm font-semibold text-foreground">
           Week {resolvedWeekId}
         </h3>
         {updatedAt && (
@@ -82,7 +82,7 @@ export default function WeeklyReviewForm({ weekId, onSaved }: WeeklyReviewFormPr
 
       {FIELDS.map(({ key, label, placeholder }) => (
         <div key={key}>
-          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className="block text-xs font-medium text-muted mb-1">
             {label}
           </label>
           <textarea
@@ -90,7 +90,7 @@ export default function WeeklyReviewForm({ weekId, onSaved }: WeeklyReviewFormPr
             onChange={(e) => setForm((prev) => ({ ...prev, [key]: e.target.value }))}
             rows={3}
             placeholder={placeholder}
-            className="w-full text-sm px-2 py-1.5 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-none focus:outline-none focus:ring-1 focus:ring-primary/50"
+            className="w-full text-sm px-2 py-1.5 border border-border rounded bg-surface text-foreground resize-none focus:outline-none focus:ring-1 focus:ring-primary/50"
           />
         </div>
       ))}
@@ -105,10 +105,10 @@ export default function WeeklyReviewForm({ weekId, onSaved }: WeeklyReviewFormPr
           {upsertMutation.isPending ? 'Saving…' : 'Save Review'}
         </button>
         {upsertMutation.isSuccess && (
-          <span className="text-xs text-emerald-600">Saved.</span>
+          <span className="text-xs text-success">Saved.</span>
         )}
         {upsertMutation.isError && (
-          <span className="text-xs text-rose-600">Failed to save.</span>
+          <span className="text-xs text-danger">Failed to save.</span>
         )}
       </div>
     </div>

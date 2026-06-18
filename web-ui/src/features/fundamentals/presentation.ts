@@ -42,11 +42,11 @@ export function metricHorizonTooltip(metricKey: string, context?: FundamentalMet
 
 export function metricHorizonClass(metricKey: string, context?: FundamentalMetricContext) {
   const label = metricHorizonLabel(metricKey, context);
-  if (label === 'live price') return 'bg-sky-100 text-sky-800';
-  if (label === 'latest FY') return 'bg-emerald-100 text-emerald-800';
-  if (label === 'latest quarter') return 'bg-amber-100 text-amber-800';
-  if (label === 'reported') return 'bg-violet-100 text-violet-800';
-  return 'bg-gray-100 text-gray-700';
+  if (label === 'live price') return 'bg-primary/10 text-primary';
+  if (label === 'latest FY') return 'bg-success/10 text-success';
+  if (label === 'latest quarter') return 'bg-warning/10 text-warning';
+  if (label === 'reported') return 'bg-primary/10 text-primary';
+  return 'bg-foreground/5 text-muted';
 }
 
 export function formatFundamentalMetricMeta(_metricKey: string, context?: FundamentalMetricContext) {

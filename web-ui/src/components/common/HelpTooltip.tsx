@@ -21,7 +21,7 @@ export default function HelpTooltip({ short, title, content, className }: HelpTo
   const modal = isOpen ? (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={handleClose}>
       <div
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto"
+        className="bg-surface rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -33,7 +33,7 @@ export default function HelpTooltip({ short, title, content, className }: HelpTo
               e.stopPropagation();
               handleClose();
             }}
-            className="text-muted hover:text-gray-600 dark:hover:text-gray-200"
+            className="text-muted hover:text-muted"
             aria-label="Close help"
           >
             <X className="w-5 h-5" />
@@ -41,7 +41,7 @@ export default function HelpTooltip({ short, title, content, className }: HelpTo
         </div>
 
         {/* Content */}
-        <div className="p-6 prose dark:prose-invert max-w-none">
+        <div className="p-6 prose prose-invert max-w-none">
           {content}
         </div>
       </div>
@@ -66,7 +66,7 @@ export default function HelpTooltip({ short, title, content, className }: HelpTo
         
         {/* Hover Tooltip */}
         {showTooltip && !isOpen && (
-          <div className="absolute z-10 bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 text-sm text-white bg-gray-900 rounded-md whitespace-nowrap pointer-events-none">
+          <div className="absolute z-10 bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 text-sm text-white bg-surface rounded-md whitespace-nowrap pointer-events-none">
             {short}
             <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900" />
           </div>

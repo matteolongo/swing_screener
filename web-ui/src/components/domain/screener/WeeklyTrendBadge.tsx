@@ -10,10 +10,10 @@ export default function WeeklyTrendBadge({ trend, className = '' }: WeeklyTrendB
 
   const colorClass =
     trend === 'up'
-      ? 'text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-900/30 dark:border-emerald-700'
+      ? 'text-success bg-success/10 border-success/40'
       : trend === 'down'
-        ? 'text-red-700 bg-red-50 border-red-200 dark:text-red-400 dark:bg-red-900/30 dark:border-red-700'
-        : 'text-gray-600 bg-gray-50 border-gray-200 dark:text-gray-400 dark:bg-gray-800 dark:border-gray-700';
+        ? 'text-danger bg-danger/10 border-danger/40'
+        : 'text-muted bg-foreground/5 border-border';
 
   const label =
     trend === 'up'

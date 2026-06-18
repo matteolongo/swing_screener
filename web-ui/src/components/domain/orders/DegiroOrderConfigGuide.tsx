@@ -38,7 +38,7 @@ export default function DegiroOrderConfigGuide({
       : formatCurrency(entryPrice, currency);
 
   return (
-    <div className="rounded border border-cyan-200 bg-cyan-50/70 p-3 text-xs text-cyan-900 dark:border-cyan-900 dark:bg-cyan-950/20 dark:text-cyan-100">
+    <div className="rounded border border-primary/40 bg-primary/10 p-3 text-xs text-primary">
       <p className="font-semibold">{t('order.candidateModal.degiroConfigTitle')}</p>
 
       <p className="mt-2 font-semibold">{t('order.candidateModal.degiroConfigEntryStep')}</p>

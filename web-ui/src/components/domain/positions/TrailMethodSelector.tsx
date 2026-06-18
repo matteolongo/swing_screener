@@ -41,7 +41,7 @@ export default function TrailMethodSelector({
         id="trail-method-select"
         value={value}
         onChange={handleMethodChange}
-        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-sm"
+        className="w-full px-3 py-2 border border-border rounded bg-surface text-sm"
       >
         <option value="sma20">{t('positions.trailMethod.sma20')}</option>
         <option value="atr">{t('positions.trailMethod.atr')}</option>
@@ -50,7 +50,7 @@ export default function TrailMethodSelector({
       </select>
       {showParam && (
         <div>
-          <label htmlFor="trail-param-input" className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
+          <label htmlFor="trail-param-input" className="block text-xs text-muted mb-1">
             {paramLabel}
           </label>
           <input
@@ -60,12 +60,12 @@ export default function TrailMethodSelector({
             min="0.1"
             value={param ?? (value === 'atr' ? ATR_DEFAULT : FIXED_PCT_DEFAULT)}
             onChange={handleParamChange}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-sm"
+            className="w-full px-3 py-2 border border-border rounded bg-surface text-sm"
           />
         </div>
       )}
       {value === 'manual' && (
-        <p className="text-xs text-gray-500 dark:text-gray-400">
+        <p className="text-xs text-muted">
           {t('positions.trailMethod.manualNote')}
         </p>
       )}
