@@ -15,6 +15,15 @@ export function formatR(r: number): string {
 }
 
 /**
+ * Tailwind text-color class for a signed value, mapped to design tokens.
+ * Non-negative -> success, negative -> danger. Single source of truth for the
+ * R / P&L sign coloring previously hand-duplicated across components.
+ */
+export function getSignColorClass(value: number): string {
+  return value >= 0 ? 'text-success' : 'text-danger';
+}
+
+/**
  * Format number as percentage (e.g., 42.3%, -5.1%)
  */
 export function formatPercent(value: number | null | undefined, decimals: number = 1): string {
