@@ -504,7 +504,6 @@ export const messagesEn = {
       calendar: 'Calendar',
       today: 'Today',
       book: 'Book',
-      research: 'Research',
       universes: 'Universes',
       settings: 'Settings',
     },
@@ -2078,22 +2077,11 @@ export const messagesEn = {
     successToast: 'Position created for {{ticker}}',
     errorFetch: 'Failed to load DeGiro orders.',
   },
-  researchPage: {
-    title: 'Research',
-    subtitle: 'Fundamental analysis and watchlist pipeline.',
-    tabs: {
-      fundamentals: 'Fundamentals',
-      watchlist: 'Watchlist',
-    },
-    symbolSearch: {
-      placeholder: 'Symbol (e.g. AAPL)',
-      search: 'Search',
-    },
-  },
   todayPage: {
     tabs: {
       today: 'Today',
       screener: 'Last Run',
+      watchlist: 'Watchlist',
     },
     openPositions: {
       sectionTitle: 'Open positions',
