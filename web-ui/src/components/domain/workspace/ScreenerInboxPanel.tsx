@@ -421,7 +421,7 @@ export default function ScreenerInboxPanel() {
               onReview={(ticker) => handleSelectCandidate(ticker, 'overview')}
             />
           ) : (
-            <div className="flex-1 min-h-0 overflow-auto rounded-md border border-border">
+            <div className="flex-1 min-h-[360px] overflow-auto rounded-md border border-border">
               <ScreenerCandidatesTable
                 candidates={displayCandidates}
                 selectedTicker={selectedTicker}
