@@ -18,7 +18,7 @@ export default function CatalystContextCard({ opportunity }: CatalystContextCard
   const stateColor = STATE_COLOR[state] ?? 'bg-slate-100 text-slate-600 border-slate-200';
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
+    <div className="rounded-xl border border-slate-200 bg-surface p-4 shadow-sm space-y-3">
       <div className="flex items-center gap-2">
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
           {t('workspacePage.panels.analysis.intelligence.marketCatalyst')}

@@ -141,7 +141,7 @@ export default function WatchlistPipelinePanel({ onTickerSelect }: WatchlistPipe
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-gray-900 dark:text-gray-100">{item.ticker}</span>
-                    {onTickerSelect ? <ArrowUpRight className="h-3.5 w-3.5 text-gray-400" /> : null}
+                    {onTickerSelect ? <ArrowUpRight className="h-3.5 w-3.5 text-muted" /> : null}
                   </div>
                   <WatchMetaInline
                     watchedAt={item.watchedAt}

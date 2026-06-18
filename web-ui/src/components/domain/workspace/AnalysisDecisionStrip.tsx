@@ -56,7 +56,7 @@ function isPositiveNumber(value: number | null | undefined): value is number {
 
 function compactValue(label: string, value: string, secondary?: string) {
   return (
-    <div className="min-w-[88px] rounded-md border border-slate-200 bg-white/90 px-2.5 py-2">
+    <div className="min-w-[88px] rounded-md border border-slate-200 bg-surface/90 px-2.5 py-2">
       <div className="text-[10px] uppercase tracking-wide text-slate-500">{label}</div>
       <div className="mt-1 text-sm font-semibold text-slate-900">{value}</div>
       {secondary ? <div className="mt-0.5 text-[10px] text-slate-500">{secondary}</div> : null}
@@ -149,7 +149,7 @@ export default function AnalysisDecisionStrip({
                 type="button"
                 onClick={isWatched ? onUnwatch : onWatch}
                 disabled={isPendingWatch}
-                className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                className="rounded-md border border-slate-200 bg-surface px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
               >
                 {isPendingWatch ? '…' : isWatched ? 'Unwatch' : 'Watch'}
               </button>

@@ -27,7 +27,7 @@ export default function PendingOrdersTab() {
   const filterTabs: ActiveFilter[] = ['pending', 'submitted'];
 
   if (ordersQuery.isLoading) {
-    return <p className="text-sm text-gray-500 py-4">{t('common.table.loading')}</p>;
+    return <p className="text-sm text-muted py-4">{t('common.table.loading')}</p>;
   }
 
   return (
@@ -51,7 +51,7 @@ export default function PendingOrdersTab() {
       </div>
 
       {orders.length === 0 ? (
-        <p className="text-sm text-gray-500 py-4">{t('pendingOrdersTab.empty')}</p>
+        <p className="text-sm text-muted py-4">{t('pendingOrdersTab.empty')}</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">

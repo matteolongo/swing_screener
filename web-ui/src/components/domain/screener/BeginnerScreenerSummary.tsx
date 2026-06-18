@@ -56,8 +56,8 @@ export default function BeginnerScreenerSummary({
 }: BeginnerScreenerSummaryProps) {
   if (candidates.length === 0) {
     return (
-      <div className="rounded-lg border border-gray-200 bg-white p-4">
-        <p className="text-sm text-gray-600">{t('screener.beginnerSummary.noCandidates')}</p>
+      <div className="rounded-lg border border-border bg-surface p-4">
+        <p className="text-sm text-muted">{t('screener.beginnerSummary.noCandidates')}</p>
       </div>
     );
   }
@@ -66,8 +66,8 @@ export default function BeginnerScreenerSummary({
 
   if (!bestCandidate) {
     return (
-      <div className="rounded-lg border border-gray-200 bg-white p-4">
-        <p className="text-sm text-gray-600">{t('screener.beginnerSummary.noCandidates')}</p>
+      <div className="rounded-lg border border-border bg-surface p-4">
+        <p className="text-sm text-muted">{t('screener.beginnerSummary.noCandidates')}</p>
       </div>
     );
   }
@@ -76,8 +76,8 @@ export default function BeginnerScreenerSummary({
   const borderClass = READINESS_BORDER_CLASS[decision.orderReadiness];
 
   return (
-    <div className={`rounded-lg border bg-white p-4 ${borderClass}`}>
-      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+    <div className={`rounded-lg border bg-surface p-4 ${borderClass}`}>
+      <p className="text-xs font-medium text-muted uppercase tracking-wide mb-2">
         {t('screener.beginnerSummary.bestCandidate')}
       </p>
       <div className="flex items-center gap-2 flex-wrap">
@@ -88,7 +88,7 @@ export default function BeginnerScreenerSummary({
           {t(READINESS_LABEL_KEY[decision.orderReadiness])}
         </span>
       </div>
-      <p className="text-sm text-gray-600 mt-1">
+      <p className="text-sm text-muted mt-1">
         {t(ACTION_LABEL_KEY[decision.suggestedAction])}
       </p>
       <p className="text-sm mt-2">{decision.plainReason}</p>

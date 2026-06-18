@@ -81,7 +81,7 @@ export default function IntelligenceCard({ intelligence }: IntelligenceCardProps
   const urgencyLabel = t(`workspacePage.panels.analysis.intelligence.catalystUrgency.${catalystUrgency}`);
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
+    <div className="rounded-xl border border-slate-200 bg-surface p-4 shadow-sm space-y-3">
       {hasUrgency && (
         <div className="flex flex-wrap items-center gap-2">
           <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${urgencyBadgeClass(catalystUrgency)}`}>

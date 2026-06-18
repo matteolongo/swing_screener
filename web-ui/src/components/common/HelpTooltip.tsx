@@ -33,7 +33,7 @@ export default function HelpTooltip({ short, title, content, className }: HelpTo
               e.stopPropagation();
               handleClose();
             }}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+            className="text-muted hover:text-gray-600 dark:hover:text-gray-200"
             aria-label="Close help"
           >
             <X className="w-5 h-5" />
@@ -54,7 +54,7 @@ export default function HelpTooltip({ short, title, content, className }: HelpTo
       <div className="relative inline-block">
         <button
           type="button"
-          className={cn('min-h-11 min-w-11 text-gray-400 hover:text-primary transition-colors', className)}
+          className={cn('min-h-11 min-w-11 text-muted hover:text-primary transition-colors', className)}
           onClick={() => setIsOpen(true)}
           onMouseEnter={() => setShowTooltip(true)}
           onMouseLeave={() => setShowTooltip(false)}

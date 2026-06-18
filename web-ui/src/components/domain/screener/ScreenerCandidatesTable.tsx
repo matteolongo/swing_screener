@@ -106,7 +106,7 @@ export default function ScreenerCandidatesTable({
 
   if (candidates.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-500">
+      <div className="text-center py-8 text-muted">
         {t('screener.table.empty')}
       </div>
     );
@@ -116,25 +116,25 @@ export default function ScreenerCandidatesTable({
     <TableShell
       headers={
         <tr>
-          <th className="py-2 px-3 text-xs font-semibold text-gray-700 text-left">
+          <th className="py-2 px-3 text-xs font-semibold text-muted text-left">
             {t('screener.table.headers.priority')}
           </th>
-          <th className="py-2 px-3 text-xs font-semibold text-gray-700 text-left">
+          <th className="py-2 px-3 text-xs font-semibold text-muted text-left">
             {t('screener.table.headers.symbol')}
           </th>
-          <th className="py-2 px-3 text-xs font-semibold text-gray-700 text-left">
+          <th className="py-2 px-3 text-xs font-semibold text-muted text-left">
             Signal
           </th>
-          <th className="py-2 px-3 text-xs font-semibold text-gray-700 text-right">
+          <th className="py-2 px-3 text-xs font-semibold text-muted text-right">
             {t('screener.table.headers.close')}
           </th>
-          <th className="py-2 px-3 text-xs font-semibold text-gray-700 text-right">
+          <th className="py-2 px-3 text-xs font-semibold text-muted text-right">
             {`6M vs ${benchmarkTicker}`}
           </th>
-          <th className="py-2 px-3 text-xs font-semibold text-gray-700 text-right">
+          <th className="py-2 px-3 text-xs font-semibold text-muted text-right">
             R:R
           </th>
-          <th className="py-2 px-3 text-xs font-semibold text-gray-700 text-center">
+          <th className="py-2 px-3 text-xs font-semibold text-muted text-center">
             {t('screener.table.headers.actions')}
           </th>
         </tr>
@@ -184,7 +184,7 @@ export default function ScreenerCandidatesTable({
                       {badge.label}
                     </span>
                   ) : (
-                    <span className="text-xs text-gray-400">—</span>
+                    <span className="text-xs text-muted">—</span>
                   )}
                   {vm.volumeRatio != null && vm.volumeRatio >= 1.5 && (
                     <span
@@ -215,7 +215,7 @@ export default function ScreenerCandidatesTable({
                     {formatPercent(candidate.benchmarkOutperformancePct, 1)}
                   </span>
                 ) : (
-                  <span className="text-gray-400">—</span>
+                  <span className="text-muted">—</span>
                 )}
               </td>
 
@@ -224,7 +224,7 @@ export default function ScreenerCandidatesTable({
                 {vm.rr != null && vm.rr > 0 ? (
                   <span className="text-gray-900 dark:text-gray-100">{vm.rr.toFixed(1)}</span>
                 ) : (
-                  <span className="text-gray-400">—</span>
+                  <span className="text-muted">—</span>
                 )}
               </td>
 

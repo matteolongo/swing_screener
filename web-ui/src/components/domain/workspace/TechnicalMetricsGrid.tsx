@@ -22,8 +22,8 @@ export default function TechnicalMetricsGrid({ candidate }: TechnicalMetricsGrid
           value: candidate.momentum12m != null ? formatPercent(candidate.momentum12m * 100) : null,
         },
       ].map(({ label, value }) => (
-        <div key={label} className="rounded-md border border-gray-200 bg-white px-2 py-1.5">
-          <p className="text-[10px] uppercase tracking-wide text-gray-400">{label}</p>
+        <div key={label} className="rounded-md border border-border bg-surface px-2 py-1.5">
+          <p className="text-[10px] uppercase tracking-wide text-muted">{label}</p>
           <p className="mt-0.5 text-xs font-mono font-semibold text-gray-800 dark:text-gray-200">{value ?? '—'}</p>
         </div>
       ))}

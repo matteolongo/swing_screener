@@ -26,14 +26,14 @@ export default function FundamentalsStrip({
 
   if (items.length === 0) {
     return (
-      <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-500">
+      <div className="rounded-lg border border-slate-200 bg-surface p-3 text-sm text-slate-500">
         {t('workspacePage.panels.analysis.fundamentalsStrip.unavailable')}
       </div>
     );
   }
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-3">
+    <div className="rounded-lg border border-slate-200 bg-surface p-3">
       <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">
         {t('workspacePage.panels.analysis.fundamentalsStrip.title')}
       </div>

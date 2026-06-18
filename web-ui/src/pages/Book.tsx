@@ -39,7 +39,7 @@ function PastReviews({ reviews }: { reviews: WeeklyReview[] }) {
   const pastReviews = reviews.filter((r) => r.week_id !== currentWeekId);
 
   if (pastReviews.length === 0) {
-    return <p className="text-sm text-gray-400 mt-2">No past weekly reviews yet.</p>;
+    return <p className="text-sm text-muted mt-2">No past weekly reviews yet.</p>;
   }
 
   return (
@@ -53,31 +53,31 @@ function PastReviews({ reviews }: { reviews: WeeklyReview[] }) {
             className="w-full px-3 py-2 flex items-center justify-between bg-gray-50 dark:bg-gray-900 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 text-left"
           >
             <span>Week {review.week_id}</span>
-            <span className="text-gray-400">{expandedWeek === review.week_id ? '▲' : '▼'}</span>
+            <span className="text-muted">{expandedWeek === review.week_id ? '▲' : '▼'}</span>
           </button>
           {expandedWeek === review.week_id && (
             <div className="px-3 py-2 space-y-2 text-sm text-gray-700 dark:text-gray-300">
               {review.what_worked && (
                 <div>
-                  <span className="font-medium text-xs text-gray-500 uppercase tracking-wide">What Worked</span>
+                  <span className="font-medium text-xs text-muted uppercase tracking-wide">What Worked</span>
                   <p className="mt-0.5">{review.what_worked}</p>
                 </div>
               )}
               {review.what_didnt && (
                 <div>
-                  <span className="font-medium text-xs text-gray-500 uppercase tracking-wide">What Didn't Work</span>
+                  <span className="font-medium text-xs text-muted uppercase tracking-wide">What Didn't Work</span>
                   <p className="mt-0.5">{review.what_didnt}</p>
                 </div>
               )}
               {review.rules_violated && (
                 <div>
-                  <span className="font-medium text-xs text-gray-500 uppercase tracking-wide">Rules Violated</span>
+                  <span className="font-medium text-xs text-muted uppercase tracking-wide">Rules Violated</span>
                   <p className="mt-0.5">{review.rules_violated}</p>
                 </div>
               )}
               {review.next_week_focus && (
                 <div>
-                  <span className="font-medium text-xs text-gray-500 uppercase tracking-wide">Next Week Focus</span>
+                  <span className="font-medium text-xs text-muted uppercase tracking-wide">Next Week Focus</span>
                   <p className="mt-0.5">{review.next_week_focus}</p>
                 </div>
               )}

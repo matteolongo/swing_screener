@@ -141,7 +141,7 @@ export default function ScreenerForm({
 
   if (isCollapsed) {
     return (
-      <div className="rounded-lg border border-gray-200 bg-gray-50/60 p-3 space-y-2">
+      <div className="rounded-lg border border-border bg-surface/60 p-3 space-y-2">
         {/* Row 1: Universe name + Run CTA */}
         <div className="flex items-center justify-between gap-3">
           <div>
@@ -149,7 +149,7 @@ export default function ScreenerForm({
               {selectedUniverseMeta?.description ?? selectedUniverse}
             </span>
             {selectedUniverseMeta && (
-              <span className="ml-2 text-xs text-gray-500">
+              <span className="ml-2 text-xs text-muted">
                 {t('screener.controls.memberCount', { count: String(selectedUniverseMeta.member_count) })}
               </span>
             )}
@@ -166,7 +166,7 @@ export default function ScreenerForm({
               <button
                 type="button"
                 onClick={onToggleCollapsed}
-                className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 px-1"
+                className="inline-flex items-center gap-1 text-xs text-muted hover:text-gray-700 px-1"
                 aria-label={t('screener.controls.adjustFilters')}
               >
                 <Settings2 className="w-3.5 h-3.5" />
@@ -219,13 +219,13 @@ export default function ScreenerForm({
   }
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-gray-50/60 p-3 md:p-4">
+    <div className="rounded-lg border border-border bg-surface/60 p-3 md:p-4">
       {onToggleCollapsed && (
         <div className="flex justify-end mb-2">
           <button
             type="button"
             onClick={onToggleCollapsed}
-            className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 px-1"
+            className="inline-flex items-center gap-1 text-xs text-muted hover:text-gray-700 px-1"
             aria-label={t('screener.controls.hideFilters')}
           >
             <ChevronUp className="w-3.5 h-3.5" />
@@ -237,12 +237,12 @@ export default function ScreenerForm({
       <div className="space-y-3">
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-8 gap-3 items-end">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.universe')}</label>
+            <label className="block text-sm font-medium text-muted mb-1">{t('screener.controls.universe')}</label>
             <select
               value={selectedUniverse}
               onChange={(e) => setSelectedUniverse(e.target.value)}
               aria-label={t('screener.controls.universe')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               disabled={isLoading}
             >
               {universes.map((universe) => (
@@ -254,7 +254,7 @@ export default function ScreenerForm({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.topN')}</label>
+            <label className="block text-sm font-medium text-muted mb-1">{t('screener.controls.topN')}</label>
             <input
               type="number"
               value={topN}
@@ -262,13 +262,13 @@ export default function ScreenerForm({
               aria-label={t('screener.controls.topN')}
               min="1"
               max={TOP_N_MAX}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               disabled={isLoading}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.minPrice')}</label>
+            <label className="block text-sm font-medium text-muted mb-1">{t('screener.controls.minPrice')}</label>
             <input
               type="number"
               value={minPrice}
@@ -276,13 +276,13 @@ export default function ScreenerForm({
               aria-label={t('screener.controls.minPrice')}
               min="0"
               step="0.1"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               disabled={isLoading}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.maxPrice')}</label>
+            <label className="block text-sm font-medium text-muted mb-1">{t('screener.controls.maxPrice')}</label>
             <input
               type="number"
               value={maxPrice}
@@ -290,18 +290,18 @@ export default function ScreenerForm({
               aria-label={t('screener.controls.maxPrice')}
               min="0"
               step="1"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               disabled={isLoading}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.currency')}</label>
+            <label className="block text-sm font-medium text-muted mb-1">{t('screener.controls.currency')}</label>
             <select
               value={currencyFilter}
               onChange={(e) => setCurrencyFilter(e.target.value as CurrencyFilter)}
               aria-label={t('screener.controls.currency')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               disabled={isLoading}
             >
               <option value="all">{t('screener.currencyFilter.all')}</option>
@@ -311,12 +311,12 @@ export default function ScreenerForm({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.venue.label')}</label>
+            <label className="block text-sm font-medium text-muted mb-1">{t('screener.controls.venue.label')}</label>
             <select
               value={exchangeFilter}
               onChange={(e) => setExchangeFilter(e.target.value as ExchangeFilter)}
               aria-label={t('screener.controls.venue.label')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               disabled={isLoading}
             >
               <option value="all">{t('screener.controls.venue.all')}</option>
@@ -331,12 +331,12 @@ export default function ScreenerForm({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.instrument.label')}</label>
+            <label className="block text-sm font-medium text-muted mb-1">{t('screener.controls.instrument.label')}</label>
             <select
               value={instrumentFilter}
               onChange={(e) => setInstrumentFilter(e.target.value as InstrumentFilter)}
               aria-label={t('screener.controls.instrument.label')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               disabled={isLoading}
             >
               <option value="all">{t('screener.controls.instrument.all')}</option>
@@ -367,9 +367,9 @@ export default function ScreenerForm({
         </div>
 
         {selectedUniverseMeta ? (
-          <div className="rounded-lg border border-gray-200 bg-white px-3 py-2">
+          <div className="rounded-lg border border-border bg-surface px-3 py-2">
             <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-              <div className="text-xs text-gray-600">
+              <div className="text-xs text-muted">
                 {t('screener.controls.memberCount', { count: String(selectedUniverseMeta.member_count) })}
                 {' · '}
                 {universeSourceLabel(selectedUniverseMeta.source)}
@@ -388,7 +388,7 @@ export default function ScreenerForm({
           </div>
         ) : null}
 
-        <div className="flex flex-col gap-3 border-t border-gray-200 pt-3 md:flex-row md:items-end md:justify-between">
+        <div className="flex flex-col gap-3 border-t border-border pt-3 md:flex-row md:items-end md:justify-between">
           <div className="flex flex-col gap-3 md:flex-row md:items-center">
             <label className="flex min-h-11 items-center gap-2 cursor-pointer">
               <input
@@ -396,10 +396,10 @@ export default function ScreenerForm({
                 checked={!includeOtc}
                 onChange={(e) => setIncludeOtc(!e.target.checked)}
                 aria-label={t('screener.controls.excludeOtc')}
-                className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                className="w-5 h-5 text-blue-600 border-border rounded focus:ring-blue-500"
                 disabled={isLoading}
               />
-              <span className="text-sm font-medium text-gray-700">{t('screener.controls.excludeOtc')}</span>
+              <span className="text-sm font-medium text-muted">{t('screener.controls.excludeOtc')}</span>
             </label>
             <label className="flex min-h-11 items-center gap-2 cursor-pointer">
               <input
@@ -407,10 +407,10 @@ export default function ScreenerForm({
                 checked={recommendedOnly}
                 onChange={(e) => setRecommendedOnly(e.target.checked)}
                 aria-label={t('screener.controls.recommendedOnly')}
-                className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                className="w-5 h-5 text-blue-600 border-border rounded focus:ring-blue-500"
                 disabled={isLoading}
               />
-              <span className="text-sm font-medium text-gray-700">{t('screener.controls.recommendedOnly')}</span>
+              <span className="text-sm font-medium text-muted">{t('screener.controls.recommendedOnly')}</span>
             </label>
             <label className="flex min-h-11 items-center gap-2 cursor-pointer">
               <input
@@ -418,20 +418,20 @@ export default function ScreenerForm({
                 checked={requireWeeklyUptrend}
                 onChange={(e) => setRequireWeeklyUptrend(e.target.checked)}
                 aria-label={t('screener.controls.requireWeeklyUptrend')}
-                className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                className="w-5 h-5 text-blue-600 border-border rounded focus:ring-blue-500"
                 disabled={isLoading}
               />
-              <span className="text-sm font-medium text-gray-700">{t('screener.controls.requireWeeklyUptrend')}</span>
+              <span className="text-sm font-medium text-muted">{t('screener.controls.requireWeeklyUptrend')}</span>
             </label>
           </div>
 
           <div className="w-full md:max-w-xs">
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('screener.controls.actionFilter')}</label>
+            <label className="block text-sm font-medium text-muted mb-1">{t('screener.controls.actionFilter')}</label>
             <select
               value={actionFilter}
               onChange={(e) => setActionFilter(e.target.value as DecisionActionFilter)}
               aria-label={t('screener.controls.actionFilter')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               disabled={isLoading}
             >
               {(['all', 'BUY_NOW', 'BUY_ON_PULLBACK', 'WAIT_FOR_BREAKOUT', 'WATCH', 'TACTICAL_ONLY', 'AVOID', 'MANAGE_ONLY'] as const).map(

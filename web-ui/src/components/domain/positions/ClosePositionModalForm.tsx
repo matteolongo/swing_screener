@@ -219,7 +219,7 @@ export default function ClosePositionModalForm({
             <p className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
               {t('tradeTags.stepTitle')}
             </p>
-            <p className="mb-3 text-xs text-gray-500">{t('tradeTags.stepHint')}</p>
+            <p className="mb-3 text-xs text-muted">{t('tradeTags.stepHint')}</p>
             <div className="flex flex-wrap gap-2">
               {TRADE_TAGS.map((tag) => (
                 <button

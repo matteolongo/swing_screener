@@ -23,7 +23,7 @@ const STEPS: OnboardingStep[] = [
     description: t('onboardingPage.steps.welcome.description'),
     icon: CheckCircle,
     content: (
-      <div className="space-y-4 text-sm text-gray-700">
+      <div className="space-y-4 text-sm text-muted">
         <p>{t('onboardingPage.steps.welcome.body')}</p>
         <ol className="list-decimal space-y-2 pl-5">
           <li>{t('onboardingPage.steps.welcome.items.configure')}</li>
@@ -45,7 +45,7 @@ const STEPS: OnboardingStep[] = [
     description: t('onboardingPage.steps.dailyReview.description'),
     icon: Calendar,
     content: (
-      <div className="space-y-3 text-sm text-gray-700">
+      <div className="space-y-3 text-sm text-muted">
         <p>{t('onboardingPage.steps.dailyReview.body')}</p>
         <ul className="list-disc space-y-1 pl-5">
           <li>{t('onboardingPage.steps.dailyReview.items.candidates')}</li>
@@ -61,7 +61,7 @@ const STEPS: OnboardingStep[] = [
     description: t('onboardingPage.steps.action.description'),
     icon: ShoppingCart,
     content: (
-      <div className="space-y-3 text-sm text-gray-700">
+      <div className="space-y-3 text-sm text-muted">
         <p>{t('onboardingPage.steps.action.body')}</p>
         <ul className="list-disc space-y-1 pl-5">
           <li>{t('onboardingPage.steps.action.items.createOrder')}</li>
@@ -76,7 +76,7 @@ const STEPS: OnboardingStep[] = [
     description: t('onboardingPage.steps.verify.description'),
     icon: Search,
     content: (
-      <div className="space-y-3 text-sm text-gray-700">
+      <div className="space-y-3 text-sm text-muted">
         <p>{t('onboardingPage.steps.verify.body')}</p>
         <ul className="list-disc space-y-1 pl-5">
           <li>{t('onboardingPage.steps.verify.items.orders')}</li>
@@ -152,7 +152,7 @@ export default function OnboardingPage() {
     <div className="mx-auto flex min-h-[calc(100dvh-8rem)] w-full max-w-4xl flex-col gap-4 pb-20 lg:pb-6">
       <div className="space-y-1">
         <h1 className="text-2xl font-bold md:text-3xl">{t('onboardingPage.header.title')}</h1>
-        <p className="text-sm text-gray-600">{t('onboardingPage.header.subtitle')}</p>
+        <p className="text-sm text-muted">{t('onboardingPage.header.subtitle')}</p>
       </div>
 
       <Card variant="bordered">
@@ -163,7 +163,7 @@ export default function OnboardingPage() {
           </div>
 
           <div>
-            <p className="text-sm text-gray-600">{step.description}</p>
+            <p className="text-sm text-muted">{step.description}</p>
           </div>
 
           <div className="flex gap-2">
@@ -174,13 +174,13 @@ export default function OnboardingPage() {
               />
             ))}
           </div>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-muted">
             {t('onboardingPage.progress', { step: stepIndex + 1, total: STEPS.length })}
           </p>
 
           {stepIndex === 0 ? (
-            <div className="rounded-lg border border-gray-200 p-3">
-              <p className="mb-2 text-sm font-medium text-gray-900">{t('onboardingPage.mode.title')}</p>
+            <div className="rounded-lg border border-border p-3">
+              <p className="mb-2 text-sm font-medium text-foreground">{t('onboardingPage.mode.title')}</p>
               <div className="flex gap-2">
                 <Button
                   variant={isBeginnerMode ? 'primary' : 'secondary'}
@@ -197,7 +197,7 @@ export default function OnboardingPage() {
                   {t('onboardingPage.mode.advanced')}
                 </Button>
               </div>
-              <p className="mt-2 text-xs text-gray-600">{t('onboardingPage.mode.hint')}</p>
+              <p className="mt-2 text-xs text-muted">{t('onboardingPage.mode.hint')}</p>
             </div>
           ) : null}
 

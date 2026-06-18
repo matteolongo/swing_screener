@@ -377,7 +377,7 @@ export default function PortfolioTable() {
       header: 'Net P&L',
       align: 'right',
       render: (row) => {
-        if (row.netPnl == null) return <span className="text-gray-400 text-xs">—</span>;
+        if (row.netPnl == null) return <span className="text-muted text-xs">—</span>;
         return (
           <span className={`font-semibold text-sm ${getSignColorClass(row.netPnl)}`}>
             {formatPnlValue(row.netPnl, row.netPnlPercent)}
@@ -390,17 +390,17 @@ export default function PortfolioTable() {
       header: 'Prices',
       render: (row) => (
         <div className="text-xs space-y-0.5 font-mono">
-          <div className="flex gap-1 text-gray-500">
+          <div className="flex gap-1 text-muted">
             <span>Entry</span>
             <span className="text-gray-900 dark:text-gray-100">{formatOptionalCurrency(row.entryPrice)}</span>
           </div>
           {row.currentPrice != null && row.currentPrice !== row.entryPrice ? (
-            <div className="flex gap-1 text-gray-500">
+            <div className="flex gap-1 text-muted">
               <span>Now</span>
               <span className="text-gray-900 dark:text-gray-100">{formatOptionalCurrency(row.currentPrice)}</span>
             </div>
           ) : null}
-          <div className="flex gap-1 text-gray-500">
+          <div className="flex gap-1 text-muted">
             <span>Stop</span>
             <span className="text-rose-700 dark:text-rose-400">{formatOptionalCurrency(row.stopLoss)}</span>
           </div>
@@ -420,7 +420,7 @@ export default function PortfolioTable() {
       header: 'R',
       align: 'right' as const,
       render: (row) => {
-        if (!row.position) return <span className="text-gray-400 text-xs">—</span>;
+        if (!row.position) return <span className="text-muted text-xs">—</span>;
         const { rNow, rFxAdjusted } = row.position;
         const rSign = rNow >= 0 ? '+' : '';
         const rLabel = `${rSign}${rNow.toFixed(2)}R`;
@@ -534,7 +534,7 @@ export default function PortfolioTable() {
             </div>
           );
         }
-        return <span className="text-xs text-gray-500">{t('workspacePage.panels.portfolio.pendingOnly')}</span>;
+        return <span className="text-xs text-muted">{t('workspacePage.panels.portfolio.pendingOnly')}</span>;
       },
     },
   ];
@@ -549,7 +549,7 @@ export default function PortfolioTable() {
         empty={!isLoading && rows.length === 0}
         emptyMessage={t('workspacePage.panels.portfolio.empty')}
         error={isError ? t('workspacePage.panels.portfolio.loadError') : undefined}
-        wrapperClassName="xl:max-h-[420px] overflow-auto rounded-md bg-white"
+        wrapperClassName="xl:max-h-[420px] overflow-auto rounded-md bg-surface"
         tableClassName="text-sm"
         rowClassName={(row) => {
           const isSelected = selectedTicker?.toUpperCase() === row.ticker.toUpperCase();

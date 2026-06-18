@@ -93,8 +93,8 @@ export default function FundamentalsPage({ initialSymbol, defaultSimple = false 
         </div>
       ) : null}
 
-      <div className="rounded-lg border border-gray-200 bg-white p-4">
-        <label htmlFor="fundamentals-symbols-input" className="block text-sm font-medium text-gray-700">
+      <div className="rounded-lg border border-border bg-surface p-4">
+        <label htmlFor="fundamentals-symbols-input" className="block text-sm font-medium text-muted">
           {t('fundamentalsPage.symbols.label')}
         </label>
         <input
@@ -102,7 +102,7 @@ export default function FundamentalsPage({ initialSymbol, defaultSimple = false 
           value={symbolsInput}
           onChange={(event) => setSymbolsInput(event.target.value)}
           placeholder={t('fundamentalsPage.symbols.placeholder')}
-          className="mt-2 w-full rounded-md border border-gray-300 px-3 py-2"
+          className="mt-2 w-full rounded-md border border-border px-3 py-2"
         />
         <div className="mt-3 flex items-center gap-3">
           <Button type="button" onClick={runCompare} disabled={symbols.length < 2 || compareMutation.isPending}>
@@ -121,7 +121,7 @@ export default function FundamentalsPage({ initialSymbol, defaultSimple = false 
               <Button type="button" onClick={warmupWatchlist} disabled={warmupMutation.isPending}>
                 {t('fundamentalsPage.warmupWatchlistAction')}
               </Button>
-              <span className="text-xs text-gray-500">{t('fundamentalsPage.hint')}</span>
+              <span className="text-xs text-muted">{t('fundamentalsPage.hint')}</span>
             </>
           ) : null}
         </div>

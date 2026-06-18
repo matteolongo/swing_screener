@@ -74,7 +74,7 @@ export default function WeeklyReviewForm({ weekId, onSaved }: WeeklyReviewFormPr
           Week {resolvedWeekId}
         </h3>
         {updatedAt && (
-          <span className="text-[11px] text-gray-400">
+          <span className="text-[11px] text-muted">
             Last saved {new Date(updatedAt).toLocaleDateString()}
           </span>
         )}

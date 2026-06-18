@@ -239,7 +239,7 @@ export default function Universes() {
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <div className="flex items-center gap-2">
-                <Globe2 className="h-4 w-4 text-gray-500" />
+                <Globe2 className="h-4 w-4 text-muted" />
                 <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Live Discovery</h2>
               </div>
               <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -263,7 +263,7 @@ export default function Universes() {
 
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <label className="block">
-              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Provider</span>
+              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">Provider</span>
               <select
                 value={discoveryProvider}
                 onChange={(event) => setDiscoveryProvider(event.target.value as SymbolDiscoveryRequest['provider'])}
@@ -274,7 +274,7 @@ export default function Universes() {
               </select>
             </label>
             <label className="block">
-              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Market</span>
+              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">Market</span>
               <select
                 value={marketPreset}
                 onChange={(event) => {
@@ -292,7 +292,7 @@ export default function Universes() {
               </select>
             </label>
             <label className="block">
-              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Currency</span>
+              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">Currency</span>
               <select
                 value={currencyPreset}
                 onChange={(event) => setCurrencyPreset(event.target.value as (typeof CURRENCY_PRESETS)[number]['value'])}
@@ -304,7 +304,7 @@ export default function Universes() {
               </select>
             </label>
             <label className="block">
-              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Instrument type</span>
+              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">Instrument type</span>
               <select
                 value={typePreset}
                 onChange={(event) => setTypePreset(event.target.value as (typeof TYPE_PRESETS)[number]['value'])}
@@ -316,7 +316,7 @@ export default function Universes() {
               </select>
             </label>
             <label className="block">
-              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Min volume</span>
+              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">Min volume</span>
               <select
                 value={discoveryMinVolume}
                 onChange={(event) => setDiscoveryMinVolume(Number(event.target.value))}
@@ -328,7 +328,7 @@ export default function Universes() {
               </select>
             </label>
             <label className="block">
-              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Min market cap</span>
+              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">Min market cap</span>
               <select
                 value={discoveryMinMarketCap}
                 onChange={(event) => setDiscoveryMinMarketCap(Number(event.target.value))}
@@ -340,7 +340,7 @@ export default function Universes() {
               </select>
             </label>
             <label className="block">
-              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Discovery limit</span>
+              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">Discovery limit</span>
               <select
                 value={discoveryLimit}
                 onChange={(event) => setDiscoveryLimit(Number(event.target.value))}
@@ -352,7 +352,7 @@ export default function Universes() {
               </select>
             </label>
             <label className="block">
-              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Screener results</span>
+              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">Screener results</span>
               <select
                 value={screenerTop}
                 onChange={(event) => setScreenerTop(Number(event.target.value))}
@@ -364,7 +364,7 @@ export default function Universes() {
               </select>
             </label>
             <div className="md:col-span-2 xl:col-span-4">
-              <div className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Yahoo status screens</div>
+              <div className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">Yahoo status screens</div>
               <div className="flex flex-wrap gap-2">
                 {DISCOVERY_SCREENS.map((screen) => {
                   const active = selectedScreens.includes(screen.value);
@@ -377,7 +377,7 @@ export default function Universes() {
                       className={`rounded-md border px-3 py-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                         active
                           ? 'border-blue-500 bg-blue-50 text-blue-700'
-                          : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                          : 'border-border bg-surface text-muted hover:bg-foreground/5'
                       }`}
                     >
                       {screen.label}
@@ -409,7 +409,7 @@ export default function Universes() {
           {discoveryResult ? (
             <div className="space-y-3">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
+                <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
                   <Badge variant="default">{discoveryResult.symbols.length} candidates</Badge>
                   <Badge variant="default">{discoveryResult.provider}</Badge>
                   <Badge variant="default">{selectedMarket.label}</Badge>
@@ -436,8 +436,8 @@ export default function Universes() {
               </div>
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                 {(['currency', 'exchange_mic', 'market', 'instrument_type'] as const).map((key) => (
-                  <div key={key} className="rounded-xl border border-gray-200 bg-gray-50 p-3">
-                    <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">{key.replace('_', ' ')}</div>
+                  <div key={key} className="rounded-xl border border-border bg-surface p-3">
+                    <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">{key.replace('_', ' ')}</div>
                     <div className="flex flex-wrap gap-2">
                       {taxonomyRows(discoveryResult.taxonomy, key).map(([value, count]) => (
                         <Badge key={`${key}-${value}`} variant="default">
@@ -449,7 +449,7 @@ export default function Universes() {
                 ))}
               </div>
               {discoveryResult.notes.length ? (
-                <div className="space-y-1 text-sm text-gray-500">
+                <div className="space-y-1 text-sm text-muted">
                   {discoveryResult.notes.map((note) => (
                     <div key={note}>{note}</div>
                   ))}
@@ -460,9 +460,9 @@ export default function Universes() {
                   No symbols matched this discovery source and filter set. Try a broader market, lower liquidity filters, or screen one of the configured universes below.
                 </div>
               ) : null}
-              <div className="max-h-[420px] overflow-auto rounded-xl border border-gray-200">
+              <div className="max-h-[420px] overflow-auto rounded-xl border border-border">
                 <table className="min-w-full divide-y divide-gray-200 text-sm">
-                  <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
+                  <thead className="bg-surface text-left text-xs uppercase tracking-wide text-muted">
                     <tr>
                       <th className="px-3 py-2">Symbol</th>
                       <th className="px-3 py-2">Name</th>
@@ -474,17 +474,17 @@ export default function Universes() {
                       <th className="px-3 py-2">Source</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 bg-white">
+                  <tbody className="divide-y divide-gray-100 bg-surface">
                     {discoveryResult.symbols.map((symbol) => (
                       <tr key={`${symbol.symbol}-${symbol.source_screen ?? symbol.provider_exchange ?? 'source'}`}>
-                        <td className="px-3 py-2 font-medium text-gray-900">{symbol.symbol}</td>
-                        <td className="px-3 py-2 text-gray-600">{symbol.name ?? '—'}</td>
-                        <td className="px-3 py-2 text-gray-600">{symbol.exchange_mic ?? symbol.provider_exchange ?? '—'}</td>
-                        <td className="px-3 py-2 text-gray-600">{symbol.currency ?? '—'}</td>
-                        <td className="px-3 py-2 text-gray-600">{symbol.instrument_type ?? '—'}</td>
-                        <td className="px-3 py-2 text-gray-600">{formatCompactNumber(symbol.volume)}</td>
-                        <td className="px-3 py-2 text-gray-600">{formatCompactNumber(symbol.market_cap)}</td>
-                        <td className="px-3 py-2 text-gray-600">{symbol.source_screen ?? symbol.source ?? '—'}</td>
+                        <td className="px-3 py-2 font-medium text-foreground">{symbol.symbol}</td>
+                        <td className="px-3 py-2 text-muted">{symbol.name ?? '—'}</td>
+                        <td className="px-3 py-2 text-muted">{symbol.exchange_mic ?? symbol.provider_exchange ?? '—'}</td>
+                        <td className="px-3 py-2 text-muted">{symbol.currency ?? '—'}</td>
+                        <td className="px-3 py-2 text-muted">{symbol.instrument_type ?? '—'}</td>
+                        <td className="px-3 py-2 text-muted">{formatCompactNumber(symbol.volume)}</td>
+                        <td className="px-3 py-2 text-muted">{formatCompactNumber(symbol.market_cap)}</td>
+                        <td className="px-3 py-2 text-muted">{symbol.source_screen ?? symbol.source ?? '—'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -516,9 +516,9 @@ export default function Universes() {
                   ))}
                 </div>
               ) : null}
-              <div className="max-h-[520px] overflow-auto rounded-xl border border-gray-200">
+              <div className="max-h-[520px] overflow-auto rounded-xl border border-border">
                 <table className="min-w-full divide-y divide-gray-200 text-sm">
-                  <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
+                  <thead className="bg-surface text-left text-xs uppercase tracking-wide text-muted">
                     <tr>
                       <th className="px-3 py-2">Rank</th>
                       <th className="px-3 py-2">Symbol</th>
@@ -531,28 +531,28 @@ export default function Universes() {
                       <th className="px-3 py-2">Fundamentals</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 bg-white">
+                  <tbody className="divide-y divide-gray-100 bg-surface">
                     {discoveryScreenerResult.candidates.map((candidate) => (
                       <tr
                         key={candidate.ticker}
                         onClick={() => setDetailTicker(candidate.ticker)}
-                        className="cursor-pointer hover:bg-gray-50"
+                        className="cursor-pointer hover:bg-foreground/5"
                       >
-                        <td className="px-3 py-2 font-medium text-gray-900">#{candidate.priorityRank ?? candidate.rank}</td>
+                        <td className="px-3 py-2 font-medium text-foreground">#{candidate.priorityRank ?? candidate.rank}</td>
                         <td className="px-3 py-2">
-                          <div className="font-semibold text-gray-900">{candidate.ticker}</div>
-                          <div className="text-xs text-gray-500">
+                          <div className="font-semibold text-foreground">{candidate.ticker}</div>
+                          <div className="text-xs text-muted">
                             {candidate.name ?? '—'}
                             {candidate.sector ? ` · ${candidate.sector}` : ''}
                           </div>
                         </td>
-                        <td className="px-3 py-2 text-gray-700">{actionLabel(candidate)}</td>
-                        <td className="px-3 py-2 text-right font-mono text-gray-900">{formatCurrency(candidate.close, candidate.currency)}</td>
-                        <td className="px-3 py-2 text-right font-mono text-gray-900">{candidate.score.toFixed(1)}</td>
-                        <td className="px-3 py-2 text-right font-mono text-gray-900">{formatPercent(candidate.momentum6m, 1)}</td>
-                        <td className="px-3 py-2 text-right font-mono text-gray-900">{formatPercent(candidate.relStrength, 1)}</td>
-                        <td className="px-3 py-2 text-right font-mono text-gray-900">{candidate.rr != null ? candidate.rr.toFixed(1) : '—'}</td>
-                        <td className="px-3 py-2 text-gray-600">{candidate.fundamentalsCoverageStatus ?? '—'}</td>
+                        <td className="px-3 py-2 text-muted">{actionLabel(candidate)}</td>
+                        <td className="px-3 py-2 text-right font-mono text-foreground">{formatCurrency(candidate.close, candidate.currency)}</td>
+                        <td className="px-3 py-2 text-right font-mono text-foreground">{candidate.score.toFixed(1)}</td>
+                        <td className="px-3 py-2 text-right font-mono text-foreground">{formatPercent(candidate.momentum6m, 1)}</td>
+                        <td className="px-3 py-2 text-right font-mono text-foreground">{formatPercent(candidate.relStrength, 1)}</td>
+                        <td className="px-3 py-2 text-right font-mono text-foreground">{candidate.rr != null ? candidate.rr.toFixed(1) : '—'}</td>
+                        <td className="px-3 py-2 text-muted">{candidate.fundamentalsCoverageStatus ?? '—'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -566,11 +566,11 @@ export default function Universes() {
       <div className="grid gap-4 xl:grid-cols-[380px_minmax(0,1fr)]">
         <Card variant="bordered" className="p-3">
           <div className="mb-3 flex items-center gap-2">
-            <Database className="h-4 w-4 text-gray-500" />
+            <Database className="h-4 w-4 text-muted" />
             <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Configured Universes</h2>
           </div>
           {catalogQuery.isLoading ? (
-            <div className="text-sm text-gray-500">Loading universe catalog…</div>
+            <div className="text-sm text-muted">Loading universe catalog…</div>
           ) : catalogQuery.isError ? (
             <div className="text-sm text-red-600">Failed to load universe catalog.</div>
           ) : (
@@ -585,19 +585,19 @@ export default function Universes() {
                     className={`w-full rounded-xl border p-3 text-left transition-colors ${
                       selected
                         ? 'border-emerald-500 bg-emerald-50'
-                        : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
+                        : 'border-border bg-surface hover:border-gray-300 hover:bg-foreground/5'
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <div className="text-sm font-semibold text-gray-900">{universe.description}</div>
-                        <div className="mt-1 text-xs text-gray-500">{universe.id}</div>
+                        <div className="text-sm font-semibold text-foreground">{universe.description}</div>
+                        <div className="mt-1 text-xs text-muted">{universe.id}</div>
                       </div>
                       <Badge variant={freshnessVariant(universe.freshness_status)}>
                         {freshnessLabel(universe.freshness_status)}
                       </Badge>
                     </div>
-                    <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-600">
+                    <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted">
                       <span>{universe.member_count} members</span>
                       <span>{sourceLabel(universe.source)}</span>
                       <span>as of {universe.source_asof}</span>
@@ -612,9 +612,9 @@ export default function Universes() {
         <div className="space-y-4">
           <Card variant="bordered" className="p-4">
             {!selectedSummary ? (
-              <div className="text-sm text-gray-500">Select a universe to inspect it.</div>
+              <div className="text-sm text-muted">Select a universe to inspect it.</div>
             ) : detailQuery.isLoading ? (
-              <div className="text-sm text-gray-500">Loading universe detail…</div>
+              <div className="text-sm text-muted">Loading universe detail…</div>
             ) : detailQuery.isError || !detail ? (
               <div className="text-sm text-red-600">Failed to load universe detail.</div>
             ) : (
@@ -622,7 +622,7 @@ export default function Universes() {
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                   <div>
                     <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{detail.description}</h2>
-                    <p className="mt-1 text-sm text-gray-500">{detail.id}</p>
+                    <p className="mt-1 text-sm text-muted">{detail.id}</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Badge variant={freshnessVariant(detail.freshness_status)}>
@@ -634,39 +634,39 @@ export default function Universes() {
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                  <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
-                    <div className="text-xs uppercase tracking-wide text-gray-500">Source</div>
-                    <div className="mt-1 text-sm font-medium text-gray-900">{sourceLabel(detail.source)}</div>
-                    <div className="mt-1 text-xs text-gray-500">{detail.source_adapter}</div>
+                  <div className="rounded-xl border border-border bg-surface p-3">
+                    <div className="text-xs uppercase tracking-wide text-muted">Source</div>
+                    <div className="mt-1 text-sm font-medium text-foreground">{sourceLabel(detail.source)}</div>
+                    <div className="mt-1 text-xs text-muted">{detail.source_adapter}</div>
                   </div>
-                  <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
-                    <div className="text-xs uppercase tracking-wide text-gray-500">Freshness</div>
-                    <div className="mt-1 text-sm font-medium text-gray-900">Reviewed {detail.last_reviewed_at}</div>
-                    <div className="mt-1 text-xs text-gray-500">
+                  <div className="rounded-xl border border-border bg-surface p-3">
+                    <div className="text-xs uppercase tracking-wide text-muted">Freshness</div>
+                    <div className="mt-1 text-sm font-medium text-foreground">Reviewed {detail.last_reviewed_at}</div>
+                    <div className="mt-1 text-xs text-muted">
                       {detail.days_since_review == null ? 'Unknown age' : `${detail.days_since_review} days ago`}
                     </div>
                   </div>
-                  <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
-                    <div className="text-xs uppercase tracking-wide text-gray-500">Source As Of</div>
-                    <div className="mt-1 text-sm font-medium text-gray-900">{detail.source_asof}</div>
-                    <div className="mt-1 text-xs text-gray-500">Configured benchmark {detail.benchmark}</div>
+                  <div className="rounded-xl border border-border bg-surface p-3">
+                    <div className="text-xs uppercase tracking-wide text-muted">Source As Of</div>
+                    <div className="mt-1 text-sm font-medium text-foreground">{detail.source_asof}</div>
+                    <div className="mt-1 text-xs text-muted">Configured benchmark {detail.benchmark}</div>
                   </div>
-                  <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
-                    <div className="text-xs uppercase tracking-wide text-gray-500">Rules</div>
-                    <div className="mt-1 text-sm font-medium text-gray-900">
+                  <div className="rounded-xl border border-border bg-surface p-3">
+                    <div className="text-xs uppercase tracking-wide text-muted">Rules</div>
+                    <div className="mt-1 text-sm font-medium text-foreground">
                       {(detail.rules.currencies ?? []).join(', ') || 'No currency rule'}
                     </div>
-                    <div className="mt-1 text-xs text-gray-500">
+                    <div className="mt-1 text-xs text-muted">
                       {(detail.rules.exchange_mics ?? []).join(', ') || 'Any exchange'}
                     </div>
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                     <div>
                       <div className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-gray-100">
-                        <Target className="h-4 w-4 text-gray-500" />
+                        <Target className="h-4 w-4 text-muted" />
                         Benchmark
                       </div>
                       <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -675,7 +675,7 @@ export default function Universes() {
                     </div>
                     <div className="flex flex-col gap-2 sm:min-w-[360px] sm:flex-row">
                       <div className="flex-1">
-                        <label htmlFor="universe-benchmark" className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">
+                        <label htmlFor="universe-benchmark" className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">
                           Benchmark symbol
                         </label>
                         <input
@@ -748,7 +748,7 @@ export default function Universes() {
                       </Button>
                     </>
                   ) : (
-                    <div className="text-sm text-gray-500">This universe is manual-only for now.</div>
+                    <div className="text-sm text-muted">This universe is manual-only for now.</div>
                   )}
                 </div>
 
@@ -759,8 +759,8 @@ export default function Universes() {
                 ) : null}
 
                 {refreshResult ? (
-                  <div className="rounded-xl border border-gray-200 bg-white p-3">
-                    <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+                  <div className="rounded-xl border border-border bg-surface p-3">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
                       {refreshResult.changed ? (
                         <AlertTriangle className="h-4 w-4 text-amber-500" />
                       ) : (
@@ -768,13 +768,13 @@ export default function Universes() {
                       )}
                       Refresh Preview
                     </div>
-                    <div className="mt-2 flex flex-wrap gap-3 text-sm text-gray-600">
+                    <div className="mt-2 flex flex-wrap gap-3 text-sm text-muted">
                       <span>{refreshResult.current_member_count} current</span>
                       <span>{refreshResult.proposed_member_count} proposed</span>
                       <span>{refreshResult.applied ? 'Applied locally' : 'Preview only'}</span>
                     </div>
                     {refreshResult.notes.length ? (
-                      <div className="mt-3 space-y-1 text-sm text-gray-600">
+                      <div className="mt-3 space-y-1 text-sm text-muted">
                         {refreshResult.notes.map((note) => (
                           <div key={note}>{note}</div>
                         ))}
@@ -816,7 +816,7 @@ export default function Universes() {
 
                 {detail.source_documents.length ? (
                   <div>
-                    <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Source Documents</div>
+                    <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Source Documents</div>
                     <div className="space-y-1">
                       {detail.source_documents.map((document) => (
                         <a
@@ -840,11 +840,11 @@ export default function Universes() {
             <Card variant="bordered" className="p-4">
               <div className="mb-3 flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Constituents</h3>
-                <div className="text-xs text-gray-500">{detail.constituents.length} rows</div>
+                <div className="text-xs text-muted">{detail.constituents.length} rows</div>
               </div>
-              <div className="max-h-[520px] overflow-auto rounded-xl border border-gray-200">
+              <div className="max-h-[520px] overflow-auto rounded-xl border border-border">
                 <table className="min-w-full divide-y divide-gray-200 text-sm">
-                  <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
+                  <thead className="bg-surface text-left text-xs uppercase tracking-wide text-muted">
                     <tr>
                       <th className="px-3 py-2">Symbol</th>
                       <th className="px-3 py-2">Source Name</th>
@@ -854,15 +854,15 @@ export default function Universes() {
                       <th className="px-3 py-2">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 bg-white">
+                  <tbody className="divide-y divide-gray-100 bg-surface">
                     {detail.constituents.map((constituent) => (
                       <tr key={constituent.symbol}>
-                        <td className="px-3 py-2 font-medium text-gray-900">{constituent.symbol}</td>
-                        <td className="px-3 py-2 text-gray-600">{constituent.source_name ?? constituent.source_symbol ?? constituent.symbol}</td>
-                        <td className="px-3 py-2 text-gray-600">{constituent.exchange_mic ?? '—'}</td>
-                        <td className="px-3 py-2 text-gray-600">{constituent.currency ?? '—'}</td>
-                        <td className="px-3 py-2 text-gray-600">{constituent.instrument_type ?? '—'}</td>
-                        <td className="px-3 py-2 text-gray-600">{constituent.status ?? '—'}</td>
+                        <td className="px-3 py-2 font-medium text-foreground">{constituent.symbol}</td>
+                        <td className="px-3 py-2 text-muted">{constituent.source_name ?? constituent.source_symbol ?? constituent.symbol}</td>
+                        <td className="px-3 py-2 text-muted">{constituent.exchange_mic ?? '—'}</td>
+                        <td className="px-3 py-2 text-muted">{constituent.currency ?? '—'}</td>
+                        <td className="px-3 py-2 text-muted">{constituent.instrument_type ?? '—'}</td>
+                        <td className="px-3 py-2 text-muted">{constituent.status ?? '—'}</td>
                       </tr>
                     ))}
                   </tbody>

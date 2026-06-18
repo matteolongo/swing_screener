@@ -101,15 +101,15 @@ export function ScreenerRunningPanel() {
             ) : isCurrent ? (
               <Loader2 className="w-4 h-4 text-blue-500 animate-spin flex-shrink-0" />
             ) : (
-              <div className="w-4 h-4 rounded-full border border-gray-300 flex-shrink-0" />
+              <div className="w-4 h-4 rounded-full border border-border flex-shrink-0" />
             )}
             <span
               className={
                 isCompleted
-                  ? 'text-gray-400 line-through'
+                  ? 'text-muted line-through'
                   : isCurrent
                     ? 'text-blue-800 font-medium'
-                    : 'text-gray-400'
+                    : 'text-muted'
               }
             >
               {t(stepKey)}
@@ -337,7 +337,7 @@ export default function ScreenerInboxPanel() {
       </div>
 
       {result ? (
-        <div className="rounded-lg border border-gray-200 bg-white p-3 flex-1 min-h-0 flex flex-col gap-3">
+        <div className="rounded-lg border border-border bg-surface p-3 flex-1 min-h-0 flex flex-col gap-3">
           <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
             <div className="space-y-1 text-xs md:text-sm text-gray-600 dark:text-gray-400">
               <div>
@@ -400,16 +400,16 @@ export default function ScreenerInboxPanel() {
               ))}
             </div>
           ) : null}
-          <div className="flex gap-1 rounded-lg border border-gray-200 p-0.5 w-fit self-start">
+          <div className="flex gap-1 rounded-lg border border-border p-0.5 w-fit self-start">
             <button
               onClick={() => setViewMode('guided')}
-              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${viewMode === 'guided' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${viewMode === 'guided' ? 'bg-surface shadow-sm text-foreground' : 'text-muted hover:text-gray-700'}`}
             >
               {t('screener.viewToggle.guided')}
             </button>
             <button
               onClick={() => setViewMode('advanced')}
-              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${viewMode === 'advanced' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${viewMode === 'advanced' ? 'bg-surface shadow-sm text-foreground' : 'text-muted hover:text-gray-700'}`}
             >
               {t('screener.viewToggle.advanced')}
             </button>

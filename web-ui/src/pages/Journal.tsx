@@ -22,7 +22,7 @@ function computeMaxR(position: Position): number | null {
 }
 
 function RBadge({ value }: { value: number | null }) {
-  if (value == null) return <span className="text-gray-400">—</span>;
+  if (value == null) return <span className="text-muted">—</span>;
   return <RChip value={value} />;
 }
 
@@ -80,7 +80,7 @@ function JournalRow({ position }: JournalRowProps) {
               ))}
             </div>
           ) : (
-            <span className="text-gray-400">{t('common.placeholders.emDash')}</span>
+            <span className="text-muted">{t('common.placeholders.emDash')}</span>
           )}
         </td>
         <td className="px-4 py-3 text-sm text-right tabular-nums">

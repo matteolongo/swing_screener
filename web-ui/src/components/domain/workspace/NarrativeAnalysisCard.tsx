@@ -145,7 +145,7 @@ export default function NarrativeAnalysisCard({
         )}
 
         {/* Decision focus */}
-        <div className="rounded-md bg-white border border-slate-200 p-3">
+        <div className="rounded-md bg-surface border border-slate-200 p-3">
           <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             {t('workspacePage.panels.analysis.intelligence.decisionFocus')}
           </div>
@@ -201,7 +201,7 @@ export default function NarrativeAnalysisCard({
 
         {/* WHY NOW */}
         {hasNewFields && intelligence.priceHook && (
-          <div className="rounded-md bg-white border border-slate-200 p-3">
+          <div className="rounded-md bg-surface border border-slate-200 p-3">
             <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
               {t('workspacePage.panels.analysis.intelligence.priceHook')}
             </div>
@@ -211,7 +211,7 @@ export default function NarrativeAnalysisCard({
 
         {/* KEY NUMBERS */}
         {hasKeyNumbers && (
-          <div className="rounded-md bg-white border border-slate-200 p-3">
+          <div className="rounded-md bg-surface border border-slate-200 p-3">
             <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">
               {t('workspacePage.panels.analysis.intelligence.keyNumbers')}
             </div>
@@ -232,7 +232,7 @@ export default function NarrativeAnalysisCard({
 
         {/* PREDICTION */}
         {hasPrediction && (
-          <div className="rounded-md bg-white border border-slate-200 p-3">
+          <div className="rounded-md bg-surface border border-slate-200 p-3">
             <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">
               {t('workspacePage.panels.analysis.intelligence.prediction')}
             </div>
@@ -254,7 +254,7 @@ export default function NarrativeAnalysisCard({
 
         {/* RISKS */}
         {hasRisks && (
-          <div className="rounded-md bg-white border border-slate-200 p-3">
+          <div className="rounded-md bg-surface border border-slate-200 p-3">
             <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">
               {t('workspacePage.panels.analysis.intelligence.riskFactors')}
             </div>
@@ -271,7 +271,7 @@ export default function NarrativeAnalysisCard({
 
         {/* PAST TRADES */}
         {hasPastTrades && (
-          <div className="rounded-md bg-white border border-slate-200 p-3">
+          <div className="rounded-md bg-surface border border-slate-200 p-3">
             <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
               {t('workspacePage.panels.analysis.intelligence.pastTrades', { symbol })}
             </div>
@@ -281,7 +281,7 @@ export default function NarrativeAnalysisCard({
 
         {/* Full rationale — collapsible when new structured fields are present; always visible otherwise */}
         {hasNewFields ? (
-          <details className="rounded-md bg-white border border-slate-200 p-3">
+          <details className="rounded-md bg-surface border border-slate-200 p-3">
             <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-slate-500 select-none">
               {t('workspacePage.panels.analysis.intelligence.fullRationale')}
             </summary>
@@ -290,7 +290,7 @@ export default function NarrativeAnalysisCard({
             </div>
           </details>
         ) : (
-          <div className="rounded-md bg-white border border-slate-200 p-3">
+          <div className="rounded-md bg-surface border border-slate-200 p-3">
             <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
               {t('workspacePage.panels.analysis.intelligence.fullRationale')}
             </div>
@@ -302,7 +302,7 @@ export default function NarrativeAnalysisCard({
 
         {/* Data inputs */}
         {intelligence.inputsUsed && Object.keys(intelligence.inputsUsed).length > 0 && (
-          <details className="rounded-md border border-slate-200 bg-white p-3">
+          <details className="rounded-md border border-slate-200 bg-surface p-3">
             <summary className="cursor-pointer text-xs font-medium text-slate-500 select-none">
               {t('workspacePage.panels.analysis.intelligence.dataInputs')}
             </summary>
@@ -331,7 +331,7 @@ export default function NarrativeAnalysisCard({
 
         {/* Signals detail */}
         {summary && (
-          <details className="rounded-md border border-slate-200 bg-white p-3">
+          <details className="rounded-md border border-slate-200 bg-surface p-3">
             <summary className="cursor-pointer text-xs font-medium text-slate-500 select-none">
               {t('workspacePage.panels.analysis.intelligence.signalsDetail')}
             </summary>

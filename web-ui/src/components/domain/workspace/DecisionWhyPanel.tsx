@@ -9,7 +9,7 @@ interface DecisionWhyPanelProps {
 export default function DecisionWhyPanel({ summary, aiSummaryLine }: DecisionWhyPanelProps) {
   if (!summary) {
     return (
-      <div className="rounded-lg border border-slate-200 bg-white p-3">
+      <div className="rounded-lg border border-slate-200 bg-surface p-3">
         <p className="text-sm text-slate-500">
           {t('workspacePage.panels.analysis.decisionWhy.noGuidance')}
         </p>
@@ -25,7 +25,7 @@ export default function DecisionWhyPanel({ summary, aiSummaryLine }: DecisionWhy
   ].filter((r) => r.value);
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-3">
+    <div className="rounded-lg border border-slate-200 bg-surface p-3">
       <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
         {t('workspacePage.panels.analysis.decisionWhy.title')}
       </div>
