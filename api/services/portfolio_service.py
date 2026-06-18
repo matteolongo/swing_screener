@@ -694,6 +694,7 @@ class PortfolioService:
             "entry_date": request.entry_date,
             "entry_price": request.entry_price,
             "stop_price": request.stop_price,
+            "target_price": request.target_price,
             "shares": request.shares,
             "initial_risk": initial_risk,
             "thesis": request.thesis,

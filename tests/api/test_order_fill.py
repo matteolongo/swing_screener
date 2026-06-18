@@ -89,3 +89,49 @@ def test_cancel_pending_order_marks_cancelled(client_with_pending_order):
     assert orders_resp.status_code == 200
     assert orders_resp.json()["orders"][0]["status"] == "cancelled"
 
+
+
+@pytest.fixture()
+def client_with_target_order(tmp_path, monkeypatch):
+    orders_path = tmp_path / "orders.json"
+    positions_path = tmp_path / "positions.json"
+    orders_path.write_text(json.dumps({
+        "orders": [{
+            "order_id": "ORD-SBMO-001",
+            "ticker": "SBMO",
+            "status": "pending",
+            "order_kind": "entry",
+            "order_type": "LIMIT",
+            "quantity": 200,
+            "limit_price": 12.50,
+            "stop_price": 11.20,
+            "target_price": 15.00,
+            "order_date": "2026-04-25",
+            "filled_date": None,
+            "entry_price": None,
+            "notes": "",
+            "parent_order_id": None,
+            "position_id": None,
+            "tif": "GTC",
+            "fee_eur": None,
+            "fill_fx_rate": None,
+            "isin": "NL0010273215",
+            "thesis": None,
+        }],
+        "asof": "2026-04-25",
+    }))
+    positions_path.write_text(json.dumps({"positions": [], "asof": "2026-04-25"}))
+    import api.dependencies as deps
+    monkeypatch.setattr(deps, "_orders_path", orders_path)
+    monkeypatch.setattr(deps, "_positions_path", positions_path)
+    return TestClient(app)
+
+
+def test_fill_order_carries_target_price_to_position(client_with_target_order):
+    resp = client_with_target_order.post(
+        "/api/portfolio/orders/ORD-SBMO-001/fill",
+        json={"filled_price": 12.34, "filled_date": "2026-04-26"},
+    )
+    assert resp.status_code == 201
+    pos = resp.json()["position"]
+    assert pos["target_price"] == 15.00

@@ -15,6 +15,7 @@ export interface Order {
   quantity: number;
   limitPrice: number | null;
   stopPrice: number | null;
+  targetPrice?: number | null;
   orderDate: string;
   filledDate: string;
   entryPrice: number | null;
@@ -36,6 +37,7 @@ export interface CreateOrderRequest {
   quantity: number;
   limitPrice?: number;
   stopPrice?: number;
+  targetPrice?: number;
   notes?: string;
   orderKind?: OrderKind;
   positionId?: string;
@@ -61,6 +63,7 @@ export interface OrderApiResponse {
   quantity: number;
   limit_price: number | null;
   stop_price: number | null;
+  target_price?: number | null;
   order_date: string;
   filled_date: string;
   entry_price: number | null;
@@ -164,6 +167,7 @@ export function transformOrder(apiOrder: OrderApiResponse): Order {
     quantity: apiOrder.quantity,
     limitPrice: apiOrder.limit_price,
     stopPrice: apiOrder.stop_price,
+    targetPrice: apiOrder.target_price ?? null,
     orderDate: apiOrder.order_date,
     filledDate: apiOrder.filled_date,
     entryPrice: apiOrder.entry_price,
@@ -238,6 +242,7 @@ export function transformCreateOrderRequest(req: CreateOrderRequest): any {
     quantity: req.quantity,
     limit_price: req.limitPrice,
     stop_price: req.stopPrice,
+    target_price: req.targetPrice ?? null,
     notes: req.notes || '',
     order_kind: req.orderKind || 'entry',
     position_id: req.positionId,
