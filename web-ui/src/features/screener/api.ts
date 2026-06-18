@@ -1,4 +1,5 @@
 import { API_ENDPOINTS, apiUrl } from '@/lib/api';
+import { fetchJson } from '@/lib/fetchJson';
 import {
   ScreenerRequest,
   ScreenerRunLaunchResponseAPI,
@@ -10,9 +11,9 @@ import {
 } from './types';
 
 export async function fetchUniverses(): Promise<UniversesResponse> {
-  const res = await fetch(apiUrl(API_ENDPOINTS.universes));
-  if (!res.ok) throw new Error('Failed to fetch universes');
-  return res.json();
+  return fetchJson<UniversesResponse>(API_ENDPOINTS.universes, {
+    errorMessage: 'Failed to fetch universes',
+  });
 }
 
 export async function runScreener(request: ScreenerRequest): Promise<ScreenerResponse> {
@@ -63,13 +64,10 @@ async function pollScreenerRunResult(jobId: string): Promise<ScreenerResponse> {
   let delayMs = POLL_INITIAL_DELAY_MS;
 
   while (Date.now() - startedAt < POLL_BUDGET_MS) {
-    const res = await fetch(apiUrl(API_ENDPOINTS.screenerRunStatus(jobId)));
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(error.detail || 'Failed to fetch screener run status');
-    }
-
-    const statusPayload: ScreenerRunStatusResponseAPI = await res.json();
+    const statusPayload = await fetchJson<ScreenerRunStatusResponseAPI>(
+      API_ENDPOINTS.screenerRunStatus(jobId),
+      { errorMessage: 'Failed to fetch screener run status' }
+    );
     if (statusPayload.status === 'completed' && statusPayload.result) {
       return transformScreenerResponse(statusPayload.result);
     }

@@ -1,4 +1,7 @@
 import { API_ENDPOINTS, apiUrl } from '@/lib/api';
+import { fetchJson } from '@/lib/fetchJson';
+import type { OrderApiResponse } from '@/types/order';
+import type { PositionUpdateApiResponse } from '@/types/position';
 import type { OpenPositionIntelligenceSummaryAPI, OpenPositionIntelligenceSummary } from '@/features/intelligence/types';
 import { transformOpenPositionIntelligence } from '@/features/intelligence/types';
 import {
@@ -193,34 +196,14 @@ export interface DegiroStatus {
 export type OrderFilterStatus = OrderStatus | 'all';
 export type PositionFilterStatus = PositionStatus | 'all';
 
-async function buildApiError(response: Response, fallbackMessage: string): Promise<Error> {
-  let message = fallbackMessage;
-  try {
-    const error = await response.json();
-    if (typeof error?.detail === 'string') {
-      message = error.detail;
-    } else if (Array.isArray(error?.detail) && error.detail.length > 0) {
-      const first = error.detail[0];
-      if (typeof first?.msg === 'string') {
-        message = first.msg;
-      }
-    }
-  } catch {
-    // Keep default error message if response body is not JSON.
-  }
-  return new Error(message);
-}
-
 export async function fetchOrders(status: OrderFilterStatus): Promise<Order[]> {
   if (isLocalPersistenceMode()) {
     return listOrdersLocal(status);
   }
   const params = status ? `?status=${status}` : '';
-  const response = await fetch(apiUrl(`${API_ENDPOINTS.localOrders}${params}`));
-  if (!response.ok) {
-    throw await buildApiError(response, 'Failed to fetch orders');
-  }
-  const data = await response.json();
+  const data = await fetchJson<{ orders?: OrderApiResponse[] }>(`${API_ENDPOINTS.localOrders}${params}`, {
+    errorMessage: 'Failed to fetch orders',
+  });
   return (data.orders ?? []).map(transformOrder);
 }
 
@@ -229,14 +212,12 @@ export async function createOrder(request: CreateOrderRequest): Promise<void> {
     createOrderLocal(request);
     return;
   }
-  const response = await fetch(apiUrl(API_ENDPOINTS.orders), {
+  await fetchJson<void>(API_ENDPOINTS.orders, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(transformCreateOrderRequest(request)),
+    errorMessage: 'Failed to create order',
   });
-  if (!response.ok) {
-    throw await buildApiError(response, 'Failed to create order');
-  }
 }
 
 export async function fillOrder(orderId: string, request: FillOrderRequest): Promise<void> {
@@ -258,19 +239,19 @@ export async function fillOrder(orderId: string, request: FillOrderRequest): Pro
     payload.fill_fx_rate = request.fillFxRate;
   }
 
-  const response = await fetch(apiUrl(API_ENDPOINTS.orderFill(orderId)), {
+  await fetchJson<void>(API_ENDPOINTS.orderFill(orderId), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
+    errorMessage: 'Failed to fill order',
   });
-  if (!response.ok) throw await buildApiError(response, 'Failed to fill order');
 }
 
 export async function submitOrder(orderId: string): Promise<void> {
-  const response = await fetch(apiUrl(`/api/portfolio/orders/${orderId}/submit`), {
+  await fetchJson<void>(`/api/portfolio/orders/${orderId}/submit`, {
     method: 'PATCH',
+    errorMessage: 'Failed to mark order submitted',
   });
-  if (!response.ok) throw new Error('Failed to mark order submitted');
 }
 
 export async function cancelOrder(orderId: string): Promise<void> {
@@ -278,10 +259,10 @@ export async function cancelOrder(orderId: string): Promise<void> {
     cancelOrderLocal(orderId);
     return;
   }
-  const response = await fetch(apiUrl(API_ENDPOINTS.order(orderId)), {
+  await fetchJson<void>(API_ENDPOINTS.order(orderId), {
     method: 'DELETE',
+    errorMessage: 'Failed to cancel order',
   });
-  if (!response.ok) throw new Error('Failed to cancel order');
 }
 
 export async function fetchDegiroStatus(): Promise<DegiroStatus> {
@@ -295,12 +276,9 @@ export async function fetchDegiroStatus(): Promise<DegiroStatus> {
     };
   }
 
-  const response = await fetch(apiUrl(API_ENDPOINTS.degiroStatus));
-  if (!response.ok) {
-    throw await buildApiError(response, 'Failed to fetch DeGiro status');
-  }
-
-  const payload: DegiroStatusApiResponse = await response.json();
+  const payload = await fetchJson<DegiroStatusApiResponse>(API_ENDPOINTS.degiroStatus, {
+    errorMessage: 'Failed to fetch DeGiro status',
+  });
   return {
     installed: payload.installed,
     credentialsConfigured: payload.credentials_configured,
@@ -315,12 +293,9 @@ export async function fetchDegiroOrderHistory(): Promise<DegiroOrder[]> {
     return [];
   }
 
-  const response = await fetch(apiUrl(API_ENDPOINTS.degiroOrderHistory));
-  if (!response.ok) {
-    throw await buildApiError(response, 'Failed to fetch DeGiro order history');
-  }
-
-  const data: { orders?: DegiroOrderApiResponse[] } = await response.json();
+  const data = await fetchJson<{ orders?: DegiroOrderApiResponse[] }>(API_ENDPOINTS.degiroOrderHistory, {
+    errorMessage: 'Failed to fetch DeGiro order history',
+  });
   return (data.orders ?? []).map(transformDegiroOrder);
 }
 
@@ -332,16 +307,12 @@ export async function fillOrderFromDegiro(
     throw new Error('Fill from DeGiro is not supported in local persistence mode');
   }
 
-  const response = await fetch(apiUrl(API_ENDPOINTS.orderFillFromDegiro(orderId)), {
+  const payload = await fetchJson<FillFromDegiroResponseApi>(API_ENDPOINTS.orderFillFromDegiro(orderId), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(transformFillFromDegiroRequest(request)),
+    errorMessage: 'Failed to fill order from DeGiro',
   });
-  if (!response.ok) {
-    throw await buildApiError(response, 'Failed to fill order from DeGiro');
-  }
-
-  const payload: FillFromDegiroResponseApi = await response.json();
   return transformFillFromDegiroResponse(payload);
 }
 
@@ -350,9 +321,10 @@ export async function fetchPositions(status: PositionFilterStatus): Promise<Posi
     return listPositionsLocal(status);
   }
   const params = status !== 'all' ? `?status=${status}` : '';
-  const response = await fetch(apiUrl(API_ENDPOINTS.positions + params));
-  if (!response.ok) throw new Error('Failed to fetch positions');
-  const data = await response.json() as { positions: PositionWithMetricsApiResponse[] };
+  const data = await fetchJson<{ positions: PositionWithMetricsApiResponse[] }>(
+    API_ENDPOINTS.positions + params,
+    { errorMessage: 'Failed to fetch positions' },
+  );
   return data.positions.map(transformPositionWithMetrics);
 }
 
@@ -360,9 +332,9 @@ export async function fetchPositionMetrics(positionId: string): Promise<Position
   if (isLocalPersistenceMode()) {
     return positionMetricsLocal(positionId);
   }
-  const response = await fetch(apiUrl(API_ENDPOINTS.positionMetrics(positionId)));
-  if (!response.ok) throw new Error('Failed to fetch position metrics');
-  const data: PositionMetricsApiResponse = await response.json();
+  const data = await fetchJson<PositionMetricsApiResponse>(API_ENDPOINTS.positionMetrics(positionId), {
+    errorMessage: 'Failed to fetch position metrics',
+  });
   return transformPositionMetrics(data);
 }
 
@@ -370,9 +342,9 @@ export async function fetchPortfolioSummary(): Promise<PortfolioSummary> {
   if (isLocalPersistenceMode()) {
     return portfolioSummaryLocal();
   }
-  const response = await fetch(apiUrl(API_ENDPOINTS.portfolioSummary));
-  if (!response.ok) throw new Error('Failed to fetch portfolio summary');
-  const data: PortfolioSummaryApiResponse = await response.json();
+  const data = await fetchJson<PortfolioSummaryApiResponse>(API_ENDPOINTS.portfolioSummary, {
+    errorMessage: 'Failed to fetch portfolio summary',
+  });
   return transformPortfolioSummary(data);
 }
 
@@ -404,18 +376,15 @@ export async function updatePositionStop(
     updatePositionStopLocal(positionId, request);
     return;
   }
-  const response = await fetch(apiUrl(API_ENDPOINTS.positionStop(positionId)), {
+  await fetchJson<void>(API_ENDPOINTS.positionStop(positionId), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       new_stop: request.newStop,
       reason: request.reason || '',
     }),
+    errorMessage: 'Failed to update stop',
   });
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Failed to update stop');
-  }
 }
 
 export async function fetchPositionStopSuggestion(positionId: string): Promise<PositionUpdate> {
@@ -425,7 +394,7 @@ export async function fetchPositionStopSuggestion(positionId: string): Promise<P
       throw new Error(`Position not found: ${positionId}`);
     }
     const strategy = getActiveStrategyLocal();
-    const response = await fetch(apiUrl(API_ENDPOINTS.positionStopSuggestionCompute), {
+    const data = await fetchJson<PositionUpdateApiResponse>(API_ENDPOINTS.positionStopSuggestionCompute, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -456,21 +425,14 @@ export async function fetchPositionStopSuggestion(positionId: string): Promise<P
           time_stop_min_r: strategy.manage.timeStopMinR,
         },
       }),
+      errorMessage: 'Failed to fetch stop suggestion',
     });
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.detail || 'Failed to fetch stop suggestion');
-    }
-    const data = await response.json();
     return transformPositionUpdate(data);
   }
 
-  const response = await fetch(apiUrl(API_ENDPOINTS.positionStopSuggestion(positionId)));
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Failed to fetch stop suggestion');
-  }
-  const data = await response.json();
+  const data = await fetchJson<PositionUpdateApiResponse>(API_ENDPOINTS.positionStopSuggestion(positionId), {
+    errorMessage: 'Failed to fetch stop suggestion',
+  });
   return transformPositionUpdate(data);
 }
 
@@ -479,12 +441,10 @@ export async function fetchPositionStopPreview(
   price: number | null,
 ): Promise<PositionUpdate> {
   const params = price != null ? `?price=${price}` : '';
-  const response = await fetch(apiUrl(`${API_ENDPOINTS.positionStopPreview(positionId)}${params}`));
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.detail || 'Failed to fetch stop preview');
-  }
-  const data = await response.json();
+  const data = await fetchJson<PositionUpdateApiResponse>(
+    `${API_ENDPOINTS.positionStopPreview(positionId)}${params}`,
+    { errorMessage: 'Failed to fetch stop preview' },
+  );
   return transformPositionUpdate(data);
 }
 
@@ -495,24 +455,21 @@ export async function updatePositionTrailMethod(
   if (isLocalPersistenceMode()) {
     throw new Error('Trail method update is not supported in local persistence mode');
   }
-  const response = await fetch(apiUrl(API_ENDPOINTS.positionTrailMethod(positionId)), {
+  await fetchJson<void>(API_ENDPOINTS.positionTrailMethod(positionId), {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       trail_method: request.trailMethod,
       trail_param: request.trailParam ?? null,
     }),
+    errorMessage: 'Failed to update trail method',
   });
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Failed to update trail method');
-  }
 }
 
 export async function computePositionStopSuggestion(
   position: Position,
 ): Promise<PositionUpdate> {
-  const response = await fetch(apiUrl(API_ENDPOINTS.positionStopSuggestionCompute), {
+  const raw = await fetchJson<PositionUpdateApiResponse>(API_ENDPOINTS.positionStopSuggestionCompute, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -536,12 +493,8 @@ export async function computePositionStopSuggestion(
         trail_param: position.trailParam ?? null,
       },
     }),
+    errorMessage: 'Failed to compute stop suggestion',
   });
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Failed to compute stop suggestion');
-  }
-  const raw = await response.json();
   return transformPositionUpdate(raw);
 }
 
@@ -553,7 +506,7 @@ export async function closePosition(
     closePositionLocal(positionId, request);
     return;
   }
-  const response = await fetch(apiUrl(API_ENDPOINTS.positionClose(positionId)), {
+  await fetchJson<void>(API_ENDPOINTS.positionClose(positionId), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -563,18 +516,15 @@ export async function closePosition(
       lesson: request.lesson ?? null,
       tags: request.tags ?? [],
     }),
+    errorMessage: 'Failed to close position',
   });
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Failed to close position');
-  }
 }
 
 export async function partialClosePosition(
   positionId: string,
   request: PartialCloseRequest,
 ): Promise<void> {
-  const response = await fetch(apiUrl(API_ENDPOINTS.positionPartialClose(positionId)), {
+  await fetchJson<void>(API_ENDPOINTS.positionPartialClose(positionId), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -582,11 +532,8 @@ export async function partialClosePosition(
       price: request.price,
       fee_eur: request.feeEur,
     }),
+    errorMessage: 'Failed to partial close position',
   });
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
-    throw new Error(error.detail ?? 'Failed to partial close position');
-  }
 }
 
 function transformPositionMetrics(data: PositionMetricsApiResponse): PositionMetrics {
@@ -685,9 +632,10 @@ function transformRegimeStats(raw: {
 }
 
 export async function fetchRegimeBreakdown(): Promise<RegimeBreakdownResponse> {
-  const res = await fetch(apiUrl(API_ENDPOINTS.regimeBreakdown));
-  if (!res.ok) throw new Error('Failed to fetch regime breakdown');
-  const data = await res.json();
+  const data = await fetchJson<{
+    regimes?: Parameters<typeof transformRegimeStats>[0][];
+    benchmark: string;
+  }>(API_ENDPOINTS.regimeBreakdown, { errorMessage: 'Failed to fetch regime breakdown' });
   return {
     regimes: (data.regimes ?? []).map(transformRegimeStats),
     benchmark: data.benchmark,
@@ -695,15 +643,16 @@ export async function fetchRegimeBreakdown(): Promise<RegimeBreakdownResponse> {
 }
 
 export async function fetchOpenPositionsIntelligence(): Promise<OpenPositionIntelligenceSummary[]> {
-  const response = await fetch(apiUrl(API_ENDPOINTS.openPositionsIntelligence));
-  if (!response.ok) throw new Error(`Failed to fetch open positions intelligence: ${response.status}`);
-  const data: OpenPositionIntelligenceSummaryAPI[] = await response.json();
+  const data = await fetchJson<OpenPositionIntelligenceSummaryAPI[]>(
+    API_ENDPOINTS.openPositionsIntelligence,
+    { errorMessage: 'Failed to fetch open positions intelligence' },
+  );
   return data.map(transformOpenPositionIntelligence);
 }
 
 export async function triggerPositionAnalyze(positionId: string): Promise<void> {
-  const response = await fetch(apiUrl(API_ENDPOINTS.analyzePosition(positionId)), {
+  await fetchJson<void>(API_ENDPOINTS.analyzePosition(positionId), {
     method: 'POST',
+    errorMessage: 'Position analysis failed',
   });
-  if (!response.ok) throw new Error(`Position analysis failed: ${response.status}`);
 }

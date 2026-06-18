@@ -6,6 +6,7 @@ describe('position intelligence API', () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => [],
+      text: async () => JSON.stringify([]),
     });
     vi.stubGlobal('fetch', mockFetch);
 
@@ -13,6 +14,7 @@ describe('position intelligence API', () => {
 
     expect(mockFetch).toHaveBeenCalledWith(
       expect.stringContaining('/api/portfolio/positions/open/intelligence'),
+      expect.anything(),
     );
     vi.unstubAllGlobals();
   });
@@ -21,6 +23,7 @@ describe('position intelligence API', () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({ symbol: 'BESI.AS', summary_line: 'Hold.' }),
+      text: async () => JSON.stringify({ symbol: 'BESI.AS', summary_line: 'Hold.' }),
     });
     vi.stubGlobal('fetch', mockFetch);
 

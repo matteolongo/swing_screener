@@ -1,4 +1,5 @@
-import { API_ENDPOINTS, apiUrl } from '@/lib/api';
+import { API_ENDPOINTS } from '@/lib/api';
+import { fetchJson } from '@/lib/fetchJson';
 import {
   isLocalPersistenceMode,
   listWatchlistLocal,
@@ -26,11 +27,9 @@ export async function fetchWatchlist(): Promise<WatchItem[]> {
     }));
   }
 
-  const response = await fetch(apiUrl(API_ENDPOINTS.watchlist));
-  if (!response.ok) {
-    throw new Error('Failed to fetch watchlist');
-  }
-  const data = (await response.json()) as WatchlistResponseAPI;
+  const data = await fetchJson<WatchlistResponseAPI>(API_ENDPOINTS.watchlist, {
+    errorMessage: 'Failed to fetch watchlist',
+  });
   return (data.items ?? []).map(transformWatchItem);
 }
 
@@ -58,28 +57,19 @@ export async function watchSymbol(request: WatchSymbolRequest): Promise<WatchIte
     };
   }
 
-  const response = await fetch(apiUrl(API_ENDPOINTS.watchlistItem(encodeURIComponent(ticker))), {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      watch_price: request.watchPrice ?? null,
-      currency: request.currency ?? null,
-      source: request.source,
-    }),
-  });
-  if (!response.ok) {
-    let message = 'Failed to watch symbol';
-    try {
-      const error = await response.json();
-      if (typeof error?.detail === 'string') {
-        message = error.detail;
-      }
-    } catch {
-      // Ignore JSON parse errors and use fallback.
-    }
-    throw new Error(message);
-  }
-  const data = (await response.json()) as WatchItemAPI;
+  const data = await fetchJson<WatchItemAPI>(
+    API_ENDPOINTS.watchlistItem(encodeURIComponent(ticker)),
+    {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        watch_price: request.watchPrice ?? null,
+        currency: request.currency ?? null,
+        source: request.source,
+      }),
+      errorMessage: 'Failed to watch symbol',
+    },
+  );
   return transformWatchItem(data);
 }
 
@@ -97,19 +87,8 @@ export async function unwatchSymbol(ticker: string): Promise<void> {
     return;
   }
 
-  const response = await fetch(apiUrl(API_ENDPOINTS.watchlistItem(encodeURIComponent(normalizedTicker))), {
+  await fetchJson<void>(API_ENDPOINTS.watchlistItem(encodeURIComponent(normalizedTicker)), {
     method: 'DELETE',
+    errorMessage: 'Failed to unwatch symbol',
   });
-  if (!response.ok) {
-    let message = 'Failed to unwatch symbol';
-    try {
-      const error = await response.json();
-      if (typeof error?.detail === 'string') {
-        message = error.detail;
-      }
-    } catch {
-      // Ignore JSON parse errors and use fallback.
-    }
-    throw new Error(message);
-  }
 }

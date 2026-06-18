@@ -2,7 +2,8 @@
  * Daily Review API client and React Query hooks
  */
 import { useQuery } from '@tanstack/react-query';
-import { API_ENDPOINTS, apiUrl } from '@/lib/api';
+import { API_ENDPOINTS } from '@/lib/api';
+import { fetchJson } from '@/lib/fetchJson';
 import { queryKeys } from '@/lib/queryKeys';
 import {
   getActiveStrategyLocal,
@@ -78,7 +79,7 @@ export async function getDailyReview(topN: number = 200, universe?: string | nul
     const positions = getAllPositionsLocal();
     const orders = getAllOrdersLocal();
 
-    const response = await fetch(apiUrl(API_ENDPOINTS.dailyReviewCompute), {
+    const data = await fetchJson<DailyReviewAPI>(API_ENDPOINTS.dailyReviewCompute, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -88,14 +89,8 @@ export async function getDailyReview(topN: number = 200, universe?: string | nul
         positions: positions.map(toPositionApi),
         orders: orders.map(toOrderApi),
       }),
+      errorMessage: 'Failed to fetch daily review',
     });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ detail: 'Failed to fetch daily review' }));
-      throw new Error(error.detail || 'Failed to fetch daily review');
-    }
-
-    const data: DailyReviewAPI = await response.json();
     return transformDailyReview(data);
   }
 
@@ -104,15 +99,10 @@ export async function getDailyReview(topN: number = 200, universe?: string | nul
   if (universe && universe.trim().length > 0) {
     params.set('universe', universe.trim());
   }
-  const url = `${apiUrl(API_ENDPOINTS.dailyReview)}?${params.toString()}`;
-  const response = await fetch(url);
-  
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: 'Failed to fetch daily review' }));
-    throw new Error(error.detail || 'Failed to fetch daily review');
-  }
-  
-  const data: DailyReviewAPI = await response.json();
+  const data = await fetchJson<DailyReviewAPI>(
+    `${API_ENDPOINTS.dailyReview}?${params.toString()}`,
+    { errorMessage: 'Failed to fetch daily review' },
+  );
   return transformDailyReview(data);
 }
 

@@ -1,4 +1,5 @@
-import { API_ENDPOINTS, apiUrl } from '@/lib/api';
+import { API_ENDPOINTS } from '@/lib/api';
+import { fetchJson } from '@/lib/fetchJson';
 import type { SymbolIntelligenceAPI, SweepSymbolPayload, SweepResponseAPI } from '@/features/intelligence/types';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
 import type { PositionWithMetrics } from '@/features/portfolio/api';
@@ -110,36 +111,25 @@ export async function postIntelligenceAnalysis(
   ticker: string,
   payload: IntelligenceRequestPayload
 ): Promise<SymbolIntelligenceAPI> {
-  const response = await fetch(apiUrl(API_ENDPOINTS.intelligenceAnalyze(ticker)), {
+  return fetchJson<SymbolIntelligenceAPI>(API_ENDPOINTS.intelligenceAnalyze(ticker), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
+    errorMessage: `Failed to analyze ${ticker}`,
   });
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.detail || `Failed to analyze ${ticker}`);
-  }
-  return response.json() as Promise<SymbolIntelligenceAPI>;
 }
 
 export async function getIntelligenceLatest(ticker: string): Promise<SymbolIntelligenceAPI> {
-  const response = await fetch(apiUrl(API_ENDPOINTS.intelligenceLatest(ticker)));
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error((error as { detail?: string }).detail || `No cached analysis for ${ticker}`);
-  }
-  return response.json() as Promise<SymbolIntelligenceAPI>;
+  return fetchJson<SymbolIntelligenceAPI>(API_ENDPOINTS.intelligenceLatest(ticker), {
+    errorMessage: `No cached analysis for ${ticker}`,
+  });
 }
 
 export async function postIntelligenceSweep(symbols: SweepSymbolPayload[]): Promise<SweepResponseAPI> {
-  const response = await fetch(apiUrl(API_ENDPOINTS.intelligenceSweep), {
+  return fetchJson<SweepResponseAPI>(API_ENDPOINTS.intelligenceSweep, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ symbols }),
+    errorMessage: 'Intelligence sweep failed',
   });
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error((error as { detail?: string }).detail || 'Intelligence sweep failed');
-  }
-  return response.json() as Promise<SweepResponseAPI>;
 }
