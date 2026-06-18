@@ -8,6 +8,7 @@ describe('Universes page', () => {
   it('runs live symbol discovery and shows taxonomy plus candidates', async () => {
     const { user } = renderWithProviders(<Universes />)
 
+    await user.click(screen.getByRole('button', { name: 'Discovery' }))
     await user.click(screen.getByRole('button', { name: /discover symbols/i }))
 
     expect(await screen.findByText('NVDA')).toBeInTheDocument()
@@ -30,6 +31,7 @@ describe('Universes page', () => {
   it('opens the symbol detail modal when a screener result row is clicked', async () => {
     const { user } = renderWithProviders(<Universes />)
 
+    await user.click(screen.getByRole('button', { name: 'Discovery' }))
     await user.click(screen.getByRole('button', { name: /discover symbols/i }))
     await screen.findByText('NVDA')
     await user.click(screen.getByRole('button', { name: /run screener on these symbols/i }))
