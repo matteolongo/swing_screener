@@ -56,7 +56,7 @@ export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: 
   });
 
   return (
-    <header className="h-12 px-4 border-b border-border bg-white flex items-center justify-between gap-4 shrink-0">
+    <header className="h-12 px-4 border-b border-border bg-surface flex items-center justify-between gap-4 shrink-0">
       {/* Left: toggle + collapsed brand */}
       <div className="flex items-center gap-2 shrink-0">
         {onToggleSidebar && (
@@ -65,7 +65,7 @@ export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: 
             onClick={onToggleSidebar}
             className={cn(
               'flex items-center justify-center w-7 h-7 rounded transition-colors',
-              'text-muted hover:text-foreground hover:bg-gray-100'
+              'text-muted hover:text-foreground hover:bg-foreground/5'
             )}
             title={isSidebarCollapsed ? t('header.showNavigation') : t('header.hideNavigation')}
             aria-label={isSidebarCollapsed ? t('header.showNavigation') : t('header.hideNavigation')}
@@ -97,7 +97,7 @@ export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: 
           aria-label={t('sidebar.activeStrategy')}
           className={cn(
             'w-full h-7 px-2 text-[13px] border border-border rounded',
-            'bg-white text-foreground',
+            'bg-surface text-foreground',
             'focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary',
             'disabled:opacity-50'
           )}

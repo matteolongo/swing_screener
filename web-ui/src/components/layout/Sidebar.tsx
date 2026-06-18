@@ -64,7 +64,7 @@ function BrandMark({ size = 6 }: { size?: number }) {
 
 export default function Sidebar({ className, onNavigate }: SidebarProps) {
   return (
-    <aside className={cn('h-full flex flex-col bg-white border-r border-border', className)}>
+    <aside className={cn('h-full flex flex-col bg-surface border-r border-border', className)}>
       {/* Brand */}
       <div className="h-12 px-4 flex items-center gap-2.5 border-b border-border shrink-0">
         <BrandMark size={6} />
@@ -88,7 +88,7 @@ export default function Sidebar({ className, onNavigate }: SidebarProps) {
                 'flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-colors',
                 isActive
                   ? 'bg-primary/10 text-primary'
-                  : 'text-muted hover:bg-gray-50 hover:text-foreground'
+                  : 'text-muted hover:bg-foreground/5 hover:text-foreground'
               )
             }
           >
@@ -108,7 +108,7 @@ export default function Sidebar({ className, onNavigate }: SidebarProps) {
               'flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-colors',
               isActive
                 ? 'bg-primary/10 text-primary'
-                : 'text-muted hover:bg-gray-50 hover:text-foreground'
+                : 'text-muted hover:bg-foreground/5 hover:text-foreground'
             )
           }
         >
