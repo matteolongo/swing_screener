@@ -1,3 +1,5 @@
+import Input from '@/components/common/Input';
+import Select from '@/components/common/Select';
 import type { TrailMethod } from '@/features/portfolio/types';
 import { t } from '@/i18n/t';
 
@@ -37,30 +39,28 @@ export default function TrailMethodSelector({
   return (
     <div className="space-y-2">
       <label htmlFor="trail-method-select" className="block text-sm font-medium">{t('positions.trailMethod.label')}</label>
-      <select
+      <Select
         id="trail-method-select"
         value={value}
         onChange={handleMethodChange}
-        className="w-full px-3 py-2 border border-border rounded bg-surface text-sm"
       >
         <option value="sma20">{t('positions.trailMethod.sma20')}</option>
         <option value="atr">{t('positions.trailMethod.atr')}</option>
         <option value="fixed_pct">{t('positions.trailMethod.fixedPct')}</option>
         <option value="manual">{t('positions.trailMethod.manual')}</option>
-      </select>
+      </Select>
       {showParam && (
         <div>
           <label htmlFor="trail-param-input" className="block text-xs text-muted mb-1">
             {paramLabel}
           </label>
-          <input
+          <Input
             id="trail-param-input"
             type="number"
             step={value === 'atr' ? '0.1' : '0.5'}
             min="0.1"
             value={param ?? (value === 'atr' ? ATR_DEFAULT : FIXED_PCT_DEFAULT)}
             onChange={handleParamChange}
-            className="w-full px-3 py-2 border border-border rounded bg-surface text-sm"
           />
         </div>
       )}

@@ -1,6 +1,5 @@
 import { t } from '@/i18n/t';
-import { cn } from '@/utils/cn';
-import RChip from '@/components/common/RChip';
+import StatsTable, { type StatsTableHeaders } from './StatsTable';
 import { useRegimeBreakdown } from '@/features/portfolio/hooks';
 import type { RegimeStats } from '@/features/portfolio/api';
 
@@ -48,45 +47,24 @@ export default function RegimeBreakdownTable() {
     );
   }
 
-  return (
-    <div className="overflow-x-auto rounded-lg border border-border bg-surface">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-border bg-foreground/5">
-            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">
-              {t('analyticsPage.regimeBreakdown.colRegime')}
-            </th>
-            <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted">
-              {t('analyticsPage.regimeBreakdown.colTrades')}
-            </th>
-            <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted">
-              {t('analyticsPage.regimeBreakdown.colWinRate')}
-            </th>
-            <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted">
-              {t('analyticsPage.regimeBreakdown.colAvgR')}
-            </th>
-            <th
-              className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted"
-              title={t('analyticsPage.regimeBreakdown.expectancyHint')}
-            >
-              {t('analyticsPage.regimeBreakdown.colExpectancy')}
-            </th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border">
-          {data.regimes.map((stat) => (
-            <tr key={stat.regime} className="hover:bg-foreground/5">
-              <td className={cn('px-4 py-3 font-semibold', regimeColorClass(stat.regime))}>
-                {regimeLabel(stat.regime)}
-              </td>
-              <td className="px-4 py-3 text-right tabular-nums">{stat.count}</td>
-              <td className="px-4 py-3 text-right tabular-nums">{Math.round(stat.winRate)}%</td>
-              <td className="px-4 py-3 text-right"><RChip value={stat.avgR} /></td>
-              <td className="px-4 py-3 text-right"><RChip value={stat.expectancy} /></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
+  const headers: StatsTableHeaders = {
+    label: t('analyticsPage.regimeBreakdown.colRegime'),
+    trades: t('analyticsPage.regimeBreakdown.colTrades'),
+    winRate: t('analyticsPage.regimeBreakdown.colWinRate'),
+    avgR: t('analyticsPage.regimeBreakdown.colAvgR'),
+    expectancy: t('analyticsPage.regimeBreakdown.colExpectancy'),
+    expectancyHint: t('analyticsPage.regimeBreakdown.expectancyHint'),
+  };
+
+  const rows = data.regimes.map((stat) => ({
+    key: stat.regime,
+    label: regimeLabel(stat.regime),
+    labelClassName: regimeColorClass(stat.regime),
+    count: stat.count,
+    winRate: stat.winRate,
+    avgR: stat.avgR,
+    expectancy: stat.expectancy,
+  }));
+
+  return <StatsTable headers={headers} rows={rows} />;
 }

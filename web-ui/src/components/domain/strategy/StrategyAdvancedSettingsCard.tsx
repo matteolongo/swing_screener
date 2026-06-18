@@ -1,5 +1,6 @@
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
+import CollapsibleSection from '@/components/common/CollapsibleSection';
 import type { Dispatch, SetStateAction } from 'react';
 import { t } from '@/i18n/t';
 import {
@@ -43,9 +44,8 @@ export default function StrategyAdvancedSettingsCard({
       </CardHeader>
       {showAdvanced && (
         <CardContent>
-          <div className="space-y-6">
-            <div>
-              <div className="text-sm font-semibold mb-3">{t('strategyPage.advanced.sections.trend')}</div>
+          <div className="space-y-3">
+            <CollapsibleSection defaultOpen title={t('strategyPage.advanced.sections.trend')}>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <NumberInput
                   label={t('strategyPage.advanced.fields.smaFast')}
@@ -96,10 +96,9 @@ export default function StrategyAdvancedSettingsCard({
                   help={help.smaLong}
                 />
               </div>
-            </div>
+            </CollapsibleSection>
 
-            <div>
-              <div className="text-sm font-semibold mb-3">{t('strategyPage.advanced.sections.volatility')}</div>
+            <CollapsibleSection title={t('strategyPage.advanced.sections.volatility')}>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <NumberInput
                   label={t('strategyPage.advanced.fields.atrWindow')}
@@ -165,10 +164,9 @@ export default function StrategyAdvancedSettingsCard({
                   help={help.requireRsPositive}
                 />
               </div>
-            </div>
+            </CollapsibleSection>
 
-            <div>
-              <div className="text-sm font-semibold mb-3">{t('strategyPage.advanced.sections.momentum')}</div>
+            <CollapsibleSection title={t('strategyPage.advanced.sections.momentum')}>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <NumberInput
                   label={t('strategyPage.advanced.fields.lookback6m')}
@@ -217,12 +215,9 @@ export default function StrategyAdvancedSettingsCard({
                   help={help.benchmark}
                 />
               </div>
-            </div>
+            </CollapsibleSection>
 
-            <div>
-              <div className="text-sm font-semibold mb-3">
-                {t('strategyPage.advanced.sections.rankingWeights')}
-              </div>
+            <CollapsibleSection title={t('strategyPage.advanced.sections.rankingWeights')}>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <NumberInput
                   label={t('strategyPage.advanced.fields.weight6m')}
@@ -264,10 +259,9 @@ export default function StrategyAdvancedSettingsCard({
                   help={help.weightRs}
                 />
               </div>
-            </div>
+            </CollapsibleSection>
 
-            <div>
-              <div className="text-sm font-semibold mb-3">{t('strategyPage.advanced.sections.riskDetails')}</div>
+            <CollapsibleSection title={t('strategyPage.advanced.sections.riskDetails')}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <NumberInput
                   label={t('strategyPage.advanced.fields.minShares')}
@@ -433,10 +427,9 @@ export default function StrategyAdvancedSettingsCard({
                   </div>
                 </div>
               </div>
-            </div>
+            </CollapsibleSection>
 
-            <div>
-              <div className="text-sm font-semibold mb-3">{t('strategyPage.advanced.sections.manageRules')}</div>
+            <CollapsibleSection title={t('strategyPage.advanced.sections.manageRules')}>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <NumberInput
                   label={t('strategyPage.advanced.fields.breakevenAtR')}
@@ -536,7 +529,7 @@ export default function StrategyAdvancedSettingsCard({
                   }
                 />
               </div>
-            </div>
+            </CollapsibleSection>
           </div>
         </CardContent>
       )}

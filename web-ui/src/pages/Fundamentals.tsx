@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import Button from '@/components/common/Button';
+import Input from '@/components/common/Input';
 import FundamentalsSnapshotCard from '@/components/domain/fundamentals/FundamentalsSnapshotCard';
 import {
   useCompareFundamentalsMutation,
@@ -97,12 +98,12 @@ export default function FundamentalsPage({ initialSymbol, defaultSimple = false 
         <label htmlFor="fundamentals-symbols-input" className="block text-sm font-medium text-muted">
           {t('fundamentalsPage.symbols.label')}
         </label>
-        <input
+        <Input
           id="fundamentals-symbols-input"
           value={symbolsInput}
           onChange={(event) => setSymbolsInput(event.target.value)}
           placeholder={t('fundamentalsPage.symbols.placeholder')}
-          className="mt-2 w-full rounded-md border border-border px-3 py-2"
+          className="mt-2"
         />
         <div className="mt-3 flex items-center gap-3">
           <Button type="button" onClick={runCompare} disabled={symbols.length < 2 || compareMutation.isPending}>

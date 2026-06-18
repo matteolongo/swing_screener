@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import Button from '@/components/common/Button';
+import Input from '@/components/common/Input';
 import ModalShell from '@/components/common/ModalShell';
 import type { FillOrderRequest, Order } from '@/features/portfolio/types';
 import { formatCurrency } from '@/utils/formatters';
@@ -143,14 +144,13 @@ export default function FillOrderModalForm({
           <label htmlFor="fill-order-filled-price" className="block text-sm font-medium mb-1">
             {t('order.fillModal.filledPrice')}
           </label>
-          <input
+          <Input
             id="fill-order-filled-price"
             type="number"
             step="0.01"
             min="0.01"
             value={filledPriceValue}
             onChange={(event) => setFilledPriceValue(event.target.value)}
-            className="w-full px-3 py-2 border border-border rounded bg-surface"
             required
           />
         </div>
@@ -159,12 +159,11 @@ export default function FillOrderModalForm({
           <label htmlFor="fill-order-filled-date" className="block text-sm font-medium mb-1">
             {t('order.fillModal.filledDate')}
           </label>
-          <input
+          <Input
             id="fill-order-filled-date"
             type="date"
             value={filledDateValue}
             onChange={(event) => setFilledDateValue(event.target.value)}
-            className="w-full px-3 py-2 border border-border rounded bg-surface"
             required
           />
         </div>
@@ -175,14 +174,13 @@ export default function FillOrderModalForm({
               ? t('order.fillModal.linkedStopPriceScaleIn')
               : t('order.fillModal.linkedStopPrice')}
           </label>
-          <input
+          <Input
             id="fill-order-stop-price"
             type="number"
             step="0.01"
             min="0.01"
             value={stopPriceValue}
             onChange={(event) => setStopPriceValue(event.target.value)}
-            className="w-full px-3 py-2 border border-border rounded bg-surface"
             required={requiresStopPrice}
           />
           {isEntryOrder && hasOpenPositionForTicker ? (
@@ -196,14 +194,13 @@ export default function FillOrderModalForm({
           <label htmlFor="fill-order-fee-eur" className="block text-sm font-medium mb-1">
             {t('order.fillModal.feeEurOptional')}
           </label>
-          <input
+          <Input
             id="fill-order-fee-eur"
             type="number"
             step="0.01"
             min="0"
             value={feeEurValue}
             onChange={(event) => setFeeEurValue(event.target.value)}
-            className="w-full px-3 py-2 border border-border rounded bg-surface"
           />
         </div>
 
@@ -211,14 +208,13 @@ export default function FillOrderModalForm({
           <label htmlFor="fill-order-fx-rate" className="block text-sm font-medium mb-1">
             {t('order.fillModal.fxRateOptional')}
           </label>
-          <input
+          <Input
             id="fill-order-fx-rate"
             type="number"
             step="0.0001"
             min="0.0001"
             value={fillFxRateValue}
             onChange={(event) => setFillFxRateValue(event.target.value)}
-            className="w-full px-3 py-2 border border-border rounded bg-surface"
           />
         </div>
 

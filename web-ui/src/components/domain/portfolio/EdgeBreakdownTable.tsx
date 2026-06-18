@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type { Position } from '@/types/position';
 import { t } from '@/i18n/t';
-import RChip from '@/components/common/RChip';
+import StatsTable, { type StatsTableHeaders } from './StatsTable';
 
 interface TagStats {
   tag: string;
@@ -86,49 +86,23 @@ export default function EdgeBreakdownTable({ positions }: EdgeBreakdownTableProp
     );
   }
 
-  return (
-    <div className="overflow-x-auto rounded-lg border border-border bg-surface">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-border bg-foreground/5">
-            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">
-              {t('analyticsPage.edgeBreakdown.colTag')}
-            </th>
-            <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted">
-              {t('analyticsPage.edgeBreakdown.colTrades')}
-            </th>
-            <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted">
-              {t('analyticsPage.edgeBreakdown.colWinRate')}
-            </th>
-            <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted">
-              {t('analyticsPage.edgeBreakdown.colAvgR')}
-            </th>
-            <th
-              className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted"
-              title={t('analyticsPage.edgeBreakdown.expectancyHint')}
-            >
-              {t('analyticsPage.edgeBreakdown.colExpectancy')}
-            </th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border">
-          {stats.map((stat) => (
-            <tr key={stat.tag} className="hover:bg-foreground/5">
-              <td className="px-4 py-3 font-semibold text-foreground">
-                {tagLabel(stat.tag)}
-              </td>
-              <td className="px-4 py-3 text-right tabular-nums">{stat.count}</td>
-              <td className="px-4 py-3 text-right tabular-nums">{Math.round(stat.winRate)}%</td>
-              <td className="px-4 py-3 text-right">
-                <RChip value={stat.avgR} />
-              </td>
-              <td className="px-4 py-3 text-right">
-                <RChip value={stat.expectancy} />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
+  const headers: StatsTableHeaders = {
+    label: t('analyticsPage.edgeBreakdown.colTag'),
+    trades: t('analyticsPage.edgeBreakdown.colTrades'),
+    winRate: t('analyticsPage.edgeBreakdown.colWinRate'),
+    avgR: t('analyticsPage.edgeBreakdown.colAvgR'),
+    expectancy: t('analyticsPage.edgeBreakdown.colExpectancy'),
+    expectancyHint: t('analyticsPage.edgeBreakdown.expectancyHint'),
+  };
+
+  const rows = stats.map((stat) => ({
+    key: stat.tag,
+    label: tagLabel(stat.tag),
+    count: stat.count,
+    winRate: stat.winRate,
+    avgR: stat.avgR,
+    expectancy: stat.expectancy,
+  }));
+
+  return <StatsTable headers={headers} rows={rows} />;
 }

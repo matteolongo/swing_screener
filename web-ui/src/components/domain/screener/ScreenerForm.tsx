@@ -2,6 +2,9 @@ import { PlayCircle, RefreshCw, ChevronUp, Settings2 } from 'lucide-react';
 import { useCallback, type ChangeEvent } from 'react';
 import Button from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
+import Field from '@/components/common/Field';
+import Input from '@/components/common/Input';
+import Select from '@/components/common/Select';
 import type { DecisionActionFilter } from '@/features/screener/prioritization';
 import type { UniverseSummary } from '@/features/screener/types';
 import { t } from '@/i18n/t';
@@ -236,13 +239,10 @@ export default function ScreenerForm({
 
       <div className="space-y-3">
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-8 gap-3 items-end">
-          <div>
-            <label className="block text-sm font-medium text-muted mb-1">{t('screener.controls.universe')}</label>
-            <select
+          <Field label={t('screener.controls.universe')}>
+            <Select
               value={selectedUniverse}
               onChange={(e) => setSelectedUniverse(e.target.value)}
-              aria-label={t('screener.controls.universe')}
-              className="w-full px-3 py-2 border border-border rounded-lg bg-surface text-foreground placeholder:text-muted focus:ring-2 focus:ring-primary focus:border-primary/40"
               disabled={isLoading}
             >
               {universes.map((universe) => (
@@ -250,73 +250,58 @@ export default function ScreenerForm({
                   {universe.description} ({universe.member_count})
                 </option>
               ))}
-            </select>
-          </div>
+            </Select>
+          </Field>
 
-          <div>
-            <label className="block text-sm font-medium text-muted mb-1">{t('screener.controls.topN')}</label>
-            <input
+          <Field label={t('screener.controls.topN')}>
+            <Input
               type="number"
               value={topN}
               onChange={handleTopNChange}
-              aria-label={t('screener.controls.topN')}
               min="1"
               max={TOP_N_MAX}
-              className="w-full px-3 py-2 border border-border rounded-lg bg-surface text-foreground placeholder:text-muted focus:ring-2 focus:ring-primary focus:border-primary/40"
               disabled={isLoading}
             />
-          </div>
+          </Field>
 
-          <div>
-            <label className="block text-sm font-medium text-muted mb-1">{t('screener.controls.minPrice')}</label>
-            <input
+          <Field label={t('screener.controls.minPrice')}>
+            <Input
               type="number"
               value={minPrice}
               onChange={handleMinPriceChange}
-              aria-label={t('screener.controls.minPrice')}
               min="0"
               step="0.1"
-              className="w-full px-3 py-2 border border-border rounded-lg bg-surface text-foreground placeholder:text-muted focus:ring-2 focus:ring-primary focus:border-primary/40"
               disabled={isLoading}
             />
-          </div>
+          </Field>
 
-          <div>
-            <label className="block text-sm font-medium text-muted mb-1">{t('screener.controls.maxPrice')}</label>
-            <input
+          <Field label={t('screener.controls.maxPrice')}>
+            <Input
               type="number"
               value={maxPrice}
               onChange={handleMaxPriceChange}
-              aria-label={t('screener.controls.maxPrice')}
               min="0"
               step="1"
-              className="w-full px-3 py-2 border border-border rounded-lg bg-surface text-foreground placeholder:text-muted focus:ring-2 focus:ring-primary focus:border-primary/40"
               disabled={isLoading}
             />
-          </div>
+          </Field>
 
-          <div>
-            <label className="block text-sm font-medium text-muted mb-1">{t('screener.controls.currency')}</label>
-            <select
+          <Field label={t('screener.controls.currency')}>
+            <Select
               value={currencyFilter}
               onChange={(e) => setCurrencyFilter(e.target.value as CurrencyFilter)}
-              aria-label={t('screener.controls.currency')}
-              className="w-full px-3 py-2 border border-border rounded-lg bg-surface text-foreground placeholder:text-muted focus:ring-2 focus:ring-primary focus:border-primary/40"
               disabled={isLoading}
             >
               <option value="all">{t('screener.currencyFilter.all')}</option>
               <option value="usd">{t('screener.currencyFilter.usdOnly')}</option>
               <option value="eur">{t('screener.currencyFilter.eurOnly')}</option>
-            </select>
-          </div>
+            </Select>
+          </Field>
 
-          <div>
-            <label className="block text-sm font-medium text-muted mb-1">{t('screener.controls.venue.label')}</label>
-            <select
+          <Field label={t('screener.controls.venue.label')}>
+            <Select
               value={exchangeFilter}
               onChange={(e) => setExchangeFilter(e.target.value as ExchangeFilter)}
-              aria-label={t('screener.controls.venue.label')}
-              className="w-full px-3 py-2 border border-border rounded-lg bg-surface text-foreground placeholder:text-muted focus:ring-2 focus:ring-primary focus:border-primary/40"
               disabled={isLoading}
             >
               <option value="all">{t('screener.controls.venue.all')}</option>
@@ -327,23 +312,20 @@ export default function ScreenerForm({
               <option value="xpar">{t('screener.controls.venue.paris')}</option>
               <option value="xmil">{t('screener.controls.venue.milan')}</option>
               <option value="xmad">{t('screener.controls.venue.madrid')}</option>
-            </select>
-          </div>
+            </Select>
+          </Field>
 
-          <div>
-            <label className="block text-sm font-medium text-muted mb-1">{t('screener.controls.instrument.label')}</label>
-            <select
+          <Field label={t('screener.controls.instrument.label')}>
+            <Select
               value={instrumentFilter}
               onChange={(e) => setInstrumentFilter(e.target.value as InstrumentFilter)}
-              aria-label={t('screener.controls.instrument.label')}
-              className="w-full px-3 py-2 border border-border rounded-lg bg-surface text-foreground placeholder:text-muted focus:ring-2 focus:ring-primary focus:border-primary/40"
               disabled={isLoading}
             >
               <option value="all">{t('screener.controls.instrument.all')}</option>
               <option value="equity">{t('screener.controls.instrument.stocks')}</option>
               <option value="etf">{t('screener.controls.instrument.etfs')}</option>
-            </select>
-          </div>
+            </Select>
+          </Field>
 
           <div className="md:col-span-2 xl:col-span-1 flex items-end xl:justify-end">
             <Button
@@ -425,13 +407,10 @@ export default function ScreenerForm({
             </label>
           </div>
 
-          <div className="w-full md:max-w-xs">
-            <label className="block text-sm font-medium text-muted mb-1">{t('screener.controls.actionFilter')}</label>
-            <select
+          <Field label={t('screener.controls.actionFilter')} className="w-full md:max-w-xs">
+            <Select
               value={actionFilter}
               onChange={(e) => setActionFilter(e.target.value as DecisionActionFilter)}
-              aria-label={t('screener.controls.actionFilter')}
-              className="w-full px-3 py-2 border border-border rounded-lg bg-surface text-foreground placeholder:text-muted focus:ring-2 focus:ring-primary focus:border-primary/40"
               disabled={isLoading}
             >
               {(['all', 'BUY_NOW', 'BUY_ON_PULLBACK', 'WAIT_FOR_BREAKOUT', 'WATCH', 'TACTICAL_ONLY', 'AVOID', 'MANAGE_ONLY'] as const).map(
@@ -439,8 +418,8 @@ export default function ScreenerForm({
                   <option key={value} value={value}>{formatActionFilterLabel(value)}</option>
                 )
               )}
-            </select>
-          </div>
+            </Select>
+          </Field>
         </div>
       </div>
     </div>

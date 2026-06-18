@@ -1,5 +1,6 @@
 import { PanelLeft, PanelLeftClose } from 'lucide-react';
 import { useI18n } from '@/i18n/I18nProvider';
+import Select from '@/components/common/Select';
 import StrategyCapitalRiskSummary from '@/components/domain/strategy/StrategyCapitalRiskSummary';
 import { usePortfolioSummary } from '@/features/portfolio/hooks';
 import {
@@ -85,7 +86,7 @@ export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: 
 
       {/* Center: strategy selector */}
       <div className="flex-1 max-w-xs">
-        <select
+        <Select
           value={activeId}
           onChange={(e) => {
             if (e.target.value && e.target.value !== activeId) {
@@ -94,9 +95,8 @@ export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: 
           }}
           aria-label={t('sidebar.activeStrategy')}
           className={cn(
-            'w-full h-7 px-2 text-[13px] border border-border rounded',
-            'bg-surface text-foreground',
-            'focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary',
+            'h-7 px-2 text-[13px] rounded',
+            'focus:ring-1 focus:border-primary',
             'disabled:opacity-50'
           )}
           disabled={isLoading || setActiveMutation.isPending}
@@ -107,7 +107,7 @@ export default function Header({ isSidebarCollapsed = false, onToggleSidebar }: 
           {!isLoading && strategies.map((s) => (
             <option key={s.id} value={s.id}>{s.name}</option>
           ))}
-        </select>
+        </Select>
       </div>
 
       {/* Right: risk summary + clock */}

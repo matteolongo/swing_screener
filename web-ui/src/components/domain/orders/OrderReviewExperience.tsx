@@ -3,6 +3,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { AlertTriangle } from 'lucide-react';
 import Button from '@/components/common/Button';
+import Input from '@/components/common/Input';
+import Select from '@/components/common/Select';
+import Textarea from '@/components/common/Textarea';
 import RecommendationBadge from '@/components/domain/recommendation/RecommendationBadge';
 import EarningsWarningBanner from '@/components/domain/screener/EarningsWarningBanner';
 import SetupExecutionGuide from '@/components/domain/orders/SetupExecutionGuide';
@@ -648,27 +651,25 @@ export default function OrderReviewExperience({
                   <label htmlFor={fieldIds.orderType} className="mb-1 block text-xs font-medium">
                     {t('order.candidateModal.orderType')}
                   </label>
-                  <select
+                  <Select
                     id={fieldIds.orderType}
                     {...form.register('orderType')}
-                    className="w-full rounded border border-border bg-surface px-3 py-2 text-sm"
                   >
                     <option value="BUY_LIMIT">{t('order.candidateModal.orderTypeOptions.buyLimit')}</option>
                     <option value="BUY_STOP">{t('order.candidateModal.orderTypeOptions.buyStop')}</option>
                     <option value="BUY_MARKET">{t('order.candidateModal.orderTypeOptions.buyMarket')}</option>
-                  </select>
+                  </Select>
                 </div>
 
                 <div>
                   <label htmlFor={fieldIds.quantity} className="mb-1 block text-xs font-medium">
                     {t('order.candidateModal.quantity')}
                   </label>
-                  <input
+                  <Input
                     id={fieldIds.quantity}
                     type="number"
                     min="1"
                     {...form.register('quantity', { valueAsNumber: true })}
-                    className="w-full rounded border border-border bg-surface px-3 py-2 text-sm"
                   />
                   {form.formState.errors.quantity ? (
                     <p className="mt-1 text-xs text-danger">{form.formState.errors.quantity.message}</p>
@@ -685,13 +686,12 @@ export default function OrderReviewExperience({
                   >
                     {triggerPriceLabel}
                   </label>
-                  <input
+                  <Input
                     id={fieldIds.limitPrice}
                     type="number"
                     step="0.01"
                     min="0.01"
                     {...form.register('limitPrice', { valueAsNumber: true })}
-                    className="w-full rounded border border-border bg-surface px-3 py-2 text-sm"
                   />
                   {orderType === 'BUY_STOP' ? (
                     <p className="mt-1 text-xs text-muted">{t('order.candidateModal.buyStopHint')}</p>
@@ -715,13 +715,12 @@ export default function OrderReviewExperience({
                   <label htmlFor={fieldIds.stopPrice} className="mb-1 block text-xs font-medium">
                     {t('order.candidateModal.stopPrice')}
                   </label>
-                  <input
+                  <Input
                     id={fieldIds.stopPrice}
                     type="number"
                     step="0.01"
                     min="0.01"
                     {...form.register('stopPrice', { valueAsNumber: true })}
-                    className="w-full rounded border border-border bg-surface px-3 py-2 text-sm"
                   />
                   {form.formState.errors.stopPrice ? (
                     <p className="mt-1 text-xs text-danger">{form.formState.errors.stopPrice.message}</p>
@@ -759,11 +758,10 @@ export default function OrderReviewExperience({
                 <label htmlFor={fieldIds.notes} className="mb-1 block text-xs font-medium">
                   {t('order.candidateModal.notes')}
                 </label>
-                <textarea
+                <Textarea
                   id={fieldIds.notes}
                   rows={3}
                   {...form.register('notes')}
-                  className="w-full rounded border border-border bg-surface px-3 py-2 text-sm"
                 />
               </div>
 
@@ -771,13 +769,12 @@ export default function OrderReviewExperience({
                 <label htmlFor={`order-review-thesis-${normalizedTicker}`} className="mb-1 block text-xs font-medium text-muted-foreground">
                   {t('order.candidateModal.tradeThesis')}
                 </label>
-                <textarea
+                <Textarea
                   id={`order-review-thesis-${normalizedTicker}`}
                   rows={3}
                   value={tradeThesis}
                   onChange={(e) => setTradeThesis(e.target.value)}
                   placeholder={t('order.candidateModal.tradeThesisPlaceholder')}
-                  className="w-full rounded border border-border bg-surface px-3 py-2 text-sm"
                 />
               </div>
 

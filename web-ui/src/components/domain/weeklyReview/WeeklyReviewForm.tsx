@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import Textarea from '@/components/common/Textarea';
 import { useWeeklyReview, useUpsertWeeklyReviewMutation } from '@/features/weeklyReview/hooks';
 
 function getCurrentWeekId(): string {
@@ -85,12 +86,12 @@ export default function WeeklyReviewForm({ weekId, onSaved }: WeeklyReviewFormPr
           <label className="block text-xs font-medium text-muted mb-1">
             {label}
           </label>
-          <textarea
+          <Textarea
             value={form[key]}
             onChange={(e) => setForm((prev) => ({ ...prev, [key]: e.target.value }))}
             rows={3}
             placeholder={placeholder}
-            className="w-full text-sm px-2 py-1.5 border border-border rounded bg-surface text-foreground resize-none focus:outline-none focus:ring-1 focus:ring-primary/50"
+            className="px-2 py-1.5 resize-none focus:ring-1 focus:ring-primary/50"
           />
         </div>
       ))}
