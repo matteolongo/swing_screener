@@ -7,6 +7,7 @@ export const candidateOrderSchema = z
     quantity: z.number().int().min(1, t('order.candidateModal.quantityError')),
     limitPrice: z.number().positive(t('order.candidateModal.limitError')),
     stopPrice: z.number().positive(t('order.candidateModal.stopPositiveError')),
+    targetPrice: z.number().positive(t('order.candidateModal.targetPositiveError')).optional(),
     notes: z.string().optional(),
   })
   .superRefine((values, ctx) => {
@@ -15,6 +16,13 @@ export const candidateOrderSchema = z
         code: z.ZodIssueCode.custom,
         message: t('order.candidateModal.stopError'),
         path: ['stopPrice'],
+      });
+    }
+    if (values.targetPrice != null && values.targetPrice <= values.limitPrice) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: t('order.candidateModal.targetError'),
+        path: ['targetPrice'],
       });
     }
   });

@@ -29,6 +29,7 @@ export interface Position {
   entryDate: string;
   entryPrice: number;
   stopPrice: number;
+  targetPrice?: number;
   shares: number;
   positionId?: string;
   sourceOrderId?: string;
@@ -100,6 +101,7 @@ export interface PositionApiResponse {
   entry_date: string;
   entry_price: number;
   stop_price: number;
+  target_price?: number | null;
   shares: number;
   position_id: string | null;
   source_order_id: string | null;
@@ -132,6 +134,7 @@ export function transformPosition(apiPosition: PositionApiResponse): Position {
     entryDate: apiPosition.entry_date,
     entryPrice: apiPosition.entry_price,
     stopPrice: apiPosition.stop_price,
+    targetPrice: apiPosition.target_price ?? undefined,
     shares: apiPosition.shares,
     positionId: apiPosition.position_id ?? undefined,
     sourceOrderId: apiPosition.source_order_id ?? undefined,

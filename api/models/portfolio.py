@@ -18,6 +18,11 @@ class Position(BaseModel):
     entry_date: str
     entry_price: float
     stop_price: float
+    target_price: Optional[float] = Field(
+        default=None,
+        gt=0,
+        description="Planned price target captured when the order was placed (for R:R display)",
+    )
     shares: int
     position_id: Optional[str] = None
     source_order_id: Optional[str] = None
@@ -170,6 +175,7 @@ class CreatePositionRequest(BaseModel):
     stop_price: float = Field(gt=0, description="Initial stop-loss price")
     shares: int = Field(gt=0, description="Number of shares")
     entry_date: str = Field(description="Entry date (YYYY-MM-DD)")
+    target_price: Optional[float] = Field(default=None, gt=0, description="Planned price target (optional)")
     thesis: Optional[str] = None
     isin: Optional[str] = None
     notes: str = ""
@@ -202,6 +208,7 @@ class CreateOrderRequest(BaseModel):
     quantity: int = Field(gt=0, description="Number of shares")
     limit_price: Optional[float] = Field(default=None, ge=0)
     stop_price: Optional[float] = Field(default=None, ge=0)
+    target_price: Optional[float] = Field(default=None, gt=0, description="Planned price target (optional)")
     notes: str = ""
     order_kind: str = "entry"
     position_id: Optional[str] = None

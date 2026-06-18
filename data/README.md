@@ -31,6 +31,15 @@ New fields added in exhaustion-score feature:
 
 Both fields are optional. Existing positions without them load with `None` (backward-compatible).
 
+New field added in target-persistence feature (2026-06-19):
+- `target_price`: `float | null` — planned price target captured on the order at creation
+  (prefilled from the screener recommendation, editable on the order ticket) and carried to the
+  position on fill. Used to show Target / To-Target / R:R on an open position.
+
+Applies to both `orders.json` (on the order record) and `positions.json` (on the position record).
+Optional and backward-compatible: existing orders/positions without it load with `None`, and the
+open-position view falls back to the candidate recommendation or shows `—` when no target is stored.
+
 ## Instrument master & index universes
 
 `intelligence/instrument_master.json` is the symbol → metadata table
