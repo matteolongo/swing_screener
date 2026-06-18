@@ -71,7 +71,7 @@ export default function ScreenerCandidateReviewList({
   }
 
   return (
-    <div className="flex-1 min-h-[360px] overflow-auto rounded-md border border-border bg-surface">
+    <div className="rounded-md border border-border bg-surface">
       {candidates.map((candidate, index) => {
         const decision = toBeginnerDecision(candidate);
         const quality = toSetupQuality(candidate);

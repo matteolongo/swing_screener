@@ -277,7 +277,7 @@ export default function ScreenerInboxPanel() {
   }
 
   return (
-    <Card variant="bordered" className="p-3 md:p-4 flex min-h-0 flex-col gap-3 xl:h-full xl:overflow-hidden">
+    <Card variant="bordered" className="p-3 md:p-4 flex min-h-0 flex-col gap-3 xl:h-full xl:overflow-y-auto">
       <ScreenerForm
         selectedUniverse={selectedUniverse}
         setSelectedUniverse={setSelectedUniverse}
@@ -337,7 +337,7 @@ export default function ScreenerInboxPanel() {
       </div>
 
       {result ? (
-        <div className="rounded-lg border border-border bg-surface p-3 flex-1 min-h-0 flex flex-col gap-3">
+        <div className="rounded-lg border border-border bg-surface p-3 flex flex-col gap-3">
           <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
             <div className="space-y-1 text-xs md:text-sm text-muted">
               <div>
@@ -421,7 +421,7 @@ export default function ScreenerInboxPanel() {
               onReview={(ticker) => handleSelectCandidate(ticker, 'overview')}
             />
           ) : (
-            <div className="flex-1 min-h-[360px] overflow-auto rounded-md border border-border">
+            <div className="overflow-x-auto rounded-md border border-border">
               <ScreenerCandidatesTable
                 candidates={displayCandidates}
                 selectedTicker={selectedTicker}
