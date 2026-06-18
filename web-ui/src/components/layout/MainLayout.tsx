@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Header from './Header';
-import MobileBottomNav from './MobileBottomNav';
 import Sidebar from './Sidebar';
 import { cn } from '@/utils/cn';
 import { useOrders, usePositions } from '@/features/portfolio/hooks';
@@ -73,7 +72,6 @@ export default function MainLayout() {
           <Outlet />
         </main>
       </div>
-      <MobileBottomNav />
     </div>
   );
 }
