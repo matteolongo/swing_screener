@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Button from '@/components/common/Button';
 import Field from '@/components/common/Field';
 import Input from '@/components/common/Input';
+import Textarea from '@/components/common/Textarea';
 import ModalShell from '@/components/common/ModalShell';
 import TrailMethodSelector from '@/components/domain/positions/TrailMethodSelector';
 import { computePositionStopSuggestion } from '@/features/portfolio/api';
@@ -197,16 +198,14 @@ export default function UpdateStopModalForm({
           ) : null}
         </Field>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">{t('positions.updateStopModal.reason')}</label>
-          <textarea
+        <Field label={t('positions.updateStopModal.reason')}>
+          <Textarea
             rows={2}
             value={formData.reason}
             onChange={(event) => setFormData((prev) => ({ ...prev, reason: event.target.value }))}
-            className="w-full px-3 py-2 border border-border rounded bg-surface"
             placeholder={t('positions.updateStopModal.reasonPlaceholder')}
           />
-        </div>
+        </Field>
 
         {error ? (
           <div className="bg-danger/10 border border-danger/40 rounded p-3">

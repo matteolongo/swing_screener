@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Button from '@/components/common/Button';
 import Input from '@/components/common/Input';
+import Textarea from '@/components/common/Textarea';
 import ModalShell from '@/components/common/ModalShell';
 import type { ClosePositionRequest, Position } from '@/features/portfolio/types';
 import { formatCurrency, formatPercent, getSignColorClass } from '@/utils/formatters';
@@ -189,12 +190,11 @@ export default function ClosePositionModalForm({
           <label htmlFor="close-position-reason" className="block text-sm font-medium mb-1">
             {t('positions.closeModal.reason')}
           </label>
-          <textarea
+          <Textarea
             id="close-position-reason"
             rows={2}
             value={reasonValue}
             onChange={(event) => setReasonValue(event.target.value)}
-            className="w-full px-3 py-2 border border-border rounded bg-surface"
             placeholder={t('positions.closeModal.reasonPlaceholder')}
           />
         </div>
@@ -203,12 +203,11 @@ export default function ClosePositionModalForm({
           <label htmlFor="close-position-lesson" className="block text-xs font-medium text-muted-foreground mb-1">
             {t('positions.closeModal.lessonOptional')}
           </label>
-          <textarea
+          <Textarea
             id="close-position-lesson"
             rows={3}
             value={lessonValue}
             onChange={(event) => setLessonValue(event.target.value)}
-            className="w-full px-3 py-2 border border-border rounded bg-surface"
             placeholder={t('positions.closeModal.lessonPlaceholder')}
           />
         </div>
