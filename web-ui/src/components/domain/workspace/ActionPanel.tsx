@@ -1,10 +1,8 @@
 import OrderActionPanel from '@/components/domain/orders/OrderActionPanel';
-import OrderReadinessGate from '@/components/domain/orders/OrderReadinessGate';
 import type { OrderReviewContext } from '@/components/domain/orders/OrderReviewExperience';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
 import { useConfigDefaultsQuery } from '@/features/config/hooks';
 import { useCreateOrderMutation, useOpenPositions } from '@/features/portfolio/hooks';
-import { toOrderReadiness } from '@/features/screener/beginnerDecision';
 import type { SameSymbolCandidateContext } from '@/features/screener/types';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 import { useScreenerStore } from '@/stores/screenerStore';
@@ -132,7 +130,7 @@ export default function ActionPanel({ ticker }: ActionPanelProps) {
     avgDailyVolumeEur: candidate?.avgDailyVolumeEur ?? null,
   };
 
-  const orderPanel = (
+  return (
     <OrderActionPanel
       context={context}
       risk={risk}
@@ -140,18 +138,5 @@ export default function ActionPanel({ ticker }: ActionPanelProps) {
       showManualOrderHint={!candidate}
       onSubmitOrder={(request) => createOrderMutation.mutateAsync(request)}
     />
-  );
-
-  if (!candidate) {
-    // Expert / manual path: no screener candidate, no gate
-    return orderPanel;
-  }
-
-  const readiness = toOrderReadiness(candidate);
-
-  return (
-    <OrderReadinessGate readiness={readiness}>
-      {orderPanel}
-    </OrderReadinessGate>
   );
 }

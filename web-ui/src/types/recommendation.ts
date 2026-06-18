@@ -44,15 +44,7 @@ export interface TradeThesis {
   explanation: StructuredExplanation;
   invalidationRules: InvalidationRule[];
   professionalInsight?: string;
-  beginnerExplanation?: BeginnerExplanation;
   educationGenerated?: GeneratedEducationPayload;
-}
-
-export interface BeginnerExplanation {
-  text: string;
-  source: 'llm' | 'deterministic_fallback';
-  model?: string;
-  generatedAt?: string;
 }
 
 export type GeneratedEducationViewName = 'recommendation' | 'thesis' | 'learn';
@@ -276,14 +268,6 @@ function transformThesis(apiThesis: any): TradeThesis {
       threshold: rule.threshold,
     })),
     professionalInsight: apiThesis.professional_insight,
-    beginnerExplanation: apiThesis.beginner_explanation
-      ? {
-          text: apiThesis.beginner_explanation.text,
-          source: apiThesis.beginner_explanation.source,
-          model: apiThesis.beginner_explanation.model ?? undefined,
-          generatedAt: apiThesis.beginner_explanation.generated_at ?? undefined,
-        }
-      : undefined,
     educationGenerated: apiEducation
       ? {
           recommendation: transformGeneratedEducationView(apiEducation.recommendation),

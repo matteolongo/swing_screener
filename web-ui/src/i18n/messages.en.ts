@@ -219,7 +219,6 @@ export const messagesEn = {
     setupType: 'Setup Type',
     whatCouldGoWrong: 'What Could Go Wrong',
     keyInsight: 'Key Insight',
-    beginnerExplanation: 'Explain It Like I Am New',
     invalidation: 'Trade No Longer Valid If:',
     monitor: 'Monitor',
     thresholdAt: 'threshold at',
@@ -518,41 +517,9 @@ export const messagesEn = {
     loadError: 'Failed to load strategies',
     updateError: 'Failed to update active strategy',
     versionLabel: 'Risk-first swing trading',
-    mode: {
-      label: 'Mode',
-      beginner: 'Beginner',
-      advanced: 'Advanced',
-      toggle: 'Toggle between Beginner and Advanced mode',
-    },
-    disabledHint: 'Enable Advanced Mode to access',
   },
   analysis: {
-    beginnerHeader: {
-      question: 'Should I place an order?',
-      answer: {
-        ready: 'Yes — setup is ready',
-        waitForPrice: 'Not yet — wait for better price',
-        watchOnly: 'Not yet — watch only',
-        avoid: 'No — skip this one',
-        manageExisting: 'No — manage existing position',
-        incomplete: 'Unclear — more data needed',
-      },
-      mainRisk: 'Main risk:',
-      invalidation: 'What would change this:',
-      weakCatalystNote: 'Acting despite weak catalyst: technical and fundamental strength meet the entry threshold.',
-      action: {
-        prepare_order: 'Prepare order',
-        wait: 'Review price plan',
-        watch: 'Add to watchlist',
-        avoid: 'Skip',
-        review_candidate: 'Review fundamentals',
-        update_stop: 'Update stop',
-        close_position: 'Close position',
-        review_pending_order: 'Review pending order',
-        run_screener: 'Run screener',
-        no_action: 'No action needed',
-      },
-    },
+    prepareOrder: 'Prepare order',
   },
   workspacePage: {
     title: 'Workspace',
@@ -1162,51 +1129,6 @@ export const messagesEn = {
         neutral: 'Neutral',
       },
     },
-    beginnerSummary: {
-      bestCandidate: 'Best candidate to review',
-      mainRisk: 'Main risk:',
-      reviewCandidate: 'Review candidate',
-      noCandidates: 'No candidates match the current filters.',
-      readiness: {
-        ready: 'Ready to act',
-        waitForPrice: 'Wait for price',
-        watchOnly: 'Watch only',
-        avoid: 'Skip',
-        manageExisting: 'Manage existing',
-        incomplete: 'Incomplete',
-      },
-    },
-    viewToggle: {
-      guided: 'Cards',
-      advanced: 'Advanced table',
-    },
-    guidedList: {
-      empty: 'No candidates to review.',
-      review: 'Review',
-      quality: {
-        pass: 'Passes',
-        caution: 'Caution',
-        fail: 'Fails',
-        incomplete: 'Incomplete',
-      },
-      readiness: {
-        ready: 'Ready',
-        wait_for_price: 'Wait for price',
-        watch_only: 'Watch only',
-        avoid: 'Avoid',
-        manage_existing: 'Manage existing',
-        incomplete: 'Incomplete',
-      },
-      action: {
-        BUY_NOW: 'Buy now',
-        BUY_ON_PULLBACK: 'Buy on pullback',
-        WAIT_FOR_BREAKOUT: 'Wait for breakout',
-        WATCH: 'Watch',
-        TACTICAL_ONLY: 'Tactical only',
-        AVOID: 'Avoid',
-        MANAGE_ONLY: 'Manage existing',
-      },
-    },
     defaultNotes: 'From screener: Score {{score}}, Confidence {{confidence}}%, Rank #{{rank}}',
     addOnNotes:
       'Same-symbol add-on: Score {{score}}, Confidence {{confidence}}%, Rank #{{rank}}, Live stop {{liveStop}}, Fresh setup stop {{freshStop}}',
@@ -1798,26 +1720,12 @@ export const messagesEn = {
     emptyFallback: 'No records found.',
     errorPrefix: 'Error',
   },
-  onboardingModal: {
-    modeSelect: {
-      title: 'Choose your mode',
-      beginner: 'Beginner',
-      advanced: 'Advanced',
-      hint: 'Beginner hides advanced surfaces, Advanced unlocks all navigation.',
-    },
-  },
   onboardingPage: {
     header: {
       title: 'Getting Started',
       subtitle: 'Set up your workflow without leaving onboarding.',
     },
     progress: 'Step {{step}} of {{total}}',
-    mode: {
-      title: 'Choose your mode',
-      beginner: 'Beginner',
-      advanced: 'Advanced',
-      hint: 'Beginner keeps the flow simple, Advanced unlocks all surfaces.',
-    },
     actions: {
       skip: 'Skip for now',
       back: 'Back',
@@ -2181,11 +2089,6 @@ export const messagesEn = {
       search: 'Search',
     },
   },
-  orderGate: {
-    notReadyWarning: 'This setup is not yet ready to order. Review the analysis before placing an order.',
-    avoidWarning: 'This candidate does not meet order criteria.',
-    overrideLabel: 'I understand this setup is not order-ready and I am proceeding deliberately.',
-  },
   todayPage: {
     tabs: {
       today: 'Today',
@@ -2208,27 +2111,6 @@ export const messagesEn = {
         TRIM: 'Trim',
         EXIT: 'Exit',
       },
-    },
-    todayPriorityCard: {
-      title: "Today's Priority",
-      kinds: {
-        close_position: 'Close Position',
-        update_stop: 'Update Stop',
-        pending_orders: 'Pending Orders',
-        pending_orders_stale: 'You have stale pending orders that need review.',
-        watchlist_near_trigger: 'Watchlist Alert',
-        best_candidate: 'Best Candidate',
-        run_screener: 'Run Screener',
-        no_action: 'No Action',
-      },
-      action: {
-        close_position: 'Close position',
-        run_screener: 'Run screener',
-      },
-      headline: {
-        run_screener: 'Run the screener to find opportunities',
-      },
-      risk: 'Risk to check',
     },
     candidateCard: {
       catalystContext: 'Market catalyst context',

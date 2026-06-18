@@ -4,8 +4,6 @@ import Badge from '@/components/common/Badge';
 import Card from '@/components/common/Card';
 import ScreenerForm from '@/components/domain/screener/ScreenerForm';
 import ScreenerCandidatesTable from '@/components/domain/screener/ScreenerCandidatesTable';
-import ScreenerCandidateReviewList from '@/components/domain/screener/ScreenerCandidateReviewList';
-import BeginnerScreenerSummary from '@/components/domain/screener/BeginnerScreenerSummary';
 import { useConfigDefaultsQuery } from '@/features/config/hooks';
 import { useActiveStrategyQuery } from '@/features/strategy/hooks';
 import { useUniverses, useRunScreenerMutation } from '@/features/screener/hooks';
@@ -122,7 +120,6 @@ export function ScreenerRunningPanel() {
 }
 
 export default function ScreenerInboxPanel() {
-  const [viewMode, setViewMode] = useState<'guided' | 'advanced'>('guided');
   const { lastResult, setLastResult } = useScreenerStore();
   const selectedTicker = useWorkspaceStore((state) => state.selectedTicker);
   const selectedTickerSource = useWorkspaceStore((state) => state.selectedTickerSource);
@@ -364,10 +361,6 @@ export default function ScreenerInboxPanel() {
               </Badge>
             </div>
           </div>
-          <BeginnerScreenerSummary
-            candidates={displayCandidates}
-            onReviewCandidate={(ticker) => handleSelectCandidate(ticker, 'overview')}
-          />
           {result.sameSymbolSuppressedCount || result.sameSymbolAddOnCount ? (
             <div className="flex flex-wrap gap-2 text-xs">
               {result.sameSymbolSuppressedCount ? (
@@ -400,38 +393,16 @@ export default function ScreenerInboxPanel() {
               ))}
             </div>
           ) : null}
-          <div className="flex gap-1 rounded-lg border border-border p-0.5 w-fit self-start">
-            <button
-              onClick={() => setViewMode('guided')}
-              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${viewMode === 'guided' ? 'bg-surface shadow-sm text-foreground' : 'text-muted hover:text-foreground'}`}
-            >
-              {t('screener.viewToggle.guided')}
-            </button>
-            <button
-              onClick={() => setViewMode('advanced')}
-              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${viewMode === 'advanced' ? 'bg-surface shadow-sm text-foreground' : 'text-muted hover:text-foreground'}`}
-            >
-              {t('screener.viewToggle.advanced')}
-            </button>
-          </div>
-          {viewMode === 'guided' ? (
-            <ScreenerCandidateReviewList
+          <div className="overflow-x-auto rounded-md border border-border">
+            <ScreenerCandidatesTable
               candidates={displayCandidates}
               selectedTicker={selectedTicker}
-              onReview={(ticker) => handleSelectCandidate(ticker, 'overview')}
+              onSymbolClick={(ticker) => handleSelectCandidate(ticker, 'overview')}
+              onRowClick={(candidate) => handleSelectCandidate(candidate.ticker, analysisTab === 'order' ? 'order' : 'overview')}
+              onCreateOrder={(candidate) => handleSelectCandidate(candidate.ticker, 'order')}
+              onRecommendationDetails={(candidate) => handleSelectCandidate(candidate.ticker, 'overview')}
             />
-          ) : (
-            <div className="overflow-x-auto rounded-md border border-border">
-              <ScreenerCandidatesTable
-                candidates={displayCandidates}
-                selectedTicker={selectedTicker}
-                onSymbolClick={(ticker) => handleSelectCandidate(ticker, 'overview')}
-                onRowClick={(candidate) => handleSelectCandidate(candidate.ticker, analysisTab === 'order' ? 'order' : 'overview')}
-                onCreateOrder={(candidate) => handleSelectCandidate(candidate.ticker, 'order')}
-                onRecommendationDetails={(candidate) => handleSelectCandidate(candidate.ticker, 'overview')}
-              />
-            </div>
-          )}
+          </div>
         </div>
       ) : null}
     </Card>
