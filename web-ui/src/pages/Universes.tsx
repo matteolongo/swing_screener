@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from 'react';
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
+import Input from '@/components/common/Input';
+import Select from '@/components/common/Select';
 import WorkspaceSymbolModal from '@/components/domain/workspace/WorkspaceSymbolModal';
 import { useRefreshUniverseMutation, useSymbolDiscoveryMutation, useUniverseCatalog, useUniverseDetail, useUpdateUniverseBenchmarkMutation } from '@/features/universes/hooks';
 import type { ScreenerCandidate, UniverseSummary } from '@/features/screener/types';
@@ -264,18 +266,17 @@ export default function Universes() {
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <label className="block">
               <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">Provider</span>
-              <select
+              <Select
                 value={discoveryProvider}
                 onChange={(event) => setDiscoveryProvider(event.target.value as SymbolDiscoveryRequest['provider'])}
-                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="yahoo_predefined">Yahoo predefined</option>
                 <option value="eodhd_exchange">EODHD exchange list</option>
-              </select>
+              </Select>
             </label>
             <label className="block">
               <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">Market</span>
-              <select
+              <Select
                 value={marketPreset}
                 onChange={(event) => {
                   const nextMarket = event.target.value as (typeof MARKET_PRESETS)[number]['value'];
@@ -284,84 +285,77 @@ export default function Universes() {
                     setDiscoveryProvider('yahoo_predefined');
                   }
                 }}
-                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground disabled:bg-foreground/5 disabled:text-muted"
               >
                 {MARKET_PRESETS.map((preset) => (
                   <option key={preset.value} value={preset.value}>{preset.label}</option>
                 ))}
-              </select>
+              </Select>
             </label>
             <label className="block">
               <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">Currency</span>
-              <select
+              <Select
                 value={currencyPreset}
                 onChange={(event) => setCurrencyPreset(event.target.value as (typeof CURRENCY_PRESETS)[number]['value'])}
-                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground disabled:bg-foreground/5 disabled:text-muted"
               >
                 {CURRENCY_PRESETS.map((preset) => (
                   <option key={preset.value} value={preset.value}>{preset.label}</option>
                 ))}
-              </select>
+              </Select>
             </label>
             <label className="block">
               <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">Instrument type</span>
-              <select
+              <Select
                 value={typePreset}
                 onChange={(event) => setTypePreset(event.target.value as (typeof TYPE_PRESETS)[number]['value'])}
-                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground"
               >
                 {TYPE_PRESETS.map((preset) => (
                   <option key={preset.value} value={preset.value}>{preset.label}</option>
                 ))}
-              </select>
+              </Select>
             </label>
             <label className="block">
               <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">Min volume</span>
-              <select
+              <Select
                 value={discoveryMinVolume}
                 onChange={(event) => setDiscoveryMinVolume(Number(event.target.value))}
-                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground"
               >
                 {VOLUME_PRESETS.map((preset) => (
                   <option key={preset.value} value={preset.value}>{preset.label}</option>
                 ))}
-              </select>
+              </Select>
             </label>
             <label className="block">
               <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">Min market cap</span>
-              <select
+              <Select
                 value={discoveryMinMarketCap}
                 onChange={(event) => setDiscoveryMinMarketCap(Number(event.target.value))}
-                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground"
               >
                 {MARKET_CAP_PRESETS.map((preset) => (
                   <option key={preset.value} value={preset.value}>{preset.label}</option>
                 ))}
-              </select>
+              </Select>
             </label>
             <label className="block">
               <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">Discovery limit</span>
-              <select
+              <Select
                 value={discoveryLimit}
                 onChange={(event) => setDiscoveryLimit(Number(event.target.value))}
-                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground"
               >
                 {[25, 50, 100, 200].map((value) => (
                   <option key={value} value={value}>{value} symbols</option>
                 ))}
-              </select>
+              </Select>
             </label>
             <label className="block">
               <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">Screener results</span>
-              <select
+              <Select
                 value={screenerTop}
                 onChange={(event) => setScreenerTop(Number(event.target.value))}
-                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground"
               >
                 {[10, 20, 50, 100].map((value) => (
                   <option key={value} value={value}>Top {value}</option>
                 ))}
-              </select>
+              </Select>
             </label>
             <div className="md:col-span-2 xl:col-span-4">
               <div className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">Yahoo status screens</div>
@@ -678,14 +672,13 @@ export default function Universes() {
                         <label htmlFor="universe-benchmark" className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">
                           Benchmark symbol
                         </label>
-                        <input
+                        <Input
                           id="universe-benchmark"
                           type="text"
                           list="universe-benchmark-options"
                           value={benchmarkDraft}
                           onChange={(event) => setBenchmarkDraft(event.target.value.toUpperCase())}
                           placeholder="SPY"
-                          className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary"
                         />
                       </div>
                       <Button

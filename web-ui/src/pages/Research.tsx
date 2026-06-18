@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { cn } from '@/utils/cn';
+import Input from '@/components/common/Input';
 import { t } from '@/i18n/t';
 import FundamentalsPage from './Fundamentals';
 import WatchlistPipelinePanel from '@/components/domain/watchlist/WatchlistPipelinePanel';
@@ -44,13 +45,13 @@ export default function Research() {
 
       {/* Symbol search */}
       <div className="flex gap-2 mb-4">
-        <input
+        <Input
           type="text"
           value={sharedSymbol}
           onChange={(e) => setSharedSymbol(e.target.value.toUpperCase())}
           onKeyDown={(e) => { if (e.key === 'Enter') setCommittedSymbol(sharedSymbol); }}
           placeholder={t('researchPage.symbolSearch.placeholder')}
-          className="w-48 px-3 py-1.5 text-sm border border-border rounded-md bg-surface"
+          className="w-48 py-1.5"
         />
         <button
           type="button"

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Button from '@/components/common/Button';
+import Input from '@/components/common/Input';
 import ModalShell from '@/components/common/ModalShell';
 import RChip from '@/components/common/RChip';
 import type { PartialCloseRequest, Position } from '@/features/portfolio/types';
@@ -93,7 +94,7 @@ export default function PartialCloseModalForm({
           <label htmlFor="partial-close-shares" className="block text-sm font-medium mb-1">
             {t('positions.partialCloseModal.sharesLabel')}
           </label>
-          <input
+          <Input
             id="partial-close-shares"
             type="number"
             step="1"
@@ -101,7 +102,6 @@ export default function PartialCloseModalForm({
             max={position.shares - 1}
             value={sharesValue}
             onChange={(e) => setSharesValue(e.target.value)}
-            className="w-full px-3 py-2 border border-border rounded bg-surface"
             required
           />
         </div>
@@ -111,14 +111,13 @@ export default function PartialCloseModalForm({
           <label htmlFor="partial-close-price" className="block text-sm font-medium mb-1">
             {t('positions.partialCloseModal.priceLabel')}
           </label>
-          <input
+          <Input
             id="partial-close-price"
             type="number"
             step="0.01"
             min="0.01"
             value={priceValue}
             onChange={(e) => setPriceValue(e.target.value)}
-            className="w-full px-3 py-2 border border-border rounded bg-surface"
             required
           />
         </div>
@@ -128,14 +127,13 @@ export default function PartialCloseModalForm({
           <label htmlFor="partial-close-fee" className="block text-sm font-medium mb-1">
             {t('positions.partialCloseModal.feeEurOptional')}
           </label>
-          <input
+          <Input
             id="partial-close-fee"
             type="number"
             step="0.01"
             min="0"
             value={feeEurValue}
             onChange={(e) => setFeeEurValue(e.target.value)}
-            className="w-full px-3 py-2 border border-border rounded bg-surface"
           />
         </div>
 

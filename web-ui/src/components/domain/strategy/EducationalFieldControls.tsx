@@ -4,13 +4,11 @@
  */
 import type { ReactNode } from 'react';
 import HelpTooltip from '@/components/common/HelpTooltip';
+import Input from '@/components/common/Input';
 import ExpandableHelp from './ExpandableHelp';
 import ParameterWarning from './ParameterWarning';
 import { getParameterDoc } from '@/content/strategy_docs/loader';
 import type { ParameterDocumentation } from '@/content/strategy_docs/types';
-
-export const strategyFieldClass =
-  'w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-surface';
 
 export type HelpInfo = {
   short: string;
@@ -73,11 +71,10 @@ export function EducationalNumberInput({
             {microcopy}
           </div>
         )}
-        <input
+        <Input
           type="number"
           value={Number.isFinite(value) ? value : 0}
           onChange={(e) => onChange(Number(e.target.value))}
-          className={strategyFieldClass}
           step={step}
           min={min}
           max={max}

@@ -1,9 +1,8 @@
 import type { ReactNode } from 'react';
 import HelpTooltip from '@/components/common/HelpTooltip';
+import Input from '@/components/common/Input';
+import Select from '@/components/common/Select';
 import { t } from '@/i18n/t';
-
-export const strategyFieldClass =
-  'w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-surface';
 
 export type HelpInfo = {
   short: string;
@@ -69,11 +68,10 @@ export function NumberInput({
         {help && <HelpTooltip short={help.short} title={help.title} content={help.content} />}
         {suffix && <span className="text-xs text-muted">{suffix}</span>}
       </div>
-      <input
+      <Input
         type="number"
         value={Number.isFinite(value) ? value : 0}
         onChange={(e) => onChange(Number(e.target.value))}
-        className={strategyFieldClass}
         step={step}
         min={min}
         max={max}
@@ -97,12 +95,11 @@ export function TextInput({ label, value, onChange, placeholder, help }: TextInp
         <span>{label}</span>
         {help && <HelpTooltip short={help.short} title={help.title} content={help.content} />}
       </div>
-      <input
+      <Input
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className={strategyFieldClass}
       />
     </label>
   );
@@ -123,13 +120,13 @@ export function SelectInput({ label, value, onChange, options, help }: SelectInp
         <span>{label}</span>
         {help && <HelpTooltip short={help.short} title={help.title} content={help.content} />}
       </div>
-      <select value={value} onChange={(e) => onChange(e.target.value)} className={strategyFieldClass}>
+      <Select value={value} onChange={(e) => onChange(e.target.value)}>
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>
             {opt.label}
           </option>
         ))}
-      </select>
+      </Select>
     </label>
   );
 }

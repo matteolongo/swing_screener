@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import Card, { CardContent, CardHeader, CardTitle } from '@/components/common/Card';
 import Button from '@/components/common/Button';
-import { strategyFieldClass } from '@/components/domain/strategy/StrategyFieldControls';
+import Field from '@/components/common/Field';
+import Input from '@/components/common/Input';
 import {
   applyPresetToStrategy,
   momentumPresets,
@@ -150,53 +151,45 @@ export default function OnboardingStrategySetupStep({ onSaved }: OnboardingStrat
 
         {setupMode === 'custom' ? (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="text-sm font-medium">
-              <div className="mb-1">{t('onboardingPage.strategyStep.fields.accountSize')}</div>
-              <input
+            <Field label={t('onboardingPage.strategyStep.fields.accountSize')}>
+              <Input
                 type="number"
                 value={Number.isFinite(draft.risk.accountSize) ? draft.risk.accountSize : 0}
                 onChange={(event) => updateRiskField('accountSize', event.target.value)}
-                className={strategyFieldClass}
                 min={0}
                 step={100}
               />
-            </label>
+            </Field>
 
-            <label className="text-sm font-medium">
-              <div className="mb-1">{t('onboardingPage.strategyStep.fields.riskPct')}</div>
-              <input
+            <Field label={t('onboardingPage.strategyStep.fields.riskPct')}>
+              <Input
                 type="number"
                 value={Number.isFinite(draft.risk.riskPct) ? draft.risk.riskPct : 0}
                 onChange={(event) => updateRiskField('riskPct', event.target.value)}
-                className={strategyFieldClass}
                 min={0}
                 step={0.001}
               />
-            </label>
+            </Field>
 
-            <label className="text-sm font-medium">
-              <div className="mb-1">{t('onboardingPage.strategyStep.fields.maxPositionPct')}</div>
-              <input
+            <Field label={t('onboardingPage.strategyStep.fields.maxPositionPct')}>
+              <Input
                 type="number"
                 value={Number.isFinite(draft.risk.maxPositionPct) ? draft.risk.maxPositionPct : 0}
                 onChange={(event) => updateRiskField('maxPositionPct', event.target.value)}
-                className={strategyFieldClass}
                 min={0}
                 step={0.01}
               />
-            </label>
+            </Field>
 
-            <label className="text-sm font-medium">
-              <div className="mb-1">{t('onboardingPage.strategyStep.fields.minRr')}</div>
-              <input
+            <Field label={t('onboardingPage.strategyStep.fields.minRr')}>
+              <Input
                 type="number"
                 value={Number.isFinite(draft.risk.minRr) ? draft.risk.minRr : 0}
                 onChange={(event) => updateRiskField('minRr', event.target.value)}
-                className={strategyFieldClass}
                 min={0}
                 step={0.1}
               />
-            </label>
+            </Field>
           </div>
         ) : null}
 

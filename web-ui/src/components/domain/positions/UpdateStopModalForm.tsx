@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import Button from '@/components/common/Button';
+import Field from '@/components/common/Field';
+import Input from '@/components/common/Input';
 import ModalShell from '@/components/common/ModalShell';
 import TrailMethodSelector from '@/components/domain/positions/TrailMethodSelector';
 import { computePositionStopSuggestion } from '@/features/portfolio/api';
@@ -176,9 +178,8 @@ export default function UpdateStopModalForm({
           )}
         </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">{t('positions.updateStopModal.newStopPrice')}</label>
-          <input
+        <Field label={t('positions.updateStopModal.newStopPrice')}>
+          <Input
             type="number"
             step="0.01"
             min={currentStopRounded}
@@ -189,13 +190,12 @@ export default function UpdateStopModalForm({
             onBlur={() =>
               setFormData((prev) => ({ ...prev, newStop: roundToCents(prev.newStop) }))
             }
-            className="w-full px-3 py-2 border border-border rounded bg-surface"
             required
           />
           {!canMoveUp && roundToCents(formData.newStop) !== currentStopRounded ? (
             <p className="text-sm text-danger mt-1">{t('positions.updateStopModal.canOnlyMoveUp')}</p>
           ) : null}
-        </div>
+        </Field>
 
         <div>
           <label className="block text-sm font-medium mb-1">{t('positions.updateStopModal.reason')}</label>

@@ -12,9 +12,10 @@ import StrategyCapitalRiskSummary from '@/components/domain/strategy/StrategyCap
 import { useI18n } from '@/i18n/I18nProvider';
 import {
   buildHelp,
-  strategyFieldClass,
   TextInput,
 } from '@/components/domain/strategy/StrategyFieldControls';
+import Field from '@/components/common/Field';
+import Select from '@/components/common/Select';
 import { getStrategyInfo } from '@/content/strategy_docs/loader';
 
 export default function StrategyPage() {
@@ -304,12 +305,10 @@ export default function StrategyPage() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-            <label className="text-sm font-medium md:col-span-2">
-              <div className="mb-2">{t('strategyPage.selection.chooseStrategy')}</div>
-              <select
+            <Field label={t('strategyPage.selection.chooseStrategy')} className="md:col-span-2">
+              <Select
                 value={selectedId}
                 onChange={(e) => setSelectedId(e.target.value)}
-                className={strategyFieldClass}
                 disabled={strategiesQuery.isLoading}
               >
                 {!strategies.length && (
@@ -324,8 +323,8 @@ export default function StrategyPage() {
                     {strategy.name}
                   </option>
                 ))}
-              </select>
-            </label>
+              </Select>
+            </Field>
             <div className="flex flex-wrap items-center gap-2">
               <Button variant="secondary" onClick={handleSetActive} disabled={!selectedStrategy || isActive}>
                 {isActive ? t('strategyPage.selection.active') : t('strategyPage.selection.setActive')}

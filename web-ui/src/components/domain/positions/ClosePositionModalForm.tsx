@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Button from '@/components/common/Button';
+import Input from '@/components/common/Input';
 import ModalShell from '@/components/common/ModalShell';
 import type { ClosePositionRequest, Position } from '@/features/portfolio/types';
 import { formatCurrency, formatPercent, getSignColorClass } from '@/utils/formatters';
@@ -148,14 +149,13 @@ export default function ClosePositionModalForm({
           <label htmlFor="close-position-exit-price" className="block text-sm font-medium mb-1">
             {t('positions.closeModal.exitPrice')}
           </label>
-          <input
+          <Input
             id="close-position-exit-price"
             type="number"
             step="0.01"
             min="0.01"
             value={exitPriceValue}
             onChange={(event) => setExitPriceValue(event.target.value)}
-            className="w-full px-3 py-2 border border-border rounded bg-surface"
             required
           />
         </div>
@@ -164,14 +164,13 @@ export default function ClosePositionModalForm({
           <label htmlFor="close-position-fee-eur" className="block text-sm font-medium mb-1">
             {t('positions.closeModal.feeEurOptional')}
           </label>
-          <input
+          <Input
             id="close-position-fee-eur"
             type="number"
             step="0.01"
             min="0"
             value={feeEurValue}
             onChange={(event) => setFeeEurValue(event.target.value)}
-            className="w-full px-3 py-2 border border-border rounded bg-surface"
           />
         </div>
 
