@@ -5,7 +5,7 @@ import {
   formatFundamentalMetricMeta,
   humanizeFundamentalSource,
   metricHorizonClass,
-  metricHorizonLabel,
+  metricHorizonShortLabel,
   metricHorizonTooltip,
 } from '@/features/fundamentals/presentation';
 
@@ -323,10 +323,10 @@ export default function FundamentalsSnapshotCard({ snapshot }: FundamentalsSnaps
                 <div className="flex items-start justify-between gap-2">
                   <div className="text-xs text-muted">{metric.label}</div>
                   <span
-                    className={`cursor-help rounded-full px-2 py-0.5 text-[10px] font-medium ${metricHorizonClass(metric.key, context)}`}
+                    className={`shrink-0 cursor-help whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-medium ${metricHorizonClass(metric.key, context)}`}
                     title={metricHorizonTooltip(metric.key, context)}
                   >
-                    {metricHorizonLabel(metric.key, context)}
+                    {metricHorizonShortLabel(metric.key, context)}
                   </span>
                 </div>
                 <div className="mt-1 font-medium">{metric.value}</div>
