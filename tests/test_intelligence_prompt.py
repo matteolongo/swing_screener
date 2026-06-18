@@ -108,3 +108,25 @@ def test_symbol_intelligence_parses_position_move_explanation():
     assert result.position_move_explanation is not None
     assert result.position_move_explanation.direction == "up"
     assert result.position_move_explanation.drivers[0].label == "Q1 earnings beat"
+
+
+def test_open_position_prompt_includes_chart_quality_and_finnhub():
+    # An enriched open position now carries technicals + finnhub signals; both blocks must render.
+    req = SymbolIntelligenceRequest(
+        close=110.0,
+        signal="MANAGE_ONLY",
+        entry_price=100.0,
+        entry_date="2026-05-01",
+        stop=95.0,
+        r_now=2.0,
+        days_open=46,
+        atr=3.2,
+        dist_52w_high_pct=-0.04,
+        near_52w_high=True,
+        insider_net_shares_90d=-1000,
+        analyst_upgrade_downgrade_net_30d=2,
+    )
+    prompt = _build_user_prompt("AAPL", req)
+    assert "--- Chart quality ---" in prompt
+    assert "Distance from 52w high" in prompt
+    assert "--- Finnhub enrichment signals ---" in prompt

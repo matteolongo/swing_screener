@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from api.dependencies import get_fundamentals_service, get_portfolio_service, get_positions_repo
 from api.repositories.positions_repo import PositionsRepository
 from api.services.fundamentals_service import FundamentalsService
-from api.services.intelligence_enrichment import enrich_intelligence_request
+from api.services.intelligence_enrichment import enrich_intelligence_request, enrich_with_technicals
 from api.services.portfolio_service import PortfolioService
 from swing_screener.intelligence.cache import read_from_cache
 from swing_screener.intelligence.models import SymbolIntelligence, SymbolIntelligenceRequest
@@ -104,23 +104,19 @@ def analyze_symbol(
 def analyze_position(
     position_id: str,
     portfolio_service: PortfolioService = Depends(get_portfolio_service),
+    fundamentals_service: FundamentalsService = Depends(get_fundamentals_service),
 ) -> SymbolIntelligence:
-    """Trigger a position-aware LLM analysis for an open position."""
+    """Trigger a position-aware LLM analysis for an open position.
+
+    The request is enriched with the same fundamentals and technicals a screener candidate gets,
+    so the model has real data to manage the position instead of just entry/stop.
+    """
     _require_api_key()
     result = portfolio_service.list_positions(status="open", time_stop_days=None, time_stop_min_r=None)
     pos = next((p for p in result.positions if p.position_id == position_id), None)
     if pos is None:
         raise HTTPException(status_code=404, detail=f"No open position with id {position_id!r}")
     stop = portfolio_service.suggest_position_stop(position_id)
-    earnings_days: int | None = None
-    earnings_date: str | None = None
-    try:
-        ep = portfolio_service.get_earnings_proximity(pos.ticker)
-        if ep.days_until is not None:
-            earnings_days = ep.days_until
-            earnings_date = ep.next_earnings_date
-    except Exception:
-        logger.warning("Earnings proximity fetch failed for %r; proceeding without earnings data", pos.ticker, exc_info=True)
     request = SymbolIntelligenceRequest(
         close=float(pos.current_price if pos.current_price is not None else pos.entry_price),
         signal=stop.action,
@@ -130,9 +126,23 @@ def analyze_position(
         stop=float(pos.stop_price),
         r_now=float(pos.r_now),
         days_open=int(pos.days_open),
-        days_to_earnings=earnings_days,
-        next_earnings_date=earnings_date,
     )
+
+    def _earnings(t: str) -> tuple[int | None, str | None]:
+        ep = portfolio_service.get_earnings_proximity(t)
+        return ep.days_until, ep.next_earnings_date
+
+    request = enrich_intelligence_request(
+        pos.ticker,
+        request,
+        fundamentals=fundamentals_service,
+        earnings=_earnings,
+    )
+    try:
+        ohlcv = portfolio_service.fetch_recent_ohlcv(pos.ticker)
+        request = enrich_with_technicals(pos.ticker, request, ohlcv)
+    except Exception:
+        logger.warning("Technical enrichment skipped for %r", pos.ticker, exc_info=True)
     try:
         analyzer = SymbolAnalyzer()
         return analyzer.analyze(pos.ticker.upper(), request)
