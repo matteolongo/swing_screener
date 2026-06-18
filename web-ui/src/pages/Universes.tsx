@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
+import CollapsibleSection from '@/components/common/CollapsibleSection';
 import Input from '@/components/common/Input';
 import Select from '@/components/common/Select';
 import WorkspaceSymbolModal from '@/components/domain/workspace/WorkspaceSymbolModal';
@@ -263,7 +264,8 @@ export default function Universes() {
             </Button>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <CollapsibleSection title="Discovery filters">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <label className="block">
               <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">Provider</span>
               <Select
@@ -380,7 +382,8 @@ export default function Universes() {
                 })}
               </div>
             </div>
-          </div>
+            </div>
+          </CollapsibleSection>
 
           {yahooUsesCustomScreener ? (
             <div className="rounded-xl border border-primary/40 bg-primary/10 p-3 text-sm text-primary">
