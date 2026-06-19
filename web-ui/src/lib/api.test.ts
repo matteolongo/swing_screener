@@ -63,10 +63,7 @@ describe('API Client', () => {
     })
 
     it('has fundamentals endpoints', () => {
-      expect(API_ENDPOINTS.fundamentalsConfig).toBe('/api/fundamentals/config')
       expect(API_ENDPOINTS.fundamentalsSnapshot('AAPL')).toBe('/api/fundamentals/snapshot/AAPL')
-      expect(API_ENDPOINTS.fundamentalsWarmup).toBe('/api/fundamentals/warmup')
-      expect(API_ENDPOINTS.fundamentalsWarmupStatus('job-1')).toBe('/api/fundamentals/warmup/job-1')
     })
   })
 

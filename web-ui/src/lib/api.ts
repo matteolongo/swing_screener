@@ -67,11 +67,7 @@ export const API_ENDPOINTS = {
   catalystsSymbol: (ticker: string) => `/api/catalysts/symbol/${encodeURIComponent(ticker)}`,
 
   // Fundamentals
-  fundamentalsConfig: '/api/fundamentals/config',
   fundamentalsSnapshot: (symbol: string) => `/api/fundamentals/snapshot/${encodeURIComponent(symbol)}`,
-  fundamentalsCompare: '/api/fundamentals/compare',
-  fundamentalsWarmup: '/api/fundamentals/warmup',
-  fundamentalsWarmupStatus: (jobId: string) => `/api/fundamentals/warmup/${jobId}`,
 
   // Daily Review
   dailyReview: '/api/daily-review',

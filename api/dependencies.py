@@ -173,11 +173,9 @@ def get_screener_service(
 
 def get_fundamentals_service(
     config_repo: FundamentalsConfigRepository = Depends(get_fundamentals_config_repo),
-    watchlist_repo: WatchlistRepository = Depends(get_watchlist_repo),
 ) -> FundamentalsService:
     return FundamentalsService(
         config_repo=config_repo,
-        watchlist_repo=watchlist_repo,
         analysis_service=_FundamentalsAnalysisService(finnhub_client=get_finnhub_client()),
     )
 
