@@ -16,23 +16,14 @@
 - `/docs/engineering/DATA_SOURCE_AUDIT_AND_PROVIDER_STRATEGY.md`
 - `/docs/engineering/ROADMAP.md`
 - `/docs/engineering/MODULE_ARCHITECTURE.md`
-- `/docs/engineering/BACKEND_ARCHITECTURE_ASSESSMENT.md`
 - `/docs/engineering/DATABASE_MIGRATION.md`
 - `/docs/engineering/OPERATIONAL_GUIDE.md`
 - `/docs/engineering/TROUBLESHOOTING.md`
 - `/docs/engineering/GITHUB_ACTIONS.md`
-- `/docs/engineering/CODE_HEALTH.md`
 - `/docs/engineering/FRAGILE_DATA_ACQUISITION_PATTERNS_AND_SAFE_ALTERNATIVES.md`
 
 ## Product
-- `/docs/product/COMBINED_ANALYSIS_REASONING.md`
 - `/docs/product/DAILY_USAGE_GUIDE.md`
-- `/docs/product/SCALABLE_UNIVERSE_AUTOMATION.md`
-
-## Education
-- `/docs/education/RECOMMENDED_LOGIC_BEGINNER_GUIDE.md`
-- `/docs/education/RECOMMENDED_LOGIC_BEGINNER_GUIDE_EN.md`
-- `/docs/education/RECOMMENDED_LOGIC_UI_COPY.md`
 
 ## Module Docs
 
@@ -55,15 +46,6 @@ Intelligence:
 
 Config:
 - `/config/README.md`
-
-## Specs & Plans
-- `/docs/superpowers/specs/2026-06-12-index-universes-wikipedia-design.md`
-- `/docs/superpowers/plans/2026-06-12-index-universes-wikipedia.md`
-- `/docs/superpowers/specs/2026-06-14-candlestick-chart-pattern-reader-design.md`
-- `/docs/superpowers/plans/2026-06-14-candlestick-chart-pattern-reader.md`
-- `/docs/superpowers/plans/2026-06-16-backend-pr-a-domain-errors-logging-docs.md`
-- `/docs/superpowers/plans/2026-06-16-backend-pr-b-split-run-screener.md`
-- `/docs/superpowers/plans/2026-06-17-asian-index-universes.md`
 
 ## Repo Policy Docs
 - `/.github/BRANCH_PROTECTION.md`
