@@ -1842,44 +1842,6 @@ export const messagesEn = {
       buttonLabel: 'Open Daily Review',
     },
   },
-  fundamentalsPage: {
-    title: 'Fundamentals',
-    description: 'Compare company-quality snapshots without changing the screener ranking.',
-    config: {
-      providerInfo: 'Provider: {{provider}} | cache TTL: {{ttl}}h | stale after: {{stale}}d',
-    },
-    symbols: {
-      label: 'Symbols',
-      placeholder: 'AAPL, MSFT, NVDA',
-    },
-    compareAction: 'Compare fundamentals',
-    comparingAction: 'Comparing...',
-    advancedToolsAction: 'Advanced research tools',
-    hideAdvancedToolsAction: 'Hide advanced research tools',
-    warmupSymbolsAction: 'Warm listed symbols',
-    warmupWatchlistAction: 'Warm watchlist',
-    queueingAction: 'Queueing...',
-    hint: 'Compare needs 2+ tickers. Warmup works with one or more.',
-    warmup: {
-      title: 'Fundamentals warmup',
-      job: 'Job {{jobId}} · {{source}} · {{status}}',
-      progress: 'Progress: {{progress}}',
-      last: 'Last: {{symbol}}',
-      coverage: {
-        label: 'Coverage',
-        stats: 'supported {{supported}} · partial {{partial}} · insufficient {{insufficient}} · unsupported {{unsupported}}',
-      },
-      freshness: {
-        label: 'Freshness',
-        stats: 'current {{current}} · stale {{stale}} · unknown {{unknown}}',
-      },
-      errors: {
-        label: 'Errors',
-        statsWithSample: '{{count}} · {{sample}}',
-        statsCount: '{{count}}',
-      },
-    },
-  },
   journalPage: {
     title: 'Trade Journal',
     subtitle: 'Review closed trades, R-multiples, and what you learned.',

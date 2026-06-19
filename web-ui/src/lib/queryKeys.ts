@@ -25,10 +25,8 @@ export const queryKeys = {
     ['positions', positionId, 'stop-preview'] as const,
   watchlist: () => ['watchlist'] as const,
   watchlistPipeline: () => ['watchlist-pipeline'] as const,
-  fundamentalsConfig: () => ['fundamentals-config'] as const,
   fundamentalsSnapshot: (symbol?: string, refresh?: boolean) =>
     ['fundamentals-snapshot', symbol ?? null, refresh ?? false] as const,
-  fundamentalsWarmupStatus: (jobId?: string) => ['fundamentals-warmup-status', jobId] as const,
   calendarEvents: (daysAhead?: number) =>
     ['calendar-events', daysAhead ?? 30] as const,
   openPositionsIntelligence: () => ['openPositionsIntelligence'] as const,
