@@ -75,6 +75,9 @@ export const API_ENDPOINTS = {
 
   // Calendar
   calendarEvents: '/api/calendar/events',
+
+  // Market data
+  marketDataCandles: (ticker: string) => `/api/market-data/${encodeURIComponent(ticker)}/candles`,
 } as const;
 
 // Helper to build full URL

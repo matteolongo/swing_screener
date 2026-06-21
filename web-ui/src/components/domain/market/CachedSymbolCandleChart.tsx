@@ -7,6 +7,7 @@ import {
   slicePriceHistory,
   type PriceRangeKey,
 } from '@/features/screener/priceHistory';
+import { useTickerCandles } from '@/features/screener/hooks';
 import { useScreenerStore } from '@/stores/screenerStore';
 import { t } from '@/i18n/t';
 import { cn } from '@/utils/cn';
@@ -76,8 +77,12 @@ export function CachedSymbolCandleChart({ ticker, className, width, height }: Ca
   );
   const benchmarkLabel = useScreenerStore((state) => state.lastResult?.benchmarkTicker ?? null);
 
-  const bars = candidate?.priceHistory ?? EMPTY_BARS;
-  const patterns = candidate?.patterns ?? EMPTY_PATTERNS;
+  // Fall back to a direct API fetch when the ticker is not in the screener store
+  // (e.g. open positions, watchlist items that were never screened).
+  const candlesQuery = useTickerCandles(candidate ? null : symbol);
+
+  const bars = candidate?.priceHistory ?? candlesQuery.data?.priceHistory ?? EMPTY_BARS;
+  const patterns = candidate?.patterns ?? candlesQuery.data?.patterns ?? EMPTY_PATTERNS;
   const benchmarkBars = candidate?.benchmarkPriceHistory ?? EMPTY_BARS;
   const outperformancePct = candidate?.benchmarkOutperformancePct ?? null;
 
