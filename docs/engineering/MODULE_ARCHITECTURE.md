@@ -95,21 +95,10 @@ refreshed by source adapters in the `data` domain:
 - `data/wikipedia_sources.py` — fetch and parse index constituent tables from Wikipedia; normalize tickers to Yahoo symbols.
 - `data/instrument_enrichment.py` — resolve a Yahoo symbol to an instrument-master record via yfinance `.info` (MIC, currency, country, timezone, type).
 
-Refreshing an index universe (`refresh_package_universe(..., apply=True)`, or
-`python -m swing_screener.cli universes refresh --name <id> --apply`) writes the
+Refreshing an index universe (`refresh_package_universe(..., apply=True)`) writes the
 snapshot and appends any newly enriched symbols to
 `data/intelligence/instrument_master.json` (append-only; never overwrites
 existing records).
-
-## CLI Entry Points
-
-Two CLIs exist by design:
-
-- `agent/cli.py` (`python -m agent.cli`) — user trading workflow (screen, positions, orders, chat).
-  Depends on the application services (currently under `api/services`) + core. Must not require a
-  running HTTP server; raises/catches `swing_screener.errors.DomainError`, never `HTTPException`.
-- `swing_screener/cli.py` (`python -m swing_screener.cli`) — data/admin operations (universe refresh,
-  report generation). Depends on the domain core directly.
 
 ## Error Boundary
 

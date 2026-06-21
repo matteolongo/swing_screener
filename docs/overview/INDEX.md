@@ -18,7 +18,6 @@
 - `/docs/engineering/MODULE_ARCHITECTURE.md`
 - `/docs/engineering/BACKEND_ARCHITECTURE_ASSESSMENT.md`
 - `/docs/engineering/DATABASE_MIGRATION.md`
-- `/docs/engineering/OPERATIONAL_GUIDE.md`
 - `/docs/engineering/TROUBLESHOOTING.md`
 - `/docs/engineering/GITHUB_ACTIONS.md`
 - `/docs/engineering/CODE_HEALTH.md`
@@ -43,9 +42,6 @@ Web UI:
 - `/web-ui/README.md`
 - `/web-ui/docs/WEB_UI_GUIDE.md`
 - `/web-ui/docs/WEB_UI_ARCHITECTURE.md`
-
-Agent:
-- `/agent/README.md`
 
 Data:
 - `/data/README.md`

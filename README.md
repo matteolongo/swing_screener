@@ -12,7 +12,6 @@ Swing Screener is a deterministic, risk-first swing-trading system for end-of-da
 
 - Web UI: browser-first workflow for daily review, research, book, and strategy
 - API: FastAPI backend for the web app and local integrations
-- Agent CLI: workflow automation and chat, calls services directly (no HTTP hop)
 
 ## Local Setup
 
@@ -71,19 +70,10 @@ cd web-ui
 npm run dev
 ```
 
-Agent examples:
-
-```bash
-python -m agent.cli screen --universe mega_all --strategy-id default --top 10
-python -m agent.cli positions review
-python -m agent.cli chat "What pending orders do I have?"
-```
-
 ## Architecture
 
 - `src/swing_screener/`: core trading, risk, execution, portfolio, and intelligence logic
 - `api/`: FastAPI layer and shared business services
-- `agent/`: workflow CLI, calls API services directly
 - `web-ui/`: React frontend
 - `data/`: local JSON runtime state
 
@@ -93,7 +83,6 @@ Core:
 
 - [Web UI Guide](web-ui/docs/WEB_UI_GUIDE.md)
 - [API README](api/README.md)
-- [Agent README](agent/README.md)
 
 AI / LLM:
 
@@ -103,7 +92,6 @@ AI / LLM:
 Operations:
 
 - [Daily Usage Guide](docs/product/DAILY_USAGE_GUIDE.md)
-- [Operational Guide](docs/engineering/OPERATIONAL_GUIDE.md)
 - [Troubleshooting](docs/engineering/TROUBLESHOOTING.md)
 - [Roadmap](docs/engineering/ROADMAP.md)
 

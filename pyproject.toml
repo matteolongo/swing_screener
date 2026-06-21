@@ -49,9 +49,6 @@ llm = [
   "langgraph>=0.2.0"
 ]
 
-[project.scripts]
-swing-screener = "swing_screener.cli:main"
-
 [tool.setuptools]
 package-dir = {"" = "src"}
 
