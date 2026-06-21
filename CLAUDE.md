@@ -28,12 +28,6 @@ black .
 
 # Run API server
 python -m uvicorn api.main:app --port 8000 --reload
-
-# CLI
-python -m agent.cli screen --universe mega_all --strategy-id default --top 10
-python -m agent.cli positions review
-python -m agent.cli daily-review
-python -m agent.cli chat "What orders are pending?"
 ```
 
 ### Frontend (TypeScript)
@@ -57,17 +51,11 @@ pytest -q && cd web-ui && npm test
 
 ## Architecture
 
-### Two Runtime Paths
-Both converge on the same shared services:
-1. **Web UI** → FastAPI (`api/`) → Services → Core library
-2. **Agent CLI** (`agent/`) → Services → Core library (same service factories as the API, no HTTP hop)
-
 ### Layer Responsibilities
 | Layer | Path | Role |
 |-------|------|------|
 | Core library | `src/swing_screener/` | Pure trading logic |
 | API | `api/routers/` + `api/services/` + `api/repositories/` | FastAPI REST, business logic, JSON/SQLite I/O |
-| Agent CLI | `agent/cli.py` | argparse CLI, calls service factories directly |
 | Web UI | `web-ui/` | React 18 + TypeScript, Zustand, React Query |
 
 See `docs/engineering/MODULE_ARCHITECTURE.md` for the canonical backend module list and `web-ui/docs/WEB_UI_GUIDE.md` for the frontend page and feature map.
