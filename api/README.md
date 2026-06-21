@@ -95,6 +95,9 @@ Watchlist (`/api/watchlist`):
 - `PUT /api/watchlist/{ticker}`
 - `DELETE /api/watchlist/{ticker}`
 
+Market Data (`/api/market-data`):
+- `GET /api/market-data/{ticker}/candles` — returns `price_history` (OHLCV, up to 252 bars) and `patterns` for any ticker. Used as a fallback when the ticker is not present in the last screener result (e.g. open positions, watchlist items).
+
 Calendar:
 - `GET /api/calendar/events`
 

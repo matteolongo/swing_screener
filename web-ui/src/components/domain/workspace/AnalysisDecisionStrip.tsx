@@ -95,7 +95,7 @@ export default function AnalysisDecisionStrip({
     (!isPositiveNumber(closeEntry) || Math.abs(suggestedOrderEntry - closeEntry) >= 0.005);
   const entry = usesSuggestedEntry ? suggestedOrderEntry : closeEntry;
   const stop = summary?.tradePlan.stop ?? candidate?.recommendation?.risk?.stop ?? candidate?.stop ?? position?.stopPrice ?? null;
-  const target = summary?.tradePlan.target ?? candidate?.recommendation?.risk?.target ?? null;
+  const target = summary?.tradePlan.target ?? candidate?.recommendation?.risk?.target ?? position?.targetPrice ?? null;
   const computedRr = target != null && entry != null && stop != null && entry > stop
     ? (target - entry) / (entry - stop)
     : null;
@@ -173,7 +173,7 @@ export default function AnalysisDecisionStrip({
               onClick={onPrepareOrder}
               className="rounded-md bg-success px-3 py-1.5 text-xs font-semibold text-white hover:bg-success"
             >
-              {t('analysis.beginnerHeader.action.prepare_order')}
+              {t('analysis.prepareOrder')}
             </button>
           </div>
         )}

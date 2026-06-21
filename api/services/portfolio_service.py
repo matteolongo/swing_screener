@@ -226,6 +226,12 @@ class PortfolioService:
         self._provider = provider or get_default_provider()
         self._config_repo = config_repo or ConfigRepository()
 
+    def fetch_recent_ohlcv(self, ticker: str, *, lookback_days: int = 400) -> pd.DataFrame:
+        """Fetch recent daily OHLCV for one ticker (enough bars for 200-SMA / 52w stats)."""
+        end_date = get_today_str()
+        start_date = (pd.Timestamp(end_date) - pd.Timedelta(days=lookback_days)).strftime("%Y-%m-%d")
+        return self._provider.fetch_ohlcv([ticker], start_date=start_date, end_date=end_date)
+
     def _fetch_last_prices(self, tickers: list[str]) -> dict[str, float]:
         if not tickers:
             return {}
@@ -688,6 +694,7 @@ class PortfolioService:
             "entry_date": request.entry_date,
             "entry_price": request.entry_price,
             "stop_price": request.stop_price,
+            "target_price": request.target_price,
             "shares": request.shares,
             "initial_risk": initial_risk,
             "thesis": request.thesis,

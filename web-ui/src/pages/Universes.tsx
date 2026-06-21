@@ -1,141 +1,29 @@
-import { RefreshCw, Database, AlertTriangle, CheckCircle2, Target, Search, Globe2, ListChecks } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
-import Card from '@/components/common/Card';
-import Button from '@/components/common/Button';
-import Badge from '@/components/common/Badge';
-import CollapsibleSection from '@/components/common/CollapsibleSection';
-import Input from '@/components/common/Input';
-import Select from '@/components/common/Select';
 import WorkspaceSymbolModal from '@/components/domain/workspace/WorkspaceSymbolModal';
+import UniverseListSidebar from '@/components/domain/universes/UniverseListSidebar';
+import UniverseConfigTab from '@/components/domain/universes/UniverseConfigTab';
+import UniverseConstituentsTab from '@/components/domain/universes/UniverseConstituentsTab';
+import UniverseDiscoveryTab from '@/components/domain/universes/UniverseDiscoveryTab';
+import UniverseScreenerTab from '@/components/domain/universes/UniverseScreenerTab';
+import {
+  CURRENCY_PRESETS,
+  DETAIL_TABS,
+  MARKET_PRESETS,
+  TYPE_PRESETS,
+  YAHOO_SUPPORTED_MICS,
+  type DetailTab,
+} from '@/components/domain/universes/universesShared';
 import { useRefreshUniverseMutation, useSymbolDiscoveryMutation, useUniverseCatalog, useUniverseDetail, useUpdateUniverseBenchmarkMutation } from '@/features/universes/hooks';
-import type { ScreenerCandidate, UniverseSummary } from '@/features/screener/types';
 import type { SymbolDiscoveryRequest } from '@/features/universes/types';
 import { useRunScreenerMutation } from '@/features/screener/hooks';
-import { formatCompactNumber, formatCurrency, formatPercent } from '@/utils/formatters';
-
-const BENCHMARK_OPTIONS = [
-  'ACWI',
-  'SPY',
-  'QQQ',
-  'IWM',
-  'VXUS',
-  'VGK',
-  'IXC',
-  'IXG',
-  'IXJ',
-  'SMH',
-  'SOXX',
-  'ITA',
-  'XLI',
-  'XLP',
-  'XLY',
-  '^AEX',
-  '^AMX',
-  '^STOXX50E',
-  '^GDAXI',
-  '^FCHI',
-  '^IBEX',
-  '^FTSE',
-  '^GSPC',
-] as const;
-
-const DISCOVERY_SCREENS = [
-  { value: 'most_actives', label: 'Most active' },
-  { value: 'day_gainers', label: 'Day gainers' },
-  { value: 'day_losers', label: 'Day losers' },
-] as const;
-
-const MARKET_PRESETS = [
-  { value: 'us_major', label: 'US major exchanges', currencies: ['USD'], exchangeMics: ['XNAS', 'XNYS'], eodhdExchanges: ['NASDAQ', 'NYSE'] },
-  { value: 'amsterdam', label: 'Amsterdam', currencies: ['EUR'], exchangeMics: ['XAMS'], eodhdExchanges: ['AS'] },
-  { value: 'euronext_core', label: 'Euronext core', currencies: ['EUR'], exchangeMics: ['XAMS', 'XPAR', 'XBRU'], eodhdExchanges: ['AS', 'PA', 'BR'] },
-  { value: 'global_keyed', label: 'Global keyed sample', currencies: [], exchangeMics: [], eodhdExchanges: ['NASDAQ', 'NYSE', 'AS', 'PA', 'LSE', 'HK'] },
-  { value: 'custom_any', label: 'Any market', currencies: [], exchangeMics: [], eodhdExchanges: [] },
-] as const;
-
-const CURRENCY_PRESETS = [
-  { value: 'preset', label: 'Market preset' },
-  { value: 'USD', label: 'USD' },
-  { value: 'EUR', label: 'EUR' },
-  { value: 'USD,EUR', label: 'USD + EUR' },
-  { value: 'any', label: 'Any currency' },
-] as const;
-
-const TYPE_PRESETS = [
-  { value: 'EQUITY', label: 'Equities' },
-  { value: 'ETF', label: 'ETFs' },
-  { value: 'EQUITY,ETF', label: 'Equities + ETFs' },
-] as const;
-
-const VOLUME_PRESETS = [
-  { value: 0, label: 'Any volume' },
-  { value: 500_000, label: '500K+' },
-  { value: 1_000_000, label: '1M+' },
-  { value: 5_000_000, label: '5M+' },
-] as const;
-
-const MARKET_CAP_PRESETS = [
-  { value: 0, label: 'Any market cap' },
-  { value: 1_000_000_000, label: '$1B+' },
-  { value: 10_000_000_000, label: '$10B+' },
-  { value: 50_000_000_000, label: '$50B+' },
-] as const;
-
-const YAHOO_SUPPORTED_MICS = new Set(['ARCX', 'BATS', 'XASE', 'XNAS', 'XNYS', 'XOTC']);
-
-const freshnessVariant = (status: UniverseSummary['freshness_status']): 'success' | 'warning' | 'error' | 'default' => {
-  switch (status) {
-    case 'fresh':
-      return 'success';
-    case 'review_due':
-      return 'warning';
-    case 'stale':
-      return 'error';
-    default:
-      return 'default';
-  }
-};
-
-const freshnessLabel = (status: UniverseSummary['freshness_status']): string => {
-  switch (status) {
-    case 'fresh':
-      return 'Fresh';
-    case 'review_due':
-      return 'Review due';
-    case 'stale':
-      return 'Stale';
-    default:
-      return 'Unknown';
-  }
-};
-
-const sourceLabel = (source: string): string => {
-  if (source === 'euronext_review') return 'Euronext review';
-  if (source === 'manual') return 'Manual';
-  return source;
-};
-
-const taxonomyRows = (taxonomy: Record<string, Record<string, number>>, key: string): Array<[string, number]> => (
-  Object.entries(taxonomy[key] ?? {}).sort((a, b) => b[1] - a[1])
-);
-
-const actionLabel = (candidate: ScreenerCandidate): string => {
-  const action = candidate.decisionSummary?.action;
-  if (action === 'BUY_NOW') return 'Buy Now';
-  if (action === 'BUY_ON_PULLBACK') return 'Pullback';
-  if (action === 'WAIT_FOR_BREAKOUT') return 'Breakout';
-  if (action === 'WATCH') return 'Watch';
-  if (action === 'TACTICAL_ONLY') return 'Tactical';
-  if (action === 'AVOID') return 'Avoid';
-  if (action === 'MANAGE_ONLY') return 'Manage';
-  return candidate.signal ?? '—';
-};
+import { cn } from '@/utils/cn';
 
 export default function Universes() {
   const catalogQuery = useUniverseCatalog();
   const universes = catalogQuery.data?.universes ?? [];
   const [selectedUniverseId, setSelectedUniverseId] = useState<string | null>(null);
+  const [activeDetailTab, setActiveDetailTab] = useState<DetailTab>('config');
   const [discoveryProvider, setDiscoveryProvider] = useState<SymbolDiscoveryRequest['provider']>('yahoo_predefined');
   const [selectedScreens, setSelectedScreens] = useState<string[]>(['most_actives', 'day_gainers', 'day_losers']);
   const [marketPreset, setMarketPreset] = useState<(typeof MARKET_PRESETS)[number]['value']>('us_major');
@@ -164,7 +52,6 @@ export default function Universes() {
     [selectedUniverseId, universes],
   );
   const detail = detailQuery.data;
-  const refreshResult = refreshMutation.data;
 
   useEffect(() => {
     const benchmark = detail?.benchmark ?? selectedSummary?.benchmark ?? '';
@@ -192,6 +79,13 @@ export default function Universes() {
       }
       return [...current, screen];
     });
+  };
+
+  const handleMarketPresetChange = (nextMarket: (typeof MARKET_PRESETS)[number]['value']) => {
+    setMarketPreset(nextMarket);
+    if (nextMarket === 'us_major') {
+      setDiscoveryProvider('yahoo_predefined');
+    }
   };
 
   const discoveryRequest = (): SymbolDiscoveryRequest => ({
@@ -225,8 +119,10 @@ export default function Universes() {
     });
   };
 
-  const discoveryResult = discoveryMutation.data;
-  const discoveryScreenerResult = discoveryScreenerMutation.data;
+  const handleRunScreener = () => {
+    runScreenerForDiscovery();
+    setActiveDetailTab('screener');
+  };
 
   return (
     <div className="mx-auto max-w-[1680px] px-4 py-4">
@@ -237,635 +133,89 @@ export default function Universes() {
         </p>
       </div>
 
-      <Card variant="bordered" className="mb-4 p-4">
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-              <div className="flex items-center gap-2">
-                <Globe2 className="h-4 w-4 text-muted" />
-                <h2 className="text-sm font-semibold text-foreground">Live Discovery</h2>
-              </div>
-              <p className="mt-1 text-sm text-muted">
-                Pull fresh candidate symbols from free sources, then review their market, currency, and exchange taxonomy before screening.
-              </p>
-            </div>
-            <Button onClick={runDiscovery} disabled={discoveryMutation.isPending || discoveryLimit <= 0} size="sm">
-              {discoveryMutation.isPending ? (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  Discovering…
-                </>
-              ) : (
-                <>
-                  <Search className="mr-2 h-4 w-4" />
-                  Discover Symbols
-                </>
-              )}
-            </Button>
-          </div>
-
-          <CollapsibleSection title="Discovery filters">
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <label className="block">
-              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">Provider</span>
-              <Select
-                value={discoveryProvider}
-                onChange={(event) => setDiscoveryProvider(event.target.value as SymbolDiscoveryRequest['provider'])}
-              >
-                <option value="yahoo_predefined">Yahoo predefined</option>
-                <option value="eodhd_exchange">EODHD exchange list</option>
-              </Select>
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">Market</span>
-              <Select
-                value={marketPreset}
-                onChange={(event) => {
-                  const nextMarket = event.target.value as (typeof MARKET_PRESETS)[number]['value'];
-                  setMarketPreset(nextMarket);
-                  if (nextMarket === 'us_major') {
-                    setDiscoveryProvider('yahoo_predefined');
-                  }
-                }}
-              >
-                {MARKET_PRESETS.map((preset) => (
-                  <option key={preset.value} value={preset.value}>{preset.label}</option>
-                ))}
-              </Select>
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">Currency</span>
-              <Select
-                value={currencyPreset}
-                onChange={(event) => setCurrencyPreset(event.target.value as (typeof CURRENCY_PRESETS)[number]['value'])}
-              >
-                {CURRENCY_PRESETS.map((preset) => (
-                  <option key={preset.value} value={preset.value}>{preset.label}</option>
-                ))}
-              </Select>
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">Instrument type</span>
-              <Select
-                value={typePreset}
-                onChange={(event) => setTypePreset(event.target.value as (typeof TYPE_PRESETS)[number]['value'])}
-              >
-                {TYPE_PRESETS.map((preset) => (
-                  <option key={preset.value} value={preset.value}>{preset.label}</option>
-                ))}
-              </Select>
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">Min volume</span>
-              <Select
-                value={discoveryMinVolume}
-                onChange={(event) => setDiscoveryMinVolume(Number(event.target.value))}
-              >
-                {VOLUME_PRESETS.map((preset) => (
-                  <option key={preset.value} value={preset.value}>{preset.label}</option>
-                ))}
-              </Select>
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">Min market cap</span>
-              <Select
-                value={discoveryMinMarketCap}
-                onChange={(event) => setDiscoveryMinMarketCap(Number(event.target.value))}
-              >
-                {MARKET_CAP_PRESETS.map((preset) => (
-                  <option key={preset.value} value={preset.value}>{preset.label}</option>
-                ))}
-              </Select>
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">Discovery limit</span>
-              <Select
-                value={discoveryLimit}
-                onChange={(event) => setDiscoveryLimit(Number(event.target.value))}
-              >
-                {[25, 50, 100, 200].map((value) => (
-                  <option key={value} value={value}>{value} symbols</option>
-                ))}
-              </Select>
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">Screener results</span>
-              <Select
-                value={screenerTop}
-                onChange={(event) => setScreenerTop(Number(event.target.value))}
-              >
-                {[10, 20, 50, 100].map((value) => (
-                  <option key={value} value={value}>Top {value}</option>
-                ))}
-              </Select>
-            </label>
-            <div className="md:col-span-2 xl:col-span-4">
-              <div className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">Yahoo status screens</div>
-              <div className="flex flex-wrap gap-2">
-                {DISCOVERY_SCREENS.map((screen) => {
-                  const active = selectedScreens.includes(screen.value);
-                  return (
-                    <button
-                      key={screen.value}
-                      type="button"
-                      onClick={() => toggleScreen(screen.value)}
-                      disabled={discoveryProvider !== 'yahoo_predefined'}
-                      className={`rounded-md border px-3 py-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                        active
-                          ? 'border-primary/40 bg-primary/10 text-primary'
-                          : 'border-border bg-surface text-muted hover:bg-foreground/5'
-                      }`}
-                    >
-                      {screen.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            </div>
-          </CollapsibleSection>
-
-          {yahooUsesCustomScreener ? (
-            <div className="rounded-xl border border-primary/40 bg-primary/10 p-3 text-sm text-primary">
-              Yahoo will use its custom screener endpoint for this market because predefined screeners are mostly US-centric.
-            </div>
-          ) : null}
-
-          {eodhdNeedsKey ? (
-            <div className="rounded-xl border border-primary/40 bg-primary/10 p-3 text-sm text-primary">
-              EODHD exchange discovery needs `EODHD_API_KEY` configured in the backend environment. Without it, the request will return a setup error instead of live EUR symbols.
-            </div>
-          ) : null}
-
-          {discoveryMutation.isError ? (
-            <div className="rounded-xl border border-danger/40 bg-danger/10 p-3 text-sm text-danger">
-              {discoveryMutation.error instanceof Error ? discoveryMutation.error.message : 'Symbol discovery failed.'}
-            </div>
-          ) : null}
-
-          {discoveryResult ? (
-            <div className="space-y-3">
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
-                  <Badge variant="default">{discoveryResult.symbols.length} candidates</Badge>
-                  <Badge variant="default">{discoveryResult.provider}</Badge>
-                  <Badge variant="default">{selectedMarket.label}</Badge>
-                  <span>as of {discoveryResult.source_asof}</span>
-                </div>
-                <Button
-                  onClick={runScreenerForDiscovery}
-                  disabled={discoveryScreenerMutation.isPending || discoveryResult.symbols.length === 0}
-                  size="sm"
-                  variant="secondary"
-                >
-                  {discoveryScreenerMutation.isPending ? (
-                    <>
-                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                      Screening…
-                    </>
-                  ) : (
-                    <>
-                      <ListChecks className="mr-2 h-4 w-4" />
-                      Run Screener on These Symbols
-                    </>
-                  )}
-                </Button>
-              </div>
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                {(['currency', 'exchange_mic', 'market', 'instrument_type'] as const).map((key) => (
-                  <div key={key} className="rounded-xl border border-border bg-surface p-3">
-                    <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">{key.replace('_', ' ')}</div>
-                    <div className="flex flex-wrap gap-2">
-                      {taxonomyRows(discoveryResult.taxonomy, key).map(([value, count]) => (
-                        <Badge key={`${key}-${value}`} variant="default">
-                          {value} {count}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {discoveryResult.notes.length ? (
-                <div className="space-y-1 text-sm text-muted">
-                  {discoveryResult.notes.map((note) => (
-                    <div key={note}>{note}</div>
-                  ))}
-                </div>
-              ) : null}
-              {discoveryResult.symbols.length === 0 ? (
-                <div className="rounded-xl border border-warning/40 bg-warning/10 p-3 text-sm text-warning">
-                  No symbols matched this discovery source and filter set. Try a broader market, lower liquidity filters, or screen one of the configured universes below.
-                </div>
-              ) : null}
-              <div className="max-h-[420px] overflow-auto rounded-xl border border-border">
-                <table className="min-w-full divide-y divide-border text-sm">
-                  <thead className="bg-surface text-left text-xs uppercase tracking-wide text-muted">
-                    <tr>
-                      <th className="px-3 py-2">Symbol</th>
-                      <th className="px-3 py-2">Name</th>
-                      <th className="px-3 py-2">Exchange</th>
-                      <th className="px-3 py-2">Currency</th>
-                      <th className="px-3 py-2">Type</th>
-                      <th className="px-3 py-2">Volume</th>
-                      <th className="px-3 py-2">Market Cap</th>
-                      <th className="px-3 py-2">Source</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border bg-surface">
-                    {discoveryResult.symbols.map((symbol) => (
-                      <tr key={`${symbol.symbol}-${symbol.source_screen ?? symbol.provider_exchange ?? 'source'}`}>
-                        <td className="px-3 py-2 font-medium text-foreground">{symbol.symbol}</td>
-                        <td className="px-3 py-2 text-muted">{symbol.name ?? '—'}</td>
-                        <td className="px-3 py-2 text-muted">{symbol.exchange_mic ?? symbol.provider_exchange ?? '—'}</td>
-                        <td className="px-3 py-2 text-muted">{symbol.currency ?? '—'}</td>
-                        <td className="px-3 py-2 text-muted">{symbol.instrument_type ?? '—'}</td>
-                        <td className="px-3 py-2 text-muted">{formatCompactNumber(symbol.volume)}</td>
-                        <td className="px-3 py-2 text-muted">{formatCompactNumber(symbol.market_cap)}</td>
-                        <td className="px-3 py-2 text-muted">{symbol.source_screen ?? symbol.source ?? '—'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ) : null}
-
-          {discoveryScreenerMutation.isError ? (
-            <div className="rounded-xl border border-danger/40 bg-danger/10 p-3 text-sm text-danger">
-              {discoveryScreenerMutation.error instanceof Error ? discoveryScreenerMutation.error.message : 'Screener run failed.'}
-            </div>
-          ) : null}
-
-          {discoveryScreenerResult ? (
-            <div className="space-y-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-sm font-semibold text-foreground">Screener Results for Discovered Symbols</h3>
-                <Badge variant="default">{discoveryScreenerResult.candidates.length} candidates</Badge>
-                <Badge variant="default">{discoveryScreenerResult.totalScreened} screened</Badge>
-                {discoveryScreenerResult.benchmarkTicker ? (
-                  <Badge variant="default">Benchmark {discoveryScreenerResult.benchmarkTicker}</Badge>
-                ) : null}
-              </div>
-              {discoveryScreenerResult.warnings?.length ? (
-                <div className="space-y-1 rounded-xl border border-warning/40 bg-warning/10 p-3 text-sm text-warning">
-                  {discoveryScreenerResult.warnings.map((warning) => (
-                    <div key={warning}>{warning}</div>
-                  ))}
-                </div>
-              ) : null}
-              <div className="max-h-[520px] overflow-auto rounded-xl border border-border">
-                <table className="min-w-full divide-y divide-border text-sm">
-                  <thead className="bg-surface text-left text-xs uppercase tracking-wide text-muted">
-                    <tr>
-                      <th className="px-3 py-2">Rank</th>
-                      <th className="px-3 py-2">Symbol</th>
-                      <th className="px-3 py-2">Signal</th>
-                      <th className="px-3 py-2 text-right">Close</th>
-                      <th className="px-3 py-2 text-right">Score</th>
-                      <th className="px-3 py-2 text-right">6M momentum</th>
-                      <th className="px-3 py-2 text-right">Rel strength</th>
-                      <th className="px-3 py-2 text-right">R:R</th>
-                      <th className="px-3 py-2">Fundamentals</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border bg-surface">
-                    {discoveryScreenerResult.candidates.map((candidate) => (
-                      <tr
-                        key={candidate.ticker}
-                        onClick={() => setDetailTicker(candidate.ticker)}
-                        className="cursor-pointer hover:bg-foreground/5"
-                      >
-                        <td className="px-3 py-2 font-medium text-foreground">#{candidate.priorityRank ?? candidate.rank}</td>
-                        <td className="px-3 py-2">
-                          <div className="font-semibold text-foreground">{candidate.ticker}</div>
-                          <div className="text-xs text-muted">
-                            {candidate.name ?? '—'}
-                            {candidate.sector ? ` · ${candidate.sector}` : ''}
-                          </div>
-                        </td>
-                        <td className="px-3 py-2 text-muted">{actionLabel(candidate)}</td>
-                        <td className="px-3 py-2 text-right font-mono text-foreground">{formatCurrency(candidate.close, candidate.currency)}</td>
-                        <td className="px-3 py-2 text-right font-mono text-foreground">{candidate.score.toFixed(1)}</td>
-                        <td className="px-3 py-2 text-right font-mono text-foreground">{formatPercent(candidate.momentum6m, 1)}</td>
-                        <td className="px-3 py-2 text-right font-mono text-foreground">{formatPercent(candidate.relStrength, 1)}</td>
-                        <td className="px-3 py-2 text-right font-mono text-foreground">{candidate.rr != null ? candidate.rr.toFixed(1) : '—'}</td>
-                        <td className="px-3 py-2 text-muted">{candidate.fundamentalsCoverageStatus ?? '—'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ) : null}
-        </div>
-      </Card>
-
       <div className="grid gap-4 xl:grid-cols-[380px_minmax(0,1fr)]">
-        <Card variant="bordered" className="p-3">
-          <div className="mb-3 flex items-center gap-2">
-            <Database className="h-4 w-4 text-muted" />
-            <h2 className="text-sm font-semibold text-foreground">Configured Universes</h2>
+        <UniverseListSidebar
+          universes={universes}
+          selectedUniverseId={selectedUniverseId}
+          isLoading={catalogQuery.isLoading}
+          isError={catalogQuery.isError}
+          onSelect={setSelectedUniverseId}
+        />
+
+        {/* Tabbed detail panel */}
+        <div>
+          <div className="flex border-b border-border mb-4">
+            {DETAIL_TABS.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveDetailTab(tab.id)}
+                className={cn(
+                  'px-4 py-2.5 text-sm font-medium transition-colors',
+                  activeDetailTab === tab.id
+                    ? 'border-b-2 border-primary text-primary'
+                    : 'text-muted hover:text-foreground',
+                )}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
-          {catalogQuery.isLoading ? (
-            <div className="text-sm text-muted">Loading universe catalog…</div>
-          ) : catalogQuery.isError ? (
-            <div className="text-sm text-danger">Failed to load universe catalog.</div>
-          ) : (
-            <div className="space-y-2">
-              {universes.map((universe) => {
-                const selected = universe.id === selectedUniverseId;
-                return (
-                  <button
-                    key={universe.id}
-                    type="button"
-                    onClick={() => setSelectedUniverseId(universe.id)}
-                    className={`w-full rounded-xl border p-3 text-left transition-colors ${
-                      selected
-                        ? 'border-success/40 bg-success/10'
-                        : 'border-border bg-surface hover:border-border hover:bg-foreground/5'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="text-sm font-semibold text-foreground">{universe.description}</div>
-                        <div className="mt-1 text-xs text-muted">{universe.id}</div>
-                      </div>
-                      <Badge variant={freshnessVariant(universe.freshness_status)}>
-                        {freshnessLabel(universe.freshness_status)}
-                      </Badge>
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted">
-                      <span>{universe.member_count} members</span>
-                      <span>{sourceLabel(universe.source)}</span>
-                      <span>as of {universe.source_asof}</span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+
+          {activeDetailTab === 'config' && (
+            <UniverseConfigTab
+              universes={universes}
+              selectedSummary={selectedSummary}
+              detail={detail}
+              detailLoading={detailQuery.isLoading}
+              detailError={detailQuery.isError}
+              benchmarkDraft={benchmarkDraft}
+              onBenchmarkDraftChange={setBenchmarkDraft}
+              benchmarkMutation={benchmarkMutation}
+              refreshMutation={refreshMutation}
+            />
           )}
-        </Card>
 
-        <div className="space-y-4">
-          <Card variant="bordered" className="p-4">
-            {!selectedSummary ? (
-              <div className="text-sm text-muted">Select a universe to inspect it.</div>
-            ) : detailQuery.isLoading ? (
-              <div className="text-sm text-muted">Loading universe detail…</div>
-            ) : detailQuery.isError || !detail ? (
-              <div className="text-sm text-danger">Failed to load universe detail.</div>
-            ) : (
-              <div className="space-y-4">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                  <div>
-                    <h2 className="text-xl font-semibold text-foreground">{detail.description}</h2>
-                    <p className="mt-1 text-sm text-muted">{detail.id}</p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant={freshnessVariant(detail.freshness_status)}>
-                      {freshnessLabel(detail.freshness_status)}
-                    </Badge>
-                    <Badge variant="default">{detail.kind}</Badge>
-                    <Badge variant="default">{detail.member_count} members</Badge>
-                  </div>
-                </div>
+          {activeDetailTab === 'constituents' && (
+            <UniverseConstituentsTab detail={detail} />
+          )}
 
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                  <div className="rounded-xl border border-border bg-surface p-3">
-                    <div className="text-xs uppercase tracking-wide text-muted">Source</div>
-                    <div className="mt-1 text-sm font-medium text-foreground">{sourceLabel(detail.source)}</div>
-                    <div className="mt-1 text-xs text-muted">{detail.source_adapter}</div>
-                  </div>
-                  <div className="rounded-xl border border-border bg-surface p-3">
-                    <div className="text-xs uppercase tracking-wide text-muted">Freshness</div>
-                    <div className="mt-1 text-sm font-medium text-foreground">Reviewed {detail.last_reviewed_at}</div>
-                    <div className="mt-1 text-xs text-muted">
-                      {detail.days_since_review == null ? 'Unknown age' : `${detail.days_since_review} days ago`}
-                    </div>
-                  </div>
-                  <div className="rounded-xl border border-border bg-surface p-3">
-                    <div className="text-xs uppercase tracking-wide text-muted">Source As Of</div>
-                    <div className="mt-1 text-sm font-medium text-foreground">{detail.source_asof}</div>
-                    <div className="mt-1 text-xs text-muted">Configured benchmark {detail.benchmark}</div>
-                  </div>
-                  <div className="rounded-xl border border-border bg-surface p-3">
-                    <div className="text-xs uppercase tracking-wide text-muted">Rules</div>
-                    <div className="mt-1 text-sm font-medium text-foreground">
-                      {(detail.rules.currencies ?? []).join(', ') || 'No currency rule'}
-                    </div>
-                    <div className="mt-1 text-xs text-muted">
-                      {(detail.rules.exchange_mics ?? []).join(', ') || 'Any exchange'}
-                    </div>
-                  </div>
-                </div>
+          {activeDetailTab === 'discovery' && (
+            <UniverseDiscoveryTab
+              discoveryProvider={discoveryProvider}
+              onProviderChange={setDiscoveryProvider}
+              marketPreset={marketPreset}
+              onMarketPresetChange={handleMarketPresetChange}
+              currencyPreset={currencyPreset}
+              onCurrencyPresetChange={setCurrencyPreset}
+              typePreset={typePreset}
+              onTypePresetChange={setTypePreset}
+              discoveryMinVolume={discoveryMinVolume}
+              onMinVolumeChange={setDiscoveryMinVolume}
+              discoveryMinMarketCap={discoveryMinMarketCap}
+              onMinMarketCapChange={setDiscoveryMinMarketCap}
+              discoveryLimit={discoveryLimit}
+              onLimitChange={setDiscoveryLimit}
+              screenerTop={screenerTop}
+              onScreenerTopChange={setScreenerTop}
+              selectedScreens={selectedScreens}
+              onToggleScreen={toggleScreen}
+              selectedMarket={selectedMarket}
+              yahooUsesCustomScreener={yahooUsesCustomScreener}
+              eodhdNeedsKey={eodhdNeedsKey}
+              discoveryMutation={discoveryMutation}
+              discoveryScreenerMutation={discoveryScreenerMutation}
+              onDiscover={runDiscovery}
+              onRunScreener={handleRunScreener}
+            />
+          )}
 
-                <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
-                  <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-                    <div>
-                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                        <Target className="h-4 w-4 text-muted" />
-                        Benchmark
-                      </div>
-                      <p className="mt-1 text-sm text-muted">
-                        Select the index or ETF used for performance comparison in the screener and chart overlay.
-                      </p>
-                    </div>
-                    <div className="flex flex-col gap-2 sm:min-w-[360px] sm:flex-row">
-                      <div className="flex-1">
-                        <label htmlFor="universe-benchmark" className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted">
-                          Benchmark symbol
-                        </label>
-                        <Input
-                          id="universe-benchmark"
-                          type="text"
-                          list="universe-benchmark-options"
-                          value={benchmarkDraft}
-                          onChange={(event) => setBenchmarkDraft(event.target.value.toUpperCase())}
-                          placeholder="SPY"
-                        />
-                      </div>
-                      <Button
-                        onClick={() => benchmarkMutation.mutate({ benchmark: benchmarkDraft.trim().toUpperCase() })}
-                        disabled={benchmarkMutation.isPending || benchmarkDraft.trim().length === 0}
-                        variant="secondary"
-                        size="sm"
-                        className="self-end"
-                      >
-                        {benchmarkMutation.isPending ? 'Saving…' : 'Save benchmark'}
-                      </Button>
-                    </div>
-                  </div>
-                  <datalist id="universe-benchmark-options">
-                    {Array.from(new Set([...BENCHMARK_OPTIONS, ...universes.map((item) => item.benchmark)]))
-                      .filter((value) => value && value.trim().length > 0)
-                      .map((value) => (
-                        <option key={value} value={value} />
-                      ))}
-                  </datalist>
-                  {benchmarkMutation.isError ? (
-                    <div className="mt-3 rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
-                      {benchmarkMutation.error instanceof Error ? benchmarkMutation.error.message : 'Failed to update benchmark.'}
-                    </div>
-                  ) : null}
-                  {benchmarkMutation.data ? (
-                    <div className="mt-3 rounded-lg border border-success/40 bg-success/10 px-3 py-2 text-sm text-success">
-                      Benchmark updated to {benchmarkMutation.data.benchmark}. The catalog and screener will pick it up after refresh.
-                    </div>
-                  ) : null}
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  {detail.refreshable ? (
-                    <>
-                      <Button
-                        onClick={() => refreshMutation.mutate({ apply: false })}
-                        disabled={refreshMutation.isPending}
-                        size="sm"
-                      >
-                        {refreshMutation.isPending ? (
-                          <>
-                            <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                            Refreshing…
-                          </>
-                        ) : (
-                          <>
-                            <RefreshCw className="mr-2 h-4 w-4" />
-                            Preview Refresh
-                          </>
-                        )}
-                      </Button>
-                      <Button
-                        onClick={() => refreshMutation.mutate({ apply: true })}
-                        disabled={refreshMutation.isPending}
-                        variant="secondary"
-                        size="sm"
-                      >
-                        Apply Refresh
-                      </Button>
-                    </>
-                  ) : (
-                    <div className="text-sm text-muted">This universe is manual-only for now.</div>
-                  )}
-                </div>
-
-                {refreshMutation.isError ? (
-                  <div className="rounded-xl border border-danger/40 bg-danger/10 p-3 text-sm text-danger">
-                    {refreshMutation.error instanceof Error ? refreshMutation.error.message : 'Refresh failed.'}
-                  </div>
-                ) : null}
-
-                {refreshResult ? (
-                  <div className="rounded-xl border border-border bg-surface p-3">
-                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                      {refreshResult.changed ? (
-                        <AlertTriangle className="h-4 w-4 text-warning" />
-                      ) : (
-                        <CheckCircle2 className="h-4 w-4 text-success" />
-                      )}
-                      Refresh Preview
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-3 text-sm text-muted">
-                      <span>{refreshResult.current_member_count} current</span>
-                      <span>{refreshResult.proposed_member_count} proposed</span>
-                      <span>{refreshResult.applied ? 'Applied locally' : 'Preview only'}</span>
-                    </div>
-                    {refreshResult.notes.length ? (
-                      <div className="mt-3 space-y-1 text-sm text-muted">
-                        {refreshResult.notes.map((note) => (
-                          <div key={note}>{note}</div>
-                        ))}
-                      </div>
-                    ) : null}
-                    {(refreshResult.additions.length || refreshResult.removals.length) ? (
-                      <div className="mt-3 grid gap-3 md:grid-cols-2">
-                        <div>
-                          <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-success">Additions</div>
-                          <div className="flex flex-wrap gap-2">
-                            {refreshResult.additions.map((symbol) => (
-                              <Badge key={symbol} variant="success">{symbol}</Badge>
-                            ))}
-                          </div>
-                        </div>
-                        <div>
-                          <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-danger">Removals</div>
-                          <div className="flex flex-wrap gap-2">
-                            {refreshResult.removals.map((symbol) => (
-                              <Badge key={symbol} variant="error">{symbol}</Badge>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-                ) : null}
-
-                {detail.validation_errors.length ? (
-                  <div className="rounded-xl border border-danger/40 bg-danger/10 p-3">
-                    <div className="mb-2 text-sm font-semibold text-danger">Validation Issues</div>
-                    <div className="space-y-1 text-sm text-danger">
-                      {detail.validation_errors.map((error) => (
-                        <div key={error}>{error}</div>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-
-                {detail.source_documents.length ? (
-                  <div>
-                    <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Source Documents</div>
-                    <div className="space-y-1">
-                      {detail.source_documents.map((document) => (
-                        <a
-                          key={`${document.label}-${document.url}`}
-                          href={document.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="block text-sm text-primary hover:text-primary hover:underline"
-                        >
-                          {document.label}
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            )}
-          </Card>
-
-          {detail ? (
-            <Card variant="bordered" className="p-4">
-              <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-foreground">Constituents</h3>
-                <div className="text-xs text-muted">{detail.constituents.length} rows</div>
-              </div>
-              <div className="max-h-[520px] overflow-auto rounded-xl border border-border">
-                <table className="min-w-full divide-y divide-border text-sm">
-                  <thead className="bg-surface text-left text-xs uppercase tracking-wide text-muted">
-                    <tr>
-                      <th className="px-3 py-2">Symbol</th>
-                      <th className="px-3 py-2">Source Name</th>
-                      <th className="px-3 py-2">Exchange</th>
-                      <th className="px-3 py-2">Currency</th>
-                      <th className="px-3 py-2">Type</th>
-                      <th className="px-3 py-2">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border bg-surface">
-                    {detail.constituents.map((constituent) => (
-                      <tr key={constituent.symbol}>
-                        <td className="px-3 py-2 font-medium text-foreground">{constituent.symbol}</td>
-                        <td className="px-3 py-2 text-muted">{constituent.source_name ?? constituent.source_symbol ?? constituent.symbol}</td>
-                        <td className="px-3 py-2 text-muted">{constituent.exchange_mic ?? '—'}</td>
-                        <td className="px-3 py-2 text-muted">{constituent.currency ?? '—'}</td>
-                        <td className="px-3 py-2 text-muted">{constituent.instrument_type ?? '—'}</td>
-                        <td className="px-3 py-2 text-muted">{constituent.status ?? '—'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
-          ) : null}
+          {activeDetailTab === 'screener' && (
+            <UniverseScreenerTab
+              discoveryScreenerMutation={discoveryScreenerMutation}
+              onSelectTicker={setDetailTicker}
+            />
+          )}
         </div>
       </div>
 

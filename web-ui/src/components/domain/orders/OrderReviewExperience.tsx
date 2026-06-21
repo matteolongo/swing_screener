@@ -6,10 +6,15 @@ import Button from '@/components/common/Button';
 import Input from '@/components/common/Input';
 import Select from '@/components/common/Select';
 import Textarea from '@/components/common/Textarea';
-import RecommendationBadge from '@/components/domain/recommendation/RecommendationBadge';
 import EarningsWarningBanner from '@/components/domain/screener/EarningsWarningBanner';
-import SetupExecutionGuide from '@/components/domain/orders/SetupExecutionGuide';
-import DegiroOrderConfigGuide from '@/components/domain/orders/DegiroOrderConfigGuide';
+import OrderReviewSummary from '@/components/domain/orders/OrderReviewSummary';
+import OrderExecutionGuidePanel from '@/components/domain/orders/OrderExecutionGuidePanel';
+import {
+  CONCENTRATION_WARNING_THRESHOLD,
+  classifyInvalidationRule,
+  countryFromTicker,
+  type ReviewSectionId,
+} from '@/components/domain/orders/orderReviewHelpers';
 
 import { useOrderRiskMetrics } from '@/components/domain/orders/useOrderRiskMetrics';
 import { candidateOrderSchema, type CandidateOrderFormValues } from '@/components/domain/orders/schemas';
@@ -21,7 +26,6 @@ import type { SameSymbolCandidateContext } from '@/features/screener/types';
 import type { RiskConfig } from '@/types/config';
 import type { Recommendation } from '@/types/recommendation';
 import { t } from '@/i18n/t';
-import { cn } from '@/utils/cn';
 import { formatCurrency, formatNumber } from '@/utils/formatters';
 
 export interface OrderReviewContext {
@@ -57,78 +61,6 @@ interface OrderReviewExperienceProps {
   successMessage?: string;
 }
 
-type ReviewSectionId = 'decision' | 'setup' | 'risk';
-
-const REVIEW_SECTIONS: Array<{ id: ReviewSectionId; titleKey: string }> = [
-  { id: 'decision', titleKey: 'order.review.sections.decision' },
-  { id: 'setup', titleKey: 'order.review.sections.setup' },
-  { id: 'risk', titleKey: 'order.review.sections.risk' },
-];
-
-const CONCENTRATION_WARNING_THRESHOLD = 60;
-const COUNTRY_SUFFIXES: Record<string, string> = {
-  '.AS': 'NL',
-  '.PA': 'FR',
-  '.DE': 'DE',
-  '.MC': 'ES',
-  '.MI': 'IT',
-  '.ST': 'SE',
-  '.L': 'UK',
-  '.BR': 'BE',
-  '.LS': 'PT',
-  '.HE': 'FI',
-  '.CO': 'DK',
-  '.OL': 'NO',
-};
-
-function MetricTile({
-  label,
-  value,
-  emphasize = false,
-}: {
-  label: string;
-  value: string;
-  emphasize?: boolean;
-}) {
-  return (
-    <div className="rounded-lg border border-border bg-surface p-3">
-      <p className="text-[11px] font-medium uppercase tracking-wide text-muted">{label}</p>
-      <p className={cn('mt-1 text-sm font-semibold text-foreground', emphasize && 'text-primary')}>
-        {value}
-      </p>
-    </div>
-  );
-}
-
-function EmptySection({ body }: { body: string }) {
-  return (
-    <div className="rounded-lg border border-dashed border-border bg-foreground/5 p-4 text-sm text-muted">
-      {body}
-    </div>
-  );
-}
-
-function classifyInvalidationRule(condition: string) {
-  const normalized = condition.toLowerCase();
-  if (
-    normalized.includes('stop') ||
-    normalized.includes('close') ||
-    normalized.includes('breaks below') ||
-    normalized.includes('invalid')
-  ) {
-    return 'hard';
-  }
-  return 'soft';
-}
-
-function countryFromTicker(ticker: string): string {
-  const normalized = ticker.trim().toUpperCase();
-  for (const [suffix, country] of Object.entries(COUNTRY_SUFFIXES)) {
-    if (normalized.endsWith(suffix)) return country;
-  }
-  return 'US';
-}
-
 export default function OrderReviewExperience({
   context,
   risk,
@@ -159,6 +91,11 @@ export default function OrderReviewExperience({
   const suggestedEntry = Number.isFinite(initialEntry) && initialEntry > 0 ? initialEntry : fallbackEntry;
   const initialStop = recRisk?.stop ?? context.stop ?? suggestedEntry * 0.95;
   const suggestedStop = Math.max(0.01, Math.min(initialStop, suggestedEntry - 0.01));
+  const recTarget = recRisk?.target ?? null;
+  const suggestedTarget =
+    recTarget != null && Number.isFinite(recTarget) && recTarget > suggestedEntry
+      ? parseFloat(recTarget.toFixed(2))
+      : undefined;
   const rawSuggestedShares = recRisk?.shares ?? context.shares ?? Math.max(1, risk.minShares);
   const maxSharesByPositionCap =
     risk.maxPositionPct > 0 && suggestedEntry > 0
@@ -184,6 +121,7 @@ export default function OrderReviewExperience({
       quantity: suggestedShares,
       limitPrice: parseFloat(suggestedEntry.toFixed(2)),
       stopPrice: parseFloat(suggestedStop.toFixed(2)),
+      targetPrice: suggestedTarget,
       notes: defaultNotes,
     },
   });
@@ -202,6 +140,7 @@ export default function OrderReviewExperience({
       quantity: suggestedShares,
       limitPrice: parseFloat(suggestedEntry.toFixed(2)),
       stopPrice: parseFloat(suggestedStop.toFixed(2)),
+      targetPrice: suggestedTarget,
       notes: defaultNotes,
     });
     setOverrideConfirmed(false);
@@ -210,7 +149,7 @@ export default function OrderReviewExperience({
     setIsSubmitting(false);
     setActiveSection('decision');
     setTradeThesis('');
-  }, [defaultNotes, defaultOrderType, form, suggestedEntry, suggestedShares, suggestedStop, normalizedTicker]);
+  }, [defaultNotes, defaultOrderType, form, suggestedEntry, suggestedShares, suggestedStop, suggestedTarget, normalizedTicker]);
 
   const orderType = form.watch('orderType') ?? defaultOrderType;
   const quantity = form.watch('quantity') ?? 0;
@@ -284,6 +223,7 @@ export default function OrderReviewExperience({
       quantity: `order-review-quantity-${normalizedTicker}`,
       limitPrice: `order-review-limit-price-${normalizedTicker}`,
       stopPrice: `order-review-stop-price-${normalizedTicker}`,
+      targetPrice: `order-review-target-price-${normalizedTicker}`,
       notes: `order-review-notes-${normalizedTicker}`,
     }),
     [normalizedTicker],
@@ -321,6 +261,7 @@ export default function OrderReviewExperience({
         quantity: values.quantity,
         limitPrice: values.limitPrice,
         stopPrice: values.stopPrice,
+        targetPrice: values.targetPrice,
         orderKind: 'entry',
         positionId: (context.sameSymbol?.mode === 'ADD_ON' || context.sameSymbol?.mode === 'SCALE_BACK') ? (context.positionId ?? context.sameSymbol.positionId) : undefined,
         entryMode: context.sameSymbol?.mode === 'ADD_ON' || context.sameSymbol?.mode === 'SCALE_BACK' ? 'ADD_ON' : 'NEW_ENTRY',
@@ -352,271 +293,31 @@ export default function OrderReviewExperience({
         </div>
       ) : null}
 
-      <section
-        className="rounded-lg border border-border bg-foreground/5 p-3"
-        aria-label={t('order.review.carouselLabel')}
-      >
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-2">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-                {t('order.review.kicker')}
-              </p>
-              <h3 className="text-base font-semibold text-foreground">
-                {t('order.review.title' as any)}
-              </h3>
-              <p className="mt-1 text-sm text-muted">
-                {t('order.review.subtitle' as any)}
-              </p>
-            </div>
-          </div>
-
-          <div
-            className="flex w-full items-center gap-1 overflow-x-auto rounded-lg border border-border bg-surface p-1"
-            role="tablist"
-            aria-label={t('order.review.carouselLabel')}
-          >
-            {REVIEW_SECTIONS.map((section) => {
-              const isActive = activeSection === section.id;
-              return (
-                <button
-                  key={section.id}
-                  id={`order-review-tab-${section.id}`}
-                  type="button"
-                  role="tab"
-                  aria-selected={isActive}
-                  aria-controls={`order-review-panel-${section.id}`}
-                  onClick={() => setActiveSection(section.id)}
-                  className={cn(
-                    'whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
-                    isActive
-                      ? 'bg-surface text-white shadow-sm'
-                      : 'text-muted hover:text-foreground',
-                  )}
-                >
-                  {t(section.titleKey as any)}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="rounded-xl border border-border bg-surface shadow-sm">
-            <div
-              id="order-review-panel-decision"
-              role="tabpanel"
-              aria-labelledby="order-review-tab-decision"
-              hidden={activeSection !== 'decision'}
-              className="p-4"
-            >
-              <div className="space-y-4">
-                {context.recommendation ? (
-                  <div className={cn(
-                    'rounded-xl border p-4',
-                    isRecommended
-                      ? 'border-success/40 bg-success/10'
-                      : isIncomplete
-                        ? 'border-warning/40 bg-warning/10'
-                        : 'border-danger/40 bg-danger/10',
-                  )}>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <RecommendationBadge verdict={verdict} reasonsDetailed={reasonsDetailed} />
-                      <span className="text-sm text-muted">{t('recommendation.summary')}</span>
-                    </div>
-                    {context.recommendation.reasonsShort.length ? (
-                      <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-muted">
-                        {context.recommendation.reasonsShort.map((reason) => (
-                          <li key={reason}>{reason}</li>
-                        ))}
-                      </ul>
-                    ) : null}
-                  </div>
-                ) : (
-                  !showManualOrderHint ? (
-                    <EmptySection body={t('workspacePage.panels.analysis.manualOrderHint')} />
-                  ) : null
-                )}
-
-                <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                  <MetricTile
-                    label={t('order.candidateModal.labels.currentPrice')}
-                    value={
-                      knownCurrentPrice != null
-                        ? formatCurrency(knownCurrentPrice, currency)
-                        : t('common.placeholders.emDash')
-                    }
-                  />
-                  <MetricTile label={t('recommendation.labels.entry')} value={formatCurrency(suggestedEntry, currency)} emphasize />
-                  <MetricTile label={t('recommendation.labels.stop')} value={formatCurrency(suggestedStop, currency)} />
-                  <MetricTile
-                    label={t('recommendation.labels.target')}
-                    value={
-                      recRisk?.target != null ? formatCurrency(recRisk.target, currency) : t('common.placeholders.emDash')
-                    }
-                  />
-                  <MetricTile
-                    label={t('order.candidateModal.labels.rr')}
-                    value={
-                      context.rReward != null
-                        ? formatNumber(context.rReward, 1)
-                        : recRisk?.rr != null
-                          ? formatNumber(recRisk.rr, 1)
-                          : t('common.placeholders.emDash')
-                    }
-                  />
-                  <MetricTile
-                    label={t('recommendation.labels.shares')}
-                    value={String(recRisk?.shares ?? context.shares ?? suggestedShares)}
-                  />
-                  <MetricTile
-                      label={t('tradeThesis.setupType')}
-                    value={thesis?.explanation.setupType ?? t(guidance.setupLabelKey)}
-                  />
-                  <MetricTile
-                    label={t('tradeThesis.tradeSafety')}
-                    value={
-                      thesis?.safetyLabel
-                        ? t(`tradeThesis.safetyLabel.${thesis.safetyLabel}`)
-                        : t('common.placeholders.emDash')
-                    }
-                  />
-                </div>
-
-                {warnings.length ? (
-                  <div className="space-y-2">
-                    {warnings.map((warning) => (
-                      <div
-                        key={warning}
-                        className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning"
-                      >
-                        {warning}
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            </div>
-
-            <div
-              id="order-review-panel-setup"
-              role="tabpanel"
-              aria-labelledby="order-review-tab-setup"
-              hidden={activeSection !== 'setup'}
-              className="p-4"
-            >
-              {thesis ? (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                    <MetricTile
-                      label={t('tradeThesis.setupQuality')}
-                      value={`${thesis.setupQualityScore}/100`}
-                      emphasize
-                    />
-                    <MetricTile
-                      label={t('tradeThesis.fields.setupQualityTier')}
-                      value={t(`tradeThesis.setupQualityTier.${thesis.setupQualityTier}`)}
-                    />
-                    <MetricTile
-                      label={t('tradeThesis.fields.trendStatus')}
-                      value={thesis.trendStatus}
-                    />
-                    <MetricTile
-                      label={t('tradeThesis.fields.relativeStrength')}
-                      value={thesis.relativeStrength}
-                    />
-                  </div>
-
-                  <div className="rounded-lg border border-primary/40 bg-primary/10 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-                      {thesisEducation?.title || t('tradeThesis.keyInsight')}
-                    </p>
-                    <p className="mt-2 text-sm text-primary">
-                      {thesisEducation?.summary || thesis.explanation.keyInsight}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">{t('tradeThesis.whyQualified')}</p>
-                    <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted">
-                      {(thesisEducation?.bullets.length ? thesisEducation.bullets : thesis.explanation.whyQualified).map((reason) => (
-                        <li key={reason}>{reason}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              ) : (
-                <EmptySection body={t('workspacePage.panels.analysis.noThesis')} />
-              )}
-            </div>
-
-            <div
-              id="order-review-panel-risk"
-              role="tabpanel"
-              aria-labelledby="order-review-tab-risk"
-              hidden={activeSection !== 'risk'}
-              className="p-4"
-            >
-              <div className="space-y-4">
-                {hardInvalidations.length ? (
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">{t('order.review.hardInvalidationTitle' as any)}</p>
-                    <ul className="mt-2 space-y-2">
-                      {hardInvalidations.map((rule) => (
-                        <li
-                          key={rule.ruleId}
-                          className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger"
-                        >
-                          <p>{rule.condition}</p>
-                          {rule.metric && rule.threshold != null ? (
-                            <p className="mt-1 text-xs text-danger">
-                              {t('tradeThesis.monitor')}: {rule.metric} {t('tradeThesis.thresholdAt')} {rule.threshold}
-                            </p>
-                          ) : null}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
-
-                {(softInvalidations.length || context.recommendation?.thesis?.explanation.whatCouldGoWrong.length) ? (
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">{t('order.review.softWarningsTitle' as any)}</p>
-                    <ul className="mt-2 space-y-2">
-                      {softInvalidations.map((rule) => (
-                        <li
-                          key={rule.ruleId}
-                          className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning"
-                        >
-                          <p>{rule.condition}</p>
-                          {rule.metric && rule.threshold != null ? (
-                            <p className="mt-1 text-xs text-warning">
-                              {t('tradeThesis.monitor')}: {rule.metric} {t('tradeThesis.thresholdAt')} {rule.threshold}
-                            </p>
-                          ) : null}
-                        </li>
-                      ))}
-                      {(
-                        thesisEducation?.watchouts.length ? thesisEducation.watchouts : context.recommendation?.thesis?.explanation.whatCouldGoWrong ?? []
-                      ).map((riskItem) => (
-                        <li
-                          key={riskItem}
-                          className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning"
-                        >
-                          {riskItem}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
-
-                {!context.recommendation?.thesis?.explanation.whatCouldGoWrong.length &&
-                !invalidationRules.length ? (
-                  <EmptySection body={t('order.review.riskFallback')} />
-                ) : null}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <OrderReviewSummary
+        activeSection={activeSection}
+        onSectionChange={setActiveSection}
+        recommendation={context.recommendation}
+        verdict={verdict}
+        reasonsDetailed={reasonsDetailed}
+        isRecommended={isRecommended}
+        isIncomplete={isIncomplete}
+        showManualOrderHint={showManualOrderHint}
+        knownCurrentPrice={knownCurrentPrice}
+        currency={currency}
+        suggestedEntry={suggestedEntry}
+        suggestedStop={suggestedStop}
+        suggestedShares={suggestedShares}
+        recRisk={recRisk}
+        contextShares={context.shares}
+        contextRReward={context.rReward}
+        thesis={thesis}
+        thesisEducation={thesisEducation}
+        guidance={guidance}
+        warnings={warnings}
+        invalidationRules={invalidationRules}
+        hardInvalidations={hardInvalidations}
+        softInvalidations={softInvalidations}
+      />
 
       <section className="rounded-lg border border-border bg-surface p-4">
         <div className="mb-4">
@@ -726,6 +427,24 @@ export default function OrderReviewExperience({
                     <p className="mt-1 text-xs text-danger">{form.formState.errors.stopPrice.message}</p>
                   ) : null}
                 </div>
+
+                <div>
+                  <label htmlFor={fieldIds.targetPrice} className="mb-1 block text-xs font-medium">
+                    {t('order.candidateModal.targetPrice')}
+                  </label>
+                  <Input
+                    id={fieldIds.targetPrice}
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    {...form.register('targetPrice', {
+                      setValueAs: (v) => (v === '' || v == null ? undefined : Number(v)),
+                    })}
+                  />
+                  {form.formState.errors.targetPrice ? (
+                    <p className="mt-1 text-xs text-danger">{form.formState.errors.targetPrice.message}</p>
+                  ) : null}
+                </div>
               </div>
 
               <div className="rounded-md bg-foreground/5 p-3 text-xs">
@@ -819,54 +538,16 @@ export default function OrderReviewExperience({
               </div>
             </div>
 
-            <div className="space-y-4">
-              <div className="rounded-lg border border-primary/40 bg-primary/10 p-3 text-sm text-primary">
-                <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-                  {t('order.review.executionGuideTitle' as any)}
-                </p>
-                <div className="mt-2 space-y-2">
-                  <p>
-                    <span className="font-semibold">{t('order.setupGuidance.setupLabel')}</span> {t(guidance.setupLabelKey)}
-                  </p>
-                  <p>{t(guidance.whatItMeansKey)}</p>
-                  {context.executionNote ? (
-                    <div className="rounded-md border border-primary/40 bg-surface/70 px-3 py-2 text-xs text-primary">
-                      {context.executionNote}
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm text-warning">
-                <p className="text-xs font-semibold uppercase tracking-wide text-warning">{t('order.review.executionCautionTitle' as any)}</p>
-                <p className="mt-2">{t(guidance.cautionKey)}</p>
-              </div>
-
-              <details className="rounded-lg border border-border bg-surface p-3">
-                <summary className="cursor-pointer list-none text-sm font-semibold text-foreground">
-                  {t('order.review.brokerStepsTitle' as any)}
-                </summary>
-                <div className="mt-3">
-                  <SetupExecutionGuide signal={guidanceSignal} />
-                </div>
-              </details>
-
-              <details className="rounded-lg border border-border bg-surface p-3">
-                <summary className="cursor-pointer list-none text-sm font-semibold text-foreground">
-                  {t('order.review.degiroSetupTitle' as any)}
-                </summary>
-                <div className="mt-3">
-                  <DegiroOrderConfigGuide
-                    orderType={orderType}
-                    entryPrice={limitPrice}
-                    stopPrice={stopPrice}
-                    quantity={quantity}
-                    currency={currency}
-                  />
-                </div>
-              </details>
-
-            </div>
+            <OrderExecutionGuidePanel
+              guidance={guidance}
+              guidanceSignal={guidanceSignal}
+              executionNote={context.executionNote}
+              orderType={orderType}
+              entryPrice={limitPrice}
+              stopPrice={stopPrice}
+              quantity={quantity}
+              currency={currency}
+            />
           </div>
         </form>
       </section>
