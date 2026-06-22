@@ -311,12 +311,12 @@ function PastReviews({ reviews }: { reviews: WeeklyReview[] }) {
   const pastReviews = reviews.filter((r) => r.week_id !== currentWeekId);
 
   if (pastReviews.length === 0) {
-    return <p className="text-sm text-muted mt-2">No past weekly reviews yet.</p>;
+    return <p className="text-sm text-muted mt-2">{t('bookPage.weeklyReview.noReviews')}</p>;
   }
 
   return (
     <div className="mt-4 space-y-2">
-      <h3 className="text-sm font-semibold text-muted">Past Reviews</h3>
+      <h3 className="text-sm font-semibold text-muted">{t('bookPage.weeklyReview.pastReviewsTitle')}</h3>
       {pastReviews.map((review) => (
         <div key={review.week_id} className="rounded-lg border border-border overflow-hidden">
           <button
@@ -324,32 +324,32 @@ function PastReviews({ reviews }: { reviews: WeeklyReview[] }) {
             onClick={() => setExpandedWeek(expandedWeek === review.week_id ? null : review.week_id)}
             className="w-full px-3 py-2 flex items-center justify-between bg-foreground/5 text-sm font-medium text-muted hover:bg-foreground/5 text-left"
           >
-            <span>Week {review.week_id}</span>
+            <span>{t('bookPage.weeklyReview.weekLabel', { id: review.week_id })}</span>
             <span className="text-muted">{expandedWeek === review.week_id ? '▲' : '▼'}</span>
           </button>
           {expandedWeek === review.week_id && (
             <div className="px-3 py-2 space-y-2 text-sm text-muted">
               {review.what_worked && (
                 <div>
-                  <span className="font-medium text-xs text-muted uppercase tracking-wide">What Worked</span>
+                  <span className="font-medium text-xs text-muted uppercase tracking-wide">{t('bookPage.weeklyReview.whatWorked')}</span>
                   <p className="mt-0.5">{review.what_worked}</p>
                 </div>
               )}
               {review.what_didnt && (
                 <div>
-                  <span className="font-medium text-xs text-muted uppercase tracking-wide">What Didn't Work</span>
+                  <span className="font-medium text-xs text-muted uppercase tracking-wide">{t('bookPage.weeklyReview.whatDidnt')}</span>
                   <p className="mt-0.5">{review.what_didnt}</p>
                 </div>
               )}
               {review.rules_violated && (
                 <div>
-                  <span className="font-medium text-xs text-muted uppercase tracking-wide">Rules Violated</span>
+                  <span className="font-medium text-xs text-muted uppercase tracking-wide">{t('bookPage.weeklyReview.rulesViolated')}</span>
                   <p className="mt-0.5">{review.rules_violated}</p>
                 </div>
               )}
               {review.next_week_focus && (
                 <div>
-                  <span className="font-medium text-xs text-muted uppercase tracking-wide">Next Week Focus</span>
+                  <span className="font-medium text-xs text-muted uppercase tracking-wide">{t('bookPage.weeklyReview.nextWeekFocus')}</span>
                   <p className="mt-0.5">{review.next_week_focus}</p>
                 </div>
               )}
