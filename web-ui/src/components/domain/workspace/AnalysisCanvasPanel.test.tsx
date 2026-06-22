@@ -43,9 +43,6 @@ vi.mock('@/components/domain/market/CachedSymbolCandleChart', () => ({
   default: ({ ticker }: { ticker: string }) => <div>Chart {ticker}</div>,
 }));
 
-vi.mock('@/components/domain/workspace/KeyMetrics', () => ({
-  default: ({ ticker }: { ticker: string }) => <div>Key metrics {ticker}</div>,
-}));
 
 function buildSnapshot(): FundamentalSnapshot {
   return {

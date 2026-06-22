@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import WorkspaceSymbolModal from '@/components/domain/workspace/WorkspaceSymbolModal';
+import ModalShell from '@/components/common/ModalShell';
+import ActionPanel from '@/components/domain/workspace/ActionPanel';
+import SymbolAnalysisContent from '@/components/domain/workspace/SymbolAnalysisContent';
+import type { WorkspaceAnalysisTab } from '@/components/domain/workspace/types';
 import UniverseListSidebar from '@/components/domain/universes/UniverseListSidebar';
 import UniverseConfigTab from '@/components/domain/universes/UniverseConfigTab';
 import UniverseConstituentsTab from '@/components/domain/universes/UniverseConstituentsTab';
@@ -17,7 +20,33 @@ import {
 import { useRefreshUniverseMutation, useSymbolDiscoveryMutation, useUniverseCatalog, useUniverseDetail, useUpdateUniverseBenchmarkMutation } from '@/features/universes/hooks';
 import type { SymbolDiscoveryRequest } from '@/features/universes/types';
 import { useRunScreenerMutation } from '@/features/screener/hooks';
+import { useOpenPositions } from '@/features/portfolio/hooks';
+import { useScreenerStore } from '@/stores/screenerStore';
+import { t } from '@/i18n/t';
 import { cn } from '@/utils/cn';
+
+function UniverseSymbolModal({ ticker, onBack }: { ticker: string; onBack: () => void }) {
+  const [activeTab, setActiveTab] = useState<WorkspaceAnalysisTab>('overview');
+  const candidate = useScreenerStore((state) =>
+    state.lastResult?.candidates.find((c) => c.ticker.toUpperCase() === ticker.toUpperCase())
+  );
+  const openPositionsQuery = useOpenPositions();
+  const openPosition =
+    openPositionsQuery.data?.find((p) => p.ticker.toUpperCase() === ticker.toUpperCase()) ?? null;
+
+  return (
+    <ModalShell title={t('workspacePage.symbolDetails.title', { ticker })} onClose={onBack} className="max-w-5xl" closeOnBackdrop={false}>
+      <SymbolAnalysisContent
+        ticker={ticker}
+        candidate={candidate}
+        position={openPosition}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        orderPanel={<ActionPanel ticker={ticker} />}
+      />
+    </ModalShell>
+  );
+}
 
 export default function Universes() {
   const catalogQuery = useUniverseCatalog();
@@ -220,7 +249,7 @@ export default function Universes() {
       </div>
 
       {detailTicker ? (
-        <WorkspaceSymbolModal ticker={detailTicker} onBack={() => setDetailTicker(null)} />
+        <UniverseSymbolModal ticker={detailTicker} onBack={() => setDetailTicker(null)} />
       ) : null}
     </div>
   );
