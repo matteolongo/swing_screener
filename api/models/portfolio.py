@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 PositionStatus = Literal["open", "closed"]
-ActionType = Literal["NO_ACTION", "MOVE_STOP_UP", "CLOSE_STOP_HIT", "CLOSE_TIME_EXIT"]
+ActionType = Literal["NO_ACTION", "MOVE_STOP_UP", "CLOSE_STOP_HIT", "CLOSE_TIME_EXIT", "CLOSE_EXIT_SIGNAL"]
 TrailMethod = Literal["sma20", "atr", "fixed_pct", "manual"]
 
 
