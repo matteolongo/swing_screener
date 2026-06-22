@@ -13,12 +13,10 @@ Daily trading workflow through the Swing Screener web interface.
 |------|-------|---------|
 | Today | `/today` | Left panel with three tabs — Today (daily review, pending orders), Last Run (screener candidates), Watchlist — plus the symbol analysis canvas on the right |
 | Calendar | `/calendar` | Earnings calendar, upcoming catalyst events |
-| Book | `/book` | Open positions: stop updates, partial close, trail config; order management: create, fill, cancel |
+| Book | `/book` | Open positions: stop updates, partial close, trail config; order management: create, fill, cancel; trade journal; performance analytics; weekly review |
 | Universes | `/universes` | Universe management, manual refresh, benchmark, symbol discovery with ad-hoc screener run (row click opens symbol detail modal) |
 | Strategy | `/strategy` | Strategy CRUD, activation, and validation |
-| Journal | `/journal` | Weekly reviews and trade log |
 | Onboarding | `/onboarding` | Setup guide for new users |
-| Analytics | `/analytics` | Regime breakdown and performance analytics |
 
 ## Feature Directory Map
 
@@ -35,7 +33,7 @@ Each domain has a directory under `web-ui/src/features/<domain>/` with `api.ts` 
 | `features/analytics` | Analytics | Regime breakdown, performance stats |
 | `features/fundamentals` | Today (symbol analysis) | Fundamental snapshots used by the symbol analysis panels. The standalone Research/Fundamentals comparison page was removed; the `compare`/`warmup` hooks are now unused and pending cleanup. |
 | `features/calendar` | Calendar | Calendar events |
-| `features/weeklyReview` | Journal | Weekly review CRUD |
+| `features/weeklyReview` | Book | Weekly review CRUD |
 | `features/strategy` | Strategy | Strategy CRUD and activation |
 | `features/universes` | Universes | Universe list, detail, refresh, benchmark |
 | `features/config` | (cross-cutting) | App config read/write |
