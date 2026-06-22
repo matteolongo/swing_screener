@@ -811,7 +811,7 @@ class ScreenerService:
                     benchmark_outperformance_pct=benchmark_outperformance_pct,
                     sector_rotation_context=sector_rotation_by_name.get(info.get("sector")),
                     data_source_summary={"market_data": market_health},
-                    signal=str(signal) if not is_na_scalar(signal) else None,
+                    signal=(None if is_na_scalar(signal) or str(signal).lower() in ("none", "") else str(signal)),
                     entry=rec_risk.entry,
                     stop=rec_risk.stop if stop_val is not None else None,
                     target=rec_risk.target,
