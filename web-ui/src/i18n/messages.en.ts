@@ -2012,6 +2012,15 @@ export const messagesEn = {
       timeStopBadge: '{{days}}d / {{r}}R',
       timeStopWarning: 'Stale trade: consider closing or documenting a reason to hold.',
     },
+    weeklyReview: {
+      pastReviewsTitle: 'Past Reviews',
+      noReviews: 'No past weekly reviews yet.',
+      weekLabel: 'Week {{id}}',
+      whatWorked: 'What Worked',
+      whatDidnt: "What Didn't Work",
+      rulesViolated: 'Rules Violated',
+      nextWeekFocus: 'Next Week Focus',
+    },
   },
   pendingOrdersTab: {
     title: 'Pending Orders',
