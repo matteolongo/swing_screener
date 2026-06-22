@@ -271,7 +271,6 @@ export default function StrategyPage() {
   );
   const strategyValidationQuery = useStrategyValidationQuery(validationPayload);
   const validationResult = strategyValidationQuery.data;
-  const validationWarnings = validationResult?.warnings ?? [];
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -428,8 +427,6 @@ export default function StrategyPage() {
             draft={draft}
             setDraft={setDraft}
             help={help}
-            validationWarnings={validationWarnings}
-            useEnhancedEducation={false}
           />
 
           <StrategyAdvancedSettingsCard
