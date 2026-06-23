@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactNode } from 'react';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
 import Button from '@/components/common/Button';
 import CatalystContextCard from '@/components/domain/workspace/CatalystContextCard';
 import { useIntelligenceAnalysisMutation, useIntelligenceLatestQuery } from '@/features/intelligence/hooks';
@@ -96,6 +96,20 @@ export default function SymbolAnalysisContent({
     intelligenceMutation.reset();
   }, [ticker]);
 
+  // Open positions are suppressed from the screener as manage-only, so a held
+  // symbol has no candidate and the analysis (and AI payload) is thin. Compute
+  // the live candidate once per symbol with includeHeld so the held position
+  // gets the full screener-grade data.
+  const autoComputedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!position || candidate) return;
+    const key = ticker.trim().toUpperCase();
+    if (autoComputedRef.current.has(key)) return;
+    if (computeAnalysisMutation.isPending) return;
+    autoComputedRef.current.add(key);
+    computeAnalysisMutation.mutate({ tickers: [ticker], top: 1, includeHeld: true });
+  }, [ticker, position, candidate, computeAnalysisMutation]);
+
   const tabs: Array<{ id: WorkspaceAnalysisTab; label: string }> = [
     { id: 'overview', label: t('workspacePage.panels.analysis.tabs.overview') },
     { id: 'fundamentals', label: t('workspacePage.panels.analysis.tabs.fundamentals') },
@@ -181,7 +195,7 @@ export default function SymbolAnalysisContent({
                     type="button"
                     size="sm"
                     variant="secondary"
-                    onClick={() => computeAnalysisMutation.mutate({ tickers: [ticker], top: 1 })}
+                    onClick={() => computeAnalysisMutation.mutate({ tickers: [ticker], top: 1, includeHeld: true })}
                     disabled={computeAnalysisMutation.isPending}
                   >
                     {computeAnalysisMutation.isPending

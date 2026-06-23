@@ -802,6 +802,29 @@ describe('AnalysisCanvasPanel', () => {
     ).toBeInTheDocument();
   });
 
+  it('auto-computes a live candidate for a held position with no screener candidate', async () => {
+    // VALE is an open position in the default MSW handler, with no cached candidate.
+    const mutate = vi.fn();
+    vi.mocked(screenerHooks.useRunScreenerMutation).mockReturnValue({
+      mutate, isPending: false, isError: false, error: null,
+    } as never);
+    useWorkspaceStore.setState({
+      selectedTicker: 'VALE',
+      selectedTickerSource: 'screener',
+      analysisTab: 'overview',
+    });
+    useScreenerStore.setState({ lastResult: null });
+    mockFundamentalsIdle();
+
+    renderWithProviders(<AnalysisCanvasPanel />);
+
+    await waitFor(() => {
+      expect(mutate).toHaveBeenCalledWith(
+        expect.objectContaining({ tickers: ['VALE'], includeHeld: true })
+      );
+    });
+  });
+
   it('renders a watch toggle for the selected symbol', () => {
     vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
       isLoading: false,
@@ -996,7 +1019,7 @@ describe('AnalysisCanvasPanel — compute analysis button', () => {
       await user.click(screen.getByRole('button', { name: 'Compute analysis' }));
     });
 
-    expect(mutate).toHaveBeenCalledWith({ tickers: ['ENI.MI'], top: 1 });
+    expect(mutate).toHaveBeenCalledWith({ tickers: ['ENI.MI'], top: 1, includeHeld: true });
   });
 
   it('shows loading text and disables button while the mutation is pending', () => {
