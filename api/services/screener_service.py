@@ -700,6 +700,27 @@ class ScreenerService:
             risk_usd = safe_optional_float(row.get("realized_risk"))
             risk_pct = (risk_usd / risk_cfg.account_size) if risk_usd and risk_cfg.account_size else None
 
+            # Anchor the entry stop to the setup's structural invalidation when a
+            # tighter pattern stop is available, so 1R reflects the real risk level
+            # instead of a wide ATR multiple. Target/R:R/risk are recomputed from the
+            # new stop by the risk engine below; share count is kept unchanged.
+            pattern_stop_val, pattern_stop_reason = (None, None)
+            if exec_cfg.pattern_stop_enabled and entry_val:
+                pattern_stop_val, pattern_stop_reason = apply_pattern_stop(
+                    ticker=ticker_str,
+                    entry=entry_val,
+                    current_stop=stop_val,
+                    atr=safe_optional_float(row.get(atr_col)),
+                    patterns=patterns_map,
+                    buffer_atr=exec_cfg.pattern_stop_atr_buffer,
+                    min_rr_stop=None,
+                )
+            if pattern_stop_val is not None:
+                stop_val = pattern_stop_val
+                position_size = None
+                risk_usd = None
+                risk_pct = None
+
             rr_target = safe_float(getattr(risk_cfg, "rr_target", 2.0), default=2.0)
             commission_pct = safe_float(getattr(risk_cfg, "commission_pct", 0.0), default=0.0)
 
@@ -750,18 +771,6 @@ class ScreenerService:
                 )
                 for p in patterns_map.get(ticker_str, [])
             ]
-            pattern_stop_val, pattern_stop_reason = (None, None)
-            if exec_cfg.pattern_stop_enabled and entry_val:
-                pattern_stop_val, pattern_stop_reason = apply_pattern_stop(
-                    ticker=ticker_str,
-                    entry=entry_val,
-                    current_stop=stop_val,
-                    atr=safe_optional_float(row.get(atr_col)),
-                    patterns=patterns_map,
-                    buffer_atr=exec_cfg.pattern_stop_atr_buffer,
-                    min_rr_stop=None,
-                )
-
             candidates.append(
                 ScreenerCandidate(
                     ticker=ticker_str,
