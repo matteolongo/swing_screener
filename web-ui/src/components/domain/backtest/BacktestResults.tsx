@@ -6,7 +6,6 @@ import { t } from '@/i18n/t';
 import type { MessageKey } from '@/i18n/types';
 import {
   formatNumber,
-  formatPrice,
   formatR,
   formatRatioAsPercent,
   getSignColorClass,
@@ -40,7 +39,7 @@ export default function BacktestResults({ result }: BacktestResultsProps) {
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <StatCard
           label={t('backtest.metrics.expectancy')}
           value={formatR(metrics.expectancyR)}
@@ -80,30 +79,13 @@ export default function BacktestResults({ result }: BacktestResultsProps) {
   );
 }
 
+// Locked to a single symbol, so the ticker and per-leg prices are dropped to
+// keep the headline R column on screen without horizontal scrolling.
 function tradeColumns(): DataTableColumn<BacktestTrade>[] {
   return [
-    { key: 'ticker', header: t('backtest.table.ticker'), render: (r) => r.ticker },
     { key: 'setup', header: t('backtest.table.setup'), render: (r) => r.setup },
     { key: 'entryDate', header: t('backtest.table.entryDate'), render: (r) => r.entryDate },
-    {
-      key: 'entryPrice',
-      header: t('backtest.table.entryPrice'),
-      align: 'right',
-      render: (r) => formatPrice(r.entryPrice),
-    },
-    {
-      key: 'initialStop',
-      header: t('backtest.table.initialStop'),
-      align: 'right',
-      render: (r) => formatPrice(r.initialStop),
-    },
     { key: 'exitDate', header: t('backtest.table.exitDate'), render: (r) => r.exitDate },
-    {
-      key: 'exitPrice',
-      header: t('backtest.table.exitPrice'),
-      align: 'right',
-      render: (r) => formatPrice(r.exitPrice),
-    },
     {
       key: 'exitReason',
       header: t('backtest.table.exitReason'),
@@ -120,12 +102,6 @@ function tradeColumns(): DataTableColumn<BacktestTrade>[] {
       header: t('backtest.table.barsHeld'),
       align: 'right',
       render: (r) => String(r.barsHeld),
-    },
-    {
-      key: 'patternStop',
-      header: t('backtest.table.patternStop'),
-      align: 'center',
-      render: (r) => (r.patternStopFired ? t('backtest.yes') : '—'),
     },
   ];
 }
