@@ -11,7 +11,7 @@ Daily trading workflow through the Swing Screener web interface.
 
 | Page | Route | Purpose |
 |------|-------|---------|
-| Today | `/today` | Left panel with three tabs — Today (open positions, daily review, pending orders), Last Run (screener candidates), Watchlist — plus the symbol analysis canvas on the right (Overview / Fundamentals / Order / Backtest tabs; the Backtest tab runs a per-symbol event study inline) |
+| Today | `/today` | Left panel with three tabs — Today (open positions, daily review, pending orders), Last Run (screener candidates), Watchlist — plus the symbol analysis canvas on the right |
 | Calendar | `/calendar` | Earnings calendar, upcoming catalyst events |
 | Book | `/book` | Open positions: stop updates, partial close, trail config; order management: create, fill, cancel; trade journal; performance analytics; weekly review |
 | Universes | `/universes` | Universe management, manual refresh, benchmark, symbol discovery with ad-hoc screener run (row click opens symbol detail modal) |
@@ -36,7 +36,6 @@ Each domain has a directory under `web-ui/src/features/<domain>/` with `api.ts` 
 | `features/weeklyReview` | Book | Weekly review CRUD |
 | `features/strategy` | Strategy | Strategy CRUD and activation |
 | `features/universes` | Universes | Universe list, detail, refresh, benchmark |
-| `features/backtest` | Today (canvas Backtest tab) | Event-study run (202+poll), trade ledger + metrics, snake_case→camelCase transform. Run inline per-symbol from the analysis canvas Backtest tab (`components/domain/workspace/SymbolBacktestTab`, locked to the selected symbol); results render via `components/domain/backtest/BacktestResults`. No standalone page |
 | `features/config` | (cross-cutting) | App config read/write |
 | `features/persistence` | (cross-cutting) | API vs localStorage mode toggle |
 

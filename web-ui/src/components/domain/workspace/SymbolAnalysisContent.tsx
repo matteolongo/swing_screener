@@ -11,7 +11,6 @@ import DecisionSummaryCard from '@/components/domain/workspace/DecisionSummaryCa
 import DecisionWhyPanel from '@/components/domain/workspace/DecisionWhyPanel';
 import FundamentalsStrip from '@/components/domain/workspace/FundamentalsStrip';
 import NarrativeAnalysisCard from '@/components/domain/workspace/NarrativeAnalysisCard';
-import SymbolBacktestTab from '@/components/domain/workspace/SymbolBacktestTab';
 import TechnicalMetricsGrid from '@/components/domain/workspace/TechnicalMetricsGrid';
 import type { SymbolAnalysisCandidate, WorkspaceAnalysisTab } from '@/components/domain/workspace/types';
 import type { ScreenerResponse } from '@/features/screener/types';
@@ -115,7 +114,6 @@ export default function SymbolAnalysisContent({
     { id: 'overview', label: t('workspacePage.panels.analysis.tabs.overview') },
     { id: 'fundamentals', label: t('workspacePage.panels.analysis.tabs.fundamentals') },
     { id: 'order', label: t('workspacePage.panels.analysis.tabs.order') },
-    { id: 'backtest', label: t('workspacePage.panels.analysis.tabs.backtest') },
   ];
   const watchedTickers = new Set((watchlistQuery.data ?? []).map((item) => item.ticker.toUpperCase()));
   const isWatched = watchedTickers.has(ticker.toUpperCase());
@@ -315,8 +313,6 @@ export default function SymbolAnalysisContent({
         )}
 
         {activeTab === 'order' ? orderPanel : null}
-
-        {activeTab === 'backtest' && <SymbolBacktestTab ticker={ticker} />}
 
         {activeTab === 'fundamentals' && (
           <>
