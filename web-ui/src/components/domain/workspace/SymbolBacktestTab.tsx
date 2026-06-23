@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import Button from '@/components/common/Button';
 import Field from '@/components/common/Field';
@@ -21,6 +21,12 @@ interface SymbolBacktestTabProps {
 export default function SymbolBacktestTab({ ticker }: SymbolBacktestTabProps) {
   const [patternStop, setPatternStop] = useState<PatternStopChoice>('default');
   const mutation = useRunEventStudyMutation();
+
+  // Drop the prior symbol's results when the canvas switches symbols.
+  useEffect(() => {
+    mutation.reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ticker]);
 
   const handleRun = () => {
     const config: NonNullable<EventStudyRequest['config']> = {};

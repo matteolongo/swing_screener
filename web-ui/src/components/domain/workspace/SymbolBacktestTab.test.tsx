@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { http, HttpResponse } from 'msw';
 
 import { server } from '@/test/mocks/server';
-import { renderWithProviders, screen } from '@/test/utils';
+import { renderWithProviders, screen, waitFor } from '@/test/utils';
 import { t } from '@/i18n/t';
 import SymbolBacktestTab from './SymbolBacktestTab';
 
@@ -65,5 +65,21 @@ describe('SymbolBacktestTab', () => {
     expect(await screen.findByText(t('backtest.results.title'))).toBeInTheDocument();
     expect(screen.getByText(t('backtest.metrics.expectancy'))).toBeInTheDocument();
     expect(postedTickers).toEqual(['AAPL']);
+  });
+
+  it('clears stale results when the symbol changes', async () => {
+    server.use(
+      http.post('*/api/backtest/event-study', () => HttpResponse.json(resultFor('AAPL'), { status: 200 })),
+    );
+
+    const { user, rerender } = renderWithProviders(<SymbolBacktestTab ticker="AAPL" />);
+    await user.click(screen.getByRole('button', { name: t('backtest.form.run') }));
+    expect(await screen.findByText(t('backtest.results.title'))).toBeInTheDocument();
+
+    rerender(<SymbolBacktestTab ticker="MSFT" />);
+
+    await waitFor(() =>
+      expect(screen.queryByText(t('backtest.results.title'))).not.toBeInTheDocument(),
+    );
   });
 });
