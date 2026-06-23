@@ -894,7 +894,13 @@ class ScreenerService:
                 same_symbol_add_on_count += 1
             if same_symbol.mode == "MANAGE_ONLY":
                 if enriched_candidate is None:
-                    same_symbol_suppressed_count += 1
+                    if ctx.request.include_held:
+                        # Keep the held symbol so live analysis (e.g. AI) can use the
+                        # full screener-grade data instead of suppressing it.
+                        candidate.same_symbol = same_symbol
+                        filtered_candidates.append(candidate)
+                    else:
+                        same_symbol_suppressed_count += 1
                     continue
                 # Recommended but add-on conditions not met: show with MANAGE_ONLY flag
             if enriched_candidate is not None:

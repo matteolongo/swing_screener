@@ -11,7 +11,7 @@ Daily trading workflow through the Swing Screener web interface.
 
 | Page | Route | Purpose |
 |------|-------|---------|
-| Today | `/today` | Left panel with three tabs — Today (daily review, pending orders), Last Run (screener candidates), Watchlist — plus the symbol analysis canvas on the right |
+| Today | `/today` | Left panel with three tabs — Today (open positions, daily review, pending orders), Last Run (screener candidates), Watchlist — plus the symbol analysis canvas on the right |
 | Calendar | `/calendar` | Earnings calendar, upcoming catalyst events |
 | Book | `/book` | Open positions: stop updates, partial close, trail config; order management: create, fill, cancel; trade journal; performance analytics; weekly review |
 | Universes | `/universes` | Universe management, manual refresh, benchmark, symbol discovery with ad-hoc screener run (row click opens symbol detail modal) |

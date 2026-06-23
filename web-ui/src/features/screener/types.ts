@@ -338,6 +338,7 @@ export interface ScreenerRequest {
   currencies?: string[];
   exchangeMics?: string[];
   includeOtc?: boolean;
+  includeHeld?: boolean;
   instrumentTypes?: Array<'equity' | 'etf'>;
   breakoutLookback?: number;
   pullbackMa?: number;

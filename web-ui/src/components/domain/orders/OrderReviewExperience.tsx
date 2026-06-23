@@ -92,9 +92,14 @@ export default function OrderReviewExperience({
   const initialStop = recRisk?.stop ?? context.stop ?? suggestedEntry * 0.95;
   const suggestedStop = Math.max(0.01, Math.min(initialStop, suggestedEntry - 0.01));
   const recTarget = recRisk?.target ?? null;
+  const rrFallbackTarget =
+    context.rReward != null && Number.isFinite(context.rReward) && context.rReward > 0
+      ? suggestedEntry + context.rReward * (suggestedEntry - suggestedStop)
+      : null;
+  const effectiveTarget = recTarget ?? rrFallbackTarget;
   const suggestedTarget =
-    recTarget != null && Number.isFinite(recTarget) && recTarget > suggestedEntry
-      ? parseFloat(recTarget.toFixed(2))
+    effectiveTarget != null && Number.isFinite(effectiveTarget) && effectiveTarget > suggestedEntry
+      ? parseFloat(effectiveTarget.toFixed(2))
       : undefined;
   const rawSuggestedShares = recRisk?.shares ?? context.shares ?? Math.max(1, risk.minShares);
   const maxSharesByPositionCap =

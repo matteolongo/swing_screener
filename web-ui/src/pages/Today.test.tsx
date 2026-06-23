@@ -198,6 +198,9 @@ describe('Today page — pending orders badge', () => {
       http.get('*/api/portfolio/orders/local', () =>
         HttpResponse.json({ orders: [], asof: '2026-05-04' })
       ),
+      http.get('*/api/portfolio/positions', () =>
+        HttpResponse.json({ positions: [], asof: '2026-05-04' })
+      ),
     );
 
     renderWithProviders(<Today />);
@@ -253,10 +256,94 @@ describe('Today page — pending orders badge', () => {
   });
 });
 
+// ── Open positions section ──────────────────────────────────────────────────────
+
+const emptyReview = {
+  watchlist_near_trigger: [],
+  positions_add_on_candidates: [],
+  positions_hold: [],
+  positions_update_stop: [],
+  positions_exit_signal: [],
+  new_candidates: [],
+  positions_close: [],
+  summary: {
+    total_positions: 0,
+    no_action: 0,
+    update_stop: 0,
+    close_positions: 0,
+    new_candidates: 0,
+    add_on_candidates: 0,
+    watchlist_near_trigger: 0,
+    review_date: '2026-06-23',
+  },
+};
+
+function makeOpenPosition(ticker: string, positionId: string) {
+  return {
+    position_id: positionId,
+    ticker,
+    status: 'open',
+    entry_date: '2026-06-16',
+    entry_price: 383.04,
+    stop_price: 346.3,
+    target_price: 456.52,
+    shares: 1,
+    initial_risk: 36.74,
+    source_order_id: 'ORD-LRCX-001',
+    exit_date: null,
+    exit_price: null,
+    current_price: 409.54,
+    notes: '',
+    exit_order_ids: null,
+    pnl: 26.5,
+    pnl_percent: 6.9,
+    r_now: 0.72,
+    entry_value: 383.04,
+    current_value: 409.54,
+    per_share_risk: 36.74,
+    total_risk: 36.74,
+    days_open: 7,
+    time_stop_warning: false,
+  };
+}
+
+describe('Today page — open positions section', () => {
+  beforeEach(() => {
+    server.use(
+      http.get('*/api/portfolio/orders/local', () =>
+        HttpResponse.json({ orders: [], asof: '2026-06-23' })
+      ),
+      http.get('*/api/daily-review', () => HttpResponse.json(emptyReview)),
+      http.get('*/api/portfolio/positions', () =>
+        HttpResponse.json({ positions: [makeOpenPosition('LRCX', 'POS-520CACE4')], asof: '2026-06-23' })
+      )
+    );
+  });
+
+  it('renders an open positions section listing the held symbol', async () => {
+    renderWithProviders(<Today />);
+    expect(
+      await screen.findByText(new RegExp(t('todayPage.actionList.openPositions'), 'i'))
+    ).toBeInTheDocument();
+    expect(screen.getByText('LRCX')).toBeInTheDocument();
+  });
+
+  it('shows the current R for the open position', async () => {
+    renderWithProviders(<Today />);
+    await screen.findByText('LRCX');
+    expect(screen.getByText(/\+0\.72R/)).toBeInTheDocument();
+  });
+});
+
 // ── Advanced scan controls ─────────────────────────────────────────────────────
 
 describe('Today page — advanced scan controls', () => {
   it('does not show catalyst scan or intelligence sweep controls in the beginner-default action list', async () => {
+    server.use(
+      http.get('*/api/portfolio/positions', () =>
+        HttpResponse.json({ positions: [], asof: '2026-06-23' })
+      )
+    );
     renderWithProviders(<Today />);
 
     await screen.findByText(t('todayPage.actionList.empty'));
