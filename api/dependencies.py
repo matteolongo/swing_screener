@@ -174,10 +174,12 @@ def get_screener_service(
     )
 
 
-def get_backtest_service() -> "BacktestService":
+def get_backtest_service(
+    strategy_repo: StrategyRepository = Depends(get_strategy_repo),
+) -> "BacktestService":
     from api.services.backtest_service import BacktestService
 
-    return BacktestService()
+    return BacktestService(strategy_repo=strategy_repo)
 
 
 def get_fundamentals_service(
