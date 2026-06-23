@@ -103,6 +103,17 @@ export function candidateToPayload(
     payload.r_now = position.rNow;
     payload.days_open = position.daysOpen;
     payload.entry_date = position.entryDate ?? null;
+
+    // Anchor target/rr to actual position values so the AI sees consistent data.
+    // position.targetPrice takes priority; fall back to candidate's market target for context.
+    const posEntry = position.entryPrice;
+    const posStop = position.stopPrice ?? null;
+    const resolvedTarget = position.targetPrice ?? payload.target ?? null;
+    payload.target = resolvedTarget;
+    payload.rr =
+      resolvedTarget != null && posStop != null && posEntry > posStop
+        ? (resolvedTarget - posEntry) / (posEntry - posStop)
+        : null;
   }
   return payload;
 }

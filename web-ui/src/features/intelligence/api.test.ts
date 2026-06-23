@@ -218,6 +218,85 @@ describe('candidateToPayload', () => {
     expect(payload!.fair_value_high).toBe(180);
   });
 
+  it('recomputes rr from actual position entry/stop when position is present', () => {
+    // candidate rr (2.4x) was computed from screener's hypothetical entry/stop — stale.
+    // With a position, rr must be recomputed from actual values so the AI sees consistent data.
+    const position = {
+      entryPrice: 383.04,
+      stopPrice: 346.30,
+      rNow: -0.42,
+      daysOpen: 10,
+    } as PositionWithMetrics;
+    const candidateWithTarget = {
+      ...baseCandidate,
+      rr: 2.4,
+      entry: 403.98,
+      stop: 365.07,
+      decisionSummary: {
+        symbol: 'LRCX',
+        action: 'MANAGE_ONLY' as const,
+        conviction: 'low' as const,
+        technicalLabel: 'neutral' as const,
+        fundamentalsLabel: 'neutral' as const,
+        valuationLabel: 'fair' as const,
+        catalystLabel: 'weak' as const,
+        whyNow: '',
+        whatToDo: '',
+        mainRisk: '',
+        tradePlan: { entry: 403.98, stop: 365.07, target: 498.47, rr: 2.4 },
+        valuationContext: { method: 'not_available' as const, summary: '' },
+        drivers: { positives: [], negatives: [], warnings: [] },
+        catalystSummary: null,
+        catalystSources: [],
+      },
+    };
+    const payload = candidateToPayload(candidateWithTarget, position);
+    // target stays as candidate's market target ($498.47) since position has no stored target
+    expect(payload!.target).toBe(498.47);
+    // rr must be recomputed: (498.47 - 383.04) / (383.04 - 346.30) ≈ 3.14
+    expect(payload!.rr).toBeCloseTo((498.47 - 383.04) / (383.04 - 346.30), 4);
+    expect(payload!.rr).not.toBe(2.4);
+  });
+
+  it('uses position.targetPrice for target and recomputes rr when position has a stored target', () => {
+    const position = {
+      entryPrice: 100,
+      stopPrice: 90,
+      targetPrice: 130,
+      rNow: 1.5,
+      daysOpen: 20,
+    } as PositionWithMetrics;
+    const payload = candidateToPayload(
+      { ...baseCandidate, rr: 5.0, decisionSummary: {
+        symbol: 'X', action: 'MANAGE_ONLY' as const, conviction: 'medium' as const,
+        technicalLabel: 'strong' as const, fundamentalsLabel: 'neutral' as const,
+        valuationLabel: 'fair' as const, catalystLabel: 'weak' as const,
+        whyNow: '', whatToDo: '', mainRisk: '',
+        tradePlan: { entry: 110, stop: 100, target: 200, rr: 5.0 },
+        valuationContext: { method: 'not_available' as const, summary: '' },
+        drivers: { positives: [], negatives: [], warnings: [] },
+        catalystSummary: null, catalystSources: [],
+      }},
+      position,
+    );
+    expect(payload!.target).toBe(130);
+    // rr = (130 - 100) / (100 - 90) = 3.0
+    expect(payload!.rr).toBeCloseTo(3.0, 4);
+    expect(payload!.rr).not.toBe(5.0);
+  });
+
+  it('nulls rr when position has no target and candidate has no target', () => {
+    const position = {
+      entryPrice: 100,
+      stopPrice: 90,
+      rNow: 1.0,
+      daysOpen: 5,
+    } as PositionWithMetrics;
+    const payload = candidateToPayload({ ...baseCandidate, rr: 2.0 }, position);
+    expect(payload!.target).toBeNull();
+    expect(payload!.rr).toBeNull();
+  });
+
   it('all new fields are null when candidate has no decisionSummary', () => {
     const payload = candidateToPayload(baseCandidate);
     expect(payload!.rr).toBeNull();
