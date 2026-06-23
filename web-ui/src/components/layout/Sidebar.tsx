@@ -4,7 +4,6 @@ import {
   CalendarDays,
   BookMarked,
   Database,
-  FlaskConical,
   Settings2,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
@@ -22,7 +21,6 @@ const primaryNav: NavigationItem[] = [
   { labelKey: 'sidebar.nav.calendar', href: '/calendar', icon: CalendarDays },
   { labelKey: 'sidebar.nav.book', href: '/book', icon: BookMarked },
   { labelKey: 'sidebar.nav.universes', href: '/universes', icon: Database },
-  { labelKey: 'sidebar.nav.backtest', href: '/backtest', icon: FlaskConical },
 ];
 
 const settingsNav: NavigationItem = {

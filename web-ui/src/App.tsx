@@ -16,7 +16,6 @@ const Today = lazy(() => import('./pages/Today'));
 const Book = lazy(() => import('./pages/Book'));
 const Universes = lazy(() => import('./pages/Universes'));
 const Calendar = lazy(() => import('./pages/Calendar'));
-const Backtest = lazy(() => import('./pages/Backtest'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -48,7 +47,6 @@ function App() {
                 <Route path="calendar" element={<ErrorBoundary><Calendar /></ErrorBoundary>} />
                 <Route path="book" element={<ErrorBoundary><Book /></ErrorBoundary>} />
                 <Route path="universes" element={<ErrorBoundary><Universes /></ErrorBoundary>} />
-                <Route path="backtest" element={<ErrorBoundary><Backtest /></ErrorBoundary>} />
 
                 {/* Strategy / settings — still accessible */}
                 <Route path="strategy" element={<ErrorBoundary><Strategy /></ErrorBoundary>} />

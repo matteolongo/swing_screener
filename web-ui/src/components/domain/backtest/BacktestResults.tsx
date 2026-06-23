@@ -1,4 +1,3 @@
-import Card from '@/components/common/Card';
 import DataTable, { type DataTableColumn } from '@/components/common/DataTable';
 import RChip from '@/components/common/RChip';
 import { StatCard } from '@/components/domain/analytics/AnalyticsCards';
@@ -68,15 +67,15 @@ export default function BacktestResults({ result }: BacktestResultsProps) {
         <StatCard label={t('backtest.metrics.trades')} value={String(metrics.nTrades)} />
       </div>
 
-      <Card variant="bordered" className="p-0 overflow-hidden">
-        <DataTable<BacktestTrade>
-          rows={trades}
-          getRowKey={(row, index) => `${row.ticker}-${row.entryDate}-${index}`}
-          empty={trades.length === 0}
-          emptyMessage={t('backtest.results.noTrades')}
-          columns={tradeColumns()}
-        />
-      </Card>
+      <DataTable<BacktestTrade>
+        rows={trades}
+        getRowKey={(row, index) => `${row.ticker}-${row.entryDate}-${index}`}
+        empty={trades.length === 0}
+        emptyMessage={t('backtest.results.noTrades')}
+        columns={tradeColumns()}
+        wrapperClassName="rounded-lg border border-border"
+        tableClassName="[&_td]:whitespace-nowrap [&_th]:whitespace-nowrap"
+      />
     </section>
   );
 }

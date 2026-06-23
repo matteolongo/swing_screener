@@ -573,7 +573,6 @@ export const messagesEn = {
       today: 'Today',
       book: 'Book',
       universes: 'Universes',
-      backtest: 'Backtest',
       settings: 'Settings',
     },
     activeStrategy: 'Active Strategy',
