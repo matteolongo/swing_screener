@@ -20,6 +20,7 @@ import {
   ExitSignalItem,
   WatchlistNearTriggerItem,
   PendingOrderItem,
+  OpenPositionItem,
 } from './TodayActionItems';
 
 interface SectionHeaderProps {
@@ -61,6 +62,7 @@ export default function TodayActionList({ onTickerSelect }: TodayActionListProps
   );
 
   const openPositionsQuery = usePositions('open');
+  const openPositions = openPositionsQuery.data ?? [];
   const positionById = useMemo(
     () => new Map(openPositionsQuery.data?.map((p) => [p.positionId, p]) ?? []),
     [openPositionsQuery.data],
@@ -126,7 +128,7 @@ export default function TodayActionList({ onTickerSelect }: TodayActionListProps
     );
   }
 
-  const isEmpty = requiresActionCount === 0 && exitSignalCount === 0 && watchlistNearTriggerCount === 0 && opportunitiesCount === 0 && holdCount === 0;
+  const isEmpty = openPositions.length === 0 && requiresActionCount === 0 && exitSignalCount === 0 && watchlistNearTriggerCount === 0 && opportunitiesCount === 0 && holdCount === 0;
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -178,6 +180,24 @@ export default function TodayActionList({ onTickerSelect }: TodayActionListProps
           <p className="text-sm text-muted px-2 py-4 text-center">
             {t('todayPage.actionList.empty')}
           </p>
+        )}
+
+        {openPositions.length > 0 && (
+          <div className="space-y-1">
+            <div className="px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary bg-primary/10 rounded">
+              {t('todayPage.actionList.openPositions')} · {openPositions.length}
+            </div>
+            <div className="space-y-0.5">
+              {openPositions.map((position) => (
+                <OpenPositionItem
+                  key={position.positionId}
+                  item={position}
+                  onClick={handleItemClick}
+                  intelligenceSummary={intelligenceByTicker.get(position.ticker)}
+                />
+              ))}
+            </div>
+          </div>
         )}
 
         {requiresActionCount > 0 && (

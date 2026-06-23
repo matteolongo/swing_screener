@@ -2084,6 +2084,8 @@ export const messagesEn = {
       requiresAction: 'Requires Action',
       opportunities: 'New Opportunities',
       holding: 'Holding',
+      openPositions: 'Open Positions',
+      openPositionDays: '{{days}}d held',
       close: 'Close',
       updateStop: 'Update Stop',
       addOn: 'Add-on',
