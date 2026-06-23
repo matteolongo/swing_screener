@@ -12,6 +12,9 @@
 - `/docs/engineering/AI_RUNTIME_ARCHITECTURE.md`
 - `/src/swing_screener/intelligence/README.md`
 
+## Module READMEs
+- `/src/swing_screener/backtest/README.md` — event-study backtesting (replay live decision path over history)
+
 ## Engineering
 - `/docs/engineering/DATA_SOURCE_AUDIT_AND_PROVIDER_STRATEGY.md`
 - `/docs/engineering/ROADMAP.md`
