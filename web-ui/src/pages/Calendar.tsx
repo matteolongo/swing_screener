@@ -55,7 +55,8 @@ function DateGroup({ date, events }: { date: string; events: CalendarEvent[] }) 
 }
 
 export default function Calendar() {
-  const { data, isLoading, isError } = useCalendarEventsQuery(30);
+  const daysAhead = 60;
+  const { data, isLoading, isError } = useCalendarEventsQuery(daysAhead);
 
   const grouped = useMemo(() => {
     if (!data) return [];
@@ -98,7 +99,7 @@ export default function Calendar() {
       )}
       {!isLoading && !isError && grouped.length === 0 && (
         <p className="text-sm text-muted">
-          {t('calendarPage.empty' as any, { days: '30' })}
+          {t('calendarPage.empty' as any, { days: String(daysAhead) })}
         </p>
       )}
       {grouped.map(([date, events]) => (
