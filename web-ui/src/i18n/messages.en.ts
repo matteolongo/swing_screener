@@ -516,6 +516,9 @@ export const messagesEn = {
       run: 'Run backtest',
       running: 'Running…',
     },
+    tab: {
+      intro: 'Replay the live rules over {{ticker}}’s history. Toggle the pattern stop to A/B the entry-stop change.',
+    },
     errors: {
       noTickers: 'Enter at least one ticker.',
       failed: 'Backtest failed. Please try again.',
@@ -618,6 +621,7 @@ export const messagesEn = {
           order: 'Order',
           fundamentals: 'Fundamentals',
           intelligence: 'Intelligence',
+          backtest: 'Backtest',
         },
         fundamentals: {
           descriptionHasSnapshot: 'Refresh the cached fundamentals snapshot for this symbol.',
