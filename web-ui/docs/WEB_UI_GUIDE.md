@@ -15,6 +15,7 @@ Daily trading workflow through the Swing Screener web interface.
 | Calendar | `/calendar` | Earnings calendar, upcoming catalyst events |
 | Book | `/book` | Open positions: stop updates, partial close, trail config; order management: create, fill, cancel; trade journal; performance analytics; weekly review |
 | Universes | `/universes` | Universe management, manual refresh, benchmark, symbol discovery with ad-hoc screener run (row click opens symbol detail modal) |
+| Backtest | `/backtest` | Event-study backtest: enter tickers + optional config overrides, run the live signal/stop/exit replay over history, view R-distribution metrics + per-trade ledger. Async run via the screener-style 202+poll pattern |
 | Strategy | `/strategy` | Strategy CRUD, activation, and validation |
 | Onboarding | `/onboarding` | Setup guide for new users |
 
@@ -36,6 +37,7 @@ Each domain has a directory under `web-ui/src/features/<domain>/` with `api.ts` 
 | `features/weeklyReview` | Book | Weekly review CRUD |
 | `features/strategy` | Strategy | Strategy CRUD and activation |
 | `features/universes` | Universes | Universe list, detail, refresh, benchmark |
+| `features/backtest` | Backtest | Event-study run (202+poll), trade ledger + metrics, snake_case→camelCase transform |
 | `features/config` | (cross-cutting) | App config read/write |
 | `features/persistence` | (cross-cutting) | API vs localStorage mode toggle |
 
