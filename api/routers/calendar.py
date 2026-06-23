@@ -24,7 +24,7 @@ def get_calendar_service() -> CalendarService:
 
 @router.get("/calendar/events", response_model=CalendarEventsResponse)
 def get_calendar_events(
-    days_ahead: int = Query(default=30, ge=1, le=90),
+    days_ahead: int = Query(default=60, ge=1, le=90),
     service: CalendarService = Depends(get_calendar_service),
 ) -> CalendarEventsResponse:
     """
