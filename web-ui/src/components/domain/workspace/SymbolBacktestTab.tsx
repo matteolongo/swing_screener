@@ -25,7 +25,6 @@ export default function SymbolBacktestTab({ ticker }: SymbolBacktestTabProps) {
   // Drop the prior symbol's results when the canvas switches symbols.
   useEffect(() => {
     mutation.reset();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticker]);
 
   const handleRun = () => {
