@@ -88,24 +88,40 @@ export default function AnalysisDecisionStrip({
 }: AnalysisDecisionStripProps) {
   const summary = candidate?.decisionSummary;
   const currency = candidate?.currency ?? 'USD';
-  const closeEntry = summary?.tradePlan.entry ?? candidate?.recommendation?.risk?.entry ?? candidate?.entry ?? position?.entryPrice ?? null;
-  const suggestedOrderEntry = isPositiveNumber(candidate?.suggestedOrderPrice) ? candidate.suggestedOrderPrice : null;
-  const usesSuggestedEntry =
-    suggestedOrderEntry != null &&
-    (!isPositiveNumber(closeEntry) || Math.abs(suggestedOrderEntry - closeEntry) >= 0.005);
-  const entry = usesSuggestedEntry ? suggestedOrderEntry : closeEntry;
-  const stop = summary?.tradePlan.stop ?? candidate?.recommendation?.risk?.stop ?? candidate?.stop ?? position?.stopPrice ?? null;
-  const target = summary?.tradePlan.target ?? candidate?.recommendation?.risk?.target ?? position?.targetPrice ?? null;
+  const isHeld = position != null;
+
+  let entry: number | null;
+  let stop: number | null;
+  let target: number | null;
+  let usesSuggestedEntry = false;
+  let closeEntry: number | null = null;
+  let riskPct: number | undefined;
+
+  if (isHeld) {
+    entry = position.entryPrice;
+    stop = position.stopPrice;
+    target = position.targetPrice ?? null;
+    riskPct = isPositiveNumber(position.perShareRisk) && isPositiveNumber(position.entryPrice)
+      ? position.perShareRisk / position.entryPrice
+      : undefined;
+  } else {
+    closeEntry = summary?.tradePlan.entry ?? candidate?.recommendation?.risk?.entry ?? candidate?.entry ?? null;
+    const suggestedOrderEntry = isPositiveNumber(candidate?.suggestedOrderPrice) ? candidate.suggestedOrderPrice : null;
+    usesSuggestedEntry =
+      suggestedOrderEntry != null &&
+      (!isPositiveNumber(closeEntry) || Math.abs(suggestedOrderEntry - closeEntry) >= 0.005);
+    entry = usesSuggestedEntry ? suggestedOrderEntry : closeEntry;
+    stop = summary?.tradePlan.stop ?? candidate?.recommendation?.risk?.stop ?? candidate?.stop ?? null;
+    target = summary?.tradePlan.target ?? candidate?.recommendation?.risk?.target ?? null;
+    riskPct = candidate?.recommendation?.risk?.riskPct;
+  }
+
   const computedRr = target != null && entry != null && stop != null && entry > stop
     ? (target - entry) / (entry - stop)
     : null;
   const rr = computedRr ?? summary?.tradePlan.rr ?? candidate?.recommendation?.risk?.rr ?? candidate?.rr ?? null;
   const oneR = entry != null && stop != null ? entry - stop : null;
   const pctToTarget = target != null && entry != null && entry > 0 ? (target - entry) / entry * 100 : null;
-  const riskPct = candidate?.recommendation?.risk?.riskPct
-    ?? (position != null && isPositiveNumber(position.perShareRisk) && isPositiveNumber(position.entryPrice)
-      ? position.perShareRisk / position.entryPrice
-      : undefined);
   const entryLabel = usesSuggestedEntry
     ? t('workspacePage.panels.analysis.decisionSummary.tradePlan.plannedEntry')
     : t('workspacePage.panels.analysis.decisionSummary.tradePlan.entryClose');

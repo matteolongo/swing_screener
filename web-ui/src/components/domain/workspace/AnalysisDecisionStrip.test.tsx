@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import AnalysisDecisionStrip from '@/components/domain/workspace/AnalysisDecisionStrip';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
+import type { PositionWithMetrics } from '@/features/portfolio/api';
 
 function buildCandidate(overrides: Partial<SymbolAnalysisCandidate> = {}): SymbolAnalysisCandidate {
   return {
@@ -229,6 +230,104 @@ describe('AnalysisDecisionStrip — no signal pills row', () => {
     expect(screen.queryByText(/Setup:/)).not.toBeInTheDocument();
   });
 });
+describe('AnalysisDecisionStrip — held position anchors to position data', () => {
+  function buildPosition(overrides: Partial<PositionWithMetrics> = {}): PositionWithMetrics {
+    return {
+      ticker: 'LRCX',
+      status: 'open',
+      entryDate: '2024-01-15',
+      entryPrice: 383.04,
+      stopPrice: 346.30,
+      targetPrice: undefined,
+      shares: 10,
+      pnl: 100,
+      pnlPercent: 0.02,
+      rNow: 0.5,
+      entryValue: 3830.4,
+      currentValue: 3930.4,
+      perShareRisk: 36.74,
+      totalRisk: 367.4,
+      feesEur: 0,
+      daysOpen: 5,
+      timeStopWarning: false,
+      ...overrides,
+    };
+  }
+
+  it('shows position entry and stop when both position and candidate are present', () => {
+    const position = buildPosition();
+    const candidate = buildCandidate({ ticker: 'LRCX', entry: 403.98, stop: 365.07 });
+    render(<AnalysisDecisionStrip ticker="LRCX" position={position} candidate={candidate} />);
+
+    const entryLabel = screen.getByText('Entry (close)');
+    const entryCell = entryLabel.closest('div[class*="min-w"]');
+    expect(entryCell?.textContent).toContain('$383.04');
+    expect(entryCell?.textContent).not.toContain('$403.98');
+
+    const stopLabel = screen.getByText('Stop');
+    const stopCell = stopLabel.closest('div[class*="min-w"]');
+    expect(stopCell?.textContent).toContain('$346.30');
+    expect(stopCell?.textContent).not.toContain('$365.07');
+  });
+
+  it('shows dash for target when position has no targetPrice even if candidate has one', () => {
+    const position = buildPosition({ targetPrice: undefined });
+    // candidate has a target via its entry/stop fields; add a decisionSummary with a target
+    const candidateWithTarget = buildCandidate({
+      ticker: 'LRCX',
+      entry: 403.98,
+      stop: 365.07,
+      decisionSummary: {
+        symbol: 'LRCX',
+        action: 'MANAGE_ONLY' as const,
+        conviction: 'medium' as const,
+        technicalLabel: 'strong' as const,
+        fundamentalsLabel: 'strong' as const,
+        valuationLabel: 'fair' as const,
+        catalystLabel: 'active' as const,
+        catalystSummary: null,
+        catalystSources: [],
+        whyNow: '',
+        whatToDo: '',
+        mainRisk: '',
+        tradePlan: { entry: 403.98, stop: 365.07, target: 498.47, rr: 2.5 },
+        drivers: { positives: [], negatives: [], warnings: [] },
+        valuationContext: {
+          method: 'not_available' as const,
+          summary: '',
+          trailingPe: undefined,
+          priceToSales: undefined,
+          bookValuePerShare: undefined,
+          priceToBook: undefined,
+          bookToPrice: undefined,
+          fairValueLow: undefined,
+          fairValueBase: undefined,
+          fairValueHigh: undefined,
+          premiumDiscountPct: undefined,
+        },
+      },
+    });
+    render(<AnalysisDecisionStrip ticker="LRCX" position={position} candidate={candidateWithTarget} />);
+
+    const targetLabel = screen.getByText('Target');
+    const targetCell = targetLabel.closest('div[class*="min-w"]');
+    expect(targetCell?.textContent).toContain('—');
+    expect(targetCell?.textContent).not.toContain('$498.47');
+  });
+
+  it('shows 1R computed from position entry/stop, not candidate', () => {
+    const position = buildPosition();
+    const candidate = buildCandidate({ ticker: 'LRCX', entry: 403.98, stop: 365.07 });
+    render(<AnalysisDecisionStrip ticker="LRCX" position={position} candidate={candidate} />);
+
+    const oneRLabel = screen.getByText('1R');
+    const oneRCell = oneRLabel.closest('div[class*="min-w"]');
+    // 383.04 - 346.30 = 36.74
+    expect(oneRCell?.textContent).toContain('$36.74');
+    expect(oneRCell?.textContent).not.toContain('$38.91');
+  });
+});
+
 describe('AnalysisDecisionStrip — metric grid layout', () => {
   it('renders exactly 7 metric cells', () => {
     const { container } = render(<AnalysisDecisionStrip ticker="BESI.AS" />);
