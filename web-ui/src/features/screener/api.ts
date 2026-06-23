@@ -27,6 +27,7 @@ export async function runScreener(request: ScreenerRequest): Promise<ScreenerRes
     currencies: request.currencies,
     exchange_mics: request.exchangeMics,
     include_otc: request.includeOtc,
+    include_held: request.includeHeld,
     instrument_types: request.instrumentTypes,
     breakout_lookback: request.breakoutLookback,
     pullback_ma: request.pullbackMa,

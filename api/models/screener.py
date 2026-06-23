@@ -148,6 +148,13 @@ class ScreenerRequest(BaseModel):
         default=None,
         description="Whether to include OTC listings (XOTC). Defaults to true.",
     )
+    include_held: Optional[bool] = Field(
+        default=False,
+        description=(
+            "Keep manage-only candidates for symbols with an open position instead "
+            "of suppressing them. Used to compute live analysis for a held position."
+        ),
+    )
     instrument_types: Optional[list[str]] = Field(
         default=None,
         description="Allowed instrument types (e.g., ['equity'], ['etf'])",
