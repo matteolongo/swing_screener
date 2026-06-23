@@ -21,9 +21,12 @@ Candlestick pattern + structural-stop settings live under `low_level`:
   `extension_threshold_pct`, `breakout_lookback`, `pullback_ma`.
 - `low_level.execution.pattern_stop_enabled` / `pattern_stop_atr_buffer` —
   toggle and ATR buffer for the structural stop derived from a bullish pattern on
-  the latest bar (`execution/guidance.apply_pattern_stop`). The structural stop is
-  only used when it is tighter than the existing stop, below entry, not in an
-  `extended` context, and does not breach minimum R.
+  the latest bar (`execution/guidance.apply_pattern_stop`). When available it
+  becomes the candidate's entry stop (the recommendation's target, R:R and risk
+  are recomputed from it; share count is unchanged), so 1R reflects the setup's
+  invalidation level instead of a wide ATR multiple. It is only applied when it is
+  tighter than the ATR stop, below entry, not in an `extended` context, and does
+  not breach minimum R.
 
 ### `user.yaml`
 

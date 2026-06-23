@@ -702,6 +702,83 @@ def test_screener_returns_same_symbol_add_on_metadata(monkeypatch):
         app.dependency_overrides.pop(get_portfolio_service, None)
 
 
+def test_screener_anchors_entry_stop_to_structural_pattern_stop(monkeypatch):
+    """A valid, tighter structural (pattern) stop becomes the entry stop used by
+    the recommendation/order, with risk recomputed from it (share count kept)."""
+    ohlcv = _ohlcv_with_spy()
+    mock_provider = _create_mock_provider(ohlcv)
+
+    def fake_build_daily_report(ohlcv, cfg, exclude_tickers=None, sector_benchmark_returns=None, **kwargs):
+        idx = ["REP.MC"]
+        data = {
+            "atr14": [0.8],
+            "mom_6m": [0.15],
+            "mom_12m": [0.25],
+            "rs_6m": [0.05],
+            "score": [0.994],
+            "confidence": [92.7],
+            "last": [23.0],
+            "ma20_level": [22.0],
+            "dist_sma50_pct": [9.5],
+            "dist_sma200_pct": [22.0],
+            "rank": [1],
+            "signal": ["breakout"],
+            "entry": [22.83],
+            "stop": [21.62],
+            "shares": [5],
+            "position_value": [114.15],
+            "realized_risk": [6.05],
+            "suggested_order_type": ["BUY_LIMIT"],
+            "suggested_order_price": [22.83],
+            "execution_note": ["Pullback setup."],
+        }
+        return pd.DataFrame(data, index=idx)
+
+    class StubPortfolioService:
+        def list_positions(self, status=None):
+            del status
+            return SimpleNamespace(positions=[])
+
+        def list_orders(self, status=None, ticker=None):
+            del status, ticker
+            return SimpleNamespace(orders=[])
+
+        def suggest_position_stop(self, position_id):
+            del position_id
+            return SimpleNamespace(action="NO_ACTION")
+
+    monkeypatch.setattr(screener_service, "get_default_provider", lambda **kwargs: mock_provider)
+    monkeypatch.setattr(screener_service, "build_daily_report", fake_build_daily_report)
+    monkeypatch.setattr(
+        screener_service,
+        "get_multiple_ticker_info",
+        lambda tickers: {"REP.MC": {"name": "Repsol", "sector": "Energy", "currency": "EUR"}},
+    )
+    # Force a valid, tighter structural stop (above the 21.62 ATR stop, below entry).
+    monkeypatch.setattr(
+        screener_service,
+        "apply_pattern_stop",
+        lambda **kwargs: (22.20, "Stop below hammer low (at breakout)"),
+    )
+
+    app.dependency_overrides[get_portfolio_service] = lambda: StubPortfolioService()
+    try:
+        client = TestClient(app)
+        res = client.post("/api/screener/run", json={"universe": "broad_market_stocks", "top": 20})
+        assert res.status_code == 200
+
+        candidate = res.json()["candidates"][0]
+        # Entry stop is now the structural pattern stop, not the wide ATR stop.
+        assert candidate["stop"] == 22.20
+        assert candidate["recommendation"]["risk"]["stop"] == 22.20
+        assert candidate["pattern_stop"] == 22.20
+        # Share count is unchanged; risk is recomputed from the tighter stop.
+        assert candidate["shares"] == 5
+        assert candidate["risk_usd"] == pytest.approx((22.83 - 22.20) * 5, abs=1e-6)
+    finally:
+        app.dependency_overrides.pop(get_portfolio_service, None)
+
+
 def test_screener_loads_each_fundamentals_snapshot_once(monkeypatch):
     ohlcv = _ohlcv_with_spy()
     mock_provider = _create_mock_provider(ohlcv)
