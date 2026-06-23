@@ -14,6 +14,7 @@ import type {
 } from '@/features/dailyReview/types';
 import type { WatchItem } from '@/features/watchlist/types';
 import type { OpenPositionIntelligenceSummary } from '@/features/intelligence/types';
+import type { PositionWithMetrics } from '@/features/portfolio/api';
 
 export interface TimeStopBadgeProps {
   daysOpen: number;
@@ -104,6 +105,42 @@ export function VolumeDot({ ratio }: { ratio: number | undefined }) {
     );
   }
   return null;
+}
+
+export interface OpenPositionItemProps {
+  item: PositionWithMetrics;
+  onClick: (ticker: string) => void;
+  isFocused?: boolean;
+  intelligenceSummary?: OpenPositionIntelligenceSummary;
+}
+
+export function OpenPositionItem({ item, onClick, isFocused, intelligenceSummary }: OpenPositionItemProps) {
+  return (
+    <button
+      type="button"
+      onClick={() => onClick(item.ticker)}
+      className={cn(
+        'w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-foreground/5 transition-colors border-l-2 border-primary/40',
+        isFocused && 'ring-1 ring-primary',
+      )}
+    >
+      <span className="text-sm font-semibold text-foreground min-w-[60px]">
+        {item.ticker}
+      </span>
+      <span className={cn('text-xs font-semibold tabular-nums', getSignColorClass(item.rNow))}>
+        {item.rNow >= 0 ? '+' : ''}{formatNumber(item.rNow, 2)}R
+      </span>
+      <span className="text-xs text-muted tabular-nums shrink-0">
+        {t('todayPage.actionList.openPositionDays', { days: String(item.daysOpen) })}
+      </span>
+      <TimeStopBadge daysOpen={item.daysOpen} rNow={item.rNow} show={item.timeStopWarning} />
+      <AiSignalBadge summary={intelligenceSummary} />
+      <EarningsBadge ticker={item.ticker} />
+      <span className={cn('text-xs tabular-nums truncate flex-1 text-right', getSignColorClass(item.pnlPercent))}>
+        {item.pnlPercent >= 0 ? '+' : ''}{formatNumber(item.pnlPercent, 1)}%
+      </span>
+    </button>
+  );
 }
 
 export interface CloseItemProps {

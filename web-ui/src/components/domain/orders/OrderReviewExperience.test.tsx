@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import { renderWithProviders } from '@/test/utils';
+import { t } from '@/i18n/t';
 import OrderReviewExperience from './OrderReviewExperience';
 import type { OrderReviewContext } from './OrderReviewExperience';
 import type { RiskConfig } from '@/types/config';
@@ -118,6 +119,35 @@ describe('OrderReviewExperience — liquidity slippage warning', () => {
     if (brokerStep) {
       expect(brokerStep).not.toBeVisible();
     }
+  });
+});
+
+describe('OrderReviewExperience — target price defaulting', () => {
+  it('pre-fills the target from the R:R ratio when no explicit recommendation target exists', async () => {
+    // entry=20, stop=18, rr=2 → target = 20 + 2*(20-18) = 24
+    renderWithProviders(
+      <OrderReviewExperience
+        context={makeContext({ rReward: 2 })}
+        risk={risk}
+        defaultNotes=""
+        onSubmitOrder={vi.fn()}
+      />
+    );
+    const targetInput = await screen.findByLabelText(t('order.candidateModal.targetPrice'));
+    expect(targetInput).toHaveValue(24);
+  });
+
+  it('leaves the target empty when neither a target nor an R:R ratio is available', async () => {
+    renderWithProviders(
+      <OrderReviewExperience
+        context={makeContext({ rReward: undefined })}
+        risk={risk}
+        defaultNotes=""
+        onSubmitOrder={vi.fn()}
+      />
+    );
+    const targetInput = await screen.findByLabelText(t('order.candidateModal.targetPrice'));
+    expect(targetInput).toHaveValue(null);
   });
 });
 
