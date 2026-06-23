@@ -125,7 +125,7 @@ export default function OnboardingPage() {
   const handleNext = () => {
     if (stepIndex >= STEPS.length - 1) {
       completeOnboarding();
-      navigate('/workspace');
+      navigate('/today');
       return;
     }
 
@@ -143,7 +143,7 @@ export default function OnboardingPage() {
 
   const handleSkip = () => {
     dismissOnboarding();
-    navigate('/workspace');
+    navigate('/today');
   };
 
   return (
