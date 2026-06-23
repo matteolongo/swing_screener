@@ -7,6 +7,7 @@ This document is the canonical module layout after the 2026 architecture consoli
 
 ## Canonical Top-Level Domains
 
+- `src/swing_screener/backtest`
 - `src/swing_screener/data`
 - `src/swing_screener/execution`
 - `src/swing_screener/fundamentals`
@@ -37,6 +38,7 @@ This document is the canonical module layout after the 2026 architecture consoli
     `risk/recommendations`, which owns the risk-side recommendation engine and trade thesis.
 11. `settings` owns settings load/migrate/path resolution.
 12. `integrations` owns third-party brokerage integrations (e.g. degiro).
+13. `backtest` orchestrates the live signal/stop/exit functions over point-in-time history to measure expectancy; owns no trading logic of its own. Validation harness only, never a parameter optimizer.
 
 ## Canonical Import Paths
 

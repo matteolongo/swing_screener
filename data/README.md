@@ -7,6 +7,7 @@ Runtime data for Swing Screener.
 - `positions.json`: position records (primary storage today)
 - `watchlist.json`: watchlist state
 - `intelligence/`: runtime intelligence snapshots, jobs, caches, and reports
+- `backtest/jobs/`: background event-study run jobs (one JSON per job; not committed, gitignored). Created on API start; interrupted `queued`/`running` jobs are recovered as `error` on restart.
 
 User-authored configuration no longer lives under `data/`. Shared configuration is stored in:
 - `config/user.yaml`

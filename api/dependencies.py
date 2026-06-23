@@ -4,7 +4,10 @@ from __future__ import annotations
 import os
 import threading
 from pathlib import Path
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from api.services.backtest_service import BacktestService
 
 from fastapi import Depends
 
@@ -169,6 +172,12 @@ def get_screener_service(
         portfolio_service=portfolio_service,
         orders_service=orders_service,
     )
+
+
+def get_backtest_service() -> "BacktestService":
+    from api.services.backtest_service import BacktestService
+
+    return BacktestService()
 
 
 def get_fundamentals_service(

@@ -51,6 +51,7 @@ data/social_cache/
 data/fundamentals/
 data/daily_reviews/
 data/screener/
+data/backtest/
 data/*.db
 data/*.db-journal
 # data/intelligence — ignore runtime output, track seed/config files
