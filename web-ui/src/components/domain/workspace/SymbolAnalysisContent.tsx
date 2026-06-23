@@ -235,7 +235,7 @@ export default function SymbolAnalysisContent({
               <CatalystContextCard opportunity={catalystQuery.data} />
             )}
             {candidate ? <TechnicalMetricsGrid candidate={candidate} /> : null}
-            {!hasNarrative && candidate && (
+            {!hasNarrative && (candidate || position) && (
               <div className="rounded-lg border border-border bg-surface p-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>

@@ -785,6 +785,23 @@ describe('AnalysisCanvasPanel', () => {
     expect(decisionTitle.compareDocumentPosition(aiTitle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
+  it('shows the Analyze with AI button for a held position that has no screener candidate', async () => {
+    // VALE is an open position in the default MSW handler, with no screener candidate cached.
+    useWorkspaceStore.setState({
+      selectedTicker: 'VALE',
+      selectedTickerSource: 'screener',
+      analysisTab: 'overview',
+    });
+    useScreenerStore.setState({ lastResult: null });
+    mockFundamentalsIdle();
+
+    renderWithProviders(<AnalysisCanvasPanel />);
+
+    expect(
+      await screen.findByRole('button', { name: t('workspacePage.panels.analysis.intelligence.analyzeAction') })
+    ).toBeInTheDocument();
+  });
+
   it('renders a watch toggle for the selected symbol', () => {
     vi.mocked(fundamentalsHooks.useFundamentalSnapshotQuery).mockReturnValue({
       isLoading: false,
