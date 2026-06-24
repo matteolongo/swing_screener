@@ -116,5 +116,11 @@ Catalysts (`/api/catalysts`):
 - `GET /api/catalysts/latest`
 - `GET /api/catalysts/symbol/{ticker}`
 
+Data Sources (`/api/datasources`) — read-only diagnostics, no config mutation:
+- `GET /api/datasources` — inventory of all known sources. Response: `{sources: [SourceDescriptorOut, ...]}`. Each `SourceDescriptorOut` has `id`, `display_name`, `domain`, `role` (`primary`/`fallback`/`enrichment`), `requires` (env var or pkg name; null if unconditional), `configured` (bool), `probeable` (bool), `canary_market` (`us`/`eu`/null), `note` (null or a free-text annotation), and `last_probe` (null or `ProbeResultOut` from the most recent probe run). Intelligence catalyst sources appear with `probeable=false` and a `note` explaining the gap.
+- `POST /api/datasources/probe` — probe all probeable sources concurrently. Response: `[ProbeResultOut, ...]`. `ProbeResultOut` has `id`, `status` (`ok`/`down`/`not_configured`), `latency_ms`, `detail`, `sample` (small dict of live data), `error`.
+- `POST /api/datasources/{source_id}/probe` — probe one source by id. Response: `ProbeResultOut` (same shape). Returns `not_configured` status (no exception) for unknown or non-probeable ids.
+- `GET /api/datasources/events?limit=N` — most recent fallback/stale-cache events recorded at runtime (default 100, max 200). Response: `{events: [FallbackEventOut, ...]}`. Each `FallbackEventOut` has `ts` (ISO-8601 UTC), `domain`, `from_provider`, `reason`, `fell_back_to` (null or id), `tickers` (list), `stale_asof` (null or date string). Events are in-memory only (not persisted; reset on server restart).
+
 ## Ownership
 Routers live in `api/routers/` and call services in `api/services/`.

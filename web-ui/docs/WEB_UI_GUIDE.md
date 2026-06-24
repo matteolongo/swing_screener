@@ -17,6 +17,7 @@ Daily trading workflow through the Swing Screener web interface.
 | Universes | `/universes` | Universe management, manual refresh, benchmark, symbol discovery with ad-hoc screener run (row click opens symbol detail modal) |
 | Strategy | `/strategy` | Strategy CRUD, activation, and validation |
 | Onboarding | `/onboarding` | Setup guide for new users |
+| Data Sources | `/datasources` | Data source diagnostics: inventory of all sources with configured/probeable status, per-source Test button (fires a live canary probe), Test All (concurrent probe of all probeable sources), and a fallback event feed |
 
 ## Feature Directory Map
 
@@ -37,6 +38,7 @@ Each domain has a directory under `web-ui/src/features/<domain>/` with `api.ts` 
 | `features/strategy` | Strategy | Strategy CRUD and activation |
 | `features/universes` | Universes | Universe list, detail, refresh, benchmark |
 | `features/backtest` | Today (canvas Backtest tab) | Event-study run (202+poll), trade ledger + metrics, snake_case→camelCase transform. Run inline per-symbol from the analysis canvas Backtest tab (`components/domain/workspace/SymbolBacktestTab`, locked to the selected symbol); results render via `components/domain/backtest/BacktestResults`. No standalone page |
+| `features/datasources` | Data Sources | Source inventory, per-source and bulk probe, fallback event feed |
 | `features/config` | (cross-cutting) | App config read/write |
 | `features/persistence` | (cross-cutting) | API vs localStorage mode toggle |
 
