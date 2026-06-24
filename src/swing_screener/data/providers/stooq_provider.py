@@ -11,7 +11,8 @@ import httpx
 import pandas as pd
 
 from .base import MarketDataProvider
-from swing_screener.data.source_health import DataSourceHealth
+from swing_screener.data.source_health import DataSourceHealth, SourceDescriptor, ProbeResult
+from swing_screener.data.providers._probe import ohlcv_canary_probe
 from swing_screener.utils import normalize_tickers
 
 _INSTRUMENT_MASTER_PATH = Path("data/intelligence/instrument_master.json")
@@ -246,3 +247,20 @@ class StooqDataProvider(MarketDataProvider):
 
     def get_provider_name(self) -> str:
         return "stooq"
+
+    @classmethod
+    def describe(cls) -> SourceDescriptor:
+        return SourceDescriptor(
+            id="stooq",
+            display_name="Stooq",
+            domain="market_data",
+            role="fallback",
+            requires=None,
+            configured=True,
+            probeable=True,
+            canary_market="eu",
+        )
+
+    @classmethod
+    def probe(cls, canary: str) -> ProbeResult:
+        return ohlcv_canary_probe(cls(), canary, "stooq")

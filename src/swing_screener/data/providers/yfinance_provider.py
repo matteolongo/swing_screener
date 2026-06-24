@@ -15,7 +15,8 @@ import yfinance as yf
 from .base import MarketDataProvider
 from .stooq_provider import StooqDataProvider
 from ..market_data import fetch_ticker_metadata
-from swing_screener.data.source_health import DataSourceHealth
+from swing_screener.data.source_health import DataSourceHealth, SourceDescriptor, ProbeResult
+from swing_screener.data.providers._probe import ohlcv_canary_probe
 from swing_screener.utils import normalize_tickers
 
 logger = logging.getLogger(__name__)
@@ -709,8 +710,25 @@ class YfinanceProvider(MarketDataProvider):
     def get_provider_name(self) -> str:
         """
         Get provider name.
-        
+
         Returns:
             "yfinance"
         """
         return "yfinance"
+
+    @classmethod
+    def describe(cls) -> SourceDescriptor:
+        return SourceDescriptor(
+            id="yfinance",
+            display_name="Yahoo Finance",
+            domain="market_data",
+            role="primary",
+            requires=None,
+            configured=True,
+            probeable=True,
+            canary_market="us",
+        )
+
+    @classmethod
+    def probe(cls, canary: str) -> ProbeResult:
+        return ohlcv_canary_probe(cls(), canary, "yfinance")
