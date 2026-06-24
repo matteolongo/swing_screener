@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from swing_screener.fundamentals.config import FundamentalsConfig
 from swing_screener.fundamentals.models import TRUST_METADATA_MISSING_FLAG, FundamentalSnapshot
+from swing_screener.data.source_health import record_fallback
 from swing_screener.fundamentals.providers import (
     DegiroFundamentalsProvider,
     SecEdgarFundamentalsProvider,
@@ -77,7 +78,7 @@ class FundamentalsAnalysisService:
         snapshot = None
         last_error: Exception | None = None
         last_provider_name = "unknown"
-        for provider in providers:
+        for idx, provider in enumerate(providers):
             last_provider_name = provider.name
             try:
                 record = provider.fetch_record(normalized_symbol)
@@ -87,6 +88,14 @@ class FundamentalsAnalysisService:
                 break
             except Exception as exc:
                 last_error = exc
+                next_provider = providers[idx + 1].name if idx + 1 < len(providers) else None
+                record_fallback(
+                    domain="fundamentals",
+                    from_provider=provider.name,
+                    reason=str(exc),
+                    fell_back_to=next_provider,
+                    tickers=[normalized_symbol],
+                )
                 continue
         if snapshot is None:
             if cached is not None:
