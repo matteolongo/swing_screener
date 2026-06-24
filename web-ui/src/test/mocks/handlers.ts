@@ -995,6 +995,12 @@ export const handlers = [
     })
   }),
 
+  // Datasources endpoints
+  http.get(`${API_BASE_URL}/api/datasources`, () => HttpResponse.json({ sources: [] })),
+  http.get(`${API_BASE_URL}/api/datasources/events`, () => HttpResponse.json({ events: [] })),
+  http.post(`${API_BASE_URL}/api/datasources/probe`, () => HttpResponse.json([])),
+  http.post(`${API_BASE_URL}/api/datasources/:id/probe`, () => HttpResponse.json({ id: 'x', status: 'ok', latency_ms: 1, detail: null, sample: null, error: null })),
+
   // Fundamentals snapshot mock
   http.get(`${API_BASE_URL}/api/fundamentals/snapshot/:symbol`, ({ params }) => {
     const symbol = String(params.symbol ?? 'AAPL').toUpperCase()
