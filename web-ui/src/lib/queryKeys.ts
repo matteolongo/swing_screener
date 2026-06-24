@@ -31,4 +31,6 @@ export const queryKeys = {
     ['calendar-events', daysAhead ?? 30] as const,
   openPositionsIntelligence: () => ['openPositionsIntelligence'] as const,
   tickerCandles: (ticker?: string | null) => ['ticker-candles', ticker ?? null] as const,
+  datasources: () => ['datasources'] as const,
+  datasourcesEvents: () => ['datasources', 'events'] as const,
 };
