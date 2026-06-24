@@ -192,6 +192,18 @@ def get_fundamentals_service(
 
 
 
+from api.services.datasources_service import DatasourcesService
+
+_datasources_service: DatasourcesService | None = None
+
+
+def get_datasources_service() -> DatasourcesService:
+    global _datasources_service
+    if _datasources_service is None:
+        _datasources_service = DatasourcesService()
+    return _datasources_service
+
+
 SCREENER_HISTORY_FILE = DATA_DIR / "screener_history.json"
 
 def get_screener_history_repo() -> ScreenerHistoryRepository:

@@ -22,6 +22,7 @@ from api.routers import (
     catalysts,
     config,
     daily_review,
+    datasources,
     fundamentals,
     intelligence,
     market_data,
@@ -315,6 +316,7 @@ app.include_router(fundamentals.router, prefix="/api/fundamentals", tags=["funda
 app.include_router(intelligence.router, prefix="/api", tags=["intelligence"])
 app.include_router(catalysts.router, prefix="/api", tags=["catalysts"])
 app.include_router(daily_review.router, prefix="/api", tags=["daily-review"])
+app.include_router(datasources.router, prefix="/api/datasources", tags=["datasources"])
 app.include_router(market_data.router, prefix="/api", tags=["market-data"])
 app.include_router(weekly_reviews.router, prefix="/api/weekly-reviews", tags=["weekly-reviews"])
 app.include_router(backtest.router, prefix="/api/backtest", tags=["backtest"])
