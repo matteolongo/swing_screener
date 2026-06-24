@@ -82,6 +82,12 @@ export const API_ENDPOINTS = {
 
   // Market data
   marketDataCandles: (ticker: string) => `/api/market-data/${encodeURIComponent(ticker)}/candles`,
+
+  // Data sources
+  datasources: '/api/datasources',
+  datasourceProbe: (id: string) => `/api/datasources/${encodeURIComponent(id)}/probe`,
+  datasourcesProbeAll: '/api/datasources/probe',
+  datasourcesEvents: '/api/datasources/events',
 } as const;
 
 // Helper to build full URL
