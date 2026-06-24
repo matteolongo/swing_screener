@@ -64,3 +64,28 @@ def test_yfinance_probe_down_on_empty(monkeypatch):
     )
     r = YfinanceProvider.probe("AAPL")
     assert r.status == "down"
+
+
+def test_stooq_probe_ok_when_data(monkeypatch):
+    df = pd.DataFrame(
+        {("Close", "ASML.AS"): [700.0, 710.0]},
+        index=pd.to_datetime(["2026-06-22", "2026-06-23"]),
+    )
+    df.columns = pd.MultiIndex.from_tuples(df.columns)
+    monkeypatch.setattr(
+        "swing_screener.data.providers.stooq_provider.StooqDataProvider.fetch_ohlcv",
+        lambda self, tickers, start_date, end_date, interval="1d": df,
+    )
+    r = StooqDataProvider.probe("ASML.AS")
+    assert r.status == "ok"
+    assert r.latency_ms is not None
+    assert r.sample["last_close"] == 710.0
+
+
+def test_stooq_probe_down_on_empty(monkeypatch):
+    monkeypatch.setattr(
+        "swing_screener.data.providers.stooq_provider.StooqDataProvider.fetch_ohlcv",
+        lambda self, tickers, start_date, end_date, interval="1d": pd.DataFrame(),
+    )
+    r = StooqDataProvider.probe("ASML.AS")
+    assert r.status == "down"

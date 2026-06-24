@@ -531,6 +531,8 @@ class YfinanceProvider(MarketDataProvider):
 
             if df is None or df.empty:
                 df = pd.DataFrame()
+                _pre_stale_len_1 = len(cached_frames)
+                _served_stale_tickers_1: list[str] = []
                 if allow_cache_fallback_on_error:
                     for ticker, path in stale_fallback.items():
                         frame = self._slice_window(
@@ -538,13 +540,14 @@ class YfinanceProvider(MarketDataProvider):
                         )
                         if frame is not None and not frame.empty:
                             cached_frames.append(frame)
-                if cached_frames:
+                            _served_stale_tickers_1.append(ticker)
+                if len(cached_frames) > _pre_stale_len_1:
                     record_fallback(
                         domain="market_data",
                         from_provider="yfinance",
                         reason="serving stale cache after download failure",
                         fell_back_to="stale_cache",
-                        tickers=list(misses[:20]),
+                        tickers=_served_stale_tickers_1[:20],
                     )
                 if not cached_frames:
                     raise RuntimeError("Download empty. Check tickers or connection.")
@@ -584,6 +587,7 @@ class YfinanceProvider(MarketDataProvider):
                 # Tickers that still have no data but hold stale cached coverage
                 # are better served stale than dropped.
                 _pre_stale_len = len(cached_frames)
+                _served_stale_tickers: list[str] = []
                 if allow_cache_fallback_on_error and stale_fallback:
                     for ticker in self._missing_close_tickers(df, misses):
                         path = stale_fallback.get(ticker)
@@ -594,13 +598,14 @@ class YfinanceProvider(MarketDataProvider):
                         )
                         if frame is not None and not frame.empty:
                             cached_frames.append(frame)
+                            _served_stale_tickers.append(ticker)
                 if len(cached_frames) > _pre_stale_len:
                     record_fallback(
                         domain="market_data",
                         from_provider="yfinance",
                         reason="serving stale cache after download failure",
                         fell_back_to="stale_cache",
-                        tickers=list(misses[:20]),
+                        tickers=_served_stale_tickers[:20],
                     )
 
                 if use_cache:
