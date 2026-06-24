@@ -1,6 +1,7 @@
 """Alpaca market data provider using alpaca-py SDK."""
 from __future__ import annotations
 
+import os
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Optional
@@ -8,12 +9,10 @@ import time
 import hashlib
 
 import pandas as pd
-from alpaca.data import StockHistoricalDataClient
-from alpaca.data.requests import StockBarsRequest
-from alpaca.data.timeframe import TimeFrame
 
 from .base import MarketDataProvider
-from swing_screener.data.source_health import DataSourceHealth
+from swing_screener.data.source_health import DataSourceHealth, SourceDescriptor, ProbeResult
+from swing_screener.data.providers._probe import ohlcv_canary_probe
 
 
 class AlpacaDataProvider(MarketDataProvider):
@@ -51,12 +50,14 @@ class AlpacaDataProvider(MarketDataProvider):
             cache_dir: Directory for parquet cache files
             use_cache: Enable caching (default: True)
         """
+        from alpaca.data import StockHistoricalDataClient  # lazy: keeps module importable without alpaca-py
+
         self.api_key = api_key
         self.secret_key = secret_key
         self.paper = paper
         self.cache_dir = Path(cache_dir)
         self.use_cache = use_cache
-        
+
         # Initialize Alpaca client
         self.client = StockHistoricalDataClient(api_key, secret_key)
         
@@ -114,8 +115,9 @@ class AlpacaDataProvider(MarketDataProvider):
             key = f"{prefix}__n={len(tickers)}__{start_date}__{end_date}__{interval}__{digest}"
         return self.cache_dir / f"{key}.parquet"
     
-    def _parse_timeframe(self, interval: str) -> TimeFrame:
+    def _parse_timeframe(self, interval: str):
         """Convert interval string to Alpaca TimeFrame."""
+        from alpaca.data.timeframe import TimeFrame  # lazy
         interval_map = {
             "1m": TimeFrame.Minute,
             "1min": TimeFrame.Minute,
@@ -186,6 +188,7 @@ class AlpacaDataProvider(MarketDataProvider):
         
         # Fetch data from Alpaca
         def fetch():
+            from alpaca.data.requests import StockBarsRequest  # lazy
             self._wait_for_rate_limit()
             request = StockBarsRequest(
                 symbol_or_symbols=tickers,
@@ -348,8 +351,39 @@ class AlpacaDataProvider(MarketDataProvider):
     def get_provider_name(self) -> str:
         """
         Get provider name.
-        
+
         Returns:
             "alpaca" or "alpaca-paper"
         """
         return "alpaca-paper" if self.paper else "alpaca"
+
+    @classmethod
+    def _credentials_present(cls) -> bool:
+        return bool(os.environ.get("ALPACA_API_KEY") and os.environ.get("ALPACA_SECRET_KEY"))
+
+    @classmethod
+    def describe(cls) -> SourceDescriptor:
+        return SourceDescriptor(
+            id="alpaca",
+            display_name="Alpaca",
+            domain="market_data",
+            role="primary",
+            requires="ALPACA_API_KEY",
+            configured=cls._credentials_present(),
+            probeable=True,
+            canary_market="us",
+        )
+
+    @classmethod
+    def probe(cls, canary: str) -> ProbeResult:
+        if not cls._credentials_present():
+            return ProbeResult(id="alpaca", status="not_configured", detail="ALPACA_API_KEY/SECRET not set")
+        try:
+            provider = cls(
+                api_key=os.environ["ALPACA_API_KEY"],
+                secret_key=os.environ["ALPACA_SECRET_KEY"],
+                paper=os.environ.get("ALPACA_PAPER", "true").lower() != "false",
+            )
+        except ModuleNotFoundError:
+            return ProbeResult(id="alpaca", status="not_configured", detail="alpaca-py not installed")
+        return ohlcv_canary_probe(provider, canary, "alpaca")

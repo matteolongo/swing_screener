@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 import datetime as dt
+import json
 import logging
+import os
+import time
+import urllib.request
 from dataclasses import replace
 from typing import Any
 
 import httpx
 
+from swing_screener.data.source_health import ProbeResult, SourceDescriptor
 from swing_screener.fundamentals.models import ProviderFundamentalsRecord
 
 logger = logging.getLogger(__name__)
@@ -236,3 +241,44 @@ class FinnhubEnrichmentClient:
         if not updates:
             return record
         return replace(record, **updates)
+
+    @classmethod
+    def _key(cls) -> str | None:
+        return os.environ.get("FINNHUB_API_KEY") or None
+
+    @classmethod
+    def describe(cls) -> SourceDescriptor:
+        return SourceDescriptor(
+            id="finnhub",
+            display_name="Finnhub (enrichment)",
+            domain="fundamentals",
+            role="enrichment",
+            requires="FINNHUB_API_KEY",
+            configured=cls._key() is not None,
+            probeable=cls._key() is not None,
+            canary_market="us",
+        )
+
+    @classmethod
+    def probe(cls, canary: str) -> ProbeResult:
+        key = cls._key()
+        if not key:
+            return ProbeResult(id="finnhub", status="not_configured", detail="FINNHUB_API_KEY not set")
+        url = f"https://finnhub.io/api/v1/quote?symbol={canary}&token={key}"
+        started = time.perf_counter()
+        try:
+            with urllib.request.urlopen(url, timeout=10) as resp:
+                payload = json.loads(resp.read().decode("utf-8"))
+            elapsed = (time.perf_counter() - started) * 1000.0
+            price = payload.get("c")
+            if not price:
+                return ProbeResult(id="finnhub", status="down", latency_ms=round(elapsed, 1), detail="empty quote")
+            return ProbeResult(
+                id="finnhub",
+                status="ok",
+                latency_ms=round(elapsed, 1),
+                sample={"symbol": canary, "current_price": price},
+            )
+        except Exception as exc:
+            elapsed = (time.perf_counter() - started) * 1000.0
+            return ProbeResult(id="finnhub", status="down", latency_ms=round(elapsed, 1), error=str(exc))

@@ -574,6 +574,7 @@ export const messagesEn = {
       book: 'Book',
       universes: 'Universes',
       settings: 'Settings',
+      datasources: 'Data Sources',
     },
     activeStrategy: 'Active Strategy',
     loadingStrategies: 'Loading strategies...',
@@ -587,6 +588,29 @@ export const messagesEn = {
   },
   analysis: {
     prepareOrder: 'Prepare order',
+  },
+  datasources: {
+    title: 'Data Sources',
+    subtitle: 'Inventory, health probes, and recent fallbacks.',
+    test: 'Test',
+    testAll: 'Test all',
+    testing: 'Testing…',
+    notConfigured: 'Not configured',
+    notProbeable: 'No probe',
+    fallbacks: {
+      title: 'Recent fallbacks',
+      empty: 'No fallbacks recorded since the server started.',
+    },
+    domains: {
+      market_data: 'Market data',
+      fundamentals: 'Fundamentals',
+      intelligence: 'Intelligence',
+    },
+    status: {
+      ok: 'OK',
+      down: 'Down',
+      not_configured: 'Not configured',
+    },
   },
   workspacePage: {
     title: 'Workspace',

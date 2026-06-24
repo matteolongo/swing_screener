@@ -27,6 +27,11 @@ Candlestick pattern + structural-stop settings live under `low_level`:
   invalidation level instead of a wide ATR multiple. It is only applied when it is
   tighter than the ATR stop, below entry, not in an `extended` context, and does
   not breach minimum R.
+- `low_level.data_providers.probe_canary` — canary symbols used by data source
+  diagnostics (Data Sources page probes). Contains region-keyed symbols: `us` (US
+  market canary, default AAPL) and `eu` (EU market canary, default ASML.AS). Used
+  by the `DatasourcesService` to test provider health without requiring a real
+  universe.
 
 ### `user.yaml`
 

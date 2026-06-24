@@ -88,6 +88,30 @@ Also removed:
 
 - `swing_screener.reporting.config` as a canonical import target.
 
+## Data Source Diagnostics
+
+`src/swing_screener/data/source_health.py` owns the diagnostics contract and the
+in-memory fallback ring used by the Data Sources page.
+
+**`DiagnosableSource` Protocol** — a `@runtime_checkable` Protocol a provider
+implements to appear in the inventory and get a Test button. Both methods must be
+**classmethods** (so unconfigured providers can be described without instantiation):
+
+- `describe() -> SourceDescriptor` — static, credential-free; reports `configured`
+  (env var / package present) and `probeable` (has a live canary path).
+- `probe(canary: str) -> ProbeResult` — fires a small real request; returns
+  `ProbeResult(status="not_configured")` (no exception) when credentials/package
+  are absent.
+
+**`FallbackEventRing`** — process-local, bounded (`capacity=200`), thread-safe
+`deque`. Call `record_fallback(...)` at any provider fallback site; read via
+`recent_events(limit)`. Not persisted — resets on server restart. Surfaced by
+`GET /api/datasources/events`.
+
+The single cross-domain enumeration (`id → provider class`) lives in
+`api/services/datasources_service.py` (`_PROBEABLE`). There is no central
+registry in core; to add or remove a probeable source, update `_PROBEABLE` only.
+
 ## Universe Registry Data Sources
 
 The packaged universe registry (`src/swing_screener/data/universes/registry/`) is

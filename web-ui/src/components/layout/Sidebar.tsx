@@ -5,6 +5,7 @@ import {
   BookMarked,
   Database,
   Settings2,
+  Activity,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { t } from '@/i18n/t';
@@ -21,6 +22,7 @@ const primaryNav: NavigationItem[] = [
   { labelKey: 'sidebar.nav.calendar', href: '/calendar', icon: CalendarDays },
   { labelKey: 'sidebar.nav.book', href: '/book', icon: BookMarked },
   { labelKey: 'sidebar.nav.universes', href: '/universes', icon: Database },
+  { labelKey: 'sidebar.nav.datasources', href: '/datasources', icon: Activity },
 ];
 
 const settingsNav: NavigationItem = {
