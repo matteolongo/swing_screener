@@ -11,6 +11,7 @@ from api.dependencies import get_fundamentals_service, get_portfolio_service, ge
 from api.repositories.positions_repo import PositionsRepository
 from api.services.fundamentals_service import FundamentalsService
 from api.services.intelligence_enrichment import enrich_intelligence_request, enrich_with_technicals
+from swing_screener.intelligence.evidence.collect import collect_evidence
 from api.services.portfolio_service import PortfolioService
 from swing_screener.intelligence.cache import read_from_cache
 from swing_screener.intelligence.models import SymbolIntelligence, SymbolIntelligenceRequest
@@ -91,6 +92,7 @@ def analyze_symbol(
         request,
         fundamentals=fundamentals_service,
         earnings=_earnings,
+        evidence=lambda t: collect_evidence(t),
     )
     try:
         past_positions, _ = positions_repo.list_positions(status="closed")
@@ -137,6 +139,7 @@ def analyze_position(
         request,
         fundamentals=fundamentals_service,
         earnings=_earnings,
+        evidence=lambda t: collect_evidence(t),
     )
     try:
         ohlcv = portfolio_service.fetch_recent_ohlcv(pos.ticker)

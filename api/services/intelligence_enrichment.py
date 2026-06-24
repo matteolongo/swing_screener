@@ -8,7 +8,7 @@ from __future__ import annotations
 import logging
 from typing import Callable, Protocol
 
-from swing_screener.intelligence.models import SymbolIntelligenceRequest
+from swing_screener.intelligence.models import SymbolIntelligenceRequest, SourceEvidence
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +38,7 @@ def enrich_intelligence_request(
     *,
     fundamentals: _FundamentalsLike | None = None,
     earnings: Callable[[str], tuple[int | None, str | None]] | None = None,
+    evidence: Callable[[str], list[SourceEvidence]] | None = None,
 ) -> SymbolIntelligenceRequest:
     updates: dict = {}
 
@@ -64,6 +65,15 @@ def enrich_intelligence_request(
             updates["days_to_earnings"] = days
         if date is not None and request.next_earnings_date is None:
             updates["next_earnings_date"] = date
+
+    if evidence is not None and not request.catalyst_evidence:
+        try:
+            items = evidence(ticker)
+        except Exception as exc:  # degrade, never fail the analysis
+            logger.warning("Evidence collection failed for %s: %s", ticker, exc)
+            items = []
+        if items:
+            updates["catalyst_evidence"] = items
 
     if not updates:
         return request
