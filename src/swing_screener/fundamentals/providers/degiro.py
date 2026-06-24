@@ -14,8 +14,10 @@ import json
 import logging
 from datetime import date
 from pathlib import Path
+import time
 from typing import Any, Optional
 
+from swing_screener.data.source_health import ProbeResult, SourceDescriptor
 from swing_screener.fundamentals.models import (
     FundamentalMetricContext,
     FundamentalMetricSeries,
@@ -365,3 +367,40 @@ class DegiroFundamentalsProvider:
             metric_context=metric_context,
             metric_sources=metric_sources,
         )
+
+    @classmethod
+    def _available(cls) -> bool:
+        from swing_screener.fundamentals.config import _degiro_integration_available
+        return _degiro_integration_available()
+
+    @classmethod
+    def describe(cls) -> SourceDescriptor:
+        available = cls._available()
+        return SourceDescriptor(
+            id="degiro",
+            display_name="DEGIRO",
+            domain="fundamentals",
+            role="fallback",
+            requires="swing_screener.integrations.degiro",
+            configured=available,
+            probeable=available,
+            canary_market="eu",
+        )
+
+    @classmethod
+    def probe(cls, canary: str) -> ProbeResult:
+        if not cls._available():
+            return ProbeResult(id="degiro", status="not_configured", detail="degiro integration not installed")
+        started = time.perf_counter()
+        try:
+            record = cls().fetch_record(canary)
+            elapsed = (time.perf_counter() - started) * 1000.0
+            return ProbeResult(
+                id="degiro",
+                status="ok",
+                latency_ms=round(elapsed, 1),
+                sample={"symbol": canary, "has_market_cap": record.market_cap is not None},
+            )
+        except Exception as exc:
+            elapsed = (time.perf_counter() - started) * 1000.0
+            return ProbeResult(id="degiro", status="down", latency_ms=round(elapsed, 1), error=str(exc))

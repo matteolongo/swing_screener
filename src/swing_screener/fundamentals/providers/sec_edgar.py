@@ -3,10 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 import os
+import time
 from typing import Any
 
 import httpx
 
+from swing_screener.data.source_health import ProbeResult, SourceDescriptor
 from swing_screener.fundamentals.models import (
     FundamentalMetricContext,
     FundamentalMetricSeries,
@@ -773,3 +775,34 @@ class SecEdgarFundamentalsProvider:
             metric_context=metric_context,
             metric_sources={key: value for key, value in metric_sources.items() if value},
         )
+
+    @classmethod
+    def describe(cls) -> SourceDescriptor:
+        return SourceDescriptor(
+            id="sec_edgar",
+            display_name="SEC EDGAR",
+            domain="fundamentals",
+            role="primary",
+            requires=None,
+            configured=True,
+            probeable=True,
+            canary_market="us",
+        )
+
+    @classmethod
+    def probe(cls, canary: str) -> ProbeResult:
+        started = time.perf_counter()
+        try:
+            provider = cls()
+            record = provider.fetch_record(canary)
+            elapsed = (time.perf_counter() - started) * 1000.0
+            return ProbeResult(
+                id="sec_edgar",
+                status="ok",
+                latency_ms=round(elapsed, 1),
+                detail="record fetched",
+                sample={"symbol": canary, "has_market_cap": record.market_cap is not None},
+            )
+        except Exception as exc:
+            elapsed = (time.perf_counter() - started) * 1000.0
+            return ProbeResult(id="sec_edgar", status="down", latency_ms=round(elapsed, 1), error=str(exc))

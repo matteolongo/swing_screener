@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from datetime import date, datetime, timezone
+import time
 from typing import Any
 
 import pandas as pd
 import yfinance as yf
 
+from swing_screener.data.source_health import ProbeResult, SourceDescriptor
 from swing_screener.fundamentals.models import (
     FundamentalMetricContext,
     FundamentalMetricSeries,
@@ -517,3 +519,33 @@ class YfinanceFundamentalsProvider:
             metric_context=metric_context,
             metric_sources={key: value for key, value in metric_sources.items() if value},
         )
+
+    @classmethod
+    def describe(cls) -> SourceDescriptor:
+        return SourceDescriptor(
+            id="yfinance_fundamentals",
+            display_name="Yahoo Finance (fundamentals)",
+            domain="fundamentals",
+            role="fallback",
+            requires=None,
+            configured=True,
+            probeable=True,
+            canary_market="us",
+        )
+
+    @classmethod
+    def probe(cls, canary: str) -> ProbeResult:
+        started = time.perf_counter()
+        try:
+            record = cls().fetch_record(canary)
+            elapsed = (time.perf_counter() - started) * 1000.0
+            return ProbeResult(
+                id="yfinance_fundamentals",
+                status="ok",
+                latency_ms=round(elapsed, 1),
+                detail="record fetched",
+                sample={"symbol": canary, "has_market_cap": record.market_cap is not None},
+            )
+        except Exception as exc:
+            elapsed = (time.perf_counter() - started) * 1000.0
+            return ProbeResult(id="yfinance_fundamentals", status="down", latency_ms=round(elapsed, 1), error=str(exc))
