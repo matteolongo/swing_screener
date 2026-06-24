@@ -24,10 +24,11 @@ def test_inventory_includes_market_fundamentals_intelligence():
     ids = {d.id for d in svc.inventory()}
     assert {"yfinance", "stooq", "alpaca"} <= ids               # market
     assert {"sec_edgar", "yfinance_fundamentals", "finnhub"} <= ids  # fundamentals + enrichment
-    # the 6 intelligence catalyst sources, listed but not probeable
+    # 6 intelligence sources: 3 real collectors (probeable) + 3 still inert
     intel = [d for d in svc.inventory() if d.domain == "intelligence"]
     assert len(intel) == 6
-    assert all(d.probeable is False for d in intel)
+    probeable_intel = {d.id for d in intel if d.probeable}
+    assert probeable_intel == {"sec_edgar_catalysts", "company_ir_rss", "exchange_announcements"}
     assert all(d.note for d in intel)
 
 
