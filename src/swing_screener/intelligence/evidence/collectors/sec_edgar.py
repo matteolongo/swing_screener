@@ -15,9 +15,13 @@ _TICKER_MAP_CACHE: dict[str, tuple[str, str | None]] | None = None
 
 def _default_get_json(cfg: EvidenceConfig) -> Callable[[str], dict]:
     def _get(url: str) -> dict:
-        with httpx.Client(
-            timeout=cfg.read_timeout_seconds, headers={"User-Agent": cfg.user_agent}
-        ) as client:
+        timeout = httpx.Timeout(
+            connect=cfg.connect_timeout_seconds,
+            read=cfg.read_timeout_seconds,
+            write=cfg.read_timeout_seconds,
+            pool=cfg.read_timeout_seconds,
+        )
+        with httpx.Client(timeout=timeout, headers={"User-Agent": cfg.user_agent}) as client:
             response = client.get(url)
             response.raise_for_status()
             payload = response.json()

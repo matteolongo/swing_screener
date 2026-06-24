@@ -94,20 +94,22 @@ Results stored as JSON under `data/intelligence/<ticker>_analysis.json`. TTL is 
 
 | Path | Purpose |
 |------|---------|
-| `evidence/models.py` | `SourceEvidence` dataclass — id, headline, url, published_at, source_id, confidence |
-| `evidence/curate.py` | `curate(items, *, window_days, max_items)` — recency filter + dedup + sort |
-| `evidence/collect.py` | `collect(ticker, *, asof_date, cfg)` — fan-out across enabled collectors, curate, return list |
-| `evidence/collectors/sec_edgar.py` | `SecEdgarCatalystCollector` — SEC EDGAR EFTS full-text search for 8-K/6-K filings |
-| `evidence/collectors/company_ir.py` | `CompanyIrRssCollector` — company IR RSS feed via SEC CIK lookup |
-| `evidence/collectors/exchange.py` | `ExchangeAnnouncementsCollector` — Euronext announcement RSS (EU-MIC symbols only) |
+| `evidence/models.py` | re-exports `SourceEvidence` (pydantic) from `catalysts.models` — `title, url, publisher, published_at, quote_or_summary, relevance` |
+| `evidence/config.py` | `EvidenceConfig` + `load_evidence_config()` — reads `config.evidence` from the intelligence document |
+| `evidence/rss.py` | `parse_feed`/`fetch_feed` — hardened lxml RSS/Atom parser (XXE-safe) + httpx fetch |
+| `evidence/curation.py` | `curate(items, *, window_days, max_items, asof_date)` — recency-window filter + dedup (normalized title+url) + newest-first + cap |
+| `evidence/collect.py` | `collect_evidence(ticker, *, asof_date, cfg, cache_root)` — per-date cache, fan-out across enabled collectors (fail-soft), curate |
+| `evidence/collectors/sec_edgar.py` | `SecEdgarCatalystCollector` — SEC EDGAR submissions API (`data.sec.gov/submissions/CIK…json`), 8-K/6-K filings |
+| `evidence/collectors/company_ir.py` | `CompanyIrRssCollector` — official IR RSS feeds from the `ir_feeds.json` seed (unmapped ticker → empty) |
+| `evidence/collectors/exchange.py` | `ExchangeAnnouncementsCollector` — exchange RSS from `source_catalog.json` keyed by MIC (EU MICs only) |
 
 ### Collectors
 
 All three implement the `DiagnosableSource` protocol (`describe()` + `probe(canary)`). Registered in `_PROBEABLE` in `api/services/datasources_service.py`.
 
-- **`sec_edgar_catalysts`** (`SecEdgarCatalystCollector`): queries SEC EDGAR full-text search for recent 8-K/6-K filings for US tickers. Fail-soft — returns empty on HTTP errors and records a fallback event.
-- **`company_ir_rss`** (`CompanyIrRssCollector`): fetches the company's own IR RSS feed located via SEC's CIK lookup. Fail-soft.
-- **`exchange_announcements`** (`ExchangeAnnouncementsCollector`): fetches Euronext announcement RSS for symbols traded on EU MICs. No-op for non-EU tickers; fail-soft.
+- **`sec_edgar_catalysts`** (`SecEdgarCatalystCollector`): reads the SEC EDGAR submissions API (ticker→CIK via `company_tickers.json`, then `submissions/CIK…json`) and keeps recent 8-K/6-K filings for US tickers. Fail-soft — returns empty on HTTP errors and records a fallback event.
+- **`company_ir_rss`** (`CompanyIrRssCollector`): fetches the company's official IR RSS feed from the seed map `data/intelligence/ir_feeds.json` (unmapped ticker → empty). Fail-soft.
+- **`exchange_announcements`** (`ExchangeAnnouncementsCollector`): resolves the symbol's MIC (`instrument_enrichment`) and fetches exchange RSS from `data/intelligence/source_catalog.json` for EU MICs only. No-op for US/unresolved MICs; fail-soft.
 
 ### Curation defaults
 
