@@ -54,7 +54,7 @@ export default function DataSources() {
           <h2 className="text-xs uppercase tracking-wide text-muted mb-2">
             {t(DOMAIN_KEY[group.domain] ?? 'datasources.domains.market_data')}
           </h2>
-          <div className="grid grid-cols-3 gap-2 md:grid-cols-1">
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
             {group.items.map((s) => (
               <SourceCard key={s.id} source={s} onTest={onTest} testing={testingId === s.id} />
             ))}
