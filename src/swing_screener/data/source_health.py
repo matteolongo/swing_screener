@@ -1,7 +1,10 @@
 """Shared data source health and provenance models."""
 from __future__ import annotations
 
+from collections import deque
 from dataclasses import asdict, dataclass, field
+from datetime import datetime, timezone
+from threading import Lock
 from typing import Literal, Protocol, runtime_checkable
 
 SourceDomain = Literal[
@@ -145,3 +148,59 @@ def merge_source_health(items: list[DataSourceHealth]) -> DataSourceHealth:
         quality_score=max(0.0, round(base_score - warning_penalty - failure_penalty, 4)),
         warnings=warnings,
     )
+
+
+class FallbackEventRing:
+    """Process-local, bounded, thread-safe ring of fallback events."""
+
+    def __init__(self, capacity: int = 200) -> None:
+        self._events: deque[FallbackEvent] = deque(maxlen=capacity)
+        self._lock = Lock()
+
+    def record(self, event: FallbackEvent) -> None:
+        with self._lock:
+            self._events.append(event)
+
+    def recent(self, limit: int | None = None) -> list[FallbackEvent]:
+        with self._lock:
+            items = list(self._events)
+        items.reverse()  # newest first
+        return items[: limit] if limit else items
+
+    def clear(self) -> None:
+        with self._lock:
+            self._events.clear()
+
+
+_FALLBACK_RING = FallbackEventRing()
+
+
+def record_fallback(
+    *,
+    domain: SourceDomain,
+    from_provider: str,
+    reason: str,
+    fell_back_to: str | None = None,
+    tickers: list[str] | None = None,
+    stale_asof: str | None = None,
+) -> None:
+    """Record a runtime fallback event into the process-local ring."""
+    _FALLBACK_RING.record(
+        FallbackEvent(
+            ts=datetime.now(timezone.utc).isoformat(),
+            domain=domain,
+            from_provider=from_provider,
+            reason=reason,
+            fell_back_to=fell_back_to,
+            tickers=list(tickers or []),
+            stale_asof=stale_asof,
+        )
+    )
+
+
+def recent_events(limit: int | None = None) -> list[FallbackEvent]:
+    return _FALLBACK_RING.recent(limit)
+
+
+def reset_fallback_events() -> None:
+    _FALLBACK_RING.clear()
