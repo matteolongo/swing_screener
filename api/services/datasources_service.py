@@ -21,6 +21,9 @@ from swing_screener.data.source_health import (
     SourceDescriptor, ProbeResult, FallbackEvent, recent_events,
 )
 from swing_screener.settings import get_settings_manager
+from swing_screener.intelligence.evidence.collectors.sec_edgar import SecEdgarCatalystCollector
+from swing_screener.intelligence.evidence.collectors.company_ir import CompanyIrRssCollector
+from swing_screener.intelligence.evidence.collectors.exchange import ExchangeAnnouncementsCollector
 
 logger = logging.getLogger(__name__)
 
@@ -33,20 +36,20 @@ _PROBEABLE: dict[str, type] = {
     "yfinance_fundamentals": YfinanceFundamentalsProvider,
     "degiro": DegiroFundamentalsProvider,
     "finnhub": FinnhubEnrichmentClient,
+    "sec_edgar_catalysts": SecEdgarCatalystCollector,
+    "company_ir_rss": CompanyIrRssCollector,
+    "exchange_announcements": ExchangeAnnouncementsCollector,
 }
 
-# The 6 declared catalyst sources — inert today (no runtime adapter). Listed
+# The 3 remaining inert catalyst sources — no runtime adapter yet. Listed
 # honestly so the page shows the gap rather than faking confidence.
 INTELLIGENCE_SOURCES: list[SourceDescriptor] = [
     SourceDescriptor(id=sid, display_name=name, domain="intelligence", role="primary",
                      requires=None, configured=False, probeable=False, canary_market=None, note=note)
     for sid, name, note in [
         ("yahoo_finance", "Yahoo Finance (catalysts)", "declared — no runtime adapter"),
-        ("earnings_calendar", "Earnings Calendar", "declared — no runtime adapter"),
-        ("sec_edgar_catalysts", "SEC EDGAR (catalysts)", "implemented for fundamentals, not as catalyst collector"),
-        ("company_ir_rss", "Company IR RSS", "declared — no runtime adapter"),
-        ("exchange_announcements", "Exchange Announcements", "declared — no runtime adapter"),
-        ("financial_news_rss", "Financial News RSS", "declared — no runtime adapter"),
+        ("earnings_calendar", "Earnings Calendar", "covered by days_to_earnings / next_earnings_date"),
+        ("financial_news_rss", "Financial News RSS", "out of v1 scope — overlaps web_search"),
     ]
 ]
 

@@ -86,6 +86,47 @@ Results stored as JSON under `data/intelligence/<ticker>_analysis.json`. TTL is 
 - `MANAGE_ONLY` — position already held; narrative is position-management focused
 - `SKIP` — no actionable signal
 
+## Evidence Collectors
+
+`intelligence/evidence/` gathers structured catalyst evidence from real sources before the LLM call.
+
+### Module layout
+
+| Path | Purpose |
+|------|---------|
+| `evidence/models.py` | `SourceEvidence` dataclass — id, headline, url, published_at, source_id, confidence |
+| `evidence/curate.py` | `curate(items, *, window_days, max_items)` — recency filter + dedup + sort |
+| `evidence/collect.py` | `collect(ticker, *, asof_date, cfg)` — fan-out across enabled collectors, curate, return list |
+| `evidence/collectors/sec_edgar.py` | `SecEdgarCatalystCollector` — SEC EDGAR EFTS full-text search for 8-K/6-K filings |
+| `evidence/collectors/company_ir.py` | `CompanyIrRssCollector` — company IR RSS feed via SEC CIK lookup |
+| `evidence/collectors/exchange.py` | `ExchangeAnnouncementsCollector` — Euronext announcement RSS (EU-MIC symbols only) |
+
+### Collectors
+
+All three implement the `DiagnosableSource` protocol (`describe()` + `probe(canary)`). Registered in `_PROBEABLE` in `api/services/datasources_service.py`.
+
+- **`sec_edgar_catalysts`** (`SecEdgarCatalystCollector`): queries SEC EDGAR full-text search for recent 8-K/6-K filings for US tickers. Fail-soft — returns empty on HTTP errors and records a fallback event.
+- **`company_ir_rss`** (`CompanyIrRssCollector`): fetches the company's own IR RSS feed located via SEC's CIK lookup. Fail-soft.
+- **`exchange_announcements`** (`ExchangeAnnouncementsCollector`): fetches Euronext announcement RSS for symbols traded on EU MICs. No-op for non-EU tickers; fail-soft.
+
+### Curation defaults
+
+Controlled by `config.evidence` in `config/intelligence.yaml`:
+- `recency_window_days: 30` — discard items older than 30 days
+- `max_items_per_symbol: 8` — keep the 8 most-recent items after dedup
+
+### Cache
+
+Curated evidence is cached lazily at `data/intelligence/evidence/{date}/{ticker}.json` (regenerable; not committed). No schema migration required.
+
+### Prompt injection
+
+`collect.py` is called during `enrich_intelligence_request` and the curated items are passed into the LLM prompt as a `--- Catalyst evidence ---` block.
+
+### Fail-soft behavior
+
+Each collector catches all HTTP/parse errors, calls `record_fallback(...)`, and returns an empty list. The enrichment pipeline never raises on a collector failure.
+
 ## Open-position fields
 
 When the request carries position context (`entry_price`, `entry_date`, `r_now`, `days_open`), the

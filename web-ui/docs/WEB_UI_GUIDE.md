@@ -17,7 +17,7 @@ Daily trading workflow through the Swing Screener web interface.
 | Universes | `/universes` | Universe management, manual refresh, benchmark, symbol discovery with ad-hoc screener run (row click opens symbol detail modal) |
 | Strategy | `/strategy` | Strategy CRUD, activation, and validation |
 | Onboarding | `/onboarding` | Setup guide for new users |
-| Data Sources | `/datasources` | Data source diagnostics: inventory of all sources with configured/probeable status, per-source Test button (fires a live canary probe), Test All (concurrent probe of all probeable sources), and a fallback event feed |
+| Data Sources | `/datasources` | Data source diagnostics: inventory of all sources with configured/probeable status, per-source Test button (fires a live canary probe), Test All (concurrent probe of all probeable sources), and a fallback event feed. Three intelligence sources now appear probeable: `sec_edgar_catalysts`, `company_ir_rss`, `exchange_announcements`. The remaining three (`yahoo_finance`, `earnings_calendar`, `financial_news_rss`) remain inert with explanatory notes. |
 
 ## Feature Directory Map
 
