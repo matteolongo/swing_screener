@@ -15,7 +15,9 @@ import yfinance as yf
 from .base import MarketDataProvider
 from .stooq_provider import StooqDataProvider
 from ..market_data import fetch_ticker_metadata
-from swing_screener.data.source_health import DataSourceHealth, SourceDescriptor, ProbeResult
+from swing_screener.data.source_health import (
+    DataSourceHealth, SourceDescriptor, ProbeResult, record_fallback,
+)
 from swing_screener.data.providers._probe import ohlcv_canary_probe
 from swing_screener.utils import normalize_tickers
 
@@ -251,6 +253,13 @@ class YfinanceProvider(MarketDataProvider):
                 len(tickers),
                 ",".join(tickers[:5]),
                 exc,
+            )
+            record_fallback(
+                domain="market_data",
+                from_provider="yfinance",
+                reason=f"stooq fallback failed: {exc}",
+                fell_back_to="stooq",
+                tickers=list(tickers[:20]),
             )
             return pd.DataFrame()
 
@@ -508,6 +517,13 @@ class YfinanceProvider(MarketDataProvider):
                     "Bulk yfinance download returned no data for %s tickers; retrying sequentially.",
                     len(misses),
                 )
+                record_fallback(
+                    domain="market_data",
+                    from_provider="yfinance",
+                    reason="bulk download empty; retrying sequentially",
+                    fell_back_to="yfinance-sequential",
+                    tickers=list(misses[:20]),
+                )
                 df = self._download_sequential(misses, start_date, actual_end)
 
             if df is None or df.empty:
@@ -522,6 +538,14 @@ class YfinanceProvider(MarketDataProvider):
                         )
                         if frame is not None and not frame.empty:
                             cached_frames.append(frame)
+                if cached_frames:
+                    record_fallback(
+                        domain="market_data",
+                        from_provider="yfinance",
+                        reason="serving stale cache after download failure",
+                        fell_back_to="stale_cache",
+                        tickers=list(misses[:20]),
+                    )
                 if not cached_frames:
                     raise RuntimeError("Download empty. Check tickers or connection.")
             else:
@@ -542,6 +566,13 @@ class YfinanceProvider(MarketDataProvider):
                             len(remaining_missing),
                             ",".join(remaining_missing[:10]),
                         )
+                        record_fallback(
+                            domain="market_data",
+                            from_provider="yfinance",
+                            reason="missing close after retries; trying stooq",
+                            fell_back_to="stooq",
+                            tickers=list(remaining_missing[:20]),
+                        )
                         fallback_df = self._fetch_stooq_fallback(
                             remaining_missing,
                             start_date,
@@ -552,6 +583,7 @@ class YfinanceProvider(MarketDataProvider):
 
                 # Tickers that still have no data but hold stale cached coverage
                 # are better served stale than dropped.
+                _pre_stale_len = len(cached_frames)
                 if allow_cache_fallback_on_error and stale_fallback:
                     for ticker in self._missing_close_tickers(df, misses):
                         path = stale_fallback.get(ticker)
@@ -562,6 +594,14 @@ class YfinanceProvider(MarketDataProvider):
                         )
                         if frame is not None and not frame.empty:
                             cached_frames.append(frame)
+                if len(cached_frames) > _pre_stale_len:
+                    record_fallback(
+                        domain="market_data",
+                        from_provider="yfinance",
+                        reason="serving stale cache after download failure",
+                        fell_back_to="stale_cache",
+                        tickers=list(misses[:20]),
+                    )
 
                 if use_cache:
                     self._store_per_ticker_cache(df, misses, start_date, end_for_coverage)
