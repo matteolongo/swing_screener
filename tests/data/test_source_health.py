@@ -2,6 +2,9 @@ from swing_screener.data.source_health import (
     DataSourceHealth,
     DataSourceProvenance,
     merge_source_health,
+    SourceDescriptor,
+    ProbeResult,
+    FallbackEvent,
 )
 from swing_screener.data.providers.alpaca_provider import AlpacaDataProvider
 from swing_screener.data.providers.base import MarketDataProvider
@@ -118,3 +121,54 @@ def test_market_data_provider_quality_defaults_are_explicit(tmp_path):
     assert alpaca_health["quality_score"] == 0.75
     assert alpaca_health["delay_policy"] == "provider_plan_dependent"
     assert alpaca_health["warnings"] == ["paper_or_basic_plan_may_be_limited"]
+
+
+def test_source_descriptor_to_dict_roundtrip():
+    d = SourceDescriptor(
+        id="yfinance",
+        display_name="Yahoo Finance",
+        domain="market_data",
+        role="primary",
+        requires=None,
+        configured=True,
+        probeable=True,
+        canary_market="us",
+        note=None,
+    )
+    payload = d.to_dict()
+    assert payload["id"] == "yfinance"
+    assert payload["domain"] == "market_data"
+    assert payload["role"] == "primary"
+    assert payload["configured"] is True
+    assert payload["canary_market"] == "us"
+
+
+def test_probe_result_to_dict():
+    r = ProbeResult(
+        id="stooq",
+        status="ok",
+        latency_ms=42.5,
+        detail="1 bar",
+        sample={"last_close": 123.4, "last_date": "2026-06-23"},
+        error=None,
+    )
+    payload = r.to_dict()
+    assert payload["status"] == "ok"
+    assert payload["latency_ms"] == 42.5
+    assert payload["sample"]["last_close"] == 123.4
+
+
+def test_fallback_event_to_dict():
+    e = FallbackEvent(
+        ts="2026-06-24T10:00:00+00:00",
+        domain="market_data",
+        from_provider="yfinance",
+        reason="bulk download empty",
+        fell_back_to="stooq",
+        tickers=["AAPL", "MSFT"],
+        stale_asof=None,
+    )
+    payload = e.to_dict()
+    assert payload["from_provider"] == "yfinance"
+    assert payload["fell_back_to"] == "stooq"
+    assert payload["tickers"] == ["AAPL", "MSFT"]

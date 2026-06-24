@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
-from typing import Literal
+from typing import Literal, Protocol, runtime_checkable
 
 SourceDomain = Literal[
     "market_data",
@@ -13,6 +13,74 @@ SourceDomain = Literal[
     "aggregate",
 ]
 SourceStatus = Literal["ok", "degraded", "failed", "unknown"]
+
+ProbeStatus = Literal["ok", "down", "not_configured"]
+SourceRole = Literal["primary", "fallback", "enrichment"]
+CanaryMarket = Literal["us", "eu"]
+
+
+@dataclass(frozen=True)
+class SourceDescriptor:
+    """Static, credential-free description of one data source."""
+
+    id: str
+    display_name: str
+    domain: SourceDomain
+    role: SourceRole
+    requires: str | None = None          # env var or pkg name; None if unconditional
+    configured: bool = True              # key/pkg present
+    probeable: bool = True               # has a live canary path
+    canary_market: CanaryMarket | None = "us"
+    note: str | None = None              # e.g. "declared — no runtime adapter"
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class ProbeResult:
+    """Outcome of a single live canary request against one source."""
+
+    id: str
+    status: ProbeStatus
+    latency_ms: float | None = None
+    detail: str | None = None
+    sample: dict | None = None
+    error: str | None = None
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class FallbackEvent:
+    """One runtime fallback / stale-cache / silent-swallow event."""
+
+    ts: str                              # ISO-8601 UTC
+    domain: SourceDomain
+    from_provider: str
+    reason: str
+    fell_back_to: str | None = None
+    tickers: list[str] = field(default_factory=list)
+    stale_asof: str | None = None
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+@runtime_checkable
+class DiagnosableSource(Protocol):
+    """Contract a data source implements to appear in the Data Sources page.
+
+    Implement BOTH as classmethods so inventory works without instantiating
+    a provider that may need credentials or an optional package.
+    """
+
+    @classmethod
+    def describe(cls) -> SourceDescriptor: ...
+
+    @classmethod
+    def probe(cls, canary: str) -> ProbeResult: ...
 
 
 @dataclass(frozen=True)
