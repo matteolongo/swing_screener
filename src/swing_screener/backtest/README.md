@@ -57,6 +57,13 @@ raises `swing_screener.errors.DomainError` subclasses (no web framework imports)
 Exposed via `POST /api/backtest/event-study` (+ `GET /api/backtest/event-study/{job_id}`
 for the async job). See `api/README.md`.
 
+The core module is strategy-agnostic (it takes a `BacktestConfig`). The API service
+(`api/services/backtest_service.py`) builds that config from the **active strategy**
+(`build_entry_config` / `build_risk_config` / `build_manage_config`), so a backtest
+reflects what live trades actually use, then layers any per-request overrides on top.
+`pattern_stop_enabled` is a global execution flag (not part of a strategy), so it keeps
+the `ExecutionConfig` default unless overridden per request.
+
 ## Known limitations / future work
 
 These are deliberate v1 scope cuts. The optimal solution is recorded here so it is

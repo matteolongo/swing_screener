@@ -1,8 +1,8 @@
 """Backtest service: fetch point-in-time data and replay the live decision path.
 
 Owns no trading logic. It fetches OHLCV via the same provider stack the screener
-uses, builds a `BacktestConfig` from request overrides, and delegates to
-`swing_screener.backtest.run_event_study`.
+uses, builds a `BacktestConfig` from the active strategy (with optional per-request
+overrides on top), and delegates to `swing_screener.backtest.run_event_study`.
 """
 
 from __future__ import annotations
@@ -18,6 +18,12 @@ from swing_screener.backtest.event_study import EventStudyResult
 from swing_screener.backtest.metrics import BacktestMetrics
 from swing_screener.data.providers import MarketDataProvider, get_default_provider
 from swing_screener.errors import ServiceError, UpstreamError, ValidationError
+from swing_screener.strategy.config import (
+    build_entry_config,
+    build_manage_config,
+    build_risk_config,
+)
+from swing_screener.utils import get_nested_dict
 
 from api.models.backtest import (
     BacktestConfigOverrides,
@@ -38,8 +44,17 @@ DEFAULT_START = "2022-01-01"
 
 
 class BacktestService:
-    def __init__(self, provider: Optional[MarketDataProvider] = None) -> None:
+    def __init__(
+        self,
+        provider: Optional[MarketDataProvider] = None,
+        strategy_repo=None,
+    ) -> None:
         self._provider = provider or get_default_provider()
+        if strategy_repo is None:
+            from api.dependencies import get_strategy_repo
+
+            strategy_repo = get_strategy_repo()
+        self._strategy_repo = strategy_repo
 
     def run_event_study(self, request: EventStudyRequest) -> EventStudyResponse:
         tickers = [
@@ -63,7 +78,8 @@ class BacktestService:
                 "No market data returned for the requested tickers and window."
             )
 
-        config = _build_config(request.config)
+        strategy = self._strategy_repo.get_active_strategy()
+        config = _build_config(strategy, request.config)
         try:
             result = run_event_study(ohlcv, tickers, config)
         except Exception as exc:
@@ -107,8 +123,23 @@ class BacktestService:
         )
 
 
-def _build_config(overrides: Optional[BacktestConfigOverrides]) -> BacktestConfig:
-    cfg = BacktestConfig()
+def _build_config(
+    strategy: dict, overrides: Optional[BacktestConfigOverrides]
+) -> BacktestConfig:
+    # Baseline from the active strategy so the backtest mirrors live behaviour
+    # (entry signals, ATR-stop multiple, R:R target, stop-management rules).
+    # `execution` (pattern stop) is a global flag, not per-strategy, so it keeps
+    # the ExecutionConfig defaults until overridden per request.
+    risk = build_risk_config(strategy)
+    cfg = BacktestConfig(
+        entry=build_entry_config(strategy),
+        manage=build_manage_config(strategy),
+        k_atr=risk.k_atr,
+        rr_target=risk.rr_target,
+        atr_window=int(
+            get_nested_dict(strategy, "universe", "vol").get("atr_window", 14)
+        ),
+    )
     if overrides is None:
         return cfg
 

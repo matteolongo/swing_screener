@@ -17,6 +17,10 @@ export const API_ENDPOINTS = {
   screenerRun: '/api/screener/run',
   screenerRunStatus: (jobId: string) => `/api/screener/run/${jobId}`,
 
+  // Backtest
+  backtestEventStudy: '/api/backtest/event-study',
+  backtestEventStudyStatus: (jobId: string) => `/api/backtest/event-study/${jobId}`,
+
   // Universe management
   universes: '/api/universes',
   universeDiscover: '/api/universes/discover',
