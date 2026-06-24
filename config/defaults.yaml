@@ -427,6 +427,9 @@ low_level:
       rate_limit_window_seconds: 60
       max_retries: 3
       retry_delay_base_seconds: 1.0
+    probe_canary:
+      us: AAPL
+      eu: ASML.AS
 
 # ---------------------------------------------------------------------------
 # Paid provider roadmap only. These entries document intended future gates and

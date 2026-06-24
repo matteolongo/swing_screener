@@ -1,5 +1,22 @@
 from api.services.datasources_service import DatasourcesService
 from swing_screener.data.source_health import SourceDescriptor, ProbeResult
+from swing_screener.settings import get_settings_manager
+
+
+def test_probe_canary_present_in_defaults_yaml():
+    """Verify probe_canary symbols are present in defaults.yaml (not just fallback)."""
+    defaults = get_settings_manager().load_defaults_document()
+    pc = defaults.get("low_level", {}).get("data_providers", {}).get("probe_canary", {})
+    assert pc.get("us") == "AAPL"
+    assert pc.get("eu") == "ASML.AS"
+
+
+def test_canary_map_reads_defaults():
+    """Verify _canary_map() returns expected symbols from config or fallback."""
+    svc = DatasourcesService()
+    m = svc._canary_map()
+    assert m["us"] == "AAPL"
+    assert m["eu"] == "ASML.AS"
 
 
 def test_inventory_includes_market_fundamentals_intelligence():
