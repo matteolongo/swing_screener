@@ -130,3 +130,11 @@ def test_open_position_prompt_includes_chart_quality_and_finnhub():
     assert "--- Chart quality ---" in prompt
     assert "Distance from 52w high" in prompt
     assert "--- Finnhub enrichment signals ---" in prompt
+
+
+def test_no_catalyst_context_block_in_prompt():
+    from swing_screener.intelligence.symbol_analyzer import _build_user_prompt
+    from swing_screener.intelligence.models import SymbolIntelligenceRequest
+    req = SymbolIntelligenceRequest(close=10.0, signal="x")
+    prompt = _build_user_prompt("AAA", req)
+    assert "Existing catalyst context" not in prompt

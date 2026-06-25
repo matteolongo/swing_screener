@@ -39,8 +39,6 @@ const baseCandidate: SymbolAnalysisCandidate = {
     valuationContext: { method: 'earnings_multiple' },
     drivers: { positives: [], negatives: [], warnings: ['Watch China exposure'] },
     explanation: undefined,
-    catalystSummary: null,
-    catalystSources: [],
   },
 };
 

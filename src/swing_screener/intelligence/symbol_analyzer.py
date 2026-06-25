@@ -390,15 +390,6 @@ def _build_user_prompt(
             "Factor this into your risk assessment and timing. If earnings are within 2 weeks, flag the binary-event risk explicitly.",
         ]
 
-    # Catalyst context block (before web search instruction)
-    if req.catalyst_summary:
-        lines += [
-            "",
-            "--- Existing catalyst context ---",
-            req.catalyst_summary,
-            "(Build on this context. Do not repeat it verbatim.)",
-        ]
-
     # Deterministic catalyst evidence (source-attributed), in addition to web search
     if req.catalyst_evidence:
         lines.append("")
@@ -576,9 +567,6 @@ class SymbolAnalyzer:
             decision["fair_value_high"] = req.fair_value_high
         if decision:
             inputs_used["decision_context"] = decision
-
-        if req.catalyst_summary:
-            inputs_used["catalyst"] = {"summary_available": True}
 
         if req.catalyst_evidence:
             inputs_used["catalyst_evidence"] = {

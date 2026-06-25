@@ -2200,10 +2200,6 @@ export const messagesEn = {
         EXIT: 'Exit',
       },
     },
-    candidateCard: {
-      catalystContext: 'Market catalyst context',
-      catalystSources: 'Sources',
-    },
     actionList: {
       watchlistNearTrigger: 'Watchlist Near Trigger',
       requiresAction: 'Requires Action',

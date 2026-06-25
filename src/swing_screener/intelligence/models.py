@@ -136,7 +136,6 @@ class SymbolIntelligenceRequest(BaseModel):
     decision_conviction: str | None = None
     technical_label: str | None = None
     fundamentals_label: str | None = None
-    catalyst_summary: str | None = None
     catalyst_evidence: list[SourceEvidence] = Field(default_factory=list)
     # Finnhub enrichment signals
     insider_net_shares_90d: int | None = None

@@ -43,7 +43,6 @@ export interface IntelligenceRequestPayload {
   decision_conviction?: string | null;
   technical_label?: string | null;
   fundamentals_label?: string | null;
-  catalyst_summary?: string | null;
   days_to_earnings?: number | null;
   next_earnings_date?: string | null;
   recent_patterns?: string[] | null;
@@ -89,7 +88,6 @@ export function candidateToPayload(
     payload.decision_conviction = candidate.decisionSummary?.conviction ?? null;
     payload.technical_label = candidate.decisionSummary?.technicalLabel ?? null;
     payload.fundamentals_label = candidate.decisionSummary?.fundamentalsLabel ?? null;
-    payload.catalyst_summary = candidate.decisionSummary?.catalystSummary ?? null;
     payload.days_to_earnings = candidate.daysToEarnings ?? null;
     payload.recent_patterns = candidate.patterns?.length
       ? candidate.patterns.map((p) => `${p.name}@${p.context}`)

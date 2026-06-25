@@ -377,28 +377,6 @@ def test_partial_coverage_produces_confidence_note() -> None:
     assert len(summary.explanation.confidence_notes) >= 1
 
 
-def test_decision_summary_catalyst_summary_none_when_no_opportunity() -> None:
-    summary = build_decision_summary(_candidate(), opportunity=None, fundamentals=None)
-    assert summary.catalyst_label == "weak"
-    assert summary.catalyst_summary is None
-    assert summary.catalyst_sources == []
-
-
-def test_decision_summary_has_catalyst_summary_when_active() -> None:
-    """catalyst_summary is populated from opportunity.thesis when catalyst is active."""
-    opp = _opportunity(state="CATALYST_ACTIVE", catalyst_strength=8.0, thesis="AI demand is accelerating.")
-    summary = build_decision_summary(_candidate(), opportunity=opp, fundamentals=None)
-    assert summary.catalyst_label == "active"
-    assert summary.catalyst_summary is not None
-    assert "AI demand" in summary.catalyst_summary
-
-
-def test_decision_summary_catalyst_sources_from_opportunity() -> None:
-    opp = _opportunity(state="CATALYST_ACTIVE", catalyst_strength=8.0, sources=["https://example.com/1"])
-    summary = build_decision_summary(_candidate(), opportunity=opp, fundamentals=None)
-    assert "https://example.com/1" in summary.catalyst_sources
-
-
 def test_quiet_opportunity_maps_to_weak_label() -> None:
     opp = _opportunity(state="QUIET", catalyst_strength=1.0)
     summary = build_decision_summary(_candidate(), opportunity=opp, fundamentals=None)

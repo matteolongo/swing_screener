@@ -41,8 +41,6 @@ function buildSummary(overrides: Partial<DecisionSummary> = {}): DecisionSummary
       negatives: [],
       warnings: ['No cached catalyst snapshot is available yet.'],
     },
-    catalystSummary: null,
-    catalystSources: [],
     ...overrides,
   };
 }

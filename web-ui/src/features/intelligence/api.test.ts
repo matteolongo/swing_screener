@@ -175,8 +175,6 @@ describe('candidateToPayload', () => {
         tradePlan: { entry: 152, stop: 143, target: 170, rr: 2.5 },
         valuationContext: { method: 'earnings_multiple' },
         drivers: { positives: [], negatives: [], warnings: [] },
-        catalystSummary: null,
-        catalystSources: [],
       },
     });
     expect(payload!.decision_action).toBe('BUY_NOW');
@@ -208,8 +206,6 @@ describe('candidateToPayload', () => {
           fairValueHigh: 180,
         },
         drivers: { positives: [], negatives: [], warnings: [] },
-        catalystSummary: null,
-        catalystSources: [],
       },
     });
     expect(payload!.target).toBe(170);
