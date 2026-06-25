@@ -154,7 +154,7 @@ def _write_cache(path: Path, data: dict) -> None:
     try:
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         Path(path).write_text(json.dumps(data))
-    except OSError:
+    except (OSError, TypeError, ValueError):
         logger.warning("Failed to write discovered-feeds cache %s", path, exc_info=True)
 
 

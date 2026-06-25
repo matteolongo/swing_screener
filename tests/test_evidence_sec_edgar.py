@@ -89,7 +89,6 @@ def test_probe_ok_with_injected_client(monkeypatch):
 
 def test_prefix_matches_and_labels():
     out = SecEdgarCatalystCollector.collect("AAPL", asof_date=date(2026, 6, 24), cfg=CFG, get_json=_fake_get_json_broad)
-    rel = {e.title.split(":")[0]: e.relevance for e in out}
     # 424B5 matched by "424B" prefix
     assert any("424B5" in e.relevance and "offering" in e.relevance for e in out)
     # amendment SC 13D/A matched by "SC 13D"
