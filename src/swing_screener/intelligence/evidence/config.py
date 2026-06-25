@@ -14,6 +14,12 @@ class EvidenceConfig:
     user_agent: str = "swing-screener-intelligence-bot/1.0"
     connect_timeout_seconds: float = 5.0
     read_timeout_seconds: float = 20.0
+    discovery_enabled: bool = True
+    discovery_found_ttl_days: int = 30
+    discovery_negative_ttl_days: int = 7
+    discovery_paths: tuple[str, ...] = (
+        "/rss", "/feed", "/news/rss", "/newsroom/rss", "/investors/rss", "/en/rss",
+    )
 
 
 def load_evidence_config() -> EvidenceConfig:
@@ -31,4 +37,8 @@ def load_evidence_config() -> EvidenceConfig:
         user_agent=str(http.get("user_agent", EvidenceConfig.user_agent)),
         connect_timeout_seconds=float(http.get("connect_timeout_seconds", 5.0)),
         read_timeout_seconds=float(http.get("read_timeout_seconds", 20.0)),
+        discovery_enabled=bool(cfg.get("discovery_enabled", True)),
+        discovery_found_ttl_days=int(cfg.get("discovery_found_ttl_days", 30)),
+        discovery_negative_ttl_days=int(cfg.get("discovery_negative_ttl_days", 7)),
+        discovery_paths=tuple(cfg.get("discovery_paths") or EvidenceConfig.discovery_paths),
     )
