@@ -61,10 +61,16 @@ class AnalysisHistoryResponse(BaseModel):
 
 
 @router.post("/sweep", response_model=SweepResponse)
-def sweep(request: SweepRequest) -> SweepResponse:
+def sweep(
+    request: SweepRequest,
+    positions_repo: PositionsRepository = Depends(get_positions_repo),
+    fundamentals_service: FundamentalsService = Depends(get_fundamentals_service),
+    portfolio_service: PortfolioService = Depends(get_portfolio_service),
+) -> SweepResponse:
     """Run intelligence analysis for a batch of symbols, caching each result."""
     _require_api_key()
     analyzer = _get_analyzer()
+    past_positions, _ = positions_repo.list_positions(status="closed")
     analyzed: list[str] = []
     failed: list[SweepFailure] = []
     for item in request.symbols:
@@ -75,8 +81,20 @@ def sweep(request: SweepRequest) -> SweepResponse:
                 if cached is not None:
                     analyzed.append(upper)
                     continue
-            analyzer.analyze(item.ticker.upper(), item.request)
-            analyzed.append(item.ticker.upper())
+            item_req = enrich_intelligence_request(
+                upper,
+                item.request,
+                fundamentals=fundamentals_service,
+                earnings=lambda t: (lambda ep: (ep.days_until, ep.next_earnings_date))(portfolio_service.get_earnings_proximity(t)),
+                evidence=lambda t: collect_evidence(t),
+            )
+            try:
+                ohlcv = portfolio_service.fetch_recent_ohlcv(upper)
+                item_req = enrich_with_technicals(upper, item_req, ohlcv)
+            except Exception:
+                logger.warning("Sweep technical enrichment skipped for %r", item.ticker, exc_info=True)
+            analyzer.analyze(upper, item_req, past_positions=past_positions)
+            analyzed.append(upper)
         except Exception as exc:
             logger.warning("Sweep failed for %s: %s", item.ticker, exc)
             failed.append(SweepFailure(ticker=item.ticker.upper(), error=str(exc)))
