@@ -42,7 +42,6 @@ class PositionSignal(BaseModel):
     reason: str
     trim_pct: float | None = None
     trim_price: float | None = None
-    re_entry_zone: dict | None = None
 
 
 class PriceMoveDriver(BaseModel):

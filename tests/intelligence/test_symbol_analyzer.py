@@ -599,3 +599,27 @@ def test_analyze_writes_to_cache(tmp_path, monkeypatch):
     data = json.loads(cache_files[0].read_text())
     assert "AAPL" in data
     assert data["AAPL"]["action"] == "BUY_NOW"
+
+
+def test_llm_analysis_strict_schema_has_no_open_objects():
+    """OpenAI Responses strict structured output rejects any object schema whose
+    `additionalProperties` is not literally false (free-form `dict` fields). Walk
+    the strict schema of `_LLMAnalysis` and assert no object node is left open,
+    so a bare `dict` can never silently break call 2 again."""
+    from openai.lib._pydantic import to_strict_json_schema
+
+    schema = to_strict_json_schema(_LLMAnalysis)
+    offenders: list[str] = []
+
+    def walk(node: object, path: str) -> None:
+        if isinstance(node, dict):
+            if node.get("type") == "object" and node.get("additionalProperties") is not False:
+                offenders.append(path or "<root>")
+            for key, value in node.items():
+                walk(value, f"{path}.{key}")
+        elif isinstance(node, list):
+            for index, value in enumerate(node):
+                walk(value, f"{path}[{index}]")
+
+    walk(schema, "")
+    assert offenders == [], f"open object schemas rejected by strict mode: {offenders}"
