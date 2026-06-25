@@ -85,9 +85,9 @@ export default function SymbolAnalysisContent({
   const displayedIntelligence = intelligenceResult ?? intelligenceLatest.data ?? null;
   const hasNarrative = Boolean(!intelligenceLatest.isLoading && displayedIntelligence?.narrative?.trim());
 
-  const handleAnalyzeWithAi = () => {
+  const handleAnalyzeWithAi = (force = false) => {
     intelligenceMutation.mutate(
-      { ticker, candidate, position },
+      { ticker, candidate, position, force },
       { onSuccess: (result) => setIntelligenceResult(result) }
     );
   };
@@ -267,7 +267,7 @@ export default function SymbolAnalysisContent({
                     size="sm"
                     variant="secondary"
                     disabled={intelligenceMutation.isPending}
-                    onClick={handleAnalyzeWithAi}
+                    onClick={() => handleAnalyzeWithAi(false)}
                   >
                     {intelligenceMutation.isPending
                       ? t('workspacePage.panels.analysis.intelligence.analyzingAction')
@@ -290,7 +290,7 @@ export default function SymbolAnalysisContent({
                   size="sm"
                   variant="secondary"
                   disabled={intelligenceMutation.isPending}
-                  onClick={handleAnalyzeWithAi}
+                  onClick={() => handleAnalyzeWithAi(true)}
                 >
                   {intelligenceMutation.isPending
                     ? t('workspacePage.panels.analysis.intelligence.analyzingAction')

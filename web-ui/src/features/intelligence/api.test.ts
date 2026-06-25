@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { candidateToPayload } from './api';
+import { describe, it, expect, vi } from 'vitest';
+import { candidateToPayload, postIntelligenceAnalysis } from './api';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
 import type { PositionWithMetrics } from '@/features/portfolio/api';
 
@@ -228,5 +228,35 @@ describe('candidateToPayload', () => {
     expect(payload!.decision_conviction).toBeNull();
     expect(payload!.technical_label).toBeNull();
     expect(payload!.fundamentals_label).toBeNull();
+  });
+});
+
+describe('postIntelligenceAnalysis', () => {
+  const okFetch = () =>
+    vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ symbol: 'AAPL' }),
+      text: async () => JSON.stringify({ symbol: 'AAPL' }),
+    });
+
+  it('omits force from the URL by default', async () => {
+    const mockFetch = okFetch();
+    vi.stubGlobal('fetch', mockFetch);
+
+    await postIntelligenceAnalysis('AAPL', { close: 150, signal: 'BUY' });
+
+    expect(mockFetch.mock.calls[0][0]).toContain('/api/intelligence/AAPL');
+    expect(mockFetch.mock.calls[0][0]).not.toContain('force=true');
+    vi.unstubAllGlobals();
+  });
+
+  it('appends force=true when forced', async () => {
+    const mockFetch = okFetch();
+    vi.stubGlobal('fetch', mockFetch);
+
+    await postIntelligenceAnalysis('AAPL', { close: 150, signal: 'BUY' }, true);
+
+    expect(mockFetch.mock.calls[0][0]).toContain('/api/intelligence/AAPL?force=true');
+    vi.unstubAllGlobals();
   });
 });

@@ -261,7 +261,7 @@ export function useOpenPositionsIntelligence() {
 export function useAnalyzePositionMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (positionId: string) => triggerPositionAnalyze(positionId),
+    mutationFn: (positionId: string) => triggerPositionAnalyze(positionId, true),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.openPositionsIntelligence() });
     },

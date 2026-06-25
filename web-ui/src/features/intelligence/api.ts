@@ -114,9 +114,13 @@ export function candidateToPayload(
 
 export async function postIntelligenceAnalysis(
   ticker: string,
-  payload: IntelligenceRequestPayload
+  payload: IntelligenceRequestPayload,
+  force = false
 ): Promise<SymbolIntelligenceAPI> {
-  return fetchJson<SymbolIntelligenceAPI>(API_ENDPOINTS.intelligenceAnalyze(ticker), {
+  const endpoint = force
+    ? `${API_ENDPOINTS.intelligenceAnalyze(ticker)}?force=true`
+    : API_ENDPOINTS.intelligenceAnalyze(ticker);
+  return fetchJson<SymbolIntelligenceAPI>(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
