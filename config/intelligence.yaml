@@ -113,6 +113,15 @@ config:
     low_evidence_confirmation_threshold: 0.25
     low_evidence_source_quality_threshold: 0.45
     stale_event_decay_hours: 120
+  analysis_history:
+    max_entries: 50   # per-symbol entries kept on disk (data/intelligence/history/{TICKER}.json)
+    digest_size: 5    # most-recent runs fed back to the LLM as the thesis-drift digest (<= max_entries)
+  pre_open:
+    enabled: true
+    timezone: America/New_York
+    market_open: "09:30"    # ET regular-session open; pre-open window ends here
+    window_start: "00:00"   # ET lower bound of the pre-open window (overnight tape)
+    session_close: "16:00"  # ET regular-session close; bounds the overnight news window
   calendar:
     binary_event_window_days: 3
     binary_event_min_materiality: 0.75

@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
+import { renderWithProviders as render, screen, waitFor, fireEvent } from '@/test/utils';
+import { server } from '@/test/mocks/server';
+import { API_BASE_URL } from '@/lib/api';
 import NarrativeAnalysisCard from './NarrativeAnalysisCard';
 import type { SymbolIntelligence } from '@/features/intelligence/types';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
@@ -267,5 +270,115 @@ describe('NarrativeAnalysisCard — new structured fields', () => {
     expect(
       screen.queryByText(t('workspacePage.panels.analysis.intelligence.positionMove.title')),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe('NarrativeAnalysisCard — pre-open outlook & thesis delta', () => {
+  it('renders the pre-open card only when preOpenOutlook is present', () => {
+    render(
+      <NarrativeAnalysisCard
+        intelligence={{
+          ...baseIntelligence,
+          preOpenOutlook: {
+            gapDirection: 'gap_up',
+            magnitude: 'moderate',
+            primaryDriver: { summary: 'Overnight earnings beat.', sourceUrl: 'https://x' },
+            actionAtOpen: 'Let it open, do not chase.',
+            stopGapPlan: 'Exit at open if it gaps below the stop.',
+            confidence: 'medium',
+          },
+        }}
+      />,
+    );
+    expect(
+      screen.getByText(t('workspacePage.panels.analysis.intelligence.preOpen.title')),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Overnight earnings beat.')).toBeInTheDocument();
+    expect(screen.getByText('Let it open, do not chase.')).toBeInTheDocument();
+    expect(screen.getByText('Exit at open if it gaps below the stop.')).toBeInTheDocument();
+  });
+
+  it('does not render the pre-open card when absent', () => {
+    render(<NarrativeAnalysisCard intelligence={baseIntelligence} />);
+    expect(
+      screen.queryByText(t('workspacePage.panels.analysis.intelligence.preOpen.title')),
+    ).not.toBeInTheDocument();
+  });
+
+  it('renders the thesis-delta status badge and summary', () => {
+    render(
+      <NarrativeAnalysisCard
+        intelligence={{
+          ...baseIntelligence,
+          thesisDelta: {
+            status: 'weakening',
+            summary: 'Momentum is fading versus last week.',
+            whatPlayedOut: ['Breakout flagged last run did not hold'],
+          },
+        }}
+      />,
+    );
+    expect(
+      screen.getByText(t('workspacePage.panels.analysis.intelligence.thesisDelta.status.weakening')),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Momentum is fading versus last week.')).toBeInTheDocument();
+    expect(screen.getByText('Breakout flagged last run did not hold')).toBeInTheDocument();
+  });
+});
+
+// jsdom doesn't toggle <details> on summary click, so drive the toggle event
+// the component listens to (onToggle) directly.
+function openTimeline() {
+  const detailsEls = Array.from(document.querySelectorAll('details'));
+  const timeline = detailsEls.find((d) =>
+    d.querySelector('summary')?.textContent ===
+    t('workspacePage.panels.analysis.intelligence.timeline.title'),
+  ) as HTMLDetailsElement;
+  timeline.open = true;
+  fireEvent(timeline, new Event('toggle', { bubbles: true }));
+}
+
+describe('NarrativeAnalysisCard — analysis timeline', () => {
+  it('renders prior analyses from the history endpoint, newest-first', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}/api/intelligence/:ticker/history`, () =>
+        HttpResponse.json({
+          entries: [
+            {
+              generated_at: '2026-06-25T08:00:00Z',
+              action: 'MANAGE_ONLY',
+              conviction: 'medium',
+              summary_line: 'Hold into the open.',
+              watch_for: ['gap risk'],
+              pre_open_outlook: null,
+            },
+            {
+              generated_at: '2026-06-18T08:00:00Z',
+              action: 'BUY_NOW',
+              conviction: 'high',
+              summary_line: 'Initial breakout entry.',
+              watch_for: [],
+              pre_open_outlook: null,
+            },
+          ],
+        }),
+      ),
+    );
+    render(<NarrativeAnalysisCard intelligence={baseIntelligence} />);
+    // Fetch is gated on opening the timeline disclosure.
+    openTimeline();
+    expect(await screen.findByText('Hold into the open.')).toBeInTheDocument();
+    expect(screen.getByText('Initial breakout entry.')).toBeInTheDocument();
+    expect(screen.getByText('Jun 25, 2026')).toBeInTheDocument();
+  });
+
+  it('shows the empty state when there is no history', async () => {
+    render(<NarrativeAnalysisCard intelligence={baseIntelligence} />);
+    openTimeline();
+    await waitFor(() =>
+      expect(
+        screen.getByText(t('workspacePage.panels.analysis.intelligence.timeline.empty')),
+      ).toBeInTheDocument(),
+    );
   });
 });

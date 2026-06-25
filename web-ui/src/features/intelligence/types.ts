@@ -71,6 +71,51 @@ export interface PositionMoveExplanation {
   drivers: PriceMoveDriver[];
 }
 
+export type GapDirection = 'gap_up' | 'gap_down' | 'flat';
+export type GapMagnitude = 'minor' | 'moderate' | 'large';
+export type PreOpenConfidence = 'high' | 'medium' | 'low';
+export type ThesisDeltaStatus = 'new' | 'confirmed' | 'weakening' | 'invalidated';
+
+export interface PreOpenDriver {
+  summary: string;
+  sourceUrl: string | null;
+}
+
+export interface PreOpenDriverAPI {
+  summary: string;
+  source_url: string | null;
+}
+
+export interface PreOpenOutlookAPI {
+  gap_direction: GapDirection;
+  magnitude: GapMagnitude;
+  primary_driver: PreOpenDriverAPI;
+  action_at_open: string;
+  stop_gap_plan: string;
+  confidence: PreOpenConfidence;
+}
+
+export interface PreOpenOutlook {
+  gapDirection: GapDirection;
+  magnitude: GapMagnitude;
+  primaryDriver: PreOpenDriver;
+  actionAtOpen: string;
+  stopGapPlan: string;
+  confidence: PreOpenConfidence;
+}
+
+export interface ThesisDeltaAPI {
+  status: ThesisDeltaStatus;
+  summary: string;
+  what_played_out: string[];
+}
+
+export interface ThesisDelta {
+  status: ThesisDeltaStatus;
+  summary: string;
+  whatPlayedOut: string[];
+}
+
 export interface SymbolIntelligenceAPI {
   symbol: string;
   generated_at: string;
@@ -90,6 +135,8 @@ export interface SymbolIntelligenceAPI {
   risk_factors?: string[];
   prediction_bullets?: PredictionBullet[];
   past_trades_context?: string | null;
+  pre_open_outlook?: PreOpenOutlookAPI | null;
+  thesis_delta?: ThesisDeltaAPI | null;
 }
 
 export interface SymbolIntelligence {
@@ -111,6 +158,32 @@ export interface SymbolIntelligence {
   riskFactors?: string[];
   predictionBullets?: PredictionBullet[];
   pastTradesContext?: string | null;
+  preOpenOutlook?: PreOpenOutlook | null;
+  thesisDelta?: ThesisDelta | null;
+}
+
+function transformPreOpenOutlook(api: PreOpenOutlookAPI | null | undefined): PreOpenOutlook | null {
+  if (!api) return null;
+  return {
+    gapDirection: api.gap_direction,
+    magnitude: api.magnitude,
+    primaryDriver: {
+      summary: api.primary_driver.summary,
+      sourceUrl: api.primary_driver.source_url ?? null,
+    },
+    actionAtOpen: api.action_at_open,
+    stopGapPlan: api.stop_gap_plan,
+    confidence: api.confidence,
+  };
+}
+
+function transformThesisDelta(api: ThesisDeltaAPI | null | undefined): ThesisDelta | null {
+  if (!api) return null;
+  return {
+    status: api.status,
+    summary: api.summary,
+    whatPlayedOut: api.what_played_out ?? [],
+  };
 }
 
 function transformPositionOutlook(api: PositionOutlookAPI | null | undefined): PositionOutlook | null {
@@ -147,6 +220,8 @@ export function transformIntelligence(api: SymbolIntelligenceAPI): SymbolIntelli
     riskFactors: api.risk_factors ?? [],
     predictionBullets: api.prediction_bullets ?? [],
     pastTradesContext: api.past_trades_context ?? null,
+    preOpenOutlook: transformPreOpenOutlook(api.pre_open_outlook),
+    thesisDelta: transformThesisDelta(api.thesis_delta),
   };
 }
 
@@ -195,6 +270,39 @@ export function transformOpenPositionIntelligence(
     stopSuggested: api.stop_suggested,
     stopReason: api.stop_reason,
     intelligence: api.intelligence ? transformIntelligence(api.intelligence) : null,
+  };
+}
+
+export interface HistoryEntryAPI {
+  generated_at: string;
+  action: DecisionAction;
+  conviction: DecisionConviction;
+  summary_line: string;
+  watch_for: string[];
+  pre_open_outlook?: PreOpenOutlookAPI | null;
+}
+
+export interface HistoryEntry {
+  generatedAt: string;
+  action: DecisionAction;
+  conviction: DecisionConviction;
+  summaryLine: string;
+  watchFor: string[];
+  preOpenOutlook: PreOpenOutlook | null;
+}
+
+export interface AnalysisHistoryResponseAPI {
+  entries: HistoryEntryAPI[];
+}
+
+export function transformHistoryEntry(api: HistoryEntryAPI): HistoryEntry {
+  return {
+    generatedAt: api.generated_at,
+    action: api.action,
+    conviction: api.conviction,
+    summaryLine: api.summary_line,
+    watchFor: api.watch_for ?? [],
+    preOpenOutlook: transformPreOpenOutlook(api.pre_open_outlook),
   };
 }
 

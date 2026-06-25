@@ -683,6 +683,10 @@ export const handlers = [
     return HttpResponse.json({ detail: `No cached analysis for ${params.ticker}` }, { status: 404 })
   }),
 
+  http.get(`${API_BASE_URL}/api/intelligence/:ticker/history`, () => {
+    return HttpResponse.json({ entries: [] })
+  }),
+
   // Orders endpoints
   http.get(`${API_BASE_URL}/api/portfolio/orders`, ({ request }) => {
     const url = new URL(request.url)

@@ -384,6 +384,141 @@ def test_analyzer_parses_new_fields():
     assert result.past_trades_context == "One prior stop at €247."
 
 
+_PRE_OPEN_NOW = __import__("datetime").datetime(
+    2026, 6, 23, 13, 0, tzinfo=__import__("datetime").timezone.utc
+)  # Tue 09:00 ET — US pre-market
+_REGULAR_NOW = __import__("datetime").datetime(
+    2026, 6, 23, 15, 0, tzinfo=__import__("datetime").timezone.utc
+)  # Tue 11:00 ET — market open
+
+_PRE_OPEN_FIELDS = {
+    "pre_open_outlook": {
+        "gap_direction": "gap_up",
+        "magnitude": "moderate",
+        "primary_driver": {"summary": "Overnight beat.", "source_url": "https://x"},
+        "action_at_open": "Let it open; don't chase.",
+        "stop_gap_plan": "Exit at open if it gaps below the stop.",
+        "confidence": "medium",
+    },
+    "thesis_delta": {
+        "status": "confirmed",
+        "summary": "Thesis intact since last run.",
+        "what_played_out": ["Beat as flagged"],
+    },
+}
+
+
+def _fake_resp_with(**extra):
+    import json
+    body = {**_FAKE_RESPONSE_JSON, **extra}
+    return _make_fake_openai_response("```json\n" + json.dumps(body) + "\n```")
+
+
+def test_pre_open_outlook_populated_in_window_for_us_symbol():
+    req = SymbolIntelligenceRequest(close=180.0, signal="breakout", currency="USD")
+    with patch("swing_screener.intelligence.symbol_analyzer.OpenAI") as MockOpenAI:
+        mock_client = MagicMock()
+        MockOpenAI.return_value = mock_client
+        mock_client.responses.create.return_value = _fake_resp_with(**_PRE_OPEN_FIELDS)
+        analyzer = SymbolAnalyzer()
+        result = analyzer.analyze("AAPL", req, now=_PRE_OPEN_NOW)
+
+    assert result.pre_open_outlook is not None
+    assert result.pre_open_outlook.gap_direction == "gap_up"
+    assert result.pre_open_outlook.magnitude == "moderate"
+    assert result.inputs_used["pre_open"]["window"] == "us_pre_market"
+    # Prompt block must have been sent
+    sent = mock_client.responses.create.call_args.kwargs["input"]
+    assert "Pre-open outlook" in sent
+
+
+def test_pre_open_outlook_dropped_when_market_open():
+    req = SymbolIntelligenceRequest(close=180.0, signal="breakout", currency="USD")
+    with patch("swing_screener.intelligence.symbol_analyzer.OpenAI") as MockOpenAI:
+        mock_client = MagicMock()
+        MockOpenAI.return_value = mock_client
+        mock_client.responses.create.return_value = _fake_resp_with(**_PRE_OPEN_FIELDS)
+        analyzer = SymbolAnalyzer()
+        result = analyzer.analyze("AAPL", req, now=_REGULAR_NOW)
+
+    assert result.pre_open_outlook is None
+    sent = mock_client.responses.create.call_args.kwargs["input"]
+    assert "Pre-open outlook" not in sent
+
+
+def test_pre_open_outlook_dropped_for_non_us_symbol():
+    req = SymbolIntelligenceRequest(close=180.0, signal="breakout", currency="EUR")
+    with patch("swing_screener.intelligence.symbol_analyzer.OpenAI") as MockOpenAI:
+        mock_client = MagicMock()
+        MockOpenAI.return_value = mock_client
+        mock_client.responses.create.return_value = _fake_resp_with(**_PRE_OPEN_FIELDS)
+        analyzer = SymbolAnalyzer()
+        result = analyzer.analyze("ASML.AS", req, now=_PRE_OPEN_NOW)
+
+    assert result.pre_open_outlook is None
+
+
+def test_thesis_delta_parsed_only_with_prior_history(tmp_path, monkeypatch):
+    monkeypatch.setenv("SWING_SCREENER_DATA_DIR", str(tmp_path))
+    req = SymbolIntelligenceRequest(close=180.0, signal="breakout", currency="USD")
+    with patch("swing_screener.intelligence.symbol_analyzer.OpenAI") as MockOpenAI:
+        mock_client = MagicMock()
+        MockOpenAI.return_value = mock_client
+        mock_client.responses.create.return_value = _fake_resp_with(**_PRE_OPEN_FIELDS)
+        analyzer = SymbolAnalyzer()
+        # First run: no prior history → thesis_delta gated to None even though the
+        # model emitted one.
+        first = analyzer.analyze("AAPL", req, now=_REGULAR_NOW)
+        assert first.thesis_delta is None
+        # Second run: prior analysis exists → thesis_delta is parsed.
+        second = analyzer.analyze("AAPL", req, now=_REGULAR_NOW)
+
+    assert second.thesis_delta is not None
+    assert second.thesis_delta.status == "confirmed"
+    assert second.thesis_delta.what_played_out == ["Beat as flagged"]
+
+
+def test_malformed_pre_open_outlook_degrades_to_none(tmp_path, monkeypatch):
+    monkeypatch.setenv("SWING_SCREENER_DATA_DIR", str(tmp_path))
+    req = SymbolIntelligenceRequest(close=180.0, signal="breakout", currency="USD")
+    # pre_open_outlook missing required action_at_open / stop_gap_plan.
+    bad = {"pre_open_outlook": {"gap_direction": "gap_up", "magnitude": "moderate"}}
+    with patch("swing_screener.intelligence.symbol_analyzer.OpenAI") as MockOpenAI:
+        mock_client = MagicMock()
+        MockOpenAI.return_value = mock_client
+        mock_client.responses.create.return_value = _fake_resp_with(**bad)
+        analyzer = SymbolAnalyzer()
+        result = analyzer.analyze("AAPL", req, now=_PRE_OPEN_NOW)
+
+    # Analysis succeeds; the malformed sub-object is dropped rather than 500-ing.
+    assert result.pre_open_outlook is None
+    assert result.action == "BUY_NOW"
+
+
+def test_history_appended_and_fed_back_as_digest(tmp_path, monkeypatch):
+    monkeypatch.setenv("SWING_SCREENER_DATA_DIR", str(tmp_path))
+    from swing_screener.intelligence.history import read_history
+
+    req = SymbolIntelligenceRequest(close=180.0, signal="breakout", currency="USD")
+    with patch("swing_screener.intelligence.symbol_analyzer.OpenAI") as MockOpenAI:
+        mock_client = MagicMock()
+        MockOpenAI.return_value = mock_client
+        mock_client.responses.create.return_value = _fake_resp_with()
+        analyzer = SymbolAnalyzer()
+        # First run: no prior history → no digest block in the prompt.
+        analyzer.analyze("AAPL", req, now=_REGULAR_NOW)
+        first_prompt = mock_client.responses.create.call_args.kwargs["input"]
+        assert "Prior analyses" not in first_prompt
+        # Second run: the first run is now in history → digest block present.
+        analyzer.analyze("AAPL", req, now=_REGULAR_NOW)
+        second_prompt = mock_client.responses.create.call_args.kwargs["input"]
+        assert "Prior analyses (most recent first)" in second_prompt
+
+    # Both runs land on the same calendar day, so same-day dedup keeps one entry.
+    stored = read_history("AAPL")
+    assert len(stored) == 1
+
+
 def test_analyze_writes_to_cache(tmp_path, monkeypatch):
     import json
     from unittest.mock import MagicMock, patch

@@ -14,6 +14,7 @@ from api.services.intelligence_enrichment import enrich_intelligence_request, en
 from swing_screener.intelligence.evidence.collect import collect_evidence
 from api.services.portfolio_service import PortfolioService
 from swing_screener.intelligence.cache import read_from_cache
+from swing_screener.intelligence.history import HistoryEntry, read_history
 from swing_screener.intelligence.models import SymbolIntelligence, SymbolIntelligenceRequest
 from swing_screener.intelligence.symbol_analyzer import SymbolAnalyzer
 
@@ -45,6 +46,10 @@ class SweepResponse(BaseModel):
     failed: list[SweepFailure]
 
 
+class AnalysisHistoryResponse(BaseModel):
+    entries: list[HistoryEntry]
+
+
 @router.post("/sweep", response_model=SweepResponse)
 def sweep(request: SweepRequest) -> SweepResponse:
     """Run intelligence analysis for a batch of symbols, caching each result."""
@@ -60,6 +65,12 @@ def sweep(request: SweepRequest) -> SweepResponse:
             logger.warning("Sweep failed for %s: %s", item.ticker, exc)
             failed.append(SweepFailure(ticker=item.ticker.upper(), error=str(exc)))
     return SweepResponse(analyzed=analyzed, failed=failed)
+
+
+@router.get("/{ticker}/history", response_model=AnalysisHistoryResponse)
+def get_history(ticker: str) -> AnalysisHistoryResponse:
+    """Return the per-symbol analysis history (newest-first, capped). Empty if none."""
+    return AnalysisHistoryResponse(entries=read_history(ticker.upper()))
 
 
 @router.get("/{ticker}/latest", response_model=SymbolIntelligence)

@@ -1,16 +1,18 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   candidateToPayload,
+  getIntelligenceHistory,
   getIntelligenceLatest,
   postIntelligenceAnalysis,
   postIntelligenceSweep,
 } from '@/features/intelligence/api';
 import { transformIntelligence } from '@/features/intelligence/types';
-import type { SymbolIntelligence, SweepResponseAPI, SweepSymbolPayload } from '@/features/intelligence/types';
+import type { HistoryEntry, SymbolIntelligence, SweepResponseAPI, SweepSymbolPayload } from '@/features/intelligence/types';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
 import type { PositionWithMetrics } from '@/features/portfolio/api';
 
 export function useIntelligenceAnalysisMutation() {
+  const queryClient = useQueryClient();
   return useMutation<
     SymbolIntelligence,
     Error,
@@ -22,6 +24,11 @@ export function useIntelligenceAnalysisMutation() {
       const api = await postIntelligenceAnalysis(ticker, payload);
       return transformIntelligence(api);
     },
+    onSuccess: (_data, { ticker }) => {
+      // A fresh analysis is appended to history server-side; refresh the timeline.
+      queryClient.invalidateQueries({ queryKey: ['intelligence', 'history', ticker] });
+      queryClient.invalidateQueries({ queryKey: ['intelligence', 'latest', ticker] });
+    },
   });
 }
 
@@ -32,6 +39,16 @@ export function useIntelligenceLatestQuery(ticker: string, enabled: boolean) {
       const api = await getIntelligenceLatest(ticker);
       return transformIntelligence(api);
     },
+    enabled,
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useIntelligenceHistoryQuery(ticker: string, enabled: boolean) {
+  return useQuery<HistoryEntry[], Error>({
+    queryKey: ['intelligence', 'history', ticker],
+    queryFn: () => getIntelligenceHistory(ticker),
     enabled,
     retry: false,
     staleTime: 5 * 60 * 1000,

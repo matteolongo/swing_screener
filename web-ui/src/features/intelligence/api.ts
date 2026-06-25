@@ -1,6 +1,13 @@
 import { API_ENDPOINTS } from '@/lib/api';
 import { fetchJson } from '@/lib/fetchJson';
-import type { SymbolIntelligenceAPI, SweepSymbolPayload, SweepResponseAPI } from '@/features/intelligence/types';
+import type {
+  SymbolIntelligenceAPI,
+  SweepSymbolPayload,
+  SweepResponseAPI,
+  AnalysisHistoryResponseAPI,
+  HistoryEntry,
+} from '@/features/intelligence/types';
+import { transformHistoryEntry } from '@/features/intelligence/types';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
 import type { PositionWithMetrics } from '@/features/portfolio/api';
 
@@ -123,6 +130,13 @@ export async function getIntelligenceLatest(ticker: string): Promise<SymbolIntel
   return fetchJson<SymbolIntelligenceAPI>(API_ENDPOINTS.intelligenceLatest(ticker), {
     errorMessage: `No cached analysis for ${ticker}`,
   });
+}
+
+export async function getIntelligenceHistory(ticker: string): Promise<HistoryEntry[]> {
+  const res = await fetchJson<AnalysisHistoryResponseAPI>(API_ENDPOINTS.intelligenceHistory(ticker), {
+    errorMessage: `Failed to load analysis history for ${ticker}`,
+  });
+  return (res.entries ?? []).map(transformHistoryEntry);
 }
 
 export async function postIntelligenceSweep(symbols: SweepSymbolPayload[]): Promise<SweepResponseAPI> {
