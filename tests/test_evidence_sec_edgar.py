@@ -18,12 +18,35 @@ SUBMISSIONS = {
     }
 }
 
+SUBMISSIONS_BROAD = {
+    "filings": {
+        "recent": {
+            "form": ["424B5", "SC 13D/A", "DEF 14A", "10-Q", "SC 13G"],
+            "filingDate": ["2026-06-18", "2026-06-15", "2026-06-12", "2026-05-01", "2026-06-10"],
+            "accessionNumber": [
+                "0000320193-26-000080", "0000320193-26-000079", "0000320193-26-000078",
+                "0000320193-26-000070", "0000320193-26-000075",
+            ],
+            "primaryDocDescription": ["Prospectus", "Schedule 13D Amendment", "Proxy", "10-Q", "Schedule 13G"],
+            "items": ["", "", "", "", ""],
+        }
+    }
+}
+
 
 def _fake_get_json(url):
     if "company_tickers.json" in url:
         return TICKERS
     if "submissions/CIK0000320193.json" in url:
         return SUBMISSIONS
+    raise AssertionError(f"unexpected url {url}")
+
+
+def _fake_get_json_broad(url):
+    if "company_tickers.json" in url:
+        return TICKERS
+    if "submissions/CIK0000320193.json" in url:
+        return SUBMISSIONS_BROAD
     raise AssertionError(f"unexpected url {url}")
 
 
@@ -62,3 +85,18 @@ def test_probe_ok_with_injected_client(monkeypatch):
     assert result.id == "sec_edgar_catalysts"
     assert result.status == "ok"
     assert result.sample["count"] >= 1
+
+
+def test_prefix_matches_and_labels():
+    out = SecEdgarCatalystCollector.collect("AAPL", asof_date=date(2026, 6, 24), cfg=CFG, get_json=_fake_get_json_broad)
+    rel = {e.title.split(":")[0]: e.relevance for e in out}
+    # 424B5 matched by "424B" prefix
+    assert any("424B5" in e.relevance and "offering" in e.relevance for e in out)
+    # amendment SC 13D/A matched by "SC 13D"
+    assert any("SC 13D/A" in e.relevance and "activist" in e.relevance for e in out)
+    # SC 13G is passive, not activist
+    assert any("SC 13G" in e.relevance and "passive" in e.relevance for e in out)
+    # DEF 14A proxy label
+    assert any("DEF 14A" in e.relevance and "proxy" in e.relevance for e in out)
+    # routine 10-Q excluded
+    assert all("10-Q" not in e.relevance for e in out)

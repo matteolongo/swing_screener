@@ -82,6 +82,10 @@ config:
     sec_forms:
     - 8-K
     - 6-K
+    - SC 13D
+    - SC 13G
+    - 424B
+    - DEF 14A
     http:
       user_agent: swing-screener-intelligence-bot/1.0
       connect_timeout_seconds: 5.0

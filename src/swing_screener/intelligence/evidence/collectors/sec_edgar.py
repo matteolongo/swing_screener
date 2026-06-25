@@ -12,6 +12,25 @@ from swing_screener.intelligence.evidence.models import SourceEvidence
 
 _TICKER_MAP_CACHE: dict[str, tuple[str, str | None]] | None = None
 
+_FORM_LABELS: dict[str, str] = {
+    "8-K": "material event",
+    "6-K": "foreign-issuer report",
+    "SC 13D": "activist / >5% ownership stake",
+    "SC 13G": "passive >5% ownership stake",
+    "424B": "securities offering / potential dilution",
+    "DEF 14A": "proxy statement (governance / M&A)",
+}
+
+
+def _match_form(form: str, wanted: tuple[str, ...]) -> str | None:
+    """Return the configured token this form matches (longest match wins), or None.
+
+    A form matches a token when it equals it or starts with it, so "424B" catches
+    "424B5" and "SC 13D" catches the "SC 13D/A" amendment.
+    """
+    matches = [f for f in wanted if form == f or form.startswith(f)]
+    return max(matches, key=len) if matches else None
+
 
 def _default_get_json(cfg: EvidenceConfig) -> Callable[[str], dict]:
     def _get(url: str) -> dict:
@@ -89,11 +108,12 @@ class SecEdgarCatalystCollector:
         accns = recent.get("accessionNumber") or []
         descs = recent.get("primaryDocDescription") or []
         items = recent.get("items") or []
-        wanted = set(cfg.sec_forms)
+        wanted = tuple(cfg.sec_forms)
         cik_int = str(int(cik))
         out: list[SourceEvidence] = []
         for i, form in enumerate(forms):
-            if form not in wanted:
+            token = _match_form(form, wanted)
+            if token is None:
                 continue
             accn = accns[i] if i < len(accns) else ""
             nodash = accn.replace("-", "")
@@ -110,7 +130,7 @@ class SecEdgarCatalystCollector:
                     publisher="SEC EDGAR",
                     published_at=dates[i] if i < len(dates) else None,
                     quote_or_summary=summary,
-                    relevance=f"SEC material-event filing ({form})",
+                    relevance=f"SEC {form}: {_FORM_LABELS.get(token, 'material-event filing')}",
                 )
             )
         return out
