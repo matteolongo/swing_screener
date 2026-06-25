@@ -147,6 +147,49 @@ def test_symbol_intelligence_new_fields_default_empty():
     assert intel.past_trades_context is None
 
 
+def test_pre_open_outlook_and_thesis_delta_round_trip():
+    from swing_screener.intelligence.models import (
+        PreOpenDriver, PreOpenOutlook, ThesisDelta,
+    )
+    intel = SymbolIntelligence(
+        symbol="AAPL", generated_at="2026-06-25T08:00:00Z",
+        action="MANAGE_ONLY", conviction="medium",
+        summary_line="Hold into the open; modest gap up likely.",
+        narrative="Text.",
+        pre_open_outlook=PreOpenOutlook(
+            gap_direction="gap_up",
+            magnitude="moderate",
+            primary_driver=PreOpenDriver(summary="Beat overnight.", source_url="https://x"),
+            action_at_open="Let it open, don't chase.",
+            stop_gap_plan="If it gaps below 180, exit at open.",
+            confidence="medium",
+        ),
+        thesis_delta=ThesisDelta(
+            status="confirmed",
+            summary="Thesis intact since last run.",
+            what_played_out=["Earnings beat as flagged"],
+        ),
+    )
+    dumped = intel.model_dump_json()
+    again = SymbolIntelligence.model_validate_json(dumped)
+    assert again.pre_open_outlook is not None
+    assert again.pre_open_outlook.gap_direction == "gap_up"
+    assert again.pre_open_outlook.primary_driver.source_url == "https://x"
+    assert again.thesis_delta is not None
+    assert again.thesis_delta.status == "confirmed"
+    assert again.thesis_delta.what_played_out == ["Earnings beat as flagged"]
+
+
+def test_pre_open_and_thesis_default_none():
+    intel = SymbolIntelligence(
+        symbol="X", generated_at="2026-06-25T08:00:00Z",
+        action="WATCH", conviction="low",
+        summary_line="Flat.", narrative="Text.",
+    )
+    assert intel.pre_open_outlook is None
+    assert intel.thesis_delta is None
+
+
 def test_key_number_sentiment_values():
     from swing_screener.intelligence.models import KeyNumber
     kn = KeyNumber(label="SMA20", value="€266", sentiment="bullish")

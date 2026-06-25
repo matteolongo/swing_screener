@@ -73,6 +73,26 @@ class PredictionBullet(BaseModel):
     reference: str
 
 
+class PreOpenDriver(BaseModel):
+    summary: str
+    source_url: str | None = None
+
+
+class PreOpenOutlook(BaseModel):
+    gap_direction: Literal["gap_up", "gap_down", "flat"]
+    magnitude: Literal["minor", "moderate", "large"]
+    primary_driver: PreOpenDriver
+    action_at_open: str
+    stop_gap_plan: str
+    confidence: Literal["high", "medium", "low"]
+
+
+class ThesisDelta(BaseModel):
+    status: Literal["new", "confirmed", "weakening", "invalidated"]
+    summary: str
+    what_played_out: list[str] = Field(default_factory=list)
+
+
 class PositionOutlook(BaseModel):
     expected_holding_period: Literal["days", "1-2_weeks", "2-6_weeks", "unknown"]
     hold_until: str
@@ -162,3 +182,5 @@ class SymbolIntelligence(BaseModel):
     risk_factors: list[str] = Field(default_factory=list)
     prediction_bullets: list[PredictionBullet] = Field(default_factory=list)
     past_trades_context: str | None = None
+    pre_open_outlook: PreOpenOutlook | None = None
+    thesis_delta: ThesisDelta | None = None
