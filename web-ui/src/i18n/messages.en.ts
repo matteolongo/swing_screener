@@ -723,6 +723,39 @@ export const messagesEn = {
           fullRationale: 'Full rationale',
           aiAnalysisTitle: 'AI analysis',
           secondOpinion: 'AI second opinion: {{aiAction}} — differs from the screener verdict ({{screenerAction}}). The screener verdict stands.',
+          preOpen: {
+            title: 'Pre-open outlook',
+            gapUp: 'Gap up',
+            gapDown: 'Gap down',
+            flat: 'Flat open',
+            magnitude: {
+              minor: 'minor',
+              moderate: 'moderate',
+              large: 'large',
+            },
+            driver: 'Overnight driver',
+            atOpen: 'At the open',
+            stopGapPlan: 'If it gaps through the stop',
+            confidence: {
+              high: 'High confidence',
+              medium: 'Medium confidence',
+              low: 'Low confidence',
+            },
+          },
+          thesisDelta: {
+            title: 'Since last analysis',
+            status: {
+              new: 'New',
+              confirmed: 'Confirmed',
+              weakening: 'Weakening',
+              invalidated: 'Invalidated',
+            },
+            playedOut: 'What played out',
+          },
+          timeline: {
+            title: 'Analysis history',
+            empty: 'No prior analyses recorded for this symbol yet.',
+          },
         },
         decisionWhy: {
           title: 'What to do & why',

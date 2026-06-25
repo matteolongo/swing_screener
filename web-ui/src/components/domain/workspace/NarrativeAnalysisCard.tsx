@@ -1,8 +1,9 @@
 import ReactMarkdown from 'react-markdown';
 import Badge from '@/components/common/Badge';
-import type { SymbolIntelligence, DecisionAction, DecisionConviction, KeyNumber, PredictionBullet, PriceMoveDirection } from '@/features/intelligence/types';
+import type { SymbolIntelligence, DecisionAction, DecisionConviction, KeyNumber, PredictionBullet, PriceMoveDirection, GapDirection, GapMagnitude, PreOpenConfidence, ThesisDeltaStatus } from '@/features/intelligence/types';
 import type { DecisionCatalystLabel, DecisionSignalLabel, DecisionValuationLabel } from '@/features/screener/types';
 import type { SymbolAnalysisCandidate } from '@/components/domain/workspace/types';
+import { useIntelligenceHistoryQuery } from '@/features/intelligence/hooks';
 import { t } from '@/i18n/t';
 
 interface NarrativeAnalysisCardProps {
@@ -103,6 +104,43 @@ function moveDirectionClass(direction: PriceMoveDirection): string {
   }
 }
 
+function gapDirectionClass(direction: GapDirection): string {
+  switch (direction) {
+    case 'gap_up': return 'border-success/40 bg-success/10 text-success';
+    case 'gap_down': return 'border-danger/40 bg-danger/10 text-danger';
+    default: return 'border-border bg-foreground/5 text-muted';
+  }
+}
+
+function gapDirectionLabel(direction: GapDirection): string {
+  switch (direction) {
+    case 'gap_up': return `↑ ${t('workspacePage.panels.analysis.intelligence.preOpen.gapUp')}`;
+    case 'gap_down': return `↓ ${t('workspacePage.panels.analysis.intelligence.preOpen.gapDown')}`;
+    default: return `→ ${t('workspacePage.panels.analysis.intelligence.preOpen.flat')}`;
+  }
+}
+
+function gapMagnitudeLabel(magnitude: GapMagnitude): string {
+  return t(`workspacePage.panels.analysis.intelligence.preOpen.magnitude.${magnitude}`);
+}
+
+function preOpenConfidenceLabel(confidence: PreOpenConfidence): string {
+  return t(`workspacePage.panels.analysis.intelligence.preOpen.confidence.${confidence}`);
+}
+
+function thesisStatusLabel(status: ThesisDeltaStatus): string {
+  return t(`workspacePage.panels.analysis.intelligence.thesisDelta.status.${status}`);
+}
+
+function thesisStatusVariant(status: ThesisDeltaStatus): 'default' | 'success' | 'primary' | 'warning' | 'error' {
+  switch (status) {
+    case 'confirmed': return 'success';
+    case 'weakening': return 'warning';
+    case 'invalidated': return 'error';
+    default: return 'primary';
+  }
+}
+
 export default function NarrativeAnalysisCard({
   intelligence,
   candidate,
@@ -117,6 +155,10 @@ export default function NarrativeAnalysisCard({
   const hasRisks = (intelligence.riskFactors?.length ?? 0) > 0;
   const hasPastTrades = Boolean(intelligence.pastTradesContext);
   const moveExplanation = intelligence.positionMoveExplanation ?? null;
+  const preOpen = intelligence.preOpenOutlook ?? null;
+  const thesisDelta = intelligence.thesisDelta ?? null;
+  const historyQuery = useIntelligenceHistoryQuery(symbol, Boolean(symbol));
+  const historyEntries = historyQuery.data ?? [];
 
   const decisionHighlights = [
     { label: t('workspacePage.panels.analysis.intelligence.whyNow'), value: summary?.whyNow },
@@ -144,12 +186,69 @@ export default function NarrativeAnalysisCard({
           </div>
         )}
 
+        {/* Pre-open outlook — prominent when the US market has not opened yet */}
+        {preOpen && (
+          <div className={`rounded-md border p-3 ${gapDirectionClass(preOpen.gapDirection)}`}>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wide">
+                {t('workspacePage.panels.analysis.intelligence.preOpen.title')}
+              </span>
+              <span className="text-sm font-semibold">
+                {gapDirectionLabel(preOpen.gapDirection)} · {gapMagnitudeLabel(preOpen.magnitude)}
+              </span>
+            </div>
+            <div className="mt-2 space-y-1.5 text-sm text-foreground">
+              <p>
+                <span className="font-medium">{t('workspacePage.panels.analysis.intelligence.preOpen.driver')}:</span>{' '}
+                {preOpen.primaryDriver.sourceUrl ? (
+                  <a href={preOpen.primaryDriver.sourceUrl} target="_blank" rel="noreferrer" className="underline">
+                    {preOpen.primaryDriver.summary}
+                  </a>
+                ) : (
+                  preOpen.primaryDriver.summary
+                )}
+              </p>
+              <p>
+                <span className="font-medium">{t('workspacePage.panels.analysis.intelligence.preOpen.atOpen')}:</span>{' '}
+                {preOpen.actionAtOpen}
+              </p>
+              <p>
+                <span className="font-medium">{t('workspacePage.panels.analysis.intelligence.preOpen.stopGapPlan')}:</span>{' '}
+                {preOpen.stopGapPlan}
+              </p>
+            </div>
+            <div className="mt-2">
+              <Badge variant="default">{preOpenConfidenceLabel(preOpen.confidence)}</Badge>
+            </div>
+          </div>
+        )}
+
         {/* Decision focus */}
         <div className="rounded-md bg-surface border border-border p-3">
           <div className="text-xs font-semibold uppercase tracking-wide text-muted">
             {t('workspacePage.panels.analysis.intelligence.decisionFocus')}
           </div>
           <p className="mt-2 text-base font-semibold text-foreground">{summaryLine}</p>
+          {thesisDelta && (
+            <div className="mt-2 rounded-md border border-border bg-foreground/5 px-3 py-2">
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+                  {t('workspacePage.panels.analysis.intelligence.thesisDelta.title')}
+                </span>
+                <Badge variant={thesisStatusVariant(thesisDelta.status)}>
+                  {thesisStatusLabel(thesisDelta.status)}
+                </Badge>
+              </div>
+              <p className="mt-1 text-sm text-foreground">{thesisDelta.summary}</p>
+              {thesisDelta.whatPlayedOut.length > 0 && (
+                <ul className="mt-2 space-y-1 text-sm list-disc list-inside text-muted">
+                  {thesisDelta.whatPlayedOut.map((item, index) => (
+                    <li key={`${item}-${index}`}>{item}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
           {decisionHighlights.length > 0 && (
             <dl className="mt-3 grid gap-2">
               {decisionHighlights.map((item) => (
@@ -354,6 +453,33 @@ export default function NarrativeAnalysisCard({
             )}
           </details>
         )}
+
+        {/* Analysis timeline — past analyses for this symbol */}
+        <details className="rounded-md border border-border bg-surface p-3">
+          <summary className="cursor-pointer text-xs font-medium text-muted select-none">
+            {t('workspacePage.panels.analysis.intelligence.timeline.title')}
+          </summary>
+          {historyEntries.length > 0 ? (
+            <ul className="mt-3 space-y-2">
+              {historyEntries.map((entry, index) => (
+                <li
+                  key={`${entry.generatedAt}-${index}`}
+                  className="flex items-start gap-2 text-sm border-l-2 border-border pl-2"
+                >
+                  <span className="shrink-0 text-[11px] text-muted tabular-nums">
+                    {entry.generatedAt.slice(0, 10)}
+                  </span>
+                  <Badge variant={convictionVariant(entry.conviction)}>{actionLabel(entry.action)}</Badge>
+                  <span className="flex-1 text-foreground">{entry.summaryLine}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-2 text-sm text-muted">
+              {t('workspacePage.panels.analysis.intelligence.timeline.empty')}
+            </p>
+          )}
+        </details>
       </div>
     </div>
   );
