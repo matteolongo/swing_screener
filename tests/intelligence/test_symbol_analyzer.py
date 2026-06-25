@@ -545,6 +545,27 @@ def test_history_appended_and_fed_back_as_digest(tmp_path, monkeypatch):
     assert len(stored) == 1
 
 
+def test_sources_attempted_non_empty_on_blackout(monkeypatch):
+    """Regression guard: sources.attempted must list configured sources even when
+    catalyst_evidence is empty (SEC blackout). Both attempted and returned must be
+    distinguishable: attempted is non-empty, returned is {}."""
+    req = SymbolIntelligenceRequest(close=50.0, signal="breakout")
+    # catalyst_evidence defaults to [] — simulates a SEC blackout.
+    assert req.catalyst_evidence == []
+
+    with patch("swing_screener.intelligence.symbol_analyzer.OpenAI") as MockOpenAI:
+        mock_client = MagicMock()
+        MockOpenAI.return_value = mock_client
+        _wire_two_calls(mock_client, _FAKE_RESPONSE_JSON)
+        analyzer = SymbolAnalyzer()
+        result = analyzer.analyze("AAPL", req)
+
+    sources = result.inputs_used["sources"]
+    assert sources["attempted"], "attempted must be non-empty even on a blackout"
+    assert "sec_edgar_catalysts" in sources["attempted"]
+    assert sources["returned"] == {}
+
+
 def test_analyze_writes_to_cache(tmp_path, monkeypatch):
     import json
     from unittest.mock import MagicMock, patch

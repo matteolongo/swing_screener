@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import datetime, timezone
 from pathlib import Path
 
 from swing_screener.settings.paths import data_dir
@@ -26,7 +27,7 @@ def record_analysis_metrics(
         existing = json.loads(path.read_text()) if path.exists() else []
         if not isinstance(existing, list):
             existing = []
-        existing.append({"ticker": ticker.upper(), "tokens": tokens})
+        existing.append({"ts": datetime.now(timezone.utc).isoformat(), "ticker": ticker.upper(), "tokens": tokens})
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(existing[-500:], indent=2))
     except (OSError, ValueError):

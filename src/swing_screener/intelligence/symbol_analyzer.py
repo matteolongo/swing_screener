@@ -644,8 +644,16 @@ class SymbolAnalyzer:
         for _ev in req.catalyst_evidence:
             if _ev.publisher:
                 _pub_counts[_ev.publisher] = _pub_counts.get(_ev.publisher, 0) + 1
+
+        # `attempted` = configured sources (visible even on a blackout where evidence is empty).
+        try:
+            from swing_screener.intelligence.evidence.config import load_evidence_config as _load_ev_cfg
+            _attempted = sorted(_load_ev_cfg().enabled_sources)
+        except Exception:
+            _attempted = sorted(_pub_counts)
+
         inputs_used["sources"] = {
-            "attempted": sorted(_pub_counts),
+            "attempted": _attempted,
             "returned": _pub_counts,
         }
 
