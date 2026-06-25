@@ -16,18 +16,26 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 
 from swing_screener.intelligence.models import PreOpenOutlook, SymbolIntelligence
+from swing_screener.recommendation.models import DecisionAction, DecisionConviction
 from swing_screener.settings.paths import data_dir
 
 logger = logging.getLogger(__name__)
 
 
+class HistoryPrediction(BaseModel):
+    direction: str
+    reason: str
+    reference: str
+
+
 class HistoryEntry(BaseModel):
     generated_at: str
-    action: str
-    conviction: str
+    action: DecisionAction
+    conviction: DecisionConviction
     summary_line: str
     watch_for: list[str] = Field(default_factory=list)
     pre_open_outlook: PreOpenOutlook | None = None
+    predictions: list[HistoryPrediction] = Field(default_factory=list)
 
 
 def _watch_for(result: SymbolIntelligence) -> list[str]:
@@ -42,11 +50,15 @@ def _watch_for(result: SymbolIntelligence) -> list[str]:
 def entry_from_result(result: SymbolIntelligence) -> HistoryEntry:
     return HistoryEntry(
         generated_at=result.generated_at,
-        action=str(result.action),
-        conviction=str(result.conviction),
+        action=result.action,
+        conviction=result.conviction,
         summary_line=result.summary_line,
         watch_for=_watch_for(result),
         pre_open_outlook=result.pre_open_outlook,
+        predictions=[
+            HistoryPrediction(direction=pb.direction, reason=pb.reason, reference=pb.reference)
+            for pb in (result.prediction_bullets or [])
+        ],
     )
 
 

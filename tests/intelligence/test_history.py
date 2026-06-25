@@ -100,3 +100,21 @@ def test_append_same_day_replaces_not_stacks(tmp_path):
     entries = read_history("AAPL", history_root=tmp_path)
     # Same-day 08:00 entry replaced by the 14:00 rerun; the other day is kept.
     assert [e.summary_line for e in entries] == ["yesterday", "midday"]
+
+
+def test_history_entry_rejects_unknown_action():
+    import pytest
+    from swing_screener.intelligence.history import HistoryEntry
+    with pytest.raises(ValueError):
+        HistoryEntry(generated_at="2026-06-25T00:00:00+00:00", action="NONSENSE",
+                     conviction="low", summary_line="s")
+
+
+def test_entry_from_result_captures_predictions():
+    from swing_screener.intelligence.history import entry_from_result
+    from swing_screener.intelligence.models import SymbolIntelligence, PredictionBullet
+    res = SymbolIntelligence(symbol="AAA", generated_at="2026-06-25T00:00:00+00:00",
+        action="WATCH", conviction="low", catalyst_urgency="none", summary_line="s",
+        narrative="n", prediction_bullets=[PredictionBullet(direction="bullish", reason="r", reference="ref")])
+    e = entry_from_result(res)
+    assert e.predictions and e.predictions[0].direction == "bullish"
