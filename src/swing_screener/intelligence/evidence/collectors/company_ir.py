@@ -8,6 +8,7 @@ from typing import Callable
 
 from swing_screener.data.source_health import ProbeResult, SourceDescriptor
 from swing_screener.intelligence.evidence.config import EvidenceConfig, load_evidence_config
+from swing_screener.intelligence.evidence.discovery import cached_discover
 from swing_screener.intelligence.evidence.models import SourceEvidence
 from swing_screener.intelligence.evidence.rss import FeedEntry, fetch_feed
 
@@ -56,9 +57,16 @@ class CompanyIrRssCollector:
         cfg: EvidenceConfig,
         fetch: Callable[[str], list[FeedEntry]] | None = None,
         feeds_path: Path | None = None,
+        discover: Callable[[str], str | None] | None = None,
     ) -> list[SourceEvidence]:
         fetch = fetch or _default_fetch(cfg)
-        feeds = _load_feeds(feeds_path or _IR_FEEDS_PATH).get(ticker.strip().upper(), [])
+        key = ticker.strip().upper()
+        feeds = _load_feeds(feeds_path or _IR_FEEDS_PATH).get(key, [])
+        if not feeds and cfg.discovery_enabled:
+            discover = discover or (lambda t: cached_discover(t, cfg=cfg, asof_date=asof_date))
+            discovered = discover(key)
+            if discovered:
+                feeds = [discovered]
         out: list[SourceEvidence] = []
         for url in feeds:
             for entry in fetch(url):

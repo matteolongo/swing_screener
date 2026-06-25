@@ -67,6 +67,10 @@ news + forward-catalyst search the intelligence prompt now performs.
 | `http.user_agent` | `swing-screener-intelligence-bot/1.0` | User-Agent header sent by all collectors |
 | `http.connect_timeout_seconds` | `5.0` | TCP connect timeout |
 | `http.read_timeout_seconds` | `20.0` | Read/response timeout |
+| `discovery_enabled` | `true` | Auto-discover IR feeds for tickers not in the seed map |
+| `discovery_found_ttl_days` | `30` | Re-validate a discovered feed after N days |
+| `discovery_negative_ttl_days` | `7` | Re-attempt discovery after N days of no feed found |
+| `discovery_paths` | `[/rss, /feed, /news/rss, /newsroom/rss, /investors/rss, /en/rss]` | Bounded path probes when no `<link rel=alternate>` is advertised |
 
 ### `mcp.yaml`
 

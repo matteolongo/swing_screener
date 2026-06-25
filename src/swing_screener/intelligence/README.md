@@ -107,7 +107,7 @@ Results stored as JSON under `data/intelligence/<ticker>_analysis.json`. TTL is 
 Both implement the `DiagnosableSource` protocol (`describe()` + `probe(canary)`). Registered in `_PROBEABLE` in `api/services/datasources_service.py`.
 
 - **`sec_edgar_catalysts`** (`SecEdgarCatalystCollector`): reads the SEC EDGAR submissions API (ticker→CIK via `company_tickers.json`, then `submissions/CIK…json`) and keeps recent 8-K/6-K filings for US tickers. Fail-soft — returns empty on HTTP errors and records a fallback event.
-- **`company_ir_rss`** (`CompanyIrRssCollector`): fetches the company's official IR RSS feed from the seed map `data/intelligence/ir_feeds.json` (unmapped ticker → empty). The seed is limited to companies that still publish a working RSS feed (currently AAPL, MSFT, NVDA, SAP.DE, SIE.DE). Fail-soft.
+- **`company_ir_rss`** (`CompanyIrRssCollector`): resolves the company's IR RSS feed in priority order: the hand-verified `data/intelligence/ir_feeds.json` seed first, then `evidence/discovery.py` auto-discovery (resolve the company site via yfinance `.info` `website`/`irWebsite`, parse the advertised `<link rel="alternate" type="application/rss+xml">`, else probe a short bounded path list, validate via `parse_feed`). Discovered feed URLs are cached long-term in `data/intelligence/discovered_feeds_cache.json` (found TTL 30d, negative TTL 7d). Auto-discovery is gated by `config.evidence.discovery_enabled`. Fail-soft throughout.
 
 A third venue-wide `exchange_announcements` collector was removed: every seeded EU exchange RSS endpoint (Euronext, CNMV, Borsa Italiana, SIX, Nasdaq Nordic) is dead or no longer serves parseable RSS, and venue-wide notices are not symbol-specific, so it added no information beyond the `web_search` pass.
 
