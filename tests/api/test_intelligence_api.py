@@ -92,3 +92,34 @@ def test_sweep_returns_503_without_api_key(monkeypatch):
     payload = {"symbols": [{"ticker": "AAPL", "request": {"close": 100.0, "signal": "breakout"}}]}
     response = client.post("/api/intelligence/sweep", json=payload)
     assert response.status_code == 503
+
+
+def test_analyze_returns_cache_unless_force(tmp_path, monkeypatch):
+    from api.routers import intelligence as r
+    from swing_screener.intelligence.models import SymbolIntelligence
+
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setenv("SWING_SCREENER_DATA_DIR", str(tmp_path))
+
+    cached = SymbolIntelligence(
+        symbol="AAA",
+        generated_at="2026-06-25T00:00:00+00:00",
+        action="WATCH",
+        conviction="low",
+        catalyst_urgency="none",
+        summary_line="s",
+        narrative="n",
+    )
+    monkeypatch.setattr(r, "read_from_cache", lambda t, *a, **k: cached)
+
+    def _fake_get_analyzer():
+        class _A:
+            def analyze(self, *a, **k):
+                raise AssertionError("analyzer was called — should have returned cache")
+        return _A()
+
+    monkeypatch.setattr(r, "_get_analyzer", _fake_get_analyzer)
+
+    resp = client.post("/api/intelligence/AAA", json={"close": 1.0, "signal": "x"})
+    assert resp.status_code == 200
+    assert resp.json()["symbol"] == "AAA"

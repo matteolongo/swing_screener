@@ -39,6 +39,7 @@ def _require_api_key() -> None:
 class SweepSymbol(BaseModel):
     ticker: str
     request: SymbolIntelligenceRequest
+    force: bool = False
 
 
 class SweepRequest(BaseModel):
@@ -68,6 +69,12 @@ def sweep(request: SweepRequest) -> SweepResponse:
     failed: list[SweepFailure] = []
     for item in request.symbols:
         try:
+            upper = item.ticker.upper()
+            if not item.force:
+                cached = read_from_cache(upper)
+                if cached is not None:
+                    analyzed.append(upper)
+                    continue
             analyzer.analyze(item.ticker.upper(), item.request)
             analyzed.append(item.ticker.upper())
         except Exception as exc:
@@ -95,6 +102,7 @@ def get_latest(ticker: str) -> SymbolIntelligence:
 def analyze_symbol(
     ticker: str,
     request: SymbolIntelligenceRequest,
+    force: bool = False,
     positions_repo: PositionsRepository = Depends(get_positions_repo),
     fundamentals_service: FundamentalsService = Depends(get_fundamentals_service),
     portfolio_service: PortfolioService = Depends(get_portfolio_service),
@@ -102,6 +110,10 @@ def analyze_symbol(
     """Generate a web-search-grounded LLM analysis for a symbol, after enriching with full data."""
     _require_api_key()
     upper = ticker.upper()
+    if not force:
+        cached = read_from_cache(upper)
+        if cached is not None:
+            return cached
 
     def _earnings(t: str) -> tuple[int | None, str | None]:
         ep = portfolio_service.get_earnings_proximity(t)
@@ -124,6 +136,7 @@ def analyze_symbol(
 @router.post("/position/{position_id}", response_model=SymbolIntelligence)
 def analyze_position(
     position_id: str,
+    force: bool = False,
     portfolio_service: PortfolioService = Depends(get_portfolio_service),
     fundamentals_service: FundamentalsService = Depends(get_fundamentals_service),
 ) -> SymbolIntelligence:
@@ -137,6 +150,10 @@ def analyze_position(
     pos = next((p for p in result.positions if p.position_id == position_id), None)
     if pos is None:
         raise HTTPException(status_code=404, detail=f"No open position with id {position_id!r}")
+    if not force:
+        cached = read_from_cache(pos.ticker.upper())
+        if cached is not None:
+            return cached
     stop = portfolio_service.suggest_position_stop(position_id)
     request = SymbolIntelligenceRequest(
         close=float(pos.current_price if pos.current_price is not None else pos.entry_price),
